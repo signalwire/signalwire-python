@@ -39,3 +39,9 @@ print(str(r))
 <?xml version="1.0" encoding="utf-8"?>
 <Response><Say>Welcome to SignalWire!</Say></Response>
 ```
+
+## Licensing
+
+This package is licensed under the MIT license.
+
+opyright (c) 2018 SignalWire Inc. - see LICENSE.md for details.
