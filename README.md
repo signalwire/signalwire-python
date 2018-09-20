@@ -2,8 +2,6 @@
 
 This package wraps the Twilio SDK for use with Signalwire.
 
-Refer to [the official Twilio library](https://github.com/twilio/twilio-python) for more examples of usage.
-
 ## Installation
 
 `pip install signalwire`
@@ -44,4 +42,4 @@ print(str(r))
 
 This package is licensed under the MIT license.
 
-opyright (c) 2018 SignalWire Inc. - see LICENSE.md for details.
+Copyright (c) 2018 SignalWire Inc. - see LICENSE.md for details.

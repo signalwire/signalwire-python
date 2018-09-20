@@ -1,11 +1,11 @@
 from setuptools import setup
 
-setup(name='SignalWire Python SDK',
-      version='0.1',
-      description='Provides Twilio-like functionality to SignalWire LAML',
+setup(name='signalwire',
+      version='1.0.0-rc1',
+      description='Provides SignalWire LAML and REST functionality',
       url='https://github.com/signalwire/signalwire-python',
-      author='Luca Pradovera',
-      author_email='luca@signalwire.com',
+      author='SignalWire Team',
+      author_email='open.source@signalwire.com',
       license='MIT',
       packages=['signalwire'],
       install_requires=[
