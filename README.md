@@ -38,6 +38,12 @@ print(str(r))
 <Response><Say>Welcome to SignalWire!</Say></Response>
 ```
 
+## Tests
+
+A `Dockerfile` is provided for your testing convenience.
+
+Run `docker run -it $(docker build -q .)` to execute the specs, or `docker run -it $(docker build -q .) sh` to get a shell with the `signalwire` package installed.
+
 ## Licensing
 
 This package is licensed under the MIT license.
