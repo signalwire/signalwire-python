@@ -7,6 +7,6 @@ client = signalwire_client(account, token, signalwire_base_url = 'https://yoursp
 call = client.calls.create(
   to="140498765432",
   from_="120823456789", #must be a number in your Signalwire account
-  url="http://twimlets.com/holdmusic?Bucket=com.twilio.music.ambient"
+  url="https://s3.us-east-2.amazonaws.com/signalwire-frontend/default-music/playlist.xml"
 )
 
