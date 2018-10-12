@@ -1,6 +1,7 @@
 from twilio.rest import Client as TwilioClient
 from twilio.rest.api import Api as TwilioApi
 from twilio.base.exceptions import TwilioRestException
+from urllib.parse import urlparse, ParseResult
 
 import sys
 from six import u
@@ -48,10 +49,16 @@ def patched_str(self):
 
 class Client(TwilioClient):
   def __init__(self, *args, **kwargs):
-    signalwire_base_url = kwargs.pop('signalwire_base_url', "https://api.signalwire.com")
+    signalwire_space_url = kwargs.pop('signalwire_space_url', "api.signalwire.com")
+
+    p = urlparse(signalwire_space_url, 'http')
+    netloc = p.netloc or p.path
+    path = p.path if p.netloc else ''
+    p = ParseResult('https', netloc, path, *p[3:])
+
     super(Client, self).__init__(*args, **kwargs)
     self._api = TwilioApi(self)
-    self._api.base_url = signalwire_base_url
+    self._api.base_url = p.geturl()
     TwilioRestException.__str__ = patched_str
 
 
