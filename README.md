@@ -15,7 +15,7 @@ from signalwire.rest import Client as signalwire_client
 
 account = "ACXXXXXXXXXXXXXXXXX"
 token = "YYYYYYYYYYYYYYYYYY"
-client = signalwire_client(account, token, signalwire_space_url = 'api.signalwire.com')
+client = signalwire_client(account, token, signalwire_space_url = 'example.signalwire.com')
 
 call = client.calls.create(to="9991231234",
                            from_="9991231234",
