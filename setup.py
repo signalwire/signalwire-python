@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='signalwire',
-      version='1.1',
+      version='1.2',
       description='Provides SignalWire LAML and REST functionality',
       url='https://github.com/signalwire/signalwire-python',
       author='SignalWire Team',
@@ -9,7 +9,7 @@ setup(name='signalwire',
       license='MIT',
       packages=find_packages(exclude=['tests', 'tests.*']),
       install_requires=[
-          'twilio',
+          'twilio==6.16.4',
       ],
       setup_requires=['pytest-runner'],
       tests_require=['pytest'],

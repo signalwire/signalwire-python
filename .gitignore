@@ -47,3 +47,5 @@ scratch
 env
 venv*
 *.egg-info
+Dockerfile.dev
+tmp
