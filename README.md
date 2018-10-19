@@ -17,9 +17,10 @@ account = "ACXXXXXXXXXXXXXXXXX"
 token = "YYYYYYYYYYYYYYYYYY"
 client = signalwire_client(account, token, signalwire_space_url = 'example.signalwire.com')
 
-call = client.calls.create(to="9991231234",
-                           from_="9991231234",
-                           url="https://cdn.signalwire.com/default-music/playlist.xml")
+call = client.calls.create(to="+19991231234",
+                           from_="+19991231234",
+                           url="https://cdn.signalwire.com/default-music/playlist.xml",
+                           method="GET")
 print(call.sid)
 ```
 

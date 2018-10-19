@@ -12,4 +12,3 @@ class TestConfigurable(TestCase):
     client = signalwire_client('account', 'token', signalwire_space_url = 'https://myname.signalwire.com')
 
     self.assertEqual(client.api.base_url, 'https://myname.signalwire.com')
-
