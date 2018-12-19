@@ -3,7 +3,10 @@ from twilio.rest.api import Api as TwilioApi
 from twilio.base.exceptions import TwilioRestException
 from urllib.parse import urlparse, ParseResult
 from twilio.rest.api.v2010.account.application import ApplicationInstance
+from twilio.rest.api.v2010.account import AccountInstance
 from twilio.rest.api.v2010.account.call import CallInstance
+from twilio.rest.api.v2010.account.recording import RecordingInstance
+from twilio.rest.api.v2010.account.transcription import TranscriptionInstance
 from twilio.rest.api.v2010.account.message import MessageInstance
 from twilio.rest.api.v2010.account.available_phone_number.local import LocalInstance
 from twilio.rest.api.v2010.account.available_phone_number.toll_free import TollFreeInstance
@@ -132,6 +135,33 @@ def patched_applicationinstance_init(self, version, payload, account_sid, sid=No
     # Context
     self._context = None
     self._solution = {'account_sid': account_sid, 'sid': sid or self._properties['sid'], }
+
+def patched_accountinstance_init(self, version, payload, sid=None):
+        """
+        Initialize the AccountInstance
+        :returns: twilio.rest.api.v2010.account.AccountInstance
+        :rtype: twilio.rest.api.v2010.account.AccountInstance
+        """
+        super(AccountInstance, self).__init__(version)
+
+        # Marshaled Properties
+        self._properties = {
+            'auth_token': payload['auth_token'],
+            'date_created': deserialize.rfc2822_datetime(payload['date_created']),
+            'date_updated': deserialize.rfc2822_datetime(payload['date_updated']),
+            'friendly_name': payload['friendly_name'],
+            'owner_account_sid': payload.get('owner_account_sid', ''),
+            'sid': payload['sid'],
+            'status': payload['status'],
+            'subresource_uris': payload['subresource_uris'],
+            'type': payload['type'],
+            'uri': payload['uri'],
+        }
+
+        # Context
+        self._context = None
+        self._solution = {'sid': sid or self._properties['sid'], }
+
 
 def patched_localinstance_init(self, version, payload, account_sid, country_code):
     """
@@ -263,6 +293,71 @@ def patched_message_init(self, version, payload, account_sid, sid=None):
     self._context = None
     self._solution = {'account_sid': account_sid, 'sid': sid or self._properties['sid'], }
 
+def patched_recordinginstance_init(self, version, payload, account_sid, sid=None):
+    """
+    Initialize the RecordingInstance
+    :returns: twilio.rest.api.v2010.account.call.recording.RecordingInstance
+    :rtype: twilio.rest.api.v2010.account.call.recording.RecordingInstance
+    """
+    super(RecordingInstance, self).__init__(version)
+
+    # Marshaled Properties
+    self._properties = {
+        'account_sid': payload['account_sid'],
+        'api_version': payload['api_version'],
+        'call_sid': payload['call_sid'],
+        'conference_sid': payload['conference_sid'],
+        'date_created': deserialize.rfc2822_datetime(payload['date_created']),
+        'date_updated': deserialize.rfc2822_datetime(payload['date_updated']),
+        'start_time': deserialize.rfc2822_datetime(payload['start_time']),
+        'duration': payload['duration'],
+        'sid': payload['sid'],
+        'price': deserialize.decimal(payload['price']),
+        'uri': payload['uri'],
+        'encryption_details': payload.get('encryption_details', ''),
+        # 'encryption_details': payload['encryption_details'],
+        'price_unit': payload['price_unit'],
+        'status': payload['status'],
+        'channels': deserialize.integer(payload.get('channels', 1)),
+        # 'channels': deserialize.integer(payload['channels']),
+        'source': payload['source'],
+        'error_code': deserialize.integer(payload['error_code']),
+    }
+
+    # Context
+    self._context = None
+    self._solution = {'account_sid': account_sid, 'sid': sid or self._properties['sid'], }
+  
+def patched_transcriptioninstance_init(self, version, payload, account_sid, sid=None):
+      """
+      Initialize the TranscriptionInstance
+      :returns: twilio.rest.api.v2010.account.transcription.TranscriptionInstance
+      :rtype: twilio.rest.api.v2010.account.transcription.TranscriptionInstance
+      """
+      super(TranscriptionInstance, self).__init__(version)
+
+      # Marshaled Properties
+      self._properties = {
+          'account_sid': payload['account_sid'],
+          'api_version': payload['api_version'],
+          'date_created': deserialize.rfc2822_datetime(payload['date_created']),
+          'date_updated': deserialize.rfc2822_datetime(payload['date_updated']),
+          'duration': payload['duration'],
+          'price': deserialize.decimal(payload['price']),
+          'price_unit': payload['price_unit'],
+          'recording_sid': payload['recording_sid'],
+          'sid': payload['sid'],
+          'status': payload['status'],
+          'transcription_text': payload['transcription_text'],
+          'type': payload.get('type', ''), #missing parameter
+          'uri': payload['uri'],
+      }
+
+      # Context
+      self._context = None
+      self._solution = {'account_sid': account_sid, 'sid': sid or self._properties['sid'], }
+
+
 class Client(TwilioClient):
   def __init__(self, *args, **kwargs):
     signalwire_space_url = kwargs.pop('signalwire_space_url', "api.signalwire.com")
@@ -277,8 +372,11 @@ class Client(TwilioClient):
     self._api.base_url = p.geturl()
     TwilioRestException.__str__ = patched_str
     CallInstance.__init__ = patched_init
+    AccountInstance.__init__ = patched_accountinstance_init
     MessageInstance.__init__ = patched_message_init
     LocalInstance.__init__ = patched_localinstance_init
     TollFreeInstance.__init__ = patched_tollfreeinstance_init
     ApplicationInstance.__init__ = patched_applicationinstance_init
     IncomingPhoneNumberInstance.__init__ = patched_incommingphonenumberinstance_init
+    RecordingInstance.__init__ = patched_recordinginstance_init
+    TranscriptionInstance.__init__ = patched_transcriptioninstance_init
