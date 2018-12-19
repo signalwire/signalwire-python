@@ -2,10 +2,12 @@ from twilio.rest import Client as TwilioClient
 from twilio.rest.api import Api as TwilioApi
 from twilio.base.exceptions import TwilioRestException
 from urllib.parse import urlparse, ParseResult
+from twilio.rest.api.v2010.account.application import ApplicationInstance
 from twilio.rest.api.v2010.account.call import CallInstance
 from twilio.rest.api.v2010.account.message import MessageInstance
 from twilio.rest.api.v2010.account.available_phone_number.local import LocalInstance
 from twilio.rest.api.v2010.account.available_phone_number.toll_free import TollFreeInstance
+from twilio.rest.api.v2010.account.incoming_phone_number import IncomingPhoneNumberInstance
 from twilio.base import deserialize
 
 import sys
@@ -94,6 +96,43 @@ def patched_init(self, version, payload, account_sid, sid=None):
     self._context = None
     self._solution = {'account_sid': account_sid, 'sid': sid or self._properties['sid'], }
 
+
+def patched_applicationinstance_init(self, version, payload, account_sid, sid=None):
+    """
+    Initialize the ApplicationInstance
+
+    :returns: twilio.rest.api.v2010.account.application.ApplicationInstance
+    :rtype: twilio.rest.api.v2010.account.application.ApplicationInstance
+    """
+    super(ApplicationInstance, self).__init__(version)
+
+    # Marshaled Properties
+    self._properties = {
+        'account_sid': payload['account_sid'],
+        'api_version': payload['api_version'],
+        'date_created': deserialize.rfc2822_datetime(payload['date_created']),
+        'date_updated': deserialize.rfc2822_datetime(payload['date_updated']),
+        'friendly_name': payload['friendly_name'],
+        'sid': payload['sid'],
+        'sms_fallback_method': payload['sms_fallback_method'],
+        'sms_fallback_url': payload['sms_fallback_url'],
+        'sms_method': payload['sms_method'],
+        'sms_status_callback': payload['sms_status_callback'],
+        'sms_url': payload['sms_url'],
+        'status_callback': payload['status_callback'],
+        'status_callback_method': payload['status_callback_method'],
+        'uri': payload['uri'],
+        'voice_caller_id_lookup': payload['voice_caller_id_lookup'],
+        'voice_fallback_method': payload['voice_fallback_method'],
+        'voice_fallback_url': payload['voice_fallback_url'],
+        'voice_method': payload['voice_method'],
+        'voice_url': payload['voice_url'],
+    }
+
+    # Context
+    self._context = None
+    self._solution = {'account_sid': account_sid, 'sid': sid or self._properties['sid'], }
+
 def patched_localinstance_init(self, version, payload, account_sid, country_code):
     """
     Initialize the LocalInstance
@@ -120,6 +159,45 @@ def patched_localinstance_init(self, version, payload, account_sid, country_code
     # Context
     self._context = None
     self._solution = {'account_sid': account_sid, 'country_code': country_code, }
+
+def patched_incommingphonenumberinstance_init(self, version, payload, account_sid, sid=None):
+    """
+    Initialize the IncomingPhoneNumberInstance
+
+    :returns: twilio.rest.api.v2010.account.incoming_phone_number.IncomingPhoneNumberInstance
+    :rtype: twilio.rest.api.v2010.account.incoming_phone_number.IncomingPhoneNumberInstance
+    """
+    super(IncomingPhoneNumberInstance, self).__init__(version)
+
+    # Marshaled Properties
+    self._properties = {
+        'api_version': payload['api_version'],
+        'beta': payload['beta'],
+        'capabilities': payload['capabilities'],
+        'date_created': deserialize.rfc2822_datetime(payload['date_created']),
+        'date_updated': deserialize.rfc2822_datetime(payload['date_updated']),
+        'friendly_name': payload['friendly_name'],
+        'phone_number': payload['phone_number'],
+        'sid': payload['sid'],
+        'sms_application_sid': payload['sms_application_sid'],
+        'sms_fallback_method': payload['sms_fallback_method'],
+        'sms_fallback_url': payload['sms_fallback_url'],
+        'sms_method': payload['sms_method'],
+        'sms_url': payload['sms_url'],
+        'status_callback': payload['status_callback'],
+        'status_callback_method': payload['status_callback_method'],
+        'uri': payload['uri'],
+        'voice_application_sid': payload['voice_application_sid'],
+        'voice_caller_id_lookup': payload['voice_caller_id_lookup'],
+        'voice_fallback_method': payload['voice_fallback_method'],
+        'voice_fallback_url': payload['voice_fallback_url'],
+        'voice_method': payload['voice_method'],
+        'voice_url': payload['voice_url'],
+    }
+
+    # Context
+    self._context = None
+    self._solution = {'account_sid': account_sid, 'sid': sid or self._properties['sid'], }
 
 def patched_tollfreeinstance_init(self, version, payload, account_sid, country_code):
     """
@@ -202,3 +280,5 @@ class Client(TwilioClient):
     MessageInstance.__init__ = patched_message_init
     LocalInstance.__init__ = patched_localinstance_init
     TollFreeInstance.__init__ = patched_tollfreeinstance_init
+    ApplicationInstance.__init__ = patched_applicationinstance_init
+    IncomingPhoneNumberInstance.__init__ = patched_incommingphonenumberinstance_init
