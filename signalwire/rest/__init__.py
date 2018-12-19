@@ -4,6 +4,8 @@ from twilio.base.exceptions import TwilioRestException
 from urllib.parse import urlparse, ParseResult
 from twilio.rest.api.v2010.account.call import CallInstance
 from twilio.rest.api.v2010.account.message import MessageInstance
+from twilio.rest.api.v2010.account.available_phone_number.local import LocalInstance
+from twilio.rest.api.v2010.account.available_phone_number.toll_free import TollFreeInstance
 from twilio.base import deserialize
 
 import sys
@@ -92,6 +94,61 @@ def patched_init(self, version, payload, account_sid, sid=None):
     self._context = None
     self._solution = {'account_sid': account_sid, 'sid': sid or self._properties['sid'], }
 
+def patched_localinstance_init(self, version, payload, account_sid, country_code):
+    """
+    Initialize the LocalInstance
+    :returns: twilio.rest.api.v2010.account.available_phone_number.local.LocalInstance
+    :rtype: twilio.rest.api.v2010.account.available_phone_number.local.LocalInstance
+    """
+    super(LocalInstance, self).__init__(version)
+
+    # Marshaled Properties
+    self._properties = {
+        'friendly_name': payload['friendly_name'],
+        'phone_number': payload['phone_number'],
+        'lata': payload['lata'],
+        'rate_center': payload['rate_center'],
+        'latitude': deserialize.decimal(payload['latitude']),
+        'longitude': deserialize.decimal(payload['longitude']),
+        'region': payload['region'],
+        'postal_code': payload['postal_code'],
+        'iso_country': payload['iso_country'],
+        'beta': payload['beta'],
+        'capabilities': payload['capabilities'],
+    }
+
+    # Context
+    self._context = None
+    self._solution = {'account_sid': account_sid, 'country_code': country_code, }
+
+def patched_tollfreeinstance_init(self, version, payload, account_sid, country_code):
+    """
+    Initialize the TollFreeInstance
+
+    :returns: twilio.rest.api.v2010.account.available_phone_number.toll_free.TollFreeInstance
+    :rtype: twilio.rest.api.v2010.account.available_phone_number.toll_free.TollFreeInstance
+    """
+    super(TollFreeInstance, self).__init__(version)
+
+    # Marshaled Properties
+    self._properties = {
+        'friendly_name': payload['friendly_name'],
+        'phone_number': payload['phone_number'],
+        'lata': payload['lata'],
+        'rate_center': payload['rate_center'],
+        'latitude': deserialize.decimal(payload['latitude']),
+        'longitude': deserialize.decimal(payload['longitude']),
+        'region': payload['region'],
+        'postal_code': payload['postal_code'],
+        'iso_country': payload['iso_country'],
+        'beta': payload['beta'],
+        'capabilities': payload['capabilities'],
+    }
+
+    # Context
+    self._context = None
+    self._solution = {'account_sid': account_sid, 'country_code': country_code, }
+
 def patched_message_init(self, version, payload, account_sid, sid=None):
     """
     Initialize the MessageInstance
@@ -143,5 +200,5 @@ class Client(TwilioClient):
     TwilioRestException.__str__ = patched_str
     CallInstance.__init__ = patched_init
     MessageInstance.__init__ = patched_message_init
-
-
+    LocalInstance.__init__ = patched_localinstance_init
+    TollFreeInstance.__init__ = patched_tollfreeinstance_init
