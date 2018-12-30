@@ -247,11 +247,11 @@ def patched_recordinginstance_init(self, version, payload, account_sid, sid=None
         'sid': payload['sid'],
         'price': deserialize.decimal(payload['price']),
         'uri': payload['uri'],
-        'encryption_details': payload.get('encryption_details', ''),
+        'encryption_details': payload.get('encryption_details', ''), #missing
         # 'encryption_details': payload['encryption_details'],
         'price_unit': payload['price_unit'],
         'status': payload['status'],
-        'channels': deserialize.integer(payload.get('channels', 1)),
+        'channels': deserialize.integer(payload.get('channels', 1)), #missing
         # 'channels': deserialize.integer(payload['channels']),
         'source': payload['source'],
         'error_code': deserialize.integer(payload['error_code']),
