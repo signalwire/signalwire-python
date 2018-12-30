@@ -1,0 +1,51 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept: [application/json]
+      Accept-Charset: [utf-8]
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Basic MjliYmEyZDQtZGRmMS00NTY5LThiNGEtNTkxNDQ0MGE1ZTEzOlBUMjNkM2NjZjUxOWQzNDdlYjA0OTJjNDhlZWM3ZTFmMmRiY2ZkZWJhN2Q3YjEzZTY4]
+      Connection: [keep-alive]
+      User-Agent: [twilio-python/6.16.4 (Python 3.6.5)]
+      X-Twilio-Client: [python-6.16.4]
+    method: GET
+    uri: https://myaccount.signalwire.com/2010-04-01/Accounts/signalwire-account-123/IncomingPhoneNumbers.json
+  response:
+    body: {string: '{"uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/IncomingPhoneNumbers?Page=0\u0026PageSize=50","first_page_uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/IncomingPhoneNumbers?Page=0\u0026PageSize=50","next_page_uri":null,"previous_page_uri":null,"page":0,"page_size":50,"incoming_phone_numbers":[{"sid":"4472cc03-1f97-436e-9f15-8752dfdbc00b","friendly_name":"+1
+        (899) 000-0001","phone_number":"+18990000001","voice_url":"http://adhearsion:8080/laml","voice_method":"GET","voice_fallback_url":"","voice_fallback_method":"POST","voice_caller_id_lookup":null,"voice_application_sid":null,"date_created":"Thu,
+        11 Oct 2018 20:37:41 +0000","date_updated":"Mon, 10 Dec 2018 18:31:21 +0000","sms_url":"","sms_method":"POST","sms_fallback_url":"","sms_fallback_method":"POST","sms_application_sid":null,"capabilities":{"voice":true,"sms":false,"mms":false},"beta":false,"status_callback":"","status_callback_method":"POST","api_version":"2010-04-01","uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/IncomingPhoneNumbers/4472cc03-1f97-436e-9f15-8752dfdbc00b"},{"sid":"9c14695d-06c8-4790-b467-5ac83f235d33","friendly_name":"+1
+        (404) 328-7382","phone_number":"+14043287382","voice_url":"https://myaccount.signalwire.com/laml-bins/edfb6a6e-a60a-4a56-9a9c-04babd511882","voice_method":"GET","voice_fallback_url":"","voice_fallback_method":"POST","voice_caller_id_lookup":null,"voice_application_sid":"34f49a97-a863-4a11-8fef-bc399c6f0928","date_created":"Wed,
+        10 Oct 2018 18:31:01 +0000","date_updated":"Wed, 19 Dec 2018 15:47:30 +0000","sms_url":"","sms_method":"POST","sms_fallback_url":"","sms_fallback_method":"POST","sms_application_sid":null,"capabilities":{"voice":true,"sms":true,"mms":true},"beta":false,"status_callback":"","status_callback_method":"POST","api_version":"2010-04-01","uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/IncomingPhoneNumbers/9c14695d-06c8-4790-b467-5ac83f235d33"},{"sid":"2eb34bc9-5108-41e7-aeb1-848f3ca90dcf","friendly_name":"+1
+        (404) 328-7360","phone_number":"+14043287360","voice_url":"https://signalwire.ngrok.io/laml","voice_method":"GET","voice_fallback_url":"","voice_fallback_method":"POST","voice_caller_id_lookup":null,"voice_application_sid":null,"date_created":"Mon,
+        20 Aug 2018 12:54:34 +0000","date_updated":"Thu, 13 Sep 2018 13:32:02 +0000","sms_url":"","sms_method":"POST","sms_fallback_url":"","sms_fallback_method":"POST","sms_application_sid":null,"capabilities":{"voice":true,"sms":true,"mms":true},"beta":false,"status_callback":"","status_callback_method":"POST","api_version":"2010-04-01","uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/IncomingPhoneNumbers/2eb34bc9-5108-41e7-aeb1-848f3ca90dcf"}]}'}
+    headers:
+      Cache-Control: ['max-age=0, private, must-revalidate']
+      Connection: [keep-alive]
+      Content-Security-Policy: ['default-src * blob:; connect-src ''self'' ''unsafe-inline''
+          wss://*.signalwire.com https://cdn.signalwire.com https://signalwire.s3-us-west-2.amazonaws.com
+          https://api.stripe.com https://www.google-analytics.com https://app.termly.io
+          https://developer.livehelpnow.net wss://app.livehelpnow.net; frame-src ''self''
+          https://www.youtube.com https://youtube.com https://cdn.signalwire.com https://js.stripe.com
+          https://app.termly.io; child-src ''self'' ''unsafe-inline'' https://cdn.signalwire.com
+          https://js.stripe.com blob:; style-src ''self'' ''unsafe-inline'' https://cdn.signalwire.com
+          https://fonts.gstatic.com https://fonts.googleapis.com https://developer.livehelpnow.net;
+          worker-src ''self'' ''unsafe-inline'' https://cdn.signalwire.com https://js.stripe.com
+          blob:; script-src ''self'' ''unsafe-inline'' https://cdn.signalwire.com
+          https://www.google-analytics.com https://www.googletagmanager.com https://js.stripe.com
+          https://connect.facebook.net https://app.termly.io https://developer.livehelpnow.net;
+          font-src ''self'' ''unsafe-inline'' https://cdn.signalwire.com https://fonts.gstatic.com
+          https://fonts.googleapis.com https://cdn.livehelpnow.net;']
+      Content-Type: [application/json; charset=utf-8]
+      Date: ['Wed, 19 Dec 2018 16:04:25 GMT']
+      ETag: [W/"6db0cfe3016b5cefb4bdf4e0ec8a404f"]
+      Server: [nginx]
+      Strict-Transport-Security: [max-age=15768000; includeSubDomains]
+      Transfer-Encoding: [chunked]
+      X-RateLimit-Limit: ['5000']
+      X-RateLimit-Remaining: ['4998']
+      X-RateLimit-Reset: ['1545238800']
+      X-Request-Id: [151e9661-10c4-474e-b3cf-51f557d65377]
+      X-Runtime: ['0.040247']
+    status: {code: 200, message: OK}
+version: 1
