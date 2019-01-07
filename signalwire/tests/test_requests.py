@@ -5,12 +5,12 @@ import vcr
 
 @pytest.fixture(scope="module")
 def client():
-  client = signalwire_client('signalwire-account-123', '123456', signalwire_space_url = 'myaccount.signalwire.com')
+  client = signalwire_client(os.getenv('SIGNALWIRE_ACCOUNT','signalwire-account-123'), os.getenv('SIGNALWIRE_TOKEN', '123456'), signalwire_space_url = os.getenv('SIGNALWIRE_SPACE', 'myaccount.signalwire.com'))
   return client
 
 @vcr.use_cassette()
 def test_accounts(client):
-  account = client.api.accounts('signalwire-account-123').fetch()
+  account = client.api.accounts(os.getenv('SIGNALWIRE_ACCOUNT','signalwire-account-123')).fetch()
   assert(account.friendly_name == 'LAML testing') 
     
 
@@ -87,3 +87,10 @@ def test_queues(client):
 def test_queue_members(client):
   members = client.queues('2fd1bc9b-2e1f-41ac-988f-06842700c10d').members.list()
   assert(members[0].call_sid == '24c0f807-2663-4080-acef-c0874f45274d')
+
+def test_send_fax(client):
+  fax = client.fax.faxes.create(
+    from_='+14043287382',
+    to='+14043287360',
+    media_url='https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'
+  )
