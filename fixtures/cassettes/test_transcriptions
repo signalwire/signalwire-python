@@ -1,0 +1,48 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept: [application/json]
+      Accept-Charset: [utf-8]
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Basic MjliYmEyZDQtZGRmMS00NTY5LThiNGEtNTkxNDQ0MGE1ZTEzOlBUMjNkM2NjZjUxOWQzNDdlYjA0OTJjNDhlZWM3ZTFmMmRiY2ZkZWJhN2Q3YjEzZTY4]
+      Connection: [keep-alive]
+      User-Agent: [twilio-python/6.16.4 (Python 3.6.5)]
+      X-Twilio-Client: [python-6.16.4]
+    method: GET
+    uri: https://lpradovera.signalwire.com/2010-04-01/Accounts/29bba2d4-ddf1-4569-8b4a-5914440a5e13/Transcriptions.json
+  response:
+    body: {string: '{"uri":"/api/laml/2010-04-01/Accounts/29bba2d4-ddf1-4569-8b4a-5914440a5e13/Transcriptions?Page=0\u0026PageSize=50","first_page_uri":"/api/laml/2010-04-01/Accounts/29bba2d4-ddf1-4569-8b4a-5914440a5e13/Transcriptions?Page=0\u0026PageSize=50","next_page_uri":null,"previous_page_uri":null,"page":0,"page_size":50,"transcriptions":[{"sid":"425e8224-c4b0-4725-ab2c-ec9d41adbbe9","api_version":"2010-04-01","account_sid":"29bba2d4-ddf1-4569-8b4a-5914440a5e13","recording_sid":"e4c78e17-c0e2-441d-b5dd-39a6dad496f8","date_created":"Wed,
+        19 Dec 2018 16:28:16 +0000","date_updated":"Wed, 19 Dec 2018 16:30:04 +0000","duration":14,"price":0.0,"price_unit":"USD","status":"completed","transcription_text":"Hello.
+        Hello? Hello? Hello? Hello? Hello? Recording. Recording, Recording, Recording,
+        recording. Hang up. Hello?","type":"","uri":"/api/laml/2010-04-01/Accounts/29bba2d4-ddf1-4569-8b4a-5914440a5e13/Transcriptions/425e8224-c4b0-4725-ab2c-ec9d41adbbe9.json"}]}'}
+    headers:
+      Cache-Control: ['max-age=0, private, must-revalidate']
+      Connection: [keep-alive]
+      Content-Security-Policy: ['default-src * blob:; connect-src ''self'' ''unsafe-inline''
+          wss://*.signalwire.com https://cdn.signalwire.com https://signalwire.s3-us-west-2.amazonaws.com
+          https://api.stripe.com https://www.google-analytics.com https://app.termly.io
+          https://developer.livehelpnow.net wss://app.livehelpnow.net; frame-src ''self''
+          https://www.youtube.com https://youtube.com https://cdn.signalwire.com https://js.stripe.com
+          https://app.termly.io; child-src ''self'' ''unsafe-inline'' https://cdn.signalwire.com
+          https://js.stripe.com blob:; style-src ''self'' ''unsafe-inline'' https://cdn.signalwire.com
+          https://fonts.gstatic.com https://fonts.googleapis.com https://developer.livehelpnow.net;
+          worker-src ''self'' ''unsafe-inline'' https://cdn.signalwire.com https://js.stripe.com
+          blob:; script-src ''self'' ''unsafe-inline'' https://cdn.signalwire.com
+          https://www.google-analytics.com https://www.googletagmanager.com https://js.stripe.com
+          https://connect.facebook.net https://app.termly.io https://developer.livehelpnow.net;
+          font-src ''self'' ''unsafe-inline'' https://cdn.signalwire.com https://fonts.gstatic.com
+          https://fonts.googleapis.com https://cdn.livehelpnow.net;']
+      Content-Type: [application/json; charset=utf-8]
+      Date: ['Mon, 07 Jan 2019 16:14:58 GMT']
+      ETag: [W/"0e11b6c16f3b5bb50d485154fcc5b81a"]
+      Server: [nginx]
+      Strict-Transport-Security: [max-age=15768000; includeSubDomains]
+      Transfer-Encoding: [chunked]
+      X-RateLimit-Limit: ['50000']
+      X-RateLimit-Remaining: ['49989']
+      X-RateLimit-Reset: ['1546880400']
+      X-Request-Id: [e1d41701-5742-4053-ac1f-41691164c9f9]
+      X-Runtime: ['0.052663']
+    status: {code: 200, message: OK}
+version: 1

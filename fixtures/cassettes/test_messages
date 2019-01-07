@@ -1,0 +1,32 @@
+interactions:
+- request:
+    body: To=%2B15058888888&From=%2B15059999999&MediaUrl=https%3A%2F%2Fwww.google.com%2Fimages%2Fbranding%2Fgooglelogo%2F1x%2Fgooglelogo_color_272x92dp.png
+    headers:
+      Accept: [application/json]
+      Accept-Charset: [utf-8]
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Basic MjliYmEyZDQtZGRmMS00NTY5LThiNGEtNTkxNDQ0MGE1ZTEzOlBUMjNkM2NjZjUxOWQzNDdlYjA0OTJjNDhlZWM3ZTFmMmRiY2ZkZWJhN2Q3YjEzZTY4]
+      Connection: [keep-alive]
+      Content-Length: ['145']
+      Content-Type: [application/x-www-form-urlencoded]
+      User-Agent: [twilio-python/6.16.4 (Python 3.6.5)]
+      X-Twilio-Client: [python-6.16.4]
+    method: POST
+    uri: https://lpradovera.signalwire.com/2010-04-01/Accounts/29bba2d4-ddf1-4569-8b4a-5914440a5e13/Messages.json
+  response:
+    body: {string: '{"code":"21210","message":"From must be a number in your project.","more_info":"https://signalwire.com","status":400}'}
+    headers:
+      Cache-Control: [no-cache]
+      Connection: [keep-alive]
+      Content-Type: [application/json; charset=utf-8]
+      Date: ['Mon, 07 Jan 2019 16:14:56 GMT']
+      Server: [nginx]
+      Strict-Transport-Security: [max-age=15768000; includeSubDomains]
+      Transfer-Encoding: [chunked]
+      X-RateLimit-Limit: ['50000']
+      X-RateLimit-Remaining: ['49992']
+      X-RateLimit-Reset: ['1546880400']
+      X-Request-Id: [98d97884-8979-447e-9c35-3993ed8e6ff0]
+      X-Runtime: ['0.035881']
+    status: {code: 422, message: Unprocessable Entity}
+version: 1
