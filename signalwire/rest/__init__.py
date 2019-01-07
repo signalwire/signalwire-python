@@ -19,6 +19,7 @@ from twilio.rest.fax.v1 import V1 as TwilioV1
 
 import sys
 from six import u
+import inspect
 
 def patched_str(self):
     """ Try to pretty-print the exception, if this is going on screen. """
@@ -293,6 +294,19 @@ def patched_transcriptioninstance_init(self, version, payload, account_sid, sid=
       self._context = None
       self._solution = {'account_sid': account_sid, 'sid': sid or self._properties['sid'], }
 
+def patched_fax_init(self, twilio):
+  """
+  Initialize the Fax Domain
+  :returns: Domain for Fax
+  :rtype: twilio.rest.fax.Fax
+  """
+  super(TwilioFax, self).__init__(twilio)
+
+  self.base_url = ''
+  self.account_sid = twilio.account_sid
+
+  # Versions
+  self._v1 = None
 
 def patched_fax_v1_init(self, domain):
   """
@@ -300,8 +314,9 @@ def patched_fax_v1_init(self, domain):
   :returns: V1 version of Fax
   :rtype: twilio.rest.fax.v1.V1.V1
   """
-  super(V1, self).__init__(domain)
-  self.version = 'v1'
+  print(domain.__class__.__name__)
+  super(TwilioV1, self).__init__(domain)
+  self.version = "2010-04-01/Accounts/" + domain.account_sid
   self._faxes = None
 
 
@@ -317,6 +332,9 @@ class Client(TwilioClient):
     super(Client, self).__init__(*args, **kwargs)
     self._api = TwilioApi(self)
     self._api.base_url = p.geturl()
+
+    TwilioFax.__init__ = patched_fax_init
+    TwilioV1.__init__ = patched_fax_v1_init
 
     self._fax = TwilioFax(self)
     self._fax.base_url = p.geturl()
