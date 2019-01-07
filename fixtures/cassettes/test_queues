@@ -10,10 +10,10 @@ interactions:
       User-Agent: [twilio-python/6.16.4 (Python 3.6.5)]
       X-Twilio-Client: [python-6.16.4]
     method: GET
-    uri: https://lpradovera.signalwire.com/2010-04-01/Accounts/29bba2d4-ddf1-4569-8b4a-5914440a5e13/Queues.json
+    uri: https://myaccount.signalwire.com/2010-04-01/Accounts/signalwire-account-123/Queues.json
   response:
-    body: {string: '{"uri":"/api/laml/2010-04-01/Accounts/29bba2d4-ddf1-4569-8b4a-5914440a5e13/Queues?Page=0\u0026PageSize=50","first_page_uri":"/api/laml/2010-04-01/Accounts/29bba2d4-ddf1-4569-8b4a-5914440a5e13/Queues?Page=0\u0026PageSize=50","next_page_uri":null,"previous_page_uri":null,"page":0,"page_size":50,"queues":[{"sid":"2fd1bc9b-2e1f-41ac-988f-06842700c10d","date_created":"Wed,
-        19 Dec 2018 16:51:49 +0000","date_updated":"Wed, 19 Dec 2018 16:51:49 +0000","account_sid":"29bba2d4-ddf1-4569-8b4a-5914440a5e13","friendly_name":"support","max_size":null,"current_size":0,"average_wait_time":0,"api_version":"2010-04-01","uri":"/api/laml/2010-04-01/Accounts/29bba2d4-ddf1-4569-8b4a-5914440a5e13/Queues/2fd1bc9b-2e1f-41ac-988f-06842700c10d.json"}]}'}
+    body: {string: '{"uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Queues?Page=0\u0026PageSize=50","first_page_uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Queues?Page=0\u0026PageSize=50","next_page_uri":null,"previous_page_uri":null,"page":0,"page_size":50,"queues":[{"sid":"2fd1bc9b-2e1f-41ac-988f-06842700c10d","date_created":"Wed,
+        19 Dec 2018 16:51:49 +0000","date_updated":"Wed, 19 Dec 2018 16:51:49 +0000","account_sid":"signalwire-account-123","friendly_name":"support","max_size":null,"current_size":0,"average_wait_time":0,"api_version":"2010-04-01","uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Queues/2fd1bc9b-2e1f-41ac-988f-06842700c10d.json"}]}'}
     headers:
       Cache-Control: ['max-age=0, private, must-revalidate']
       Connection: [keep-alive]
@@ -32,15 +32,15 @@ interactions:
           font-src ''self'' ''unsafe-inline'' https://cdn.signalwire.com https://fonts.gstatic.com
           https://fonts.googleapis.com https://cdn.livehelpnow.net;']
       Content-Type: [application/json; charset=utf-8]
-      Date: ['Mon, 07 Jan 2019 16:14:58 GMT']
+      Date: ['Wed, 19 Dec 2018 16:52:25 GMT']
       ETag: [W/"5f5dbdad771cd89a956a5e39888b58ae"]
       Server: [nginx]
       Strict-Transport-Security: [max-age=15768000; includeSubDomains]
       Transfer-Encoding: [chunked]
-      X-RateLimit-Limit: ['50000']
-      X-RateLimit-Remaining: ['49988']
-      X-RateLimit-Reset: ['1546880400']
-      X-Request-Id: [d4b6f90f-cc31-42f9-a291-0c9b2a90d1b1]
-      X-Runtime: ['0.051921']
+      X-RateLimit-Limit: ['5000']
+      X-RateLimit-Remaining: ['4960']
+      X-RateLimit-Reset: ['1545238800']
+      X-Request-Id: [e7320c7f-78fe-49d4-bff5-a9b463222ba9]
+      X-Runtime: ['0.031531']
     status: {code: 200, message: OK}
 version: 1

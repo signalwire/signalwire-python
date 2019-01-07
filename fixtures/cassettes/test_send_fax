@@ -1,0 +1,28 @@
+interactions:
+- request:
+    body: To=%2B14043287360&MediaUrl=https%3A%2F%2Fwww.w3.org%2FWAI%2FER%2Ftests%2Fxhtml%2Ftestfiles%2Fresources%2Fpdf%2Fdummy.pdf&From=%2B14043287382
+    headers:
+      Accept: [application/json]
+      Accept-Charset: [utf-8]
+      Accept-Encoding: ['gzip, deflate']
+      Authorization: [Basic MjliYmEyZDQtZGRmMS00NTY5LThiNGEtNTkxNDQ0MGE1ZTEzOlBUMjNkM2NjZjUxOWQzNDdlYjA0OTJjNDhlZWM3ZTFmMmRiY2ZkZWJhN2Q3YjEzZTY4]
+      Connection: [keep-alive]
+      Content-Length: ['140']
+      Content-Type: [application/x-www-form-urlencoded]
+      User-Agent: [twilio-python/6.16.4 (Python 3.6.5)]
+      X-Twilio-Client: [python-6.16.4]
+    method: POST
+    uri: https://lpradovera.signalwire.com/v1/Faxes
+  response:
+    body: {string: '{"status":404,"error":"Not Found"}'}
+    headers:
+      Connection: [keep-alive]
+      Content-Length: ['34']
+      Content-Type: [application/json; charset=UTF-8]
+      Date: ['Mon, 07 Jan 2019 16:21:02 GMT']
+      Server: [nginx]
+      Strict-Transport-Security: [max-age=15768000; includeSubDomains]
+      X-Request-Id: [0557a9d7-a009-4611-8e5f-3013712e85c7]
+      X-Runtime: ['0.002037']
+    status: {code: 404, message: Not Found}
+version: 1
