@@ -5,10 +5,6 @@ interactions:
       Accept: [application/json]
       Accept-Charset: [utf-8]
       Accept-Encoding: ['gzip, deflate']
-      Authorization: [Basic MjliYmEyZDQtZGRmMS00NTY5LThiNGEtNTkxNDQ0MGE1ZTEzOlBUMjNkM2NjZjUxOWQzNDdlYjA0OTJjNDhlZWM3ZTFmMmRiY2ZkZWJhN2Q3YjEzZTY4]
-      Connection: [keep-alive]
-      User-Agent: [twilio-python/6.16.4 (Python 3.6.5)]
-      X-Twilio-Client: [python-6.16.4]
     method: GET
     uri: https://myaccount.signalwire.com/2010-04-01/Accounts/signalwire-account-123/Faxes/831455c6-574e-4d8b-b6ee-2418140bf4cd
   response:
