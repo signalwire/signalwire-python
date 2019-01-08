@@ -100,3 +100,15 @@ def test_send_fax(client):
     to='+15556677999',
     media_url='https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf'
   )
+  assert(fax.sid == 'dd3e1ac4-50c9-4241-933a-5d4e9a2baf31')
+
+@my_vcr.use_cassette()
+def test_list_fax(client):
+  faxes = client.fax.faxes.list()
+  assert(faxes[0].sid == 'dd3e1ac4-50c9-4241-933a-5d4e9a2baf31')
+
+@my_vcr.use_cassette()
+def test_fetch_fax(client):
+  fax = client.fax.faxes('831455c6-574e-4d8b-b6ee-2418140bf4cd').fetch()
+  assert(fax.to == '+15556677999')
+  assert(fax.media_url == 'https://s3.us-east-2.amazonaws.com/signalwire-assets/faxes/20190104162834-831455c6-574e-4d8b-b6ee-2418140bf4cd.tiff')
