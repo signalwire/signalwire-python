@@ -19,7 +19,6 @@ from twilio.rest.fax.v1 import V1 as TwilioV1
 
 import sys
 from six import u
-import inspect
 
 def patched_str(self):
     """ Try to pretty-print the exception, if this is going on screen. """
