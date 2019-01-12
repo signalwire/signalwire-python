@@ -1,0 +1,15 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept: [application/json]
+      Accept-Charset: [utf-8]
+      Accept-Encoding: ['gzip, deflate']
+    method: GET
+    uri: https://myaccount.signalwire.com/2010-04-01/Accounts/signalwire-account-123/Conferences/a811cb2c-9e5a-415d-a951-701f8e884fb5/Participants.json
+  response:
+    body: {string: '{"uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Conferences.a811cb2c-9e5a-415d-a951-701f8e884fb5?Page=0\u0026PageSize=50","first_page_uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Conferences.a811cb2c-9e5a-415d-a951-701f8e884fb5?Page=0\u0026PageSize=50","next_page_uri":null,"previous_page_uri":null,"page":0,"page_size":50,"participants":[{"account_sid":"signalwire-account-123","call_sid":"7a520324-684d-435c-87c2-ea7975f371d0","conference_sid":"a811cb2c-9e5a-415d-a951-701f8e884fb5","date_created":"Wed,
+        19 Dec 2018 15:48:13 +0000","date_updated":"Wed, 19 Dec 2018 15:48:13 +0000","start_conference_on_enter":true,"end_conference_on_exit":false,"muted":false,"hold":false,"status":"completed","uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Conferences/a811cb2c-9e5a-415d-a951-701f8e884fb5/Participants/7a520324-684d-435c-87c2-ea7975f371d0.json"}]}'}
+    headers: {}
+    status: {code: 200, message: OK}
+version: 1

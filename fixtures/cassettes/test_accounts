@@ -1,0 +1,17 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept: [application/json]
+      Accept-Charset: [utf-8]
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+    method: GET
+    uri: https://myaccount.signalwire.com/2010-04-01/Accounts/signalwire-account-123.json
+  response:
+    body: {string: '{"sid":"signalwire-account-123","friendly_name":"LAML
+        testing","status":"active","auth_token":"redacted","date_created":"Mon, 20
+        Aug 2018 12:54:10 +0000","date_updated":"Mon, 20 Aug 2018 12:54:10 +0000","type":"Full","uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123","subresource_uris":{"addresses":null,"available_phone_numbers":"/api/laml/2010-04-01/Accounts/signalwire-account-123/AvailablePhoneNumbers","applications":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Applications","authorized_connect_apps":null,"calls":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Calls","conferences":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Conferences","connect_apps":null,"incoming_phone_numbers":"/api/laml/2010-04-01/Accounts/signalwire-account-123/IncomingPhoneNumbers","keys":null,"notifications":null,"outgoing_caller_ids":null,"queues":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Queues","recordings":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Recordings","sandbox":null,"signing_keys":null,"sip":null,"short_codes":null,"messages":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Messages","transcriptions":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Transcriptions","usage":null}}'}
+    headers: {}
+    status: {code: 200, message: OK}
+version: 1

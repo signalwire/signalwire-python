@@ -1,0 +1,14 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept: [application/json]
+      Accept-Charset: [utf-8]
+      Accept-Encoding: ['gzip, deflate']
+    method: GET
+    uri: https://myaccount.signalwire.com/2010-04-01/Accounts/signalwire-account-123/Faxes/831455c6-574e-4d8b-b6ee-2418140bf4cd
+  response:
+    body: {string: '{"account_sid":"29bba2d4-ddf1-4569-8b4a-5914440a5e13","api_version":"v1","date_created":"2019-01-04T16:28:33Z","date_updated":"2019-01-04T16:29:20Z","direction":"outbound","from":"+15556677888","media_url":"https://s3.us-east-2.amazonaws.com/signalwire-assets/faxes/20190104162834-831455c6-574e-4d8b-b6ee-2418140bf4cd.tiff","media_sid":"aff0684c-3445-49bc-802b-3a0a488139f5","num_pages":1,"price":0.0105,"price_unit":"USD","quality":"fine","sid":"831455c6-574e-4d8b-b6ee-2418140bf4cd","status":"delivered","to":"+15556677999","duration":41,"links":{"media":"/api/laml/2010-04-01/Accounts/29bba2d4-ddf1-4569-8b4a-5914440a5e13/Faxes/831455c6-574e-4d8b-b6ee-2418140bf4cd/Media"},"url":"/api/laml/2010-04-01/Accounts/29bba2d4-ddf1-4569-8b4a-5914440a5e13/Faxes/831455c6-574e-4d8b-b6ee-2418140bf4cd"}'}
+    headers: {}
+    status: {code: 200, message: OK}
+version: 1

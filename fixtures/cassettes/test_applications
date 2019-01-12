@@ -1,0 +1,17 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept: [application/json]
+      Accept-Charset: [utf-8]
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+    method: GET
+    uri: https://myaccount.signalwire.com/2010-04-01/Accounts/signalwire-account-123/Applications.json
+  response:
+    body: {string: '{"uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Applications?Page=0\u0026PageSize=50","first_page_uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Applications?Page=0\u0026PageSize=50","next_page_uri":null,"previous_page_uri":null,"page":0,"page_size":50,"applications":[{"sid":"34f49a97-a863-4a11-8fef-bc399c6f0928","date_created":"Wed,
+        19 Dec 2018 14:23:36 +0000","date_updated":"Wed, 19 Dec 2018 14:23:36 +0000","account_sid":"signalwire-account-123","friendly_name":"Test
+        App","voice_url":"","voice_method":"POST","voice_fallback_url":"","voice_fallback_method":"POST","status_callback":"","status_callback_method":"POST","voice_caller_id_lookup":null,"sms_url":"","sms_method":"POST","sms_fallback_url":"","sms_fallback_method":"POST","sms_status_callback":"","sms_status_callback_method":"POST","api_version":"2010-04-01","uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Calls/34f49a97-a863-4a11-8fef-bc399c6f0928"}]}'}
+    headers: {}
+    status: {code: 200, message: OK}
+version: 1

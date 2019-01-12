@@ -1,0 +1,18 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept: [application/json]
+      Accept-Charset: [utf-8]
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+    method: GET
+    uri: https://myaccount.signalwire.com/2010-04-01/Accounts/signalwire-account-123/Transcriptions.json
+  response:
+    body: {string: '{"uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Transcriptions?Page=0\u0026PageSize=50","first_page_uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Transcriptions?Page=0\u0026PageSize=50","next_page_uri":null,"previous_page_uri":null,"page":0,"page_size":50,"transcriptions":[{"sid":"425e8224-c4b0-4725-ab2c-ec9d41adbbe9","api_version":"2010-04-01","account_sid":"signalwire-account-123","recording_sid":"e4c78e17-c0e2-441d-b5dd-39a6dad496f8","date_created":"Wed,
+        19 Dec 2018 16:28:16 +0000","date_updated":"Wed, 19 Dec 2018 16:30:04 +0000","duration":14,"price":0.0,"price_unit":"USD","status":"completed","transcription_text":"Hello.
+        Hello? Hello? Hello? Hello? Hello? Recording. Recording, Recording, Recording,
+        recording. Hang up. Hello?","uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Transcriptions/425e8224-c4b0-4725-ab2c-ec9d41adbbe9.json"}]}'}
+    headers: {}
+    status: {code: 200, message: OK}
+version: 1

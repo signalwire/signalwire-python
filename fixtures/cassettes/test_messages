@@ -1,0 +1,20 @@
+interactions:
+- request:
+    body: To=%2B14044754849&From=%2B18990000001&Body=Hello+World%21
+    headers:
+      Accept: [application/json]
+      Accept-Charset: [utf-8]
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+      Content-Length: ['57']
+      Content-Type: [application/x-www-form-urlencoded]
+    method: POST
+    uri: https://myaccount.signalwire.com/2010-04-01/Accounts/signalwire-account-123/Messages.json
+  response:
+    body: {string: '{"account_sid":"signalwire-account-123","api_version":"2010-04-01","body":"Hello
+        World!","num_segments":1,"num_media":0,"date_created":"Wed, 19 Dec 2018 16:06:46
+        +0000","date_sent":null,"date_updated":"Wed, 19 Dec 2018 16:06:46 +0000","direction":"outbound-api","error_code":"21601","error_message":"Phone
+        number is not a SMS-capable phone number.","from":"+18990000001","price":null,"price_unit":"USD","sid":"cbad786b-fdcd-4d2a-bcb2-fff9df045008","status":"failed","to":"+14044754849","uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Messages/cbad786b-fdcd-4d2a-bcb2-fff9df045008","subresource_uris":{"media":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Messages/cbad786b-fdcd-4d2a-bcb2-fff9df045008/Media"},"messaging_service_sid":null}'}
+    headers: {}
+    status: {code: 201, message: Created}
+version: 1

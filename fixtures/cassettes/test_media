@@ -1,0 +1,15 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept: [application/json]
+      Accept-Charset: [utf-8]
+      Accept-Encoding: ['gzip, deflate']
+    method: GET
+    uri: https://myaccount.signalwire.com/2010-04-01/Accounts/signalwire-account-123/Messages/0da01046-5cca-462f-bc50-adae4e1307e1/Media.json
+  response:
+    body: {string: '{"uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Messages/0da01046-5cca-462f-bc50-adae4e1307e1/Media?Page=0\u0026PageSize=50","first_page_uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Messages/0da01046-5cca-462f-bc50-adae4e1307e1/Media?Page=0\u0026PageSize=50","next_page_uri":null,"previous_page_uri":null,"page":0,"page_size":50,"media_list":[{"sid":"a1ee4484-99a4-4996-b7df-fd3ceef2e9ec","date_created":"Wed,
+        19 Dec 2018 16:23:50 +0000","date_updated":"Wed, 19 Dec 2018 16:23:50 +0000","account_sid":"signalwire-account-123","parent_sid":"0da01046-5cca-462f-bc50-adae4e1307e1","content_type":"image/png","uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Messages/0da01046-5cca-462f-bc50-adae4e1307e1/Media/a1ee4484-99a4-4996-b7df-fd3ceef2e9ec.json"}]}'}
+    headers: {}
+    status: {code: 200, message: OK}
+version: 1

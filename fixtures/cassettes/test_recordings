@@ -1,0 +1,17 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept: [application/json]
+      Accept-Charset: [utf-8]
+      Accept-Encoding: ['gzip, deflate']
+      Connection: [keep-alive]
+    method: GET
+    uri: https://myaccount.signalwire.com/2010-04-01/Accounts/signalwire-account-123/Recordings.json
+  response:
+    body: {string: '{"uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Recordings?Page=0\u0026PageSize=50","first_page_uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Recordings?Page=0\u0026PageSize=50","next_page_uri":null,"previous_page_uri":null,"page":0,"page_size":50,"recordings":[{"sid":"e4c78e17-c0e2-441d-b5dd-39a6dad496f8","api_version":"2010-04-01","channel":"1","account_sid":"signalwire-account-123","call_sid":"d411976d-d319-4fbd-923c-57c62b6f677a","conference_sid":null,"date_created":"Wed,
+        19 Dec 2018 16:28:16 +0000","date_updated":"Wed, 19 Dec 2018 16:28:16 +0000","duration":14,"start_time":"Wed,
+        19 Dec 2018 16:27:56 +0000","end_time":"Wed, 19 Dec 2018 16:28:16 +0000","error_code":null,"price":0.0,"price_unit":"USD","source":"RecordVerb","status":"completed","uri":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Calls/d411976d-d319-4fbd-923c-57c62b6f677a/Recordings/e4c78e17-c0e2-441d-b5dd-39a6dad496f8.json","subresource_uris":{"transcriptions":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Recordings/e4c78e17-c0e2-441d-b5dd-39a6dad496f8/Transcriptions.json"}}]}'}
+    headers: {}
+    status: {code: 200, message: OK}
+version: 1
