@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='signalwire',
-      version='1.3',
+      version='1.4.0',
       description='Provides SignalWire LAML and REST functionality',
       url='https://github.com/signalwire/signalwire-python',
       author='SignalWire Team',
