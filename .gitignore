@@ -49,3 +49,5 @@ venv*
 *.egg-info
 Dockerfile.dev
 tmp
+*.pyc
+

@@ -1,7 +1,10 @@
+try:
+  from urllib.parse import urlparse, ParseResult
+except ImportError:
+  from urlparse import urlparse, ParseResult
 from twilio.rest import Client as TwilioClient
 from twilio.rest.api import Api as TwilioApi
 from twilio.base.exceptions import TwilioRestException
-from urllib.parse import urlparse, ParseResult
 from twilio.base import deserialize
 
 from twilio.rest.api.v2010.account.application import ApplicationInstance
