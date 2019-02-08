@@ -11,7 +11,7 @@ interactions:
     method: POST
     uri: https://myaccount.signalwire.com/2010-04-01/Accounts/signalwire-account-123/Faxes
   response:
-    body: {string: '{"account_sid":"29bba2d4-ddf1-4569-8b4a-5914440a5e13","api_version":"v1","date_created":"2019-01-07T16:51:22Z","date_updated":"2019-01-07T16:51:22Z","direction":"outbound","from":"+14043287382","media_url":null,"media_sid":"ceab8d12-359b-4c0c-86fc-75e5d500a1c0","num_pages":null,"price":null,"price_unit":"USD","quality":"fine","sid":"dd3e1ac4-50c9-4241-933a-5d4e9a2baf31","status":"queued","to":"+14043287360","duration":0,"links":{"media":"/api/laml/2010-04-01/Accounts/29bba2d4-ddf1-4569-8b4a-5914440a5e13/Faxes/dd3e1ac4-50c9-4241-933a-5d4e9a2baf31/Media"},"url":"/api/laml/2010-04-01/Accounts/29bba2d4-ddf1-4569-8b4a-5914440a5e13/Faxes/dd3e1ac4-50c9-4241-933a-5d4e9a2baf31"}'}
+    body: {string: '{"account_sid":"signalwire-account-123","api_version":"v1","date_created":"2019-01-07T16:51:22Z","date_updated":"2019-01-07T16:51:22Z","direction":"outbound","from":"+14043287382","media_url":null,"media_sid":"ceab8d12-359b-4c0c-86fc-75e5d500a1c0","num_pages":null,"price":null,"price_unit":"USD","quality":"fine","sid":"dd3e1ac4-50c9-4241-933a-5d4e9a2baf31","status":"queued","to":"+14043287360","duration":0,"links":{"media":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Faxes/dd3e1ac4-50c9-4241-933a-5d4e9a2baf31/Media"},"url":"/api/laml/2010-04-01/Accounts/signalwire-account-123/Faxes/dd3e1ac4-50c9-4241-933a-5d4e9a2baf31"}'}
     headers: {}
     status: {code: 201, message: Created}
 version: 1
