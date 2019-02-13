@@ -1,0 +1,12 @@
+kind: pipeline
+name: default
+
+steps:
+- name: test
+  image: python:3.7-alpine
+  commands:
+  - pip install -r requirements.txt
+  - python setup.py test
+
+trigger:
+  event: push

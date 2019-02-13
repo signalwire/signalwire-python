@@ -2,6 +2,10 @@
 
 This package wraps the Twilio SDK for use with Signalwire.
 
+[![PyPI version](https://badge.fury.io/py/signalwire.svg)](https://badge.fury.io/py/signalwire)
+
+![Drone CI](https://ci.signalwire.com/api/badges/signalwire/signalwire-python/status.svg)
+
 ## Installation
 
 `pip install signalwire`
