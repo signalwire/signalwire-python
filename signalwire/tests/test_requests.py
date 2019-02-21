@@ -112,3 +112,13 @@ def test_fetch_fax(client):
   fax = client.fax.faxes('831455c6-574e-4d8b-b6ee-2418140bf4cd').fetch()
   assert(fax.to == '+15556677999')
   assert(fax.media_url == 'https://s3.us-east-2.amazonaws.com/signalwire-assets/faxes/20190104162834-831455c6-574e-4d8b-b6ee-2418140bf4cd.tiff')
+
+@my_vcr.use_cassette()
+def test_fetch_fax_media(client):
+  media = client.fax.faxes('831455c6-574e-4d8b-b6ee-2418140bf4cd').media.list()
+  assert(media[0].sid == 'aff0684c-3445-49bc-802b-3a0a488139f5')
+
+@my_vcr.use_cassette()
+def test_fetch_fax_media_instance(client):
+  media = client.fax.faxes('831455c6-574e-4d8b-b6ee-2418140bf4cd').media('aff0684c-3445-49bc-802b-3a0a488139f5').fetch()
+  assert(media.url == '/api/laml/2010-04-01/Accounts/signalwire-account-123/Faxes/831455c6-574e-4d8b-b6ee-2418140bf4cd/Media/aff0684c-3445-49bc-802b-3a0a488139f5.json')
