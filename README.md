@@ -12,6 +12,12 @@ This package wraps the Twilio SDK for use with Signalwire.
 
 ## Usage
 
+You can find documentation on the [SignalWire website](https://docs.signalwire.com/topics/laml-api/?python#laml-rest-api).
+
+Before you use this library, you will need to create a space on SignalWire.
+
+You can then provide your SignalWire Space URL either via the constructor or by setting the `SIGNALWIRE_SPACE_URL` environment library.
+
 ### Make a call
 
 ```

@@ -22,6 +22,7 @@ from twilio.rest.fax.v1 import V1 as TwilioV1
 
 import sys
 from six import u
+import os
 
 def patched_str(self):
     """ Try to pretty-print the exception, if this is going on screen. """
@@ -324,7 +325,10 @@ def patched_fax_v1_init(self, domain):
 
 class Client(TwilioClient):
   def __init__(self, *args, **kwargs):
-    signalwire_space_url = kwargs.pop('signalwire_space_url', "api.signalwire.com")
+    if 'signalwire_space_url' in kwargs:
+      signalwire_space_url = kwargs.pop('signalwire_space_url', "api.signalwire.com")
+    else:
+      signalwire_space_url = os.environ['SIGNALWIRE_SPACE_URL']
 
     p = urlparse(signalwire_space_url, 'http')
     netloc = p.netloc or p.path
