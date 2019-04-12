@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.5.0
+
+- Allow initialization via ENV variable
+
 ## 1.4.2
 
 - Importing LaML subclasses
