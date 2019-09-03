@@ -11,4 +11,5 @@ setup(name='signalwire',
       install_requires=[
           'twilio==6.16.4',
       ],
+      python_requires='>=3',
       zip_safe=False)

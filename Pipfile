@@ -12,4 +12,3 @@ vcrpy = "*"
 twilio = "==6.16.4"
 
 [requires]
-python_version = "3.7"
