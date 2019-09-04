@@ -10,5 +10,6 @@ vcrpy = "*"
 
 [packages]
 twilio = "==6.16.4"
+signalwire = {editable = true,path = "."}
 
 [requires]

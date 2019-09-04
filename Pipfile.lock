@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "4d0d7e961b9b348cd0fad50e8f4c88bafcef679f790354495998298506e8faa0"
+            "sha256": "305def946fe2676d0585023cc781dcd637f590a3b1db60845766f7c2d42c6de5"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -65,6 +65,10 @@
             ],
             "markers": "python_version >= '3.0'",
             "version": "==2.22.0"
+        },
+        "signalwire": {
+            "editable": true,
+            "path": "."
         },
         "six": {
             "hashes": [
