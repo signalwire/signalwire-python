@@ -11,7 +11,5 @@ setup(name='signalwire',
       install_requires=[
           'twilio==6.16.4',
       ],
-      setup_requires=['pytest-runner'],
-      tests_require=['pytest','vcrpy'],
+      python_requires='>=3',
       zip_safe=False)
-
