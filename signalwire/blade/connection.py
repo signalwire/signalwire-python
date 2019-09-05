@@ -40,8 +40,7 @@ class Connection:
 
     async def send(self, message):
         if self.ws_client is not None:
-            message_json = message.to_json()
-            logging.debug("SEND: " + message_json)
-            await self.ws_client.send_str(message_json)
+            logging.debug("SEND: " + message.to_json(indent=2))
+            await self.ws_client.send_str(message.to_json())
         else:
             print('ws_client not ready!')
