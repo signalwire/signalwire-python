@@ -15,7 +15,7 @@ class Message:
             self.result = kwargs.pop('result')
 
     def to_json(self):
-        return json.dumps(self.__dict__, separators=(',', ':'))
+        return json.dumps(self.__dict__, separators=(',', ':'), indent = 2)
 
     @classmethod
     def from_json(cls, json_str):

@@ -3,6 +3,8 @@ import signal
 import aiohttp
 from signalwire.blade.messages.message import Message
 from signalwire.blade.messages.connect import Connect
+import logging
+import json
 
 class Connection:
     def __init__(self, client):
@@ -13,19 +15,19 @@ class Connection:
     async def connect(self):
         async with aiohttp.ClientSession() as session:
             async with session.ws_connect(self.host) as ws:
-                print('WS OPENED!')
+                logging.info('WS OPENED!')
                 self.ws_client = ws
                 await self.client.on_socket_open()
                 async for msg in ws:
-                    print(msg.data)
+                    logging.debug("RECV: " + msg.data)
                     if msg.type == aiohttp.WSMsgType.TEXT:
                         inbound = Message.from_json(msg.data)
                         # print(inbound)
                     elif msg.type == aiohttp.WSMsgType.CLOSED:
-                        print('WebSocket Closed!')
+                        logging.info('WebSocket Closed!')
                         break
                     elif msg.type == aiohttp.WSMsgType.ERROR:
-                        print('WebSocket Error!')
+                        logging.info('WebSocket Error!')
                         break
 
     async def close(self):
@@ -33,6 +35,8 @@ class Connection:
 
     async def send(self, message):
         if self.ws_client is not None:
-            await self.ws_client.send_str(message.to_json())
+            message_json = message.to_json()
+            logging.debug("SEND: " + message_json)
+            await self.ws_client.send_str(message_json)
         else:
             print('ws_client not ready!')
