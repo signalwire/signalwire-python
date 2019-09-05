@@ -6,8 +6,9 @@ from signalwire.blade.messages.connect import Connect
 import logging
 
 class Client:
-    def __init__(self, project, token):
+    def __init__(self, project, token, **kwargs):
         self.loop = asyncio.get_event_loop()
+        self.host = kwargs.pop('host', 'relay.swire.io')
         self.project = project
         self.token = token
         self.connection = None

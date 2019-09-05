@@ -5,12 +5,17 @@ from signalwire.blade.messages.message import Message
 from signalwire.blade.messages.connect import Connect
 import logging
 import json
+import re
 
 class Connection:
     def __init__(self, client):
         self.client = client
-        self.host = 'wss://relay.swire.io'
+        self.host = self._checkHost(client.host)
         self.ws_client = None
+
+    def _checkHost(self, host):
+        protocol = '' if re.match(r"^(ws|wss):\/\/", host) else 'wss://'
+        return protocol + host
 
     async def connect(self):
         async with aiohttp.ClientSession() as session:
