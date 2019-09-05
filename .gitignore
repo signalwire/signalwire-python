@@ -50,4 +50,4 @@ venv*
 Dockerfile.dev
 tmp
 *.pyc
-
+.vscode
