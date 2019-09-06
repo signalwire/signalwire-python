@@ -3,11 +3,12 @@ import signal
 import aiohttp
 from signalwire.blade.connection import Connection
 from signalwire.blade.messages.connect import Connect
-import logging
+import logging, time
 
 class Client:
-    def __init__(self, project, token):
+    def __init__(self, project, token, **kwargs):
       self.loop = asyncio.get_event_loop()
+      self.host = kwargs.pop('host', 'relay.swire.io')
       self.project = project
       self.token = token
       self.connection = None
@@ -17,10 +18,18 @@ class Client:
       logging.basicConfig(level=logging.DEBUG)
 
     def connect(self):
-      self.connection = Connection(self)
-      self.loop.run_until_complete(self.connection.connect())
-      logging.info('Connection closed..')
-      self.connected = True
+      try:
+        self.connection = Connection(self)
+        self.loop.run_until_complete(self.connection.connect())
+        logging.info('Connection closed..')
+        self.connected = False
+
+        if self.reconnect == True: 
+          self.reconnect_loop()
+      except aiohttp.client_exceptions.ClientConnectorError:
+        logging.warn("Host seems down")
+        self.reconnect = True
+        self.reconnect_loop()
 
     async def disconnect(self):
       self.connected = False
@@ -56,3 +65,13 @@ class Client:
 
     def execute(self, message):
       pass
+
+    def reconnect_loop(self):
+      logging.info('Reconnection')
+      print(self.connected)
+      print(self.reconnect)
+      if self.connected == False and self.reconnect == True:
+        time.sleep(5)
+        self.connect()
+
+
