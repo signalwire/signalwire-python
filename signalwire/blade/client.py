@@ -1,77 +1,67 @@
 import asyncio
+import logging
 import signal
 import aiohttp
 from signalwire.blade.connection import Connection
 from signalwire.blade.messages.connect import Connect
-import logging, time
 
 class Client:
-    def __init__(self, project, token, host='relay.swire.io'):
-      self.loop = asyncio.get_event_loop()
-      self.host = host
-      self.project = project
-      self.token = token
-      self.connection = None
-      self.attach_signals()
-      self.connected = False
-      self.reconnect = False
-      logging.basicConfig(level=logging.DEBUG)
+  def __init__(self, project, token, host='relay.swire.io'):
+    self.loop = asyncio.get_event_loop()
+    self.host = host
+    self.project = project
+    self.token = token
+    self.attach_signals()
+    self.connection = Connection(self)
+    self._reconnect = False
+    logging.basicConfig(level=logging.DEBUG)
 
-    def connect(self):
+  @property
+  def connected(self):
+    return isinstance(self.connection, Connection) and self.connection.connected
+
+  def execute(self, message):
+    pass
+
+  def connect(self):
+    self._reconnect = True
+    self.loop.run_until_complete(self._connect())
+
+  async def _connect(self):
+    sleep = False
+    while True:
+      if self._reconnect == False:
+        break
       try:
-        self.connection = Connection(self)
-        self.loop.run_until_complete(self.connection.connect())
+        if sleep == True:
+          await asyncio.sleep(5)
+        await self.connection.connect()
         logging.info('Connection closed..')
-        self.connected = False
-
-        if self.reconnect == True: 
-          self.reconnect_loop()
       except aiohttp.client_exceptions.ClientConnectorError:
-        logging.warn("Host seems down")
-        self.reconnect = True
-        self.reconnect_loop()
+        logging.warn(f"{self.host} seems down..")
+      sleep = True
 
-    async def disconnect(self):
-      self.connected = False
-      self.reconnect = False
-      logging.info('Disconnect from socket...')
-      await self.connection.close()
+  async def disconnect(self):
+    logging.info('Disconnection..')
+    # TODO: handle idle state here
+    self._reconnect = False
+    await self.connection.close()
+    await self.cancel_pending_tasks()
+    logging.info(f"Bye bye!")
+    self.loop.stop()
 
-    def attach_signals(self):
-      for s in (signal.SIGHUP, signal.SIGTERM, signal.SIGINT):
-        self.loop.add_signal_handler(s, lambda s=s: asyncio.create_task(self.shutdown(s)))
+  async def cancel_pending_tasks(self):
+    tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+    logging.info(f"Cancelling {len(tasks)} outstanding tasks..")
+    [task.cancel() for task in tasks]
+    await asyncio.gather(*tasks)
 
-    async def shutdown(self, signal):
-      logging.info(f"Received exit signal {signal.name}")
-      await self.disconnect()
-      tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-      logging.info(f"Cancelling {len(tasks)} outstanding tasks..")
-      [task.cancel() for task in tasks]
-      await asyncio.gather(*tasks)
-      logging.info(f"Bye bye!")
-      self.loop.stop()
+  def attach_signals(self):
+    for s in (signal.SIGHUP, signal.SIGTERM, signal.SIGINT):
+      self.loop.add_signal_handler(s, lambda: asyncio.create_task(self.disconnect()))
 
-    async def on_socket_open(self):
-      logging.info('Connection is open.')
-      self.connected = True
-      self.reconnect = True
-      connect = Connect(project=self.project, token=self.token)
-      await self.connection.send(connect)
-
-    def on_socket_close(self, task):
-      logging.info('Socket closed?')
-      print(task.exception())
-      pass
-
-    def execute(self, message):
-      pass
-
-    def reconnect_loop(self):
-      logging.info('Reconnection')
-      print(self.connected)
-      print(self.reconnect)
-      if self.connected == False and self.reconnect == True:
-        time.sleep(5)
-        self.connect()
-
-
+  async def on_socket_open(self):
+    logging.info('Connection is open..')
+    self._reconnect = True # FIXME: move this after
+    connect = Connect(project=self.project, token=self.token)
+    await self.connection.send(connect)
