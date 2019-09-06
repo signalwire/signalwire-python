@@ -41,22 +41,9 @@ class TestBladeMessages(TestCase):
     self.assertEqual(msg.method, 'blade.connect')
     self.assertEqual(msg.params['authentication']['project'], 'project')
     self.assertEqual(msg.params['authentication']['token'], 'token')
-    self.assertEqual(msg.to_json(), '{"method":"blade.connect","jsonrpc":"2.0","id":"mocked","params":{"version":{"major":2,"minor":4,"revision":0},"authentication":{"project":"project","token":"token"}}}')
+    self.assertEqual(msg.to_json(), '{{"method":"blade.connect","jsonrpc":"2.0","id":"mocked","params":{{"version":{{"major":{0},"minor":{1},"revision":{2}}},"authentication":{{"project":"project","token":"token"}}}}}}'.format(Connect.MAJOR, Connect.MINOR, Connect.REVISION))
 
   def test_connect_kwargs(self):
     msg = Connect(token='token', project='project')
     msg.id = 'mocked'
-    self.assertEqual(msg.to_json(), '{"method":"blade.connect","jsonrpc":"2.0","id":"mocked","params":{"version":{"major":2,"minor":4,"revision":0},"authentication":{"project":"project","token":"token"}}}')
-
-  # def test_api_url_scheme(self):
-  #   from signalwire.rest import Client as signalwire_client
-  #   client = signalwire_client('account', 'token', signalwire_space_url = 'https://myname.signalwire.com')
-
-  #   self.assertEqual(client.api.base_url, 'https://myname.signalwire.com')
-
-  # def test_api_url_environnment(self):
-  #   from signalwire.rest import Client as signalwire_client
-  #   os.environ['SIGNALWIRE_SPACE_URL'] = 'myname.signalwire.com'
-  #   client = signalwire_client('account', 'token')
-
-  #   self.assertEqual(client.api.base_url, 'https://myname.signalwire.com')
+    self.assertEqual(msg.to_json(), '{{"method":"blade.connect","jsonrpc":"2.0","id":"mocked","params":{{"version":{{"major":{0},"minor":{1},"revision":{2}}},"authentication":{{"project":"project","token":"token"}}}}}}'.format(Connect.MAJOR, Connect.MINOR, Connect.REVISION))

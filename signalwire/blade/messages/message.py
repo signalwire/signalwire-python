@@ -14,8 +14,8 @@ class Message:
         if 'result' in kwargs:
             self.result = kwargs.pop('result')
 
-    def to_json(self):
-        return json.dumps(self.__dict__, separators=(',', ':'), indent = 2)
+    def to_json(self, **kwargs):
+        return json.dumps(self.__dict__, separators=(',', ':'), **kwargs)
 
     @classmethod
     def from_json(cls, json_str):
