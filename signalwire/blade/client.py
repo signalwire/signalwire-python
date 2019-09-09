@@ -13,7 +13,7 @@ class Client:
     self.token = token
     self.attach_signals()
     self.connection = Connection(self)
-    self._reconnect = False
+    self._reconnect = True
     logging.basicConfig(level=logging.DEBUG)
 
   @property
@@ -29,9 +29,7 @@ class Client:
 
   async def _connect(self):
     sleep = False
-    while True:
-      if self._reconnect == False:
-        break
+    while self._reconnect:
       try:
         if sleep == True:
           await asyncio.sleep(5)
@@ -62,6 +60,5 @@ class Client:
 
   async def on_socket_open(self):
     logging.info('Connection is open..')
-    self._reconnect = True # FIXME: move this after
     connect = Connect(project=self.project, token=self.token)
     await self.connection.send(connect)
