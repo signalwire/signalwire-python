@@ -32,7 +32,8 @@ class Client:
 
   def connect(self):
     self._reconnect = True
-    self.loop.run_until_complete(self._connect())
+    self.loop.create_task(self._connect())
+    self.loop.run_forever()
 
   async def _connect(self):
     sleep = False
@@ -69,7 +70,7 @@ class Client:
     tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
     logging.info(f"Cancelling {len(tasks)} outstanding tasks..")
     [task.cancel() for task in tasks]
-    await asyncio.gather(*tasks)
+    await asyncio.gather(*tasks, return_exceptions=True)
 
   def attach_signals(self):
     for s in (signal.SIGHUP, signal.SIGTERM, signal.SIGINT):
