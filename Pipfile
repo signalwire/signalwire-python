@@ -7,8 +7,12 @@ verify_ssl = true
 pytest-runner = "*"
 pytest = "*"
 vcrpy = "*"
+pylint = "*"
 
 [packages]
 twilio = "==6.16.4"
+signalwire = {editable = true,path = "."}
+aiohttp = "*"
+asyncio = "*"
 
 [requires]
