@@ -2,8 +2,10 @@ import asyncio
 import logging
 import signal
 import aiohttp
+from uuid import uuid4
 from signalwire.blade.connection import Connection
 from signalwire.blade.messages.connect import Connect
+from signalwire.blade.handler import register, unregister, trigger
 from .helpers import setup_protocol
 
 class Client:
@@ -14,6 +16,7 @@ class Client:
     self.token = token
     self.attach_signals()
     self.connection = Connection(self)
+    self.uuid = str(uuid4())
     self._reconnect = True
     self.session_id = None
     self.signature = None
@@ -54,6 +57,14 @@ class Client:
     logging.info(f"Bye bye!")
     self.loop.stop()
 
+  def on(self, event, callback):
+    register(event, callback, self.uuid)
+    return self
+
+  def off(self, event, callback=None):
+    unregister(event, callback, self.uuid)
+    return self
+
   async def cancel_pending_tasks(self):
     tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
     logging.info(f"Cancelling {len(tasks)} outstanding tasks..")
@@ -72,6 +83,15 @@ class Client:
       self.signature = result['authorization']['signature']
       self.protocol = await setup_protocol(self)
       logging.info(self.protocol)
+      trigger('ready', self, self.uuid)
     except Exception as error:
       logging.error('Auth error: {0}'.format(str(error)))
       pass
+
+  def on_socket_message(self, message):
+    if message.method == 'blade.netcast':
+      pass
+    elif message.method == 'blade.broadcast':
+      logging.info('- - - - - relay broadcast')
+      logging.info(message.params)
+      logging.info('- - - - - relay broadcast')

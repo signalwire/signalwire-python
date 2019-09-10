@@ -1,8 +1,5 @@
-import asyncio
-import signal
 from aiohttp import WSMsgType, ClientSession, ClientWebSocketResponse
 import logging
-import json
 import re
 from signalwire.blade.messages.message import Message
 
@@ -30,21 +27,20 @@ class Connection(ClientSession):
     self._requests[uuid].set_exception(Exception(error['message']))
 
   def message_handler(self, msg):
-    if msg.id in self._requests:
-      if hasattr(msg, 'error'):
-        self.set_exception(msg.id, msg.error)
-      elif hasattr(msg, 'result'):
-        try:
-          if msg.result['result']['code'] == '200':
-            self.set_result(msg.id, msg.result)
-          else:
-            self.set_exception(msg.id, msg.result['result'])
-        except KeyError: # not a Relay with "result.result.code"
+    if msg.id not in self._requests:
+      return self.client.on_socket_message(msg)
+
+    if hasattr(msg, 'error'):
+      self.set_exception(msg.id, msg.error)
+    elif hasattr(msg, 'result'):
+      try:
+        if msg.result['result']['code'] == '200':
           self.set_result(msg.id, msg.result)
-    else:
-      # TODO: dispatch inbound message to the client
-      logging.info('Inbound msg:')
-      print(msg)
+        else:
+          self.set_exception(msg.id, msg.result['result'])
+      except KeyError: # not a Relay with "result.result.code"
+        self.set_result(msg.id, msg.result)
+
 
   async def connect(self):
     logging.debug('Connecting to: {0}'.format(self.host))
