@@ -2,6 +2,7 @@ from unittest import TestCase
 from unittest.mock import patch
 from signalwire.blade.messages.message import Message
 from signalwire.blade.messages.connect import Connect
+from signalwire.blade.messages.execute import Execute
 
 class TestBladeMessages(TestCase):
   def test_from_json_with_result(self):
@@ -47,3 +48,16 @@ class TestBladeMessages(TestCase):
     msg = Connect(token='token', project='project')
     msg.id = 'mocked'
     self.assertEqual(msg.to_json(), '{{"method":"blade.connect","jsonrpc":"2.0","id":"mocked","params":{{"version":{{"major":{0},"minor":{1},"revision":{2}}},"authentication":{{"project":"project","token":"token"}}}}}}'.format(Connect.MAJOR, Connect.MINOR, Connect.REVISION))
+
+  def test_execute(self):
+    msg = Execute({
+      'protocol': 'proto',
+      'method': 'py.test',
+      'params': {
+        'nested': True
+      }
+    })
+    msg.id = 'mocked'
+
+    self.assertEqual(msg.method, 'blade.execute')
+    self.assertEqual(msg.to_json(), '{"method":"blade.execute","jsonrpc":"2.0","id":"mocked","params":{"protocol":"proto","method":"py.test","params":{"nested":true}}}')
