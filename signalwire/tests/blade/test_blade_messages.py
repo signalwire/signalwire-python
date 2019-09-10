@@ -3,6 +3,7 @@ from unittest.mock import patch
 from signalwire.blade.messages.message import Message
 from signalwire.blade.messages.connect import Connect
 from signalwire.blade.messages.execute import Execute
+from signalwire.blade.messages.subscription import Subscription
 
 class TestBladeMessages(TestCase):
   def test_from_json_with_result(self):
@@ -61,3 +62,14 @@ class TestBladeMessages(TestCase):
 
     self.assertEqual(msg.method, 'blade.execute')
     self.assertEqual(msg.to_json(), '{"method":"blade.execute","jsonrpc":"2.0","id":"mocked","params":{"protocol":"proto","method":"py.test","params":{"nested":true}}}')
+
+  def test_subscription(self):
+    msg = Subscription({
+      'protocol': 'proto',
+      'command': 'add',
+      'channels': ['notif']
+    })
+    msg.id = 'mocked'
+
+    self.assertEqual(msg.method, 'blade.subscription')
+    self.assertEqual(msg.to_json(), '{"method":"blade.subscription","jsonrpc":"2.0","id":"mocked","params":{"protocol":"proto","command":"add","channels":["notif"]}}')
