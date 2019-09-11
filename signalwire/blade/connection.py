@@ -3,9 +3,9 @@ import logging
 import re
 from signalwire.blade.messages.message import Message
 
-class Connection(ClientSession):
-  def __init__(self, client):
-    super().__init__()
+class Connection:
+  def __init__(self, client, session=ClientSession()):
+    self._session = session
     self.client = client
     self.host = self._checkHost(client.host)
     self.ws = None
@@ -44,7 +44,7 @@ class Connection(ClientSession):
 
   async def connect(self):
     logging.debug('Connecting to: {0}'.format(self.host))
-    self.ws = await self.ws_connect(self.host)
+    self.ws = await self._session.ws_connect(self.host)
 
   async def read(self):
     async for msg in self.ws:
