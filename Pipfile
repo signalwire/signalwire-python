@@ -8,6 +8,7 @@ pytest-runner = "*"
 pytest = "*"
 vcrpy = "*"
 pylint = "*"
+pytest-aiohttp = "*"
 
 [packages]
 twilio = "==6.16.4"
