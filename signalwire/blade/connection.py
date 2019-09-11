@@ -4,8 +4,8 @@ import re
 from signalwire.blade.messages.message import Message
 
 class Connection:
-  def __init__(self, client, session=ClientSession()):
-    self._session = session
+  def __init__(self, client, session=ClientSession):
+    self._session = session()
     self.client = client
     self.host = self._checkHost(client.host)
     self.ws = None
