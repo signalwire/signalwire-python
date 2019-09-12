@@ -9,6 +9,8 @@ pytest = "*"
 vcrpy = "*"
 pylint = "*"
 pytest-aiohttp = "*"
+pytest-asyncio = "*"
+asynctest = "*"
 
 [packages]
 twilio = "==6.16.4"

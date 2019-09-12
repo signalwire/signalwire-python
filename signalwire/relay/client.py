@@ -79,6 +79,7 @@ class Client:
   async def on_socket_open(self):
     logging.info('Connection successful!')
     try:
+      print(self.connection.send)
       result = await self.connection.send(Connect(project=self.project, token=self.token))
       self.session_id = result['sessionid']
       self.signature = result['authorization']['signature']
@@ -87,7 +88,6 @@ class Client:
       trigger('ready', self, self.uuid)
     except Exception as error:
       logging.error('Auth error: {0}'.format(str(error)))
-      pass
 
   def on_socket_message(self, message):
     if message.method == 'blade.netcast':
