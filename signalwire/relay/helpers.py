@@ -8,12 +8,12 @@ async def setup_protocol(client):
     'method': 'setup',
     'params': {}
   })
-  response = await client.connection.send(setup_message)
+  response = await client.execute(setup_message)
   protocol = response['result']['protocol']
   subscribe_message = Subscription({
     'command': 'add',
     'protocol': protocol,
     'channels': ['notifications']
   })
-  response = await client.connection.send(subscribe_message)
+  response = await client.execute(subscribe_message)
   return protocol
