@@ -9,49 +9,55 @@ from signalwire.blade.handler import register, unregister, trigger
 from .helpers import setup_protocol
 
 class Client:
-  def __init__(self, project, token, host='relay.swire.io'):
+  def __init__(self, project, token, host='relay.swire.io', connection=Connection):
     self.loop = asyncio.get_event_loop()
     self.host = host
     self.project = project
     self.token = token
     self.attach_signals()
-    self.connection = Connection(self)
+    self.connection = connection(self)
     self.uuid = str(uuid4())
     self._reconnect = True
     self.session_id = None
     self.signature = None
     self.protocol = None
+    self._requests = {}
     logging.basicConfig(level=logging.DEBUG)
 
   @property
   def connected(self):
-    return isinstance(self.connection, Connection) and self.connection.connected
+    return self.connection.connected
 
-  def execute(self, message):
-    pass
+  async def execute(self, message):
+    logging.debug('We are on execute:')
+    if self.connected == False:
+      # TODO: put message in a queue and process it later.
+      logging.error('Client is not connected!')
+      return False
+    self._requests[message.id] = self.loop.create_future()
+    await self.connection.send(message)
+    return await self._requests[message.id]
 
   def connect(self):
-    self._reconnect = True
-    self.loop.create_task(self._connect())
-    self.loop.run_forever()
-
-  async def _connect(self):
+    # FIXME: make this sleep logic better
     sleep = False
     while self._reconnect:
       try:
-        if sleep == True:
-          await asyncio.sleep(5)
-        await self.connection.connect()
-        asyncio.create_task(self.on_socket_open())
-        await self.connection.read()
+        self.loop.run_until_complete(self._connect(sleep))
         logging.info('Connection closed..')
       except aiohttp.client_exceptions.ClientConnectorError:
         logging.warn(f"{self.host} seems down..")
       sleep = True
 
+  async def _connect(self, sleep=False):
+    if sleep == True:
+      await asyncio.sleep(5)
+    await self.connection.connect()
+    asyncio.create_task(self.on_socket_open())
+    await self.connection.read()
+
   async def disconnect(self):
     logging.info('Disconnection..')
-    # TODO: handle idle state here
     self._reconnect = False
     await self.connection.close()
     await self.cancel_pending_tasks()
@@ -79,8 +85,7 @@ class Client:
   async def on_socket_open(self):
     logging.info('Connection successful!')
     try:
-      print(self.connection.send)
-      result = await self.connection.send(Connect(project=self.project, token=self.token))
+      result = await self.execute(Connect(project=self.project, token=self.token))
       self.session_id = result['sessionid']
       self.signature = result['authorization']['signature']
       self.protocol = await setup_protocol(self)
@@ -89,7 +94,29 @@ class Client:
     except Exception as error:
       logging.error('Auth error: {0}'.format(str(error)))
 
-  def on_socket_message(self, message):
+  def message_handler(self, msg):
+    if msg.id not in self._requests:
+      return self._on_socket_message(msg)
+
+    if hasattr(msg, 'error'):
+      self._set_exception(msg.id, msg.error)
+    elif hasattr(msg, 'result'):
+      try:
+        if msg.result['result']['code'] == '200':
+          self._set_result(msg.id, msg.result)
+        else:
+          self._set_exception(msg.id, msg.result['result'])
+      except KeyError: # not a Relay with "result.result.code"
+        self._set_result(msg.id, msg.result)
+
+  def _set_result(self, uuid, result):
+    self._requests[uuid].set_result(result)
+
+  def _set_exception(self, uuid, error):
+    # TODO: replace with a custom exception
+    self._requests[uuid].set_exception(Exception(error['message']))
+
+  def _on_socket_message(self, message):
     if message.method == 'blade.netcast':
       pass
     elif message.method == 'blade.broadcast':
