@@ -3,7 +3,7 @@ from signalwire.relay.client import Client
 
 def ready(client):
   print('Client ready!')
-  print(client)
+  print(client.calling)
   pass
 
 def main():

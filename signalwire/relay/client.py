@@ -7,6 +7,7 @@ from signalwire.blade.connection import Connection
 from signalwire.blade.messages.connect import Connect
 from signalwire.blade.handler import register, unregister, trigger
 from .helpers import setup_protocol
+from .calling import Calling
 
 class Client:
   def __init__(self, project, token, host='relay.swire.io', connection=Connection):
@@ -22,12 +23,19 @@ class Client:
     self.signature = None
     self.protocol = None
     self.contexts = []
+    self._calling = None
     self._requests = {}
     logging.basicConfig(level=logging.DEBUG)
 
   @property
   def connected(self):
     return self.connection.connected
+
+  @property
+  def calling(self):
+    if self._calling is None:
+      self._calling = Calling(self)
+    return self._calling
 
   async def execute(self, message):
     logging.debug('We are on execute:')
