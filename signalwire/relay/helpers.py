@@ -1,8 +1,10 @@
+import logging
 from signalwire.blade.messages.execute import Execute
 from signalwire.blade.messages.subscription import Subscription
 
+# TODO: move protocols/methods to a constants file
+
 async def setup_protocol(client):
-  # move proto/method to a constants file
   setup_message = Execute({
     'protocol': 'signalwire',
     'method': 'setup',
@@ -17,3 +19,15 @@ async def setup_protocol(client):
   })
   response = await client.execute(subscribe_message)
   return protocol
+
+async def receive_contexts(client, contexts):
+  message = Execute({
+    'protocol': client.protocol,
+    'method': 'signalwire.receive',
+    'params': {
+      'contexts': contexts
+    }
+  })
+  response = await client.execute(message)
+  logging.info(response['result']['message'])
+  return response['result']

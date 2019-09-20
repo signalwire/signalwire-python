@@ -89,10 +89,10 @@ class Client:
       self.session_id = result['sessionid']
       self.signature = result['authorization']['signature']
       self.protocol = await setup_protocol(self)
-      logging.info(self.protocol)
       trigger('ready', self, self.uuid)
     except Exception as error:
-      logging.error('Auth error: {0}'.format(str(error)))
+      logging.error('Client setup error: {0}'.format(str(error)))
+      await self.connection.close()
 
   def message_handler(self, msg):
     if msg.id not in self._requests:
