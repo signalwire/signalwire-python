@@ -39,22 +39,21 @@ class Client:
     return await self._requests[message.id]
 
   def connect(self):
-    # FIXME: make this sleep logic better
-    sleep = False
     while self._reconnect:
-      try:
-        self.loop.run_until_complete(self._connect(sleep))
-        logging.info('Connection closed..')
-      except aiohttp.client_exceptions.ClientConnectorError:
-        logging.warn(f"{self.host} seems down..")
-      sleep = True
+      self.loop.run_until_complete(self._connect())
 
-  async def _connect(self, sleep=False):
-    if sleep == True:
+  async def _connect(self):
+    try:
+      await self.connection.connect()
+      asyncio.create_task(self.on_socket_open())
+      await self.connection.read()
+    except aiohttp.client_exceptions.ClientConnectorError:
+      logging.warn(f"{self.host} seems down..")
+    try:
+      logging.info('Connection closed..')
       await asyncio.sleep(5)
-    await self.connection.connect()
-    asyncio.create_task(self.on_socket_open())
-    await self.connection.read()
+    except asyncio.CancelledError:
+      pass
 
   async def disconnect(self):
     logging.info('Disconnection..')
