@@ -33,4 +33,29 @@ async def test_receive_contexts():
   assert msg.params.pop('protocol') == 'signalwire-proto-test'
   assert msg.params.pop('method') == 'signalwire.receive'
   assert msg.params.pop('params') == {'contexts': ['default']}
+  assert client.contexts == ['default']
+  client.execute.mock.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_receive_contexts_already_present():
+  client = Client(project='project', token='token', connection=MockedConnection)
+  client.contexts = ['already_there']
+  client.execute = AsyncMock()
+  await receive_contexts(client, ['already_there'])
+  assert client.contexts == ['already_there']
+  client.execute.mock.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_receive_contexts_with_mixed_contexts():
+  client = Client(project='project', token='token', connection=MockedConnection)
+  client.protocol = 'signalwire-proto-test'
+  client.contexts = ['already_there']
+  response = json.loads('{"requester_nodeid":"uuid","responder_nodeid":"uuid","result":{"code":"200","message":"Receiving all inbound related to the requested relay contexts and available scopes"}}')
+  client.execute = AsyncMock(return_value=response)
+  await receive_contexts(client, ['another_one'])
+
+  msg = client.execute.mock.call_args[0][0]
+  assert msg.params.pop('params') == {'contexts': ['another_one']}
+  assert client.contexts == ['already_there', 'another_one']
   client.execute.mock.assert_called_once()

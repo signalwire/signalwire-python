@@ -21,6 +21,7 @@ class Client:
     self.session_id = None
     self.signature = None
     self.protocol = None
+    self.contexts = []
     self._requests = {}
     logging.basicConfig(level=logging.DEBUG)
 

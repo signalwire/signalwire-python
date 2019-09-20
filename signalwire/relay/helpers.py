@@ -21,6 +21,9 @@ async def setup_protocol(client):
   return protocol
 
 async def receive_contexts(client, contexts):
+  contexts = list(set(contexts) - set(client.contexts))
+  if len(contexts) == 0:
+    return True
   message = Execute({
     'protocol': client.protocol,
     'method': 'signalwire.receive',
@@ -30,4 +33,5 @@ async def receive_contexts(client, contexts):
   })
   response = await client.execute(message)
   logging.info(response['result']['message'])
+  client.contexts = list(set(client.contexts + contexts))
   return response['result']
