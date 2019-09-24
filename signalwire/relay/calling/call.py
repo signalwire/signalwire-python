@@ -1,5 +1,6 @@
 from uuid import uuid4
-from .enums import CallState
+from .constants import CallState
+from .components import Dial, Hangup, Answer
 
 class Call:
 
@@ -36,7 +37,7 @@ class Call:
 
   @property
   def answered(self):
-    return self.state == CallState.ANSWERED.value
+    return self.state == CallState.ANSWERED
 
   @property
   def active(self):
@@ -44,10 +45,11 @@ class Call:
 
   @property
   def ended(self):
-    return self.state == CallState.ENDING.value or self.state == CallState.ENDED.value
+    return self.state == CallState.ENDING or self.state == CallState.ENDED
 
   async def dial(self):
-    pass
+    component = Dial(self)
+    await component.wait_for(CallState.ANSWERED, CallState.ENDING, CallState.ENDED)
 
   async def hangup(self):
     pass

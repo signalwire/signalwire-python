@@ -1,10 +1,9 @@
-from enum import Enum
-
-class Method(Enum):
+class Method:
   BEGIN = 'calling.begin'
   ANSWER = 'calling.answer'
+  END = 'calling.end'
 
-class Notification(Enum):
+class Notification:
   STATE = 'calling.call.state'
   CONNECT = 'calling.call.connect'
   RECORD = 'calling.call.record'
@@ -16,7 +15,7 @@ class Notification(Enum):
   TAP = 'calling.call.tap'
   SENDDIGITS = 'calling.call.send_digits'
 
-class CallState(Enum):
+class CallState:
   NONE = 'none'
   CREATED = 'created'
   RINGING = 'ringing'
