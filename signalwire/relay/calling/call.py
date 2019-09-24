@@ -1,8 +1,7 @@
 from uuid import uuid4
+from .enums import CallState
 
 class Call:
-
-  # TODO: use constants file!
 
   def __init__(self, *, calling, **kwargs):
     self.calling = calling
@@ -37,7 +36,7 @@ class Call:
 
   @property
   def answered(self):
-    return self.state == 'answered'
+    return self.state == CallState.ANSWERED.value
 
   @property
   def active(self):
@@ -45,7 +44,7 @@ class Call:
 
   @property
   def ended(self):
-    return self.state == 'ending' or self.state == 'ended'
+    return self.state == CallState.ENDING.value or self.state == CallState.ENDED.value
 
   async def dial(self):
     pass
