@@ -8,6 +8,7 @@ from signalwire.blade.messages.connect import Connect
 from signalwire.blade.handler import register, unregister, trigger
 from .helpers import setup_protocol
 from .calling import Calling
+from .message_handler import handle_inbound_message
 
 class Client:
   def __init__(self, project, token, host='relay.swire.io', connection=Connection):
@@ -38,7 +39,6 @@ class Client:
     return self._calling
 
   async def execute(self, message):
-    logging.debug('We are on execute:')
     if self.connected == False:
       # TODO: put message in a queue and process it later.
       logging.error('Client is not connected!')
@@ -104,7 +104,7 @@ class Client:
 
   def message_handler(self, msg):
     if msg.id not in self._requests:
-      return self._on_socket_message(msg)
+      return handle_inbound_message(self, msg)
 
     if hasattr(msg, 'error'):
       self._set_exception(msg.id, msg.error)
@@ -123,11 +123,3 @@ class Client:
   def _set_exception(self, uuid, error):
     # TODO: replace with a custom exception
     self._requests[uuid].set_exception(Exception(error['message']))
-
-  def _on_socket_message(self, message):
-    if message.method == 'blade.netcast':
-      pass
-    elif message.method == 'blade.broadcast':
-      logging.info('- - - - - relay broadcast')
-      logging.info(message.params)
-      logging.info('- - - - - relay broadcast')
