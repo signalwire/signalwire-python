@@ -1,19 +1,73 @@
 import logging
 from signalwire.relay import BaseRelay
+from .call import Call
 
 class Calling(BaseRelay):
+  def __init__(self, client):
+    super().__init__(client)
+    self.calls = []
+
   @property
   def service(self):
     return 'calling'
 
   def notification_handler(self, notification):
-    logging.info('Handle calling notification')
-    logging.info(notification)
+    notification['params']['event_type'] = notification['event_type']
+    if notification['event_type'] == 'calling.call.state':
+      self._on_state(notification['params'])
+    elif notification['event_type'] == 'calling.call.receive':
+      self._on_receive(notification['params'])
 
   def new_call(self, *, type='phone', from_number, to_number, timeout=None):
-    logging.info(f'Make {type} call from: {from_number} to: {to_number} - timeout: {timeout}')
-    # TODO:
+    call = Call(calling=self)
+    call.from_number = from_number
+    call.to_number = to_number
+    call.timeout = timeout
+    return call
 
-  def dial(self, *, type='phone', from_number, to_number, timeout=None):
-    logging.info(f'Make {type} call from: {from_number} to: {to_number} - timeout: {timeout}')
-    # TODO:
+  async def dial(self, *, type='phone', from_number, to_number, timeout=None):
+    call = Call(calling=self)
+    call.from_number = from_number
+    call.to_number = to_number
+    call.timeout = timeout
+    return await call.dial()
+
+  def add_call(self, call):
+    self.calls.append(call)
+
+  def remove_call(self, call):
+    try:
+      self.calls.remove(call)
+    except ValueError:
+      logging.warn('Call to remove not found')
+
+  def _get_call_by_id(self, call_id):
+    for call in self.calls:
+      if call.id == call_id:
+        return call
+    return None
+
+  def _get_call_by_tag(self, tag):
+    for call in self.calls:
+      if call.tag == tag:
+        return call
+    return None
+
+  def _on_state(self, params):
+    call = self._get_call_by_id(params['call_id'])
+    tag = params.get('tag', None)
+    if call is None and tag is not None:
+      call = self._get_call_by_tag(tag)
+
+    if call is not None:
+      if call.id is None:
+        call.id = params['call_id']
+        call.node_id = params['node_id']
+      call._stateChange(params)
+    elif 'call_id' in params and 'peer' in params:
+      call = Call(calling=self, **params)
+    else:
+      logging.error('Unknown call {0}'.format(params['call_id']))
+
+  def _on_receive(self, params):
+    logging.info('Handle receiving call...')
