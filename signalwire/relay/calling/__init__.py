@@ -65,7 +65,8 @@ class Calling(BaseRelay):
         call.node_id = params['node_id']
       call._stateChange(params)
     elif 'call_id' in params and 'peer' in params:
-      call = Call(calling=self, **params)
+      pass
+      # call = Call(calling=self, **params)
     else:
       logging.error('Unknown call {0}'.format(params['call_id']))
 

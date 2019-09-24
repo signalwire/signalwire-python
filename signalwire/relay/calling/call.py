@@ -1,9 +1,13 @@
 from uuid import uuid4
 from .constants import CallState
-from .components import Dial, Hangup, Answer
+from .components.dial import Dial
+from .components.hangup import Hangup
+from .components.answer import Answer
+from .results.dial_result import DialResult
+from .results.hangup_result import HangupResult
+from .results.answer_result import AnswerResult
 
 class Call:
-
   def __init__(self, *, calling, **kwargs):
     self.calling = calling
     self.tag = str(uuid4())
@@ -50,9 +54,14 @@ class Call:
   async def dial(self):
     component = Dial(self)
     await component.wait_for(CallState.ANSWERED, CallState.ENDING, CallState.ENDED)
+    return DialResult(component)
 
-  async def hangup(self):
-    pass
+  async def hangup(self, reason: str = 'hangup'):
+    component = Hangup(self, reason)
+    await component.wait_for(CallState.ENDED)
+    return HangupResult(component)
 
   async def answer(self):
-    pass
+    component = Answer(self)
+    await component.wait_for(CallState.ANSWERED, CallState.ENDING, CallState.ENDED)
+    return AnswerResult(component)
