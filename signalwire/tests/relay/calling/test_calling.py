@@ -39,3 +39,22 @@ async def test_on_receive(relay_calling):
   assert call.from_number == '+12029999999'
   assert call.to_number == '+12028888888'
   handler.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_on_state_created(relay_calling):
+  call = Call(calling=relay_calling)
+  assert call.id is None
+  message = Message.from_json('{"jsonrpc":"2.0","id":"uuid","method":"blade.broadcast","params":{"broadcaster_nodeid":"uuid","protocol":"signalwire-proto-test","channel":"notifications","event":"queuing.relay.events","params":{"event_type":"calling.call.state","event_channel":"signalwire-proto-test","timestamp":1569517309.4546909,"project_id":"project-uuid","space_id":"space-uuid","params":{"call_state":"created","direction":"outbound","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12028888888"}},"call_id":"call-id","node_id":"node-id","tag":"'+call.tag+'"}}}}')
+  relay_calling.client.message_handler(message)
+
+  assert call.state == 'created'
+  assert call.id == 'call-id'
+  assert call.node_id == 'node-id'
+
+@pytest.mark.asyncio
+async def test_on_state_ringing(relay_calling):
+  call = Call(calling=relay_calling)
+  call.id = 'call-id'
+  message = Message.from_json('{"jsonrpc":"2.0","id":"uuid","method":"blade.broadcast","params":{"broadcaster_nodeid":"uuid","protocol":"signalwire-proto-test","channel":"notifications","event":"queuing.relay.events","params":{"event_type":"calling.call.state","event_channel":"signalwire-proto-test","timestamp":1569517309.4546909,"project_id":"project-uuid","space_id":"space-uuid","params":{"call_state":"ringing","direction":"outbound","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12028888888"}},"call_id":"call-id","node_id":"node-id","tag":"'+call.tag+'"}}}}')
+  relay_calling.client.message_handler(message)
+  assert call.state == 'ringing'
