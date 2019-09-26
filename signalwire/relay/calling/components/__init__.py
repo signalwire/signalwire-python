@@ -4,6 +4,7 @@ from abc import ABC, abstractmethod, abstractproperty
 from uuid import uuid4
 from signalwire.blade.handler import register, unregister
 from signalwire.blade.messages.execute import Execute
+from ..constants import CallState
 
 class BaseComponent(ABC):
   def __init__(self, call):
@@ -35,9 +36,13 @@ class BaseComponent(ABC):
 
   def register(self):
     register(self.event_type, self.notification_handler, self.control_id)
+    check_id = self.call.id if self.call.id else self.call.tag
+    register(check_id, self.terminate, CallState.ENDED)
 
   def unregister(self):
     unregister(self.event_type, self.notification_handler, self.control_id)
+    unregister(self.call.id, self.terminate, CallState.ENDED)
+    unregister(self.call.tag, self.terminate, CallState.ENDED)
 
   async def execute(self):
     if self.call.ended == True:
