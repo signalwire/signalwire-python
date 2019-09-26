@@ -2,15 +2,14 @@ import json
 import pytest
 from signalwire.tests import MockedConnection, AsyncMock
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def relay_client():
   from signalwire.relay.client import Client
   return Client(project='project', token='token', connection=MockedConnection)
 
-@pytest.fixture(scope='module')
+@pytest.fixture(scope='function')
 def relay_calling(relay_client):
-  from signalwire.relay.calling import Calling
   relay_client.protocol = 'signalwire-proto-test'
   response = json.loads('{"requester_nodeid":"uuid","responder_nodeid":"uuid","result":{"code":"200","message":"Receiving all inbound related to the requested relay contexts and available scopes"}}')
   relay_client.execute = AsyncMock(return_value=response)
-  return Calling(relay_client)
+  return relay_client.calling

@@ -20,15 +20,17 @@ class Calling(BaseRelay):
     elif notification['event_type'] == Notification.RECEIVE:
       self._on_receive(notification['params'])
 
-  def new_call(self, *, type='phone', from_number, to_number, timeout=None):
+  def new_call(self, *, call_type='phone', from_number, to_number, timeout=None):
     call = Call(calling=self)
+    call.call_type = call_type
     call.from_number = from_number
     call.to_number = to_number
     call.timeout = timeout
     return call
 
-  async def dial(self, *, type='phone', from_number, to_number, timeout=None):
+  async def dial(self, *, call_type='phone', from_number, to_number, timeout=None):
     call = Call(calling=self)
+    call.call_type = call_type
     call.from_number = from_number
     call.to_number = to_number
     call.timeout = timeout
