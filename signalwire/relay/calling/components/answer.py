@@ -32,4 +32,4 @@ class Answer(BaseComponent):
       self.successful = True
       # self.event = None # TODO: set Even
       if self.has_future():
-        self._future.set_result()
+        self._future.set_result(True)

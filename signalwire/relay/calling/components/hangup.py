@@ -36,4 +36,4 @@ class Hangup(BaseComponent):
       if 'end_reason' in params:
         self.reason = params['end_reason']
       if self.has_future():
-        self._future.set_result()
+        self._future.set_result(True)

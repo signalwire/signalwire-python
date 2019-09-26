@@ -32,4 +32,4 @@ class Dial(BaseComponent):
       self.successful = self.state == CallState.ANSWERED
       # self.event = None # TODO: set Event
       if self.has_future():
-        self._future.set_result()
+        self._future.set_result(True)
