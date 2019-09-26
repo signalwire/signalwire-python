@@ -57,5 +57,6 @@ async def test_receive_contexts_with_mixed_contexts():
 
   msg = client.execute.mock.call_args[0][0]
   assert msg.params.pop('params') == {'contexts': ['another_one']}
+  client.contexts.sort()
   assert client.contexts == ['already_there', 'another_one']
   client.execute.mock.assert_called_once()
