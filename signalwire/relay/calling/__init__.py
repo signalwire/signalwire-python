@@ -1,6 +1,8 @@
 import logging
+from signalwire.blade.handler import trigger
 from signalwire.relay import BaseRelay
 from .call import Call
+from .constants import Notification
 
 class Calling(BaseRelay):
   def __init__(self, client):
@@ -13,9 +15,9 @@ class Calling(BaseRelay):
 
   def notification_handler(self, notification):
     notification['params']['event_type'] = notification['event_type']
-    if notification['event_type'] == 'calling.call.state':
+    if notification['event_type'] == Notification.STATE:
       self._on_state(notification['params'])
-    elif notification['event_type'] == 'calling.call.receive':
+    elif notification['event_type'] == Notification.RECEIVE:
       self._on_receive(notification['params'])
 
   def new_call(self, *, type='phone', from_number, to_number, timeout=None):
@@ -71,4 +73,5 @@ class Calling(BaseRelay):
       logging.error('Unknown call {0}'.format(params['call_id']))
 
   def _on_receive(self, params):
-    logging.info('Handle receiving call...')
+    call = Call(calling=self, **params)
+    trigger(self.client.protocol, call, self.ctx_receive_unique(call.context))
