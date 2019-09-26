@@ -65,10 +65,10 @@ class Calling(BaseRelay):
       if call.id is None:
         call.id = params['call_id']
         call.node_id = params['node_id']
-      call._stateChange(params)
+      call._state_changed(params)
+      trigger(Notification.STATE, params, call.tag)
     elif 'call_id' in params and 'peer' in params:
-      pass
-      # call = Call(calling=self, **params)
+      call = Call(calling=self, **params)
     else:
       logging.error('Unknown call {0}'.format(params['call_id']))
 

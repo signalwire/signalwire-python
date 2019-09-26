@@ -22,3 +22,7 @@ class CallState:
   ANSWERED = 'answered'
   ENDING = 'ending'
   ENDED = 'ended'
+
+class DisconnectReason:
+  ERROR = 'error'
+  BUSY = 'busy'

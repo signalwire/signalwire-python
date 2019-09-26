@@ -1,5 +1,5 @@
 from uuid import uuid4
-from .constants import CallState
+from .constants import CallState, DisconnectReason
 from .components.dial import Dial
 from .components.hangup import Hangup
 from .components.answer import Answer
@@ -19,7 +19,7 @@ class Call:
       self.from_number = kwargs['device']['params'].get('from_number', None)
       self.to_number = kwargs['device']['params'].get('to_number', None)
       self.timeout = kwargs['device']['params'].get('timeout', None)
-    self.prevState = None
+    self.prev_state = None
     self.state = kwargs.get('call_state', None)
     self.peer = None
     self.failed = False
@@ -65,3 +65,13 @@ class Call:
     component = Answer(self)
     await component.wait_for(CallState.ANSWERED, CallState.ENDING, CallState.ENDED)
     return AnswerResult(component)
+
+  def _state_changed(self, params):
+    self.prev_state = self.state
+    self.state = params['call_state']
+    if self.state == CallState.ENDED:
+      # TODO: terminate components
+      end_reason = params.get('end_reason', '')
+      self.failed = end_reason == DisconnectReason.ERROR
+      self.busy = end_reason == DisconnectReason.BUSY
+      self.calling.remove_call(self)

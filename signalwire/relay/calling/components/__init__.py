@@ -50,9 +50,10 @@ class BaseComponent(ABC):
     })
     try:
       self.register()
-      self._execute_result = await self.call._execute(msg)
+      self._execute_result = await self.call.calling.client.execute(msg)
       return self._execute_result
-    except Exception:
+    except Exception as error:
+      logging.error('Relay command failed: {0}'.format(str(error)))
       self.terminate()
 
   async def wait_for(self, *events):
