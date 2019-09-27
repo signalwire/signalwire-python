@@ -1,3 +1,5 @@
+import asyncio
+
 GLOBAL = 'GLOBAL'
 _queue = {}
 
@@ -43,7 +45,10 @@ def trigger(event, data, unique_id = GLOBAL):
     return False
   event = build_event_name(event, unique_id)
   for callback in _queue[event]:
-    callback(data)
+    if asyncio.iscoroutinefunction(callback):
+      asyncio.create_task(callback(data))
+    else:
+      callback(data)
   return True
 
 def is_queued(event, unique_id = GLOBAL):
