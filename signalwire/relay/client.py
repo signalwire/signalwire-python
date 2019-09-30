@@ -8,6 +8,7 @@ from signalwire.blade.messages.connect import Connect
 from signalwire.blade.handler import register, unregister, trigger
 from .helpers import setup_protocol
 from .calling import Calling
+from .tasking import Tasking
 from .message_handler import handle_inbound_message
 
 class Client:
@@ -25,6 +26,7 @@ class Client:
     self.protocol = None
     self.contexts = []
     self._calling = None
+    self._tasking = None
     self._requests = {}
     logging.basicConfig(level=logging.DEBUG)
 
@@ -37,6 +39,12 @@ class Client:
     if self._calling is None:
       self._calling = Calling(self)
     return self._calling
+
+  @property
+  def tasking(self):
+    if self._tasking is None:
+      self._tasking = Tasking(self)
+    return self._tasking
 
   async def execute(self, message):
     if self.connected == False:
