@@ -9,7 +9,7 @@ class CustomConsumer(Consumer):
     self.contexts = ['office', 'home']
 
   async def ready(self):
-    result = await self.client.calling.dial(from_number='+12075699736', to_number='+12044000543')
+    result = await self.client.calling.dial(from_number='+1xxx', to_number='+1yyy')
     if result.successful:
       logging.info('Call answered')
 
