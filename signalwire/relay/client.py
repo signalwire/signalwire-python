@@ -9,9 +9,10 @@ from signalwire.blade.handler import register, unregister, trigger
 from .helpers import setup_protocol
 from .calling import Calling
 from .message_handler import handle_inbound_message
+from .constants import Constants
 
 class Client:
-  def __init__(self, project, token, host='relay.swire.io', connection=Connection):
+  def __init__(self, project, token, host=Constants.HOST, connection=Connection):
     self.loop = asyncio.get_event_loop()
     self.host = host
     self.project = project
