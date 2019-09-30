@@ -3,9 +3,10 @@ from base64 import b64encode
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError
+from .constants import Constants
 
 class Task:
-  def __init__(self, project, token, host='relay.swire.io'):
+  def __init__(self, project, token, host=Constants.HOST):
     self.project = project
     self.token = token
     self.host = host
