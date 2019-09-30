@@ -6,7 +6,6 @@ class CustomConsumer(Consumer):
   def setup(self):
     self.project = os.getenv('PROJECT', '')
     self.token = os.getenv('TOKEN', '')
-    self.host = 'relay.swire.io'
     self.contexts = ['office', 'home']
 
   async def ready(self):
@@ -21,6 +20,10 @@ class CustomConsumer(Consumer):
     result = await call.answer()
     if result.successful:
       logging.info('Call answered')
+
+  async def on_task(self, message):
+    logging.info('Handle inbound task')
+    logging.info(message)
 
 consumer = CustomConsumer()
 consumer.run()
