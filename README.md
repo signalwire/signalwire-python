@@ -1,62 +1,36 @@
-# SignalWire Python SDK
+# SignalWire Python
 
-This package wraps the Twilio SDK for use with Signalwire.
 
-[![PyPI version](https://badge.fury.io/py/signalwire.svg)](https://badge.fury.io/py/signalwire)
-
+![PyPI Version](https://img.shields.io/pypi/v/signalwire.svg?color=brightgreen)
 ![Drone CI](https://ci.signalwire.com/api/badges/signalwire/signalwire-python/status.svg)
 
-## Installation
+The Relay SDK for Python enables developers to connect and use SignalWire's Relay APIs within their own Python code. Our Relay SDK allows developers to build or add robust and innovative communication services to their applications.
 
-`pip install signalwire`
+## Getting Started
 
-## Usage
+Read the implementation documentation, guides and API Reference at the official [Relay SDK for Python Documentation](https://docs.signalwire.com/topics/relay-sdk-python) site.
 
-You can find documentation on the [SignalWire website](https://docs.signalwire.com/topics/laml-api/?python#laml-rest-api).
+---
 
-Before you use this library, you will need to create a space on SignalWire.
+## Contributing
 
-You can then provide your SignalWire Space URL either via the constructor or by setting the `SIGNALWIRE_SPACE_URL` environment library.
+Relay SDK for Python is open source and maintained by the SignalWire team, but we are very grateful for [everyone](https://github.com/signalwire/signalwire-python/contributors) who has contributed and assisted so far.
 
-### Make a call
+If you'd like to contribute, feel free to visit our [Slack channel](https://signalwire.community/) and read our developer section to get the code running in your local environment.
 
-```
-from signalwire.rest import Client as signalwire_client
+## Developers
 
-account = "ACXXXXXXXXXXXXXXXXX"
-token = "YYYYYYYYYYYYYYYYYY"
-client = signalwire_client(account, token, signalwire_space_url = 'example.signalwire.com')
+To setup the dev environment follow these steps:
 
-call = client.calls.create(to="+19991231234",
-                           from_="+19991231234",
-                           url="https://cdn.signalwire.com/default-music/playlist.xml",
-                           method="GET")
-print(call.sid)
-```
+1. Fork this repository and clone it.
+2. Create a new branch from `master` for your change.
+3. Make changes!
 
-### Generate a LAML response
+## Versioning
 
-```
-from signalwire.voice_response import VoiceResponse
+Relay SDK for Python follows Semantic Versioning 2.0 as defined at <http://semver.org>.
 
-r = VoiceResponse()
-r.say("Welcome to SignalWire!")
-print(str(r))
-```
+## License
 
-```
-<?xml version="1.0" encoding="utf-8"?>
-<Response><Say>Welcome to SignalWire!</Say></Response>
-```
-
-## Tests
-
-A `Dockerfile` is provided for your testing convenience.
-
-Run `docker run -it $(docker build -q .)` to execute the specs, or `docker run -it $(docker build -q .) sh` to get a shell with the `signalwire` package installed.
-
-## Licensing
-
-This package is licensed under the MIT license.
-
-Copyright (c) 2018 SignalWire Inc. - see LICENSE.md for details.
+Relay SDK for Python is copyright © 2018-2019
+[SignalWire](http://signalwire.com). It is free software, and may be redistributed under the terms specified in the [MIT-LICENSE](https://github.com/signalwire/signalwire-python/blob/master/LICENSE) file.
