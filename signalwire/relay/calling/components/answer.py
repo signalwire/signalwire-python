@@ -1,5 +1,6 @@
 from . import BaseComponent
 from ..constants import Method, Notification, CallState
+from ...event import Event
 
 class Answer(BaseComponent):
   def __init__(self, call):
@@ -30,6 +31,6 @@ class Answer(BaseComponent):
       self.unregister()
       self.completed = True
       self.successful = True
-      # self.event = None # TODO: set Even
+      self.event = Event(self.state, params)
       if self.has_future():
         self._future.set_result(True)

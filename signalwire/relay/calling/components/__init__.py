@@ -5,6 +5,7 @@ from uuid import uuid4
 from signalwire.blade.handler import register, unregister
 from signalwire.blade.messages.execute import Execute
 from ..constants import CallState
+from ...event import Event
 
 class BaseComponent(ABC):
   def __init__(self, call):
@@ -73,7 +74,7 @@ class BaseComponent(ABC):
     self.successful = False
     self.state = 'failed'
     if 'call_state' in params:
-      self.event = None # TODO: set Event
+      self.event = Event(params['call_state'], params)
     if self.has_future():
       self._future.cancel()
 
