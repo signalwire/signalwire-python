@@ -29,7 +29,7 @@ class Client:
     self._calling = None
     self._tasking = None
     self._requests = {}
-    logging.basicConfig(level=logging.DEBUG)
+    logging.basicConfig(level=logging.INFO)
 
   @property
   def connected(self):
