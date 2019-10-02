@@ -28,7 +28,7 @@ async def ready(client):
 def main():
   project = os.getenv('PROJECT', '')
   token = os.getenv('TOKEN', '')
-  client = Client(project=project, token=token, host='relay.swire.io')
+  client = Client(project=project, token=token)
   client.on('ready', ready)
   client.connect()
 

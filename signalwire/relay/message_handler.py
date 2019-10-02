@@ -15,6 +15,6 @@ def _blade_broadcast(client, params):
     # FIXME: at the moment all these events are for calling. In the future we'll change the case
     client.calling.notification_handler(params['params'])
   elif params['event'] == 'queuing.relay.tasks':
-    logging.info('Handle task notification')
+    client.tasking.notification_handler(params['params'])
   elif params['event'] == 'queuing.relay.messaging':
     logging.info('Handle messaging notification')
