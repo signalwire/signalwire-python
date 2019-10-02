@@ -24,6 +24,7 @@ async def receive_contexts(client, contexts):
   contexts = list(set(contexts) - set(client.contexts))
   if len(contexts) == 0:
     return True
+  logging.info(f'Trying to receive contexts: {contexts}')
   message = Execute({
     'protocol': client.protocol,
     'method': 'signalwire.receive',
