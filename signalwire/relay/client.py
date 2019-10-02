@@ -10,7 +10,7 @@ from .helpers import setup_protocol
 from .calling import Calling
 from .tasking import Tasking
 from .message_handler import handle_inbound_message
-from .constants import Constants
+from .constants import Constants, WebSocketEvents
 
 class Client:
   def __init__(self, project, token, host=Constants.HOST, connection=Connection):
@@ -65,7 +65,9 @@ class Client:
       await self.connection.connect()
       asyncio.create_task(self.on_socket_open())
       await self.connection.read()
-    except aiohttp.client_exceptions.ClientConnectorError:
+      trigger(WebSocketEvents.CLOSE, suffix=self.uuid)
+    except aiohttp.client_exceptions.ClientConnectorError as error:
+      trigger(WebSocketEvents.ERROR, error, suffix=self.uuid)
       logging.warn(f"{self.host} seems down..")
     try:
       logging.info('Connection closed..')
@@ -100,19 +102,20 @@ class Client:
       self.loop.add_signal_handler(s, lambda: asyncio.create_task(self.disconnect()))
 
   async def on_socket_open(self):
-    logging.info('Connection successful!')
     try:
+      trigger(WebSocketEvents.OPEN, suffix=self.uuid)
       result = await self.execute(Connect(project=self.project, token=self.token))
       self.session_id = result['sessionid']
       self.signature = result['authorization']['signature']
       self.protocol = await setup_protocol(self)
       logging.info('Client connected!')
-      trigger('ready', self, suffix=self.uuid)
+      trigger(Constants.READY, self, suffix=self.uuid)
     except Exception as error:
       logging.error('Client setup error: {0}'.format(str(error)))
       await self.connection.close()
 
   def message_handler(self, msg):
+    trigger(WebSocketEvents.MESSAGE, msg, suffix=self.uuid)
     if msg.id not in self._requests:
       return handle_inbound_message(self, msg)
 
