@@ -23,6 +23,6 @@ class BaseRelay(ABC):
       logging.info(f'Trying to receive contexts: {contexts}')
       await receive_contexts(self.client, contexts)
       for context in contexts:
-        register(self.client.protocol, handler, self.ctx_receive_unique(context))
+        register(event=self.client.protocol, callback=handler, suffix=self.ctx_receive_unique(context))
     except Exception as error:
       logging.error('receive error: {0}'.format(str(error)))

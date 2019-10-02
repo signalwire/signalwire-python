@@ -82,11 +82,11 @@ class Client:
     self.loop.stop()
 
   def on(self, event, callback):
-    register(event, callback, self.uuid)
+    register(event=event, callback=callback, suffix=self.uuid)
     return self
 
   def off(self, event, callback=None):
-    unregister(event, callback, self.uuid)
+    unregister(event=event, callback=callback, suffix=self.uuid)
     return self
 
   async def cancel_pending_tasks(self):
@@ -106,7 +106,8 @@ class Client:
       self.session_id = result['sessionid']
       self.signature = result['authorization']['signature']
       self.protocol = await setup_protocol(self)
-      trigger('ready', self, self.uuid)
+      logging.info('Client connected!')
+      trigger('ready', self, suffix=self.uuid)
     except Exception as error:
       logging.error('Client setup error: {0}'.format(str(error)))
       await self.connection.close()

@@ -72,7 +72,7 @@ class Call:
     self.state = params['call_state']
     if self.state == CallState.ENDED:
       check_id = self.id if self.id else self.tag
-      trigger(check_id, params, CallState.ENDED) # terminate components
+      trigger(check_id, params, suffix=CallState.ENDED) # terminate components
       end_reason = params.get('end_reason', '')
       self.failed = end_reason == DisconnectReason.ERROR
       self.busy = end_reason == DisconnectReason.BUSY

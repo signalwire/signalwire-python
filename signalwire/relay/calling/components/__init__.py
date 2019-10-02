@@ -35,14 +35,14 @@ class BaseComponent(ABC):
     pass
 
   def register(self):
-    register(self.event_type, self.notification_handler, self.control_id)
+    register(event=self.event_type, callback=self.notification_handler, suffix=self.control_id)
     check_id = self.call.id if self.call.id else self.call.tag
-    register(check_id, self.terminate, CallState.ENDED)
+    register(event=check_id, callback=self.terminate, suffix=CallState.ENDED)
 
   def unregister(self):
-    unregister(self.event_type, self.notification_handler, self.control_id)
-    unregister(self.call.id, self.terminate, CallState.ENDED)
-    unregister(self.call.tag, self.terminate, CallState.ENDED)
+    unregister(event=self.event_type, callback=self.notification_handler, suffix=self.control_id)
+    unregister(event=self.call.id, callback=self.terminate, suffix=CallState.ENDED)
+    unregister(event=self.call.tag, callback=self.terminate, suffix=CallState.ENDED)
 
   async def execute(self):
     if self.call.ended == True:

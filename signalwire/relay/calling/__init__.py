@@ -68,7 +68,7 @@ class Calling(BaseRelay):
         call.id = params['call_id']
         call.node_id = params['node_id']
       call._state_changed(params)
-      trigger(Notification.STATE, params, call.tag) # Notify components listening on State and Tag
+      trigger(Notification.STATE, params, suffix=call.tag) # Notify components listening on State and Tag
     elif 'call_id' in params and 'peer' in params:
       call = Call(calling=self, **params)
     else:
@@ -76,4 +76,4 @@ class Calling(BaseRelay):
 
   def _on_receive(self, params):
     call = Call(calling=self, **params)
-    trigger(self.client.protocol, call, self.ctx_receive_unique(call.context))
+    trigger(self.client.protocol, call, suffix=self.ctx_receive_unique(call.context))
