@@ -11,4 +11,4 @@ class Tasking(BaseRelay):
   def notification_handler(self, notification):
     context = notification['context']
     logging.info(f'Receive task in context: {context}')
-    trigger(self.client.protocol, notification['message'], self.ctx_receive_unique(context))
+    trigger(self.client.protocol, notification['message'], suffix=self.ctx_receive_unique(context))

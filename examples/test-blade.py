@@ -25,11 +25,29 @@ async def ready(client):
   # else:
   #   print('Outbound call failed or not answered')
 
+def socket_open():
+  print('socket_open')
+
+def socket_error(error):
+  print('socket_error')
+  print(error)
+
+def socket_message(msg):
+  print('socket_message')
+  print(msg)
+
+def socket_close():
+  print('socket_close')
+
 def main():
   project = os.getenv('PROJECT', '')
   token = os.getenv('TOKEN', '')
   client = Client(project=project, token=token)
   client.on('ready', ready)
+  client.on('signalwire.socket.open', socket_open)
+  client.on('signalwire.socket.error', socket_error)
+  client.on('signalwire.socket.message', socket_message)
+  client.on('signalwire.socket.close', socket_close)
   client.connect()
 
 main()
