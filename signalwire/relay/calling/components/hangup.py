@@ -1,5 +1,6 @@
 from . import BaseComponent
 from ..constants import Method, Notification, CallState
+from ...event import Event
 
 class Hangup(BaseComponent):
   def __init__(self, call, reason: str):
@@ -32,7 +33,7 @@ class Hangup(BaseComponent):
       self.unregister()
       self.completed = True
       self.successful = self.state == CallState.ENDED
-      # self.event = None # TODO: set Event
+      self.event = Event(self.state, params)
       if 'end_reason' in params:
         self.reason = params['end_reason']
       if self.has_future():
