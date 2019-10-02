@@ -42,7 +42,8 @@ class BaseComponent(ABC):
 
   def unregister(self):
     unregister(event=self.event_type, callback=self.notification_handler, suffix=self.control_id)
-    unregister(event=self.call.id, callback=self.terminate, suffix=CallState.ENDED)
+    if self.call.id:
+      unregister(event=self.call.id, callback=self.terminate, suffix=CallState.ENDED)
     unregister(event=self.call.tag, callback=self.terminate, suffix=CallState.ENDED)
 
   async def execute(self):
