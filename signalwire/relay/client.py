@@ -9,6 +9,7 @@ from signalwire.blade.handler import register, unregister, trigger
 from .helpers import setup_protocol
 from .calling import Calling
 from .tasking import Tasking
+from .messaging import Messaging
 from .message_handler import handle_inbound_message
 from .constants import Constants, WebSocketEvents
 
@@ -28,6 +29,7 @@ class Client:
     self.contexts = []
     self._calling = None
     self._tasking = None
+    self._messaging = None
     self._requests = {}
     self._idle = False
     self._executeQueue = asyncio.Queue()
@@ -48,6 +50,12 @@ class Client:
     if self._tasking is None:
       self._tasking = Tasking(self)
     return self._tasking
+
+  @property
+  def messaging(self):
+    if self._messaging is None:
+      self._messaging = Messaging(self)
+    return self._messaging
 
   async def execute(self, message):
     if message.id not in self._requests:

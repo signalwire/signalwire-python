@@ -18,6 +18,9 @@ class BaseRelay(ABC):
   def ctx_receive_unique(self, context):
     return f"{self.service}.ctx_receive.{context}"
 
+  def ctx_state_unique(self, context):
+    return f"{self.service}.ctx_state.{context}"
+
   async def receive(self, contexts, handler):
     try:
       await receive_contexts(self.client, contexts)
