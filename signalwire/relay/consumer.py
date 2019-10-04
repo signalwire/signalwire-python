@@ -27,6 +27,12 @@ class Consumer:
   def on_task(self, message):
     pass
 
+  def on_incoming_message(self, message):
+    pass
+
+  def on_message_state_change(self, message):
+    pass
+
   def run(self):
     self.setup()
     self.check_requirements()
@@ -53,5 +59,6 @@ class Consumer:
   async def _client_ready(self, client):
     await self.client.calling.receive(self.contexts, self.on_incoming_call)
     await self.client.tasking.receive(self.contexts, self.on_task)
-    logging.warn('Client ready to rock!')
+    await self.client.messaging.receive(self.contexts, self.on_incoming_message)
+    await self.client.messaging.state_change(self.contexts, self.on_message_state_change)
     safe_invoke_callback(self.ready)

@@ -28,3 +28,11 @@ class BaseRelay(ABC):
         register(event=self.client.protocol, callback=handler, suffix=self.ctx_receive_unique(context))
     except Exception as error:
       logging.error('receive error: {0}'.format(str(error)))
+
+  async def state_change(self, contexts, handler):
+    try:
+      await receive_contexts(self.client, contexts)
+      for context in contexts:
+        register(event=self.client.protocol, callback=handler, suffix=self.ctx_state_unique(context))
+    except Exception as error:
+      logging.error('state_change error: {0}'.format(str(error)))
