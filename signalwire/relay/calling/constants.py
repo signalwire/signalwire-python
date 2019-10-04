@@ -2,6 +2,7 @@ class Method:
   BEGIN = 'calling.begin'
   ANSWER = 'calling.answer'
   END = 'calling.end'
+  CONNECT = 'calling.connect'
 
 class Notification:
   STATE = 'calling.call.state'
@@ -22,6 +23,12 @@ class CallState:
   ANSWERED = 'answered'
   ENDING = 'ending'
   ENDED = 'ended'
+
+class ConnectState:
+  DISCONNECTED = 'disconnected'
+  CONNECTING = 'connecting'
+  CONNECTED = 'connected'
+  FAILED = 'failed'
 
 class DisconnectReason:
   ERROR = 'error'

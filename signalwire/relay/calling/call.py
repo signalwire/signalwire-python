@@ -1,12 +1,14 @@
 from uuid import uuid4
 from signalwire.blade.handler import trigger
-from .constants import CallState, DisconnectReason
+from .constants import CallState, DisconnectReason, ConnectState
 from .components.dial import Dial
 from .components.hangup import Hangup
 from .components.answer import Answer
+from .components.connect import Connect
 from .results.dial_result import DialResult
 from .results.hangup_result import HangupResult
 from .results.answer_result import AnswerResult
+from .results.connect_result import ConnectResult
 
 class Call:
   def __init__(self, *, calling, **kwargs):
@@ -66,6 +68,15 @@ class Call:
     component = Answer(self)
     await component.wait_for(CallState.ANSWERED, CallState.ENDING, CallState.ENDED)
     return AnswerResult(component)
+
+  async def connect(self, *args):
+    devices = [] # TODO: reduce args to a list of devices
+    component = Connect(self, devices)
+    await component.wait_for(ConnectState.FAILED, ConnectState.CONNECTED)
+    return ConnectResult(component)
+
+  async def connect_async(self, *args):
+    pass
 
   def _state_changed(self, params):
     self.prev_state = self.state
