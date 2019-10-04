@@ -29,6 +29,8 @@ class Client:
     self._calling = None
     self._tasking = None
     self._requests = {}
+    self._idle = False
+    self._executeQueue = asyncio.Queue()
     logging.basicConfig(level=logging.INFO)
 
   @property
@@ -48,12 +50,14 @@ class Client:
     return self._tasking
 
   async def execute(self, message):
-    if self.connected == False:
-      # TODO: put message in a queue and process it later.
-      logging.error('Client is not connected!')
-      return False
-    self._requests[message.id] = self.loop.create_future()
-    await self.connection.send(message)
+    if message.id not in self._requests:
+      self._requests[message.id] = self.loop.create_future()
+
+    if self._idle == True or self.connected == False:
+      await self._executeQueue.put(message)
+    else:
+      await self.connection.send(message)
+
     return await self._requests[message.id]
 
   def connect(self):
@@ -77,6 +81,7 @@ class Client:
 
   async def disconnect(self):
     logging.info('Disconnection..')
+    self._idle = True
     self._reconnect = False
     await self.connection.close()
     await self.cancel_pending_tasks()
@@ -103,16 +108,25 @@ class Client:
 
   async def on_socket_open(self):
     try:
+      self._idle = False
       trigger(WebSocketEvents.OPEN, suffix=self.uuid)
       result = await self.execute(Connect(project=self.project, token=self.token))
       self.session_id = result['sessionid']
       self.signature = result['authorization']['signature']
       self.protocol = await setup_protocol(self)
+      await self._clearExecuteQueue()
       logging.info('Client connected!')
       trigger(Constants.READY, self, suffix=self.uuid)
     except Exception as error:
       logging.error('Client setup error: {0}'.format(str(error)))
       await self.connection.close()
+
+  async def _clearExecuteQueue(self):
+    while True:
+      if self._executeQueue.empty():
+        break
+      message = self._executeQueue.get_nowait()
+      asyncio.create_task(self.connection.send(message))
 
   def message_handler(self, msg):
     trigger(WebSocketEvents.MESSAGE, msg, suffix=self.uuid)
