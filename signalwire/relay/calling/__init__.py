@@ -67,8 +67,8 @@ class Calling(BaseRelay):
       if call.id is None:
         call.id = params['call_id']
         call.node_id = params['node_id']
-      call._state_changed(params)
       trigger(Notification.STATE, params, suffix=call.tag) # Notify components listening on State and Tag
+      call._state_changed(params)
     elif 'call_id' in params and 'peer' in params:
       call = Call(calling=self, **params)
     else:
