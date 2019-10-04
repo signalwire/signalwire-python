@@ -1,8 +1,10 @@
 import logging
+from signalwire.blade.messages.execute import Execute
 from signalwire.blade.handler import trigger
 from signalwire.relay import BaseRelay
 from .message import Message
-from .constants import Notification
+from .send_result import SendResult
+from .constants import Notification, Method
 
 class Messaging(BaseRelay):
 
@@ -18,11 +20,28 @@ class Messaging(BaseRelay):
     elif notification['event_type'] == Notification.RECEIVE:
       trigger(self.client.protocol, message, suffix=self.ctx_receive_unique(message.context))
 
-  def send(self, *, call_type='phone', from_number, to_number, timeout=None):
-    pass
-    # call = Call(calling=self)
-    # call.call_type = call_type
-    # call.from_number = from_number
-    # call.to_number = to_number
-    # call.timeout = timeout
-    # return call
+  async def send(self, *, from_number, to_number, context, body=None, media=None, tags=None):
+    params = {
+      'from_number': from_number,
+      'to_number': to_number,
+      'context': context
+    }
+    if body:
+      params['body'] = body
+    if media:
+      params['media'] = media
+    if tags:
+      params['tags'] = tags
+
+    message = Execute({
+      'protocol': self.client.protocol,
+      'method': Method.SEND,
+      'params': params
+    })
+    try:
+      response = await self.client.execute(message)
+      logging.info(response['result']['message'])
+      return SendResult(response['result'])
+    except Exception as error:
+      logging.error(f'Messaging send error: {str(error)}')
+      return SendResult()
