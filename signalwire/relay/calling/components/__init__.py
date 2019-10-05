@@ -67,7 +67,10 @@ class BaseComponent(ABC):
     self._events_to_await = events
     self._future = asyncio.get_event_loop().create_future()
     await self.execute()
-    await self._future
+    try:
+      await self._future
+    except asyncio.CancelledError:
+      pass
 
   def terminate(self, params={}):
     self.unregister()
