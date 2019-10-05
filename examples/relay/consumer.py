@@ -9,6 +9,7 @@ class CustomConsumer(Consumer):
     self.contexts = ['office', 'home']
 
   async def ready(self):
+    logging.info('Consumer Ready')
     result = await self.client.calling.dial(from_number='+1xxx', to_number='+1yyy')
     if result.successful:
       logging.info('Call answered')
@@ -23,6 +24,14 @@ class CustomConsumer(Consumer):
 
   async def on_task(self, message):
     logging.info('Handle inbound task')
+    logging.info(message)
+
+  def on_incoming_message(self, message):
+    logging.info('on_incoming_message')
+    logging.info(message)
+
+  def on_message_state_change(self, message):
+    logging.info('on_message_state_change')
     logging.info(message)
 
 consumer = CustomConsumer()

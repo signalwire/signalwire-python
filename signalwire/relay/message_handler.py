@@ -20,4 +20,4 @@ def _blade_broadcast(client, params):
   elif params['event'] == 'queuing.relay.tasks':
     client.tasking.notification_handler(params['params'])
   elif params['event'] == 'queuing.relay.messaging':
-    logging.info('Handle messaging notification')
+    client.messaging.notification_handler(params['params'])
