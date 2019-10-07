@@ -1,6 +1,6 @@
 from uuid import uuid4
 from signalwire.blade.handler import trigger, register, unregister, unregister_all
-from .constants import CallState, DisconnectReason, ConnectState
+from .constants import CallState, DisconnectReason, ConnectState, CallPlayState
 from .components.dial import Dial
 from .components.hangup import Hangup
 from .components.answer import Answer
@@ -10,6 +10,8 @@ from .results.hangup_result import HangupResult
 from .results.answer_result import AnswerResult
 from .results.connect_result import ConnectResult
 from .actions.connect_action import ConnectAction
+from .components.play import Play
+from .results.play_result import PlayResult
 
 class Call:
   def __init__(self, *, calling, **kwargs):
@@ -88,6 +90,17 @@ class Call:
     await component.execute()
     return ConnectAction(component)
 
+  async def play(self, *args):
+    component = Play(self, args)
+    await component.wait_for(CallPlayState.ERROR, CallPlayState.FINISHED)
+    return PlayResult(component)
+
+  async def play_async(self, *args):
+    pass
+    # component = Play(self, args)
+    # await component.execute()
+    # return PlayAction(component)
+
   def _state_changed(self, params):
     self.prev_state = self.state
     self.state = params['call_state']
@@ -104,4 +117,8 @@ class Call:
 
   def _connect_changed(self, params):
     # TODO: dispatch connect events
+    pass
+
+  def _play_changed(self, params):
+    # TODO: dispatch play events
     pass

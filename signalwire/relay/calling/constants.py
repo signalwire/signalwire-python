@@ -3,6 +3,7 @@ class Method:
   ANSWER = 'calling.answer'
   END = 'calling.end'
   CONNECT = 'calling.connect'
+  PLAY = 'calling.play'
 
 class Notification:
   STATE = 'calling.call.state'
@@ -33,3 +34,8 @@ class ConnectState:
 class DisconnectReason:
   ERROR = 'error'
   BUSY = 'busy'
+
+class CallPlayState:
+  PLAYING = 'playing'
+  ERROR = 'error'
+  FINISHED = 'finished'
