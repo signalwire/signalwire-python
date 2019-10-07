@@ -9,6 +9,7 @@ from .results.dial_result import DialResult
 from .results.hangup_result import HangupResult
 from .results.answer_result import AnswerResult
 from .results.connect_result import ConnectResult
+from .actions.connect_action import ConnectAction
 
 class Call:
   def __init__(self, *, calling, **kwargs):
@@ -75,7 +76,9 @@ class Call:
     return ConnectResult(component)
 
   async def connect_async(self, *args):
-    pass
+    component = Connect(self, args)
+    await component.execute()
+    return ConnectAction(component)
 
   def _state_changed(self, params):
     self.prev_state = self.state
