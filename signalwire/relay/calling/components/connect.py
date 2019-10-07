@@ -31,6 +31,7 @@ class Connect(BaseComponent):
       return
     self.completed = self.state != ConnectState.CONNECTING
     if self.completed:
+      self.unregister()
       self.successful = self.state == ConnectState.CONNECTED
       self.event = Event(self.state, params)
       if self.has_future():
