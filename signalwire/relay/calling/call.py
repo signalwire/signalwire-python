@@ -71,7 +71,7 @@ class Call:
 
   async def connect(self, *args):
     component = Connect(self, args)
-    await component.wait_for(ConnectState.FAILED, ConnectState.CONNECTED)
+    await component.wait_for(ConnectState.FAILED, ConnectState.DISCONNECTED, ConnectState.CONNECTED)
     return ConnectResult(component)
 
   async def connect_async(self, *args):
