@@ -66,9 +66,21 @@ async def test_connect_series_and_parallel_with_success(success_response, relay_
   relay_call.calling.client.execute.mock.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_connect_with_rejection(success_response, relay_call):
+async def test_connect_with_disconnected_event(success_response, relay_call):
   relay_call.calling.client.execute = success_response
   payload = json.loads('{"event_type":"calling.call.connect","params":{"connect_state":"disconnected","peer":{"call_id":"peer-call-id","node_id":"peer-node-id","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991"}}},"call_id":"call-id","node_id":"node-id","tag":"call-tag"}}')
+  asyncio.create_task(_fire(relay_call.calling, payload))
+  result = await relay_call.connect({ 'to_number': '+12029999990', 'timeout': 30 })
+  assert not result.successful
+  assert result.call is None
+  msg = relay_call.calling.client.execute.mock.call_args[0][0]
+  assert msg.params == json.loads('{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"call_id":"call-id","node_id":"node-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}]]}}')
+  relay_call.calling.client.execute.mock.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_connect_with_failed_event(success_response, relay_call):
+  relay_call.calling.client.execute = success_response
+  payload = json.loads('{"event_type":"calling.call.connect","params":{"connect_state":"failed","peer":{"call_id":"peer-call-id","node_id":"peer-node-id","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991"}}},"call_id":"call-id","node_id":"node-id","tag":"call-tag"}}')
   asyncio.create_task(_fire(relay_call.calling, payload))
   result = await relay_call.connect({ 'to_number': '+12029999990', 'timeout': 30 })
   assert not result.successful
