@@ -70,8 +70,7 @@ class Call:
     return AnswerResult(component)
 
   async def connect(self, *args):
-    devices = [] # TODO: reduce args to a list of devices
-    component = Connect(self, devices)
+    component = Connect(self, args)
     await component.wait_for(ConnectState.FAILED, ConnectState.CONNECTED)
     return ConnectResult(component)
 
@@ -81,6 +80,7 @@ class Call:
   def _state_changed(self, params):
     self.prev_state = self.state
     self.state = params['call_state']
+    # TODO: dispatch state events
     if self.state == CallState.ENDED:
       check_id = self.id if self.id else self.tag
       trigger(check_id, params, suffix=CallState.ENDED) # terminate components
@@ -88,3 +88,7 @@ class Call:
       self.failed = end_reason == DisconnectReason.ERROR
       self.busy = end_reason == DisconnectReason.BUSY
       self.calling.remove_call(self)
+
+  def _connect_changed(self, params):
+    # TODO: dispatch connect events
+    pass
