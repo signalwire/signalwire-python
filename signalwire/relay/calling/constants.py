@@ -39,3 +39,8 @@ class CallPlayState:
   PLAYING = 'playing'
   ERROR = 'error'
   FINISHED = 'finished'
+
+class MediaType:
+  AUDIO = 'audio'
+  TTS = 'tts'
+  SILENCE = 'silence'

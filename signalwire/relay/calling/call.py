@@ -1,6 +1,6 @@
 from uuid import uuid4
 from signalwire.blade.handler import trigger, register, unregister, unregister_all
-from .constants import CallState, DisconnectReason, ConnectState, CallPlayState
+from .constants import CallState, DisconnectReason, ConnectState, CallPlayState, MediaType
 from .components.dial import Dial
 from .components.hangup import Hangup
 from .components.answer import Answer
@@ -90,16 +90,48 @@ class Call:
     await component.execute()
     return ConnectAction(component)
 
-  async def play(self, *args):
-    component = Play(self, args)
+  async def play(self, media_list):
+    component = Play(self, media_list)
     await component.wait_for(CallPlayState.ERROR, CallPlayState.FINISHED)
     return PlayResult(component)
 
-  async def play_async(self, *args):
+  async def play_async(self, media_list):
     pass
-    # component = Play(self, args)
+    # component = Play(self, media_list)
     # await component.execute()
     # return PlayAction(component)
+
+  def play_audio(self, url):
+    media_list = [{ 'type': MediaType.AUDIO, 'url': url }]
+    return self.play(media_list)
+
+  def play_audio_async(self, url):
+    media_list = [{ 'type': MediaType.AUDIO, 'url': url }]
+    return self.play_async(media_list)
+
+  def play_silence(self, duration):
+    media_list = [{ 'type': MediaType.SILENCE, 'duration': duration }]
+    return self.play(media_list)
+
+  def play_silence_async(self, duration):
+    media_list = [{ 'type': MediaType.SILENCE, 'duration': duration }]
+    return self.play_async(media_list)
+
+  def play_tts(self, text, language=None, gender=None):
+    media = { 'type': MediaType.TTS, 'text': text }
+    if language:
+      media['language'] = language
+    if gender:
+      media['gender'] = gender
+    return self.play([ media ])
+
+  def play_tts_async(self, text, language=None, gender=None):
+    media = { 'type': MediaType.TTS, 'text': text }
+    if language:
+      media['language'] = language
+    if gender:
+      media['gender'] = gender
+    return self.play_async([ media ])
 
   def _state_changed(self, params):
     self.prev_state = self.state
