@@ -1,13 +1,14 @@
 from signalwire.relay.calling.components import BaseComponent
-from ..helpers import reduce_connect_params
+from ..helpers import prepare_connect_devices, prepare_media_list
 from ..constants import Method, Notification, ConnectState
 from ...event import Event
 
 class Connect(BaseComponent):
-  def __init__(self, call, devices):
+  def __init__(self, call, devices, ringback=[]):
     super().__init__(call)
     self.control_id = call.tag
-    self.devices = reduce_connect_params(devices, call.from_number, call.timeout)
+    self.devices = prepare_connect_devices(devices, call.from_number, call.timeout)
+    self.ringback = prepare_media_list(ringback)
 
   @property
   def event_type(self):
@@ -19,11 +20,14 @@ class Connect(BaseComponent):
 
   @property
   def payload(self):
-    return {
+    tmp = {
       'node_id': self.call.node_id,
       'call_id': self.call.id,
       'devices': self.devices
     }
+    if len(self.ringback) > 0:
+      tmp['ringback'] = self.ringback
+    return tmp
 
   def notification_handler(self, params):
     self.state = params.get('connect_state', None)

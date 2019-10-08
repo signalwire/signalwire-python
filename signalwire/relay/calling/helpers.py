@@ -1,8 +1,8 @@
-def reduce_connect_params(devices, default_from, default_timeout=None, nested=False):
+def prepare_connect_devices(devices, default_from, default_timeout=None, nested=False):
   final = []
   for device in devices:
     if isinstance(device, list):
-      final.append(reduce_connect_params(device, default_from, default_timeout, True))
+      final.append(prepare_connect_devices(device, default_from, default_timeout, True))
     elif isinstance(device, dict):
       params = {
         'from_number': device.get('from_number', default_from),
@@ -16,4 +16,16 @@ def reduce_connect_params(devices, default_from, default_timeout=None, nested=Fa
         'params': params
       }
       final.append(tmp if nested else [tmp])
+  return final
+
+def prepare_media_list(media_list):
+  final = []
+  for media in media_list:
+    if not isinstance(media, dict):
+      continue
+    media_type = media.pop('type', '')
+    final.append({
+      'type': media_type,
+      'params': media
+    })
   return final

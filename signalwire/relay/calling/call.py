@@ -70,13 +70,13 @@ class Call:
     await component.wait_for(CallState.ANSWERED, CallState.ENDING, CallState.ENDED)
     return AnswerResult(component)
 
-  async def connect(self, *args):
-    component = Connect(self, args)
+  async def connect(self, device_list, ringback_list=[]):
+    component = Connect(self, device_list, ringback_list)
     await component.wait_for(ConnectState.FAILED, ConnectState.DISCONNECTED, ConnectState.CONNECTED)
     return ConnectResult(component)
 
-  async def connect_async(self, *args):
-    component = Connect(self, args)
+  async def connect_async(self, device_list, ringback_list=[]):
+    component = Connect(self, device_list, ringback_list)
     await component.execute()
     return ConnectAction(component)
 
