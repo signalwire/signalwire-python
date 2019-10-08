@@ -1,5 +1,5 @@
 from uuid import uuid4
-from signalwire.blade.handler import trigger
+from signalwire.blade.handler import trigger, register, unregister, unregister_all
 from .constants import CallState, DisconnectReason, ConnectState
 from .components.dial import Dial
 from .components.hangup import Hangup
@@ -55,6 +55,14 @@ class Call:
   def ended(self):
     return self.state == CallState.ENDING or self.state == CallState.ENDED
 
+  def on(self, event, callback):
+    register(event=self.tag, callback=callback, suffix=event)
+    return self
+
+  def off(self, event, callback=None):
+    unregister(event=self.tag, callback=callback, suffix=event)
+    return self
+
   async def dial(self):
     component = Dial(self)
     await component.wait_for(CallState.ANSWERED, CallState.ENDING, CallState.ENDED)
@@ -83,10 +91,12 @@ class Call:
   def _state_changed(self, params):
     self.prev_state = self.state
     self.state = params['call_state']
-    # TODO: dispatch state events
+    trigger(self.tag, params, suffix='stateChange')
+    trigger(self.tag, params, suffix=self.state)
     if self.state == CallState.ENDED:
       check_id = self.id if self.id else self.tag
       trigger(check_id, params, suffix=CallState.ENDED) # terminate components
+      unregister_all(self.tag) # unregister all external handlers
       end_reason = params.get('end_reason', '')
       self.failed = end_reason == DisconnectReason.ERROR
       self.busy = end_reason == DisconnectReason.BUSY

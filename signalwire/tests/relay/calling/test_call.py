@@ -1,6 +1,7 @@
 import asyncio
 import json
 import pytest
+from unittest.mock import Mock
 from signalwire.relay.calling import Call
 
 @pytest.fixture()
@@ -23,6 +24,31 @@ def test_device(relay_call):
 
 async def _fire(calling, notification):
   calling.notification_handler(notification)
+
+def test_on_method(relay_call):
+  on_answered = Mock()
+  relay_call.on('stateChange', on_answered)
+  relay_call.on('answered', on_answered)
+  on_ended = Mock()
+  relay_call.on('ended', on_ended)
+  answered_event = json.loads('{"event_type":"calling.call.state","event_channel":"signalwire-proto-test","timestamp":1570204684.1133151,"project_id":"project-uuid","space_id":"space-uuid","params":{"call_state":"answered","direction":"outbound","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12028888888"}},"call_id":"call-id","node_id":"node-id","tag":"call-tag"}}')
+  relay_call.calling.notification_handler(answered_event)
+  assert on_answered.call_count == 2
+  on_ended.assert_not_called()
+  ended_event = json.loads('{"event_type":"calling.call.state","event_channel":"signalwire-proto-test","timestamp":1570204684.1133151,"project_id":"project-uuid","space_id":"space-uuid","params":{"call_state":"ended","direction":"outbound","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12028888888"}},"end_reason":"noAnswer","call_id":"call-id","node_id":"node-id","tag":"call-tag"}}')
+  relay_call.calling.notification_handler(ended_event)
+  on_ended.assert_called_once()
+
+def test_off_method(relay_call):
+  on_answered = Mock()
+  relay_call.on('stateChange', on_answered)
+  relay_call.on('answered', on_answered)
+
+  relay_call.off('stateChange', on_answered)
+  relay_call.off('answered')
+  answered_event = json.loads('{"event_type":"calling.call.state","event_channel":"signalwire-proto-test","timestamp":1570204684.1133151,"project_id":"project-uuid","space_id":"space-uuid","params":{"call_state":"answered","direction":"outbound","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12028888888"}},"call_id":"call-id","node_id":"node-id","tag":"call-tag"}}')
+  relay_call.calling.notification_handler(answered_event)
+  on_answered.assert_not_called()
 
 @pytest.mark.asyncio
 async def test_answer_with_success(success_response, relay_call):

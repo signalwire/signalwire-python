@@ -1,6 +1,6 @@
 from unittest import TestCase
 from unittest.mock import Mock
-from signalwire.blade.handler import register, register_once, unregister, trigger, queue_size, is_queued, clear
+from signalwire.blade.handler import register, register_once, unregister, unregister_all, trigger, queue_size, is_queued, clear
 
 class TestBladeMessages(TestCase):
   def setUp(self):
@@ -71,6 +71,17 @@ class TestBladeMessages(TestCase):
     unregister(event='event_name')
     self.assertEqual(queue_size('event_name'), 0)
     trigger('event_name', 'custom data')
+    mock.assert_not_called()
+
+  def test_unregister_all(self):
+    mock = Mock()
+    register(event='event_name', callback=mock)
+    register(event='event_name', callback=mock, suffix='t1')
+    register(event='event_name', callback=mock, suffix='t2')
+    unregister_all('event_name')
+    trigger('event_name', 'custom data')
+    trigger('event_name', 'custom data', suffix='t1')
+    trigger('event_name', 'custom data', suffix='t2')
     mock.assert_not_called()
 
   def test_clear(self):
