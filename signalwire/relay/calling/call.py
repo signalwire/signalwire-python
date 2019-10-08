@@ -12,6 +12,7 @@ from .results.connect_result import ConnectResult
 from .actions.connect_action import ConnectAction
 from .components.play import Play
 from .results.play_result import PlayResult
+from .actions.play_action import PlayAction
 
 class Call:
   def __init__(self, *, calling, **kwargs):
@@ -96,10 +97,9 @@ class Call:
     return PlayResult(component)
 
   async def play_async(self, media_list):
-    pass
-    # component = Play(self, media_list)
-    # await component.execute()
-    # return PlayAction(component)
+    component = Play(self, media_list)
+    await component.execute()
+    return PlayAction(component)
 
   def play_audio(self, url):
     media_list = [{ 'type': MediaType.AUDIO, 'url': url }]
