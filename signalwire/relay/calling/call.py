@@ -1,12 +1,15 @@
 from uuid import uuid4
 from signalwire.blade.handler import trigger
-from .constants import CallState, DisconnectReason
+from .constants import CallState, DisconnectReason, ConnectState
 from .components.dial import Dial
 from .components.hangup import Hangup
 from .components.answer import Answer
+from .components.connect import Connect
 from .results.dial_result import DialResult
 from .results.hangup_result import HangupResult
 from .results.answer_result import AnswerResult
+from .results.connect_result import ConnectResult
+from .actions.connect_action import ConnectAction
 
 class Call:
   def __init__(self, *, calling, **kwargs):
@@ -67,9 +70,20 @@ class Call:
     await component.wait_for(CallState.ANSWERED, CallState.ENDING, CallState.ENDED)
     return AnswerResult(component)
 
+  async def connect(self, device_list, ringback_list=[]):
+    component = Connect(self, device_list, ringback_list)
+    await component.wait_for(ConnectState.FAILED, ConnectState.DISCONNECTED, ConnectState.CONNECTED)
+    return ConnectResult(component)
+
+  async def connect_async(self, device_list, ringback_list=[]):
+    component = Connect(self, device_list, ringback_list)
+    await component.execute()
+    return ConnectAction(component)
+
   def _state_changed(self, params):
     self.prev_state = self.state
     self.state = params['call_state']
+    # TODO: dispatch state events
     if self.state == CallState.ENDED:
       check_id = self.id if self.id else self.tag
       trigger(check_id, params, suffix=CallState.ENDED) # terminate components
@@ -77,3 +91,7 @@ class Call:
       self.failed = end_reason == DisconnectReason.ERROR
       self.busy = end_reason == DisconnectReason.BUSY
       self.calling.remove_call(self)
+
+  def _connect_changed(self, params):
+    # TODO: dispatch connect events
+    pass

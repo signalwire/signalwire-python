@@ -19,6 +19,8 @@ class Calling(BaseRelay):
       self._on_state(notification['params'])
     elif notification['event_type'] == Notification.RECEIVE:
       self._on_receive(notification['params'])
+    elif notification['event_type'] == Notification.CONNECT:
+      self._on_connect(notification['params'])
 
   def new_call(self, *, call_type='phone', from_number, to_number, timeout=None):
     call = Call(calling=self)
@@ -77,3 +79,13 @@ class Calling(BaseRelay):
   def _on_receive(self, params):
     call = Call(calling=self, **params)
     trigger(self.client.protocol, call, suffix=self.ctx_receive_unique(call.context))
+
+  def _on_connect(self, params):
+    call = self._get_call_by_id(params['call_id'])
+    if call is not None:
+      try:
+        call.peer = self._get_call_by_id(params['peer']['call_id'])
+      except KeyError:
+        pass
+      call._connect_changed(params)
+      trigger(Notification.CONNECT, params, suffix=call.tag) # Notify components listening on Connect and Tag

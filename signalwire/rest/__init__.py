@@ -267,7 +267,7 @@ def patched_recordinginstance_init(self, version, payload, account_sid, sid=None
     # Context
     self._context = None
     self._solution = {'account_sid': account_sid, 'sid': sid or self._properties['sid'], }
-  
+
 def patched_transcriptioninstance_init(self, version, payload, account_sid, sid=None):
       """
       Initialize the TranscriptionInstance
@@ -317,7 +317,6 @@ def patched_fax_v1_init(self, domain):
   :returns: V1 version of Fax
   :rtype: twilio.rest.fax.v1.V1.V1
   """
-  print(domain.__class__.__name__)
   super(TwilioV1, self).__init__(domain)
   self.version = "2010-04-01/Accounts/" + domain.account_sid
   self._faxes = None
