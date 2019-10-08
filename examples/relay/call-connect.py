@@ -4,7 +4,6 @@ from signalwire.relay.consumer import Consumer
 
 class CustomConsumer(Consumer):
   def setup(self):
-    self.host = 'relay.swire.io'
     self.project = os.getenv('PROJECT', '')
     self.token = os.getenv('TOKEN', '')
     self.contexts = ['office', 'home']
