@@ -38,6 +38,14 @@ def unregister(*, event, callback=None, suffix=GLOBAL):
 
   return True
 
+def unregister_all(event):
+  global _queue
+
+  target = build_event_name(event, '')
+  for event in list(_queue.keys()):
+    if event.find(target) == 0:
+      del _queue[event]
+
 def trigger(event, *args, suffix=GLOBAL, **kwargs):
   global _queue
 
