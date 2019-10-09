@@ -89,11 +89,13 @@ class Calling(BaseRelay):
         call.peer = self._get_call_by_id(params['peer']['call_id'])
       except KeyError:
         pass
-      call._connect_changed(params)
       trigger(Notification.CONNECT, params, suffix=call.tag) # Notify components listening on Connect and Tag
+      trigger(call.tag, params, suffix='connect.stateChange')
+      trigger(call.tag, params, suffix=f"connect.{params['connect_state']}")
 
   def _on_play(self, params):
     call = self._get_call_by_id(params['call_id'])
     if call is not None:
       trigger(Notification.PLAY, params, suffix=params['control_id']) # Notify components listening on Play and control_id
-      call._play_changed(params)
+      trigger(call.tag, params, suffix='play.stateChange')
+      trigger(call.tag, params, suffix=f"play.{params['state']}")

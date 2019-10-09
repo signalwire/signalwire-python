@@ -146,11 +146,3 @@ class Call:
       self.failed = end_reason == DisconnectReason.ERROR
       self.busy = end_reason == DisconnectReason.BUSY
       self.calling.remove_call(self)
-
-  def _connect_changed(self, params):
-    # TODO: dispatch connect events
-    pass
-
-  def _play_changed(self, params):
-    # TODO: dispatch play events
-    pass
