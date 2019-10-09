@@ -2,15 +2,9 @@ import asyncio
 import json
 import pytest
 from unittest.mock import Mock
-from signalwire.relay.calling import Call
 
 async def _fire(calling, notification):
   calling.notification_handler(notification)
-
-@pytest.fixture()
-def relay_call(relay_calling):
-  params = json.loads('{"call_state":"created","context":"office","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12028888888"}},"direction":"inbound","call_id":"call-id","node_id":"node-id","tag":"call-tag"}')
-  return Call(calling=relay_calling, **params)
 
 def test_connect_events(relay_call):
   mock = Mock()
