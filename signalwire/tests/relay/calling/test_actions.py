@@ -20,7 +20,7 @@ def play_action(relay_call):
 async def test_play_action_stop_with_success(success_response, relay_call, play_action):
   relay_call.calling.client.execute = success_response
   result = await play_action.stop()
-  assert result
+  assert result.successful
   msg = relay_call.calling.client.execute.mock.call_args[0][0]
   assert msg.params == PLAY_STOP_PAYLOAD
   relay_call.calling.client.execute.mock.assert_called_once()
@@ -29,7 +29,7 @@ async def test_play_action_stop_with_success(success_response, relay_call, play_
 async def test_play_action_stop_with_failure(fail_response, relay_call, play_action):
   relay_call.calling.client.execute = fail_response
   result = await play_action.stop()
-  assert not result
+  assert not result.successful
   msg = relay_call.calling.client.execute.mock.call_args[0][0]
   assert msg.params == PLAY_STOP_PAYLOAD
   relay_call.calling.client.execute.mock.assert_called_once()

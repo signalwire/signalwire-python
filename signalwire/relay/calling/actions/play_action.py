@@ -8,7 +8,7 @@ class PlayAction(BaseAction):
   def result(self):
     return PlayResult(self.component)
 
-  def stop(self):
+  async def stop(self):
     result = await self.component.stop()
     return StopResult(result)
 
