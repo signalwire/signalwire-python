@@ -51,7 +51,6 @@ def has_volume_control(cls):
       return True
     except Exception:
       return False
-    return _execute(self, f'{self.method}.resume')
 
   setattr(cls, 'volume', volume)
   return cls

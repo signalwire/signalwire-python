@@ -10,9 +10,10 @@ from .decorators import stoppable, pausable, resumable, has_volume_control
 @has_volume_control
 class Play(BaseComponent):
 
-  def __init__(self, call, play):
+  def __init__(self, call, play, volume=0):
     super().__init__(call)
     self.play = prepare_media_list(play)
+    self.volume_value = float(volume)
 
   @property
   def event_type(self):
@@ -24,12 +25,15 @@ class Play(BaseComponent):
 
   @property
   def payload(self):
-    return {
+    tmp = {
       'node_id': self.call.node_id,
       'call_id': self.call.id,
       'control_id': self.control_id,
       'play': self.play
     }
+    if self.volume_value > 0:
+      tmp['volume'] = self.volume_value
+    return tmp
 
   def notification_handler(self, params):
     self.state = params.get('state', None)

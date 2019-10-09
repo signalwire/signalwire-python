@@ -91,23 +91,23 @@ class Call:
     await component.execute()
     return ConnectAction(component)
 
-  async def play(self, media_list):
-    component = Play(self, media_list)
+  async def play(self, media_list, volume=0):
+    component = Play(self, media_list, volume)
     await component.wait_for(CallPlayState.ERROR, CallPlayState.FINISHED)
     return PlayResult(component)
 
-  async def play_async(self, media_list):
-    component = Play(self, media_list)
+  async def play_async(self, media_list, volume=0):
+    component = Play(self, media_list, volume)
     await component.execute()
     return PlayAction(component)
 
-  def play_audio(self, url):
+  def play_audio(self, url, volume=0):
     media_list = [{ 'type': MediaType.AUDIO, 'url': url }]
-    return self.play(media_list)
+    return self.play(media_list, volume)
 
-  def play_audio_async(self, url):
+  def play_audio_async(self, url, volume=0):
     media_list = [{ 'type': MediaType.AUDIO, 'url': url }]
-    return self.play_async(media_list)
+    return self.play_async(media_list, volume)
 
   def play_silence(self, duration):
     media_list = [{ 'type': MediaType.SILENCE, 'duration': float(duration) }]
@@ -117,21 +117,21 @@ class Call:
     media_list = [{ 'type': MediaType.SILENCE, 'duration': float(duration) }]
     return self.play_async(media_list)
 
-  def play_tts(self, text, language=None, gender=None):
+  def play_tts(self, text, language=None, gender=None, volume=0):
     media = { 'type': MediaType.TTS, 'text': text }
     if language:
       media['language'] = language
     if gender:
       media['gender'] = gender
-    return self.play([ media ])
+    return self.play([ media ], volume)
 
-  def play_tts_async(self, text, language=None, gender=None):
+  def play_tts_async(self, text, language=None, gender=None, volume=0):
     media = { 'type': MediaType.TTS, 'text': text }
     if language:
       media['language'] = language
     if gender:
       media['gender'] = gender
-    return self.play_async([ media ])
+    return self.play_async([ media ], volume)
 
   def _state_changed(self, params):
     self.prev_state = self.state
