@@ -1,6 +1,6 @@
 from uuid import uuid4
 from signalwire.blade.handler import trigger, register, unregister, unregister_all
-from .constants import CallState, DisconnectReason, ConnectState
+from .constants import CallState, DisconnectReason, ConnectState, CallPlayState, MediaType
 from .components.dial import Dial
 from .components.hangup import Hangup
 from .components.answer import Answer
@@ -10,6 +10,9 @@ from .results.hangup_result import HangupResult
 from .results.answer_result import AnswerResult
 from .results.connect_result import ConnectResult
 from .actions.connect_action import ConnectAction
+from .components.play import Play
+from .results.play_result import PlayResult
+from .actions.play_action import PlayAction
 
 class Call:
   def __init__(self, *, calling, **kwargs):
@@ -88,6 +91,48 @@ class Call:
     await component.execute()
     return ConnectAction(component)
 
+  async def play(self, media_list, volume=0):
+    component = Play(self, media_list, volume)
+    await component.wait_for(CallPlayState.ERROR, CallPlayState.FINISHED)
+    return PlayResult(component)
+
+  async def play_async(self, media_list, volume=0):
+    component = Play(self, media_list, volume)
+    await component.execute()
+    return PlayAction(component)
+
+  def play_audio(self, url, volume=0):
+    media_list = [{ 'type': MediaType.AUDIO, 'url': url }]
+    return self.play(media_list, volume)
+
+  def play_audio_async(self, url, volume=0):
+    media_list = [{ 'type': MediaType.AUDIO, 'url': url }]
+    return self.play_async(media_list, volume)
+
+  def play_silence(self, duration):
+    media_list = [{ 'type': MediaType.SILENCE, 'duration': float(duration) }]
+    return self.play(media_list)
+
+  def play_silence_async(self, duration):
+    media_list = [{ 'type': MediaType.SILENCE, 'duration': float(duration) }]
+    return self.play_async(media_list)
+
+  def play_tts(self, text, language=None, gender=None, volume=0):
+    media = { 'type': MediaType.TTS, 'text': text }
+    if language:
+      media['language'] = language
+    if gender:
+      media['gender'] = gender
+    return self.play([ media ], volume)
+
+  def play_tts_async(self, text, language=None, gender=None, volume=0):
+    media = { 'type': MediaType.TTS, 'text': text }
+    if language:
+      media['language'] = language
+    if gender:
+      media['gender'] = gender
+    return self.play_async([ media ], volume)
+
   def _state_changed(self, params):
     self.prev_state = self.state
     self.state = params['call_state']
@@ -101,7 +146,3 @@ class Call:
       self.failed = end_reason == DisconnectReason.ERROR
       self.busy = end_reason == DisconnectReason.BUSY
       self.calling.remove_call(self)
-
-  def _connect_changed(self, params):
-    # TODO: dispatch connect events
-    pass

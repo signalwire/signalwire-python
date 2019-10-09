@@ -1,15 +1,18 @@
 import asyncio
 import json
 import pytest
-from signalwire.relay.calling import Call
+from unittest.mock import Mock
 
 async def _fire(calling, notification):
   calling.notification_handler(notification)
 
-@pytest.fixture()
-def relay_call(relay_calling):
-  params = json.loads('{"call_state":"created","context":"office","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12028888888"}},"direction":"inbound","call_id":"call-id","node_id":"node-id","tag":"call-tag"}')
-  return Call(calling=relay_calling, **params)
+def test_connect_events(relay_call):
+  mock = Mock()
+  relay_call.on('connect.stateChange', mock)
+  relay_call.on('connect.connected', mock)
+  payload = json.loads('{"event_type":"calling.call.connect","params":{"connect_state":"connected","peer":{"call_id":"peer-call-id","node_id":"peer-node-id","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991"}}},"call_id":"call-id","node_id":"node-id","tag":"call-tag"}}')
+  relay_call.calling.notification_handler(payload)
+  assert mock.call_count == 2
 
 @pytest.mark.asyncio
 async def test_connect_in_series_with_success(success_response, relay_call):
