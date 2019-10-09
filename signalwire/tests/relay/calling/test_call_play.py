@@ -38,6 +38,24 @@ async def test_play_multiple_media_with_success(success_response, relay_call):
     relay_call.calling.client.execute.mock.assert_called_once()
 
 @pytest.mark.asyncio
+async def test_play_multiple_media_volume_with_success(success_response, relay_call):
+  with patch('signalwire.relay.calling.components.uuid4', mock_uuid):
+    relay_call.calling.client.execute = success_response
+    payload = json.loads('{"event_type":"calling.call.play","params":{"control_id":"control-id","call_id":"call-id","node_id":"node-id","state":"finished"}}')
+    asyncio.create_task(_fire(relay_call.calling, payload))
+    media = [
+      { 'type': 'audio', 'url': 'audio.mp3' },
+      { 'type': 'tts', 'text': 'welcome', 'gender': 'male' },
+      { 'type': 'silence', 'duration': 5 }
+    ]
+    result = await relay_call.play(media_list=media, volume=3.2)
+    assert result.successful
+    assert result.event.payload['state'] == 'finished'
+    msg = relay_call.calling.client.execute.mock.call_args[0][0]
+    assert msg.params == json.loads('{"protocol":"signalwire-proto-test","method":"calling.play","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id","play":[{"type":"audio","params":{"url":"audio.mp3"}},{"type":"tts","params":{"text":"welcome","gender":"male"}},{"type":"silence","params":{"duration":5}}],"volume":3.2}}')
+    relay_call.calling.client.execute.mock.assert_called_once()
+
+@pytest.mark.asyncio
 async def test_play_multiple_media_with_failure(fail_response, relay_call):
   relay_call.calling.client.execute = fail_response
   media = [
@@ -58,14 +76,14 @@ async def test_play_async_multiple_media_with_success(success_response, relay_ca
       { 'type': 'tts', 'text': 'welcome', 'gender': 'male' },
       { 'type': 'silence', 'duration': 5 }
     ]
-    action = await relay_call.play_async(media_list=media)
+    action = await relay_call.play_async(media_list=media, volume=4.3)
     assert not action.completed
     # Complete the action now..
     payload = json.loads('{"event_type":"calling.call.play","params":{"control_id":"control-id","call_id":"call-id","node_id":"node-id","state":"finished"}}')
     await _fire(relay_call.calling, payload)
     assert action.completed
     msg = relay_call.calling.client.execute.mock.call_args[0][0]
-    assert msg.params == json.loads('{"protocol":"signalwire-proto-test","method":"calling.play","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id","play":[{"type":"audio","params":{"url":"audio.mp3"}},{"type":"tts","params":{"text":"welcome","gender":"male"}},{"type":"silence","params":{"duration":5}}]}}')
+    assert msg.params == json.loads('{"protocol":"signalwire-proto-test","method":"calling.play","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id","play":[{"type":"audio","params":{"url":"audio.mp3"}},{"type":"tts","params":{"text":"welcome","gender":"male"}},{"type":"silence","params":{"duration":5}}],"volume":4.3}}')
     relay_call.calling.client.execute.mock.assert_called_once()
 
 @pytest.mark.asyncio
@@ -112,14 +130,14 @@ async def test_play_tts_media_with_success(success_response, relay_call):
 async def test_play_tts_async_multiple_media_with_success(success_response, relay_call):
   with patch('signalwire.relay.calling.components.uuid4', mock_uuid):
     relay_call.calling.client.execute = success_response
-    action = await relay_call.play_tts_async(text='welcome', gender='male')
+    action = await relay_call.play_tts_async(text='welcome', gender='male', volume=5.0)
     assert not action.completed
     # Complete the action now..
     payload = json.loads('{"event_type":"calling.call.play","params":{"control_id":"control-id","call_id":"call-id","node_id":"node-id","state":"finished"}}')
     await _fire(relay_call.calling, payload)
     assert action.completed
     msg = relay_call.calling.client.execute.mock.call_args[0][0]
-    assert msg.params == json.loads('{"protocol":"signalwire-proto-test","method":"calling.play","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id","play":[{"type":"tts","params":{"text":"welcome","gender":"male"}}]}}')
+    assert msg.params == json.loads('{"protocol":"signalwire-proto-test","method":"calling.play","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id","play":[{"type":"tts","params":{"text":"welcome","gender":"male"}}],"volume":5.0}}')
     relay_call.calling.client.execute.mock.assert_called_once()
 
 @pytest.mark.asyncio
