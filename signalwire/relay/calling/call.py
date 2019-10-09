@@ -110,11 +110,11 @@ class Call:
     return self.play_async(media_list)
 
   def play_silence(self, duration):
-    media_list = [{ 'type': MediaType.SILENCE, 'duration': duration }]
+    media_list = [{ 'type': MediaType.SILENCE, 'duration': float(duration) }]
     return self.play(media_list)
 
   def play_silence_async(self, duration):
-    media_list = [{ 'type': MediaType.SILENCE, 'duration': duration }]
+    media_list = [{ 'type': MediaType.SILENCE, 'duration': float(duration) }]
     return self.play_async(media_list)
 
   def play_tts(self, text, language=None, gender=None):
