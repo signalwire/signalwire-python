@@ -1,5 +1,6 @@
 from . import BaseComponent
 from ..constants import Method, Notification, CallPlayState
+from ..helpers import prepare_media_list
 from ...event import Event
 from .decorators import stoppable, pausable, resumable
 
@@ -10,8 +11,7 @@ class Play(BaseComponent):
 
   def __init__(self, call, play):
     super().__init__(call)
-    # TODO: reduce play
-    self.play = play
+    self.play = prepare_media_list(play)
 
   @property
   def event_type(self):
