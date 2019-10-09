@@ -1,7 +1,11 @@
 from . import BaseComponent
 from ..constants import Method, Notification, CallPlayState
 from ...event import Event
+from .decorators import stoppable, pausable, resumable
 
+@stoppable
+@pausable
+@resumable
 class Play(BaseComponent):
 
   def __init__(self, call, play):
