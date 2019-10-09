@@ -1,5 +1,5 @@
 from . import BaseAction
-from ..results.play_result import PlayResult, PlayPauseResult, PlayResumeResult
+from ..results.play_result import PlayResult, PlayPauseResult, PlayResumeResult, PlayVolumeResult
 from ..results.stop_result import StopResult
 
 class PlayAction(BaseAction):
@@ -19,3 +19,7 @@ class PlayAction(BaseAction):
   async def resume(self):
     result = await self.component.resume()
     return PlayResumeResult(result)
+
+  async def volume(self, value):
+    result = await self.component.volume(value)
+    return PlayVolumeResult(result)

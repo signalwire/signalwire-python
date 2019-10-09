@@ -33,3 +33,25 @@ def resumable(cls):
     return _execute(self, f'{self.method}.resume')
   setattr(cls, 'resume', resume)
   return cls
+
+def has_volume_control(cls):
+  async def volume(self, volume):
+    msg = Execute({
+      'protocol': self.call.calling.client.protocol,
+      'method': f'{self.method}.volume',
+      'params': {
+        'node_id': self.call.node_id,
+        'call_id': self.call.id,
+        'control_id': self.control_id,
+        'volume': float(volume)
+      }
+    })
+    try:
+      await self.call.calling.client.execute(msg)
+      return True
+    except Exception:
+      return False
+    return _execute(self, f'{self.method}.resume')
+
+  setattr(cls, 'volume', volume)
+  return cls

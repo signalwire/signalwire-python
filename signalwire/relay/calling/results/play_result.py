@@ -10,3 +10,7 @@ class PlayPauseResult:
 class PlayResumeResult:
   def __init__(self, successful):
     self.successful = successful
+
+class PlayVolumeResult:
+  def __init__(self, successful):
+    self.successful = successful

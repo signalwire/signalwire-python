@@ -2,11 +2,12 @@ from . import BaseComponent
 from ..constants import Method, Notification, CallPlayState
 from ..helpers import prepare_media_list
 from ...event import Event
-from .decorators import stoppable, pausable, resumable
+from .decorators import stoppable, pausable, resumable, has_volume_control
 
 @stoppable
 @pausable
 @resumable
+@has_volume_control
 class Play(BaseComponent):
 
   def __init__(self, call, play):
