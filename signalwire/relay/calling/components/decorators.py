@@ -18,19 +18,19 @@ async def _execute(self, method):
     return False
 
 def stoppable(cls):
-  def stop(self):
+  async def stop(self):
     return await _execute(self, f'{self.method}.stop')
   setattr(cls, 'stop', stop)
   return cls
 
 def pausable(cls):
-  def pause(self):
+  async def pause(self):
     return await _execute(self, f'{self.method}.pause')
   setattr(cls, 'pause', pause)
   return cls
 
 def resumable(cls):
-  def resume(self):
+  async def resume(self):
     return await _execute(self, f'{self.method}.resume')
   setattr(cls, 'resume', resume)
   return cls
