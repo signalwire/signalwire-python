@@ -14,7 +14,6 @@ async def _execute(self, method):
     await self.call.calling.client.execute(msg)
     return True
   except Exception:
-    # logging.error('Relay command failed: {0}'.format(str(error)))
     return False
 
 def stoppable(cls):
