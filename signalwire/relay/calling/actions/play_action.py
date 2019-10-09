@@ -1,5 +1,6 @@
 from . import BaseAction
 from ..results.play_result import PlayResult, PlayPauseResult, PlayResumeResult
+from ..results.stop_result import StopResult
 
 class PlayAction(BaseAction):
 
@@ -8,7 +9,8 @@ class PlayAction(BaseAction):
     return PlayResult(self.component)
 
   def stop(self):
-    return self.component.stop()
+    result = await self.component.stop()
+    return StopResult(result)
 
   async def pause(self):
     result = await self.component.pause()
