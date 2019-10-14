@@ -31,7 +31,7 @@ class Play(BaseComponent):
       'control_id': self.control_id,
       'play': self.play
     }
-    if self.volume_value > 0:
+    if self.volume_value != 0:
       tmp['volume'] = self.volume_value
     return tmp
 

@@ -48,11 +48,11 @@ async def test_play_multiple_media_volume_with_success(success_response, relay_c
       { 'type': 'tts', 'text': 'welcome', 'gender': 'male' },
       { 'type': 'silence', 'duration': 5 }
     ]
-    result = await relay_call.play(media_list=media, volume=3.2)
+    result = await relay_call.play(media_list=media, volume=-3.2)
     assert result.successful
     assert result.event.payload['state'] == 'finished'
     msg = relay_call.calling.client.execute.mock.call_args[0][0]
-    assert msg.params == json.loads('{"protocol":"signalwire-proto-test","method":"calling.play","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id","play":[{"type":"audio","params":{"url":"audio.mp3"}},{"type":"tts","params":{"text":"welcome","gender":"male"}},{"type":"silence","params":{"duration":5}}],"volume":3.2}}')
+    assert msg.params == json.loads('{"protocol":"signalwire-proto-test","method":"calling.play","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id","play":[{"type":"audio","params":{"url":"audio.mp3"}},{"type":"tts","params":{"text":"welcome","gender":"male"}},{"type":"silence","params":{"duration":5}}],"volume":-3.2}}')
     relay_call.calling.client.execute.mock.assert_called_once()
 
 @pytest.mark.asyncio
