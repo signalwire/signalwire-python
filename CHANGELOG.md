@@ -8,6 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support for Relay Messaging
 - Support for Calling `connect` and `play` methods.
 - Support for Calling `record` methods.
+- Methods to wait some events on the Call object: `wait_for_ringing`, `wait_for_answered`, `wait_for_ending`, `wait_for_ended`.
 
 ## [2.0.0b2] - 2019-10-03
 ### Fixed

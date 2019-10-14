@@ -16,6 +16,7 @@ from .actions.play_action import PlayAction
 from .components.record import Record
 from .results.record_result import RecordResult
 from .actions.record_action import RecordAction
+from .components.awaiter import Awaiter
 
 class Call:
   def __init__(self, *, calling, **kwargs):
@@ -147,6 +148,27 @@ class Call:
     if result and 'url' in result:
       component.url = result['url']
     return RecordAction(component)
+
+  async def wait_for(self, events=[CallState.ENDED]):
+    state_index = CallState.ALL.index(self.state)
+    for event in events:
+      if CallState.ALL.index(event) <= state_index:
+        return True
+    component = Awaiter(self)
+    await component.wait_for(*events)
+    return component.successful
+
+  def wait_for_ringing(self):
+    return self.wait_for(events=[CallState.RINGING])
+
+  def wait_for_answered(self):
+    return self.wait_for(events=[CallState.ANSWERED])
+
+  def wait_for_ending(self):
+    return self.wait_for(events=[CallState.ENDING])
+
+  def wait_for_ended(self):
+    return self.wait_for(events=[CallState.ENDED])
 
   def _state_changed(self, params):
     self.prev_state = self.state

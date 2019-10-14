@@ -49,14 +49,15 @@ class BaseComponent(ABC):
   async def execute(self):
     if self.call.ended == True:
       return self.terminate()
-
+    self.register()
+    if self.method is None:
+      return
     msg = Execute({
       'protocol': self.call.calling.client.protocol,
       'method': self.method,
       'params': self.payload
     })
     try:
-      self.register()
       response = await self.call.calling.client.execute(msg)
       self._execute_result = response.get('result', {})
       return self._execute_result

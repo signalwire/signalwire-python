@@ -19,6 +19,7 @@ class Notification:
   SENDDIGITS = 'calling.call.send_digits'
 
 class CallState:
+  ALL = ['created', 'ringing', 'answered', 'ending', 'ended']
   NONE = 'none'
   CREATED = 'created'
   RINGING = 'ringing'
