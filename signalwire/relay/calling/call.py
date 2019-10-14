@@ -1,6 +1,6 @@
 from uuid import uuid4
 from signalwire.blade.handler import trigger, register, unregister, unregister_all
-from .constants import CallState, DisconnectReason, ConnectState, CallPlayState, MediaType
+from .constants import CallState, DisconnectReason, ConnectState, CallPlayState, MediaType, RecordType
 from .components.dial import Dial
 from .components.hangup import Hangup
 from .components.answer import Answer
@@ -13,6 +13,9 @@ from .actions.connect_action import ConnectAction
 from .components.play import Play
 from .results.play_result import PlayResult
 from .actions.play_action import PlayAction
+from .components.record import Record
+from .results.record_result import RecordResult
+from .actions.record_action import RecordAction
 
 class Call:
   def __init__(self, *, calling, **kwargs):
@@ -132,6 +135,18 @@ class Call:
     if gender:
       media['gender'] = gender
     return self.play_async([ media ], volume)
+
+  async def record(self, record_type=RecordType.AUDIO, beep=None, record_format=None, stereo=None, direction=None, initial_timeout=None, end_silence_timeout=None, terminators=None):
+    component = Record(self, record_type, beep, record_format, stereo, direction, initial_timeout, end_silence_timeout, terminators)
+    await component.wait_for(CallPlayState.ERROR, CallPlayState.FINISHED)
+    return RecordResult(component)
+
+  async def record_async(self, record_type=RecordType.AUDIO, beep=None, record_format=None, stereo=None, direction=None, initial_timeout=None, end_silence_timeout=None, terminators=None):
+    component = Record(self, record_type, beep, record_format, stereo, direction, initial_timeout, end_silence_timeout, terminators)
+    result = await component.execute()
+    if result and 'url' in result:
+      component.url = result['url']
+    return RecordAction(component)
 
   def _state_changed(self, params):
     self.prev_state = self.state

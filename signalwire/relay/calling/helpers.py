@@ -29,3 +29,21 @@ def prepare_media_list(media_list):
       'params': media
     })
   return final
+
+def prepare_record_params(record_type, beep, record_format, stereo, direction, initial_timeout, end_silence_timeout, terminators):
+  params = {}
+  if isinstance(beep, bool):
+    params['beep'] = beep
+  if record_format is not None:
+    params['format'] = record_format
+  if isinstance(stereo, bool):
+    params['stereo'] = stereo
+  if direction is not None:
+    params['direction'] = direction
+  if initial_timeout is not None:
+    params['initial_timeout'] = initial_timeout
+  if end_silence_timeout is not None:
+    params['end_silence_timeout'] = end_silence_timeout
+  if terminators is not None:
+    params['terminators'] = terminators
+  return { record_type: params }
