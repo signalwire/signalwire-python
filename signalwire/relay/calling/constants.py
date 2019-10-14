@@ -4,6 +4,7 @@ class Method:
   END = 'calling.end'
   CONNECT = 'calling.connect'
   PLAY = 'calling.play'
+  RECORD = 'calling.record'
 
 class Notification:
   STATE = 'calling.call.state'
@@ -44,3 +45,11 @@ class MediaType:
   AUDIO = 'audio'
   TTS = 'tts'
   SILENCE = 'silence'
+
+class CallRecordState:
+  RECORDING = 'recording'
+  NOINPUT = 'no_input'
+  FINISHED = 'finished'
+
+class RecordType:
+  AUDIO = 'audio'
