@@ -7,6 +7,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 - Support for Relay Messaging
 - Support for Calling `connect` and `play` methods.
+- Support for Calling `record` methods.
 
 ## [2.0.0b2] - 2019-10-03
 ### Fixed
