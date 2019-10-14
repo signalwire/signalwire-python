@@ -57,7 +57,8 @@ class BaseComponent(ABC):
     })
     try:
       self.register()
-      self._execute_result = await self.call.calling.client.execute(msg)
+      response = await self.call.calling.client.execute(msg)
+      self._execute_result = response.get('result', {})
       return self._execute_result
     except Exception as error:
       logging.error('Relay command failed: {0}'.format(str(error)))
