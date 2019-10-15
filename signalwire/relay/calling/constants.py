@@ -7,6 +7,7 @@ class Method:
   RECORD = 'calling.record'
   RECEIVE_FAX = 'calling.receive_fax'
   SEND_FAX = 'calling.send_fax'
+  TAP = 'calling.tap'
 
 class Notification:
   STATE = 'calling.call.state'
@@ -61,3 +62,10 @@ class CallFaxState:
   PAGE = 'page'
   ERROR = 'error'
   FINISHED = 'finished'
+
+class CallTapState:
+  TAPPING = 'tapping'
+  FINISHED = 'finished'
+
+class TapType:
+  AUDIO = 'audio'
