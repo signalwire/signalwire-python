@@ -19,7 +19,7 @@ PLAY_VOLUME_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"
 RECORD_STOP_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.record.stop","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id"}}')
 RECEIVE_FAX_STOP_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.receive_fax.stop","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id"}}')
 SEND_FAX_STOP_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.send_fax.stop","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id"}}')
-TAP_STOP_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.record.tap","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id"}}')
+TAP_STOP_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.tap.stop","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id"}}')
 
 @pytest.fixture()
 def play_action(relay_call):
