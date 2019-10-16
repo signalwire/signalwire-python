@@ -25,6 +25,8 @@ class Calling(BaseRelay):
       self._on_play(notification['params'])
     elif notification['event_type'] == Notification.RECORD:
       self._on_record(notification['params'])
+    elif notification['event_type'] == Notification.FAX:
+      self._on_fax(notification['params'])
 
   def new_call(self, *, call_type='phone', from_number, to_number, timeout=None):
     call = Call(calling=self)
@@ -108,3 +110,13 @@ class Calling(BaseRelay):
       trigger(Notification.RECORD, params, suffix=params['control_id']) # Notify components listening on Record and control_id
       trigger(call.tag, params, suffix='record.stateChange')
       trigger(call.tag, params, suffix=f"record.{params['state']}")
+
+  def _on_fax(self, params):
+    call = self._get_call_by_id(params['call_id'])
+    if call is not None:
+      trigger(Notification.FAX, params, suffix=params['control_id']) # Notify components listening on Fax and control_id
+      trigger(call.tag, params, suffix='fax.stateChange')
+      try:
+        trigger(call.tag, params, suffix=f"fax.{params['fax']['type']}")
+      except KeyError:
+        pass
