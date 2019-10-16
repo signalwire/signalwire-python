@@ -1,6 +1,6 @@
 from uuid import uuid4
 from signalwire.blade.handler import trigger, register, unregister, unregister_all
-from .constants import CallState, DisconnectReason, ConnectState, CallPlayState, MediaType, RecordType, CallFaxState, TapType
+from .constants import CallState, DisconnectReason, ConnectState, CallPlayState, MediaType, RecordType, TapType, CallTapState, CallFaxState
 from .components.dial import Dial
 from .components.hangup import Hangup
 from .components.answer import Answer
@@ -199,14 +199,12 @@ class Call:
 
   async def tap(self, audio_direction, target_type, target_addr=None, target_port=None, target_ptime=None, target_uri=None, rate=None, codec=None):
     component = Tap(self, audio_direction, target_type, target_addr, target_port, target_ptime, target_uri, rate, codec)
-    await component.wait_for(CallPlayState.ERROR, CallPlayState.FINISHED)
+    await component.wait_for(CallTapState.FINISHED)
     return TapResult(component)
 
   async def tap_async(self, audio_direction, target_type, target_addr=None, target_port=None, target_ptime=None, target_uri=None, rate=None, codec=None):
     component = Tap(self, audio_direction, target_type, target_addr, target_port, target_ptime, target_uri, rate, codec)
-    result = await component.execute()
-    if result and 'url' in result:
-      component.url = result['url']
+    await component.execute()
     return TapAction(component)
 
   def _state_changed(self, params):

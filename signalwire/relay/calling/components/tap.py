@@ -8,26 +8,26 @@ class Tap(BaseComponent):
 
   def __init__(self, call, audio_direction, target_type, target_addr=None, target_port=None, target_ptime=None, target_uri=None, rate=None, codec=None):
     super().__init__(call)
-    self._tap = {
+    self.tap = {
       'type': TapType.AUDIO,
       'params': { 'direction': audio_direction }
     }
-    self._device = {
+    self.device = {
       'type': target_type,
       'params': {}
     }
     if target_addr is not None:
-      self._device['params']['addr'] = target_addr
+      self.device['params']['addr'] = target_addr
     if target_port is not None:
-      self._device['params']['port'] = target_port
+      self.device['params']['port'] = target_port
     if target_ptime is not None:
-      self._device['params']['ptime'] = target_ptime
+      self.device['params']['ptime'] = target_ptime
     if target_uri is not None:
-      self._device['params']['uri'] = target_uri
+      self.device['params']['uri'] = target_uri
     if rate is not None:
-      self._device['params']['rate'] = rate
+      self.device['params']['rate'] = rate
     if codec is not None:
-      self._device['params']['codec'] = codec
+      self.device['params']['codec'] = codec
 
   @property
   def event_type(self):
@@ -43,16 +43,25 @@ class Tap(BaseComponent):
       'node_id': self.call.node_id,
       'call_id': self.call.id,
       'control_id': self.control_id,
-      'tap': self._tap,
-      'device': self._device
+      'tap': self.tap,
+      'device': self.device
     }
+
+  @property
+  def source_device(self):
+    try:
+      return self._execute_result['source_device']
+    except Exception:
+      return {}
 
   def notification_handler(self, params):
     self.state = params.get('state', None)
     if self.state is None:
       return
-    self.tap = params.get('tap', {})
-    self.device = params.get('device', {})
+    if 'tap' in params:
+      self.tap = params['tap']
+    if 'device' in params:
+      self.device = params['device']
 
     self.completed = self.state == CallTapState.FINISHED
     if self.completed:

@@ -12,4 +12,4 @@ class TapResult(BaseResult):
 
   @property
   def destination_device(self):
-    return self.component.destination_device
+    return self.component.device
