@@ -19,13 +19,13 @@ class Tap(BaseComponent):
     if target_addr is not None:
       self.device['params']['addr'] = target_addr
     if target_port is not None:
-      self.device['params']['port'] = target_port
+      self.device['params']['port'] = int(target_port)
     if target_ptime is not None:
-      self.device['params']['ptime'] = target_ptime
+      self.device['params']['ptime'] = int(target_ptime)
     if target_uri is not None:
       self.device['params']['uri'] = target_uri
     if rate is not None:
-      self.device['params']['rate'] = rate
+      self.device['params']['rate'] = int(rate)
     if codec is not None:
       self.device['params']['codec'] = codec
 

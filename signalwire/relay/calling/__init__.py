@@ -126,6 +126,6 @@ class Calling(BaseRelay):
   def _on_tap(self, params):
     call = self._get_call_by_id(params['call_id'])
     if call is not None:
-      trigger(Notification.TAP, params, suffix=params['control_id']) # Notify components listening on Record and control_id
+      trigger(Notification.TAP, params, suffix=params['control_id']) # Notify components listening on Tap and control_id
       trigger(call.tag, params, suffix='tap.stateChange')
       trigger(call.tag, params, suffix=f"tap.{params['state']}")
