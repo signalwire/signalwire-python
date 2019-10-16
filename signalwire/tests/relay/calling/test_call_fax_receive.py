@@ -25,7 +25,7 @@ def test_fax_events(relay_call):
   assert on_finished.call_count == 1
 
 @pytest.mark.asyncio
-async def test_record_with_success(success_response, relay_call):
+async def test_fax_receive_with_success(success_response, relay_call):
   with patch('signalwire.relay.calling.components.uuid4', mock_uuid):
     relay_call.calling.client.execute = success_response
     payload = json.loads('{"event_type":"calling.call.fax","params":{"control_id":"control-id","call_id":"call-id","node_id":"node-id","fax":{"type":"finished","params":{"direction":"receive","identity":"+1xxx","remote_identity":"+1yyy","document":"file.pdf","success":true,"result":"1231","result_text":"","pages":"1"}}}}')
@@ -43,14 +43,14 @@ async def test_record_with_success(success_response, relay_call):
     relay_call.calling.client.execute.mock.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_record_with_failure(fail_response, relay_call):
+async def test_fax_receive_with_failure(fail_response, relay_call):
   relay_call.calling.client.execute = fail_response
   result = await relay_call.fax_receive()
   assert not result.successful
   relay_call.calling.client.execute.mock.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_record_async_with_success(success_response, relay_call):
+async def test_fax_receive_async_with_success(success_response, relay_call):
   with patch('signalwire.relay.calling.components.uuid4', mock_uuid):
     relay_call.calling.client.execute = success_response
     action = await relay_call.fax_receive_async()
@@ -64,7 +64,7 @@ async def test_record_async_with_success(success_response, relay_call):
     relay_call.calling.client.execute.mock.assert_called_once()
 
 @pytest.mark.asyncio
-async def test_record_async_with_failure(fail_response, relay_call):
+async def test_fax_receive_async_with_failure(fail_response, relay_call):
   relay_call.calling.client.execute = fail_response
   action = await relay_call.fax_receive_async()
   assert action.completed
