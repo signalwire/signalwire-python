@@ -3,7 +3,10 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-<!-- ## [Unreleased] -->
+## [Unreleased]
+### Added
+- Support for Calling `tap`, `tap_async` methods.
+
 ## [2.0.0b3] - 2019-10-14
 ### Added
 - Support for Relay Messaging

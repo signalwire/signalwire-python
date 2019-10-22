@@ -1,6 +1,6 @@
 from uuid import uuid4
 from signalwire.blade.handler import trigger, register, unregister, unregister_all
-from .constants import CallState, DisconnectReason, ConnectState, CallPlayState, MediaType, RecordType, CallFaxState, CallSendDigitsState
+from .constants import CallState, DisconnectReason, ConnectState, CallPlayState, MediaType, RecordType, TapType, CallTapState, CallFaxState
 from .components.dial import Dial
 from .components.hangup import Hangup
 from .components.answer import Answer
@@ -24,6 +24,9 @@ from .actions.fax_action import FaxAction
 from .components.send_digits import SendDigits
 from .results.send_digits_result import SendDigitsResult
 from .actions.send_digits_action import SendDigitsAction
+from .components.tap import Tap
+from .results.tap_result import TapResult
+from .actions.tap_action import TapAction
 
 class Call:
   def __init__(self, *, calling, **kwargs):
@@ -206,6 +209,16 @@ class Call:
     component = FaxSend(self, document=url, identity=identity, header=header)
     await component.execute()
     return FaxAction(component)
+
+  async def tap(self, audio_direction, target_type, target_addr=None, target_port=None, target_ptime=None, target_uri=None, rate=None, codec=None):
+    component = Tap(self, audio_direction, target_type, target_addr, target_port, target_ptime, target_uri, rate, codec)
+    await component.wait_for(CallTapState.FINISHED)
+    return TapResult(component)
+
+  async def tap_async(self, audio_direction, target_type, target_addr=None, target_port=None, target_ptime=None, target_uri=None, rate=None, codec=None):
+    component = Tap(self, audio_direction, target_type, target_addr, target_port, target_ptime, target_uri, rate, codec)
+    await component.execute()
+    return TapAction(component)
 
   def _state_changed(self, params):
     self.prev_state = self.state

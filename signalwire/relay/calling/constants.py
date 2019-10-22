@@ -8,6 +8,7 @@ class Method:
   RECEIVE_FAX = 'calling.receive_fax'
   SEND_FAX = 'calling.send_fax'
   SEND_DIGITS = 'calling.send_digits'
+  TAP = 'calling.tap'
 
 class Notification:
   STATE = 'calling.call.state'
@@ -65,3 +66,10 @@ class CallFaxState:
 
 class CallSendDigitsState:
   FINISHED = 'finished'
+
+class CallTapState:
+  TAPPING = 'tapping'
+  FINISHED = 'finished'
+
+class TapType:
+  AUDIO = 'audio'
