@@ -1,6 +1,6 @@
 from uuid import uuid4
 from signalwire.blade.handler import trigger, register, unregister, unregister_all
-from .constants import CallState, DisconnectReason, ConnectState, CallPlayState, MediaType, RecordType, CallFaxState
+from .constants import CallState, DisconnectReason, ConnectState, CallPlayState, MediaType, RecordType, CallFaxState, CallSendDigitsState
 from .components.dial import Dial
 from .components.hangup import Hangup
 from .components.answer import Answer
@@ -158,7 +158,7 @@ class Call:
 
   async def send_digits(self, digits):
     component = SendDigits(self, digits)
-    await component.wait_for(CallPlayState.ERROR, CallPlayState.FINISHED)
+    await component.wait_for(CallSendDigitsState.FINISHED)
     return SendDigitsResult(component)
 
   async def send_digits_async(self, digits):
