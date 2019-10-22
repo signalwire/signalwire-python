@@ -1,6 +1,6 @@
 from uuid import uuid4
 from signalwire.blade.handler import trigger, register, unregister, unregister_all
-from .constants import CallState, DisconnectReason, ConnectState, CallPlayState, MediaType, RecordType, TapType, CallTapState, CallFaxState
+from .constants import CallState, DisconnectReason, ConnectState, CallPlayState, MediaType, RecordType, TapType, CallTapState, CallFaxState, CallSendDigitsState
 from .components.dial import Dial
 from .components.hangup import Hangup
 from .components.answer import Answer
