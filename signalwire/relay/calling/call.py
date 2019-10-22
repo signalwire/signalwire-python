@@ -1,6 +1,6 @@
 from uuid import uuid4
 from signalwire.blade.handler import trigger, register, unregister, unregister_all
-from .constants import CallState, DisconnectReason, ConnectState, CallPlayState, MediaType, RecordType
+from .constants import CallState, DisconnectReason, ConnectState, CallPlayState, MediaType, RecordType, CallFaxState
 from .components.dial import Dial
 from .components.hangup import Hangup
 from .components.answer import Answer
@@ -17,6 +17,10 @@ from .components.record import Record
 from .results.record_result import RecordResult
 from .actions.record_action import RecordAction
 from .components.awaiter import Awaiter
+from .components.fax_send import FaxSend
+from .components.fax_receive import FaxReceive
+from .results.fax_result import FaxResult
+from .actions.fax_action import FaxAction
 
 class Call:
   def __init__(self, *, calling, **kwargs):
@@ -169,6 +173,26 @@ class Call:
 
   def wait_for_ended(self):
     return self.wait_for(events=[CallState.ENDED])
+
+  async def fax_receive(self):
+    component = FaxReceive(self)
+    await component.wait_for(CallFaxState.ERROR, CallFaxState.FINISHED)
+    return FaxResult(component)
+
+  async def fax_receive_async(self):
+    component = FaxReceive(self)
+    await component.execute()
+    return FaxAction(component)
+
+  async def fax_send(self, url, identity=None, header=None):
+    component = FaxSend(self, document=url, identity=identity, header=header)
+    await component.wait_for(CallFaxState.ERROR, CallFaxState.FINISHED)
+    return FaxResult(component)
+
+  async def fax_send_async(self, url, identity=None, header=None):
+    component = FaxSend(self, document=url, identity=identity, header=header)
+    await component.execute()
+    return FaxAction(component)
 
   def _state_changed(self, params):
     self.prev_state = self.state

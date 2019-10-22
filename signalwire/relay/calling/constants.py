@@ -5,6 +5,8 @@ class Method:
   CONNECT = 'calling.connect'
   PLAY = 'calling.play'
   RECORD = 'calling.record'
+  RECEIVE_FAX = 'calling.receive_fax'
+  SEND_FAX = 'calling.send_fax'
 
 class Notification:
   STATE = 'calling.call.state'
@@ -54,3 +56,8 @@ class CallRecordState:
 
 class RecordType:
   AUDIO = 'audio'
+
+class CallFaxState:
+  PAGE = 'page'
+  ERROR = 'error'
+  FINISHED = 'finished'
