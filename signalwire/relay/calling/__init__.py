@@ -27,6 +27,8 @@ class Calling(BaseRelay):
       self._on_record(notification['params'])
     elif notification['event_type'] == Notification.FAX:
       self._on_fax(notification['params'])
+    elif notification['event_type'] == Notification.SEND_DIGITS:
+      self._on_send_digits(notification['params'])
     elif notification['event_type'] == Notification.TAP:
       self._on_tap(notification['params'])
 
@@ -122,6 +124,13 @@ class Calling(BaseRelay):
         trigger(call.tag, params, suffix=f"fax.{params['fax']['type']}")
       except KeyError:
         pass
+
+  def _on_send_digits(self, params):
+    call = self._get_call_by_id(params['call_id'])
+    if call is not None:
+      trigger(Notification.SEND_DIGITS, params, suffix=params['control_id']) # Notify components listening on SendDigits and control_id
+      trigger(call.tag, params, suffix='sendDigits.stateChange')
+      trigger(call.tag, params, suffix=f"sendDigits.{params['state']}")
 
   def _on_tap(self, params):
     call = self._get_call_by_id(params['call_id'])
