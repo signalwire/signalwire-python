@@ -7,6 +7,7 @@ class Method:
   RECORD = 'calling.record'
   RECEIVE_FAX = 'calling.receive_fax'
   SEND_FAX = 'calling.send_fax'
+  SEND_DIGITS = 'calling.send_digits'
 
 class Notification:
   STATE = 'calling.call.state'
@@ -18,7 +19,7 @@ class Notification:
   FAX = 'calling.call.fax'
   DETECT = 'calling.call.detect'
   TAP = 'calling.call.tap'
-  SENDDIGITS = 'calling.call.send_digits'
+  SEND_DIGITS = 'calling.call.send_digits'
 
 class CallState:
   ALL = ['created', 'ringing', 'answered', 'ending', 'ended']
@@ -60,4 +61,7 @@ class RecordType:
 class CallFaxState:
   PAGE = 'page'
   ERROR = 'error'
+  FINISHED = 'finished'
+
+class CallSendDigitsState:
   FINISHED = 'finished'
