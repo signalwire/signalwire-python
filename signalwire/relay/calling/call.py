@@ -21,6 +21,9 @@ from .components.fax_send import FaxSend
 from .components.fax_receive import FaxReceive
 from .results.fax_result import FaxResult
 from .actions.fax_action import FaxAction
+from .components.send_digits import SendDigits
+from .results.send_digits_result import SendDigitsResult
+from .actions.send_digits_action import SendDigitsAction
 
 class Call:
   def __init__(self, *, calling, **kwargs):
@@ -152,6 +155,16 @@ class Call:
     if result and 'url' in result:
       component.url = result['url']
     return RecordAction(component)
+
+  async def send_digits(self, digits):
+    component = SendDigits(self, digits)
+    await component.wait_for(CallPlayState.ERROR, CallPlayState.FINISHED)
+    return SendDigitsResult(component)
+
+  async def send_digits_async(self, digits):
+    component = SendDigits(self, digits)
+    await component.execute()
+    return SendDigitsAction(component)
 
   async def wait_for(self, events=[CallState.ENDED]):
     state_index = CallState.ALL.index(self.state)
