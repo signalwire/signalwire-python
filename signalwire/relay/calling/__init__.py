@@ -2,7 +2,7 @@ import logging
 from signalwire.blade.handler import trigger
 from signalwire.relay import BaseRelay
 from .call import Call
-from .constants import Notification
+from .constants import Notification, DetectState
 
 class Calling(BaseRelay):
   def __init__(self, client):
@@ -31,6 +31,8 @@ class Calling(BaseRelay):
       self._on_send_digits(notification['params'])
     elif notification['event_type'] == Notification.TAP:
       self._on_tap(notification['params'])
+    elif notification['event_type'] == Notification.DETECT:
+      self._on_detect(notification['params'])
 
   def new_call(self, *, call_type='phone', from_number, to_number, timeout=None):
     call = Call(calling=self)
@@ -138,3 +140,14 @@ class Calling(BaseRelay):
       trigger(Notification.TAP, params, suffix=params['control_id']) # Notify components listening on Tap and control_id
       trigger(call.tag, params, suffix='tap.stateChange')
       trigger(call.tag, params, suffix=f"tap.{params['state']}")
+
+  def _on_detect(self, params):
+    call = self._get_call_by_id(params['call_id'])
+    if call is not None:
+      trigger(Notification.DETECT, params, suffix=params['control_id']) # Notify components listening on Detect and control_id
+      try:
+        event = params['detect']['params']['event']
+        suffix = event if event == DetectState.FINISHED or event == DetectState.ERROR else 'update'
+        trigger(call.tag, params['detect'], suffix=f"detect.{suffix}")
+      except KeyError:
+        pass
