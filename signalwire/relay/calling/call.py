@@ -118,26 +118,26 @@ class Call:
     await component.execute()
     return DetectAction(component)
 
-  async def detect_answering_machine(self, wait_for_beep=False, timeout=None, initial_timeout=None, end_silence_timeout=None, machine_voice_threshold=None, machine_words_threshold=None):
+  def detect_answering_machine(self, wait_for_beep=False, timeout=None, initial_timeout=None, end_silence_timeout=None, machine_voice_threshold=None, machine_words_threshold=None):
     return self.detect(DetectType.MACHINE, wait_for_beep=wait_for_beep, timeout=timeout, initial_timeout=initial_timeout, end_silence_timeout=end_silence_timeout, machine_voice_threshold=machine_voice_threshold, machine_words_threshold=machine_words_threshold)
 
   amd = detect_answering_machine
 
-  async def detect_answering_machine_async(self, wait_for_beep=False, timeout=None, initial_timeout=None, end_silence_timeout=None, machine_voice_threshold=None, machine_words_threshold=None):
+  def detect_answering_machine_async(self, wait_for_beep=False, timeout=None, initial_timeout=None, end_silence_timeout=None, machine_voice_threshold=None, machine_words_threshold=None):
     return self.detect_async(DetectType.MACHINE, wait_for_beep=wait_for_beep, timeout=timeout, initial_timeout=initial_timeout, end_silence_timeout=end_silence_timeout, machine_voice_threshold=machine_voice_threshold, machine_words_threshold=machine_words_threshold)
 
   amd_async = detect_answering_machine_async
 
-  async def detect_fax(self, tone=None, timeout=None):
+  def detect_fax(self, tone=None, timeout=None):
     return self.detect(DetectType.FAX, tone=tone, timeout=timeout)
 
-  async def detect_fax_async(self, tone=None, timeout=None):
+  def detect_fax_async(self, tone=None, timeout=None):
     return self.detect_async(DetectType.FAX, tone=tone, timeout=timeout)
 
-  async def detect_digit(self, digits=None, timeout=None):
+  def detect_digit(self, digits=None, timeout=None):
     return self.detect(DetectType.DIGIT, digits=digits, timeout=timeout)
 
-  async def detect_digit_async(self, digits=None, timeout=None):
+  def detect_digit_async(self, digits=None, timeout=None):
     return self.detect_async(DetectType.DIGIT, digits=digits, timeout=timeout)
 
   async def play(self, media_list, volume=0):
