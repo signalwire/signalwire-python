@@ -11,6 +11,8 @@ from signalwire.relay.calling.components.fax_receive import FaxReceive
 from signalwire.relay.calling.actions.fax_action import FaxAction
 from signalwire.relay.calling.components.tap import Tap
 from signalwire.relay.calling.actions.tap_action import TapAction
+from signalwire.relay.calling.components.detect import Detect
+from signalwire.relay.calling.actions.detect_action import DetectAction
 
 PLAY_STOP_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.play.stop","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id"}}')
 PLAY_PAUSE_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.play.pause","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id"}}')
@@ -20,6 +22,7 @@ RECORD_STOP_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"
 RECEIVE_FAX_STOP_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.receive_fax.stop","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id"}}')
 SEND_FAX_STOP_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.send_fax.stop","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id"}}')
 TAP_STOP_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.tap.stop","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id"}}')
+DETECT_STOP_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.detect.stop","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id"}}')
 
 @pytest.fixture()
 def play_action(relay_call):
@@ -50,6 +53,12 @@ def tap_action(relay_call):
   component = Tap(relay_call, audio_direction='both', target_type='rtp')
   component.control_id = 'control-id' # force-mock control_id
   return TapAction(component)
+
+@pytest.fixture()
+def detect_action(relay_call):
+  component = Detect(relay_call, 'machine')
+  component.control_id = 'control-id' # force-mock control_id
+  return DetectAction(component)
 
 @pytest.mark.asyncio
 async def test_play_action_stop_with_success(success_response, relay_call, play_action):
@@ -192,4 +201,22 @@ async def test_tap_action_stop_with_failure(fail_response, relay_call, tap_actio
   assert not result.successful
   msg = relay_call.calling.client.execute.mock.call_args[0][0]
   assert msg.params == TAP_STOP_PAYLOAD
+  relay_call.calling.client.execute.mock.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_detect_action_stop_with_success(success_response, relay_call, detect_action):
+  relay_call.calling.client.execute = success_response
+  result = await detect_action.stop()
+  assert result.successful
+  msg = relay_call.calling.client.execute.mock.call_args[0][0]
+  assert msg.params == DETECT_STOP_PAYLOAD
+  relay_call.calling.client.execute.mock.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_detect_action_stop_with_failure(fail_response, relay_call, detect_action):
+  relay_call.calling.client.execute = fail_response
+  result = await detect_action.stop()
+  assert not result.successful
+  msg = relay_call.calling.client.execute.mock.call_args[0][0]
+  assert msg.params == DETECT_STOP_PAYLOAD
   relay_call.calling.client.execute.mock.assert_called_once()
