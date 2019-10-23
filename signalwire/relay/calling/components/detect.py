@@ -65,6 +65,7 @@ class Detect(BaseComponent):
 
     if not self.has_future():
       self._results.append(self.state)
+      return
 
     if self.detect_type == DetectType.DIGIT:
       return self._complete(detect)
