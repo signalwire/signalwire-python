@@ -6,6 +6,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 ### Added
 - Support for Calling `tap`, `tap_async` methods.
+- Support for Calling `send_digits`, `send_digits_async` methods.
+- Support to send/receive faxes on the Call: `fax_receive`, `fax_receive_async`, `fax_send`, `fax_send_async`.
+- Methods to start detectors on the Call: `detect`, `detect_async`, `detect_answering_machine`, `detect_answering_machine_async`, `detect_digit`, `detect_digit_async`, `detect_fax`, `detect_fax_async`.
 
 ## [2.0.0b3] - 2019-10-14
 ### Added

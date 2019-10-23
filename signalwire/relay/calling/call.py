@@ -1,6 +1,6 @@
 from uuid import uuid4
 from signalwire.blade.handler import trigger, register, unregister, unregister_all
-from .constants import CallState, DisconnectReason, ConnectState, CallPlayState, MediaType, RecordType, TapType, CallTapState, CallFaxState, CallSendDigitsState
+from .constants import CallState, DisconnectReason, ConnectState, CallPlayState, MediaType, RecordType, TapType, CallTapState, CallFaxState, CallSendDigitsState, DetectState, DetectType
 from .components.dial import Dial
 from .components.hangup import Hangup
 from .components.answer import Answer
@@ -10,6 +10,9 @@ from .results.hangup_result import HangupResult
 from .results.answer_result import AnswerResult
 from .results.connect_result import ConnectResult
 from .actions.connect_action import ConnectAction
+from .components.detect import Detect
+from .results.detect_result import DetectResult
+from .actions.detect_action import DetectAction
 from .components.play import Play
 from .results.play_result import PlayResult
 from .actions.play_action import PlayAction
@@ -104,6 +107,38 @@ class Call:
     component = Connect(self, device_list, ringback_list)
     await component.execute()
     return ConnectAction(component)
+
+  async def detect(self, detect_type, wait_for_beep=False, timeout=None, initial_timeout=None, end_silence_timeout=None, machine_voice_threshold=None, machine_words_threshold=None, tone=None, digits=None):
+    component = Detect(self, detect_type, wait_for_beep, timeout, initial_timeout, end_silence_timeout, machine_voice_threshold, machine_words_threshold, tone, digits)
+    await component.wait_for(DetectState.MACHINE, DetectState.HUMAN, DetectState.UNKNOWN, DetectState.CED, DetectState.CNG)
+    return DetectResult(component)
+
+  async def detect_async(self, detect_type, wait_for_beep=False, timeout=None, initial_timeout=None, end_silence_timeout=None, machine_voice_threshold=None, machine_words_threshold=None, tone=None, digits=None):
+    component = Detect(self, detect_type, wait_for_beep, timeout, initial_timeout, end_silence_timeout, machine_voice_threshold, machine_words_threshold, tone, digits)
+    await component.execute()
+    return DetectAction(component)
+
+  def detect_answering_machine(self, wait_for_beep=False, timeout=None, initial_timeout=None, end_silence_timeout=None, machine_voice_threshold=None, machine_words_threshold=None):
+    return self.detect(DetectType.MACHINE, wait_for_beep=wait_for_beep, timeout=timeout, initial_timeout=initial_timeout, end_silence_timeout=end_silence_timeout, machine_voice_threshold=machine_voice_threshold, machine_words_threshold=machine_words_threshold)
+
+  amd = detect_answering_machine
+
+  def detect_answering_machine_async(self, wait_for_beep=False, timeout=None, initial_timeout=None, end_silence_timeout=None, machine_voice_threshold=None, machine_words_threshold=None):
+    return self.detect_async(DetectType.MACHINE, wait_for_beep=wait_for_beep, timeout=timeout, initial_timeout=initial_timeout, end_silence_timeout=end_silence_timeout, machine_voice_threshold=machine_voice_threshold, machine_words_threshold=machine_words_threshold)
+
+  amd_async = detect_answering_machine_async
+
+  def detect_fax(self, tone=None, timeout=None):
+    return self.detect(DetectType.FAX, tone=tone, timeout=timeout)
+
+  def detect_fax_async(self, tone=None, timeout=None):
+    return self.detect_async(DetectType.FAX, tone=tone, timeout=timeout)
+
+  def detect_digit(self, digits=None, timeout=None):
+    return self.detect(DetectType.DIGIT, digits=digits, timeout=timeout)
+
+  def detect_digit_async(self, digits=None, timeout=None):
+    return self.detect_async(DetectType.DIGIT, digits=digits, timeout=timeout)
 
   async def play(self, media_list, volume=0):
     component = Play(self, media_list, volume)
