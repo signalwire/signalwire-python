@@ -59,6 +59,7 @@ class MediaType:
   AUDIO = 'audio'
   TTS = 'tts'
   SILENCE = 'silence'
+  RINGTONE = 'ringtone'
 
 class CallRecordState:
   RECORDING = 'recording'

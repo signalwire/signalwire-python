@@ -77,3 +77,10 @@ def prepare_collect_params(prompt_type, params):
     collect['speech']['hints'] = params['speech_hints']
 
   return collect
+
+def prepare_prompt_media_list(params, kwargs):
+  # helper method to build media_list for prompt_ringtone and prompt_tts
+  for k in ['duration', 'language', 'gender']:
+    if k in kwargs:
+      params[k] = kwargs[k]
+  return params
