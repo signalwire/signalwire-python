@@ -23,6 +23,8 @@ class Calling(BaseRelay):
       self._on_connect(notification['params'])
     elif notification['event_type'] == Notification.PLAY:
       self._on_play(notification['params'])
+    elif notification['event_type'] == Notification.COLLECT:
+      self._on_collect(notification['params'])
     elif notification['event_type'] == Notification.RECORD:
       self._on_record(notification['params'])
     elif notification['event_type'] == Notification.FAX:
@@ -109,6 +111,12 @@ class Calling(BaseRelay):
       trigger(Notification.PLAY, params, suffix=params['control_id']) # Notify components listening on Play and control_id
       trigger(call.tag, params, suffix='play.stateChange')
       trigger(call.tag, params, suffix=f"play.{params['state']}")
+
+  def _on_collect(self, params):
+    call = self._get_call_by_id(params['call_id'])
+    if call is not None:
+      trigger(Notification.COLLECT, params, suffix=params['control_id']) # Notify components listening on Collect and control_id
+      trigger(call.tag, params, suffix='prompt')
 
   def _on_record(self, params):
     call = self._get_call_by_id(params['call_id'])

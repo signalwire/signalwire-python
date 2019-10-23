@@ -10,6 +10,7 @@ class Method:
   SEND_DIGITS = 'calling.send_digits'
   TAP = 'calling.tap'
   DETECT = 'calling.detect'
+  PLAY_AND_COLLECT = 'calling.play_and_collect'
 
 class Notification:
   STATE = 'calling.call.state'
@@ -47,14 +48,22 @@ class CallPlayState:
   ERROR = 'error'
   FINISHED = 'finished'
 
+class PromptState:
+  ERROR = 'error'
+  NO_INPUT = 'no_input'
+  NO_MATCH = 'no_match'
+  DIGIT = 'digit'
+  SPEECH = 'speech'
+
 class MediaType:
   AUDIO = 'audio'
   TTS = 'tts'
   SILENCE = 'silence'
+  RINGTONE = 'ringtone'
 
 class CallRecordState:
   RECORDING = 'recording'
-  NOINPUT = 'no_input'
+  NO_INPUT = 'no_input'
   FINISHED = 'finished'
 
 class RecordType:

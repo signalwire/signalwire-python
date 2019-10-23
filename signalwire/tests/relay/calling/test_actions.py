@@ -13,6 +13,8 @@ from signalwire.relay.calling.components.tap import Tap
 from signalwire.relay.calling.actions.tap_action import TapAction
 from signalwire.relay.calling.components.detect import Detect
 from signalwire.relay.calling.actions.detect_action import DetectAction
+from signalwire.relay.calling.components.prompt import Prompt
+from signalwire.relay.calling.actions.prompt_action import PromptAction
 
 PLAY_STOP_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.play.stop","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id"}}')
 PLAY_PAUSE_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.play.pause","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id"}}')
@@ -23,6 +25,8 @@ RECEIVE_FAX_STOP_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","meth
 SEND_FAX_STOP_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.send_fax.stop","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id"}}')
 TAP_STOP_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.tap.stop","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id"}}')
 DETECT_STOP_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.detect.stop","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id"}}')
+PROMPT_STOP_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.play_and_collect.stop","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id"}}')
+PROMPT_VOLUME_PAYLOAD = json.loads('{"protocol":"signalwire-proto-test","method":"calling.play_and_collect.volume","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id","volume":-5.4}}')
 
 @pytest.fixture()
 def play_action(relay_call):
@@ -59,6 +63,12 @@ def detect_action(relay_call):
   component = Detect(relay_call, 'machine')
   component.control_id = 'control-id' # force-mock control_id
   return DetectAction(component)
+
+@pytest.fixture()
+def prompt_action(relay_call):
+  component = Prompt(relay_call, 'both', [])
+  component.control_id = 'control-id' # force-mock control_id
+  return PromptAction(component)
 
 @pytest.mark.asyncio
 async def test_play_action_stop_with_success(success_response, relay_call, play_action):
@@ -219,4 +229,40 @@ async def test_detect_action_stop_with_failure(fail_response, relay_call, detect
   assert not result.successful
   msg = relay_call.calling.client.execute.mock.call_args[0][0]
   assert msg.params == DETECT_STOP_PAYLOAD
+  relay_call.calling.client.execute.mock.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_prompt_action_stop_with_success(success_response, relay_call, prompt_action):
+  relay_call.calling.client.execute = success_response
+  result = await prompt_action.stop()
+  assert result.successful
+  msg = relay_call.calling.client.execute.mock.call_args[0][0]
+  assert msg.params == PROMPT_STOP_PAYLOAD
+  relay_call.calling.client.execute.mock.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_prompt_action_stop_with_failure(fail_response, relay_call, prompt_action):
+  relay_call.calling.client.execute = fail_response
+  result = await prompt_action.stop()
+  assert not result.successful
+  msg = relay_call.calling.client.execute.mock.call_args[0][0]
+  assert msg.params == PROMPT_STOP_PAYLOAD
+  relay_call.calling.client.execute.mock.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_prompt_action_volume_with_success(success_response, relay_call, prompt_action):
+  relay_call.calling.client.execute = success_response
+  result = await prompt_action.volume(-5.4)
+  assert result.successful
+  msg = relay_call.calling.client.execute.mock.call_args[0][0]
+  assert msg.params == PROMPT_VOLUME_PAYLOAD
+  relay_call.calling.client.execute.mock.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_prompt_action_volume_with_failure(fail_response, relay_call, prompt_action):
+  relay_call.calling.client.execute = fail_response
+  result = await prompt_action.volume(-5.4)
+  assert not result.successful
+  msg = relay_call.calling.client.execute.mock.call_args[0][0]
+  assert msg.params == PROMPT_VOLUME_PAYLOAD
   relay_call.calling.client.execute.mock.assert_called_once()
