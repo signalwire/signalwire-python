@@ -195,3 +195,30 @@ async def test_play_async_multiple_media_with_error_event(success_response, rela
     assert action.completed
     assert not action.result.successful
     relay_call.calling.client.execute.mock.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_play_ringtone_with_success(success_response, relay_call):
+  with patch('signalwire.relay.calling.components.uuid4', mock_uuid):
+    relay_call.calling.client.execute = success_response
+    payload = json.loads('{"event_type":"calling.call.play","params":{"control_id":"control-id","call_id":"call-id","node_id":"node-id","state":"finished"}}')
+    asyncio.create_task(_fire(relay_call.calling, payload))
+    result = await relay_call.play_ringtone(name='us')
+    assert result.successful
+    assert result.event.payload['state'] == 'finished'
+    msg = relay_call.calling.client.execute.mock.call_args[0][0]
+    assert msg.params == json.loads('{"protocol":"signalwire-proto-test","method":"calling.play","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id","play":[{"type":"ringtone","params":{"name":"us"}}]}}')
+    relay_call.calling.client.execute.mock.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_play_ringtone_async_with_success(success_response, relay_call):
+  with patch('signalwire.relay.calling.components.uuid4', mock_uuid):
+    relay_call.calling.client.execute = success_response
+    action = await relay_call.play_ringtone_async(duration=40, name='us')
+    assert not action.completed
+    # Complete the action now..
+    payload = json.loads('{"event_type":"calling.call.play","params":{"control_id":"control-id","call_id":"call-id","node_id":"node-id","state":"finished"}}')
+    await _fire(relay_call.calling, payload)
+    assert action.completed
+    msg = relay_call.calling.client.execute.mock.call_args[0][0]
+    assert msg.params == json.loads('{"protocol":"signalwire-proto-test","method":"calling.play","params":{"call_id":"call-id","node_id":"node-id","control_id":"control-id","play":[{"type":"ringtone","params":{"name":"us","duration":40}}]}}')
+    relay_call.calling.client.execute.mock.assert_called_once()

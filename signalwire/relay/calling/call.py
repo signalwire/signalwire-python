@@ -162,6 +162,18 @@ class Call:
     media_list = [{ 'type': MediaType.AUDIO, 'url': url }]
     return self.play_async(media_list, volume)
 
+  def play_ringtone(self, name, duration=None, volume=0):
+    media = { 'type': MediaType.RINGTONE, 'name': name }
+    if duration:
+      media['duration'] = float(duration)
+    return self.play([ media ], volume)
+
+  def play_ringtone_async(self, name, duration=None, volume=0):
+    media = { 'type': MediaType.RINGTONE, 'name': name }
+    if duration:
+      media['duration'] = float(duration)
+    return self.play_async([ media ], volume)
+
   def play_silence(self, duration):
     media_list = [{ 'type': MediaType.SILENCE, 'duration': float(duration) }]
     return self.play(media_list)
