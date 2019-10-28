@@ -21,7 +21,7 @@ CLASSIFIERS = [
 
 setup(
   name='signalwire',
-  version='2.0.0b3',
+  version='2.0.0rc1',
   description='Client library for connecting to SignalWire.',
   long_description=read('README.md'),
   long_description_content_type="text/markdown",
