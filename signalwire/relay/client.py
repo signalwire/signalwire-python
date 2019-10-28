@@ -1,3 +1,4 @@
+import os
 import asyncio
 import logging
 import signal
@@ -33,7 +34,8 @@ class Client:
     self._requests = {}
     self._idle = False
     self._executeQueue = asyncio.Queue()
-    logging.basicConfig(level=logging.INFO)
+    log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
+    logging.basicConfig(level=log_level)
 
   @property
   def connected(self):
