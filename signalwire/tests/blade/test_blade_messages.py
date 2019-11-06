@@ -1,5 +1,6 @@
 from unittest import TestCase
 from unittest.mock import patch
+from signalwire import __version__
 from signalwire.blade.messages.message import Message
 from signalwire.blade.messages.connect import Connect
 from signalwire.blade.messages.execute import Execute
@@ -43,12 +44,12 @@ class TestBladeMessages(TestCase):
     self.assertEqual(msg.method, 'blade.connect')
     self.assertEqual(msg.params['authentication']['project'], 'project')
     self.assertEqual(msg.params['authentication']['token'], 'token')
-    self.assertEqual(msg.to_json(), '{{"method":"blade.connect","jsonrpc":"2.0","id":"mocked","params":{{"version":{{"major":{0},"minor":{1},"revision":{2}}},"authentication":{{"project":"project","token":"token"}}}}}}'.format(Connect.MAJOR, Connect.MINOR, Connect.REVISION))
+    self.assertEqual(msg.to_json(), '{{"method":"blade.connect","jsonrpc":"2.0","id":"mocked","params":{{"version":{{"major":{0},"minor":{1},"revision":{2}}},"authentication":{{"project":"project","token":"token"}},"agent":"Python SDK/{3}"}}}}'.format(Connect.MAJOR, Connect.MINOR, Connect.REVISION, __version__))
 
   def test_connect_kwargs(self):
     msg = Connect(token='token', project='project')
     msg.id = 'mocked'
-    self.assertEqual(msg.to_json(), '{{"method":"blade.connect","jsonrpc":"2.0","id":"mocked","params":{{"version":{{"major":{0},"minor":{1},"revision":{2}}},"authentication":{{"project":"project","token":"token"}}}}}}'.format(Connect.MAJOR, Connect.MINOR, Connect.REVISION))
+    self.assertEqual(msg.to_json(), '{{"method":"blade.connect","jsonrpc":"2.0","id":"mocked","params":{{"version":{{"major":{0},"minor":{1},"revision":{2}}},"authentication":{{"project":"project","token":"token"}},"agent":"Python SDK/{3}"}}}}'.format(Connect.MAJOR, Connect.MINOR, Connect.REVISION, __version__))
 
   def test_execute(self):
     msg = Execute({
