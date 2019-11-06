@@ -1,3 +1,4 @@
+from signalwire import __version__
 from signalwire.blade.messages.message import Message
 
 class Connect(Message):
@@ -17,6 +18,7 @@ class Connect(Message):
       'authentication': {
         'project': project,
         'token': token
-      }
+      },
+      'agent': f'Python SDK/{__version__}'
     }
     super().__init__(params=params)
