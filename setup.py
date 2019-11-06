@@ -1,4 +1,4 @@
-import os, codecs
+import os, codecs, re
 from setuptools import setup, find_packages
 
 HERE = os.path.abspath(os.path.dirname(__file__))
@@ -7,6 +7,13 @@ def read(*file_paths):
   """Read file data."""
   with codecs.open(os.path.join(HERE, *file_paths), "r") as file_in:
     return file_in.read()
+
+def get_version():
+  content = read('signalwire/__init__.py')
+  match = re.search(r"^__version__ = '(.*)'$", content, re.MULTILINE)
+  if match:
+    return match.group(1)
+  raise RuntimeError('Unable to find package version!')
 
 CLASSIFIERS = [
   'Development Status :: 4 - Beta',
@@ -21,7 +28,7 @@ CLASSIFIERS = [
 
 setup(
   name='signalwire',
-  version='2.0.0rc1',
+  version=get_version(),
   description='Client library for connecting to SignalWire.',
   long_description=read('README.md'),
   long_description_content_type="text/markdown",
