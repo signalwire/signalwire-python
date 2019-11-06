@@ -17,12 +17,13 @@ class CustomConsumer(Consumer):
   async def on_incoming_call(self, call):
     await call.answer()
     devices = [
-      { 'to_number': '+12135877632', 'timeout': 10 },
-      { 'to_number': '+12135877632', 'timeout': 20 }
+      { 'to_number': '+1xxx', 'timeout': 10 },
+      { 'to_number': '+1yyy', 'timeout': 20 }
     ]
-    # ringback not supported yet
-    # ringback = [ { 'type': 'ringtone', 'name': 'it' } ]
-    result = await call.connect(device_list=devices)
+    ringback = [
+      { 'type': 'ringtone', 'name': 'us' }
+    ]
+    result = await call.connect(device_list=devices, ringback_list=ringback)
     if result.successful:
       print('Call Connected!')
       remote_call = result.call
