@@ -34,6 +34,8 @@ from .actions.send_digits_action import SendDigitsAction
 from .components.tap import Tap
 from .results.tap_result import TapResult
 from .actions.tap_action import TapAction
+from .components.disconnect import Disconnect
+from .results.disconnect_result import DisconnectResult
 
 class Call:
   def __init__(self, *, calling, **kwargs):
@@ -91,6 +93,11 @@ class Call:
     component = Dial(self)
     await component.wait_for(CallState.ANSWERED, CallState.ENDING, CallState.ENDED)
     return DialResult(component)
+
+  async def disconnect(self):
+    component = Disconnect(self)
+    await component.wait_for(ConnectState.FAILED, ConnectState.DISCONNECTED)
+    return DisconnectResult(component)
 
   async def hangup(self, reason: str = 'hangup'):
     component = Hangup(self, reason)

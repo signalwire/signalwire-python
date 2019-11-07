@@ -3,6 +3,7 @@ class Method:
   ANSWER = 'calling.answer'
   END = 'calling.end'
   CONNECT = 'calling.connect'
+  DISCONNECT = 'calling.disconnect'
   PLAY = 'calling.play'
   RECORD = 'calling.record'
   RECEIVE_FAX = 'calling.receive_fax'
