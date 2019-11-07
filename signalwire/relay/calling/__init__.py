@@ -2,7 +2,7 @@ import logging
 from signalwire.blade.handler import trigger
 from signalwire.relay import BaseRelay
 from .call import Call
-from .constants import Notification, DetectState
+from .constants import Notification, DetectState, ConnectState
 
 class Calling(BaseRelay):
   def __init__(self, client):
@@ -96,14 +96,18 @@ class Calling(BaseRelay):
 
   def _on_connect(self, params):
     call = self._get_call_by_id(params['call_id'])
+    state = params['connect_state']
     if call is not None:
       try:
-        call.peer = self._get_call_by_id(params['peer']['call_id'])
+        if state == ConnectState.CONNECTED:
+          call.peer = self._get_call_by_id(params['peer']['call_id'])
+        else:
+          call.peer = None
       except KeyError:
         pass
       trigger(Notification.CONNECT, params, suffix=call.tag) # Notify components listening on Connect and Tag
       trigger(call.tag, params, suffix='connect.stateChange')
-      trigger(call.tag, params, suffix=f"connect.{params['connect_state']}")
+      trigger(call.tag, params, suffix=f"connect.{state}")
 
   def _on_play(self, params):
     call = self._get_call_by_id(params['call_id'])
