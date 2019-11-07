@@ -7,6 +7,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 - Call `disconnect()` method.
 
+### Fixed
+- Check signals supported by the environment. On Windows there is no `SIGHUP`.
+
 ## [2.0.0rc1] - 2019-10-28
 ### Added
 - Support for Calling `tap`, `tap_async` methods.
