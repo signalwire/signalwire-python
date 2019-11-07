@@ -112,9 +112,15 @@ class Client:
     [task.cancel() for task in tasks]
     await asyncio.gather(*tasks, return_exceptions=True)
 
+  def handle_signal(self):
+    asyncio.create_task(self.disconnect())
+
   def attach_signals(self):
-    for s in (signal.SIGHUP, signal.SIGTERM, signal.SIGINT):
-      self.loop.add_signal_handler(s, lambda: asyncio.create_task(self.disconnect()))
+    for s in ('SIGHUP', 'SIGTERM', 'SIGINT'):
+      try:
+        self.loop.add_signal_handler(getattr(signal, s), self.handle_signal)
+      except:
+        pass
 
   async def on_socket_open(self):
     try:
