@@ -82,9 +82,7 @@ class Client:
       await self.connection.connect()
       asyncio.create_task(self.on_socket_open())
       await self.connection.read()
-      if self._pingInterval:
-        self._pingInterval.cancel()
-      trigger(WebSocketEvents.CLOSE, suffix=self.uuid)
+      self.on_socket_close()
     except aiohttp.client_exceptions.ClientConnectorError as error:
       trigger(WebSocketEvents.ERROR, error, suffix=self.uuid)
       logging.warn(f"{self.host} seems down..")
@@ -127,6 +125,12 @@ class Client:
       except:
         pass
 
+  def on_socket_close(self):
+    if self._pingInterval:
+      self._pingInterval.cancel()
+    self.contexts = []
+    trigger(WebSocketEvents.CLOSE, suffix=self.uuid)
+
   async def on_socket_open(self):
     try:
       self._idle = False
@@ -136,26 +140,23 @@ class Client:
       self.signature = result['authorization']['signature']
       self.protocol = await setup_protocol(self)
       await self._clearExecuteQueue()
-      self._pings()
+      self._pong = True
+      self.keepalive()
       logging.info('Client connected!')
       trigger(Constants.READY, self, suffix=self.uuid)
     except Exception as error:
       logging.error('Client setup error: {0}'.format(str(error)))
       await self.connection.close()
 
-  def _pings(self):
-    self._pingMatch = True
-    asyncio.create_task(self.send_ping())
-    self._pingInterval = self.loop.call_later(5, self._pings)
-
-  async def send_ping(self):
-    if self._pingMatch is False:
-      await self.connection.close()
-      return
-    self._pingMatch = False
-    timestamp = time()
-    result = await self.execute(Ping(timestamp))
-    self._pingMatch = result['timestamp'] == timestamp
+  def keepalive(self):
+    async def send_ping():
+      if self._pong is False:
+        return await self.connection.close()
+      self._pong = False
+      await self.execute(Ping())
+      self._pong = True
+    asyncio.create_task(send_ping())
+    self._pingInterval = self.loop.call_later(3, self.keepalive)
 
   async def _clearExecuteQueue(self):
     while True:
