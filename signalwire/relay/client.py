@@ -3,7 +3,6 @@ import asyncio
 import logging
 import signal
 import aiohttp
-from time import time
 from uuid import uuid4
 from signalwire.blade.connection import Connection
 from signalwire.blade.messages.connect import Connect
@@ -156,7 +155,7 @@ class Client:
       await self.execute(Ping())
       self._pong = True
     asyncio.create_task(send_ping())
-    self._pingInterval = self.loop.call_later(3, self.keepalive)
+    self._pingInterval = self.loop.call_later(10, self.keepalive)
 
   async def _clearExecuteQueue(self):
     while True:
