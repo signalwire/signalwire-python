@@ -16,6 +16,8 @@ from .message_handler import handle_inbound_message
 from .constants import Constants, WebSocketEvents
 
 class Client:
+  PING_DELAY = 10
+
   def __init__(self, project, token, host=Constants.HOST, connection=Connection):
     self.loop = asyncio.get_event_loop()
     self.host = host
@@ -155,7 +157,7 @@ class Client:
       await self.execute(Ping())
       self._pong = True
     asyncio.create_task(send_ping())
-    self._pingInterval = self.loop.call_later(10, self.keepalive)
+    self._pingInterval = self.loop.call_later(self.PING_DELAY, self.keepalive)
 
   async def _clearExecuteQueue(self):
     while True:
