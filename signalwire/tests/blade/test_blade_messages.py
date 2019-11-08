@@ -1,10 +1,11 @@
+from time import time
 from unittest import TestCase
-from unittest.mock import patch
 from signalwire import __version__
 from signalwire.blade.messages.message import Message
 from signalwire.blade.messages.connect import Connect
 from signalwire.blade.messages.execute import Execute
 from signalwire.blade.messages.subscription import Subscription
+from signalwire.blade.messages.ping import Ping
 
 class TestBladeMessages(TestCase):
   def test_from_json_with_result(self):
@@ -74,3 +75,18 @@ class TestBladeMessages(TestCase):
 
     self.assertEqual(msg.method, 'blade.subscription')
     self.assertEqual(msg.to_json(), '{"method":"blade.subscription","jsonrpc":"2.0","id":"mocked","params":{"protocol":"proto","command":"add","channels":["notif"]}}')
+
+  def test_ping_without_ts(self):
+    msg = Ping()
+    msg.id = 'mocked'
+
+    self.assertEqual(msg.method, 'blade.ping')
+    self.assertEqual(msg.to_json(), '{"method":"blade.ping","jsonrpc":"2.0","id":"mocked","params":{}}')
+
+  def test_ping_with_ts(self):
+    ts = time()
+    msg = Ping(ts)
+    msg.id = 'mocked'
+
+    self.assertEqual(msg.method, 'blade.ping')
+    self.assertEqual(msg.to_json(), f'{{"method":"blade.ping","jsonrpc":"2.0","id":"mocked","params":{{"timestamp":{ts}}}}}')

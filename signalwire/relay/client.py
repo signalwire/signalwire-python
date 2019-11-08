@@ -6,6 +6,7 @@ import aiohttp
 from uuid import uuid4
 from signalwire.blade.connection import Connection
 from signalwire.blade.messages.connect import Connect
+from signalwire.blade.messages.ping import Ping
 from signalwire.blade.handler import register, unregister, trigger
 from .helpers import setup_protocol
 from .calling import Calling
@@ -15,6 +16,8 @@ from .message_handler import handle_inbound_message
 from .constants import Constants, WebSocketEvents
 
 class Client:
+  PING_DELAY = 10
+
   def __init__(self, project, token, host=Constants.HOST, connection=Connection):
     self.loop = asyncio.get_event_loop()
     self.host = host
@@ -34,6 +37,7 @@ class Client:
     self._requests = {}
     self._idle = False
     self._executeQueue = asyncio.Queue()
+    self._pingInterval = None
     log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
     logging.basicConfig(level=log_level)
 
@@ -79,7 +83,7 @@ class Client:
       await self.connection.connect()
       asyncio.create_task(self.on_socket_open())
       await self.connection.read()
-      trigger(WebSocketEvents.CLOSE, suffix=self.uuid)
+      self.on_socket_close()
     except aiohttp.client_exceptions.ClientConnectorError as error:
       trigger(WebSocketEvents.ERROR, error, suffix=self.uuid)
       logging.warn(f"{self.host} seems down..")
@@ -122,6 +126,12 @@ class Client:
       except:
         pass
 
+  def on_socket_close(self):
+    if self._pingInterval:
+      self._pingInterval.cancel()
+    self.contexts = []
+    trigger(WebSocketEvents.CLOSE, suffix=self.uuid)
+
   async def on_socket_open(self):
     try:
       self._idle = False
@@ -131,11 +141,23 @@ class Client:
       self.signature = result['authorization']['signature']
       self.protocol = await setup_protocol(self)
       await self._clearExecuteQueue()
+      self._pong = True
+      self.keepalive()
       logging.info('Client connected!')
       trigger(Constants.READY, self, suffix=self.uuid)
     except Exception as error:
       logging.error('Client setup error: {0}'.format(str(error)))
       await self.connection.close()
+
+  def keepalive(self):
+    async def send_ping():
+      if self._pong is False:
+        return await self.connection.close()
+      self._pong = False
+      await self.execute(Ping())
+      self._pong = True
+    asyncio.create_task(send_ping())
+    self._pingInterval = self.loop.call_later(self.PING_DELAY, self.keepalive)
 
   async def _clearExecuteQueue(self):
     while True:
