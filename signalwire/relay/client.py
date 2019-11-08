@@ -3,9 +3,11 @@ import asyncio
 import logging
 import signal
 import aiohttp
+from time import time
 from uuid import uuid4
 from signalwire.blade.connection import Connection
 from signalwire.blade.messages.connect import Connect
+from signalwire.blade.messages.ping import Ping
 from signalwire.blade.handler import register, unregister, trigger
 from .helpers import setup_protocol
 from .calling import Calling
@@ -34,6 +36,7 @@ class Client:
     self._requests = {}
     self._idle = False
     self._executeQueue = asyncio.Queue()
+    self._pingInterval = None
     log_level = os.getenv('LOG_LEVEL', 'INFO').upper()
     logging.basicConfig(level=log_level)
 
@@ -79,6 +82,8 @@ class Client:
       await self.connection.connect()
       asyncio.create_task(self.on_socket_open())
       await self.connection.read()
+      if self._pingInterval:
+        self._pingInterval.cancel()
       trigger(WebSocketEvents.CLOSE, suffix=self.uuid)
     except aiohttp.client_exceptions.ClientConnectorError as error:
       trigger(WebSocketEvents.ERROR, error, suffix=self.uuid)
@@ -131,11 +136,26 @@ class Client:
       self.signature = result['authorization']['signature']
       self.protocol = await setup_protocol(self)
       await self._clearExecuteQueue()
+      self._pings()
       logging.info('Client connected!')
       trigger(Constants.READY, self, suffix=self.uuid)
     except Exception as error:
       logging.error('Client setup error: {0}'.format(str(error)))
       await self.connection.close()
+
+  def _pings(self):
+    self._pingMatch = True
+    asyncio.create_task(self.send_ping())
+    self._pingInterval = self.loop.call_later(5, self._pings)
+
+  async def send_ping(self):
+    if self._pingMatch is False:
+      await self.connection.close()
+      return
+    self._pingMatch = False
+    timestamp = time()
+    result = await self.execute(Ping(timestamp))
+    self._pingMatch = result['timestamp'] == timestamp
 
   async def _clearExecuteQueue(self):
     while True:
