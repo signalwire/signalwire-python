@@ -9,6 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 - Check signals supported by the environment. On Windows there is no `SIGHUP`.
+- Detect half-open connection and force close connection to update Client/Consumer properly.
 
 ## [2.0.0rc1] - 2019-10-28
 ### Added
