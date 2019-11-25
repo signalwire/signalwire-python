@@ -2,7 +2,6 @@
 
 
 ![PyPI Version](https://img.shields.io/pypi/v/signalwire.svg?color=brightgreen)
-![PyPI Version](https://img.shields.io/badge/pipy-v2.0.0b2-yellow.svg)
 ![Drone CI](https://ci.signalwire.com/api/badges/signalwire/signalwire-python/status.svg)
 
 The Relay SDK for Python enables developers to connect and use SignalWire's Relay APIs within their own Python code. Our Relay SDK allows developers to build or add robust and innovative communication services to their applications.
