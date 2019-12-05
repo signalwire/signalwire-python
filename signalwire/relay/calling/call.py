@@ -216,32 +216,32 @@ class Call:
     return PromptAction(component)
 
   def prompt_audio(self, prompt_type, url, **kwargs):
-    media_list = [{ 'type': MediaType.AUDIO, 'params': { 'url': url } }]
+    media_list = [{ 'type': MediaType.AUDIO, 'url': url }]
     return self.prompt(prompt_type=prompt_type, media_list=media_list, **kwargs)
 
   def prompt_audio_async(self, prompt_type, url, **kwargs):
-    media_list = [{ 'type': MediaType.AUDIO, 'params': { 'url': url } }]
+    media_list = [{ 'type': MediaType.AUDIO, 'url': url }]
     return self.prompt_async(prompt_type=prompt_type, media_list=media_list, **kwargs)
 
   def prompt_ringtone(self, prompt_type, name, **kwargs):
-    params = prepare_prompt_media_list({ 'name': name }, kwargs)
-    media_list = [{ 'type': MediaType.RINGTONE, 'params': params }]
-    return self.prompt(prompt_type=prompt_type, media_list=media_list, **kwargs)
+    media = prepare_prompt_media_list({ 'name': name }, kwargs)
+    media['type'] = MediaType.RINGTONE
+    return self.prompt(prompt_type=prompt_type, media_list=[media], **kwargs)
 
   def prompt_ringtone_async(self, prompt_type, name, **kwargs):
-    params = prepare_prompt_media_list({ 'name': name }, kwargs)
-    media_list = [{ 'type': MediaType.RINGTONE, 'params': params }]
-    return self.prompt_async(prompt_type=prompt_type, media_list=media_list, **kwargs)
+    media = prepare_prompt_media_list({ 'name': name }, kwargs)
+    media['type'] = MediaType.RINGTONE
+    return self.prompt_async(prompt_type=prompt_type, media_list=[media], **kwargs)
 
   def prompt_tts(self, prompt_type, text, **kwargs):
-    params = prepare_prompt_media_list({ 'text': text }, kwargs)
-    media_list = [{ 'type': MediaType.TTS, 'params': params }]
-    return self.prompt(prompt_type=prompt_type, media_list=media_list, **kwargs)
+    media = prepare_prompt_media_list({ 'text': text }, kwargs)
+    media['type'] = MediaType.TTS
+    return self.prompt(prompt_type=prompt_type, media_list=[media], **kwargs)
 
   def prompt_tts_async(self, prompt_type, text, **kwargs):
-    params = prepare_prompt_media_list({ 'text': text }, kwargs)
-    media_list = [{ 'type': MediaType.TTS, 'params': params }]
-    return self.prompt_async(prompt_type=prompt_type, media_list=media_list, **kwargs)
+    media = prepare_prompt_media_list({ 'text': text }, kwargs)
+    media['type'] = MediaType.TTS
+    return self.prompt_async(prompt_type=prompt_type, media_list=[media], **kwargs)
 
   async def record(self, record_type=RecordType.AUDIO, beep=None, record_format=None, stereo=None, direction=None, initial_timeout=None, end_silence_timeout=None, terminators=None):
     component = Record(self, record_type, beep, record_format, stereo, direction, initial_timeout, end_silence_timeout, terminators)

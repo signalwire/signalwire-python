@@ -1,6 +1,6 @@
 from . import BaseComponent
 from ..constants import Method, Notification, PromptState
-from ..helpers import prepare_collect_params
+from ..helpers import prepare_collect_params, prepare_media_list
 from ...event import Event
 from .decorators import stoppable, has_volume_control
 
@@ -11,7 +11,7 @@ class Prompt(BaseComponent):
   def __init__(self, call, prompt_type, play, **kwargs):
     super().__init__(call)
     self._collect = prepare_collect_params(prompt_type, kwargs)
-    self.play = play
+    self.play = prepare_media_list(play)
     self.volume_value = kwargs.get('volume', None)
     self.prompt_type = prompt_type
     self.confidence = None

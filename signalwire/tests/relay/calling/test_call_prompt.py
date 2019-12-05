@@ -9,7 +9,7 @@ ERROR = json.loads('{"event_type":"calling.call.collect","params":{"control_id":
 
 @pytest.fixture()
 def media_list():
-  return [{ 'type': 'audio', 'params': { 'url': 'audio.mp3' } }]
+  return [{ 'type': 'audio', 'url': 'audio.mp3' }]
 
 async def _fire(calling, notification):
   calling.notification_handler(notification)
