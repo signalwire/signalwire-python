@@ -100,3 +100,9 @@ class DetectState:
   UNKNOWN = 'UNKNOWN'
   READY = 'READY'
   NOT_READY = 'NOT_READY'
+
+class DeviceType:
+  PHONE = 'phone'
+  SIP = 'sip'
+  WEBRTC = 'webrtc'
+  AGORA = 'agora'
