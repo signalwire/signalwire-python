@@ -9,7 +9,7 @@ class BaseDevice(ABC):
     try:
       self.params = options['params']
     except Exception:
-      self.params = self._build_params(options)
+      self._build_params(options)
 
   @abstractproperty
   def from_endpoint(self):
@@ -22,6 +22,9 @@ class BaseDevice(ABC):
   @abstractmethod
   def _build_params(self, options):
     pass
+
+  def serialize(self, **kwargs):
+    return { 'type': self.device_type, 'params': self.params }
 
   def _add_timeout(self, options):
     if 'timeout' in options:
