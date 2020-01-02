@@ -2,6 +2,21 @@ from abc import ABC, abstractmethod, abstractproperty
 import logging
 from .constants import DeviceType
 
+class Device():
+  @classmethod
+  def factory(cls, options):
+    dtype = options.get('type', None)
+    if dtype == DeviceType.PHONE:
+      return PhoneDevice(options)
+    elif dtype == DeviceType.SIP:
+      return SipDevice(options)
+    elif dtype == DeviceType.WEBRTC:
+      return WebRTCDevice(options)
+    elif dtype == DeviceType.AGORA:
+      return AgoraDevice(options)
+    else:
+      logging.warn(f'Unknow device type: {dtype}')
+
 class BaseDevice(ABC):
   device_type = None
 
@@ -30,7 +45,6 @@ class BaseDevice(ABC):
     if 'timeout' in options:
       self.params['timeout'] = options['timeout']
 
-
 class PhoneDevice(BaseDevice):
   device_type = DeviceType.PHONE
 
@@ -42,8 +56,8 @@ class PhoneDevice(BaseDevice):
 
   def _build_params(self, options):
     self.params = {
-      'from_number': options['from'],
-      'to_number': options['to']
+      'from_number': options.get('from', None),
+      'to_number': options.get('to', None)
     }
     self._add_timeout(options)
 
@@ -80,8 +94,8 @@ class WebRTCDevice(BaseDevice):
 
   def _build_params(self, options):
     self.params = {
-      'from': options['from'],
-      'to': options['to']
+      'from': options.get('from', None),
+      'to': options.get('to', None)
     }
     self._add_timeout(options)
     if 'codecs' in options:
@@ -98,9 +112,9 @@ class AgoraDevice(BaseDevice):
 
   def _build_params(self, options):
     self.params = {
-      'from': options['from'],
-      'to': options['to'],
-      'appid': options['app_id'],
-      'channel': options['channel']
+      'from': options.get('from', None),
+      'to': options.get('to', None),
+      'appid': options.get('app_id', None),
+      'channel': options.get('channel', None)
     }
     self._add_timeout(options)

@@ -1,6 +1,6 @@
 import json
 from unittest import TestCase
-from signalwire.relay.calling.devices import PhoneDevice, SipDevice, WebRTCDevice, AgoraDevice
+from signalwire.relay.calling.devices import PhoneDevice, SipDevice, WebRTCDevice, AgoraDevice, Device
 
 class TestDevices(TestCase):
 
@@ -119,3 +119,21 @@ class TestDevices(TestCase):
     self.assertEqual(device.device_type, 'agora')
     self.assertEqual(device.params, json.loads('{"from":"user@somewhere.com","to":"room-example","appid":"uuid","channel":"1111"}'))
     self.assertEqual(device.serialize(), {'type':'agora', 'params': {'from': 'user@somewhere.com', 'to': 'room-example', 'appid': 'uuid', 'channel': '1111'}})
+
+  # FACTORY METHOD
+
+  def test_factory_phone(self):
+    device = Device.factory({'type': 'phone', 'from': 'from', 'to': 'to'})
+    self.assertIsInstance(device, PhoneDevice)
+
+  def test_factory_sip(self):
+    device = Device.factory({'type': 'sip', 'from': 'from', 'to': 'to'})
+    self.assertIsInstance(device, SipDevice)
+
+  def test_factory_webrtc(self):
+    device = Device.factory({'type': 'webrtc', 'from': 'from', 'to': 'to'})
+    self.assertIsInstance(device, WebRTCDevice)
+
+  def test_factory_agora(self):
+    device = Device.factory({'type': 'agora', 'from': 'from', 'to': 'to'})
+    self.assertIsInstance(device, AgoraDevice)
