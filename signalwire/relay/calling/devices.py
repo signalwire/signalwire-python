@@ -37,7 +37,6 @@ class PhoneDevice(BaseDevice):
   def to_endpoint(self):
     return self.params['to_number']
 
-  @abstractmethod
   def _build_params(self, options):
     self.params = {
       'from_number': options['from'],
@@ -54,7 +53,6 @@ class SipDevice(BaseDevice):
   def to_endpoint(self):
     return self.params['to']
 
-  @abstractmethod
   def _build_params(self, options):
     self.params = {
       'from': options['from'],
@@ -77,7 +75,6 @@ class WebRTCDevice(BaseDevice):
   def to_endpoint(self):
     return self.params['to']
 
-  @abstractmethod
   def _build_params(self, options):
     self.params = {
       'from': options['from'],
@@ -96,7 +93,6 @@ class AgoraDevice(BaseDevice):
   def to_endpoint(self):
     return self.params['to']
 
-  @abstractmethod
   def _build_params(self, options):
     self.params = {
       'from': options['from'],
