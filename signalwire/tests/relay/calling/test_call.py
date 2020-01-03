@@ -16,9 +16,6 @@ def test_init_options(relay_call):
   assert relay_call.context == 'office'
   assert relay_call.timeout is None
 
-# def test_device(relay_call):
-#   assert relay_call.device == {'type':'phone','params':{'from_number':'+12029999999','to_number':'+12028888888'}}
-
 async def _fire(calling, notification):
   calling.notification_handler(notification)
 
