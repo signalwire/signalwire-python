@@ -13,13 +13,13 @@ class Dial(BaseComponent):
 
   @property
   def method(self):
-    return Method.BEGIN
+    return Method.DIAL
 
   @property
   def payload(self):
     return {
       'tag': self.call.tag,
-      'device': self.call.device
+      'devices': self.call.targets
     }
 
   def notification_handler(self, params):

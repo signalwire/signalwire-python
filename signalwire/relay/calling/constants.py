@@ -1,5 +1,6 @@
 class Method:
-  BEGIN = 'calling.begin'
+  # BEGIN = 'calling.begin'
+  DIAL = 'calling.dial'
   ANSWER = 'calling.answer'
   END = 'calling.end'
   CONNECT = 'calling.connect'
