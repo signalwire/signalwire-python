@@ -1,5 +1,5 @@
 from signalwire.relay.calling.components import BaseComponent
-from ..helpers import prepare_connect_devices, prepare_media_list
+from ..helpers import prepare_devices, prepare_media_list
 from ..constants import Method, Notification, ConnectState
 from ...event import Event
 
@@ -7,7 +7,7 @@ class Connect(BaseComponent):
   def __init__(self, call, devices, ringback=[]):
     super().__init__(call)
     self.control_id = call.tag
-    self.devices = prepare_connect_devices(devices, call.from_number, call.timeout)
+    self.devices = prepare_devices(devices, call.from_endpoint, call.timeout)
     self.ringback = prepare_media_list(ringback)
 
   @property

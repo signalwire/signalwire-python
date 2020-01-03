@@ -1,20 +1,16 @@
-def prepare_connect_devices(devices, default_from, default_timeout=None, nested=False):
+from .devices import Device
+
+def prepare_devices(devices, default_from=None, default_timeout=None, nested=False):
   final = []
   for device in devices:
     if isinstance(device, list):
-      final.append(prepare_connect_devices(device, default_from, default_timeout, True))
+      final.append(prepare_devices(device, default_from, default_timeout, True))
     elif isinstance(device, dict):
-      params = {
-        'from_number': device.get('from_number', default_from),
-        'to_number': device.get('to_number', '')
-      }
-      timeout = device.get('timeout', default_timeout)
-      if timeout:
-        params['timeout'] = int(timeout)
-      tmp = {
-        'type': device.get('call_type', 'phone'),
-        'params': params
-      }
+      if default_from:
+        device['default_from'] = default_from
+      if default_timeout:
+        device['default_timeout'] = default_timeout
+      tmp = Device.factory(device)
       final.append(tmp if nested else [tmp])
   return final
 

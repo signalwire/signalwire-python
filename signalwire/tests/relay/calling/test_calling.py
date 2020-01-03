@@ -1,7 +1,7 @@
 import pytest
 from signalwire.blade.messages.message import Message
 from signalwire.relay.calling import Calling, Call
-from signalwire.relay.calling.devices import PhoneDevice, AgoraDevice
+from signalwire.relay.calling.devices import PhoneDevice, AgoraDevice, SipDevice
 from unittest.mock import Mock
 
 def test_add_call(relay_client):
@@ -78,3 +78,36 @@ async def test_on_state_ringing(relay_calling):
   message = Message.from_json('{"jsonrpc":"2.0","id":"uuid","method":"blade.broadcast","params":{"broadcaster_nodeid":"uuid","protocol":"signalwire-proto-test","channel":"notifications","event":"queuing.relay.events","params":{"event_type":"calling.call.state","event_channel":"signalwire-proto-test","timestamp":1569517309.4546909,"project_id":"project-uuid","space_id":"space-uuid","params":{"call_state":"ringing","direction":"outbound","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12028888888"}},"call_id":"call-id","node_id":"node-id","tag":"'+call.tag+'"}}}}')
   relay_calling.client.message_handler(message)
   assert call.state == 'ringing'
+
+def test_new_call_with_flattened_params_old_way(relay_calling):
+  call = relay_calling.new_call(call_type='phone', from_number='+12029999999', to_number='+12028888888', timeout=50)
+  assert isinstance(call, Call)
+  assert len(call.targets) == 1
+  # dispatch relay events
+  message = Message.from_json('{"jsonrpc":"2.0","id":"uuid","method":"blade.broadcast","params":{"broadcaster_nodeid":"uuid","protocol":"signalwire-proto-test","channel":"notifications","event":"queuing.relay.events","params":{"event_type":"calling.call.state","event_channel":"signalwire-proto-test","timestamp":1569517309.4546909,"project_id":"project-uuid","space_id":"space-uuid","params":{"call_state":"created","direction":"outbound","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12028888888"}},"call_id":"call-id","node_id":"node-id","tag":"'+call.tag+'"}}}}')
+  relay_calling.client.message_handler(message)
+  assert len(call.attempted_devices) == 1
+  message = Message.from_json('{"jsonrpc":"2.0","id":"uuid","method":"blade.broadcast","params":{"broadcaster_nodeid":"uuid","protocol":"signalwire-proto-test","channel":"notifications","event":"queuing.relay.events","params":{"event_type":"calling.call.state","event_channel":"signalwire-proto-test","timestamp":1569517309.4546909,"project_id":"project-uuid","space_id":"space-uuid","params":{"call_state":"answered","direction":"outbound","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12028888888","timeout":50}},"call_id":"call-id","node_id":"node-id","tag":"'+call.tag+'"}}}}')
+  relay_calling.client.message_handler(message)
+
+  assert isinstance(call.device, PhoneDevice)
+  assert call.call_type == 'phone'
+  assert call.from_endpoint == '+12029999999'
+  assert call.to_endpoint == '+12028888888'
+  assert call.timeout == 50
+
+def test_new_call_with_flattened_params_old_way_sip(relay_calling):
+  call = relay_calling.new_call(call_type='sip', from_number='user@domain.sip.com', to_number='user@other.sip.com')
+  assert isinstance(call, Call)
+  assert len(call.targets) == 1
+  # dispatch relay events
+  message = Message.from_json('{"jsonrpc":"2.0","id":"uuid","method":"blade.broadcast","params":{"broadcaster_nodeid":"uuid","protocol":"signalwire-proto-test","channel":"notifications","event":"queuing.relay.events","params":{"event_type":"calling.call.state","event_channel":"signalwire-proto-test","timestamp":1569517309.4546909,"project_id":"project-uuid","space_id":"space-uuid","params":{"call_state":"created","direction":"outbound","device":{"type":"sip","params":{"from":"user@domain.sip.com","to":"user@other.sip.com"}},"call_id":"call-id","node_id":"node-id","tag":"'+call.tag+'"}}}}')
+  relay_calling.client.message_handler(message)
+  assert isinstance(call.attempted_devices[0], SipDevice)
+  message = Message.from_json('{"jsonrpc":"2.0","id":"uuid","method":"blade.broadcast","params":{"broadcaster_nodeid":"uuid","protocol":"signalwire-proto-test","channel":"notifications","event":"queuing.relay.events","params":{"event_type":"calling.call.state","event_channel":"signalwire-proto-test","timestamp":1569517309.4546909,"project_id":"project-uuid","space_id":"space-uuid","params":{"call_state":"answered","direction":"outbound","device":{"type":"sip","params":{"from":"user@domain.sip.com","to":"user@other.sip.com"}},"call_id":"call-id","node_id":"node-id","tag":"'+call.tag+'"}}}}')
+  relay_calling.client.message_handler(message)
+
+  assert isinstance(call.device, SipDevice)
+  assert call.call_type == 'sip'
+  assert call.from_endpoint == 'user@domain.sip.com'
+  assert call.to_endpoint == 'user@other.sip.com'

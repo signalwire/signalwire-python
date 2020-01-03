@@ -2,10 +2,40 @@ from abc import ABC, abstractmethod, abstractproperty
 import logging
 from .constants import DeviceType
 
+def get_device_type(options):
+  if 'type' in options:
+    return options['type']
+  elif 'call_type' in options: # backwards compatibility
+    return options['call_type']
+  else:
+    return DeviceType.PHONE # backwards compatibility
+
+def get_device_from(options):
+  if 'from' in options:
+    return options['from']
+  elif 'from_endpoint' in options:
+    return options['from_endpoint']
+  elif 'from_number' in options: # backwards compatibility
+    return options['from_number']
+  elif 'default_from' in options:
+    return options['default_from']
+  else:
+    return None
+
+def get_device_to(options):
+  if 'to' in options:
+    return options['to']
+  elif 'to_endpoint' in options:
+    return options['to_endpoint']
+  elif 'to_number' in options: # backwards compatibility
+    return options['to_number']
+  else:
+    return None
+
 class Device():
   @classmethod
   def factory(cls, options):
-    dtype = options.get('type', None)
+    dtype = get_device_type(options)
     if dtype == DeviceType.PHONE:
       return PhoneDevice(options)
     elif dtype == DeviceType.SIP:
@@ -21,9 +51,14 @@ class BaseDevice(ABC):
   device_type = None
 
   def __init__(self, options):
+    # print('BaseDevice')
+    # print(options)
+    # print('BaseDevice')
     try:
       self.params = options['params']
     except Exception:
+      options['from'] = get_device_from(options)
+      options['to'] = get_device_to(options)
       self._build_params(options)
 
   @abstractproperty
@@ -47,7 +82,9 @@ class BaseDevice(ABC):
 
   def _add_timeout(self, options):
     if 'timeout' in options:
-      self.params['timeout'] = options['timeout']
+      self.params['timeout'] = int(options['timeout'])
+    elif 'default_timeout' in options:
+      self.params['timeout'] = int(options['default_timeout'])
 
 class PhoneDevice(BaseDevice):
   device_type = DeviceType.PHONE
