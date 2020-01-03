@@ -1,13 +1,6 @@
 import json
 from uuid import uuid4
-
-def json_encode(obj):
-  try:
-    return obj.serialize()
-  except:
-    pass
-  # Let Python raise the TypeError
-  return json.dumps(obj)
+from . import JSONRPCEncoder
 
 class Message:
   def __init__(self, **kwargs):
@@ -23,7 +16,7 @@ class Message:
       self.result = kwargs.pop('result')
 
   def to_json(self, **kwargs):
-    return json.dumps(self.__dict__, default=json_encode, separators=(',', ':'), **kwargs)
+    return JSONRPCEncoder.encode(dictionary=self.__dict__, **kwargs)
 
   @classmethod
   def from_json(cls, json_str):

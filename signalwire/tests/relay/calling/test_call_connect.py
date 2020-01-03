@@ -1,7 +1,7 @@
 import asyncio
 import json
 import pytest
-from signalwire.blade.messages.message import json_encode
+from signalwire.blade.messages.message import JSONRPCEncoder
 from signalwire.relay.calling.devices import Device
 from unittest.mock import Mock
 
@@ -35,7 +35,7 @@ async def test_connect_in_series_with_success(success_response, relay_call_activ
   assert result.successful
   assert result.call == relay_call_active.peer
   msg = relay_call_active.calling.client.execute.mock.call_args[0][0]
-  assert json.dumps(msg.params, default=json_encode, separators=(',', ':')) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}],[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991"}}]]}}'
+  assert JSONRPCEncoder.encode(msg.params) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}],[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991"}}]]}}'
   relay_call_active.calling.client.execute.mock.assert_called_once()
 
 @pytest.mark.asyncio
@@ -55,7 +55,7 @@ async def test_connect_in_series_with_ringback_success(success_response, relay_c
   assert result.successful
   assert result.call == relay_call_active.peer
   msg = relay_call_active.calling.client.execute.mock.call_args[0][0]
-  assert json.dumps(msg.params, default=json_encode, separators=(',', ':')) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}],[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991"}}]],"ringback":[{"type":"audio","params":{"url":"audio.mp3"}},{"type":"ringtone","params":{"name":"us"}}]}}'
+  assert JSONRPCEncoder.encode(msg.params) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}],[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991"}}]],"ringback":[{"type":"audio","params":{"url":"audio.mp3"}},{"type":"ringtone","params":{"name":"us"}}]}}'
   relay_call_active.calling.client.execute.mock.assert_called_once()
 
 @pytest.mark.asyncio
@@ -76,7 +76,7 @@ async def test_connect_in_parallel_with_success(success_response, relay_call_act
   assert result.successful
   assert result.call == relay_call_active.peer
   msg = relay_call_active.calling.client.execute.mock.call_args[0][0]
-  assert json.dumps(msg.params, default=json_encode, separators=(',', ':')) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}],[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991","timeout":20}},{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999992"}}]]}}'
+  assert JSONRPCEncoder.encode(msg.params) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}],[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991","timeout":20}},{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999992"}}]]}}'
   relay_call_active.calling.client.execute.mock.assert_called_once()
 
 @pytest.mark.asyncio
@@ -98,7 +98,7 @@ async def test_connect_in_parallel_with_ringback_success(success_response, relay
   assert result.successful
   assert result.call == relay_call_active.peer
   msg = relay_call_active.calling.client.execute.mock.call_args[0][0]
-  assert json.dumps(msg.params, default=json_encode, separators=(',', ':')) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991","timeout":20}},{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999992"}}]],"ringback":[{"type":"audio","params":{"url":"audio.mp3"}},{"type":"ringtone","params":{"name":"us"}}]}}'
+  assert JSONRPCEncoder.encode(msg.params) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991","timeout":20}},{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999992"}}]],"ringback":[{"type":"audio","params":{"url":"audio.mp3"}},{"type":"ringtone","params":{"name":"us"}}]}}'
   relay_call_active.calling.client.execute.mock.assert_called_once()
 
 @pytest.mark.asyncio
@@ -118,7 +118,7 @@ async def test_connect_series_and_parallel_with_success(success_response, relay_
   assert result.successful
   assert result.call == relay_call_active.peer
   msg = relay_call_active.calling.client.execute.mock.call_args[0][0]
-  assert json.dumps(msg.params, default=json_encode, separators=(',', ':')) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}],[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991","timeout":20}},{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999992"}}],[{"type":"phone","params":{"from_number":"+13029999999","to_number":"+12029999993"}}]]}}'
+  assert JSONRPCEncoder.encode(msg.params) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}],[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991","timeout":20}},{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999992"}}],[{"type":"phone","params":{"from_number":"+13029999999","to_number":"+12029999993"}}]]}}'
   relay_call_active.calling.client.execute.mock.assert_called_once()
 
 @pytest.mark.asyncio
@@ -133,7 +133,7 @@ async def test_connect_with_disconnected_event(success_response, relay_call_acti
   assert not result.successful
   assert result.call is None
   msg = relay_call_active.calling.client.execute.mock.call_args[0][0]
-  assert json.dumps(msg.params, default=json_encode, separators=(',', ':')) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}]]}}'
+  assert JSONRPCEncoder.encode(msg.params) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}]]}}'
   relay_call_active.calling.client.execute.mock.assert_called_once()
 
 @pytest.mark.asyncio
@@ -148,7 +148,7 @@ async def test_connect_with_failed_event(success_response, relay_call_active):
   assert not result.successful
   assert result.call is None
   msg = relay_call_active.calling.client.execute.mock.call_args[0][0]
-  assert json.dumps(msg.params, default=json_encode, separators=(',', ':')) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}]]}}'
+  assert JSONRPCEncoder.encode(msg.params) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}]]}}'
   relay_call_active.calling.client.execute.mock.assert_called_once()
 
 @pytest.mark.asyncio
@@ -171,7 +171,7 @@ async def test_connect_async_in_series_with_success(success_response, relay_call
   action = await relay_call_active.connect_async(device_list=devices)
   assert not action.completed
   msg = relay_call_active.calling.client.execute.mock.call_args[0][0]
-  assert json.dumps(msg.params, default=json_encode, separators=(',', ':')) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}],[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991"}}]]}}'
+  assert JSONRPCEncoder.encode(msg.params) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}],[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991"}}]]}}'
   relay_call_active.calling.client.execute.mock.assert_called_once()
   payload = json.loads('{"event_type":"calling.call.connect","params":{"connect_state":"connected","peer":{"call_id":"peer-call-id","node_id":"peer-node-id","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991"}}},"call_id":"call-id","node_id":"node-id","tag":"call-tag"}}')
   await _fire(relay_call_active.calling, payload)
@@ -193,7 +193,7 @@ async def test_connect_async_in_parallel_with_success(success_response, relay_ca
   action = await relay_call_active.connect_async(device_list=devices)
   assert not action.completed
   msg = relay_call_active.calling.client.execute.mock.call_args[0][0]
-  assert json.dumps(msg.params, default=json_encode, separators=(',', ':')) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}],[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991","timeout":20}},{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999992"}}]]}}'
+  assert JSONRPCEncoder.encode(msg.params) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}],[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991","timeout":20}},{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999992"}}]]}}'
   relay_call_active.calling.client.execute.mock.assert_called_once()
   payload = json.loads('{"event_type":"calling.call.connect","params":{"connect_state":"connected","peer":{"call_id":"peer-call-id","node_id":"peer-node-id","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991"}}},"call_id":"call-id","node_id":"node-id","tag":"call-tag"}}')
   await _fire(relay_call_active.calling, payload)
@@ -214,7 +214,7 @@ async def test_connect_async_series_and_parallel_with_success(success_response, 
   action = await relay_call_active.connect_async(device_list=devices)
   assert not action.completed
   msg = relay_call_active.calling.client.execute.mock.call_args[0][0]
-  assert json.dumps(msg.params, default=json_encode, separators=(',', ':')) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}],[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991","timeout":20}},{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999992"}}],[{"type":"phone","params":{"from_number":"+13029999999","to_number":"+12029999993"}}]]}}'
+  assert JSONRPCEncoder.encode(msg.params) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}],[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991","timeout":20}},{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999992"}}],[{"type":"phone","params":{"from_number":"+13029999999","to_number":"+12029999993"}}]]}}'
   relay_call_active.calling.client.execute.mock.assert_called_once()
   payload = json.loads('{"event_type":"calling.call.connect","params":{"connect_state":"connected","peer":{"call_id":"peer-call-id","node_id":"peer-node-id","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991"}}},"call_id":"call-id","node_id":"node-id","tag":"call-tag"}}')
   await _fire(relay_call_active.calling, payload)
@@ -230,7 +230,7 @@ async def test_connect_async_with_disconnected_event(success_response, relay_cal
   action = await relay_call_active.connect_async(device_list=devices)
   assert not action.completed
   msg = relay_call_active.calling.client.execute.mock.call_args[0][0]
-  assert json.dumps(msg.params, default=json_encode, separators=(',', ':')) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}]]}}'
+  assert JSONRPCEncoder.encode(msg.params) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}]]}}'
   relay_call_active.calling.client.execute.mock.assert_called_once()
   payload = json.loads('{"event_type":"calling.call.connect","params":{"connect_state":"disconnected","peer":{"call_id":"peer-call-id","node_id":"peer-node-id","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991"}}},"call_id":"call-id","node_id":"node-id","tag":"call-tag"}}')
   await _fire(relay_call_active.calling, payload)
@@ -246,7 +246,7 @@ async def test_connect_async_with_failed_event(success_response, relay_call_acti
   action = await relay_call_active.connect_async(device_list=devices)
   assert not action.completed
   msg = relay_call_active.calling.client.execute.mock.call_args[0][0]
-  assert json.dumps(msg.params, default=json_encode, separators=(',', ':')) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}]]}}'
+  assert JSONRPCEncoder.encode(msg.params) == '{"protocol":"signalwire-proto-test","method":"calling.connect","params":{"node_id":"node-id","call_id":"call-id","devices":[[{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999990","timeout":30}}]]}}'
   relay_call_active.calling.client.execute.mock.assert_called_once()
   payload = json.loads('{"event_type":"calling.call.connect","params":{"connect_state":"failed","peer":{"call_id":"peer-call-id","node_id":"peer-node-id","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12029999991"}}},"call_id":"call-id","node_id":"node-id","tag":"call-tag"}}')
   await _fire(relay_call_active.calling, payload)
