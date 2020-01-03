@@ -1,6 +1,7 @@
 import pytest
 from signalwire.blade.messages.message import Message
 from signalwire.relay.calling import Calling, Call
+from signalwire.relay.calling.devices import PhoneDevice, AgoraDevice
 from unittest.mock import Mock
 
 def test_add_call(relay_client):
@@ -27,7 +28,7 @@ def test_get_call_by_tag(relay_client):
   assert instance._get_call_by_tag(c1.tag) is c1
 
 @pytest.mark.asyncio
-async def test_on_receive(relay_calling):
+async def test_on_receive_phone_call(relay_calling):
   handler = Mock()
   await relay_calling.receive(['home', 'office'], handler)
 
@@ -36,8 +37,27 @@ async def test_on_receive(relay_calling):
 
   call = handler.call_args[0][0]
   assert isinstance(call, Call)
-  assert call.from_number == '+12029999999'
-  assert call.to_number == '+12028888888'
+  assert isinstance(call.device, PhoneDevice)
+  assert call.call_type == 'phone'
+  assert call.from_endpoint == '+12029999999'
+  assert call.to_endpoint == '+12028888888'
+  handler.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_on_receive_agora_call(relay_calling):
+  handler = Mock()
+  await relay_calling.receive(['home', 'office'], handler)
+
+  message = Message.from_json('{"jsonrpc":"2.0","id":"uuid","method":"blade.broadcast","params":{"broadcaster_nodeid":"uuid","protocol":"signalwire-proto-test","channel":"notifications","event":"queuing.relay.events","params":{"event_type":"calling.call.receive","timestamp":1569514183.0130031,"project_id":"project-uuid","space_id":"space-uuid","params":{"call_state":"created","context":"office","device":{"type":"agora","params":{"to":"+15551231234","from":"+15551231245","appid":"uuid","channel":"1111","timeout":60}},"direction":"inbound","call_id":"call-id","node_id":"node-id"},"context":"office","event_channel":"signalwire-proto-test"}}}')
+  relay_calling.client.message_handler(message)
+
+  call = handler.call_args[0][0]
+  assert isinstance(call, Call)
+  assert isinstance(call.device, AgoraDevice)
+  assert call.call_type == 'agora'
+  assert call.from_endpoint == '+15551231245'
+  assert call.to_endpoint == '+15551231234'
+  assert call.timeout == 60
   handler.assert_called_once()
 
 @pytest.mark.asyncio

@@ -6,15 +6,18 @@ from unittest.mock import Mock
 def test_init_options(relay_call):
   assert relay_call.id == 'call-id'
   assert relay_call.node_id == 'node-id'
-  assert relay_call.call_type == 'phone'
-  assert relay_call.from_number == '+12029999999'
-  assert relay_call.to_number == '+12028888888'
+  assert relay_call.call_type is None
+  assert relay_call.from_number is None
+  assert relay_call.to_number is None
+  assert relay_call.device is None
+  assert relay_call.attempted_devices == []
+  assert relay_call.ended is False
   assert relay_call.state == 'created'
   assert relay_call.context == 'office'
   assert relay_call.timeout is None
 
-def test_device(relay_call):
-  assert relay_call.device == {'type':'phone','params':{'from_number':'+12029999999','to_number':'+12028888888'}}
+# def test_device(relay_call):
+#   assert relay_call.device == {'type':'phone','params':{'from_number':'+12029999999','to_number':'+12028888888'}}
 
 async def _fire(calling, notification):
   calling.notification_handler(notification)
@@ -91,7 +94,7 @@ async def test_dial(success_response, relay_call):
 
   assert result.successful
   msg = relay_call.calling.client.execute.mock.call_args[0][0]
-  assert msg.params == json.loads('{"protocol":"signalwire-proto-test","method":"calling.begin","params":{"tag":"'+relay_call.tag+'","device":{"type":"phone","params":{"from_number":"+12029999999","to_number":"+12028888888"}}}}')
+  assert msg.params == json.loads('{"protocol":"signalwire-proto-test","method":"calling.dial","params":{"tag":"'+relay_call.tag+'","devices":[]}}')
   relay_call.calling.client.execute.mock.assert_called_once()
 
 @pytest.mark.asyncio
