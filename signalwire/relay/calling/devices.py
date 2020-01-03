@@ -51,9 +51,6 @@ class BaseDevice(ABC):
   device_type = None
 
   def __init__(self, options):
-    # print('BaseDevice')
-    # print(options)
-    # print('BaseDevice')
     try:
       self.params = options['params']
     except Exception:
