@@ -38,6 +38,10 @@ class BaseDevice(ABC):
   def _build_params(self, options):
     pass
 
+  @property
+  def timeout(self):
+    return self.params.get('timeout', None)
+
   def serialize(self, **kwargs):
     return { 'type': self.device_type, 'params': self.params }
 
@@ -48,9 +52,11 @@ class BaseDevice(ABC):
 class PhoneDevice(BaseDevice):
   device_type = DeviceType.PHONE
 
+  @property
   def from_endpoint(self):
     return self.params['from_number']
 
+  @property
   def to_endpoint(self):
     return self.params['to_number']
 
@@ -64,9 +70,11 @@ class PhoneDevice(BaseDevice):
 class SipDevice(BaseDevice):
   device_type = DeviceType.SIP
 
+  @property
   def from_endpoint(self):
     return self.params['from']
 
+  @property
   def to_endpoint(self):
     return self.params['to']
 
@@ -86,9 +94,11 @@ class SipDevice(BaseDevice):
 class WebRTCDevice(BaseDevice):
   device_type = DeviceType.WEBRTC
 
+  @property
   def from_endpoint(self):
     return self.params['from']
 
+  @property
   def to_endpoint(self):
     return self.params['to']
 
@@ -104,9 +114,11 @@ class WebRTCDevice(BaseDevice):
 class AgoraDevice(BaseDevice):
   device_type = DeviceType.AGORA
 
+  @property
   def from_endpoint(self):
     return self.params['from']
 
+  @property
   def to_endpoint(self):
     return self.params['to']
 
