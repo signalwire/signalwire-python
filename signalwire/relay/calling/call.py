@@ -36,6 +36,7 @@ from .results.tap_result import TapResult
 from .actions.tap_action import TapAction
 from .components.disconnect import Disconnect
 from .results.disconnect_result import DisconnectResult
+from .devices import BaseDevice, Device
 
 class Call:
   def __init__(self, *, calling, **kwargs):
@@ -44,30 +45,33 @@ class Call:
     self.id = kwargs.get('call_id', None)
     self.node_id = kwargs.get('node_id', None)
     self.context = kwargs.get('context', None)
-    if 'device' in kwargs:
-      self.call_type = kwargs['device'].get('type', None)
-      self.from_number = kwargs['device']['params'].get('from_number', None)
-      self.to_number = kwargs['device']['params'].get('to_number', None)
-      self.timeout = kwargs['device']['params'].get('timeout', None)
+    self.targets = kwargs.get('targets', [])
+    self.device = None
+    self.attempted_devices = []
     self.prev_state = None
     self.state = kwargs.get('call_state', None)
     self.peer = None
     self.failed = False
     self.busy = False
     self.calling.add_call(self)
+    self.from_number = None # deprecated
+    self.to_number = None # deprecated
 
   @property
-  def device(self):
-    device = {
-      'type': self.call_type,
-      'params': {
-        'from_number': self.from_number,
-        'to_number': self.to_number
-      }
-    }
-    if self.timeout is not None:
-      device['params']['timeout'] = self.timeout
-    return device
+  def call_type(self):
+    return self.device.device_type if isinstance(self.device, BaseDevice) else None
+
+  @property
+  def from_endpoint(self):
+    return self.device.from_endpoint if isinstance(self.device, BaseDevice) else None
+
+  @property
+  def to_endpoint(self):
+    return self.device.to_endpoint if isinstance(self.device, BaseDevice) else None
+
+  @property
+  def timeout(self):
+    return self.device.timeout if isinstance(self.device, BaseDevice) else None
 
   @property
   def answered(self):
@@ -321,7 +325,11 @@ class Call:
     self.state = params['call_state']
     trigger(self.tag, params, suffix='stateChange')
     trigger(self.tag, params, suffix=self.state)
-    if self.state == CallState.ENDED:
+    if self.state == CallState.CREATED:
+      self.attempted_devices.append(Device.factory(params['device']))
+    elif self.state == CallState.ANSWERED:
+      self.device = Device.factory(params['device'])
+    elif self.state == CallState.ENDED:
       check_id = self.id if self.id else self.tag
       trigger(check_id, params, suffix=CallState.ENDED) # terminate components
       unregister_all(self.tag) # unregister all external handlers

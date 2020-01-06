@@ -3,6 +3,8 @@ from signalwire.blade.handler import trigger
 from signalwire.relay import BaseRelay
 from .call import Call
 from .constants import Notification, DetectState, ConnectState
+from .devices import Device
+from .helpers import prepare_devices
 
 class Calling(BaseRelay):
   def __init__(self, client):
@@ -36,20 +38,15 @@ class Calling(BaseRelay):
     elif notification['event_type'] == Notification.DETECT:
       self._on_detect(notification['params'])
 
-  def new_call(self, *, call_type='phone', from_number, to_number, timeout=None):
-    call = Call(calling=self)
-    call.call_type = call_type
-    call.from_number = from_number
-    call.to_number = to_number
-    call.timeout = timeout
-    return call
+  def new_call(self, **kwargs):
+    targets = kwargs.get('targets', [])
+    if len(targets) <= 0:
+      targets.append(kwargs)
+    targets = prepare_devices(targets)
+    return Call(calling=self, targets=targets)
 
-  async def dial(self, *, call_type='phone', from_number, to_number, timeout=None):
-    call = Call(calling=self)
-    call.call_type = call_type
-    call.from_number = from_number
-    call.to_number = to_number
-    call.timeout = timeout
+  async def dial(self, **kwargs):
+    call = self.new_call(**kwargs)
     return await call.dial()
 
   def add_call(self, call):
@@ -92,6 +89,7 @@ class Calling(BaseRelay):
 
   def _on_receive(self, params):
     call = Call(calling=self, **params)
+    call.device = Device.factory(params['device'])
     trigger(self.client.protocol, call, suffix=self.ctx_receive_unique(call.context))
 
   def _on_connect(self, params):

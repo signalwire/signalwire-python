@@ -1,5 +1,6 @@
 import json
 from uuid import uuid4
+from . import JSONRPCEncoder
 
 class Message:
   def __init__(self, **kwargs):
@@ -15,7 +16,7 @@ class Message:
       self.result = kwargs.pop('result')
 
   def to_json(self, **kwargs):
-    return json.dumps(self.__dict__, separators=(',', ':'), **kwargs)
+    return JSONRPCEncoder.encode(dictionary=self.__dict__, **kwargs)
 
   @classmethod
   def from_json(cls, json_str):

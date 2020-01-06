@@ -1,5 +1,6 @@
 class Method:
-  BEGIN = 'calling.begin'
+  # BEGIN = 'calling.begin'
+  DIAL = 'calling.dial'
   ANSWER = 'calling.answer'
   END = 'calling.end'
   CONNECT = 'calling.connect'
@@ -100,3 +101,9 @@ class DetectState:
   UNKNOWN = 'UNKNOWN'
   READY = 'READY'
   NOT_READY = 'NOT_READY'
+
+class DeviceType:
+  PHONE = 'phone'
+  SIP = 'sip'
+  WEBRTC = 'webrtc'
+  AGORA = 'agora'
