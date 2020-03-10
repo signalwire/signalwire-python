@@ -71,8 +71,9 @@ class Client:
       await self._executeQueue.put(message)
     else:
       await self.connection.send(message)
-
-    return await self._requests[message.id]
+    result = await self._requests[message.id]
+    del self._requests[message.id]
+    return result
 
   def connect(self):
     while self._reconnect:
