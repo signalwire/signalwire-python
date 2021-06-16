@@ -1,0 +1,54 @@
+interactions:
+- request:
+    body: null
+    headers:
+      Accept:
+      - application/json
+      Accept-Charset:
+      - utf-8
+      Accept-Encoding:
+      - gzip, deflate
+      Authorization:
+      - Basic c2lnbmFsd2lyZS1hY2NvdW50LTEyMzoxMjM0NTY=
+      Connection:
+      - keep-alive
+      User-Agent:
+      - twilio-python/6.16.4 (Python 3.8.6)
+      X-Twilio-Client:
+      - python-6.16.4
+    method: GET
+    uri: https://myaccount.signalwire.com/2010-04-01/Accounts/signalwire-account-123/AvailablePhoneNumbers/US/Local.json?StartsWith=206&InRegion=WA
+  response:
+    body:
+      string: !!binary |
+        H4sIAAAAAAAAAx2OQW7DMAwEv7JADz3ZuvcVBVKgZ5pmY6ISaYhU0vy+Sm6zwGJ2vw5BnMSC9iBm
+        H5bYXcLeE/KnkXDDRa9G9Vu7rPisQiGzM7Yq4EP4Fw8foD5FYrvaFenI6WXvXTgRY9u9kdqKiwiO
+        zDM+StmdY42X+v5Us7eSfipHqdTqQqeWtxd1iXzGxW/Sbyr3ZZsfltErfryj+dxWm9go1W39B/F9
+        M2HVAAAA
+    headers:
+      Cache-Control:
+      - no-cache
+      Connection:
+      - keep-alive
+      Content-Encoding:
+      - gzip
+      Content-Type:
+      - text/plain; charset=utf-8
+      Date:
+      - Wed, 16 Jun 2021 18:22:24 GMT
+      Server:
+      - nginx
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - Accept-Encoding
+      X-Request-Id:
+      - 666041a2-18ea-4f10-b9da-99ec32dafc07
+      X-Runtime:
+      - '0.020666'
+    status:
+      code: 404
+      message: Not Found
+version: 1

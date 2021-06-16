@@ -16,8 +16,8 @@ def client():
 @my_vcr.use_cassette()
 def test_accounts(client):
   account = client.api.accounts(os.getenv('SIGNALWIRE_ACCOUNT','signalwire-account-123')).fetch()
-  assert(account.friendly_name == 'LAML testing') 
-    
+  assert(account.friendly_name == 'LAML testing')
+
 
 @my_vcr.use_cassette()
 def test_applications(client):
@@ -29,6 +29,20 @@ def test_local_numbers(client):
   numbers = client.available_phone_numbers("US") \
                 .local \
                 .list(in_region="WA")
+  assert(numbers[0].phone_number == '+12064015921')
+
+@my_vcr.use_cassette()
+def test_local_numbers_starts_with(client):
+  numbers = client.available_phone_numbers("US") \
+                .local \
+                .list(in_region="WA", starts_with='206')
+  assert(numbers[0].phone_number == '+12064015921')
+
+@my_vcr.use_cassette()
+def test_local_numbers_ends_with(client):
+  numbers = client.available_phone_numbers("US") \
+                .local \
+                .list(in_region="WA", ends_with='921')
   assert(numbers[0].phone_number == '+12064015921')
 
 @my_vcr.use_cassette()
