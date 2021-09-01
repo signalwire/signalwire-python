@@ -14,6 +14,5 @@ pytest-asyncio = "*"
 twilio = "==6.16.4"
 signalwire = {editable = true,path = "."}
 aiohttp = "*"
-asyncio = "*"
 
 [requires]
