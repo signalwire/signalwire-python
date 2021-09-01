@@ -41,7 +41,6 @@ setup(
   install_requires=[
     'twilio==6.16.4',
     'aiohttp',
-    'asyncio'
   ],
   python_requires='>=3.6',
   zip_safe=False
