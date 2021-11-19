@@ -11,7 +11,7 @@ pylint = "*"
 pytest-asyncio = "*"
 
 [packages]
-twilio = "==6.16.4"
+twilio = "==6.43.0"
 signalwire = {editable = true,path = "."}
 aiohttp = "*"
 
