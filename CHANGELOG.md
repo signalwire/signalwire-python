@@ -3,6 +3,10 @@ All notable changes to this project will be documented in this file.
 
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.5] - 2023-06-21
+### Updated
+- Update dependencies.
+
 ## [2.0.4] - 2021-11-29
 ### Updated
 - Update compatibility SDK versions.
