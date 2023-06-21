@@ -12,5 +12,5 @@ class TestVoiceResponse(TestCase):
     r = VoiceResponse()
     connect = r.connect(action='http://example.com/action')
     connect.virtual_agent(connectorName='project', statusCallback='https://mycallbackurl.com')
-    self.assertEqual(str(r), '<?xml version="1.0" encoding="UTF-8"?><Response><Connect action="http://example.com/action"><VirtualAgent connectorName="project" statusCallback="https://mycallbackurl.com"/></Connect></Response>')
+    self.assertEqual(str(r), '<?xml version="1.0" encoding="UTF-8"?><Response><Connect action="http://example.com/action"><VirtualAgent connectorName="project" statusCallback="https://mycallbackurl.com" /></Connect></Response>')
 
