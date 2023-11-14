@@ -1,5 +1,6 @@
 import base64
 import hmac
+import json
 from hashlib import sha1
 from urllib.parse import urlparse
 from twilio.request_validator import compare, remove_port, add_port, RequestValidator as TwilioRequestValidator
@@ -42,6 +43,13 @@ class RequestValidator(object):
                 signature
             )
 
-            return valid_signature_without_port or valid_signature_with_port
+            if valid_signature_without_port or valid_signature_with_port:
+                return True
+
+            try:
+                parsed_params = json.loads(params)
+                return self.validate_with_compatibility(uri, parsed_params, signature)
+            except json.JSONDecodeError as e:
+                return False
         
         return self.validate_with_compatibility(uri, params, signature)

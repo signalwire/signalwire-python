@@ -106,6 +106,32 @@ class TestRequestValidator(TestCase):
         valid = validator.validate(url, body, signature)
         self.assertTrue(valid)
 
+    def test_should_validate_from_raw_json(self):
+        from signalwire.request_validator import RequestValidator
+
+        url = 'https://675d-189-71-169-171.ngrok-free.app/voice'
+        token = 'PSK_V3bF8oyeRNpJWGoRWHNYQMUU'
+        signature = 'muUMpldcBHlzuXGZ5gbw1ETZCYA='
+        body = '''{
+            "CallSid": "a97d4e8a-6047-4e2b-be48-fb96b33b5642", 
+            "AccountSid": "6bfbbe86-a901-4197-8759-2a0de1fa319d", 
+            "ApiVersion": "2010-04-01", 
+            "Direction": "outbound-api", 
+            "From": "sip:+17063958228@sip.swire.io", 
+            "To": "sip:jpsantos@joaosantos-2a0de1fa319d.sip.swire.io", 
+            "Timestamp": "Thu, 09 Nov 2023 14:40:55 +0000", 
+            "CallStatus": "no-answer", 
+            "CallbackSource": "call-progress-events", 
+            "HangupDirection": "outbound", 
+            "HangupBy": "sip:+17063958228@sip.swire.io", 
+            "SipResultCode": "487"
+        }'''
+
+        
+        validator = RequestValidator(token)
+        valid = validator.validate(url, body, signature)
+        self.assertTrue(valid)
+
 
 
 
