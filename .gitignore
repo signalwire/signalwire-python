@@ -51,3 +51,4 @@ Dockerfile.dev
 tmp
 *.pyc
 .vscode
+.devcontainer
