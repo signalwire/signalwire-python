@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "0bab5ca8ce20afc86f6ce5ae3aa3e75a234f8c9735a1816a8545995a2e053cb7"
+            "sha256": "15c5329e584072d3cd572a6e07280facf3c9964d1c46b2420dcb3cb2ba2a14db"
         },
         "pipfile-spec": 6,
         "requires": {},
@@ -382,10 +382,11 @@
         },
         "pyjwt": {
             "hashes": [
-                "sha256:5c6eca3c2940464d106b99ba83b00c6add741c9becaec087fb7ccdefea71350e",
-                "sha256:8d59a976fb773f3e6a39c85636357c4f0e242707394cadadd9814f5cbaa20e96"
+                "sha256:57e28d156e3d5c10088e0c68abb90bfac3df82b40a71bd0daa20c65ccd5c23de",
+                "sha256:59127c392cc44c2da5bb3192169a91f429924e17aff6534d70fdc02ab3e04320"
             ],
-            "version": "==1.7.1"
+            "markers": "python_version >= '3.7'",
+            "version": "==2.8.0"
         },
         "pytz": {
             "hashes": [
@@ -399,7 +400,7 @@
                 "sha256:58cd2187c01e70e6e26505bca751777aa9f2ee0b7f4300988b709f44e013003f",
                 "sha256:942c5a758f98d790eaed1a29cb6eefc7ffb0d1cf7af05c3d2791656dbd6ad1e1"
             ],
-            "markers": "python_version >= '3.0'",
+            "markers": "python_version >= '3.7'",
             "version": "==2.31.0"
         },
         "signalwire": {
@@ -407,20 +408,14 @@
             "markers": "python_version >= '3.6'",
             "path": "."
         },
-        "six": {
-            "hashes": [
-                "sha256:1e61c37477a1626458e36f7b1d82aa5c9b094fa4802892072e49de9c60c4c926",
-                "sha256:8abb2f1d86890a2dfb989f9a77cfcfd3e47c2a354b01111771326f8aa26e0254"
-            ],
-            "markers": "python_version >= '2.7' and python_version not in '3.0, 3.1, 3.2, 3.3'",
-            "version": "==1.16.0"
-        },
         "twilio": {
             "hashes": [
-                "sha256:016a936061e1c85a879314e5fbf9bf09927b10b33f5b7143ea904ca0a09bfca3"
+                "sha256:312e25b0a1ca782974a359d95123f270574e6e4b195b0e2095a156219ad7b7ec",
+                "sha256:f43de32cdc27f8853bb02ab0b8703a487beffbb9dcc8118398b6757e1376e6ed"
             ],
             "index": "pypi",
-            "version": "==6.54.0"
+            "markers": "python_full_version >= '3.6.0'",
+            "version": "==7.17.0"
         },
         "urllib3": {
             "hashes": [
