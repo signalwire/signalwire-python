@@ -13,6 +13,7 @@ vcrpy = "*"
 [packages]
 aiohttp = "*"
 signalwire = {editable = true,path = "."}
-twilio = "*"
+six = "*"
+twilio = ">=7.0.0,<7.6.0"
 
 [requires]
