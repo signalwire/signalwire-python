@@ -39,9 +39,9 @@ setup(
   license='MIT',
   packages=find_packages(exclude=['tests', 'tests.*']),
   install_requires=[
-    'twilio==6.54.0',
-    'aiohttp==3.9.5',
+    'twilio',
+    'aiohttp',
   ],
-  python_requires='>=3.6',
+  python_requires='>=3.9',
   zip_safe=False
 )

@@ -4,15 +4,15 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 
 [dev-packages]
-pytest-runner = "*"
-pytest = "*"
-vcrpy = "*"
 pylint = "*"
+pytest = "*"
 pytest-asyncio = "*"
+pytest-runner = "*"
+vcrpy = "*"
 
 [packages]
-twilio = "==6.54.0"
+aiohttp = "*"
 signalwire = {editable = true,path = "."}
-aiohttp = "3.9.5"
+twilio = "*"
 
 [requires]
