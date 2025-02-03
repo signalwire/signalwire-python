@@ -40,7 +40,7 @@ setup(
   packages=find_packages(exclude=['tests', 'tests.*']),
   install_requires=[
     'twilio==6.54.0',
-    'aiohttp',
+    'aiohttp==3.9.5',
   ],
   python_requires='>=3.6',
   zip_safe=False

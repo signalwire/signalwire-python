@@ -13,6 +13,6 @@ pytest-asyncio = "*"
 [packages]
 twilio = "==6.54.0"
 signalwire = {editable = true,path = "."}
-aiohttp = "*"
+aiohttp = "3.9.5"
 
 [requires]
