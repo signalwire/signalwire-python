@@ -1,4 +1,7 @@
-FROM python:3.10-slim
+FROM python:3.12-slim
+
+# Install build-essential and any other necessary system dependencies
+RUN apt-get update && apt-get install -y build-essential
 
 COPY . /app
 WORKDIR /app
