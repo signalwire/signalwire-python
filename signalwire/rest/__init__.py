@@ -19,6 +19,9 @@ from twilio.rest.api.v2010.account.incoming_phone_number import IncomingPhoneNum
 
 from twilio.rest.fax import Fax as TwilioFax
 from twilio.rest.fax.v1 import V1 as TwilioV1
+from twilio.rest.fax.v1.fax import FaxList
+
+from signalwire.rest.fax import SWFaxContext
 
 import sys
 from six import u
@@ -311,6 +314,9 @@ def patched_fax_init(self, twilio):
   # Versions
   self._v1 = None
 
+def patched_faxlist_call(self, sid):
+    return SWFaxContext(self._version, sid)
+
 def patched_fax_v1_init(self, domain):
   """
   Initialize the V1 version of Fax
@@ -319,7 +325,8 @@ def patched_fax_v1_init(self, domain):
   """
   super(TwilioV1, self).__init__(domain)
   self.version = "2010-04-01/Accounts/" + domain.account_sid
-  self._faxes = None
+  FaxList.__call__ = patched_faxlist_call
+  self._faxes = FaxList(self)
 
 
 class Client(TwilioClient):
