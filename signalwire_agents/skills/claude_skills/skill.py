@@ -9,6 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import os
 import re
+import subprocess
 import fnmatch
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -20,6 +21,18 @@ from signalwire_agents.core.function_result import SwaigFunctionResult
 from signalwire_agents.core.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+# Frontmatter fields that are parsed but not supported in SignalWire agents
+_UNSUPPORTED_FIELDS = {
+    "context": "context: fork is not supported in SignalWire agents — skill '{name}' will run inline, not in a subagent",
+    "agent": "agent field is not supported in SignalWire agents — skill '{name}' cannot select a subagent type",
+    "allowed-tools": "allowed-tools is not supported in SignalWire agents — skill '{name}' tool restrictions will not be enforced",
+    "model": "model field is not supported in SignalWire agents — skill '{name}' model selection is controlled at the agent level",
+    "hooks": "hooks field is not supported in SignalWire agents — skill '{name}' lifecycle hooks will not fire",
+}
+
+# Regex for shell injection patterns: !`command`
+_SHELL_INJECTION_RE = re.compile(r"!\`([^`]+)\`")
 
 
 class ClaudeSkillsSkill(SkillBase):
@@ -75,6 +88,18 @@ class ClaudeSkillsSkill(SkillBase):
         self._include_patterns = self.params.get("include", ["*"])
         self._exclude_patterns = self.params.get("exclude", [])
 
+        # Store safety/control flags
+        self._allow_shell_injection = self.params.get("allow_shell_injection", False)
+        self._allow_script_execution = self.params.get("allow_script_execution", False)
+        self._ignore_invocation_control = self.params.get("ignore_invocation_control", False)
+        self._shell_timeout = self.params.get("shell_timeout", 30)
+
+        if self._allow_shell_injection:
+            logger.warning(
+                "claude_skills: allow_shell_injection is enabled — "
+                "skill bodies may execute arbitrary shell commands"
+            )
+
         # Discover and parse skills
         self._skills = self._discover_skills()
 
@@ -121,6 +146,22 @@ class ClaudeSkillsSkill(SkillBase):
                 # Discover supporting files (all .md files except SKILL.md)
                 parsed["sections"] = self._discover_sections(item)
 
+                # Discover non-.md files if script execution is enabled
+                if self._allow_script_execution:
+                    parsed["files"] = self._discover_all_files(item)
+                else:
+                    parsed["files"] = {}
+
+                # Warn about unsupported frontmatter fields
+                self._warn_unsupported_fields(parsed)
+
+                # Warn about shell injection patterns if disabled
+                if not self._allow_shell_injection:
+                    self._warn_shell_patterns(parsed)
+
+                # Determine invocation control flags
+                self._apply_invocation_control(parsed)
+
                 skills.append(parsed)
                 section_count = len(parsed["sections"])
                 logger.debug(f"claude_skills: loaded skill '{parsed['name']}' from {skill_file} with {section_count} sections")
@@ -165,6 +206,46 @@ class ClaudeSkillsSkill(SkillBase):
             sections[key] = md_file
 
         return sections
+
+    def _discover_all_files(self, skill_dir: Path) -> Dict[str, List[str]]:
+        """
+        Discover non-.md files recursively, categorized by location.
+
+        Returns:
+            Dictionary with keys 'scripts', 'assets', 'other' mapping to
+            lists of relative file paths.
+        """
+        files = {"scripts": [], "assets": [], "other": []}
+
+        for file_path in skill_dir.rglob("*"):
+            if not file_path.is_file():
+                continue
+
+            # Skip .md files (handled by _discover_sections)
+            if file_path.suffix.lower() == ".md":
+                continue
+
+            # Skip hidden files and __pycache__
+            relative = file_path.relative_to(skill_dir)
+            parts = relative.parts
+            if any(p.startswith(".") or p == "__pycache__" for p in parts):
+                continue
+
+            rel_str = str(relative).replace("\\", "/")
+
+            # Categorize by top-level directory
+            if parts[0] == "scripts":
+                files["scripts"].append(rel_str)
+            elif parts[0] == "assets":
+                files["assets"].append(rel_str)
+            else:
+                files["other"].append(rel_str)
+
+        # Sort for deterministic output
+        for key in files:
+            files[key].sort()
+
+        return files
 
     def _matches_patterns(self, name: str) -> bool:
         """Check if a skill name matches include/exclude patterns."""
@@ -235,12 +316,89 @@ class ClaudeSkillsSkill(SkillBase):
             "name": frontmatter.get("name"),
             "description": frontmatter.get("description"),
             "body": body,
+            # Invocation control
             "disable_model_invocation": frontmatter.get("disable-model-invocation", False),
             "user_invocable": frontmatter.get("user-invocable", True),
             "argument_hint": frontmatter.get("argument-hint"),
+            # Informational fields
+            "license": frontmatter.get("license"),
+            "compatibility": frontmatter.get("compatibility"),
+            # Unsupported but parsed fields
+            "context": frontmatter.get("context"),
+            "agent": frontmatter.get("agent"),
+            "allowed_tools": frontmatter.get("allowed-tools"),
+            "model": frontmatter.get("model"),
+            "hooks": frontmatter.get("hooks"),
             # Store full frontmatter for potential future use
             "_frontmatter": frontmatter
         }
+
+    def _warn_unsupported_fields(self, parsed: Dict[str, Any]) -> None:
+        """Log warnings for unsupported frontmatter fields that are set."""
+        name = parsed.get("name", "unknown")
+
+        # Map parsed dict keys to frontmatter field names
+        field_mapping = {
+            "context": "context",
+            "agent": "agent",
+            "allowed_tools": "allowed-tools",
+            "model": "model",
+            "hooks": "hooks",
+        }
+
+        for parsed_key, frontmatter_key in field_mapping.items():
+            value = parsed.get(parsed_key)
+            if value is not None:
+                msg = _UNSUPPORTED_FIELDS[frontmatter_key].format(name=name)
+                logger.warning(f"claude_skills: {msg}")
+
+        # Log informational fields at debug level
+        if parsed.get("license"):
+            logger.debug(f"claude_skills: skill '{name}' has license: {parsed['license']}")
+        if parsed.get("compatibility"):
+            logger.debug(f"claude_skills: skill '{name}' has compatibility: {parsed['compatibility']}")
+
+    def _warn_shell_patterns(self, parsed: Dict[str, Any]) -> None:
+        """Warn about shell injection patterns when allow_shell_injection is disabled."""
+        name = parsed.get("name", "unknown")
+        body = parsed.get("body", "")
+
+        for match in _SHELL_INJECTION_RE.finditer(body):
+            command = match.group(1)
+            logger.warning(
+                f"claude_skills: shell injection pattern `!`{command}`` found in skill "
+                f"'{name}' but allow_shell_injection is disabled — pattern will be "
+                f"passed through as-is. Set allow_shell_injection=True to enable."
+            )
+
+    def _apply_invocation_control(self, parsed: Dict[str, Any]) -> None:
+        """
+        Set _skip_tool and _skip_prompt flags based on invocation control frontmatter.
+
+        When ignore_invocation_control is True, both flags default to False (register everything).
+        """
+        if self._ignore_invocation_control:
+            parsed["_skip_tool"] = False
+            parsed["_skip_prompt"] = False
+            return
+
+        disable_model = parsed.get("disable_model_invocation", False)
+        user_invocable = parsed.get("user_invocable", True)
+
+        if disable_model:
+            # disable-model-invocation: true → no tool, no prompt
+            parsed["_skip_tool"] = True
+            parsed["_skip_prompt"] = True
+            logger.debug(f"claude_skills: skill '{parsed['name']}' has disable-model-invocation=true — skipping tool and prompt")
+        elif not user_invocable:
+            # user-invocable: false → no tool, yes prompt (knowledge-only)
+            parsed["_skip_tool"] = True
+            parsed["_skip_prompt"] = False
+            logger.debug(f"claude_skills: skill '{parsed['name']}' has user-invocable=false — skipping tool, keeping prompt")
+        else:
+            # Default: register both
+            parsed["_skip_tool"] = False
+            parsed["_skip_prompt"] = False
 
     def _sanitize_tool_name(self, name: str) -> str:
         """
@@ -257,6 +415,58 @@ class ClaudeSkillsSkill(SkillBase):
             sanitized = "_" + sanitized
         return sanitized or "unnamed"
 
+    def _execute_shell_injection(self, content: str, skill_dir: Path, timeout: int) -> str:
+        """
+        Process shell injection patterns in content.
+
+        Replaces !`command` with the stdout of running the command.
+
+        Args:
+            content: The content string containing potential shell patterns
+            skill_dir: Working directory for command execution
+            timeout: Timeout in seconds for each command
+
+        Returns:
+            Content with shell patterns replaced by command output
+        """
+        def replace_command(match):
+            command = match.group(1)
+            try:
+                result = subprocess.run(
+                    command,
+                    shell=True,
+                    capture_output=True,
+                    text=True,
+                    timeout=timeout,
+                    cwd=str(skill_dir)
+                )
+                return result.stdout.rstrip("\n")
+            except subprocess.TimeoutExpired:
+                logger.error(f"claude_skills: shell command timed out after {timeout}s: {command}")
+                return f"[command timed out: {command}]"
+            except Exception as e:
+                logger.error(f"claude_skills: shell command failed: {command}: {e}")
+                return f"[command error: {command}]"
+
+        return _SHELL_INJECTION_RE.sub(replace_command, content)
+
+    def _substitute_variables(self, content: str, skill_dir: Path, raw_data: Optional[Dict] = None) -> str:
+        """
+        Substitute variable placeholders in content.
+
+        Supports:
+            ${CLAUDE_SKILL_DIR} - absolute path to skill directory
+            ${CLAUDE_SESSION_ID} - session/call ID from raw_data
+        """
+        content = content.replace("${CLAUDE_SKILL_DIR}", str(skill_dir))
+
+        session_id = ""
+        if raw_data:
+            session_id = raw_data.get("call_id", "")
+        content = content.replace("${CLAUDE_SESSION_ID}", session_id)
+
+        return content
+
     def _substitute_arguments(self, body: str, arguments: str) -> str:
         """
         Substitute Claude skill argument placeholders.
@@ -265,9 +475,15 @@ class ClaudeSkillsSkill(SkillBase):
             $ARGUMENTS - full arguments string
             $ARGUMENTS[N] - positional argument by index
             $0, $1, $2... - shorthand for positional arguments
+
+        If the body does not contain bare $ARGUMENTS (not indexed) and arguments
+        are non-empty, appends the arguments to the result.
         """
         if not arguments:
             arguments = ""
+
+        # Check if body contains bare $ARGUMENTS before substitution
+        has_bare_arguments = bool(re.search(r"\$ARGUMENTS(?!\[)", body))
 
         # Split into positional args
         positional = arguments.split() if arguments else []
@@ -293,12 +509,21 @@ class ClaudeSkillsSkill(SkillBase):
         # Replace $ARGUMENTS with full string
         result = result.replace("$ARGUMENTS", arguments)
 
+        # Fallback: append arguments if body had no bare $ARGUMENTS placeholder
+        if not has_bare_arguments and arguments:
+            result += f"\n\nARGUMENTS: {arguments}"
+
         return result
 
     def register_tools(self) -> None:
         """Register a SWAIG tool for each discovered Claude skill."""
         prefix = self.params.get("tool_prefix", "claude_")
         for skill in self._skills:
+            # Check invocation control — skip tool registration if flagged
+            if skill.get("_skip_tool", False):
+                logger.debug(f"claude_skills: skipping tool registration for '{skill['name']}' (invocation control)")
+                continue
+
             tool_name = f"{prefix}{self._sanitize_tool_name(skill['name'])}"
 
             # Get description (with override support)
@@ -331,7 +556,7 @@ class ClaudeSkillsSkill(SkillBase):
             response_postfix = self.params.get("response_postfix", "")
 
             # Create handler that captures the skill and prefix/postfix
-            def make_handler(s, prefix, postfix):
+            def make_handler(s, rprefix, rpostfix):
                 def handler(args, raw_data):
                     section = args.get("section")
                     arguments = args.get("arguments", "")
@@ -347,17 +572,26 @@ class ClaudeSkillsSkill(SkillBase):
                         # No section specified or invalid - return SKILL.md body
                         content = s["body"]
 
-                    # Substitute arguments
+                    skill_dir = s.get("skill_dir", Path("."))
+
+                    # 1. Shell injection (if enabled)
+                    if self._allow_shell_injection:
+                        content = self._execute_shell_injection(content, skill_dir, self._shell_timeout)
+
+                    # 2. Variable substitution
+                    content = self._substitute_variables(content, skill_dir, raw_data)
+
+                    # 3. Argument substitution (with fallback append)
                     content = self._substitute_arguments(content, arguments)
 
-                    # Wrap with prefix/postfix if configured
-                    if prefix or postfix:
+                    # 4. Prefix/postfix wrapping
+                    if rprefix or rpostfix:
                         parts = []
-                        if prefix:
-                            parts.append(prefix)
+                        if rprefix:
+                            parts.append(rprefix)
                         parts.append(content)
-                        if postfix:
-                            parts.append(postfix)
+                        if rpostfix:
+                            parts.append(rpostfix)
                         content = "\n\n".join(parts)
 
                     return SwaigFunctionResult(content)
@@ -382,7 +616,7 @@ class ClaudeSkillsSkill(SkillBase):
             hints.extend(name.replace("-", " ").replace("_", " ").split())
         return list(set(hints))  # Deduplicate
 
-    def get_prompt_sections(self) -> List[Dict[str, Any]]:
+    def _get_prompt_sections(self) -> List[Dict[str, Any]]:
         """
         Return prompt sections describing available Claude skills.
 
@@ -397,17 +631,31 @@ class ClaudeSkillsSkill(SkillBase):
         sections = []
 
         for skill in self._skills:
+            # Skip skills marked to exclude from prompt
+            if skill.get("_skip_prompt", False):
+                continue
+
             tool_name = f"{prefix}{self._sanitize_tool_name(skill['name'])}"
+            has_tool = not skill.get("_skip_tool", False)
 
             # Start with the SKILL.md body
             body = skill["body"]
 
             # Append available sections if any
             skill_sections = skill.get("sections", {})
-            if skill_sections:
+            if skill_sections and has_tool:
                 section_list = ", ".join(sorted(skill_sections.keys()))
                 body += f"\n\nAvailable reference sections: {section_list}"
                 body += f"\nCall {tool_name}(section=\"<name>\") to load a section."
+
+            # Append discovered files if script execution is enabled
+            if self._allow_script_execution:
+                skill_files = skill.get("files", {})
+                for category in ("scripts", "assets", "other"):
+                    file_list = skill_files.get(category, [])
+                    if file_list:
+                        label = category.capitalize() if category != "other" else "Other files"
+                        body += f"\n\n{label}: {', '.join(file_list)}"
 
             sections.append({
                 "title": skill["name"],
@@ -479,6 +727,30 @@ class ClaudeSkillsSkill(SkillBase):
                 "type": "string",
                 "description": "Text to append to skill results (e.g., reminders or constraints)",
                 "default": "",
+                "required": False
+            },
+            "allow_shell_injection": {
+                "type": "boolean",
+                "description": "Enable !`command` preprocessing in skill bodies. DANGEROUS: allows arbitrary shell execution.",
+                "default": False,
+                "required": False
+            },
+            "allow_script_execution": {
+                "type": "boolean",
+                "description": "Discover and list scripts/, assets/ files in prompt sections",
+                "default": False,
+                "required": False
+            },
+            "ignore_invocation_control": {
+                "type": "boolean",
+                "description": "Override disable-model-invocation and user-invocable flags, register everything",
+                "default": False,
+                "required": False
+            },
+            "shell_timeout": {
+                "type": "integer",
+                "description": "Timeout in seconds for shell injection commands",
+                "default": 30,
                 "required": False
             }
         })

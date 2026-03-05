@@ -52,6 +52,19 @@ agent.add_skill("claude_skills", {
 | `response_postfix` | string | No | `""` | Text to append to skill results |
 | `swaig_fields` | object | No | `{}` | Extra SWAIG fields (fillers, wait_file, etc.) |
 
+## Safety Parameters
+
+These parameters control advanced features that are disabled by default for security:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `allow_shell_injection` | boolean | `False` | Enable `` !`command` `` preprocessing. **DANGEROUS**: allows arbitrary shell execution in skill bodies |
+| `allow_script_execution` | boolean | `False` | Discover and list `scripts/`, `assets/` files in prompt sections |
+| `ignore_invocation_control` | boolean | `False` | Override `disable-model-invocation` and `user-invocable` flags, register everything |
+| `shell_timeout` | integer | `30` | Timeout in seconds for shell injection commands |
+
+> **Security Warning**: Enabling `allow_shell_injection` permits skill bodies to execute arbitrary shell commands on the host system. Only enable this for trusted skills in controlled environments.
+
 ## How It Works
 
 1. **Discovery**: Scans `skills_path` for directories containing `SKILL.md` files
@@ -59,6 +72,35 @@ agent.add_skill("claude_skills", {
 3. **Prompt Injection**: Adds a prompt section telling the AI when to use each skill
 4. **Tool Registration**: Creates a SWAIG tool for each skill (e.g., `claude_explain_code`)
 5. **Execution**: When called, returns the skill's instructions with arguments substituted
+
+## Invocation Control
+
+Skills can control whether they are registered as tools and/or appear in prompt sections using frontmatter fields:
+
+| Frontmatter | Tool Registered? | Prompt Section? | Use Case |
+|---|---|---|---|
+| *(defaults)* | Yes | Yes | Normal skill |
+| `disable-model-invocation: true` | No | No | Completely hidden from AI |
+| `user-invocable: false` | No | Yes | Knowledge-only (appears in prompt but not callable) |
+
+Example knowledge-only skill:
+```yaml
+---
+name: coding-standards
+description: Team coding standards
+user-invocable: false
+---
+
+Always follow these coding standards:
+- Use 4-space indentation
+- Write docstrings for all public methods
+```
+
+Set `ignore_invocation_control=True` to override these flags and register everything.
+
+### Breaking Change
+
+`disable-model-invocation` and `user-invocable` flags were previously parsed but ignored. They are now respected by default. Set `ignore_invocation_control=True` to restore the old behavior where all skills are registered regardless of these flags.
 
 ## Argument Substitution
 
@@ -84,6 +126,89 @@ When called with arguments `"Button React Vue"`, expands to:
 Migrate the Button component from React to Vue.
 Preserve all existing behavior.
 ```
+
+### Fallback Argument Appending
+
+If a skill body does **not** contain a bare `$ARGUMENTS` placeholder (the indexed form `$ARGUMENTS[N]` does not count) and arguments are non-empty, the arguments are automatically appended:
+
+```
+[skill body content]
+
+ARGUMENTS: [the arguments value]
+```
+
+This matches Claude Code behavior where arguments are always visible to the AI. Skills that explicitly use `$ARGUMENTS` control their own placement and do not get the fallback.
+
+## Variable Substitution
+
+Skill bodies support variable placeholders that are replaced at invocation time:
+
+| Variable | Description |
+|----------|-------------|
+| `${CLAUDE_SKILL_DIR}` | Absolute path to the skill's directory |
+| `${CLAUDE_SESSION_ID}` | Session/call ID from the current request |
+
+Example:
+```yaml
+---
+name: file-helper
+description: Help with file operations
+---
+
+The skill files are located at: ${CLAUDE_SKILL_DIR}
+Current session: ${CLAUDE_SESSION_ID}
+```
+
+## Shell Injection
+
+> **Security Warning**: Shell injection allows arbitrary command execution. Only enable for trusted skills.
+
+When `allow_shell_injection=True`, patterns like `` !`command` `` in skill bodies are replaced with the command's stdout:
+
+```yaml
+---
+name: git-status
+description: Show current git status
+---
+
+Current branch: !`git branch --show-current`
+Last commit: !`git log -1 --oneline`
+```
+
+When called, `!`git branch --show-current`` is replaced with the actual output of the command, executed in the skill's directory.
+
+Configuration:
+```python
+agent.add_skill("claude_skills", {
+    "skills_path": "~/.claude/skills",
+    "allow_shell_injection": True,
+    "shell_timeout": 10,  # seconds
+})
+```
+
+When shell injection is **disabled** (default) but patterns are detected in skill bodies, a WARNING is logged for each pattern to alert operators.
+
+## File Discovery
+
+When `allow_script_execution=True`, non-markdown files in skill directories are discovered and listed in prompt sections:
+
+```
+my-skill/
+├── SKILL.md
+├── scripts/
+│   ├── build.sh
+│   └── test.py
+├── assets/
+│   └── template.json
+└── config.yaml
+```
+
+Files are categorized as:
+- **Scripts**: Files under `scripts/` directory
+- **Assets**: Files under `assets/` directory
+- **Other files**: Any other non-`.md` files at top level or other directories
+
+Hidden files (starting with `.`) and `__pycache__` directories are skipped.
 
 ## Customizing Descriptions
 
@@ -281,13 +406,20 @@ Call claude_explain_code(section="<name>") to load a section.
 - **Better organization**: Split large skill documentation into logical sections
 - **Nested structure**: Organize files in subdirectories for complex skills
 
-## Limitations
+## Unsupported Claude Code Features
 
-This skill does **not** support:
+All frontmatter fields from the Claude Code skills spec are **parsed** from SKILL.md files. When an unsupported field is detected, a `WARNING` is logged at skill discovery time identifying the specific skill and field.
 
-- `!`command`` shell injection (security concern)
-- `context: fork` subagent execution
-- `allowed-tools` restrictions
+| Feature | Status | Notes |
+|---------|--------|-------|
+| `context: fork` | Not supported | Subagent execution is a Claude Code concept; logged as WARNING if set |
+| `agent` | Not supported | Subagent type selection; logged as WARNING if set |
+| `allowed-tools` | Not supported | Tool restrictions per skill; logged as WARNING if set |
+| `model` | Not supported | Model switching; logged as WARNING if set |
+| `hooks` | Not supported | Lifecycle hooks; logged as WARNING if set |
+| `` !`command` `` | Opt-in | Requires `allow_shell_injection=True`; logged as WARNING if patterns detected but disabled |
+| `license` | Informational | Parsed and logged at DEBUG level |
+| `compatibility` | Informational | Parsed and logged at DEBUG level |
 
 ## Example
 
