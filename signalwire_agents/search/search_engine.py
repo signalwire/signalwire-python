@@ -146,20 +146,21 @@ class SearchEngine:
             candidates[chunk_id]['source_scores'] = {'vector': result['score']}
 
         # Add metadata/keyword results (secondary signals that boost or backfill)
-        for result_set, source_type, source_weight in [(filename_results, 'filename', 2.0),
-                                                        (metadata_results, 'metadata', 1.5),
-                                                        (keyword_results, 'keyword', 1.0)]:
+        # Store raw scores - max-signal-wins scoring handles the rest
+        for result_set, source_type in [(filename_results, 'filename'),
+                                        (metadata_results, 'metadata'),
+                                        (keyword_results, 'keyword')]:
             for result in result_set:
                 chunk_id = result['id']
                 if chunk_id not in candidates:
                     # New candidate from metadata/keyword (no vector match)
                     candidates[chunk_id] = result
                     candidates[chunk_id]['sources'] = {source_type: True}
-                    candidates[chunk_id]['source_scores'] = {source_type: result['score'] * source_weight}
+                    candidates[chunk_id]['source_scores'] = {source_type: result['score']}
                 else:
                     # Exists in vector results - add metadata/keyword as confirmation signal
                     candidates[chunk_id]['sources'][source_type] = True
-                    candidates[chunk_id]['source_scores'][source_type] = result['score'] * source_weight
+                    candidates[chunk_id]['source_scores'][source_type] = result['score']
         
         # Stage 3: Score and rank all candidates
         final_results = []
@@ -177,11 +178,11 @@ class SearchEngine:
             final_results = [r for r in final_results 
                            if any(tag in r['metadata'].get('tags', []) for tag in tags)]
         
-        # Apply distance threshold as final filter (soft threshold already applied in scoring)
+        # Apply similarity threshold to final scores
+        # This filters on the score the consumer actually sees
         if similarity_threshold > 0:
-            final_results = [r for r in final_results 
-                           if r.get('vector_distance', 0) <= similarity_threshold * 1.5 
-                           or 'vector' not in r.get('sources', {})]
+            final_results = [r for r in final_results
+                           if r.get('final_score', 0) >= similarity_threshold]
         
         # Boost exact matches if we have the original query
         if original_query:
@@ -1077,56 +1078,31 @@ class SearchEngine:
                 conn.close()
     
     def _calculate_combined_score(self, candidate: Dict, similarity_threshold: float) -> float:
-        """Calculate final score with hybrid vector + metadata weighting
+        """Calculate final score using max-signal-wins approach.
 
-        Hybrid approach:
-        - Vector score is the primary ranking signal (semantic similarity)
-        - Metadata/keyword matches provide confirmation boost
-        - Multiple signal types indicate high relevance (confirmation bonus)
-        - Special boost for 'code' tag matches when query contains code-related terms
+        The strongest signal (vector, keyword, filename, or metadata) becomes
+        the base score. Agreement from additional sources boosts it. This keeps
+        scores in an intuitive 0-1 range where 0.5 means 'decent match'
+        regardless of which source found the result.
         """
-        sources = candidate.get('sources', {})
-        source_scores = candidate.get('source_scores', {})
+        agreement_boost = 0.1  # Boost per additional agreeing source
 
-        # Vector score is PRIMARY
+        # Collect all available scores
+        scores = {}
         if 'vector_score' in candidate:
-            vector_score = candidate['vector_score']
-            base_score = vector_score
+            scores['vector'] = candidate['vector_score']
 
-            # Metadata/keyword matches provide confirmation boost
-            if len(sources) > 1:
-                # Has both vector AND metadata/keyword matches - strong confirmation signal
-                keyword_signals = sum(source_scores.get(k, 0) for k in ['keyword', 'filename', 'metadata'])
-                if keyword_signals > 0:
-                    # Normalize and apply boost (up to 30% for strong confirmation)
-                    keyword_boost = min(0.3, keyword_signals * 0.15)
-                    base_score = vector_score * (1.0 + keyword_boost)
+        source_scores = candidate.get('source_scores', {})
+        for source_type, score in source_scores.items():
+            if source_type not in scores:
+                scores[source_type] = score
 
-                    # Additional boost if multiple signal types confirm (2+ sources)
-                    num_metadata_sources = sum(1 for s in ['keyword', 'filename', 'metadata'] if s in sources)
-                    if num_metadata_sources >= 2:
-                        # Multiple confirmation signals - very high confidence
-                        base_score *= 1.1
+        if not scores:
+            return 0.0
 
-            # Check for code-related tags to boost code examples
-            tags = candidate.get('metadata', {}).get('tags', [])
-            if 'code' in tags:
-                # This chunk contains code - boost if query is code-related
-                # (metadata search would have found it if query mentioned code/example/python/etc)
-                if 'metadata' in sources or 'keyword' in sources:
-                    # Query matched code-related metadata - apply code boost
-                    base_score *= 1.2
-        else:
-            # No vector score - this is a keyword-only result (backfill)
-            # Use keyword scores but penalize for lack of semantic match
-            base_score = sum(source_scores.values()) * 0.6  # 40% penalty for no vector
-
-            # Still boost code chunks if metadata matched
-            tags = candidate.get('metadata', {}).get('tags', [])
-            if 'code' in tags and 'metadata' in sources:
-                base_score *= 1.15
-
-        return base_score
+        base = max(scores.values())
+        boost = agreement_boost * (len(scores) - 1)
+        return min(1.0, base + boost)
     
     def _apply_diversity_penalties(self, results: List[Dict], target_count: int) -> List[Dict]:
         """Apply penalties to prevent single-file dominance while maintaining quality"""

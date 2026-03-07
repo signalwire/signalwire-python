@@ -474,24 +474,24 @@ class PgVectorSearchBackend:
         # Vector search
         vector_results = self._vector_search(query_vector, count * 2, tags)
 
-        # Apply similarity threshold to raw vector scores BEFORE weighting
-        # This ensures threshold behaves intuitively (filters on actual similarity, not weighted score)
-        if similarity_threshold > 0:
-            vector_results = [r for r in vector_results if r['score'] >= similarity_threshold]
-
         # Keyword search
         keyword_results = self._keyword_search(enhanced_text, count * 2, tags)
 
         # Metadata search
         metadata_results = self._metadata_search(query_terms, count * 2, tags)
 
-        # Merge all results (threshold already applied to vector results)
+        # Merge all results
         merged_results = self._merge_all_results(vector_results, keyword_results, metadata_results, keyword_weight)
 
         # Ensure 'score' field exists for CLI compatibility
         for r in merged_results:
             if 'score' not in r:
                 r['score'] = r.get('final_score', 0.0)
+
+        # Apply similarity threshold to FINAL merged scores
+        # This filters on the score the consumer actually sees, not just the vector component
+        if similarity_threshold > 0:
+            merged_results = [r for r in merged_results if r['score'] >= similarity_threshold]
 
         return merged_results[:count]
     
@@ -636,23 +636,28 @@ class PgVectorSearchBackend:
             for row in cursor.fetchall():
                 chunk_id, content, filename, section, tags_json, metadata_json, metadata_text = row
                 
-                # Calculate score based on term matches
-                score = 0.0
+                # Calculate score based on proportion of terms matched
+                text_matches = 0
+                json_matches = 0
+                total_terms = len(query_terms) if query_terms else 1
+
                 if metadata_text:
                     metadata_lower = metadata_text.lower()
                     for term in query_terms:
                         if term.lower() in metadata_lower:
-                            score += 0.3  # Base score for each match
-                
-                # Bonus for exact matches in JSONB keys/values
+                            text_matches += 1
+
                 if metadata_json:
                     json_str = json.dumps(metadata_json).lower()
                     for term in query_terms:
                         if term.lower() in json_str:
-                            score += 0.2
-                
-                # Normalize score
-                score = min(1.0, score)
+                            json_matches += 1
+
+                # Score based on what fraction of terms matched, scaled to a reasonable range
+                # Max possible: 0.4 (text) + 0.2 (json) = 0.6 for a perfect metadata match
+                text_score = (text_matches / total_terms) * 0.4
+                json_score = (json_matches / total_terms) * 0.2
+                score = text_score + json_score
                 
                 results.append({
                     'id': chunk_id,
@@ -671,101 +676,92 @@ class PgVectorSearchBackend:
             results.sort(key=lambda x: x['score'], reverse=True)
             return results[:count]
     
-    def _merge_results(self, vector_results: List[Dict[str, Any]], 
+    def _merge_results(self, vector_results: List[Dict[str, Any]],
                       keyword_results: List[Dict[str, Any]],
                       keyword_weight: Optional[float] = None) -> List[Dict[str, Any]]:
-        """Merge and rank results from vector and keyword search"""
-        # Use provided weights or defaults
-        if keyword_weight is None:
-            keyword_weight = 0.3
-        vector_weight = 1.0 - keyword_weight
-        
-        # Create a map to track unique results
+        """Merge and rank results from vector and keyword search.
+
+        Uses max-signal-wins scoring: the strongest signal (vector or keyword)
+        becomes the base score, and agreement from the other source boosts it.
+        This keeps scores in an intuitive 0-1 range where 0.5 means 'decent match'.
+        """
+        agreement_boost = 0.1  # Boost when multiple sources agree
+
+        # Collect per-source scores for each result
         results_map = {}
-        
-        # Add vector results
+        all_sources = {}
+
         for result in vector_results:
             chunk_id = result['id']
-            if chunk_id not in results_map:
-                results_map[chunk_id] = result
-                results_map[chunk_id]['score'] *= vector_weight
-            else:
-                # Combine scores if result appears in both
-                results_map[chunk_id]['score'] += result['score'] * vector_weight
-        
-        # Add keyword results
+            results_map[chunk_id] = result.copy()
+            all_sources.setdefault(chunk_id, {})['vector'] = result['score']
+
         for result in keyword_results:
             chunk_id = result['id']
             if chunk_id not in results_map:
-                results_map[chunk_id] = result
-                results_map[chunk_id]['score'] *= keyword_weight
-            else:
-                # Combine scores if result appears in both
-                results_map[chunk_id]['score'] += result['score'] * keyword_weight
-        
-        # Sort by combined score
+                results_map[chunk_id] = result.copy()
+            all_sources.setdefault(chunk_id, {})['keyword'] = result['score']
+
+        # Score: max signal wins, boost for agreement
+        for chunk_id, result in results_map.items():
+            sources = all_sources[chunk_id]
+            scores = list(sources.values())
+            base = max(scores)
+            boost = agreement_boost * (len(scores) - 1)
+            result['score'] = min(1.0, base + boost)
+
         merged = list(results_map.values())
         merged.sort(key=lambda x: x['score'], reverse=True)
-        
+
         return merged
     
-    def _merge_all_results(self, vector_results: List[Dict[str, Any]], 
+    def _merge_all_results(self, vector_results: List[Dict[str, Any]],
                           keyword_results: List[Dict[str, Any]],
                           metadata_results: List[Dict[str, Any]],
                           keyword_weight: Optional[float] = None) -> List[Dict[str, Any]]:
-        """Merge and rank results from vector, keyword, and metadata search"""
-        # Use provided weights or defaults
-        if keyword_weight is None:
-            keyword_weight = 0.3
-        vector_weight = 0.5
-        metadata_weight = 0.2
-        
-        # Create a map to track unique results
+        """Merge and rank results from vector, keyword, and metadata search.
+
+        Uses max-signal-wins scoring: the strongest signal (vector, keyword,
+        or metadata) becomes the base score, and agreement from additional
+        sources boosts it. This keeps scores in an intuitive 0-1 range where
+        0.5 means 'decent match' regardless of which source found it.
+        """
+        agreement_boost = 0.1  # Boost per additional agreeing source
+
+        # Collect per-source scores for each result
         results_map = {}
         all_sources = {}
-        
-        # Add vector results
+
         for result in vector_results:
             chunk_id = result['id']
-            if chunk_id not in results_map:
-                results_map[chunk_id] = result.copy()
-                results_map[chunk_id]['score'] = result['score'] * vector_weight
-                all_sources[chunk_id] = {'vector': result['score']}
-            else:
-                results_map[chunk_id]['score'] += result['score'] * vector_weight
-                all_sources[chunk_id]['vector'] = result['score']
-        
-        # Add keyword results
+            results_map[chunk_id] = result.copy()
+            all_sources.setdefault(chunk_id, {})['vector'] = result['score']
+
         for result in keyword_results:
             chunk_id = result['id']
             if chunk_id not in results_map:
                 results_map[chunk_id] = result.copy()
-                results_map[chunk_id]['score'] = result['score'] * keyword_weight
-                all_sources.setdefault(chunk_id, {})['keyword'] = result['score']
-            else:
-                results_map[chunk_id]['score'] += result['score'] * keyword_weight
-                all_sources[chunk_id]['keyword'] = result['score']
-        
-        # Add metadata results
+            all_sources.setdefault(chunk_id, {})['keyword'] = result['score']
+
         for result in metadata_results:
             chunk_id = result['id']
             if chunk_id not in results_map:
                 results_map[chunk_id] = result.copy()
-                results_map[chunk_id]['score'] = result['score'] * metadata_weight
-                all_sources.setdefault(chunk_id, {})['metadata'] = result['score']
-            else:
-                results_map[chunk_id]['score'] += result['score'] * metadata_weight
-                all_sources[chunk_id]['metadata'] = result['score']
-        
-        # Add sources to results for transparency
+            all_sources.setdefault(chunk_id, {})['metadata'] = result['score']
+
+        # Score: max signal wins, boost for each additional agreeing source
         for chunk_id, result in results_map.items():
-            result['sources'] = all_sources.get(chunk_id, {})
+            sources = all_sources[chunk_id]
+            scores = list(sources.values())
+            base = max(scores)
+            boost = agreement_boost * (len(scores) - 1)
+            result['score'] = min(1.0, base + boost)
+            result['sources'] = sources
             result['final_score'] = result['score']
-        
-        # Sort by combined score
+
         merged = list(results_map.values())
         merged.sort(key=lambda x: x['score'], reverse=True)
-        
+
         return merged
     
     def get_stats(self) -> Dict[str, Any]:
