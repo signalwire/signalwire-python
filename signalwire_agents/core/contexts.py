@@ -279,7 +279,12 @@ class Step:
 
         Args:
             output_key: Key in global_data to store answers under (default: top-level)
-            completion_action: "next_step" to auto-advance when all questions are answered
+            completion_action: Where to go when all questions are answered. Can be:
+                - "next_step" to auto-advance to the next sequential step
+                - A specific step name (e.g. "process_results") to jump to that step
+                - None (default) to return to normal step mode after gathering
+                The target must be valid: "next_step" requires a following step,
+                and named steps must exist in the same context.
             prompt: Preamble text injected once when entering the gather step, giving
                 the model personality/context for why it is asking these questions
 
@@ -1029,6 +1034,25 @@ class ContextBuilder:
                                 f"has duplicate gather_info question key '{q.key}'"
                             )
                         keys_seen.add(q.key)
+
+                    # Validate completion_action references a reachable step
+                    action = step._gather_info._completion_action
+                    if action is not None:
+                        if action == "next_step":
+                            # "next_step" requires a subsequent step in the order
+                            step_idx = context._step_order.index(step_name)
+                            if step_idx >= len(context._step_order) - 1:
+                                raise ValueError(
+                                    f"Step '{step_name}' in context '{context_name}' "
+                                    f"has gather_info completion_action='next_step' "
+                                    f"but it is the last step in the context"
+                                )
+                        elif action not in context._steps:
+                            raise ValueError(
+                                f"Step '{step_name}' in context '{context_name}' "
+                                f"has gather_info completion_action='{action}' "
+                                f"but step '{action}' does not exist in this context"
+                            )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert all contexts to dictionary for SWML generation"""

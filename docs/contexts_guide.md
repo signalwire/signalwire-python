@@ -577,8 +577,9 @@ Gather info mode solves this by using **dynamic step instruction re-injection**.
 4. **Tool lockdown**: During gather mode, **all normal functions are hidden** -- only `gather_submit` (an internal function) and any per-question `functions` are visible.
 5. **Answer submission**: When the AI calls `gather_submit`, the answer is written to `global_data` and the next question's instruction is re-injected. The `gather_submit` call routes through the system-log path, so the LLM never sees tool_call/tool_result for it.
 6. **Completion**: When all questions are answered, either:
-   - The step auto-advances to the next step (`completion_action="next_step"`)
-   - The step returns to normal mode with the regular step text, plus a note that gathered data is available
+   - The step auto-advances to the next sequential step (`completion_action="next_step"`)
+   - The step jumps to a specific named step (`completion_action="step_name"`)
+   - The step returns to normal mode with the regular step text, plus a note that gathered data is available (when `completion_action` is None)
 
 Here's what the LLM conversation history looks like during gather mode:
 
@@ -715,9 +716,10 @@ ctx.add_step("plan_trip") \
 
 #### Auto-Advancing After Gather
 
-With `completion_action="next_step"`, the step automatically advances when the last question is answered:
+With `completion_action`, the step automatically advances when the last question is answered. You can advance to the next sequential step or jump to a specific named step:
 
 ```python
+# Advance to the next sequential step
 ctx.add_step("collect_profile") \
     .set_text("Collect the caller's profile.") \
     .set_gather_info(
@@ -733,9 +735,30 @@ ctx.add_step("process") \
     .set_text("You have the caller's profile in ${profile}. Help them with their request.")
 ```
 
+You can also jump to a specific step by name:
+
+```python
+ctx.add_step("collect_info") \
+    .set_text("Collect caller info.") \
+    .set_gather_info(
+        output_key="info",
+        completion_action="review",  # Jump directly to "review" step
+    ) \
+    .add_gather_question("name", "What is your name?") \
+    .add_gather_question("issue", "What is your issue?")
+
+ctx.add_step("other_step") \
+    .set_text("This step is skipped when coming from collect_info.")
+
+ctx.add_step("review") \
+    .set_text("Review the collected info in ${info} and help the caller.")
+```
+
+> **Note**: The target step is validated at build time. Using `"next_step"` on the last step in a context, or naming a step that doesn't exist, will raise a `ValueError`.
+
 #### Combining Gather with Normal Step Mode
 
-Without `completion_action="next_step"`, the step returns to normal mode after all questions are answered:
+Without `completion_action` (or when set to None), the step returns to normal mode after all questions are answered:
 
 ```python
 ctx.add_step("intake") \
@@ -764,7 +787,7 @@ Flow:
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `output_key` | str | None | Key in global_data to store answers under. If None, answers stored at top level. |
-| `completion_action` | str | None | Set to `"next_step"` to auto-advance when all questions are answered. |
+| `completion_action` | str | None | Where to go when all questions are answered: `"next_step"` to advance sequentially, or a specific step name (e.g. `"process_results"`) to jump to that step. If None, returns to normal step mode. The target is validated — `"next_step"` requires a following step, and named steps must exist in the context. |
 | `prompt` | str | None | Preamble text injected once as a persistent message when entering the gather step. |
 
 **`add_gather_question()` Parameters:**

@@ -19,6 +19,8 @@ from signalwire_agents.core.contexts import (
     ContextBuilder,
     Context,
     Step,
+    GatherInfo,
+    GatherQuestion,
     create_simple_context
 )
 
@@ -1018,3 +1020,183 @@ class TestContextBuilderValidation:
         ctx3.add_step("s3").set_text("C")
         result = builder.to_dict()
         assert list(result.keys()) == ["alpha", "beta", "gamma"]
+
+
+# ---------------------------------------------------------------------------
+# GatherInfo / GatherQuestion
+# ---------------------------------------------------------------------------
+
+class TestGatherQuestion:
+    """Test GatherQuestion class"""
+
+    def test_basic_question(self):
+        q = GatherQuestion(key="name", question="What is your name?")
+        d = q.to_dict()
+        assert d == {"key": "name", "question": "What is your name?"}
+
+    def test_question_with_all_fields(self):
+        q = GatherQuestion(
+            key="email", question="Email?", type="string",
+            confirm=True, prompt="Be precise", functions=["validate_email"]
+        )
+        d = q.to_dict()
+        assert d["key"] == "email"
+        assert d["confirm"] is True
+        assert d["prompt"] == "Be precise"
+        assert d["functions"] == ["validate_email"]
+
+    def test_default_type_not_included(self):
+        q = GatherQuestion(key="x", question="Q?")
+        assert "type" not in q.to_dict()
+
+    def test_non_default_type_included(self):
+        q = GatherQuestion(key="age", question="Age?", type="integer")
+        assert q.to_dict()["type"] == "integer"
+
+
+class TestGatherInfo:
+    """Test GatherInfo class"""
+
+    def test_basic_gather_info(self):
+        gi = GatherInfo()
+        gi.add_question("name", "What is your name?")
+        d = gi.to_dict()
+        assert "questions" in d
+        assert len(d["questions"]) == 1
+
+    def test_gather_info_with_all_params(self):
+        gi = GatherInfo(output_key="profile", completion_action="next_step",
+                        prompt="Welcome!")
+        gi.add_question("name", "Name?")
+        d = gi.to_dict()
+        assert d["output_key"] == "profile"
+        assert d["completion_action"] == "next_step"
+        assert d["prompt"] == "Welcome!"
+
+    def test_gather_info_no_questions_raises(self):
+        gi = GatherInfo()
+        with pytest.raises(ValueError, match="at least one question"):
+            gi.to_dict()
+
+    def test_method_chaining(self):
+        gi = GatherInfo()
+        result = gi.add_question("a", "Q1?").add_question("b", "Q2?")
+        assert result is gi
+        assert len(gi._questions) == 2
+
+    def test_completion_action_passed_as_is(self):
+        gi = GatherInfo(completion_action="my_custom_step")
+        gi.add_question("x", "Q?")
+        assert gi.to_dict()["completion_action"] == "my_custom_step"
+
+
+class TestStepGatherInfo:
+    """Test Step gather_info integration"""
+
+    def test_set_gather_info_and_add_questions(self):
+        step = Step("intake")
+        step.set_text("Collect info")
+        step.set_gather_info(output_key="data", completion_action="next_step")
+        step.add_gather_question("name", "Name?")
+        step.add_gather_question("email", "Email?", confirm=True)
+        d = step.to_dict()
+        assert "gather_info" in d
+        assert d["gather_info"]["output_key"] == "data"
+        assert len(d["gather_info"]["questions"]) == 2
+
+    def test_add_gather_question_without_set_gather_info_raises(self):
+        step = Step("s")
+        with pytest.raises(ValueError, match="Must call set_gather_info"):
+            step.add_gather_question("key", "Q?")
+
+    def test_gather_info_completion_action_named_step(self):
+        step = Step("s")
+        step.set_text("Go")
+        step.set_gather_info(completion_action="review")
+        step.add_gather_question("x", "Q?")
+        d = step.to_dict()
+        assert d["gather_info"]["completion_action"] == "review"
+
+
+class TestGatherInfoValidation:
+    """Test ContextBuilder validation of gather_info completion_action"""
+
+    def _make_builder(self):
+        return ContextBuilder(Mock())
+
+    def test_next_step_valid_when_following_step_exists(self):
+        builder = self._make_builder()
+        ctx = builder.add_context("default")
+        ctx.add_step("gather") \
+            .set_text("Gather") \
+            .set_gather_info(completion_action="next_step") \
+            .add_gather_question("name", "Name?")
+        ctx.add_step("process").set_text("Process")
+        builder.validate()  # Should not raise
+
+    def test_next_step_invalid_on_last_step(self):
+        builder = self._make_builder()
+        ctx = builder.add_context("default")
+        ctx.add_step("only_step") \
+            .set_text("Gather") \
+            .set_gather_info(completion_action="next_step") \
+            .add_gather_question("name", "Name?")
+        with pytest.raises(ValueError, match="last step"):
+            builder.validate()
+
+    def test_named_step_valid(self):
+        builder = self._make_builder()
+        ctx = builder.add_context("default")
+        ctx.add_step("gather") \
+            .set_text("Gather") \
+            .set_gather_info(completion_action="review") \
+            .add_gather_question("name", "Name?")
+        ctx.add_step("middle").set_text("Middle")
+        ctx.add_step("review").set_text("Review")
+        builder.validate()  # Should not raise
+
+    def test_named_step_invalid_when_not_defined(self):
+        builder = self._make_builder()
+        ctx = builder.add_context("default")
+        ctx.add_step("gather") \
+            .set_text("Gather") \
+            .set_gather_info(completion_action="nonexistent") \
+            .add_gather_question("name", "Name?")
+        ctx.add_step("other").set_text("Other")
+        with pytest.raises(ValueError, match="does not exist"):
+            builder.validate()
+
+    def test_no_completion_action_always_valid(self):
+        builder = self._make_builder()
+        ctx = builder.add_context("default")
+        ctx.add_step("only_step") \
+            .set_text("Gather") \
+            .set_gather_info() \
+            .add_gather_question("name", "Name?")
+        builder.validate()  # Should not raise
+
+    def test_next_step_valid_not_last_in_multi_step(self):
+        builder = self._make_builder()
+        ctx = builder.add_context("default")
+        ctx.add_step("step1") \
+            .set_text("S1") \
+            .set_gather_info(completion_action="next_step") \
+            .add_gather_question("a", "Q?")
+        ctx.add_step("step2") \
+            .set_text("S2") \
+            .set_gather_info(completion_action="next_step") \
+            .add_gather_question("b", "Q?")
+        ctx.add_step("step3").set_text("S3")
+        builder.validate()  # Both step1 and step2 have a following step
+
+    def test_second_to_last_next_step_valid_last_next_step_invalid(self):
+        builder = self._make_builder()
+        ctx = builder.add_context("default")
+        ctx.add_step("s1").set_text("S1")
+        ctx.add_step("s2") \
+            .set_text("S2") \
+            .set_gather_info(completion_action="next_step") \
+            .add_gather_question("x", "Q?")
+        # s2 is the last step
+        with pytest.raises(ValueError, match="last step"):
+            builder.validate()
