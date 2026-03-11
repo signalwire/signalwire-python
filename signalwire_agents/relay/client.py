@@ -185,7 +185,7 @@ class RelayClient:
         _active_clients.add(id(self))
 
         uri = f"wss://{self.host}"
-        logger.info("Connecting to %s", uri)
+        logger.info(f"Connecting to {uri}")
 
         self._ws = await websockets.connect(uri, ping_interval=None, max_size=10 * 1024 * 1024)
         self._connected = True
@@ -234,8 +234,7 @@ class RelayClient:
         # Capture server-assigned protocol and identity
         self._relay_protocol = result.get("protocol", self._relay_protocol)
         self._identity = result.get("identity", self._identity)
-        logger.debug("Auth response: protocol=%s identity=%s",
-                     self._relay_protocol, self._identity)
+        logger.debug(f"Auth response: protocol={self._relay_protocol} identity={self._identity}")
 
     async def disconnect(self) -> None:
         """Cleanly close the connection."""
@@ -350,7 +349,7 @@ class RelayClient:
             self._clear_pending_requests()
 
             # Auto-reconnect with exponential backoff
-            logger.info("Reconnecting in %.1fs ...", self._reconnect_delay)
+            logger.info(f"Reconnecting in {self._reconnect_delay:.1f}s ...")
             await asyncio.sleep(self._reconnect_delay)
             self._reconnect_delay = min(
                 self._reconnect_delay * RECONNECT_BACKOFF_FACTOR,
@@ -386,15 +385,15 @@ class RelayClient:
                 if len(self._execute_queue) >= _MAX_QUEUE_SIZE:
                     raise RelayError(-1, "Execute queue full — too many requests while disconnected")
                 self._execute_queue.append((message, future))
-                logger.debug("Request queued (not connected): %s", method)
+                logger.debug(f"Request queued (not connected): {method}")
             else:
                 raw = json.dumps(message)
-                logger.debug(">> %s id=%s", method, req_id)
+                logger.debug(f">> {method} id={req_id}")
                 await self._ws.send(raw)
 
             return await asyncio.wait_for(future, timeout=_EXECUTE_TIMEOUT)
         except asyncio.TimeoutError:
-            logger.error("Request timeout: %s %s", method, req_id)
+            logger.error(f"Request timeout: {method} {req_id}")
             # Timeout may indicate a half-open connection — force reconnect
             if method != METHOD_SIGNALWIRE_CONNECT:
                 self._force_close()
@@ -409,12 +408,12 @@ class RelayClient:
             return
         queued = list(self._execute_queue)
         self._execute_queue.clear()
-        logger.debug("Flushing %d queued requests", len(queued))
+        logger.debug(f"Flushing {len(queued)} queued requests")
         for message, future in queued:
             if future.done():
                 continue
             raw = json.dumps(message)
-            logger.debug(">> (queued) %s id=%s", message.get("method", "?"), message.get("id", "?"))
+            logger.debug(f">> (queued) {message.get('method', '?')} id={message.get('id', '?')}")
             asyncio.ensure_future(self._safe_send(raw, future))
 
     async def _safe_send(self, raw: str, future: asyncio.Future) -> None:
@@ -445,10 +444,10 @@ class RelayClient:
                 try:
                     msg = json.loads(raw)
                 except json.JSONDecodeError:
-                    logger.warning("Invalid JSON received: %s", raw[:200])
+                    logger.warning(f"Invalid JSON received: {str(raw)[:200]}")
                     continue
 
-                logger.debug("<< %s", str(raw)[:500])
+                logger.debug(f"<< {str(raw)[:500]}")
                 await self._handle_message(msg)
         except websockets.exceptions.ConnectionClosed:
             logger.info("WebSocket connection closed")
@@ -481,7 +480,7 @@ class RelayClient:
                     RelayError(error.get("code", -1), str(error.get("message", "Unknown error"))[:512])
                 )
             else:
-                logger.debug("Error response for unknown/expired request %s", req_id)
+                logger.debug(f"Error response for unknown/expired request {req_id}")
             return
 
         # Response to a pending request
@@ -513,7 +512,7 @@ class RelayClient:
                     else:
                         future.set_result(result)
             else:
-                logger.debug("Response for unknown/expired request %s", req_id)
+                logger.debug(f"Response for unknown/expired request {req_id}")
             return
 
         # Server-initiated method call (event or ping)
@@ -555,10 +554,10 @@ class RelayClient:
         call_id = event_params.get("call_id", "")
 
         if not event_type:
-            logger.warning("Received event with empty event_type: %s", payload)
+            logger.warning(f"Received event with empty event_type: {payload}")
             return
 
-        logger.debug("Event: %s call_id=%s", event_type, call_id)
+        logger.debug(f"Event: {event_type} call_id={call_id}")
 
         # Inbound call
         if event_type == EVENT_CALL_RECEIVE:
@@ -577,7 +576,7 @@ class RelayClient:
     async def _handle_inbound_call(self, payload: dict[str, Any]) -> None:
         """Create a Call object for an inbound call and invoke the handler."""
         if len(self._calls) >= _MAX_ACTIVE_CALLS:
-            logger.error("Max active calls (%d) reached, dropping inbound call", _MAX_ACTIVE_CALLS)
+            logger.error(f"Max active calls ({_MAX_ACTIVE_CALLS}) reached, dropping inbound call")
             return
         params = payload.get("params", {})
         call_id = params.get("call_id", "")
@@ -599,14 +598,14 @@ class RelayClient:
         if self._on_call_handler:
             asyncio.ensure_future(self._safe_call_handler(call))
         else:
-            logger.warning("Inbound call %s but no on_call handler registered", call_id)
+            logger.warning(f"Inbound call {call_id} but no on_call handler registered")
 
     async def _safe_call_handler(self, call: Call) -> None:
         """Run the on_call handler as a free task so the recv loop is never blocked."""
         try:
             await self._on_call_handler(call)
         except Exception:
-            logger.exception("Error in on_call handler for %s", call.call_id)
+            logger.exception(f"Error in on_call handler for {call.call_id}")
 
     async def _send_pong(self, req_id: str) -> None:
         """Respond to a server ping."""
@@ -658,8 +657,7 @@ class RelayClient:
                         RECONNECT_MAX_DELAY,
                     )
                     logger.warning(
-                        "Client ping failed (%d/%d), backoff %.1fs",
-                        self._ping_failures, _MAX_PING_FAILURES, backoff,
+                        f"Client ping failed ({self._ping_failures}/{_MAX_PING_FAILURES}), backoff {backoff:.1f}s"
                     )
                     if self._ping_failures >= _MAX_PING_FAILURES:
                         logger.error("Max ping failures reached, forcing reconnect")
@@ -694,8 +692,7 @@ class RelayClient:
         The client ping loop will handle failures with exponential backoff.
         This just logs; the ping loop does the actual probing.
         """
-        logger.debug("No server ping received in %.1fs, client pings will probe",
-                     _CHECK_PING_DELAY)
+        logger.debug(f"No server ping received in {_CHECK_PING_DELAY:.1f}s, client pings will probe")
 
     def _force_close(self) -> None:
         """Force-close the WebSocket to trigger reconnect."""
