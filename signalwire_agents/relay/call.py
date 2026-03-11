@@ -138,7 +138,10 @@ class CollectAction(Action):
                          ("finished", "error", "no_input", "no_match"))
 
     def _check_event(self, event: RelayEvent) -> None:
-        # Collect events carry a result dict; any result is terminal.
+        # play_and_collect shares a control_id across play and collect
+        # phases.  Only resolve on collect events, not play events.
+        if event.event_type != "calling.call.collect":
+            return
         result = event.params.get("result", {})
         if result and not self._done.done():
             self.result = event
