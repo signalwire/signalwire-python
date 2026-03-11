@@ -334,13 +334,68 @@ Note the nested `params.params` structure. The outer `params` has `event_type`, 
 | `calling.call.collect` | Result object has `type` (digit/speech/error/no_input/no_match) and `params`. |
 | `calling.call.record` | `url`, `duration`, `size` may be at top level OR nested inside `record` object. Check both. |
 
+## Authorization State (Fast Reconnection)
+
+The server sends `signalwire.authorization.state` events containing an encrypted `authorization_state` string. Store this and send it back on reconnect for fast re-auth without a full authentication round-trip.
+
+```json
+// Server sends:
+{"method":"signalwire.event", "params":{
+  "event_type":"signalwire.authorization.state",
+  "params":{"authorization_state":"<encryptedBase64>:<tagBase64>"}
+}}
+```
+
+On reconnect, include `authorization_state` in the `signalwire.connect` params alongside `protocol`. If the authorization state is invalid or expired, the server ignores it and falls back to normal `authentication`.
+
+## Server-Initiated Disconnect
+
+The server sends `signalwire.disconnect` to gracefully shut down connections (e.g. during deployments). The client MUST:
+
+1. Respond with an empty result `{"jsonrpc":"2.0","id":"...","result":{}}`
+2. Check the `restart` flag:
+   - `restart: false` (or absent) → reconnect normally, reuse `protocol` and `authorization_state`
+   - `restart: true` → clear `protocol` and `authorization_state`, reconnect with fresh auth
+
+```json
+{"method":"signalwire.disconnect", "params":{"restart": true}}
+```
+
+Do NOT set a "closing" flag — the client should reconnect after the server closes the socket.
+
+## Dynamic Context Subscription
+
+Contexts can be sent in `signalwire.connect` for initial subscription, but you can also add/remove contexts dynamically after connecting:
+
+### signalwire.receive
+
+Subscribe to additional contexts for inbound events:
+```json
+{"method":"signalwire.receive", "params":{"contexts":["sales","support"]}}
+// Response: {"code":"200","message":"Receiving events"}
+// Error: {"code":"402","message":"Payment required"}
+```
+
+### signalwire.unreceive
+
+Unsubscribe from contexts:
+```json
+{"method":"signalwire.unreceive", "params":{"contexts":["sales"]}}
+// Response: {"code":"200","message":"Unreceiving events"}
+```
+
+These are sent on the assigned protocol (the one returned from `signalwire.connect`), not the signalwire protocol.
+
 ## Reconnection
 
 On WebSocket disconnect:
 1. Reject all pending request Futures
 2. Reject all pending dial Futures
 3. Wait with exponential backoff (1s → 2s → 4s → ... → 30s max)
-4. Reconnect and re-authenticate with `signalwire.connect`, sending the previous `protocol` string
+4. Reconnect and re-authenticate with `signalwire.connect`, sending:
+   - The previous `protocol` string (to resume the session)
+   - The `authorization_state` (for fast re-auth)
+   - Unless a `signalwire.disconnect` with `restart: true` was received — then connect fresh
 5. Flush any queued requests
 
 Call objects survive reconnect — the server tracks them by `call_id` across connections.
@@ -351,8 +406,11 @@ Call objects survive reconnect — the server tracks them by `call_id` across co
 - [ ] `calls` map: `call_id` → Call (for event routing)
 - [ ] Each Call has `actions` map: `control_id` → Action (for action event routing)
 - [ ] `pending_dials` map: `tag` → Future<Call> (for dial event matching)
+- [ ] `authorization_state` stored from events and sent on reconnect
 - [ ] Event ACK sent for every `signalwire.event`
 - [ ] Pong sent for every `signalwire.ping`
+- [ ] `signalwire.disconnect` handled: respond, check `restart` flag, reconnect
+- [ ] `signalwire.receive`/`signalwire.unreceive` for dynamic context management
 - [ ] 404/410 errors handled gracefully (call-gone, not exceptional)
 - [ ] `calling.call.dial` events routed by `tag`, not `call_id`
 - [ ] `calling.call.state` events during dial create Call objects before dial completes

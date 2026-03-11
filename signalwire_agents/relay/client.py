@@ -37,6 +37,7 @@ from .constants import (
     AGENT_STRING,
     PROTOCOL_VERSION,
     DEFAULT_RELAY_HOST,
+    EVENT_AUTHORIZATION_STATE,
     EVENT_CALL_DIAL,
     EVENT_CALL_RECEIVE,
     EVENT_CALL_STATE,
@@ -44,6 +45,8 @@ from .constants import (
     METHOD_SIGNALWIRE_DISCONNECT,
     METHOD_SIGNALWIRE_EVENT,
     METHOD_SIGNALWIRE_PING,
+    METHOD_SIGNALWIRE_RECEIVE,
+    METHOD_SIGNALWIRE_UNRECEIVE,
     RECONNECT_BACKOFF_FACTOR,
     RECONNECT_MAX_DELAY,
     RECONNECT_MIN_DELAY,
@@ -141,6 +144,10 @@ class RelayClient:
         # Sent back on reconnect to resume the same session.
         self._relay_protocol: str = ""
         self._identity: str = ""
+        # Encrypted authorization state from signalwire.authorization.state
+        # events. Sent back on reconnect for fast re-auth without full
+        # authentication round-trip.
+        self._authorization_state: str = ""
         # Half-open detection: reset on every server ping; fires if no ping
         # arrives within _CHECK_PING_DELAY seconds.
         self._check_ping_handle: Optional[asyncio.TimerHandle] = None
@@ -235,6 +242,9 @@ class RelayClient:
         # Re-send the protocol on reconnect to resume the session
         if self._relay_protocol:
             params["protocol"] = self._relay_protocol
+        # Send authorization_state for fast reconnection if available
+        if self._authorization_state:
+            params["authorization_state"] = self._authorization_state
 
         result = await self._send_request(METHOD_SIGNALWIRE_CONNECT, params)
 
@@ -358,6 +368,37 @@ class RelayClient:
         finally:
             self._pending_dials.pop(dial_tag, None)
             self._dial_calls_by_tag.pop(dial_tag, None)
+
+    # ------------------------------------------------------------------
+    # Dynamic context subscription
+    # ------------------------------------------------------------------
+
+    async def receive(self, contexts: list[str]) -> None:
+        """Subscribe to additional contexts for inbound events.
+
+        Sends ``signalwire.receive`` on the assigned protocol to start
+        receiving inbound calls on the given contexts.  Can be called
+        after ``connect()`` to dynamically add contexts without reconnecting.
+        """
+        if not contexts:
+            return
+        await self._send_request(METHOD_SIGNALWIRE_RECEIVE, {
+            "contexts": contexts,
+        })
+        logger.info(f"Subscribed to contexts: {contexts}")
+
+    async def unreceive(self, contexts: list[str]) -> None:
+        """Unsubscribe from contexts for inbound events.
+
+        Sends ``signalwire.unreceive`` to stop receiving inbound calls
+        on the given contexts.
+        """
+        if not contexts:
+            return
+        await self._send_request(METHOD_SIGNALWIRE_UNRECEIVE, {
+            "contexts": contexts,
+        })
+        logger.info(f"Unsubscribed from contexts: {contexts}")
 
     # ------------------------------------------------------------------
     # Run / event loop entry point
@@ -581,11 +622,17 @@ class RelayClient:
             if "id" in msg:
                 await self._send_pong(msg["id"])
         elif method == METHOD_SIGNALWIRE_DISCONNECT:
-            # Server is telling us to disconnect; respond with empty result
-            # then let the server close the socket (reconnect will happen naturally)
-            logger.info("Received signalwire.disconnect from server")
+            # Server is telling us to disconnect (e.g. during deployment).
+            # Respond with empty result, then let the server close the socket.
+            restart = params.get("restart", False)
+            logger.info(f"Received signalwire.disconnect from server (restart={restart})")
             if "id" in msg:
                 await self._send_event_ack(msg["id"])
+            if restart:
+                # Server says start fresh — clear protocol and auth state
+                # so the next connect is a clean connection, not a hijack
+                self._relay_protocol = ""
+                self._authorization_state = ""
             # Don't set _closing — we want to reconnect after the server closes
 
     def _get_request_method(self, req_id: str) -> str:
@@ -614,6 +661,14 @@ class RelayClient:
             return
 
         logger.debug(f"Event: {event_type} call_id={call_id}")
+
+        # Authorization state update — store for reconnection
+        if event_type == EVENT_AUTHORIZATION_STATE:
+            auth_state = event_params.get("authorization_state", "")
+            if auth_state:
+                self._authorization_state = auth_state
+                logger.debug("Updated authorization_state for reconnection")
+            return
 
         # Inbound call
         if event_type == EVENT_CALL_RECEIVE:

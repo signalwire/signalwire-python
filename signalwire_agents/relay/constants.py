@@ -9,6 +9,11 @@ METHOD_SIGNALWIRE_CONNECT = "signalwire.connect"
 METHOD_SIGNALWIRE_EVENT = "signalwire.event"
 METHOD_SIGNALWIRE_PING = "signalwire.ping"
 METHOD_SIGNALWIRE_DISCONNECT = "signalwire.disconnect"
+METHOD_SIGNALWIRE_RECEIVE = "signalwire.receive"
+METHOD_SIGNALWIRE_UNRECEIVE = "signalwire.unreceive"
+
+# Authorization state event
+EVENT_AUTHORIZATION_STATE = "signalwire.authorization.state"
 
 # Call states
 CALL_STATE_CREATED = "created"
