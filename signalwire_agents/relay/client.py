@@ -37,7 +37,9 @@ from .constants import (
     AGENT_STRING,
     PROTOCOL_VERSION,
     DEFAULT_RELAY_HOST,
+    EVENT_CALL_DIAL,
     EVENT_CALL_RECEIVE,
+    EVENT_CALL_STATE,
     METHOD_SIGNALWIRE_CONNECT,
     METHOD_SIGNALWIRE_DISCONNECT,
     METHOD_SIGNALWIRE_EVENT,
@@ -125,6 +127,11 @@ class RelayClient:
         self._pending_methods: dict[str, str] = {}
         self._calls: dict[str, Call] = {}
         self._on_call_handler: Optional[CallHandler] = None
+        # Pending outbound dials: tag → Future[Call] resolved when dial completes
+        self._pending_dials: dict[str, asyncio.Future["Call"]] = {}
+        # Calls created during dial, indexed by tag for event routing before
+        # the winning call_id is known
+        self._dial_calls_by_tag: dict[str, list["Call"]] = {}
         self._connected = False
         self._closing = False
         self._reconnect_delay = RECONNECT_MIN_DELAY
@@ -268,6 +275,13 @@ class RelayClient:
                 fut.cancel()
         self._execute_queue.clear()
 
+        # Cancel any pending dials
+        for fut in self._pending_dials.values():
+            if not fut.done():
+                fut.cancel()
+        self._pending_dials.clear()
+        self._dial_calls_by_tag.clear()
+
         logger.info("Disconnected from RELAY")
 
     # ------------------------------------------------------------------
@@ -292,32 +306,58 @@ class RelayClient:
         *,
         tag: Optional[str] = None,
         max_duration: Optional[int] = None,
+        dial_timeout: Optional[float] = None,
     ) -> Call:
-        """Initiate an outbound call using dial. Returns a Call object."""
+        """Initiate an outbound call using dial. Returns a Call object.
+
+        The ``calling.dial`` RPC response only contains
+        ``{"code": "200", "message": "Dialing"}`` — no call_id. The real
+        call_id and node_id arrive via ``calling.call.dial`` events
+        matched by ``tag``.  This method waits for that event so the
+        returned Call always has valid identifiers.
+
+        Args:
+            devices: Array of device lists (serial/parallel dial).
+            tag: Client-provided tag for event correlation. Auto-generated
+                 if not supplied.
+            max_duration: Optional max call duration in minutes.
+            dial_timeout: How long (seconds) to wait for the dial to
+                          complete before raising TimeoutError.  Defaults
+                          to 120s.
+        """
+        dial_tag = tag or str(uuid.uuid4())
         params: dict[str, Any] = {
-            "tag": tag or str(uuid.uuid4()),
+            "tag": dial_tag,
             "devices": devices,
         }
         if max_duration:
             params["max_duration"] = max_duration
 
-        result = await self.execute("calling.dial", params)
+        # Register a Future that _handle_event will resolve when the
+        # calling.call.dial event arrives with matching tag.
+        loop = asyncio.get_running_loop()
+        dial_future: asyncio.Future[Call] = loop.create_future()
+        self._pending_dials[dial_tag] = dial_future
+        self._dial_calls_by_tag[dial_tag] = []
 
-        # Create a Call object from the response
-        call_id = result.get("call_id", "")
-        node_id = result.get("node_id", "")
-        call = Call(
-            client=self,
-            call_id=call_id,
-            node_id=node_id,
-            project_id=self.project,
-            context=self._relay_protocol,
-            tag=tag or "",
-            direction="outbound",
-            state=result.get("call_state", "created"),
-        )
-        self._calls[call_id] = call
-        return call
+        try:
+            # Send the dial RPC — response is just {"code": "200", "message": "Dialing"}
+            await self.execute("calling.dial", params)
+
+            # Wait for the calling.call.dial event to resolve the call
+            timeout = dial_timeout if dial_timeout is not None else 120.0
+            call = await asyncio.wait_for(dial_future, timeout=timeout)
+            return call
+        except asyncio.TimeoutError:
+            raise RelayError(-1, f"Dial timed out waiting for answer (tag={dial_tag})")
+        except Exception:
+            # Cancel the future if it hasn't resolved yet
+            if not dial_future.done():
+                dial_future.cancel()
+            raise
+        finally:
+            self._pending_dials.pop(dial_tag, None)
+            self._dial_calls_by_tag.pop(dial_tag, None)
 
     # ------------------------------------------------------------------
     # Run / event loop entry point
@@ -436,6 +476,14 @@ class RelayClient:
                 )
         self._pending.clear()
         self._pending_methods.clear()
+        # Also reject pending dials
+        for fut in self._pending_dials.values():
+            if not fut.done():
+                fut.set_exception(
+                    RelayError(-1, "Connection closed during dial")
+                )
+        self._pending_dials.clear()
+        self._dial_calls_by_tag.clear()
 
     async def _recv_loop(self) -> None:
         """Read messages from the WebSocket until closed."""
@@ -548,7 +596,15 @@ class RelayClient:
         return self._pending_methods.get(req_id, "")
 
     async def _handle_event(self, payload: dict[str, Any]) -> None:
-        """Dispatch a signalwire.event to the appropriate Call."""
+        """Dispatch a signalwire.event to the appropriate Call.
+
+        Routing logic:
+        1. ``calling.call.receive`` → create inbound Call
+        2. ``calling.call.dial`` → resolve pending dial by tag
+        3. ``calling.call.state`` with tag matching a pending dial →
+           create/register the Call leg so events flow before dial completes
+        4. All other events → route by ``call_id`` in ``params``
+        """
         event_type = payload.get("event_type", "")
         event_params = payload.get("params", {})
         call_id = event_params.get("call_id", "")
@@ -564,7 +620,23 @@ class RelayClient:
             await self._handle_inbound_call(payload)
             return
 
-        # Route to existing Call
+        # Outbound dial progress — call_id is nested at params.call.call_id
+        if event_type == EVENT_CALL_DIAL:
+            await self._handle_dial_event(payload)
+            return
+
+        # State events during pending dial — the Call hasn't been returned
+        # to the user yet but we need to create and register it so
+        # subsequent events (play, record, etc.) can route to it.
+        if event_type == EVENT_CALL_STATE:
+            tag = event_params.get("tag", "")
+            if tag and tag in self._pending_dials and call_id:
+                if call_id not in self._calls:
+                    self._register_dial_leg(tag, event_params)
+                # Fall through to normal routing below so the Call gets
+                # the state update dispatched to it.
+
+        # Route to existing Call by call_id
         call = self._calls.get(call_id) if call_id else None
         if call:
             await call._dispatch_event(payload)
@@ -606,6 +678,96 @@ class RelayClient:
             await self._on_call_handler(call)
         except Exception:
             logger.exception(f"Error in on_call handler for {call.call_id}")
+
+    def _register_dial_leg(self, tag: str, event_params: dict[str, Any]) -> Call:
+        """Create a Call for a call leg spawned by calling.dial.
+
+        Called when a ``calling.call.state`` event arrives with a tag
+        matching a pending dial but the call_id isn't registered yet.
+        The Call is registered in ``_calls`` so subsequent events route
+        normally, and also tracked in ``_dial_calls_by_tag`` so
+        ``_handle_dial_event`` can find the winner.
+        """
+        call_id = event_params.get("call_id", "")
+        node_id = event_params.get("node_id", "")
+        call = Call(
+            client=self,
+            call_id=call_id,
+            node_id=node_id,
+            project_id=event_params.get("project_id", self.project),
+            context=self._relay_protocol,
+            tag=tag,
+            direction="outbound",
+            device=event_params.get("device"),
+            state=event_params.get("call_state", "created"),
+        )
+        self._calls[call_id] = call
+        self._dial_calls_by_tag.setdefault(tag, []).append(call)
+        logger.debug(f"Registered dial leg: call_id={call_id} tag={tag}")
+        return call
+
+    async def _handle_dial_event(self, payload: dict[str, Any]) -> None:
+        """Handle a ``calling.call.dial`` event.
+
+        The event structure (per spec):
+        - ``params.tag`` — the dial tag
+        - ``params.dial_state`` — ``dialing`` | ``answered`` | ``failed``
+        - ``params.call`` — object with ``call_id``, ``node_id``,
+          ``tag``, ``device``, ``dial_winner`` (only on answered)
+
+        Resolves the pending dial Future with the winning Call when
+        ``dial_state`` is ``"answered"``, or rejects it on ``"failed"``.
+        """
+        event_params = payload.get("params", {})
+        tag = event_params.get("tag", "")
+        dial_state = event_params.get("dial_state", "")
+        call_info = event_params.get("call", {})
+
+        logger.debug(f"Dial event: tag={tag} state={dial_state}")
+
+        dial_future = self._pending_dials.get(tag)
+        if not dial_future or dial_future.done():
+            # No pending dial for this tag — may be a stale event
+            # or a "dialing" progress event after we already resolved.
+            # Still dispatch to any existing call for event listeners.
+            if call_info:
+                cid = call_info.get("call_id", "")
+                call = self._calls.get(cid)
+                if call:
+                    await call._dispatch_event(payload)
+            return
+
+        if dial_state == "answered":
+            # Find or create the winning Call
+            winner_call_id = call_info.get("call_id", "")
+            winner_node_id = call_info.get("node_id", "")
+            call = self._calls.get(winner_call_id)
+            if not call:
+                # Call wasn't registered via state events — create it now
+                call = Call(
+                    client=self,
+                    call_id=winner_call_id,
+                    node_id=winner_node_id,
+                    project_id=self.project,
+                    context=self._relay_protocol,
+                    tag=tag,
+                    direction="outbound",
+                    device=call_info.get("device"),
+                    state="answered",
+                )
+                self._calls[winner_call_id] = call
+            else:
+                # Update node_id in case it wasn't set from state events
+                if winner_node_id and not call.node_id:
+                    call.node_id = winner_node_id
+            dial_future.set_result(call)
+
+        elif dial_state == "failed":
+            dial_future.set_exception(
+                RelayError(-1, f"Dial failed (tag={tag})")
+            )
+
+        # "dialing" events are progress — don't resolve the future yet
 
     async def _send_pong(self, req_id: str) -> None:
         """Respond to a server ping."""
