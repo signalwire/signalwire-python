@@ -113,11 +113,13 @@ class RelayClient:
         self._connected = True
         self._reconnect_delay = RECONNECT_MIN_DELAY
 
+        # Start receive loop BEFORE authenticate so responses can be read
+        self._recv_task = asyncio.ensure_future(self._recv_loop())
+
         # Authenticate
         await self._authenticate()
 
-        # Start receive + ping loops
-        self._recv_task = asyncio.ensure_future(self._recv_loop())
+        # Start ping loop after successful auth
         self._ping_task = asyncio.ensure_future(self._ping_loop())
 
         logger.info("Connected and authenticated to RELAY")
@@ -382,12 +384,16 @@ class RelayClient:
         self._calls[call_id] = call
 
         if self._on_call_handler:
-            try:
-                await self._on_call_handler(call)
-            except Exception:
-                logger.exception("Error in on_call handler for %s", call_id)
+            asyncio.ensure_future(self._safe_call_handler(call))
         else:
             logger.warning("Inbound call %s but no on_call handler registered", call_id)
+
+    async def _safe_call_handler(self, call: Call) -> None:
+        """Run the on_call handler as a free task so the recv loop is never blocked."""
+        try:
+            await self._on_call_handler(call)
+        except Exception:
+            logger.exception("Error in on_call handler for %s", call.call_id)
 
     async def _send_pong(self, req_id: str) -> None:
         """Respond to a server ping."""

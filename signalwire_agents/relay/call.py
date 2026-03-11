@@ -237,13 +237,13 @@ class Call:
         if control_id and control_id in self._actions:
             self._actions[control_id]._check_event(event)
 
-        # Notify registered listeners
+        # Notify registered listeners (spawned as tasks to avoid blocking recv loop)
         handlers = self._listeners.get(event_type, [])
         for handler in handlers:
             try:
                 result = handler(event)
                 if asyncio.iscoroutine(result):
-                    await result
+                    asyncio.ensure_future(result)
             except Exception:
                 logger.exception("Error in event handler for %s", event_type)
 
