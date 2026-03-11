@@ -936,7 +936,11 @@ class AgentBase(
                     if token:
                         url_params["__token"] = token  # Use __token to avoid collision
                     function_entry["web_hook_url"] = agent_to_use._build_webhook_url("swaig", url_params)
-            
+
+                # Apply any extra SWAIG fields (e.g., skip_fillers, meta_data)
+                if func.extra_swaig_fields:
+                    function_entry.update(func.extra_swaig_fields)
+
             functions.append(function_entry)
         
         # Add functions array to SWAIG object if we have any
