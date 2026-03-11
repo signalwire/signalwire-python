@@ -201,17 +201,19 @@ class Call:
     # ------------------------------------------------------------------
 
     async def _execute(self, method: str, extra_params: Optional[dict[str, Any]] = None) -> dict:
-        """Send a calling.call RPC for this call."""
+        """Send a ``calling.<method>`` JSON-RPC request for this call.
+
+        The outer JSON-RPC method is ``"calling.<method>"`` (e.g.
+        ``"calling.answer"``) with ``node_id`` and ``call_id`` in params.
+        """
+        rpc_method = f"calling.{method}"
         params: dict[str, Any] = {
-            "method": method,
-            "call_id": self.call_id,
             "node_id": self.node_id,
-            "project_id": self.project_id,
-            "protocol": self.context,
+            "call_id": self.call_id,
         }
         if extra_params:
             params.update(extra_params)
-        return await self._client.execute("calling.call", params)
+        return await self._client.execute(rpc_method, params)
 
     # ------------------------------------------------------------------
     # Event plumbing
@@ -395,12 +397,9 @@ class Call:
         params.update(kwargs)
         return await self._execute("connect", params)
 
-    async def disconnect(self, reason: Optional[str] = None) -> dict:
+    async def disconnect(self) -> dict:
         """Disconnect (unbridge) a connected call."""
-        params: dict[str, Any] = {}
-        if reason:
-            params["reason"] = reason
-        return await self._execute("disconnect", params or None)
+        return await self._execute("disconnect")
 
     # ------------------------------------------------------------------
     # DTMF

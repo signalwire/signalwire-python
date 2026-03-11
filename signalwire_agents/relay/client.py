@@ -22,7 +22,6 @@ from .constants import (
     PROTOCOL_VERSION,
     DEFAULT_RELAY_HOST,
     EVENT_CALL_RECEIVE,
-    METHOD_CALLING_CALL,
     METHOD_SIGNALWIRE_CONNECT,
     METHOD_SIGNALWIRE_EVENT,
     METHOD_SIGNALWIRE_PING,
@@ -186,8 +185,9 @@ class RelayClient:
     async def execute(self, method: str, params: dict[str, Any]) -> dict:
         """Send a JSON-RPC request and await the response.
 
-        For calling methods, ``method`` is typically ``"calling.call"``
-        and the actual command (e.g. ``"play"``) is inside ``params["method"]``.
+        For calling methods, ``method`` is the full name (e.g.
+        ``"calling.answer"``, ``"calling.play"``) with ``node_id``
+        and ``call_id`` in ``params``.
         """
         return await self._send_request(method, params)
 
@@ -200,17 +200,13 @@ class RelayClient:
     ) -> Call:
         """Initiate an outbound call using dial. Returns a Call object."""
         params: dict[str, Any] = {
-            "method": "dial",
+            "tag": tag or str(uuid.uuid4()),
             "devices": devices,
-            "project_id": self.project,
-            "protocol": self._relay_protocol,
         }
-        if tag:
-            params["tag"] = tag
         if max_duration:
             params["max_duration"] = max_duration
 
-        result = await self.execute(METHOD_CALLING_CALL, params)
+        result = await self.execute("calling.dial", params)
 
         # Create a Call object from the response
         call_id = result.get("call_id", "")
@@ -312,15 +308,7 @@ class RelayClient:
 
     async def _handle_message(self, msg: dict[str, Any]) -> None:
         """Route an incoming JSON-RPC message."""
-        # Response to a pending request
-        if "id" in msg and "result" in msg:
-            req_id = msg["id"]
-            future = self._pending.get(req_id)
-            if future and not future.done():
-                future.set_result(msg["result"])
-            return
-
-        # Error response
+        # JSON-RPC level error (e.g. method not found)
         if "id" in msg and "error" in msg:
             req_id = msg["id"]
             future = self._pending.get(req_id)
@@ -329,6 +317,23 @@ class RelayClient:
                 future.set_exception(
                     RelayError(error.get("code", -1), error.get("message", "Unknown error"))
                 )
+            return
+
+        # Response to a pending request
+        if "id" in msg and "result" in msg:
+            req_id = msg["id"]
+            future = self._pending.get(req_id)
+            if future and not future.done():
+                result = msg["result"]
+                # Calling API returns code/message inside result;
+                # any code other than "200" is an error.
+                code = result.get("code")
+                if code is not None and str(code) != "200":
+                    future.set_exception(
+                        RelayError(int(code), result.get("message", "Unknown error"))
+                    )
+                else:
+                    future.set_result(result)
             return
 
         # Server-initiated method call (event or ping)
