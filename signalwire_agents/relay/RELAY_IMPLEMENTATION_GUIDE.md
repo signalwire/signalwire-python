@@ -359,3 +359,683 @@ Call objects survive reconnect — the server tracks them by `call_id` across co
 - [ ] `play_and_collect` CollectAction filters by event_type, ignores play events
 - [ ] Auto-reconnect with exponential backoff
 - [ ] All pending futures cleaned up on disconnect
+
+## Complete Method Parameter Reference
+
+Every calling method is sent as a JSON-RPC request. Unless otherwise noted, all methods require `node_id` (UUID) and `call_id` (UUID) in params. The `project_id` and `protocol` fields are added by the client automatically.
+
+### Media Objects (reused across methods)
+
+Used in `play`, `play_and_collect`, and `connect` (ringback):
+
+```
+audio:    { type: "audio",    params: { url: "https://..." } }
+tts:      { type: "tts",      params: { text: "...", language?: "en-US", gender?: "male"|"female", voice?: "..." } }
+silence:  { type: "silence",  params: { duration: <seconds> } }
+ringtone: { type: "ringtone", params: { name: "<country-code>", duration?: <seconds> } }
+```
+
+Ringtone country codes: `at au bg br be ch cl cn cz de dk ee es fi fr gr hu il in it lt jp mx my nl no nz ph pl pt ru se sg th uk us tw ve za`
+
+### Device Objects (reused across dial/connect)
+
+```
+phone:  { type: "phone",  params: { from_number: "+1...", to_number: "+1...", timeout?: 30, max_duration?: <sec>, call_state_url?: "https://...", call_state_events?: ["created","ringing","answered","ended"], confirm?: "<swml>" } }
+sip:    { type: "sip",    params: { from: "sip:...", to: "sip:...", from_name?: "...", timeout?: 30, max_duration?: <sec>, headers?: [{name,value}], codecs?: ["PCMU","PCMA","OPUS","G729","G722","VP8","H264"], webrtc_media?: false, call_state_url?: "...", call_state_events?: [...], confirm?: "..." } }
+webrtc: { type: "webrtc", params: { from: "+1...", to: "resource-name", timeout?: 30, codecs?: ["PCMU","PCMA","OPUS","VP8","H264"], call_state_url?: "...", call_state_events?: [...], confirm?: "..." } }
+agora:  { type: "agora",  params: { from: "+1...", to?: "...", appid: "...", channel: "...", call_state_url?: "...", call_state_events?: [...], confirm?: "..." } }
+call:   { type: "call",   params: { node_id: "...", call_id: "..." } }        // connect only
+queue:  { type: "queue",  params: { node_id: "...", queue_name: "...", queue_id?: "..." } }  // connect only
+stream: { type: "stream", params: { url: "wss://...", name?: "...", codec?: "PCMU", status_url?: "...", status_url_method?: "POST", realtime?: false, authorization_bearer_token?: "...", custom_parameters?: {} } }  // connect only
+```
+
+### Collect Object (reused in collect and play_and_collect)
+
+```
+{
+  initial_timeout?: 4.0,        // seconds, used when start_input_timers is true
+  digits?: {
+    max: <int>,                  // required
+    terminators?: "#*",
+    digit_timeout?: 5.0
+  },
+  speech?: {
+    end_silence_timeout?: 1.0,
+    speech_timeout?: 60.0,
+    language?: "en-US",
+    hints?: ["word1", "word2"],
+    engine?: "Deepgram"|"Google"
+  }
+}
+```
+
+---
+
+### calling.dial
+
+Dial outbound call(s). First device to answer wins.
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `tag` | string | YES | Identifier for matching async events |
+| `devices` | array[array[Device]] | YES | Outer=sequential, inner=parallel |
+| `region` | string | no | Region to originate from |
+| `max_price_per_minute` | number | no | Price cap |
+
+Does NOT take `node_id`/`call_id`. Response has NO `call_id` — see tag correlation section above.
+
+### calling.begin (DEPRECATED)
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `tag` | string | no | |
+| `region` | string | no | |
+| `device` | Device | YES | Single device (not array) |
+
+Response DOES return `call_id` and `node_id`. Do NOT assume dial works the same.
+
+### calling.answer
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `codecs` | string[] | no | e.g. ["PCMU","PCMA","OPUS","G729","G722","VP8","H264"] |
+
+### calling.end
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `reason` | string | no | hangup\|cancel\|busy\|noAnswer\|decline\|error (default: hangup) |
+
+### calling.pass
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+
+Pass on inbound call offer. SignalWire offers it to another RELAY consumer.
+
+### calling.connect
+
+Connect another device to this active call.
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `devices` | array[array[Device]] | YES | Sequential/parallel device arrays |
+| `ringback` | Media[] | no | What caller hears while connecting |
+| `tag` | string | no | Tag for created calls' events |
+| `max_duration` | number | no | Max connected duration in minutes |
+| `max_price_per_minute` | number | no | |
+| `status_url` | URL | no | |
+
+### calling.disconnect
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+
+Disconnects all connected calls without hanging up on them.
+
+### calling.play
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | Client-generated UUID |
+| `play` | Media[] | YES | Array of media objects |
+| `volume` | float | no | -40 to +40 dB |
+| `direction` | string | no | listen\|speak\|both (default: listen) |
+| `loop` | int | no | 0=infinite, default 1 |
+| `status_url` | URL | no | |
+
+### calling.play.pause / calling.play.resume / calling.play.stop
+
+| Param | Type | Required |
+|-------|------|----------|
+| `node_id` | UUID | YES |
+| `call_id` | UUID | YES |
+| `control_id` | string | YES |
+
+### calling.play.volume
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | |
+| `volume` | float | YES | -40 to +40 dB |
+
+### calling.record
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | |
+| `record` | object | YES | See below |
+| `status_url` | URL | no | |
+
+Record object (`record.audio`):
+| Param | Type | Default | Notes |
+|-------|------|---------|-------|
+| `beep` | bool | false | |
+| `format` | string | "mp3" | mp3\|wav |
+| `stereo` | bool | false | |
+| `direction` | string | "speak" | listen\|speak\|both |
+| `initial_timeout` | float | 5.0 | seconds, 0=disable |
+| `end_silence_timeout` | float | 1.0 | seconds, 0=disable |
+| `terminators` | string | "#*" | DTMF digits |
+| `input_sensitivity` | int | 44 | 0-100 |
+
+### calling.record.pause
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | |
+| `behavior` | string | no | skip\|silence (default: skip) |
+
+### calling.record.resume / calling.record.stop
+
+| Param | Type | Required |
+|-------|------|----------|
+| `node_id` | UUID | YES |
+| `call_id` | UUID | YES |
+| `control_id` | string | YES |
+
+### calling.collect
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | |
+| `initial_timeout` | float | no | seconds, default 4.0 |
+| `digits` | object | conditional | Required if no speech |
+| `speech` | object | conditional | Required if no digits |
+| `partial_results` | bool | no | default false |
+| `continuous` | bool | no | default false |
+| `send_start_of_input` | bool | no | default false |
+| `start_input_timers` | bool | no | default false |
+| `status_url` | URL | no | |
+
+See Collect Object section above for digits/speech schemas.
+
+### calling.collect.stop
+
+| Param | Type | Required |
+|-------|------|----------|
+| `node_id` | UUID | YES |
+| `call_id` | UUID | YES |
+| `control_id` | string | YES |
+
+### calling.collect.start_input_timers
+
+| Param | Type | Required |
+|-------|------|----------|
+| `node_id` | UUID | YES |
+| `call_id` | UUID | YES |
+| `control_id` | string | YES |
+
+Starts the `initial_timeout` timer on an active collect.
+
+### calling.play_and_collect
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | |
+| `play` | Media[] | YES | Array of media objects |
+| `collect` | object | YES | See Collect Object section |
+| `volume` | float | no | -40 to +40 dB |
+| `status_url` | URL | no | |
+
+### calling.play_and_collect.stop
+
+| Param | Type | Required |
+|-------|------|----------|
+| `node_id` | UUID | YES |
+| `call_id` | UUID | YES |
+| `control_id` | string | YES |
+
+### calling.play_and_collect.volume
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | |
+| `volume` | float | YES | -40 to +40 dB |
+
+### calling.detect
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | |
+| `detect` | object | YES | See below |
+| `timeout` | float | no | seconds, default 30.0 |
+| `status_url` | URL | no | |
+
+Detect object — type "machine":
+| Param | Type | Default |
+|-------|------|---------|
+| `initial_timeout` | float | 4.5 |
+| `end_silence_timeout` | float | 1.0 |
+| `machine_ready_timeout` | float | =end_silence_timeout |
+| `machine_voice_threshold` | float | 1.25 |
+| `machine_words_threshold` | int | 6 |
+| `detect_interruptions` | bool | false |
+| `detect_message_end` | bool | true |
+
+Detect object — type "fax":
+| Param | Type | Default |
+|-------|------|---------|
+| `tone` | string | "CED" | CED\|CNG |
+
+Detect object — type "digit":
+| Param | Type | Default |
+|-------|------|---------|
+| `digits` | string | "0123456789#*" |
+
+### calling.detect.stop
+
+| Param | Type | Required |
+|-------|------|----------|
+| `node_id` | UUID | YES |
+| `call_id` | UUID | YES |
+| `control_id` | string | YES |
+
+### calling.send_digits
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | |
+| `digits` | string | YES | 0-9, #, *, A-D, w (0.5s wait), W (1s wait) |
+
+### calling.tap
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | |
+| `tap` | object | YES | `{type:"audio", params:{direction:"listen"\|"speak"\|"both"}}` |
+| `device` | object | YES | See below |
+| `status_url` | URL | no | |
+
+Tap device — type "rtp":
+| Param | Type | Required |
+|-------|------|----------|
+| `addr` | string (IPv4) | YES |
+| `port` | int | YES |
+| `codec` | string | no |
+| `ptime` | int | no |
+
+Tap device — type "ws":
+| Param | Type | Required |
+|-------|------|----------|
+| `uri` | string | YES |
+| `codec` | string | no |
+| `rate` | int | no |
+
+### calling.tap.stop
+
+| Param | Type | Required |
+|-------|------|----------|
+| `node_id` | UUID | YES |
+| `call_id` | UUID | YES |
+| `control_id` | string | YES |
+
+### calling.stream
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | |
+| `url` | string | YES | wss:// WebSocket URI |
+| `name` | string | no | Friendly name |
+| `codec` | string | no | Default: call's native codec |
+| `track` | string | no | inbound_track\|outbound_track\|both_tracks (default: inbound_track) |
+| `status_url` | URL | no | |
+| `status_url_method` | string | no | GET\|POST (default: POST) |
+| `authorization_bearer_token` | string | no | |
+| `custom_parameters` | object | no | |
+
+### calling.stream.stop
+
+| Param | Type | Required |
+|-------|------|----------|
+| `node_id` | UUID | YES |
+| `call_id` | UUID | YES |
+| `control_id` | string | YES |
+
+### calling.transcribe
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | |
+| `status_url` | URL | no | |
+
+Only one active transcription per call (409 if already active).
+
+### calling.transcribe.stop
+
+| Param | Type | Required |
+|-------|------|----------|
+| `node_id` | UUID | YES |
+| `call_id` | UUID | YES |
+| `control_id` | string | YES |
+
+### calling.send_fax
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | |
+| `document` | URL | YES | URL to PDF |
+| `identity` | string | no | Display identity on receiver |
+| `header_info` | string | no | Custom header (default: "SignalWire", ""=disable) |
+| `status_url` | URL | no | |
+
+### calling.send_fax.stop / calling.receive_fax.stop
+
+| Param | Type | Required |
+|-------|------|----------|
+| `node_id` | UUID | YES |
+| `call_id` | UUID | YES |
+| `control_id` | string | YES |
+
+### calling.receive_fax
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | |
+| `status_url` | URL | no | |
+
+### calling.refer
+
+SIP REFER transfer.
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `device` | object | YES | `{type:"sip", params:{to:"sip:...", username?:"...", password?:"..."}}` |
+| `status_url` | URL | no | |
+
+### calling.transfer
+
+Transfer call control to another app.
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `dest` | string | YES | https:// URL, SWML script, or `context:<app>` |
+
+### calling.join_conference
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `name` | string | YES | Conference name |
+| `muted` | bool | no | default false |
+| `beep` | string | no | true\|false\|onEnter\|onExit (default: "true") |
+| `start_on_enter` | bool | no | default true |
+| `end_on_exit` | bool | no | default false |
+| `wait_url` | URL | no | CXML/mp3/wav hold music |
+| `max_participants` | int | no | 1-250, default 250 |
+| `record` | string | no | do-not-record\|record-from-start |
+| `region` | string | no | global\|us\|eu |
+| `trim` | string | no | trim-silence\|do-not-trim |
+| `coach` | string | no | Call ID to coach |
+| `status_callback` | URL | no | |
+| `status_callback_event` | string | no | Space-separated: start end join leave mute hold modify speaker announcement |
+| `status_callback_event_type` | string | no | relay\|cxml (default: relay) |
+| `status_callback_method` | string | no | GET\|POST |
+| `recording_status_callback` | URL | no | |
+| `recording_status_callback_event` | string | no | in-progress\|completed\|absent |
+| `recording_status_callback_event_type` | string | no | relay\|cxml |
+| `recording_status_callback_method` | string | no | GET\|POST |
+| `stream` | object | no | `{url:"wss://...", name?:"...", codec?:"...", ...}` |
+
+### calling.leave_conference
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `conference_id` | UUID | YES | From conference events |
+
+### calling.hold / calling.unhold
+
+| Param | Type | Required |
+|-------|------|----------|
+| `node_id` | UUID | YES |
+| `call_id` | UUID | YES |
+
+Note: marked NOT IMPLEMENTED in spec.
+
+### calling.denoise / calling.denoise.stop
+
+| Param | Type | Required |
+|-------|------|----------|
+| `node_id` | UUID | YES |
+| `call_id` | UUID | YES |
+
+### calling.echo
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `timeout` | int | no | seconds, 0=until call ends |
+| `status_url` | URL | no | |
+
+### calling.bind_digit
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `digits` | string | YES | DTMF sequence to bind |
+| `bind_method` | string | YES | Method to invoke |
+| `params` | object | no | Params for bound method |
+| `realm` | string | no | Namespace for selective clearing |
+| `max_triggers` | int | no | 0=unlimited |
+
+### calling.clear_digit_bindings
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `realm` | string | no | Only clear this realm |
+
+### calling.queue.enter
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | |
+| `queue_name` | string | YES | |
+| `status_url` | URL | no | |
+
+### calling.queue.leave
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | |
+| `queue_name` | string | YES | |
+| `queue_id` | string | no | |
+| `status_url` | URL | no | |
+
+### calling.ai
+
+Start an AI agent on the call.
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | |
+| `agent` | UUID | no | Pre-configured agent |
+| `prompt` | object | no | `{text, top_p?, temperature?, confidence?, barge_confidence?, presence_penalty?, frequency_penalty?, model?}` |
+| `post_prompt` | object | no | Same structure as prompt |
+| `post_prompt_url` | URL | no | |
+| `post_prompt_auth_user` | string | no | |
+| `post_prompt_auth_password` | string | no | |
+| `global_data` | object | no | Data for SWAIG functions |
+| `pronounce` | object | no | Pronunciation rules |
+| `hints` | object | no | Context hints |
+| `languages` | object | no | Language configs |
+| `SWAIG` | object | no | `{defaults?, functions?, includes?, native_functions?}` |
+| `params` | object | no | ASR, TTS, turn detection, barge-in, LLM config, video, etc. |
+
+### calling.ai.stop
+
+| Param | Type | Required |
+|-------|------|----------|
+| `node_id` | UUID | YES |
+| `call_id` | UUID | YES |
+| `control_id` | string | YES |
+
+### calling.amazon_bedrock
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `prompt` | string | no | System prompt |
+| `SWAIG` | object | no | Function config |
+| `params` | object | no | AI params |
+| `global_data` | object | no | |
+| `post_prompt` | object | no | |
+| `post_prompt_url` | URL | no | |
+
+### calling.ai_message
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `message_text` | string | no | Text to inject |
+| `role` | string | no | Message role |
+| `reset` | object | no | `{full_reset?, user_prompt?, system_prompt?}` |
+| `global_data` | object | no | Updated global data |
+
+### calling.ai_hold
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `timeout` | string/number | no | |
+| `prompt` | string | no | Hold prompt/music |
+
+### calling.ai_unhold
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `prompt` | string | no | Resume prompt |
+
+### calling.user_event
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `event` | string | no | Event name |
+
+### calling.live_transcribe
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `action` | object | YES | One key: `start{}`, `stop{}`, or `summarize{}` |
+
+### calling.live_translate
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `action` | object | YES | One key: `start{}`, `stop{}`, `summarize{}`, or `inject{}` |
+| `status_url` | URL | no | |
+
+### calling.join_room
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `name` | string | YES | Room name |
+| `status_url` | URL | no | |
+
+### calling.leave_room
+
+| Param | Type | Required |
+|-------|------|----------|
+| `node_id` | UUID | YES |
+| `call_id` | UUID | YES |
+
+### calling.pay
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `node_id` | UUID | YES | |
+| `call_id` | UUID | YES | |
+| `control_id` | string | YES | |
+| `payment_connector_url` | URL | YES | |
+| `input` | string | no | dtmf (only option) |
+| `status_url` | URL | no | |
+| `payment_method` | string | no | credit-card (only option) |
+| `timeout` | int | no | seconds, default 5 |
+| `max_attempts` | int | no | default 1 |
+| `security_code` | bool | no | default true |
+| `postal_code` | bool/string | no | true/false/known-postcode |
+| `min_postal_code_length` | int | no | default 0 |
+| `token_type` | string | no | one-time\|reusable (default: reusable) |
+| `charge_amount` | string | no | Decimal, no currency prefix |
+| `currency` | string | no | default "usd" |
+| `language` | string | no | default "en-US" |
+| `voice` | string | no | TTS voice, default "woman" |
+| `description` | string | no | |
+| `valid_card_types` | string | no | Space-separated: visa mastercard amex maestro discover jcb diners-club |
+| `parameters` | array | no | `[{name, value}]` |
+| `prompts` | array | no | See spec for prompt structure |
+
+### calling.pay.stop
+
+| Param | Type | Required |
+|-------|------|----------|
+| `node_id` | UUID | YES |
+| `call_id` | UUID | YES |
+| `control_id` | string | YES |
