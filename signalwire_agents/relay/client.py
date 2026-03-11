@@ -492,10 +492,10 @@ class RelayClient:
                 try:
                     msg = json.loads(raw)
                 except json.JSONDecodeError:
-                    logger.warning(f"Invalid JSON received: {str(raw)[:200]}")
+                    logger.warning(f"Invalid JSON received: {raw}")
                     continue
 
-                logger.debug(f"<< {str(raw)[:500]}")
+                logger.debug(f"<< {raw}")
                 await self._handle_message(msg)
         except websockets.exceptions.ConnectionClosed:
             logger.info("WebSocket connection closed")
@@ -523,9 +523,9 @@ class RelayClient:
             if future and not future.done():
                 error = msg["error"]
                 if not isinstance(error, dict):
-                    error = {"code": -1, "message": str(error)[:512]}
+                    error = {"code": -1, "message": str(error)}
                 future.set_exception(
-                    RelayError(error.get("code", -1), str(error.get("message", "Unknown error"))[:512])
+                    RelayError(error.get("code", -1), str(error.get("message", "Unknown error")))
                 )
             else:
                 logger.debug(f"Error response for unknown/expired request {req_id}")
@@ -555,7 +555,7 @@ class RelayClient:
                         except (ValueError, TypeError):
                             int_code = -1
                         future.set_exception(
-                            RelayError(int_code, str(result.get("message", "Unknown error"))[:512])
+                            RelayError(int_code, str(result.get("message", "Unknown error")))
                         )
                     else:
                         future.set_result(result)
