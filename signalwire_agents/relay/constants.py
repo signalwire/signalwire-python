@@ -8,7 +8,7 @@ AGENT_STRING = "signalwire-agents-python/1.0"
 METHOD_SIGNALWIRE_CONNECT = "signalwire.connect"
 METHOD_SIGNALWIRE_EVENT = "signalwire.event"
 METHOD_SIGNALWIRE_PING = "signalwire.ping"
-METHOD_CALLING_CALL = "calling"
+METHOD_SIGNALWIRE_DISCONNECT = "signalwire.disconnect"
 
 # Call states
 CALL_STATE_CREATED = "created"

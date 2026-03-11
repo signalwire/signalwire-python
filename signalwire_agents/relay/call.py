@@ -42,7 +42,7 @@ class Action:
         self.control_id = control_id
         self._terminal_event = terminal_event
         self._terminal_states = terminal_states
-        self._done: asyncio.Future[RelayEvent] = asyncio.get_event_loop().create_future()
+        self._done: asyncio.Future[RelayEvent] = asyncio.get_running_loop().create_future()
         self.result: Optional[RelayEvent] = None
         self.completed = False
 
@@ -197,7 +197,7 @@ class Call:
         # Active actions indexed by control_id
         self._actions: dict[str, Action] = {}
         # Future that resolves when the call ends
-        self._ended: asyncio.Future[RelayEvent] = asyncio.get_event_loop().create_future()
+        self._ended: asyncio.Future[RelayEvent] = asyncio.get_running_loop().create_future()
 
     # ------------------------------------------------------------------
     # Internal RPC primitive
@@ -240,10 +240,14 @@ class Call:
         # Route to active actions by control_id
         control_id = event.params.get("control_id", "")
         if control_id and control_id in self._actions:
-            self._actions[control_id]._check_event(event)
+            action = self._actions[control_id]
+            action._check_event(event)
+            # Clean up completed actions
+            if action.completed:
+                self._actions.pop(control_id, None)
 
-        # Notify registered listeners (spawned as tasks to avoid blocking recv loop)
-        handlers = self._listeners.get(event_type, [])
+        # Notify registered listeners (snapshot list to allow modification during iteration)
+        handlers = list(self._listeners.get(event_type, []))
         for handler in handlers:
             try:
                 result = handler(event)
@@ -259,7 +263,7 @@ class Call:
         timeout: Optional[float] = None,
     ) -> RelayEvent:
         """Wait for a specific event, optionally filtered by predicate."""
-        future: asyncio.Future[RelayEvent] = asyncio.get_event_loop().create_future()
+        future: asyncio.Future[RelayEvent] = asyncio.get_running_loop().create_future()
 
         def _handler(event: RelayEvent) -> None:
             if future.done():
@@ -285,6 +289,29 @@ class Call:
         if timeout is not None:
             return await asyncio.wait_for(self._ended, timeout=timeout)
         return await self._ended
+
+    # ------------------------------------------------------------------
+    # Action helper
+    # ------------------------------------------------------------------
+
+    async def _start_action(self, action: Action, method: str, params: dict[str, Any]) -> Action:
+        """Register an action, execute the RPC, and clean up on failure.
+
+        If _execute raises, the action is removed from _actions and its
+        Future is rejected so callers of action.wait() get the error
+        instead of hanging forever.
+        """
+        if self.state == CALL_STATE_ENDED:
+            raise RuntimeError("Cannot start action on an ended call")
+        self._actions[action.control_id] = action
+        try:
+            await self._execute(method, params)
+        except Exception as exc:
+            self._actions.pop(action.control_id, None)
+            if not action._done.done():
+                action._done.set_exception(exc)
+            raise
+        return action
 
     # ------------------------------------------------------------------
     # Call lifecycle methods
@@ -327,9 +354,7 @@ class Call:
             params["loop"] = loop
         params.update(kwargs)
         action = PlayAction(self, cid)
-        self._actions[cid] = action
-        await self._execute("play", params)
-        return action
+        return await self._start_action(action, "play", params)
 
     # ------------------------------------------------------------------
     # Recording
@@ -348,9 +373,7 @@ class Call:
         params: dict[str, Any] = {"control_id": cid, "record": record_obj}
         params.update(kwargs)
         action = RecordAction(self, cid)
-        self._actions[cid] = action
-        await self._execute("record", params)
-        return action
+        return await self._start_action(action, "record", params)
 
     # ------------------------------------------------------------------
     # Input collection
@@ -376,9 +399,7 @@ class Call:
             params["volume"] = volume
         params.update(kwargs)
         action = CollectAction(self, cid)
-        self._actions[cid] = action
-        await self._execute("play_and_collect", params)
-        return action
+        return await self._start_action(action, "play_and_collect", params)
 
     # ------------------------------------------------------------------
     # Bridging & connectivity
@@ -439,9 +460,7 @@ class Call:
             params["timeout"] = timeout
         params.update(kwargs)
         action = DetectAction(self, cid)
-        self._actions[cid] = action
-        await self._execute("detect", params)
-        return action
+        return await self._start_action(action, "detect", params)
 
     def __repr__(self) -> str:
         return (
