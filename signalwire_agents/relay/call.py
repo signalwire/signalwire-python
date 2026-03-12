@@ -449,7 +449,10 @@ class Call:
                 function — coroutines are scheduled as tasks.
         """
         if self.state == CALL_STATE_ENDED:
-            raise RuntimeError("Cannot start action on an ended call")
+            logger.warning(f"Call {self.call_id} already ended, skipping {method}")
+            gone_event = RelayEvent(event_type="", params={})
+            action._resolve(gone_event)
+            return action
         action._on_completed = on_completed
         self._actions[action.control_id] = action
         try:
