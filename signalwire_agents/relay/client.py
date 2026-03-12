@@ -511,10 +511,22 @@ class RelayClient:
 
     def run(self) -> None:
         """Blocking entry point — runs the event loop until interrupted."""
-        asyncio.run(self._run_forever())
+        try:
+            asyncio.run(self._run_forever())
+        except KeyboardInterrupt:
+            pass
+        logger.info("RELAY client stopped")
 
     async def _run_forever(self) -> None:
         """Connect and maintain the connection with auto-reconnect."""
+        # Register SIGINT handler so Ctrl+C triggers a clean shutdown
+        # instead of dumping a stack trace.
+        loop = asyncio.get_running_loop()
+        loop.add_signal_handler(
+            __import__("signal").SIGINT,
+            lambda: asyncio.ensure_future(self._shutdown()),
+        )
+
         while not self._closing:
             try:
                 await self.connect()
@@ -536,11 +548,24 @@ class RelayClient:
 
             # Auto-reconnect with exponential backoff
             logger.info(f"Reconnecting in {self._reconnect_delay:.1f}s ...")
-            await asyncio.sleep(self._reconnect_delay)
+            try:
+                await asyncio.sleep(self._reconnect_delay)
+            except asyncio.CancelledError:
+                break
             self._reconnect_delay = min(
                 self._reconnect_delay * RECONNECT_BACKOFF_FACTOR,
                 RECONNECT_MAX_DELAY,
             )
+
+        await self.disconnect()
+
+    async def _shutdown(self) -> None:
+        """Signal handler for clean Ctrl+C shutdown."""
+        logger.info("Shutting down ...")
+        self._closing = True
+        # Cancel the recv task to unblock _run_forever
+        if self._recv_task and not self._recv_task.done():
+            self._recv_task.cancel()
 
     # ------------------------------------------------------------------
     # Internal: send / receive

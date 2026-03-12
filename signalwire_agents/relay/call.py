@@ -324,19 +324,15 @@ class Call:
     # Internal RPC primitive
     # ------------------------------------------------------------------
 
-    # Error codes that mean "call no longer exists on server"
-    _CALL_GONE_CODES = (404, 410)
-
     async def _execute(self, method: str, extra_params: Optional[dict[str, Any]] = None) -> dict:
         """Send a ``calling.<method>`` JSON-RPC request for this call.
 
         The outer JSON-RPC method is ``"calling.<method>"`` (e.g.
         ``"calling.answer"``) with ``node_id`` and ``call_id`` in params.
 
-        If the server responds with 404/410 (call gone), the error is
-        logged instead of raised — the caller hung up, which is normal
-        telephony flow, not an exceptional condition.  An empty result
-        dict is returned so callers can proceed without try/except.
+        All server errors are logged gracefully and return an empty dict
+        rather than raising exceptions.  This is an SDK — stack traces
+        from server-side errors should never bubble up to the developer.
         """
         rpc_method = f"calling.{method}"
         params: dict[str, Any] = {
@@ -349,8 +345,8 @@ class Call:
             return await self._client.execute(rpc_method, params)
         except Exception as exc:
             code = getattr(exc, "code", None)
-            if code in self._CALL_GONE_CODES:
-                logger.info(f"Call {self.call_id} gone during {method}: {exc}")
+            if code is not None:
+                logger.warning(f"Call {self.call_id} error during {method} (code={code}): {exc}")
                 return {}
             raise
 
