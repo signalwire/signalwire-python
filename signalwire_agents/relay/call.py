@@ -586,14 +586,24 @@ class Call:
         devices: list[list[dict[str, Any]]],
         *,
         ringback: Optional[list[dict[str, Any]]] = None,
-        control_id: Optional[str] = None,
+        tag: Optional[str] = None,
+        max_duration: Optional[int] = None,
+        max_price_per_minute: Optional[float] = None,
+        status_url: Optional[str] = None,
         **kwargs: Any,
     ) -> dict:
         """Bridge the call to one or more destinations."""
-        cid = control_id or str(uuid.uuid4())
-        params: dict[str, Any] = {"control_id": cid, "devices": devices}
+        params: dict[str, Any] = {"devices": devices}
         if ringback is not None:
             params["ringback"] = ringback
+        if tag is not None:
+            params["tag"] = tag
+        if max_duration is not None:
+            params["max_duration"] = max_duration
+        if max_price_per_minute is not None:
+            params["max_price_per_minute"] = max_price_per_minute
+        if status_url is not None:
+            params["status_url"] = status_url
         params.update(kwargs)
         return await self._execute("connect", params)
 

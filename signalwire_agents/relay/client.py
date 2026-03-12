@@ -103,18 +103,25 @@ class RelayClient:
         self,
         project: Optional[str] = None,
         token: Optional[str] = None,
+        jwt_token: Optional[str] = None,
         host: Optional[str] = None,
         contexts: Optional[list[str]] = None,
     ):
         self.project = project or os.environ.get("SIGNALWIRE_PROJECT_ID", "")
         self.token = token or os.environ.get("SIGNALWIRE_API_TOKEN", "")
+        self.jwt_token = jwt_token or os.environ.get("SIGNALWIRE_JWT_TOKEN", "")
         self.host = host or os.environ.get("SIGNALWIRE_SPACE", DEFAULT_RELAY_HOST)
         self.contexts = contexts or []
 
-        if not self.project or not self.token:
+        if self.jwt_token:
+            # JWT auth — project/token not required (project_id is inside the token)
+            if not self.project:
+                self.project = ""
+        elif not self.project or not self.token:
             raise ValueError(
-                "project and token are required. Pass them directly or set "
-                "SIGNALWIRE_PROJECT_ID / SIGNALWIRE_API_TOKEN env vars."
+                "project and token are required (or provide jwt_token). "
+                "Pass them directly or set SIGNALWIRE_PROJECT_ID / "
+                "SIGNALWIRE_API_TOKEN / SIGNALWIRE_JWT_TOKEN env vars."
             )
 
         # Validate host to prevent SSRF / header injection
@@ -228,14 +235,15 @@ class RelayClient:
         On reconnect the previously-received protocol is sent back to
         resume the same session.
         """
+        if self.jwt_token:
+            authentication = {"jwt_token": self.jwt_token}
+        else:
+            authentication = {"project": self.project, "token": self.token}
         params: dict[str, Any] = {
             "version": PROTOCOL_VERSION,
             "agent": AGENT_STRING,
             "event_acks": True,
-            "authentication": {
-                "project": self.project,
-                "token": self.token,
-            },
+            "authentication": authentication,
         }
         if self.contexts:
             params["contexts"] = self.contexts
