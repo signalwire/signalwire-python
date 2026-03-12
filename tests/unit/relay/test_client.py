@@ -511,8 +511,7 @@ class TestClientEventDispatch:
             pass
 
         # Fill up to max
-        from signalwire_agents.relay.client import _MAX_ACTIVE_CALLS
-        for i in range(_MAX_ACTIVE_CALLS):
+        for i in range(client._max_active_calls):
             client._calls[f"fill-{i}"] = MagicMock()
 
         event = make_event(EVENT_CALL_RECEIVE, {

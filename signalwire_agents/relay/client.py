@@ -71,7 +71,7 @@ _CLIENT_PING_INTERVAL = 30.0
 _MAX_PING_FAILURES = 3
 
 # Safety limits to prevent unbounded memory growth from malicious/buggy servers
-_MAX_ACTIVE_CALLS = 1000
+_DEFAULT_MAX_ACTIVE_CALLS = 1000
 _MAX_QUEUE_SIZE = 500
 
 # Max concurrent RelayClient connections per process (env: RELAY_MAX_CONNECTIONS)
@@ -106,6 +106,7 @@ class RelayClient:
         jwt_token: Optional[str] = None,
         host: Optional[str] = None,
         contexts: Optional[list[str]] = None,
+        max_active_calls: Optional[int] = None,
     ):
         self.project = project or os.environ.get("SIGNALWIRE_PROJECT_ID", "")
         self.token = token or os.environ.get("SIGNALWIRE_API_TOKEN", "")
@@ -129,6 +130,16 @@ class RelayClient:
             raise ValueError(
                 f"Invalid host: {self.host!r}. Must be a hostname, not a URL."
             )
+
+        # Max concurrent calls (constructor > env var > default)
+        if max_active_calls is not None:
+            self._max_active_calls = max(1, max_active_calls)
+        else:
+            try:
+                env_val = os.environ.get("RELAY_MAX_ACTIVE_CALLS", "")
+                self._max_active_calls = max(1, int(env_val)) if env_val else _DEFAULT_MAX_ACTIVE_CALLS
+            except ValueError:
+                self._max_active_calls = _DEFAULT_MAX_ACTIVE_CALLS
 
         # Internal state
         self._ws: Optional[websockets.WebSocketClientProtocol] = None
@@ -710,8 +721,8 @@ class RelayClient:
 
     async def _handle_inbound_call(self, payload: dict[str, Any]) -> None:
         """Create a Call object for an inbound call and invoke the handler."""
-        if len(self._calls) >= _MAX_ACTIVE_CALLS:
-            logger.error(f"Max active calls ({_MAX_ACTIVE_CALLS}) reached, dropping inbound call")
+        if len(self._calls) >= self._max_active_calls:
+            logger.error(f"Max active calls ({self._max_active_calls}) reached, dropping inbound call")
             return
         params = payload.get("params", {})
         call_id = params.get("call_id", "")
