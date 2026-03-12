@@ -106,6 +106,14 @@ Note: `connect`, `refer`, `send_digits` etc. DO produce async events (`calling.c
 
 These methods start a long-running operation. The client generates a `control_id` UUID, sends it in the request, and the server echoes it back in all related events. You MUST track these as Action objects to support `stop()`, `pause()`, `resume()`, `wait()`.
 
+**Blocking vs fire-and-forget**: The `await call.play(...)` call only waits for the server to accept the command (the JSON-RPC response). The actual operation runs asynchronously on the server. The user chooses how to handle completion:
+
+1. **Wait inline** (blocking): `await action.wait()` — blocks until the terminal event arrives
+2. **Fire and forget** (background): don't call `action.wait()`, continue immediately. Check `action.is_done` or `action.result` later if needed
+3. **Callback** (background + notification): pass `on_completed=callback` to the method. The callback fires when the action reaches a terminal state. Accepts both sync and async functions. Errors in callbacks are caught and logged.
+
+The `on_completed` callback MUST also fire when the call is gone (404/410) — the action is resolved immediately with an empty event so the callback still runs. Implementations MUST support all three patterns on every action-based method.
+
 | Method | RPC | Event Type | Terminal States |
 |--------|-----|------------|-----------------|
 | `play` | `calling.play` | `calling.call.play` | `finished`, `error` |
@@ -417,6 +425,9 @@ Call objects survive reconnect — the server tracks them by `call_id` across co
 - [ ] `play_and_collect` CollectAction filters by event_type, ignores play events
 - [ ] Auto-reconnect with exponential backoff
 - [ ] All pending futures cleaned up on disconnect
+- [ ] Actions support three completion patterns: `await action.wait()` (blocking), fire-and-forget (don't await), `on_completed` callback
+- [ ] `on_completed` callback supports both sync and async functions, errors caught and logged
+- [ ] `on_completed` fires on call-gone (404/410) with resolved empty event
 
 ## Complete Method Parameter Reference
 

@@ -14,6 +14,62 @@ A `Call` object represents a live phone call. You get one from `@client.on_call`
 | `device` | `dict` | Device info (type, params) |
 | `segment_id` | `str` | Segment identifier |
 
+## Actions: Blocking vs Fire-and-Forget
+
+Methods like `play()`, `record()`, `detect()`, etc. return **Action** objects. The `await call.play(...)` itself only waits for the server to accept the command — the actual operation runs asynchronously on the server. You choose how to handle completion:
+
+### Wait inline (blocking)
+
+```python
+action = await call.play([{"type": "tts", "params": {"text": "Hello"}}])
+await action.wait()  # blocks until playback finishes
+# execution continues only after play is done
+```
+
+### Fire and forget (background)
+
+```python
+action = await call.play([{"type": "tts", "params": {"text": "Hello"}}])
+# don't call action.wait() — continue immediately while audio plays
+await call.send_digits("1234")
+
+# check later if needed
+if action.is_done:
+    print(f"Play result: {action.result}")
+```
+
+### Fire with callback
+
+```python
+# Sync callback
+action = await call.play(
+    [{"type": "tts", "params": {"text": "Hello"}}],
+    on_completed=lambda event: print(f"Done: {event.params}"),
+)
+# continues immediately; callback fires when playback finishes
+
+# Async callback
+async def on_recording_done(event):
+    print(f"Recording URL: {event.params.get('url')}")
+    await call.hangup()
+
+action = await call.record(on_completed=on_recording_done)
+```
+
+The `on_completed` callback is available on all action-based methods: `play`, `record`, `play_and_collect`, `collect`, `detect`, `pay`, `send_fax`, `receive_fax`, `tap`, `stream`, `transcribe`, and `ai`. It accepts both sync and async functions. Errors in callbacks are caught and logged, never crash the event loop. The callback also fires when the call is gone (404/410).
+
+### Action methods summary
+
+| Method | Returns |
+|--------|---------|
+| `action.wait(timeout=None)` | Blocks until the action completes, returns the terminal `RelayEvent` |
+| `action.is_done` | `True` if the action has completed |
+| `action.result` | The terminal `RelayEvent` (or `None` if not done) |
+| `action.completed` | `True` if the action reached a terminal state |
+| `action.stop()` | Stop the operation on the server |
+
+Some actions also have `pause()`, `resume()`, and `volume()`.
+
 ## Lifecycle
 
 ### `answer(**kwargs) -> dict`
