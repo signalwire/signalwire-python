@@ -56,14 +56,26 @@ class Action:
         self._done: asyncio.Future[RelayEvent] = asyncio.get_running_loop().create_future()
         self.result: Optional[RelayEvent] = None
         self.completed = False
+        self._on_completed: Optional[Callable[[RelayEvent], Any]] = None
 
     def _check_event(self, event: RelayEvent) -> None:
         """Called by Call when an event matches our control_id."""
         state = event.params.get("state", "")
         if state in self._terminal_states and not self._done.done():
-            self.result = event
-            self.completed = True
-            self._done.set_result(event)
+            self._resolve(event)
+
+    def _resolve(self, event: RelayEvent) -> None:
+        """Mark the action as completed and fire the on_completed callback."""
+        self.result = event
+        self.completed = True
+        self._done.set_result(event)
+        if self._on_completed is not None:
+            try:
+                result = self._on_completed(event)
+                if asyncio.iscoroutine(result):
+                    asyncio.ensure_future(result)
+            except Exception:
+                logger.exception(f"Error in on_completed callback for {self.control_id}")
 
     async def wait(self, timeout: Optional[float] = None) -> RelayEvent:
         """Wait for the action to complete. Returns the terminal event."""
@@ -130,9 +142,7 @@ class DetectAction(Action):
         detect = event.params.get("detect", {})
         state = event.params.get("state", "")
         if (detect or state in self._terminal_states) and not self._done.done():
-            self.result = event
-            self.completed = True
-            self._done.set_result(event)
+            self._resolve(event)
 
     async def stop(self) -> dict:
         return await self.call._execute("detect.stop", {"control_id": self.control_id})
@@ -152,9 +162,7 @@ class CollectAction(Action):
             return
         result = event.params.get("result", {})
         if result and not self._done.done():
-            self.result = event
-            self.completed = True
-            self._done.set_result(event)
+            self._resolve(event)
         else:
             super()._check_event(event)
 
@@ -186,9 +194,7 @@ class StandaloneCollectAction(Action):
         result = event.params.get("result", {})
         state = event.params.get("state", "")
         if (result or state in self._terminal_states) and not self._done.done():
-            self.result = event
-            self.completed = True
-            self._done.set_result(event)
+            self._resolve(event)
 
     async def stop(self) -> dict:
         return await self.call._execute("collect.stop",
@@ -424,7 +430,13 @@ class Call:
     # Action helper
     # ------------------------------------------------------------------
 
-    async def _start_action(self, action: Action, method: str, params: dict[str, Any]) -> Action:
+    async def _start_action(
+        self,
+        action: Action,
+        method: str,
+        params: dict[str, Any],
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+    ) -> Action:
         """Register an action, execute the RPC, and clean up on failure.
 
         If _execute raises, the action is removed from _actions and its
@@ -434,9 +446,15 @@ class Call:
         If the call is already gone (404/410 handled by _execute), the
         action is immediately marked completed so action.wait() returns
         right away instead of hanging.
+
+        Args:
+            on_completed: Optional callback invoked when the action reaches
+                a terminal state.  Can be a regular function or a coroutine
+                function — coroutines are scheduled as tasks.
         """
         if self.state == CALL_STATE_ENDED:
             raise RuntimeError("Cannot start action on an ended call")
+        action._on_completed = on_completed
         self._actions[action.control_id] = action
         try:
             result = await self._execute(method, params)
@@ -450,9 +468,8 @@ class Call:
         if not result:
             self._actions.pop(action.control_id, None)
             if not action._done.done():
-                action.completed = True
-                action.result = RelayEvent(event_type="", params={})
-                action._done.set_result(action.result)
+                gone_event = RelayEvent(event_type="", params={})
+                action._resolve(gone_event)
         return action
 
     # ------------------------------------------------------------------
@@ -483,6 +500,7 @@ class Call:
         direction: Optional[str] = None,
         loop: Optional[int] = None,
         control_id: Optional[str] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
         **kwargs: Any,
     ) -> PlayAction:
         """Play audio content. Returns a PlayAction for stop/pause/resume/wait."""
@@ -496,7 +514,7 @@ class Call:
             params["loop"] = loop
         params.update(kwargs)
         action = PlayAction(self, cid)
-        return await self._start_action(action, "play", params)
+        return await self._start_action(action, "play", params, on_completed=on_completed)
 
     # ------------------------------------------------------------------
     # Recording
@@ -507,6 +525,7 @@ class Call:
         audio: Optional[dict[str, Any]] = None,
         *,
         control_id: Optional[str] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
         **kwargs: Any,
     ) -> RecordAction:
         """Record audio from the call. Returns a RecordAction."""
@@ -515,7 +534,7 @@ class Call:
         params: dict[str, Any] = {"control_id": cid, "record": record_obj}
         params.update(kwargs)
         action = RecordAction(self, cid)
-        return await self._start_action(action, "record", params)
+        return await self._start_action(action, "record", params, on_completed=on_completed)
 
     # ------------------------------------------------------------------
     # Input collection
@@ -528,6 +547,7 @@ class Call:
         *,
         volume: Optional[float] = None,
         control_id: Optional[str] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
         **kwargs: Any,
     ) -> CollectAction:
         """Play audio and collect digit/speech input."""
@@ -541,7 +561,7 @@ class Call:
             params["volume"] = volume
         params.update(kwargs)
         action = CollectAction(self, cid)
-        return await self._start_action(action, "play_and_collect", params)
+        return await self._start_action(action, "play_and_collect", params, on_completed=on_completed)
 
     async def collect(
         self,
@@ -554,6 +574,7 @@ class Call:
         send_start_of_input: Optional[bool] = None,
         start_input_timers: Optional[bool] = None,
         control_id: Optional[str] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
         **kwargs: Any,
     ) -> StandaloneCollectAction:
         """Collect digit/speech input without playing media."""
@@ -575,7 +596,7 @@ class Call:
             params["start_input_timers"] = start_input_timers
         params.update(kwargs)
         action = StandaloneCollectAction(self, cid)
-        return await self._start_action(action, "collect", params)
+        return await self._start_action(action, "collect", params, on_completed=on_completed)
 
     # ------------------------------------------------------------------
     # Bridging & connectivity
@@ -637,6 +658,7 @@ class Call:
         *,
         timeout: Optional[float] = None,
         control_id: Optional[str] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
         **kwargs: Any,
     ) -> DetectAction:
         """Start audio detection (machine, fax, digit). Returns a DetectAction."""
@@ -646,7 +668,7 @@ class Call:
             params["timeout"] = timeout
         params.update(kwargs)
         action = DetectAction(self, cid)
-        return await self._start_action(action, "detect", params)
+        return await self._start_action(action, "detect", params, on_completed=on_completed)
 
     # ------------------------------------------------------------------
     # SIP Refer (transfer)
@@ -692,6 +714,7 @@ class Call:
         valid_card_types: Optional[str] = None,
         parameters: Optional[list[dict[str, Any]]] = None,
         prompts: Optional[list[dict[str, Any]]] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
         **kwargs: Any,
     ) -> PayAction:
         """Start a payment collection. Returns a PayAction."""
@@ -736,7 +759,7 @@ class Call:
             params["prompts"] = prompts
         params.update(kwargs)
         action = PayAction(self, cid)
-        return await self._start_action(action, "pay", params)
+        return await self._start_action(action, "pay", params, on_completed=on_completed)
 
     # ------------------------------------------------------------------
     # Faxing
@@ -749,6 +772,7 @@ class Call:
         identity: Optional[str] = None,
         header_info: Optional[str] = None,
         control_id: Optional[str] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
         **kwargs: Any,
     ) -> FaxAction:
         """Send a fax document. Returns a FaxAction."""
@@ -760,12 +784,13 @@ class Call:
             params["header_info"] = header_info
         params.update(kwargs)
         action = FaxAction(self, cid, "send_fax")
-        return await self._start_action(action, "send_fax", params)
+        return await self._start_action(action, "send_fax", params, on_completed=on_completed)
 
     async def receive_fax(
         self,
         *,
         control_id: Optional[str] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
         **kwargs: Any,
     ) -> FaxAction:
         """Receive a fax. Returns a FaxAction."""
@@ -773,7 +798,7 @@ class Call:
         params: dict[str, Any] = {"control_id": cid}
         params.update(kwargs)
         action = FaxAction(self, cid, "receive_fax")
-        return await self._start_action(action, "receive_fax", params)
+        return await self._start_action(action, "receive_fax", params, on_completed=on_completed)
 
     # ------------------------------------------------------------------
     # Tap (media interception)
@@ -785,6 +810,7 @@ class Call:
         device: dict[str, Any],
         *,
         control_id: Optional[str] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
         **kwargs: Any,
     ) -> TapAction:
         """Intercept call media and stream it. Returns a TapAction."""
@@ -796,7 +822,7 @@ class Call:
         }
         params.update(kwargs)
         action = TapAction(self, cid)
-        return await self._start_action(action, "tap", params)
+        return await self._start_action(action, "tap", params, on_completed=on_completed)
 
     # ------------------------------------------------------------------
     # Streaming
@@ -814,6 +840,7 @@ class Call:
         authorization_bearer_token: Optional[str] = None,
         custom_parameters: Optional[dict[str, Any]] = None,
         control_id: Optional[str] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
         **kwargs: Any,
     ) -> StreamAction:
         """Start streaming call audio to a WebSocket endpoint. Returns a StreamAction."""
@@ -835,7 +862,7 @@ class Call:
             params["custom_parameters"] = custom_parameters
         params.update(kwargs)
         action = StreamAction(self, cid)
-        return await self._start_action(action, "stream", params)
+        return await self._start_action(action, "stream", params, on_completed=on_completed)
 
     # ------------------------------------------------------------------
     # Transfer
@@ -962,6 +989,7 @@ class Call:
         *,
         control_id: Optional[str] = None,
         status_url: Optional[str] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
         **kwargs: Any,
     ) -> TranscribeAction:
         """Start transcribing the call. Returns a TranscribeAction."""
@@ -971,7 +999,7 @@ class Call:
             params["status_url"] = status_url
         params.update(kwargs)
         action = TranscribeAction(self, cid)
-        return await self._start_action(action, "transcribe", params)
+        return await self._start_action(action, "transcribe", params, on_completed=on_completed)
 
     # ------------------------------------------------------------------
     # Echo
@@ -1104,6 +1132,7 @@ class Call:
         languages: Optional[list[dict[str, Any]]] = None,
         SWAIG: Optional[dict[str, Any]] = None,
         ai_params: Optional[dict[str, Any]] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
         **kwargs: Any,
     ) -> AIAction:
         """Start an AI agent session on the call. Returns an AIAction."""
@@ -1135,7 +1164,7 @@ class Call:
             params["params"] = ai_params
         params.update(kwargs)
         action = AIAction(self, cid)
-        return await self._start_action(action, "ai", params)
+        return await self._start_action(action, "ai", params, on_completed=on_completed)
 
     async def amazon_bedrock(
         self,

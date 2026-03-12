@@ -1208,6 +1208,105 @@ class TestWaitForTimeout:
         await task
 
 
+class TestOnCompleted:
+    @pytest.mark.asyncio
+    async def test_on_completed_sync_callback(self, call, mock_client):
+        results = []
+        action = await call.play(
+            [{"type": "tts", "params": {"text": "Hi"}}],
+            control_id="ctl1",
+            on_completed=lambda event: results.append(event),
+        )
+        # Simulate play finished
+        await call._dispatch_event({
+            "event_type": EVENT_CALL_PLAY,
+            "params": {"call_id": "call-1", "control_id": "ctl1", "state": "finished"},
+        })
+        assert action.is_done
+        assert len(results) == 1
+        assert results[0].params["state"] == "finished"
+
+    @pytest.mark.asyncio
+    async def test_on_completed_async_callback(self, call, mock_client):
+        results = []
+
+        async def on_done(event):
+            results.append(event)
+
+        action = await call.play(
+            [{"type": "tts", "params": {"text": "Hi"}}],
+            control_id="ctl1",
+            on_completed=on_done,
+        )
+        await call._dispatch_event({
+            "event_type": EVENT_CALL_PLAY,
+            "params": {"call_id": "call-1", "control_id": "ctl1", "state": "finished"},
+        })
+        await asyncio.sleep(0.01)  # let the coroutine task run
+        assert len(results) == 1
+
+    @pytest.mark.asyncio
+    async def test_on_completed_not_called_on_non_terminal(self, call, mock_client):
+        results = []
+        action = await call.play(
+            [{"type": "tts", "params": {"text": "Hi"}}],
+            control_id="ctl1",
+            on_completed=lambda event: results.append(event),
+        )
+        # Non-terminal state — callback should NOT fire
+        await call._dispatch_event({
+            "event_type": EVENT_CALL_PLAY,
+            "params": {"call_id": "call-1", "control_id": "ctl1", "state": "playing"},
+        })
+        assert not action.is_done
+        assert len(results) == 0
+
+    @pytest.mark.asyncio
+    async def test_on_completed_error_does_not_crash(self, call, mock_client):
+        def bad_callback(event):
+            raise RuntimeError("callback error")
+
+        action = await call.play(
+            [{"type": "tts", "params": {"text": "Hi"}}],
+            control_id="ctl1",
+            on_completed=bad_callback,
+        )
+        # Should not raise
+        await call._dispatch_event({
+            "event_type": EVENT_CALL_PLAY,
+            "params": {"call_id": "call-1", "control_id": "ctl1", "state": "finished"},
+        })
+        assert action.is_done
+
+    @pytest.mark.asyncio
+    async def test_on_completed_on_record(self, call, mock_client):
+        results = []
+        from signalwire_agents.relay.constants import EVENT_CALL_RECORD
+        action = await call.record(
+            control_id="r1",
+            on_completed=lambda event: results.append(event),
+        )
+        await call._dispatch_event({
+            "event_type": EVENT_CALL_RECORD,
+            "params": {"call_id": "call-1", "control_id": "r1", "state": "finished"},
+        })
+        assert action.is_done
+        assert len(results) == 1
+
+    @pytest.mark.asyncio
+    async def test_on_completed_on_call_gone(self, call, mock_client):
+        """on_completed fires even when call is gone (404)."""
+        mock_client.execute.side_effect = MockRelayError(404, "Call not found")
+        results = []
+        action = await call.play(
+            [{"type": "tts", "params": {"text": "Hi"}}],
+            control_id="ctl1",
+            on_completed=lambda event: results.append(event),
+        )
+        assert action.is_done
+        assert len(results) == 1
+
+
 class TestCallRepr:
     def test_repr(self, call):
         r = repr(call)
