@@ -41,6 +41,8 @@ from .constants import (
     EVENT_CALL_DIAL,
     EVENT_CALL_RECEIVE,
     EVENT_CALL_STATE,
+    EVENT_MESSAGING_RECEIVE,
+    EVENT_MESSAGING_STATE,
     METHOD_SIGNALWIRE_CONNECT,
     METHOD_SIGNALWIRE_DISCONNECT,
     METHOD_SIGNALWIRE_EVENT,
@@ -51,9 +53,11 @@ from .constants import (
     RECONNECT_MAX_DELAY,
     RECONNECT_MIN_DELAY,
 )
+from .message import Message
 logger = get_logger("relay_client")
 
 CallHandler = Callable[["Call"], Coroutine[Any, Any, None]]
+MessageHandler = Callable[["Message"], Coroutine[Any, Any, None]]
 
 # Any 2xx code is considered success (matches JS SDK: /^2[0-9][0-9]$/)
 _SUCCESS_CODE_RE = re.compile(r"^2\d{2}$")
@@ -148,6 +152,8 @@ class RelayClient:
         self._pending_methods: dict[str, str] = {}
         self._calls: dict[str, Call] = {}
         self._on_call_handler: Optional[CallHandler] = None
+        self._on_message_handler: Optional[MessageHandler] = None
+        self._messages: dict[str, Message] = {}  # message_id → Message
         # Pending outbound dials: tag → Future[Call] resolved when dial completes
         self._pending_dials: dict[str, asyncio.Future["Call"]] = {}
         # Calls created during dial, indexed by tag for event routing before
@@ -196,6 +202,11 @@ class RelayClient:
     def on_call(self, handler: CallHandler) -> CallHandler:
         """Register the inbound call handler (decorator)."""
         self._on_call_handler = handler
+        return handler
+
+    def on_message(self, handler: MessageHandler) -> MessageHandler:
+        """Register the inbound message handler (decorator)."""
+        self._on_message_handler = handler
         return handler
 
     # ------------------------------------------------------------------
@@ -387,6 +398,81 @@ class RelayClient:
         finally:
             self._pending_dials.pop(dial_tag, None)
             self._dial_calls_by_tag.pop(dial_tag, None)
+
+    # ------------------------------------------------------------------
+    # Messaging
+    # ------------------------------------------------------------------
+
+    async def send_message(
+        self,
+        *,
+        to_number: str,
+        from_number: str,
+        context: Optional[str] = None,
+        body: Optional[str] = None,
+        media: Optional[list[str]] = None,
+        tags: Optional[list[str]] = None,
+        region: Optional[str] = None,
+        on_completed: Optional[Callable] = None,
+    ) -> Message:
+        """Send an outbound SMS/MMS message.
+
+        At least one of ``body`` or ``media`` must be provided.
+
+        Returns a Message object that tracks state changes. Use
+        ``await message.wait()`` to block until delivery confirmation
+        (or failure).
+
+        Args:
+            to_number: Destination phone number in E.164 format.
+            from_number: Sender phone number in E.164 format.
+            context: Context for receiving state events. Defaults to
+                     the relay protocol.
+            body: Text body of the message.
+            media: List of media URLs for MMS.
+            tags: Optional tags for the message.
+            region: Optional origination region.
+            on_completed: Optional callback fired when a terminal state
+                          (delivered/undelivered/failed) is reached.
+        """
+        if not body and not media:
+            raise ValueError("At least one of body or media is required")
+
+        msg_context = context or self._relay_protocol or "default"
+        params: dict[str, Any] = {
+            "context": msg_context,
+            "to_number": to_number,
+            "from_number": from_number,
+        }
+        if body:
+            params["body"] = body
+        if media:
+            params["media"] = media
+        if tags:
+            params["tags"] = tags
+        if region:
+            params["region"] = region
+
+        result = await self.execute("messaging.send", params)
+
+        message_id = result.get("message_id", "")
+        message = Message(
+            message_id=message_id,
+            context=msg_context,
+            direction="outbound",
+            from_number=from_number,
+            to_number=to_number,
+            body=body or "",
+            media=media or [],
+            tags=tags or [],
+            state="queued",
+        )
+        if on_completed:
+            message._on_completed = on_completed
+        if message_id:
+            self._messages[message_id] = message
+
+        return message
 
     # ------------------------------------------------------------------
     # Dynamic context subscription
@@ -689,6 +775,16 @@ class RelayClient:
                 logger.debug("Updated authorization_state for reconnection")
             return
 
+        # Inbound message
+        if event_type == EVENT_MESSAGING_RECEIVE:
+            await self._handle_inbound_message(payload)
+            return
+
+        # Outbound message state change
+        if event_type == EVENT_MESSAGING_STATE:
+            await self._handle_message_state(payload)
+            return
+
         # Inbound call
         if event_type == EVENT_CALL_RECEIVE:
             await self._handle_inbound_call(payload)
@@ -752,6 +848,47 @@ class RelayClient:
             await self._on_call_handler(call)
         except Exception:
             logger.exception(f"Error in on_call handler for {call.call_id}")
+
+    async def _handle_inbound_message(self, payload: dict[str, Any]) -> None:
+        """Create a Message object for an inbound message and invoke the handler."""
+        params = payload.get("params", {})
+        message = Message(
+            message_id=params.get("message_id", ""),
+            context=params.get("context", ""),
+            direction=params.get("direction", "inbound"),
+            from_number=params.get("from_number", ""),
+            to_number=params.get("to_number", ""),
+            body=params.get("body", ""),
+            media=params.get("media", []),
+            segments=params.get("segments", 0),
+            state=params.get("message_state", "received"),
+            tags=params.get("tags", []),
+        )
+
+        if self._on_message_handler:
+            asyncio.ensure_future(self._safe_message_handler(message))
+        else:
+            logger.warning(f"Inbound message {message.message_id} but no on_message handler registered")
+
+    async def _safe_message_handler(self, message: Message) -> None:
+        """Run the on_message handler as a free task so the recv loop is never blocked."""
+        try:
+            await self._on_message_handler(message)
+        except Exception:
+            logger.exception(f"Error in on_message handler for {message.message_id}")
+
+    async def _handle_message_state(self, payload: dict[str, Any]) -> None:
+        """Route a messaging.state event to the tracked Message object."""
+        params = payload.get("params", {})
+        message_id = params.get("message_id", "")
+        message = self._messages.get(message_id)
+        if message:
+            await message._dispatch_event(payload)
+            # Clean up terminal messages
+            if message.is_done:
+                self._messages.pop(message_id, None)
+        else:
+            logger.debug(f"State event for unknown message {message_id}")
 
     def _register_dial_leg(self, tag: str, event_params: dict[str, Any]) -> Call:
         """Create a Call for a call leg spawned by calling.dial.

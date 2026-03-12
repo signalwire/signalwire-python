@@ -55,6 +55,8 @@ All event type constants are importable from `signalwire_agents.relay`:
 | `EVENT_CALL_TRANSCRIBE` | `calling.call.transcribe` | Transcription state changes |
 | `EVENT_CONFERENCE` | `calling.conference` | Conference state changes |
 | `EVENT_CALLING_ERROR` | `calling.error` | Error events |
+| `EVENT_MESSAGING_RECEIVE` | `messaging.receive` | Inbound message received |
+| `EVENT_MESSAGING_STATE` | `messaging.state` | Outbound message state change |
 
 ## Typed Event Classes
 
@@ -98,6 +100,8 @@ if event.event_type == "calling.call.state":
 | `HoldEvent` | `state` |
 | `ConferenceEvent` | `conference_id`, `name`, `status` |
 | `CallingErrorEvent` | `code`, `message` |
+| `MessageReceiveEvent` | `message_id`, `context`, `direction`, `from_number`, `to_number`, `body`, `media`, `segments`, `message_state`, `tags` |
+| `MessageStateEvent` | `message_id`, `context`, `direction`, `from_number`, `to_number`, `body`, `media`, `segments`, `message_state`, `reason`, `tags` |
 
 ## Call States
 
@@ -122,3 +126,9 @@ When a call reaches the `ended` state, the `end_reason` field indicates why:
 | `abandoned` | Call abandoned |
 | `max_duration` | Max duration reached |
 | `not_found` | Destination not found |
+
+## Message States
+
+Outbound messages progress through: `queued` → `initiated` → `sent` → `delivered` (or `undelivered`/`failed`).
+
+Constants: `MESSAGE_STATE_QUEUED`, `MESSAGE_STATE_INITIATED`, `MESSAGE_STATE_SENT`, `MESSAGE_STATE_DELIVERED`, `MESSAGE_STATE_UNDELIVERED`, `MESSAGE_STATE_FAILED`, `MESSAGE_STATE_RECEIVED`

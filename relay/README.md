@@ -1,6 +1,6 @@
 # SignalWire RELAY Client
 
-Real-time call control over WebSocket using Python's asyncio. The RELAY client connects to SignalWire via the Blade protocol (JSON-RPC 2.0 over WebSocket) and gives you imperative control over live phone calls.
+Real-time call control and messaging over WebSocket using Python's asyncio. The RELAY client connects to SignalWire via the Blade protocol (JSON-RPC 2.0 over WebSocket) and gives you imperative control over live phone calls and SMS/MMS messaging.
 
 ## Quick Start
 
@@ -28,6 +28,7 @@ client.run()
 
 - Asyncio-native with auto-reconnect and exponential backoff
 - All 57+ calling methods: play, record, collect, connect, detect, fax, tap, stream, AI, conferencing, queues, and more
+- SMS/MMS messaging: send outbound messages, receive inbound messages, track delivery state
 - Action objects with `wait()`, `stop()`, `pause()`, `resume()` for controllable operations
 - Typed event classes for all call events
 - JWT and legacy authentication
@@ -39,6 +40,7 @@ client.run()
 - [Getting Started](docs/getting-started.md) -- installation, configuration, first call
 - [Call Methods Reference](docs/call-methods.md) -- every method available on a Call object
 - [Events](docs/events.md) -- event types, typed event classes, call states
+- [Messaging](docs/messaging.md) -- sending and receiving SMS/MMS messages
 - [Client Reference](docs/client-reference.md) -- RelayClient configuration, methods, connection behavior
 
 ## Examples
@@ -64,6 +66,7 @@ signalwire_agents/relay/
     __init__.py      # Public exports
     client.py        # RelayClient -- WebSocket connection, auth, event dispatch
     call.py          # Call object -- all calling methods and Action classes
+    message.py       # Message object -- SMS/MMS message tracking
     event.py         # Typed event dataclasses
     constants.py     # Protocol constants, call states, event types
 ```

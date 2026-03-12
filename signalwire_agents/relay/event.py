@@ -527,6 +527,82 @@ class CallingErrorEvent(RelayEvent):
         )
 
 
+@dataclass
+class MessageReceiveEvent(RelayEvent):
+    """Event for messaging.receive — inbound message notification."""
+
+    message_id: str = ""
+    context: str = ""
+    direction: str = ""
+    from_number: str = ""
+    to_number: str = ""
+    body: str = ""
+    media: list[str] = field(default_factory=list)
+    segments: int = 0
+    message_state: str = ""
+    tags: list[str] = field(default_factory=list)
+
+    @classmethod
+    def from_payload(cls, payload: dict[str, Any]) -> "MessageReceiveEvent":
+        base = RelayEvent.from_payload(payload)
+        p = base.params
+        return cls(
+            event_type=base.event_type,
+            params=base.params,
+            call_id=base.call_id,
+            timestamp=base.timestamp,
+            message_id=p.get("message_id", ""),
+            context=p.get("context", ""),
+            direction=p.get("direction", ""),
+            from_number=p.get("from_number", ""),
+            to_number=p.get("to_number", ""),
+            body=p.get("body", ""),
+            media=p.get("media", []),
+            segments=p.get("segments", 0),
+            message_state=p.get("message_state", ""),
+            tags=p.get("tags", []),
+        )
+
+
+@dataclass
+class MessageStateEvent(RelayEvent):
+    """Event for messaging.state — outbound message state change."""
+
+    message_id: str = ""
+    context: str = ""
+    direction: str = ""
+    from_number: str = ""
+    to_number: str = ""
+    body: str = ""
+    media: list[str] = field(default_factory=list)
+    segments: int = 0
+    message_state: str = ""
+    reason: str = ""
+    tags: list[str] = field(default_factory=list)
+
+    @classmethod
+    def from_payload(cls, payload: dict[str, Any]) -> "MessageStateEvent":
+        base = RelayEvent.from_payload(payload)
+        p = base.params
+        return cls(
+            event_type=base.event_type,
+            params=base.params,
+            call_id=base.call_id,
+            timestamp=base.timestamp,
+            message_id=p.get("message_id", ""),
+            context=p.get("context", ""),
+            direction=p.get("direction", ""),
+            from_number=p.get("from_number", ""),
+            to_number=p.get("to_number", ""),
+            body=p.get("body", ""),
+            media=p.get("media", []),
+            segments=p.get("segments", 0),
+            message_state=p.get("message_state", ""),
+            reason=p.get("reason", ""),
+            tags=p.get("tags", []),
+        )
+
+
 # Map event_type string → typed event class
 EVENT_CLASS_MAP: dict[str, type[RelayEvent]] = {
     "calling.call.state": CallStateEvent,
@@ -550,6 +626,8 @@ EVENT_CLASS_MAP: dict[str, type[RelayEvent]] = {
     "calling.call.hold": HoldEvent,
     "calling.conference": ConferenceEvent,
     "calling.error": CallingErrorEvent,
+    "messaging.receive": MessageReceiveEvent,
+    "messaging.state": MessageStateEvent,
 }
 
 

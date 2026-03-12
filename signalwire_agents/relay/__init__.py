@@ -16,6 +16,7 @@ from .call import (
     TranscribeAction,
     AIAction,
 )
+from .message import Message
 from .event import (
     RelayEvent,
     CallStateEvent,
@@ -39,6 +40,8 @@ from .event import (
     HoldEvent,
     ConferenceEvent,
     CallingErrorEvent,
+    MessageReceiveEvent,
+    MessageStateEvent,
     parse_event,
 )
 from .constants import (
@@ -71,6 +74,15 @@ from .constants import (
     EVENT_CALL_TRANSCRIBE,
     EVENT_CONFERENCE,
     EVENT_CALLING_ERROR,
+    EVENT_MESSAGING_RECEIVE,
+    EVENT_MESSAGING_STATE,
+    MESSAGE_STATE_QUEUED,
+    MESSAGE_STATE_INITIATED,
+    MESSAGE_STATE_SENT,
+    MESSAGE_STATE_DELIVERED,
+    MESSAGE_STATE_UNDELIVERED,
+    MESSAGE_STATE_FAILED,
+    MESSAGE_STATE_RECEIVED,
 )
 
 __all__ = [
@@ -91,6 +103,8 @@ __all__ = [
     "PayAction",
     "TranscribeAction",
     "AIAction",
+    # Message
+    "Message",
     # Events
     "RelayEvent",
     "CallStateEvent",
@@ -114,6 +128,8 @@ __all__ = [
     "HoldEvent",
     "ConferenceEvent",
     "CallingErrorEvent",
+    "MessageReceiveEvent",
+    "MessageStateEvent",
     "parse_event",
     # Constants — call states
     "CALL_STATE_CREATED",
@@ -147,4 +163,15 @@ __all__ = [
     "EVENT_CALL_TRANSCRIBE",
     "EVENT_CONFERENCE",
     "EVENT_CALLING_ERROR",
+    # Constants — messaging event types
+    "EVENT_MESSAGING_RECEIVE",
+    "EVENT_MESSAGING_STATE",
+    # Constants — message states
+    "MESSAGE_STATE_QUEUED",
+    "MESSAGE_STATE_INITIATED",
+    "MESSAGE_STATE_SENT",
+    "MESSAGE_STATE_DELIVERED",
+    "MESSAGE_STATE_UNDELIVERED",
+    "MESSAGE_STATE_FAILED",
+    "MESSAGE_STATE_RECEIVED",
 ]

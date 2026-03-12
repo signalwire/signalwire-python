@@ -69,6 +69,25 @@ EVENT_CALL_TRANSCRIBE = "calling.call.transcribe"
 EVENT_CONFERENCE = "calling.conference"
 EVENT_CALLING_ERROR = "calling.error"
 
+# Messaging event types
+EVENT_MESSAGING_RECEIVE = "messaging.receive"
+EVENT_MESSAGING_STATE = "messaging.state"
+
+# Message states
+MESSAGE_STATE_QUEUED = "queued"
+MESSAGE_STATE_INITIATED = "initiated"
+MESSAGE_STATE_SENT = "sent"
+MESSAGE_STATE_DELIVERED = "delivered"
+MESSAGE_STATE_UNDELIVERED = "undelivered"
+MESSAGE_STATE_FAILED = "failed"
+MESSAGE_STATE_RECEIVED = "received"
+
+MESSAGE_TERMINAL_STATES = (
+    MESSAGE_STATE_DELIVERED,
+    MESSAGE_STATE_UNDELIVERED,
+    MESSAGE_STATE_FAILED,
+)
+
 # Play states
 PLAY_STATE_PLAYING = "playing"
 PLAY_STATE_PAUSED = "paused"

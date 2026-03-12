@@ -67,6 +67,31 @@ call = await client.dial([
 ])
 ```
 
+### `on_message(handler)`
+
+Decorator to register the inbound message handler. The handler receives a `Message` object.
+
+```python
+@client.on_message
+async def handle(message):
+    print(f"SMS from {message.from_number}: {message.body}")
+```
+
+### `send_message(*, to_number, from_number, body=None, media=None, ...) -> Message`
+
+Send an outbound SMS/MMS. Returns a `Message` that tracks delivery state.
+
+```python
+message = await client.send_message(
+    to_number="+15552222222",
+    from_number="+15551111111",
+    body="Hello!",
+)
+event = await message.wait()  # block until delivered/failed
+```
+
+See [Messaging](messaging.md) for full details.
+
 ### `execute(method, params) -> dict`
 
 Send a raw JSON-RPC request. Used internally by Call methods, but available for custom commands.

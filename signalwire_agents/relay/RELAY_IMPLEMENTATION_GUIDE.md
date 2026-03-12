@@ -428,6 +428,9 @@ Call objects survive reconnect — the server tracks them by `call_id` across co
 - [ ] Actions support three completion patterns: `await action.wait()` (blocking), fire-and-forget (don't await), `on_completed` callback
 - [ ] `on_completed` callback supports both sync and async functions, errors caught and logged
 - [ ] `on_completed` fires on call-gone (404/410) with resolved empty event
+- [ ] `messages` map: `message_id` → Message (for messaging.state routing)
+- [ ] `on_message` handler for inbound SMS/MMS (like `on_call` for calls)
+- [ ] `send_message()` returns Message, tracks by `message_id`, supports `on_completed`
 
 ## Complete Method Parameter Reference
 
@@ -1108,3 +1111,147 @@ Start an AI agent on the call.
 | `node_id` | UUID | YES |
 | `call_id` | UUID | YES |
 | `control_id` | string | YES |
+
+---
+
+## Messaging Namespace
+
+The messaging namespace is separate from calling. It handles SMS/MMS and uses different methods and event types. Messages are identified by `message_id` (not `call_id`), and there is no `node_id` or `control_id`.
+
+### Correlation
+
+Messages use a simpler model than calls:
+1. **JSON-RPC `id`** — matches the RPC response (same as calling)
+2. **`message_id`** — returned in the `messaging.send` response and echoed in all `messaging.state` events. Route state events to the correct Message object by `message_id`.
+
+Implementation: maintain a `messages: Map<string, Message>` keyed by `message_id`.
+
+### messaging.send
+
+Send an outbound SMS/MMS.
+
+| Param | Type | Required | Notes |
+|-------|------|----------|-------|
+| `context` | string | YES | Context for receiving state events |
+| `to_number` | string | YES | E.164 format |
+| `from_number` | string | YES | E.164 format |
+| `body` | string | conditional | Required if no media |
+| `media` | string[] | conditional | Required if no body — array of URLs |
+| `tags` | string[] | no | Tags for searching in UI |
+| `region` | string | no | Origination region |
+
+```
+Client → {"method":"messaging.send", "params":{
+  "context": "my_context",
+  "from_number": "+15551111111",
+  "to_number": "+15552222222",
+  "body": "Hello World",
+  "media": ["https://example.com/image.jpg"],
+  "tags": ["vip"]
+}}
+Server → {"result":{"code":"200", "message":"Message accepted", "message_id":"<UUID>"}}
+```
+
+**IMPORTANT**: The response includes `message_id`. Store this to route subsequent `messaging.state` events.
+
+### Messaging Events
+
+Events arrive via the same `signalwire.event` mechanism as calling events, but with `messaging.*` event types.
+
+#### messaging.receive
+
+Inbound message received.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `message_id` | UUID | Message identifier |
+| `context` | string | Context |
+| `direction` | string | Always `"inbound"` |
+| `from_number` | string | Sender (E.164) |
+| `to_number` | string | Recipient (E.164) |
+| `body` | string | Message body |
+| `media` | string[] | Media URLs |
+| `segments` | int | Number of segments |
+| `message_state` | string | Always `"received"` |
+| `tags` | string[] | Tags |
+
+```json
+{"method":"signalwire.event", "params":{
+  "event_type":"messaging.receive",
+  "params":{
+    "message_id":"<UUID>",
+    "context":"my_context",
+    "direction":"inbound",
+    "from_number":"+15553333333",
+    "to_number":"+15551111111",
+    "body":"Hello",
+    "media":[],
+    "segments":1,
+    "message_state":"received"
+  }
+}}
+```
+
+#### messaging.state
+
+Outbound message state change.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `message_id` | UUID | Message identifier |
+| `context` | string | Context |
+| `direction` | string | Always `"outbound"` |
+| `from_number` | string | Sender (E.164) |
+| `to_number` | string | Recipient (E.164) |
+| `body` | string | Message body |
+| `media` | string[] | Media URLs |
+| `segments` | int | Number of segments |
+| `message_state` | string | See states below |
+| `reason` | string | Present on `undelivered` and `failed` |
+| `tags` | string[] | Tags |
+
+Message states: `queued` → `initiated` → `sent` → `delivered` (terminal)
+
+Failed paths: `queued` → `initiated` → `failed` or `undelivered` (terminal)
+
+Terminal states: `delivered`, `undelivered`, `failed`
+
+### Message Object Design
+
+The Message object is simpler than Call — it's a data holder with state tracking:
+
+```python
+class Message:
+    message_id: str
+    context: str
+    direction: str       # "inbound" or "outbound"
+    from_number: str
+    to_number: str
+    body: str
+    media: list[str]
+    segments: int
+    state: str           # current message_state
+    reason: str          # failure reason (on failed/undelivered)
+    tags: list[str]
+
+    # Completion
+    is_done: bool        # True when terminal state reached
+    result: RelayEvent   # Terminal event (or None)
+
+    async def wait(timeout=None) -> RelayEvent
+    def on(handler)      # Register state change listener
+```
+
+The `on_completed` callback pattern from calling actions applies here too — pass it to `send_message()` and it fires when a terminal state is reached.
+
+### Messaging Checklist
+
+- [ ] `messages` map: `message_id` → Message (for state event routing)
+- [ ] `on_message` handler for inbound messages (like `on_call` for calls)
+- [ ] `send_message()` returns a Message object with the `message_id` from the response
+- [ ] `messaging.receive` events create a Message and invoke the `on_message` handler
+- [ ] `messaging.state` events route to tracked Message by `message_id`
+- [ ] Message tracks state progression and resolves on terminal state (delivered/undelivered/failed)
+- [ ] Terminal messages are cleaned up from the tracking map
+- [ ] `on_completed` callback supported on `send_message()`
+- [ ] At least one of `body` or `media` is required for `send_message()`
