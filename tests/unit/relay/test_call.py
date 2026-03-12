@@ -795,6 +795,419 @@ class TestDetectActionEventRouting:
         assert action.result.params["detect"]["params"]["event"] == "HUMAN"
 
 
+class TestRecordActionMethods:
+    @pytest.mark.asyncio
+    async def test_record_stop(self, call, mock_client):
+        action = await call.record(control_id="r1")
+        mock_client.execute.reset_mock()
+        await action.stop()
+        assert mock_client.execute.call_args[0][0] == "calling.record.stop"
+        assert mock_client.execute.call_args[0][1]["control_id"] == "r1"
+
+    @pytest.mark.asyncio
+    async def test_record_pause(self, call, mock_client):
+        action = await call.record(control_id="r1")
+        mock_client.execute.reset_mock()
+        await action.pause(behavior="silence")
+        params = mock_client.execute.call_args[0][1]
+        assert mock_client.execute.call_args[0][0] == "calling.record.pause"
+        assert params["behavior"] == "silence"
+
+    @pytest.mark.asyncio
+    async def test_record_resume(self, call, mock_client):
+        action = await call.record(control_id="r1")
+        mock_client.execute.reset_mock()
+        await action.resume()
+        assert mock_client.execute.call_args[0][0] == "calling.record.resume"
+
+
+class TestDetectActionMethods:
+    @pytest.mark.asyncio
+    async def test_detect_stop(self, call, mock_client):
+        action = await call.detect({"type": "machine"}, control_id="d1")
+        mock_client.execute.reset_mock()
+        await action.stop()
+        assert mock_client.execute.call_args[0][0] == "calling.detect.stop"
+
+
+class TestCollectActionMethods:
+    @pytest.mark.asyncio
+    async def test_play_and_collect_stop(self, call, mock_client):
+        action = await call.play_and_collect(
+            [{"type": "tts", "params": {"text": "Press 1"}}],
+            {"digits": {"max": 1}},
+            control_id="pac1",
+        )
+        mock_client.execute.reset_mock()
+        await action.stop()
+        assert mock_client.execute.call_args[0][0] == "calling.play_and_collect.stop"
+
+    @pytest.mark.asyncio
+    async def test_play_and_collect_volume(self, call, mock_client):
+        action = await call.play_and_collect(
+            [{"type": "tts", "params": {"text": "Press 1"}}],
+            {"digits": {"max": 1}},
+            control_id="pac1",
+        )
+        mock_client.execute.reset_mock()
+        await action.volume(5.0)
+        params = mock_client.execute.call_args[0][1]
+        assert mock_client.execute.call_args[0][0] == "calling.play_and_collect.volume"
+        assert params["volume"] == 5.0
+
+    @pytest.mark.asyncio
+    async def test_play_and_collect_with_volume_param(self, call, mock_client):
+        await call.play_and_collect(
+            [{"type": "tts", "params": {"text": "Press 1"}}],
+            {"digits": {"max": 1}},
+            volume=3.0,
+        )
+        params = mock_client.execute.call_args[0][1]
+        assert params["volume"] == 3.0
+
+    @pytest.mark.asyncio
+    async def test_collect_start_input_timers_method(self, call, mock_client):
+        action = await call.play_and_collect(
+            [{"type": "tts", "params": {"text": "Press 1"}}],
+            {"digits": {"max": 1}},
+            control_id="pac1",
+        )
+        mock_client.execute.reset_mock()
+        await action.start_input_timers()
+        assert mock_client.execute.call_args[0][0] == "calling.collect.start_input_timers"
+
+
+class TestStandaloneCollectEventRouting:
+    @pytest.mark.asyncio
+    async def test_standalone_collect_resolves_on_result(self, call, mock_client):
+        action = await call.collect(digits={"max": 1}, control_id="col1")
+        await call._dispatch_event({
+            "event_type": EVENT_CALL_COLLECT,
+            "params": {
+                "call_id": "call-1",
+                "control_id": "col1",
+                "result": {"type": "digit", "params": {"digits": "5"}},
+            },
+        })
+        assert action.is_done
+
+    @pytest.mark.asyncio
+    async def test_standalone_collect_ignores_non_collect_events(self, call, mock_client):
+        action = await call.collect(digits={"max": 1}, control_id="col1")
+        await call._dispatch_event({
+            "event_type": EVENT_CALL_PLAY,
+            "params": {"call_id": "call-1", "control_id": "col1", "state": "finished"},
+        })
+        assert not action.is_done
+
+    @pytest.mark.asyncio
+    async def test_standalone_collect_resolves_on_terminal_state(self, call, mock_client):
+        action = await call.collect(digits={"max": 1}, control_id="col1")
+        await call._dispatch_event({
+            "event_type": EVENT_CALL_COLLECT,
+            "params": {
+                "call_id": "call-1",
+                "control_id": "col1",
+                "state": "no_input",
+            },
+        })
+        assert action.is_done
+
+
+class TestCollectOptionalParams:
+    @pytest.mark.asyncio
+    async def test_collect_with_all_params(self, call, mock_client):
+        await call.collect(
+            digits={"max": 4},
+            speech={"language": "en-US"},
+            initial_timeout=10.0,
+            partial_results=True,
+            continuous=True,
+            send_start_of_input=True,
+            start_input_timers=False,
+            control_id="col1",
+        )
+        params = mock_client.execute.call_args[0][1]
+        assert params["initial_timeout"] == 10.0
+        assert params["send_start_of_input"] is True
+        assert params["start_input_timers"] is False
+        assert params["continuous"] is True
+
+
+class TestConnectOptionalParams:
+    @pytest.mark.asyncio
+    async def test_connect_with_all_params(self, call, mock_client):
+        await call.connect(
+            [[{"type": "phone", "params": {"to_number": "+15551234567"}}]],
+            tag="my-tag",
+            max_duration=60,
+            max_price_per_minute=1.50,
+            status_url="https://example.com/status",
+        )
+        params = mock_client.execute.call_args[0][1]
+        assert params["tag"] == "my-tag"
+        assert params["max_duration"] == 60
+        assert params["max_price_per_minute"] == 1.50
+        assert params["status_url"] == "https://example.com/status"
+
+
+class TestPayAllParams:
+    @pytest.mark.asyncio
+    async def test_pay_all_optional_params(self, call, mock_client):
+        await call.pay(
+            "https://pay.example.com",
+            control_id="pay1",
+            input_method="dtmf",
+            status_url="https://status.example.com",
+            payment_method="credit-card",
+            timeout="30",
+            max_attempts="3",
+            security_code="required",
+            postal_code="required",
+            min_postal_code_length="5",
+            token_type="reusable",
+            charge_amount="25.99",
+            currency="usd",
+            language="en",
+            voice="man",
+            description="Test payment",
+            valid_card_types="visa mastercard",
+            parameters=[{"name": "key", "value": "val"}],
+            prompts=[{"name": "greeting", "text": "Enter card"}],
+        )
+        params = mock_client.execute.call_args[0][1]
+        assert params["input"] == "dtmf"
+        assert params["status_url"] == "https://status.example.com"
+        assert params["payment_method"] == "credit-card"
+        assert params["timeout"] == "30"
+        assert params["max_attempts"] == "3"
+        assert params["security_code"] == "required"
+        assert params["postal_code"] == "required"
+        assert params["min_postal_code_length"] == "5"
+        assert params["token_type"] == "reusable"
+        assert params["charge_amount"] == "25.99"
+        assert params["currency"] == "usd"
+        assert params["language"] == "en"
+        assert params["voice"] == "man"
+        assert params["description"] == "Test payment"
+        assert params["valid_card_types"] == "visa mastercard"
+        assert params["parameters"] == [{"name": "key", "value": "val"}]
+        assert params["prompts"] == [{"name": "greeting", "text": "Enter card"}]
+
+    @pytest.mark.asyncio
+    async def test_pay_action_stop(self, call, mock_client):
+        action = await call.pay("https://pay.example.com", control_id="pay1")
+        mock_client.execute.reset_mock()
+        await action.stop()
+        assert mock_client.execute.call_args[0][0] == "calling.pay.stop"
+
+
+class TestTapActionMethods:
+    @pytest.mark.asyncio
+    async def test_tap_action_stop(self, call, mock_client):
+        action = await call.tap(
+            {"type": "audio", "params": {"direction": "speak"}},
+            {"type": "rtp", "params": {"addr": "1.2.3.4", "port": 5000}},
+            control_id="tap1",
+        )
+        mock_client.execute.reset_mock()
+        await action.stop()
+        assert mock_client.execute.call_args[0][0] == "calling.tap.stop"
+
+
+class TestStreamAllParams:
+    @pytest.mark.asyncio
+    async def test_stream_all_params(self, call, mock_client):
+        await call.stream(
+            "wss://example.com/audio",
+            name="my_stream",
+            codec="PCMU",
+            track="inbound_track",
+            status_url="https://status.example.com",
+            status_url_method="POST",
+            authorization_bearer_token="Bearer abc",
+            custom_parameters={"key": "val"},
+            control_id="str1",
+        )
+        params = mock_client.execute.call_args[0][1]
+        assert params["status_url"] == "https://status.example.com"
+        assert params["status_url_method"] == "POST"
+        assert params["authorization_bearer_token"] == "Bearer abc"
+        assert params["custom_parameters"] == {"key": "val"}
+
+    @pytest.mark.asyncio
+    async def test_stream_action_stop(self, call, mock_client):
+        action = await call.stream("wss://example.com/audio", control_id="str1")
+        mock_client.execute.reset_mock()
+        await action.stop()
+        assert mock_client.execute.call_args[0][0] == "calling.stream.stop"
+
+
+class TestTranscribeActionMethods:
+    @pytest.mark.asyncio
+    async def test_transcribe_stop(self, call, mock_client):
+        action = await call.transcribe(control_id="tr1")
+        mock_client.execute.reset_mock()
+        await action.stop()
+        assert mock_client.execute.call_args[0][0] == "calling.transcribe.stop"
+
+
+class TestConferenceAllParams:
+    @pytest.mark.asyncio
+    async def test_join_conference_all_params(self, call, mock_client):
+        await call.join_conference(
+            "my_conf",
+            muted=True,
+            beep="onEnter",
+            start_on_enter=True,
+            end_on_exit=False,
+            wait_url="https://example.com/wait",
+            max_participants=50,
+            record="record-from-start",
+            region="us1",
+            trim="trim-silence",
+            coach="coach-id",
+            status_callback="https://example.com/status",
+            status_callback_event="start end",
+            status_callback_event_type="webhook",
+            status_callback_method="POST",
+            recording_status_callback="https://example.com/rec",
+            recording_status_callback_event="completed",
+            recording_status_callback_event_type="webhook",
+            recording_status_callback_method="POST",
+            stream_obj={"url": "wss://example.com"},
+        )
+        params = mock_client.execute.call_args[0][1]
+        assert params["muted"] is True
+        assert params["start_on_enter"] is True
+        assert params["end_on_exit"] is False
+        assert params["wait_url"] == "https://example.com/wait"
+        assert params["region"] == "us1"
+        assert params["trim"] == "trim-silence"
+        assert params["coach"] == "coach-id"
+        assert params["status_callback"] == "https://example.com/status"
+        assert params["status_callback_event"] == "start end"
+        assert params["status_callback_event_type"] == "webhook"
+        assert params["status_callback_method"] == "POST"
+        assert params["recording_status_callback"] == "https://example.com/rec"
+        assert params["recording_status_callback_event"] == "completed"
+        assert params["recording_status_callback_event_type"] == "webhook"
+        assert params["recording_status_callback_method"] == "POST"
+        assert params["stream"] == {"url": "wss://example.com"}
+
+
+class TestEchoOptionalParams:
+    @pytest.mark.asyncio
+    async def test_echo_with_status_url(self, call, mock_client):
+        await call.echo(timeout=30.0, status_url="https://example.com/echo")
+        params = mock_client.execute.call_args[0][1]
+        assert params["status_url"] == "https://example.com/echo"
+
+
+class TestAIAllParams:
+    @pytest.mark.asyncio
+    async def test_ai_with_post_prompt_params(self, call, mock_client):
+        await call.ai(
+            control_id="ai1",
+            prompt={"text": "Hello"},
+            post_prompt={"text": "Goodbye"},
+            post_prompt_url="https://example.com/post",
+            post_prompt_auth_user="user",
+            post_prompt_auth_password="pass",
+            pronounce=[{"replace": "SW", "with": "SignalWire"}],
+            languages=[{"name": "English", "code": "en-US"}],
+        )
+        params = mock_client.execute.call_args[0][1]
+        assert params["post_prompt"]["text"] == "Goodbye"
+        assert params["post_prompt_url"] == "https://example.com/post"
+        assert params["post_prompt_auth_user"] == "user"
+        assert params["post_prompt_auth_password"] == "pass"
+        assert params["pronounce"][0]["replace"] == "SW"
+        assert params["languages"][0]["code"] == "en-US"
+
+
+class TestAmazonBedrockAllParams:
+    @pytest.mark.asyncio
+    async def test_amazon_bedrock_all_params(self, call, mock_client):
+        await call.amazon_bedrock(
+            prompt="You are helpful.",
+            SWAIG={"functions": []},
+            ai_params={"end_of_speech_timeout": 3000},
+            global_data={"key": "value"},
+            post_prompt={"text": "Goodbye"},
+            post_prompt_url="https://example.com/post",
+        )
+        params = mock_client.execute.call_args[0][1]
+        assert params["prompt"] == "You are helpful."
+        assert params["SWAIG"] == {"functions": []}
+        assert params["params"]["end_of_speech_timeout"] == 3000
+        assert params["global_data"]["key"] == "value"
+        assert params["post_prompt"]["text"] == "Goodbye"
+        assert params["post_prompt_url"] == "https://example.com/post"
+
+
+class TestAIMessageAllParams:
+    @pytest.mark.asyncio
+    async def test_ai_message_with_control_id(self, call, mock_client):
+        await call.ai_message(
+            message_text="Hello",
+            role="system",
+            control_id="ai1",
+        )
+        params = mock_client.execute.call_args[0][1]
+        assert params["control_id"] == "ai1"
+        assert params["message_text"] == "Hello"
+        assert params["role"] == "system"
+
+
+class TestQueueOptionalParams:
+    @pytest.mark.asyncio
+    async def test_queue_leave_with_status_url(self, call, mock_client):
+        await call.queue_leave("support", control_id="q1", status_url="https://example.com/q")
+        params = mock_client.execute.call_args[0][1]
+        assert params["status_url"] == "https://example.com/q"
+
+
+class TestEventHandlerError:
+    @pytest.mark.asyncio
+    async def test_listener_exception_does_not_crash(self, call):
+        """Verify that an exception in an event handler is caught."""
+        def bad_handler(event):
+            raise RuntimeError("handler crashed")
+
+        call.on(EVENT_CALL_PLAY, bad_handler)
+        # Should not raise
+        await call._dispatch_event({
+            "event_type": EVENT_CALL_PLAY,
+            "params": {"call_id": "call-1", "control_id": "ctl1", "state": "playing"},
+        })
+
+
+class TestWaitForTimeout:
+    @pytest.mark.asyncio
+    async def test_wait_for_timeout_raises(self, call):
+        with pytest.raises(asyncio.TimeoutError):
+            await call.wait_for(EVENT_CALL_PLAY, timeout=0.01)
+
+    @pytest.mark.asyncio
+    async def test_wait_for_no_timeout(self, call):
+        """wait_for without timeout resolves when event arrives."""
+        async def send_later():
+            await asyncio.sleep(0.01)
+            await call._dispatch_event({
+                "event_type": EVENT_CALL_PLAY,
+                "params": {"call_id": "call-1", "control_id": "x", "state": "finished"},
+            })
+
+        task = asyncio.create_task(send_later())
+        event = await asyncio.wait_for(
+            call.wait_for(EVENT_CALL_PLAY),
+            timeout=2.0,
+        )
+        assert event.params["state"] == "finished"
+        await task
+
+
 class TestCallRepr:
     def test_repr(self, call):
         r = repr(call)

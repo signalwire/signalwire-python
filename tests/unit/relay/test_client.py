@@ -1426,3 +1426,227 @@ class TestSafeSendNoWs:
         await client._safe_send('{"test": true}', future)
         # Future should not be resolved or rejected
         assert not future.done()
+
+
+# ===================================================================
+# JWT auth
+# ===================================================================
+
+class TestJwtAuth:
+    def setup_method(self):
+        _active_clients.clear()
+
+    def teardown_method(self):
+        _active_clients.clear()
+
+    @patch.dict(os.environ, {}, clear=True)
+    def test_jwt_token_skips_project_token(self):
+        c = RelayClient(jwt_token="eyJ...")
+        assert c.jwt_token == "eyJ..."
+        assert c.project == ""
+
+    @patch.dict(os.environ, {}, clear=True)
+    def test_jwt_token_with_project(self):
+        c = RelayClient(jwt_token="eyJ...", project="proj-1")
+        assert c.jwt_token == "eyJ..."
+        assert c.project == "proj-1"
+
+    def test_jwt_env_var(self, monkeypatch):
+        monkeypatch.setenv("SIGNALWIRE_JWT_TOKEN", "env-jwt")
+        monkeypatch.delenv("SIGNALWIRE_PROJECT_ID", raising=False)
+        monkeypatch.delenv("SIGNALWIRE_API_TOKEN", raising=False)
+        c = RelayClient()
+        assert c.jwt_token == "env-jwt"
+
+    @pytest.mark.asyncio
+    async def test_jwt_auth_sends_jwt_token(self):
+        ws = AutoAuthMockWebSocket()
+        client = RelayClient(jwt_token="eyJ...", project="p")
+        with patch("signalwire_agents.relay.client.websockets.connect",
+                   new_callable=AsyncMock, return_value=ws):
+            await client.connect()
+        connect_msg = None
+        for msg in ws.sent_messages:
+            if msg.get("method") == METHOD_SIGNALWIRE_CONNECT:
+                connect_msg = msg
+                break
+        assert connect_msg is not None
+        assert connect_msg["params"]["authentication"] == {"jwt_token": "eyJ..."}
+        await client.disconnect()
+
+    @pytest.mark.asyncio
+    async def test_legacy_auth_sends_project_token(self, connected_client):
+        client, ws = connected_client
+        connect_msg = None
+        for msg in ws.sent_messages:
+            if msg.get("method") == METHOD_SIGNALWIRE_CONNECT:
+                connect_msg = msg
+                break
+        assert connect_msg is not None
+        auth = connect_msg["params"]["authentication"]
+        assert "project" in auth
+        assert "token" in auth
+        assert "jwt_token" not in auth
+
+
+# ===================================================================
+# max_active_calls config
+# ===================================================================
+
+class TestMaxActiveCallsConfig:
+    def setup_method(self):
+        _active_clients.clear()
+
+    def teardown_method(self):
+        _active_clients.clear()
+
+    def test_constructor_param(self):
+        c = RelayClient(project="p", token="t", max_active_calls=50)
+        assert c._max_active_calls == 50
+
+    def test_constructor_param_min_1(self):
+        c = RelayClient(project="p", token="t", max_active_calls=0)
+        assert c._max_active_calls == 1
+
+    def test_env_var(self, monkeypatch):
+        monkeypatch.setenv("RELAY_MAX_ACTIVE_CALLS", "200")
+        c = RelayClient(project="p", token="t")
+        assert c._max_active_calls == 200
+
+    def test_env_var_invalid(self, monkeypatch):
+        monkeypatch.setenv("RELAY_MAX_ACTIVE_CALLS", "not_a_number")
+        c = RelayClient(project="p", token="t")
+        from signalwire_agents.relay.client import _DEFAULT_MAX_ACTIVE_CALLS
+        assert c._max_active_calls == _DEFAULT_MAX_ACTIVE_CALLS
+
+    def test_default(self):
+        c = RelayClient(project="p", token="t")
+        from signalwire_agents.relay.client import _DEFAULT_MAX_ACTIVE_CALLS
+        assert c._max_active_calls == _DEFAULT_MAX_ACTIVE_CALLS
+
+
+# ===================================================================
+# Dynamic context subscription
+# ===================================================================
+
+class TestReceiveUnreceive:
+    def setup_method(self):
+        _active_clients.clear()
+
+    def teardown_method(self):
+        _active_clients.clear()
+
+    @pytest.mark.asyncio
+    async def test_receive_sends_request(self):
+        ws = AutoAuthMockWebSocket(auto_reply_all=True)
+        client = RelayClient(project="p", token="t")
+        with patch("signalwire_agents.relay.client.websockets.connect",
+                   new_callable=AsyncMock, return_value=ws):
+            await client.connect()
+        ws.sent_messages.clear()
+        await client.receive(["support", "sales"])
+        recv_msgs = [m for m in ws.sent_messages if m.get("method") == "signalwire.receive"]
+        assert len(recv_msgs) == 1
+        assert recv_msgs[0]["params"]["contexts"] == ["support", "sales"]
+        await client.disconnect()
+
+    @pytest.mark.asyncio
+    async def test_receive_empty_is_noop(self, connected_client):
+        client, ws = connected_client
+        ws.sent_messages.clear()
+        await client.receive([])
+        recv_msgs = [m for m in ws.sent_messages if m.get("method") == "signalwire.receive"]
+        assert len(recv_msgs) == 0
+
+    @pytest.mark.asyncio
+    async def test_unreceive_sends_request(self):
+        ws = AutoAuthMockWebSocket(auto_reply_all=True)
+        client = RelayClient(project="p", token="t")
+        with patch("signalwire_agents.relay.client.websockets.connect",
+                   new_callable=AsyncMock, return_value=ws):
+            await client.connect()
+        ws.sent_messages.clear()
+        await client.unreceive(["support"])
+        msgs = [m for m in ws.sent_messages if m.get("method") == "signalwire.unreceive"]
+        assert len(msgs) == 1
+        assert msgs[0]["params"]["contexts"] == ["support"]
+        await client.disconnect()
+
+    @pytest.mark.asyncio
+    async def test_unreceive_empty_is_noop(self, connected_client):
+        client, ws = connected_client
+        ws.sent_messages.clear()
+        await client.unreceive([])
+        msgs = [m for m in ws.sent_messages if m.get("method") == "signalwire.unreceive"]
+        assert len(msgs) == 0
+
+
+# ===================================================================
+# Authorization state
+# ===================================================================
+
+class TestAuthorizationState:
+    @pytest.mark.asyncio
+    async def test_authorization_state_stored(self, connected_client):
+        client, ws = connected_client
+        from signalwire_agents.relay.constants import EVENT_AUTHORIZATION_STATE
+        event = make_event(EVENT_AUTHORIZATION_STATE, {
+            "authorization_state": "encrypted-state-abc",
+        })
+        ws.feed_message(event)
+        await asyncio.sleep(0.05)
+        assert client._authorization_state == "encrypted-state-abc"
+
+    @pytest.mark.asyncio
+    async def test_authorization_state_empty_ignored(self, connected_client):
+        client, ws = connected_client
+        client._authorization_state = "existing"
+        from signalwire_agents.relay.constants import EVENT_AUTHORIZATION_STATE
+        event = make_event(EVENT_AUTHORIZATION_STATE, {
+            "authorization_state": "",
+        })
+        ws.feed_message(event)
+        await asyncio.sleep(0.05)
+        assert client._authorization_state == "existing"
+
+
+# ===================================================================
+# signalwire.disconnect with restart
+# ===================================================================
+
+class TestDisconnectRestart:
+    @pytest.mark.asyncio
+    async def test_disconnect_restart_clears_state(self, connected_client):
+        client, ws = connected_client
+        client._relay_protocol = "proto-123"
+        client._authorization_state = "auth-state-abc"
+
+        disconnect_msg = {
+            "jsonrpc": "2.0",
+            "id": "disc-restart",
+            "method": METHOD_SIGNALWIRE_DISCONNECT,
+            "params": {"restart": True},
+        }
+        ws.feed_message(disconnect_msg)
+        await asyncio.sleep(0.05)
+
+        assert client._relay_protocol == ""
+        assert client._authorization_state == ""
+
+    @pytest.mark.asyncio
+    async def test_disconnect_no_restart_keeps_state(self, connected_client):
+        client, ws = connected_client
+        client._relay_protocol = "proto-123"
+        client._authorization_state = "auth-state-abc"
+
+        disconnect_msg = {
+            "jsonrpc": "2.0",
+            "id": "disc-no-restart",
+            "method": METHOD_SIGNALWIRE_DISCONNECT,
+            "params": {"restart": False},
+        }
+        ws.feed_message(disconnect_msg)
+        await asyncio.sleep(0.05)
+
+        assert client._relay_protocol == "proto-123"
+        assert client._authorization_state == "auth-state-abc"

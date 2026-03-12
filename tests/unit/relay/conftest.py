@@ -84,9 +84,10 @@ class AutoAuthMockWebSocket(MockWebSocket):
     a matching success response into the recv queue.
     """
 
-    def __init__(self, protocol: str = "test-protocol-abc123") -> None:
+    def __init__(self, protocol: str = "test-protocol-abc123", auto_reply_all: bool = False) -> None:
         super().__init__()
         self.protocol = protocol
+        self.auto_reply_all = auto_reply_all
 
     async def send(self, raw: str) -> None:
         await super().send(raw)
@@ -95,6 +96,10 @@ class AutoAuthMockWebSocket(MockWebSocket):
             self.feed_message(make_jsonrpc_response(msg["id"], {
                 "protocol": self.protocol,
                 "identity": "test-identity",
+            }))
+        elif self.auto_reply_all and "id" in msg and "method" in msg:
+            self.feed_message(make_jsonrpc_response(msg["id"], {
+                "code": "200", "message": "OK",
             }))
 
 
