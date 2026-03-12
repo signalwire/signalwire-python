@@ -103,10 +103,11 @@ class TestCallExecute:
         assert result == {}
 
     @pytest.mark.asyncio
-    async def test_execute_raises_non_gone_errors(self, call, mock_client):
+    async def test_execute_swallows_non_gone_relay_errors(self, call, mock_client):
+        """Non-gone relay errors (e.g. 500) are logged and return {} — not raised."""
         mock_client.execute.side_effect = MockRelayError(500, "Server error")
-        with pytest.raises(MockRelayError):
-            await call._execute("play", {"control_id": "ctl1"})
+        result = await call._execute("play", {"control_id": "ctl1"})
+        assert result == {}
 
     @pytest.mark.asyncio
     async def test_execute_raises_non_relay_errors(self, call, mock_client):
@@ -615,17 +616,20 @@ class TestQueue:
 
 class TestStartAction:
     @pytest.mark.asyncio
-    async def test_ended_call_raises(self, call, mock_client):
+    async def test_ended_call_resolves_gracefully(self, call, mock_client):
+        """Starting an action on an ended call logs a warning and returns a resolved action."""
         call.state = CALL_STATE_ENDED
-        with pytest.raises(RuntimeError, match="Cannot start action on an ended call"):
-            await call.play([{"type": "tts", "params": {"text": "Hi"}}])
+        action = await call.play([{"type": "tts", "params": {"text": "Hi"}}])
+        assert action.completed is True
+        assert action.is_done is True
 
     @pytest.mark.asyncio
-    async def test_execute_failure_rejects_action(self, call, mock_client):
+    async def test_execute_failure_resolves_action(self, call, mock_client):
+        """Non-gone relay errors are swallowed; action is resolved immediately."""
         mock_client.execute.side_effect = MockRelayError(500, "Server error")
-        with pytest.raises(MockRelayError):
-            await call.play([{"type": "tts", "params": {"text": "Hi"}}])
-        assert len(call._actions) == 0
+        action = await call.play([{"type": "tts", "params": {"text": "Hi"}}])
+        assert action.completed is True
+        assert action.control_id not in call._actions
 
     @pytest.mark.asyncio
     async def test_call_gone_resolves_action_immediately(self, call, mock_client):

@@ -174,7 +174,8 @@ class TestMessage:
         })
         assert msg.state == "sent"
 
-    def test_repr(self):
+    @pytest.mark.asyncio
+    async def test_repr(self):
         msg = Message(
             message_id="msg-1",
             direction="outbound",
