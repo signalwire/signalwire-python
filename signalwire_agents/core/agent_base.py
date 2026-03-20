@@ -69,6 +69,7 @@ from signalwire_agents.core.mixins.skill_mixin import SkillMixin
 from signalwire_agents.core.mixins.ai_config_mixin import AIConfigMixin
 from signalwire_agents.core.mixins.serverless_mixin import ServerlessMixin
 from signalwire_agents.core.mixins.state_mixin import StateMixin
+from signalwire_agents.core.mixins.mcp_server_mixin import MCPServerMixin
 
 # Create a logger using centralized system
 logger = get_logger("agent_base")
@@ -83,7 +84,8 @@ class AgentBase(
     SkillMixin,
     AIConfigMixin,
     ServerlessMixin,
-    StateMixin
+    StateMixin,
+    MCPServerMixin
 ):
     """
     Base class for all SignalWire AI Agents.
@@ -255,6 +257,8 @@ class AgentBase(
         self._params = {}
         self._global_data = {}
         self._function_includes = []
+        self._mcp_servers = []
+        self._mcp_server_enabled = False
         # Initialize LLM params as empty - only send if explicitly set
         self._prompt_llm_params = {}
         self._post_prompt_llm_params = {}
@@ -951,6 +955,14 @@ class AgentBase(
                 swaig_obj["defaults"] = {
                     "web_hook_url": default_webhook_url
                 }
+
+        # Add MCP servers if configured (external servers only — enable_mcp_server
+        # just adds the /mcp route, it doesn't auto-add to SWML. Use
+        # add_mcp_server() to explicitly point at self or external servers.)
+        mcp_servers = list(agent_to_use._mcp_servers)
+
+        if mcp_servers:
+            swaig_obj["mcp_servers"] = mcp_servers
         
         # Add post-prompt URL with token if we have a post-prompt
         post_prompt_url = None

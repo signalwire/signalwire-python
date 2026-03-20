@@ -412,6 +412,49 @@ class AIConfigMixin:
             self._function_includes = valid_includes
         return self
     
+    def add_mcp_server(self, url: str, headers: Optional[Dict[str, str]] = None,
+                       resources: bool = False, resource_vars: Optional[Dict[str, str]] = None) -> 'AgentBase':
+        """
+        Add an external MCP server for tool discovery and invocation.
+
+        Tools are discovered via the MCP protocol at session start and
+        registered as SWAIG functions. Resources are optionally fetched
+        into global_data.
+
+        Args:
+            url: MCP server HTTP endpoint URL
+            headers: Optional HTTP headers (e.g. {"Authorization": "Bearer sk-xxx"})
+            resources: Whether to fetch resources into global_data
+            resource_vars: Variables for URI template substitution (e.g. {"caller_id": "${caller_id_number}"})
+
+        Returns:
+            Self for method chaining
+        """
+        server = {"url": url}
+        if headers:
+            server["headers"] = headers
+        if resources:
+            server["resources"] = True
+        if resource_vars:
+            server["resource_vars"] = resource_vars
+        self._mcp_servers.append(server)
+        return self
+
+    def enable_mcp_server(self) -> 'AgentBase':
+        """
+        Expose this agent's @tool functions as an MCP server endpoint.
+
+        Adds a /mcp route that speaks JSON-RPC 2.0 (MCP protocol).
+        Other MCP clients (Claude Desktop, other agents, etc.) can
+        connect and use the same tools. The agent's SWML output also
+        references this endpoint for native MCP tool discovery.
+
+        Returns:
+            Self for method chaining
+        """
+        self._mcp_server_enabled = True
+        return self
+
     def set_prompt_llm_params(self, **params) -> 'AgentBase':
         """
         Set LLM parameters for the main prompt.

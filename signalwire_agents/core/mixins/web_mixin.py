@@ -404,6 +404,25 @@ class WebMixin:
             """Handle POST requests delivering debug webhook events"""
             return await self._handle_debug_events_request(request)
 
+        # MCP server endpoint — exposes @tool functions as MCP tools
+        if hasattr(self, '_mcp_server_enabled') and self._mcp_server_enabled:
+            @router.post("/mcp")
+            @router.post("/mcp/")
+            async def handle_mcp(request: Request):
+                """Handle MCP JSON-RPC 2.0 requests"""
+                try:
+                    body = await request.json()
+                    result = self._handle_mcp_request(body)
+                    from starlette.responses import JSONResponse
+                    return JSONResponse(content=result)
+                except Exception as e:
+                    from starlette.responses import JSONResponse
+                    return JSONResponse(content={
+                        "jsonrpc": "2.0",
+                        "id": None,
+                        "error": {"code": -32700, "message": f"Parse error: {str(e)}"}
+                    })
+
         # Register callback routes for routing callbacks if available
         if hasattr(self, '_routing_callbacks') and self._routing_callbacks:
             for callback_path, callback_fn in self._routing_callbacks.items():
