@@ -29,8 +29,8 @@ pip install signalwire-agents
 ```
 
 ```python
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import FunctionResult
 
 class MyAgent(AgentBase):
     def __init__(self):
@@ -43,7 +43,7 @@ class MyAgent(AgentBase):
     def get_time(self):
         """Get the current time"""
         from datetime import datetime
-        return SwaigFunctionResult(f"The time is {datetime.now().strftime('%H:%M:%S')}")
+        return FunctionResult(f"The time is {datetime.now().strftime('%H:%M:%S')}")
 
 if __name__ == "__main__":
     agent = MyAgent()
@@ -99,7 +99,7 @@ The [`examples/`](examples/) directory contains 50+ working examples. A few star
 | [contexts_demo.py](examples/contexts_demo.py) | Multi-persona workflow with context switching and step navigation |
 | [data_map_demo.py](examples/data_map_demo.py) | Server-side API tools without webhooks |
 | [skills_demo.py](examples/skills_demo.py) | Loading built-in skills (datetime, math) |
-| [call_flow_and_actions_demo.py](examples/call_flow_and_actions_demo.py) | Call flow verbs, debug events, SwaigFunctionResult actions |
+| [call_flow_and_actions_demo.py](examples/call_flow_and_actions_demo.py) | Call flow verbs, debug events, FunctionResult actions |
 | [session_and_state_demo.py](examples/session_and_state_demo.py) | on_summary, global data, post-prompt summaries |
 | [swaig_features_agent.py](examples/swaig_features_agent.py) | Type inference, fillers, default webhook URLs |
 | [multi_agent_server.py](examples/multi_agent_server.py) | Multiple agents on one server |
@@ -124,7 +124,7 @@ swaig-test examples/simple_agent.py --exec get_weather --location "New York"
 Real-time call control and messaging over WebSocket. The RELAY client connects to SignalWire via the Blade protocol and gives you imperative, async control over live phone calls and SMS/MMS.
 
 ```python
-from signalwire_agents.relay import RelayClient
+from signalwire.relay import RelayClient
 
 client = RelayClient(project="...", token="...", host="example.signalwire.com", contexts=["default"])
 
@@ -150,9 +150,9 @@ See the **[RELAY documentation](relay/README.md)** for the full guide, API refer
 Synchronous REST client for managing SignalWire resources and controlling calls over HTTP. No WebSocket required.
 
 ```python
-from signalwire_agents.rest import SignalWireClient
+from signalwire.rest import RestClient
 
-client = SignalWireClient(project="...", token="...", host="example.signalwire.com")
+client = RestClient(project="...", token="...", host="example.signalwire.com")
 
 client.fabric.ai_agents.create(name="Support Bot", prompt={"text": "You are helpful."})
 client.calling.play(call_id, play=[{"type": "tts", "text": "Hello!"}])
@@ -245,7 +245,7 @@ pytest -m integration
 pytest -m skills
 
 # Coverage
-pytest --cov=signalwire_agents --cov-report=html
+pytest --cov=signalwire --cov-report=html
 ```
 
 ## License

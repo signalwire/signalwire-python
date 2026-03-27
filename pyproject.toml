@@ -3,8 +3,8 @@ requires = ["setuptools>=61.0,<81", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "signalwire_agents"
-version = "1.1.0"
+name = "signalwire"
+version = "2.0.0"
 description = "SignalWire AI Agents SDK"
 authors = [
     {name = "SignalWire Team", email = "info@signalwire.com"}
@@ -134,18 +134,18 @@ all = [
 Homepage = "https://github.com/signalwire/signalwire-agents"
 
 [project.scripts]
-swaig-test = "signalwire_agents.cli.swaig_test_wrapper:main"
-sw-search = "signalwire_agents.cli.build_search:console_entry_point"
-sw-agent-init = "signalwire_agents.cli.init_project:main"
-sw-agent-dokku = "signalwire_agents.cli.dokku:main"
-mcp-gateway = "signalwire_agents.mcp_gateway.gateway_service:main"
+swaig-test = "signalwire.cli.swaig_test_wrapper:main"
+sw-search = "signalwire.cli.build_search:console_entry_point"
+sw-agent-init = "signalwire.cli.init_project:main"
+sw-agent-dokku = "signalwire.cli.dokku:main"
+mcp-gateway = "signalwire.mcp_gateway.gateway_service:main"
 
 [tool.setuptools]
-packages = {find = {where = ["."], include = ["signalwire_agents*"]}}
+packages = {find = {where = ["."], include = ["signalwire*"]}}
 include-package-data = true
 
 [tool.setuptools.package-data]
-signalwire_agents = [
+signalwire = [
     "schema.json",
     "**/*.json",
     "skills/*/README.md",
