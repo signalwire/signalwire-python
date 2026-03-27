@@ -99,7 +99,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Install with:**" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "pip install signalwire-agents==${{ steps.tag_version.outputs.tag_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "pip install signalwire==${{ steps.tag_version.outputs.tag_version }}" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**PyPI:** https://pypi.org/project/signalwire-agents/${{ steps.tag_version.outputs.tag_version }}/" >> $GITHUB_STEP_SUMMARY
+          echo "**PyPI:** https://pypi.org/project/signalwire/${{ steps.tag_version.outputs.tag_version }}/" >> $GITHUB_STEP_SUMMARY
