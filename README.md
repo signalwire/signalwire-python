@@ -4,29 +4,41 @@
         <img src="https://github.com/user-attachments/assets/0c8ed3b9-8c50-4dc6-9cc4-cc6cd137fd50" width="500" />
     </a>
 
-# Agents SDK
+# SignalWire SDK for Python
 
-_A Python SDK for creating, hosting, and securing SignalWire AI agents as microservices._
+_Build AI voice agents, control live calls over WebSocket, and manage every SignalWire resource over REST -- all from one package._
 
 <p align="center">
   <a href="https://developer.signalwire.com/sdks/agents-sdk" target="_blank">Documentation</a> &middot;
   <a href="https://github.com/signalwire/signalwire-docs/issues/new/choose" target="_blank">Report an Issue</a> &middot;
-  <a href="https://pypi.org/project/signalwire-agents/" target="_blank">PyPI</a>
+  <a href="https://pypi.org/project/signalwire/" target="_blank">PyPI</a>
 </p>
 
 <a href="https://discord.com/invite/F2WNYTNjuF" target="_blank"><img src="https://img.shields.io/badge/Discord%20Community-5865F2" alt="Discord" /></a>
 <a href="LICENSE"><img src="https://img.shields.io/badge/MIT-License-blue" alt="MIT License" /></a>
-<a href="https://github.com/signalwire/signalwire-agents" target="_blank"><img src="https://img.shields.io/github/stars/signalwire/signalwire-agents" alt="GitHub Stars" /></a>
+<a href="https://github.com/signalwire/signalwire-python" target="_blank"><img src="https://img.shields.io/github/stars/signalwire/signalwire-python" alt="GitHub Stars" /></a>
 
 </div>
 
 ---
 
-## Quick Start
+## What's in this SDK
+
+| Capability | What it does | Quick link |
+|-----------|-------------|------------|
+| **AI Agents** | Build voice agents that handle calls autonomously -- the platform runs the AI pipeline, your code defines the persona, tools, and call flow | [Agent Guide](#ai-agents) |
+| **RELAY Client** | Control live calls and SMS/MMS in real time over WebSocket -- answer, play, record, collect DTMF, conference, transfer, and more | [RELAY docs](relay/README.md) |
+| **REST Client** | Manage SignalWire resources over HTTP -- phone numbers, SIP endpoints, Fabric AI agents, video rooms, messaging, and 18+ API namespaces | [REST docs](rest/README.md) |
 
 ```bash
-pip install signalwire-agents
+pip install signalwire
 ```
+
+---
+
+## AI Agents
+
+Each agent is a self-contained microservice that generates [SWML](docs/swml_service_guide.md) (SignalWire Markup Language) and handles [SWAIG](docs/swaig_reference.md) (SignalWire AI Gateway) tool calls. The SignalWire platform runs the entire AI pipeline (STT, LLM, TTS) -- your agent just defines the behavior.
 
 ```python
 from signalwire import AgentBase
@@ -39,7 +51,7 @@ class MyAgent(AgentBase):
         self.add_language(name="English", code="en-US", voice="inworld.Mark")
         self.prompt_add_section("Role", body="You are a helpful assistant.")
 
-    @AgentBase.tool("Get the current time")
+    @AgentBase.tool(name="get_time")
     def get_time(self):
         """Get the current time"""
         from datetime import datetime
@@ -58,14 +70,13 @@ swaig-test my_agent.py --dump-swml
 swaig-test my_agent.py --exec get_time
 ```
 
-## Features
+### Agent Features
 
-- **Self-contained agents** -- each agent is both a web application and an AI persona
 - **Prompt Object Model (POM)** -- structured prompt composition via `prompt_add_section()`
-- **SWAIG tools** -- [SWAIG (SignalWire AI Gateway)](docs/swaig_reference.md) is the platform's AI tool-calling system with native access to the media stack; define functions with `@AgentBase.tool()` decorators and the AI can invoke them mid-call
+- **SWAIG tools** -- define functions with `@AgentBase.tool()` that the AI calls mid-conversation, with native access to the call's media stack
 - **Skills system** -- add capabilities with one-liners: `agent.add_skill("datetime")`
 - **Contexts and steps** -- structured multi-step workflows with navigation control
-- **DataMap tools** -- define tools that execute on SignalWire's servers, calling REST APIs without needing your own webhook endpoints
+- **DataMap tools** -- tools that execute on SignalWire's servers, calling REST APIs without your own webhook
 - **Dynamic configuration** -- per-request agent customization for multi-tenant deployments
 - **Call flow control** -- pre-answer, post-answer, and post-AI verb insertion
 - **Prefab agents** -- ready-to-use archetypes (InfoGatherer, Survey, FAQ, Receptionist, Concierge)
@@ -73,25 +84,12 @@ swaig-test my_agent.py --exec get_time
 - **Local search** -- offline document search with vector similarity and keyword matching
 - **SIP routing** -- route SIP calls to agents based on usernames
 - **Session state** -- persistent conversation state with global data and post-prompt summaries
-- **Security** -- auto-generated basic auth, function-specific tokens, SSL support
-- **Serverless deployment** -- auto-detects Lambda, CGI, Google Cloud Functions, Azure Functions
+- **Security** -- auto-generated basic auth, function-specific HMAC tokens, SSL support
+- **Serverless** -- auto-detects Lambda, CGI, Google Cloud Functions, Azure Functions
 
-## Installation
+### Agent Examples
 
-```bash
-# Core SDK
-pip install signalwire-agents
-
-# With search (pick one based on your needs)
-pip install signalwire-agents[search-queryonly]   # Query pre-built .swsearch files (~400MB)
-pip install signalwire-agents[search]              # Build + query search indexes (~500MB)
-pip install signalwire-agents[search-full]         # + PDF, DOCX, Excel, HTML processing (~600MB)
-pip install signalwire-agents[search-all]          # All search features (~700MB)
-```
-
-## Examples
-
-The [`examples/`](examples/) directory contains 50+ working examples. A few starting points:
+The [`examples/`](examples/) directory contains 50+ working examples:
 
 | Example | What it demonstrates |
 |---------|---------------------|
@@ -101,23 +99,13 @@ The [`examples/`](examples/) directory contains 50+ working examples. A few star
 | [skills_demo.py](examples/skills_demo.py) | Loading built-in skills (datetime, math) |
 | [call_flow_and_actions_demo.py](examples/call_flow_and_actions_demo.py) | Call flow verbs, debug events, FunctionResult actions |
 | [session_and_state_demo.py](examples/session_and_state_demo.py) | on_summary, global data, post-prompt summaries |
-| [swaig_features_agent.py](examples/swaig_features_agent.py) | Type inference, fillers, default webhook URLs |
 | [multi_agent_server.py](examples/multi_agent_server.py) | Multiple agents on one server |
 | [lambda_agent.py](examples/lambda_agent.py) | AWS Lambda deployment with Mangum |
 | [comprehensive_dynamic_agent.py](examples/comprehensive_dynamic_agent.py) | Per-request dynamic configuration, multi-tenant routing |
 
 See [examples/README.md](examples/README.md) for the full list organized by category.
 
-Run any example:
-
-```bash
-python examples/simple_agent.py
-
-# Or test without running a server
-swaig-test examples/simple_agent.py --list-tools
-swaig-test examples/simple_agent.py --dump-swml
-swaig-test examples/simple_agent.py --exec get_weather --location "New York"
-```
+---
 
 ## RELAY Client
 
@@ -145,6 +133,8 @@ client.run()
 
 See the **[RELAY documentation](relay/README.md)** for the full guide, API reference, and examples.
 
+---
+
 ## REST Client
 
 Synchronous REST client for managing SignalWire resources and controlling calls over HTTP. No WebSocket required.
@@ -160,11 +150,26 @@ client.phone_numbers.search(area_code="512")
 client.datasphere.documents.search(query_string="billing policy")
 ```
 
-- Namespaced sub-objects for every API: Fabric (13 resource types), Calling (37 commands), Video, Datasphere, Compat (Twilio-compatible), and more
+- 21 namespaced API surfaces: Fabric (13 resource types), Calling (37 commands), Video, Datasphere, Compat (Twilio-compatible), Phone Numbers, SIP, Queues, Recordings, and more
 - Shared `requests.Session` for connection pooling
 - Dict returns -- raw JSON, no wrapper objects
 
 See the **[REST documentation](rest/README.md)** for the full guide, API reference, and examples.
+
+---
+
+## Installation
+
+```bash
+# Core SDK (agents, RELAY, REST)
+pip install signalwire
+
+# With search (pick one based on your needs)
+pip install signalwire[search-queryonly]   # Query pre-built .swsearch files (~400MB)
+pip install signalwire[search]              # Build + query search indexes (~500MB)
+pip install signalwire[search-full]         # + PDF, DOCX, Excel, HTML processing (~600MB)
+pip install signalwire[search-all]          # All search features (~700MB)
+```
 
 ## Documentation
 
@@ -176,7 +181,7 @@ Guides are also available in the [`docs/`](docs/) directory:
 
 - [Agent Guide](docs/agent_guide.md) -- creating agents, prompt configuration, dynamic setup
 - [Architecture](docs/architecture.md) -- SDK architecture and core concepts
-- [SDK Features](docs/sdk_features.md) -- feature overview, SDK vs raw SWML (SignalWire Markup Language) comparison
+- [SDK Features](docs/sdk_features.md) -- feature overview, SDK vs raw SWML comparison
 
 ### Core Features
 
@@ -184,7 +189,7 @@ Guides are also available in the [`docs/`](docs/) directory:
 - [Contexts and Steps](docs/contexts_guide.md) -- structured workflows, navigation, gather mode
 - [DataMap Guide](docs/datamap_guide.md) -- serverless API tools without webhooks
 - [LLM Parameters](docs/llm_parameters.md) -- temperature, top_p, barge confidence tuning
-- [SWML Service Guide](docs/swml_service_guide.md) -- low-level construction of SWML documents (the JSON format that defines agent behavior during calls)
+- [SWML Service Guide](docs/swml_service_guide.md) -- low-level construction of SWML documents
 
 ### Skills and Extensions
 
@@ -220,15 +225,19 @@ Guides are also available in the [`docs/`](docs/) directory:
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `SWML_BASIC_AUTH_USER` | Basic auth username (default: auto-generated) |
-| `SWML_BASIC_AUTH_PASSWORD` | Basic auth password (default: auto-generated) |
-| `SWML_PROXY_URL_BASE` | Base URL when behind a reverse proxy |
-| `SWML_SSL_ENABLED` | Enable HTTPS (`true`, `1`, `yes`) |
-| `SWML_SSL_CERT_PATH` | Path to SSL certificate |
-| `SWML_SSL_KEY_PATH` | Path to SSL private key |
-| `SWML_DOMAIN` | Domain for SSL and external URLs |
+| Variable | Used by | Description |
+|----------|---------|-------------|
+| `SIGNALWIRE_PROJECT_ID` | RELAY, REST | Project identifier |
+| `SIGNALWIRE_API_TOKEN` | RELAY, REST | API token |
+| `SIGNALWIRE_SPACE` | RELAY, REST | Space hostname (e.g. `example.signalwire.com`) |
+| `SWML_BASIC_AUTH_USER` | Agents | Basic auth username (default: auto-generated) |
+| `SWML_BASIC_AUTH_PASSWORD` | Agents | Basic auth password (default: auto-generated) |
+| `SWML_PROXY_URL_BASE` | Agents | Base URL when behind a reverse proxy |
+| `SWML_SSL_ENABLED` | Agents | Enable HTTPS (`true`, `1`, `yes`) |
+| `SWML_SSL_CERT_PATH` | Agents | Path to SSL certificate |
+| `SWML_SSL_KEY_PATH` | Agents | Path to SSL private key |
+| `SIGNALWIRE_LOG_LEVEL` | All | Logging level (`debug`, `info`, `warn`, `error`) |
+| `SIGNALWIRE_LOG_MODE` | All | Set to `off` to suppress all logging |
 
 ## Testing
 
