@@ -51,14 +51,14 @@ jobs:
           sed -i "s/^version = \".*\"/version = \"$DEV_VERSION\"/" pyproject.toml
 
           # Update __init__.py
-          sed -i "s/__version__ = \".*\"/__version__ = \"$DEV_VERSION\"/" signalwire/__init__.py
+          sed -i "s/__version__ = \".*\"/__version__ = \"$DEV_VERSION\"/" signalwire/signalwire/__init__.py
 
           # Update agent_server.py
-          sed -i "s/version=\"[^\"]*\"/version=\"$DEV_VERSION\"/" signalwire/agent_server.py
+          sed -i "s/version=\"[^\"]*\"/version=\"$DEV_VERSION\"/" signalwire/signalwire/agent_server.py
 
           echo "Updated version to $DEV_VERSION"
           grep "version" pyproject.toml | head -1
-          grep "__version__" signalwire/__init__.py
+          grep "__version__" signalwire/signalwire/__init__.py
 
       - name: Build package
         run: python -m build
