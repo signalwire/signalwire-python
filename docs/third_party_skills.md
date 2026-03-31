@@ -19,8 +19,8 @@ Third-party skills follow the same structure as built-in skills. Here's a minima
 
 ```python
 # my_weather_skill/skill.py
-from signalwire_agents.core.skill_base import SkillBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.skill_base import SkillBase
+from signalwire.core.function_result import FunctionResult
 from typing import Dict, Any, List
 
 class WeatherSkill(SkillBase):
@@ -98,11 +98,11 @@ class WeatherSkill(SkillBase):
         location = args.get('location', '').strip()
         
         if not location:
-            return SwaigFunctionResult("Please provide a location")
+            return FunctionResult("Please provide a location")
         
         # Implementation would call weather API here
         # This is just an example
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"The weather in {location} is sunny and 22°{self.units[0].upper()}"
         )
 ```
@@ -114,7 +114,7 @@ class WeatherSkill(SkillBase):
 Register individual skill classes programmatically:
 
 ```python
-from signalwire_agents import AgentBase, register_skill
+from signalwire import AgentBase, register_skill
 from my_weather_skill import WeatherSkill
 
 # Register the skill globally
@@ -137,7 +137,7 @@ class MyAgent(AgentBase):
 Register directories containing multiple skills:
 
 ```python
-from signalwire_agents import add_skill_directory
+from signalwire import add_skill_directory
 
 # Add a directory of custom skills
 add_skill_directory('/opt/custom_skills')
@@ -173,7 +173,7 @@ setup(
         "requests",
     ],
     entry_points={
-        'signalwire_agents.skills': [
+        'signalwire.skills': [
             'weather = my_skills.weather:WeatherSkill',
             'stock = my_skills.stock:StockMarketSkill',
             'translate = my_skills.translate:TranslationSkill',
@@ -235,7 +235,7 @@ my_skills_directory/
 Third-party skills are fully integrated with the SDK's discovery system:
 
 ```python
-from signalwire_agents import list_skills_with_params
+from signalwire import list_skills_with_params
 
 # Get all skills including third-party ones
 all_skills = list_skills_with_params()
@@ -405,7 +405,7 @@ Test your skills before distribution:
 ```python
 # test_my_skill.py
 import unittest
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 from my_weather_skill import WeatherSkill
 
 class TestWeatherSkill(unittest.TestCase):
@@ -414,7 +414,7 @@ class TestWeatherSkill(unittest.TestCase):
         
     def test_skill_registration(self):
         # Test direct registration
-        from signalwire_agents import register_skill
+        from signalwire import register_skill
         register_skill(WeatherSkill)
         
         # Test adding skill
@@ -464,7 +464,7 @@ Debug environment variable loading:
 import os
 print(f"Skill paths: {os.environ.get('SIGNALWIRE_SKILL_PATHS', 'Not set')}")
 
-from signalwire_agents.skills.registry import skill_registry
+from signalwire.skills.registry import skill_registry
 sources = skill_registry.list_all_skill_sources()
 print(f"External skills: {sources['external_paths']}")
 ```
@@ -508,7 +508,7 @@ setup(
         "requests>=2.25.0",
     ],
     entry_points={
-        'signalwire_agents.skills': [
+        'signalwire.skills': [
             'weather = my_signalwire_skills.weather.skill:WeatherSkill',
             'translate = my_signalwire_skills.translation.skill:TranslationSkill',
         ]
@@ -524,7 +524,7 @@ pip install git+https://github.com/yourname/my-signalwire-skills.git
 ```
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 agent = AgentBase(name="my-agent")
 agent.add_skill("weather", {"api_key": "..."})

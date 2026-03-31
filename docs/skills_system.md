@@ -7,7 +7,7 @@ The SignalWire Agents SDK now includes a modular skills system that lets you add
 Instead of manually implementing every agent capability, you can now:
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 # Create an agent
 agent = AgentBase("My Assistant")
@@ -221,7 +221,7 @@ agent.add_skill("swml_transfer", {
 
 ### Basic Usage
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 # Create agent and add skills
 agent = AgentBase("Assistant", route="/assistant")
@@ -235,7 +235,7 @@ agent.run()
 
 ### Skills with Custom Parameters
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 # Create agent
 agent = AgentBase("Research Assistant", route="/research")
@@ -277,7 +277,7 @@ agent.add_skill("web_search", {
 
 ### Check Available Skills
 ```python
-from signalwire_agents.skills.registry import skill_registry
+from signalwire.skills.registry import skill_registry
 
 # List all discovered skills
 for skill in skill_registry.list_skills():
@@ -311,9 +311,9 @@ if agent.has_skill("datetime"):
 Create a new skill by extending `SkillBase` with parameter support:
 
 ```python
-# signalwire_agents/skills/my_skill/skill.py
-from signalwire_agents.core.skill_base import SkillBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+# signalwire/skills/my_skill/skill.py
+from signalwire.core.skill_base import SkillBase
+from signalwire.core.function_result import FunctionResult
 
 class MyCustomSkill(SkillBase):
     SKILL_NAME = "my_skill"
@@ -351,7 +351,7 @@ class MyCustomSkill(SkillBase):
     def _my_handler(self, args, raw_data):
         """Handle the tool call using configured parameters"""
         # Use self.max_items, self.timeout, self.retry_count in your logic
-        return SwaigFunctionResult(f"Processed with max_items={self.max_items}")
+        return FunctionResult(f"Processed with max_items={self.max_items}")
         
     def get_hints(self):
         """Speech recognition hints"""
@@ -402,8 +402,8 @@ Test the skills system with parameters:
 
 ```bash
 python3 -c "
-from signalwire_agents import AgentBase
-from signalwire_agents.skills.registry import skill_registry
+from signalwire import AgentBase
+from signalwire.skills.registry import skill_registry
 
 # Show discovered skills
 print('Available skills:', [s['name'] for s in skill_registry.list_skills()])

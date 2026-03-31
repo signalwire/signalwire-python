@@ -12,7 +12,7 @@ These features are independent and can be used separately or together.
 Use `add_mcp_server()` to connect your agent to remote MCP servers. Tools are discovered at call start via the MCP protocol and added to the AI's tool list alongside your `@tool` functions.
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class MyAgent(AgentBase):
     def __init__(self):
@@ -64,8 +64,8 @@ Tools from all servers are merged into one list. If an MCP tool has the same nam
 Use `enable_mcp_server()` to add an MCP endpoint at `/mcp` on your agent's server. Any MCP client can connect and use your `@tool` functions.
 
 ```python
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import FunctionResult
 
 class MyAgent(AgentBase):
     def __init__(self):
@@ -75,7 +75,7 @@ class MyAgent(AgentBase):
     @AgentBase.tool("get_weather", description="Get weather for a location")
     def get_weather(self, args, raw_data):
         location = args.get("location", "unknown")
-        return SwaigFunctionResult(f"72F sunny in {location}")
+        return FunctionResult(f"72F sunny in {location}")
 ```
 
 The `/mcp` endpoint handles the full MCP protocol:
@@ -121,7 +121,7 @@ class MyAgent(AgentBase):
     @AgentBase.tool("transfer_call", description="Transfer the caller")
     def transfer_call(self, args, raw_data):
         # This tool is available both as MCP AND as SWAIG webhook
-        return SwaigFunctionResult("Transferring now.")
+        return FunctionResult("Transferring now.")
 ```
 
 In this setup:

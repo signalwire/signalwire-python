@@ -1,6 +1,6 @@
-# SwaigFunctionResult Methods Reference
+# FunctionResult Methods Reference
 
-SWAIG (SignalWire AI Gateway) is the platform's AI tool-calling system -- it connects the AI's decisions to actions like call transfers, SMS, recordings, and API calls, with native access to the media stack. This document provides a complete reference for all methods available in the `SwaigFunctionResult` class. These methods provide convenient abstractions for SWAIG actions, eliminating the need to manually construct action JSON objects.
+SWAIG (SignalWire AI Gateway) is the platform's AI tool-calling system -- it connects the AI's decisions to actions like call transfers, SMS, recordings, and API calls, with native access to the media stack. This document provides a complete reference for all methods available in the `FunctionResult` class. These methods provide convenient abstractions for SWAIG actions, eliminating the need to manually construct action JSON objects.
 
 ## Core Methods
 
@@ -10,8 +10,8 @@ SWAIG (SignalWire AI Gateway) is the platform's AI tool-calling system -- it con
 Creates a new result object with optional response text and post-processing behavior.
 
 ```python
-result = SwaigFunctionResult("Hello, I'll help you with that")
-result = SwaigFunctionResult("Processing request...", post_process=True)
+result = FunctionResult("Hello, I'll help you with that")
+result = FunctionResult("Processing request...", post_process=True)
 ```
 
 #### `set_response(response)`
@@ -112,19 +112,19 @@ result.pay(
 )
 
 # Advanced payment with custom prompts
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.function_result import FunctionResult
 
 # Create custom prompts
 welcome_actions = [
-    SwaigFunctionResult.create_payment_action("Say", "Welcome to our payment system"),
-    SwaigFunctionResult.create_payment_action("Say", "Please enter your credit card number")
+    FunctionResult.create_payment_action("Say", "Welcome to our payment system"),
+    FunctionResult.create_payment_action("Say", "Please enter your credit card number")
 ]
-card_prompt = SwaigFunctionResult.create_payment_prompt("payment-card-number", welcome_actions)
+card_prompt = FunctionResult.create_payment_prompt("payment-card-number", welcome_actions)
 
 error_actions = [
-    SwaigFunctionResult.create_payment_action("Say", "Invalid card number, please try again")
+    FunctionResult.create_payment_action("Say", "Invalid card number, please try again")
 ]
-error_prompt = SwaigFunctionResult.create_payment_prompt(
+error_prompt = FunctionResult.create_payment_prompt(
     "payment-card-number", 
     error_actions, 
     error_type="invalid-card-number timeout"
@@ -132,8 +132,8 @@ error_prompt = SwaigFunctionResult.create_payment_prompt(
 
 # Create payment parameters
 params = [
-    SwaigFunctionResult.create_payment_parameter("customer_id", "12345"),
-    SwaigFunctionResult.create_payment_parameter("order_id", "ORD-789")
+    FunctionResult.create_payment_parameter("customer_id", "12345"),
+    FunctionResult.create_payment_parameter("order_id", "ORD-789")
 ]
 
 # Full payment configuration
@@ -185,17 +185,17 @@ result.pay(
 **Helper Methods for Payment Setup:**
 ```python
 # Create payment action
-action = SwaigFunctionResult.create_payment_action("Say", "Enter card number")
+action = FunctionResult.create_payment_action("Say", "Enter card number")
 
 # Create payment prompt
-prompt = SwaigFunctionResult.create_payment_prompt(
+prompt = FunctionResult.create_payment_prompt(
     "payment-card-number", 
     [action], 
     error_type="invalid-card-number"
 )
 
 # Create payment parameter
-param = SwaigFunctionResult.create_payment_parameter("customer_id", "12345")
+param = FunctionResult.create_payment_parameter("customer_id", "12345")
 ```
 
 **Variables Set:**
@@ -622,18 +622,18 @@ When called with a string, the tool_call/tool_result pair is replaced with an as
 
 ```python
 # Remove entirely — LLM won't see this function was called
-result = SwaigFunctionResult("Done.")
+result = FunctionResult("Done.")
 result.replace_in_history()
 
 # Replace with a friendly assistant message instead of tool artifacts
-result = SwaigFunctionResult("Profile saved.")
+result = FunctionResult("Profile saved.")
 result.replace_in_history("I've saved your profile information.")
 
 # Practical example: data collection function that shouldn't clutter history
 @agent.tool(name="save_answer", description="Save the user's answer")
 def save_answer(args, raw_data):
     answer = args.get("answer")
-    result = SwaigFunctionResult(f"Answer recorded: {answer}")
+    result = FunctionResult(f"Answer recorded: {answer}")
     result.replace_in_history()  # Keep history clean
     return result
 ```
@@ -738,13 +738,13 @@ result_dict = result.to_dict()
 All methods return `self` to enable fluent method chaining:
 
 ```python
-result = SwaigFunctionResult("Processing your request", post_process=True) \
+result = FunctionResult("Processing your request", post_process=True) \
     .update_global_data({"status": "processing"}) \
     .play_background_file("processing.wav", wait=True) \
     .set_end_of_speech_timeout(2500)
 
 # Complex chaining example
-result = SwaigFunctionResult("Let me transfer you to billing") \
+result = FunctionResult("Let me transfer you to billing") \
     .set_metadata({"transfer_reason": "billing_inquiry"}) \
     .update_global_data({"last_action": "transfer_to_billing"}) \
     .connect("+15551234567", final=True)
@@ -872,9 +872,9 @@ DataMap processing supports template expansion with access to:
 
 ## Related Documentation
 
-- **[API Reference](api_reference.md)** - Complete AgentBase and SwaigFunctionResult API reference
+- **[API Reference](api_reference.md)** - Complete AgentBase and FunctionResult API reference
 - **[Contexts Guide](contexts_guide.md)** - Using `swml_change_context()` and `swml_change_step()`
-- **[DataMap Guide](datamap_guide.md)** - Using SwaigFunctionResult with DataMap outputs
+- **[DataMap Guide](datamap_guide.md)** - Using FunctionResult with DataMap outputs
 - **[Agent Guide](agent_guide.md)** - General agent development guide
 
 ### Example Files

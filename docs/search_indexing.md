@@ -71,7 +71,7 @@ With pgvector, `--output` specifies the collection name, not a filename.
 ### Python API (IndexBuilder)
 
 ```python
-from signalwire_agents.search import IndexBuilder
+from signalwire.search import IndexBuilder
 
 # Create index builder
 builder = IndexBuilder(
@@ -408,7 +408,7 @@ Code blocks are detected and treated as atomic units -- they are never split acr
 
 Here's how to create an agent:
 
-    from signalwire_agents import AgentBase
+    from signalwire import AgentBase
 
     class MyAgent(AgentBase):
         def __init__(self):
@@ -681,7 +681,7 @@ sw-search ./critical_chunks.json ./docs/other/ \
 {
   "chunks": [
     {
-      "content": "Here's how to authenticate with the API:\n\n```python\nfrom signalwire_agents import AgentBase\n\nagent = AgentBase(\n    name=\"MyAgent\",\n    api_key=\"your_key\"\n)\n```\n\nThis creates an authenticated agent instance.",
+      "content": "Here's how to authenticate with the API:\n\n```python\nfrom signalwire import AgentBase\n\nagent = AgentBase(\n    name=\"MyAgent\",\n    api_key=\"your_key\"\n)\n```\n\nThis creates an authenticated agent instance.",
       "metadata": {
         "chunk_id": "auth_example_001",
         "filename": "authentication.md",
@@ -1551,7 +1551,7 @@ sw-search validate \
 **Validate using Python API:**
 
 ```python
-from signalwire_agents.search import SearchEngine
+from signalwire.search import SearchEngine
 engine = SearchEngine('docs.swsearch')
 print(f'Index stats: {engine.get_stats()}')
 ```

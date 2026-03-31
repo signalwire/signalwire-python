@@ -44,7 +44,7 @@ Try these requests to see the differences:
    curl "http://localhost:3000/debug?vip=true&department=sales&customer_id=CUST456"
 """
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class SimpleDynamicEnhanced(AgentBase):
     def __init__(self):

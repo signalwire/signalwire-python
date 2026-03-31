@@ -29,7 +29,7 @@ import types
 import structlog
 
 # Import the SWMLService class
-from signalwire_agents.core.swml_service import SWMLService
+from signalwire.core.swml_service import SWMLService
 
 # Create structured logger for this example
 logger = structlog.get_logger("auto_vivified")

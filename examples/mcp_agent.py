@@ -19,8 +19,8 @@ Usage:
     - Connect Claude Desktop to http://your-server:3000/agent/mcp
 """
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import FunctionResult
 
 
 class MCPAgent(AgentBase):
@@ -98,7 +98,7 @@ class MCPAgent(AgentBase):
     def get_weather(self, args, raw_data):
         """Look up weather — available via both SWAIG and MCP"""
         location = args.get("location", "unknown")
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"Currently 72°F and sunny in {location}."
         )
 
@@ -119,7 +119,7 @@ class MCPAgent(AgentBase):
     def create_ticket(self, args, raw_data):
         """Create a support ticket — available via both SWAIG and MCP"""
         subject = args.get("subject", "No subject")
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"Ticket created: '{subject}'. Reference number: TK-12345."
         )
 

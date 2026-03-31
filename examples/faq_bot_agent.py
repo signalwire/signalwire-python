@@ -28,8 +28,8 @@ from typing import Dict, List, Optional
 # Add the parent directory to the path so we can import the package
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import FunctionResult
 
 
 class FAQBotAgent(AgentBase):

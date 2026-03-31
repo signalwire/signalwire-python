@@ -48,7 +48,7 @@ Query Parameters:
 - customer_id: <string> (customer-specific data)
 """
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class ComprehensiveDynamicAgent(AgentBase):
     def __init__(self, route="/dynamic"):

@@ -42,7 +42,7 @@ pip install signalwire-agents
 ## Quick Start
 
 ```python
-from signalwire_agents import WebService
+from signalwire import WebService
 
 # Create a service to serve files
 service = WebService(
@@ -266,7 +266,7 @@ Serve files from mounted directories
 ### Basic File Serving
 
 ```python
-from signalwire_agents import WebService
+from signalwire import WebService
 
 # Serve documentation
 service = WebService(
@@ -378,7 +378,7 @@ Run WebService as a dedicated static file server:
 
 ```python
 # web_server.py
-from signalwire_agents import WebService
+from signalwire import WebService
 
 if __name__ == "__main__":
     service = WebService(
@@ -398,7 +398,7 @@ Run WebService alongside your AI agents on different ports:
 
 ```python
 # main.py
-from signalwire_agents import AgentBase, WebService
+from signalwire import AgentBase, WebService
 import threading
 
 # Start WebService in background
@@ -440,7 +440,7 @@ COPY ./web_config.json /app/web_config.json
 EXPOSE 8002
 
 # Run WebService
-CMD ["python", "-c", "from signalwire_agents import WebService; WebService(config_file='web_config.json').start()"]
+CMD ["python", "-c", "from signalwire import WebService; WebService(config_file='web_config.json').start()"]
 ```
 
 ### Systemd Service
@@ -458,7 +458,7 @@ User=www-data
 WorkingDirectory=/opt/signalwire
 Environment="SWML_SSL_CERT=/etc/ssl/certs/server.crt"
 Environment="SWML_SSL_KEY=/etc/ssl/private/server.key"
-ExecStart=/usr/bin/python3 -c "from signalwire_agents import WebService; WebService(directories={'/': '/var/www/html'}).start()"
+ExecStart=/usr/bin/python3 -c "from signalwire import WebService; WebService(directories={'/': '/var/www/html'}).start()"
 Restart=always
 
 [Install]
@@ -628,7 +628,7 @@ Remove a directory from being served.
 WebService complements AI agents by providing static file serving:
 
 ```python
-from signalwire_agents import AgentBase, WebService
+from signalwire import AgentBase, WebService
 
 class DocumentationAgent(AgentBase):
     def __init__(self):
@@ -649,7 +649,7 @@ class DocumentationAgent(AgentBase):
         )
         def get_doc_link(self, args, raw_data):
             doc_name = args.get('doc_name')
-            return SwaigFunctionResult(
+            return FunctionResult(
                 f"Documentation available at: https://example.com:8002/docs/{doc_name}.html"
             )
 

@@ -17,7 +17,7 @@ To create a collection:
 """
 
 import os
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class PGVectorSearchAgent(AgentBase):
     """Agent that uses pgvector for document search"""

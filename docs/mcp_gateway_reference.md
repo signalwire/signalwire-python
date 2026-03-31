@@ -28,7 +28,7 @@ mcp-gateway -c config.json
    - Handles session lifecycle per SignalWire call
    - Translates between SWAIG and MCP protocols
 
-2. **MCP Gateway Skill** (`signalwire_agents/skills/mcp_gateway/`)
+2. **MCP Gateway Skill** (`signalwire/skills/mcp_gateway/`)
    - SignalWire skill that connects agents to the gateway
    - Dynamically creates SWAIG functions from MCP tools
    - Manages session lifecycle using call_id
@@ -79,7 +79,7 @@ The gateway uses a custom envelope format for routing and session management:
 ## Directory Structure
 
 ```
-signalwire_agents/mcp_gateway/    # Core gateway package (installed with SDK)
+signalwire/mcp_gateway/    # Core gateway package (installed with SDK)
 ├── __init__.py                   # Package exports
 ├── gateway_service.py            # Main HTTP/HTTPS server
 ├── mcp_manager.py                # MCP server lifecycle management
@@ -101,7 +101,7 @@ mcp_gateway/                      # Configuration and deployment files
 └── examples/
     └── generate_cert.sh          # Generate self-signed certificate
 
-signalwire_agents/skills/mcp_gateway/
+signalwire/skills/mcp_gateway/
 ├── __init__.py
 ├── skill.py                      # MCP gateway skill
 └── README.md                     # Skill documentation
@@ -447,7 +447,7 @@ swaig-test test/test_agent.py --dump-swml
 
 ```python
 # test/test_agent.py
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class TestMCPAgent(AgentBase):
     def __init__(self):

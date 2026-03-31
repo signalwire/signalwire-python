@@ -273,7 +273,7 @@ After (Option 3 - Mix config and env vars):
 ### Loading Configuration
 
 ```python
-from signalwire_agents.core.config_loader import ConfigLoader
+from signalwire.core.config_loader import ConfigLoader
 
 # Load config
 loader = ConfigLoader(["my_config.json"])
@@ -291,7 +291,7 @@ if loader.has_config():
 
 ```python
 # SWML Service
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class MyAgent(AgentBase):
     def __init__(self):
@@ -299,7 +299,7 @@ class MyAgent(AgentBase):
         super().__init__(name="my-agent", config_file="agent_config.json")
 
 # Search Service
-from signalwire_agents.search import SearchService
+from signalwire.search import SearchService
 
 service = SearchService(config_file="search_config.json")
 

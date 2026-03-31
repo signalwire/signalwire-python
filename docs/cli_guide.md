@@ -34,7 +34,7 @@ The tool automatically detects function types, provides appropriate execution en
 
 ## Installation
 
-Install as part of the signalwire_agents package:
+Install as part of the signalwire package:
 
 ```bash
 pip install -e .
@@ -1315,7 +1315,7 @@ Arguments: {"expression": "25 * 47"}
 Function description: Perform mathematical calculations and return the result
 
 RESULT:
-SwaigFunctionResult: The result of 25 * 47 is 1175.
+FunctionResult: The result of 25 * 47 is 1175.
 ```
 
 ### DateTime Skill Function

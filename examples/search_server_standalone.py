@@ -87,7 +87,7 @@ def main():
     
     # Check if search dependencies are available
     try:
-        from signalwire_agents.search import SearchService, IndexBuilder
+        from signalwire.search import SearchService, IndexBuilder
         logger.info("Search dependencies are available")
     except ImportError as e:
         logger.error("Search dependencies not available")

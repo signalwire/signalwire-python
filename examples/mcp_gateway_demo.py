@@ -16,7 +16,7 @@ Environment variables (or pass directly):
 """
 
 import os
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 
 class MCPGatewayAgent(AgentBase):

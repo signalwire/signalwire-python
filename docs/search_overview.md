@@ -179,7 +179,7 @@ pip install "signalwire-agents[search,pgvector]"
 
 ```python
 try:
-    from signalwire_agents.search import IndexBuilder, SearchEngine
+    from signalwire.search import IndexBuilder, SearchEngine
     print("Search functionality is available")
 except ImportError as e:
     print(f"Search not available: {e}")
@@ -419,7 +419,7 @@ Add the `native_vector_search` skill to any agent to enable search:
 ```python
 #!/usr/bin/env python3
 import os
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class DocsAgent(AgentBase):
     def __init__(self):

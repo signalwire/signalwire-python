@@ -77,7 +77,7 @@ Developer writes Pipeline
 
 **SignalWire - Minimal Agent:**
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class MyAgent(AgentBase):
     def __init__(self):

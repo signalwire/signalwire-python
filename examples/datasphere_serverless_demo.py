@@ -27,7 +27,7 @@ To use this demo, you'll need:
 """
 
 import os
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 def main():
     # Create an agent
@@ -130,7 +130,7 @@ def main():
     
     # Show available skills from registry
     try:
-        from signalwire_agents.skills.registry import skill_registry
+        from signalwire.skills.registry import skill_registry
         available_skills = skill_registry.list_skills()
         print(f"\nAvailable skills in registry:")
         for skill in available_skills:

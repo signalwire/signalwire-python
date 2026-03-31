@@ -6,7 +6,7 @@ This example demonstrates how to use the response_format_callback parameter
 to customize how search results are presented to users.
 """
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 
 def basic_formatter(response, agent, query, results, **kwargs):

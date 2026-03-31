@@ -2292,7 +2292,7 @@ For common patterns, convenience functions simplify DataMap creation:
 #### Simple API Tool
 
 ```python
-from signalwire_agents.core.data_map import create_simple_api_tool
+from signalwire.core.data_map import create_simple_api_tool
 
 weather = create_simple_api_tool(
     name='get_weather',
@@ -2313,14 +2313,14 @@ weather = create_simple_api_tool(
 #### Expression Tool
 
 ```python
-from signalwire_agents.core.data_map import create_expression_tool
+from signalwire.core.data_map import create_expression_tool
 
 control = create_expression_tool(
     name='media_control',
     patterns={
-        r'start|play|begin': SwaigFunctionResult().add_action('start', True),
-        r'stop|end|pause': SwaigFunctionResult().add_action('stop', True),
-        r'next|skip': SwaigFunctionResult().add_action('next', True)
+        r'start|play|begin': FunctionResult().add_action('start', True),
+        r'stop|end|pause': FunctionResult().add_action('stop', True),
+        r'next|skip': FunctionResult().add_action('next', True)
     },
     parameters={
         'command': {'type': 'string', 'description': 'Control command'}

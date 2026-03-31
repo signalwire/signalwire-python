@@ -26,7 +26,7 @@ import os
 import sys
 import json
 import argparse
-from signalwire_agents.prefabs import InfoGathererAgent
+from signalwire.prefabs import InfoGathererAgent
 
 # Question sets for different scenarios
 QUESTION_SETS = {

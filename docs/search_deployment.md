@@ -311,7 +311,7 @@ pip install signalwire-agents[search-queryonly]
 **Verification:**
 
 ```python
-from signalwire_agents.search import check_dependencies
+from signalwire.search import check_dependencies
 
 check_dependencies()
 # Output:
@@ -526,7 +526,7 @@ services:
     depends_on:
       - postgres
     command: >
-      python -m signalwire_agents.search.search_service
+      python -m signalwire.search.search_service
       --backend pgvector
       --connection-string "$${PGVECTOR_CONNECTION}"
       --port 8001
@@ -622,7 +622,7 @@ sw-search search docs_collection "configuration" \
 **Direct connection mode** -- the agent connects directly to PostgreSQL:
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 import os
 
 class MyAgent(AgentBase):
@@ -663,7 +663,7 @@ class MyAgent(AgentBase):
 First, start the search service:
 
 ```bash
-python -m signalwire_agents.search.search_service \
+python -m signalwire.search.search_service \
     --backend pgvector \
     --connection-string "postgresql://signalwire:signalwire123@localhost:5432/knowledge" \
     --port 8001
@@ -703,7 +703,7 @@ The search service provides an HTTP API for searching across document collection
 **Basic startup:**
 
 ```bash
-python -m signalwire_agents.search.search_service \
+python -m signalwire.search.search_service \
     --backend pgvector \
     --connection-string "postgresql://user:password@localhost:5432/database" \
     --port 8001
@@ -808,7 +808,7 @@ gunicorn -w 4 -k uvicorn.workers.UvicornWorker \
     --timeout 120 \
     --access-logfile - \
     --error-logfile - \
-    "signalwire_agents.search.search_service:create_app(backend='pgvector', connection_string='$PGVECTOR_CONNECTION')"
+    "signalwire.search.search_service:create_app(backend='pgvector', connection_string='$PGVECTOR_CONNECTION')"
 ```
 
 #### systemd Service
@@ -831,7 +831,7 @@ Environment="SEARCH_API_PASSWORD=secure-password"
 ExecStart=/usr/local/bin/gunicorn -w 4 -k uvicorn.workers.UvicornWorker \
     --bind 0.0.0.0:8001 \
     --timeout 120 \
-    "signalwire_agents.search.search_service:create_app(backend='pgvector')"
+    "signalwire.search.search_service:create_app(backend='pgvector')"
 Restart=always
 
 [Install]
@@ -1006,7 +1006,7 @@ sw-search migrate --info ./knowledge.swsearch
 **Step 4: Migrate using the Python API (alternative).**
 
 ```python
-from signalwire_agents.search import SearchIndexMigrator
+from signalwire.search import SearchIndexMigrator
 
 migrator = SearchIndexMigrator(verbose=True)
 
@@ -2117,7 +2117,7 @@ This means developers do not need the full ML stack, local setup is faster, inde
 
 import os
 from pathlib import Path
-from signalwire_agents.search import SearchIndexMigrator
+from signalwire.search import SearchIndexMigrator
 
 DEV_DIR = "./indexes"
 PROD_DB = os.environ["PGVECTOR_CONNECTION"]

@@ -5,7 +5,7 @@ This document provides a comprehensive reference for all public APIs in the Sign
 ## Table of Contents
 
 1. [AgentBase Class](#agentbase-class) - Core agent functionality
-2. [SwaigFunctionResult Class](#swaigfunctionresult-class) - SWAIG (SignalWire AI Gateway) function response handling
+2. [FunctionResult Class](#swaigfunctionresult-class) - SWAIG (SignalWire AI Gateway) function response handling
 3. [DataMap Class](#datamap-class) - Serverless API tools that execute on SignalWire's servers
 4. [Context System](#context-system) - Structured workflows
 5. [State Management](#state-management) - Persistent state
@@ -541,7 +541,7 @@ Define a custom SWAIG function/tool.
 ```python
 def get_weather(args, raw_data):
     location = args.get("location", "Unknown")
-    return SwaigFunctionResult(f"The weather in {location} is sunny and 75°F")
+    return FunctionResult(f"The weather in {location} is sunny and 75°F")
 
 agent.define_tool(
     name="get_weather",
@@ -579,7 +579,7 @@ class MyAgent(AgentBase):
     )
     def get_time(self, args, raw_data):
         import datetime
-        return SwaigFunctionResult(f"Current time: {datetime.datetime.now()}")
+        return FunctionResult(f"Current time: {datetime.datetime.now()}")
 ```
 
 **Usage (type-hinted, schema inferred):**
@@ -593,7 +593,7 @@ class MyAgent(AgentBase):
             city: Name of the city
             units: Temperature units
         """
-        return SwaigFunctionResult(f"Weather in {city}")
+        return FunctionResult(f"Weather in {city}")
 ```
 
 ##### `register_swaig_function`
@@ -632,7 +632,7 @@ Called when a new conversation/call begins.
 def startup_hook(self, args, raw_data):
     call_id = raw_data.get("call_id")
     # Initialize session resources, load user data, etc.
-    return SwaigFunctionResult("Session initialized")
+    return FunctionResult("Session initialized")
 ```
 
 ##### `hangup_hook`
@@ -648,7 +648,7 @@ Called when a conversation/call ends.
 def hangup_hook(self, args, raw_data):
     call_id = raw_data.get("call_id")
     # Clean up resources, save session data, etc.
-    return SwaigFunctionResult("Session ended")
+    return FunctionResult("Session ended")
 ```
 
 **Common Use Cases:**
@@ -1311,7 +1311,7 @@ Override to handle function calls with custom logic.
 - `raw_data` (Optional[Dict[str, Any]]): Raw request data
 
 **Returns:**
-- Any: Function result (typically SwaigFunctionResult)
+- Any: Function result (typically FunctionResult)
 
 **Usage:**
 ```python
@@ -1320,7 +1320,7 @@ class MyAgent(AgentBase):
         if name == "get_weather":
             location = args.get("location")
             # Custom weather logic
-            return SwaigFunctionResult(f"Weather in {location}: Sunny")
+            return FunctionResult(f"Weather in {location}: Sunny")
         return super().on_function_call(name, args, raw_data)
 ```
 
@@ -1415,18 +1415,18 @@ contexts.add_context("main_menu") \
     .allow_functions(["transfer_to_support", "transfer_to_sales"])
 ```
 
-This concludes Part 1 of the API reference covering the AgentBase class. The document will continue with SwaigFunctionResult, DataMap, and other components in subsequent parts.
+This concludes Part 1 of the API reference covering the AgentBase class. The document will continue with FunctionResult, DataMap, and other components in subsequent parts.
 
 ---
 
-## SwaigFunctionResult Class
+## FunctionResult Class
 
-The `SwaigFunctionResult` class is used to create structured responses from SWAIG functions. It handles both natural language responses and structured actions that the agent should execute.
+The `FunctionResult` class is used to create structured responses from SWAIG functions. It handles both natural language responses and structured actions that the agent should execute.
 
 ### Constructor
 
 ```python
-SwaigFunctionResult(
+FunctionResult(
     response: Optional[str] = None, 
     post_process: bool = False
 )
@@ -1443,20 +1443,20 @@ SwaigFunctionResult(
 **Usage:**
 ```python
 # Simple response
-result = SwaigFunctionResult("The weather is sunny and 75°F")
+result = FunctionResult("The weather is sunny and 75°F")
 
 # Response with post-processing enabled
-result = SwaigFunctionResult("I'll transfer you now", post_process=True)
+result = FunctionResult("I'll transfer you now", post_process=True)
 
 # Empty response (actions only)
-result = SwaigFunctionResult()
+result = FunctionResult()
 ```
 
 ### Core Methods
 
 #### Response Configuration
 
-##### `set_response(response: str) -> SwaigFunctionResult`
+##### `set_response(response: str) -> FunctionResult`
 Set or update the natural language response text.
 
 **Parameters:**
@@ -1464,11 +1464,11 @@ Set or update the natural language response text.
 
 **Usage:**
 ```python
-result = SwaigFunctionResult()
+result = FunctionResult()
 result.set_response("I found your order information")
 ```
 
-##### `set_post_process(post_process: bool) -> SwaigFunctionResult`
+##### `set_post_process(post_process: bool) -> FunctionResult`
 Enable or disable post-processing for this result.
 
 **Parameters:**
@@ -1476,13 +1476,13 @@ Enable or disable post-processing for this result.
 
 **Usage:**
 ```python
-result = SwaigFunctionResult("I'll help you with that")
+result = FunctionResult("I'll help you with that")
 result.set_post_process(True)  # Let AI handle follow-up questions first
 ```
 
 #### Action Management
 
-##### `add_action(name: str, data: Any) -> SwaigFunctionResult`
+##### `add_action(name: str, data: Any) -> FunctionResult`
 Add a structured action to execute.
 
 **Parameters:**
@@ -1504,7 +1504,7 @@ result.add_action("set_global_data", {"customer_id": "12345", "status": "verifie
 result.add_action("send_sms", ["+15551234567", "Your order is ready!"])
 ```
 
-##### `add_actions(actions: List[Dict[str, Any]]) -> SwaigFunctionResult`
+##### `add_actions(actions: List[Dict[str, Any]]) -> FunctionResult`
 Add multiple actions at once.
 
 **Parameters:**
@@ -1523,7 +1523,7 @@ result.add_actions([
 
 #### Call Transfer and Connection
 
-##### `connect(destination: str, final: bool = True, from_addr: Optional[str] = None) -> SwaigFunctionResult`
+##### `connect(destination: str, final: bool = True, from_addr: Optional[str] = None) -> FunctionResult`
 Transfer or connect the call to another destination.
 
 **Parameters:**
@@ -1544,11 +1544,11 @@ result.connect("+15551234567", final=True)
 result.connect("support@company.com", final=False, from_addr="+15559876543")
 
 # Transfer with response
-result = SwaigFunctionResult("Transferring you to our sales team")
+result = FunctionResult("Transferring you to our sales team")
 result.connect("sales@company.com")
 ```
 
-##### `swml_transfer(dest: str, ai_response: str) -> SwaigFunctionResult`
+##### `swml_transfer(dest: str, ai_response: str) -> FunctionResult`
 Create a SWML-based transfer with AI response setup.
 
 **Parameters:**
@@ -1563,7 +1563,7 @@ result.swml_transfer(
 )
 ```
 
-##### `sip_refer(to_uri: str) -> SwaigFunctionResult`
+##### `sip_refer(to_uri: str) -> FunctionResult`
 Perform a SIP REFER transfer.
 
 **Parameters:**
@@ -1576,16 +1576,16 @@ result.sip_refer("sip:support@company.com")
 
 #### Call Management
 
-##### `hangup() -> SwaigFunctionResult`
+##### `hangup() -> FunctionResult`
 End the call immediately.
 
 **Usage:**
 ```python
-result = SwaigFunctionResult("Thank you for calling. Goodbye!")
+result = FunctionResult("Thank you for calling. Goodbye!")
 result.hangup()
 ```
 
-##### `hold(timeout: int = 300) -> SwaigFunctionResult`
+##### `hold(timeout: int = 300) -> FunctionResult`
 Put the call on hold.
 
 **Parameters:**
@@ -1593,11 +1593,11 @@ Put the call on hold.
 
 **Usage:**
 ```python
-result = SwaigFunctionResult("Please hold while I look that up")
+result = FunctionResult("Please hold while I look that up")
 result.hold(timeout=60)
 ```
 
-##### `stop() -> SwaigFunctionResult`
+##### `stop() -> FunctionResult`
 Stop current audio playback or recording.
 
 **Usage:**
@@ -1607,7 +1607,7 @@ result.stop()
 
 #### Audio Control
 
-##### `say(text: str) -> SwaigFunctionResult`
+##### `say(text: str) -> FunctionResult`
 Add text for the AI to speak.
 
 **Parameters:**
@@ -1618,7 +1618,7 @@ Add text for the AI to speak.
 result.say("Please wait while I process your request")
 ```
 
-##### `play_background_file(filename: str, wait: bool = False) -> SwaigFunctionResult`
+##### `play_background_file(filename: str, wait: bool = False) -> FunctionResult`
 Play an audio file in the background.
 
 **Parameters:**
@@ -1634,7 +1634,7 @@ result.play_background_file("hold_music.mp3")
 result.play_background_file("important_announcement.wav", wait=True)
 ```
 
-##### `stop_background_file() -> SwaigFunctionResult`
+##### `stop_background_file() -> FunctionResult`
 Stop background audio playback.
 
 **Usage:**
@@ -1644,7 +1644,7 @@ result.stop_background_file()
 
 ### Data Management Actions
 
-##### `set_global_data(data: Dict[str, Any]) -> SwaigFunctionResult`
+##### `set_global_data(data: Dict[str, Any]) -> FunctionResult`
 Set global data for the conversation.
 
 **Parameters:**
@@ -1659,7 +1659,7 @@ result.set_global_data({
 })
 ```
 
-##### `update_global_data(data: Dict[str, Any]) -> SwaigFunctionResult`
+##### `update_global_data(data: Dict[str, Any]) -> FunctionResult`
 Update existing global data (merge with existing).
 
 **Parameters:**
@@ -1673,7 +1673,7 @@ result.update_global_data({
 })
 ```
 
-##### `remove_global_data(keys: Union[str, List[str]]) -> SwaigFunctionResult`
+##### `remove_global_data(keys: Union[str, List[str]]) -> FunctionResult`
 Remove specific keys from global data.
 
 **Parameters:**
@@ -1688,7 +1688,7 @@ result.remove_global_data("temporary_data")
 result.remove_global_data(["temp1", "temp2", "cache_data"])
 ```
 
-##### `set_metadata(data: Dict[str, Any]) -> SwaigFunctionResult`
+##### `set_metadata(data: Dict[str, Any]) -> FunctionResult`
 Set metadata for the conversation.
 
 **Parameters:**
@@ -1703,7 +1703,7 @@ result.set_metadata({
 })
 ```
 
-##### `remove_metadata(keys: Union[str, List[str]]) -> SwaigFunctionResult`
+##### `remove_metadata(keys: Union[str, List[str]]) -> FunctionResult`
 Remove specific metadata keys.
 
 **Parameters:**
@@ -1716,7 +1716,7 @@ result.remove_metadata(["temporary_flag", "debug_info"])
 
 ### AI Behavior Control
 
-##### `set_end_of_speech_timeout(milliseconds: int) -> SwaigFunctionResult`
+##### `set_end_of_speech_timeout(milliseconds: int) -> FunctionResult`
 Adjust how long to wait for speech to end.
 
 **Parameters:**
@@ -1731,7 +1731,7 @@ result.set_end_of_speech_timeout(300)
 result.set_end_of_speech_timeout(2000)
 ```
 
-##### `set_speech_event_timeout(milliseconds: int) -> SwaigFunctionResult`
+##### `set_speech_event_timeout(milliseconds: int) -> FunctionResult`
 Set timeout for speech events.
 
 **Parameters:**
@@ -1742,7 +1742,7 @@ Set timeout for speech events.
 result.set_speech_event_timeout(5000)
 ```
 
-##### `wait_for_user(enabled: Optional[bool] = None, timeout: Optional[int] = None, answer_first: bool = False) -> SwaigFunctionResult`
+##### `wait_for_user(enabled: Optional[bool] = None, timeout: Optional[int] = None, answer_first: bool = False) -> FunctionResult`
 Control whether to wait for user input.
 
 **Parameters:**
@@ -1759,7 +1759,7 @@ result.wait_for_user(enabled=True, timeout=10000)
 result.wait_for_user(enabled=False)
 ```
 
-##### `toggle_functions(function_toggles: List[Dict[str, Any]]) -> SwaigFunctionResult`
+##### `toggle_functions(function_toggles: List[Dict[str, Any]]) -> FunctionResult`
 Enable or disable specific functions.
 
 **Parameters:**
@@ -1774,7 +1774,7 @@ result.toggle_functions([
 ])
 ```
 
-##### `enable_functions_on_timeout(enabled: bool = True) -> SwaigFunctionResult`
+##### `enable_functions_on_timeout(enabled: bool = True) -> FunctionResult`
 Control whether functions are enabled when timeout occurs.
 
 **Parameters:**
@@ -1785,7 +1785,7 @@ Control whether functions are enabled when timeout occurs.
 result.enable_functions_on_timeout(False)  # Disable functions on timeout
 ```
 
-##### `enable_extensive_data(enabled: bool = True) -> SwaigFunctionResult`
+##### `enable_extensive_data(enabled: bool = True) -> FunctionResult`
 Enable extensive data collection.
 
 **Parameters:**
@@ -1796,7 +1796,7 @@ Enable extensive data collection.
 result.enable_extensive_data(True)
 ```
 
-##### `update_settings(settings: Dict[str, Any]) -> SwaigFunctionResult`
+##### `update_settings(settings: Dict[str, Any]) -> FunctionResult`
 Update various AI settings.
 
 **Parameters:**
@@ -1813,7 +1813,7 @@ result.update_settings({
 
 ### Context and Conversation Control
 
-##### `switch_context(system_prompt: Optional[str] = None, user_prompt: Optional[str] = None, consolidate: bool = False, full_reset: bool = False) -> SwaigFunctionResult`
+##### `switch_context(system_prompt: Optional[str] = None, user_prompt: Optional[str] = None, consolidate: bool = False, full_reset: bool = False) -> FunctionResult`
 Switch conversation context or reset the conversation.
 
 **Parameters:**
@@ -1837,7 +1837,7 @@ result.switch_context(full_reset=True)
 result.switch_context(consolidate=True)
 ```
 
-##### `simulate_user_input(text: str) -> SwaigFunctionResult`
+##### `simulate_user_input(text: str) -> FunctionResult`
 Simulate user input for testing or automation.
 
 **Parameters:**
@@ -1850,7 +1850,7 @@ result.simulate_user_input("I need help with my order")
 
 ### Communication Actions
 
-##### `send_sms(to_number: str, from_number: str, body: Optional[str] = None, media: Optional[List[str]] = None, tags: Optional[List[str]] = None, region: Optional[str] = None) -> SwaigFunctionResult`
+##### `send_sms(to_number: str, from_number: str, body: Optional[str] = None, media: Optional[List[str]] = None, tags: Optional[List[str]] = None, region: Optional[str] = None) -> FunctionResult`
 Send an SMS message.
 
 **Parameters:**
@@ -1882,7 +1882,7 @@ result.send_sms(
 
 ### Recording and Media
 
-##### `record_call(control_id: Optional[str] = None, stereo: bool = False, format: str = "wav", direction: str = "both", terminators: Optional[str] = None, beep: bool = False, input_sensitivity: float = 44.0, initial_timeout: float = 0.0, end_silence_timeout: float = 0.0, max_length: Optional[float] = None, status_url: Optional[str] = None) -> SwaigFunctionResult`
+##### `record_call(control_id: Optional[str] = None, stereo: bool = False, format: str = "wav", direction: str = "both", terminators: Optional[str] = None, beep: bool = False, input_sensitivity: float = 44.0, initial_timeout: float = 0.0, end_silence_timeout: float = 0.0, max_length: Optional[float] = None, status_url: Optional[str] = None) -> FunctionResult`
 Start call recording.
 
 **Parameters:**
@@ -1914,7 +1914,7 @@ result.record_call(
 )
 ```
 
-##### `stop_record_call(control_id: Optional[str] = None) -> SwaigFunctionResult`
+##### `stop_record_call(control_id: Optional[str] = None) -> FunctionResult`
 Stop call recording.
 
 **Parameters:**
@@ -1928,7 +1928,7 @@ result.stop_record_call(control_id="customer_call_001")
 
 ### Conference and Room Management
 
-##### `join_room(name: str) -> SwaigFunctionResult`
+##### `join_room(name: str) -> FunctionResult`
 Join a SignalWire room.
 
 **Parameters:**
@@ -1939,7 +1939,7 @@ Join a SignalWire room.
 result.join_room("support_room_1")
 ```
 
-##### `join_conference(name: str, muted: bool = False, beep: str = "true", start_on_enter: bool = True, end_on_exit: bool = False, wait_url: Optional[str] = None, max_participants: int = 250, record: str = "do-not-record", region: Optional[str] = None, trim: str = "trim-silence", coach: Optional[str] = None, status_callback_event: Optional[str] = None, status_callback: Optional[str] = None, status_callback_method: str = "POST", recording_status_callback: Optional[str] = None, recording_status_callback_method: str = "POST", recording_status_callback_event: str = "completed", result: Optional[Any] = None) -> SwaigFunctionResult`
+##### `join_conference(name: str, muted: bool = False, beep: str = "true", start_on_enter: bool = True, end_on_exit: bool = False, wait_url: Optional[str] = None, max_participants: int = 250, record: str = "do-not-record", region: Optional[str] = None, trim: str = "trim-silence", coach: Optional[str] = None, status_callback_event: Optional[str] = None, status_callback: Optional[str] = None, status_callback_method: str = "POST", recording_status_callback: Optional[str] = None, recording_status_callback_method: str = "POST", recording_status_callback_event: str = "completed", result: Optional[Any] = None) -> FunctionResult`
 Join a conference call.
 
 **Parameters:**
@@ -1978,7 +1978,7 @@ result.join_conference(
 
 ### Payment Processing
 
-##### `pay(payment_connector_url: str, input_method: str = "dtmf", status_url: Optional[str] = None, payment_method: str = "credit-card", timeout: int = 5, max_attempts: int = 1, security_code: bool = True, postal_code: Union[bool, str] = True, min_postal_code_length: int = 0, token_type: str = "reusable", charge_amount: Optional[str] = None, currency: str = "usd", language: str = "en-US", voice: str = "woman", description: Optional[str] = None, valid_card_types: str = "visa mastercard amex", parameters: Optional[List[Dict[str, str]]] = None, prompts: Optional[List[Dict[str, Any]]] = None) -> SwaigFunctionResult`
+##### `pay(payment_connector_url: str, input_method: str = "dtmf", status_url: Optional[str] = None, payment_method: str = "credit-card", timeout: int = 5, max_attempts: int = 1, security_code: bool = True, postal_code: Union[bool, str] = True, min_postal_code_length: int = 0, token_type: str = "reusable", charge_amount: Optional[str] = None, currency: str = "usd", language: str = "en-US", voice: str = "woman", description: Optional[str] = None, valid_card_types: str = "visa mastercard amex", parameters: Optional[List[Dict[str, str]]] = None, prompts: Optional[List[Dict[str, Any]]] = None) -> FunctionResult`
 Process a payment through the call.
 
 **Parameters:**
@@ -2026,7 +2026,7 @@ result.pay(
 
 ### Call Monitoring
 
-##### `tap(uri: str, control_id: Optional[str] = None, direction: str = "both", codec: str = "PCMU", rtp_ptime: int = 20, status_url: Optional[str] = None) -> SwaigFunctionResult`
+##### `tap(uri: str, control_id: Optional[str] = None, direction: str = "both", codec: str = "PCMU", rtp_ptime: int = 20, status_url: Optional[str] = None) -> FunctionResult`
 Start call tapping/monitoring.
 
 **Parameters:**
@@ -2051,7 +2051,7 @@ result.tap(
 )
 ```
 
-##### `stop_tap(control_id: Optional[str] = None) -> SwaigFunctionResult`
+##### `stop_tap(control_id: Optional[str] = None) -> FunctionResult`
 Stop call tapping.
 
 **Parameters:**
@@ -2065,7 +2065,7 @@ result.stop_tap(control_id="quality_monitor_001")
 
 ### Advanced SWML Execution
 
-##### `execute_swml(swml_content, transfer: bool = False) -> SwaigFunctionResult`
+##### `execute_swml(swml_content, transfer: bool = False) -> FunctionResult`
 Execute custom SWML content.
 
 **Parameters:**
@@ -2097,7 +2097,7 @@ Convert the result to a dictionary for serialization.
 
 **Usage:**
 ```python
-result = SwaigFunctionResult("Hello world")
+result = FunctionResult("Hello world")
 result.add_action("play", "music.mp3")
 result_dict = result.to_dict()
 print(result_dict)
@@ -2117,10 +2117,10 @@ Create a payment prompt configuration.
 
 **Usage:**
 ```python
-prompt = SwaigFunctionResult.create_payment_prompt(
+prompt = FunctionResult.create_payment_prompt(
     for_situation="card_number",
     actions=[
-        SwaigFunctionResult.create_payment_action("say", "Please enter your card number")
+        FunctionResult.create_payment_action("say", "Please enter your card number")
     ]
 )
 ```
@@ -2134,7 +2134,7 @@ Create a payment action configuration.
 
 **Usage:**
 ```python
-action = SwaigFunctionResult.create_payment_action("say", "Enter your card number")
+action = FunctionResult.create_payment_action("say", "Enter your card number")
 ```
 
 ##### `create_payment_parameter(name: str, value: str) -> Dict[str, str]`
@@ -2146,7 +2146,7 @@ Create a payment parameter configuration.
 
 **Usage:**
 ```python
-param = SwaigFunctionResult.create_payment_parameter("merchant_id", "12345")
+param = FunctionResult.create_payment_parameter("merchant_id", "12345")
 ```
 
 ### Method Chaining
@@ -2154,14 +2154,14 @@ param = SwaigFunctionResult.create_payment_parameter("merchant_id", "12345")
 All methods return `self`, enabling fluent method chaining:
 
 ```python
-result = (SwaigFunctionResult("I'll help you with that")
+result = (FunctionResult("I'll help you with that")
     .set_post_process(True)
     .update_global_data({"status": "helping"})
     .set_end_of_speech_timeout(800)
     .add_action("play", "thinking.mp3"))
 
 # Complex workflow
-result = (SwaigFunctionResult("Processing your payment")
+result = (FunctionResult("Processing your payment")
     .set_post_process(True)
     .update_global_data({"payment_status": "processing"})
     .pay(
@@ -2176,7 +2176,7 @@ result = (SwaigFunctionResult("Processing your payment")
     ))
 ```
 
-This concludes Part 2 of the API reference covering the SwaigFunctionResult class. The document will continue with DataMap and other components in subsequent parts.
+This concludes Part 2 of the API reference covering the FunctionResult class. The document will continue with DataMap and other components in subsequent parts.
 
 ---
 
@@ -2362,14 +2362,14 @@ data_map = (DataMap('search_with_fallback')
     
     # Primary API
     .webhook('GET', 'https://api.primary.com/search?q=${args.query}')
-    .output(SwaigFunctionResult('Primary result: ${response.title}'))
+    .output(FunctionResult('Primary result: ${response.title}'))
     
     # Fallback API
     .webhook('GET', 'https://api.fallback.com/search?q=${args.query}')
-    .output(SwaigFunctionResult('Fallback result: ${response.title}'))
+    .output(FunctionResult('Fallback result: ${response.title}'))
     
     # Final fallback if all APIs fail
-    .fallback_output(SwaigFunctionResult('Sorry, all search services are currently unavailable'))
+    .fallback_output(FunctionResult('Sorry, all search services are currently unavailable'))
 )
 ```
 
@@ -2377,11 +2377,11 @@ data_map = (DataMap('search_with_fallback')
 
 #### Basic Output
 
-##### `output(result: SwaigFunctionResult) -> DataMap`
+##### `output(result: FunctionResult) -> DataMap`
 Set the response template for successful API calls.
 
 **Parameters:**
-- `result` (SwaigFunctionResult): Response template with variable substitution
+- `result` (FunctionResult): Response template with variable substitution
 
 **Variable Substitution in Outputs:**
 - `${response.field}`: API response fields
@@ -2393,31 +2393,31 @@ Set the response template for successful API calls.
 **Usage:**
 ```python
 # Simple response template
-data_map.output(SwaigFunctionResult('Weather in ${args.location}: ${response.current.condition.text}, ${response.current.temp_f}°F'))
+data_map.output(FunctionResult('Weather in ${args.location}: ${response.current.condition.text}, ${response.current.temp_f}°F'))
 
 # Response with actions
 data_map.output(
-    SwaigFunctionResult('Found ${response.total_results} results')
+    FunctionResult('Found ${response.total_results} results')
     .update_global_data({'last_search': '${args.query}'})
     .add_action('play', 'search_complete.mp3')
 )
 
 # Complex response with nested data
 data_map.output(
-    SwaigFunctionResult('Order ${response.order.id} status: ${response.order.status}. Estimated delivery: ${response.order.delivery.estimated_date}')
+    FunctionResult('Order ${response.order.id} status: ${response.order.status}. Estimated delivery: ${response.order.delivery.estimated_date}')
 )
 ```
 
-##### `fallback_output(result: SwaigFunctionResult) -> DataMap`
+##### `fallback_output(result: FunctionResult) -> DataMap`
 Set the response when all webhooks fail.
 
 **Parameters:**
-- `result` (SwaigFunctionResult): Fallback response
+- `result` (FunctionResult): Fallback response
 
 **Usage:**
 ```python
 data_map.fallback_output(
-    SwaigFunctionResult('Sorry, the service is temporarily unavailable. Please try again later.')
+    FunctionResult('Sorry, the service is temporarily unavailable. Please try again later.')
     .add_action('play', 'service_unavailable.mp3')
 )
 ```
@@ -2436,7 +2436,7 @@ Process array responses by iterating over elements.
 data_map = (DataMap('search_docs')
     .webhook('GET', 'https://api.docs.com/search?q=${args.query}')
     .foreach('${response.results}')  # Iterate over results array
-    .output(SwaigFunctionResult('Found: ${foreach.title} - ${foreach.summary}'))
+    .output(FunctionResult('Found: ${foreach.title} - ${foreach.summary}'))
 )
 ```
 
@@ -2463,14 +2463,14 @@ data_map.foreach({
 
 #### Expression Matching
 
-##### `expression(test_value: str, pattern: Union[str, Pattern], output: SwaigFunctionResult, nomatch_output: Optional[SwaigFunctionResult] = None) -> DataMap`
+##### `expression(test_value: str, pattern: Union[str, Pattern], output: FunctionResult, nomatch_output: Optional[FunctionResult] = None) -> DataMap`
 Add pattern-based responses without API calls.
 
 **Parameters:**
 - `test_value` (str): Template string to test against pattern
 - `pattern` (Union[str, Pattern]): Regex pattern or compiled Pattern object
-- `output` (SwaigFunctionResult): Response when pattern matches
-- `nomatch_output` (Optional[SwaigFunctionResult]): Response when pattern doesn't match
+- `output` (FunctionResult): Response when pattern matches
+- `nomatch_output` (Optional[FunctionResult]): Response when pattern doesn't match
 
 **Usage:**
 ```python
@@ -2484,7 +2484,7 @@ control_map = (DataMap('file_control')
     .expression(
         '${args.command}', 
         r'start|play|begin',
-        SwaigFunctionResult('Starting playback')
+        FunctionResult('Starting playback')
         .add_action('start_playback', {'file': '${args.filename}'})
     )
     
@@ -2492,7 +2492,7 @@ control_map = (DataMap('file_control')
     .expression(
         '${args.command}',
         r'stop|pause|halt',
-        SwaigFunctionResult('Stopping playback')
+        FunctionResult('Stopping playback')
         .add_action('stop_playback', True)
     )
     
@@ -2500,7 +2500,7 @@ control_map = (DataMap('file_control')
     .expression(
         '${args.command}',
         r'volume (\d+)',
-        SwaigFunctionResult('Setting volume to ${match.1}')
+        FunctionResult('Setting volume to ${match.1}')
         .add_action('set_volume', '${match.1}')
     )
 )
@@ -2579,7 +2579,7 @@ weather_tool = (DataMap('get_weather')
     .parameter('location', 'string', 'City name or ZIP code', required=True)
     .parameter('units', 'string', 'Temperature units', enum=['celsius', 'fahrenheit'])
     .webhook('GET', 'https://api.weather.com/v1/current?key=API_KEY&q=${args.location}&units=${args.units}')
-    .output(SwaigFunctionResult('Weather in ${args.location}: ${response.current.condition.text}, ${response.current.temp_f}°F'))
+    .output(FunctionResult('Weather in ${args.location}: ${response.current.condition.text}, ${response.current.temp_f}°F'))
     .error_keys(['error'])
 )
 
@@ -2605,8 +2605,8 @@ search_tool = (DataMap('search_knowledge')
         'limit': 5
     })
     .foreach('${response.results}')
-    .output(SwaigFunctionResult('Found: ${foreach.title} - ${foreach.summary}'))
-    .fallback_output(SwaigFunctionResult('Search service is temporarily unavailable'))
+    .output(FunctionResult('Found: ${foreach.title} - ${foreach.summary}'))
+    .fallback_output(FunctionResult('Search service is temporarily unavailable'))
 )
 ```
 
@@ -2622,7 +2622,7 @@ control_tool = (DataMap('system_control')
     .expression(
         '${args.action}',
         r'restart|reboot',
-        SwaigFunctionResult('Restarting ${args.target}')
+        FunctionResult('Restarting ${args.target}')
         .add_action('restart_service', {'service': '${args.target}'})
     )
     
@@ -2630,7 +2630,7 @@ control_tool = (DataMap('system_control')
     .expression(
         '${args.action}',
         r'status|check',
-        SwaigFunctionResult('Checking status of ${args.target}')
+        FunctionResult('Checking status of ${args.target}')
         .add_action('check_status', {'service': '${args.target}'})
     )
     
@@ -2638,8 +2638,8 @@ control_tool = (DataMap('system_control')
     .expression(
         '${args.action}',
         r'.*',
-        SwaigFunctionResult('Unknown command: ${args.action}'),
-        nomatch_output=SwaigFunctionResult('Please specify a valid action')
+        FunctionResult('Unknown command: ${args.action}'),
+        nomatch_output=FunctionResult('Please specify a valid action')
     )
 )
 ```
@@ -2682,7 +2682,7 @@ Create a simple API integration tool.
 
 **Usage:**
 ```python
-from signalwire_agents.core.data_map import create_simple_api_tool
+from signalwire.core.data_map import create_simple_api_tool
 
 weather = create_simple_api_tool(
     name='get_weather',
@@ -2700,24 +2700,24 @@ weather = create_simple_api_tool(
 agent.register_swaig_function(weather.to_swaig_function())
 ```
 
-##### `create_expression_tool(name: str, patterns: Dict[str, Tuple[str, SwaigFunctionResult]], parameters: Optional[Dict[str, Dict]] = None) -> DataMap`
+##### `create_expression_tool(name: str, patterns: Dict[str, Tuple[str, FunctionResult]], parameters: Optional[Dict[str, Dict]] = None) -> DataMap`
 
 Create a pattern-based tool without API calls.
 
 **Parameters:**
 - `name` (str): Function name
-- `patterns` (Dict[str, Tuple[str, SwaigFunctionResult]]): Pattern mappings
+- `patterns` (Dict[str, Tuple[str, FunctionResult]]): Pattern mappings
 - `parameters` (Optional[Dict[str, Dict]]): Parameter definitions
 
 **Usage:**
 ```python
-from signalwire_agents.core.data_map import create_expression_tool
+from signalwire.core.data_map import create_expression_tool
 
 file_control = create_expression_tool(
     name='file_control',
     patterns={
-        r'start.*': ('${args.command}', SwaigFunctionResult().add_action('start_playback', True)),
-        r'stop.*': ('${args.command}', SwaigFunctionResult().add_action('stop_playback', True))
+        r'start.*': ('${args.command}', FunctionResult().add_action('start_playback', True)),
+        r'stop.*': ('${args.command}', FunctionResult().add_action('stop_playback', True))
     },
     parameters={
         'command': {
@@ -2741,10 +2741,10 @@ complete_tool = (DataMap('comprehensive_search')
     .parameter('query', 'string', 'Search query', required=True)
     .parameter('category', 'string', 'Search category', enum=['all', 'docs', 'faq'])
     .webhook('GET', 'https://primary-api.com/search?q=${args.query}&cat=${args.category}')
-    .output(SwaigFunctionResult('Primary: ${response.title}'))
+    .output(FunctionResult('Primary: ${response.title}'))
     .webhook('GET', 'https://backup-api.com/search?q=${args.query}')
-    .output(SwaigFunctionResult('Backup: ${response.title}'))
-    .fallback_output(SwaigFunctionResult('All search services unavailable'))
+    .output(FunctionResult('Backup: ${response.title}'))
+    .fallback_output(FunctionResult('All search services unavailable'))
     .error_keys(['error', 'message'])
 )
 ```
@@ -3014,9 +3014,9 @@ agent.add_skill("native_vector_search", {
 Create a new skill by extending `SkillBase`:
 
 ```python
-from signalwire_agents.core.skill_base import SkillBase
-from signalwire_agents.core.data_map import DataMap
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.skill_base import SkillBase
+from signalwire.core.data_map import DataMap
+from signalwire.core.function_result import FunctionResult
 
 class CustomSkill(SkillBase):
     SKILL_NAME = "custom_skill"
@@ -3041,7 +3041,7 @@ class CustomSkill(SkillBase):
             .description("Custom API integration")
             .parameter("query", "string", "Search query", required=True)
             .webhook("GET", f"https://api.example.com/search?key={self.api_key}&q=${{args.query}}")
-            .output(SwaigFunctionResult("Found: ${{response.title}}"))
+            .output(FunctionResult("Found: ${{response.title}}"))
         )
         
         self.agent.register_swaig_function(tool.to_swaig_function())
@@ -3065,9 +3065,9 @@ class CustomSkill(SkillBase):
 
 #### Skill Registration
 
-Skills are automatically discovered from the `signalwire_agents/skills/` directory. To register a custom skill:
+Skills are automatically discovered from the `signalwire/skills/` directory. To register a custom skill:
 
-1. Create directory: `signalwire_agents/skills/your_skill/`
+1. Create directory: `signalwire/skills/your_skill/`
 2. Add `__init__.py`, `skill.py`, and `README.md`
 3. Implement your skill class in `skill.py`
 4. The skill will be automatically available
@@ -3100,7 +3100,7 @@ SWAIGFunction(
 #### Usage
 
 ```python
-from signalwire_agents.core.swaig_function import SWAIGFunction
+from signalwire.core.swaig_function import SWAIGFunction
 
 # Create SWAIG function
 swaig_func = SWAIGFunction(
@@ -3208,7 +3208,7 @@ agent.add_skill("web_search", {
 Here's a comprehensive example using multiple SDK components:
 
 ```python
-from signalwire_agents import AgentBase, SwaigFunctionResult, DataMap
+from signalwire import AgentBase, FunctionResult, DataMap
 
 class ComprehensiveAgent(AgentBase):
     def __init__(self):
@@ -3297,7 +3297,7 @@ class ComprehensiveAgent(AgentBase):
             .parameter("customer_id", "string", "Customer ID", required=True)
             .webhook("GET", "https://api.company.com/customers/${args.customer_id}",
                     headers={"Authorization": "Bearer YOUR_TOKEN"})
-            .output(SwaigFunctionResult("Customer: ${response.name}, Status: ${response.status}"))
+            .output(FunctionResult("Customer: ${response.name}, Status: ${response.status}"))
             .error_keys(["error"])
         )
         
@@ -3309,10 +3309,10 @@ class ComprehensiveAgent(AgentBase):
             .parameter("action", "string", "Action to perform", required=True)
             .parameter("target", "string", "Target system")
             .expression("${args.action}", r"restart|reboot",
-                       SwaigFunctionResult("Restarting ${args.target}")
+                       FunctionResult("Restarting ${args.target}")
                        .add_action("restart_system", {"target": "${args.target}"}))
             .expression("${args.action}", r"status|check",
-                       SwaigFunctionResult("Checking ${args.target} status")
+                       FunctionResult("Checking ${args.target} status")
                        .add_action("check_status", {"target": "${args.target}"}))
         )
         
@@ -3324,7 +3324,7 @@ class ComprehensiveAgent(AgentBase):
     )
     def transfer_to_billing(self, args, raw_data):
         """Transfer to billing with state tracking"""
-        return (SwaigFunctionResult("Transferring you to our billing department")
+        return (FunctionResult("Transferring you to our billing department")
                 .update_global_data({"last_action": "transfer_to_billing"})
                 .connect("billing@company.com", final=False))
     

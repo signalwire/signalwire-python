@@ -11,7 +11,7 @@ This document covers how to integrate the search system into your agents, config
 The `native_vector_search` skill provides search functionality to agents. The simplest integration requires only a tool name, description, and index path:
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class DocsAgent(AgentBase):
     def __init__(self):

@@ -47,7 +47,7 @@ The AI automatically gets `next_step` and `change_context` tools to navigate.
 - Omitting these means no navigation from that step/context is allowed
 """
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 
 class AdvancedContextsDemoAgent(AgentBase):

@@ -90,8 +90,8 @@ from datetime import datetime
 # Add the parent directory to the path so we can import the package
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import FunctionResult
 
 
 class SwaigFeaturesAgent(AgentBase):
@@ -147,7 +147,7 @@ class SwaigFeaturesAgent(AgentBase):
         """Get the current time"""
         now = datetime.now()
         formatted_time = now.strftime("%H:%M:%S")
-        return SwaigFunctionResult(f"The current time is {formatted_time}")
+        return FunctionResult(f"The current time is {formatted_time}")
     
     @AgentBase.tool(
         name="get_weather",
@@ -182,7 +182,7 @@ class SwaigFeaturesAgent(AgentBase):
         }
         
         result = weather_data.get(location.lower(), weather_data["default"])
-        return SwaigFunctionResult(f"The weather in {location}: {result}")
+        return FunctionResult(f"The weather in {location}: {result}")
     
     # This function also uses the default webhook URL
     @AgentBase.tool(
@@ -216,7 +216,7 @@ class SwaigFeaturesAgent(AgentBase):
                 day["temp"] = round((day["temp"] - 32) * 5/9)
         
         forecast_text = "\n".join([f"{d['day']}: {d['temp']}°{'C' if units == 'celsius' else 'F'}, {d['condition']}" for d in forecast])
-        return SwaigFunctionResult(f"3-day forecast for {location}:\n{forecast_text}")
+        return FunctionResult(f"3-day forecast for {location}:\n{forecast_text}")
 
 
 def main():

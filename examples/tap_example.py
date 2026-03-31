@@ -19,14 +19,14 @@ This example shows how to use the new virtual helpers to:
 """
 
 import json
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.function_result import FunctionResult
 
 
 def basic_websocket_tap_example():
     """Simple WebSocket tap for monitoring."""
     print("=== Basic WebSocket Tap Example ===")
     
-    result = SwaigFunctionResult("Starting call monitoring") \
+    result = FunctionResult("Starting call monitoring") \
         .tap("wss://monitoring.company.com/audio-stream") \
         .say("Call monitoring is now active")
     
@@ -38,7 +38,7 @@ def basic_rtp_tap_example():
     """Basic RTP tap for real-time processing."""
     print("=== Basic RTP Tap Example ===")
     
-    result = SwaigFunctionResult("Starting RTP monitoring") \
+    result = FunctionResult("Starting RTP monitoring") \
         .tap("rtp://192.168.1.100:5004") \
         .update_global_data({"rtp_monitoring": True})
     
@@ -50,7 +50,7 @@ def advanced_compliance_monitoring():
     """Advanced compliance monitoring setup."""
     print("=== Advanced Compliance Monitoring ===")
     
-    result = SwaigFunctionResult("Setting up compliance monitoring") \
+    result = FunctionResult("Setting up compliance monitoring") \
         .tap(
             uri="wss://compliance.company.com/secure-stream",
             control_id="compliance_tap_001",
@@ -73,7 +73,7 @@ def customer_service_monitoring():
     """Customer service quality monitoring."""
     print("=== Customer Service Monitoring ===")
     
-    result = SwaigFunctionResult("Initializing quality monitoring") \
+    result = FunctionResult("Initializing quality monitoring") \
         .tap(
             uri="wss://quality.company.com/cs-monitoring",
             control_id="cs_quality_monitor",
@@ -94,7 +94,7 @@ def real_time_analytics_tap():
     """Real-time analytics with RTP streaming."""
     print("=== Real-Time Analytics Tap ===")
     
-    result = SwaigFunctionResult("Starting real-time analytics") \
+    result = FunctionResult("Starting real-time analytics") \
         .tap(
             uri="rtp://analytics.company.com:6000",
             control_id="analytics_stream",
@@ -118,7 +118,7 @@ def stop_tap_examples():
     print("=== Stop Tap Examples ===")
     
     # Stop most recent tap
-    stop_recent = SwaigFunctionResult("Ending monitoring session") \
+    stop_recent = FunctionResult("Ending monitoring session") \
         .stop_tap() \
         .say("Call monitoring has been stopped")
     
@@ -127,7 +127,7 @@ def stop_tap_examples():
     print()
     
     # Stop specific tap by ID
-    stop_specific = SwaigFunctionResult("Ending compliance monitoring") \
+    stop_specific = FunctionResult("Ending compliance monitoring") \
         .stop_tap("compliance_tap_001") \
         .update_global_data({"compliance_session": False}) \
         .say("Compliance monitoring has been deactivated")
@@ -142,7 +142,7 @@ def call_center_workflow():
     print("=== Call Center Workflow ===")
     
     # Start monitoring when call begins
-    start_monitoring = SwaigFunctionResult("Call center session starting") \
+    start_monitoring = FunctionResult("Call center session starting") \
         .tap(
             uri="wss://callcenter.company.com/agent-monitoring",
             control_id="agent_monitor_001",
@@ -166,7 +166,7 @@ def call_center_workflow():
     print()
     
     # End monitoring when call completes
-    end_monitoring = SwaigFunctionResult("Ending call session") \
+    end_monitoring = FunctionResult("Ending call session") \
         .stop_tap("agent_monitor_001") \
         .update_global_data({
             "call_monitored": False,
@@ -184,7 +184,7 @@ def security_incident_monitoring():
     """Emergency security incident monitoring."""
     print("=== Security Incident Monitoring ===")
     
-    result = SwaigFunctionResult("SECURITY ALERT: Activating emergency monitoring") \
+    result = FunctionResult("SECURITY ALERT: Activating emergency monitoring") \
         .tap(
             uri="wss://security.company.com/incident-stream",
             control_id="security_incident_001",
@@ -212,7 +212,7 @@ def training_and_coaching():
     """Training and coaching monitoring setup."""
     print("=== Training and Coaching Setup ===")
     
-    result = SwaigFunctionResult("Setting up training session monitoring") \
+    result = FunctionResult("Setting up training session monitoring") \
         .tap(
             uri="wss://training.company.com/coaching-stream",
             control_id="training_session_001",
@@ -240,7 +240,7 @@ def multi_tap_management():
     print("=== Multi-Tap Management ===")
     
     # Start multiple taps for different purposes
-    start_multiple = SwaigFunctionResult("Initializing multi-stream monitoring") \
+    start_multiple = FunctionResult("Initializing multi-stream monitoring") \
         .tap(
             uri="wss://compliance.company.com/stream",
             control_id="compliance_stream",
@@ -267,7 +267,7 @@ def multi_tap_management():
     print()
     
     # Stop specific streams
-    stop_selective = SwaigFunctionResult("Reducing monitoring scope") \
+    stop_selective = FunctionResult("Reducing monitoring scope") \
         .stop_tap("analytics_stream") \
         .stop_tap("quality_stream") \
         .update_global_data({

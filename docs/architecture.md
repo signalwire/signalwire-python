@@ -87,7 +87,7 @@ DataMap tools follow a pipeline execution model on the SignalWire server:
        .description('Function purpose')
        .parameter('param', 'string', 'Description', required=True)
        .webhook('GET', 'https://api.example.com/endpoint')
-       .output(SwaigFunctionResult('Response template'))
+       .output(FunctionResult('Response template'))
    )
    ```
 
@@ -95,7 +95,7 @@ DataMap tools follow a pipeline execution model on the SignalWire server:
    - **Expressions**: Pattern matching against arguments
    - **Webhooks**: HTTP API calls with variable substitution
    - **Foreach**: Array iteration for response processing
-   - **Output**: Final response generation using SwaigFunctionResult
+   - **Output**: Final response generation using FunctionResult
 
 3. **Variable Expansion**: Dynamic substitution using `${variable}` syntax
    - Function arguments: `${args.parameter_name}`
@@ -112,15 +112,15 @@ The system supports different tool patterns:
    ```python
    weather_tool = (DataMap('get_weather')
        .webhook('GET', 'https://api.weather.com/v1/current?q=${location}')
-       .output(SwaigFunctionResult('Weather: ${response.current.condition}'))
+       .output(FunctionResult('Weather: ${response.current.condition}'))
    )
    ```
 
 2. **Expression-Based Tools**: Pattern matching without API calls
    ```python
    control_tool = (DataMap('file_control')
-       .expression(r'start.*', SwaigFunctionResult().add_action('start', True))
-       .expression(r'stop.*', SwaigFunctionResult().add_action('stop', True))
+       .expression(r'start.*', FunctionResult().add_action('start', True))
+       .expression(r'stop.*', FunctionResult().add_action('stop', True))
    )
    ```
 
@@ -129,7 +129,7 @@ The system supports different tool patterns:
    search_tool = (DataMap('search_docs')
        .webhook('GET', 'https://api.docs.com/search')
        .foreach('${response.results}')
-       .output(SwaigFunctionResult('Found: ${foreach.title}'))
+       .output(FunctionResult('Found: ${foreach.title}'))
    )
    ```
 
@@ -409,7 +409,7 @@ The SDK is designed to be highly extensible:
 
 9. **Custom Skills**: Create reusable skill modules
    ```python
-   from signalwire_agents.core.skill_base import SkillBase
+   from signalwire.core.skill_base import SkillBase
    
    class MyCustomSkill(SkillBase):
        SKILL_NAME = "my_skill"
@@ -710,7 +710,7 @@ Key steps for creating custom prefabs:
    )
    def specialized_function(self, args, raw_data):
        # Implementation
-       return SwaigFunctionResult("Function result")
+       return FunctionResult("Function result")
    ```
 
 4. **Create a factory method** (optional):
@@ -1005,7 +1005,7 @@ Example:
 )
 def get_weather(self, args, raw_data):
     location = args.get("location", "Unknown location")
-    return SwaigFunctionResult(f"It's sunny and 72°F in {location}.")
+    return FunctionResult(f"It's sunny and 72°F in {location}.")
 ```
 
 ### HTTP Routing

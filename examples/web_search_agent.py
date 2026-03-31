@@ -34,7 +34,7 @@ https://developers.google.com/custom-search/v1/introduction
 """
 
 import os
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 def main():
     # Create an agent

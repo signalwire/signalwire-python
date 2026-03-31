@@ -18,14 +18,14 @@ This example shows how to use the new virtual helpers to:
 """
 
 import json
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.function_result import FunctionResult
 
 
 def basic_room_join_example():
     """Simple room joining with default settings."""
     print("=== Basic Room Join Example ===")
     
-    result = SwaigFunctionResult("Joining the support team room") \
+    result = FunctionResult("Joining the support team room") \
         .join_room("support_team_room") \
         .say("Welcome to the support team collaboration room")
     
@@ -37,7 +37,7 @@ def conference_room_example():
     """Conference room setup with metadata tracking."""
     print("=== Conference Room Example ===")
     
-    result = SwaigFunctionResult("Setting up daily standup meeting") \
+    result = FunctionResult("Setting up daily standup meeting") \
         .join_room("daily_standup_room") \
         .set_metadata({
             "meeting_type": "daily_standup",
@@ -59,7 +59,7 @@ def basic_sip_refer_example():
     """Simple SIP REFER for call transfer."""
     print("=== Basic SIP REFER Example ===")
     
-    result = SwaigFunctionResult("Transferring your call to support") \
+    result = FunctionResult("Transferring your call to support") \
         .say("Please hold while I transfer you to our support specialist") \
         .sip_refer("sip:support@company.com")
     
@@ -71,7 +71,7 @@ def advanced_sip_refer_example():
     """Advanced SIP REFER with full URI and metadata."""
     print("=== Advanced SIP REFER Example ===")
     
-    result = SwaigFunctionResult("Transferring to technical support") \
+    result = FunctionResult("Transferring to technical support") \
         .set_metadata({
             "transfer_type": "technical_support",
             "priority": "high",
@@ -93,7 +93,7 @@ def customer_service_workflow():
     print("=== Customer Service Workflow ===")
     
     # Step 1: Join customer service room
-    join_service_room = SwaigFunctionResult("Connecting to customer service") \
+    join_service_room = FunctionResult("Connecting to customer service") \
         .join_room("customer_service_room") \
         .set_metadata({
             "service_type": "billing_inquiry",
@@ -107,7 +107,7 @@ def customer_service_workflow():
     print()
     
     # Step 2: Escalate to manager via SIP transfer
-    escalate_to_manager = SwaigFunctionResult("Escalating to manager") \
+    escalate_to_manager = FunctionResult("Escalating to manager") \
         .say("Let me connect you with a manager who can better assist you") \
         .sip_refer("sip:manager@customer-service.company.com") \
         .update_global_data({
@@ -125,7 +125,7 @@ def multi_party_conference_example():
     print("=== Multi-Party Conference Example ===")
     
     # Host joins conference room
-    host_joins = SwaigFunctionResult("Setting up conference call") \
+    host_joins = FunctionResult("Setting up conference call") \
         .join_room("project_kickoff_meeting") \
         .set_metadata({
             "role": "meeting_host",
@@ -139,7 +139,7 @@ def multi_party_conference_example():
     print()
     
     # Add external participant via SIP
-    add_external = SwaigFunctionResult("Adding external consultant") \
+    add_external = FunctionResult("Adding external consultant") \
         .say("Now connecting our external consultant") \
         .sip_refer("sip:consultant@partner-company.com") \
         .update_global_data({
@@ -156,7 +156,7 @@ def emergency_escalation_example():
     """Emergency escalation with priority handling."""
     print("=== Emergency Escalation Example ===")
     
-    result = SwaigFunctionResult("Emergency escalation in progress") \
+    result = FunctionResult("Emergency escalation in progress") \
         .set_metadata({
             "alert_level": "critical",
             "incident_id": "INC-2024-001",
@@ -179,7 +179,7 @@ def sales_team_handoff_example():
     print("=== Sales Team Handoff Example ===")
     
     # Qualify lead in sales room
-    qualify_lead = SwaigFunctionResult("Connecting to sales qualification team") \
+    qualify_lead = FunctionResult("Connecting to sales qualification team") \
         .join_room("sales_qualification_room") \
         .set_metadata({
             "lead_score": 85,
@@ -193,7 +193,7 @@ def sales_team_handoff_example():
     print()
     
     # Transfer to senior sales via SIP
-    transfer_to_senior = SwaigFunctionResult("Transferring to senior sales representative") \
+    transfer_to_senior = FunctionResult("Transferring to senior sales representative") \
         .say("Based on your requirements, I'm connecting you with our senior sales specialist") \
         .sip_refer("sip:senior-sales@company.com") \
         .update_global_data({
@@ -212,7 +212,7 @@ def join_conference_examples():
     print("=== Join Conference Examples ===")
     
     # Simple conference join
-    simple_conf = SwaigFunctionResult("Joining team conference") \
+    simple_conf = FunctionResult("Joining team conference") \
         .join_conference("daily_standup") \
         .say("Welcome to the daily standup conference")
     
@@ -221,7 +221,7 @@ def join_conference_examples():
     print()
     
     # Advanced conference with recording and callbacks
-    advanced_conf = SwaigFunctionResult("Setting up recorded conference call") \
+    advanced_conf = FunctionResult("Setting up recorded conference call") \
         .join_conference(
             name="customer_training_session",
             muted=False,

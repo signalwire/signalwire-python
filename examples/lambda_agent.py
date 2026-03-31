@@ -36,12 +36,12 @@ import os
 import sys
 from datetime import datetime
 
-# Add the signalwire_agents module to the path if needed
+# Add the signalwire module to the path if needed
 # (not needed if installed via pip)
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import FunctionResult
 
 # Import Mangum for Lambda/API Gateway integration
 try:
@@ -56,7 +56,7 @@ class HealthCheckAgent(AgentBase):
     Example agent for Lambda deployment
 
     This agent demonstrates all the standard AgentBase features:
-    - SWAIG functions with SwaigFunctionResult
+    - SWAIG functions with FunctionResult
     - Prompt configuration via prompt_add_section
     - Voice configuration via add_language
     - Basic auth and health endpoints
@@ -85,12 +85,12 @@ class HealthCheckAgent(AgentBase):
     @AgentBase.tool("Greet a user by name")
     def greet_user(self, name: str = "friend"):
         """Greet a user by name"""
-        return SwaigFunctionResult(f"Hello {name}! I'm running in AWS Lambda!")
+        return FunctionResult(f"Hello {name}! I'm running in AWS Lambda!")
 
     @AgentBase.tool("Get the current time")
     def get_time(self):
         """Get the current time"""
-        return SwaigFunctionResult(f"Current time: {datetime.now().isoformat()}")
+        return FunctionResult(f"Current time: {datetime.now().isoformat()}")
 
 
 # Create the agent instance

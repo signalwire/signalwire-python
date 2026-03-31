@@ -69,7 +69,7 @@ Here's how these components relate to each other:
 To create an agent, extend the `AgentBase` class and define your agent's behavior:
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class MyAgent(AgentBase):
     def __init__(self):
@@ -250,7 +250,7 @@ SWAIG (SignalWire AI Gateway) functions allow the AI agent to perform actions an
 These are the traditional SWAIG functions that are handled locally by your agent:
 
 ```python
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.function_result import FunctionResult
 
 @AgentBase.tool(
     name="get_weather",
@@ -271,8 +271,8 @@ def get_weather(self, args, raw_data):
     # For this example, we'll return mock data
     weather_data = f"It's sunny and 72°F in {location}."
     
-    # Return a SwaigFunctionResult
-    return SwaigFunctionResult(weather_data)
+    # Return a FunctionResult
+    return FunctionResult(weather_data)
 ```
 
 ### 2. External Webhook Functions
@@ -299,7 +299,7 @@ To create an external webhook function, add a `webhook_url` parameter to the dec
 def get_weather_external(self, args, raw_data):
     # This function will never be called locally when webhook_url is provided
     # The external service at webhook_url will receive the function call instead
-    return SwaigFunctionResult("This should not be reached for external webhooks")
+    return FunctionResult("This should not be reached for external webhooks")
 ```
 
 #### How External Webhooks Work
@@ -342,7 +342,7 @@ class HybridAgent(AgentBase):
         parameters={}
     )
     def get_help(self, args, raw_data):
-        return SwaigFunctionResult("I can help you with weather and news!")
+        return FunctionResult("I can help you with weather and news!")
     
     # External function - handled by external service
     @AgentBase.tool(
@@ -403,7 +403,7 @@ def get_weather(self, city: str, units: Literal["celsius", "fahrenheit"] = "cels
         city: Name of the city to look up
         units: Temperature units to use
     """
-    return SwaigFunctionResult(f"It's sunny in {city} (showing {units})")
+    return FunctionResult(f"It's sunny in {city} (showing {units})")
 ```
 
 The SDK automatically:
@@ -439,7 +439,7 @@ The SDK automatically:
 def check_call(self, query: str, raw_data: dict = None):
     """Check the current call."""
     call_id = raw_data.get("call_id", "unknown") if raw_data else "unknown"
-    return SwaigFunctionResult(f"Call {call_id}: query={query}")
+    return FunctionResult(f"Call {call_id}: query={query}")
 ```
 
 ### Function Parameters
@@ -462,18 +462,18 @@ parameters={
 
 ### Function Results
 
-To return results from a SWAIG function, use the `SwaigFunctionResult` class:
+To return results from a SWAIG function, use the `FunctionResult` class:
 
 ```python
 # Basic result with just text
-return SwaigFunctionResult("Here's the result")
+return FunctionResult("Here's the result")
 
 # Result with a single action
-return SwaigFunctionResult("Here's the result with an action")
+return FunctionResult("Here's the result with an action")
        .add_action("say", "I found the information you requested.")
 
 # Result with multiple actions using add_actions
-return SwaigFunctionResult("Multiple actions example")
+return FunctionResult("Multiple actions example")
        .add_actions([
            {"playback_bg": {"file": "https://example.com/music.mp3"}},
            {"set_global_data": {"key": "value"}}
@@ -481,7 +481,7 @@ return SwaigFunctionResult("Multiple actions example")
 
 # Alternative way to add multiple actions sequentially
 return (
-    SwaigFunctionResult("Sequential actions example")
+    FunctionResult("Sequential actions example")
     .add_action("say", "I found the information you requested.")
     .add_action("playback_bg", {"file": "https://example.com/music.mp3"})
 )
@@ -596,7 +596,7 @@ The Skills System allows you to extend your agents with reusable capabilities vi
 ### Quick Start
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class SkillfulAgent(AgentBase):
     def __init__(self):
@@ -845,10 +845,10 @@ Before using local mode, you need to build search indexes:
 
 ```bash
 # Build index from documentation
-python -m signalwire_agents.cli.build_search docs --output docs.swsearch
+python -m signalwire.cli.build_search docs --output docs.swsearch
 
 # Build with custom settings
-python -m signalwire_agents.cli.build_search ./knowledge \
+python -m signalwire.cli.build_search ./knowledge \
     --output knowledge.swsearch \
     --file-types md,txt,pdf \
     --chunk-size 500 \
@@ -926,8 +926,8 @@ except ValueError as e:
 You can create your own skills by extending the `SkillBase` class:
 
 ```python
-from signalwire_agents.core.skill_base import SkillBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.skill_base import SkillBase
+from signalwire.core.function_result import FunctionResult
 
 class WeatherSkill(SkillBase):
     """A custom skill for weather information"""
@@ -974,11 +974,11 @@ class WeatherSkill(SkillBase):
         units = args.get("units", self.default_units)
         
         if not location:
-            return SwaigFunctionResult("Please provide a location")
+            return FunctionResult("Please provide a location")
         
         # Your weather API integration here
         weather_data = f"Weather for {location}: 72°F and sunny"
-        return SwaigFunctionResult(weather_data)
+        return FunctionResult(weather_data)
     
     def get_hints(self) -> List[str]:
         """Return speech recognition hints"""
@@ -1001,7 +1001,7 @@ class WeatherSkill(SkillBase):
 
 **Using the custom skill:**
 ```python
-# Place the skill in signalwire_agents/skills/weather/skill.py
+# Place the skill in signalwire/skills/weather/skill.py
 # Then use it in your agent:
 
 agent.add_skill("weather", {
@@ -1887,7 +1887,7 @@ These hooks are particularly useful for:
 To implement lifecycle hooks, define them as regular SWAIG functions with these specific names:
 
 ```python
-from signalwire_agents import AgentBase, SwaigFunctionResult
+from signalwire import AgentBase, FunctionResult
 
 class MyAgent(AgentBase):
     def __init__(self):
@@ -1915,7 +1915,7 @@ class MyAgent(AgentBase):
         print(f"Session started: {call_id} from {from_number}")
         
         # Return success (SignalWire expects a response)
-        return SwaigFunctionResult("Session initialized successfully")
+        return FunctionResult("Session initialized successfully")
     
     @AgentBase.tool(
         name="hangup_hook",
@@ -1941,7 +1941,7 @@ class MyAgent(AgentBase):
             # Clean up state (optional - SignalWire will clean up automatically)
             self.delete_state(call_id)
         
-        return SwaigFunctionResult("Session cleanup completed")
+        return FunctionResult("Session cleanup completed")
 ```
 
 #### Common Use Cases
@@ -1962,7 +1962,7 @@ def startup_hook(self, args, raw_data):
         "previous_orders": preferences.get("recent_orders", [])
     })
     
-    return SwaigFunctionResult("User preferences loaded")
+    return FunctionResult("User preferences loaded")
 ```
 
 ##### 2. Analytics and Logging
@@ -1983,7 +1983,7 @@ def hangup_hook(self, args, raw_data):
     # Post to analytics service
     self.send_to_analytics(analytics_data)
     
-    return SwaigFunctionResult("Analytics data sent")
+    return FunctionResult("Analytics data sent")
 ```
 
 #### Important Notes
@@ -1992,7 +1992,7 @@ def hangup_hook(self, args, raw_data):
 2. **Error Handling**: Always implement proper error handling in hooks - failures shouldn't crash the voice session
 3. **Timing**: `startup_hook` is called before the AI starts speaking to the caller
 4. **Session Data**: Any data you need to persist across the session should be stored in external storage (Redis, database, etc.)
-5. **Return Values**: Both hooks must return a `SwaigFunctionResult` object
+5. **Return Values**: Both hooks must return a `FunctionResult` object
 
 ### SIP Routing
 
@@ -2286,7 +2286,7 @@ The SDK includes several built-in prefab agents:
 Collects structured information from users:
 
 ```python
-from signalwire_agents.prefabs import InfoGathererAgent
+from signalwire.prefabs import InfoGathererAgent
 
 agent = InfoGathererAgent(
     fields=[
@@ -2308,7 +2308,7 @@ agent.serve(host="0.0.0.0", port=8000)
 Answers questions based on a knowledge base:
 
 ```python
-from signalwire_agents.prefabs import FAQBotAgent
+from signalwire.prefabs import FAQBotAgent
 
 agent = FAQBotAgent(
     knowledge_base_path="./docs",
@@ -2326,7 +2326,7 @@ agent.serve(host="0.0.0.0", port=8000)
 Routes users to specialized agents:
 
 ```python
-from signalwire_agents.prefabs import ConciergeAgent
+from signalwire.prefabs import ConciergeAgent
 
 agent = ConciergeAgent(
     routing_map={
@@ -2352,7 +2352,7 @@ agent.serve(host="0.0.0.0", port=8000)
 Conducts structured surveys with different question types:
 
 ```python
-from signalwire_agents.prefabs import SurveyAgent
+from signalwire.prefabs import SurveyAgent
 
 agent = SurveyAgent(
     survey_name="Customer Satisfaction",
@@ -2386,7 +2386,7 @@ agent.serve(host="0.0.0.0", port=8000)
 Handles call routing and department transfers:
 
 ```python
-from signalwire_agents.prefabs import ReceptionistAgent
+from signalwire.prefabs import ReceptionistAgent
 
 agent = ReceptionistAgent(
     departments=[
@@ -2420,8 +2420,8 @@ A well-designed prefab should:
 Example of a custom support agent prefab:
 
 ```python
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import FunctionResult
 
 class CustomerSupportAgent(AgentBase):
     def __init__(
@@ -2487,7 +2487,7 @@ class CustomerSupportAgent(AgentBase):
     )
     def escalate_issue(self, args, raw_data):
         # Implementation...
-        return SwaigFunctionResult("Issue escalated successfully.")
+        return FunctionResult("Issue escalated successfully.")
     
     @AgentBase.tool(
         name="send_support_email",
@@ -2500,7 +2500,7 @@ class CustomerSupportAgent(AgentBase):
     )
     def send_support_email(self, args, raw_data):
         # Implementation...
-        return SwaigFunctionResult("Follow-up email sent successfully.")
+        return FunctionResult("Follow-up email sent successfully.")
 ```
 
 #### Using the Custom Prefab
@@ -2525,7 +2525,7 @@ support_agent.serve(host="0.0.0.0", port=8000)
 You can also extend and customize the built-in prefabs:
 
 ```python
-from signalwire_agents.prefabs import InfoGathererAgent
+from signalwire.prefabs import InfoGathererAgent
 
 class EnhancedGatherer(InfoGathererAgent):
     def __init__(self, fields, **kwargs):
@@ -2545,7 +2545,7 @@ class EnhancedGatherer(InfoGathererAgent):
     )
     def check_customer(self, args, raw_data):
         # Implementation...
-        return SwaigFunctionResult("Customer status: Active")
+        return FunctionResult("Customer status: Active")
 ```
 
 ### Best Practices for Prefab Design
@@ -2852,8 +2852,8 @@ For more detailed testing documentation, see the [CLI Guide](cli_guide.md).
 ### Simple Question-Answering Agent
 
 ```python
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import FunctionResult
 from datetime import datetime
 
 class SimpleAgent(AgentBase):
@@ -2882,7 +2882,7 @@ class SimpleAgent(AgentBase):
         """Get the current time"""
         now = datetime.now()
         formatted_time = now.strftime("%H:%M:%S")
-        return SwaigFunctionResult(f"The current time is {formatted_time}")
+        return FunctionResult(f"The current time is {formatted_time}")
 
 def main():
     agent = SimpleAgent()
@@ -2956,7 +2956,7 @@ class CustomerServiceAgent(AgentBase):
     def check_account_status(self, args, raw_data):
         account_id = args.get("account_id")
         # In a real implementation, this would query a database
-        return SwaigFunctionResult(f"Account {account_id} is in good standing.")
+        return FunctionResult(f"Account {account_id} is in good standing.")
     
     @AgentBase.tool(
         name="create_support_ticket",
@@ -2980,7 +2980,7 @@ class CustomerServiceAgent(AgentBase):
         # Generate a ticket ID (in a real system, this would create a database entry)
         ticket_id = f"TICKET-{hash(issue) % 10000:04d}"
         
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"Support ticket {ticket_id} has been created with {priority} priority. " +
             "A support representative will contact you shortly."
         )

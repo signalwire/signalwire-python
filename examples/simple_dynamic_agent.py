@@ -39,7 +39,7 @@ Try these requests:
 Compare the SWML output - it will be IDENTICAL to the static version!
 """
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class SimpleDynamicAgent(AgentBase):
     def __init__(self):

@@ -10,7 +10,7 @@ tool_call/tool_result entries in conversation history. Answers are
 stored in global_data under the configured output key.
 """
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 
 class PatientIntakeAgent(AgentBase):

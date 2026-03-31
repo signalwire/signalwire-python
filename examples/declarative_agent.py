@@ -29,8 +29,8 @@ from datetime import datetime
 # Add the parent directory to the path so we can import the package
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import FunctionResult
 
 
 class DeclarativeAgent(AgentBase):
@@ -158,14 +158,14 @@ class DeclarativeAgent(AgentBase):
             raw_data: The complete request data
             
         Returns:
-            SwaigFunctionResult with current time
+            FunctionResult with current time
         """
         # Get the current time
         now = datetime.now()
         # Format it as HH:MM:SS
         formatted_time = now.strftime("%H:%M:%S")
         # Return a result that will be shown to the user
-        return SwaigFunctionResult(f"The current time is {formatted_time}")
+        return FunctionResult(f"The current time is {formatted_time}")
     
     @AgentBase.tool(
         name="get_weather",
@@ -190,14 +190,14 @@ class DeclarativeAgent(AgentBase):
             raw_data: The complete request data
             
         Returns:
-            SwaigFunctionResult with weather information
+            FunctionResult with weather information
         """
         # Extract location from the args dictionary
         location = args.get("location", "Unknown location")
         
         # In a real implementation, this would call a weather API
         # For demonstration purposes, we return a mock response
-        return SwaigFunctionResult(f"It's sunny and 72°F in {location}.")
+        return FunctionResult(f"It's sunny and 72°F in {location}.")
     
     def on_summary(self, summary, raw_data=None):
         """

@@ -43,15 +43,15 @@ import sys
 import json
 from datetime import datetime
 from fastapi import FastAPI
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 from comprehensive_dynamic_agent import ComprehensiveDynamicAgent
 
 # Add the parent directory to the path so we can import the package
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from signalwire_agents import AgentServer
-from signalwire_agents.prefabs import InfoGathererAgent
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentServer
+from signalwire.prefabs import InfoGathererAgent
+from signalwire.core.function_result import FunctionResult
 
 
 class CustomInfoGatherer(InfoGathererAgent):
@@ -121,7 +121,7 @@ class CustomInfoGatherer(InfoGathererAgent):
             raw_data: Complete request data
             
         Returns:
-            SwaigFunctionResult with confirmation and SMS action
+            FunctionResult with confirmation and SMS action
         """
         # Extract parameters from the args dictionary
         name = args.get("name", "")
@@ -143,7 +143,7 @@ class CustomInfoGatherer(InfoGathererAgent):
         # Return success response with an additional action
         # This demonstrates how to trigger SMS sending as part of the function result
         return (
-            SwaigFunctionResult("I've saved your information to our system.")
+            FunctionResult("I've saved your information to our system.")
             .add_action("send_sms", 
                        {"to": phone,                # Phone number to send to
                        "message": f"Thanks {name} for registering!"})  # SMS content

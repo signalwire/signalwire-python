@@ -19,7 +19,7 @@ The parameter schema system allows skills to declare their configurable paramete
 Use the `list_skills_with_params()` function to get a complete schema of all available skills:
 
 ```python
-from signalwire_agents import list_skills_with_params
+from signalwire import list_skills_with_params
 
 # Get complete schema for all skills
 schema = list_skills_with_params()
@@ -85,7 +85,7 @@ Here's an example of how to use the schema to generate a configuration form:
 
 ```python
 import json
-from signalwire_agents import list_skills_with_params, AgentBase
+from signalwire import list_skills_with_params, AgentBase
 
 # Get skills schema
 schema = list_skills_with_params()
@@ -141,7 +141,7 @@ print("</form>")
 Use the schema to validate and configure skills programmatically:
 
 ```python
-from signalwire_agents import AgentBase, list_skills_with_params
+from signalwire import AgentBase, list_skills_with_params
 
 class MyAgent(AgentBase):
     def __init__(self):
@@ -189,7 +189,7 @@ Each parameter in the schema can have the following properties:
 To add parameter schema support to a skill, override the `get_parameter_schema()` class method:
 
 ```python
-from signalwire_agents.core.skill_base import SkillBase
+from signalwire.core.skill_base import SkillBase
 from typing import Dict, Any
 
 class MyCustomSkill(SkillBase):

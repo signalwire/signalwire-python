@@ -16,7 +16,7 @@ BedrockAgent is a specialized agent implementation that integrates Amazon Bedroc
 BedrockAgent is included in the signalwire-agents package:
 
 ```python
-from signalwire_agents import BedrockAgent
+from signalwire import BedrockAgent
 ```
 
 ## Basic Usage
@@ -24,7 +24,7 @@ from signalwire_agents import BedrockAgent
 ### Creating a BedrockAgent
 
 ```python
-from signalwire_agents import BedrockAgent
+from signalwire import BedrockAgent
 
 # Create a basic Bedrock agent
 agent = BedrockAgent(
@@ -41,7 +41,7 @@ agent.run()
 ### With Skills and Tools
 
 ```python
-from signalwire_agents import BedrockAgent
+from signalwire import BedrockAgent
 
 agent = BedrockAgent(
     name="advanced_bedrock",
@@ -227,7 +227,7 @@ swaig-test examples/bedrock_with_skills.py --function calculate_sum --args '{"a"
 
 ```python
 #!/usr/bin/env python3
-from signalwire_agents import BedrockAgent
+from signalwire import BedrockAgent
 import os
 
 # Create a BedrockAgent with full configuration
@@ -301,11 +301,11 @@ Migrating from a standard Agent to BedrockAgent is straightforward:
 
 ```python
 # Before
-from signalwire_agents import Agent
+from signalwire import Agent
 agent = Agent(name="my_agent")
 
 # After
-from signalwire_agents import BedrockAgent
+from signalwire import BedrockAgent
 agent = BedrockAgent(name="my_agent", voice_id="matthew")
 ```
 

@@ -71,7 +71,7 @@ export SWML_BASIC_AUTH_PASSWORD=mysecurepassword
 SWML-based services automatically use the unified security configuration:
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class MyAgent(AgentBase):
     def __init__(self):
@@ -88,7 +88,7 @@ agent.run()
 The standalone search service also supports the same security configuration:
 
 ```python
-from signalwire_agents.search import SearchService
+from signalwire.search import SearchService
 
 # Basic usage - security configured from environment
 service = SearchService(port=8001, indexes={"docs": "index.swsearch"})

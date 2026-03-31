@@ -32,8 +32,8 @@ from datetime import datetime
 import structlog
 
 # Import the SurveyAgent prefab
-from signalwire_agents.prefabs import SurveyAgent
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.prefabs import SurveyAgent
+from signalwire.core.function_result import FunctionResult
 
 # Configure structlog
 structlog.configure(
@@ -201,7 +201,7 @@ class ProductSurveyAgent(SurveyAgent):
                 key_themes.append(theme)
         
         # Return the analysis
-        return SwaigFunctionResult({
+        return FunctionResult({
             "response": f"I've analyzed the feedback. The sentiment appears to be {sentiment}. " +
                         (f"Key themes identified: {', '.join(key_themes)}" if key_themes else "No specific themes identified."),
             "sentiment": sentiment,

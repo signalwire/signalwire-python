@@ -38,7 +38,7 @@ pip install signalwire-agents
 Here's a simple example of creating an SWML service:
 
 ```python
-from signalwire_agents.core.swml_service import SWMLService
+from signalwire.core.swml_service import SWMLService
 
 class SimpleVoiceService(SWMLService):
     def __init__(self, host="0.0.0.0", port=3000):
@@ -191,7 +191,7 @@ self.add_verb("play", {
 You can register custom verb handlers for specialized verb processing:
 
 ```python
-from signalwire_agents.core.swml_handler import SWMLVerbHandler
+from signalwire.core.swml_handler import SWMLVerbHandler
 
 class CustomPlayHandler(SWMLVerbHandler):
     def __init__(self):
@@ -351,7 +351,7 @@ def on_request(self, request_data=None, callback_path=None):
 Here's an example of a service that uses routing callbacks to handle different types of requests:
 
 ```python
-from signalwire_agents.core.swml_service import SWMLService
+from signalwire.core.swml_service import SWMLService
 from fastapi import Request
 from typing import Dict, Any, Optional
 
@@ -498,7 +498,7 @@ service = SWMLService(
 ### Basic Voicemail Service
 
 ```python
-from signalwire_agents.core.swml_service import SWMLService
+from signalwire.core.swml_service import SWMLService
 
 class VoicemailService(SWMLService):
     def __init__(self, host="0.0.0.0", port=3000):

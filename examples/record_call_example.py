@@ -18,14 +18,14 @@ This example shows how to use the new recording virtual helpers to:
 """
 
 import json
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.function_result import FunctionResult
 
 
 def basic_recording_example():
     """Simple background recording with default settings."""
     print("=== Basic Recording Example ===")
     
-    result = SwaigFunctionResult("Starting basic call recording") \
+    result = FunctionResult("Starting basic call recording") \
         .record_call() \
         .say("This call is now being recorded")
     
@@ -37,7 +37,7 @@ def advanced_recording_example():
     """Advanced recording with custom settings."""
     print("=== Advanced Recording Example ===")
     
-    result = SwaigFunctionResult("Starting advanced call recording") \
+    result = FunctionResult("Starting advanced call recording") \
         .record_call(
             control_id="support_call_2024_001",
             stereo=True,
@@ -58,7 +58,7 @@ def voicemail_recording_example():
     """Recording setup for voicemail system."""
     print("=== Voicemail Recording Example ===")
     
-    result = SwaigFunctionResult("Please leave your message after the beep") \
+    result = FunctionResult("Please leave your message after the beep") \
         .record_call(
             control_id="voicemail_123456",
             format="wav",
@@ -80,7 +80,7 @@ def stop_recording_example():
     print("=== Stop Recording Example ===")
     
     # Stop specific recording
-    result = SwaigFunctionResult("Ending call recording") \
+    result = FunctionResult("Ending call recording") \
         .stop_record_call("support_call_2024_001") \
         .say("Thank you for calling. Your feedback is important to us.")
     
@@ -93,7 +93,7 @@ def customer_service_workflow():
     print("=== Customer Service Workflow ===")
     
     # Start recording when transferring to agent
-    start_recording = SwaigFunctionResult("Transferring you to a customer service agent") \
+    start_recording = FunctionResult("Transferring you to a customer service agent") \
         .record_call(
             control_id="cs_transfer_001",
             format="mp3",
@@ -110,7 +110,7 @@ def customer_service_workflow():
     print()
     
     # Later in the conversation, stop recording
-    end_recording = SwaigFunctionResult("Call recording stopped") \
+    end_recording = FunctionResult("Call recording stopped") \
         .stop_record_call("cs_transfer_001") \
         .remove_global_data("recording_id") \
         .say("Thank you for calling. Have a wonderful day!")
@@ -124,7 +124,7 @@ def compliance_recording_example():
     """Recording for compliance/legal purposes."""
     print("=== Compliance Recording Example ===")
     
-    result = SwaigFunctionResult("This call is being recorded for compliance purposes") \
+    result = FunctionResult("This call is being recorded for compliance purposes") \
         .record_call(
             control_id="compliance_rec_001",
             stereo=True,           # High quality stereo

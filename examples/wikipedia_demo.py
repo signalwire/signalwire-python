@@ -20,7 +20,7 @@ Features demonstrated:
 - SWAIG fillers for better user experience
 """
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 def main():
     # Create an agent focused on Wikipedia search

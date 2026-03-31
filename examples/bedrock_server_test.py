@@ -4,7 +4,7 @@ Test BedrockAgent as a SWML server
 """
 
 import os
-from signalwire_agents import BedrockAgent
+from signalwire import BedrockAgent
 
 # Create a Bedrock agent
 agent = BedrockAgent(

@@ -29,9 +29,9 @@ enable_debug_events() makes the SignalWire platform POST real-time events
 (barge, errors, session lifecycle) to the agent. Use @agent.on_debug_event
 to handle them.
 
-## SwaigFunctionResult Actions
+## FunctionResult Actions
 
-Tool functions return SwaigFunctionResult objects. Beyond a text response,
+Tool functions return FunctionResult objects. Beyond a text response,
 these can carry actions that the platform executes:
 
 - connect()              — transfer the call to another destination
@@ -48,17 +48,17 @@ these can carry actions that the platform executes:
 
 ## Post-Processing
 
-SwaigFunctionResult(msg, post_process=True) tells the platform to let the AI
+FunctionResult(msg, post_process=True) tells the platform to let the AI
 speak to the user one more time before executing the attached actions. This is
 useful for confirmation workflows like "I'll transfer you now — anything else?"
 """
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import FunctionResult
 
 
 class CallFlowDemoAgent(AgentBase):
-    """Demonstrates call flow verbs, debug events, and SwaigFunctionResult actions."""
+    """Demonstrates call flow verbs, debug events, and FunctionResult actions."""
 
     def __init__(self):
         super().__init__(name="call-flow-demo", route="/call-flow-demo")
@@ -127,7 +127,7 @@ class CallFlowDemoAgent(AgentBase):
                 self.log.debug("debug_event", event_type=event_type)
 
     # ----------------------------------------------------------------
-    # SWAIG tools demonstrating SwaigFunctionResult action helpers
+    # SWAIG tools demonstrating FunctionResult action helpers
     # ----------------------------------------------------------------
 
     @AgentBase.tool(
@@ -152,7 +152,7 @@ class CallFlowDemoAgent(AgentBase):
         # post_process=True lets the AI speak one more time before the
         # transfer actually executes — useful for a goodbye message.
         return (
-            SwaigFunctionResult(
+            FunctionResult(
                 f"Transferring you to {department} support now.",
                 post_process=True
             )
@@ -176,7 +176,7 @@ class CallFlowDemoAgent(AgentBase):
     def send_confirmation(self, phone: str, message: str):
         """Send an SMS message to the caller."""
         return (
-            SwaigFunctionResult(f"Sending confirmation to {phone}.")
+            FunctionResult(f"Sending confirmation to {phone}.")
             .send_sms(
                 to_number=phone,
                 from_number="+15559999999",
@@ -191,7 +191,7 @@ class CallFlowDemoAgent(AgentBase):
     def start_recording(self):
         """Begin background call recording in stereo WAV format."""
         return (
-            SwaigFunctionResult("Recording has started.")
+            FunctionResult("Recording has started.")
             .record_call(control_id="demo-recording", stereo=True, format="wav")
         )
 
@@ -202,7 +202,7 @@ class CallFlowDemoAgent(AgentBase):
     def play_hold_music(self):
         """Play background music and put the caller on hold."""
         return (
-            SwaigFunctionResult("Playing hold music for you.")
+            FunctionResult("Playing hold music for you.")
             .play_background_file("https://cdn.example.com/hold-music.mp3")
             .hold(timeout=120)
         )
@@ -224,7 +224,7 @@ class CallFlowDemoAgent(AgentBase):
     def update_preferences(self, key: str, value: str):
         """Update global session data and toggle functions based on preferences."""
         result = (
-            SwaigFunctionResult(f"Preference '{key}' set to '{value}'.")
+            FunctionResult(f"Preference '{key}' set to '{value}'.")
             .update_global_data({key: value})
         )
         # Example: disable the send_confirmation tool if notifications are off
@@ -248,7 +248,7 @@ class CallFlowDemoAgent(AgentBase):
         """Add dynamic hints and adjust speech timeout for better recognition."""
         hint_list = [h.strip() for h in hints.split(",")]
         return (
-            SwaigFunctionResult(f"Added speech hints: {', '.join(hint_list)}")
+            FunctionResult(f"Added speech hints: {', '.join(hint_list)}")
             .add_dynamic_hints(hint_list)
             .set_end_of_speech_timeout(1200)
         )
@@ -259,6 +259,6 @@ if __name__ == "__main__":
     agent = CallFlowDemoAgent()
     print("Call Flow & Actions Demo")
     print(f"  Route: {agent.route}")
-    print("  Features: pre/post-answer verbs, debug events, SwaigFunctionResult actions")
+    print("  Features: pre/post-answer verbs, debug events, FunctionResult actions")
     print("Note: Works in any deployment mode (server/CGI/Lambda)")
     agent.run()

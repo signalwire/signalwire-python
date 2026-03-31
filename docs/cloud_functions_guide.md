@@ -414,7 +414,7 @@ curl -u username:password \
 **Environment Detection:**
 ```python
 # Check detected mode
-from signalwire_agents.core.logging_config import get_execution_mode
+from signalwire.core.logging_config import get_execution_mode
 print(f"Detected mode: {get_execution_mode()}")
 ```
 
