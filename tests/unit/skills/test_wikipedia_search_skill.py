@@ -15,7 +15,7 @@ import pytest
 import requests
 from unittest.mock import Mock, patch, MagicMock, call
 
-from signalwire_agents.skills.wikipedia_search.skill import WikipediaSearchSkill
+from signalwire.skills.wikipedia_search.skill import WikipediaSearchSkill
 
 
 # ---------------------------------------------------------------------------
@@ -130,7 +130,7 @@ class TestWikipediaSearchSkillInit:
 
     def test_init_logger_name(self):
         skill = _make_skill()
-        assert skill.logger.name == "signalwire_agents.skills.wikipedia_search"
+        assert skill.logger.name == "signalwire.skills.wikipedia_search"
 
 
 # ===========================================================================
@@ -292,22 +292,22 @@ class TestRegisterTools:
 class TestSearchWikiHandler:
     """Test the _search_wiki_handler method."""
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_handler_empty_query(self, mock_get):
         skill = _setup_skill()
         result = skill._search_wiki_handler({"query": ""}, {})
-        # Should return a SwaigFunctionResult without calling the API
+        # Should return a FunctionResult without calling the API
         mock_get.assert_not_called()
         assert result.response == "Please provide a search query for Wikipedia."
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_handler_whitespace_query(self, mock_get):
         skill = _setup_skill()
         result = skill._search_wiki_handler({"query": "   "}, {})
         mock_get.assert_not_called()
         assert result.response == "Please provide a search query for Wikipedia."
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_handler_missing_query_key(self, mock_get):
         skill = _setup_skill()
         result = skill._search_wiki_handler({}, {})
@@ -323,10 +323,10 @@ class TestSearchWikiHandler:
 
     @patch.object(WikipediaSearchSkill, "search_wiki", return_value="Some content")
     def test_handler_returns_swaig_function_result(self, mock_search):
-        from signalwire_agents.core.function_result import SwaigFunctionResult
+        from signalwire.core.function_result import FunctionResult
         skill = _setup_skill()
         result = skill._search_wiki_handler({"query": "test"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
 
     @patch.object(WikipediaSearchSkill, "search_wiki", return_value="Trimmed result")
     def test_handler_strips_query(self, mock_search):
@@ -342,7 +342,7 @@ class TestSearchWikiHandler:
 class TestSearchWikiSingleResult:
     """Test search_wiki with a single result (default num_results=1)."""
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_single_result_success(self, mock_get):
         skill = _setup_skill()
 
@@ -363,7 +363,7 @@ class TestSearchWikiSingleResult:
         assert "**Python (programming language)**" in result
         assert "Python is a high-level programming language." in result
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_search_url_contains_encoded_query(self, mock_get):
         skill = _setup_skill()
 
@@ -377,7 +377,7 @@ class TestSearchWikiSingleResult:
         # + should be URL-encoded as %2B
         assert "C%2B%2B" in called_url
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_search_url_contains_srlimit(self, mock_get):
         skill = _setup_skill({"num_results": 3})
 
@@ -390,7 +390,7 @@ class TestSearchWikiSingleResult:
         called_url = mock_get.call_args_list[0][0][0]
         assert "srlimit=3" in called_url
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_timeout_is_10_seconds(self, mock_get):
         skill = _setup_skill()
 
@@ -410,7 +410,7 @@ class TestSearchWikiSingleResult:
 class TestSearchWikiMultipleResults:
     """Test search_wiki when num_results > 1."""
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_multiple_results_joined_with_separator(self, mock_get):
         skill = _setup_skill({"num_results": 2})
 
@@ -433,7 +433,7 @@ class TestSearchWikiMultipleResults:
         assert "**Article Two**" in result
         assert "=" * 50 in result
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_results_limited_to_num_results(self, mock_get):
         """Even if search returns more titles, only num_results extracts should be fetched."""
         skill = _setup_skill({"num_results": 1})
@@ -461,7 +461,7 @@ class TestSearchWikiMultipleResults:
 class TestSearchWikiNoResults:
     """Test search_wiki edge cases for empty or missing data."""
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_no_search_results(self, mock_get):
         skill = _setup_skill()
 
@@ -474,7 +474,7 @@ class TestSearchWikiNoResults:
         assert "xyznonexistent" in result
         assert "couldn't find" in result.lower() or "rephrasing" in result.lower()
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_no_search_key_in_response(self, mock_get):
         skill = _setup_skill()
 
@@ -487,7 +487,7 @@ class TestSearchWikiNoResults:
         # Should fall through to no_results_message
         assert "broken" in result
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_empty_extract_shows_no_summary(self, mock_get):
         skill = _setup_skill()
 
@@ -505,7 +505,7 @@ class TestSearchWikiNoResults:
         assert "**Some Title**" in result
         assert "No summary available" in result
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_whitespace_only_extract_shows_no_summary(self, mock_get):
         skill = _setup_skill()
 
@@ -522,7 +522,7 @@ class TestSearchWikiNoResults:
         result = skill.search_wiki("blank article")
         assert "No summary available" in result
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_empty_pages_dict(self, mock_get):
         """If the extract API returns empty pages, no article is appended."""
         skill = _setup_skill()
@@ -541,7 +541,7 @@ class TestSearchWikiNoResults:
         # No articles appended, falls back to no_results_message
         assert "ghost" in result
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_custom_no_results_message_with_query(self, mock_get):
         msg = "Nothing for '{query}', sorry!"
         skill = _setup_skill({"no_results_message": msg})
@@ -562,7 +562,7 @@ class TestSearchWikiNoResults:
 class TestSearchWikiErrorHandling:
     """Test error handling in search_wiki."""
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_request_exception_on_search(self, mock_get):
         skill = _setup_skill()
         mock_get.side_effect = requests.exceptions.ConnectionError("Connection refused")
@@ -571,7 +571,7 @@ class TestSearchWikiErrorHandling:
         assert "Error accessing Wikipedia" in result
         assert "Connection refused" in result
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_timeout_exception_on_search(self, mock_get):
         skill = _setup_skill()
         mock_get.side_effect = requests.exceptions.Timeout("Request timed out")
@@ -579,7 +579,7 @@ class TestSearchWikiErrorHandling:
         result = skill.search_wiki("test")
         assert "Error accessing Wikipedia" in result
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_http_error_on_search(self, mock_get):
         skill = _setup_skill()
         resp = Mock()
@@ -589,7 +589,7 @@ class TestSearchWikiErrorHandling:
         result = skill.search_wiki("test")
         assert "Error accessing Wikipedia" in result
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_request_exception_on_extract(self, mock_get):
         skill = _setup_skill()
 
@@ -605,7 +605,7 @@ class TestSearchWikiErrorHandling:
         result = skill.search_wiki("test")
         assert "Error accessing Wikipedia" in result
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_generic_exception(self, mock_get):
         skill = _setup_skill()
         mock_get.side_effect = ValueError("Unexpected error")
@@ -614,7 +614,7 @@ class TestSearchWikiErrorHandling:
         assert "Error searching Wikipedia" in result
         assert "Unexpected error" in result
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_json_decode_error_on_search(self, mock_get):
         skill = _setup_skill()
         resp = Mock()
@@ -625,7 +625,7 @@ class TestSearchWikiErrorHandling:
         result = skill.search_wiki("test")
         assert "Error searching Wikipedia" in result
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_json_decode_error_on_extract(self, mock_get):
         skill = _setup_skill()
 
@@ -650,7 +650,7 @@ class TestSearchWikiErrorHandling:
 class TestSearchWikiResponseStructure:
     """Test subtle response structure edge cases."""
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_single_article_no_separator(self, mock_get):
         """A single result should NOT contain the separator."""
         skill = _setup_skill()
@@ -669,7 +669,7 @@ class TestSearchWikiResponseStructure:
         assert "=" * 50 not in result
         assert result == "**Only One**\n\nContent here."
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_extract_with_leading_trailing_whitespace_stripped(self, mock_get):
         skill = _setup_skill()
 
@@ -688,7 +688,7 @@ class TestSearchWikiResponseStructure:
         result = skill.search_wiki("whitespace test")
         assert "**Whitespace Test**\n\nSome content with whitespace" in result
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_multiple_results_some_empty_extracts(self, mock_get):
         """Articles with empty extracts should still appear with 'No summary' message."""
         skill = _setup_skill({"num_results": 2})
@@ -714,7 +714,7 @@ class TestSearchWikiResponseStructure:
         assert "No summary available" in result
         assert "=" * 50 in result
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_page_missing_extract_key(self, mock_get):
         """If a page has no 'extract' key at all, it should show 'No summary available'."""
         skill = _setup_skill()
@@ -824,7 +824,7 @@ class TestGetInstanceKey:
 class TestHandlerToSearchIntegration:
     """Test the full handler -> search_wiki pipeline with mocked HTTP."""
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_full_flow_success(self, mock_get):
         skill = _setup_skill()
 
@@ -845,7 +845,7 @@ class TestHandlerToSearchIntegration:
         assert "Albert Einstein" in result.response
         assert "theoretical physicist" in result.response
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_full_flow_no_results(self, mock_get):
         skill = _setup_skill()
 
@@ -857,7 +857,7 @@ class TestHandlerToSearchIntegration:
         result = skill._search_wiki_handler({"query": "zzznonexistenttopic"}, {})
         assert "zzznonexistenttopic" in result.response
 
-    @patch("signalwire_agents.skills.wikipedia_search.skill.requests.get")
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
     def test_full_flow_api_error(self, mock_get):
         skill = _setup_skill()
         mock_get.side_effect = requests.exceptions.ConnectionError("Network down")

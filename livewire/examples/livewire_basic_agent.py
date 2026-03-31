@@ -9,7 +9,7 @@ Usage:
     python livewire_basic_agent.py
 """
 
-from signalwire_agents.livewire import (
+from signalwire.livewire import (
     Agent,
     AgentSession,
     AgentServer,

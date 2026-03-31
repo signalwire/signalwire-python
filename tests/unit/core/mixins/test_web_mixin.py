@@ -18,8 +18,8 @@ import base64
 import asyncio
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 
-from signalwire_agents.core.mixins.web_mixin import WebMixin
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.mixins.web_mixin import WebMixin
+from signalwire.core.function_result import FunctionResult
 
 
 # ---------------------------------------------------------------------------
@@ -102,7 +102,7 @@ def _build_mixin(**overrides):
     if "_render_swml" not in overrides:
         agent._render_swml = MagicMock(return_value='{"sections":{}}')
     if "on_function_call" not in overrides:
-        agent.on_function_call = MagicMock(return_value=SwaigFunctionResult("ok"))
+        agent.on_function_call = MagicMock(return_value=FunctionResult("ok"))
     if "on_summary" not in overrides:
         agent.on_summary = MagicMock(return_value=None)
     if "_find_summary_in_post_data" not in overrides:
@@ -502,7 +502,7 @@ class TestHandleSwaigRequest:
 
     def test_post_calls_function(self):
         agent = _build_mixin()
-        agent.on_function_call = MagicMock(return_value=SwaigFunctionResult("done"))
+        agent.on_function_call = MagicMock(return_value=FunctionResult("done"))
         resp = MagicMock()
         resp.headers = {}
         body = {
@@ -1034,7 +1034,7 @@ class TestAzureModeBehavior:
     def test_run_auto_detection_defaults_to_server(self):
         agent = _build_mixin()
         agent.serve = MagicMock()
-        with patch("signalwire_agents.core.mixins.web_mixin.get_execution_mode", return_value="server"):
+        with patch("signalwire.core.mixins.web_mixin.get_execution_mode", return_value="server"):
             agent.run()
         agent.serve.assert_called_once()
 
@@ -1479,7 +1479,7 @@ class TestRootRequestProxyParentDetection:
         agent.get_name = MagicMock(return_value="test_agent")
         agent._check_basic_auth = MagicMock(return_value=True)
         agent._render_swml = MagicMock(return_value='{"sections":{}}')
-        agent.on_function_call = MagicMock(return_value=SwaigFunctionResult("ok"))
+        agent.on_function_call = MagicMock(return_value=FunctionResult("ok"))
         agent.on_summary = MagicMock(return_value=None)
         agent._find_summary_in_post_data = MagicMock(return_value=None)
         agent.on_swml_request = MagicMock(return_value=None)
@@ -1716,14 +1716,14 @@ class TestSessionManagerDebugGuard:
     """Test that debug_token requires _debug_mode."""
 
     def test_debug_token_disabled_by_default(self):
-        from signalwire_agents.core.security.session_manager import SessionManager
+        from signalwire.core.security.session_manager import SessionManager
         manager = SessionManager()
         token = manager.generate_token("func", "call_123")
         result = manager.debug_token(token)
         assert result == {"error": "debug mode not enabled"}
 
     def test_debug_token_enabled(self):
-        from signalwire_agents.core.security.session_manager import SessionManager
+        from signalwire.core.security.session_manager import SessionManager
         manager = SessionManager()
         manager._debug_mode = True
         token = manager.generate_token("func", "call_123")

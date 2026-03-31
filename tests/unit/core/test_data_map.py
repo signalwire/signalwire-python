@@ -17,8 +17,8 @@ import re
 from unittest.mock import Mock, patch, MagicMock
 from typing import Pattern
 
-from signalwire_agents.core.data_map import DataMap, create_simple_api_tool, create_expression_tool
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.data_map import DataMap, create_simple_api_tool, create_expression_tool
+from signalwire.core.function_result import FunctionResult
 
 
 class TestDataMapBasic:
@@ -68,7 +68,7 @@ class TestDataMapExpressions:
     def test_add_expression_with_string_pattern(self):
         """Test adding expression with string pattern"""
         data_map = DataMap("test_function")
-        output = SwaigFunctionResult("Pattern matched")
+        output = FunctionResult("Pattern matched")
         
         data_map.expression("${args.command}", r"start.*", output)
         
@@ -81,7 +81,7 @@ class TestDataMapExpressions:
     def test_add_expression_with_compiled_pattern(self):
         """Test adding expression with compiled regex pattern"""
         data_map = DataMap("test_function")
-        output = SwaigFunctionResult("Pattern matched")
+        output = FunctionResult("Pattern matched")
         pattern = re.compile(r"stop.*")
         
         data_map.expression("${args.command}", pattern, output)
@@ -92,8 +92,8 @@ class TestDataMapExpressions:
     def test_add_expression_with_nomatch_output(self):
         """Test adding expression with nomatch output"""
         data_map = DataMap("test_function")
-        match_output = SwaigFunctionResult("Matched")
-        nomatch_output = SwaigFunctionResult("No match")
+        match_output = FunctionResult("Matched")
+        nomatch_output = FunctionResult("No match")
         
         data_map.expression("${args.command}", r"test.*", match_output, nomatch_output)
         
@@ -162,7 +162,7 @@ class TestDataMapOutput:
     def test_set_output(self):
         """Test setting output"""
         data_map = DataMap("test_function")
-        output = SwaigFunctionResult("API call successful: ${response.data}")
+        output = FunctionResult("API call successful: ${response.data}")
         
         # Must add webhook first
         data_map.webhook("GET", "https://api.example.com/data")
@@ -174,7 +174,7 @@ class TestDataMapOutput:
     def test_set_fallback_output(self):
         """Test setting fallback output"""
         data_map = DataMap("test_function")
-        fallback = SwaigFunctionResult("API unavailable")
+        fallback = FunctionResult("API unavailable")
         
         data_map.fallback_output(fallback)
         
@@ -203,7 +203,7 @@ class TestDataMapSerialization:
         """Test to_swaig_function with expressions"""
         data_map = DataMap("test_function")
         data_map.purpose("Test function")
-        output = SwaigFunctionResult("Expression result")
+        output = FunctionResult("Expression result")
         data_map.expression("${args.command}", r"test.*", output)
         
         swaig_func = data_map.to_swaig_function()
@@ -217,7 +217,7 @@ class TestDataMapSerialization:
         data_map = DataMap("test_function")
         data_map.purpose("Test function")
         data_map.webhook("GET", "https://api.example.com/data")
-        output = SwaigFunctionResult("Webhook result: ${response.data}")
+        output = FunctionResult("Webhook result: ${response.data}")
         data_map.output(output)
         
         swaig_func = data_map.to_swaig_function()
@@ -232,7 +232,7 @@ class TestDataMapChaining:
     
     def test_method_chaining(self):
         """Test that methods return self for chaining"""
-        output = SwaigFunctionResult("Chained result")
+        output = FunctionResult("Chained result")
         
         data_map = (DataMap("test_function")
                    .purpose("Test chaining")
@@ -247,7 +247,7 @@ class TestDataMapChaining:
     
     def test_complex_chaining(self):
         """Test complex method chaining"""
-        result = SwaigFunctionResult()
+        result = FunctionResult()
         result.say("Complex result")
         
         data_map = (DataMap("complex_function")
@@ -293,8 +293,8 @@ class TestDataMapFactoryFunctions:
     def test_create_expression_tool(self):
         """Test create_expression_tool factory"""
         patterns = {
-            "${args.command}": ("start", SwaigFunctionResult().add_action("start", True)),
-            "${args.command}": ("stop", SwaigFunctionResult().add_action("stop", True))
+            "${args.command}": ("start", FunctionResult().add_action("start", True)),
+            "${args.command}": ("stop", FunctionResult().add_action("stop", True))
         }
         
         data_map = create_expression_tool("control_tool", patterns)
@@ -305,7 +305,7 @@ class TestDataMapFactoryFunctions:
     def test_create_expression_tool_with_parameters(self):
         """Test create_expression_tool with parameters"""
         patterns = {
-            "${args.input}": ("test", SwaigFunctionResult("Test result"))
+            "${args.input}": ("test", FunctionResult("Test result"))
         }
         parameters = {
             "input": {"type": "string", "description": "Input text"}
@@ -356,7 +356,7 @@ class TestDataMapErrorHandling:
     def test_output_without_webhook(self):
         """Test setting output without webhook raises error"""
         data_map = DataMap("test_function")
-        output = SwaigFunctionResult("Test output")
+        output = FunctionResult("Test output")
         
         with pytest.raises(ValueError, match="Must add webhook before setting output"):
             data_map.output(output)
@@ -387,7 +387,7 @@ class TestDataMapTemplateVariables:
     def test_response_variables_in_output(self):
         """Test response variables in output templates"""
         data_map = DataMap("test_function")
-        output = SwaigFunctionResult("Result: ${response.data.title}")
+        output = FunctionResult("Result: ${response.data.title}")
         
         data_map.webhook("GET", "https://api.example.com/data")
         data_map.output(output)
@@ -412,9 +412,9 @@ class TestDataMapIntegration:
         assert "parameters" in swaig_func
     
     def test_swaig_function_compatibility(self):
-        """Test compatibility with SwaigFunctionResult"""
+        """Test compatibility with FunctionResult"""
         data_map = DataMap("test_function")
-        result = SwaigFunctionResult("Test response")
+        result = FunctionResult("Test response")
         result.add_action("test_action", {"key": "value"})
         
         data_map.webhook("GET", "https://api.example.com/data")
@@ -430,7 +430,7 @@ class TestDataMapIntegration:
         data_map = DataMap("serialization_test")
         data_map.purpose("Test serialization")
         data_map.parameter("input", "string", "Test input")
-        result = SwaigFunctionResult("Serialized result")
+        result = FunctionResult("Serialized result")
         data_map.webhook("GET", "https://api.example.com/data")
         data_map.output(result)
         

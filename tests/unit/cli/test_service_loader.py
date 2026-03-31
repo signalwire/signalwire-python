@@ -31,7 +31,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock, PropertyMock, call
 from io import StringIO
 
-from signalwire_agents.cli.core.service_loader import (
+from signalwire.cli.core.service_loader import (
     ServiceCapture,
     load_and_simulate_service,
     load_agent_from_file,
@@ -39,8 +39,8 @@ from signalwire_agents.cli.core.service_loader import (
     simulate_request_to_service,
     DEPENDENCIES_AVAILABLE,
 )
-from signalwire_agents.core.swml_service import SWMLService
-from signalwire_agents.core.agent_base import AgentBase
+from signalwire.core.swml_service import SWMLService
+from signalwire.core.agent_base import AgentBase
 
 
 # =============================================================================
@@ -128,7 +128,7 @@ class TestServiceCaptureErrors:
         """ImportError when DEPENDENCIES_AVAILABLE is False."""
         py_file = tmp_path / "service.py"
         py_file.write_text("pass")
-        with patch("signalwire_agents.cli.core.service_loader.DEPENDENCIES_AVAILABLE", False):
+        with patch("signalwire.cli.core.service_loader.DEPENDENCIES_AVAILABLE", False):
             with pytest.raises(ImportError, match="Required dependencies not available"):
                 capturer.capture(str(py_file))
 
@@ -144,7 +144,7 @@ class TestServiceCaptureErrors:
         py_file = tmp_path / "partial_service.py"
         # Write a service file that will create an instance, call run(), then crash
         py_file.write_text(
-            "from signalwire_agents.core.swml_service import SWMLService\n"
+            "from signalwire.core.swml_service import SWMLService\n"
             "svc = SWMLService(name='partial', route='/p', schema_validation=False)\n"
             "svc.serve()\n"
             "raise RuntimeError('after capture')\n"
@@ -165,7 +165,7 @@ class TestServiceCaptureSuccess:
         """Capture a service that calls serve()."""
         py_file = tmp_path / "my_service.py"
         py_file.write_text(
-            "from signalwire_agents.core.swml_service import SWMLService\n"
+            "from signalwire.core.swml_service import SWMLService\n"
             "svc = SWMLService(name='serve_test', route='/s', schema_validation=False)\n"
             "svc.serve()\n"
         )
@@ -177,7 +177,7 @@ class TestServiceCaptureSuccess:
         """Capture a service that calls run() (via AgentBase)."""
         py_file = tmp_path / "my_agent.py"
         py_file.write_text(
-            "from signalwire_agents import AgentBase\n"
+            "from signalwire import AgentBase\n"
             "agent = AgentBase(name='run_test', route='/r', schema_validation=False)\n"
             "agent.run()\n"
         )
@@ -188,7 +188,7 @@ class TestServiceCaptureSuccess:
         """Capture multiple services from one file."""
         py_file = tmp_path / "multi_service.py"
         py_file.write_text(
-            "from signalwire_agents.core.swml_service import SWMLService\n"
+            "from signalwire.core.swml_service import SWMLService\n"
             "svc1 = SWMLService(name='svc1', route='/a', schema_validation=False)\n"
             "svc1.serve()\n"
             "svc2 = SWMLService(name='svc2', route='/b', schema_validation=False)\n"
@@ -203,7 +203,7 @@ class TestServiceCaptureSuccess:
         """captured_services is reset before each capture call."""
         py_file = tmp_path / "resettable.py"
         py_file.write_text(
-            "from signalwire_agents.core.swml_service import SWMLService\n"
+            "from signalwire.core.swml_service import SWMLService\n"
             "svc = SWMLService(name='resettable', route='/r', schema_validation=False)\n"
             "svc.serve()\n"
         )
@@ -219,7 +219,7 @@ class TestServiceCaptureSuccess:
         """suppress_output=True suppresses stdout from the loaded module."""
         py_file = tmp_path / "noisy_service.py"
         py_file.write_text(
-            "from signalwire_agents.core.swml_service import SWMLService\n"
+            "from signalwire.core.swml_service import SWMLService\n"
             "print('I AM VERY NOISY')\n"
             "svc = SWMLService(name='noisy', route='/n', schema_validation=False)\n"
             "svc.serve()\n"
@@ -239,7 +239,7 @@ class TestServiceCaptureSuccess:
         """suppress_output=False (default) allows stdout from the loaded module."""
         py_file = tmp_path / "chatty_service.py"
         py_file.write_text(
-            "from signalwire_agents.core.swml_service import SWMLService\n"
+            "from signalwire.core.swml_service import SWMLService\n"
             "svc = SWMLService(name='chatty', route='/c', schema_validation=False)\n"
             "svc.serve()\n"
         )
@@ -250,7 +250,7 @@ class TestServiceCaptureSuccess:
         """capture() returns a list."""
         py_file = tmp_path / "list_service.py"
         py_file.write_text(
-            "from signalwire_agents.core.swml_service import SWMLService\n"
+            "from signalwire.core.swml_service import SWMLService\n"
             "svc = SWMLService(name='list_test', route='/l', schema_validation=False)\n"
             "svc.serve()\n"
         )
@@ -261,7 +261,7 @@ class TestServiceCaptureSuccess:
         """capture() resolves the path before checking existence."""
         py_file = tmp_path / "relative_service.py"
         py_file.write_text(
-            "from signalwire_agents.core.swml_service import SWMLService\n"
+            "from signalwire.core.swml_service import SWMLService\n"
             "svc = SWMLService(name='relative', route='/rel', schema_validation=False)\n"
             "svc.serve()\n"
         )
@@ -395,8 +395,8 @@ class TestLoadAndSimulateService:
         mock_svc2 = _make_mock_service(route="/b")
 
         with patch.object(ServiceCapture, 'capture', return_value=[mock_svc1, mock_svc2]), \
-             patch("signalwire_agents.cli.core.service_loader.simulate_request_to_service", new=MagicMock()), \
-             patch("signalwire_agents.cli.core.service_loader.asyncio") as mock_asyncio:
+             patch("signalwire.cli.core.service_loader.simulate_request_to_service", new=MagicMock()), \
+             patch("signalwire.cli.core.service_loader.asyncio") as mock_asyncio:
             mock_asyncio.run.return_value = {"result": "ok"}
             result = load_and_simulate_service("fake.py", route="/b")
             assert result == {"result": "ok"}
@@ -409,8 +409,8 @@ class TestLoadAndSimulateService:
         mock_svc = _make_mock_service(route="/only")
 
         with patch.object(ServiceCapture, 'capture', return_value=[mock_svc]), \
-             patch("signalwire_agents.cli.core.service_loader.simulate_request_to_service", new=MagicMock()), \
-             patch("signalwire_agents.cli.core.service_loader.asyncio") as mock_asyncio:
+             patch("signalwire.cli.core.service_loader.simulate_request_to_service", new=MagicMock()), \
+             patch("signalwire.cli.core.service_loader.asyncio") as mock_asyncio:
             mock_asyncio.run.return_value = {"response": "data"}
             result = load_and_simulate_service("fake.py")
             assert result == {"response": "data"}
@@ -420,8 +420,8 @@ class TestLoadAndSimulateService:
         mock_svc = _make_mock_service(route="/only")
 
         with patch.object(ServiceCapture, 'capture', return_value=[mock_svc]), \
-             patch("signalwire_agents.cli.core.service_loader.simulate_request_to_service", new=MagicMock()), \
-             patch("signalwire_agents.cli.core.service_loader.asyncio") as mock_asyncio:
+             patch("signalwire.cli.core.service_loader.simulate_request_to_service", new=MagicMock()), \
+             patch("signalwire.cli.core.service_loader.asyncio") as mock_asyncio:
             mock_asyncio.run.return_value = {}
             load_and_simulate_service(
                 "fake.py",
@@ -595,8 +595,8 @@ class TestSimulateRequestToService:
 
         mock_service._handle_request = async_handler
 
-        with patch("signalwire_agents.cli.simulation.mock_env.create_mock_request") as mock_create, \
-             patch("signalwire_agents.cli.core.service_loader.Response") as mock_response_cls:
+        with patch("signalwire.cli.simulation.mock_env.create_mock_request") as mock_create, \
+             patch("signalwire.cli.core.service_loader.Response") as mock_response_cls:
             mock_create.return_value = Mock()
             mock_response_cls.return_value = Mock()
             result = await simulate_request_to_service(mock_service, body={"test": True})
@@ -616,8 +616,8 @@ class TestSimulateRequestToService:
 
         mock_service._handle_request = async_handler
 
-        with patch("signalwire_agents.cli.simulation.mock_env.create_mock_request") as mock_create, \
-             patch("signalwire_agents.cli.core.service_loader.Response") as mock_response_cls:
+        with patch("signalwire.cli.simulation.mock_env.create_mock_request") as mock_create, \
+             patch("signalwire.cli.core.service_loader.Response") as mock_response_cls:
             mock_create.return_value = Mock()
             mock_response_cls.return_value = Mock()
             result = await simulate_request_to_service(mock_service)
@@ -633,8 +633,8 @@ class TestSimulateRequestToService:
 
         mock_service._handle_request = async_handler
 
-        with patch("signalwire_agents.cli.simulation.mock_env.create_mock_request") as mock_create, \
-             patch("signalwire_agents.cli.core.service_loader.Response") as mock_response_cls:
+        with patch("signalwire.cli.simulation.mock_env.create_mock_request") as mock_create, \
+             patch("signalwire.cli.core.service_loader.Response") as mock_response_cls:
             mock_create.return_value = Mock()
             mock_response_cls.return_value = Mock()
             result = await simulate_request_to_service(mock_service)

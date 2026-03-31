@@ -20,7 +20,7 @@ with patch.dict('sys.modules', {
     'signalwire_pom': MagicMock(),
     'signalwire_pom.pom': MagicMock()
 }):
-    from signalwire_agents.core.pom_builder import PomBuilder
+    from signalwire.core.pom_builder import PomBuilder
 
 
 class TestPomBuilder:
@@ -28,7 +28,7 @@ class TestPomBuilder:
     
     def test_basic_initialization(self):
         """Test basic PomBuilder initialization"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             builder = PomBuilder()
             
             assert mock_pom.called
@@ -36,7 +36,7 @@ class TestPomBuilder:
     
     def test_add_section_basic(self):
         """Test adding a basic section"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_section = Mock()
             mock_pom.return_value.add_section.return_value = mock_section
             
@@ -55,7 +55,7 @@ class TestPomBuilder:
     
     def test_add_section_with_options(self):
         """Test adding a section with various options"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_section = Mock()
             mock_pom.return_value.add_section.return_value = mock_section
             
@@ -81,7 +81,7 @@ class TestPomBuilder:
     
     def test_add_section_with_subsections(self):
         """Test adding a section with subsections"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_section = Mock()
             mock_pom.return_value.add_section.return_value = mock_section
             
@@ -108,7 +108,7 @@ class TestPomBuilder:
     
     def test_add_to_section_new_section(self):
         """Test adding content to a new section (auto-vivification)"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_section = Mock()
             mock_section.body = ""
             mock_section.bullets = []
@@ -124,7 +124,7 @@ class TestPomBuilder:
     
     def test_add_to_section_existing_section(self):
         """Test adding content to an existing section"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_section = Mock()
             mock_section.body = "Existing content"
             mock_section.bullets = []
@@ -140,7 +140,7 @@ class TestPomBuilder:
     
     def test_add_to_section_bullets(self):
         """Test adding bullets to a section"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_section = Mock()
             mock_section.bullets = []
             mock_pom.return_value.add_section.return_value = mock_section
@@ -159,7 +159,7 @@ class TestPomBuilder:
     
     def test_add_subsection(self):
         """Test adding subsections"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_parent_section = Mock()
             mock_subsection = Mock()
             mock_parent_section.add_subsection.return_value = mock_subsection
@@ -184,7 +184,7 @@ class TestPomBuilder:
     
     def test_add_subsection_auto_vivification(self):
         """Test adding subsection with auto-creation of parent"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_parent_section = Mock()
             mock_pom.return_value.add_section.return_value = mock_parent_section
             
@@ -199,7 +199,7 @@ class TestPomBuilder:
     
     def test_has_section(self):
         """Test checking if section exists"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_section = Mock()
             mock_pom.return_value.add_section.return_value = mock_section
             
@@ -212,7 +212,7 @@ class TestPomBuilder:
     
     def test_get_section(self):
         """Test getting section by title"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_section = Mock()
             mock_pom.return_value.add_section.return_value = mock_section
             
@@ -225,7 +225,7 @@ class TestPomBuilder:
     
     def test_render_methods(self):
         """Test rendering methods"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_pom.return_value.render_markdown.return_value = "# Markdown"
             mock_pom.return_value.render_xml.return_value = "<xml>content</xml>"
             
@@ -239,7 +239,7 @@ class TestPomBuilder:
     
     def test_to_dict_and_to_json(self):
         """Test conversion methods"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_dict = [{"title": "Section", "body": "Content"}]
             mock_json = '{"sections": []}'
             mock_pom.return_value.to_dict.return_value = mock_dict
@@ -255,7 +255,7 @@ class TestPomBuilder:
     
     def test_from_sections_classmethod(self):
         """Test creating PomBuilder from sections"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_pom_instance = Mock()
             # Fix the mock to have iterable sections
             mock_pom_instance.sections = [Mock(name="section1"), Mock(name="section2")]
@@ -269,7 +269,7 @@ class TestPomBuilder:
     
     def test_method_chaining(self):
         """Test method chaining functionality"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_section = Mock()
             mock_section.bullets = []
             mock_pom.return_value.add_section.return_value = mock_section
@@ -298,7 +298,7 @@ class TestPomBuilderErrorHandling:
         
         # Test that PomBuilder can be instantiated and used
         # even when the underlying dependency might not be available
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel', side_effect=ImportError("Module not found")):
+        with patch('signalwire.core.pom_builder.PromptObjectModel', side_effect=ImportError("Module not found")):
             # This should handle the error gracefully
             try:
                 builder = PomBuilder()
@@ -318,7 +318,7 @@ class TestPomBuilderIntegration:
     
     def test_complex_document_building(self):
         """Test building a complex document structure"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_section = Mock()
             mock_section.bullets = []
             mock_section.body = ""
@@ -352,7 +352,7 @@ class TestPomBuilderIntegration:
     
     def test_agent_prompt_building(self):
         """Test building agent prompts using PomBuilder"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_section = Mock()
             mock_section.bullets = []
             mock_pom.return_value.add_section.return_value = mock_section
@@ -392,7 +392,7 @@ class TestPomBuilderIntegration:
     
     def test_documentation_generation(self):
         """Test generating API documentation"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_section = Mock()
             mock_section.bullets = []
             mock_section.body = ""
@@ -434,7 +434,7 @@ class TestPomBuilderIntegration:
     
     def test_error_recovery_and_flexibility(self):
         """Test error recovery and flexible usage patterns"""
-        with patch('signalwire_agents.core.pom_builder.PromptObjectModel') as mock_pom:
+        with patch('signalwire.core.pom_builder.PromptObjectModel') as mock_pom:
             mock_section = Mock()
             mock_section.bullets = []
             mock_section.body = ""

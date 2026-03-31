@@ -73,7 +73,7 @@ def _create_gateway(config=None):
     Returns (gateway, mocks_dict) where *mocks_dict* maps friendly names to
     the active ``MagicMock`` instances so tests can configure or assert on them.
     """
-    from signalwire_agents.mcp_gateway.gateway_service import MCPGateway
+    from signalwire.mcp_gateway.gateway_service import MCPGateway
 
     if config is None:
         config = _minimal_config()
@@ -85,17 +85,17 @@ def _create_gateway(config=None):
 
     patches = {
         "config_loader_cls": patch(
-            "signalwire_agents.mcp_gateway.gateway_service.ConfigLoader",
+            "signalwire.mcp_gateway.gateway_service.ConfigLoader",
             return_value=mock_config_loader,
         ),
         "security_config_cls": patch(
-            "signalwire_agents.mcp_gateway.gateway_service.SecurityConfig",
+            "signalwire.mcp_gateway.gateway_service.SecurityConfig",
         ),
         "mcp_manager_cls": patch(
-            "signalwire_agents.mcp_gateway.gateway_service.MCPManager",
+            "signalwire.mcp_gateway.gateway_service.MCPManager",
         ),
         "session_manager_cls": patch(
-            "signalwire_agents.mcp_gateway.gateway_service.SessionManager",
+            "signalwire.mcp_gateway.gateway_service.SessionManager",
         ),
     }
 
@@ -159,17 +159,17 @@ class TestMCPGatewayInit:
 
     def test_init_falls_back_to_load_config_when_no_config_loader(self):
         """When ConfigLoader has_config() is False, _load_config is used."""
-        from signalwire_agents.mcp_gateway.gateway_service import MCPGateway
+        from signalwire.mcp_gateway.gateway_service import MCPGateway
 
         config = _minimal_config()
 
         mock_config_loader = MagicMock()
         mock_config_loader.has_config.return_value = False
 
-        with patch("signalwire_agents.mcp_gateway.gateway_service.ConfigLoader", return_value=mock_config_loader), \
-             patch("signalwire_agents.mcp_gateway.gateway_service.SecurityConfig"), \
-             patch("signalwire_agents.mcp_gateway.gateway_service.MCPManager") as mock_mcp_cls, \
-             patch("signalwire_agents.mcp_gateway.gateway_service.SessionManager") as mock_session_cls, \
+        with patch("signalwire.mcp_gateway.gateway_service.ConfigLoader", return_value=mock_config_loader), \
+             patch("signalwire.mcp_gateway.gateway_service.SecurityConfig"), \
+             patch("signalwire.mcp_gateway.gateway_service.MCPManager") as mock_mcp_cls, \
+             patch("signalwire.mcp_gateway.gateway_service.SessionManager") as mock_session_cls, \
              patch.object(MCPGateway, "_load_config", return_value=config) as mock_load:
 
             mock_mcp_cls.return_value.validate_services.return_value = {}
@@ -201,7 +201,7 @@ class TestMCPGatewayInit:
 
     def test_init_logs_warning_for_failed_validation(self):
         """A warning is logged when a service fails validation."""
-        from signalwire_agents.mcp_gateway.gateway_service import MCPGateway
+        from signalwire.mcp_gateway.gateway_service import MCPGateway
 
         config = _minimal_config()
         mock_config_loader = MagicMock()
@@ -209,11 +209,11 @@ class TestMCPGatewayInit:
         mock_config_loader.get_config.return_value = config
         mock_config_loader.substitute_vars.return_value = config
 
-        with patch("signalwire_agents.mcp_gateway.gateway_service.ConfigLoader", return_value=mock_config_loader), \
-             patch("signalwire_agents.mcp_gateway.gateway_service.SecurityConfig"), \
-             patch("signalwire_agents.mcp_gateway.gateway_service.MCPManager") as mcp_cls, \
-             patch("signalwire_agents.mcp_gateway.gateway_service.SessionManager") as sm_cls, \
-             patch("signalwire_agents.mcp_gateway.gateway_service.logger") as mock_logger:
+        with patch("signalwire.mcp_gateway.gateway_service.ConfigLoader", return_value=mock_config_loader), \
+             patch("signalwire.mcp_gateway.gateway_service.SecurityConfig"), \
+             patch("signalwire.mcp_gateway.gateway_service.MCPManager") as mcp_cls, \
+             patch("signalwire.mcp_gateway.gateway_service.SessionManager") as sm_cls, \
+             patch("signalwire.mcp_gateway.gateway_service.logger") as mock_logger:
 
             mcp_cls.return_value.validate_services.return_value = {"bad_svc": False, "good_svc": True}
             sm_cls.return_value.default_timeout = 300
@@ -241,7 +241,7 @@ class TestMCPGatewayInit:
 
     def test_init_security_config_created(self):
         """SecurityConfig is instantiated with correct parameters."""
-        from signalwire_agents.mcp_gateway.gateway_service import MCPGateway
+        from signalwire.mcp_gateway.gateway_service import MCPGateway
 
         config = _minimal_config()
         mock_cl = MagicMock()
@@ -249,10 +249,10 @@ class TestMCPGatewayInit:
         mock_cl.get_config.return_value = config
         mock_cl.substitute_vars.return_value = config
 
-        with patch("signalwire_agents.mcp_gateway.gateway_service.ConfigLoader", return_value=mock_cl), \
-             patch("signalwire_agents.mcp_gateway.gateway_service.SecurityConfig") as sec_cls, \
-             patch("signalwire_agents.mcp_gateway.gateway_service.MCPManager") as mcp_cls, \
-             patch("signalwire_agents.mcp_gateway.gateway_service.SessionManager") as sm_cls:
+        with patch("signalwire.mcp_gateway.gateway_service.ConfigLoader", return_value=mock_cl), \
+             patch("signalwire.mcp_gateway.gateway_service.SecurityConfig") as sec_cls, \
+             patch("signalwire.mcp_gateway.gateway_service.MCPManager") as mcp_cls, \
+             patch("signalwire.mcp_gateway.gateway_service.SessionManager") as sm_cls:
 
             mcp_cls.return_value.validate_services.return_value = {}
             sm_cls.return_value.default_timeout = 300
@@ -365,7 +365,7 @@ class TestLogSecurityEvent:
         self.gateway, self.mocks = _create_gateway()
 
     def test_log_security_event_basic(self):
-        with patch("signalwire_agents.mcp_gateway.gateway_service.logger") as mock_logger:
+        with patch("signalwire.mcp_gateway.gateway_service.logger") as mock_logger:
             self.gateway._log_security_event("auth_failed", {"ip": "1.2.3.4"})
             mock_logger.info.assert_called_once()
             logged = mock_logger.info.call_args[0][0]
@@ -374,7 +374,7 @@ class TestLogSecurityEvent:
             assert "1.2.3.4" in logged
 
     def test_log_security_event_truncates_long_strings(self):
-        with patch("signalwire_agents.mcp_gateway.gateway_service.logger") as mock_logger:
+        with patch("signalwire.mcp_gateway.gateway_service.logger") as mock_logger:
             long_val = "x" * 500
             self.gateway._log_security_event("test", {"data": long_val})
             logged = mock_logger.info.call_args[0][0]
@@ -382,7 +382,7 @@ class TestLogSecurityEvent:
             assert len(parsed["data"]) <= 256
 
     def test_log_security_event_strips_control_chars(self):
-        with patch("signalwire_agents.mcp_gateway.gateway_service.logger") as mock_logger:
+        with patch("signalwire.mcp_gateway.gateway_service.logger") as mock_logger:
             self.gateway._log_security_event("test", {"data": "hello\x00world\x1b"})
             logged = mock_logger.info.call_args[0][0]
             parsed = json.loads(logged.split("SECURITY_EVENT: ")[1])
@@ -391,14 +391,14 @@ class TestLogSecurityEvent:
             assert "helloworld" in parsed["data"]
 
     def test_log_security_event_includes_timestamp(self):
-        with patch("signalwire_agents.mcp_gateway.gateway_service.logger") as mock_logger:
+        with patch("signalwire.mcp_gateway.gateway_service.logger") as mock_logger:
             self.gateway._log_security_event("test", {})
             logged = mock_logger.info.call_args[0][0]
             parsed = json.loads(logged.split("SECURITY_EVENT: ")[1])
             assert "timestamp" in parsed
 
     def test_log_security_event_preserves_non_string_values(self):
-        with patch("signalwire_agents.mcp_gateway.gateway_service.logger") as mock_logger:
+        with patch("signalwire.mcp_gateway.gateway_service.logger") as mock_logger:
             self.gateway._log_security_event("test", {"count": 42, "flag": True})
             logged = mock_logger.info.call_args[0][0]
             parsed = json.loads(logged.split("SECURITY_EVENT: ")[1])
@@ -1200,8 +1200,8 @@ class TestRunMethod:
 
     def test_run_creates_server_and_serves(self):
         mock_server = MagicMock()
-        with patch("signalwire_agents.mcp_gateway.gateway_service.make_server", return_value=mock_server) as mock_make, \
-             patch("signalwire_agents.mcp_gateway.gateway_service.signal") as mock_signal, \
+        with patch("signalwire.mcp_gateway.gateway_service.make_server", return_value=mock_server) as mock_make, \
+             patch("signalwire.mcp_gateway.gateway_service.signal") as mock_signal, \
              patch("os.path.exists", return_value=False):
 
             # simulate immediate shutdown via KeyboardInterrupt
@@ -1217,10 +1217,10 @@ class TestRunMethod:
         mock_server = MagicMock()
         mock_server.serve_forever.side_effect = KeyboardInterrupt()
 
-        with patch("signalwire_agents.mcp_gateway.gateway_service.make_server", return_value=mock_server), \
-             patch("signalwire_agents.mcp_gateway.gateway_service.signal"), \
+        with patch("signalwire.mcp_gateway.gateway_service.make_server", return_value=mock_server), \
+             patch("signalwire.mcp_gateway.gateway_service.signal"), \
              patch("os.path.exists", return_value=True), \
-             patch("signalwire_agents.mcp_gateway.gateway_service.ssl") as mock_ssl:
+             patch("signalwire.mcp_gateway.gateway_service.ssl") as mock_ssl:
 
             mock_ctx = MagicMock()
             mock_ssl.SSLContext.return_value = mock_ctx
@@ -1233,8 +1233,8 @@ class TestRunMethod:
         mock_server = MagicMock()
         mock_server.serve_forever.side_effect = KeyboardInterrupt()
 
-        with patch("signalwire_agents.mcp_gateway.gateway_service.make_server", return_value=mock_server), \
-             patch("signalwire_agents.mcp_gateway.gateway_service.signal"), \
+        with patch("signalwire.mcp_gateway.gateway_service.make_server", return_value=mock_server), \
+             patch("signalwire.mcp_gateway.gateway_service.signal"), \
              patch("os.path.exists", return_value=False), \
              patch.object(self.gateway, "shutdown") as mock_shutdown:
 
@@ -1245,8 +1245,8 @@ class TestRunMethod:
         mock_server = MagicMock()
         mock_server.serve_forever.side_effect = KeyboardInterrupt()
 
-        with patch("signalwire_agents.mcp_gateway.gateway_service.make_server", return_value=mock_server), \
-             patch("signalwire_agents.mcp_gateway.gateway_service.signal") as mock_signal_mod, \
+        with patch("signalwire.mcp_gateway.gateway_service.make_server", return_value=mock_server), \
+             patch("signalwire.mcp_gateway.gateway_service.signal") as mock_signal_mod, \
              patch("os.path.exists", return_value=False):
 
             self.gateway.run()
@@ -1266,8 +1266,8 @@ class TestRunMethod:
         mock_server = MagicMock()
         mock_server.serve_forever.side_effect = KeyboardInterrupt()
 
-        with patch("signalwire_agents.mcp_gateway.gateway_service.make_server", return_value=mock_server) as mock_make, \
-             patch("signalwire_agents.mcp_gateway.gateway_service.signal"), \
+        with patch("signalwire.mcp_gateway.gateway_service.make_server", return_value=mock_server) as mock_make, \
+             patch("signalwire.mcp_gateway.gateway_service.signal"), \
              patch("os.path.exists", return_value=False):
 
             gateway.run()

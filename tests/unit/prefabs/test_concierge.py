@@ -37,8 +37,8 @@ def _make_concierge(**overrides):
     chain (schema files, uvicorn, POM imports, etc.) while still exercising
     all of ConciergeAgent's own initialisation logic.
     """
-    with patch("signalwire_agents.prefabs.concierge.AgentBase.__init__", return_value=None) as mock_init:
-        from signalwire_agents.prefabs.concierge import ConciergeAgent
+    with patch("signalwire.prefabs.concierge.AgentBase.__init__", return_value=None) as mock_init:
+        from signalwire.prefabs.concierge import ConciergeAgent
 
         # Stub the methods that _setup_concierge_agent calls on `self`
         # so that assertions can be made against them.
@@ -67,7 +67,7 @@ def _make_bare_concierge():
     Create a ConciergeAgent using __new__ (skipping __init__) and set
     only the attributes needed by the tool methods under test.
     """
-    from signalwire_agents.prefabs.concierge import ConciergeAgent
+    from signalwire.prefabs.concierge import ConciergeAgent
 
     agent = ConciergeAgent.__new__(ConciergeAgent)
     agent.venue_name = VENUE_NAME
@@ -155,7 +155,7 @@ class TestSetupConciergeAgent:
     @pytest.fixture(autouse=True)
     def _create_agent(self):
         """Create a bare agent and mock out the AgentBase helper methods."""
-        from signalwire_agents.prefabs.concierge import ConciergeAgent
+        from signalwire.prefabs.concierge import ConciergeAgent
 
         self.agent = ConciergeAgent.__new__(ConciergeAgent)
         self.agent.venue_name = VENUE_NAME
@@ -346,37 +346,37 @@ class TestCheckAvailability:
         self.agent = _make_bare_concierge()
 
     def test_known_service_returns_available(self):
-        from signalwire_agents.core.function_result import SwaigFunctionResult
+        from signalwire.core.function_result import FunctionResult
 
         result = self.agent.check_availability(
             {"service": "spa bookings", "date": "2025-03-15", "time": "14:00"},
             raw_data={},
         )
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "spa bookings" in result.response
         assert "2025-03-15" in result.response
         assert "14:00" in result.response
 
     def test_known_service_case_insensitive(self):
-        from signalwire_agents.core.function_result import SwaigFunctionResult
+        from signalwire.core.function_result import FunctionResult
 
         result = self.agent.check_availability(
             {"service": "Room Service", "date": "2025-01-01", "time": "08:00"},
             raw_data={},
         )
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         # The lowered input "room service" matches "room service" in SERVICES
         assert "room service" in result.response.lower()
         assert "available" in result.response.lower() or "reservation" in result.response.lower()
 
     def test_unknown_service_returns_error(self):
-        from signalwire_agents.core.function_result import SwaigFunctionResult
+        from signalwire.core.function_result import FunctionResult
 
         result = self.agent.check_availability(
             {"service": "helicopter tours", "date": "2025-06-01", "time": "10:00"},
             raw_data={},
         )
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "sorry" in result.response.lower() or "don't offer" in result.response.lower()
         assert VENUE_NAME in result.response
         # Should list available services
@@ -423,10 +423,10 @@ class TestGetDirections:
         self.agent = _make_bare_concierge()
 
     def test_known_amenity_with_location(self):
-        from signalwire_agents.core.function_result import SwaigFunctionResult
+        from signalwire.core.function_result import FunctionResult
 
         result = self.agent.get_directions({"location": "pool"}, raw_data={})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "2nd Floor" in result.response
 
     def test_known_amenity_gym(self):
@@ -515,7 +515,7 @@ class TestOnSummary:
         # to the else branch which calls print(f"... {summary}").  That
         # won't raise, so let's force isinstance to return True and make
         # json.dumps fail.
-        with patch("signalwire_agents.prefabs.concierge.json.dumps", side_effect=TypeError("not serializable")):
+        with patch("signalwire.prefabs.concierge.json.dumps", side_effect=TypeError("not serializable")):
             self.agent.on_summary({"key": "value"})
         captured = capsys.readouterr()
         assert "Error processing summary" in captured.out
@@ -531,18 +531,18 @@ class TestToolDecoratorMetadata:
     """Verify that @AgentBase.tool marks methods with expected metadata."""
 
     def test_check_availability_is_marked_as_tool(self):
-        from signalwire_agents.prefabs.concierge import ConciergeAgent
+        from signalwire.prefabs.concierge import ConciergeAgent
 
         method = ConciergeAgent.check_availability
         assert getattr(method, "_is_tool", False) is True
 
     def test_check_availability_tool_name(self):
-        from signalwire_agents.prefabs.concierge import ConciergeAgent
+        from signalwire.prefabs.concierge import ConciergeAgent
 
         assert ConciergeAgent.check_availability._tool_name == "check_availability"
 
     def test_check_availability_tool_params_has_description(self):
-        from signalwire_agents.prefabs.concierge import ConciergeAgent
+        from signalwire.prefabs.concierge import ConciergeAgent
 
         params = ConciergeAgent.check_availability._tool_params
         assert "description" in params
@@ -552,18 +552,18 @@ class TestToolDecoratorMetadata:
         assert "time" in params["parameters"]
 
     def test_get_directions_is_marked_as_tool(self):
-        from signalwire_agents.prefabs.concierge import ConciergeAgent
+        from signalwire.prefabs.concierge import ConciergeAgent
 
         method = ConciergeAgent.get_directions
         assert getattr(method, "_is_tool", False) is True
 
     def test_get_directions_tool_name(self):
-        from signalwire_agents.prefabs.concierge import ConciergeAgent
+        from signalwire.prefabs.concierge import ConciergeAgent
 
         assert ConciergeAgent.get_directions._tool_name == "get_directions"
 
     def test_get_directions_tool_params_has_location_parameter(self):
-        from signalwire_agents.prefabs.concierge import ConciergeAgent
+        from signalwire.prefabs.concierge import ConciergeAgent
 
         params = ConciergeAgent.get_directions._tool_params
         assert "parameters" in params
@@ -639,7 +639,7 @@ class TestSetupSectionOrder:
 
     @pytest.fixture(autouse=True)
     def _create_agent(self):
-        from signalwire_agents.prefabs.concierge import ConciergeAgent
+        from signalwire.prefabs.concierge import ConciergeAgent
 
         self.agent = ConciergeAgent.__new__(ConciergeAgent)
         self.agent.venue_name = VENUE_NAME

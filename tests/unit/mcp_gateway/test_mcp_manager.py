@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 """
 Unit tests for MCPManager, MCPClient, and MCPService classes
-in signalwire_agents.mcp_gateway.mcp_manager
+in signalwire.mcp_gateway.mcp_manager
 """
 
 import os
@@ -24,7 +24,7 @@ from unittest.mock import Mock, patch, MagicMock, PropertyMock, call
 # Skip the entire module when Flask is not installed (mcp_gateway.__init__ imports flask)
 pytest.importorskip("flask", reason="flask is required for MCP Gateway tests")
 
-from signalwire_agents.mcp_gateway.mcp_manager import (
+from signalwire.mcp_gateway.mcp_manager import (
     MCPService,
     MCPClient,
     MCPManager,
@@ -150,7 +150,7 @@ class TestMCPClientSetupSandboxEnv:
         )
         return MCPClient(svc, sandbox_base_dir="/tmp/sandbox_test")
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_sandboxing_disabled_returns_full_env(self, mock_makedirs):
         """When sandbox is disabled, the full environment is returned."""
         client = self._make_client(sandbox_config={"enabled": False})
@@ -163,7 +163,7 @@ class TestMCPClientSetupSandboxEnv:
         assert "PATH" in env
         assert cwd == os.getcwd()
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_sandbox_enabled_restricted_env(self, mock_makedirs):
         """When sandbox is enabled with restricted_env, a minimal env is created."""
         client = self._make_client(
@@ -187,7 +187,7 @@ class TestMCPClientSetupSandboxEnv:
         assert "LD_LIBRARY_PATH" not in env
         assert "DYLD_INSERT_LIBRARIES" not in env
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_sandbox_enabled_unrestricted_env(self, mock_makedirs):
         """When sandbox is enabled but restricted_env is False, full env with overrides is returned."""
         client = self._make_client(
@@ -207,7 +207,7 @@ class TestMCPClientSetupSandboxEnv:
         assert client.sandbox_dir is not None
         assert env["HOME"] == client.sandbox_dir
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_sandbox_copies_essential_env_vars(self, mock_makedirs):
         """Essential vars like PYTHONPATH should be copied when present."""
         client = self._make_client(
@@ -222,7 +222,7 @@ class TestMCPClientSetupSandboxEnv:
         assert env.get("PYTHONPATH") == "/my/path"
         assert env.get("NODE_PATH") == "/node"
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_sandbox_working_dir_from_config(self, mock_makedirs):
         """Working directory can be overridden via sandbox config."""
         client = self._make_client(
@@ -232,7 +232,7 @@ class TestMCPClientSetupSandboxEnv:
         _, cwd = client._setup_sandbox_env()
         assert cwd == "/custom/dir"
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_sandbox_disabled_working_dir_from_config(self, mock_makedirs):
         """When sandboxing disabled, working_dir from config is still honoured."""
         client = self._make_client(
@@ -433,8 +433,8 @@ class TestMCPClientGetTools:
 class TestMCPClientStart:
     """Tests for MCPClient.start."""
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.subprocess.Popen")
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.subprocess.Popen")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_start_success(self, mock_makedirs, mock_popen):
         """start() should return True when initialization and tool listing succeed."""
         service = MCPService(
@@ -461,8 +461,8 @@ class TestMCPClientStart:
         client._initialize.assert_called_once()
         client._list_tools.assert_called_once()
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.subprocess.Popen")
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.subprocess.Popen")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_start_fails_on_initialize(self, mock_makedirs, mock_popen):
         """start() should return False when _initialize fails."""
         service = MCPService(
@@ -488,8 +488,8 @@ class TestMCPClientStart:
 
         assert result is False
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.subprocess.Popen")
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.subprocess.Popen")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_start_fails_on_popen_exception(self, mock_makedirs, mock_popen):
         """start() should return False when Popen raises an exception."""
         service = MCPService(
@@ -505,8 +505,8 @@ class TestMCPClientStart:
 
         assert result is False
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.subprocess.Popen")
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.subprocess.Popen")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_start_creates_reader_thread(self, mock_makedirs, mock_popen):
         """start() should launch a reader thread."""
         service = MCPService(
@@ -524,7 +524,7 @@ class TestMCPClientStart:
         client._initialize = Mock(return_value=True)
         client._list_tools = Mock(return_value=[])
 
-        with patch("signalwire_agents.mcp_gateway.mcp_manager.threading.Thread") as mock_thread_cls:
+        with patch("signalwire.mcp_gateway.mcp_manager.threading.Thread") as mock_thread_cls:
             mock_thread_instance = Mock()
             mock_thread_cls.return_value = mock_thread_instance
 
@@ -583,7 +583,7 @@ class TestMCPClientStop:
 
         mock_proc.kill.assert_called()
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.shutil.rmtree")
+    @patch("signalwire.mcp_gateway.mcp_manager.shutil.rmtree")
     def test_stop_cleans_up_sandbox_dir(self, mock_rmtree):
         """stop() should remove the sandbox directory if it exists."""
         service = MCPService(
@@ -594,7 +594,7 @@ class TestMCPClientStop:
         client.process = None  # already stopped
         client.sandbox_dir = "/tmp/sandbox_test/mcp_svc_123"
 
-        with patch("signalwire_agents.mcp_gateway.mcp_manager.os.path.exists", return_value=True):
+        with patch("signalwire.mcp_gateway.mcp_manager.os.path.exists", return_value=True):
             client.stop()
 
         mock_rmtree.assert_called_once_with("/tmp/sandbox_test/mcp_svc_123")
@@ -811,7 +811,7 @@ class TestMCPClientSandboxPreexec:
         # Should not raise or do anything
         client._sandbox_preexec()
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.resource.setrlimit")
+    @patch("signalwire.mcp_gateway.mcp_manager.resource.setrlimit")
     def test_preexec_sets_resource_limits(self, mock_setrlimit):
         """_sandbox_preexec should set resource limits when enabled."""
         service = MCPService(
@@ -827,7 +827,7 @@ class TestMCPClientSandboxPreexec:
         # Should have called setrlimit multiple times
         assert mock_setrlimit.call_count == 4
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.resource.setrlimit")
+    @patch("signalwire.mcp_gateway.mcp_manager.resource.setrlimit")
     def test_preexec_skips_resource_limits_when_disabled(self, mock_setrlimit):
         """_sandbox_preexec should skip resource limits when disabled."""
         service = MCPService(
@@ -842,7 +842,7 @@ class TestMCPClientSandboxPreexec:
 
         mock_setrlimit.assert_not_called()
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.resource.setrlimit")
+    @patch("signalwire.mcp_gateway.mcp_manager.resource.setrlimit")
     def test_preexec_handles_resource_limit_errors(self, mock_setrlimit):
         """_sandbox_preexec should not raise on resource limit errors."""
         mock_setrlimit.side_effect = OSError("Not permitted")
@@ -867,7 +867,7 @@ class TestMCPClientSandboxPreexec:
 class TestMCPManagerInit:
     """Tests for MCPManager.__init__."""
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_init_with_empty_config(self, mock_makedirs):
         """MCPManager should initialize with an empty config."""
         config = {}
@@ -879,7 +879,7 @@ class TestMCPManagerInit:
         assert manager.sandbox_base_dir == "./sandbox"
         mock_makedirs.assert_called_once_with("./sandbox", exist_ok=True)
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_init_with_custom_sandbox_dir(self, mock_makedirs):
         """MCPManager should use sandbox_dir from session config."""
         config = {"session": {"sandbox_dir": "/custom/sandbox"}}
@@ -888,7 +888,7 @@ class TestMCPManagerInit:
         assert manager.sandbox_base_dir == "/custom/sandbox"
         mock_makedirs.assert_called_once_with("/custom/sandbox", exist_ok=True)
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_init_loads_services(self, mock_makedirs):
         """MCPManager should load services from config on init."""
         config = {
@@ -911,7 +911,7 @@ class TestMCPManagerInit:
         assert "service2" in manager.services
         assert len(manager.services) == 2
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_init_skips_disabled_services(self, mock_makedirs):
         """MCPManager should skip services with enabled=False."""
         config = {
@@ -939,7 +939,7 @@ class TestMCPManagerInit:
 class TestMCPManagerLoadServices:
     """Tests for MCPManager._load_services."""
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_load_services_creates_mcp_service_objects(self, mock_makedirs):
         """Loaded services should be MCPService instances with correct attributes."""
         config = {
@@ -963,7 +963,7 @@ class TestMCPManagerLoadServices:
         assert svc.enabled is True
         assert svc.sandbox_config == {"enabled": False}
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_load_services_default_description(self, mock_makedirs):
         """Services without description should default to empty string."""
         config = {
@@ -978,7 +978,7 @@ class TestMCPManagerLoadServices:
 
         assert manager.services["svc"].description == ""
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_load_services_no_services_key(self, mock_makedirs):
         """Config without 'services' key should result in no services."""
         config = {"some_other_key": "value"}
@@ -991,7 +991,7 @@ class TestMCPManagerLoadServices:
 class TestMCPManagerGetService:
     """Tests for MCPManager.get_service."""
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_get_existing_service(self, mock_makedirs):
         """get_service should return the MCPService for a known name."""
         config = {
@@ -1006,7 +1006,7 @@ class TestMCPManagerGetService:
         assert svc is not None
         assert svc.name == "known"
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_get_nonexistent_service(self, mock_makedirs):
         """get_service should return None for an unknown name."""
         config = {}
@@ -1018,7 +1018,7 @@ class TestMCPManagerGetService:
 class TestMCPManagerListServices:
     """Tests for MCPManager.list_services."""
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_list_services_returns_dict(self, mock_makedirs):
         """list_services should return a dict with service info."""
         config = {
@@ -1044,7 +1044,7 @@ class TestMCPManagerListServices:
         assert result["svc1"]["command"] == ["python", "s1.py"]
         assert result["svc1"]["enabled"] is True
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_list_services_empty(self, mock_makedirs):
         """list_services should return empty dict when no services."""
         manager = MCPManager({})
@@ -1055,7 +1055,7 @@ class TestMCPManagerListServices:
 class TestMCPManagerCreateClient:
     """Tests for MCPManager.create_client."""
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_create_client_unknown_service(self, mock_makedirs):
         """create_client should raise ValueError for unknown service."""
         manager = MCPManager({})
@@ -1063,7 +1063,7 @@ class TestMCPManagerCreateClient:
         with pytest.raises(ValueError, match="Unknown service"):
             manager.create_client("nonexistent")
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_create_client_disabled_service(self, mock_makedirs):
         """create_client should raise ValueError for disabled service."""
         config = {
@@ -1082,8 +1082,8 @@ class TestMCPManagerCreateClient:
         with pytest.raises(ValueError, match="disabled"):
             manager.create_client("disabled")
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.MCPClient")
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.MCPClient")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_create_client_success(self, mock_makedirs, mock_client_cls):
         """create_client should return a started MCPClient and track it."""
         config = {
@@ -1104,8 +1104,8 @@ class TestMCPManagerCreateClient:
         # Should be tracked in manager.clients
         assert len(manager.clients) == 1
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.MCPClient")
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.MCPClient")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_create_client_start_failure(self, mock_makedirs, mock_client_cls):
         """create_client should raise RuntimeError when client.start() fails."""
         config = {
@@ -1122,8 +1122,8 @@ class TestMCPManagerCreateClient:
         with pytest.raises(RuntimeError, match="Failed to start"):
             manager.create_client("my_svc")
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.MCPClient")
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.MCPClient")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_create_client_tracks_with_unique_key(self, mock_makedirs, mock_client_cls):
         """Each created client should get a unique key in the clients dict."""
         config = {
@@ -1148,7 +1148,7 @@ class TestMCPManagerCreateClient:
 class TestMCPManagerGetServiceTools:
     """Tests for MCPManager.get_service_tools."""
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_get_service_tools_returns_tools_and_cleans_up(self, mock_makedirs):
         """get_service_tools should return tools and clean up the temp client."""
         config = {
@@ -1177,7 +1177,7 @@ class TestMCPManagerGetServiceTools:
         # Client should be cleaned up from tracking
         assert len(manager.clients) == 0
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_get_service_tools_cleans_up_on_error(self, mock_makedirs):
         """get_service_tools should clean up even when get_tools raises."""
         config = {
@@ -1207,7 +1207,7 @@ class TestMCPManagerGetServiceTools:
 class TestMCPManagerValidateServices:
     """Tests for MCPManager.validate_services."""
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_validate_services_all_pass(self, mock_makedirs):
         """validate_services should return True for all services that start OK."""
         config = {
@@ -1232,7 +1232,7 @@ class TestMCPManagerValidateServices:
 
         assert results == {"svc1": True, "svc2": True}
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_validate_services_some_fail(self, mock_makedirs):
         """validate_services should return False for services that fail to start."""
         config = {
@@ -1263,7 +1263,7 @@ class TestMCPManagerValidateServices:
 class TestMCPManagerShutdown:
     """Tests for MCPManager.shutdown."""
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_shutdown_stops_all_clients(self, mock_makedirs):
         """shutdown should stop all tracked clients and clear the dict."""
         manager = MCPManager({})
@@ -1278,7 +1278,7 @@ class TestMCPManagerShutdown:
         client2.stop.assert_called_once()
         assert len(manager.clients) == 0
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_shutdown_handles_stop_errors(self, mock_makedirs):
         """shutdown should continue stopping other clients even if one fails."""
         manager = MCPManager({})
@@ -1294,7 +1294,7 @@ class TestMCPManagerShutdown:
         client1.stop.assert_called_once()
         client2.stop.assert_called_once()
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_shutdown_no_clients(self, mock_makedirs):
         """shutdown should handle the case with no active clients."""
         manager = MCPManager({})
@@ -1312,7 +1312,7 @@ class TestMCPManagerShutdown:
 class TestMCPManagerServiceLifecycle:
     """Tests for service lifecycle management patterns."""
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_full_lifecycle(self, mock_makedirs):
         """Test creating a manager, listing services, and shutting down."""
         config = {
@@ -1339,7 +1339,7 @@ class TestMCPManagerServiceLifecycle:
         # Shutdown should be clean
         manager.shutdown()
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_config_with_sandbox_overrides(self, mock_makedirs):
         """Services should correctly inherit sandbox config from the config file."""
         config = {
@@ -1372,7 +1372,7 @@ class TestMCPManagerServiceLifecycle:
         unsandboxed = manager.get_service("unsandboxed")
         assert unsandboxed.sandbox_config["enabled"] is False
 
-    @patch("signalwire_agents.mcp_gateway.mcp_manager.os.makedirs")
+    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_multiple_services_isolation(self, mock_makedirs):
         """Each service should be an independent MCPService instance."""
         config = {

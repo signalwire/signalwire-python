@@ -17,8 +17,8 @@ from datetime import datetime, timezone
 
 import pytz
 
-from signalwire_agents.skills.datetime.skill import DateTimeSkill
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.skills.datetime.skill import DateTimeSkill
+from signalwire.core.function_result import FunctionResult
 
 
 def _make_skill(params=None):
@@ -80,7 +80,7 @@ class TestDateTimeSkillInit:
     def test_logger_created(self):
         skill = DateTimeSkill(agent=Mock())
         assert skill.logger is not None
-        assert skill.logger.name == "signalwire_agents.skills.datetime"
+        assert skill.logger.name == "signalwire.skills.datetime"
 
     def test_swaig_fields_extracted_from_params(self):
         params = {"swaig_fields": {"meta_data": {"x": 1}}}
@@ -167,7 +167,7 @@ class TestGetTimeHandler:
     def test_default_utc_timezone(self):
         skill = _make_skill()
         result = skill._get_time_handler({}, None)
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "The current time is" in result.response
         assert "UTC" in result.response
 
@@ -186,7 +186,7 @@ class TestGetTimeHandler:
     def test_specific_timezone(self):
         skill = _make_skill()
         result = skill._get_time_handler({"timezone": "America/New_York"}, None)
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "The current time is" in result.response
 
     def test_europe_timezone(self):
@@ -197,10 +197,10 @@ class TestGetTimeHandler:
     def test_invalid_timezone_returns_error(self):
         skill = _make_skill()
         result = skill._get_time_handler({"timezone": "Invalid/Timezone"}, None)
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "Error getting time" in result.response
 
-    @patch("signalwire_agents.skills.datetime.skill.datetime")
+    @patch("signalwire.skills.datetime.skill.datetime")
     def test_time_format(self, mock_datetime):
         """Verify the time string format using a fixed datetime."""
         fixed_dt = datetime(2025, 6, 15, 14, 30, 45, tzinfo=timezone.utc)
@@ -211,7 +211,7 @@ class TestGetTimeHandler:
 
         skill = _make_skill()
         result = skill._get_time_handler({"timezone": "UTC"}, None)
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "The current time is" in result.response
 
 
@@ -225,7 +225,7 @@ class TestGetDateHandler:
     def test_default_utc_timezone(self):
         skill = _make_skill()
         result = skill._get_date_handler({}, None)
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "Today's date is" in result.response
         assert "UTC" not in result.response  # date format doesn't include timezone
 
@@ -242,16 +242,16 @@ class TestGetDateHandler:
     def test_specific_timezone(self):
         skill = _make_skill()
         result = skill._get_date_handler({"timezone": "Asia/Tokyo"}, None)
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "Today's date is" in result.response
 
     def test_invalid_timezone_returns_error(self):
         skill = _make_skill()
         result = skill._get_date_handler({"timezone": "Fake/Zone"}, None)
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "Error getting date" in result.response
 
-    @patch("signalwire_agents.skills.datetime.skill.datetime")
+    @patch("signalwire.skills.datetime.skill.datetime")
     def test_date_format(self, mock_datetime):
         """Verify the date string format using a fixed datetime."""
         fixed_dt = datetime(2025, 1, 20, 10, 0, 0, tzinfo=timezone.utc)
@@ -261,7 +261,7 @@ class TestGetDateHandler:
 
         skill = _make_skill()
         result = skill._get_date_handler({"timezone": "UTC"}, None)
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "Today's date is" in result.response
 
 

@@ -6,7 +6,7 @@ import uuid
 from unittest.mock import AsyncMock, MagicMock, patch
 
 
-from signalwire_agents.relay.call import (
+from signalwire.relay.call import (
     Call,
     Action,
     PlayAction,
@@ -21,8 +21,8 @@ from signalwire_agents.relay.call import (
     TranscribeAction,
     AIAction,
 )
-from signalwire_agents.relay.event import RelayEvent
-from signalwire_agents.relay.constants import (
+from signalwire.relay.event import RelayEvent
+from signalwire.relay.constants import (
     CALL_STATE_ENDED,
     CALL_STATE_ANSWERED,
     EVENT_CALL_STATE,
@@ -1285,7 +1285,7 @@ class TestOnCompleted:
     @pytest.mark.asyncio
     async def test_on_completed_on_record(self, call, mock_client):
         results = []
-        from signalwire_agents.relay.constants import EVENT_CALL_RECORD
+        from signalwire.relay.constants import EVENT_CALL_RECORD
         action = await call.record(
             control_id="r1",
             on_completed=lambda event: results.append(event),

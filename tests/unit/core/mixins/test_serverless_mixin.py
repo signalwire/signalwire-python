@@ -18,8 +18,8 @@ import os
 import sys
 from unittest.mock import Mock, MagicMock, patch, PropertyMock
 
-from signalwire_agents.core.mixins.serverless_mixin import ServerlessMixin
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.mixins.serverless_mixin import ServerlessMixin
+from signalwire.core.function_result import FunctionResult
 
 
 # ---------------------------------------------------------------------------
@@ -865,9 +865,9 @@ class TestExecuteSwaigFunction:
         assert result == {"key": "val"}
 
     def test_successful_swaig_function_result(self):
-        """Function returning SwaigFunctionResult is converted to dict."""
+        """Function returning FunctionResult is converted to dict."""
         def handler(args, raw):
-            return SwaigFunctionResult("Done")
+            return FunctionResult("Done")
 
         mixin = ConcreteServerlessMixin(swaig_functions={"fn": handler})
         result = mixin._execute_swaig_function("fn", {"x": 1})
@@ -992,7 +992,7 @@ class TestModeDetection:
     def test_mode_auto_detection_lambda(self):
         """When mode is None, get_execution_mode() is called."""
         mixin = ConcreteServerlessMixin()
-        with patch("signalwire_agents.core.mixins.serverless_mixin.get_execution_mode", return_value="lambda"):
+        with patch("signalwire.core.mixins.serverless_mixin.get_execution_mode", return_value="lambda"):
             result = mixin.handle_serverless_request(event=None)
         assert result["statusCode"] == 200
 

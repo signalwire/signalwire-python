@@ -19,7 +19,7 @@ import os
 from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
 
-from signalwire_agents.search.search_engine import SearchEngine
+from signalwire.search.search_engine import SearchEngine
 
 
 class TestSearchEngineInit:
@@ -141,8 +141,8 @@ class TestSearchEngineVectorSearch:
         """Clean up test database"""
         os.unlink(self.db_path)
     
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_vector_search_success(self, mock_cosine_sim, mock_np):
         """Test successful vector search"""
         # Mock numpy and cosine similarity
@@ -172,8 +172,8 @@ class TestSearchEngineVectorSearch:
         assert results[1]['score'] == 0.75
         assert results[1]['content'] == 'Test content 2'
 
-    @patch('signalwire_agents.search.search_engine.np', None)
-    @patch('signalwire_agents.search.search_engine.cosine_similarity', None)
+    @patch('signalwire.search.search_engine.np', None)
+    @patch('signalwire.search.search_engine.cosine_similarity', None)
     def test_vector_search_no_numpy(self):
         """Test vector search when numpy is not available"""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
@@ -181,8 +181,8 @@ class TestSearchEngineVectorSearch:
 
         assert results == []
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_vector_search_database_error(self, mock_cosine_sim, mock_np):
         """Test vector search with database error"""
         engine = SearchEngine(backend='sqlite', index_path='/nonexistent/path.db')
@@ -333,8 +333,8 @@ class TestSearchEngineHybridSearch:
         """Clean up test database"""
         os.unlink(self.db_path)
     
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_search_with_numpy_available(self, mock_cosine_sim, mock_np):
         """Test search when numpy is available"""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
@@ -359,8 +359,8 @@ class TestSearchEngineHybridSearch:
         engine._keyword_search.assert_called_once()
         assert len(results) == 2
     
-    @patch('signalwire_agents.search.search_engine.np', None)
-    @patch('signalwire_agents.search.search_engine.cosine_similarity', None)
+    @patch('signalwire.search.search_engine.np', None)
+    @patch('signalwire.search.search_engine.cosine_similarity', None)
     def test_search_without_numpy(self, mock_logger=None):
         """Test search when numpy is not available"""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
@@ -373,8 +373,8 @@ class TestSearchEngineHybridSearch:
         engine._keyword_search_only.assert_called_once_with('test query', 2, None, None)
         assert len(results) == 1
     
-    @patch('signalwire_agents.search.search_engine.np', None)
-    @patch('signalwire_agents.search.search_engine.cosine_similarity', None)
+    @patch('signalwire.search.search_engine.np', None)
+    @patch('signalwire.search.search_engine.cosine_similarity', None)
     def test_search_with_tags_filter(self):
         """Test search with tag filtering"""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
@@ -389,8 +389,8 @@ class TestSearchEngineHybridSearch:
         engine._keyword_search_only.assert_called_once_with('test query', 2, ['python'], None)
         assert len(results) == 1
     
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_search_with_similarity_threshold(self, mock_cosine_sim, mock_np):
         """Test search with distance threshold filtering"""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
@@ -803,8 +803,8 @@ def empty_db(tmp_path):
 class TestSearch:
     """End-to-end tests for the search() orchestrator method."""
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_search_returns_results(self, mock_cosine, mock_np, full_db):
         """search() returns results when vector + keyword candidates exist."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
@@ -825,8 +825,8 @@ class TestSearch:
         assert len(results) >= 1
         assert 'score' in results[0]
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_search_merges_multiple_sources(self, mock_cosine, mock_np, full_db):
         """search() merges candidates from vector, keyword, filename, metadata."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
@@ -848,8 +848,8 @@ class TestSearch:
         ids = {r['id'] for r in results}
         assert ids == {1, 2, 3}
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_search_respects_count(self, mock_cosine, mock_np, full_db):
         """search() returns at most `count` results."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
@@ -867,8 +867,8 @@ class TestSearch:
         results = engine.search([0.9, 0.1, 0.0, 0.0], 'test', count=3)
         assert len(results) == 3
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_search_filters_by_tags(self, mock_cosine, mock_np, full_db):
         """search() filters results by tags when specified."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
@@ -888,8 +888,8 @@ class TestSearch:
         results = engine.search([0.9, 0.1, 0.0, 0.0], 'test', count=5, tags=['python'])
         assert all('python' in r['metadata']['tags'] for r in results)
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_search_boosts_exact_matches(self, mock_cosine, mock_np, full_db):
         """search() boosts exact query matches when original_query given."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
@@ -911,8 +911,8 @@ class TestSearch:
         # The exact-match result should now be ranked first
         assert results[0]['id'] == 1
 
-    @patch('signalwire_agents.search.search_engine.np', None)
-    @patch('signalwire_agents.search.search_engine.cosine_similarity', None)
+    @patch('signalwire.search.search_engine.np', None)
+    @patch('signalwire.search.search_engine.cosine_similarity', None)
     def test_search_falls_back_to_keyword_only(self, full_db):
         """search() uses keyword-only when numpy is unavailable."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
@@ -923,8 +923,8 @@ class TestSearch:
         engine._keyword_search_only.assert_called_once()
         assert len(results) == 1
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_search_handles_vector_conversion_error(self, mock_cosine, mock_np, full_db):
         """search() falls back to keyword-only when vector conversion fails."""
         mock_np.array.side_effect = Exception("bad vector")
@@ -933,8 +933,8 @@ class TestSearch:
         results = engine.search([0.1], 'python', count=3)
         engine._keyword_search_only.assert_called_once()
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_search_applies_diversity_penalties(self, mock_cosine, mock_np, full_db):
         """search() calls _apply_diversity_penalties."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
@@ -953,8 +953,8 @@ class TestSearch:
         engine.search([0.9, 0.1, 0.0, 0.0], 'test', count=3)
         diversity_mock.assert_called_once()
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_search_sets_score_field(self, mock_cosine, mock_np, full_db):
         """search() ensures every result has a 'score' field."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
@@ -973,8 +973,8 @@ class TestSearch:
         for r in results:
             assert 'score' in r
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_search_similarity_threshold_filters(self, mock_cosine, mock_np, full_db):
         """search() filters by similarity_threshold when > 0."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
@@ -1003,8 +1003,8 @@ class TestSearch:
 class TestVectorSearch:
     """Tests for _vector_search()."""
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_returns_sorted_by_score(self, mock_cosine, mock_np, full_db):
         """Results are sorted by similarity descending."""
         # Set up mock so frombuffer returns mock arrays
@@ -1020,8 +1020,8 @@ class TestVectorSearch:
         scores = [r['score'] for r in results]
         assert scores == sorted(scores, reverse=True)
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_limits_count(self, mock_cosine, mock_np, full_db):
         """Returns at most `count` results."""
         mock_array = Mock()
@@ -1034,8 +1034,8 @@ class TestVectorSearch:
         results = engine._vector_search([[0.9, 0.1, 0.0, 0.0]], count=2)
         assert len(results) <= 2
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_metadata_parsed_correctly(self, mock_cosine, mock_np, full_db):
         """Metadata (tags, section, filename) is correctly parsed."""
         mock_array = Mock()
@@ -1052,8 +1052,8 @@ class TestVectorSearch:
         assert 'section' in md
         assert isinstance(md['tags'], list)
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_skips_empty_embeddings(self, mock_cosine, mock_np, db_no_embeddings):
         """Chunks with NULL embeddings are skipped."""
         mock_np.frombuffer.return_value = Mock(reshape=Mock(return_value=[[0.0]]))
@@ -1064,8 +1064,8 @@ class TestVectorSearch:
         results = engine._vector_search([[0.1, 0.1, 0.1, 0.1]], count=10)
         assert results == []
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_handles_embedding_processing_error(self, mock_cosine, mock_np, full_db):
         """Gracefully continues when one embedding fails to process."""
         call_count = [0]
@@ -1086,22 +1086,22 @@ class TestVectorSearch:
         # Should still return results from non-corrupt chunks
         assert len(results) >= 1
 
-    @patch('signalwire_agents.search.search_engine.np', None)
-    @patch('signalwire_agents.search.search_engine.cosine_similarity', None)
+    @patch('signalwire.search.search_engine.np', None)
+    @patch('signalwire.search.search_engine.cosine_similarity', None)
     def test_no_numpy_returns_empty(self, full_db):
         """Returns [] when numpy is not available."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         assert engine._vector_search([[0.1]], count=5) == []
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_db_error_returns_empty(self, mock_cosine, mock_np):
         """Returns [] when the database cannot be opened."""
         engine = SearchEngine(backend='sqlite', index_path='/no/such/file.db')
         assert engine._vector_search([[0.1]], count=5) == []
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_search_type_is_vector(self, mock_cosine, mock_np, full_db):
         """All results have search_type == 'vector'."""
         mock_array = Mock()
@@ -1748,8 +1748,8 @@ class TestEdgeCases:
         results = engine._metadata_search('test', count=5)
         assert results == []
 
-    @patch('signalwire_agents.search.search_engine.np', None)
-    @patch('signalwire_agents.search.search_engine.cosine_similarity', None)
+    @patch('signalwire.search.search_engine.np', None)
+    @patch('signalwire.search.search_engine.cosine_similarity', None)
     def test_numpy_unavailable_keyword_search_only(self, full_db):
         """When numpy is None, search() uses keyword-only path."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
@@ -1855,8 +1855,8 @@ class TestEdgeCases:
 class TestAddVectorScoresToCandidates:
     """Tests for _add_vector_scores_to_candidates()."""
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_adds_vector_scores(self, mock_cosine, mock_np, full_db):
         """Adds vector_score and vector_distance to candidates."""
         mock_array = Mock()
@@ -1874,7 +1874,7 @@ class TestAddVectorScoresToCandidates:
         assert 'vector_distance' in candidates[1]
         assert candidates[1]['sources'].get('vector_rerank')
 
-    @patch('signalwire_agents.search.search_engine.np', None)
+    @patch('signalwire.search.search_engine.np', None)
     def test_no_numpy_does_nothing(self, full_db):
         """Does nothing when numpy is unavailable."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
@@ -1882,8 +1882,8 @@ class TestAddVectorScoresToCandidates:
         engine._add_vector_scores_to_candidates(candidates, [[0.1]], 0.5)
         assert 'vector_score' not in candidates[1]
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_empty_candidates(self, mock_cosine, mock_np, full_db):
         """Does nothing with empty candidates dict."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
@@ -1891,8 +1891,8 @@ class TestAddVectorScoresToCandidates:
         engine._add_vector_scores_to_candidates(candidates, [[0.1]], 0.5)
         assert candidates == {}
 
-    @patch('signalwire_agents.search.search_engine.np')
-    @patch('signalwire_agents.search.search_engine.cosine_similarity')
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
     def test_db_error_handled(self, mock_cosine, mock_np):
         """Database errors are handled gracefully."""
         engine = SearchEngine(backend='sqlite', index_path='/nonexistent/path.db')

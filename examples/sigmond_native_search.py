@@ -197,7 +197,7 @@ class SigmondNativeSearch(AgentBase):
         
         # Get the project root directory
         project_root = Path(__file__).parent.parent
-        concepts_guide_file = project_root / "docs" / "signalwire_agents_concepts_guide.md"
+        concepts_guide_file = project_root / "docs" / "signalwire_concepts_guide.md"
         concepts_index_file = project_root / "concepts_guide.swsearch"
         
         # Check if the concepts guide file exists

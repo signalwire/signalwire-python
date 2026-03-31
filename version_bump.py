@@ -126,9 +126,9 @@ def main():
     # Define paths
     root_dir = Path(__file__).parent
     pyproject_path = root_dir / "pyproject.toml"
-    init_path = root_dir / "signalwire_agents" / "__init__.py"
+    init_path = root_dir / "signalwire" / "__init__.py"
     changelog_path = root_dir / "CHANGELOG.md"
-    agent_server_path = root_dir / "signalwire_agents" / "agent_server.py"
+    agent_server_path = root_dir / "signalwire" / "agent_server.py"
 
     # Get current version
     current_version = None

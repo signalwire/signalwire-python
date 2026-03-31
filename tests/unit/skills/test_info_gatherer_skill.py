@@ -14,9 +14,9 @@ Unit tests for InfoGathererSkill and SkillBase namespace helpers
 import pytest
 from unittest.mock import Mock
 
-from signalwire_agents.core.skill_base import SkillBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
-from signalwire_agents.skills.info_gatherer.skill import InfoGathererSkill
+from signalwire.core.skill_base import SkillBase
+from signalwire.core.function_result import FunctionResult
+from signalwire.skills.info_gatherer.skill import InfoGathererSkill
 
 
 # ---------------------------------------------------------------------------
@@ -205,7 +205,7 @@ class TestNamespaceHelpers:
     def test_update_skill_data(self):
         skill = _make_skill({"questions": SAMPLE_QUESTIONS, "prefix": "billing"})
         skill.setup()
-        result = SwaigFunctionResult("test")
+        result = FunctionResult("test")
         returned = skill.update_skill_data(result, {"question_index": 1, "answers": []})
         assert returned is result
         result_dict = result.to_dict()

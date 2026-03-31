@@ -35,20 +35,20 @@ def _ensure_mock_module(module_path, attrs=None):
                 setattr(mod, attr_name, attr_val)
             sys.modules[module_path] = mod
 
-_ensure_mock_module('signalwire_agents.search.index_builder', {
+_ensure_mock_module('signalwire.search.index_builder', {
     'IndexBuilder': type('IndexBuilder', (), {}),
 })
-_ensure_mock_module('signalwire_agents.search.search_engine', {
+_ensure_mock_module('signalwire.search.search_engine', {
     'SearchEngine': type('SearchEngine', (), {}),
 })
-_ensure_mock_module('signalwire_agents.search.query_processor', {
+_ensure_mock_module('signalwire.search.query_processor', {
     'preprocess_query': lambda *a, **kw: {},
 })
-_ensure_mock_module('signalwire_agents.search.migration', {
+_ensure_mock_module('signalwire.search.migration', {
     'SearchIndexMigrator': type('SearchIndexMigrator', (), {}),
 })
 
-from signalwire_agents.cli.build_search import (
+from signalwire.cli.build_search import (
     main,
     validate_command,
     search_command,
@@ -59,7 +59,7 @@ from signalwire_agents.cli.build_search import (
 class TestBuildSearchMain:
     """Test the main build command functionality"""
     
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs'])
     def test_basic_build_command(self, mock_builder_class):
         """Test basic build command with minimal arguments"""
@@ -97,7 +97,7 @@ class TestBuildSearchMain:
             assert args[1]['output_file'] == 'docs.swsearch'
             assert args[1]['file_types'] == ['md', 'txt', 'rst']
     
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', [
         'sw-search', './docs', './examples', 
         '--output', 'custom.swsearch',
@@ -161,7 +161,7 @@ class TestBuildSearchMain:
             # Verify verbose output
             mock_print.assert_any_call("Building search index:")
     
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', 'README.md'])
     def test_mixed_sources(self, mock_builder_class):
         """Test build command with mixed file and directory sources"""
@@ -197,7 +197,7 @@ class TestBuildSearchMain:
             assert exc_info.value.code == 1
             mock_print.assert_any_call("Error: No valid sources found")
     
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', './missing'])
     def test_partial_valid_sources(self, mock_builder_class):
         """Test handling when some sources are invalid"""
@@ -228,7 +228,7 @@ class TestBuildSearchMain:
                 return mock_path
 
         # Patch Path where it was imported in build_search module
-        with patch('signalwire_agents.cli.build_search.Path', side_effect=mock_path_constructor), \
+        with patch('signalwire.cli.build_search.Path', side_effect=mock_path_constructor), \
              patch('os.path.exists', return_value=True), \
              patch('builtins.print') as mock_print:
 
@@ -241,7 +241,7 @@ class TestBuildSearchMain:
             args = mock_builder.build_index_from_sources.call_args[1]
             assert len(args['sources']) == 1
     
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './missing1', './missing2'])
     def test_all_invalid_sources(self, mock_builder_class):
         """Test handling when all sources are invalid"""
@@ -257,7 +257,7 @@ class TestBuildSearchMain:
             assert exc_info.value.code == 1
             mock_print.assert_any_call("Error: No valid sources found")
     
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--output', 'test'])
     def test_output_extension_handling(self, mock_builder_class):
         """Test automatic addition of .swsearch extension"""
@@ -273,7 +273,7 @@ class TestBuildSearchMain:
             args = mock_builder.build_index_from_sources.call_args[1]
             assert args['output_file'] == 'test.swsearch'
     
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs'])
     def test_keyboard_interrupt(self, mock_builder_class):
         """Test handling of keyboard interrupt"""
@@ -291,7 +291,7 @@ class TestBuildSearchMain:
             assert exc_info.value.code == 1
             mock_print.assert_any_call("\n\nBuild interrupted by user")
     
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs'])
     def test_build_error(self, mock_builder_class):
         """Test handling of build errors"""
@@ -309,7 +309,7 @@ class TestBuildSearchMain:
             assert exc_info.value.code == 1
             mock_print.assert_any_call("\nError building index: Build failed")
     
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--validate'])
     def test_validation_failure(self, mock_builder_class):
         """Test handling of validation failure"""
@@ -379,8 +379,8 @@ class TestSearchCommand:
         
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
-             patch('signalwire_agents.search.search_engine.SearchEngine', return_value=mock_engine), \
-             patch('signalwire_agents.search.query_processor.preprocess_query', return_value=mock_preprocess_return):
+             patch('signalwire.search.search_engine.SearchEngine', return_value=mock_engine), \
+             patch('signalwire.search.query_processor.preprocess_query', return_value=mock_preprocess_return):
             
             search_command()
             
@@ -414,8 +414,8 @@ class TestSearchCommand:
         
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
-             patch('signalwire_agents.search.search_engine.SearchEngine', return_value=mock_engine), \
-             patch('signalwire_agents.search.query_processor.preprocess_query', return_value=mock_preprocess_return):
+             patch('signalwire.search.search_engine.SearchEngine', return_value=mock_engine), \
+             patch('signalwire.search.query_processor.preprocess_query', return_value=mock_preprocess_return):
             
             search_command()
             
@@ -444,8 +444,8 @@ class TestSearchCommand:
         
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
-             patch('signalwire_agents.search.search_engine.SearchEngine', return_value=mock_engine), \
-             patch('signalwire_agents.search.query_processor.preprocess_query', return_value=mock_preprocess_return):
+             patch('signalwire.search.search_engine.SearchEngine', return_value=mock_engine), \
+             patch('signalwire.search.query_processor.preprocess_query', return_value=mock_preprocess_return):
             
             search_command()
             
@@ -467,8 +467,8 @@ class TestSearchCommand:
         
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
-             patch('signalwire_agents.search.search_engine.SearchEngine', return_value=mock_engine), \
-             patch('signalwire_agents.search.query_processor.preprocess_query', return_value=mock_preprocess_return), \
+             patch('signalwire.search.search_engine.SearchEngine', return_value=mock_engine), \
+             patch('signalwire.search.query_processor.preprocess_query', return_value=mock_preprocess_return), \
              pytest.raises(SystemExit) as exc_info:
             
             search_command()
@@ -496,7 +496,7 @@ class TestSearchCommand:
              pytest.raises(SystemExit) as exc_info:
             
             # Mock import error for search dependencies
-            with patch('signalwire_agents.search.search_engine.SearchEngine', side_effect=ImportError("No module")):
+            with patch('signalwire.search.search_engine.SearchEngine', side_effect=ImportError("No module")):
                 search_command()
             
             assert exc_info.value.code == 1
@@ -507,7 +507,7 @@ class TestSearchCommand:
         """Test search engine initialization error"""
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
-             patch('signalwire_agents.search.search_engine.SearchEngine', side_effect=Exception("Engine error")), \
+             patch('signalwire.search.search_engine.SearchEngine', side_effect=Exception("Engine error")), \
              pytest.raises(SystemExit) as exc_info:
             
             search_command()
@@ -519,14 +519,14 @@ class TestSearchCommand:
 class TestConsoleEntryPoint:
     """Test the console entry point functionality"""
     
-    @patch('signalwire_agents.cli.build_search.main')
+    @patch('signalwire.cli.build_search.main')
     @patch('sys.argv', ['sw-search', './docs'])
     def test_console_entry_main(self, mock_main):
         """Test console entry point calls main for build command"""
         console_entry_point()
         mock_main.assert_called_once()
     
-    @patch('signalwire_agents.cli.build_search.validate_command')
+    @patch('signalwire.cli.build_search.validate_command')
     @patch('sys.argv', ['sw-search', 'validate', 'test.swsearch'])
     def test_console_entry_validate(self, mock_validate):
         """Test console entry point calls validate_command"""
@@ -535,7 +535,7 @@ class TestConsoleEntryPoint:
         # Should remove 'validate' from argv
         assert 'validate' not in sys.argv
     
-    @patch('signalwire_agents.cli.build_search.search_command')
+    @patch('signalwire.cli.build_search.search_command')
     @patch('sys.argv', ['sw-search', 'search', 'test.swsearch', 'query'])
     def test_console_entry_search(self, mock_search):
         """Test console entry point calls search_command"""
@@ -548,7 +548,7 @@ class TestConsoleEntryPoint:
 class TestArgumentParsing:
     """Test argument parsing edge cases"""
     
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--chunking-strategy', 'sentence', '--split-newlines', '2'])
     def test_sentence_chunking_with_newlines(self, mock_builder_class):
         """Test sentence chunking with split newlines parameter"""
@@ -577,7 +577,7 @@ class TestArgumentParsing:
                 connection_string=None
             )
     
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--chunking-strategy', 'paragraph'])
     def test_paragraph_chunking(self, mock_builder_class):
         """Test paragraph chunking strategy"""
@@ -606,7 +606,7 @@ class TestArgumentParsing:
                 connection_string=None
             )
     
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--chunking-strategy', 'page'])
     def test_page_chunking(self, mock_builder_class):
         """Test page chunking strategy"""
@@ -639,7 +639,7 @@ class TestArgumentParsing:
 class TestVerboseOutput:
     """Test verbose output functionality"""
     
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose', '--chunking-strategy', 'sliding'])
     def test_verbose_sliding_output(self, mock_builder_class):
         """Test verbose output for sliding window strategy"""
@@ -658,7 +658,7 @@ class TestVerboseOutput:
             mock_print.assert_any_call("  Chunk size (words): 50")
             mock_print.assert_any_call("  Overlap size (words): 10")
     
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose', '--chunking-strategy', 'sentence', '--split-newlines', '3'])
     def test_verbose_sentence_output(self, mock_builder_class):
         """Test verbose output for sentence strategy with newlines"""
@@ -681,7 +681,7 @@ class TestVerboseOutput:
 class TestErrorHandlingEdgeCases:
     """Test edge cases and error handling"""
     
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose'])
     def test_verbose_error_with_traceback(self, mock_builder_class):
         """Test verbose error output includes traceback"""
@@ -697,7 +697,7 @@ class TestErrorHandlingEdgeCases:
             
             mock_traceback.assert_called_once()
     
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['validate', 'test.swsearch', '--verbose'])
     def test_validate_verbose_error_with_traceback(self, mock_builder_class):
         """Test verbose validation error includes traceback"""
@@ -718,7 +718,7 @@ class TestErrorHandlingEdgeCases:
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
              patch('traceback.print_exc') as mock_traceback, \
-             patch('signalwire_agents.search.search_engine.SearchEngine', side_effect=Exception("Search detailed error")), \
+             patch('signalwire.search.search_engine.SearchEngine', side_effect=Exception("Search detailed error")), \
              pytest.raises(SystemExit):
             
             search_command()
@@ -729,7 +729,7 @@ class TestErrorHandlingEdgeCases:
 # ---------------------------------------------------------------------------
 # Additional imports needed for new tests
 # ---------------------------------------------------------------------------
-from signalwire_agents.cli.build_search import (
+from signalwire.cli.build_search import (
     migrate_command,
     remote_command,
 )
@@ -754,7 +754,7 @@ class TestConsoleEntryPointExtended:
         printed = ''.join(str(c.args[0]) for c in mock_print.call_args_list if c.args)
         assert 'positional arguments' in printed
 
-    @patch('signalwire_agents.cli.build_search.remote_command')
+    @patch('signalwire.cli.build_search.remote_command')
     @patch('sys.argv', ['sw-search', 'remote', 'http://localhost:8001', 'query'])
     def test_console_entry_remote(self, mock_remote):
         """Test console entry point routes to remote_command."""
@@ -762,7 +762,7 @@ class TestConsoleEntryPointExtended:
         mock_remote.assert_called_once()
         assert 'remote' not in sys.argv
 
-    @patch('signalwire_agents.cli.build_search.migrate_command')
+    @patch('signalwire.cli.build_search.migrate_command')
     @patch('sys.argv', ['sw-search', 'migrate', 'test.swsearch', '--info'])
     def test_console_entry_migrate(self, mock_migrate):
         """Test console entry point routes to migrate_command."""
@@ -786,7 +786,7 @@ class TestMainPgvectorBackend:
             "Error: --connection-string is required for pgvector backend"
         )
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', [
         'sw-search', './docs',
         '--backend', 'pgvector',
@@ -807,7 +807,7 @@ class TestMainPgvectorBackend:
         # pgvector should NOT add .swsearch
         assert not call_kw['output_file'].endswith('.swsearch')
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', [
         'sw-search', './docs', './more',
         '--backend', 'pgvector',
@@ -826,7 +826,7 @@ class TestMainPgvectorBackend:
         call_kw = mock_builder.build_index_from_sources.call_args[1]
         assert call_kw['output_file'] == 'documents'
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', [
         'sw-search', './docs',
         '--backend', 'pgvector',
@@ -863,7 +863,7 @@ class TestMainOutputConflict:
 class TestMainJsonOutputFormat:
     """Tests for --output-format json handling in main()."""
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--output-format', 'json'])
     def test_json_format_default_output_name(self, mock_builder_class):
         """JSON format without explicit output should default to chunks.json."""
@@ -880,7 +880,7 @@ class TestMainJsonOutputFormat:
         # builder should have been constructed (JSON mode uses IndexBuilder too)
         mock_builder_class.assert_called_once()
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', [
         'sw-search', './docs',
         '--output-format', 'json',
@@ -903,7 +903,7 @@ class TestMainJsonOutputFormat:
             "Warning: --backend is ignored when using --output-format json"
         )
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', [
         'sw-search', './docs',
         '--output-format', 'json',
@@ -929,7 +929,7 @@ class TestMainJsonOutputFormat:
         # The output file should end in .json
         assert '.json' in printed or mock_builder._discover_files_from_sources.called
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', [
         'sw-search', './docs',
         '--output-format', 'json',
@@ -954,7 +954,7 @@ class TestMainJsonOutputFormat:
 class TestMainOutputDirIndexFormat:
     """Tests for --output-dir with index format."""
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--output-dir', '/tmp/idx_out'])
     def test_output_dir_single_source_sqlite(self, mock_builder_class):
         """Index format with --output-dir and single source auto-names the file."""
@@ -972,7 +972,7 @@ class TestMainOutputDirIndexFormat:
         call_kw = mock_builder.build_index_from_sources.call_args[1]
         assert call_kw['output_file'].endswith('.swsearch')
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './a', './b', '--output-dir', '/tmp/idx_out'])
     def test_output_dir_multi_source_sqlite(self, mock_builder_class):
         """Index format with --output-dir and multiple sources uses 'combined'."""
@@ -993,7 +993,7 @@ class TestMainOutputDirIndexFormat:
 class TestMainModelAlias:
     """Tests for model alias resolution in main()."""
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--model', 'base'])
     def test_model_alias_base(self, mock_builder_class):
         """Model alias 'base' should resolve to the full model name."""
@@ -1009,7 +1009,7 @@ class TestMainModelAlias:
         call_kw = mock_builder_class.call_args[1]
         assert call_kw['model_name'] == 'sentence-transformers/all-mpnet-base-v2'
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--model', 'large'])
     def test_model_alias_large(self, mock_builder_class):
         """Model alias 'large' should resolve correctly."""
@@ -1025,7 +1025,7 @@ class TestMainModelAlias:
         call_kw = mock_builder_class.call_args[1]
         assert call_kw['model_name'] == 'sentence-transformers/all-mpnet-base-v2'
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--model', 'custom-org/my-model'])
     def test_model_full_name_passthrough(self, mock_builder_class):
         """Full model name that is not an alias should pass through unchanged."""
@@ -1045,7 +1045,7 @@ class TestMainModelAlias:
 class TestMainVerboseStrategies:
     """Tests for verbose output across all chunking strategies."""
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose', '--chunking-strategy', 'paragraph'])
     def test_verbose_paragraph(self, mock_builder_class):
         mock_builder = Mock()
@@ -1058,7 +1058,7 @@ class TestMainVerboseStrategies:
             main()
         mock_print.assert_any_call("  Chunking by paragraphs (double newlines)")
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose', '--chunking-strategy', 'page'])
     def test_verbose_page(self, mock_builder_class):
         mock_builder = Mock()
@@ -1071,7 +1071,7 @@ class TestMainVerboseStrategies:
             main()
         mock_print.assert_any_call("  Chunking by pages")
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose', '--chunking-strategy', 'semantic'])
     def test_verbose_semantic(self, mock_builder_class):
         mock_builder = Mock()
@@ -1084,7 +1084,7 @@ class TestMainVerboseStrategies:
             main()
         mock_print.assert_any_call("  Semantic chunking (similarity threshold: 0.5)")
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose', '--chunking-strategy', 'topic'])
     def test_verbose_topic(self, mock_builder_class):
         mock_builder = Mock()
@@ -1097,7 +1097,7 @@ class TestMainVerboseStrategies:
             main()
         mock_print.assert_any_call("  Topic-based chunking (similarity threshold: 0.3)")
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose', '--chunking-strategy', 'qa'])
     def test_verbose_qa(self, mock_builder_class):
         mock_builder = Mock()
@@ -1110,7 +1110,7 @@ class TestMainVerboseStrategies:
             main()
         mock_print.assert_any_call("  QA-optimized chunking")
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose', '--chunking-strategy', 'sentence'])
     def test_verbose_sentence_no_newlines(self, mock_builder_class):
         """Sentence strategy without split-newlines should not print newline line."""
@@ -1132,7 +1132,7 @@ class TestMainVerboseStrategies:
 class TestMainSingleFileSource:
     """Tests for single file source naming."""
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', 'README.md'])
     def test_single_file_source_names_output(self, mock_builder_class):
         """Single file source should name output after file stem."""
@@ -1159,7 +1159,7 @@ class TestMainSingleFileSource:
 class TestMainIndexCreationCheck:
     """Tests for post-build file existence check."""
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs'])
     def test_index_file_not_created(self, mock_builder_class):
         """If output file is not created, should exit with error."""
@@ -1183,7 +1183,7 @@ class TestMainIndexCreationCheck:
 class TestValidateCommandExtended:
     """Additional tests for validate_command."""
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('argparse.ArgumentParser')
     def test_validate_success(self, mock_parser_class, mock_builder_class):
         """Successful validation prints valid message."""
@@ -1211,7 +1211,7 @@ class TestValidateCommandExtended:
         mock_print.assert_any_call("  Chunks: 50")
         mock_print.assert_any_call("  Files: 5")
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('argparse.ArgumentParser')
     def test_validate_success_verbose(self, mock_parser_class, mock_builder_class):
         """Successful verbose validation prints configuration details."""
@@ -1238,7 +1238,7 @@ class TestValidateCommandExtended:
         mock_print.assert_any_call("\nConfiguration:")
         mock_print.assert_any_call("  embedding_model: test-model")
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('argparse.ArgumentParser')
     def test_validate_failure(self, mock_parser_class, mock_builder_class):
         """Failed validation should exit with code 1."""
@@ -1266,7 +1266,7 @@ class TestValidateCommandExtended:
             "\u2717 Index validation failed: corrupted index"
         )
 
-    @patch('signalwire_agents.search.index_builder.IndexBuilder')
+    @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('argparse.ArgumentParser')
     def test_validate_exception(self, mock_parser_class, mock_builder_class):
         """Exception during validation should exit with code 1."""
@@ -1350,8 +1350,8 @@ class TestSearchCommandExtended:
 
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print'), \
-             patch('signalwire_agents.search.search_engine.SearchEngine', return_value=mock_engine) as mock_se, \
-             patch('signalwire_agents.search.query_processor.preprocess_query', return_value=mock_preprocess), \
+             patch('signalwire.search.search_engine.SearchEngine', return_value=mock_engine) as mock_se, \
+             patch('signalwire.search.query_processor.preprocess_query', return_value=mock_preprocess), \
              pytest.raises(SystemExit):
             search_command()
 
@@ -1376,8 +1376,8 @@ class TestSearchCommandExtended:
 
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
-             patch('signalwire_agents.search.search_engine.SearchEngine', return_value=mock_engine), \
-             patch('signalwire_agents.search.query_processor.preprocess_query', return_value=mock_preprocess):
+             patch('signalwire.search.search_engine.SearchEngine', return_value=mock_engine), \
+             patch('signalwire.search.query_processor.preprocess_query', return_value=mock_preprocess):
             search_command()
 
         # Parse the JSON output printed
@@ -1398,8 +1398,8 @@ class TestSearchCommandExtended:
 
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
-             patch('signalwire_agents.search.search_engine.SearchEngine', return_value=mock_engine), \
-             patch('signalwire_agents.search.query_processor.preprocess_query', return_value=mock_preprocess), \
+             patch('signalwire.search.search_engine.SearchEngine', return_value=mock_engine), \
+             patch('signalwire.search.query_processor.preprocess_query', return_value=mock_preprocess), \
              pytest.raises(SystemExit):
             search_command()
 
@@ -1428,8 +1428,8 @@ class TestSearchCommandExtended:
 
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
-             patch('signalwire_agents.search.search_engine.SearchEngine', return_value=mock_engine), \
-             patch('signalwire_agents.search.query_processor.preprocess_query', return_value=mock_preprocess):
+             patch('signalwire.search.search_engine.SearchEngine', return_value=mock_engine), \
+             patch('signalwire.search.query_processor.preprocess_query', return_value=mock_preprocess):
             search_command()
 
         printed = [str(c) for c in mock_print.call_args_list]
@@ -1454,8 +1454,8 @@ class TestSearchCommandExtended:
 
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
-             patch('signalwire_agents.search.search_engine.SearchEngine', return_value=mock_engine), \
-             patch('signalwire_agents.search.query_processor.preprocess_query', return_value=mock_preprocess):
+             patch('signalwire.search.search_engine.SearchEngine', return_value=mock_engine), \
+             patch('signalwire.search.query_processor.preprocess_query', return_value=mock_preprocess):
             search_command()
 
         printed = ''.join(str(c) for c in mock_print.call_args_list)
@@ -1480,7 +1480,7 @@ class TestMigrateCommand:
             },
         }
 
-        with patch('signalwire_agents.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
+        with patch('signalwire.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
              patch('builtins.print') as mock_print:
             migrate_command()
 
@@ -1520,7 +1520,7 @@ class TestMigrateCommand:
     def test_migrate_to_pgvector_no_connection_string(self):
         """to-pgvector without connection string should exit."""
         mock_migrator = Mock()
-        with patch('signalwire_agents.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
+        with patch('signalwire.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
              patch('builtins.print') as mock_print, \
              pytest.raises(SystemExit) as exc_info:
             migrate_command()
@@ -1536,7 +1536,7 @@ class TestMigrateCommand:
     def test_migrate_to_pgvector_no_collection_name(self):
         """to-pgvector without collection name should exit."""
         mock_migrator = Mock()
-        with patch('signalwire_agents.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
+        with patch('signalwire.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
              patch('builtins.print') as mock_print, \
              pytest.raises(SystemExit) as exc_info:
             migrate_command()
@@ -1558,7 +1558,7 @@ class TestMigrateCommand:
             'errors': 0,
         }
 
-        with patch('signalwire_agents.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
+        with patch('signalwire.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
              patch('builtins.print') as mock_print:
             migrate_command()
 
@@ -1569,7 +1569,7 @@ class TestMigrateCommand:
     def test_migrate_to_sqlite_not_implemented(self):
         """to-sqlite should report not implemented and exit."""
         mock_migrator = Mock()
-        with patch('signalwire_agents.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
+        with patch('signalwire.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
              patch('builtins.print') as mock_print, \
              pytest.raises(SystemExit) as exc_info:
             migrate_command()
@@ -1585,7 +1585,7 @@ class TestMigrateCommand:
         mock_migrator = Mock()
         mock_migrator.migrate_sqlite_to_pgvector.side_effect = Exception("DB error")
 
-        with patch('signalwire_agents.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
+        with patch('signalwire.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
              patch('builtins.print') as mock_print, \
              pytest.raises(SystemExit) as exc_info:
             migrate_command()
@@ -1606,7 +1606,7 @@ class TestMigrateCommand:
             },
         }
 
-        with patch('signalwire_agents.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
+        with patch('signalwire.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
              patch('builtins.print') as mock_print:
             migrate_command()
 
@@ -1615,7 +1615,7 @@ class TestMigrateCommand:
     @patch('sys.argv', ['migrate', '--info', 'test.swsearch'])
     def test_migrate_info_exception(self):
         """Exception in info mode should exit with code 1."""
-        with patch('signalwire_agents.search.migration.SearchIndexMigrator', side_effect=Exception("fail")), \
+        with patch('signalwire.search.migration.SearchIndexMigrator', side_effect=Exception("fail")), \
              patch('builtins.print'), \
              pytest.raises(SystemExit) as exc_info:
             migrate_command()
@@ -1629,7 +1629,7 @@ class TestMigrateCommand:
             'type': 'unknown',
         }
 
-        with patch('signalwire_agents.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
+        with patch('signalwire.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
              patch('builtins.print') as mock_print:
             migrate_command()
 

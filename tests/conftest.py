@@ -28,12 +28,12 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Import the main classes we'll be testing
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
-from signalwire_agents.core.swaig_function import SWAIGFunction
-from signalwire_agents.core.data_map import DataMap
-from signalwire_agents.core.contexts import ContextBuilder
-from signalwire_agents.core.swml_service import SWMLService
+from signalwire import AgentBase
+from signalwire.core.function_result import FunctionResult
+from signalwire.core.swaig_function import SWAIGFunction
+from signalwire.core.data_map import DataMap
+from signalwire.core.contexts import ContextBuilder
+from signalwire.core.swml_service import SWMLService
 
 
 @pytest.fixture(scope="session")
@@ -85,7 +85,7 @@ def mock_agent(mock_env_vars):
     """Create a mock agent for testing (schema validation disabled)"""
     with pytest.MonkeyPatch().context() as m:
         # Mock uvicorn to prevent actual server startup
-        m.setattr("signalwire_agents.core.agent_base.uvicorn", Mock())
+        m.setattr("signalwire.core.agent_base.uvicorn", Mock())
 
         agent = AgentBase(
             name="test_agent",
@@ -205,7 +205,7 @@ def sample_swml_document():
 @pytest.fixture
 def mock_skill():
     """Mock skill for testing skill manager"""
-    from signalwire_agents.core.skill_base import SkillBase
+    from signalwire.core.skill_base import SkillBase
     
     class MockSkill(SkillBase):
         SKILL_NAME = "mock_skill"

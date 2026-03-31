@@ -97,7 +97,7 @@ sys.modules["fastapi.security"].HTTPBasicCredentials = None
 sys.modules["pydantic"].BaseModel = None
 
 # Now we can safely import the module under test.
-from signalwire_agents.search.search_service import (
+from signalwire.search.search_service import (
     _cache_key,
     SearchService,
     SearchRequest,
@@ -109,7 +109,7 @@ from signalwire_agents.search.search_service import (
 # added during the stubbed import (intermediate imports like query_processor
 # that captured stub references), and put back real modules we replaced.
 _keep_modules = {
-    "signalwire_agents.search.search_service",
+    "signalwire.search.search_service",
 }
 for _mod_name in list(sys.modules):
     if _mod_name not in _sys_modules_snapshot and _mod_name not in _keep_modules:
@@ -151,11 +151,11 @@ def _run_async(coro):
 @pytest.fixture(autouse=True)
 def _patch_external_deps():
     """Patch external dependencies for every test so SearchService can be constructed."""
-    with patch("signalwire_agents.search.search_service.SecurityConfig") as mock_sec, \
-         patch("signalwire_agents.search.search_service.ConfigLoader") as mock_cl, \
-         patch("signalwire_agents.search.search_service.set_global_model"), \
-         patch("signalwire_agents.search.search_service.SearchEngine") as mock_se, \
-         patch("signalwire_agents.search.search_service.SentenceTransformer", None):
+    with patch("signalwire.search.search_service.SecurityConfig") as mock_sec, \
+         patch("signalwire.search.search_service.ConfigLoader") as mock_cl, \
+         patch("signalwire.search.search_service.set_global_model"), \
+         patch("signalwire.search.search_service.SearchEngine") as mock_se, \
+         patch("signalwire.search.search_service.SentenceTransformer", None):
         # SecurityConfig defaults
         sec_instance = MagicMock()
         sec_instance.get_basic_auth.return_value = ("user", "pass")
@@ -295,7 +295,7 @@ class TestSearchServiceInit:
 
     def test_no_fastapi_sets_app_none(self):
         # Patch FastAPI to None so the constructor skips app creation
-        with patch("signalwire_agents.search.search_service.FastAPI", None):
+        with patch("signalwire.search.search_service.FastAPI", None):
             svc = SearchService()
             assert svc.app is None
 
@@ -355,7 +355,7 @@ class TestLoadResources:
 
     def test_load_resources_sqlite_with_indexes(self, _patch_external_deps):
         mock_model = MagicMock()
-        with patch("signalwire_agents.search.search_service.SentenceTransformer", return_value=mock_model):
+        with patch("signalwire.search.search_service.SentenceTransformer", return_value=mock_model):
             with patch.object(
                 SearchService, "_get_model_name", return_value="sentence-transformers/all-mpnet-base-v2"
             ):
@@ -364,7 +364,7 @@ class TestLoadResources:
 
     def test_load_resources_sqlite_model_load_failure(self, _patch_external_deps):
         with patch(
-            "signalwire_agents.search.search_service.SentenceTransformer",
+            "signalwire.search.search_service.SentenceTransformer",
             side_effect=Exception("model load failed"),
         ):
             with patch.object(
@@ -379,7 +379,7 @@ class TestLoadResources:
         _patch_external_deps["SearchEngine"].return_value = mock_engine
 
         mock_model = MagicMock()
-        with patch("signalwire_agents.search.search_service.SentenceTransformer", return_value=mock_model):
+        with patch("signalwire.search.search_service.SentenceTransformer", return_value=mock_model):
             svc = SearchService(
                 backend="pgvector",
                 connection_string="postgresql://localhost/db",
@@ -484,7 +484,7 @@ class TestHandleSearch:
             _run_async(svc._handle_search(request))
 
     def test_handle_search_success(self, service_with_engine):
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "enhanced test query",
                 "vector": [0.1, 0.2, 0.3],
@@ -504,7 +504,7 @@ class TestHandleSearch:
     def test_handle_search_preprocessing_failure(self, service_with_engine):
         """When preprocess_query fails, search should still proceed with original query."""
         with patch(
-            "signalwire_agents.search.search_service.preprocess_query",
+            "signalwire.search.search_service.preprocess_query",
             side_effect=Exception("NLP error"),
         ):
             request = _make_search_request()
@@ -516,7 +516,7 @@ class TestHandleSearch:
         """When search engine raises, should return empty results."""
         service_with_engine.search_engines["default"].search.side_effect = Exception("search error")
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -530,7 +530,7 @@ class TestHandleSearch:
 
     def test_handle_search_caching(self, service_with_engine):
         """Second identical query should return cached result."""
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -550,7 +550,7 @@ class TestHandleSearch:
         """When cache is full, oldest entry should be evicted."""
         service_with_engine._cache_size = 2
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -564,7 +564,7 @@ class TestHandleSearch:
             assert len(service_with_engine._query_cache) <= 2
 
     def test_handle_search_with_tags(self, service_with_engine):
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -578,7 +578,7 @@ class TestHandleSearch:
             assert call_kwargs[1]["tags"] == ["python"]
 
     def test_handle_search_with_language(self, service_with_engine):
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -593,7 +593,7 @@ class TestHandleSearch:
             assert call_kwargs[1]["language"] == "es"
 
     def test_handle_search_auto_language(self, service_with_engine):
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -607,7 +607,7 @@ class TestHandleSearch:
             assert call_kwargs[1]["language"] == "auto"
 
     def test_handle_search_similarity_threshold(self, service_with_engine):
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -642,8 +642,8 @@ class TestHandleSearchPgvector:
         svc.models = {"test-model": mock_model}
         svc.collection_models = {"default": "test-model"}
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp, \
-             patch("signalwire_agents.search.search_service.set_global_model") as mock_sgm:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp, \
+             patch("signalwire.search.search_service.set_global_model") as mock_sgm:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -734,7 +734,7 @@ class TestSearchDirect:
         ]
         svc.search_engines["default"] = mock_engine
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -756,7 +756,7 @@ class TestSearchDirect:
         mock_engine.search.return_value = []
         svc.search_engines["myindex"] = mock_engine
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -790,7 +790,7 @@ class TestStartStop:
     """Tests for start and stop methods."""
 
     def test_start_no_app_raises(self):
-        with patch("signalwire_agents.search.search_service.FastAPI", None):
+        with patch("signalwire.search.search_service.FastAPI", None):
             svc = SearchService()
             # app is None because FastAPI is patched to None
             with pytest.raises(RuntimeError, match="FastAPI not available"):
@@ -868,7 +868,7 @@ class TestSetupSecurity:
     """Tests for security middleware setup."""
 
     def test_setup_security_no_app(self):
-        with patch("signalwire_agents.search.search_service.FastAPI", None):
+        with patch("signalwire.search.search_service.FastAPI", None):
             svc = SearchService()
             assert svc.app is None
             # Should not raise when app is None
@@ -883,7 +883,7 @@ class TestSetupRoutes:
     """Tests for route setup."""
 
     def test_setup_routes_no_app(self):
-        with patch("signalwire_agents.search.search_service.FastAPI", None):
+        with patch("signalwire.search.search_service.FastAPI", None):
             svc = SearchService()
             assert svc.app is None
             # Should not raise when app is None
@@ -958,7 +958,7 @@ class TestEdgeCasesAndSecurity:
         mock_engine.search.return_value = []
         svc.search_engines["default"] = mock_engine
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "",
                 "vector": [],
@@ -978,7 +978,7 @@ class TestEdgeCasesAndSecurity:
         mock_engine.search.return_value = []
         svc.search_engines["default"] = mock_engine
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "long " * 10000,
                 "vector": [0.1],
@@ -999,7 +999,7 @@ class TestEdgeCasesAndSecurity:
         mock_engine.search.return_value = []
         svc.search_engines["default"] = mock_engine
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -1030,7 +1030,7 @@ class TestEdgeCasesAndSecurity:
         ]
         svc.search_engines["default"] = mock_engine
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -1055,7 +1055,7 @@ class TestEdgeCasesAndSecurity:
         ]
         svc.search_engines["default"] = mock_engine
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -1081,7 +1081,7 @@ class TestEdgeCasesAndSecurity:
         mock_engine.search.return_value = []
         svc.search_engines["default"] = mock_engine
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -1103,7 +1103,7 @@ class TestEdgeCasesAndSecurity:
         mock_engine.search.return_value = []
         svc.search_engines["default"] = mock_engine
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -1125,7 +1125,7 @@ class TestEdgeCasesAndSecurity:
         mock_engine.search.return_value = []
         svc.search_engines["default"] = mock_engine
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -1146,7 +1146,7 @@ class TestEdgeCasesAndSecurity:
         mock_engine.search = MagicMock(return_value=[])
         svc.search_engines["default"] = mock_engine
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -1175,7 +1175,7 @@ class TestResponseFormat:
         mock_engine.search.return_value = []
         svc.search_engines["default"] = mock_engine
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "enhanced",
                 "vector": [0.1],
@@ -1211,7 +1211,7 @@ class TestResponseFormat:
         ]
         svc.search_engines["default"] = mock_engine
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -1251,7 +1251,7 @@ class TestSearchDirectResultFormat:
         ]
         svc.search_engines["default"] = mock_engine
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
                 "vector": [0.1],
@@ -1279,7 +1279,7 @@ class TestSearchDirectResultFormat:
         mock_engine.search.return_value = []
         svc.search_engines["default"] = mock_engine
 
-        with patch("signalwire_agents.search.search_service.preprocess_query") as mock_pp:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "no results",
                 "vector": [0.1],

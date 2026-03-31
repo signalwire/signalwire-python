@@ -17,10 +17,10 @@ This agent demonstrates using the MCP Gateway skill to interact with MCP service
 import os
 import sys
 
-# Add parent directory to path to import signalwire_agents
+# Add parent directory to path to import signalwire
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 
 class TestMCPAgent(AgentBase):

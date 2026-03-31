@@ -17,8 +17,8 @@ from unittest.mock import Mock, patch, MagicMock, PropertyMock
 
 import requests
 
-from signalwire_agents.skills.datasphere.skill import DataSphereSkill
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.skills.datasphere.skill import DataSphereSkill
+from signalwire.core.function_result import FunctionResult
 
 
 def _make_skill(params=None):
@@ -92,7 +92,7 @@ class TestDataSphereSkillInit:
     def test_logger_created(self):
         skill = DataSphereSkill(agent=Mock())
         assert skill.logger is not None
-        assert skill.logger.name == "signalwire_agents.skills.datasphere"
+        assert skill.logger.name == "signalwire.skills.datasphere"
 
     def test_swaig_fields_extracted_from_params(self):
         params = {"swaig_fields": {"meta_data": {"x": 1}}, "space_name": "s"}
@@ -186,7 +186,7 @@ class TestGetInstanceKey:
 class TestSetup:
     """Tests for the setup method."""
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_setup_success_all_required(self, mock_session_cls):
         skill = _make_skill()
         result = skill.setup()
@@ -197,20 +197,20 @@ class TestSetup:
         assert skill.token == "test-token"
         assert skill.document_id == "test-doc-id"
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_setup_creates_api_url(self, mock_session_cls):
         skill = _make_skill()
         skill.setup()
         assert skill.api_url == "https://testspace.signalwire.com/api/datasphere/documents/search"
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_setup_creates_session(self, mock_session_cls):
         skill = _make_skill()
         skill.setup()
         mock_session_cls.assert_called_once()
         assert skill.session is mock_session_cls.return_value
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_setup_optional_defaults(self, mock_session_cls):
         skill = _make_skill()
         skill.setup()
@@ -224,7 +224,7 @@ class TestSetup:
         assert skill.tool_name == "search_knowledge"
         assert "{query}" in skill.no_results_message
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_setup_custom_optional_values(self, mock_session_cls):
         skill = _make_skill({
             "count": 5,
@@ -293,7 +293,7 @@ class TestSetup:
 class TestRegisterTools:
     """Tests for register_tools method."""
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_register_tools_calls_define_tool(self, mock_session_cls):
         skill = _make_skill()
         skill.setup()
@@ -301,7 +301,7 @@ class TestRegisterTools:
 
         skill.agent.define_tool.assert_called_once()
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_register_tools_default_name(self, mock_session_cls):
         skill = _make_skill()
         skill.setup()
@@ -310,7 +310,7 @@ class TestRegisterTools:
         call_kwargs = skill.agent.define_tool.call_args
         assert call_kwargs[1]["name"] == "search_knowledge" or call_kwargs.kwargs.get("name") == "search_knowledge"
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_register_tools_custom_name(self, mock_session_cls):
         skill = _make_skill({"tool_name": "kb_lookup"})
         skill.setup()
@@ -321,7 +321,7 @@ class TestRegisterTools:
         _, kw = call_kwargs
         assert kw["name"] == "kb_lookup"
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_register_tools_has_query_parameter(self, mock_session_cls):
         skill = _make_skill()
         skill.setup()
@@ -331,7 +331,7 @@ class TestRegisterTools:
         assert "query" in kw["parameters"]
         assert kw["parameters"]["query"]["type"] == "string"
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_register_tools_handler_is_callable(self, mock_session_cls):
         skill = _make_skill()
         skill.setup()
@@ -340,7 +340,7 @@ class TestRegisterTools:
         _, kw = skill.agent.define_tool.call_args
         assert callable(kw["handler"])
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_register_tools_merges_swaig_fields(self, mock_session_cls):
         """swaig_fields from params should be merged into define_tool call."""
         params = {
@@ -367,7 +367,7 @@ class TestRegisterTools:
 class TestSearchKnowledgeHandler:
     """Tests for the _search_knowledge_handler method."""
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def _setup_skill(self, mock_session_cls, params=None):
         """Helper that returns (skill, mock_session_instance)."""
         skill = _make_skill(params)
@@ -377,19 +377,19 @@ class TestSearchKnowledgeHandler:
     def test_empty_query_returns_error(self):
         skill, _ = self._setup_skill()
         result = skill._search_knowledge_handler({"query": ""}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "provide a search query" in result.response.lower()
 
     def test_whitespace_query_returns_error(self):
         skill, _ = self._setup_skill()
         result = skill._search_knowledge_handler({"query": "   "}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "provide a search query" in result.response.lower()
 
     def test_missing_query_key_returns_error(self):
         skill, _ = self._setup_skill()
         result = skill._search_knowledge_handler({}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "provide a search query" in result.response.lower()
 
     def test_successful_search_single_chunk(self):
@@ -402,7 +402,7 @@ class TestSearchKnowledgeHandler:
         mock_session.post.return_value = mock_response
 
         result = skill._search_knowledge_handler({"query": "test query"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "1 result" in result.response
         assert "Answer to your question" in result.response
 
@@ -431,7 +431,7 @@ class TestSearchKnowledgeHandler:
         mock_session.post.return_value = mock_response
 
         result = skill._search_knowledge_handler({"query": "unknown topic"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "unknown topic" in result.response
 
     def test_no_results_custom_message_with_placeholder(self):
@@ -466,7 +466,7 @@ class TestSearchKnowledgeHandler:
         mock_session.post.return_value = mock_response
 
         result = skill._search_knowledge_handler({"query": "test"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         # Should return no-results message
 
     def test_invalid_response_data_not_dict(self):
@@ -477,14 +477,14 @@ class TestSearchKnowledgeHandler:
         mock_session.post.return_value = mock_response
 
         result = skill._search_knowledge_handler({"query": "test"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
 
     def test_timeout_error(self):
         skill, mock_session = self._setup_skill()
         mock_session.post.side_effect = requests.exceptions.Timeout("timed out")
 
         result = skill._search_knowledge_handler({"query": "test"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "timed out" in result.response.lower()
 
     def test_http_error(self):
@@ -494,7 +494,7 @@ class TestSearchKnowledgeHandler:
         mock_session.post.return_value = mock_response
 
         result = skill._search_knowledge_handler({"query": "test"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "error" in result.response.lower()
 
     def test_generic_exception(self):
@@ -502,7 +502,7 @@ class TestSearchKnowledgeHandler:
         mock_session.post.side_effect = RuntimeError("unexpected")
 
         result = skill._search_knowledge_handler({"query": "test"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "error" in result.response.lower()
 
     def test_request_payload_required_fields(self):
@@ -657,7 +657,7 @@ class TestSearchKnowledgeHandler:
         mock_session.post.return_value = mock_response
 
         result = skill._search_knowledge_handler({"query": "test"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         # Should get no_results_message because chunks key yields empty list
 
 
@@ -668,7 +668,7 @@ class TestSearchKnowledgeHandler:
 class TestFormatSearchResults:
     """Tests for the _format_search_results helper."""
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def _setup_skill(self, mock_session_cls):
         skill = _make_skill()
         skill.setup()
@@ -734,7 +734,7 @@ class TestFormatSearchResults:
 class TestCleanup:
     """Tests for the cleanup method."""
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_cleanup_closes_session(self, mock_session_cls):
         skill = _make_skill()
         skill.setup()
@@ -768,7 +768,7 @@ class TestGetHints:
 class TestGetGlobalData:
     """Tests for the get_global_data method."""
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_returns_correct_keys(self, mock_session_cls):
         skill = _make_skill()
         skill.setup()
@@ -778,7 +778,7 @@ class TestGetGlobalData:
         assert data["document_id"] == "test-doc-id"
         assert data["knowledge_provider"] == "SignalWire DataSphere"
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_reflects_configured_document_id(self, mock_session_cls):
         skill = _make_skill({"document_id": "custom-doc-123"})
         skill.setup()
@@ -792,28 +792,28 @@ class TestGetGlobalData:
 class TestGetPromptSections:
     """Tests for the get_prompt_sections method."""
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_returns_one_section(self, mock_session_cls):
         skill = _make_skill()
         skill.setup()
         sections = skill.get_prompt_sections()
         assert len(sections) == 1
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_section_title(self, mock_session_cls):
         skill = _make_skill()
         skill.setup()
         section = skill.get_prompt_sections()[0]
         assert section["title"] == "Knowledge Search Capability"
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_section_references_tool_name(self, mock_session_cls):
         skill = _make_skill()
         skill.setup()
         section = skill.get_prompt_sections()[0]
         assert "search_knowledge" in section["body"]
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_section_references_custom_tool_name(self, mock_session_cls):
         skill = _make_skill({"tool_name": "my_kb"})
         skill.setup()
@@ -821,7 +821,7 @@ class TestGetPromptSections:
         assert "my_kb" in section["body"]
         assert any("my_kb" in bullet for bullet in section["bullets"])
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_section_has_bullets(self, mock_session_cls):
         skill = _make_skill()
         skill.setup()
@@ -837,7 +837,7 @@ class TestGetPromptSections:
 class TestEdgeCases:
     """Edge case and integration-style tests."""
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_setup_then_register_then_handler_flow(self, mock_session_cls):
         """Full lifecycle: setup -> register -> handle search."""
         skill = _make_skill()
@@ -857,16 +857,16 @@ class TestEdgeCases:
         skill.session.post.return_value = mock_response
 
         result = handler({"query": "lifecycle test"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "Lifecycle answer" in result.response
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_api_url_with_special_space_name(self, mock_session_cls):
         skill = _make_skill({"space_name": "my-company-space"})
         skill.setup()
         assert skill.api_url == "https://my-company-space.signalwire.com/api/datasphere/documents/search"
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_handler_strips_query_whitespace(self, mock_session_cls):
         skill = _make_skill()
         skill.setup()
@@ -881,7 +881,7 @@ class TestEdgeCases:
         _, call_kwargs = skill.session.post.call_args
         assert call_kwargs["json"]["query_string"] == "padded query"
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_no_results_message_format_with_query_placeholder_in_invalid_data_path(self, mock_session_cls):
         """When API returns non-dict data and no_results_message has {query} placeholder."""
         skill = _make_skill({"no_results_message": "Sorry, '{query}' not found."})
@@ -895,7 +895,7 @@ class TestEdgeCases:
         result = skill._search_knowledge_handler({"query": "test topic"}, {})
         assert result.response == "Sorry, 'test topic' not found."
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_setup_returns_true_only_with_all_required(self, mock_session_cls):
         """Verify setup returns True only when all four required params are present."""
         required = ["space_name", "project_id", "token", "document_id"]
@@ -906,7 +906,7 @@ class TestEdgeCases:
             skill = DataSphereSkill(agent=mock_agent, params=params)
             assert skill.setup() is False, f"Should fail when {missing} is empty"
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_multiple_instances_different_tool_names(self, mock_session_cls):
         """Two instances with different tool_names should have different keys."""
         skill_a = _make_skill({"tool_name": "search_faq"})
@@ -916,7 +916,7 @@ class TestEdgeCases:
         assert "search_faq" in skill_a.get_instance_key()
         assert "search_docs" in skill_b.get_instance_key()
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_response_with_dict_no_chunks_key(self, mock_session_cls):
         """API returns a valid dict but without the 'chunks' key."""
         skill = _make_skill()
@@ -928,10 +928,10 @@ class TestEdgeCases:
         skill.session.post.return_value = mock_response
 
         result = skill._search_knowledge_handler({"query": "test"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         # Should hit the "not chunks" path and return no_results_message
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_cleanup_after_setup(self, mock_session_cls):
         """cleanup should close the session created during setup."""
         skill = _make_skill()
@@ -940,7 +940,7 @@ class TestEdgeCases:
         skill.cleanup()
         session_mock.close.assert_called_once()
 
-    @patch("signalwire_agents.skills.datasphere.skill.requests.Session")
+    @patch("signalwire.skills.datasphere.skill.requests.Session")
     def test_connection_error(self, mock_session_cls):
         """ConnectionError should be caught by the generic Exception handler."""
         skill = _make_skill()
@@ -948,5 +948,5 @@ class TestEdgeCases:
         skill.session.post.side_effect = requests.exceptions.ConnectionError("refused")
 
         result = skill._search_knowledge_handler({"query": "test"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "error" in result.response.lower()

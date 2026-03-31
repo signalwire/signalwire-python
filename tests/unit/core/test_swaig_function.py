@@ -15,7 +15,7 @@ import pytest
 import json
 from unittest.mock import Mock, patch
 
-from signalwire_agents.core.swaig_function import SWAIGFunction
+from signalwire.core.swaig_function import SWAIGFunction
 
 
 class TestSWAIGFunctionInitialization:
@@ -127,11 +127,11 @@ class TestSWAIGFunctionExecution:
         assert "response" in result or "result" in result
     
     def test_execute_with_swaig_function_result(self):
-        """Test execution returning SwaigFunctionResult"""
-        from signalwire_agents.core.function_result import SwaigFunctionResult
+        """Test execution returning FunctionResult"""
+        from signalwire.core.function_result import FunctionResult
         
         def test_handler(args, raw_data):
-            return SwaigFunctionResult("Function executed successfully")
+            return FunctionResult("Function executed successfully")
         
         func = SWAIGFunction(
             name="test_function",

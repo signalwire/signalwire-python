@@ -16,8 +16,8 @@ import os
 from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
 
-from signalwire_agents.core.skill_manager import SkillManager
-from signalwire_agents.core.skill_base import SkillBase
+from signalwire.core.skill_manager import SkillManager
+from signalwire.core.skill_base import SkillBase
 
 
 class MockSkill(SkillBase):
@@ -187,7 +187,7 @@ class TestSkillManagerLoading:
         """Test loading skill without providing class when registry is missing"""
         skill_manager = SkillManager(mock_agent)
         
-        with patch('signalwire_agents.skills.registry.skill_registry') as mock_registry:
+        with patch('signalwire.skills.registry.skill_registry') as mock_registry:
             mock_registry.get_skill_class.return_value = None
             
             success, error = skill_manager.load_skill("nonexistent_skill")

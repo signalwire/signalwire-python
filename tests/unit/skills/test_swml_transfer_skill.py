@@ -14,8 +14,8 @@ Unit tests for the SWMLTransfer skill module
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 
-from signalwire_agents.skills.swml_transfer.skill import SWMLTransferSkill
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.skills.swml_transfer.skill import SWMLTransferSkill
+from signalwire.core.function_result import FunctionResult
 
 
 def _make_skill(params=None):
@@ -101,7 +101,7 @@ class TestSWMLTransferSkillInit:
     def test_logger_created(self):
         skill = SWMLTransferSkill(agent=Mock())
         assert skill.logger is not None
-        assert skill.logger.name == "signalwire_agents.skills.swml_transfer"
+        assert skill.logger.name == "signalwire.skills.swml_transfer"
 
     def test_swaig_fields_extracted_from_params(self):
         params = {"swaig_fields": {"meta_data": {"x": 1}}, "transfers": {}}

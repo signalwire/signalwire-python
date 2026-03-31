@@ -22,7 +22,7 @@ class TestDataSphereServerlessSkillClassAttributes:
 
     def _get_skill_class(self):
         """Import and return the skill class with mocked dependencies"""
-        from signalwire_agents.skills.datasphere_serverless.skill import DataSphereServerlessSkill
+        from signalwire.skills.datasphere_serverless.skill import DataSphereServerlessSkill
         return DataSphereServerlessSkill
 
     def test_skill_name(self):
@@ -60,7 +60,7 @@ class TestDataSphereServerlessSkillParameterSchema:
     """Test get_parameter_schema class method"""
 
     def _get_skill_class(self):
-        from signalwire_agents.skills.datasphere_serverless.skill import DataSphereServerlessSkill
+        from signalwire.skills.datasphere_serverless.skill import DataSphereServerlessSkill
         return DataSphereServerlessSkill
 
     def test_schema_includes_base_params(self):
@@ -203,7 +203,7 @@ class TestDataSphereServerlessSkillParameterSchema:
 
 def _create_skill(params=None, swaig_fields=None):
     """Helper to create a DataSphereServerlessSkill with mocked agent"""
-    from signalwire_agents.skills.datasphere_serverless.skill import DataSphereServerlessSkill
+    from signalwire.skills.datasphere_serverless.skill import DataSphereServerlessSkill
 
     mock_agent = Mock()
     mock_agent.register_swaig_function = Mock()
@@ -245,7 +245,7 @@ class TestDataSphereServerlessSkillInit:
         """Test that init creates a logger with the skill name"""
         skill, _ = _create_skill()
         assert skill.logger is not None
-        assert skill.logger.name == "signalwire_agents.skills.datasphere_serverless"
+        assert skill.logger.name == "signalwire.skills.datasphere_serverless"
 
     def test_init_extracts_swaig_fields(self):
         """Test that swaig_fields are extracted and removed from params"""
@@ -262,7 +262,7 @@ class TestDataSphereServerlessSkillInit:
 
     def test_init_with_empty_params(self):
         """Test that init works with None params"""
-        from signalwire_agents.skills.datasphere_serverless.skill import DataSphereServerlessSkill
+        from signalwire.skills.datasphere_serverless.skill import DataSphereServerlessSkill
         mock_agent = Mock()
         skill = DataSphereServerlessSkill(mock_agent, None)
         assert skill.params == {}
@@ -336,7 +336,7 @@ class TestDataSphereServerlessSkillSetup:
 
     def test_setup_missing_all_required_params(self):
         """Test that setup returns False when all required params are missing"""
-        from signalwire_agents.skills.datasphere_serverless.skill import DataSphereServerlessSkill
+        from signalwire.skills.datasphere_serverless.skill import DataSphereServerlessSkill
         mock_agent = Mock()
         skill = DataSphereServerlessSkill(mock_agent, {})
         result = skill.setup()

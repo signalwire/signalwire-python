@@ -16,7 +16,7 @@ import re
 from unittest.mock import Mock, patch, MagicMock, PropertyMock
 from typing import Dict, Any
 
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.function_result import FunctionResult
 
 
 # ---------------------------------------------------------------------------
@@ -56,12 +56,12 @@ def mock_agent():
 @pytest.fixture
 def default_skill(mock_agent):
     """SpiderSkill with default parameters."""
-    with patch("signalwire_agents.skills.spider.skill.requests.Session") as MockSession:
+    with patch("signalwire.skills.spider.skill.requests.Session") as MockSession:
         mock_session = Mock()
         mock_session.headers = {}
         MockSession.return_value = mock_session
 
-        from signalwire_agents.skills.spider.skill import SpiderSkill
+        from signalwire.skills.spider.skill import SpiderSkill
         skill = SpiderSkill(mock_agent, {})
     return skill
 
@@ -86,12 +86,12 @@ def custom_skill(mock_agent):
         "selectors": {"title": "//title/text()"},
         "follow_patterns": [r"/blog/.*"],
     }
-    with patch("signalwire_agents.skills.spider.skill.requests.Session") as MockSession:
+    with patch("signalwire.skills.spider.skill.requests.Session") as MockSession:
         mock_session = Mock()
         mock_session.headers = {}
         MockSession.return_value = mock_session
 
-        from signalwire_agents.skills.spider.skill import SpiderSkill
+        from signalwire.skills.spider.skill import SpiderSkill
         skill = SpiderSkill(mock_agent, params)
     return skill
 
@@ -104,31 +104,31 @@ class TestSpiderSkillClassAttributes:
     """Verify class-level constants."""
 
     def test_skill_name(self):
-        from signalwire_agents.skills.spider.skill import SpiderSkill
+        from signalwire.skills.spider.skill import SpiderSkill
         assert SpiderSkill.SKILL_NAME == "spider"
 
     def test_skill_description(self):
-        from signalwire_agents.skills.spider.skill import SpiderSkill
+        from signalwire.skills.spider.skill import SpiderSkill
         assert SpiderSkill.SKILL_DESCRIPTION == "Fast web scraping and crawling capabilities"
 
     def test_skill_version(self):
-        from signalwire_agents.skills.spider.skill import SpiderSkill
+        from signalwire.skills.spider.skill import SpiderSkill
         assert SpiderSkill.SKILL_VERSION == "1.0.0"
 
     def test_required_packages(self):
-        from signalwire_agents.skills.spider.skill import SpiderSkill
+        from signalwire.skills.spider.skill import SpiderSkill
         assert "lxml" in SpiderSkill.REQUIRED_PACKAGES
 
     def test_required_env_vars_empty(self):
-        from signalwire_agents.skills.spider.skill import SpiderSkill
+        from signalwire.skills.spider.skill import SpiderSkill
         assert SpiderSkill.REQUIRED_ENV_VARS == []
 
     def test_supports_multiple_instances(self):
-        from signalwire_agents.skills.spider.skill import SpiderSkill
+        from signalwire.skills.spider.skill import SpiderSkill
         assert SpiderSkill.SUPPORTS_MULTIPLE_INSTANCES is True
 
     def test_whitespace_regex_compiled(self):
-        from signalwire_agents.skills.spider.skill import SpiderSkill
+        from signalwire.skills.spider.skill import SpiderSkill
         assert isinstance(SpiderSkill.WHITESPACE_REGEX, re.Pattern)
         assert SpiderSkill.WHITESPACE_REGEX.sub(" ", "  a   b  ") == " a b "
 
@@ -141,12 +141,12 @@ class TestGetParameterSchema:
     """Verify the parameter schema returned by the class method."""
 
     def test_returns_dict(self):
-        from signalwire_agents.skills.spider.skill import SpiderSkill
+        from signalwire.skills.spider.skill import SpiderSkill
         schema = SpiderSkill.get_parameter_schema()
         assert isinstance(schema, dict)
 
     def test_contains_expected_keys(self):
-        from signalwire_agents.skills.spider.skill import SpiderSkill
+        from signalwire.skills.spider.skill import SpiderSkill
         schema = SpiderSkill.get_parameter_schema()
         expected_keys = [
             "delay", "concurrent_requests", "timeout", "max_pages",
@@ -158,20 +158,20 @@ class TestGetParameterSchema:
             assert key in schema, f"Missing key: {key}"
 
     def test_includes_base_schema_keys(self):
-        from signalwire_agents.skills.spider.skill import SpiderSkill
+        from signalwire.skills.spider.skill import SpiderSkill
         schema = SpiderSkill.get_parameter_schema()
         # SkillBase adds swaig_fields and tool_name for multi-instance
         assert "swaig_fields" in schema
         assert "tool_name" in schema
 
     def test_delay_has_correct_defaults(self):
-        from signalwire_agents.skills.spider.skill import SpiderSkill
+        from signalwire.skills.spider.skill import SpiderSkill
         schema = SpiderSkill.get_parameter_schema()
         assert schema["delay"]["default"] == 0.1
         assert schema["delay"]["type"] == "number"
 
     def test_extract_type_enum(self):
-        from signalwire_agents.skills.spider.skill import SpiderSkill
+        from signalwire.skills.spider.skill import SpiderSkill
         schema = SpiderSkill.get_parameter_schema()
         assert set(schema["extract_type"]["enum"]) == {
             "fast_text", "clean_text", "full_text", "html", "custom"
@@ -471,7 +471,7 @@ class TestFastTextExtract:
         assert "[...CONTENT TRUNCATED...]" not in text
 
     def test_returns_empty_string_on_parse_error(self, default_skill):
-        with patch("signalwire_agents.skills.spider.skill.html.fromstring",
+        with patch("signalwire.skills.spider.skill.html.fromstring",
                     side_effect=Exception("parse error")):
             resp = _make_mock_response(content=b"not valid html at all")
             text = default_skill._fast_text_extract(resp)
@@ -624,7 +624,7 @@ class TestStructuredExtract:
         assert result["data"]["bad"] is None
 
     def test_general_parse_error_returns_error_dict(self, default_skill):
-        with patch("signalwire_agents.skills.spider.skill.html.fromstring",
+        with patch("signalwire.skills.spider.skill.html.fromstring",
                     side_effect=Exception("parse failed")):
             resp = _make_mock_response()
             result = default_skill._structured_extract(resp)
@@ -644,7 +644,7 @@ class TestScrapeUrlHandler:
 
     def test_empty_url_returns_error_message(self, default_skill):
         result = default_skill._scrape_url_handler({"url": ""}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "provide a URL" in result.response
 
     def test_missing_url_returns_error_message(self, default_skill):
@@ -1178,34 +1178,34 @@ class TestEdgeCases:
 
     def test_init_with_empty_params(self, mock_agent):
         """Skill should initialize fine with no params at all."""
-        with patch("signalwire_agents.skills.spider.skill.requests.Session") as MockSession:
+        with patch("signalwire.skills.spider.skill.requests.Session") as MockSession:
             mock_session = Mock()
             mock_session.headers = {}
             MockSession.return_value = mock_session
 
-            from signalwire_agents.skills.spider.skill import SpiderSkill
+            from signalwire.skills.spider.skill import SpiderSkill
             skill = SpiderSkill(mock_agent, {})
             assert skill.delay == 0.1
             assert skill.cache == {}
 
     def test_init_with_none_params(self, mock_agent):
         """Skill should handle None params gracefully (via SkillBase default)."""
-        with patch("signalwire_agents.skills.spider.skill.requests.Session") as MockSession:
+        with patch("signalwire.skills.spider.skill.requests.Session") as MockSession:
             mock_session = Mock()
             mock_session.headers = {}
             MockSession.return_value = mock_session
 
-            from signalwire_agents.skills.spider.skill import SpiderSkill
+            from signalwire.skills.spider.skill import SpiderSkill
             skill = SpiderSkill(mock_agent, None)
             assert skill.delay == 0.1
 
     def test_register_tools_no_prefix_when_tool_name_empty(self, mock_agent):
-        with patch("signalwire_agents.skills.spider.skill.requests.Session") as MockSession:
+        with patch("signalwire.skills.spider.skill.requests.Session") as MockSession:
             mock_session = Mock()
             mock_session.headers = {}
             MockSession.return_value = mock_session
 
-            from signalwire_agents.skills.spider.skill import SpiderSkill
+            from signalwire.skills.spider.skill import SpiderSkill
             skill = SpiderSkill(mock_agent, {"tool_name": ""})
             skill.register_tools()
             names = [call.kwargs.get("name") or call[1].get("name")
@@ -1265,7 +1265,7 @@ class TestEdgeCases:
         with patch.object(default_skill, "_fetch_url", return_value=resp):
             with patch.object(default_skill, "_fast_text_extract",
                               return_value="content"):
-                with patch("signalwire_agents.skills.spider.skill.html.fromstring",
+                with patch("signalwire.skills.spider.skill.html.fromstring",
                             side_effect=Exception("parse error")):
                     # The crawl handler internally calls html.fromstring for link extraction
                     # but _fast_text_extract is mocked to succeed

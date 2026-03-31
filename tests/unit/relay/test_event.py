@@ -1,7 +1,7 @@
 """Unit tests for relay event parsing and typed event classes."""
 
 import pytest
-from signalwire_agents.relay.event import (
+from signalwire.relay.event import (
     RelayEvent,
     CallStateEvent,
     CallReceiveEvent,

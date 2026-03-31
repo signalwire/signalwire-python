@@ -10,9 +10,9 @@ import json
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from signalwire_agents.relay.client import RelayClient, RelayError
-from signalwire_agents.relay.call import Call
-from signalwire_agents.relay.constants import (
+from signalwire.relay.client import RelayClient, RelayError
+from signalwire.relay.call import Call
+from signalwire.relay.constants import (
     EVENT_CALL_DIAL,
     EVENT_CALL_RECEIVE,
     EVENT_CALL_STATE,

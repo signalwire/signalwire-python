@@ -44,10 +44,10 @@ def _make_config(**env_overrides):
     clean.update(env_overrides)
     with patch.dict(os.environ, clean, clear=True):
         with patch(
-            'signalwire_agents.core.security_config.ConfigLoader.find_config_file',
+            'signalwire.core.security_config.ConfigLoader.find_config_file',
             return_value=None,
         ):
-            from signalwire_agents.core.security_config import SecurityConfig
+            from signalwire.core.security_config import SecurityConfig
             return SecurityConfig()
 
 
@@ -55,7 +55,7 @@ class TestSecurityConfigClassAttributes:
     """Test that class-level constants are defined correctly."""
 
     def test_ssl_env_var_names(self):
-        from signalwire_agents.core.security_config import SecurityConfig
+        from signalwire.core.security_config import SecurityConfig
         assert SecurityConfig.SSL_ENABLED == 'SWML_SSL_ENABLED'
         assert SecurityConfig.SSL_CERT_PATH == 'SWML_SSL_CERT_PATH'
         assert SecurityConfig.SSL_KEY_PATH == 'SWML_SSL_KEY_PATH'
@@ -63,7 +63,7 @@ class TestSecurityConfigClassAttributes:
         assert SecurityConfig.SSL_VERIFY_MODE == 'SWML_SSL_VERIFY_MODE'
 
     def test_additional_env_var_names(self):
-        from signalwire_agents.core.security_config import SecurityConfig
+        from signalwire.core.security_config import SecurityConfig
         assert SecurityConfig.ALLOWED_HOSTS == 'SWML_ALLOWED_HOSTS'
         assert SecurityConfig.CORS_ORIGINS == 'SWML_CORS_ORIGINS'
         assert SecurityConfig.MAX_REQUEST_SIZE == 'SWML_MAX_REQUEST_SIZE'
@@ -73,12 +73,12 @@ class TestSecurityConfigClassAttributes:
         assert SecurityConfig.HSTS_MAX_AGE == 'SWML_HSTS_MAX_AGE'
 
     def test_auth_env_var_names(self):
-        from signalwire_agents.core.security_config import SecurityConfig
+        from signalwire.core.security_config import SecurityConfig
         assert SecurityConfig.BASIC_AUTH_USER == 'SWML_BASIC_AUTH_USER'
         assert SecurityConfig.BASIC_AUTH_PASSWORD == 'SWML_BASIC_AUTH_PASSWORD'
 
     def test_defaults_dict_contains_expected_keys(self):
-        from signalwire_agents.core.security_config import SecurityConfig
+        from signalwire.core.security_config import SecurityConfig
         defaults = SecurityConfig.DEFAULTS
         assert defaults['SWML_SSL_ENABLED'] is False
         assert defaults['SWML_SSL_VERIFY_MODE'] == 'CERT_REQUIRED'
@@ -279,14 +279,14 @@ class TestLoadConfigFile:
         clean = {k: v for k, v in os.environ.items() if k not in ENV_CLEAR_KEYS}
         with patch.dict(os.environ, clean, clear=True):
             with patch(
-                'signalwire_agents.core.security_config.ConfigLoader.find_config_file',
+                'signalwire.core.security_config.ConfigLoader.find_config_file',
                 return_value='/fake/config.json',
             ):
                 with patch(
-                    'signalwire_agents.core.security_config.ConfigLoader',
+                    'signalwire.core.security_config.ConfigLoader',
                     return_value=mock_config_loader_instance,
                 ):
-                    from signalwire_agents.core.security_config import SecurityConfig
+                    from signalwire.core.security_config import SecurityConfig
                     return SecurityConfig()
 
     def test_no_config_file_found(self):
@@ -416,14 +416,14 @@ class TestLoadConfigFile:
 
         with patch.dict(os.environ, clean, clear=True):
             with patch(
-                'signalwire_agents.core.security_config.ConfigLoader.find_config_file',
+                'signalwire.core.security_config.ConfigLoader.find_config_file',
                 return_value='/fake/config.json',
             ):
                 with patch(
-                    'signalwire_agents.core.security_config.ConfigLoader',
+                    'signalwire.core.security_config.ConfigLoader',
                     return_value=mock_config_loader_instance,
                 ):
-                    from signalwire_agents.core.security_config import SecurityConfig
+                    from signalwire.core.security_config import SecurityConfig
                     cfg = SecurityConfig()
 
         # Config file values should win
@@ -439,13 +439,13 @@ class TestLoadConfigFile:
         clean = {k: v for k, v in os.environ.items() if k not in ENV_CLEAR_KEYS}
         with patch.dict(os.environ, clean, clear=True):
             with patch(
-                'signalwire_agents.core.security_config.ConfigLoader.find_config_file',
+                'signalwire.core.security_config.ConfigLoader.find_config_file',
             ) as mock_find:
                 with patch(
-                    'signalwire_agents.core.security_config.ConfigLoader',
+                    'signalwire.core.security_config.ConfigLoader',
                     return_value=mock_config_loader_instance,
                 ):
-                    from signalwire_agents.core.security_config import SecurityConfig
+                    from signalwire.core.security_config import SecurityConfig
                     cfg = SecurityConfig(config_file='/explicit/path.json')
 
         mock_find.assert_not_called()
@@ -456,10 +456,10 @@ class TestLoadConfigFile:
         clean = {k: v for k, v in os.environ.items() if k not in ENV_CLEAR_KEYS}
         with patch.dict(os.environ, clean, clear=True):
             with patch(
-                'signalwire_agents.core.security_config.ConfigLoader.find_config_file',
+                'signalwire.core.security_config.ConfigLoader.find_config_file',
                 return_value=None,
             ) as mock_find:
-                from signalwire_agents.core.security_config import SecurityConfig
+                from signalwire.core.security_config import SecurityConfig
                 SecurityConfig(service_name='my_service')
 
         mock_find.assert_called_once_with('my_service')
@@ -546,7 +546,7 @@ class TestGetSSLContextKwargs:
     def test_ssl_enabled_invalid_logs_error(self):
         cfg = _make_config(SWML_SSL_ENABLED='true')
         cfg.ssl_cert_path = None
-        with patch('signalwire_agents.core.security_config.logger') as mock_logger:
+        with patch('signalwire.core.security_config.logger') as mock_logger:
             cfg.get_ssl_context_kwargs()
             mock_logger.error.assert_called_once()
 
@@ -573,7 +573,7 @@ class TestGetBasicAuth:
     def test_password_is_url_safe_token(self):
         """Verify the generated password comes from secrets.token_urlsafe."""
         cfg = _make_config()
-        with patch('signalwire_agents.core.security_config.secrets.token_urlsafe',
+        with patch('signalwire.core.security_config.secrets.token_urlsafe',
                     return_value='mock_token_abc') as mock_token:
             _, password = cfg.get_basic_auth()
         mock_token.assert_called_once_with(32)
@@ -591,13 +591,13 @@ class TestGetBasicAuth:
     def test_password_caching_does_not_regenerate(self):
         """After the first call generates a password, subsequent calls must not call secrets again."""
         cfg = _make_config()
-        with patch('signalwire_agents.core.security_config.secrets.token_urlsafe',
+        with patch('signalwire.core.security_config.secrets.token_urlsafe',
                     return_value='first_token') as mock_token:
             _, pw1 = cfg.get_basic_auth()
         assert pw1 == 'first_token'
 
         # Second call should NOT invoke token_urlsafe again
-        with patch('signalwire_agents.core.security_config.secrets.token_urlsafe',
+        with patch('signalwire.core.security_config.secrets.token_urlsafe',
                     return_value='second_token') as mock_token:
             _, pw2 = cfg.get_basic_auth()
         mock_token.assert_not_called()
@@ -758,13 +758,13 @@ class TestLogConfig:
 
     def test_log_config_calls_logger(self):
         cfg = _make_config()
-        with patch('signalwire_agents.core.security_config.logger') as mock_logger:
+        with patch('signalwire.core.security_config.logger') as mock_logger:
             cfg.log_config('test_service')
             mock_logger.info.assert_called_once()
 
     def test_log_config_includes_service_name(self):
         cfg = _make_config()
-        with patch('signalwire_agents.core.security_config.logger') as mock_logger:
+        with patch('signalwire.core.security_config.logger') as mock_logger:
             cfg.log_config('my_service')
             call_kwargs = mock_logger.info.call_args
             # The first positional arg is the event name
@@ -774,7 +774,7 @@ class TestLogConfig:
 
     def test_log_config_includes_key_fields(self):
         cfg = _make_config()
-        with patch('signalwire_agents.core.security_config.logger') as mock_logger:
+        with patch('signalwire.core.security_config.logger') as mock_logger:
             cfg.log_config('svc')
             kwargs = mock_logger.info.call_args[1]
             assert 'ssl_enabled' in kwargs
@@ -791,14 +791,14 @@ class TestLogConfig:
             SWML_BASIC_AUTH_USER='user',
             SWML_BASIC_AUTH_PASSWORD='pass',
         )
-        with patch('signalwire_agents.core.security_config.logger') as mock_logger:
+        with patch('signalwire.core.security_config.logger') as mock_logger:
             cfg.log_config('svc')
             kwargs = mock_logger.info.call_args[1]
             assert kwargs['has_basic_auth'] is True
 
     def test_log_config_has_basic_auth_false(self):
         cfg = _make_config()
-        with patch('signalwire_agents.core.security_config.logger') as mock_logger:
+        with patch('signalwire.core.security_config.logger') as mock_logger:
             cfg.log_config('svc')
             kwargs = mock_logger.info.call_args[1]
             assert kwargs['has_basic_auth'] is False
@@ -808,13 +808,13 @@ class TestGlobalInstance:
     """Test the module-level global security_config instance."""
 
     def test_global_instance_exists(self):
-        from signalwire_agents.core.security_config import security_config
-        from signalwire_agents.core.security_config import SecurityConfig
+        from signalwire.core.security_config import security_config
+        from signalwire.core.security_config import SecurityConfig
         assert isinstance(security_config, SecurityConfig)
 
     def test_global_instance_is_same_on_reimport(self):
-        from signalwire_agents.core.security_config import security_config as sc1
-        from signalwire_agents.core.security_config import security_config as sc2
+        from signalwire.core.security_config import security_config as sc1
+        from signalwire.core.security_config import security_config as sc2
         assert sc1 is sc2
 
 
@@ -838,14 +838,14 @@ class TestInitOrder:
 
         with patch.dict(os.environ, clean, clear=True):
             with patch(
-                'signalwire_agents.core.security_config.ConfigLoader.find_config_file',
+                'signalwire.core.security_config.ConfigLoader.find_config_file',
                 return_value='/fake/config.json',
             ):
                 with patch(
-                    'signalwire_agents.core.security_config.ConfigLoader',
+                    'signalwire.core.security_config.ConfigLoader',
                     return_value=mock_config_loader,
                 ):
-                    from signalwire_agents.core.security_config import SecurityConfig
+                    from signalwire.core.security_config import SecurityConfig
                     cfg = SecurityConfig()
 
         # Config file value (300) should win over env (100) and default (60)

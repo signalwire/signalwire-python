@@ -19,7 +19,7 @@ import os
 
 os.environ.setdefault("SIGNALWIRE_LOG_LEVEL", "debug")
 
-from signalwire_agents.relay import RelayClient
+from signalwire.relay import RelayClient
 
 AGENT_NUMBER = "+19184238080"
 

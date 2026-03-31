@@ -15,7 +15,7 @@ import pytest
 import json
 from unittest.mock import Mock, patch, MagicMock
 
-from signalwire_agents.core.swml_service import SWMLService
+from signalwire.core.swml_service import SWMLService
 
 
 class TestSWMLServiceInitialization:
@@ -751,7 +751,7 @@ class TestProxyDetection:
 class TestServe:
     """Test that serve() calls uvicorn.run with correct arguments."""
 
-    @patch("signalwire_agents.core.swml_service.uvicorn", create=True)
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_serve_basic_defaults(self, mock_uvicorn_module):
         """serve() should call uvicorn.run with default host and port."""
         service = SWMLService(
@@ -769,7 +769,7 @@ class TestServe:
         assert call_kwargs[1]["host"] == "127.0.0.1" or call_kwargs[0][0] is not None
         assert call_kwargs[1].get("port", call_kwargs[1].get("port")) == 4000
 
-    @patch("signalwire_agents.core.swml_service.uvicorn", create=True)
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_serve_custom_host_port(self, mock_uvicorn_module):
         """serve() should honor explicit host/port arguments."""
         service = SWMLService(
@@ -785,7 +785,7 @@ class TestServe:
         assert call_kwargs[1]["host"] == "192.168.1.1"
         assert call_kwargs[1]["port"] == 9999
 
-    @patch("signalwire_agents.core.swml_service.uvicorn", create=True)
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_serve_with_ssl(self, mock_uvicorn_module):
         """serve() with SSL should pass cert/key to uvicorn.run."""
         service = SWMLService(
@@ -804,7 +804,7 @@ class TestServe:
         assert call_kwargs[1].get("ssl_certfile") == "/path/cert.pem"
         assert call_kwargs[1].get("ssl_keyfile") == "/path/key.pem"
 
-    @patch("signalwire_agents.core.swml_service.uvicorn", create=True)
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_serve_ssl_invalid_config_disables_ssl(self, mock_uvicorn_module):
         """serve() should disable SSL when validation fails."""
         service = SWMLService(
@@ -822,7 +822,7 @@ class TestServe:
         call_kwargs = mock_uvicorn_module.run.call_args
         assert "ssl_certfile" not in call_kwargs[1]
 
-    @patch("signalwire_agents.core.swml_service.uvicorn", create=True)
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_serve_creates_fastapi_app(self, mock_uvicorn_module):
         """serve() should create a FastAPI app if none exists."""
         service = SWMLService(
@@ -837,7 +837,7 @@ class TestServe:
             service.serve()
         assert service._app is not None
 
-    @patch("signalwire_agents.core.swml_service.uvicorn", create=True)
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_serve_reuses_existing_app(self, mock_uvicorn_module):
         """serve() should reuse an existing _app if already created."""
         service = SWMLService(
@@ -856,7 +856,7 @@ class TestServe:
             service.serve()
         assert service._app is app_first
 
-    @patch("signalwire_agents.core.swml_service.uvicorn", create=True)
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_serve_prints_startup_info(self, mock_uvicorn_module, capsys):
         """serve() should print user-friendly startup info."""
         service = SWMLService(
@@ -872,7 +872,7 @@ class TestServe:
         assert "serve_print" in captured.out
         assert "Basic Auth" in captured.out
 
-    @patch("signalwire_agents.core.swml_service.uvicorn", create=True)
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_serve_ssl_without_domain_warns(self, mock_uvicorn_module):
         """serve() with SSL but no domain should still proceed (with warning)."""
         service = SWMLService(
@@ -890,7 +890,7 @@ class TestServe:
         call_kwargs = mock_uvicorn_module.run.call_args
         assert call_kwargs[1].get("ssl_certfile") == "/cert.pem"
 
-    @patch("signalwire_agents.core.swml_service.uvicorn", create=True)
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_serve_with_routing_callbacks(self, mock_uvicorn_module, capsys):
         """serve() should print callback endpoint info when callbacks registered."""
         service = SWMLService(
@@ -906,7 +906,7 @@ class TestServe:
         captured = capsys.readouterr()
         assert "Callback endpoints" in captured.out
 
-    @patch("signalwire_agents.core.swml_service.uvicorn", create=True)
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_serve_root_route(self, mock_uvicorn_module):
         """serve() with root route should include router without prefix."""
         service = SWMLService(
@@ -1576,7 +1576,7 @@ import os
 from fastapi import FastAPI, Request, Response
 from starlette.testclient import TestClient
 
-from signalwire_agents.utils.schema_utils import SchemaValidationError
+from signalwire.utils.schema_utils import SchemaValidationError
 
 
 def _build_test_client(service, prefix=None):
@@ -2208,7 +2208,7 @@ class TestFindSchemaPath:
 class TestServeCatchAllRoute:
     """Test the catch-all route handler created inside serve() (lines 803-836)."""
 
-    @patch("signalwire_agents.core.swml_service.uvicorn", create=True)
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_catch_all_exact_route_match(self, mock_uvicorn):
         """Catch-all route should handle exact route match."""
         svc = SWMLService(
@@ -2223,7 +2223,7 @@ class TestServeCatchAllRoute:
         resp = client.get("/agent", headers=_auth_header("u", "p"))
         assert resp.status_code == 200
 
-    @patch("signalwire_agents.core.swml_service.uvicorn", create=True)
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_catch_all_route_with_trailing_slash(self, mock_uvicorn):
         """Catch-all route should handle route with trailing slash."""
         svc = SWMLService(
@@ -2237,7 +2237,7 @@ class TestServeCatchAllRoute:
         resp = client.get("/agent/", headers=_auth_header("u", "p"))
         assert resp.status_code == 200
 
-    @patch("signalwire_agents.core.swml_service.uvicorn", create=True)
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_catch_all_no_match(self, mock_uvicorn):
         """Catch-all route should return error for unmatched paths."""
         svc = SWMLService(
@@ -2253,7 +2253,7 @@ class TestServeCatchAllRoute:
         body = resp.json()
         assert "error" in body
 
-    @patch("signalwire_agents.core.swml_service.uvicorn", create=True)
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_catch_all_with_routing_callback_subpath(self, mock_uvicorn):
         """Catch-all route should forward to routing callback subpath."""
         svc = SWMLService(
@@ -2271,7 +2271,7 @@ class TestServeCatchAllRoute:
         )
         assert resp.status_code == 200
 
-    @patch("signalwire_agents.core.swml_service.uvicorn", create=True)
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_catch_all_root_route_match(self, mock_uvicorn):
         """When route is '/', catch-all should handle sub-paths."""
         svc = SWMLService(
@@ -2290,7 +2290,7 @@ class TestServeCatchAllRoute:
 class TestServeDomainOverride:
     """Test serve() domain override (line 766)."""
 
-    @patch("signalwire_agents.core.swml_service.uvicorn", create=True)
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_serve_overrides_domain(self, mock_uvicorn):
         """serve(domain=...) should override the service domain."""
         svc = SWMLService(

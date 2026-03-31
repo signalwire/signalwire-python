@@ -15,8 +15,8 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, List, Any, Optional
 
-from signalwire_agents.core.swml_builder import SWMLBuilder
-from signalwire_agents.core.swml_service import SWMLService
+from signalwire.core.swml_builder import SWMLBuilder
+from signalwire.core.swml_service import SWMLService
 
 
 class TestSWMLBuilder:

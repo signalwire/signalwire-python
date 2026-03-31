@@ -12,9 +12,9 @@ import pytest
 import pytest_asyncio
 import websockets.exceptions
 
-from signalwire_agents.relay.client import RelayClient, _active_clients
-from signalwire_agents.relay.call import Call
-from signalwire_agents.relay.constants import METHOD_SIGNALWIRE_CONNECT
+from signalwire.relay.client import RelayClient, _active_clients
+from signalwire.relay.call import Call
+from signalwire.relay.constants import METHOD_SIGNALWIRE_CONNECT
 
 
 # ---------------------------------------------------------------------------
@@ -175,7 +175,7 @@ async def connected_client():
     _active_clients.clear()
     mock_ws = AutoAuthMockWebSocket()
 
-    with patch("signalwire_agents.relay.client.websockets.connect",
+    with patch("signalwire.relay.client.websockets.connect",
                new_callable=AsyncMock, return_value=mock_ws):
         client = RelayClient(project="test-project", token="test-token")
         await client.connect()

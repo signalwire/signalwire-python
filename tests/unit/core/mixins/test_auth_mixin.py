@@ -17,7 +17,7 @@ import base64
 import os
 from unittest.mock import Mock, patch, MagicMock
 
-from signalwire_agents.core.mixins.auth_mixin import AuthMixin
+from signalwire.core.mixins.auth_mixin import AuthMixin
 
 
 class ConcreteAuthMixin(AuthMixin):
@@ -583,7 +583,7 @@ class TestCheckGoogleCloudFunctionAuth:
 class TestSendGoogleCloudFunctionAuthChallenge:
     """Tests for _send_google_cloud_function_auth_challenge method."""
 
-    @patch("signalwire_agents.core.mixins.auth_mixin.AuthMixin._send_google_cloud_function_auth_challenge")
+    @patch("signalwire.core.mixins.auth_mixin.AuthMixin._send_google_cloud_function_auth_challenge")
     def test_returns_response_object(self, mock_challenge):
         """Challenge returns a Flask Response-like object."""
         mock_response = Mock()

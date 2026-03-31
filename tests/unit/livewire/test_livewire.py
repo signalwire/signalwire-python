@@ -18,7 +18,7 @@ import sys
 import pytest
 from unittest.mock import patch, Mock
 
-from signalwire_agents.livewire import (
+from signalwire.livewire import (
     Agent,
     AgentSession,
     AgentServer,
@@ -43,7 +43,7 @@ from signalwire_agents.livewire import (
     _print_banner,
     _print_tip,
 )
-from signalwire_agents.livewire.plugins import (
+from signalwire.livewire.plugins import (
     DeepgramSTT,
     OpenAILLM,
     CartesiaTTS,
@@ -426,17 +426,17 @@ class TestPluginStubs:
 
 class TestInferenceStubs:
     def test_inference_stt(self):
-        from signalwire_agents.livewire import InferenceSTT
+        from signalwire.livewire import InferenceSTT
         stt = InferenceSTT("whisper-large-v3")
         assert stt.model == "whisper-large-v3"
 
     def test_inference_llm(self):
-        from signalwire_agents.livewire import InferenceLLM
+        from signalwire.livewire import InferenceLLM
         llm = InferenceLLM("gpt-4o")
         assert llm.model == "gpt-4o"
 
     def test_inference_tts(self):
-        from signalwire_agents.livewire import InferenceTTS
+        from signalwire.livewire import InferenceTTS
         tts = InferenceTTS("tts-1")
         assert tts.model == "tts-1"
 
@@ -573,7 +573,7 @@ class TestNamespaces:
         assert cli_ns.run_app is run_app
 
     def test_inference_namespace(self):
-        from signalwire_agents.livewire import InferenceSTT, InferenceLLM, InferenceTTS
+        from signalwire.livewire import InferenceSTT, InferenceLLM, InferenceTTS
         assert inference.STT is InferenceSTT
         assert inference.LLM is InferenceLLM
         assert inference.TTS is InferenceTTS
@@ -635,7 +635,7 @@ class TestBuildSwAgent:
         agent = Agent(instructions="You are a test agent.")
         await session.start(agent)
 
-        with patch("signalwire_agents.core.agent_base.uvicorn", Mock()):
+        with patch("signalwire.core.agent_base.uvicorn", Mock()):
             sw = session._build_sw_agent()
 
         assert sw is not None
@@ -652,7 +652,7 @@ class TestBuildSwAgent:
         agent = Agent(instructions="test", tools=[ping])
         await session.start(agent)
 
-        with patch("signalwire_agents.core.agent_base.uvicorn", Mock()):
+        with patch("signalwire.core.agent_base.uvicorn", Mock()):
             sw = session._build_sw_agent()
 
         # The tool should be registered

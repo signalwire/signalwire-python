@@ -15,8 +15,8 @@ import pytest
 from unittest.mock import Mock
 
 
-from signalwire_agents.skills.api_ninjas_trivia.skill import ApiNinjasTriviaSkill
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.skills.api_ninjas_trivia.skill import ApiNinjasTriviaSkill
+from signalwire.core.function_result import FunctionResult
 
 
 def _make_skill(params=None):
@@ -110,7 +110,7 @@ class TestApiNinjasTriviaSkillInit:
     def test_logger_created(self):
         skill = _make_skill()
         assert skill.logger is not None
-        assert skill.logger.name == "signalwire_agents.skills.api_ninjas_trivia"
+        assert skill.logger.name == "signalwire.skills.api_ninjas_trivia"
 
     def test_swaig_fields_extracted_from_params(self):
         params = {"api_key": "key", "swaig_fields": {"meta_data": {"x": 1}}}

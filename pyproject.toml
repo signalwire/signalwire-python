@@ -141,7 +141,7 @@ sw-agent-dokku = "signalwire.cli.dokku:main"
 mcp-gateway = "signalwire.mcp_gateway.gateway_service:main"
 
 [tool.setuptools]
-packages = {find = {where = ["."], include = ["signalwire*"]}}
+packages = {find = {where = ["signalwire"], include = ["signalwire*"]}}
 include-package-data = true
 
 [tool.setuptools.package-data]

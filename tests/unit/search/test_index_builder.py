@@ -19,7 +19,7 @@ import json
 from unittest.mock import Mock, patch, MagicMock, mock_open
 from pathlib import Path
 
-from signalwire_agents.search.index_builder import IndexBuilder
+from signalwire.search.index_builder import IndexBuilder
 
 
 class TestIndexBuilderInit:
@@ -69,13 +69,13 @@ class TestIndexBuilderModelLoading:
         """Set up test fixtures"""
         self.builder = IndexBuilder()
     
-    @patch('signalwire_agents.search.index_builder.SentenceTransformer', None)
+    @patch('signalwire.search.index_builder.SentenceTransformer', None)
     def test_load_model_no_library(self):
         """Test model loading without sentence-transformers"""
         with pytest.raises(ImportError, match="sentence-transformers is required"):
             self.builder._load_model()
     
-    @patch('signalwire_agents.search.index_builder.SentenceTransformer')
+    @patch('signalwire.search.index_builder.SentenceTransformer')
     def test_load_model_success(self, mock_transformer):
         """Test successful model loading"""
         mock_model = Mock()
@@ -86,7 +86,7 @@ class TestIndexBuilderModelLoading:
         mock_transformer.assert_called_once_with('sentence-transformers/all-mpnet-base-v2')
         assert self.builder.model == mock_model
     
-    @patch('signalwire_agents.search.index_builder.SentenceTransformer')
+    @patch('signalwire.search.index_builder.SentenceTransformer')
     def test_load_model_error(self, mock_transformer):
         """Test model loading with error"""
         mock_transformer.side_effect = Exception("Model loading failed")
@@ -94,7 +94,7 @@ class TestIndexBuilderModelLoading:
         with pytest.raises(Exception, match="Model loading failed"):
             self.builder._load_model()
     
-    @patch('signalwire_agents.search.index_builder.SentenceTransformer')
+    @patch('signalwire.search.index_builder.SentenceTransformer')
     def test_load_model_lazy_loading(self, mock_transformer):
         """Test that model is only loaded once"""
         mock_model = Mock()
@@ -416,7 +416,7 @@ class TestIndexBuilderDatabaseCreation:
         assert cursor.fetchone()[0] == 1
         conn.close()
     
-    @patch('signalwire_agents.search.index_builder.np')
+    @patch('signalwire.search.index_builder.np')
     def test_create_database_with_numpy_embedding_dimensions(self, mock_np):
         """Test database creation with numpy embedding dimension detection"""
         mock_array = Mock()
@@ -520,7 +520,7 @@ class TestIndexBuilderBuildMethods:
         if self.temp_db and os.path.exists(self.temp_db):
             os.remove(self.temp_db)
     
-    @patch('signalwire_agents.search.index_builder.preprocess_document_content')
+    @patch('signalwire.search.index_builder.preprocess_document_content')
     def test_build_index_from_sources_success(self, mock_preprocess):
         """Test successful index building from sources"""
         with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
@@ -597,7 +597,7 @@ class TestIndexBuilderBuildMethods:
             # Database should not be created
             assert not os.path.exists(temp_db)
     
-    @patch('signalwire_agents.search.index_builder.np')
+    @patch('signalwire.search.index_builder.np')
     def test_build_index_from_sources_embedding_error(self, mock_np):
         """Test index building with embedding generation error"""
         with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
@@ -619,7 +619,7 @@ class TestIndexBuilderBuildMethods:
              patch.object(self.builder, '_process_file', return_value=mock_chunks), \
              patch.object(self.builder, '_load_model'), \
              patch.object(self.builder, '_create_database') as mock_create_db, \
-             patch('signalwire_agents.search.index_builder.preprocess_document_content') as mock_preprocess:
+             patch('signalwire.search.index_builder.preprocess_document_content') as mock_preprocess:
             
             mock_preprocess.return_value = {"enhanced_text": "enhanced", "keywords": []}
             self.builder.model = mock_model
@@ -661,7 +661,7 @@ class TestIndexBuilderEdgeCases:
         try:
             chunks = [{"content": "Test", "filename": "test.txt", "embedding": b"invalid_data"}]
             
-            with patch('signalwire_agents.search.index_builder.np') as mock_np:
+            with patch('signalwire.search.index_builder.np') as mock_np:
                 mock_np.frombuffer.side_effect = Exception("Invalid buffer")
                 
                 # Should handle error gracefully and use default dimensions
