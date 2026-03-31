@@ -37,7 +37,7 @@ Usage:
         -d '{"query": "how to create an agent", "index_name": "concepts", "count": 3}'
 
 The server will automatically build a search index from the concepts guide file
-(docs/signalwire_agents_concepts_guide.md) if it doesn't already exist.
+(docs/signalwire_concepts_guide.md) if it doesn't already exist.
 
 The server will be available at http://localhost:8001 with the following endpoints:
 - POST /search - Search the indexes/collections
@@ -87,7 +87,7 @@ def main():
     
     # Check if search dependencies are available
     try:
-        from signalwire_agents.search import SearchService, IndexBuilder
+        from signalwire.search import SearchService, IndexBuilder
         logger.info("Search dependencies are available")
     except ImportError as e:
         logger.error("Search dependencies not available")
@@ -127,7 +127,7 @@ def main():
     else:
         # SQLite backend - original behavior
         # Define the concepts guide file and index
-        concepts_guide_file = project_root / "docs" / "signalwire_agents_concepts_guide.md"
+        concepts_guide_file = project_root / "docs" / "signalwire_concepts_guide.md"
         concepts_index_file = project_root / "concepts_guide.swsearch"
         
         # Check if the concepts guide file exists

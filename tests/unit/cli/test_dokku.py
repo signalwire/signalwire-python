@@ -27,7 +27,7 @@ from pathlib import Path, PurePosixPath
 from unittest.mock import Mock, patch, MagicMock, call, mock_open
 from io import StringIO
 
-from signalwire_agents.cli.dokku import (
+from signalwire.cli.dokku import (
     Colors,
     print_step,
     print_success,
@@ -285,7 +285,7 @@ class TestDokkuProjectGeneratorGenerate:
     @patch.object(DokkuProjectGenerator, '_write_cicd_files')
     @patch.object(DokkuProjectGenerator, '_write_simple_files')
     @patch.object(DokkuProjectGenerator, '_write_core_files')
-    @patch('signalwire_agents.cli.dokku.print_success')
+    @patch('signalwire.cli.dokku.print_success')
     def test_generate_simple_mode(self, mock_ps, mock_core, mock_simple, mock_cicd, tmp_path):
         gen = DokkuProjectGenerator("testapp", {'project_dir': str(tmp_path / 'out')})
         result = gen.generate()
@@ -297,7 +297,7 @@ class TestDokkuProjectGeneratorGenerate:
     @patch.object(DokkuProjectGenerator, '_write_cicd_files')
     @patch.object(DokkuProjectGenerator, '_write_simple_files')
     @patch.object(DokkuProjectGenerator, '_write_core_files')
-    @patch('signalwire_agents.cli.dokku.print_success')
+    @patch('signalwire.cli.dokku.print_success')
     def test_generate_cicd_mode(self, mock_ps, mock_core, mock_simple, mock_cicd, tmp_path):
         gen = DokkuProjectGenerator("testapp", {
             'project_dir': str(tmp_path / 'out'),
@@ -310,8 +310,8 @@ class TestDokkuProjectGeneratorGenerate:
         mock_simple.assert_not_called()
 
     @patch.object(DokkuProjectGenerator, '_write_core_files', side_effect=OSError("disk full"))
-    @patch('signalwire_agents.cli.dokku.print_error')
-    @patch('signalwire_agents.cli.dokku.print_success')
+    @patch('signalwire.cli.dokku.print_error')
+    @patch('signalwire.cli.dokku.print_success')
     def test_generate_handles_exception(self, mock_ps, mock_pe, mock_core, tmp_path):
         gen = DokkuProjectGenerator("testapp", {'project_dir': str(tmp_path / 'out')})
         result = gen.generate()
@@ -597,7 +597,7 @@ class TestCmdInit:
         return args
 
     @patch.object(DokkuProjectGenerator, 'generate', return_value=True)
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.Path')
     def test_init_simple_with_host(self, mock_path_cls, mock_gen):
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = False
@@ -609,7 +609,7 @@ class TestCmdInit:
         mock_gen.assert_called_once()
 
     @patch.object(DokkuProjectGenerator, 'generate', return_value=True)
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.Path')
     def test_init_cicd_mode(self, mock_path_cls, mock_gen):
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = False
@@ -620,7 +620,7 @@ class TestCmdInit:
         assert result == 0
 
     @patch.object(DokkuProjectGenerator, 'generate', return_value=False)
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.Path')
     def test_init_generation_failure_returns_1(self, mock_path_cls, mock_gen):
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = False
@@ -630,9 +630,9 @@ class TestCmdInit:
         result = cmd_init(args)
         assert result == 1
 
-    @patch('signalwire_agents.cli.dokku.shutil')
+    @patch('signalwire.cli.dokku.shutil')
     @patch.object(DokkuProjectGenerator, 'generate', return_value=True)
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.Path')
     def test_init_force_overwrites_existing_dir(self, mock_path_cls, mock_gen, mock_shutil):
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True
@@ -643,8 +643,8 @@ class TestCmdInit:
         assert result == 0
         mock_shutil.rmtree.assert_called_once_with(mock_path_instance)
 
-    @patch('signalwire_agents.cli.dokku.prompt_yes_no', return_value=False)
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.prompt_yes_no', return_value=False)
+    @patch('signalwire.cli.dokku.Path')
     def test_init_existing_dir_no_force_aborts(self, mock_path_cls, mock_prompt):
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True
@@ -654,10 +654,10 @@ class TestCmdInit:
         result = cmd_init(args)
         assert result == 1
 
-    @patch('signalwire_agents.cli.dokku.prompt_yes_no', side_effect=[False, True])
-    @patch('signalwire_agents.cli.dokku.prompt', return_value='dokku.example.com')
+    @patch('signalwire.cli.dokku.prompt_yes_no', side_effect=[False, True])
+    @patch('signalwire.cli.dokku.prompt', return_value='dokku.example.com')
     @patch.object(DokkuProjectGenerator, 'generate', return_value=True)
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.Path')
     def test_init_interactive_mode_simple(self, mock_path_cls, mock_gen,
                                           mock_prompt, mock_yes_no):
         """When no --host and no --cicd, enters interactive mode."""
@@ -671,9 +671,9 @@ class TestCmdInit:
         # Should have prompted for cicd (False) and then web
         assert mock_yes_no.call_count == 2
 
-    @patch('signalwire_agents.cli.dokku.prompt_yes_no', side_effect=[True, True])
+    @patch('signalwire.cli.dokku.prompt_yes_no', side_effect=[True, True])
     @patch.object(DokkuProjectGenerator, 'generate', return_value=True)
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.Path')
     def test_init_interactive_cicd_mode(self, mock_path_cls, mock_gen, mock_yes_no):
         """When user chooses cicd in interactive mode."""
         mock_path_instance = MagicMock()
@@ -685,7 +685,7 @@ class TestCmdInit:
         assert result == 0
 
     @patch.object(DokkuProjectGenerator, 'generate', return_value=True)
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.Path')
     def test_init_with_web_flag(self, mock_path_cls, mock_gen):
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = False
@@ -696,7 +696,7 @@ class TestCmdInit:
         assert result == 0
 
     @patch.object(DokkuProjectGenerator, 'generate', return_value=True)
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.Path')
     def test_init_custom_dir(self, mock_path_cls, mock_gen):
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = False
@@ -720,7 +720,7 @@ class TestCmdDeploy:
         args.host = host
         return args
 
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.Path')
     def test_deploy_no_procfile_returns_error(self, mock_path_cls):
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = False
@@ -730,8 +730,8 @@ class TestCmdDeploy:
         result = cmd_deploy(args)
         assert result == 1
 
-    @patch('signalwire_agents.cli.dokku.subprocess')
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.Path')
     def test_deploy_with_app_name_and_host(self, mock_path_cls, mock_subprocess):
         # Procfile exists, .git exists
         path_instances = {}
@@ -759,8 +759,8 @@ class TestCmdDeploy:
         result = cmd_deploy(args)
         assert result == 0
 
-    @patch('signalwire_agents.cli.dokku.subprocess')
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.Path')
     def test_deploy_git_push_failure(self, mock_path_cls, mock_subprocess):
         path_instances = {}
 
@@ -793,8 +793,8 @@ class TestCmdDeploy:
         result = cmd_deploy(args)
         assert result == 1
 
-    @patch('signalwire_agents.cli.dokku.subprocess')
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.Path')
     def test_deploy_initializes_git_if_needed(self, mock_path_cls, mock_subprocess):
         path_instances = {}
 
@@ -825,9 +825,9 @@ class TestCmdDeploy:
         git_init_calls = [c for c in calls if c[0][0] == ['git', 'init']]
         assert len(git_init_calls) == 1
 
-    @patch('signalwire_agents.cli.dokku.prompt', side_effect=['myapp', 'dokku.example.com'])
-    @patch('signalwire_agents.cli.dokku.subprocess')
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.prompt', side_effect=['myapp', 'dokku.example.com'])
+    @patch('signalwire.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.Path')
     def test_deploy_prompts_for_missing_info(self, mock_path_cls, mock_subprocess, mock_prompt):
         path_instances = {}
 
@@ -853,9 +853,9 @@ class TestCmdDeploy:
         assert result == 0
         assert mock_prompt.call_count == 2
 
-    @patch('signalwire_agents.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.subprocess')
     @patch('builtins.open', mock_open(read_data='{"name": "from-json"}'))
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.Path')
     def test_deploy_reads_app_name_from_app_json(self, mock_path_cls, mock_subprocess):
         path_instances = {}
 
@@ -896,7 +896,7 @@ class TestCmdLogs:
         args.num = num
         return args
 
-    @patch('signalwire_agents.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.subprocess')
     def test_logs_basic(self, mock_subprocess):
         args = self._make_args(app='myapp', host='dokku.example.com')
         result = cmd_logs(args)
@@ -905,14 +905,14 @@ class TestCmdLogs:
         cmd = mock_subprocess.run.call_args[0][0]
         assert cmd == ['ssh', 'dokku@dokku.example.com', 'logs', 'myapp']
 
-    @patch('signalwire_agents.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.subprocess')
     def test_logs_with_tail(self, mock_subprocess):
         args = self._make_args(app='myapp', host='dokku.example.com', tail=True)
         result = cmd_logs(args)
         cmd = mock_subprocess.run.call_args[0][0]
         assert '-t' in cmd
 
-    @patch('signalwire_agents.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.subprocess')
     def test_logs_with_num(self, mock_subprocess):
         args = self._make_args(app='myapp', host='dokku.example.com', num=50)
         result = cmd_logs(args)
@@ -920,7 +920,7 @@ class TestCmdLogs:
         assert '--num' in cmd
         assert '50' in cmd
 
-    @patch('signalwire_agents.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.subprocess')
     def test_logs_with_tail_and_num(self, mock_subprocess):
         args = self._make_args(app='myapp', host='dokku.example.com', tail=True, num=100)
         result = cmd_logs(args)
@@ -929,9 +929,9 @@ class TestCmdLogs:
         assert '--num' in cmd
         assert '100' in cmd
 
-    @patch('signalwire_agents.cli.dokku._get_app_name', return_value='fromjson')
-    @patch('signalwire_agents.cli.dokku.prompt', return_value='dokku.example.com')
-    @patch('signalwire_agents.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku._get_app_name', return_value='fromjson')
+    @patch('signalwire.cli.dokku.prompt', return_value='dokku.example.com')
+    @patch('signalwire.cli.dokku.subprocess')
     def test_logs_prompts_for_missing_info(self, mock_subprocess, mock_prompt, mock_get_name):
         args = self._make_args()  # no app, no host
         result = cmd_logs(args)
@@ -955,7 +955,7 @@ class TestCmdConfig:
         args.host = host
         return args
 
-    @patch('signalwire_agents.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.subprocess')
     def test_config_show(self, mock_subprocess):
         args = self._make_args(action='show', app='myapp', host='dokku.example.com')
         result = cmd_config(args)
@@ -964,7 +964,7 @@ class TestCmdConfig:
         assert 'config:show' in cmd
         assert 'myapp' in cmd
 
-    @patch('signalwire_agents.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.subprocess')
     def test_config_set(self, mock_subprocess):
         args = self._make_args(
             action='set',
@@ -979,7 +979,7 @@ class TestCmdConfig:
         assert 'KEY=value' in cmd
         assert 'OTHER=thing' in cmd
 
-    @patch('signalwire_agents.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.subprocess')
     def test_config_unset(self, mock_subprocess):
         args = self._make_args(
             action='unset',
@@ -1003,9 +1003,9 @@ class TestCmdConfig:
         result = cmd_config(args)
         assert result == 1
 
-    @patch('signalwire_agents.cli.dokku._get_app_name', return_value='fromjson')
-    @patch('signalwire_agents.cli.dokku.prompt', return_value='dokku.example.com')
-    @patch('signalwire_agents.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku._get_app_name', return_value='fromjson')
+    @patch('signalwire.cli.dokku.prompt', return_value='dokku.example.com')
+    @patch('signalwire.cli.dokku.subprocess')
     def test_config_prompts_for_missing_info(self, mock_subprocess, mock_prompt, mock_get_name):
         args = self._make_args(action='show')  # no app, no host
         result = cmd_config(args)
@@ -1028,7 +1028,7 @@ class TestCmdScale:
         args.host = host
         return args
 
-    @patch('signalwire_agents.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.subprocess')
     def test_scale_show_current(self, mock_subprocess):
         args = self._make_args(app='myapp', host='dokku.example.com')
         result = cmd_scale(args)
@@ -1039,7 +1039,7 @@ class TestCmdScale:
         # No extra args for showing
         assert len(cmd) == 4  # ssh, dokku@host, ps:scale, myapp
 
-    @patch('signalwire_agents.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.subprocess')
     def test_scale_set(self, mock_subprocess):
         args = self._make_args(
             scale_args=['web=2'],
@@ -1052,7 +1052,7 @@ class TestCmdScale:
         assert 'ps:scale' in cmd
         assert 'web=2' in cmd
 
-    @patch('signalwire_agents.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.subprocess')
     def test_scale_set_multiple(self, mock_subprocess):
         args = self._make_args(
             scale_args=['web=2', 'worker=3'],
@@ -1065,9 +1065,9 @@ class TestCmdScale:
         assert 'web=2' in cmd
         assert 'worker=3' in cmd
 
-    @patch('signalwire_agents.cli.dokku._get_app_name', return_value='fromjson')
-    @patch('signalwire_agents.cli.dokku.prompt', return_value='dokku.example.com')
-    @patch('signalwire_agents.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku._get_app_name', return_value='fromjson')
+    @patch('signalwire.cli.dokku.prompt', return_value='dokku.example.com')
+    @patch('signalwire.cli.dokku.subprocess')
     def test_scale_prompts_for_missing_info(self, mock_subprocess, mock_prompt, mock_get_name):
         args = self._make_args()  # no app, no host
         result = cmd_scale(args)
@@ -1084,7 +1084,7 @@ class TestGetAppName:
     """Tests for the _get_app_name helper function."""
 
     @patch('builtins.open', mock_open(read_data='{"name": "json-app"}'))
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.Path')
     def test_reads_from_app_json(self, mock_path_cls):
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True
@@ -1093,8 +1093,8 @@ class TestGetAppName:
         result = _get_app_name()
         assert result == 'json-app'
 
-    @patch('signalwire_agents.cli.dokku.prompt', return_value='prompted-app')
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.prompt', return_value='prompted-app')
+    @patch('signalwire.cli.dokku.Path')
     def test_prompts_when_no_app_json(self, mock_path_cls, mock_prompt):
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = False
@@ -1103,9 +1103,9 @@ class TestGetAppName:
         result = _get_app_name()
         assert result == 'prompted-app'
 
-    @patch('signalwire_agents.cli.dokku.prompt', return_value='fallback')
+    @patch('signalwire.cli.dokku.prompt', return_value='fallback')
     @patch('builtins.open', side_effect=json.JSONDecodeError("err", "doc", 0))
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.Path')
     def test_prompts_on_invalid_json(self, mock_path_cls, mock_open_fn, mock_prompt):
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True
@@ -1115,7 +1115,7 @@ class TestGetAppName:
         assert result == 'fallback'
 
     @patch('builtins.open', mock_open(read_data='{}'))
-    @patch('signalwire_agents.cli.dokku.Path')
+    @patch('signalwire.cli.dokku.Path')
     def test_returns_empty_string_when_name_missing(self, mock_path_cls):
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True
@@ -1132,7 +1132,7 @@ class TestGetAppName:
 class TestMain:
     """Tests for the main() entry point and argument parsing."""
 
-    @patch('signalwire_agents.cli.dokku.cmd_init', return_value=0)
+    @patch('signalwire.cli.dokku.cmd_init', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'init', 'myapp', '--host', 'dokku.test.com'])
     def test_main_init_command(self, mock_cmd_init):
         result = main()
@@ -1143,7 +1143,7 @@ class TestMain:
         assert args.host == 'dokku.test.com'
         assert args.command == 'init'
 
-    @patch('signalwire_agents.cli.dokku.cmd_init', return_value=0)
+    @patch('signalwire.cli.dokku.cmd_init', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'init', 'myapp', '--cicd'])
     def test_main_init_cicd(self, mock_cmd_init):
         result = main()
@@ -1151,7 +1151,7 @@ class TestMain:
         args = mock_cmd_init.call_args[0][0]
         assert args.cicd is True
 
-    @patch('signalwire_agents.cli.dokku.cmd_init', return_value=0)
+    @patch('signalwire.cli.dokku.cmd_init', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'init', 'myapp', '--web'])
     def test_main_init_web(self, mock_cmd_init):
         result = main()
@@ -1159,7 +1159,7 @@ class TestMain:
         args = mock_cmd_init.call_args[0][0]
         assert args.web is True
 
-    @patch('signalwire_agents.cli.dokku.cmd_init', return_value=0)
+    @patch('signalwire.cli.dokku.cmd_init', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'init', 'myapp', '--force'])
     def test_main_init_force(self, mock_cmd_init):
         result = main()
@@ -1167,7 +1167,7 @@ class TestMain:
         args = mock_cmd_init.call_args[0][0]
         assert args.force is True
 
-    @patch('signalwire_agents.cli.dokku.cmd_init', return_value=0)
+    @patch('signalwire.cli.dokku.cmd_init', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'init', 'myapp', '-f'])
     def test_main_init_force_short(self, mock_cmd_init):
         result = main()
@@ -1175,7 +1175,7 @@ class TestMain:
         args = mock_cmd_init.call_args[0][0]
         assert args.force is True
 
-    @patch('signalwire_agents.cli.dokku.cmd_init', return_value=0)
+    @patch('signalwire.cli.dokku.cmd_init', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'init', 'myapp', '--dir', '/tmp/out'])
     def test_main_init_custom_dir(self, mock_cmd_init):
         result = main()
@@ -1183,7 +1183,7 @@ class TestMain:
         args = mock_cmd_init.call_args[0][0]
         assert args.dir == '/tmp/out'
 
-    @patch('signalwire_agents.cli.dokku.cmd_deploy', return_value=0)
+    @patch('signalwire.cli.dokku.cmd_deploy', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'deploy', '--app', 'myapp', '--host', 'dokku.test.com'])
     def test_main_deploy_command(self, mock_cmd_deploy):
         result = main()
@@ -1193,7 +1193,7 @@ class TestMain:
         assert args.app == 'myapp'
         assert args.host == 'dokku.test.com'
 
-    @patch('signalwire_agents.cli.dokku.cmd_deploy', return_value=0)
+    @patch('signalwire.cli.dokku.cmd_deploy', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'deploy', '-a', 'myapp', '-H', 'dokku.test.com'])
     def test_main_deploy_short_flags(self, mock_cmd_deploy):
         result = main()
@@ -1202,7 +1202,7 @@ class TestMain:
         assert args.app == 'myapp'
         assert args.host == 'dokku.test.com'
 
-    @patch('signalwire_agents.cli.dokku.cmd_logs', return_value=0)
+    @patch('signalwire.cli.dokku.cmd_logs', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'logs', '-a', 'myapp', '-H', 'h', '-t', '-n', '20'])
     def test_main_logs_command(self, mock_cmd_logs):
         result = main()
@@ -1213,7 +1213,7 @@ class TestMain:
         assert args.tail is True
         assert args.num == 20
 
-    @patch('signalwire_agents.cli.dokku.cmd_config', return_value=0)
+    @patch('signalwire.cli.dokku.cmd_config', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'config', 'set', 'KEY=val', '-a', 'myapp', '-H', 'h'])
     def test_main_config_set_command(self, mock_cmd_config):
         result = main()
@@ -1223,7 +1223,7 @@ class TestMain:
         assert args.config_action == 'set'
         assert args.vars == ['KEY=val']
 
-    @patch('signalwire_agents.cli.dokku.cmd_config', return_value=0)
+    @patch('signalwire.cli.dokku.cmd_config', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'config', 'show', '-a', 'myapp', '-H', 'h'])
     def test_main_config_show_command(self, mock_cmd_config):
         result = main()
@@ -1231,7 +1231,7 @@ class TestMain:
         args = mock_cmd_config.call_args[0][0]
         assert args.config_action == 'show'
 
-    @patch('signalwire_agents.cli.dokku.cmd_config', return_value=0)
+    @patch('signalwire.cli.dokku.cmd_config', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'config', 'unset', 'KEY', '-a', 'myapp', '-H', 'h'])
     def test_main_config_unset_command(self, mock_cmd_config):
         result = main()
@@ -1240,7 +1240,7 @@ class TestMain:
         assert args.config_action == 'unset'
         assert args.vars == ['KEY']
 
-    @patch('signalwire_agents.cli.dokku.cmd_scale', return_value=0)
+    @patch('signalwire.cli.dokku.cmd_scale', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'scale', 'web=2', '-a', 'myapp', '-H', 'h'])
     def test_main_scale_command(self, mock_cmd_scale):
         result = main()
@@ -1354,10 +1354,10 @@ class TestEdgeCases:
         assert gen.agent_slug == "abc"
         assert gen.agent_class == "AbcAgent"
 
-    @patch('signalwire_agents.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.subprocess')
     def test_deploy_remote_url_format(self, mock_subprocess):
         """Verify the dokku remote URL is correctly formed."""
-        with patch('signalwire_agents.cli.dokku.Path') as mock_path_cls:
+        with patch('signalwire.cli.dokku.Path') as mock_path_cls:
             path_instances = {}
 
             def path_side_effect(p):
@@ -1387,7 +1387,7 @@ class TestEdgeCases:
                     assert 'dokku@dokku.host.com:myapp' in call_args
                     break
 
-    @patch('signalwire_agents.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.subprocess')
     def test_logs_command_structure(self, mock_subprocess):
         """Verify the SSH log command is correctly formed."""
         args = argparse.Namespace(
@@ -1419,7 +1419,7 @@ class TestEdgeCases:
         result = cmd_config(args)
         assert result == 1
 
-    @patch('signalwire_agents.cli.dokku.subprocess')
+    @patch('signalwire.cli.dokku.subprocess')
     def test_scale_show_no_extra_args(self, mock_subprocess):
         """When scale_args is empty, just show current scale without extra args."""
         args = argparse.Namespace(
@@ -1441,7 +1441,7 @@ class TestEdgeCases:
         assert result is True
         assert deep_dir.exists()
 
-    @patch('signalwire_agents.cli.dokku.cmd_init', return_value=0)
+    @patch('signalwire.cli.dokku.cmd_init', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'init', 'my-app', '--cicd', '--web',
                         '--host', 'h', '--dir', '/tmp/d', '-f'])
     def test_main_all_init_flags(self, mock_cmd_init):

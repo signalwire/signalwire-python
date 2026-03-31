@@ -35,7 +35,7 @@ from pathlib import Path
 # Add the parent directory to the path so we can import the package
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -232,7 +232,7 @@ class SigmondSimple(AgentBase):
             "SWAIG stands for SignalWire AI Gateway and these are tools the AI can call during conversations.",
             "Define functions using the AgentBase tool decorator, specifying the name, description, and parameters.",
             "Functions receive parsed arguments and raw request data as parameters.",
-            "Functions should return a SwaigFunctionResult object containing the response data.",
+            "Functions should return a FunctionResult object containing the response data.",
             "Functions can perform external API calls, database operations, or any Python logic you need.",
             "The AI automatically decides when to call functions based on the conversation context and user needs.",
             "Functions support security tokens, external webhooks, and custom parameter validation."

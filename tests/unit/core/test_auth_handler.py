@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 """
-Unit tests for AuthHandler class in signalwire_agents/core/auth_handler.py
+Unit tests for AuthHandler class in signalwire/core/auth_handler.py
 """
 
 import asyncio
@@ -53,7 +53,7 @@ class TestAuthHandlerInit:
 
     def test_basic_init_with_basic_auth_only(self):
         """AuthHandler initializes with basic auth from SecurityConfig."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(username="admin", password="secret")
         handler = AuthHandler(cfg)
@@ -67,7 +67,7 @@ class TestAuthHandlerInit:
 
     def test_init_with_bearer_token(self):
         """AuthHandler registers bearer method when token is configured."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(bearer_token="my-token-123")
         handler = AuthHandler(cfg)
@@ -78,7 +78,7 @@ class TestAuthHandlerInit:
 
     def test_init_with_api_key(self):
         """AuthHandler registers api_key method when key is configured."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(api_key="ak_abc123")
         handler = AuthHandler(cfg)
@@ -89,7 +89,7 @@ class TestAuthHandlerInit:
 
     def test_init_with_custom_api_key_header(self):
         """AuthHandler respects a custom api_key_header from SecurityConfig."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(api_key="ak_abc", api_key_header="X-Custom-Key")
         handler = AuthHandler(cfg)
@@ -98,7 +98,7 @@ class TestAuthHandlerInit:
 
     def test_init_with_default_api_key_header(self):
         """When api_key_header attribute is missing, default to X-API-Key."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = Mock()
         cfg.get_basic_auth.return_value = ("u", "p")
@@ -112,7 +112,7 @@ class TestAuthHandlerInit:
 
     def test_init_with_all_methods(self):
         """AuthHandler initializes all three auth methods when all configured."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(
             username="u", password="p",
@@ -126,7 +126,7 @@ class TestAuthHandlerInit:
 
     def test_bearer_not_registered_when_none(self):
         """Bearer method is not added when bearer_token is None."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(bearer_token=None)
         handler = AuthHandler(cfg)
@@ -134,7 +134,7 @@ class TestAuthHandlerInit:
 
     def test_bearer_not_registered_when_empty_string(self):
         """Bearer method is not added when bearer_token is empty string (falsy)."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(bearer_token="")
         handler = AuthHandler(cfg)
@@ -142,7 +142,7 @@ class TestAuthHandlerInit:
 
     def test_api_key_not_registered_when_none(self):
         """api_key method is not added when api_key is None."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(api_key=None)
         handler = AuthHandler(cfg)
@@ -150,9 +150,9 @@ class TestAuthHandlerInit:
 
     def test_auto_error_false_on_http_basic(self):
         """HTTPBasic is created with auto_error=False so credentials are optional."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
-        with patch("signalwire_agents.core.auth_handler.HTTPBasic") as mock_cls:
+        with patch("signalwire.core.auth_handler.HTTPBasic") as mock_cls:
             mock_cls.return_value = Mock()
             cfg = _make_security_config()
             handler = AuthHandler(cfg)
@@ -160,9 +160,9 @@ class TestAuthHandlerInit:
 
     def test_auto_error_false_on_http_bearer(self):
         """HTTPBearer is created with auto_error=False so credentials are optional."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
-        with patch("signalwire_agents.core.auth_handler.HTTPBearer") as mock_cls:
+        with patch("signalwire.core.auth_handler.HTTPBearer") as mock_cls:
             mock_cls.return_value = Mock()
             cfg = _make_security_config()
             handler = AuthHandler(cfg)
@@ -170,7 +170,7 @@ class TestAuthHandlerInit:
 
     def test_basic_auth_always_enabled(self):
         """Basic auth is always marked as enabled, even when username is empty."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(username="", password="")
         handler = AuthHandler(cfg)
@@ -185,7 +185,7 @@ class TestVerifyBasicAuth:
     """Test the verify_basic_auth method, including timing-safe comparison."""
 
     def _make_handler(self, username="user", password="pass"):
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
         cfg = _make_security_config(username=username, password=password)
         return AuthHandler(cfg)
 
@@ -233,13 +233,13 @@ class TestVerifyBasicAuth:
 
     def test_uses_secrets_compare_digest(self):
         """Verify that secrets.compare_digest is used (timing-safe comparison)."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(username="admin", password="secret")
         handler = AuthHandler(cfg)
         creds = self._make_creds("admin", "secret")
 
-        with patch("signalwire_agents.core.auth_handler.secrets.compare_digest", wraps=secrets.compare_digest) as mock_cd:
+        with patch("signalwire.core.auth_handler.secrets.compare_digest", wraps=secrets.compare_digest) as mock_cd:
             result = handler.verify_basic_auth(creds)
             assert result is True
             assert mock_cd.call_count == 2
@@ -253,13 +253,13 @@ class TestVerifyBasicAuth:
         timing information about which field was wrong. The implementation
         computes both comparisons before AND-ing them together.
         """
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(username="admin", password="secret")
         handler = AuthHandler(cfg)
         creds = self._make_creds("wrong", "secret")
 
-        with patch("signalwire_agents.core.auth_handler.secrets.compare_digest", wraps=secrets.compare_digest) as mock_cd:
+        with patch("signalwire.core.auth_handler.secrets.compare_digest", wraps=secrets.compare_digest) as mock_cd:
             result = handler.verify_basic_auth(creds)
             assert result is False
             # Both comparisons should still occur (no short-circuit)
@@ -267,20 +267,20 @@ class TestVerifyBasicAuth:
 
     def test_timing_safe_even_on_password_mismatch(self):
         """Both fields are compared even when only the password is wrong."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(username="admin", password="secret")
         handler = AuthHandler(cfg)
         creds = self._make_creds("admin", "wrong")
 
-        with patch("signalwire_agents.core.auth_handler.secrets.compare_digest", wraps=secrets.compare_digest) as mock_cd:
+        with patch("signalwire.core.auth_handler.secrets.compare_digest", wraps=secrets.compare_digest) as mock_cd:
             result = handler.verify_basic_auth(creds)
             assert result is False
             assert mock_cd.call_count == 2
 
     def test_basic_auth_disabled(self):
         """When basic auth is disabled, verify_basic_auth returns False."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config()
         handler = AuthHandler(cfg)
@@ -292,7 +292,7 @@ class TestVerifyBasicAuth:
 
     def test_basic_auth_missing_from_methods(self):
         """When 'basic' key is entirely absent, verify_basic_auth returns False."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config()
         handler = AuthHandler(cfg)
@@ -322,7 +322,7 @@ class TestVerifyBearerToken:
     """Test the verify_bearer_token method."""
 
     def _make_handler(self, bearer_token="tok_abc"):
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
         cfg = _make_security_config(bearer_token=bearer_token)
         return AuthHandler(cfg)
 
@@ -351,7 +351,7 @@ class TestVerifyBearerToken:
 
     def test_bearer_not_configured(self):
         """When no bearer token is configured, returns False."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
         cfg = _make_security_config(bearer_token=None)
         handler = AuthHandler(cfg)
 
@@ -371,14 +371,14 @@ class TestVerifyBearerToken:
         handler = self._make_handler("tok_xyz")
         creds = self._make_bearer_creds("tok_xyz")
 
-        with patch("signalwire_agents.core.auth_handler.secrets.compare_digest", wraps=secrets.compare_digest) as mock_cd:
+        with patch("signalwire.core.auth_handler.secrets.compare_digest", wraps=secrets.compare_digest) as mock_cd:
             result = handler.verify_bearer_token(creds)
             assert result is True
             mock_cd.assert_called_once_with("tok_xyz", "tok_xyz")
 
     def test_bearer_missing_from_methods(self):
         """When 'bearer' key is absent from auth_methods, returns False."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
         cfg = _make_security_config(bearer_token="tok")
         handler = AuthHandler(cfg)
         del handler.auth_methods['bearer']
@@ -401,7 +401,7 @@ class TestVerifyApiKey:
     """Test the verify_api_key method."""
 
     def _make_handler(self, api_key="ak_secret"):
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
         cfg = _make_security_config(api_key=api_key)
         return AuthHandler(cfg)
 
@@ -422,7 +422,7 @@ class TestVerifyApiKey:
 
     def test_api_key_not_configured(self):
         """When no API key configured, returns False."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
         cfg = _make_security_config(api_key=None)
         handler = AuthHandler(cfg)
         assert handler.verify_api_key("anything") is False
@@ -436,13 +436,13 @@ class TestVerifyApiKey:
     def test_uses_secrets_compare_digest(self):
         """Ensure timing-safe comparison via secrets.compare_digest."""
         handler = self._make_handler("ak_xyz")
-        with patch("signalwire_agents.core.auth_handler.secrets.compare_digest", wraps=secrets.compare_digest) as mock_cd:
+        with patch("signalwire.core.auth_handler.secrets.compare_digest", wraps=secrets.compare_digest) as mock_cd:
             handler.verify_api_key("ak_xyz")
             mock_cd.assert_called_once_with("ak_xyz", "ak_xyz")
 
     def test_api_key_missing_from_methods(self):
         """When 'api_key' key is absent from auth_methods, returns False."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
         cfg = _make_security_config(api_key="ak")
         handler = AuthHandler(cfg)
         del handler.auth_methods['api_key']
@@ -462,7 +462,7 @@ class TestGetFastapiDependency:
     """Test the FastAPI dependency factory."""
 
     def _make_handler(self, **kwargs):
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
         cfg = _make_security_config(**kwargs)
         return AuthHandler(cfg)
 
@@ -493,7 +493,7 @@ class TestGetFastapiDependency:
 
     def test_basic_auth_fails_raises_401(self):
         """Auth dependency raises HTTPException(401) on bad basic creds."""
-        from signalwire_agents.core.auth_handler import HTTPException
+        from signalwire.core.auth_handler import HTTPException
 
         handler = self._make_handler(username="u", password="p")
         dep = handler.get_fastapi_dependency(optional=False)
@@ -508,7 +508,7 @@ class TestGetFastapiDependency:
 
     def test_no_credentials_raises_401(self):
         """Auth dependency raises 401 when no credentials are provided."""
-        from signalwire_agents.core.auth_handler import HTTPException
+        from signalwire.core.auth_handler import HTTPException
 
         handler = self._make_handler()
         dep = handler.get_fastapi_dependency(optional=False)
@@ -569,7 +569,7 @@ class TestGetFastapiDependency:
 
     def test_401_includes_www_authenticate_header(self):
         """HTTPException includes WWW-Authenticate: Basic header."""
-        from signalwire_agents.core.auth_handler import HTTPException
+        from signalwire.core.auth_handler import HTTPException
 
         handler = self._make_handler()
         dep = handler.get_fastapi_dependency(optional=False)
@@ -580,7 +580,7 @@ class TestGetFastapiDependency:
 
     def test_401_detail_message(self):
         """HTTPException 401 includes the expected detail message."""
-        from signalwire_agents.core.auth_handler import HTTPException
+        from signalwire.core.auth_handler import HTTPException
 
         handler = self._make_handler()
         dep = handler.get_fastapi_dependency(optional=False)
@@ -591,7 +591,7 @@ class TestGetFastapiDependency:
 
     def test_returns_none_when_depends_unavailable(self):
         """When Depends is None (FastAPI not installed), returns None."""
-        from signalwire_agents.core import auth_handler
+        from signalwire.core import auth_handler
 
         original_depends = auth_handler.Depends
         try:
@@ -624,7 +624,7 @@ class TestFlaskDecorator:
     """Test the Flask decorator for authentication."""
 
     def _make_handler(self, **kwargs):
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
         cfg = _make_security_config(**kwargs)
         return AuthHandler(cfg)
 
@@ -795,7 +795,7 @@ class TestFlaskDecorator:
         mock_flask.Response = Mock(return_value="401 resp")
 
         with patch.dict("sys.modules", {"flask": mock_flask}):
-            with patch("signalwire_agents.core.auth_handler.secrets.compare_digest", wraps=secrets.compare_digest) as mock_cd:
+            with patch("signalwire.core.auth_handler.secrets.compare_digest", wraps=secrets.compare_digest) as mock_cd:
                 result = my_view()
                 assert result == "OK"
                 # Should have been called for the bearer comparison
@@ -877,7 +877,7 @@ class TestGetAuthInfo:
     """Test the get_auth_info method."""
 
     def _make_handler(self, **kwargs):
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
         cfg = _make_security_config(**kwargs)
         return AuthHandler(cfg)
 
@@ -975,7 +975,7 @@ class TestEdgeCases:
 
     def test_very_long_credentials(self):
         """Very long credential strings are handled correctly."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         long_user = "u" * 10000
         long_pass = "p" * 10000
@@ -989,7 +989,7 @@ class TestEdgeCases:
 
     def test_credentials_with_special_characters(self):
         """Special characters (colons, slashes, etc.) in credentials."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(username="user:with:colons", password="p@ss/w0rd!#$%")
         handler = AuthHandler(cfg)
@@ -1001,7 +1001,7 @@ class TestEdgeCases:
 
     def test_bearer_token_with_jwt_format(self):
         """Bearer tokens with JWT-like format are handled correctly."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.test.signature"
         cfg = _make_security_config(bearer_token=token)
@@ -1017,7 +1017,7 @@ class TestEdgeCases:
         secrets.compare_digest only accepts ASCII strings or bytes.
         This test documents the behavior when non-ASCII credentials are used.
         """
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(username="user_\u00e9", password="p\u00e4ss")
         handler = AuthHandler(cfg)
@@ -1031,7 +1031,7 @@ class TestEdgeCases:
 
     def test_setup_auth_methods_called_on_init(self):
         """_setup_auth_methods is called during __init__."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(username="u", password="p")
         with patch.object(AuthHandler, '_setup_auth_methods') as mock_setup:
@@ -1040,7 +1040,7 @@ class TestEdgeCases:
 
     def test_handler_stores_security_config(self):
         """The handler retains a reference to the security config."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config()
         handler = AuthHandler(cfg)
@@ -1048,7 +1048,7 @@ class TestEdgeCases:
 
     def test_verify_basic_auth_requires_both_fields_correct(self):
         """Only one matching field (username OR password) is not enough."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(username="admin", password="secret")
         handler = AuthHandler(cfg)
@@ -1066,7 +1066,7 @@ class TestEdgeCases:
 
     def test_multiple_handler_instances_independent(self):
         """Multiple AuthHandler instances have independent auth_methods."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg1 = _make_security_config(username="user1", password="pass1")
         cfg2 = _make_security_config(username="user2", password="pass2", bearer_token="tok")
@@ -1081,7 +1081,7 @@ class TestEdgeCases:
 
     def test_api_key_header_defaults_when_attr_missing(self):
         """When security_config has no api_key_header attr, defaults to X-API-Key."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         # Use Mock with spec to ensure api_key_header is not an attribute
         cfg = Mock(spec=['get_basic_auth', 'bearer_token', 'api_key'])
@@ -1094,7 +1094,7 @@ class TestEdgeCases:
 
     def test_whitespace_credentials_not_stripped(self):
         """Leading/trailing whitespace in credentials is significant."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(username="admin", password="secret")
         handler = AuthHandler(cfg)
@@ -1106,7 +1106,7 @@ class TestEdgeCases:
 
     def test_null_bearer_token_in_auth_methods(self):
         """Verifying bearer token when bearer method exists but enabled is False."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(bearer_token="tok")
         handler = AuthHandler(cfg)
@@ -1118,7 +1118,7 @@ class TestEdgeCases:
 
     def test_handler_basic_auth_has_basic_auth_and_bearer_fields(self):
         """Handler stores both basic_auth and bearer_auth scheme objects."""
-        from signalwire_agents.core.auth_handler import AuthHandler
+        from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config()
         handler = AuthHandler(cfg)
@@ -1128,7 +1128,7 @@ class TestEdgeCases:
 
     def test_handler_with_none_httpbasic(self):
         """When HTTPBasic is None (not installed), basic_auth attribute is None."""
-        from signalwire_agents.core import auth_handler
+        from signalwire.core import auth_handler
 
         original = auth_handler.HTTPBasic
         try:
@@ -1141,7 +1141,7 @@ class TestEdgeCases:
 
     def test_handler_with_none_httpbearer(self):
         """When HTTPBearer is None (not installed), bearer_auth attribute is None."""
-        from signalwire_agents.core import auth_handler
+        from signalwire.core import auth_handler
 
         original = auth_handler.HTTPBearer
         try:

@@ -14,7 +14,7 @@ Unit tests for AIConfigMixin
 import pytest
 from unittest.mock import Mock
 
-from signalwire_agents.core.mixins.ai_config_mixin import AIConfigMixin
+from signalwire.core.mixins.ai_config_mixin import AIConfigMixin
 
 
 class MockAIConfigHost(AIConfigMixin):

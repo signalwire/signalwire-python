@@ -1,20 +1,20 @@
-"""Tests for client.py — SignalWireClient instantiation and namespace wiring."""
+"""Tests for client.py — RestClient instantiation and namespace wiring."""
 
 import os
 import pytest
 from unittest.mock import patch
 
-from signalwire_agents.rest.client import SignalWireClient
-from signalwire_agents.rest.namespaces.fabric import FabricNamespace
-from signalwire_agents.rest.namespaces.calling import CallingNamespace
-from signalwire_agents.rest.namespaces.video import VideoNamespace
-from signalwire_agents.rest.namespaces.compat import CompatNamespace
+from signalwire.rest.client import RestClient
+from signalwire.rest.namespaces.fabric import FabricNamespace
+from signalwire.rest.namespaces.calling import CallingNamespace
+from signalwire.rest.namespaces.video import VideoNamespace
+from signalwire.rest.namespaces.compat import CompatNamespace
 
 
-class TestSignalWireClient:
+class TestRestClient:
     def test_requires_credentials(self):
         with pytest.raises(ValueError, match="project, token, and host"):
-            SignalWireClient()
+            RestClient()
 
     def test_env_var_fallback(self, mock_session):
         env = {
@@ -23,7 +23,7 @@ class TestSignalWireClient:
             "SIGNALWIRE_SPACE": "env.signalwire.com",
         }
         with patch.dict(os.environ, env):
-            c = SignalWireClient()
+            c = RestClient()
             assert c._project == "env-project"
 
     def test_explicit_overrides_env(self, mock_session):
@@ -33,7 +33,7 @@ class TestSignalWireClient:
             "SIGNALWIRE_SPACE": "env.signalwire.com",
         }
         with patch.dict(os.environ, env):
-            c = SignalWireClient(project="explicit", token="tok", host="h.com")
+            c = RestClient(project="explicit", token="tok", host="h.com")
             assert c._project == "explicit"
 
     def test_namespaces_exist(self, client):

@@ -17,7 +17,7 @@ import os
 from unittest.mock import Mock, patch, MagicMock, mock_open
 from pathlib import Path
 
-from signalwire_agents.search.document_processor import DocumentProcessor
+from signalwire.search.document_processor import DocumentProcessor
 
 
 class TestDocumentProcessorInit:
@@ -328,7 +328,7 @@ class TestDocumentProcessorFileExtraction:
         """Set up test fixtures"""
         self.processor = DocumentProcessor()
     
-    @patch('signalwire_agents.search.document_processor.magic', None)
+    @patch('signalwire.search.document_processor.magic', None)
     def test_extract_text_from_file_no_magic(self):
         """Test file extraction without magic library"""
         with patch.object(self.processor, '_extract_text') as mock_extract:
@@ -339,7 +339,7 @@ class TestDocumentProcessorFileExtraction:
             mock_extract.assert_called_once_with("test.txt")
             assert result == "test content"
     
-    @patch('signalwire_agents.search.document_processor.magic')
+    @patch('signalwire.search.document_processor.magic')
     def test_extract_text_from_file_with_magic(self, mock_magic):
         """Test file extraction with magic library"""
         mock_mime = Mock()
@@ -377,7 +377,7 @@ class TestDocumentProcessorFileExtraction:
     def test_extract_text_from_file_html(self):
         """Test HTML file extraction"""
         # HTML files with fallback detection go to _extract_text due to 'text' in 'text/html'
-        with patch('signalwire_agents.search.document_processor.magic', None):
+        with patch('signalwire.search.document_processor.magic', None):
             with patch.object(self.processor, '_extract_text') as mock_extract:
                 mock_extract.return_value = "html content"
                 
@@ -389,7 +389,7 @@ class TestDocumentProcessorFileExtraction:
     def test_extract_text_from_file_markdown(self):
         """Test Markdown file extraction"""
         # Markdown files with fallback detection go to _extract_text due to 'text' in 'text/plain'
-        with patch('signalwire_agents.search.document_processor.magic', None):
+        with patch('signalwire.search.document_processor.magic', None):
             with patch.object(self.processor, '_extract_text') as mock_extract:
                 mock_extract.return_value = "markdown content"
                 
@@ -400,7 +400,7 @@ class TestDocumentProcessorFileExtraction:
     
     def test_extract_text_from_file_unsupported(self):
         """Test unsupported file type"""
-        with patch('signalwire_agents.search.document_processor.magic') as mock_magic:
+        with patch('signalwire.search.document_processor.magic') as mock_magic:
             mock_mime = Mock()
             mock_mime.from_file.return_value = "application/unknown"
             mock_magic.Magic.return_value = mock_mime
@@ -417,14 +417,14 @@ class TestDocumentProcessorSpecificExtractors:
         """Set up test fixtures"""
         self.processor = DocumentProcessor()
     
-    @patch('signalwire_agents.search.document_processor.pdfplumber', None)
+    @patch('signalwire.search.document_processor.pdfplumber', None)
     def test_extract_pdf_no_library(self):
         """Test PDF extraction without pdfplumber"""
         result = self.processor._extract_pdf("test.pdf")
         
         assert "pdfplumber not available" in result
     
-    @patch('signalwire_agents.search.document_processor.pdfplumber')
+    @patch('signalwire.search.document_processor.pdfplumber')
     def test_extract_pdf_success(self, mock_pdfplumber):
         """Test successful PDF extraction"""
         mock_page1 = Mock()
@@ -443,7 +443,7 @@ class TestDocumentProcessorSpecificExtractors:
         
         assert result == ["Page 1 content", "Page 2 content"]
     
-    @patch('signalwire_agents.search.document_processor.pdfplumber')
+    @patch('signalwire.search.document_processor.pdfplumber')
     def test_extract_pdf_error(self, mock_pdfplumber):
         """Test PDF extraction with error"""
         mock_pdfplumber.open.side_effect = Exception("PDF error")
@@ -452,14 +452,14 @@ class TestDocumentProcessorSpecificExtractors:
         
         assert "Error processing PDF" in result
     
-    @patch('signalwire_agents.search.document_processor.DocxDocument', None)
+    @patch('signalwire.search.document_processor.DocxDocument', None)
     def test_extract_docx_no_library(self):
         """Test DOCX extraction without python-docx"""
         result = self.processor._extract_docx("test.docx")
         
         assert "python-docx not available" in result
     
-    @patch('signalwire_agents.search.document_processor.DocxDocument')
+    @patch('signalwire.search.document_processor.DocxDocument')
     def test_extract_docx_success(self, mock_docx):
         """Test successful DOCX extraction"""
         mock_para1 = Mock()
@@ -477,7 +477,7 @@ class TestDocumentProcessorSpecificExtractors:
         
         assert result == ["Paragraph 1", "Paragraph 2"]
     
-    @patch('signalwire_agents.search.document_processor.DocxDocument')
+    @patch('signalwire.search.document_processor.DocxDocument')
     def test_extract_docx_error(self, mock_docx):
         """Test DOCX extraction with error"""
         mock_docx.side_effect = Exception("DOCX error")
@@ -500,14 +500,14 @@ class TestDocumentProcessorSpecificExtractors:
             
             assert "Error processing TXT" in result
     
-    @patch('signalwire_agents.search.document_processor.BeautifulSoup', None)
+    @patch('signalwire.search.document_processor.BeautifulSoup', None)
     def test_extract_html_no_library(self):
         """Test HTML extraction without BeautifulSoup"""
         result = self.processor._extract_html("test.html")
         
         assert "beautifulsoup4 not available" in result
     
-    @patch('signalwire_agents.search.document_processor.BeautifulSoup')
+    @patch('signalwire.search.document_processor.BeautifulSoup')
     def test_extract_html_success(self, mock_bs):
         """Test successful HTML extraction"""
         mock_soup = Mock()
@@ -519,7 +519,7 @@ class TestDocumentProcessorSpecificExtractors:
             
             assert result == "HTML content"
     
-    @patch('signalwire_agents.search.document_processor.markdown', None)
+    @patch('signalwire.search.document_processor.markdown', None)
     def test_extract_markdown_no_library(self):
         """Test Markdown extraction without markdown library"""
         with patch('builtins.open', mock_open(read_data="# Header\nContent")):
@@ -528,13 +528,13 @@ class TestDocumentProcessorSpecificExtractors:
             # Should fallback to plain text
             assert result == "# Header\nContent"
     
-    @patch('signalwire_agents.search.document_processor.markdown')
+    @patch('signalwire.search.document_processor.markdown')
     def test_extract_markdown_success(self, mock_markdown):
         """Test successful Markdown extraction"""
         mock_markdown.markdown.return_value = "<h1>Header</h1><p>Content</p>"
         
         with patch('builtins.open', mock_open(read_data="# Header\nContent")):
-            with patch('signalwire_agents.search.document_processor.BeautifulSoup') as mock_bs:
+            with patch('signalwire.search.document_processor.BeautifulSoup') as mock_bs:
                 mock_soup = Mock()
                 mock_soup.get_text.return_value = "Header Content"
                 mock_bs.return_value = mock_soup
@@ -580,7 +580,7 @@ class TestDocumentProcessorUtilities:
         assert chunk['metadata']['custom_field'] == "custom_value"
         assert chunk['metadata']['file_type'] == 'txt'  # Base metadata should still be there
     
-    @patch('signalwire_agents.search.document_processor.sent_tokenize')
+    @patch('signalwire.search.document_processor.sent_tokenize')
     def test_create_chunk_sentence_count_with_nltk(self, mock_sent_tokenize):
         """Test chunk creation with NLTK sentence tokenization"""
         mock_sent_tokenize.return_value = ["Sentence 1.", "Sentence 2."]
@@ -593,7 +593,7 @@ class TestDocumentProcessorUtilities:
         assert chunk['metadata']['sentence_count'] == 2
         mock_sent_tokenize.assert_called_once_with("Sentence 1. Sentence 2.")
     
-    @patch('signalwire_agents.search.document_processor.sent_tokenize', None)
+    @patch('signalwire.search.document_processor.sent_tokenize', None)
     def test_create_chunk_sentence_count_fallback(self):
         """Test chunk creation with fallback sentence counting"""
         chunk = self.processor._create_chunk(
@@ -603,7 +603,7 @@ class TestDocumentProcessorUtilities:
         
         assert chunk['metadata']['sentence_count'] == 3
     
-    @patch('signalwire_agents.search.document_processor.sent_tokenize')
+    @patch('signalwire.search.document_processor.sent_tokenize')
     def test_create_chunk_sentence_count_error(self, mock_sent_tokenize):
         """Test chunk creation with sentence counting error"""
         mock_sent_tokenize.side_effect = Exception("NLTK error")
@@ -721,7 +721,7 @@ class TestFileExtraction:
 
     # ── PDF ──────────────────────────────────────────────────────────
 
-    @patch('signalwire_agents.search.document_processor.pdfplumber')
+    @patch('signalwire.search.document_processor.pdfplumber')
     def test_extract_pdf_with_pages(self, mock_pdfplumber):
         """Extract text from multiple PDF pages, including one with None text."""
         page1 = Mock(); page1.extract_text.return_value = "Page one text"
@@ -738,7 +738,7 @@ class TestFileExtraction:
         assert len(result) == 2  # page2 had None text, should be skipped
         assert "Page one text" in result[0]
 
-    @patch('signalwire_agents.search.document_processor.pdfplumber')
+    @patch('signalwire.search.document_processor.pdfplumber')
     def test_extract_pdf_strips_leading_page_numbers(self, mock_pdfplumber):
         """Leading page numbers like '1. ' should be stripped."""
         page = Mock(); page.extract_text.return_value = "1. Introduction paragraph"
@@ -749,12 +749,12 @@ class TestFileExtraction:
         result = self.processor._extract_pdf("/fake/doc.pdf")
         assert result == ["Introduction paragraph"]
 
-    @patch('signalwire_agents.search.document_processor.pdfplumber', None)
+    @patch('signalwire.search.document_processor.pdfplumber', None)
     def test_extract_pdf_missing_dependency(self):
         result = self.processor._extract_pdf("/fake/doc.pdf")
         assert "pdfplumber not available" in result
 
-    @patch('signalwire_agents.search.document_processor.pdfplumber')
+    @patch('signalwire.search.document_processor.pdfplumber')
     def test_extract_pdf_exception(self, mock_pdfplumber):
         mock_pdfplumber.open.side_effect = RuntimeError("corrupt file")
         result = self.processor._extract_pdf("/fake/doc.pdf")
@@ -762,7 +762,7 @@ class TestFileExtraction:
 
     # ── DOCX ─────────────────────────────────────────────────────────
 
-    @patch('signalwire_agents.search.document_processor.DocxDocument')
+    @patch('signalwire.search.document_processor.DocxDocument')
     def test_extract_docx_filters_empty_paragraphs(self, mock_docx_cls):
         p1 = Mock(text="Hello"); p2 = Mock(text=""); p3 = Mock(text="World")
         mock_doc = Mock(); mock_doc.paragraphs = [p1, p2, p3]
@@ -771,12 +771,12 @@ class TestFileExtraction:
         result = self.processor._extract_docx("/fake/doc.docx")
         assert result == ["Hello", "World"]
 
-    @patch('signalwire_agents.search.document_processor.DocxDocument', None)
+    @patch('signalwire.search.document_processor.DocxDocument', None)
     def test_extract_docx_missing_dependency(self):
         result = self.processor._extract_docx("/fake/doc.docx")
         assert "python-docx not available" in result
 
-    @patch('signalwire_agents.search.document_processor.DocxDocument')
+    @patch('signalwire.search.document_processor.DocxDocument')
     def test_extract_docx_exception(self, mock_docx_cls):
         mock_docx_cls.side_effect = ValueError("bad docx")
         result = self.processor._extract_docx("/fake/doc.docx")
@@ -784,7 +784,7 @@ class TestFileExtraction:
 
     # ── XLSX (Excel) ─────────────────────────────────────────────────
 
-    @patch('signalwire_agents.search.document_processor.load_workbook')
+    @patch('signalwire.search.document_processor.load_workbook')
     def test_extract_excel_success(self, mock_lwb):
         mock_sheet = Mock()
         mock_sheet.iter_rows.return_value = [
@@ -801,12 +801,12 @@ class TestFileExtraction:
         assert "30" in result  # integers become str
         assert "Bob" in result
 
-    @patch('signalwire_agents.search.document_processor.load_workbook', None)
+    @patch('signalwire.search.document_processor.load_workbook', None)
     def test_extract_excel_missing_dependency(self):
         result = self.processor._extract_excel("/fake/data.xlsx")
         assert "openpyxl not available" in result
 
-    @patch('signalwire_agents.search.document_processor.load_workbook')
+    @patch('signalwire.search.document_processor.load_workbook')
     def test_extract_excel_exception(self, mock_lwb):
         mock_lwb.side_effect = Exception("xlsx error")
         result = self.processor._extract_excel("/fake/data.xlsx")
@@ -814,7 +814,7 @@ class TestFileExtraction:
 
     # ── PPTX (PowerPoint) ────────────────────────────────────────────
 
-    @patch('signalwire_agents.search.document_processor.Presentation')
+    @patch('signalwire.search.document_processor.Presentation')
     def test_extract_powerpoint_success(self, mock_pres_cls):
         shape1 = Mock(text="Title Slide"); shape1.__class__ = type('S', (), {'text': 'Title Slide'})
         shape2 = Mock(text="Bullet 1")
@@ -830,12 +830,12 @@ class TestFileExtraction:
         assert "Title Slide" in result[0]
         assert "Bullet 1" in result[1]
 
-    @patch('signalwire_agents.search.document_processor.Presentation', None)
+    @patch('signalwire.search.document_processor.Presentation', None)
     def test_extract_powerpoint_missing_dependency(self):
         result = self.processor._extract_powerpoint("/fake/pres.pptx")
         assert "python-pptx not available" in result
 
-    @patch('signalwire_agents.search.document_processor.Presentation')
+    @patch('signalwire.search.document_processor.Presentation')
     def test_extract_powerpoint_exception(self, mock_pres_cls):
         mock_pres_cls.side_effect = Exception("pptx error")
         result = self.processor._extract_powerpoint("/fake/pres.pptx")
@@ -843,7 +843,7 @@ class TestFileExtraction:
 
     # ── HTML ─────────────────────────────────────────────────────────
 
-    @patch('signalwire_agents.search.document_processor.BeautifulSoup')
+    @patch('signalwire.search.document_processor.BeautifulSoup')
     def test_extract_html_success(self, mock_bs):
         mock_soup = Mock(); mock_soup.get_text.return_value = "Hello World"
         mock_bs.return_value = mock_soup
@@ -851,12 +851,12 @@ class TestFileExtraction:
             result = self.processor._extract_html("/fake/page.html")
         assert result == "Hello World"
 
-    @patch('signalwire_agents.search.document_processor.BeautifulSoup', None)
+    @patch('signalwire.search.document_processor.BeautifulSoup', None)
     def test_extract_html_missing_dependency(self):
         result = self.processor._extract_html("/fake/page.html")
         assert "beautifulsoup4 not available" in result
 
-    @patch('signalwire_agents.search.document_processor.BeautifulSoup')
+    @patch('signalwire.search.document_processor.BeautifulSoup')
     def test_extract_html_exception(self, mock_bs):
         with patch('builtins.open', side_effect=IOError("disk")):
             result = self.processor._extract_html("/fake/page.html")
@@ -864,8 +864,8 @@ class TestFileExtraction:
 
     # ── Markdown ─────────────────────────────────────────────────────
 
-    @patch('signalwire_agents.search.document_processor.BeautifulSoup')
-    @patch('signalwire_agents.search.document_processor.markdown')
+    @patch('signalwire.search.document_processor.BeautifulSoup')
+    @patch('signalwire.search.document_processor.markdown')
     def test_extract_markdown_success(self, mock_md, mock_bs):
         mock_md.markdown.return_value = "<h1>Title</h1>"
         mock_soup = Mock(); mock_soup.get_text.return_value = "Title"
@@ -874,8 +874,8 @@ class TestFileExtraction:
             result = self.processor._extract_markdown("/fake/doc.md")
         assert result == "Title"
 
-    @patch('signalwire_agents.search.document_processor.BeautifulSoup', None)
-    @patch('signalwire_agents.search.document_processor.markdown', None)
+    @patch('signalwire.search.document_processor.BeautifulSoup', None)
+    @patch('signalwire.search.document_processor.markdown', None)
     def test_extract_markdown_fallback_raw(self):
         """Without markdown+BS4, returns raw markdown text."""
         with patch('builtins.open', mock_open(read_data="# Raw Title\nBody")):
@@ -889,19 +889,19 @@ class TestFileExtraction:
 
     # ── RTF ───────────────────────────────────────────────────────────
 
-    @patch('signalwire_agents.search.document_processor.rtf_to_text')
+    @patch('signalwire.search.document_processor.rtf_to_text')
     def test_extract_rtf_success(self, mock_rtf):
         mock_rtf.return_value = "Plain text from RTF"
         with patch('builtins.open', mock_open(read_data=r"{\rtf1 Plain text from RTF}")):
             result = self.processor._extract_rtf("/fake/doc.rtf")
         assert result == "Plain text from RTF"
 
-    @patch('signalwire_agents.search.document_processor.rtf_to_text', None)
+    @patch('signalwire.search.document_processor.rtf_to_text', None)
     def test_extract_rtf_missing_dependency(self):
         result = self.processor._extract_rtf("/fake/doc.rtf")
         assert "striprtf not available" in result
 
-    @patch('signalwire_agents.search.document_processor.rtf_to_text')
+    @patch('signalwire.search.document_processor.rtf_to_text')
     def test_extract_rtf_exception(self, mock_rtf):
         with patch('builtins.open', side_effect=IOError("disk")):
             result = self.processor._extract_rtf("/fake/doc.rtf")
@@ -921,28 +921,28 @@ class TestFileExtraction:
 
     # ── _extract_text_from_file routing ──────────────────────────────
 
-    @patch('signalwire_agents.search.document_processor.magic', None)
+    @patch('signalwire.search.document_processor.magic', None)
     def test_extract_text_from_file_routes_xlsx(self):
         with patch.object(self.processor, '_extract_excel', return_value="cells") as m:
             result = self.processor._extract_text_from_file("data.xlsx")
         m.assert_called_once_with("data.xlsx")
         assert result == "cells"
 
-    @patch('signalwire_agents.search.document_processor.magic', None)
+    @patch('signalwire.search.document_processor.magic', None)
     def test_extract_text_from_file_routes_pptx(self):
         with patch.object(self.processor, '_extract_powerpoint', return_value=["s1"]) as m:
             result = self.processor._extract_text_from_file("slides.pptx")
         m.assert_called_once_with("slides.pptx")
         assert result == ["s1"]
 
-    @patch('signalwire_agents.search.document_processor.magic', None)
+    @patch('signalwire.search.document_processor.magic', None)
     def test_extract_text_from_file_routes_rtf(self):
         with patch.object(self.processor, '_extract_rtf', return_value="rtf text") as m:
             result = self.processor._extract_text_from_file("notes.rtf")
         m.assert_called_once_with("notes.rtf")
         assert result == "rtf text"
 
-    @patch('signalwire_agents.search.document_processor.magic', None)
+    @patch('signalwire.search.document_processor.magic', None)
     def test_extract_text_from_file_unknown_extension(self):
         """Unknown extension falls back to text/plain routing."""
         with patch.object(self.processor, '_extract_text', return_value="raw") as m:
@@ -950,7 +950,7 @@ class TestFileExtraction:
         m.assert_called_once_with("file.zzz")
         assert result == "raw"
 
-    @patch('signalwire_agents.search.document_processor.magic')
+    @patch('signalwire.search.document_processor.magic')
     def test_extract_text_from_file_magic_html(self, mock_magic):
         """When magic reports text/html, route to _extract_html."""
         mock_mime = Mock(); mock_mime.from_file.return_value = "text/html"
@@ -963,7 +963,7 @@ class TestFileExtraction:
             result = self.processor._extract_text_from_file("page.html")
         assert result == "content"
 
-    @patch('signalwire_agents.search.document_processor.magic')
+    @patch('signalwire.search.document_processor.magic')
     def test_extract_text_from_file_magic_rtf(self, mock_magic):
         mock_mime = Mock(); mock_mime.from_file.return_value = "application/rtf"
         mock_magic.Magic.return_value = mock_mime
@@ -972,7 +972,7 @@ class TestFileExtraction:
         m.assert_called_once_with("doc.rtf")
         assert result == "rtf"
 
-    @patch('signalwire_agents.search.document_processor.magic')
+    @patch('signalwire.search.document_processor.magic')
     def test_extract_text_from_file_magic_unsupported(self, mock_magic):
         mock_mime = Mock(); mock_mime.from_file.return_value = "application/octet-stream"
         mock_magic.Magic.return_value = mock_mime
@@ -985,7 +985,7 @@ class TestChunkingStrategies:
 
     # ── sentence ─────────────────────────────────────────────────────
 
-    @patch('signalwire_agents.search.document_processor.sent_tokenize', None)
+    @patch('signalwire.search.document_processor.sent_tokenize', None)
     def test_sentence_chunking_no_nltk(self):
         """Without NLTK, fallback to period-based splitting."""
         proc = DocumentProcessor(chunking_strategy='sentence', max_sentences_per_chunk=2)
@@ -994,7 +994,7 @@ class TestChunkingStrategies:
         assert len(chunks) >= 1
         assert all(c['metadata']['chunk_method'] == 'sentence_based' for c in chunks)
 
-    @patch('signalwire_agents.search.document_processor.sent_tokenize')
+    @patch('signalwire.search.document_processor.sent_tokenize')
     def test_sentence_chunking_with_nltk(self, mock_tok):
         mock_tok.side_effect = lambda t: [s.strip() for s in t.split('.') if s.strip()]
         proc = DocumentProcessor(chunking_strategy='sentence', max_sentences_per_chunk=2)
@@ -1002,7 +1002,7 @@ class TestChunkingStrategies:
         chunks = proc.create_chunks(text, "f.txt", "txt")
         assert len(chunks) >= 1
 
-    @patch('signalwire_agents.search.document_processor.sent_tokenize')
+    @patch('signalwire.search.document_processor.sent_tokenize')
     def test_sentence_chunking_with_split_newlines_zero(self, mock_tok):
         """split_newlines=0 should use direct tokenization without newline splitting."""
         mock_tok.side_effect = lambda t: [s.strip() for s in t.split('.') if s.strip()]
@@ -1099,7 +1099,7 @@ class TestChunkingStrategies:
 
     # ── semantic ─────────────────────────────────────────────────────
 
-    @patch('signalwire_agents.search.document_processor.sent_tokenize', None)
+    @patch('signalwire.search.document_processor.sent_tokenize', None)
     def test_semantic_single_sentence_fallback(self):
         """Single sentence should return one chunk without import error."""
         proc = DocumentProcessor(chunking_strategy='semantic')
@@ -1107,7 +1107,7 @@ class TestChunkingStrategies:
         assert len(chunks) == 1
         assert chunks[0]['metadata']['chunk_method'] == 'semantic'
 
-    @patch('signalwire_agents.search.document_processor.sent_tokenize', None)
+    @patch('signalwire.search.document_processor.sent_tokenize', None)
     def test_semantic_import_error_falls_back(self):
         """When sentence_transformers is missing, fall back to sentence-based."""
         proc = DocumentProcessor(chunking_strategy='semantic')
@@ -1116,7 +1116,7 @@ class TestChunkingStrategies:
         # Should get chunks (via fallback)
         assert len(chunks) >= 1
 
-    @patch('signalwire_agents.search.document_processor.sent_tokenize')
+    @patch('signalwire.search.document_processor.sent_tokenize')
     def test_semantic_with_tokenizer_import_error(self, mock_tok):
         """Semantic with NLTK available but sentence_transformers missing."""
         mock_tok.side_effect = lambda t: [s.strip()+'.' for s in t.split('.') if s.strip()]
@@ -1127,7 +1127,7 @@ class TestChunkingStrategies:
 
     # ── topics ───────────────────────────────────────────────────────
 
-    @patch('signalwire_agents.search.document_processor.sent_tokenize', None)
+    @patch('signalwire.search.document_processor.sent_tokenize', None)
     def test_topics_short_text_single_chunk(self):
         """3 or fewer sentences returns a single topic chunk."""
         proc = DocumentProcessor(chunking_strategy='topic')
@@ -1136,7 +1136,7 @@ class TestChunkingStrategies:
         assert len(chunks) == 1
         assert chunks[0]['metadata']['chunk_method'] == 'topic'
 
-    @patch('signalwire_agents.search.document_processor.sent_tokenize', None)
+    @patch('signalwire.search.document_processor.sent_tokenize', None)
     def test_topics_multiple_topics(self):
         """Multiple distinct topics should produce multiple chunks."""
         proc = DocumentProcessor(chunking_strategy='topic', topic_threshold=0.9)
@@ -1152,7 +1152,7 @@ class TestChunkingStrategies:
         assert len(chunks) >= 1
         assert all(c['metadata']['chunk_method'] == 'topic' for c in chunks)
 
-    @patch('signalwire_agents.search.document_processor.sent_tokenize')
+    @patch('signalwire.search.document_processor.sent_tokenize')
     def test_topics_with_nltk(self, mock_tok):
         mock_tok.side_effect = lambda t: [s.strip() for s in t.split('.') if s.strip()]
         proc = DocumentProcessor(chunking_strategy='topic', topic_threshold=0.0)
@@ -1160,7 +1160,7 @@ class TestChunkingStrategies:
         chunks = proc.create_chunks(text, "f.txt", "txt")
         assert len(chunks) >= 1
 
-    @patch('signalwire_agents.search.document_processor.sent_tokenize', None)
+    @patch('signalwire.search.document_processor.sent_tokenize', None)
     def test_topics_list_input(self):
         proc = DocumentProcessor(chunking_strategy='topic')
         chunks = proc.create_chunks(
@@ -1171,7 +1171,7 @@ class TestChunkingStrategies:
 
     # ── qa_optimization ──────────────────────────────────────────────
 
-    @patch('signalwire_agents.search.document_processor.sent_tokenize', None)
+    @patch('signalwire.search.document_processor.sent_tokenize', None)
     def test_qa_optimization_basic(self):
         proc = DocumentProcessor(chunking_strategy='qa')
         text = (
@@ -1183,7 +1183,7 @@ class TestChunkingStrategies:
         assert len(chunks) >= 1
         assert all(c['metadata']['chunk_method'] == 'qa_optimized' for c in chunks)
 
-    @patch('signalwire_agents.search.document_processor.sent_tokenize', None)
+    @patch('signalwire.search.document_processor.sent_tokenize', None)
     def test_qa_optimization_has_question_metadata(self):
         proc = DocumentProcessor(chunking_strategy='qa')
         text = "What is this? It is a test. Does it work? Yes it does. Final statement here."
@@ -1193,7 +1193,7 @@ class TestChunkingStrategies:
         has_q_chunks = [c for c in chunks if c['metadata'].get('has_question')]
         assert len(has_q_chunks) >= 0  # may or may not have, but should not crash
 
-    @patch('signalwire_agents.search.document_processor.sent_tokenize')
+    @patch('signalwire.search.document_processor.sent_tokenize')
     def test_qa_optimization_with_nltk(self, mock_tok):
         mock_tok.side_effect = lambda t: [s.strip() for s in t.split('.') if s.strip()]
         proc = DocumentProcessor(chunking_strategy='qa')
@@ -1201,13 +1201,13 @@ class TestChunkingStrategies:
         chunks = proc.create_chunks(text, "f.txt", "txt")
         assert len(chunks) >= 1
 
-    @patch('signalwire_agents.search.document_processor.sent_tokenize', None)
+    @patch('signalwire.search.document_processor.sent_tokenize', None)
     def test_qa_optimization_empty_text(self):
         proc = DocumentProcessor(chunking_strategy='qa')
         chunks = proc.create_chunks("", "f.txt", "txt")
         assert isinstance(chunks, list)
 
-    @patch('signalwire_agents.search.document_processor.sent_tokenize', None)
+    @patch('signalwire.search.document_processor.sent_tokenize', None)
     def test_qa_optimization_list_input(self):
         proc = DocumentProcessor(chunking_strategy='qa')
         chunks = proc.create_chunks(["Question? Answer.", "More content."], "f.txt", "txt")
@@ -1477,14 +1477,14 @@ class TestEdgeCases:
 
     # ── _calculate_sentences_per_chunk ───────────────────────────────
 
-    @patch('signalwire_agents.search.document_processor.sent_tokenize', None)
+    @patch('signalwire.search.document_processor.sent_tokenize', None)
     def test_calculate_sentences_per_chunk_no_nltk(self):
         proc = DocumentProcessor(chunk_size=50)
         result = proc._calculate_sentences_per_chunk("Short. Another.")
         assert isinstance(result, int)
         assert result >= 1
 
-    @patch('signalwire_agents.search.document_processor.sent_tokenize', None)
+    @patch('signalwire.search.document_processor.sent_tokenize', None)
     def test_calculate_sentences_per_chunk_empty(self):
         """Empty string with no nltk causes ZeroDivisionError (source code bug)."""
         proc = DocumentProcessor()

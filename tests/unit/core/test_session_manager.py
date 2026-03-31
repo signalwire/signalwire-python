@@ -19,7 +19,7 @@ import base64
 from datetime import datetime, timedelta
 from unittest.mock import Mock, patch, MagicMock
 
-from signalwire_agents.core.security.session_manager import SessionManager
+from signalwire.core.security.session_manager import SessionManager
 
 
 class TestSessionManager:

@@ -19,7 +19,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock, mock_open
 from typing import Dict, List, Any, Optional
 
-from signalwire_agents.utils.schema_utils import SchemaUtils
+from signalwire.utils.schema_utils import SchemaUtils
 
 
 class TestSchemaUtils:
@@ -57,7 +57,7 @@ class TestSchemaUtils:
             result = utils._get_default_schema_path()
             
             assert result == "/package/schema.json"
-            mock_files.assert_called_once_with("signalwire_agents")
+            mock_files.assert_called_once_with("signalwire")
     
     def test_get_default_schema_path_importlib_resources_old(self):
         """Test default schema path using importlib.resources (Python 3.7-3.8)"""
@@ -83,7 +83,7 @@ class TestSchemaUtils:
         original_files = importlib.resources.files
 
         def failing_files(package):
-            if package == "signalwire_agents":
+            if package == "signalwire":
                 raise ImportError("mocked")
             return original_files(package)
 
@@ -106,7 +106,7 @@ class TestSchemaUtils:
         original_files = importlib.resources.files
 
         def failing_files(package):
-            if package == "signalwire_agents":
+            if package == "signalwire":
                 raise ImportError("mocked")
             return original_files(package)
 

@@ -15,7 +15,7 @@ Example of using the redesigned InfoGathererAgent to collect answers to question
 
 import os
 import sys
-from signalwire_agents.prefabs import InfoGathererAgent
+from signalwire.prefabs import InfoGathererAgent
 
 def main():
     """Run the InfoGathererAgent example"""

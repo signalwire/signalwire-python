@@ -26,7 +26,7 @@ import sys
 import argparse
 
 # Import the ConciergeAgent prefab
-from signalwire_agents.prefabs import ConciergeAgent
+from signalwire.prefabs import ConciergeAgent
 
 # Basic logging setup
 logging.basicConfig(

@@ -237,4 +237,5 @@ test.db
 # Test/example projects
 myagent/
 Anaconda3-2024.02-1-Linux-x86_64.sh
-core
+# core dump files
+/core

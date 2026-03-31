@@ -25,9 +25,9 @@ and ${call_data.summary} to the receiving agent.
 import os
 from datetime import datetime
 from typing import Dict, Any, Optional
-from signalwire_agents import AgentBase, AgentServer
-from signalwire_agents.core.function_result import SwaigFunctionResult
-from signalwire_agents.core.logging_config import get_logger
+from signalwire import AgentBase, AgentServer
+from signalwire.core.function_result import FunctionResult
+from signalwire.core.logging_config import get_logger
 
 # Set up logger for this module
 logger = get_logger(__name__)
@@ -182,7 +182,7 @@ class SalesAgent(AgentBase):
         # Define sales-specific functions
         @self.tool("create_build_recommendation", description="Create a custom PC build recommendation")
         async def create_build_recommendation(budget: str, use_case: str, preferences: str):
-            return SwaigFunctionResult(
+            return FunctionResult(
                 f"Based on your ${budget} budget for {use_case}, I recommend: "
                 f"[Custom build details would be generated here based on current "
                 f"market data and your preferences: {preferences}]"
@@ -190,7 +190,7 @@ class SalesAgent(AgentBase):
         
         @self.tool("check_component_compatibility", description="Check if PC components are compatible")
         async def check_component_compatibility(components: str):
-            return SwaigFunctionResult(
+            return FunctionResult(
                 f"Compatibility check for: {components} - "
                 f"[Detailed compatibility analysis would be performed here]"
             )
@@ -338,7 +338,7 @@ class SupportAgent(AgentBase):
         # Define support-specific functions
         @self.tool("diagnose_hardware_issue", description="Help diagnose PC hardware problems")
         async def diagnose_hardware_issue(symptoms: str, system_specs: str):
-            return SwaigFunctionResult(
+            return FunctionResult(
                 f"For symptoms '{symptoms}' on system '{system_specs}': "
                 f"[Diagnostic steps and potential solutions would be provided here]"
             )
@@ -346,7 +346,7 @@ class SupportAgent(AgentBase):
         @self.tool("create_support_ticket", description="Create a support ticket for complex issues")
         async def create_support_ticket(issue_description: str, customer_info: str, priority: str):
             ticket_id = f"SUP-{datetime.now().strftime('%Y%m%d-%H%M%S')}"
-            return SwaigFunctionResult(
+            return FunctionResult(
                 f"Support ticket {ticket_id} created for: {issue_description}. "
                 f"Priority: {priority}. We'll follow up within 24 hours."
             )

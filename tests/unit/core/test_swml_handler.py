@@ -15,7 +15,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, List, Any, Optional, Tuple
 
-from signalwire_agents.core.swml_handler import (
+from signalwire.core.swml_handler import (
     SWMLVerbHandler,
     AIVerbHandler,
     VerbHandlerRegistry

@@ -19,8 +19,8 @@ import json
 import argparse
 
 # Import the ReceptionistAgent prefab
-from signalwire_agents.prefabs import ReceptionistAgent
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.prefabs import ReceptionistAgent
+from signalwire.core.function_result import FunctionResult
 
 class CustomReceptionistAgent(ReceptionistAgent):
     """

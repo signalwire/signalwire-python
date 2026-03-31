@@ -25,12 +25,12 @@ import json
 import argparse
 import fastapi
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
-from signalwire_agents.core.logging_config import get_logger
+from signalwire import AgentBase
+from signalwire.core.function_result import FunctionResult
+from signalwire.core.logging_config import get_logger
 
 # Create structured logger using the SDK's centralized logging
-logger = get_logger("signalwire_agents.examples.simple_agent")
+logger = get_logger("signalwire.examples.simple_agent")
 
 class SimpleAgent(AgentBase):
     """
@@ -340,12 +340,12 @@ class SimpleAgent(AgentBase):
             raw_data: Complete request data including call_id and other metadata
             
         Returns:
-            SwaigFunctionResult containing the current time
+            FunctionResult containing the current time
         """
         now = datetime.now()
         formatted_time = now.strftime("%H:%M:%S")
         logger.debug("get_time_called", time=formatted_time)
-        return SwaigFunctionResult(f"The current time is {formatted_time}")
+        return FunctionResult(f"The current time is {formatted_time}")
     
     @AgentBase.tool(
         name="get_weather",
@@ -370,7 +370,7 @@ class SimpleAgent(AgentBase):
             raw_data: Complete request data including call_id and other metadata
             
         Returns:
-            SwaigFunctionResult containing the response text and optional actions
+            FunctionResult containing the response text and optional actions
         """
         # Extract location from the args dictionary 
         location = args.get("location", "Unknown location")
@@ -381,7 +381,7 @@ class SimpleAgent(AgentBase):
         # Create the result with a response and multiple actions using add_actions
         # In a real implementation, this would call a weather API
         # For this example, we return mock data with multiple actions
-        result = SwaigFunctionResult(f"It's sunny and 72°F in {location}.")
+        result = FunctionResult(f"It's sunny and 72°F in {location}.")
         
         # Example 1: Add a single action using add_action
         result.add_action("set_global_data", {"weather_location": location})

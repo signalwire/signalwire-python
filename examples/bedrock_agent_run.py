@@ -3,7 +3,7 @@
 Test BedrockAgent with standard agent run
 """
 
-from signalwire_agents import BedrockAgent, run_agent
+from signalwire import BedrockAgent, run_agent
 
 # Create a Bedrock agent
 agent = BedrockAgent(

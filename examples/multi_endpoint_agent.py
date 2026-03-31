@@ -16,8 +16,8 @@ from datetime import datetime
 from fastapi import FastAPI, Request, Response, APIRouter
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import FunctionResult
 
 
 class MultiEndpointAgent(AgentBase):
@@ -59,7 +59,7 @@ class MultiEndpointAgent(AgentBase):
     def get_time(self, args, raw_data):
         """Simple SWAIG function for voice interactions"""
         now = datetime.now().strftime("%I:%M %p")
-        return SwaigFunctionResult(f"The current time is {now}")
+        return FunctionResult(f"The current time is {now}")
     
     def _register_routes(self, router: APIRouter):
         """

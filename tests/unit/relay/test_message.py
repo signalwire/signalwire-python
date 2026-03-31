@@ -9,9 +9,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 import pytest_asyncio
 
-from signalwire_agents.relay.client import RelayClient, RelayError, _active_clients
-from signalwire_agents.relay.message import Message
-from signalwire_agents.relay.constants import (
+from signalwire.relay.client import RelayClient, RelayError, _active_clients
+from signalwire.relay.message import Message
+from signalwire.relay.constants import (
     EVENT_MESSAGING_RECEIVE,
     EVENT_MESSAGING_STATE,
     MESSAGE_STATE_DELIVERED,
@@ -200,7 +200,7 @@ class TestSendMessage:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             client = RelayClient(project="test-project", token="test-token")
             await client.connect()
@@ -253,7 +253,7 @@ class TestSendMessage:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             client = RelayClient(project="test-project", token="test-token")
             await client.connect()
@@ -278,7 +278,7 @@ class TestSendMessage:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             client = RelayClient(project="test-project", token="test-token")
             await client.connect()
@@ -310,7 +310,7 @@ class TestSendMessage:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             client = RelayClient(project="test-project", token="test-token")
             await client.connect()
@@ -329,7 +329,7 @@ class TestSendMessage:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             client = RelayClient(project="test-project", token="test-token")
             await client.connect()
@@ -360,7 +360,7 @@ class TestMessagingEventRouting:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             client = RelayClient(project="test-project", token="test-token")
 
@@ -406,7 +406,7 @@ class TestMessagingEventRouting:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             client = RelayClient(project="test-project", token="test-token")
             await client.connect()
@@ -432,7 +432,7 @@ class TestMessagingEventRouting:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             client = RelayClient(project="test-project", token="test-token")
             await client.connect()
@@ -476,7 +476,7 @@ class TestMessagingEventRouting:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             client = RelayClient(project="test-project", token="test-token")
             await client.connect()
@@ -497,7 +497,7 @@ class TestMessagingEventRouting:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             client = RelayClient(project="test-project", token="test-token")
 
@@ -527,7 +527,7 @@ class TestMessagingEventRouting:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             client = RelayClient(project="test-project", token="test-token")
 

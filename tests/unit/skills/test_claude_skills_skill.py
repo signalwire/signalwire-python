@@ -15,8 +15,8 @@ import tempfile
 from pathlib import Path
 from unittest.mock import Mock, patch
 
-from signalwire_agents.skills.claude_skills.skill import ClaudeSkillsSkill
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.skills.claude_skills.skill import ClaudeSkillsSkill
+from signalwire.core.function_result import FunctionResult
 
 
 def _make_skill(params=None):
@@ -483,7 +483,7 @@ class TestUnsupportedFeatureWarnings:
             skill_dir = Path(tmpdir) / "forked"
             _write_skill_md(skill_dir, "forked", extra_frontmatter={"context": "fork"})
             skill = _make_skill({"skills_path": tmpdir})
-            with patch("signalwire_agents.skills.claude_skills.skill.logger") as mock_logger:
+            with patch("signalwire.skills.claude_skills.skill.logger") as mock_logger:
                 skill.setup()
             warning_calls = [str(c) for c in mock_logger.warning.call_args_list]
             assert any("context: fork is not supported" in c for c in warning_calls)
@@ -493,7 +493,7 @@ class TestUnsupportedFeatureWarnings:
             skill_dir = Path(tmpdir) / "agent-skill"
             _write_skill_md(skill_dir, "agent-skill", extra_frontmatter={"agent": "Explore"})
             skill = _make_skill({"skills_path": tmpdir})
-            with patch("signalwire_agents.skills.claude_skills.skill.logger") as mock_logger:
+            with patch("signalwire.skills.claude_skills.skill.logger") as mock_logger:
                 skill.setup()
             warning_calls = [str(c) for c in mock_logger.warning.call_args_list]
             assert any("agent field is not supported" in c for c in warning_calls)
@@ -503,7 +503,7 @@ class TestUnsupportedFeatureWarnings:
             skill_dir = Path(tmpdir) / "tools-skill"
             _write_skill_md(skill_dir, "tools-skill", extra_frontmatter={"allowed-tools": "Read, Grep"})
             skill = _make_skill({"skills_path": tmpdir})
-            with patch("signalwire_agents.skills.claude_skills.skill.logger") as mock_logger:
+            with patch("signalwire.skills.claude_skills.skill.logger") as mock_logger:
                 skill.setup()
             warning_calls = [str(c) for c in mock_logger.warning.call_args_list]
             assert any("allowed-tools is not supported" in c for c in warning_calls)
@@ -513,7 +513,7 @@ class TestUnsupportedFeatureWarnings:
             skill_dir = Path(tmpdir) / "model-skill"
             _write_skill_md(skill_dir, "model-skill", extra_frontmatter={"model": "opus"})
             skill = _make_skill({"skills_path": tmpdir})
-            with patch("signalwire_agents.skills.claude_skills.skill.logger") as mock_logger:
+            with patch("signalwire.skills.claude_skills.skill.logger") as mock_logger:
                 skill.setup()
             warning_calls = [str(c) for c in mock_logger.warning.call_args_list]
             assert any("model field is not supported" in c for c in warning_calls)
@@ -523,7 +523,7 @@ class TestUnsupportedFeatureWarnings:
             skill_dir = Path(tmpdir) / "hooks-skill"
             _write_skill_md(skill_dir, "hooks-skill", extra_frontmatter={"hooks": "pre-run"})
             skill = _make_skill({"skills_path": tmpdir})
-            with patch("signalwire_agents.skills.claude_skills.skill.logger") as mock_logger:
+            with patch("signalwire.skills.claude_skills.skill.logger") as mock_logger:
                 skill.setup()
             warning_calls = [str(c) for c in mock_logger.warning.call_args_list]
             assert any("hooks field is not supported" in c for c in warning_calls)
@@ -533,7 +533,7 @@ class TestUnsupportedFeatureWarnings:
             skill_dir = Path(tmpdir) / "shell-warn"
             _write_skill_md(skill_dir, "shell-warn", body="Run !`date` now")
             skill = _make_skill({"skills_path": tmpdir})
-            with patch("signalwire_agents.skills.claude_skills.skill.logger") as mock_logger:
+            with patch("signalwire.skills.claude_skills.skill.logger") as mock_logger:
                 skill.setup()
             warning_calls = [str(c) for c in mock_logger.warning.call_args_list]
             assert any("shell injection pattern" in c and "allow_shell_injection is disabled" in c
@@ -544,7 +544,7 @@ class TestUnsupportedFeatureWarnings:
             skill_dir = Path(tmpdir) / "clean"
             _write_skill_md(skill_dir, "clean", body="Just text")
             skill = _make_skill({"skills_path": tmpdir})
-            with patch("signalwire_agents.skills.claude_skills.skill.logger") as mock_logger:
+            with patch("signalwire.skills.claude_skills.skill.logger") as mock_logger:
                 skill.setup()
             warning_calls = [str(c) for c in mock_logger.warning.call_args_list]
             unsupported_warnings = [c for c in warning_calls

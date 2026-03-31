@@ -3,9 +3,9 @@
 
 import json
 import pytest
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
-from signalwire_agents.core.mixins.mcp_server_mixin import MCPServerMixin
+from signalwire import AgentBase
+from signalwire.core.function_result import FunctionResult
+from signalwire.core.mixins.mcp_server_mixin import MCPServerMixin
 
 
 class TestMCPServerMixin:
@@ -17,10 +17,10 @@ class TestMCPServerMixin:
         agent._mcp_server_enabled = True
 
         # Register a tool manually for testing
-        from signalwire_agents.core.swaig_function import SWAIGFunction
+        from signalwire.core.swaig_function import SWAIGFunction
 
         def weather_handler(agent_self, args, raw):
-            return SwaigFunctionResult(f"72F sunny in {args.get('location', 'unknown')}")
+            return FunctionResult(f"72F sunny in {args.get('location', 'unknown')}")
 
         func = SWAIGFunction(
             name="get_weather",

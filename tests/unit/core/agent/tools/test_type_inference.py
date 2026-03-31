@@ -15,13 +15,13 @@ import pytest
 from typing import Optional, List, Dict, Literal
 from unittest.mock import Mock, MagicMock
 
-from signalwire_agents.core.agent.tools.type_inference import (
+from signalwire.core.agent.tools.type_inference import (
     infer_schema,
     create_typed_handler_wrapper,
     _resolve_type,
     _parse_docstring_args,
 )
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.function_result import FunctionResult
 
 
 # ===========================================================================
@@ -431,31 +431,31 @@ class TestCreateTypedHandlerWrapper:
 
     def test_wrapper_unpacks_args(self):
         def handler(city: str, units: str = "celsius"):
-            return SwaigFunctionResult(f"Weather in {city} ({units})")
+            return FunctionResult(f"Weather in {city} ({units})")
 
         wrapper = create_typed_handler_wrapper(handler, has_raw_data=False)
         result = wrapper({"city": "London", "units": "fahrenheit"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "London" in result.response
         assert "fahrenheit" in result.response
 
     def test_wrapper_passes_raw_data(self):
         def handler(city: str, raw_data: dict = None):
-            return SwaigFunctionResult(f"Weather in {city}, call={raw_data.get('call_id', 'none')}")
+            return FunctionResult(f"Weather in {city}, call={raw_data.get('call_id', 'none')}")
 
         wrapper = create_typed_handler_wrapper(handler, has_raw_data=True)
         result = wrapper({"city": "Paris"}, {"call_id": "abc123"})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "Paris" in result.response
         assert "abc123" in result.response
 
     def test_wrapper_without_raw_data(self):
         def handler(name: str):
-            return SwaigFunctionResult(f"Hello, {name}")
+            return FunctionResult(f"Hello, {name}")
 
         wrapper = create_typed_handler_wrapper(handler, has_raw_data=False)
         result = wrapper({"name": "Alice"}, {"call_id": "ignored"})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "Alice" in result.response
 
     def test_wrapper_preserves_name(self):
@@ -482,16 +482,16 @@ class TestCreateTypedHandlerWrapper:
 
     def test_wrapper_with_empty_args(self):
         def handler():
-            return SwaigFunctionResult("done")
+            return FunctionResult("done")
 
         wrapper = create_typed_handler_wrapper(handler, has_raw_data=False)
         result = wrapper({}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert result.response == "done"
 
     def test_wrapper_with_default_values(self):
         def handler(city: str, units: str = "celsius"):
-            return SwaigFunctionResult(f"{city}:{units}")
+            return FunctionResult(f"{city}:{units}")
 
         wrapper = create_typed_handler_wrapper(handler, has_raw_data=False)
         # Only pass required arg, default should fill in
@@ -509,7 +509,7 @@ class TestEndToEndIntegration:
 
     def test_class_decorator_with_typed_handler(self):
         """Test that @AgentBase.tool() with typed params infers schema correctly."""
-        from signalwire_agents import AgentBase
+        from signalwire import AgentBase
 
         class TestAgent(AgentBase):
             def __init__(self):
@@ -523,7 +523,7 @@ class TestEndToEndIntegration:
                     city: Name of the city
                     units: Temperature units
                 """
-                return SwaigFunctionResult(f"Weather in {city}")
+                return FunctionResult(f"Weather in {city}")
 
         agent = TestAgent()
         func = agent._tool_registry.get_function("get_weather")
@@ -540,7 +540,7 @@ class TestEndToEndIntegration:
 
     def test_class_decorator_with_explicit_params_not_overridden(self):
         """Explicit parameters= should always win over inference."""
-        from signalwire_agents import AgentBase
+        from signalwire import AgentBase
 
         explicit_params = {
             "location": {"type": "string", "description": "Location name"}
@@ -553,7 +553,7 @@ class TestEndToEndIntegration:
             @AgentBase.tool(name="get_weather2", parameters=explicit_params, description="Explicit desc")
             def get_weather(self, city: str, units: str = "celsius"):
                 """Get the weather forecast."""
-                return SwaigFunctionResult(f"Weather in {city}")
+                return FunctionResult(f"Weather in {city}")
 
         agent = TestAgent()
         func = agent._tool_registry.get_function("get_weather2")
@@ -565,7 +565,7 @@ class TestEndToEndIntegration:
 
     def test_class_decorator_old_style_still_works(self):
         """Old-style (self, args, raw_data) should work as before."""
-        from signalwire_agents import AgentBase
+        from signalwire import AgentBase
 
         class TestAgent(AgentBase):
             def __init__(self):
@@ -577,7 +577,7 @@ class TestEndToEndIntegration:
                 parameters={"x": {"type": "string", "description": "Input"}},
             )
             def old_tool(self, args, raw_data):
-                return SwaigFunctionResult("done")
+                return FunctionResult("done")
 
         agent = TestAgent()
         func = agent._tool_registry.get_function("old_tool")
@@ -587,7 +587,7 @@ class TestEndToEndIntegration:
 
     def test_typed_handler_execution_through_on_function_call(self):
         """Typed handler should execute correctly through the standard dispatch."""
-        from signalwire_agents import AgentBase
+        from signalwire import AgentBase
 
         class TestAgent(AgentBase):
             def __init__(self):
@@ -601,17 +601,17 @@ class TestEndToEndIntegration:
                     name: Person's name
                     greeting: Greeting word
                 """
-                return SwaigFunctionResult(f"{greeting}, {name}!")
+                return FunctionResult(f"{greeting}, {name}!")
 
         agent = TestAgent()
         result = agent.on_function_call("greet", {"name": "Alice", "greeting": "Hi"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "Hi" in result.response
         assert "Alice" in result.response
 
     def test_typed_handler_with_defaults(self):
         """Typed handler should use defaults for missing args."""
-        from signalwire_agents import AgentBase
+        from signalwire import AgentBase
 
         class TestAgent(AgentBase):
             def __init__(self):
@@ -620,17 +620,17 @@ class TestEndToEndIntegration:
             @AgentBase.tool(name="greet2")
             def greet(self, name: str, greeting: str = "Hello"):
                 """Greet someone."""
-                return SwaigFunctionResult(f"{greeting}, {name}!")
+                return FunctionResult(f"{greeting}, {name}!")
 
         agent = TestAgent()
         result = agent.on_function_call("greet2", {"name": "Bob"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "Hello" in result.response
         assert "Bob" in result.response
 
     def test_typed_handler_with_raw_data(self):
         """Typed handler with raw_data should receive it."""
-        from signalwire_agents import AgentBase
+        from signalwire import AgentBase
 
         class TestAgent(AgentBase):
             def __init__(self):
@@ -644,17 +644,17 @@ class TestEndToEndIntegration:
                     query: Search query
                 """
                 call_id = raw_data.get("call_id", "unknown") if raw_data else "unknown"
-                return SwaigFunctionResult(f"query={query}, call={call_id}")
+                return FunctionResult(f"query={query}, call={call_id}")
 
         agent = TestAgent()
         result = agent.on_function_call("check_call", {"query": "test"}, {"call_id": "c42"})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "test" in result.response
         assert "c42" in result.response
 
     def test_literal_enum_in_swml(self):
         """Literal types should produce enum in SWML output."""
-        from signalwire_agents import AgentBase
+        from signalwire import AgentBase
 
         class TestAgent(AgentBase):
             def __init__(self):
@@ -667,7 +667,7 @@ class TestEndToEndIntegration:
                 Args:
                     mode: The mode to set
                 """
-                return SwaigFunctionResult(f"Mode set to {mode}")
+                return FunctionResult(f"Mode set to {mode}")
 
         agent = TestAgent()
         func = agent._tool_registry.get_function("set_mode")
@@ -676,7 +676,7 @@ class TestEndToEndIntegration:
 
     def test_instance_decorator_with_typed_handler(self):
         """Test the instance-level @agent.tool() decorator with typed params."""
-        from signalwire_agents import AgentBase
+        from signalwire import AgentBase
 
         agent = AgentBase("Test Agent", route="/test8")
 
@@ -688,7 +688,7 @@ class TestEndToEndIntegration:
                 user_id: The user's ID
                 include_details: Whether to include extra details
             """
-            return SwaigFunctionResult(f"User {user_id}")
+            return FunctionResult(f"User {user_id}")
 
         func = agent._tool_registry.get_function("lookup")
         assert func is not None
@@ -701,7 +701,7 @@ class TestEndToEndIntegration:
 
     def test_swml_output_includes_inferred_schema(self):
         """The generated SWML should include the inferred parameter schema."""
-        from signalwire_agents import AgentBase
+        from signalwire import AgentBase
 
         class TestAgent(AgentBase):
             def __init__(self):
@@ -715,7 +715,7 @@ class TestEndToEndIntegration:
                     query: Search query string
                     limit: Max results to return
                 """
-                return SwaigFunctionResult("results")
+                return FunctionResult("results")
 
         agent = TestAgent()
         func = agent._tool_registry.get_function("search")

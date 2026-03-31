@@ -16,9 +16,9 @@ import json
 from unittest.mock import patch
 from typing import Dict, List, Any, Optional
 
-from signalwire_agents.core.swml_renderer import SwmlRenderer
-from signalwire_agents.core.swml_service import SWMLService
-from signalwire_agents.utils.schema_utils import SchemaValidationError
+from signalwire.core.swml_renderer import SwmlRenderer
+from signalwire.core.swml_service import SWMLService
+from signalwire.utils.schema_utils import SchemaValidationError
 
 
 def _make_service():

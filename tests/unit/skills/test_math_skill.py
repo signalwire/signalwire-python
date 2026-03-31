@@ -14,8 +14,8 @@ Unit tests for the Math skill module
 import pytest
 from unittest.mock import Mock
 
-from signalwire_agents.skills.math.skill import MathSkill
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.skills.math.skill import MathSkill
+from signalwire.core.function_result import FunctionResult
 
 
 def _make_skill(params=None):
@@ -121,7 +121,7 @@ class TestCalculateHandlerValid:
     def test_addition(self):
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "2+3"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "5" in result.response
 
     def test_subtraction(self):
@@ -175,19 +175,19 @@ class TestCalculateHandlerEmpty:
     def test_empty_string(self):
         skill = _make_skill()
         result = skill._calculate_handler({"expression": ""}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "provide" in result.response.lower()
 
     def test_whitespace_only(self):
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "   "}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "provide" in result.response.lower()
 
     def test_missing_expression_key(self):
         skill = _make_skill()
         result = skill._calculate_handler({}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "provide" in result.response.lower()
 
 
@@ -201,25 +201,25 @@ class TestCalculateHandlerUnsafe:
     def test_import_os_rejected(self):
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "import os"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "invalid" in result.response.lower()
 
     def test_letters_rejected(self):
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "abc"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "invalid" in result.response.lower()
 
     def test_dunder_rejected(self):
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "__import__('os')"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "invalid" in result.response.lower()
 
     def test_semicolon_rejected(self):
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "1;2"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "invalid" in result.response.lower()
 
 
@@ -233,13 +233,13 @@ class TestCalculateHandlerDivisionByZero:
     def test_division_by_zero(self):
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "1/0"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "zero" in result.response.lower()
 
     def test_modulo_by_zero(self):
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "10%0"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "zero" in result.response.lower()
 
 
@@ -253,13 +253,13 @@ class TestCalculateHandlerInvalidExpression:
     def test_incomplete_expression(self):
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "2+"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "error" in result.response.lower()
 
     def test_unmatched_parens(self):
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "(2+3"}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "error" in result.response.lower()
 
 

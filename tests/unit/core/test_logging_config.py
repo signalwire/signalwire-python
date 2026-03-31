@@ -21,7 +21,7 @@ from io import StringIO
 
 import structlog
 
-from signalwire_agents.core.logging_config import (
+from signalwire.core.logging_config import (
     get_logger,
     get_execution_mode,
     configure_logging,
@@ -38,7 +38,7 @@ def _reset_logging(monkeypatch):
     """Reset logging state before every test."""
     reset_logging_configuration()
     # Also clear any handlers left from previous tests
-    sw_logger = logging.getLogger("signalwire_agents")
+    sw_logger = logging.getLogger("signalwire")
     sw_logger.handlers.clear()
     sw_logger.setLevel(logging.NOTSET)
     sw_logger.propagate = True
@@ -113,7 +113,7 @@ class TestGetLogger:
         assert logger1 is not logger2
 
     def test_triggers_configure_logging(self):
-        with patch('signalwire_agents.core.logging_config.configure_logging') as mock_conf:
+        with patch('signalwire.core.logging_config.configure_logging') as mock_conf:
             get_logger("test")
             mock_conf.assert_called_once()
 
@@ -130,23 +130,23 @@ class TestConfigureLogging:
         """configure_logging should only run once until reset."""
         configure_logging()
         # Grab the handler count after first call
-        sw = logging.getLogger("signalwire_agents")
+        sw = logging.getLogger("signalwire")
         handler_count = len(sw.handlers)
         # Second call should be a no-op (no extra handlers)
         configure_logging()
         assert len(sw.handlers) == handler_count
 
     def test_default_mode(self):
-        """Default (no env var) should attach a handler to signalwire_agents."""
+        """Default (no env var) should attach a handler to signalwire."""
         configure_logging()
-        sw = logging.getLogger("signalwire_agents")
+        sw = logging.getLogger("signalwire")
         assert len(sw.handlers) == 1
         assert sw.propagate is False
 
     def test_off_mode(self):
         with patch.dict(os.environ, {'SIGNALWIRE_LOG_MODE': 'off'}):
             configure_logging()
-            sw = logging.getLogger("signalwire_agents")
+            sw = logging.getLogger("signalwire")
             # Off mode sets level above CRITICAL and no handlers
             assert sw.level > logging.CRITICAL
             assert len(sw.handlers) == 0
@@ -154,14 +154,14 @@ class TestConfigureLogging:
     def test_stderr_mode(self):
         with patch.dict(os.environ, {'SIGNALWIRE_LOG_MODE': 'stderr'}):
             configure_logging()
-            sw = logging.getLogger("signalwire_agents")
+            sw = logging.getLogger("signalwire")
             assert len(sw.handlers) == 1
             assert sw.handlers[0].stream is sys.stderr
 
     def test_auto_mode_cgi(self):
         with patch.dict(os.environ, {'SIGNALWIRE_LOG_MODE': 'auto', 'GATEWAY_INTERFACE': 'CGI/1.1'}):
             configure_logging()
-            sw = logging.getLogger("signalwire_agents")
+            sw = logging.getLogger("signalwire")
             # CGI → off mode
             assert sw.level > logging.CRITICAL
 
@@ -172,19 +172,19 @@ class TestConfigureLogging:
             for v in removals:
                 os.environ.pop(v, None)
             configure_logging()
-            sw = logging.getLogger("signalwire_agents")
+            sw = logging.getLogger("signalwire")
             assert len(sw.handlers) == 1
 
     def test_log_level_env(self):
         with patch.dict(os.environ, {'SIGNALWIRE_LOG_LEVEL': 'debug'}):
             configure_logging()
-            sw = logging.getLogger("signalwire_agents")
+            sw = logging.getLogger("signalwire")
             assert sw.level == logging.DEBUG
 
     def test_json_format(self):
         with patch.dict(os.environ, {'SIGNALWIRE_LOG_FORMAT': 'json'}):
             configure_logging()
-            sw = logging.getLogger("signalwire_agents")
+            sw = logging.getLogger("signalwire")
             assert len(sw.handlers) == 1
             # Handler's formatter should be a ProcessorFormatter
             fmt = sw.handlers[0].formatter
@@ -205,10 +205,10 @@ class TestStructuredLogging:
             configure_logging()
 
             buf = StringIO()
-            sw = logging.getLogger("signalwire_agents")
+            sw = logging.getLogger("signalwire")
             sw.handlers[0].stream = buf
 
-            log = get_logger("signalwire_agents.test_bind")
+            log = get_logger("signalwire.test_bind")
             bound = log.bind(request_id="abc123")
             bound.info("hello")
 
@@ -223,10 +223,10 @@ class TestStructuredLogging:
             configure_logging()
 
             buf = StringIO()
-            sw = logging.getLogger("signalwire_agents")
+            sw = logging.getLogger("signalwire")
             sw.handlers[0].stream = buf
 
-            log = get_logger("signalwire_agents.test_nested")
+            log = get_logger("signalwire.test_nested")
             log2 = log.bind(a="1").bind(b="2")
             log2.info("nested")
 
@@ -242,10 +242,10 @@ class TestStructuredLogging:
             configure_logging()
 
             buf = StringIO()
-            sw = logging.getLogger("signalwire_agents")
+            sw = logging.getLogger("signalwire")
             sw.handlers[0].stream = buf
 
-            log = get_logger("signalwire_agents.test_exc")
+            log = get_logger("signalwire.test_exc")
 
             try:
                 raise ValueError("boom")
@@ -306,11 +306,11 @@ class TestJsonMode:
             configure_logging()
 
             buf = StringIO()
-            sw = logging.getLogger("signalwire_agents")
+            sw = logging.getLogger("signalwire")
             # Replace handler's stream with our buffer
             sw.handlers[0].stream = buf
 
-            log = get_logger("signalwire_agents.test_json")
+            log = get_logger("signalwire.test_json")
             bound = log.bind(user="alice")
             bound.info("login")
 
@@ -330,12 +330,12 @@ class TestColorDetection:
     """Verify color auto-detection logic."""
 
     def test_no_colors_when_not_tty(self):
-        from signalwire_agents.core.logging_config import _detect_colors
+        from signalwire.core.logging_config import _detect_colors
         with patch.object(sys, 'stdout', new_callable=StringIO):
             assert _detect_colors() is False
 
     def test_no_colors_when_dump_swml(self):
-        from signalwire_agents.core.logging_config import _detect_colors
+        from signalwire.core.logging_config import _detect_colors
         original_argv = sys.argv[:]
         try:
             sys.argv.append('--dump-swml')
@@ -344,7 +344,7 @@ class TestColorDetection:
             sys.argv[:] = original_argv
 
     def test_no_colors_when_raw(self):
-        from signalwire_agents.core.logging_config import _detect_colors
+        from signalwire.core.logging_config import _detect_colors
         original_argv = sys.argv[:]
         try:
             sys.argv.append('--raw')
@@ -363,7 +363,7 @@ class TestResetLogging:
 
     def test_reset_allows_reconfigure(self):
         configure_logging()
-        sw = logging.getLogger("signalwire_agents")
+        sw = logging.getLogger("signalwire")
         assert len(sw.handlers) >= 1
 
         reset_logging_configuration()

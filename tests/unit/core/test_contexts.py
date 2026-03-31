@@ -15,7 +15,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, List, Any, Optional
 
-from signalwire_agents.core.contexts import (
+from signalwire.core.contexts import (
     ContextBuilder,
     Context,
     Step,

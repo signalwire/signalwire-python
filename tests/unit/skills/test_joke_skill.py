@@ -14,8 +14,8 @@ Unit tests for the Joke skill module
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 
-from signalwire_agents.skills.joke.skill import JokeSkill
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.skills.joke.skill import JokeSkill
+from signalwire.core.function_result import FunctionResult
 
 
 def _make_skill(params=None):
@@ -86,7 +86,7 @@ class TestJokeSkillInit:
     def test_logger_created(self):
         skill = JokeSkill(agent=Mock())
         assert skill.logger is not None
-        assert skill.logger.name == "signalwire_agents.skills.joke"
+        assert skill.logger.name == "signalwire.skills.joke"
 
     def test_swaig_fields_extracted_from_params(self):
         params = {"swaig_fields": {"meta_data": {"x": 1}}, "api_key": "k"}

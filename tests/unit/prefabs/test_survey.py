@@ -48,11 +48,11 @@ def _make_survey(
         ]
 
     with patch(
-        "signalwire_agents.prefabs.survey.AgentBase.__init__", return_value=None
+        "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
     ) as mock_init:
         # Mock the methods that _setup_survey_agent calls on 'self'
         with patch.multiple(
-            "signalwire_agents.prefabs.survey.AgentBase",
+            "signalwire.prefabs.survey.AgentBase",
             prompt_add_section=MagicMock(),
             set_post_prompt=MagicMock(),
             add_hints=MagicMock(),
@@ -60,7 +60,7 @@ def _make_survey(
             set_global_data=MagicMock(),
             set_native_functions=MagicMock(),
         ):
-            from signalwire_agents.prefabs.survey import SurveyAgent
+            from signalwire.prefabs.survey import SurveyAgent
 
             survey = SurveyAgent(
                 survey_name=survey_name,
@@ -81,7 +81,7 @@ def _bare_survey(questions=None):
     minimum attributes required for method-level tests such as validate_response
     and log_response.
     """
-    from signalwire_agents.prefabs.survey import SurveyAgent
+    from signalwire.prefabs.survey import SurveyAgent
 
     survey = SurveyAgent.__new__(SurveyAgent)
     survey.questions = questions or [
@@ -203,10 +203,10 @@ class TestSurveyInitialization:
             {"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}
         ]
         with patch(
-            "signalwire_agents.prefabs.survey.AgentBase.__init__", return_value=None
+            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
         ) as mock_init:
             with patch.multiple(
-                "signalwire_agents.prefabs.survey.AgentBase",
+                "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
                 add_hints=MagicMock(),
@@ -214,7 +214,7 @@ class TestSurveyInitialization:
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
             ):
-                from signalwire_agents.prefabs.survey import SurveyAgent
+                from signalwire.prefabs.survey import SurveyAgent
 
                 SurveyAgent(
                     survey_name="S",
@@ -357,10 +357,10 @@ class TestSetupSurveyAgent:
         ]
 
         with patch(
-            "signalwire_agents.prefabs.survey.AgentBase.__init__", return_value=None
+            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
         ):
             with patch.multiple(
-                "signalwire_agents.prefabs.survey.AgentBase",
+                "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
                 add_hints=MagicMock(),
@@ -368,7 +368,7 @@ class TestSetupSurveyAgent:
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
             ):
-                from signalwire_agents.prefabs.survey import SurveyAgent
+                from signalwire.prefabs.survey import SurveyAgent
 
                 survey = SurveyAgent(survey_name="Test", questions=questions)
 
@@ -391,10 +391,10 @@ class TestSetupSurveyAgent:
         ]
 
         with patch(
-            "signalwire_agents.prefabs.survey.AgentBase.__init__", return_value=None
+            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
         ):
             with patch.multiple(
-                "signalwire_agents.prefabs.survey.AgentBase",
+                "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
                 add_hints=MagicMock(),
@@ -402,7 +402,7 @@ class TestSetupSurveyAgent:
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
             ):
-                from signalwire_agents.prefabs.survey import SurveyAgent
+                from signalwire.prefabs.survey import SurveyAgent
 
                 survey = SurveyAgent(survey_name="Test", questions=questions)
                 survey.set_post_prompt.assert_called_once()
@@ -425,10 +425,10 @@ class TestSetupSurveyAgent:
         ]
 
         with patch(
-            "signalwire_agents.prefabs.survey.AgentBase.__init__", return_value=None
+            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
         ):
             with patch.multiple(
-                "signalwire_agents.prefabs.survey.AgentBase",
+                "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
                 add_hints=MagicMock(),
@@ -436,7 +436,7 @@ class TestSetupSurveyAgent:
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
             ):
-                from signalwire_agents.prefabs.survey import SurveyAgent
+                from signalwire.prefabs.survey import SurveyAgent
 
                 survey = SurveyAgent(
                     survey_name="CX Survey",
@@ -466,10 +466,10 @@ class TestSetupSurveyAgent:
         ]
 
         with patch(
-            "signalwire_agents.prefabs.survey.AgentBase.__init__", return_value=None
+            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
         ):
             with patch.multiple(
-                "signalwire_agents.prefabs.survey.AgentBase",
+                "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
                 add_hints=MagicMock(),
@@ -477,7 +477,7 @@ class TestSetupSurveyAgent:
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
             ):
-                from signalwire_agents.prefabs.survey import SurveyAgent
+                from signalwire.prefabs.survey import SurveyAgent
 
                 survey = SurveyAgent(survey_name="Test", questions=questions)
 
@@ -497,10 +497,10 @@ class TestSetupSurveyAgent:
         ]
 
         with patch(
-            "signalwire_agents.prefabs.survey.AgentBase.__init__", return_value=None
+            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
         ):
             with patch.multiple(
-                "signalwire_agents.prefabs.survey.AgentBase",
+                "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
                 add_hints=MagicMock(),
@@ -508,7 +508,7 @@ class TestSetupSurveyAgent:
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
             ):
-                from signalwire_agents.prefabs.survey import SurveyAgent
+                from signalwire.prefabs.survey import SurveyAgent
 
                 survey = SurveyAgent(
                     survey_name="GD Survey",
@@ -531,10 +531,10 @@ class TestSetupSurveyAgent:
         ]
 
         with patch(
-            "signalwire_agents.prefabs.survey.AgentBase.__init__", return_value=None
+            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
         ):
             with patch.multiple(
-                "signalwire_agents.prefabs.survey.AgentBase",
+                "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
                 add_hints=MagicMock(),
@@ -542,7 +542,7 @@ class TestSetupSurveyAgent:
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
             ):
-                from signalwire_agents.prefabs.survey import SurveyAgent
+                from signalwire.prefabs.survey import SurveyAgent
 
                 survey = SurveyAgent(survey_name="Test", questions=questions)
                 survey.set_native_functions.assert_called_once_with(["check_time"])
@@ -718,14 +718,14 @@ class TestValidateResponse:
         assert "invalid" in result.response.lower()
 
     def test_returns_swaig_function_result(self):
-        """validate_response returns a SwaigFunctionResult instance."""
-        from signalwire_agents.core.function_result import SwaigFunctionResult
+        """validate_response returns a FunctionResult instance."""
+        from signalwire.core.function_result import FunctionResult
 
         survey = _bare_survey()
         result = survey.validate_response(
             {"question_id": "q1", "response": "3"}, {}
         )
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
 
     def test_rating_whitespace_trimmed(self):
         """Leading/trailing whitespace in a rating response is trimmed."""
@@ -766,14 +766,14 @@ class TestLogResponse:
         assert "recorded" in result.response.lower()
 
     def test_returns_swaig_function_result(self):
-        """log_response returns a SwaigFunctionResult."""
-        from signalwire_agents.core.function_result import SwaigFunctionResult
+        """log_response returns a FunctionResult."""
+        from signalwire.core.function_result import FunctionResult
 
         survey = _bare_survey()
         result = survey.log_response(
             {"question_id": "q1", "response": "3"}, {}
         )
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
 
     def test_log_response_includes_question_text(self):
         """The acknowledgement mentions the question text."""
@@ -941,7 +941,7 @@ class TestToolDecorators:
 
     def test_validate_response_has_tool_metadata(self):
         """validate_response should be marked as a tool by the @tool decorator."""
-        from signalwire_agents.prefabs.survey import SurveyAgent
+        from signalwire.prefabs.survey import SurveyAgent
 
         # The class-level @AgentBase.tool decorator sets _is_tool, _tool_name, _tool_params
         assert hasattr(SurveyAgent.validate_response, "_is_tool")
@@ -955,7 +955,7 @@ class TestToolDecorators:
 
     def test_log_response_has_tool_metadata(self):
         """log_response should be marked as a tool by the @tool decorator."""
-        from signalwire_agents.prefabs.survey import SurveyAgent
+        from signalwire.prefabs.survey import SurveyAgent
 
         assert hasattr(SurveyAgent.log_response, "_is_tool")
         assert SurveyAgent.log_response._is_tool is True
@@ -972,10 +972,10 @@ class TestSurveySetupDetails:
     def test_personality_section_includes_brand(self):
         """The Personality prompt section includes the brand name."""
         with patch(
-            "signalwire_agents.prefabs.survey.AgentBase.__init__", return_value=None
+            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
         ):
             with patch.multiple(
-                "signalwire_agents.prefabs.survey.AgentBase",
+                "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
                 add_hints=MagicMock(),
@@ -983,7 +983,7 @@ class TestSurveySetupDetails:
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
             ):
-                from signalwire_agents.prefabs.survey import SurveyAgent
+                from signalwire.prefabs.survey import SurveyAgent
 
                 survey = SurveyAgent(
                     survey_name="Test",
@@ -1003,10 +1003,10 @@ class TestSurveySetupDetails:
     def test_goal_section_includes_survey_name(self):
         """The Goal prompt section includes the survey name."""
         with patch(
-            "signalwire_agents.prefabs.survey.AgentBase.__init__", return_value=None
+            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
         ):
             with patch.multiple(
-                "signalwire_agents.prefabs.survey.AgentBase",
+                "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
                 add_hints=MagicMock(),
@@ -1014,7 +1014,7 @@ class TestSurveySetupDetails:
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
             ):
-                from signalwire_agents.prefabs.survey import SurveyAgent
+                from signalwire.prefabs.survey import SurveyAgent
 
                 survey = SurveyAgent(
                     survey_name="Satisfaction Survey",
@@ -1032,10 +1032,10 @@ class TestSurveySetupDetails:
     def test_instructions_section_has_bullets(self):
         """The Instructions prompt section contains bullet points."""
         with patch(
-            "signalwire_agents.prefabs.survey.AgentBase.__init__", return_value=None
+            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
         ):
             with patch.multiple(
-                "signalwire_agents.prefabs.survey.AgentBase",
+                "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
                 add_hints=MagicMock(),
@@ -1043,7 +1043,7 @@ class TestSurveySetupDetails:
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
             ):
-                from signalwire_agents.prefabs.survey import SurveyAgent
+                from signalwire.prefabs.survey import SurveyAgent
 
                 survey = SurveyAgent(
                     survey_name="T",
@@ -1070,10 +1070,10 @@ class TestSurveySetupDetails:
         ]
 
         with patch(
-            "signalwire_agents.prefabs.survey.AgentBase.__init__", return_value=None
+            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
         ):
             with patch.multiple(
-                "signalwire_agents.prefabs.survey.AgentBase",
+                "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
                 add_hints=MagicMock(),
@@ -1081,7 +1081,7 @@ class TestSurveySetupDetails:
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
             ):
-                from signalwire_agents.prefabs.survey import SurveyAgent
+                from signalwire.prefabs.survey import SurveyAgent
 
                 survey = SurveyAgent(survey_name="T", questions=questions)
 
@@ -1102,10 +1102,10 @@ class TestSurveySetupDetails:
     def test_introduction_section_body(self):
         """The Introduction section body includes the introduction message."""
         with patch(
-            "signalwire_agents.prefabs.survey.AgentBase.__init__", return_value=None
+            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
         ):
             with patch.multiple(
-                "signalwire_agents.prefabs.survey.AgentBase",
+                "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
                 add_hints=MagicMock(),
@@ -1113,7 +1113,7 @@ class TestSurveySetupDetails:
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
             ):
-                from signalwire_agents.prefabs.survey import SurveyAgent
+                from signalwire.prefabs.survey import SurveyAgent
 
                 survey = SurveyAgent(
                     survey_name="T",
@@ -1132,10 +1132,10 @@ class TestSurveySetupDetails:
     def test_conclusion_section_body(self):
         """The Conclusion section body includes the conclusion message."""
         with patch(
-            "signalwire_agents.prefabs.survey.AgentBase.__init__", return_value=None
+            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
         ):
             with patch.multiple(
-                "signalwire_agents.prefabs.survey.AgentBase",
+                "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
                 add_hints=MagicMock(),
@@ -1143,7 +1143,7 @@ class TestSurveySetupDetails:
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
             ):
-                from signalwire_agents.prefabs.survey import SurveyAgent
+                from signalwire.prefabs.survey import SurveyAgent
 
                 survey = SurveyAgent(
                     survey_name="T",
@@ -1167,10 +1167,10 @@ class TestSurveyHintsEdgeCases:
         """An open_ended-only survey has no type-specific hint terms (just name/brand)."""
         questions = [{"id": "q1", "text": "Comments?", "type": "open_ended"}]
         with patch(
-            "signalwire_agents.prefabs.survey.AgentBase.__init__", return_value=None
+            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
         ):
             with patch.multiple(
-                "signalwire_agents.prefabs.survey.AgentBase",
+                "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
                 add_hints=MagicMock(),
@@ -1178,7 +1178,7 @@ class TestSurveyHintsEdgeCases:
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
             ):
-                from signalwire_agents.prefabs.survey import SurveyAgent
+                from signalwire.prefabs.survey import SurveyAgent
 
                 survey = SurveyAgent(
                     survey_name="Open Survey",
@@ -1193,10 +1193,10 @@ class TestSurveyHintsEdgeCases:
         """A rating question with scale=10 generates hints 1-10."""
         questions = [{"id": "q1", "text": "Rate?", "type": "rating", "scale": 10}]
         with patch(
-            "signalwire_agents.prefabs.survey.AgentBase.__init__", return_value=None
+            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
         ):
             with patch.multiple(
-                "signalwire_agents.prefabs.survey.AgentBase",
+                "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
                 add_hints=MagicMock(),
@@ -1204,7 +1204,7 @@ class TestSurveyHintsEdgeCases:
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
             ):
-                from signalwire_agents.prefabs.survey import SurveyAgent
+                from signalwire.prefabs.survey import SurveyAgent
 
                 survey = SurveyAgent(
                     survey_name="S",

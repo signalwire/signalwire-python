@@ -18,7 +18,7 @@ import os
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 from typing import Dict, Any, List, Optional
 
-from signalwire_agents.core.agent_base import AgentBase
+from signalwire.core.agent_base import AgentBase
 
 
 
@@ -28,7 +28,7 @@ class TestAgentBaseInitialization:
     def _create_mock_agent(self, **kwargs):
         """Helper to create a properly mocked agent"""
         with pytest.MonkeyPatch().context() as m:
-            m.setattr("signalwire_agents.core.agent_base.uvicorn", Mock())
+            m.setattr("signalwire.core.agent_base.uvicorn", Mock())
             agent = AgentBase(schema_validation=False, **kwargs)
         return agent
 
@@ -79,7 +79,7 @@ class TestAgentBasePromptMethods:
     def setup_method(self):
         """Set up test fixtures"""
         with pytest.MonkeyPatch().context() as m:
-            m.setattr("signalwire_agents.core.agent_base.uvicorn", Mock())
+            m.setattr("signalwire.core.agent_base.uvicorn", Mock())
             self.agent = AgentBase("test_agent", use_pom=False, schema_validation=False)
 
     def test_set_prompt_text(self):
@@ -131,7 +131,7 @@ class TestAgentBaseConfigurationMethods:
     def setup_method(self):
         """Set up test fixtures"""
         with pytest.MonkeyPatch().context() as m:
-            m.setattr("signalwire_agents.core.agent_base.uvicorn", Mock())
+            m.setattr("signalwire.core.agent_base.uvicorn", Mock())
             self.agent = AgentBase("test_agent", schema_validation=False)
 
     def test_add_hint(self):
@@ -231,7 +231,7 @@ class TestAgentBaseToolMethods:
     def setup_method(self):
         """Set up test fixtures"""
         with pytest.MonkeyPatch().context() as m:
-            m.setattr("signalwire_agents.core.agent_base.uvicorn", Mock())
+            m.setattr("signalwire.core.agent_base.uvicorn", Mock())
             self.agent = AgentBase("test_agent", schema_validation=False)
 
     def test_define_tool(self):
@@ -297,7 +297,7 @@ class TestAgentBaseAuthMethods:
     def setup_method(self):
         """Set up test fixtures"""
         with pytest.MonkeyPatch().context() as m:
-            m.setattr("signalwire_agents.core.agent_base.uvicorn", Mock())
+            m.setattr("signalwire.core.agent_base.uvicorn", Mock())
             self.agent = AgentBase("test_agent", basic_auth=("user", "pass"), schema_validation=False)
 
     def test_validate_basic_auth_success(self):
@@ -315,7 +315,7 @@ class TestAgentBaseAuthMethods:
     def test_validate_basic_auth_no_auth_configured(self):
         """Test basic auth validation when no auth is configured"""
         with pytest.MonkeyPatch().context() as m:
-            m.setattr("signalwire_agents.core.agent_base.uvicorn", Mock())
+            m.setattr("signalwire.core.agent_base.uvicorn", Mock())
             agent = AgentBase("test_agent", schema_validation=False)  # No basic_auth
             agent._basic_auth = (None, None)  # Explicitly set no auth
 
@@ -345,7 +345,7 @@ class TestAgentBaseURLMethods:
     def setup_method(self):
         """Set up test fixtures"""
         with pytest.MonkeyPatch().context() as m:
-            m.setattr("signalwire_agents.core.agent_base.uvicorn", Mock())
+            m.setattr("signalwire.core.agent_base.uvicorn", Mock())
             self.agent = AgentBase("test_agent", host="localhost", port=3000, route="/test", schema_validation=False)
 
     def test_get_full_url_basic(self):
@@ -357,7 +357,7 @@ class TestAgentBaseURLMethods:
     def test_get_full_url_with_auth(self):
         """Test getting full URL with auth"""
         with pytest.MonkeyPatch().context() as m:
-            m.setattr("signalwire_agents.core.agent_base.uvicorn", Mock())
+            m.setattr("signalwire.core.agent_base.uvicorn", Mock())
             agent = AgentBase("test_agent", host="localhost", port=3000, route="/test",
                             basic_auth=("user", "pass"), schema_validation=False)
 
@@ -393,7 +393,7 @@ class TestAgentBaseSkillMethods:
     def setup_method(self):
         """Set up test fixtures"""
         with pytest.MonkeyPatch().context() as m:
-            m.setattr("signalwire_agents.core.agent_base.uvicorn", Mock())
+            m.setattr("signalwire.core.agent_base.uvicorn", Mock())
             self.agent = AgentBase("test_agent", schema_validation=False)
 
         # Replace the real skill_manager with a mock after creation
@@ -441,7 +441,7 @@ class TestAgentBaseTokenMethods:
     def setup_method(self):
         """Set up test fixtures"""
         with pytest.MonkeyPatch().context() as m:
-            m.setattr("signalwire_agents.core.agent_base.uvicorn", Mock())
+            m.setattr("signalwire.core.agent_base.uvicorn", Mock())
             self.agent = AgentBase("test_agent", schema_validation=False)
 
         # Replace the real session_manager with a mock after creation
@@ -478,7 +478,7 @@ class TestAgentBaseMiscMethods:
     def setup_method(self):
         """Set up test fixtures"""
         with pytest.MonkeyPatch().context() as m:
-            m.setattr("signalwire_agents.core.agent_base.uvicorn", Mock())
+            m.setattr("signalwire.core.agent_base.uvicorn", Mock())
             self.agent = AgentBase("test_agent", schema_validation=False)
 
     def test_get_name(self):
@@ -532,7 +532,7 @@ class TestAgentBaseDeclarativePrompts:
             }
 
         with pytest.MonkeyPatch().context() as m:
-            m.setattr("signalwire_agents.core.agent_base.uvicorn", Mock())
+            m.setattr("signalwire.core.agent_base.uvicorn", Mock())
             with patch.object(TestAgent, 'prompt_add_section') as mock_add_section:
                 agent = TestAgent("test_agent", schema_validation=False)
 
@@ -545,7 +545,7 @@ class TestAgentBaseDeclarativePrompts:
             PROMPT_SECTIONS = {"Test": "Content"}
 
         with pytest.MonkeyPatch().context() as m:
-            m.setattr("signalwire_agents.core.agent_base.uvicorn", Mock())
+            m.setattr("signalwire.core.agent_base.uvicorn", Mock())
             with patch.object(TestAgent, 'prompt_add_section') as mock_add_section:
                 agent = TestAgent("test_agent", use_pom=False, schema_validation=False)
 
@@ -561,7 +561,7 @@ class TestAgentBaseDeclarativePrompts:
 def _make_agent(**kwargs):
     """Module-level helper to create a properly mocked agent."""
     with pytest.MonkeyPatch().context() as m:
-        m.setattr("signalwire_agents.core.agent_base.uvicorn", Mock())
+        m.setattr("signalwire.core.agent_base.uvicorn", Mock())
         agent = AgentBase(schema_validation=False, **kwargs)
     return agent
 
@@ -1556,7 +1556,7 @@ class TestSkillIntegration:
     def test_skill_manager_initialized(self):
         """Verify skill_manager is a SkillManager by default."""
         agent = self._make()
-        from signalwire_agents.core.skill_manager import SkillManager
+        from signalwire.core.skill_manager import SkillManager
         assert isinstance(agent.skill_manager, SkillManager)
 
     def test_skill_manager_agent_reference(self):

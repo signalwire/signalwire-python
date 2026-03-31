@@ -6,8 +6,8 @@ This example shows how to use set_prompt_llm_params() and set_post_prompt_llm_pa
 to create agents with different response characteristics.
 """
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import FunctionResult
 import random
 
 
@@ -54,7 +54,7 @@ class PreciseAssistant(AgentBase):
             "disk_space": f"{random.randint(50, 500)}GB free",
             "uptime": f"{random.randint(1, 30)} days"
         }
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"System Status: CPU {info['cpu_usage']}, "
             f"Memory {info['memory_available']}, "
             f"Disk {info['disk_space']}, "
@@ -121,7 +121,7 @@ class CreativeAssistant(AgentBase):
         prompt_list = prompts.get(theme.lower(), prompts["default"])
         chosen_prompt = random.choice(prompt_list)
         
-        return SwaigFunctionResult(
+        return FunctionResult(
             f"Story prompt for {theme}: {chosen_prompt}"
         )
 
@@ -174,7 +174,7 @@ class CustomerServiceAgent(AgentBase):
         ]
         
         status = random.choice(statuses)
-        return SwaigFunctionResult(f"Order {order_id} status: {status}")
+        return FunctionResult(f"Order {order_id} status: {status}")
 
 
 def main():

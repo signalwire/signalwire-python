@@ -14,8 +14,8 @@ Unit tests for the PlayBackgroundFile skill module
 import pytest
 from unittest.mock import Mock
 
-from signalwire_agents.skills.play_background_file.skill import PlayBackgroundFileSkill
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.skills.play_background_file.skill import PlayBackgroundFileSkill
+from signalwire.core.function_result import FunctionResult
 
 
 def _make_skill(params=None):
@@ -111,7 +111,7 @@ class TestPlayBackgroundFileSkillInit:
     def test_logger_created(self):
         skill = _make_skill()
         assert skill.logger is not None
-        assert skill.logger.name == "signalwire_agents.skills.play_background_file"
+        assert skill.logger.name == "signalwire.skills.play_background_file"
 
     def test_swaig_fields_extracted_from_params(self):
         skill = _make_skill({"swaig_fields": {"meta_data": {"x": 1}}})

@@ -37,7 +37,7 @@ from pathlib import Path
 # Add the parent directory to the path so we can import the package
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 # Set up logger
 logger = logging.getLogger(__name__)
@@ -197,7 +197,7 @@ class SigmondNativeSearch(AgentBase):
         
         # Get the project root directory
         project_root = Path(__file__).parent.parent
-        concepts_guide_file = project_root / "docs" / "signalwire_agents_concepts_guide.md"
+        concepts_guide_file = project_root / "docs" / "signalwire_concepts_guide.md"
         concepts_index_file = project_root / "concepts_guide.swsearch"
         
         # Check if the concepts guide file exists
@@ -217,7 +217,7 @@ class SigmondNativeSearch(AgentBase):
         # Build index from the specific concepts guide file
         if build_index:
             try:
-                from signalwire_agents.search import IndexBuilder
+                from signalwire.search import IndexBuilder
                 logger.info("Building search index from concepts guide...")
                 
                 builder = IndexBuilder(
@@ -271,7 +271,7 @@ def main():
     
     # Check if search dependencies are available
     try:
-        from signalwire_agents.search import IndexBuilder
+        from signalwire.search import IndexBuilder
         logger.info("Search dependencies are available")
     except ImportError as e:
         logger.error("Search dependencies not available")

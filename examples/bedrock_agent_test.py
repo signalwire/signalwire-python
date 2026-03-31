@@ -6,7 +6,7 @@ This example demonstrates how BedrockAgent works exactly like a regular agent
 but outputs SWML with the amazon_bedrock verb.
 """
 
-from signalwire_agents import BedrockAgent
+from signalwire import BedrockAgent
 
 # Create a Bedrock agent
 agent = BedrockAgent(

@@ -2,7 +2,7 @@
 
 import pytest
 from unittest.mock import MagicMock
-from signalwire_agents.rest._base import (
+from signalwire.rest._base import (
     HttpClient,
     SignalWireRestError,
     BaseResource,

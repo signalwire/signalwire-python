@@ -11,7 +11,7 @@ Requires env vars:
 import asyncio
 import os
 
-from signalwire_agents.relay import RelayClient, CALL_STATE_ANSWERED, CALL_STATE_ENDED
+from signalwire.relay import RelayClient, CALL_STATE_ANSWERED, CALL_STATE_ENDED
 
 
 async def main():

@@ -32,8 +32,8 @@ import logging
 import structlog
 
 # Import the SWMLService class - this will set up the logging configuration
-from signalwire_agents.core.swml_service import SWMLService
-from signalwire_agents.core.swml_builder import SWMLBuilder
+from signalwire.core.swml_service import SWMLService
+from signalwire.core.swml_builder import SWMLBuilder
 
 # Create structured logger for this example
 logger = structlog.get_logger("basic_swml")

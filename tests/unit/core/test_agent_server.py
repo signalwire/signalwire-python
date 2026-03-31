@@ -34,7 +34,7 @@ from unittest.mock import Mock, patch, MagicMock, call
 from io import StringIO
 
 from fastapi.testclient import TestClient
-from signalwire_agents import AgentBase, AgentServer
+from signalwire import AgentBase, AgentServer
 
 
 class SimpleTestAgent(AgentBase):
@@ -394,18 +394,18 @@ class TestSipRouting:
 class TestRunMethod:
     """Test the universal run method and execution mode detection"""
 
-    @patch("signalwire_agents.agent_server.uvicorn")
+    @patch("signalwire.agent_server.uvicorn")
     def test_run_server_mode(self, mock_uvicorn):
         """Test run() in server mode delegates to _run_server"""
         server = AgentServer()
-        with patch("signalwire_agents.core.logging_config.get_execution_mode", return_value="server"):
+        with patch("signalwire.core.logging_config.get_execution_mode", return_value="server"):
             server.run()
         mock_uvicorn.run.assert_called_once()
 
     def test_run_cgi_mode(self):
         """Test run() in CGI mode delegates to _handle_cgi_request"""
         server = AgentServer()
-        with patch("signalwire_agents.core.logging_config.get_execution_mode", return_value="cgi"):
+        with patch("signalwire.core.logging_config.get_execution_mode", return_value="cgi"):
             with patch.object(server, '_handle_cgi_request', return_value="cgi_response") as mock_cgi:
                 result = server.run()
                 mock_cgi.assert_called_once()
@@ -416,7 +416,7 @@ class TestRunMethod:
         server = AgentServer()
         event = {"path": "/test"}
         context = Mock()
-        with patch("signalwire_agents.core.logging_config.get_execution_mode", return_value="lambda"):
+        with patch("signalwire.core.logging_config.get_execution_mode", return_value="lambda"):
             with patch.object(server, '_handle_lambda_request', return_value={"statusCode": 200}) as mock_lambda:
                 result = server.run(event=event, context=context)
                 mock_lambda.assert_called_once_with(event, context)
@@ -426,7 +426,7 @@ class TestRunMethod:
 class TestRunServer:
     """Test _run_server method"""
 
-    @patch("signalwire_agents.agent_server.uvicorn")
+    @patch("signalwire.agent_server.uvicorn")
     def test_run_server_default_host_port(self, mock_uvicorn):
         """Test _run_server uses default host and port"""
         server = AgentServer(host="0.0.0.0", port=3000)
@@ -438,7 +438,7 @@ class TestRunServer:
             log_level="info"
         )
 
-    @patch("signalwire_agents.agent_server.uvicorn")
+    @patch("signalwire.agent_server.uvicorn")
     def test_run_server_override_host_port(self, mock_uvicorn):
         """Test _run_server with overridden host and port"""
         server = AgentServer()
@@ -450,7 +450,7 @@ class TestRunServer:
             log_level="info"
         )
 
-    @patch("signalwire_agents.agent_server.uvicorn")
+    @patch("signalwire.agent_server.uvicorn")
     def test_run_server_with_ssl(self, mock_uvicorn):
         """Test _run_server with SSL enabled via environment variables"""
         with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as cert_f, \
@@ -480,7 +480,7 @@ class TestRunServer:
             os.unlink(cert_path)
             os.unlink(key_path)
 
-    @patch("signalwire_agents.agent_server.uvicorn")
+    @patch("signalwire.agent_server.uvicorn")
     def test_run_server_ssl_disabled_bad_cert(self, mock_uvicorn):
         """Test _run_server falls back to non-SSL if cert not found"""
         env = {
@@ -499,7 +499,7 @@ class TestRunServer:
                 log_level="info"
             )
 
-    @patch("signalwire_agents.agent_server.uvicorn")
+    @patch("signalwire.agent_server.uvicorn")
     def test_run_server_no_agents_warning(self, mock_uvicorn):
         """Test _run_server with no agents logs a warning"""
         server = AgentServer()
@@ -507,7 +507,7 @@ class TestRunServer:
         server._run_server()
         mock_uvicorn.run.assert_called_once()
 
-    @patch("signalwire_agents.agent_server.uvicorn")
+    @patch("signalwire.agent_server.uvicorn")
     def test_run_server_ssl_missing_key(self, mock_uvicorn):
         """Test _run_server falls back when SSL key path is missing"""
         with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as cert_f:

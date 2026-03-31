@@ -17,8 +17,8 @@ from unittest.mock import Mock, patch, MagicMock
 
 import requests
 
-from signalwire_agents.skills.web_search.skill import WebSearchSkill, GoogleSearchScraper
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.skills.web_search.skill import WebSearchSkill, GoogleSearchScraper
+from signalwire.core.function_result import FunctionResult
 
 
 def _make_skill(params=None):
@@ -90,7 +90,7 @@ class TestWebSearchSkillInit:
     def test_logger_created(self):
         skill = WebSearchSkill(agent=Mock())
         assert skill.logger is not None
-        assert skill.logger.name == "signalwire_agents.skills.web_search"
+        assert skill.logger.name == "signalwire.skills.web_search"
 
     def test_swaig_fields_extracted_from_params(self):
         params = {"swaig_fields": {"meta_data": {"x": 1}}, "api_key": "k"}
@@ -374,19 +374,19 @@ class TestWebSearchHandler:
     def test_empty_query_returns_error(self):
         skill = self._setup_skill()
         result = skill._web_search_handler({"query": ""}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "provide a search query" in result.response.lower()
 
     def test_whitespace_query_returns_error(self):
         skill = self._setup_skill()
         result = skill._web_search_handler({"query": "   "}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "provide a search query" in result.response.lower()
 
     def test_missing_query_key_returns_error(self):
         skill = self._setup_skill()
         result = skill._web_search_handler({}, {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
         assert "provide a search query" in result.response.lower()
 
     def test_successful_search(self):
@@ -394,7 +394,7 @@ class TestWebSearchHandler:
         mock_results = "Found 2 results meeting quality threshold from 8 searched.\nShowing top 2:\n\n=== RESULT 1 ===\nTitle: Test\nContent: Good content"
         with patch.object(skill.search_scraper, 'search_and_scrape_best', return_value=mock_results):
             result = skill._web_search_handler({"query": "test query"}, {})
-            assert isinstance(result, SwaigFunctionResult)
+            assert isinstance(result, FunctionResult)
             assert "test query" in result.response
             assert "RESULT 1" in result.response
 
@@ -403,7 +403,7 @@ class TestWebSearchHandler:
         with patch.object(skill.search_scraper, 'search_and_scrape_best',
                           return_value="No search results found for query: test"):
             result = skill._web_search_handler({"query": "test"}, {})
-            assert isinstance(result, SwaigFunctionResult)
+            assert isinstance(result, FunctionResult)
             # Should trigger no_results_message
             assert "couldn't find" in result.response.lower() or "quality" in result.response.lower()
 
@@ -412,20 +412,20 @@ class TestWebSearchHandler:
         with patch.object(skill.search_scraper, 'search_and_scrape_best',
                           return_value="No quality results found for query: test. All results were below quality threshold."):
             result = skill._web_search_handler({"query": "test"}, {})
-            assert isinstance(result, SwaigFunctionResult)
+            assert isinstance(result, FunctionResult)
 
     def test_empty_search_results(self):
         skill = self._setup_skill()
         with patch.object(skill.search_scraper, 'search_and_scrape_best', return_value=""):
             result = skill._web_search_handler({"query": "test"}, {})
-            assert isinstance(result, SwaigFunctionResult)
+            assert isinstance(result, FunctionResult)
 
     def test_exception_during_search(self):
         skill = self._setup_skill()
         with patch.object(skill.search_scraper, 'search_and_scrape_best',
                           side_effect=RuntimeError("connection failed")):
             result = skill._web_search_handler({"query": "test"}, {})
-            assert isinstance(result, SwaigFunctionResult)
+            assert isinstance(result, FunctionResult)
             assert "error" in result.response.lower()
 
     def test_no_results_custom_message_with_placeholder(self):
@@ -675,7 +675,7 @@ class TestExtractRedditContent:
             comments_data = {"data": {"children": comments}}
         return [post_data, comments_data]
 
-    @patch("signalwire_agents.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill.requests.get")
     def test_successful_reddit_extraction(self, mock_get):
         scraper = GoogleSearchScraper("key", "engine_id")
         mock_response = Mock()
@@ -688,7 +688,7 @@ class TestExtractRedditContent:
         assert "testuser" in text
         assert metrics["is_reddit"] is True
 
-    @patch("signalwire_agents.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill.requests.get")
     def test_reddit_with_comments(self, mock_get):
         scraper = GoogleSearchScraper("key", "engine_id")
         comments = [
@@ -710,7 +710,7 @@ class TestExtractRedditContent:
         assert "commenter1" in text
         assert "helpful" in text
 
-    @patch("signalwire_agents.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill.requests.get")
     def test_reddit_filters_short_comments(self, mock_get):
         scraper = GoogleSearchScraper("key", "engine_id")
         comments = [
@@ -728,7 +728,7 @@ class TestExtractRedditContent:
         # Short comments (< 50 chars) should be filtered
         assert "short_commenter" not in text
 
-    @patch("signalwire_agents.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill.requests.get")
     def test_reddit_filters_deleted_comments(self, mock_get):
         scraper = GoogleSearchScraper("key", "engine_id")
         comments = [
@@ -749,7 +749,7 @@ class TestExtractRedditContent:
         text, _ = scraper.extract_reddit_content("https://reddit.com/r/test/comments/123")
         assert "deleted_user" not in text
 
-    @patch("signalwire_agents.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill.requests.get")
     def test_reddit_filters_removed_selftext(self, mock_get):
         scraper = GoogleSearchScraper("key", "engine_id")
         mock_response = Mock()
@@ -760,7 +760,7 @@ class TestExtractRedditContent:
         text, _ = scraper.extract_reddit_content("https://reddit.com/r/test/comments/123")
         assert "[removed]" not in text
 
-    @patch("signalwire_agents.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill.requests.get")
     def test_reddit_appends_json_suffix(self, mock_get):
         scraper = GoogleSearchScraper("key", "engine_id")
         mock_response = Mock()
@@ -772,7 +772,7 @@ class TestExtractRedditContent:
         called_url = mock_get.call_args[0][0]
         assert called_url.endswith(".json")
 
-    @patch("signalwire_agents.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill.requests.get")
     def test_reddit_already_json_url(self, mock_get):
         scraper = GoogleSearchScraper("key", "engine_id")
         mock_response = Mock()
@@ -784,7 +784,7 @@ class TestExtractRedditContent:
         called_url = mock_get.call_args[0][0]
         assert called_url == "https://reddit.com/r/test/comments/123.json"
 
-    @patch("signalwire_agents.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill.requests.get")
     def test_reddit_invalid_json_falls_back_to_html(self, mock_get):
         scraper = GoogleSearchScraper("key", "engine_id")
         mock_get.side_effect = ValueError("Invalid JSON")
@@ -794,7 +794,7 @@ class TestExtractRedditContent:
             mock_html.assert_called_once()
             assert text == "fallback"
 
-    @patch("signalwire_agents.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill.requests.get")
     def test_reddit_content_limit(self, mock_get):
         scraper = GoogleSearchScraper("key", "engine_id", max_content_length=100000)
         mock_response = Mock()
@@ -805,7 +805,7 @@ class TestExtractRedditContent:
         text, _ = scraper.extract_reddit_content("https://reddit.com/r/test", content_limit=50)
         assert len(text) <= 50
 
-    @patch("signalwire_agents.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill.requests.get")
     def test_reddit_quality_metrics(self, mock_get):
         scraper = GoogleSearchScraper("key", "engine_id")
         mock_response = Mock()
@@ -1038,7 +1038,7 @@ class TestEdgeCases:
         with patch.object(skill.search_scraper, 'search_and_scrape_best',
                           return_value="=== RESULT 1 ===\nTitle: Lifecycle\nContent: Answer"):
             result = handler({"query": "lifecycle test"}, {})
-            assert isinstance(result, SwaigFunctionResult)
+            assert isinstance(result, FunctionResult)
             assert "Lifecycle" in result.response
 
     def test_setup_returns_false_for_each_missing_param(self):
@@ -1066,7 +1066,7 @@ class TestEdgeCases:
         skill.setup()
         with patch.object(skill.search_scraper, 'search_and_scrape_best', return_value=None):
             result = skill._web_search_handler({"query": "test"}, {})
-            assert isinstance(result, SwaigFunctionResult)
+            assert isinstance(result, FunctionResult)
 
     def test_content_quality_with_ideal_length_text(self):
         """Text in the 2000-10000 char range should get max length score."""

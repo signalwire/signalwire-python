@@ -1,6 +1,6 @@
 """Example: Call queues, recording review, and MFA verification.
 
-Set these env vars (or pass them directly to SignalWireClient):
+Set these env vars (or pass them directly to RestClient):
   SIGNALWIRE_PROJECT_ID   - your SignalWire project ID
   SIGNALWIRE_API_TOKEN    - your SignalWire API token
   SIGNALWIRE_SPACE        - your SignalWire space (e.g. example.signalwire.com)
@@ -9,9 +9,9 @@ For full HTTP debug output:
   SIGNALWIRE_LOG_LEVEL=debug
 """
 
-from signalwire_agents.rest import SignalWireClient, SignalWireRestError
+from signalwire.rest import RestClient, SignalWireRestError
 
-client = SignalWireClient()
+client = RestClient()
 
 
 def main():

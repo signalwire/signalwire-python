@@ -15,8 +15,8 @@ A friendly agent that can search Wikipedia for factual information.
 Fred is curious, helpful, and loves sharing knowledge from Wikipedia.
 """
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import FunctionResult
 
 class FredTheWikiBot(AgentBase):
     """Fred - Your friendly Wikipedia assistant"""
@@ -82,7 +82,7 @@ class FredTheWikiBot(AgentBase):
                 "Wikipedia is the 7th most visited website in the world!"
             ]
             fact = random.choice(facts)
-            return SwaigFunctionResult(f"Here's a fun Wikipedia fact: {fact}")
+            return FunctionResult(f"Here's a fun Wikipedia fact: {fact}")
         
         # Configure Fred's voice
         self.add_language(

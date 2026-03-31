@@ -20,7 +20,7 @@ Run with: API_NINJAS_KEY=your_api_key python examples/joke_skill_demo.py
 
 import os
 import sys
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 
 class JokeSkillAgent(AgentBase):

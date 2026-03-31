@@ -29,7 +29,7 @@ def run_swaig_test(agent_path: Path, *args, timeout: int = 30) -> tuple:
     """
     Run swaig-test on an agent file and return (returncode, stdout, stderr).
     """
-    cmd = [sys.executable, "-m", "signalwire_agents.cli.swaig_test_wrapper", str(agent_path)] + list(args)
+    cmd = [sys.executable, "-m", "signalwire.cli.swaig_test_wrapper", str(agent_path)] + list(args)
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
         return result.returncode, result.stdout, result.stderr

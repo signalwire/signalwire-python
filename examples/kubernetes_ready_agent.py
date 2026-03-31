@@ -31,7 +31,7 @@ Usage:
 import os
 import sys
 import logging
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class KubernetesReadyAgent(AgentBase):
     def __init__(self, port=None):
@@ -69,8 +69,8 @@ class KubernetesReadyAgent(AgentBase):
         description="Get the health status of this agent"
     )
     def health_status(self, args, raw_data):
-        from signalwire_agents.core.function_result import SwaigFunctionResult
-        return SwaigFunctionResult(
+        from signalwire.core.function_result import FunctionResult
+        return FunctionResult(
             f"Agent {self.get_name()} is healthy, running on route {self.route} "
             f"port {self.port} in Kubernetes."
         )

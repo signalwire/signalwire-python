@@ -33,15 +33,15 @@ the entire call session. Multiple calls merge (not replace) into existing data.
 set_post_prompt() tells the platform what to summarize after the conversation.
 The summary is delivered to on_summary() or to a URL set via set_post_prompt_url().
 
-## SwaigFunctionResult.update_global_data / hangup
+## FunctionResult.update_global_data / hangup
 
 Tools can modify global data mid-call with update_global_data() and terminate
-the call with hangup(). These are actions attached to SwaigFunctionResult.
+the call with hangup(). These are actions attached to FunctionResult.
 """
 
 import json
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import FunctionResult
 
 
 class SessionStateDemoAgent(AgentBase):
@@ -130,7 +130,7 @@ class SessionStateDemoAgent(AgentBase):
     def update_customer_info(self, field: str, value: str):
         """Update a field in the session's global data."""
         return (
-            SwaigFunctionResult(f"Updated {field} to '{value}'.")
+            FunctionResult(f"Updated {field} to '{value}'.")
             .update_global_data({field: value})
         )
 
@@ -142,7 +142,7 @@ class SessionStateDemoAgent(AgentBase):
         """Return a summary of what has been collected so far."""
         # Note: In a real scenario, tools receive global_data in raw_data.
         # Here we return a prompt for the AI to read from its context.
-        return SwaigFunctionResult(
+        return FunctionResult(
             "Check the global data variables for current session information: "
             "${global_data.status}, ${global_data.customer_name}, ${global_data.issue_type}"
         )
@@ -160,7 +160,7 @@ class SessionStateDemoAgent(AgentBase):
     def end_session(self, reason: str):
         """Mark the session as closed and terminate the call."""
         return (
-            SwaigFunctionResult(f"Session ended: {reason}. Goodbye!")
+            FunctionResult(f"Session ended: {reason}. Goodbye!")
             .update_global_data({"status": "closed", "close_reason": reason})
             .hangup()
         )

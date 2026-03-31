@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 """
-Unit tests for WebService (signalwire_agents/web/web_service.py).
+Unit tests for WebService (signalwire/web/web_service.py).
 
 Covers:
   - Initialization with and without FastAPI
@@ -71,26 +71,26 @@ def _make_web_service(
 
     patches = {
         "security_config": patch(
-            "signalwire_agents.web.web_service.SecurityConfig",
+            "signalwire.web.web_service.SecurityConfig",
             return_value=security_mock,
         ),
         "config_loader_find": patch(
-            "signalwire_agents.web.web_service.ConfigLoader.find_config_file",
+            "signalwire.web.web_service.ConfigLoader.find_config_file",
             return_value=None,
         ),
         "config_loader_cls": patch(
-            "signalwire_agents.web.web_service.ConfigLoader",
+            "signalwire.web.web_service.ConfigLoader",
         ),
     }
 
     if not fastapi_available:
         patches["fastapi_mod"] = patch(
-            "signalwire_agents.web.web_service.FastAPI", None
+            "signalwire.web.web_service.FastAPI", None
         )
 
     started = {k: p.start() for k, p in patches.items()}
 
-    from signalwire_agents.web.web_service import WebService
+    from signalwire.web.web_service import WebService
 
     ws = WebService(
         port=9999,
@@ -242,16 +242,16 @@ class TestLoadConfig:
         mock_loader_instance.get_section.return_value = service_section
 
         with patch(
-            "signalwire_agents.web.web_service.SecurityConfig",
+            "signalwire.web.web_service.SecurityConfig",
             return_value=_make_security_mock(),
         ), patch(
-            "signalwire_agents.web.web_service.ConfigLoader.find_config_file",
+            "signalwire.web.web_service.ConfigLoader.find_config_file",
             return_value="/fake/config.json",
         ), patch(
-            "signalwire_agents.web.web_service.ConfigLoader",
+            "signalwire.web.web_service.ConfigLoader",
             return_value=mock_loader_instance,
         ):
-            from signalwire_agents.web.web_service import WebService
+            from signalwire.web.web_service import WebService
 
             ws = WebService(config_file="/fake/config.json")
 
@@ -617,7 +617,7 @@ class TestGetCurrentUsername:
         creds = MagicMock()
         creds.username = "hacker"
         creds.password = "secret"
-        from signalwire_agents.web.web_service import HTTPException
+        from signalwire.web.web_service import HTTPException
 
         if HTTPException is None:
             pytest.skip("HTTPException not available")
@@ -630,7 +630,7 @@ class TestGetCurrentUsername:
         creds = MagicMock()
         creds.username = "admin"
         creds.password = "wrong"
-        from signalwire_agents.web.web_service import HTTPException
+        from signalwire.web.web_service import HTTPException
 
         if HTTPException is None:
             pytest.skip("HTTPException not available")
@@ -643,7 +643,7 @@ class TestGetCurrentUsername:
         creds = MagicMock()
         creds.username = "bad"
         creds.password = "bad"
-        from signalwire_agents.web.web_service import HTTPException
+        from signalwire.web.web_service import HTTPException
 
         if HTTPException is None:
             pytest.skip("HTTPException not available")
@@ -945,13 +945,13 @@ class TestLoadConfigBranches:
         """When find_config_file returns None and no config_file given,
         _load_config should return early (line 124)."""
         with patch(
-            "signalwire_agents.web.web_service.SecurityConfig",
+            "signalwire.web.web_service.SecurityConfig",
             return_value=_make_security_mock(),
         ), patch(
-            "signalwire_agents.web.web_service.ConfigLoader"
+            "signalwire.web.web_service.ConfigLoader"
         ) as mock_cl_cls:
             mock_cl_cls.find_config_file.return_value = None
-            from signalwire_agents.web.web_service import WebService
+            from signalwire.web.web_service import WebService
             ws = WebService(port=9999, directories={})
         # Defaults should be set; ConfigLoader should not have been instantiated
         # for loading (only find_config_file was called)
@@ -964,14 +964,14 @@ class TestLoadConfigBranches:
         mock_loader.has_config.return_value = False
 
         with patch(
-            "signalwire_agents.web.web_service.SecurityConfig",
+            "signalwire.web.web_service.SecurityConfig",
             return_value=_make_security_mock(),
         ), patch(
-            "signalwire_agents.web.web_service.ConfigLoader",
+            "signalwire.web.web_service.ConfigLoader",
             return_value=mock_loader,
         ) as mock_cl_cls:
             mock_cl_cls.find_config_file.return_value = "/fake/config.yaml"
-            from signalwire_agents.web.web_service import WebService
+            from signalwire.web.web_service import WebService
             ws = WebService(port=9999, directories={})
         # get_section should never be called
         mock_loader.get_section.assert_not_called()
@@ -983,14 +983,14 @@ class TestLoadConfigBranches:
         mock_loader.get_section.return_value = None
 
         with patch(
-            "signalwire_agents.web.web_service.SecurityConfig",
+            "signalwire.web.web_service.SecurityConfig",
             return_value=_make_security_mock(),
         ), patch(
-            "signalwire_agents.web.web_service.ConfigLoader",
+            "signalwire.web.web_service.ConfigLoader",
             return_value=mock_loader,
         ) as mock_cl_cls:
             mock_cl_cls.find_config_file.return_value = "/fake/config.yaml"
-            from signalwire_agents.web.web_service import WebService
+            from signalwire.web.web_service import WebService
             ws = WebService(port=9999, directories={})
         assert ws.directories == {}
 
@@ -1003,14 +1003,14 @@ class TestLoadConfigBranches:
         }
 
         with patch(
-            "signalwire_agents.web.web_service.SecurityConfig",
+            "signalwire.web.web_service.SecurityConfig",
             return_value=_make_security_mock(),
         ), patch(
-            "signalwire_agents.web.web_service.ConfigLoader",
+            "signalwire.web.web_service.ConfigLoader",
             return_value=mock_loader,
         ) as mock_cl_cls:
             mock_cl_cls.find_config_file.return_value = "/fake/config.yaml"
-            from signalwire_agents.web.web_service import WebService
+            from signalwire.web.web_service import WebService
             ws = WebService(port=9999)
         # directories should remain the default empty dict since the non-dict
         # value was ignored by _load_config and no directories kwarg was given
@@ -1032,15 +1032,15 @@ class TestRouteHandlers:
         security_mock = _make_security_mock()
 
         with patch(
-            "signalwire_agents.web.web_service.SecurityConfig",
+            "signalwire.web.web_service.SecurityConfig",
             return_value=security_mock,
         ), patch(
-            "signalwire_agents.web.web_service.ConfigLoader.find_config_file",
+            "signalwire.web.web_service.ConfigLoader.find_config_file",
             return_value=None,
         ), patch(
-            "signalwire_agents.web.web_service.ConfigLoader",
+            "signalwire.web.web_service.ConfigLoader",
         ):
-            from signalwire_agents.web.web_service import WebService
+            from signalwire.web.web_service import WebService
             ws = WebService(
                 port=9999,
                 directories=directories or {},
@@ -1273,15 +1273,15 @@ class TestSecurityMiddleware:
     def _make_testable_service(self, **kwargs):
         security_mock = _make_security_mock()
         with patch(
-            "signalwire_agents.web.web_service.SecurityConfig",
+            "signalwire.web.web_service.SecurityConfig",
             return_value=security_mock,
         ), patch(
-            "signalwire_agents.web.web_service.ConfigLoader.find_config_file",
+            "signalwire.web.web_service.ConfigLoader.find_config_file",
             return_value=None,
         ), patch(
-            "signalwire_agents.web.web_service.ConfigLoader",
+            "signalwire.web.web_service.ConfigLoader",
         ):
-            from signalwire_agents.web.web_service import WebService
+            from signalwire.web.web_service import WebService
             ws = WebService(
                 port=9999,
                 directories=kwargs.get("directories", {}),

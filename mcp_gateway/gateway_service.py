@@ -36,7 +36,7 @@ from flask_limiter.util import get_remote_address
 from functools import wraps
 import threading
 
-# Add parent directory to path for signalwire_agents imports
+# Add parent directory to path for signalwire imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Add current directory to path for local imports
@@ -44,8 +44,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from session_manager import SessionManager
 from mcp_manager import MCPManager
-from signalwire_agents.core.config_loader import ConfigLoader
-from signalwire_agents.core.security_config import SecurityConfig
+from signalwire.core.config_loader import ConfigLoader
+from signalwire.core.security_config import SecurityConfig
 
 # Configure logging
 logging.basicConfig(

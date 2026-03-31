@@ -14,7 +14,7 @@ import os
 
 import pytest
 
-from signalwire_agents.relay.client import RelayClient, _active_clients
+from signalwire.relay.client import RelayClient, _active_clients
 
 pytestmark = pytest.mark.network
 

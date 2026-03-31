@@ -15,9 +15,9 @@ import json
 import pytest
 from unittest.mock import Mock, MagicMock, patch
 
-from signalwire_agents.core.mixins.tool_mixin import ToolMixin
-from signalwire_agents.core.function_result import SwaigFunctionResult
-from signalwire_agents.core.swaig_function import SWAIGFunction
+from signalwire.core.mixins.tool_mixin import ToolMixin
+from signalwire.core.function_result import FunctionResult
+from signalwire.core.swaig_function import SWAIGFunction
 
 
 class MockToolHost(ToolMixin):
@@ -54,7 +54,7 @@ def host(mock_registry):
 def _make_swaig_function(name="test_tool", handler=None, secure=True, webhook_url=None):
     """Helper to create a SWAIGFunction instance."""
     if handler is None:
-        handler = Mock(return_value=SwaigFunctionResult("ok"))
+        handler = Mock(return_value=FunctionResult("ok"))
     return SWAIGFunction(
         name=name,
         handler=handler,
@@ -230,7 +230,7 @@ class TestOnFunctionCall:
         assert "webhook" in result["response"].lower() or "External" in result["response"]
 
     def test_calls_handler_successfully(self, host, mock_registry):
-        expected_result = SwaigFunctionResult("success")
+        expected_result = FunctionResult("success")
         handler = Mock(return_value=expected_result)
         func = _make_swaig_function("my_tool", handler=handler)
         mock_registry._swaig_functions = {"my_tool": func}
@@ -245,7 +245,7 @@ class TestOnFunctionCall:
         mock_registry._swaig_functions = {"my_tool": func}
 
         result = host.on_function_call("my_tool", {})
-        assert isinstance(result, SwaigFunctionResult)
+        assert isinstance(result, FunctionResult)
 
     def test_handler_exception_returns_error(self, host, mock_registry):
         handler = Mock(side_effect=RuntimeError("handler crash"))
@@ -269,7 +269,7 @@ class TestExecuteSwaigFunction:
         assert "error" in result
 
     def test_default_args_when_none(self, host, mock_registry):
-        handler = Mock(return_value=SwaigFunctionResult("done"))
+        handler = Mock(return_value=FunctionResult("done"))
         func = _make_swaig_function("tool", handler=handler)
         mock_registry._swaig_functions = {"tool": func}
 
@@ -278,7 +278,7 @@ class TestExecuteSwaigFunction:
         assert result["response"] == "done"
 
     def test_passes_args_and_raw_data(self, host, mock_registry):
-        handler = Mock(return_value=SwaigFunctionResult("ok"))
+        handler = Mock(return_value=FunctionResult("ok"))
         func = _make_swaig_function("tool", handler=handler)
         mock_registry._swaig_functions = {"tool": func}
 
@@ -288,7 +288,7 @@ class TestExecuteSwaigFunction:
         assert result["response"] == "ok"
 
     def test_with_call_id(self, host, mock_registry):
-        handler = Mock(return_value=SwaigFunctionResult("ok"))
+        handler = Mock(return_value=FunctionResult("ok"))
         func = _make_swaig_function("tool", handler=handler)
         mock_registry._swaig_functions = {"tool": func}
 
@@ -296,7 +296,7 @@ class TestExecuteSwaigFunction:
         assert result["response"] == "ok"
 
     def test_constructs_raw_data_with_args(self, host, mock_registry):
-        handler = Mock(return_value=SwaigFunctionResult("fine"))
+        handler = Mock(return_value=FunctionResult("fine"))
         func = _make_swaig_function("tool", handler=handler)
         mock_registry._swaig_functions = {"tool": func}
 
@@ -335,7 +335,7 @@ class TestExecuteSwaigFunction:
         assert "Error" in result["response"]
 
     def test_empty_args_creates_empty_raw_data_argument(self, host, mock_registry):
-        handler = Mock(return_value=SwaigFunctionResult("ok"))
+        handler = Mock(return_value=FunctionResult("ok"))
         func = _make_swaig_function("tool", handler=handler)
         mock_registry._swaig_functions = {"tool": func}
 
@@ -361,7 +361,7 @@ class TestToolDecorator:
 
         @host._tool_decorator(name="greet", description="Greet user", parameters={"name": {"type": "string"}})
         def greet(args, raw_data):
-            return SwaigFunctionResult("Hello")
+            return FunctionResult("Hello")
 
         mock_registry.define_tool.assert_called_once()
         call_kwargs = mock_registry.define_tool.call_args[1]
@@ -380,7 +380,7 @@ class TestToolClassDecorator:
         decorator = ToolMixin.tool(name="class_func", parameters={})
 
         def my_func(self, args, raw_data):
-            return SwaigFunctionResult("hi")
+            return FunctionResult("hi")
 
         decorated = decorator(my_func)
         assert decorated._is_tool is True

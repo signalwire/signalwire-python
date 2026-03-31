@@ -3,8 +3,8 @@
 from unittest.mock import MagicMock, patch
 import pytest
 
-from signalwire_agents.rest._base import HttpClient
-from signalwire_agents.rest.client import SignalWireClient
+from signalwire.rest._base import HttpClient
+from signalwire.rest.client import RestClient
 
 
 class MockResponse:
@@ -24,7 +24,7 @@ class MockResponse:
 @pytest.fixture
 def mock_session():
     """Patches requests.Session and returns the mock session instance."""
-    with patch("signalwire_agents.rest._base.requests.Session") as MockSession:
+    with patch("signalwire.rest._base.requests.Session") as MockSession:
         session = MagicMock()
         MockSession.return_value = session
         # Default: return 200 with empty dict
@@ -40,8 +40,8 @@ def http(mock_session):
 
 @pytest.fixture
 def client(mock_session):
-    """A SignalWireClient backed by a mock session."""
-    return SignalWireClient(
+    """A RestClient backed by a mock session."""
+    return RestClient(
         project="test-project-id",
         token="test-token",
         host="test.signalwire.com",

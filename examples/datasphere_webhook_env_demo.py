@@ -36,7 +36,7 @@ Usage:
 
 import os
 import sys
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 def get_required_env_var(name: str) -> str:
     """Get a required environment variable or exit with error"""

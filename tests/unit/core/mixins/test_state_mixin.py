@@ -15,7 +15,7 @@ import pytest
 from unittest.mock import Mock, MagicMock, PropertyMock, patch
 
 
-from signalwire_agents.core.mixins.state_mixin import StateMixin
+from signalwire.core.mixins.state_mixin import StateMixin
 
 
 class MockStateHost(StateMixin):

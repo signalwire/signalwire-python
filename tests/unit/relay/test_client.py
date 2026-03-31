@@ -10,7 +10,7 @@ from unittest.mock import AsyncMock, patch, MagicMock
 import pytest
 import websockets.exceptions
 
-from signalwire_agents.relay.client import (
+from signalwire.relay.client import (
     RelayClient,
     RelayError,
     _active_clients,
@@ -18,8 +18,8 @@ from signalwire_agents.relay.client import (
     _MAX_QUEUE_SIZE,
     _SUCCESS_CODE_RE,
 )
-from signalwire_agents.relay.call import Call, PlayAction
-from signalwire_agents.relay.constants import (
+from signalwire.relay.call import Call, PlayAction
+from signalwire.relay.constants import (
     AGENT_STRING,
     CALL_STATE_ENDED,
     DEFAULT_RELAY_HOST,
@@ -169,7 +169,7 @@ class TestConnectAuth:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             client = RelayClient(project="p", token="t")
             await client.connect()
@@ -180,7 +180,7 @@ class TestConnectAuth:
             _active_clients.clear()
 
             ws2 = AutoAuthMockWebSocket(protocol="new-proto")
-            with patch("signalwire_agents.relay.client.websockets.connect",
+            with patch("signalwire.relay.client.websockets.connect",
                        new_callable=AsyncMock, return_value=ws2):
                 await client.connect()
 
@@ -197,7 +197,7 @@ class TestConnectAuth:
     async def test_contexts_sent_in_connect(self):
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             client = RelayClient(project="p", token="t", contexts=["default", "support"])
             await client.connect()
@@ -223,12 +223,12 @@ class TestConnectionLimits:
     async def test_default_limit_is_one(self):
         ws1 = AutoAuthMockWebSocket()
         ws2 = AutoAuthMockWebSocket()
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws1):
             c1 = RelayClient(project="p", token="t")
             await c1.connect()
 
-            with patch("signalwire_agents.relay.client.websockets.connect",
+            with patch("signalwire.relay.client.websockets.connect",
                        new_callable=AsyncMock, return_value=ws2):
                 c2 = RelayClient(project="p2", token="t2")
                 with pytest.raises(RuntimeError, match="connection limit"):
@@ -239,7 +239,7 @@ class TestConnectionLimits:
     @pytest.mark.asyncio
     async def test_disconnect_frees_slot(self):
         ws = AutoAuthMockWebSocket()
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             c1 = RelayClient(project="p", token="t")
             await c1.connect()
@@ -247,7 +247,7 @@ class TestConnectionLimits:
 
         # Now another client should be able to connect
         ws2 = AutoAuthMockWebSocket()
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws2):
             c2 = RelayClient(project="p2", token="t2")
             await c2.connect()
@@ -589,9 +589,9 @@ class TestPing:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws), \
-             patch("signalwire_agents.relay.client._CLIENT_PING_INTERVAL", 0.05):
+             patch("signalwire.relay.client._CLIENT_PING_INTERVAL", 0.05):
             client = RelayClient(project="p", token="t")
             await client.connect()
 
@@ -615,11 +615,11 @@ class TestPing:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws), \
-             patch("signalwire_agents.relay.client._CLIENT_PING_INTERVAL", 0.02), \
-             patch("signalwire_agents.relay.client._EXECUTE_TIMEOUT", 0.02), \
-             patch("signalwire_agents.relay.client._MAX_PING_FAILURES", 2):
+             patch("signalwire.relay.client._CLIENT_PING_INTERVAL", 0.02), \
+             patch("signalwire.relay.client._EXECUTE_TIMEOUT", 0.02), \
+             patch("signalwire.relay.client._MAX_PING_FAILURES", 2):
             client = RelayClient(project="p", token="t")
             await client.connect()
 
@@ -677,7 +677,7 @@ class TestRequestQueuing:
 
         # Now connect — the queued request should be flushed
         ws = AutoAuthMockWebSocket()
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             await client.connect()
             await asyncio.sleep(0.05)
@@ -729,7 +729,7 @@ class TestTimeouts:
     async def test_execute_timeout_raises(self, connected_client):
         client, ws = connected_client
 
-        with patch("signalwire_agents.relay.client._EXECUTE_TIMEOUT", 0.05):
+        with patch("signalwire.relay.client._EXECUTE_TIMEOUT", 0.05):
             # Don't respond to the request — it should timeout
             with pytest.raises(RelayError, match="timeout"):
                 await client.execute("calling.answer", {"node_id": "n1", "call_id": "c1"})
@@ -738,7 +738,7 @@ class TestTimeouts:
     async def test_execute_timeout_force_closes(self, connected_client):
         client, ws = connected_client
 
-        with patch("signalwire_agents.relay.client._EXECUTE_TIMEOUT", 0.05):
+        with patch("signalwire.relay.client._EXECUTE_TIMEOUT", 0.05):
             try:
                 await client.execute("calling.answer", {"node_id": "n1", "call_id": "c1"})
             except RelayError:
@@ -771,7 +771,7 @@ class TestAsyncContextManager:
     async def test_aenter_aexit(self):
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             async with RelayClient(project="p", token="t") as client:
                 assert client._connected
@@ -926,7 +926,7 @@ class TestMaxConnectionsEnvVar:
         # We can't easily re-execute module-level code, but we can test
         # that the regex/parsing logic works by importing the module fresh.
         # Instead, just verify the current value is sane.
-        import signalwire_agents.relay.client as mod
+        import signalwire.relay.client as mod
         assert mod._MAX_CONNECTIONS >= 1
         _active_clients.clear()
 
@@ -1000,9 +1000,9 @@ class TestRunForever:
             ws = CountingMockWS()
             return ws
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    side_effect=mock_connect), \
-             patch("signalwire_agents.relay.client._CLIENT_PING_INTERVAL", 999):
+             patch("signalwire.relay.client._CLIENT_PING_INTERVAL", 999):
             client = RelayClient(project="p", token="t")
 
             async def stop_after_connect():
@@ -1035,10 +1035,10 @@ class TestRunForever:
                 raise ConnectionRefusedError("test")
             return AutoAuthMockWebSocket()
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    side_effect=fail_then_succeed), \
-             patch("signalwire_agents.relay.client._CLIENT_PING_INTERVAL", 999), \
-             patch("signalwire_agents.relay.client.RECONNECT_MIN_DELAY", 0.01):
+             patch("signalwire.relay.client._CLIENT_PING_INTERVAL", 999), \
+             patch("signalwire.relay.client.RECONNECT_MIN_DELAY", 0.01):
             client = RelayClient(project="p", token="t")
 
             async def stop_after():
@@ -1065,7 +1065,7 @@ class TestRunForever:
             """Close the coroutine to avoid 'was never awaited' warning."""
             coro.close()
 
-        with patch("signalwire_agents.relay.client.asyncio.run",
+        with patch("signalwire.relay.client.asyncio.run",
                    side_effect=close_coro_and_record) as mock_run:
             client.run()
             mock_run.assert_called_once()
@@ -1079,7 +1079,7 @@ class TestRunForever:
         async def cancel_connect(*args, **kwargs):
             raise asyncio.CancelledError()
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    side_effect=cancel_connect):
             client = RelayClient(project="p", token="t")
             # Should exit cleanly without raising
@@ -1170,9 +1170,9 @@ class TestRecvLoopExceptions:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws), \
-             patch("signalwire_agents.relay.client._CLIENT_PING_INTERVAL", 999):
+             patch("signalwire.relay.client._CLIENT_PING_INTERVAL", 999):
             client = RelayClient(project="p", token="t")
             await client.connect()
 
@@ -1210,7 +1210,7 @@ class TestRecvLoopExceptions:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             client = RelayClient(project="p", token="t")
             await client.connect()
@@ -1230,9 +1230,9 @@ class TestRecvLoopExceptions:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws), \
-             patch("signalwire_agents.relay.client._CLIENT_PING_INTERVAL", 999):
+             patch("signalwire.relay.client._CLIENT_PING_INTERVAL", 999):
             client = RelayClient(project="p", token="t")
             await client.connect()
 
@@ -1359,9 +1359,9 @@ class TestPingLoopInternals:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws), \
-             patch("signalwire_agents.relay.client._CLIENT_PING_INTERVAL", 0.02):
+             patch("signalwire.relay.client._CLIENT_PING_INTERVAL", 0.02):
             client = RelayClient(project="p", token="t")
             await client.connect()
 
@@ -1385,12 +1385,12 @@ class TestPingLoopInternals:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
 
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws), \
-             patch("signalwire_agents.relay.client._CLIENT_PING_INTERVAL", 0.01), \
-             patch("signalwire_agents.relay.client._EXECUTE_TIMEOUT", 0.01), \
-             patch("signalwire_agents.relay.client._MAX_PING_FAILURES", 1), \
-             patch("signalwire_agents.relay.client.RECONNECT_MIN_DELAY", 0.01):
+             patch("signalwire.relay.client._CLIENT_PING_INTERVAL", 0.01), \
+             patch("signalwire.relay.client._EXECUTE_TIMEOUT", 0.01), \
+             patch("signalwire.relay.client._MAX_PING_FAILURES", 1), \
+             patch("signalwire.relay.client.RECONNECT_MIN_DELAY", 0.01):
             client = RelayClient(project="p", token="t")
             await client.connect()
 
@@ -1462,7 +1462,7 @@ class TestJwtAuth:
     async def test_jwt_auth_sends_jwt_token(self):
         ws = AutoAuthMockWebSocket()
         client = RelayClient(jwt_token="eyJ...", project="p")
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             await client.connect()
         connect_msg = None
@@ -1516,12 +1516,12 @@ class TestMaxActiveCallsConfig:
     def test_env_var_invalid(self, monkeypatch):
         monkeypatch.setenv("RELAY_MAX_ACTIVE_CALLS", "not_a_number")
         c = RelayClient(project="p", token="t")
-        from signalwire_agents.relay.client import _DEFAULT_MAX_ACTIVE_CALLS
+        from signalwire.relay.client import _DEFAULT_MAX_ACTIVE_CALLS
         assert c._max_active_calls == _DEFAULT_MAX_ACTIVE_CALLS
 
     def test_default(self):
         c = RelayClient(project="p", token="t")
-        from signalwire_agents.relay.client import _DEFAULT_MAX_ACTIVE_CALLS
+        from signalwire.relay.client import _DEFAULT_MAX_ACTIVE_CALLS
         assert c._max_active_calls == _DEFAULT_MAX_ACTIVE_CALLS
 
 
@@ -1540,7 +1540,7 @@ class TestReceiveUnreceive:
     async def test_receive_sends_request(self):
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
         client = RelayClient(project="p", token="t")
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             await client.connect()
         ws.sent_messages.clear()
@@ -1562,7 +1562,7 @@ class TestReceiveUnreceive:
     async def test_unreceive_sends_request(self):
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
         client = RelayClient(project="p", token="t")
-        with patch("signalwire_agents.relay.client.websockets.connect",
+        with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
             await client.connect()
         ws.sent_messages.clear()
@@ -1589,7 +1589,7 @@ class TestAuthorizationState:
     @pytest.mark.asyncio
     async def test_authorization_state_stored(self, connected_client):
         client, ws = connected_client
-        from signalwire_agents.relay.constants import EVENT_AUTHORIZATION_STATE
+        from signalwire.relay.constants import EVENT_AUTHORIZATION_STATE
         event = make_event(EVENT_AUTHORIZATION_STATE, {
             "authorization_state": "encrypted-state-abc",
         })
@@ -1601,7 +1601,7 @@ class TestAuthorizationState:
     async def test_authorization_state_empty_ignored(self, connected_client):
         client, ws = connected_client
         client._authorization_state = "existing"
-        from signalwire_agents.relay.constants import EVENT_AUTHORIZATION_STATE
+        from signalwire.relay.constants import EVENT_AUTHORIZATION_STATE
         event = make_event(EVENT_AUTHORIZATION_STATE, {
             "authorization_state": "",
         })

@@ -13,7 +13,7 @@ Simple Sales Agent - Morgan
 A friendly PC building sales specialist
 """
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class SalesAgent(AgentBase):
     def __init__(self):

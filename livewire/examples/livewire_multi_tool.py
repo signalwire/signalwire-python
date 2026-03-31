@@ -9,7 +9,7 @@ Usage:
     python livewire_multi_tool.py
 """
 
-from signalwire_agents.livewire import (
+from signalwire.livewire import (
     Agent,
     AgentSession,
     AgentServer,

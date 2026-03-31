@@ -62,7 +62,7 @@ class _MockServiceCapture:
 # so that the `from .service_loader import ...` inside the try-block
 # does not fail at import time.  We temporarily stub if needed, but
 # restore any real module afterward to avoid polluting other tests.
-_core_pkg = "signalwire_agents.cli.core"
+_core_pkg = "signalwire.cli.core"
 _svc_loader_mod = f"{_core_pkg}.service_loader"
 _original_svc_loader = sys.modules.get(_svc_loader_mod)
 _needs_stub = _svc_loader_mod not in sys.modules
@@ -75,7 +75,7 @@ if _needs_stub:
 # Now import the module under test -- the try/except at module level will
 # either succeed with the real classes or fall back to None.  We will
 # patch the module-level sentinels in our fixtures.
-from signalwire_agents.cli.core import agent_loader
+from signalwire.cli.core import agent_loader
 
 # Restore the real service_loader module so other test files can import it
 if _needs_stub:

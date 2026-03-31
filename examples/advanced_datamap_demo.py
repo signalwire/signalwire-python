@@ -19,8 +19,8 @@ This example demonstrates all the comprehensive DataMap features including:
 - Fallback chains
 """
 
-from signalwire_agents.core.data_map import DataMap
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.data_map import DataMap
+from signalwire.core.function_result import FunctionResult
 
 def create_expression_demo():
     """Demonstrate expression-based responses with test values and patterns"""
@@ -31,12 +31,12 @@ def create_expression_demo():
         
         # Expression with pattern matching
         .expression('${args.command}', r'^start', 
-                   SwaigFunctionResult('Starting process: ${args.target}').add_action('start_process', {'target': '${args.target}'}))
+                   FunctionResult('Starting process: ${args.target}').add_action('start_process', {'target': '${args.target}'}))
         .expression('${args.command}', r'^stop', 
-                   SwaigFunctionResult('Stopping process: ${args.target}').add_action('stop_process', {'target': '${args.target}'}))
+                   FunctionResult('Stopping process: ${args.target}').add_action('stop_process', {'target': '${args.target}'}))
         .expression('${args.command}', r'^status', 
-                   SwaigFunctionResult('Checking status of: ${args.target}').add_action('check_status', {'target': '${args.target}'}),
-                   nomatch_output=SwaigFunctionResult('Unknown command: ${args.command}. Try start, stop, or status.'))
+                   FunctionResult('Checking status of: ${args.target}').add_action('check_status', {'target': '${args.target}'}),
+                   nomatch_output=FunctionResult('Unknown command: ${args.command}. Try start, stop, or status.'))
     )
 
 def create_advanced_webhook_demo():
@@ -75,10 +75,10 @@ def create_advanced_webhook_demo():
         .webhook('GET', 'https://backup-api.example.com/simple',
                 headers={'Accept': 'application/json'})
         .params({'q': '${args.action}'})
-        .output(SwaigFunctionResult('Backup result: ${response.data}'))
+        .output(FunctionResult('Backup result: ${response.data}'))
         
         # Global fallback
-        .fallback_output(SwaigFunctionResult('All APIs are currently unavailable'))
+        .fallback_output(FunctionResult('All APIs are currently unavailable'))
         .global_error_keys(['error', 'fault', 'exception'])
     )
 
@@ -102,7 +102,7 @@ def create_form_encoding_demo():
             'message': '${args.message}',
             'timestamp': '@{strftime_tz UTC %Y-%m-%d %H:%M:%S}'
         })
-        .output(SwaigFunctionResult('Form submitted successfully for ${args.name}'))
+        .output(FunctionResult('Form submitted successfully for ${args.name}'))
         .error_keys(['error', 'validation_errors'])
     )
 
@@ -125,7 +125,7 @@ def create_array_processing_demo():
             "max": 5,
             "append": "Title: ${this.title}\n${this.summary}\nURL: ${this.url}\n\n"
         })
-        .output(SwaigFunctionResult('Found @{expr ${response.total}} results for "${args.query}":\n\n${formatted_results}'))
+        .output(FunctionResult('Found @{expr ${response.total}} results for "${args.query}":\n\n${formatted_results}'))
         .error_keys(['error'])
     )
 
@@ -138,18 +138,18 @@ def create_conditional_logic_demo():
         
         # Check if expression is simple arithmetic
         .expression('${args.expression}', r'^\s*\d+\s*[+\-*/]\s*\d+\s*$',
-                   SwaigFunctionResult('Quick calculation: ${args.expression} = @{expr ${args.expression}}'))
+                   FunctionResult('Quick calculation: ${args.expression} = @{expr ${args.expression}}'))
         
         # Check if requesting detailed format
         .expression('${args.format}', r'^detailed$',
-                   SwaigFunctionResult().add_action('detailed_calc', {
+                   FunctionResult().add_action('detailed_calc', {
                        'expression': '${args.expression}',
                        'result': '@{expr ${args.expression}}',
                        'timestamp': '@{strftime_tz UTC %Y-%m-%d %H:%M:%S}'
                    }))
         
         # Fallback for complex expressions
-        .fallback_output(SwaigFunctionResult(
+        .fallback_output(FunctionResult(
             'Expression: ${args.expression}\n' +
             'Result: @{expr ${args.expression}}\n' +
             'Calculated at: @{strftime_tz UTC %Y-%m-%d %H:%M:%S}'

@@ -13,7 +13,7 @@ Sales Agent with Knowledge Base - Morgan
 A PC building sales specialist with access to product knowledge
 """
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class SalesAgentWithSearch(AgentBase):
     def __init__(self):

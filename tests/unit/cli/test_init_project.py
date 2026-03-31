@@ -20,7 +20,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock, call
 from io import StringIO
 
-from signalwire_agents.cli.init_project import (
+from signalwire.cli.init_project import (
     Colors,
     print_step,
     print_success,
@@ -261,8 +261,8 @@ class TestGetAgentTemplate:
         features = {'example_tool': True, 'debug_webhooks': False, 'basic_auth': False}
         result = get_agent_template('basic', features)
         assert 'class MainAgent(AgentBase):' in result
-        assert 'from signalwire_agents import AgentBase' in result
-        assert 'SwaigFunctionResult' in result
+        assert 'from signalwire import AgentBase' in result
+        assert 'FunctionResult' in result
         assert 'get_info' in result
 
     def test_agent_template_without_tool(self):
@@ -270,7 +270,7 @@ class TestGetAgentTemplate:
         result = get_agent_template('basic', features)
         assert 'class MainAgent(AgentBase):' in result
         assert 'get_info' not in result
-        assert 'SwaigFunctionResult' not in result
+        assert 'FunctionResult' not in result
 
     def test_agent_template_with_all_features(self):
         features = {'example_tool': True, 'debug_webhooks': True, 'basic_auth': True}
@@ -294,7 +294,7 @@ class TestGetAppTemplate:
     def test_basic_app_template(self):
         features = {'debug_webhooks': False, 'web_ui': False}
         result = get_app_template(features)
-        assert 'from signalwire_agents import AgentServer' in result
+        assert 'from signalwire import AgentServer' in result
         assert 'def main():' in result
         assert 'server.run()' in result
 
@@ -538,7 +538,7 @@ class TestRunQuick:
 class TestMain:
     """Tests for the main() CLI entry point."""
 
-    @patch('signalwire_agents.cli.init_project.ProjectGenerator')
+    @patch('signalwire.cli.init_project.ProjectGenerator')
     @patch('sys.argv', ['sw-agent-init', 'testproject', '--type', 'basic', '--no-venv'])
     def test_main_quick_mode(self, mock_gen_class):
         mock_gen = Mock()
@@ -553,7 +553,7 @@ class TestMain:
         assert config['agent_type'] == 'basic'
         mock_gen.generate.assert_called_once()
 
-    @patch('signalwire_agents.cli.init_project.ProjectGenerator')
+    @patch('signalwire.cli.init_project.ProjectGenerator')
     @patch('sys.argv', ['sw-agent-init', 'testproject', '--type', 'full', '--no-venv'])
     def test_main_quick_mode_full(self, mock_gen_class):
         mock_gen = Mock()
@@ -566,7 +566,7 @@ class TestMain:
         assert config['agent_type'] == 'full'
         assert config['features']['debug_webhooks'] is True
 
-    @patch('signalwire_agents.cli.init_project.ProjectGenerator')
+    @patch('signalwire.cli.init_project.ProjectGenerator')
     @patch('sys.argv', ['sw-agent-init', 'testproject', '-p', 'aws', '--no-venv'])
     def test_main_aws_platform(self, mock_gen_class):
         mock_gen = Mock()
@@ -578,7 +578,7 @@ class TestMain:
         config = mock_gen_class.call_args[0][0]
         assert config['platform'] == 'aws'
 
-    @patch('signalwire_agents.cli.init_project.ProjectGenerator')
+    @patch('signalwire.cli.init_project.ProjectGenerator')
     @patch('sys.argv', ['sw-agent-init', 'testproject', '--no-venv', '--dir', '/tmp/custom'])
     def test_main_custom_dir(self, mock_gen_class):
         mock_gen = Mock()
@@ -590,7 +590,7 @@ class TestMain:
         config = mock_gen_class.call_args[0][0]
         assert '/tmp/custom' in config['project_dir']
 
-    @patch('signalwire_agents.cli.init_project.ProjectGenerator')
+    @patch('signalwire.cli.init_project.ProjectGenerator')
     @patch('sys.argv', ['sw-agent-init', 'testproject', '--no-venv'])
     def test_main_generate_failure_exits(self, mock_gen_class):
         mock_gen = Mock()

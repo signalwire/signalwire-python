@@ -15,7 +15,7 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock, PropertyMock
 from typing import Dict, List, Any, Optional
 
-from signalwire_agents.core.mixins.prompt_mixin import PromptMixin
+from signalwire.core.mixins.prompt_mixin import PromptMixin
 
 
 class MockPromptHost(PromptMixin):
@@ -520,7 +520,7 @@ class TestDefineContextsWithArg:
 class TestDefineContextsWithoutArg:
     """Tests for PromptMixin.define_contexts when called without contexts arg"""
 
-    @patch("signalwire_agents.core.mixins.prompt_mixin.ContextBuilder")
+    @patch("signalwire.core.mixins.prompt_mixin.ContextBuilder")
     def test_creates_context_builder_on_first_call(self, MockCB, host):
         host._contexts_builder = None
         mock_cb_instance = MockCB.return_value
@@ -531,7 +531,7 @@ class TestDefineContextsWithoutArg:
         assert result is mock_cb_instance
         assert host._contexts_defined is True
 
-    @patch("signalwire_agents.core.mixins.prompt_mixin.ContextBuilder")
+    @patch("signalwire.core.mixins.prompt_mixin.ContextBuilder")
     def test_returns_existing_builder_on_subsequent_calls(self, MockCB, host):
         existing_builder = Mock()
         host._contexts_builder = existing_builder
@@ -549,7 +549,7 @@ class TestDefineContextsWithoutArg:
 class TestContextsProperty:
     """Tests for PromptMixin.contexts property"""
 
-    @patch("signalwire_agents.core.mixins.prompt_mixin.ContextBuilder")
+    @patch("signalwire.core.mixins.prompt_mixin.ContextBuilder")
     def test_returns_context_builder(self, MockCB, host):
         host._contexts_builder = None
         mock_cb = MockCB.return_value
@@ -1071,14 +1071,14 @@ class TestEdgeCases:
         result = host.get_prompt()
         assert result == "You are MinBot, a helpful AI assistant."
 
-    @patch("signalwire_agents.core.mixins.prompt_mixin.ContextBuilder")
+    @patch("signalwire.core.mixins.prompt_mixin.ContextBuilder")
     def test_define_contexts_without_arg_sets_contexts_defined(self, MockCB, host):
         host._contexts_builder = None
         host._contexts_defined = False
         host.define_contexts()
         assert host._contexts_defined is True
 
-    @patch("signalwire_agents.core.mixins.prompt_mixin.ContextBuilder")
+    @patch("signalwire.core.mixins.prompt_mixin.ContextBuilder")
     def test_define_contexts_without_arg_does_not_reset_flag(self, MockCB, host):
         """Calling define_contexts() twice does not reset _contexts_defined."""
         host._contexts_builder = None

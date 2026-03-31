@@ -22,9 +22,9 @@ letting the SignalWire server handle all the REST API calls and processing.
 """
 
 import os
-from signalwire_agents import AgentBase
-from signalwire_agents.core.data_map import DataMap, create_simple_api_tool, create_expression_tool
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.data_map import DataMap, create_simple_api_tool, create_expression_tool
+from signalwire.core.function_result import FunctionResult
 
 
 class DataMapDemoAgent(AgentBase):
@@ -80,13 +80,13 @@ class DataMapDemoAgent(AgentBase):
             .parameter('command', 'string', 'Playback command', required=True)
             .parameter('filename', 'string', 'File to control', required=False)
             .expression('${args.command}', r'start.*', 
-                       SwaigFunctionResult("Starting playback").add_action('start_playback', {'file': '${args.filename}'}))
+                       FunctionResult("Starting playback").add_action('start_playback', {'file': '${args.filename}'}))
             .expression('${args.command}', r'stop.*',
-                       SwaigFunctionResult("Stopping playback").add_action('stop_playback', True))
+                       FunctionResult("Stopping playback").add_action('stop_playback', True))
             .expression('${args.command}', r'pause.*',
-                       SwaigFunctionResult("Pausing playback").add_action('pause_playback', True))
+                       FunctionResult("Pausing playback").add_action('pause_playback', True))
             .expression('${args.command}', r'resume.*',
-                       SwaigFunctionResult("Resuming playback").add_action('resume_playback', True))
+                       FunctionResult("Resuming playback").add_action('resume_playback', True))
         )
         
         # 3. Knowledge search with foreach - processes arrays
@@ -102,7 +102,7 @@ class DataMapDemoAgent(AgentBase):
                 'output_key': 'foreach',
                 'append': True
             })
-            .output(SwaigFunctionResult('Found: ${foreach.title} - ${foreach.summary}'))
+            .output(FunctionResult('Found: ${foreach.title} - ${foreach.summary}'))
             .error_keys(['error', 'status'])
         )
         
@@ -112,7 +112,7 @@ class DataMapDemoAgent(AgentBase):
             .parameter('category', 'string', 'Joke category', 
                       enum=['programming', 'dad', 'general'], required=False)
             .webhook('GET', 'https://api.jokes.com/random?category=${category}')
-            .output(SwaigFunctionResult("Here's a ${response.category} joke: ${response.joke}"))
+            .output(FunctionResult("Here's a ${response.category} joke: ${response.joke}"))
             .error_keys(['error'])
         )
         
@@ -133,7 +133,7 @@ class DataMapDemoAgent(AgentBase):
                 'output_key': 'foreach',
                 'append': True
             })
-            .output(SwaigFunctionResult('Search result: ${foreach.title} - Score: ${foreach.relevance}'))
+            .output(FunctionResult('Search result: ${foreach.title} - Score: ${foreach.relevance}'))
             .error_keys(['error', 'failed', 'unavailable'])
         )
         
@@ -194,8 +194,8 @@ def print_data_map_examples():
     
     # Expression tool
     patterns = {
-        r'start.*': SwaigFunctionResult().add_action('start_playback', {'file': '${args.filename}'}),
-        r'stop.*': SwaigFunctionResult().add_action('stop_playback', True)
+        r'start.*': FunctionResult().add_action('start_playback', {'file': '${args.filename}'}),
+        r'stop.*': FunctionResult().add_action('stop_playback', True)
     }
     
     file_control = create_expression_tool(
@@ -218,7 +218,7 @@ def print_data_map_examples():
             'output_key': 'foreach',
             'append': True
         })
-        .output(SwaigFunctionResult('Found: ${foreach.title} - ${foreach.summary}'))
+        .output(FunctionResult('Found: ${foreach.title} - ${foreach.summary}'))
         .error_keys(['error'])
     )
     
@@ -241,14 +241,14 @@ if __name__ == "__main__":
     
     print("\n" + "=" * 80)
     print("All examples above show the pattern:")
-    print("SUCCESS: Uses DataMap class with SwaigFunctionResult for outputs")
+    print("SUCCESS: Uses DataMap class with FunctionResult for outputs")
     print("SUCCESS: Generates SWAIG JSON with 'data_map' instead of 'url'")
     print("SUCCESS: SignalWire server handles REST API calls automatically")
     print("SUCCESS: Supports expressions, foreach, webhooks, error handling")
     print("=" * 80)
     
     print("\nKey benefits of this approach:")
-    print("- Familiar SwaigFunctionResult pattern for all outputs")
+    print("- Familiar FunctionResult pattern for all outputs")
     print("- Method chaining like: DataMap('name').webhook().output().foreach()")
     print("- No webhook servers needed - everything runs on SignalWire")
     print("- Covers all data_map patterns from real examples")

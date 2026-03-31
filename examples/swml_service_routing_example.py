@@ -33,7 +33,7 @@ import argparse
 from typing import Dict, Optional, Any
 from fastapi import Request
 
-from signalwire_agents.core.swml_service import SWMLService
+from signalwire.core.swml_service import SWMLService
 
 
 class RoutingExample(SWMLService):

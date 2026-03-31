@@ -33,7 +33,7 @@ Try these requests:
     curl "http://localhost:3000/chat/debug"
 """
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class ChatAgent(AgentBase):
     def __init__(self, route="/chat"):
