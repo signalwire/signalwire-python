@@ -193,6 +193,24 @@ class Step:
         """
         Set which non-internal functions are callable while this step is active.
 
+        IMPORTANT — keep the per-step active set small:
+            LLM tool selection accuracy degrades noticeably once the
+            per-call tool list grows past ~7-8 entries. Symptoms: the model
+            has the right tool available, the user's request clearly matches
+            it, but the model doesn't call it (or calls a near-neighbor
+            instead). Same prompt may pass on rerun. This is the LLM's
+            native tool-selection behavior — not something the SDK can fix.
+
+            Mitigations:
+              - Whitelist only the tools the current step actually needs.
+                A 4-tool step is more reliable than a 12-tool step.
+              - Split a busy step into two narrower steps so the relevant
+                tools are partitioned by phase of the conversation.
+              - Remember that `next_step` and `change_context` are
+                auto-injected when valid_steps / valid_contexts are set —
+                they count against the budget too. Don't list them in
+                `functions`; the runtime adds them separately.
+
         IMPORTANT — inheritance behavior:
             If you do NOT call this method, the step inherits whichever function
             set was active on the previous step (or the previous context's last
@@ -518,8 +536,38 @@ class Step:
 
 
 class Context:
-    """Represents a single context containing multiple steps"""
-    
+    """A single context containing an ordered list of steps.
+
+    Conversation history across context switches
+    --------------------------------------------
+    By default (`isolated=False`), switching from one context to another
+    via `change_context` PRESERVES the entire conversation history. The
+    user's prior turns and the model's prior responses remain visible
+    on the next LLM call. The only thing that changes is which step
+    instructions get injected.
+
+    A common confusion: "the AI re-asked for information the user already
+    gave." If you see this, history loss is almost never the cause —
+    history is preserved unless you set `isolated=True`. The real cause
+    is usually one of:
+
+      - The destination step's `text` literally tells the model to ask
+        ("Ask the user for their account number"). The model follows
+        instructions; rephrase to "Confirm the user's account number"
+        or have the step instructions check global_data first.
+      - The relevant info was never extracted into global_data, so
+        ${var} expansion has nothing to inject and the step prompt
+        looks generic. Add a webhook that captures the field.
+      - You explicitly called `set_isolated(True)` on the destination
+        context. Isolated contexts wipe the conversation array on entry.
+        Pair with `set_consolidate(True)` if you want a summary instead.
+
+    See Context.set_isolated() for the wipe semantics, and the SDK's
+    FunctionResult.swml_change_step / swml_change_context docstrings
+    for how to communicate transition intent through tool response text
+    and global_data.
+    """
+
     def __init__(self, name: str):
         self.name = name
         self._steps: Dict[str, Step] = {}

@@ -229,13 +229,25 @@ class ToolMixin:
             
             # Call the function using the existing on_function_call method
             result = self.on_function_call(function_name, args, raw_data)
-            
+
             # Convert result to dict if needed (same logic as in _handle_swaig_request)
             if isinstance(result, FunctionResult):
                 result_dict = result.to_dict()
             elif isinstance(result, dict):
                 result_dict = result
             else:
+                req_log.warning(
+                    "unexpected_function_result_type",
+                    function=function_name,
+                    result_type=type(result).__name__,
+                    hint=(
+                        "SWAIG function returned a value that is neither "
+                        "FunctionResult nor dict; falling back to str(result). "
+                        "The AI will see the stringified value as its tool "
+                        "response. Wrap your return in FunctionResult(...) or "
+                        "return a dict with at least a 'response' key."
+                    ),
+                )
                 result_dict = {"response": str(result)}
             
             req_log.info("serverless_function_executed_successfully")

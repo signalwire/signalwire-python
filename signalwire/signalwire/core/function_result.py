@@ -300,42 +300,94 @@ class FunctionResult:
     
     def swml_change_step(self, step_name: str) -> 'FunctionResult':
         """
-        Change the conversation step in the AI agent's workflow.
-        
-        This is a convenience method for transitioning between conversation steps,
-        allowing dynamic workflow control based on user interactions or game state.
-        
+        Force the conversation into a specific step in the current context.
+
+        This is a workflow-level transition driven by your webhook, not by the
+        model. Webhook-triggered step changes bypass any `valid_steps` clamp
+        on the current step (the model's `next_step` tool is the constrained
+        path; this is the unconstrained one). Use it when something the user
+        said unambiguously requires moving the flow forward.
+
+        Communicating intent to the destination step
+        --------------------------------------------
+        When the model arrives at the new step, the next thing it sees in
+        history is the tool result that contained this action — i.e., your
+        FunctionResult's `response` text. Put your "why" there. The model
+        reads it before the new step's injected instructions:
+
+            FunctionResult(
+                "Premium plan confirmed. Now collecting payment details."
+            ).swml_change_step("collect_payment")
+
+        For structured data the destination step needs (account number,
+        plan tier, etc.), pair this with `update_global_data()` and reference
+        the values from the destination step's `text` via ${var} expansion:
+
+            (FunctionResult("Premium plan confirmed.")
+                .update_global_data({"plan": "premium", "billing_cycle": "annual"})
+                .swml_change_step("collect_payment"))
+
+        And in the destination step's text:
+
+            step.set_text(
+                "Collect payment for the ${plan} plan, billed ${billing_cycle}. "
+                "Confirm the amount with the user before proceeding."
+            )
+
         Args:
-            step_name: Name of the step to transition to (e.g., "betting", "playing", "hand_complete")
-            
+            step_name: Name of the step to transition to. The step must exist
+                in the current context.
+
         Returns:
-            Self for method chaining
-            
+            Self for method chaining.
+
         Example:
             result = (
                 FunctionResult("Starting a new hand")
+                .update_global_data({"chips": 1000})
                 .swml_change_step("betting")
-                .swml_user_event({"type": "game_reset", "chips": 1000})
             )
         """
         return self.add_action("change_step", step_name)
-    
+
     def swml_change_context(self, context_name: str) -> 'FunctionResult':
         """
-        Change the conversation context in the AI agent's workflow.
-        
-        This is a convenience method for switching between different conversation contexts,
-        useful for agents that handle multiple distinct workflows or service modes.
-        
+        Force the conversation into a different context.
+
+        Webhook-triggered context changes bypass any `valid_contexts` clamp.
+        Step state resets (cur_step = 0) on entry. The new context's first
+        step's instructions are injected on the next turn.
+
+        Communicating intent to the destination context
+        ------------------------------------------------
+        Same pattern as swml_change_step: the model reads your FunctionResult's
+        `response` text as the tool result before it sees the destination
+        context's first step. Put your reason there:
+
+            FunctionResult(
+                "I'm transferring you to billing because your question is "
+                "about an invoice charge."
+            ).swml_change_context("billing")
+
+        For structured carry-over, use update_global_data() and reference the
+        values via ${var} expansion in the destination context's step text.
+
+        Note that conversation history is preserved across context switches
+        unless the destination context is marked `isolated=True`. The model
+        retains everything the user said in the previous context — you do
+        not need to re-state it.
+
         Args:
-            context_name: Name of the context to transition to (e.g., "support", "sales", "technical")
-            
+            context_name: Name of the context to switch to. Must exist in
+                the agent's context map.
+
         Returns:
-            Self for method chaining
-            
+            Self for method chaining.
+
         Example:
             result = (
-                FunctionResult("Transferring you to technical support")
+                FunctionResult("Transferring you to technical support.")
+                .update_global_data({"original_issue": user_problem})
                 .swml_change_context("technical_support")
             )
         """
@@ -1482,5 +1534,11 @@ class FunctionResult:
         if not result:
             # Default response if neither is present
             result["response"] = "Action completed."
-            
+
         return result
+
+
+# Backwards-compatible alias. Older docs, skill READMEs, and external
+# tutorials import this as `SwaigFunctionResult`. Both names refer to the
+# same class — pick whichever reads better in your code.
+SwaigFunctionResult = FunctionResult

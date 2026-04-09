@@ -281,26 +281,68 @@ class AIConfigMixin:
             self.native_functions = [name for name in function_names if isinstance(name, str)]
         return self
 
+    #: The complete set of internal SWAIG function names that accept fillers,
+    #: matching the SWAIGInternalFiller schema definition. Any name outside
+    #: this set is rejected by the runtime — set_internal_fillers /
+    #: add_internal_filler will warn if you pass an unknown name.
+    SUPPORTED_INTERNAL_FILLER_NAMES = frozenset({
+        "hangup",                  # AI is hanging up the call
+        "check_time",              # AI is checking the time
+        "wait_for_user",           # AI is waiting for user input
+        "wait_seconds",            # deliberate pause / wait period
+        "adjust_response_latency", # AI is adjusting response timing
+        "next_step",               # transitioning between steps in prompt.contexts
+        "change_context",          # switching between contexts in prompt.contexts
+        "get_visual_input",        # processing visual input (enable_vision)
+        "get_ideal_strategy",      # thinking (enable_thinking)
+    })
+
     def set_internal_fillers(self, internal_fillers: Dict[str, Dict[str, List[str]]]) -> 'AgentBase':
         """
-        Set internal fillers for native SWAIG functions
-        
-        Internal fillers provide custom phrases the AI says while executing
-        internal/native functions like check_time, wait_for_user, next_step, etc.
-        
+        Set internal fillers for native SWAIG functions.
+
+        Internal fillers are short phrases the AI agent speaks (via TTS) while
+        an internal/native function is running, so the caller doesn't hear
+        dead air during transitions or background work.
+
+        Supported function names (matches the SWAIGInternalFiller schema):
+
+            hangup                  — when the agent is hanging up
+            check_time              — when checking the time
+            wait_for_user           — when waiting for user input
+            wait_seconds            — during deliberate pauses
+            adjust_response_latency — when adjusting response timing
+            next_step               — transitioning between steps in prompt.contexts
+            change_context          — switching between contexts in prompt.contexts
+            get_visual_input        — processing visual input (enable_vision=True)
+            get_ideal_strategy      — thinking (enable_thinking=True)
+
+        Notably NOT supported: change_step, gather_submit, or arbitrary
+        user-defined SWAIG function names. The runtime only honors fillers
+        for the names listed above; everything else is silently ignored at
+        the SWML level. This method warns at registration time if you pass
+        an unknown name so you catch the typo early.
+
+        Without internal fillers, callers hear dead air during context
+        switches and other internal transitions — set this on every agent
+        that uses contexts/steps with audio.
+
         Args:
-            internal_fillers: Dictionary mapping function names to language-specific filler phrases
-                            Format: {"function_name": {"language_code": ["phrase1", "phrase2"]}}
-                            Example: {"next_step": {"en-US": ["Moving to the next step...", "Great, let's continue..."]}}
-            
+            internal_fillers: Dictionary mapping function names to
+                language-specific filler phrases.
+                Format: {"function_name": {"language_code": ["phrase1", "phrase2"]}}
+
         Returns:
-            Self for method chaining
-            
+            Self for method chaining.
+
         Example:
             agent.set_internal_fillers({
                 "next_step": {
                     "en-US": ["Moving to the next step...", "Great, let's continue..."],
                     "es": ["Pasando al siguiente paso...", "Excelente, continuemos..."]
+                },
+                "change_context": {
+                    "en-US": ["Let me switch modes...", "One moment..."]
                 },
                 "check_time": {
                     "en-US": ["Let me check the time...", "Getting the current time..."]
@@ -308,6 +350,20 @@ class AIConfigMixin:
             })
         """
         if internal_fillers and isinstance(internal_fillers, dict):
+            unknown = sorted(set(internal_fillers.keys()) - self.SUPPORTED_INTERNAL_FILLER_NAMES)
+            if unknown:
+                from signalwire.core.logging_config import get_logger
+                get_logger("ai_config_mixin").warning(
+                    "unknown_internal_filler_names",
+                    unknown=unknown,
+                    supported=sorted(self.SUPPORTED_INTERNAL_FILLER_NAMES),
+                    hint=(
+                        "set_internal_fillers received names that the SWML "
+                        "schema does not recognize. Those entries will be "
+                        "ignored by the runtime. Use one of the supported "
+                        "names listed in 'supported'."
+                    ),
+                )
             if not hasattr(self, '_internal_fillers'):
                 self._internal_fillers = {}
             self._internal_fillers.update(internal_fillers)
@@ -315,26 +371,48 @@ class AIConfigMixin:
 
     def add_internal_filler(self, function_name: str, language_code: str, fillers: List[str]) -> 'AgentBase':
         """
-        Add internal fillers for a specific function and language
-        
+        Add internal fillers for a single internal function and language.
+
+        See set_internal_fillers() for the complete list of supported
+        function_name values and an explanation of what fillers do.
+
         Args:
-            function_name: Name of the internal function (e.g., 'next_step', 'check_time')
-            language_code: Language code (e.g., 'en-US', 'es', 'fr')
-            fillers: List of filler phrases for this function and language
-            
+            function_name: One of the supported internal function names
+                (see SUPPORTED_INTERNAL_FILLER_NAMES). Common values:
+                'next_step', 'change_context', 'check_time', 'wait_for_user',
+                'hangup'. Names outside the supported set log a warning and
+                are ignored by the runtime.
+            language_code: Language code (e.g. 'en-US', 'es', 'fr').
+            fillers: List of filler phrases for this function and language.
+
         Returns:
-            Self for method chaining
-            
+            Self for method chaining.
+
         Example:
-            agent.add_internal_filler("next_step", "en-US", ["Moving to the next step...", "Great, let's continue..."])
+            agent.add_internal_filler(
+                "change_context", "en-US",
+                ["Let me switch over to that...", "One moment..."]
+            )
         """
         if function_name and language_code and fillers and isinstance(fillers, list):
+            if function_name not in self.SUPPORTED_INTERNAL_FILLER_NAMES:
+                from signalwire.core.logging_config import get_logger
+                get_logger("ai_config_mixin").warning(
+                    "unknown_internal_filler_name",
+                    function_name=function_name,
+                    supported=sorted(self.SUPPORTED_INTERNAL_FILLER_NAMES),
+                    hint=(
+                        "add_internal_filler received a function name the "
+                        "SWML schema does not recognize. The entry will be "
+                        "stored but the runtime will not play these fillers."
+                    ),
+                )
             if not hasattr(self, '_internal_fillers'):
                 self._internal_fillers = {}
-            
+
             if function_name not in self._internal_fillers:
                 self._internal_fillers[function_name] = {}
-                
+
             self._internal_fillers[function_name][language_code] = fillers
         return self
 

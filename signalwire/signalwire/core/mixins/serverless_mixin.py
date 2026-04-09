@@ -255,6 +255,18 @@ class ServerlessMixin:
             elif isinstance(result, dict):
                 result_dict = result
             else:
+                req_log.warning(
+                    "unexpected_function_result_type",
+                    function=function_name,
+                    result_type=type(result).__name__,
+                    hint=(
+                        "SWAIG function returned a value that is neither "
+                        "FunctionResult nor dict; falling back to str(result). "
+                        "The AI will see the stringified value as its tool "
+                        "response. Wrap your return in FunctionResult(...) or "
+                        "return a dict with at least a 'response' key."
+                    ),
+                )
                 result_dict = {"response": str(result)}
             
             req_log.info("serverless_function_executed_successfully")

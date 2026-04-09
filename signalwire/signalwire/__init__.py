@@ -27,7 +27,7 @@ from .core.data_map import DataMap, create_simple_api_tool, create_expression_to
 from signalwire.agent_server import AgentServer
 from signalwire.core.swml_service import SWMLService
 from signalwire.core.swml_builder import SWMLBuilder
-from signalwire.core.function_result import FunctionResult
+from signalwire.core.function_result import FunctionResult, SwaigFunctionResult
 from signalwire.core.swaig_function import SWAIGFunction
 from signalwire.agents.bedrock import BedrockAgent
 from signalwire.utils.schema_utils import SchemaValidationError
