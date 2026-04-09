@@ -1163,7 +1163,7 @@ class TestGatherInfoValidation:
             .set_gather_info(completion_action="nonexistent") \
             .add_gather_question("name", "Name?")
         ctx.add_step("other").set_text("Other")
-        with pytest.raises(ValueError, match="does not exist"):
+        with pytest.raises(ValueError, match="is not a step in this context"):
             builder.validate()
 
     def test_no_completion_action_always_valid(self):
@@ -1200,3 +1200,141 @@ class TestGatherInfoValidation:
         # s2 is the last step
         with pytest.raises(ValueError, match="last step"):
             builder.validate()
+
+
+class TestStepFunctionsSerialization:
+    """Pinning tests for Step.set_functions semantics in to_dict output."""
+
+    def test_omitted_functions_key_absent_from_dict(self):
+        """If set_functions() is never called, the resulting step dict
+        must NOT contain a 'functions' key — that omission is what tells
+        the C runtime to inherit the previous step's active set.
+        """
+        step = Step("s")
+        step.set_text("hi")
+        d = step.to_dict()
+        assert "functions" not in d, (
+            "Step with no set_functions() call must omit the key entirely "
+            "so the runtime applies inheritance semantics."
+        )
+
+    def test_explicit_empty_list_persists(self):
+        """functions=[] is the documented disable-all form. It must
+        round-trip into the dict so the runtime sees the empty list."""
+        step = Step("s")
+        step.set_text("hi")
+        step.set_functions([])
+        d = step.to_dict()
+        assert d["functions"] == []
+
+    def test_none_string_persists_as_synonym(self):
+        """functions="none" is a Python convenience; it should appear
+        in the dict so the runtime treats it like an empty list."""
+        step = Step("s")
+        step.set_text("hi")
+        step.set_functions("none")
+        d = step.to_dict()
+        assert d["functions"] == "none"
+
+    def test_explicit_list_round_trips(self):
+        step = Step("s")
+        step.set_text("hi")
+        step.set_functions(["a", "b"])
+        d = step.to_dict()
+        assert d["functions"] == ["a", "b"]
+
+
+class TestReservedToolNameValidation:
+    """ContextBuilder.validate() must reject user tools that collide
+    with reserved native tool names (next_step / change_context / gather_submit)."""
+
+    def _make_agent_with_tools(self, tool_names):
+        """Build a mock agent that exposes a real dict of registered tools
+        at agent._tool_registry._swaig_functions, matching the structure
+        the production code reads from."""
+        agent = Mock()
+        agent._tool_registry = Mock()
+        agent._tool_registry._swaig_functions = {name: Mock() for name in tool_names}
+        return agent
+
+    def _builder_with_minimal_context(self, agent):
+        builder = ContextBuilder(agent)
+        ctx = builder.add_context("default")
+        ctx.add_step("only").set_text("Step text")
+        return builder
+
+    def test_collision_with_next_step_rejected(self):
+        agent = self._make_agent_with_tools(["next_step", "lookup"])
+        builder = self._builder_with_minimal_context(agent)
+        with pytest.raises(ValueError, match="next_step"):
+            builder.validate()
+
+    def test_collision_with_change_context_rejected(self):
+        agent = self._make_agent_with_tools(["change_context"])
+        builder = self._builder_with_minimal_context(agent)
+        with pytest.raises(ValueError, match="reserved"):
+            builder.validate()
+
+    def test_collision_with_gather_submit_rejected(self):
+        agent = self._make_agent_with_tools(["gather_submit", "search"])
+        builder = self._builder_with_minimal_context(agent)
+        with pytest.raises(ValueError, match="gather_submit"):
+            builder.validate()
+
+    def test_no_collision_passes(self):
+        agent = self._make_agent_with_tools(["lookup_account", "send_email"])
+        builder = self._builder_with_minimal_context(agent)
+        builder.validate()  # should not raise
+
+    def test_empty_tool_registry_passes(self):
+        agent = self._make_agent_with_tools([])
+        builder = self._builder_with_minimal_context(agent)
+        builder.validate()  # should not raise
+
+    def test_mock_agent_does_not_trigger_check(self):
+        """Plain Mock() agents (used throughout the existing test suite)
+        must not accidentally trip the collision check — the real check
+        only fires when _swaig_functions is an actual dict."""
+        builder = self._builder_with_minimal_context(Mock())
+        builder.validate()  # should not raise
+
+
+class TestImprovedCompletionActionErrorMessage:
+    """The completion_action validation errors should be actionable."""
+
+    def _make_builder(self):
+        return ContextBuilder(Mock())
+
+    def test_next_step_on_last_step_error_lists_remediations(self):
+        builder = self._make_builder()
+        ctx = builder.add_context("default")
+        ctx.add_step("only") \
+            .set_text("Last step") \
+            .set_gather_info(completion_action="next_step") \
+            .add_gather_question("x", "Q?")
+        try:
+            builder.validate()
+            assert False, "expected ValueError"
+        except ValueError as e:
+            msg = str(e)
+            # Suggestions an LLM can act on:
+            assert "add another step" in msg
+            assert "completion_action=None" in msg
+
+    def test_unknown_step_error_lists_available_steps(self):
+        builder = self._make_builder()
+        ctx = builder.add_context("default")
+        ctx.add_step("alpha").set_text("A")
+        ctx.add_step("beta") \
+            .set_text("B") \
+            .set_gather_info(completion_action="gamma") \
+            .add_gather_question("x", "Q?")
+        try:
+            builder.validate()
+            assert False, "expected ValueError"
+        except ValueError as e:
+            msg = str(e)
+            assert "is not a step in this context" in msg
+            # Should enumerate the legal options
+            assert "alpha" in msg
+            assert "beta" in msg

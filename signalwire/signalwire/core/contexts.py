@@ -191,13 +191,42 @@ class Step:
     
     def set_functions(self, functions: Union[str, List[str]]) -> 'Step':
         """
-        Set which functions are available in this step
-        
+        Set which non-internal functions are callable while this step is active.
+
+        IMPORTANT — inheritance behavior:
+            If you do NOT call this method, the step inherits whichever function
+            set was active on the previous step (or the previous context's last
+            step). The server-side runtime only resets the active set when a
+            step explicitly declares its `functions` field. This is by design,
+            but it is the most common source of bugs in multi-step agents:
+            forgetting set_functions() on a later step lets the previous step's
+            tools leak through.
+
+            Best practice: call set_functions() explicitly on every step that
+            should have a different toolset than the previous one.
+
         Args:
-            functions: "none" to disable all functions, or list of function names
-            
+            functions: One of:
+                - List[str]  — whitelist of function names allowed in this step.
+                              Functions not in the list become inactive.
+                - []         — explicit disable-all (no user functions callable).
+                - "none"     — synonym for [], same effect.
+
+        Internal functions (`startup_hook`, `hangup_hook`, `check_for_input`,
+        `summarize_conversation`, `gather_submit`, `get_ideal_strategy`) are
+        ALWAYS protected and cannot be deactivated by this whitelist.
+
+        The native navigation tools `next_step` and `change_context` are
+        injected automatically when valid_steps / valid_contexts is set; they
+        are not affected by this list and do not need to appear in it.
+
         Returns:
-            Self for method chaining
+            Self for method chaining.
+
+        Examples:
+            step.set_functions(["lookup_account", "check_balance"])  # whitelist
+            step.set_functions([])                                   # disable all
+            step.set_functions("none")                               # disable all (alt)
         """
         self._functions = functions
         return self
@@ -230,13 +259,25 @@ class Step:
     
     def set_end(self, end: bool) -> 'Step':
         """
-        Set whether the conversation should end after this step
+        Mark this step as terminal for the step flow.
+
+        IMPORTANT: `end=True` does NOT end the conversation or hang up the
+        call. It exits step mode entirely after this step executes — clearing
+        the steps list, current step index, valid_steps, and valid_contexts.
+        The agent keeps running, but operates only under the base system
+        prompt and the context-level prompt; no more step instructions are
+        injected and no more `next_step` tool is offered.
+
+        To actually end the call, call a hangup tool or define a hangup_hook.
+
+        Combine with `set_reset_*()` if you also want to reset/consolidate
+        the conversation when this step exits.
 
         Args:
-            end: Whether to end the conversation after this step
+            end: True to exit step mode after this step.
 
         Returns:
-            Self for method chaining
+            Self for method chaining.
         """
         self._end = end
         return self
@@ -303,16 +344,37 @@ class Step:
         Add a question to this step's gather_info configuration.
         set_gather_info() must be called before this method.
 
+        IMPORTANT — gather mode locks function access:
+            While the model is asking gather questions, the runtime forcibly
+            deactivates ALL of the step's other functions. The only callable
+            tools during a gather question are:
+
+              - `gather_submit` (the native answer-submission tool)
+              - Whatever names you list in this question's `functions` arg
+
+            `next_step` and `change_context` are also filtered out — the model
+            cannot navigate away until the gather completes. This is by design:
+            it forces a tight ask → submit → next-question loop.
+
+            If a question needs to call out to a tool (e.g. validate an email,
+            geocode a ZIP), list that tool name in this question's `functions`.
+            Functions listed here are active ONLY for this question.
+
         Args:
-            key: Key name for storing the answer in global_data
-            question: The question text to ask the user
-            type: JSON schema type for the answer param (default: "string")
-            confirm: If True, model must confirm answer with user before submitting
-            prompt: Extra instruction text appended for this question
-            functions: Additional function names to make visible for this question
+            key: Key name for storing the answer in global_data.
+            question: The question text the model is instructed to ask.
+            type: JSON schema type for the answer ("string", "integer",
+                "number", "boolean"). Default: "string".
+            confirm: If True, the model must read the answer back and obtain
+                explicit user confirmation before submitting (the gather_submit
+                schema gains a required `confirmed_by_user` parameter).
+            prompt: Extra instruction text appended after the question.
+            functions: Names of functions to unlock for this question only.
+                These are activated on top of `gather_submit`. All other step
+                functions remain locked out.
 
         Returns:
-            Self for method chaining
+            Self for method chaining.
         """
         if self._gather_info is None:
             raise ValueError("Must call set_gather_info() before add_gather_question()")
@@ -678,13 +740,33 @@ class Context:
     
     def set_isolated(self, isolated: bool) -> 'Context':
         """
-        Set whether to truncate conversation history when entering this context
-        
+        Mark this context as isolated — entering it wipes conversation history.
+
+        When `isolated=True` and the context is entered via change_context,
+        the runtime calls ai_conversation_restart() and the entire conversation
+        array is wiped. The model starts fresh with only the new context's
+        system_prompt + step instructions, with no memory of prior turns.
+
+        EXCEPTION — `reset` overrides the wipe:
+            If the context also has a `reset` configuration (set via the
+            Step.set_reset_*() methods on a step that switches into this
+            context, or via set_consolidate() / set_full_reset() on the
+            context itself), the wipe is skipped in favor of the reset
+            behavior. Use `reset` with `consolidate=True` to summarize prior
+            history into a single message instead of dropping it entirely.
+
+        Use cases:
+            - Switching to a sensitive billing flow that should not see
+              prior small-talk
+            - Handing off to a different agent persona
+            - Resetting after a long off-topic detour
+
         Args:
-            isolated: Whether to truncate conversation on context switch
-            
+            isolated: True to wipe conversation history on context entry
+                (subject to the reset exception above).
+
         Returns:
-            Self for method chaining
+            Self for method chaining.
         """
         self._isolated = isolated
         return self
@@ -929,9 +1011,64 @@ class Context:
         return context_dict
 
 
+#: Reserved tool names auto-injected by the runtime when contexts/steps are
+#: present. User-defined SWAIG tools must not collide with these names.
+RESERVED_NATIVE_TOOL_NAMES = frozenset({
+    "next_step",
+    "change_context",
+    "gather_submit",
+})
+
+
 class ContextBuilder:
-    """Main builder class for creating contexts and steps"""
-    
+    """Builder for multi-step, multi-context AI agent workflows.
+
+    A ContextBuilder owns one or more Contexts; each Context owns an ordered
+    list of Steps. Only one context and one step is active at a time. Per
+    chat turn, the runtime injects the current step's instructions as a
+    system message, then asks the LLM for a response.
+
+    Native tools auto-injected by the runtime
+    -----------------------------------------
+    When a step (or its enclosing context) declares `valid_steps` or
+    `valid_contexts`, the runtime auto-injects two native tools so the model
+    can navigate the flow:
+
+      - ``next_step(step: enum)``        — present when valid_steps is set
+      - ``change_context(context: enum)`` — present when valid_contexts is set
+
+    Their `enum` schemas are rewritten on every turn to match whatever
+    valid_steps / valid_contexts apply to the current step. You do NOT need
+    to define these tools yourself; they appear automatically.
+
+    A third native tool — ``gather_submit`` — is injected during gather_info
+    questioning (see Step.set_gather_info / add_gather_question).
+
+    These three names — ``next_step``, ``change_context``, ``gather_submit``
+    — are reserved. ContextBuilder.validate() will reject any agent that
+    defines a SWAIG tool with one of these names.
+
+    Function whitelisting (Step.set_functions)
+    ------------------------------------------
+    Each step may declare a `functions` whitelist. The whitelist is applied
+    in-memory at the start of each LLM turn. CRITICALLY: if a step does NOT
+    declare a `functions` field, it INHERITS the previous step's active set.
+    See Step.set_functions() for details and examples.
+
+    Validation
+    ----------
+    Call validate() (or to_dict(), which calls it) to check that:
+
+      - At least one context is defined
+      - A single context must be named "default"
+      - Every context has at least one step
+      - valid_steps references resolve to real step names (or "next")
+      - valid_contexts references resolve to real context names
+      - gather_info questions are non-empty and have unique keys
+      - gather_info completion_action targets a reachable step
+      - No user-defined SWAIG tool collides with a reserved native name
+    """
+
     def __init__(self, agent):
         self._agent = agent
         self._contexts: Dict[str, Context] = {}
@@ -1045,14 +1182,44 @@ class ContextBuilder:
                                 raise ValueError(
                                     f"Step '{step_name}' in context '{context_name}' "
                                     f"has gather_info completion_action='next_step' "
-                                    f"but it is the last step in the context"
+                                    f"but it is the last step in the context. Either "
+                                    f"(1) add another step after '{step_name}', "
+                                    f"(2) set completion_action to the name of an "
+                                    f"existing step in this context to jump to it, or "
+                                    f"(3) set completion_action=None (default) to stay "
+                                    f"in '{step_name}' after gathering completes."
                                 )
                         elif action not in context._steps:
+                            available = sorted(context._steps.keys())
                             raise ValueError(
                                 f"Step '{step_name}' in context '{context_name}' "
                                 f"has gather_info completion_action='{action}' "
-                                f"but step '{action}' does not exist in this context"
+                                f"but '{action}' is not a step in this context. "
+                                f"Valid options: 'next_step' (advance to the next "
+                                f"sequential step), None (stay in the current step), "
+                                f"or one of {available}."
                             )
+
+        # Validate that user-defined tools do not collide with reserved native
+        # tool names. The runtime auto-injects next_step / change_context /
+        # gather_submit when contexts/steps are present, so user tools sharing
+        # those names would never be called.
+        if self._agent is not None:
+            tool_registry = getattr(self._agent, "_tool_registry", None)
+            registered = getattr(tool_registry, "_swaig_functions", None) if tool_registry else None
+            # Only run the collision check against a real dict — test mocks
+            # pass Mock() instances and we don't want to misinterpret them.
+            if isinstance(registered, dict) and registered:
+                colliding = sorted(set(registered.keys()) & RESERVED_NATIVE_TOOL_NAMES)
+                if colliding:
+                    raise ValueError(
+                        f"Tool name(s) {colliding} collide with reserved native "
+                        f"tools auto-injected by contexts/steps. The names "
+                        f"{sorted(RESERVED_NATIVE_TOOL_NAMES)} are reserved and "
+                        f"cannot be used for user-defined SWAIG tools when "
+                        f"contexts/steps are in use. Rename your tool(s) to "
+                        f"avoid the collision."
+                    )
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert all contexts to dictionary for SWML generation"""
