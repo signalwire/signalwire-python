@@ -20,7 +20,26 @@ from signalwire.core.function_result import FunctionResult
 
 class SWAIGFunction:
     """
-    Represents a SWAIG function for AI integration
+    Represents a SWAIG function — i.e., a tool the AI model can call.
+
+    A SWAIG function is exactly the same concept as a "tool" in native
+    OpenAI / Anthropic tool calling. Each SWAIGFunction is rendered into
+    the OpenAI tool schema format and sent to the model on every turn:
+
+        {"type": "function", "function": {
+            "name":        self.name,
+            "description": self.description,
+            "parameters":  self.parameters,
+        }}
+
+    The model parses `description` (and the `description` inside each
+    parameter) to decide WHEN to call the tool and HOW to fill in the
+    arguments. Both fields are prompt-engineered text — the quality of
+    your descriptions directly drives tool-selection accuracy.
+
+    Use AgentBase.define_tool() to create one (it builds the
+    SWAIGFunction for you and registers it). Use the @agent.tool()
+    decorator for the same thing in class-based agents.
     """
     def __init__(
         self,
@@ -38,21 +57,36 @@ class SWAIGFunction:
         **extra_swaig_fields
     ):
         """
-        Initialize a new SWAIG function
+        Initialize a new SWAIG function.
 
         Args:
-            name: Name of the function to appear in SWML
-            handler: Function to call when this SWAIG function is invoked
-            description: Human-readable description of the function
-            parameters: Dictionary of parameters, keys are parameter names, values are param definitions
-            secure: Whether this function requires token validation
-            fillers: Optional dictionary of filler phrases by language code (deprecated, use wait_file)
-            wait_file: Optional URL to audio file to play while function executes
-            wait_file_loops: Optional number of times to loop the wait_file
-            webhook_url: Optional external webhook URL to use instead of local handling
-            required: Optional list of required parameter names
-            is_typed_handler: Whether the handler uses type-hinted parameters (auto-wrapped)
-            **extra_swaig_fields: Additional SWAIG fields to include in function definition
+            name: Function name. Becomes the `name` field in the OpenAI
+                tool schema sent to the model — what the model emits when
+                it decides to call this tool.
+            handler: Python callable invoked when the model calls this tool.
+            description: LLM-facing description. The model reads this on
+                every turn to decide whether to call the tool. Be specific
+                about WHEN to use it and what makes it the right choice
+                over sibling tools — vague descriptions are the most
+                common cause of "model has the right tool but doesn't
+                call it" failures.
+            parameters: JSON Schema for the arguments. Per-property
+                `description` strings inside the schema are also LLM-facing
+                — write them as instructions to the model on how to fill
+                in each argument.
+            secure: Whether this function requires SWAIG token validation.
+            fillers: Optional dictionary of filler phrases by language code
+                (deprecated, use wait_file).
+            wait_file: Optional URL to audio file to play while function
+                executes.
+            wait_file_loops: Optional number of times to loop the wait_file.
+            webhook_url: Optional external webhook URL to use instead of
+                local handling.
+            required: Optional list of required parameter names.
+            is_typed_handler: Whether the handler uses type-hinted parameters
+                (auto-wrapped).
+            **extra_swaig_fields: Additional SWAIG-only fields (meta_data_token,
+                web_hook_auth_*, etc.) to include in the generated definition.
         """
         self.name = name
         self.handler = handler

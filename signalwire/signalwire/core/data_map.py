@@ -81,43 +81,76 @@ class DataMap:
         
     def purpose(self, description: str) -> 'DataMap':
         """
-        Set the function description/purpose
-        
+        Set the function description that the LLM will read.
+
+        A DataMap creates a SWAIG function that gets sent to the model in
+        OpenAI tool-schema format. This `description` field is what the
+        model reads on every turn to decide WHEN to call the tool. It is
+        prompt-engineered text, not developer documentation:
+
+          - Bad:  "Search function"
+          - Good: "Search the company's knowledge base for help articles
+                  matching a user query. Use this when the user asks a
+                  product or how-to question that the base prompt does
+                  not cover."
+
+        Vague descriptions are the most common cause of "the model has
+        the right tool but doesn't call it" failures.
+
         Args:
-            description: Human-readable description of what this function does
-            
+            description: LLM-facing description of what this function does
+                and when to use it. See above.
+
         Returns:
-            Self for method chaining
+            Self for method chaining.
         """
         self._purpose = description
         return self
-    
+
     def description(self, description: str) -> 'DataMap':
         """
-        Set the function description (alias for purpose)
-        
+        Set the function description (alias for purpose).
+
+        See purpose() for guidance on writing description text the LLM
+        can act on.
+
         Args:
-            description: Human-readable description of what this function does
-            
+            description: LLM-facing description of what this function does
+                and when to use it.
+
         Returns:
-            Self for method chaining
+            Self for method chaining.
         """
         return self.purpose(description)
-    
-    def parameter(self, name: str, param_type: str, description: str, 
+
+    def parameter(self, name: str, param_type: str, description: str,
                  required: bool = False, enum: Optional[List[str]] = None) -> 'DataMap':
         """
-        Add a function parameter
-        
+        Add a function parameter.
+
+        Just like the function-level `description`, this parameter
+        `description` is sent to the LLM as part of the tool schema and
+        is read by the model when deciding HOW to fill in the argument.
+        Write it as an instruction to the model:
+
+          - Bad:  "the id"
+          - Good: "The customer's 8-digit account number, no dashes or
+                  spaces. Ask the user if they don't provide it."
+
         Args:
-            name: Parameter name
-            param_type: JSON schema type (string, number, boolean, array, object)
-            description: Parameter description
-            required: Whether parameter is required
-            enum: Optional list of allowed values
-            
+            name: Parameter name. Becomes a key in the tool schema's
+                `properties` object and is what the model emits.
+            param_type: JSON schema type (string, number, boolean, array,
+                object).
+            description: LLM-facing parameter description. See above —
+                this should tell the model what value to put here, in
+                what format, and where to source it.
+            required: Whether parameter is required.
+            enum: Optional list of allowed values. The model will only
+                emit values from this list.
+
         Returns:
-            Self for method chaining
+            Self for method chaining.
         """
         param_def = {
             "type": param_type,

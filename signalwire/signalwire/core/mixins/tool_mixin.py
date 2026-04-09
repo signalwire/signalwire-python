@@ -37,22 +37,113 @@ class ToolMixin:
         **swaig_fields
     ) -> 'AgentBase':
         """
-        Define a SWAIG function that the AI can call
+        Define a SWAIG function the AI can call.
+
+        How this becomes a tool the model sees
+        --------------------------------------
+        SWAIG functions are NOT a separate concept from "LLM tools" — they
+        ARE the tools, exposed to the model in exactly the same shape as
+        native OpenAI / Anthropic tool calling. Under the hood, the SDK
+        renders each SWAIG function into an OpenAI-format tool schema:
+
+            {"type": "function", "function": {
+                "name":        "<your name>",
+                "description": "<your description>",
+                "parameters":  {<your JSON schema>}
+            }}
+
+        That schema is sent to the model on every turn. The model reads
+        the `description` field and the per-parameter `description`
+        strings inside `parameters` to decide WHEN to call this tool and
+        HOW to fill in the arguments.
+
+        Treat description text as prompt engineering, not as developer
+        documentation:
+
+          - Bad:  "Lookup function"
+          - Bad:  "Internal helper for account fetching"
+          - Good: "Look up a customer's account details by their account
+                  number. Use this BEFORE quoting any account-specific
+                  information (balance, plan, status, billing date)."
+
+          - Bad parameter:  "the id"
+          - Good parameter: "The customer's account number, exactly 8
+                           digits, no dashes or spaces. Ask the user if
+                           they don't provide it."
+
+        Vague descriptions are the #1 cause of "the model has the right
+        tool but doesn't call it" failures. Be specific about WHEN to
+        use the tool, what makes it the right choice over alternatives,
+        and any preconditions on the arguments.
+
+        Tool count matters too: LLM tool selection accuracy degrades past
+        ~7-8 simultaneously-active tools per call. If you have many tools,
+        partition them across steps using Step.set_functions() so only
+        the relevant subset is active at any moment.
 
         Args:
-            name: Function name (must be unique)
-            description: Function description for the AI
-            parameters: JSON Schema of parameters
-            handler: Function to call when invoked
-            secure: Whether to require token validation
-            fillers: Optional dict mapping language codes to arrays of filler phrases
-            webhook_url: Optional external webhook URL to use instead of local handling
-            required: Optional list of required parameter names
-            is_typed_handler: Whether the handler uses type-hinted parameters
-            **swaig_fields: Additional SWAIG fields to include in function definition
+            name: Function name. Must be unique across all SWAIG functions
+                on this agent. Becomes the `name` field in the OpenAI tool
+                schema and is what the model emits when it picks this tool.
+                Use snake_case; the model picks up naming conventions from
+                this field too.
+            description: The function description as the LLM will read it.
+                See above — this is prompt-engineered text, not internal
+                docs. Explain what the tool does, when to use it, and what
+                NOT to use it for if there are sibling tools the model
+                might confuse it with.
+            parameters: JSON Schema for the function's arguments. The
+                per-property `description` fields inside the schema are
+                also LLM-facing — give every parameter a description that
+                tells the model how to fill it in (format, source,
+                constraints).
+            handler: Python callable invoked when the model calls this
+                tool. Receives parsed args and the raw request data.
+                Should return a FunctionResult or dict; anything else
+                logs a warning and is stringified.
+            secure: Whether to require SWAIG token validation on the
+                webhook callback.
+            fillers: Optional dict mapping language codes to arrays of
+                filler phrases the AI speaks while the function executes.
+                Format: {"en-US": ["one moment...", "checking..."]}
+            webhook_url: Optional external webhook URL. If set, the SDK
+                does not handle the call locally — the model's tool call
+                is forwarded to this URL.
+            required: Optional list of required parameter names. May also
+                be set inside `parameters["required"]`.
+            is_typed_handler: Whether the handler uses type-hinted
+                parameters (auto-wrapped from inferred schema).
+            **swaig_fields: Additional SWAIG-only fields (e.g.
+                meta_data_token, web_hook_auth_user) included in the
+                generated function definition.
 
         Returns:
-            Self for method chaining
+            Self for method chaining.
+
+        Example:
+            agent.define_tool(
+                name="lookup_account",
+                description=(
+                    "Look up a customer's account details by their account "
+                    "number. Use this BEFORE quoting any account-specific "
+                    "information. Do not call it for general questions about "
+                    "the product."
+                ),
+                parameters={
+                    "type": "object",
+                    "properties": {
+                        "account_number": {
+                            "type": "string",
+                            "description": (
+                                "The customer's 8-digit account number, "
+                                "no dashes. Ask the user if not provided."
+                            ),
+                        }
+                    },
+                    "required": ["account_number"],
+                },
+                handler=self.handle_lookup_account,
+            )
         """
         self._tool_registry.define_tool(
             name=name,

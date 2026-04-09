@@ -245,6 +245,39 @@ Analyze the conversation and extract:
 
 SWAIG (SignalWire AI Gateway) functions allow the AI agent to perform actions and access external systems during a call. The AI decides when to call a function based on the conversation; SWAIG handles invocation, parameter passing, and delivering the result back to the AI. There are two types of SWAIG functions you can define:
 
+### SWAIG functions ARE LLM tools — descriptions matter
+
+Before writing your first SWAIG function, internalize this: a SWAIG function is **exactly the same concept** as a "tool" in native OpenAI / Anthropic tool calling. There is no separate "SWAIG layer" between your function and the model. Each SWAIG function is rendered into the OpenAI tool schema format on every turn:
+
+```json
+{
+  "type": "function",
+  "function": {
+    "name":        "your_function_name",
+    "description": "your description text",
+    "parameters":  { /* your JSON schema */ }
+  }
+}
+```
+
+That schema is sent to the model as part of the same API call that produces the next assistant message. The model reads:
+
+- the **function `description`** to decide WHEN to call this tool
+- the **per-parameter `description` strings** inside `parameters` to decide HOW to fill in each argument
+
+This means **descriptions are prompt engineering**, not developer documentation. They are not a comment for the next human reading the code — they are instructions to the LLM that directly determine whether the model picks your tool when the user's request matches it.
+
+Compare:
+
+| Bad (model often misses the tool) | Good (model picks it reliably) |
+|---|---|
+| `description="Lookup function"` | `description="Look up a customer's account details by their account number. Use this BEFORE quoting any account-specific information (balance, plan, status, billing date). Don't use it for general product questions."` |
+| `description="the id"` (parameter) | `description="The customer's 8-digit account number, no dashes or spaces. Ask the user if they don't provide it."` |
+
+A vague description is the #1 cause of "the model has the right tool but doesn't call it" failures. When you find yourself debugging why the model isn't picking a tool that obviously matches the user's request, the first thing to check is whether the description tells the model — in plain language — when to use it and what makes it the right choice over sibling tools.
+
+**Tool count matters too.** LLM tool selection accuracy degrades noticeably past ~7-8 simultaneously-active tools per call. If you have many tools, partition them across steps using `Step.set_functions()` so only the relevant subset is active at any moment. See `contexts_guide.md` for the per-step whitelist mechanism.
+
 ### 1. Local Webhook Functions (Standard)
 
 These are the traditional SWAIG functions that are handled locally by your agent:

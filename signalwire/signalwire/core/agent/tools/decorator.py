@@ -35,11 +35,49 @@ class ToolDecorator:
             """
             Decorator for defining SWAIG tools in a class.
 
+            A SWAIG tool is exactly the same concept as an OpenAI/Anthropic
+            tool: the function's name, description, and parameter schema
+            are sent to the model on every turn, and the model decides
+            when to call it based on those fields. The `description`
+            kwarg (or the function's docstring as a fallback) and the
+            per-parameter description strings inside `parameters` are
+            ALL read by the LLM — they are prompt engineering, not just
+            developer notes.
+
             Used as:
 
-            @agent.tool(name="example_function", parameters={...})
-            def example_function(self, param1):
-                # ...
+                @agent.tool(
+                    name="lookup_account",
+                    description=(
+                        "Look up a customer's account by account number. "
+                        "Use this BEFORE quoting any account-specific info. "
+                        "Don't use it for general product questions."
+                    ),
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "account_number": {
+                                "type": "string",
+                                "description": (
+                                    "The customer's 8-digit account number, "
+                                    "no dashes."
+                                ),
+                            }
+                        },
+                        "required": ["account_number"],
+                    },
+                )
+                def lookup_account(self, args, raw_data):
+                    ...
+
+            If you omit `description`, the function's docstring is used —
+            so write the docstring with the model in mind, not just other
+            developers. If you omit `parameters` entirely and use type
+            hints, the schema is inferred but you should still pass good
+            descriptions via Annotated[type, "description"] or similar.
+
+            See AgentBase.define_tool() for the full description-writing
+            guidance.
             """
             def inner_decorator(func):
                 nonlocal name
@@ -102,12 +140,35 @@ class ToolDecorator:
         def tool(name=None, **kwargs):
             """
             Class method decorator for defining SWAIG tools.
-            
+
+            See AgentBase.define_tool() for the full guidance on writing
+            descriptions. The short version: a SWAIG tool is exactly the
+            same concept as an OpenAI tool — the model reads `description`
+            (and per-parameter descriptions) on every turn to decide when
+            to call this function. Treat those strings as prompt
+            engineering, not as developer notes.
+
             Used as:
-            
-            @AgentBase.tool(name="example_function", parameters={...})
-            def example_function(self, param1):
-                # ...
+
+                @AgentBase.tool(
+                    name="lookup_account",
+                    description=(
+                        "Look up a customer's account by number. Use BEFORE "
+                        "quoting account-specific info."
+                    ),
+                    parameters={
+                        "type": "object",
+                        "properties": {
+                            "account_number": {
+                                "type": "string",
+                                "description": "Customer's 8-digit account number",
+                            }
+                        },
+                        "required": ["account_number"],
+                    },
+                )
+                def lookup_account(self, args, raw_data):
+                    ...
             """
             def decorator(func):
                 # Mark the function as a tool
