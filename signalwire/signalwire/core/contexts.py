@@ -574,6 +574,7 @@ class Context:
         self._step_order: List[str] = []
         self._valid_contexts: Optional[List[str]] = None
         self._valid_steps: Optional[List[str]] = None
+        self._initial_step: Optional[str] = None
 
         # Context entry parameters
         self._post_prompt: Optional[str] = None
@@ -583,11 +584,11 @@ class Context:
         self._full_reset: bool = False
         self._user_prompt: Optional[str] = None
         self._isolated: bool = False
-        
+
         # Context prompt (separate from system_prompt)
         self._prompt_text: Optional[str] = None
         self._prompt_sections: List[Dict[str, Any]] = []
-        
+
         # Context fillers
         self._enter_fillers: Optional[Dict[str, List[str]]] = None
         self._exit_fillers: Optional[Dict[str, List[str]]] = None
@@ -717,6 +718,36 @@ class Context:
             Self for method chaining
         """
         self._valid_steps = steps
+        return self
+
+    def set_initial_step(self, step_name: str) -> 'Context':
+        """
+        Set which step the context starts on when entered.
+
+        By default, a context starts on its first step (index 0). If the
+        context has a preamble step that should only run on first entry
+        (e.g. a greeting), later entries via ``change_context`` can skip
+        it by setting ``initial_step`` to the name of the step to start
+        from instead.
+
+        ``initial_step`` is honoured both at conversation creation (when
+        the context is first activated) and when switching to this context
+        via ``change_context`` during the conversation.
+
+        Args:
+            step_name: Name of the step to start on. Must exist in this
+                context's step list; validated by ContextBuilder.validate().
+
+        Returns:
+            Self for method chaining.
+
+        Example:
+            ctx = contexts.add_context("support")
+            ctx.add_step("greeting").set_text("Welcome!")
+            ctx.add_step("triage").set_text("What do you need help with?")
+            ctx.set_initial_step("triage")  # skip greeting on re-entry
+        """
+        self._initial_step = step_name
         return self
 
     def set_post_prompt(self, post_prompt: str) -> 'Context':
@@ -1021,6 +1052,9 @@ class Context:
         if self._valid_steps is not None:
             context_dict["valid_steps"] = self._valid_steps
 
+        if self._initial_step is not None:
+            context_dict["initial_step"] = self._initial_step
+
         # Add context entry parameters
         if self._post_prompt is not None:
             context_dict["post_prompt"] = self._post_prompt
@@ -1170,7 +1204,17 @@ class ContextBuilder:
         for context_name, context in self._contexts.items():
             if not context._steps:
                 raise ValueError(f"Context '{context_name}' must have at least one step")
-        
+
+        # Validate initial_step references a real step in the context
+        for context_name, context in self._contexts.items():
+            if context._initial_step is not None:
+                if context._initial_step not in context._steps:
+                    available = sorted(context._steps.keys())
+                    raise ValueError(
+                        f"Context '{context_name}' has initial_step='{context._initial_step}' "
+                        f"but that step does not exist. Available steps: {available}"
+                    )
+
         # Validate step references in valid_steps
         for context_name, context in self._contexts.items():
             for step_name, step in context._steps.items():

@@ -1338,3 +1338,40 @@ class TestImprovedCompletionActionErrorMessage:
             # Should enumerate the legal options
             assert "alpha" in msg
             assert "beta" in msg
+
+
+class TestInitialStep:
+    """Tests for Context.set_initial_step and its to_dict / validation."""
+
+    def _make_builder(self):
+        return ContextBuilder(Mock())
+
+    def test_set_initial_step_round_trips_to_dict(self):
+        ctx = Context("default")
+        ctx.add_step("greeting").set_text("Hello")
+        ctx.add_step("triage").set_text("What?")
+        ctx.set_initial_step("triage")
+        d = ctx.to_dict()
+        assert d["initial_step"] == "triage"
+
+    def test_omitted_initial_step_absent_from_dict(self):
+        ctx = Context("default")
+        ctx.add_step("greeting").set_text("Hello")
+        d = ctx.to_dict()
+        assert "initial_step" not in d
+
+    def test_validation_accepts_valid_initial_step(self):
+        builder = self._make_builder()
+        ctx = builder.add_context("default")
+        ctx.add_step("a").set_text("A")
+        ctx.add_step("b").set_text("B")
+        ctx.set_initial_step("b")
+        builder.validate()  # should not raise
+
+    def test_validation_rejects_invalid_initial_step(self):
+        builder = self._make_builder()
+        ctx = builder.add_context("default")
+        ctx.add_step("a").set_text("A")
+        ctx.set_initial_step("nonexistent")
+        with pytest.raises(ValueError, match="initial_step='nonexistent'"):
+            builder.validate()
