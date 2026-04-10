@@ -148,12 +148,35 @@ class PromptMixin:
     def contexts(self) -> 'ContextBuilder':
         """
         Get the ContextBuilder for this agent
-        
+
         Returns:
             ContextBuilder instance for defining contexts
         """
         return self.define_contexts()
-    
+
+    def reset_contexts(self) -> 'AgentBase':
+        """
+        Remove all contexts, returning the agent to a no-contexts state.
+
+        This is a convenience wrapper around ``define_contexts().reset()``.
+        Use it in a dynamic config callback when you need to rebuild
+        contexts from scratch for a specific request.
+
+        Returns:
+            Self for method chaining.
+
+        Example::
+
+            def on_dynamic_config(query, body, headers, agent):
+                if query.get("transfer"):
+                    agent.reset_contexts()
+                    ctx = agent.define_contexts().add_context("default")
+                    ctx.add_step("route").set_text("Route the caller.")
+        """
+        if self._contexts_builder is not None:
+            self._contexts_builder.reset()
+        return self
+
     def _validate_prompt_mode_exclusivity(self):
         """
         Validate that POM sections and raw text are not mixed in the main prompt

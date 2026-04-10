@@ -1375,3 +1375,43 @@ class TestInitialStep:
         ctx.set_initial_step("nonexistent")
         with pytest.raises(ValueError, match="initial_step='nonexistent'"):
             builder.validate()
+
+
+class TestContextBuilderReset:
+    """Tests for ContextBuilder.reset() and AgentBase.reset_contexts()."""
+
+    def _make_builder(self):
+        agent = Mock()
+        agent._tool_registry = None
+        return ContextBuilder(agent)
+
+    def test_reset_clears_all_contexts(self):
+        builder = self._make_builder()
+        builder.add_context("default").add_step("s").set_text("T")
+        assert len(builder._contexts) > 0
+        builder.reset()
+        assert len(builder._contexts) == 0
+        assert len(builder._context_order) == 0
+
+    def test_reset_returns_self(self):
+        builder = self._make_builder()
+        result = builder.reset()
+        assert result is builder
+
+    def test_reset_allows_rebuilding(self):
+        builder = self._make_builder()
+        builder.add_context("default").add_step("s1").set_text("First")
+        builder.reset()
+        ctx = builder.add_context("default")
+        ctx.add_step("s2").set_text("Second")
+        builder.validate()  # should not raise
+        result = builder.to_dict()
+        # steps in to_dict is a list of step dicts
+        step_names = [s["name"] for s in result["default"]["steps"]]
+        assert "s2" in step_names
+        assert "s1" not in step_names
+
+    def test_reset_on_empty_builder(self):
+        builder = self._make_builder()
+        builder.reset()  # should not raise
+        assert len(builder._contexts) == 0

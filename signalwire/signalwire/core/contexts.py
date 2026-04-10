@@ -1155,7 +1155,30 @@ class ContextBuilder:
         self._agent = agent
         self._contexts: Dict[str, Context] = {}
         self._context_order: List[str] = []
-    
+
+    def reset(self) -> 'ContextBuilder':
+        """
+        Remove all contexts, returning the builder to its initial state.
+
+        Use this in a dynamic config callback when you need to rebuild
+        contexts from scratch for a specific request — e.g. skipping a
+        greeting context on transfers.
+
+        Returns:
+            Self for method chaining.
+
+        Example::
+
+            def on_dynamic_config(query, body, headers, agent):
+                if query.get("transfer"):
+                    agent.define_contexts().reset()
+                    ctx = agent.define_contexts().add_context("default")
+                    ctx.add_step("route").set_text("Route the caller.")
+        """
+        self._contexts.clear()
+        self._context_order.clear()
+        return self
+
     def add_context(self, name: str) -> Context:
         """
         Add a new context
