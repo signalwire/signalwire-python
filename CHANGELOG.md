@@ -1,5 +1,9 @@
 # Changelog
 
+## [3.0.0] - 2026-04-12
+
+- Version bump
+
 ## [1.1.0] - 2026-03-17
 
 - Version bump

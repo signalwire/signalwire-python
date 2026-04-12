@@ -220,7 +220,7 @@ Skills are pluggable capabilities loaded via `SkillManager` and discovered throu
 
 ## Version Management
 
-Version is tracked in three places (keep in sync): `pyproject.toml`, `signalwire/__init__.py`, and `signalwire/agent_server.py`. Use `version_bump.py` for bumping.
+Version is tracked in three places (keep in sync): `pyproject.toml`, `signalwire/signalwire/__init__.py`, and `signalwire/signalwire/agent_server.py` (the FastAPI app `version=` kwarg in `AgentServer.__init__`).
 
 ## Environment Variables
 

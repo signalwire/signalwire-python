@@ -7,7 +7,6 @@ omit =
     */venv/*
     */env/*
     setup.py
-    version_bump.py
     */examples/*
     */docs/*
 
