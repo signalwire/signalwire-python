@@ -1,4 +1,4 @@
-# SignalWire AI Agents SDK vs. LiveKit Agents: Comprehensive Framework Comparison
+# SignalWire SDK vs. LiveKit Agents: Comprehensive Framework Comparison
 
 **Internal Engineering Analysis**
 **Date:** February 2026
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This document provides an unbiased technical comparison between the **SignalWire AI Agents SDK** and **LiveKit Agents** (by LiveKit Inc.), two open-source Python frameworks for building voice AI agents. While architecturally different -- SignalWire uses declarative SWML (SignalWire Markup Language) document generation executed by a full-featured telecom platform, while LiveKit uses an imperative room-based model where agents join WebRTC rooms as participants -- both solve the fundamental problem of enabling developers to build conversational AI agents that interact via voice.
+This document provides an unbiased technical comparison between the **SignalWire SDK** and **LiveKit Agents** (by LiveKit Inc.), two open-source Python frameworks for building voice AI agents. While architecturally different -- SignalWire uses declarative SWML (SignalWire Markup Language) document generation executed by a full-featured telecom platform, while LiveKit uses an imperative room-based model where agents join WebRTC rooms as participants -- both solve the fundamental problem of enabling developers to build conversational AI agents that interact via voice.
 
 LiveKit is the better-funded and higher-profile competitor, with $182.5M in funding, a $1B valuation, and OpenAI as a customer (powering ChatGPT Voice Mode). Its agent framework has 9,300+ GitHub stars and 1M+ monthly downloads. The core server has 17,100+ stars. LiveKit Cloud offers a managed deployment path with phone numbers, SIP trunking, and an inference API.
 
@@ -282,7 +282,7 @@ LiveKit tools return data to the LLM but cannot directly control call behavior, 
 
 ## 4. Strengths Analysis
 
-### 4.1 SignalWire AI Agents SDK Strengths
+### 4.1 SignalWire SDK Strengths
 
 1. **Dramatically Lower Complexity** -- A functional agent can be created in 6 lines of Python. The declarative approach means developers describe *what* they want, not *how* to wire it together. LiveKit requires ~18 lines minimum, explicit provider selection with API keys, and a running LiveKit server.
 
@@ -414,7 +414,7 @@ LiveKit tools return data to the LLM but cannot directly control call behavior, 
 
 ## 5. Weaknesses Analysis
 
-### 5.1 SignalWire AI Agents SDK Weaknesses
+### 5.1 SignalWire SDK Weaknesses
 
 1. **Low Open-Source Visibility** -- 39 GitHub stars vs. LiveKit's combined 26K+. PyPI downloads are ~322x lower. This is an even larger gap than with Pipecat. LiveKit's OpenAI partnership and $1B valuation create a perception of industry leadership.
 

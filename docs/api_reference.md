@@ -1,6 +1,6 @@
-# SignalWire AI Agents SDK - Complete API Reference
+# SignalWire SDK - Complete API Reference
 
-This document provides a comprehensive reference for all public APIs in the SignalWire AI Agents SDK.
+This document provides a comprehensive reference for all public APIs in the SignalWire SDK.
 
 ## Table of Contents
 
@@ -3339,4 +3339,4 @@ if __name__ == "__main__":
     agent.run()
 ```
 
-This concludes the complete API reference for the SignalWire AI Agents SDK. The SDK provides a comprehensive framework for building sophisticated AI agents with modular capabilities, structured workflows, persistent state, and deployment across multiple environments.
+This concludes the complete API reference for the SignalWire SDK. The SDK provides a comprehensive framework for building sophisticated AI agents with modular capabilities, structured workflows, persistent state, and deployment across multiple environments.

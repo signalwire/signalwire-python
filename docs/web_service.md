@@ -1,6 +1,6 @@
 # WebService Documentation
 
-The `WebService` class provides static file serving capabilities for the SignalWire AI Agents SDK. It follows the same architectural pattern as `SearchService`, allowing it to run as a standalone service or alongside your AI agents.
+The `WebService` class provides static file serving capabilities for the SignalWire SDK. It follows the same architectural pattern as `SearchService`, allowing it to run as a standalone service or alongside your AI agents.
 
 ## Table of Contents
 - [Overview](#overview)
@@ -33,7 +33,7 @@ WebService is designed to serve static files with configurable security features
 
 ## Installation
 
-WebService is included in the core SignalWire AI Agents SDK:
+WebService is included in the core SignalWire SDK:
 
 ```bash
 pip install signalwire-agents
@@ -674,4 +674,4 @@ if __name__ == "__main__":
 
 ## Summary
 
-WebService provides a secure, configurable static file server that integrates with the SignalWire AI Agents SDK. It follows the same architectural patterns as other SDK services, making it familiar and easy to use while providing configurable security features and flexible deployment options.
+WebService provides a secure, configurable static file server that integrates with the SignalWire SDK. It follows the same architectural patterns as other SDK services, making it familiar and easy to use while providing configurable security features and flexible deployment options.

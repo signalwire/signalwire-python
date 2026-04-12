@@ -1,6 +1,6 @@
 # Skills Parameter Schema System
 
-This guide explains the parameter schema system for SignalWire AI Agents SDK skills, which enables GUI configuration tools and programmatic skill discovery.
+This guide explains the parameter schema system for SignalWire SDK skills, which enables GUI configuration tools and programmatic skill discovery.
 
 ## Overview
 

@@ -1,6 +1,6 @@
 # Third-Party Skills Integration Guide
 
-This guide explains how to create and integrate third-party skills with the SignalWire AI Agents SDK. The SDK supports multiple methods for loading external skills, making it easy to extend agent capabilities without modifying the core SDK.
+This guide explains how to create and integrate third-party skills with the SignalWire SDK. The SDK supports multiple methods for loading external skills, making it easy to extend agent capabilities without modifying the core SDK.
 
 ## Overview
 

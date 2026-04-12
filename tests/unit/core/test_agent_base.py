@@ -1,7 +1,7 @@
 """
 Copyright (c) 2025 SignalWire
 
-This file is part of the SignalWire AI Agents SDK.
+This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
@@ -65,13 +65,6 @@ class TestAgentBaseInitialization:
         assert agent._use_pom is False
         assert agent.pom is None
         assert agent.native_functions == ["func1", "func2"]
-
-    def test_initialization_with_pom_import_error(self):
-        """Test AgentBase initialization with POM import error"""
-        with patch('builtins.__import__', side_effect=ImportError("No module named 'signalwire_pom'")):
-            with pytest.raises(ImportError, match="No module named 'signalwire_pom'"):
-                self._create_mock_agent(name="test_agent", use_pom=True)
-
 
 class TestAgentBasePromptMethods:
     """Test AgentBase prompt-related methods"""

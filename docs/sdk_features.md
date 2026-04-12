@@ -1,4 +1,4 @@
-# SignalWire AI Agents SDK: Why the SDK, Not Raw SWML
+# SignalWire SDK: Why the SDK, Not Raw SWML
 
 ## The Problem with Raw SWML
 

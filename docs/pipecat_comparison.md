@@ -1,4 +1,4 @@
-# SignalWire AI Agents SDK vs. Pipecat: Comprehensive Framework Comparison
+# SignalWire SDK vs. Pipecat: Comprehensive Framework Comparison
 
 **Internal Engineering Analysis**
 **Date:** February 2026
@@ -8,7 +8,7 @@
 
 ## Executive Summary
 
-This document provides an unbiased technical comparison between the **SignalWire AI Agents SDK** and **Pipecat** (by Daily.co), the two leading open-source Python frameworks for building voice AI agents. While architecturally different -- SignalWire uses declarative SWML (SignalWire Markup Language) document generation executed by a full-featured telecom platform, while Pipecat uses imperative frame-based pipelines -- both solve the fundamental problem of enabling developers to build conversational AI agents that interact via voice.
+This document provides an unbiased technical comparison between the **SignalWire SDK** and **Pipecat** (by Daily.co), the two leading open-source Python frameworks for building voice AI agents. While architecturally different -- SignalWire uses declarative SWML (SignalWire Markup Language) document generation executed by a full-featured telecom platform, while Pipecat uses imperative frame-based pipelines -- both solve the fundamental problem of enabling developers to build conversational AI agents that interact via voice.
 
 The analysis identifies specific strengths and gaps in both frameworks, and proposes actionable improvements for the SignalWire solution that adapt Pipecat's best ideas to our declarative architecture. Crucially, this analysis considers the **full SignalWire platform capabilities** (SWML verbs, SWAIG -- SignalWire AI Gateway, the platform's tool-calling system -- actions, built-in functions, post-prompt analytics, debug webhooks, relay events, video avatars, PGI methodology) -- not just the Python SDK surface -- since the SDK generates documents that the platform executes with a rich feature set.
 
@@ -256,7 +256,7 @@ SignalWire's SWAIG provides 20+ actions that tools can return to control call be
 
 ## 4. Strengths Analysis
 
-### 4.1 SignalWire AI Agents SDK Strengths
+### 4.1 SignalWire SDK Strengths
 
 1. **Dramatically Lower Complexity** -- A functional agent can be created in 6 lines of Python. The declarative approach means developers describe *what* they want, not *how* to wire it together. This is the single biggest advantage.
 
@@ -397,7 +397,7 @@ SignalWire's SWAIG provides 20+ actions that tools can return to control call be
 
 ## 5. Weaknesses Analysis
 
-### 5.1 SignalWire AI Agents SDK Weaknesses
+### 5.1 SignalWire SDK Weaknesses
 
 1. **Low Open-Source Visibility** -- 39 GitHub stars vs. 10,300 is a 264x gap. PyPI downloads are 143x lower. Regardless of technical merit, this affects hiring, contributor recruitment, and enterprise adoption decisions.
 

@@ -1,12 +1,12 @@
-# Building Advanced AI Voice Agents with the SignalWire AI Agents SDK
+# Building Advanced AI Voice Agents with the SignalWire SDK
 
 [TOC]
 
 ## 1. Introduction
 
-### What is the SignalWire AI Agents SDK
+### What is the SignalWire SDK
 
-The SignalWire AI Agents SDK is a Python framework that provides developers with powerful tools to create, deploy, and manage conversational AI agents with minimal effort. Unlike generic AI tools that require significant customization for voice applications, this SDK is purpose-built for creating voice-centric AI agents that can understand spoken language, respond naturally, and execute complex workflows.
+The SignalWire SDK is a Python framework that provides developers with powerful tools to create, deploy, and manage conversational AI agents with minimal effort. Unlike generic AI tools that require significant customization for voice applications, this SDK is purpose-built for creating voice-centric AI agents that can understand spoken language, respond naturally, and execute complex workflows.
 
 At its core, the SDK enables you to create self-contained AI agents as microservices, each with its own personality, capabilities, and endpoints. These agents can handle telephone calls, respond to user queries, perform actions through custom functions, and maintain context throughout conversations. The SDK abstracts away the complexities of prompt engineering, web service configuration, and conversation flow management, allowing developers to focus on designing the agent's behavior and business logic.
 
@@ -42,7 +42,7 @@ In customer engagement specifically, voice AI can transform key touchpoints thro
 
 ### Key Features and Benefits
 
-The SignalWire AI Agents SDK offers several distinctive features that set it apart from general-purpose AI frameworks:
+The SignalWire SDK offers several distinctive features that set it apart from general-purpose AI frameworks:
 
 **Self-Contained Agents**: Each agent functions as both a web application and an AI persona, complete with its own HTTP endpoints, personality, and specialized capabilities. This modular approach allows for clear separation of concerns and simplified deployment.
 
@@ -95,7 +95,7 @@ sw-search docs/ --output knowledge.swsearch
 
 **Multi-Agent Orchestration**: Multiple specialized agents can be hosted on a single server, with routing mechanisms to direct users to the appropriate agent based on their needs.
 
-The benefits of using the SignalWire AI Agents SDK include:
+The benefits of using the SignalWire SDK include:
 
 - **Dramatically Reduced Development Time**: Skills system eliminates 80% of common function implementations
 - **Zero Infrastructure for API Tools**: DataMap tools run on SignalWire's servers without webhook setup
@@ -109,7 +109,7 @@ In the following sections, we'll explore the architecture of the SDK, walk throu
 
 ## 2. Understanding the Architecture
 
-The SignalWire AI Agents SDK embodies a sophisticated architectural design that prioritizes both developer productivity and production scalability. Rather than forcing developers to choose between simplicity and power, the SDK provides a layered architecture where common tasks are effortless while advanced customization remains fully accessible.
+The SignalWire SDK embodies a sophisticated architectural design that prioritizes both developer productivity and production scalability. Rather than forcing developers to choose between simplicity and power, the SDK provides a layered architecture where common tasks are effortless while advanced customization remains fully accessible.
 
 ### Architectural Philosophy
 
@@ -467,7 +467,7 @@ This architectural foundation enables developers to build voice AI applications 
 
 ### Installation Options
 
-The SignalWire AI Agents SDK offers flexible installation options depending on your requirements:
+The SignalWire SDK offers flexible installation options depending on your requirements:
 
 **Basic Installation**
 
@@ -2041,7 +2041,7 @@ Now that you've built a basic agent, let's explore advanced customization option
 
 ### Prompt Building with POM
 
-The Prompt Object Model (POM) is a key feature of the SignalWire AI Agents SDK that allows for structured, maintainable prompt construction. While we used some basic POM capabilities in our simple agent, the full power of POM offers much more flexibility:
+The Prompt Object Model (POM) is a key feature of the SignalWire SDK that allows for structured, maintainable prompt construction. While we used some basic POM capabilities in our simple agent, the full power of POM offers much more flexibility:
 
 #### Section Types and Organization
 
@@ -2112,7 +2112,7 @@ self.prompt_add_section("Instructions", bullets=[
 
 ### Adding Multilingual Support
 
-One of the powerful features of the SignalWire AI Agents SDK is built-in multilingual support. This allows your agent to communicate with users in their preferred language, providing a more inclusive and personalized experience.
+One of the powerful features of the SignalWire SDK is built-in multilingual support. This allows your agent to communicate with users in their preferred language, providing a more inclusive and personalized experience.
 
 #### Configuring Multiple Languages
 
@@ -2280,7 +2280,7 @@ These parameters allow you to create conversational experiences tailored to spec
 
 ### Handling State and Context
 
-The SignalWire AI Agents SDK follows a **stateless-first design philosophy**. By default, agents do not maintain persistent state, making them highly scalable and suitable for microservice deployments. However, when state management is needed, the platform provides built-in mechanisms through SWAIG.
+The SignalWire SDK follows a **stateless-first design philosophy**. By default, agents do not maintain persistent state, making them highly scalable and suitable for microservice deployments. However, when state management is needed, the platform provides built-in mechanisms through SWAIG.
 
 #### Understanding Stateless Design
 
@@ -2474,7 +2474,7 @@ This approach combines the benefits of stateless design with the flexibility of 
 
 ## 9. SWAIG Functions: When to Use Custom Functions
 
-SWAIG (SignalWire AI Gateway) functions are one of the most powerful features of the SignalWire AI Agents SDK. They allow your AI agent to go beyond simple conversation by providing the ability to execute code, access external systems, and perform actions on behalf of the user. In this section, we'll dive deeper into how to define, implement, and leverage SWAIG functions effectively.
+SWAIG (SignalWire AI Gateway) functions are one of the most powerful features of the SignalWire SDK. They allow your AI agent to go beyond simple conversation by providing the ability to execute code, access external systems, and perform actions on behalf of the user. In this section, we'll dive deeper into how to define, implement, and leverage SWAIG functions effectively.
 
 ### Understanding SWAIG Functions
 
@@ -2830,7 +2830,7 @@ These fillers make the conversation feel more natural during delays, especially 
 
 ## 10. Prefab Agents: Ready-to-Use Solutions
 
-The SignalWire AI Agents SDK includes several pre-built "prefab" agents that provide ready-to-use implementations for common use cases. These prefabs can significantly accelerate your development process, allowing you to deploy fully functional agents with minimal code. In this section, we'll explore the available prefab agents, how to configure them, and strategies for extending them to meet your specific needs.
+The SignalWire SDK includes several pre-built "prefab" agents that provide ready-to-use implementations for common use cases. These prefabs can significantly accelerate your development process, allowing you to deploy fully functional agents with minimal code. In this section, we'll explore the available prefab agents, how to configure them, and strategies for extending them to meet your specific needs.
 
 ### InfoGathererAgent for Structured Data Collection
 
@@ -3850,7 +3850,7 @@ By following these patterns and practices, you can build voice AI agents that no
 
 ## 12. Real-World Examples
 
-Understanding the SignalWire AI Agents SDK through practical examples helps bridge the gap between conceptual knowledge and real-world implementation. These examples demonstrate complete, production-ready solutions that combine multiple SDK features to solve common business challenges.
+Understanding the SignalWire SDK through practical examples helps bridge the gap between conceptual knowledge and real-world implementation. These examples demonstrate complete, production-ready solutions that combine multiple SDK features to solve common business challenges.
 
 ### E-Commerce Customer Service Agent
 
@@ -4553,11 +4553,11 @@ class LoanApplicationAgent(AgentBase):
             return SwaigFunctionResult("I had trouble with that calculation. Could you verify the loan amount and terms?")
 ```
 
-These examples demonstrate how the SignalWire AI Agents SDK can be used to build sophisticated, production-ready applications that handle real business requirements while maintaining excellent user experiences.
+These examples demonstrate how the SignalWire SDK can be used to build sophisticated, production-ready applications that handle real business requirements while maintaining excellent user experiences.
 
 ## 13. Conclusion
 
-The SignalWire AI Agents SDK represents a fundamental shift in how conversational AI applications are built and deployed. What traditionally required months of infrastructure development, complex integrations, and specialized expertise can now be accomplished in days using the SDK's Skills System, DataMap tools, and comprehensive agent framework.
+The SignalWire SDK represents a fundamental shift in how conversational AI applications are built and deployed. What traditionally required months of infrastructure development, complex integrations, and specialized expertise can now be accomplished in days using the SDK's Skills System, DataMap tools, and comprehensive agent framework.
 
 ### The Transformation of Voice AI Development
 
@@ -4627,7 +4627,7 @@ But perhaps most importantly, they free human workers to focus on the aspects of
 
 ### Final Thoughts
 
-The SignalWire AI Agents SDK provides the tools needed to build sophisticated voice AI applications, but tools alone don't create great user experiences. The most successful implementations will combine technical capability with deep understanding of user needs, thoughtful conversation design, and ongoing commitment to improvement.
+The SignalWire SDK provides the tools needed to build sophisticated voice AI applications, but tools alone don't create great user experiences. The most successful implementations will combine technical capability with deep understanding of user needs, thoughtful conversation design, and ongoing commitment to improvement.
 
 As you begin building with the SDK, remember that the goal isn't just to create agents that can perform tasks—it's to create agents that make people's lives easier, more productive, and more enjoyable. The technology is ready. The question is: what will you build?
 

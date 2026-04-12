@@ -2,7 +2,7 @@
 """
 Copyright (c) 2025 SignalWire
 
-This file is part of the SignalWire AI Agents SDK.
+This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
@@ -206,14 +206,8 @@ class AgentBase(
         
         # Initialize POM if needed
         if self._use_pom:
-            try:
-                from signalwire_pom.pom import PromptObjectModel
-                self.pom = PromptObjectModel()
-            except ImportError:
-                raise ImportError(
-                    "signalwire-pom package is required for use_pom=True. "
-                    "Install it with: pip install signalwire-pom"
-                )
+            from signalwire.pom.pom import PromptObjectModel
+            self.pom = PromptObjectModel()
         else:
             self.pom = None
         

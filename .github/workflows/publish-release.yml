@@ -10,7 +10,6 @@ jobs:
     runs-on: ubuntu-latest
     environment: pypi-release
     permissions:
-      id-token: write  # For trusted publishing (OIDC)
       contents: write  # For creating GitHub releases
 
     steps:
@@ -25,7 +24,7 @@ jobs:
       - name: Install build dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install build
+          pip install build twine
 
       - name: Get version from tag
         id: tag_version
@@ -55,7 +54,11 @@ jobs:
         run: python -m build
 
       - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          twine upload dist/*
 
       - name: Extract changelog for this version
         id: changelog

@@ -3,9 +3,9 @@ requires = ["setuptools>=61.0,<81", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "signalwire"
+name = "signalwire-sdk"
 version = "3.0.0"
-description = "SignalWire AI Agents SDK"
+description = "SignalWire SDK"
 authors = [
     {name = "SignalWire Team", email = "info@signalwire.com"}
 ]
@@ -29,7 +29,7 @@ dependencies = [
     "PyYAML>=6.0.2",
     "Requests>=2.32.3",
     "setuptools>=66.1.1,<81",
-    "signalwire_pom>=2.7.1",
+    "docopt>=0.6.2",
     "structlog>=25.3.0",
     "uvicorn>=0.34.2",
     "beautifulsoup4>=4.12.3",
@@ -139,6 +139,7 @@ sw-search = "signalwire.cli.build_search:console_entry_point"
 sw-agent-init = "signalwire.cli.init_project:main"
 sw-agent-dokku = "signalwire.cli.dokku:main"
 mcp-gateway = "signalwire.mcp_gateway.gateway_service:main"
+pom-tool = "signalwire.pom.pom_tool:main"
 
 [tool.setuptools]
 packages = {find = {where = ["signalwire"], include = ["signalwire*"]}}

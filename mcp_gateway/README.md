@@ -302,4 +302,4 @@ docker-compose up
 
 ## License
 
-This is part of the SignalWire AI Agents SDK, licensed under the MIT License.
+This is part of the SignalWire SDK, licensed under the MIT License.

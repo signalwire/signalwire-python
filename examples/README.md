@@ -1,6 +1,6 @@
-# SignalWire AI Agents SDK - Examples
+# SignalWire SDK - Examples
 
-This directory contains working examples demonstrating the features of the SignalWire AI Agents SDK.
+This directory contains working examples demonstrating the features of the SignalWire SDK.
 
 ## Setup
 

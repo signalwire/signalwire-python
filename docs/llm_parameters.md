@@ -4,7 +4,7 @@ This guide explains how to customize Language Model (LLM) parameters in SignalWi
 
 ## Overview
 
-SignalWire AI Agents SDK provides methods to customize LLM parameters for both the main prompt and post-prompt, allowing precise control over the AI's response characteristics.
+SignalWire SDK provides methods to customize LLM parameters for both the main prompt and post-prompt, allowing precise control over the AI's response characteristics.
 
 **Important:** The SDK passes parameters through to the SignalWire server without validation. Model-specific parameters are validated and handled by the server based on the target model's capabilities and requirements. Invalid parameters for the selected model will be handled or ignored by the server.
 

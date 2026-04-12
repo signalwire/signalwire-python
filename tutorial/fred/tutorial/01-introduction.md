@@ -40,7 +40,7 @@ User calls → SignalWire Platform → Your Agent → SWML Response → AI Conve
 
 ## The SDK Architecture
 
-The SignalWire AI Agents SDK provides a clean abstraction layer:
+The SignalWire SDK provides a clean abstraction layer:
 
 ```python
 from signalwire_agents import AgentBase

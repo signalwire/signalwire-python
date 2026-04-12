@@ -1,7 +1,7 @@
 """
 Copyright (c) 2025 SignalWire
 
-This file is part of the SignalWire AI Agents SDK.
+This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
@@ -15,12 +15,8 @@ import pytest
 from unittest.mock import Mock, patch, MagicMock
 from typing import Dict, List, Any, Optional
 
-# Mock the signalwire_pom dependency since it may not be available
-with patch.dict('sys.modules', {
-    'signalwire_pom': MagicMock(),
-    'signalwire_pom.pom': MagicMock()
-}):
-    from signalwire.core.pom_builder import PomBuilder
+# signalwire.pom is now vendored inside this package, so no mocks needed at import time
+from signalwire.core.pom_builder import PomBuilder
 
 
 class TestPomBuilder:
@@ -285,32 +281,6 @@ class TestPomBuilder:
             
             assert result is builder
             assert mock_pom.return_value.add_section.call_count == 2
-
-
-class TestPomBuilderErrorHandling:
-    """Test error handling in PomBuilder"""
-    
-    def test_missing_dependency_error(self):
-        """Test error when signalwire_pom is not available"""
-        # Since the module is already imported with mocks, we can test that
-        # the PomBuilder works with the mocked dependency
-        # The actual import error handling is tested at module level
-        
-        # Test that PomBuilder can be instantiated and used
-        # even when the underlying dependency might not be available
-        with patch('signalwire.core.pom_builder.PromptObjectModel', side_effect=ImportError("Module not found")):
-            # This should handle the error gracefully
-            try:
-                builder = PomBuilder()
-                # If we get here, the error was handled gracefully
-                assert True
-            except ImportError:
-                # If ImportError propagates, that's also acceptable behavior
-                # as long as it's a clear error message
-                assert True
-            except Exception as e:
-                # Any other exception type would be unexpected
-                pytest.fail(f"Unexpected exception type: {type(e).__name__}: {e}")
 
 
 class TestPomBuilderIntegration:

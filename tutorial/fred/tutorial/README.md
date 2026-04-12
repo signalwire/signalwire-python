@@ -1,6 +1,6 @@
 # Fred Bot Tutorial - Building a Wikipedia AI Assistant
 
-Welcome to the Fred Bot tutorial! This step-by-step guide will teach you how to build Fred, a friendly Wikipedia-powered AI assistant using the SignalWire AI Agents SDK.
+Welcome to the Fred Bot tutorial! This step-by-step guide will teach you how to build Fred, a friendly Wikipedia-powered AI assistant using the SignalWire SDK.
 
 ## What You'll Build
 
@@ -15,7 +15,7 @@ Fred is an AI voice agent that can:
 This tutorial is divided into 6 progressive lessons:
 
 ### 📚 [Lesson 1: Introduction to SignalWire Agents](01-introduction.md)
-Learn the basics of the SignalWire AI Agents SDK and understand the core concepts.
+Learn the basics of the SignalWire SDK and understand the core concepts.
 
 ### 🛠️ [Lesson 2: Setting Up Your Environment](02-setup.md)
 Install the SDK and prepare your development environment.
@@ -73,4 +73,4 @@ Ready to build Fred? Start with [Lesson 1: Introduction to SignalWire Agents](01
 
 ---
 
-*This tutorial was created for SignalWire AI Agents SDK v1.0.12*
+*This tutorial was created for SignalWire SDK v1.0.12*

@@ -1,6 +1,6 @@
 # Lesson 2: Setting Up Your Environment
 
-Let's get your development environment ready to build Fred! This lesson covers installing the SignalWire AI Agents SDK and verifying everything works correctly.
+Let's get your development environment ready to build Fred! This lesson covers installing the SignalWire SDK and verifying everything works correctly.
 
 ## Table of Contents
 
@@ -61,7 +61,7 @@ fred-env\Scripts\activate
 
 ## Installing the SDK
 
-Now let's install the SignalWire AI Agents SDK:
+Now let's install the SignalWire SDK:
 
 ### Basic Installation
 

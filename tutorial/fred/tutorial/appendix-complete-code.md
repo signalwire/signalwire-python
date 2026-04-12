@@ -535,7 +535,7 @@ WantedBy=multi-user.target
 
 ---
 
-Congratulations! You now have a complete, working Wikipedia assistant bot built with the SignalWire AI Agents SDK. Fred is ready to help users learn and discover new information!
+Congratulations! You now have a complete, working Wikipedia assistant bot built with the SignalWire SDK. Fred is ready to help users learn and discover new information!
 
 ---
 

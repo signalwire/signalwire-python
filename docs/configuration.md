@@ -1,6 +1,6 @@
 # Configuration Guide
 
-This guide explains the unified configuration system available in SignalWire AI Agents SDK.
+This guide explains the unified configuration system available in SignalWire SDK.
 
 ## Overview
 

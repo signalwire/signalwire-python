@@ -1,7 +1,7 @@
 """
 Copyright (c) 2025 SignalWire
 
-This file is part of the SignalWire AI Agents SDK.
+This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
@@ -11,13 +11,7 @@ See LICENSE file in the project root for full license information.
 PomBuilder for creating structured POM prompts for SignalWire AI Agents
 """
 
-try:
-    from signalwire_pom.pom import PromptObjectModel, Section
-except ImportError:
-    raise ImportError(
-        "signalwire-pom package is required. "
-        "Install it with: pip install signalwire-pom"
-    )
+from signalwire.pom.pom import PromptObjectModel, Section
 
 from typing import List, Dict, Any, Optional, Union
 

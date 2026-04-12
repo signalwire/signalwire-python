@@ -1,7 +1,7 @@
 """
 Copyright (c) 2025 SignalWire
 
-This file is part of the SignalWire AI Agents SDK.
+This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
@@ -682,7 +682,7 @@ def _create_full_test_db(db_path, with_fts=True, with_embeddings=True,
             'metadata_text': 'javascript async Guide JS SDK' if with_metadata_text else None,
         },
         {
-            'content': 'Getting started with SignalWire AI Agents SDK',
+            'content': 'Getting started with SignalWire SDK',
             'embedding': _emb([0.3, 0.3, 0.3, 0.3]),
             'filename': 'docs/getting_started.md',
             'section': 'quickstart',
