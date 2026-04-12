@@ -1,5 +1,9 @@
 # Changelog
 
+## [3.0.1] - 2026-04-12
+
+- Update install instructions and PyPI URLs to use `signalwire-sdk`
+
 ## [3.0.0] - 2026-04-12
 
 - Version bump
