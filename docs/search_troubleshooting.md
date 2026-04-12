@@ -357,7 +357,7 @@ Error loading model: sentence-transformers/all-MiniLM-L6-v2
 1. **Search dependencies not installed** -- Install the appropriate search extras:
    ```bash
    # Base install does not include search
-   pip install signalwire-agents[search]
+   pip install signalwire-sdk[search]
    ```
 
 2. **Network issues preventing model download on first run** -- Pre-download the model:
@@ -374,7 +374,7 @@ Error loading model: sentence-transformers/all-MiniLM-L6-v2
 
 **Pre-download in Docker builds:**
 ```dockerfile
-RUN pip install signalwire-agents[search] && \
+RUN pip install signalwire-sdk[search] && \
     python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 ```
 
@@ -385,7 +385,7 @@ export TRANSFORMERS_OFFLINE=1
 
 **Query-only mode** -- If you only need to query existing indexes and do not need the full model:
 ```bash
-pip install signalwire-agents[search-queryonly]
+pip install signalwire-sdk[search-queryonly]
 ```
 
 ---
@@ -786,13 +786,13 @@ When troubleshooting search issues, work through this checklist in order:
 
 - **Use `search-queryonly` in production** to save approximately 400MB of dependencies:
   ```bash
-  pip install signalwire-agents[search-queryonly]
+  pip install signalwire-sdk[search-queryonly]
   ```
 - **Use `search-full` for building indexes** in your CI/CD pipeline or development environment.
 - **Switch to pgvector for multi-agent deployments** -- SQLite is appropriate for single-agent setups; pgvector handles concurrent access and shared knowledge bases.
 - **Pre-download models in Docker builds** to avoid first-run delays:
   ```dockerfile
-  RUN pip install signalwire-agents[search] && \
+  RUN pip install signalwire-sdk[search] && \
       python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
   ```
 - **Create pgvector indexes** on the embedding column for large datasets:

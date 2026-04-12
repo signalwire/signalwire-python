@@ -12,10 +12,10 @@ See LICENSE file in the project root for full license information.
 This module provides local search capabilities for the SignalWire Agents SDK.
 It requires additional dependencies that can be installed with:
 
-    pip install signalwire-agents[search]           # Basic search
-    pip install signalwire-agents[search-full]      # + Document processing
-    pip install signalwire-agents[search-nlp]       # + Advanced NLP
-    pip install signalwire-agents[search-all]       # All features
+    pip install signalwire-sdk[search]           # Basic search
+    pip install signalwire-sdk[search-full]      # + Document processing
+    pip install signalwire-sdk[search-nlp]       # + Advanced NLP
+    pip install signalwire-sdk[search-all]       # All features
 """
 
 import warnings
@@ -54,8 +54,8 @@ def _check_search_dependencies():
         missing = ', '.join(_MISSING_DEPS)
         raise ImportError(
             f"Search functionality requires additional dependencies: {missing}\n"
-            f"Install with: pip install signalwire-agents[search]\n"
-            f"For full features: pip install signalwire-agents[search-all]"
+            f"Install with: pip install signalwire-sdk[search]\n"
+            f"For full features: pip install signalwire-sdk[search-all]"
         )
 
 # Conditional imports based on available dependencies
@@ -87,7 +87,7 @@ if _SEARCH_AVAILABLE:
         # Some search components failed to import
         warnings.warn(
             f"Some search components failed to import: {e}\n"
-            f"For full search functionality, install: pip install signalwire-agents[search-all]",
+            f"For full search functionality, install: pip install signalwire-sdk[search-all]",
             ImportWarning
         )
         

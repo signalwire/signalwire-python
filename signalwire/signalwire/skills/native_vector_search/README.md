@@ -132,17 +132,17 @@ agent.add_skill("native_vector_search", {
 
 ### For SQLite Backend
 ```bash
-pip install signalwire-agents[search]
+pip install signalwire-sdk[search]
 ```
 
 ### For pgvector Backend
 ```bash
-pip install signalwire-agents[search,pgvector]
+pip install signalwire-sdk[search,pgvector]
 ```
 
 ### For All Features
 ```bash
-pip install signalwire-agents[search-all]
+pip install signalwire-sdk[search-all]
 ```
 
 ## Building Indexes
@@ -188,13 +188,13 @@ None required - all configuration comes through skill parameters.
 ### "Search dependencies not available"
 Install the search extras:
 ```bash
-pip install signalwire-agents[search]
+pip install signalwire-sdk[search]
 ```
 
 ### "pgvector dependencies not available"
 Install pgvector support:
 ```bash
-pip install signalwire-agents[pgvector]
+pip install signalwire-sdk[pgvector]
 ```
 
 ### "Failed to connect to pgvector"

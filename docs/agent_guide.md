@@ -810,7 +810,7 @@ agent.add_skill("datasphere", {
 Provides local document search capabilities using vector similarity and keyword search. This skill works entirely offline with local `.swsearch` index files or can connect to remote search servers.
 
 **Requirements:**
-- Packages: `sentence-transformers`, `scikit-learn`, `numpy` (install with `pip install signalwire-agents[search]`)
+- Packages: `sentence-transformers`, `scikit-learn`, `numpy` (install with `pip install signalwire-sdk[search]`)
 
 **Parameters:**
 - `tool_name` (default: "search_knowledge"): Custom name for the search tool

@@ -498,11 +498,11 @@ ModuleNotFoundError: No module named 'signalwire_agents'
 **Solution:**
 ```bash
 # Install the SDK
-pip install signalwire-agents
+pip install signalwire-sdk
 
 # Or if using virtual environment
 source fred-env/bin/activate
-pip install signalwire-agents
+pip install signalwire-sdk
 ```
 
 #### No Response from Functions

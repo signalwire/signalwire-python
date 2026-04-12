@@ -8,7 +8,7 @@ within a SignalWire AI Agent using the native_vector_search skill.
 Prerequisites:
 1. PostgreSQL with pgvector extension running
 2. A collection already created in the database
-3. Required packages: pip install signalwire-agents[search-all]
+3. Required packages: pip install signalwire-sdk[search-all]
 
 To create a collection:
     sw-search ./docs --backend pgvector \

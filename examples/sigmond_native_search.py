@@ -22,7 +22,7 @@ Features:
 - Only search functionality, no other tools
 
 To run:
-1. Install search dependencies: pip install signalwire-agents[search-full]
+1. Install search dependencies: pip install signalwire-sdk[search-full]
 2. Run: python examples/sigmond_native_search.py
 
 The agent will automatically build a search index from the docs/ directory
@@ -275,7 +275,7 @@ def main():
         logger.info("Search dependencies are available")
     except ImportError as e:
         logger.error("Search dependencies not available")
-        logger.error("Install with: pip install signalwire-agents[search-full]")
+        logger.error("Install with: pip install signalwire-sdk[search-full]")
         logger.error(f"Error: {e}")
         return
     

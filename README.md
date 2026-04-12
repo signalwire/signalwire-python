@@ -11,7 +11,7 @@ _Build AI voice agents, control live calls over WebSocket, and manage every Sign
 <p align="center">
   <a href="https://developer.signalwire.com/sdks/agents-sdk" target="_blank">Documentation</a> &middot;
   <a href="https://github.com/signalwire/signalwire-docs/issues/new/choose" target="_blank">Report an Issue</a> &middot;
-  <a href="https://pypi.org/project/signalwire/" target="_blank">PyPI</a>
+  <a href="https://pypi.org/project/signalwire-sdk/" target="_blank">PyPI</a>
 </p>
 
 <a href="https://discord.com/invite/F2WNYTNjuF" target="_blank"><img src="https://img.shields.io/badge/Discord%20Community-5865F2" alt="Discord" /></a>
@@ -31,7 +31,7 @@ _Build AI voice agents, control live calls over WebSocket, and manage every Sign
 | **REST Client** | Manage SignalWire resources over HTTP -- phone numbers, SIP endpoints, Fabric AI agents, video rooms, messaging, and 18+ API namespaces | [REST docs](rest/README.md) |
 
 ```bash
-pip install signalwire
+pip install signalwire-sdk
 ```
 
 ---
@@ -162,13 +162,13 @@ See the **[REST documentation](rest/README.md)** for the full guide, API referen
 
 ```bash
 # Core SDK (agents, RELAY, REST)
-pip install signalwire
+pip install signalwire-sdk
 
 # With search (pick one based on your needs)
-pip install signalwire[search-queryonly]   # Query pre-built .swsearch files (~400MB)
-pip install signalwire[search]              # Build + query search indexes (~500MB)
-pip install signalwire[search-full]         # + PDF, DOCX, Excel, HTML processing (~600MB)
-pip install signalwire[search-all]          # All search features (~700MB)
+pip install signalwire-sdk[search-queryonly]   # Query pre-built .swsearch files (~400MB)
+pip install signalwire-sdk[search]              # Build + query search indexes (~500MB)
+pip install signalwire-sdk[search-full]         # + PDF, DOCX, Excel, HTML processing (~600MB)
+pip install signalwire-sdk[search-all]          # All search features (~700MB)
 ```
 
 ## Documentation

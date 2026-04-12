@@ -4,10 +4,10 @@
 
 ```bash
 # Before
-pip install signalwire_agents
+pip install signalwire-sdk
 
 # After
-pip install signalwire
+pip install signalwire-sdk
 ```
 
 ## Import Changes

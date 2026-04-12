@@ -500,7 +500,7 @@ class TestSearchCommand:
                 search_command()
             
             assert exc_info.value.code == 1
-            mock_print.assert_any_call("Error: Search functionality not available. Install with: pip install signalwire-agents[search]")
+            mock_print.assert_any_call("Error: Search functionality not available. Install with: pip install signalwire-sdk[search]")
     
     @patch('sys.argv', ['search', 'test.swsearch', 'query'])
     def test_search_engine_error(self):

@@ -310,7 +310,7 @@ class SigmondSimple(AgentBase):
         
         self.prompt_add_section("Local_Search_System", bullets=[
             "The SDK includes optional local search capabilities for offline document search.",
-            "Install search features with pip install signalwire-agents[search] or other search options.",
+            "Install search features with pip install signalwire-sdk[search] or other search options.",
             "Build search indexes using the build_search CLI command from document directories.",
             "Native vector search skill provides hybrid vector similarity and keyword search.",
             "Supports multiple file formats: Markdown, PDF, DOCX, HTML, Python, and more.",
@@ -329,11 +329,11 @@ class SigmondSimple(AgentBase):
         ])
         
         self.prompt_add_section("Installation_Options", bullets=[
-            "Basic installation: pip install signalwire-agents for core functionality.",
-            "Search functionality: pip install signalwire-agents[search] for basic search features.",
-            "Full search: pip install signalwire-agents[search-full] adds document processing for PDF and DOCX.",
-            "Advanced NLP: pip install signalwire-agents[search-nlp] includes spaCy for advanced text processing.",
-            "All features: pip install signalwire-agents[search-all] includes everything.",
+            "Basic installation: pip install signalwire-sdk for core functionality.",
+            "Search functionality: pip install signalwire-sdk[search] for basic search features.",
+            "Full search: pip install signalwire-sdk[search-full] adds document processing for PDF and DOCX.",
+            "Advanced NLP: pip install signalwire-sdk[search-nlp] includes spaCy for advanced text processing.",
+            "All features: pip install signalwire-sdk[search-all] includes everything.",
             "Optional dependencies keep the base SDK lightweight while adding search and document processing when needed."
         ])
         

@@ -91,7 +91,7 @@ def main():
         logger.info("Search dependencies are available")
     except ImportError as e:
         logger.error("Search dependencies not available")
-        logger.error("Install with: pip install signalwire-agents[search-full]")
+        logger.error("Install with: pip install signalwire-sdk[search-full]")
         logger.error(f"Error: {e}")
         return
     
@@ -103,7 +103,7 @@ def main():
             logger.info("pgvector dependencies are available")
         except ImportError as e:
             logger.error("pgvector dependencies not available")
-            logger.error("Install with: pip install signalwire-agents[pgvector]")
+            logger.error("Install with: pip install signalwire-sdk[pgvector]")
             logger.error(f"Error: {e}")
             return
     
@@ -217,10 +217,10 @@ def main():
     except Exception as e:
         logger.error(f"Error starting server: {e}")
         if args.backend == 'pgvector':
-            logger.error("Make sure you have installed: pip install signalwire-agents[search-all]")
+            logger.error("Make sure you have installed: pip install signalwire-sdk[search-all]")
             logger.error("And ensure PostgreSQL is running with pgvector extension")
         else:
-            logger.error("Make sure you have installed: pip install signalwire-agents[search-full]")
+            logger.error("Make sure you have installed: pip install signalwire-sdk[search-full]")
 
 if __name__ == "__main__":
     main() 

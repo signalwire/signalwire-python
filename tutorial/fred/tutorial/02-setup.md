@@ -66,7 +66,7 @@ Now let's install the SignalWire SDK:
 ### Basic Installation
 
 ```bash
-pip install signalwire-agents
+pip install signalwire-sdk
 ```
 
 This installs the core SDK with all required dependencies.
@@ -103,7 +103,7 @@ try:
     
 except ImportError as e:
     print(f"❌ Import failed: {e}")
-    print("   Please run: pip install signalwire-agents")
+    print("   Please run: pip install signalwire-sdk")
 ```
 
 Run it:
@@ -155,7 +155,7 @@ The SDK has several dependency categories:
 **Search Features** (we won't need these for Fred):
 ```bash
 # If you wanted search features:
-pip install signalwire-agents[search]
+pip install signalwire-sdk[search]
 ```
 
 **Development Tools** (optional but helpful):
@@ -285,7 +285,7 @@ def check_setup():
 if __name__ == "__main__":
     if not check_setup():
         print("\n⚠️  Please install missing dependencies:")
-        print("   pip install signalwire-agents")
+        print("   pip install signalwire-sdk")
         sys.exit(1)
 ```
 
@@ -298,7 +298,7 @@ if __name__ == "__main__":
 pip install --user signalwire-agents
 
 # Or use sudo (less recommended)
-sudo pip install signalwire-agents
+sudo pip install signalwire-sdk
 ```
 
 ### Issue: pip Not Found

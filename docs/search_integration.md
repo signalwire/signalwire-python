@@ -1438,7 +1438,7 @@ Production Dockerfile using the lightweight `search-queryonly` installation (pod
 
 ```dockerfile
 FROM python:3.11-slim
-RUN pip install signalwire-agents[search-queryonly]
+RUN pip install signalwire-sdk[search-queryonly]
 COPY sigmond.py /app/
 CMD ["python", "/app/sigmond.py"]
 ```

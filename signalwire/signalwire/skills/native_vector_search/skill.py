@@ -533,7 +533,7 @@ class NativeVectorSearchSkill(SkillBase):
         if not self.search_available:
             return FunctionResult(
                 f"Search functionality is not available. {getattr(self, 'import_error', '')}\n"
-                f"Install with: pip install signalwire-agents[search]"
+                f"Install with: pip install signalwire-sdk[search]"
             )
         
         if not self.use_remote and not self.search_engine:

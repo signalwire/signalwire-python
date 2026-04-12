@@ -30,7 +30,7 @@ The class is designed to be extended for specific use cases, while providing a f
 The `SWMLService` class is part of the SignalWire AI Agent SDK. Install it using pip:
 
 ```bash
-pip install signalwire-agents
+pip install signalwire-sdk
 ```
 
 ## Basic Usage

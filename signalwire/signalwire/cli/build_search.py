@@ -710,7 +710,7 @@ def search_command():
             from signalwire.search.search_engine import SearchEngine
             from signalwire.search.query_processor import preprocess_query
         except ImportError as e:
-            print(f"Error: Search functionality not available. Install with: pip install signalwire-agents[search]")
+            print(f"Error: Search functionality not available. Install with: pip install signalwire-sdk[search]")
             print(f"Details: {e}")
             sys.exit(1)
         

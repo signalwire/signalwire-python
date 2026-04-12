@@ -279,7 +279,7 @@ These libraries are necessary for **generating embeddings** during index buildin
 The `search-queryonly` install provides querying capabilities without the ML model stack:
 
 ```bash
-pip install signalwire-agents[search-queryonly]
+pip install signalwire-sdk[search-queryonly]
 ```
 
 **Total size:** ~400MB (vs ~500MB for full search)
@@ -327,14 +327,14 @@ check_dependencies()
 On the development or build machine, install full search to build indexes:
 
 ```bash
-pip install signalwire-agents[search-full]
+pip install signalwire-sdk[search-full]
 sw-search ./docs --output knowledge.swsearch
 ```
 
 On production, install query-only and deploy with pre-built indexes:
 
 ```bash
-pip install signalwire-agents[search-queryonly]
+pip install signalwire-sdk[search-queryonly]
 scp knowledge.swsearch prod:/app/
 ```
 
@@ -363,7 +363,7 @@ jobs:
           python-version: '3.11'
 
       - name: Install dependencies
-        run: pip install signalwire-agents[search-full]
+        run: pip install signalwire-sdk[search-full]
 
       - name: Build search index
         run: |
@@ -423,7 +423,7 @@ sw-search ./docs \
   --model mini
 
 # Deploy query-only everywhere -- embeddings already in PostgreSQL
-pip install signalwire-agents[search-queryonly]
+pip install signalwire-sdk[search-queryonly]
 ```
 
 ### Container Deployment Patterns
@@ -436,7 +436,7 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install query-only dependencies
-RUN pip install signalwire-agents[search-queryonly]
+RUN pip install signalwire-sdk[search-queryonly]
 
 # Copy pre-built index
 COPY knowledge.swsearch /app/
@@ -470,7 +470,7 @@ aws s3 cp knowledge.swsearch s3://bucket/indexes/
 
 # 2. Update Dockerfile
 # FROM python:3.11
-# RUN pip install signalwire-agents[search-queryonly]
+# RUN pip install signalwire-sdk[search-queryonly]
 # RUN wget https://bucket/indexes/knowledge.swsearch -O /app/knowledge.swsearch
 
 # 3. Deploy
@@ -1159,13 +1159,13 @@ After (SQLite):
 # Before: needed PostgreSQL connection
 FROM python:3.11-slim
 RUN apt-get update && apt-get install -y libpq-dev
-RUN pip install signalwire-agents[search-queryonly] psycopg2-binary
+RUN pip install signalwire-sdk[search-queryonly] psycopg2-binary
 ENV PGVECTOR_CONNECTION=postgresql://...
 COPY agent.py /app/
 
 # After: standalone
 FROM python:3.11-slim
-RUN pip install signalwire-agents[search-queryonly]
+RUN pip install signalwire-sdk[search-queryonly]
 COPY agent.py knowledge.swsearch /app/
 ```
 
@@ -2095,7 +2095,7 @@ sw-search ./examples --backend pgvector \
 
 2. Developers install only query-only dependencies:
    ```bash
-   pip install signalwire-agents[search-queryonly]
+   pip install signalwire-sdk[search-queryonly]
    ```
 
 3. Agents connect to the shared database:

@@ -183,15 +183,15 @@ try:
     print("Search functionality is available")
 except ImportError as e:
     print(f"Search not available: {e}")
-    print("Install with: pip install signalwire-agents[search]")
+    print("Install with: pip install signalwire-sdk[search]")
 ```
 
 Common installation issues:
 
 | Error | Solution |
 |-------|----------|
-| `No module named 'sentence_transformers'` | `pip install signalwire-agents[search]` |
-| `No module named 'pdfplumber'` | `pip install signalwire-agents[search-full]` |
+| `No module named 'sentence_transformers'` | `pip install signalwire-sdk[search]` |
+| `No module named 'pdfplumber'` | `pip install signalwire-sdk[search-full]` |
 | NLTK data not found | `import nltk; nltk.download('punkt'); nltk.download('averaged_perceptron_tagger')` |
 | spaCy model not found | `python -m spacy download en_core_web_sm` |
 

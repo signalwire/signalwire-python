@@ -474,7 +474,7 @@ The SignalWire SDK offers flexible installation options depending on your requir
 For standard agent development with Skills System and DataMap tools:
 
 ```bash
-pip install signalwire-agents
+pip install signalwire-sdk
 ```
 
 This includes all core functionality:
@@ -578,7 +578,7 @@ try:
     print("✅ Search functionality is available")
 except ImportError as e:
     print(f"❌ Search not available: {e}")
-    print("Install with: pip install signalwire-agents[search]")
+    print("Install with: pip install signalwire-sdk[search]")
 ```
 
 ### Common Installation Issues
@@ -592,7 +592,7 @@ export PYTORCH_DISABLE_AVX512=1
 
 Then run your installation or commands:
 ```bash
-PYTORCH_DISABLE_AVX2=1 PYTORCH_DISABLE_AVX512=1 pip install signalwire-agents[search]
+PYTORCH_DISABLE_AVX2=1 PYTORCH_DISABLE_AVX512=1 pip install signalwire-sdk[search]
 ```
 
 **Development Dependencies**
@@ -672,7 +672,7 @@ Creating your first AI agent with the SignalWire SDK has never been easier thank
 
 1. **Install the SDK**:
    ```bash
-   pip install signalwire-agents
+   pip install signalwire-sdk
    ```
 
 2. **Environment Variables** (Optional):

@@ -106,7 +106,7 @@ Search local document collections using vector similarity and keyword search.
 
 **Requirements:**
 - Packages: `sentence-transformers`, `scikit-learn`, `numpy`
-- Install with: `pip install signalwire-agents[search]`
+- Install with: `pip install signalwire-sdk[search]`
 
 **Parameters:**
 - `tool_name` (default: "search_knowledge") - Custom name for the search tool

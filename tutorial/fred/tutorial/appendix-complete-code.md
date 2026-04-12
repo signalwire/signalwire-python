@@ -422,7 +422,7 @@ python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install dependencies
-pip install signalwire-agents
+pip install signalwire-sdk
 ```
 
 ### 2. Create Files

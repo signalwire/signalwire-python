@@ -2233,10 +2233,10 @@ For complete documentation on the search system, see [Search Overview](search_ov
 All CLI tools are included when you install the SignalWire Agents SDK:
 
 ```bash
-pip install signalwire-agents
+pip install signalwire-sdk
 
 # For search functionality
-pip install signalwire-agents[search]
+pip install signalwire-sdk[search]
 ```
 
 ## Getting Help

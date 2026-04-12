@@ -77,7 +77,7 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Install with:**" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`bash" >> $GITHUB_STEP_SUMMARY
-          echo "pip install signalwire==${{ steps.version.outputs.dev_version }}" >> $GITHUB_STEP_SUMMARY
+          echo "pip install signalwire-sdk==${{ steps.version.outputs.dev_version }}" >> $GITHUB_STEP_SUMMARY
           echo "# or for latest dev:" >> $GITHUB_STEP_SUMMARY
-          echo "pip install signalwire --pre" >> $GITHUB_STEP_SUMMARY
+          echo "pip install signalwire-sdk --pre" >> $GITHUB_STEP_SUMMARY
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY

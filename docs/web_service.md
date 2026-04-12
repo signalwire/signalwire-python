@@ -36,7 +36,7 @@ WebService is designed to serve static files with configurable security features
 WebService is included in the core SignalWire SDK:
 
 ```bash
-pip install signalwire-agents
+pip install signalwire-sdk
 ```
 
 ## Quick Start
@@ -430,7 +430,7 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Install SDK
-RUN pip install signalwire-agents
+RUN pip install signalwire-sdk
 
 # Copy static files
 COPY ./static /app/static
