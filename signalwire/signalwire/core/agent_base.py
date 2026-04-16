@@ -1191,14 +1191,22 @@ class AgentBase(
     def _build_webhook_url(self, endpoint: str, query_params: Optional[Dict[str, str]] = None) -> str:
         """
         Helper method to build webhook URLs consistently
-        
+
         Args:
             endpoint: The endpoint path (e.g., "swaig", "post_prompt")
             query_params: Optional query parameters to append
-            
+
         Returns:
             Fully constructed webhook URL
         """
+        # When a proxy URL base is configured (e.g. SWML_PROXY_URL_BASE under
+        # Mangum-on-Lambda), defer to the parent implementation so self.route
+        # is included in the path. The serverless branch below derives its base
+        # from get_full_url(), whose proxy short-circuit returns the bare proxy
+        # URL with no route appended — dropping the agent's mount point.
+        if getattr(self, '_proxy_url_base', None):
+            return super()._build_webhook_url(endpoint, query_params)
+
         # Check for serverless environment and use appropriate URL generation
         mode = get_execution_mode()
 
