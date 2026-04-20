@@ -1339,7 +1339,13 @@ class TestPgVectorSearchBackendMergeAllResults:
             return sb
 
     def test_merge_all_results_three_sources(self):
-        """Test _merge_all_results combines vector, keyword, and metadata"""
+        """Max-signal-wins scoring with 0.1 per-additional-source agreement boost.
+
+        Commit f0be3a9 replaced the weighted-sum combination (vector*0.5 +
+        keyword*0.3 + metadata*0.2) with max-signal-wins. The strongest raw
+        score becomes the base; each additional agreeing source adds 0.1.
+        Result is capped at 1.0.
+        """
         sb = self._make_search_backend()
 
         vector = [{"id": 1, "content": "V", "score": 0.9, "search_type": "vector", "metadata": {}}]
@@ -1349,10 +1355,9 @@ class TestPgVectorSearchBackendMergeAllResults:
         merged = sb._merge_all_results(vector, keyword, metadata)
 
         assert len(merged) == 1
-        # default weights: vector=0.5, keyword=0.3, metadata=0.2
-        expected_score = 0.9 * 0.5 + 0.8 * 0.3 + 0.7 * 0.2
-        assert abs(merged[0]["score"] - expected_score) < 1e-9
-        assert abs(merged[0]["final_score"] - expected_score) < 1e-9
+        # max(0.9, 0.8, 0.7) + 0.1 * (3 - 1) = 1.1, capped at 1.0
+        assert abs(merged[0]["score"] - 1.0) < 1e-9
+        assert abs(merged[0]["final_score"] - 1.0) < 1e-9
 
     def test_merge_all_results_includes_sources(self):
         """Test _merge_all_results includes source breakdown"""
@@ -1402,8 +1407,13 @@ class TestPgVectorSearchBackendMergeAllResults:
         merged = sb._merge_all_results([], [], [])
         assert merged == []
 
-    def test_merge_all_results_custom_keyword_weight(self):
-        """Test _merge_all_results with custom keyword_weight"""
+    def test_merge_all_results_custom_keyword_weight_is_noop(self):
+        """keyword_weight is accepted for API stability but is a no-op under max-signal-wins.
+
+        The pre-f0be3a9 algorithm applied this weight to the keyword component
+        of a weighted sum. Max-signal-wins doesn't weight sources, so the
+        parameter is kept for signature compatibility but has no effect.
+        """
         sb = self._make_search_backend()
 
         keyword = [{"id": 1, "content": "K", "score": 1.0, "search_type": "keyword", "metadata": {}}]
@@ -1411,8 +1421,8 @@ class TestPgVectorSearchBackendMergeAllResults:
         merged_default = sb._merge_all_results([], keyword, [])
         merged_custom = sb._merge_all_results([], keyword, [], keyword_weight=0.8)
 
-        # Custom weight 0.8 should give higher score than default 0.3
-        assert merged_custom[0]["score"] > merged_default[0]["score"]
+        # Under max-signal-wins, the weight parameter doesn't change the result
+        assert merged_custom[0]["score"] == merged_default[0]["score"]
 
 
 class TestPgVectorSearchBackendSearch:
@@ -1462,27 +1472,32 @@ class TestPgVectorSearchBackendSearch:
 
         assert len(results) == 3
 
-    def test_search_applies_similarity_threshold_before_merge(self):
-        """Test search filters vector results by similarity threshold before merging"""
+    def test_search_applies_similarity_threshold_post_merge(self):
+        """search() filters by similarity_threshold on the final merged score.
+
+        Commit f0be3a9 moved the threshold filter from pre-merge (on raw
+        vector scores) to post-merge (on combined final scores), so the
+        threshold now applies to what the caller actually sees. A result
+        with strong keyword/metadata signals can survive even if its vector
+        score alone would have missed.
+        """
         sb = self._make_search_backend()
 
-        vector_results = [
-            {"id": 1, "content": "High", "score": 0.9, "search_type": "vector", "metadata": {}},
-            {"id": 2, "content": "Low", "score": 0.3, "search_type": "vector", "metadata": {}},
+        merged_output = [
+            {"id": 1, "content": "High", "score": 0.9, "final_score": 0.9, "metadata": {}},
+            {"id": 2, "content": "Low", "score": 0.3, "final_score": 0.3, "metadata": {}},
         ]
 
-        sb._vector_search = Mock(return_value=vector_results)
+        sb._vector_search = Mock(return_value=[])
         sb._keyword_search = Mock(return_value=[])
         sb._metadata_search = Mock(return_value=[])
-        sb._merge_all_results = Mock(return_value=[])
+        sb._merge_all_results = Mock(return_value=merged_output)
 
-        sb.search([0.1], "query", count=5, similarity_threshold=0.5)
+        results = sb.search([0.1], "query", count=5, similarity_threshold=0.5)
 
-        # _merge_all_results should receive only the high-score vector result
-        merge_call_args = sb._merge_all_results.call_args
-        filtered_vector = merge_call_args[0][0]
-        assert len(filtered_vector) == 1
-        assert filtered_vector[0]["id"] == 1
+        # Post-merge filter keeps only candidates whose FINAL score passes threshold.
+        assert len(results) == 1
+        assert results[0]["id"] == 1
 
     def test_search_no_threshold_keeps_all_vector_results(self):
         """Test search with threshold=0.0 keeps all vector results"""

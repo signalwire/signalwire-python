@@ -1562,7 +1562,13 @@ class TestResultProcessing:
         assert score > 0.8
 
     def test_combined_score_no_vector(self, tmp_path):
-        """Keyword-only candidates get 60% of their score."""
+        """Keyword-only candidate returns its raw score under max-signal-wins.
+
+        Prior algorithm penalized non-vector matches to 60% of their score; the
+        max-signal-wins approach (commit f0be3a9) treats every source equally
+        and uses the strongest signal as the base. A single source means no
+        agreement boost, so keyword=1.0 stays 1.0.
+        """
         engine = self._make_engine(tmp_path)
         candidate = {
             'sources': {'keyword': True},
@@ -1570,7 +1576,7 @@ class TestResultProcessing:
             'metadata': {'tags': []}
         }
         score = engine._calculate_combined_score(candidate, 0.0)
-        assert abs(score - 0.6) < 0.01
+        assert abs(score - 1.0) < 0.01
 
     def test_combined_score_code_tag_boost(self, tmp_path):
         """Code tag with metadata source gets boosted."""
@@ -1586,7 +1592,14 @@ class TestResultProcessing:
         assert score > 0.7
 
     def test_combined_score_no_vector_code_tag(self, tmp_path):
-        """No-vector candidate with code tag and metadata source gets 1.15x."""
+        """Single-source metadata match returns raw score; code tag is no longer scored.
+
+        Prior algorithm multiplied non-vector matches by 0.6 and added a 1.15x
+        bonus when the candidate had a 'code' tag. The max-signal-wins approach
+        (commit f0be3a9) dropped both the penalty and the tag-specific bonus.
+        Tag-based re-ranking now happens via metadata search scoring upstream,
+        not in the combined score. Single source means no agreement boost.
+        """
         engine = self._make_engine(tmp_path)
         candidate = {
             'sources': {'metadata': True},
@@ -1594,8 +1607,7 @@ class TestResultProcessing:
             'metadata': {'tags': ['code']}
         }
         score = engine._calculate_combined_score(candidate, 0.0)
-        # 1.0 * 0.6 * 1.15 = 0.69
-        assert abs(score - 0.69) < 0.01
+        assert abs(score - 1.0) < 0.01
 
     # -- _apply_diversity_penalties --
 
