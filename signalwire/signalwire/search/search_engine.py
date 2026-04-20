@@ -76,127 +76,202 @@ class SearchEngine:
             if conn:
                 conn.close()
     
-    def search(self, query_vector: List[float], enhanced_text: str, 
+    def search(self, query_vector: List[float], enhanced_text: str,
               count: int = 3, similarity_threshold: float = 0.0,
-              tags: Optional[List[str]] = None, 
+              tags: Optional[List[str]] = None,
               keyword_weight: Optional[float] = None,
               original_query: Optional[str] = None) -> List[Dict[str, Any]]:
         """
-        Perform improved search with fast filtering and vector re-ranking
-        
-        Strategy:
-        1. Fast candidate collection (filename, metadata, keywords)
-        2. Vector re-ranking on candidates only
-        3. Fallback to full vector search if few candidates
-        
+        Unified hybrid search: backends fetch candidates, SearchEngine post-processes.
+
+        Flow is backend-agnostic:
+          1. fetch_candidates(k = count * search_multiplier)  — per-source signals
+          2. _process_candidates                              — score / boost / dedupe / diversity
+          3. return top `count`
+
+        Backends (sqlite, pgvector, future) only implement candidate fetching.
+        All quality logic (max-signal scoring with agreement boost, exact-match
+        boosting, content dedup, filename diversity, match-type diversity) runs
+        once here and therefore applies to every backend uniformly.
+
         Args:
             query_vector: Embedding vector for the query
             enhanced_text: Processed query text for keyword search
             count: Number of results to return
-            similarity_threshold: Minimum similarity score
+            similarity_threshold: Minimum similarity score (applied to raw vector
+                pre-merge so the threshold is intuitive)
             tags: Filter by tags
-            keyword_weight: Optional manual weight for keyword vs vector
-            original_query: Original query for exact matching
-            
+            keyword_weight: Accepted for API stability; scoring is max-signal-wins
+                with agreement boost, so this is no-op currently
+            original_query: Original query for exact matching / filename match
+
         Returns:
             List of search results with scores and metadata
         """
-        
-        # Use pgvector backend if available
-        if self.backend == 'pgvector':
-            return self._backend.search(query_vector, enhanced_text, count, similarity_threshold, tags, keyword_weight)
-        
-        # Check for numpy/sklearn availability
-        if not np or not cosine_similarity:
+        # Fallback: if sqlite backend and numpy/sklearn unavailable, skip the
+        # unified pipeline entirely and return keyword-only results directly.
+        # The fallback results don't have per-source signal structure, so the
+        # post-processing pipeline would choke on them.
+        if self.backend == 'sqlite' and (not np or not cosine_similarity):
             logger.warning("NumPy or scikit-learn not available. Using keyword search only.")
             return self._keyword_search_only(enhanced_text, count, tags, original_query)
-        
-        # Convert query vector to numpy array
+
+        # Pool size: always over-fetch so diversity has room to work
+        search_multiplier = 3
+        pool_size = count * search_multiplier
+
+        candidates = self._fetch_candidates(
+            query_vector=query_vector,
+            enhanced_text=enhanced_text,
+            count=pool_size,
+            similarity_threshold=similarity_threshold,
+            tags=tags,
+            original_query=original_query,
+        )
+
+        return self._process_candidates(
+            candidates=candidates,
+            count=count,
+            similarity_threshold=similarity_threshold,
+            tags=tags,
+            original_query=original_query,
+        )
+
+    def _fetch_candidates(self, query_vector: List[float], enhanced_text: str,
+                         count: int, similarity_threshold: float = 0.0,
+                         tags: Optional[List[str]] = None,
+                         original_query: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Dispatch candidate fetching to the active backend.
+
+        Returns a list of raw candidates (not yet scored/deduped/diversified).
+        Each candidate has at minimum: id, content, metadata, sources,
+        source_scores. Candidates matched by vector also have vector_score
+        and vector_distance.
+        """
+        # pgvector backend: delegate to its own fetch
+        if self.backend == 'pgvector':
+            return self._backend.fetch_candidates(
+                query_vector=query_vector,
+                enhanced_text=enhanced_text,
+                count=count,
+                similarity_threshold=similarity_threshold,
+                tags=tags,
+                original_query=original_query,
+            )
+
+        # sqlite path: available only when numpy + sklearn are installed
+        if not np or not cosine_similarity:
+            logger.warning("NumPy or scikit-learn not available. Using keyword search only.")
+            # Keyword-only fallback returns FINAL results, not raw candidates.
+            # Caller detects this by inspecting the shape.
+            return self._keyword_search_only(enhanced_text, count, tags, original_query)
+
         try:
             query_array = np.array(query_vector).reshape(1, -1)
         except Exception as e:
             logger.error(f"Error converting query vector: {e}")
             return self._keyword_search_only(enhanced_text, count, tags, original_query)
-        
-        # HYBRID APPROACH: Search vector AND metadata in parallel
-        # Stage 1: Run both search types simultaneously
-        search_multiplier = 3
 
-        # Vector search (semantic similarity - primary ranking signal)
-        vector_results = self._vector_search(query_array, count * search_multiplier)
+        # Run all source searches
+        vector_results = self._vector_search(query_array, count)
+        # Apply similarity threshold on raw vector scores before merging
+        # (keeps threshold intuitive: "vector similarity >= N")
+        if similarity_threshold > 0:
+            vector_results = [r for r in vector_results if r.get('score', 0) >= similarity_threshold]
 
-        # Metadata/keyword searches (confirmation signals and backfill)
-        filename_results = self._filename_search(original_query or enhanced_text, count * search_multiplier)
-        metadata_results = self._metadata_search(original_query or enhanced_text, count * search_multiplier)
-        keyword_results = self._keyword_search(enhanced_text, count * search_multiplier, original_query)
+        filename_results = self._filename_search(original_query or enhanced_text, count)
+        metadata_results = self._metadata_search(original_query or enhanced_text, count)
+        keyword_results = self._keyword_search(enhanced_text, count, original_query)
 
-        logger.debug(f"Parallel search: vector={len(vector_results)}, filename={len(filename_results)}, "
-                    f"metadata={len(metadata_results)}, keyword={len(keyword_results)}")
+        logger.debug(
+            f"sqlite fetch_candidates: vector={len(vector_results)}, "
+            f"filename={len(filename_results)}, metadata={len(metadata_results)}, "
+            f"keyword={len(keyword_results)}"
+        )
 
-        # Stage 2: Merge all results into candidate pool
-        candidates = {}
+        candidates: Dict[Any, Dict[str, Any]] = {}
 
-        # Add vector results first (primary signal)
-        for result in vector_results:
-            chunk_id = result['id']
-            candidates[chunk_id] = result
-            candidates[chunk_id]['vector_score'] = result['score']
-            candidates[chunk_id]['vector_distance'] = 1 - result['score']
-            candidates[chunk_id]['sources'] = {'vector': True}
-            candidates[chunk_id]['source_scores'] = {'vector': result['score']}
+        # Vector first (primary signal)
+        for r in vector_results:
+            cid = r['id']
+            candidates[cid] = r
+            candidates[cid]['vector_score'] = r['score']
+            candidates[cid]['vector_distance'] = 1 - r['score']
+            candidates[cid]['sources'] = {'vector': True}
+            candidates[cid]['source_scores'] = {'vector': r['score']}
 
-        # Add metadata/keyword results (secondary signals that boost or backfill)
-        # Store raw scores - max-signal-wins scoring handles the rest
-        for result_set, source_type in [(filename_results, 'filename'),
-                                        (metadata_results, 'metadata'),
-                                        (keyword_results, 'keyword')]:
-            for result in result_set:
-                chunk_id = result['id']
-                if chunk_id not in candidates:
-                    # New candidate from metadata/keyword (no vector match)
-                    candidates[chunk_id] = result
-                    candidates[chunk_id]['sources'] = {source_type: True}
-                    candidates[chunk_id]['source_scores'] = {source_type: result['score']}
+        # Other signals: fill in or add as backfill
+        for result_set, source_type in [
+            (filename_results, 'filename'),
+            (metadata_results, 'metadata'),
+            (keyword_results, 'keyword'),
+        ]:
+            for r in result_set:
+                cid = r['id']
+                if cid not in candidates:
+                    candidates[cid] = r
+                    candidates[cid]['sources'] = {source_type: True}
+                    candidates[cid]['source_scores'] = {source_type: r['score']}
                 else:
-                    # Exists in vector results - add metadata/keyword as confirmation signal
-                    candidates[chunk_id]['sources'][source_type] = True
-                    candidates[chunk_id]['source_scores'][source_type] = result['score']
-        
-        # Stage 3: Score and rank all candidates
+                    candidates[cid]['sources'][source_type] = True
+                    candidates[cid]['source_scores'][source_type] = r['score']
+
+        return list(candidates.values())
+
+    def _process_candidates(self, candidates: List[Dict[str, Any]], count: int,
+                           similarity_threshold: float = 0.0,
+                           tags: Optional[List[str]] = None,
+                           original_query: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Backend-agnostic post-processing pipeline.
+
+        Steps (in order):
+          1. score   — max-signal-wins with 0.1 agreement boost per extra source
+          2. tag filter (optional)
+          3. threshold filter on final score (redundant but safe)
+          4. exact-match boost (when original_query provided)
+          5. content dedup — collapse near-identical chunks, keep highest scorer
+          6. filename diversity — decay 2nd/3rd/4th+ chunks from the same file
+          7. match-type diversity — 40/40/20 hybrid/vector-only/keyword-only
+          8. truncate to `count`
+        """
+        # 1. score
         final_results = []
-        for chunk_id, candidate in candidates.items():
-            # Calculate final score combining all signals
-            score = self._calculate_combined_score(candidate, similarity_threshold)
-            candidate['final_score'] = score
+        for candidate in candidates:
+            candidate['final_score'] = self._calculate_combined_score(candidate, similarity_threshold)
             final_results.append(candidate)
-        
-        # Sort by final score
         final_results.sort(key=lambda x: x['final_score'], reverse=True)
-        
-        # Filter by tags if specified
+
+        # 2. tag filter
         if tags:
-            final_results = [r for r in final_results 
+            final_results = [r for r in final_results
                            if any(tag in r['metadata'].get('tags', []) for tag in tags)]
-        
-        # Apply similarity threshold to final scores
-        # This filters on the score the consumer actually sees
+
+        # 3. threshold on final score (defense in depth)
         if similarity_threshold > 0:
             final_results = [r for r in final_results
                            if r.get('final_score', 0) >= similarity_threshold]
-        
-        # Boost exact matches if we have the original query
+
+        # 4. exact-match boost
         if original_query:
             final_results = self._boost_exact_matches(final_results, original_query)
-            # Re-sort after boosting
             final_results.sort(key=lambda x: x['final_score'], reverse=True)
-        
-        # Apply diversity penalties to prevent single-file dominance
+
+        # 5. content dedup (sorted best-first, so the kept copy is the winner)
+        final_results = self._dedupe_by_content(final_results)
+
+        # 6. filename diversity penalty
         final_results = self._apply_diversity_penalties(final_results, count)
 
-        # Ensure 'score' field exists for CLI compatibility
+        # 7. match-type diversity
+        final_results = self._apply_match_type_diversity(final_results, count)
+
+        # Expose final_score as score for callers. Without this the CLI/skill
+        # layer sees whatever per-source raw score the candidate was last tagged
+        # with (from vector_search / keyword_search / etc) instead of the
+        # combined, boosted, penalized final value — which misorders output.
+        # pgvector's legacy path has done this for a long time; unify here.
         for r in final_results:
-            if 'score' not in r:
-                r['score'] = r.get('final_score', 0.0)
+            r['score'] = r.get('final_score', r.get('score', 0.0))
 
         return final_results[:count]
     
@@ -1104,6 +1179,42 @@ class SearchEngine:
         boost = agreement_boost * (len(scores) - 1)
         return min(1.0, base + boost)
     
+    def _dedupe_by_content(self, results: List[Dict]) -> List[Dict]:
+        """Collapse exact/near-exact content duplicates, keeping the highest-scoring copy.
+
+        Index quality varies: some source docs contain repeated boilerplate (footers,
+        disclaimers, "see also" blurbs) that get chunked into many near-identical
+        entries. Without deduping, those repeated chunks can flood the top-N for any
+        query whose surface words overlap, crowding out distinct content. This runs
+        before diversity penalties and final ranking so downstream logic sees a clean
+        pool.
+
+        Content is normalized before hashing: lowercased, whitespace collapsed,
+        leading/trailing punctuation stripped. This catches formatting variation.
+        Results must already be sorted best-first so the kept copy is the winner.
+        """
+        import hashlib
+        import re
+
+        if not results:
+            return results
+
+        seen_hashes = {}
+        deduped = []
+        for result in results:
+            content = result.get('content') or ''
+            normalized = re.sub(r'\s+', ' ', content.strip().lower())
+            normalized = normalized.strip('*_`#>- \t\n')
+            if not normalized:
+                deduped.append(result)
+                continue
+            h = hashlib.sha1(normalized.encode('utf-8')).hexdigest()
+            if h in seen_hashes:
+                continue
+            seen_hashes[h] = True
+            deduped.append(result)
+        return deduped
+
     def _apply_diversity_penalties(self, results: List[Dict], target_count: int) -> List[Dict]:
         """Apply penalties to prevent single-file dominance while maintaining quality"""
         if not results:
@@ -1122,7 +1233,14 @@ class SearchEngine:
         }
         
         for result in results:
-            filename = result['metadata']['filename']
+            filename = (result.get('metadata') or {}).get('filename')
+            if filename is None:
+                # No filename signal - skip penalty logic for this result
+                penalized_result = result.copy()
+                penalized_result['diversity_penalty'] = 1.0
+                penalized_result['final_score'] = result.get('final_score', result.get('score', 0))
+                penalized_results.append(penalized_result)
+                continue
             
             # Get current count for this file
             current_count = file_counts.get(filename, 0) + 1

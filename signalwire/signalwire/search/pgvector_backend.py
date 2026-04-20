@@ -453,8 +453,16 @@ class PgVectorSearchBackend:
               tags: Optional[List[str]] = None,
               keyword_weight: Optional[float] = None) -> List[Dict[str, Any]]:
         """
-        Perform hybrid search (vector + keyword + metadata)
-        
+        Perform hybrid search (vector + keyword + metadata).
+
+        NOTE: As of the unified-pipeline refactor, production traffic flows
+        through SearchEngine.search() which calls fetch_candidates() here
+        and then runs all post-processing (scoring, dedup, diversity) in
+        SearchEngine. This method remains as a self-contained search path
+        for direct backend use and test coverage, but does NOT receive the
+        SearchEngine's exact-match boost, filename diversity, or match-type
+        diversity logic. For consistent behavior, call SearchEngine.search().
+
         Args:
             query_vector: Embedding vector for the query
             enhanced_text: Processed query text for keyword search
@@ -462,7 +470,7 @@ class PgVectorSearchBackend:
             similarity_threshold: Minimum similarity score
             tags: Filter by tags
             keyword_weight: Manual keyword weight (0.0-1.0). If None, uses default weighting
-            
+
         Returns:
             List of search results with scores and metadata
         """
@@ -493,7 +501,37 @@ class PgVectorSearchBackend:
         if similarity_threshold > 0:
             merged_results = [r for r in merged_results if r['score'] >= similarity_threshold]
 
+        # Collapse content duplicates. Index quality varies: some source docs have
+        # repeated boilerplate (footers, disclaimers) chunked into many near-identical
+        # entries. Without this, those repeated chunks flood the top-N for any query
+        # whose surface words overlap. Normalize (lowercase + whitespace collapse +
+        # trim formatting punctuation) before hashing to catch formatting variation.
+        # Results must be sorted best-first so the kept copy wins.
+        merged_results.sort(key=lambda r: r.get('score', 0.0), reverse=True)
+        merged_results = self._dedupe_by_content(merged_results)
+
         return merged_results[:count]
+
+    def _dedupe_by_content(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Drop duplicate-content chunks, keeping the first (highest-scoring) occurrence."""
+        import hashlib
+        import re
+        if not results:
+            return results
+        seen = set()
+        out = []
+        for r in results:
+            content = r.get('content') or ''
+            normalized = re.sub(r'\s+', ' ', content.strip().lower()).strip('*_`#>- \t\n')
+            if not normalized:
+                out.append(r)
+                continue
+            h = hashlib.sha1(normalized.encode('utf-8')).hexdigest()
+            if h in seen:
+                continue
+            seen.add(h)
+            out.append(r)
+        return out
     
     def _vector_search(self, query_vector: List[float], count: int,
                       tags: Optional[List[str]] = None) -> List[Dict[str, Any]]:
@@ -675,7 +713,185 @@ class PgVectorSearchBackend:
             # Sort by score
             results.sort(key=lambda x: x['score'], reverse=True)
             return results[:count]
-    
+
+    def _filename_search(self, query: str, count: int,
+                        tags: Optional[List[str]] = None) -> List[Dict[str, Any]]:
+        """Search for query in filenames with term coverage scoring.
+
+        Phase 1: exact phrase match on filename (highest score).
+        Phase 2: any-term match (scored by coverage = matched_terms / total_terms).
+        Mirrors the sqlite path so downstream scoring treats signals uniformly.
+        """
+        query_lower = (query or '').lower().strip()
+        if not query_lower:
+            return []
+
+        terms = query_lower.split()
+
+        with self.conn.cursor() as cursor:
+            tbl = psycopg2_sql.Identifier(self.table_name)
+            results = []
+            seen_ids = set()
+
+            # Phase 1 — exact phrase match on filename
+            parts = [psycopg2_sql.SQL("""
+                SELECT DISTINCT id, content, filename, section, tags, metadata
+                FROM {tbl}
+                WHERE LOWER(filename) LIKE %s
+            """).format(tbl=tbl)]
+            params = [f'%{query_lower}%']
+            if tags:
+                parts.append(psycopg2_sql.SQL(" AND tags ?| %s"))
+                params.append(tags)
+            parts.append(psycopg2_sql.SQL(" LIMIT %s"))
+            params.append(count)
+
+            try:
+                cursor.execute(psycopg2_sql.SQL("").join(parts), params)
+                for row in cursor.fetchall():
+                    chunk_id, content, filename, section, tags_json, metadata_json = row
+                    seen_ids.add(chunk_id)
+                    filename_lower = (filename or '').lower()
+                    basename = filename_lower.rsplit('/', 1)[-1]
+                    # Exact phrase in basename scores higher than elsewhere in path.
+                    # Normalize to 0-1 so downstream scoring treats this like vector scores.
+                    score = 1.0 if query_lower in basename else 0.67
+                    results.append({
+                        'id': chunk_id,
+                        'content': content,
+                        'score': float(score),
+                        'metadata': {
+                            'filename': filename,
+                            'section': section,
+                            'tags': tags_json if isinstance(tags_json, list) else [],
+                            **(metadata_json or {})
+                        },
+                        'search_type': 'filename',
+                        'match_coverage': 1.0,
+                    })
+            except Exception as e:
+                logger.debug(f"Filename phase-1 search error: {e}")
+
+            # Phase 2 — any-term match with coverage scoring, excluding already-seen
+            if terms and len(results) < count:
+                remaining = count - len(results)
+                parts = [psycopg2_sql.SQL("""
+                    SELECT DISTINCT id, content, filename, section, tags, metadata
+                    FROM {tbl}
+                    WHERE (
+                """).format(tbl=tbl)]
+                ors = []
+                params = []
+                for t in terms:
+                    ors.append(psycopg2_sql.SQL("LOWER(filename) LIKE %s"))
+                    params.append(f'%{t}%')
+                parts.append(psycopg2_sql.SQL(" OR ").join(ors))
+                parts.append(psycopg2_sql.SQL(")"))
+                if seen_ids:
+                    parts.append(psycopg2_sql.SQL(" AND id NOT IN %s"))
+                    params.append(tuple(seen_ids))
+                if tags:
+                    parts.append(psycopg2_sql.SQL(" AND tags ?| %s"))
+                    params.append(tags)
+                parts.append(psycopg2_sql.SQL(" LIMIT %s"))
+                params.append(remaining * 2)
+
+                try:
+                    cursor.execute(psycopg2_sql.SQL("").join(parts), params)
+                    for row in cursor.fetchall():
+                        chunk_id, content, filename, section, tags_json, metadata_json = row
+                        filename_lower = (filename or '').lower()
+                        matched = sum(1 for t in terms if t in filename_lower)
+                        coverage = matched / len(terms) if terms else 0.0
+                        # Term-coverage-only matches cap at 0.5 so phrase matches always outrank them.
+                        score = min(0.5, coverage * 0.5)
+                        results.append({
+                            'id': chunk_id,
+                            'content': content,
+                            'score': float(score),
+                            'metadata': {
+                                'filename': filename,
+                                'section': section,
+                                'tags': tags_json if isinstance(tags_json, list) else [],
+                                **(metadata_json or {})
+                            },
+                            'search_type': 'filename',
+                            'match_coverage': coverage,
+                        })
+                except Exception as e:
+                    logger.debug(f"Filename phase-2 search error: {e}")
+
+            results.sort(key=lambda r: r['score'], reverse=True)
+            return results[:count]
+
+    def fetch_candidates(self, query_vector: List[float], enhanced_text: str,
+                        count: int, similarity_threshold: float = 0.0,
+                        tags: Optional[List[str]] = None,
+                        original_query: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Fetch raw candidates with per-source signal scores.
+
+        Runs vector/keyword/metadata/filename searches, applies similarity
+        threshold to raw vector scores pre-merge (keeps threshold intuitive),
+        and merges into a candidate list keyed by chunk id. Does NOT compute
+        final scores, boost exact matches, dedupe, or apply diversity -
+        those run uniformly in SearchEngine for every backend.
+
+        Result shape per candidate (matches sqlite path):
+            {
+                'id', 'content', 'metadata': {filename, section, tags, **custom},
+                'search_type', 'vector_score' (if vector matched),
+                'vector_distance' (if vector matched),
+                'sources': {source_type: True, ...},
+                'source_scores': {source_type: raw_score, ...},
+            }
+        """
+        self._ensure_connection()
+        query_terms = enhanced_text.lower().split()
+
+        # Vector + apply threshold to raw scores before merging
+        vector_results = self._vector_search(query_vector, count, tags)
+        if similarity_threshold > 0:
+            vector_results = [r for r in vector_results if r['score'] >= similarity_threshold]
+
+        keyword_results = self._keyword_search(enhanced_text, count, tags)
+        metadata_results = self._metadata_search(query_terms, count, tags)
+        filename_results = self._filename_search(original_query or enhanced_text, count, tags)
+
+        logger.debug(
+            f"pgvector fetch_candidates: vector={len(vector_results)}, "
+            f"filename={len(filename_results)}, metadata={len(metadata_results)}, "
+            f"keyword={len(keyword_results)}"
+        )
+
+        candidates: Dict[Any, Dict[str, Any]] = {}
+
+        # Vector first (primary signal)
+        for r in vector_results:
+            cid = r['id']
+            candidates[cid] = r
+            candidates[cid]['vector_score'] = r['score']
+            candidates[cid]['vector_distance'] = 1 - r['score']
+            candidates[cid]['sources'] = {'vector': True}
+            candidates[cid]['source_scores'] = {'vector': r['score']}
+
+        # Other signals: fill in or add as backfill
+        for result_set, source_type in [
+            (filename_results, 'filename'),
+            (metadata_results, 'metadata'),
+            (keyword_results, 'keyword'),
+        ]:
+            for r in result_set:
+                cid = r['id']
+                if cid not in candidates:
+                    candidates[cid] = r
+                    candidates[cid]['sources'] = {source_type: True}
+                    candidates[cid]['source_scores'] = {source_type: r['score']}
+                else:
+                    candidates[cid]['sources'][source_type] = True
+                    candidates[cid]['source_scores'][source_type] = r['score']
+
+        return list(candidates.values())
+
     def _merge_results(self, vector_results: List[Dict[str, Any]],
                       keyword_results: List[Dict[str, Any]],
                       keyword_weight: Optional[float] = None) -> List[Dict[str, Any]]:
