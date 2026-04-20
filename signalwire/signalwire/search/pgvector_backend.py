@@ -414,19 +414,28 @@ class PgVectorSearchBackend:
         self.config = self._load_config()
     
     def _connect(self):
-        """Establish database connection"""
+        """Establish database connection.
+
+        Autocommit is enabled because this backend is read-only — all methods
+        issue SELECTs. psycopg2's default (autocommit=False) would implicitly
+        start a transaction on every cursor.execute() and leave the connection
+        'idle in transaction' until the next query, which holds table locks
+        that block concurrent DROP TABLE during reindex. With autocommit on,
+        each SELECT is its own implicit transaction that closes immediately.
+        """
         try:
             self.conn = psycopg2.connect(self.connection_string)
+            self.conn.autocommit = True
             register_vector(self.conn)
         except Exception as e:
             logger.error(f"Failed to connect to database: {e}")
             raise
-    
+
     def _ensure_connection(self):
         """Ensure database connection is active"""
         if self.conn is None or self.conn.closed:
             self._connect()
-    
+
     def _load_config(self) -> Dict[str, Any]:
         """Load collection configuration"""
         self._ensure_connection()
