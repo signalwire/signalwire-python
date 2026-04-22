@@ -1193,9 +1193,16 @@ class DocumentProcessor:
                     'original_chunk_id': json_chunk.get('chunk_id', f'chunk_{idx}')
                 }
                 
-                # Extract tags before merging metadata
-                tags = json_metadata.get('tags', [])
-                
+                # Extract tags: merge top-level chunk.tags with metadata.tags so
+                # neither source is silently dropped. build_index_from_sources
+                # writes its --tags global tags to the TOP LEVEL of each chunk,
+                # while the markdown chunker writes auto-tags (depth:N, code:LANG)
+                # to chunk.metadata.tags. Reading only one would lose the other.
+                tags = list(dict.fromkeys(
+                    list(json_chunk.get('tags') or []) +
+                    list(json_metadata.get('tags') or [])
+                ))
+
                 # Merge JSON metadata (this includes all fields including tags)
                 # We'll keep tags in metadata for backward compatibility but also set at top level
                 metadata.update(json_metadata)
