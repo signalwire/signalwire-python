@@ -35,6 +35,11 @@ except ImportError:
     markdown = None
 
 try:
+    from markdown_it import MarkdownIt
+except ImportError:
+    MarkdownIt = None
+
+try:
     from striprtf.striprtf import rtf_to_text
 except ImportError:
     rtf_to_text = None
@@ -366,13 +371,185 @@ class DocumentProcessor:
         return chunks
     
     def _chunk_markdown_enhanced(self, content: str, filename: str) -> List[Dict[str, Any]]:
-        """Enhanced markdown chunking with code block detection and rich metadata
+        """Enhanced markdown chunking with code block detection and rich metadata.
 
-        Features:
-        - Tracks header hierarchy for section paths
-        - Detects code blocks and extracts language
-        - Adds 'code' tags to chunks containing code
-        - Preserves markdown structure for better search
+        Uses markdown-it-py AST when available to keep tables, fenced code,
+        blockquotes, and lists atomic. Falls back to a line-based walker when
+        markdown-it-py is unavailable.
+        """
+        if MarkdownIt is not None:
+            return self._chunk_markdown_ast(content, filename)
+        return self._chunk_markdown_line_walker(content, filename)
+
+    def _chunk_markdown_ast(self, content: str, filename: str) -> List[Dict[str, Any]]:
+        """AST-based markdown chunker.
+
+        Parses the doc with markdown-it-py, then walks the top-level block tokens,
+        reconstructing each block from its source line range. Atomic blocks
+        (tables, fenced code, blockquotes, lists, html blocks) are never split.
+        Size-based splits only happen at block boundaries.
+        """
+        md = MarkdownIt("commonmark").enable(["table"])
+        tokens = md.parse(content)
+        lines = content.split('\n')
+        threshold_chars = max(1, self.chunk_size * 6)
+
+        # Group top-level tokens into atomic blocks.
+        # A "block" here = heading OR one non-heading container whose source
+        # spans [map[0], map[1]) in the original lines.
+        blocks = []  # each: {type, level?, hierarchy_update?, text, lines: [str], has_code, code_lang?}
+        depth = 0
+        current_open = None  # dict collecting the current container
+        for tok in tokens:
+            # Track nesting for container tokens so we only look at top-level opens.
+            if tok.nesting == 1:
+                if depth == 0:
+                    current_open = {
+                        "type": tok.type.replace("_open", ""),
+                        "token": tok,
+                        "map": tok.map,
+                        "has_code": False,
+                        "code_lang": None,
+                    }
+                depth += 1
+            elif tok.nesting == -1:
+                depth -= 1
+                if depth == 0 and current_open is not None:
+                    block = self._finalize_md_block(current_open, lines)
+                    if block is not None:
+                        blocks.append(block)
+                    current_open = None
+            else:
+                # Leaf block at top level (fence, code_block, hr, html_block).
+                if depth == 0 and tok.map is not None:
+                    blocks.append(self._leaf_md_block(tok, lines))
+
+        # Walk blocks, maintain heading hierarchy, emit chunks.
+        chunks: List[Dict[str, Any]] = []
+        hierarchy: List[str] = []
+        current_lines: List[str] = []
+        current_hierarchy: List[str] = []
+        current_start_line: Optional[int] = None
+        current_end_line: Optional[int] = None
+        current_size = 0
+        current_code_langs: List[str] = []
+        current_has_code = False
+
+        def flush():
+            nonlocal current_lines, current_start_line, current_end_line
+            nonlocal current_size, current_code_langs, current_has_code, current_hierarchy
+            text = '\n'.join(current_lines)
+            if text.strip():
+                meta = self._build_markdown_metadata(current_hierarchy, current_code_langs, current_has_code)
+                chunks.append(self._create_chunk(
+                    content=text,
+                    filename=filename,
+                    section=self._build_section_path(current_hierarchy),
+                    start_line=current_start_line,
+                    end_line=current_end_line,
+                    metadata=meta,
+                ))
+            current_lines = []
+            current_start_line = None
+            current_end_line = None
+            current_size = 0
+            current_code_langs = []
+            current_has_code = False
+
+        for block in blocks:
+            if block["type"] == "heading":
+                # Flush whatever preceded this heading under the old hierarchy.
+                flush()
+                level = block["level"]
+                hierarchy = hierarchy[:level - 1] + [block["heading_text"]]
+                # Seed the new chunk with the heading line(s) themselves.
+                current_hierarchy = list(hierarchy)
+                current_lines = list(block["source_lines"])
+                current_start_line = block["start_line"]
+                current_end_line = block["end_line"]
+                current_size = sum(len(l) + 1 for l in block["source_lines"])
+                continue
+
+            block_size = sum(len(l) + 1 for l in block["source_lines"])
+            # If adding this block would push us over and we already have real
+            # content, flush first. Keep the hierarchy for the follow-on chunk
+            # so breadcrumbs continue across the split.
+            if current_size + block_size > threshold_chars and current_size > 0:
+                saved_hierarchy = list(current_hierarchy or hierarchy)
+                flush()
+                current_hierarchy = saved_hierarchy
+
+            if not current_hierarchy:
+                current_hierarchy = list(hierarchy)
+            if current_start_line is None:
+                current_start_line = block["start_line"]
+            current_end_line = block["end_line"]
+            current_lines.extend(block["source_lines"])
+            current_size += block_size
+            if block.get("has_code"):
+                current_has_code = True
+                lang = block.get("code_lang")
+                if lang and lang not in current_code_langs:
+                    current_code_langs.append(lang)
+
+        flush()
+        return chunks
+
+    def _finalize_md_block(self, opened: Dict[str, Any], lines: List[str]) -> Optional[Dict[str, Any]]:
+        """Turn an accumulated container token into a block record."""
+        tok = opened["token"]
+        tmap = opened["map"]
+        if tmap is None:
+            return None
+        start, end = tmap  # [start, end) zero-indexed
+        source_lines = lines[start:end]
+        block_type = opened["type"]
+        if block_type == "heading":
+            level = int(tok.tag[1]) if tok.tag and tok.tag.startswith("h") else 1
+            # Extract heading text from the first non-empty source line.
+            heading_text = ""
+            for l in source_lines:
+                stripped = re.sub(r'^#{1,6}\s+', '', l).strip()
+                if stripped:
+                    heading_text = stripped
+                    break
+            return {
+                "type": "heading",
+                "level": level,
+                "heading_text": heading_text,
+                "source_lines": source_lines,
+                "start_line": start + 1,
+                "end_line": end,
+                "has_code": False,
+            }
+        return {
+            "type": block_type,
+            "source_lines": source_lines,
+            "start_line": start + 1,
+            "end_line": end,
+            "has_code": False,
+        }
+
+    def _leaf_md_block(self, tok, lines: List[str]) -> Dict[str, Any]:
+        """Turn a leaf (fence, code_block, hr, html_block) token into a block."""
+        start, end = tok.map
+        source_lines = lines[start:end]
+        block = {
+            "type": tok.type,
+            "source_lines": source_lines,
+            "start_line": start + 1,
+            "end_line": end,
+            "has_code": False,
+        }
+        if tok.type in ("fence", "code_block"):
+            block["has_code"] = True
+            block["code_lang"] = (tok.info.strip().split() or [None])[0] if tok.type == "fence" and tok.info else None
+        return block
+
+    def _chunk_markdown_line_walker(self, content: str, filename: str) -> List[Dict[str, Any]]:
+        """Legacy line-based markdown chunker. Kept as fallback when
+        markdown-it-py is unavailable. Preserves original behavior with the
+        empty-chunk guard applied.
         """
         chunks = []
         lines = content.split('\n')
@@ -404,8 +581,8 @@ class DocumentProcessor:
                 header_level = len(header_match.group(1))
                 header_text = header_match.group(2).strip()
 
-                # Save current chunk if it exists
-                if current_chunk:
+                # Save current chunk if it exists and has real content
+                if current_chunk and '\n'.join(current_chunk).strip():
                     chunk_metadata = self._build_markdown_metadata(
                         current_hierarchy, code_languages, has_code
                     )
@@ -438,17 +615,18 @@ class DocumentProcessor:
                     split_point = self._find_best_split_point(current_chunk)
 
                     chunk_to_save = current_chunk[:split_point]
-                    chunk_metadata = self._build_markdown_metadata(
-                        current_hierarchy, code_languages, has_code
-                    )
-                    chunks.append(self._create_chunk(
-                        content='\n'.join(chunk_to_save),
-                        filename=filename,
-                        section=self._build_section_path(current_hierarchy),
-                        start_line=line_start,
-                        end_line=line_start + split_point - 1,
-                        metadata=chunk_metadata
-                    ))
+                    if '\n'.join(chunk_to_save).strip():
+                        chunk_metadata = self._build_markdown_metadata(
+                            current_hierarchy, code_languages, has_code
+                        )
+                        chunks.append(self._create_chunk(
+                            content='\n'.join(chunk_to_save),
+                            filename=filename,
+                            section=self._build_section_path(current_hierarchy),
+                            start_line=line_start,
+                            end_line=line_start + split_point - 1,
+                            metadata=chunk_metadata
+                        ))
 
                     # Start new chunk with overlap
                     overlap_lines = self._get_overlap_lines(chunk_to_save)
@@ -461,7 +639,7 @@ class DocumentProcessor:
                     has_code = False
 
         # Add final chunk
-        if current_chunk:
+        if current_chunk and '\n'.join(current_chunk).strip():
             chunk_metadata = self._build_markdown_metadata(
                 current_hierarchy, code_languages, has_code
             )
@@ -475,7 +653,7 @@ class DocumentProcessor:
             ))
 
         return chunks
-    
+
     def _chunk_python_enhanced(self, content: str, filename: str) -> List[Dict[str, Any]]:
         """Enhanced Python code chunking with better function/class detection"""
         chunks = []
