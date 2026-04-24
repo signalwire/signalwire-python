@@ -203,19 +203,28 @@ self.prompt_add_section("Context",
                                "Check for existing tickets"])
 ```
 
-For convenience, the SDK also provides wrapper methods that some users may prefer:
+If you prefer a more conversational API, you can define thin wrapper methods on
+your agent subclass that delegate to `prompt_add_section()`. The `simple_agent`
+example demonstrates this pattern:
 
 ```python
-# Convenience methods
-self.setPersonality("You are a friendly assistant.") 
-self.setGoal("Help users with their questions.")
-self.setInstructions([
-    "Answer questions clearly",
-    "Be helpful and polite"
-])
+# User-defined wrappers (see examples/simple_agent.py)
+class MyAgent(AgentBase):
+    def setPersonality(self, text):
+        self.prompt_add_section("Personality", body=text)
+        return self
+
+    def setGoal(self, text):
+        self.prompt_add_section("Goal", body=text)
+        return self
+
+    def setInstructions(self, items):
+        self.prompt_add_section("Instructions", bullets=items)
+        return self
 ```
 
-These convenience methods call `prompt_add_section()` internally with the appropriate section titles.
+These are not part of the SDK surface — they are one-line helpers you can copy
+into your own agent class if you prefer that style.
 
 ### 2. Using Raw Text Prompts
 
@@ -1917,7 +1926,12 @@ These hooks are particularly useful for:
 
 #### Implementation
 
-To implement lifecycle hooks, define them as regular SWAIG functions with these specific names:
+To implement lifecycle hooks, define them as regular SWAIG functions with these specific names.
+
+> **Note:** The SDK does not ship built-in session storage. The `update_state`,
+> `get_state`, and `delete_state` methods in the example below are helpers you
+> would implement yourself on top of Redis, a database, or another external
+> store — see **Important Notes** item 4 below.
 
 ```python
 from signalwire import AgentBase, FunctionResult
@@ -1925,7 +1939,7 @@ from signalwire import AgentBase, FunctionResult
 class MyAgent(AgentBase):
     def __init__(self):
         super().__init__(name="my-agent")
-    
+
     @AgentBase.tool(
         name="startup_hook",
         description="Called when the voice session starts"
@@ -1935,8 +1949,8 @@ class MyAgent(AgentBase):
         call_id = raw_data.get("call_id")
         from_number = raw_data.get("from_number")
         to_number = raw_data.get("to_number")
-        
-        # Initialize session state
+
+        # Initialize session state (using your own storage helpers)
         self.update_state(call_id, {
             "session_start": datetime.now().isoformat(),
             "from": from_number,

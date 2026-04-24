@@ -111,12 +111,10 @@ class DeclarativeAgent(AgentBase):
         
         # Notice we don't need any prompt building calls here - they're handled
         # automatically by the declarative PROMPT_SECTIONS
-        # This is different from the conventional approach:
-        #
-        # Conventional approach:
-        #   self.set_personality("You are a friendly AI assistant...")
-        #   self.add_goal("Help users with their questions...")
-        #   self.add_instruction("Be concise and direct...")
+        # This is different from the conventional approach using prompt_add_section:
+        #   self.prompt_add_section("Personality", body="You are a friendly AI assistant...")
+        #   self.prompt_add_section("Goal",        body="Help users with their questions...")
+        #   self.prompt_add_section("Instructions", bullets=["Be concise and direct..."])
         #   ...
         
         #------------------------------------------------------------------------

@@ -90,10 +90,10 @@ class VoicemailService(SWMLService):
         self.add_verb("play", {
             "url": "say:Thank you for your message. Goodbye!"
         })
-        
+
         # Hang up
-        self.add_hangup_verb()
-        
+        self.add_verb("hangup", {})
+
         self.log.debug("voicemail_document_built")
 
 
@@ -260,10 +260,10 @@ class CallTransferService(SWMLService):
         self.add_verb("play", {
             "url": "say:Thank you for your message. We'll get back to you as soon as possible."
         })
-        
+
         # Hang up
-        self.add_hangup_verb()
-        
+        self.add_verb("hangup", {})
+
         self.log.debug("transfer_document_built")
 
 
@@ -332,10 +332,10 @@ class CallRecordingService(SWMLService):
         self.add_verb("play", {
             "url": "say:Thank you for your time. Goodbye!"
         })
-        
+
         # Hang up
-        self.add_hangup_verb()
-        
+        self.add_verb("hangup", {})
+
         self.log.debug("recording_document_built")
 
 

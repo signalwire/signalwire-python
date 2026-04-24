@@ -163,10 +163,10 @@ class VoicemailService(SWMLService):
                 "url": "say:Thank you for your message. Goodbye!"
             })
             print("Fell back to add_verb")
-        
-        # Hang up - use the existing method
-        self.add_hangup_verb()
-        
+
+        # Hang up - use the add_verb method
+        self.add_verb("hangup", {})
+
         self.log.debug("voicemail_document_built")
 
 
@@ -327,10 +327,10 @@ class CallTransferService(SWMLService):
         self.add_verb("play", {
             "url": "say:Thank you for your message. We'll get back to you as soon as possible."
         })
-        
+
         # Hang up
-        self.add_hangup_verb()
-        
+        self.add_verb("hangup", {})
+
         self.log.debug("transfer_document_built")
 
 

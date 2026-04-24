@@ -1,0 +1,66 @@
+name: Doc Audit
+
+# Fails if a method referenced in docs/ or examples/ does not resolve in the
+# public SDK surface (see porting-sdk/python_surface.json) and is not listed
+# in DOC_AUDIT_IGNORE.md with a rationale. Also runs `python -m py_compile`
+# over every example script to catch syntax errors introduced by a drift fix.
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  schedule:
+    # Nightly at 07:13 UTC — catches drift introduced by changes in porting-sdk
+    # or in the Python SDK between PR cycles.
+    - cron: '13 7 * * *'
+  workflow_dispatch:
+
+jobs:
+  doc-audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out signalwire-python
+        uses: actions/checkout@v6
+        with:
+          path: signalwire-python
+
+      - name: Check out porting-sdk (provides audit scripts + surface JSON)
+        uses: actions/checkout@v6
+        with:
+          repository: signalwire/porting-sdk
+          path: porting-sdk
+          # porting-sdk is the source of truth for the Python surface — pin to
+          # main so the audit reflects the latest reference.
+          ref: main
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+
+      - name: Compile every example (catches syntax-level phantom APIs)
+        # py_compile only verifies syntax, but any example that calls a phantom
+        # import or syntax error will fail here before the audit even runs.
+        run: |
+          cd signalwire-python
+          python -m py_compile examples/*.py rest/examples/*.py relay/examples/*.py
+
+      - name: Run audit_docs.py against the Python surface
+        run: |
+          python3 porting-sdk/scripts/audit_docs.py \
+            --root signalwire-python \
+            --surface porting-sdk/python_surface.json \
+            --ignore signalwire-python/DOC_AUDIT_IGNORE.md
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Doc Audit" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Verifies every \`.method(\` reference in \`docs/\`, \`examples/\`, \`rest/**\`, \`relay/**\` resolves in \`python_surface.json\`" >> $GITHUB_STEP_SUMMARY
+          echo "- Ignores listed in \`DOC_AUDIT_IGNORE.md\` (each entry has a rationale)" >> $GITHUB_STEP_SUMMARY
+          echo "- Also runs \`python -m py_compile\` on every example script" >> $GITHUB_STEP_SUMMARY
