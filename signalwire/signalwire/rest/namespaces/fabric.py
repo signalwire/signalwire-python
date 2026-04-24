@@ -11,6 +11,8 @@ See LICENSE file in the project root for full license information.
 Fabric API namespace — resource composition, addresses, and tokens.
 """
 
+import warnings
+
 from .._base import BaseResource, CrudWithAddresses
 
 
@@ -22,6 +24,38 @@ class FabricResource(CrudWithAddresses):
 class FabricResourcePUT(CrudWithAddresses):
     """Fabric resource that uses PUT for updates."""
     _update_method = "PUT"
+
+
+class AutoMaterializedWebhook(FabricResource):
+    """Fabric webhook resource that's normally auto-created by phone_numbers.set_*.
+
+    Exposed for backwards compatibility. The binding model for these resources
+    is on the phone number (see ``phone_numbers.set_swml_webhook`` /
+    ``set_cxml_webhook``) — setting ``call_handler`` on a phone number
+    auto-materializes the webhook. Calling ``create`` here produces an orphan
+    resource that isn't bound to any phone number.
+    """
+
+    _auto_helper_name = "phone_numbers.set_*_webhook"
+
+    def create(self, **kwargs):
+        warnings.warn(
+            f"Creating a webhook Fabric resource directly produces an orphan not "
+            f"bound to any phone number. Use {self._auto_helper_name} instead; "
+            f"it updates the phone number and the server auto-materializes the "
+            f"resource. See porting-sdk's phone-binding.md.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return super().create(**kwargs)
+
+
+class SwmlWebhooksResource(AutoMaterializedWebhook):
+    _auto_helper_name = "phone_numbers.set_swml_webhook(sid, url=...)"
+
+
+class CxmlWebhooksResource(AutoMaterializedWebhook):
+    _auto_helper_name = "phone_numbers.set_cxml_webhook(sid, url=...)"
 
 
 class CallFlowsResource(FabricResourcePUT):
@@ -110,6 +144,25 @@ class GenericResources(BaseResource):
         )
 
     def assign_phone_route(self, resource_id, **kwargs):
+        """Deprecated for the common binding cases. Use ``phone_numbers.set_*`` helpers.
+
+        This endpoint (``POST /api/fabric/resources/{id}/phone_routes``) accepts
+        only a narrow set of legacy resource types as the attach target. It
+        **does not work** for ``swml_webhook`` / ``cxml_webhook`` / ``ai_agent``
+        bindings — those are configured on the phone number and the Fabric
+        resource is auto-materialized (see ``phone_numbers.set_swml_webhook``
+        etc.). The authoritative list of accepting resource types lives in the
+        OpenAPI spec; routing here for those types returns 404 or 422.
+        """
+        warnings.warn(
+            "assign_phone_route does not bind phone numbers to "
+            "swml_webhook/cxml_webhook/ai_agent resources — those are "
+            "configured via phone_numbers.set_swml_webhook / set_cxml_webhook "
+            "/ set_ai_agent. This method applies only to a narrow set of "
+            "legacy resource types. See porting-sdk's phone-binding.md.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self._http.post(self._path(resource_id, "phone_routes"), body=kwargs)
 
     def assign_domain_application(self, resource_id, **kwargs):
@@ -166,10 +219,13 @@ class FabricNamespace:
         self.cxml_applications = CxmlApplicationsResource(http, f"{base}/cxml_applications")
 
         # PATCH-update resources
-        self.swml_webhooks = FabricResource(http, f"{base}/swml_webhooks")
+        # swml_webhooks and cxml_webhooks are normally auto-materialized by
+        # phone_numbers.set_swml_webhook / set_cxml_webhook. Direct create
+        # still works for backcompat but emits a DeprecationWarning.
+        self.swml_webhooks = SwmlWebhooksResource(http, f"{base}/swml_webhooks")
         self.ai_agents = FabricResource(http, f"{base}/ai_agents")
         self.sip_gateways = FabricResource(http, f"{base}/sip_gateways")
-        self.cxml_webhooks = FabricResource(http, f"{base}/cxml_webhooks")
+        self.cxml_webhooks = CxmlWebhooksResource(http, f"{base}/cxml_webhooks")
 
         # Special resources
         self.resources = GenericResources(http, base)

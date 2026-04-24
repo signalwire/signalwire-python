@@ -13,5 +13,6 @@ SignalWire REST API client module.
 
 from .client import RestClient
 from ._base import SignalWireRestError
+from .call_handler import PhoneCallHandler
 
-__all__ = ["RestClient", "SignalWireRestError"]
+__all__ = ["RestClient", "SignalWireRestError", "PhoneCallHandler"]
