@@ -1406,13 +1406,14 @@ Define structured workflow contexts for the agent.
 **Usage:**
 ```python
 contexts = agent.define_contexts()
-contexts.add_context("greeting") \
-    .add_step("welcome", "Welcome! How can I help?") \
-    .on_completion_go_to("main_menu")
 
-contexts.add_context("main_menu") \
-    .add_step("menu", "Choose: 1) Support 2) Sales 3) Billing") \
-    .allow_functions(["transfer_to_support", "transfer_to_sales"])
+greeting = contexts.add_context("greeting")
+greeting.add_step("welcome", task="Welcome! How can I help?",
+                  valid_steps=["main_menu"])
+
+main_menu = contexts.add_context("main_menu")
+main_menu.add_step("menu", task="Choose: 1) Support 2) Sales 3) Billing",
+                   functions=["transfer_to_support", "transfer_to_sales"])
 ```
 
 This concludes Part 1 of the API reference covering the AgentBase class. The document will continue with FunctionResult, DataMap, and other components in subsequent parts.

@@ -45,12 +45,6 @@ result.execute_swml('{"version":"1.0.0","sections":{"main":[{"say":"Hello"}]}}')
 # SWML dictionary
 swml_dict = {"version": "1.0.0", "sections": {"main": [{"say": "Hello"}]}}
 result.execute_swml(swml_dict, transfer=True)
-
-# SWML SDK object
-from signalwire.swml import SWML
-swml_doc = SWML()
-swml_doc.add_application("main", "say", {"text": "Connecting now"})
-result.execute_swml(swml_doc)
 ```
 
 #### **[IMPLEMENTED]** - Transfer/connect call to another destination using SWML.

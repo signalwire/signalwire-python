@@ -67,12 +67,12 @@ class DynamicGreetingService(SWMLService):
             "max_digits": 1,
             "terminators": "#"
         })
-        
+
         # Add hang up
-        self.add_hangup_verb()
-        
+        self.add_verb("hangup", {})
+
         self.log.debug("default_document_built")
-    
+
     def on_request(self, request_data: dict = None) -> dict:
         """
         Customize the SWML document based on the request data
@@ -172,9 +172,9 @@ class DynamicGreetingService(SWMLService):
                 "timeout": 30,
                 "answer_on_bridge": True
             })
-        
+
         # Add hang up as fallback
-        self.add_hangup_verb()
+        self.add_verb("hangup", {})
         
         self.log.info("document_customized", 
                      caller_type=caller_type,
@@ -219,10 +219,10 @@ class CallRouterService(SWMLService):
             "to": "+15551234567",  # Fallback number
             "timeout": 30
         })
-        
+
         # Add hang up
-        self.add_hangup_verb()
-        
+        self.add_verb("hangup", {})
+
         self.log.debug("default_document_built")
     
     def on_request(self, request_data: dict = None) -> dict:
@@ -268,7 +268,7 @@ class CallRouterService(SWMLService):
             self.add_verb("play", {
                 "url": "say:We'll call you back at the number you provided. Thank you for your patience."
             })
-            self.add_hangup_verb()
+            self.add_verb("hangup", {})
             return None
         
         # Inform caller if we're experiencing high volume
@@ -344,7 +344,7 @@ class CallRouterService(SWMLService):
         self.add_verb("play", {
             "url": "say:We're sorry, but all of our agents are currently busy. Please try your call again later."
         })
-        self.add_hangup_verb()
+        self.add_verb("hangup", {})
         
         return None  # The document has already been modified
 
