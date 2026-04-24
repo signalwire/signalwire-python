@@ -69,17 +69,7 @@ def main():
         detail = client.fabric.resources.get(first["id"])
         print(f"  Resource detail: {detail.get('display_name', 'N/A')} ({detail.get('type', 'N/A')})")
 
-    # 8. Assign a phone route to a resource (demo)
-    print("\nAssigning phone route (demo)...")
-    try:
-        client.fabric.resources.assign_phone_route(
-            relay_id, phone_number="+15551234567",
-        )
-        print("  Phone route assigned")
-    except SignalWireRestError as e:
-        print(f"  Route assignment failed (expected in demo): {e.status_code}")
-
-    # 9. Assign a domain application (demo)
+    # 8. Assign a domain application (demo)
     print("\nAssigning domain application (demo)...")
     try:
         client.fabric.resources.assign_domain_application(
@@ -89,7 +79,11 @@ def main():
     except SignalWireRestError as e:
         print(f"  Domain assignment failed (expected in demo): {e.status_code}")
 
-    # 10. Generate tokens
+    # NOTE: To bind a phone number to a webhook/agent/flow, set call_handler
+    # on the phone number directly — see rest_bind_phone_to_swml_webhook.py.
+    # assign_phone_route does NOT work for swml_webhook / cxml_webhook / ai_agent.
+
+    # 9. Generate tokens
     print("\nGenerating tokens...")
     try:
         guest = client.fabric.tokens.create_guest_token(resource_id=relay_id)
@@ -109,7 +103,7 @@ def main():
     except SignalWireRestError as e:
         print(f"  Embed token failed (expected in demo): {e.status_code}")
 
-    # 11. Clean up
+    # 10. Clean up
     print("\nCleaning up...")
     client.fabric.relay_applications.delete(relay_id)
     print(f"  Deleted relay application {relay_id}")
