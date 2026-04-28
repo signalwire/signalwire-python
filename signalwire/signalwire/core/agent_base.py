@@ -78,9 +78,8 @@ logger = get_logger("agent_base")
 class AgentBase(
     AuthMixin,
     WebMixin,
-    SWMLService,
+    SWMLService,  # ToolMixin is now composed into SWMLService — inherited via SWMLService
     PromptMixin,
-    ToolMixin,
     SkillMixin,
     AIConfigMixin,
     ServerlessMixin,
@@ -229,17 +228,14 @@ class AgentBase(
         self._record_format = record_format
         self._record_stereo = record_stereo
         
-        # Initialize refactored managers early
+        # Initialize refactored managers early. _tool_registry is now created
+        # by SWMLService.__init__ (lifted down so non-agent SWMLServices can
+        # also host SWAIG); class-decorated tools are picked up there too.
         self._prompt_manager = PromptManager(self)
-        self._tool_registry = ToolRegistry(self)
-        
+
         # Process declarative PROMPT_SECTIONS if defined in subclass
         self._process_prompt_sections()
-        
-        
-        # Process class-decorated tools (using @AgentBase.tool)
-        self._tool_registry.register_class_decorated_tools()
-        
+
         # Add native_functions parameter
         self.native_functions = native_functions or []
         
@@ -1187,7 +1183,65 @@ class AgentBase(
         
         # Return the rendered document as a string
         return agent_to_use.render_document()
-    
+
+    # -- SWAIG extension-point overrides ------------------------------------
+    # SWMLService now owns the /swaig handler (lifted down so non-agent
+    # SWMLServices can host SWAIG too). AgentBase customizes behavior via
+    # these hooks: dynamic prompt-rendered SWML on GET, and
+    # token-validation + ephemeral dynamic config on POST dispatch.
+
+    async def _swaig_render_get_response(self, request: Request, call_id: Optional[str]) -> Response:
+        swml = self._render_swml(call_id)
+        self.log.debug("swml_rendered", swml_size=len(swml))
+        return Response(content=swml, media_type="application/json")
+
+    def _swaig_pre_dispatch(
+        self,
+        request: Request,
+        body: Dict[str, Any],
+        call_id: Optional[str],
+        function_name: str,
+    ) -> Tuple[Any, Optional[Dict[str, Any]]]:
+        req_log = self.log.bind(endpoint="swaig", function=function_name)
+
+        # Validate security token if present.
+        token = request.query_params.get("__token") or request.query_params.get("token")
+        if token:
+            req_log.debug("token_found", token_length=len(token))
+            if hasattr(self, '_session_manager') and function_name in self._tool_registry._swaig_functions:
+                is_valid = self._session_manager.validate_tool_token(function_name, token, call_id)
+                if is_valid:
+                    req_log.debug("token_valid")
+                else:
+                    req_log.warning("token_invalid")
+                    if hasattr(self._session_manager, 'debug_token'):
+                        debug_info = self._session_manager.debug_token(token)
+                        req_log.debug("token_debug", debug=json.dumps(debug_info))
+                    func_entry = self._tool_registry._swaig_functions.get(function_name)
+                    if func_entry and (
+                        func_entry.secure if hasattr(func_entry, 'secure') else func_entry.get('secure', True)
+                    ):
+                        from signalwire.core.function_result import FunctionResult
+                        return self, FunctionResult(
+                            response=(
+                                "I'm sorry, the security token for this function is invalid "
+                                "or expired. I cannot execute this action."
+                            )
+                        ).to_dict()
+
+        # Dynamic-config ephemeral agent.
+        target = self
+        if self._dynamic_config_callback and request:
+            target = self._create_ephemeral_copy()
+            try:
+                query_params = dict(request.query_params)
+                headers = dict(request.headers)
+                self._dynamic_config_callback(query_params, body, headers, target)
+            except Exception as e:
+                req_log.error("dynamic_config_error", error=str(e))
+
+        return target, None
+
     def _build_webhook_url(self, endpoint: str, query_params: Optional[Dict[str, str]] = None) -> str:
         """
         Helper method to build webhook URLs consistently

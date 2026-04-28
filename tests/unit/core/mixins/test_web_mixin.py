@@ -16,10 +16,17 @@ import pytest
 import json
 import base64
 import asyncio
+import types
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
 
 from signalwire.core.mixins.web_mixin import WebMixin
 from signalwire.core.function_result import FunctionResult
+# SWAIG handler was lifted from WebMixin into SWMLService, with extension
+# points overridden in AgentBase. Tests in this file historically tested the
+# monolithic WebMixin handler — we bind the lifted methods onto FakeAgent so
+# behavior coverage is preserved.
+from signalwire.core.swml_service import SWMLService as _SWMLSvc
+from signalwire.core.agent_base import AgentBase as _AgentBase
 
 
 # ---------------------------------------------------------------------------
@@ -115,6 +122,26 @@ def _build_mixin(**overrides):
         agent._create_ephemeral_copy = MagicMock(return_value=agent)
     if "handle_serverless_request" not in overrides:
         agent.handle_serverless_request = MagicMock(return_value=None)
+    # _check_content_type and _read_body_with_limit were lifted from WebMixin
+    # into SWMLService. The real MRO supplies them via inheritance; these
+    # tests build FakeAgent(WebMixin) in isolation, so we mock them here.
+    # _check_content_type and _read_body_with_limit live on SWMLService now.
+    # Bind the real implementations so size/content-type tests still trigger
+    # real 413/415 paths.
+    if "_check_content_type" not in overrides:
+        agent._check_content_type = types.MethodType(_SWMLSvc._check_content_type, agent)
+    if "_read_body_with_limit" not in overrides:
+        agent._read_body_with_limit = types.MethodType(_SWMLSvc._read_body_with_limit, agent)
+    # Bind the lifted SWAIG handler + AgentBase extension overrides so tests
+    # of SWAIG behavior (token validation, ephemeral dynamic config) keep
+    # exercising the same path. AgentBase's override IS what these tests
+    # historically asserted on.
+    if "_handle_swaig_request" not in overrides:
+        agent._handle_swaig_request = types.MethodType(_SWMLSvc._handle_swaig_request, agent)
+    if "_swaig_render_get_response" not in overrides:
+        agent._swaig_render_get_response = types.MethodType(_AgentBase._swaig_render_get_response, agent)
+    if "_swaig_pre_dispatch" not in overrides:
+        agent._swaig_pre_dispatch = types.MethodType(_AgentBase._swaig_pre_dispatch, agent)
 
     return agent
 

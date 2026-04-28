@@ -17,6 +17,7 @@ import os
 import hmac
 import inspect
 import json
+import re
 import secrets
 import base64
 import logging
@@ -44,9 +45,15 @@ except ImportError:
 from signalwire.utils.schema_utils import SchemaUtils, SchemaValidationError
 from signalwire.core.swml_handler import VerbHandlerRegistry, SWMLVerbHandler
 from signalwire.core.security_config import SecurityConfig
+from signalwire.core.function_result import FunctionResult
+from signalwire.core.agent.tools.registry import ToolRegistry
+from signalwire.core.mixins.tool_mixin import ToolMixin
+
+# Maximum request body size (10MB, matches CGI limit). Mirrors WebMixin.
+MAX_REQUEST_BODY_SIZE = 10 * 1024 * 1024
 
 
-class SWMLService:
+class SWMLService(ToolMixin):
     """
     Base class for creating and serving SWML documents.
     
@@ -155,7 +162,15 @@ class SWMLService:
         
         # Initialize routing callbacks dictionary (path -> callback)
         self._routing_callbacks = {}
-    
+
+        # SWAIG tool registry — lifted from AgentBase so that any SWMLService
+        # (sidecar, custom verb host, etc.) can register and dispatch SWAIG
+        # functions without subclassing AgentBase.
+        self._tool_registry = ToolRegistry(self)
+
+        # Pick up any class-decorated @AgentBase.tool / @SWMLService.tool methods
+        self._tool_registry.register_class_decorated_tools()
+
     def _create_verb_methods(self) -> None:
         """
         Create auto-vivified methods for all verbs at initialization time
@@ -546,30 +561,38 @@ class SWMLService:
     def as_router(self) -> APIRouter:
         """
         Create a FastAPI router for this service
-        
+
         Returns:
             APIRouter: FastAPI router
         """
         router = APIRouter(redirect_slashes=False)
-        
+
         # Root endpoint with and without trailing slash
         @router.get("/")
         @router.post("/")
         async def handle_root(request: Request, response: Response):
             """Handle requests to the root endpoint"""
             return await self._handle_request(request, response)
-        
+
+        # SWAIG endpoint (lifted from AgentBase). Available to any SWMLService.
+        @router.get("/swaig")
+        @router.get("/swaig/")
+        @router.post("/swaig")
+        @router.post("/swaig/")
+        async def handle_swaig(request: Request, response: Response):
+            return await self._handle_swaig_request(request, response)
+
         # Register routing callbacks as needed
         if hasattr(self, '_routing_callbacks') and self._routing_callbacks:
             for callback_path, callback_fn in self._routing_callbacks.items():
                 # Skip the root path which is already handled
                 if callback_path == "/":
                     continue
-                    
+
                 # Register both versions: with and without trailing slash
                 path = callback_path.rstrip("/")
                 path_with_slash = f"{path}/"
-                
+
                 @router.get(path)
                 @router.get(path_with_slash)
                 @router.post(path)
@@ -579,8 +602,195 @@ class SWMLService:
                     # Store the callback path in the request state
                     request.state.callback_path = cb_path
                     return await self._handle_request(request, response)
-        
+
         return router
+
+    # -- SWAIG hosting (lifted from WebMixin) --------------------------------
+    # These methods let any SWMLService host a /swaig endpoint and dispatch
+    # registered tool functions, without depending on AgentBase. AgentBase
+    # overrides the extension points below to layer in agent-specific behavior
+    # (token validation, ephemeral dynamic config, full prompt-rendered SWML).
+
+    async def _read_body_with_limit(self, request: Request) -> bytes:
+        """Read request body with size limit enforcement."""
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                if int(content_length) > MAX_REQUEST_BODY_SIZE:
+                    raise ValueError("Request body too large")
+            except (ValueError, TypeError):
+                if isinstance(content_length, str) and not content_length.isdigit():
+                    pass
+                else:
+                    raise
+        raw = await request.body()
+        if len(raw) > MAX_REQUEST_BODY_SIZE:
+            raise ValueError("Request body too large")
+        return raw
+
+    def _check_content_type(self, request: Request) -> bool:
+        """Check if POST request has application/json content type."""
+        content_type = request.headers.get("content-type", "")
+        if not content_type:
+            return True
+        return "application/json" in content_type
+
+    async def _swaig_render_get_response(self, request: Request, call_id: Optional[str]) -> Response:
+        """Extension point: render the SWML document for a GET on /swaig.
+
+        Default: serialize the currently-built document. AgentBase overrides
+        this to call _render_swml(call_id) which dynamically rebuilds the
+        SWML each request from prompts and dynamic config.
+        """
+        return Response(content=self.render_document(), media_type="application/json")
+
+    def _swaig_pre_dispatch(
+        self,
+        request: Request,
+        body: Dict[str, Any],
+        call_id: Optional[str],
+        function_name: str,
+    ) -> Tuple[Any, Optional[Dict[str, Any]]]:
+        """Extension point: invoked between argument parsing and function dispatch.
+
+        Returns a tuple (target, short_circuit):
+        - target: the object whose on_function_call will be invoked. Defaults
+          to self; AgentBase may return an ephemeral copy for dynamic config.
+        - short_circuit: if non-None, this dict is returned as the SWAIG
+          response without dispatching (e.g. for invalid security tokens).
+        """
+        return self, None
+
+    async def _handle_swaig_request(self, request: Request, response: Response):
+        """Generic SWAIG endpoint handler.
+
+        GET: returns the SWML document via _swaig_render_get_response().
+        POST: parses {function, argument, call_id, ...}, validates, runs
+        _swaig_pre_dispatch hook, calls on_function_call() on the target, and
+        returns the FunctionResult-shaped response.
+        """
+        req_log = self.log.bind(
+            endpoint="swaig",
+            method=request.method,
+            path=request.url.path,
+        )
+        req_log.debug("endpoint_called")
+
+        try:
+            if not self._check_basic_auth(request):
+                req_log.warning("unauthorized_access_attempt")
+                return Response(
+                    content=json.dumps({"error": "Unauthorized"}),
+                    status_code=401,
+                    headers={"WWW-Authenticate": "Basic"},
+                    media_type="application/json",
+                )
+
+            if request.method == "GET":
+                call_id = request.query_params.get("call_id")
+                return await self._swaig_render_get_response(request, call_id)
+
+            if not self._check_content_type(request):
+                return Response(
+                    content=json.dumps({"error": "Content-Type must be application/json"}),
+                    status_code=415,
+                    media_type="application/json",
+                )
+
+            try:
+                await self._read_body_with_limit(request)
+            except ValueError:
+                return Response(
+                    content=json.dumps({"error": "Request body too large"}),
+                    status_code=413,
+                    media_type="application/json",
+                )
+
+            try:
+                body = await request.json()
+                req_log.debug("request_body_received", body_size=len(str(body)))
+            except Exception as e:
+                req_log.error("error_parsing_request_body", error=str(e))
+                body = {}
+
+            function_name = body.get("function")
+            if not function_name:
+                req_log.warning("missing_function_name")
+                return Response(
+                    content=json.dumps({"error": "Missing function name"}),
+                    status_code=400,
+                    media_type="application/json",
+                )
+
+            if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', function_name):
+                req_log.warning("invalid_function_name_format", function=function_name)
+                return Response(
+                    content=json.dumps({"error": f"Invalid function name format: '{function_name}'"}),
+                    status_code=400,
+                    media_type="application/json",
+                )
+
+            req_log = req_log.bind(function=function_name)
+
+            # Argument extraction. Handle both AgentBase's nested
+            # {"argument": {"parsed": [...], "raw": "..."}} shape AND a flat
+            # {"arguments": {...}} shape used by some external integrations.
+            args: Dict[str, Any] = {}
+            if "argument" in body and isinstance(body["argument"], dict):
+                if (
+                    "parsed" in body["argument"]
+                    and isinstance(body["argument"]["parsed"], list)
+                    and body["argument"]["parsed"]
+                ):
+                    args = body["argument"]["parsed"][0]
+                elif "raw" in body["argument"] and body["argument"]["raw"]:
+                    try:
+                        args = json.loads(body["argument"]["raw"])
+                    except Exception as e:
+                        req_log.error("error_parsing_raw_arguments", error=str(e))
+            elif "arguments" in body and isinstance(body["arguments"], dict):
+                args = body["arguments"]
+            if not isinstance(args, dict):
+                args = {}
+
+            call_id = body.get("call_id")
+            if call_id:
+                req_log = req_log.bind(call_id=call_id)
+
+            target, short_circuit = self._swaig_pre_dispatch(request, body, call_id, function_name)
+            if short_circuit is not None:
+                return short_circuit
+
+            try:
+                result = target.on_function_call(function_name, args, body)
+                if isinstance(result, FunctionResult):
+                    result_dict = result.to_dict()
+                elif isinstance(result, dict):
+                    result_dict = result
+                else:
+                    req_log.warning(
+                        "unexpected_function_result_type",
+                        function=function_name,
+                        result_type=type(result).__name__,
+                        hint=(
+                            "SWAIG function returned a value that is neither "
+                            "FunctionResult nor dict; falling back to str(result)."
+                        ),
+                    )
+                    result_dict = {"response": str(result)}
+                req_log.info("function_executed_successfully")
+                return result_dict
+            except Exception as e:
+                req_log.error("function_execution_error", error=str(e))
+                return {"error": str(e), "function": function_name}
+
+        except Exception as e:
+            req_log.error("request_failed", error=str(e))
+            return Response(
+                content=json.dumps({"error": "Internal server error"}),
+                status_code=500,
+                media_type="application/json",
+            )
     
     def register_routing_callback(self, callback_fn: Callable[[Request, Dict[str, Any]], Optional[str]], 
                                 path: str = "/sip") -> None:
