@@ -76,6 +76,9 @@
                     "$ref": "#/$defs/LiveTranscribe"
                 },
                 {
+                    "$ref": "#/$defs/AiSidecar"
+                },
+                {
                     "$ref": "#/$defs/LiveTranslate"
                 },
                 {
@@ -12245,6 +12248,189 @@
                 "not": {}
             },
             "title": "UserInputAction object"
+        },
+        "AiSidecar": {
+            "type": "object",
+            "properties": {
+                "ai_sidecar": {
+                    "type": "object",
+                    "properties": {
+                        "prompt": {
+                            "oneOf": [
+                                {
+                                    "type": "string"
+                                },
+                                {
+                                    "type": "object",
+                                    "not": {
+                                        "required": [
+                                            "file"
+                                        ]
+                                    },
+                                    "description": "POM object — structure passed through to mod_openai's prompt resolver."
+                                },
+                                {
+                                    "type": "object",
+                                    "properties": {
+                                        "file": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "file"
+                                    ]
+                                }
+                            ],
+                            "description": "Operator prompt — POM object, plain string, or {file: path}. Built-in sidecar job framing is prepended automatically."
+                        },
+                        "lang": {
+                            "type": "string",
+                            "description": "BCP-47 language code. Required. Sets ASR language and is included in the LLM's conversation-language hint."
+                        },
+                        "model": {
+                            "type": "string",
+                            "description": "LLM model. Default gpt-4o-mini."
+                        },
+                        "speech_engine": {
+                            "type": "string",
+                            "enum": [
+                                "deepgram",
+                                "google"
+                            ],
+                            "description": "ASR engine. Default deepgram."
+                        },
+                        "direction": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "enum": [
+                                    "remote-caller",
+                                    "local-caller"
+                                ]
+                            },
+                            "minItems": 2,
+                            "uniqueItems": true,
+                            "description": "Both legs are required for sidecar mode."
+                        },
+                        "customer_role": {
+                            "type": "string",
+                            "enum": [
+                                "remote-caller",
+                                "local-caller"
+                            ],
+                            "description": "Which leg is the customer (turn-end source). Default remote-caller."
+                        },
+                        "url": {
+                            "type": "string",
+                            "description": "Webhook URL for transcribe events AND sidecar events."
+                        },
+                        "live_events": {
+                            "type": "boolean",
+                            "description": "Per-utterance calling.ai.transcribe.utterance events."
+                        },
+                        "ai_summary": {
+                            "type": "boolean",
+                            "description": "Run close-time summary of the raw call."
+                        },
+                        "ai_summary_prompt": {
+                            "type": "string",
+                            "description": "Custom prompt for the close-time raw-call summary."
+                        },
+                        "speech_timeout": {
+                            "type": "integer",
+                            "description": "ASR speech timeout (ms)."
+                        },
+                        "vad_silence_ms": {
+                            "type": "integer",
+                            "description": "VAD silence threshold (ms)."
+                        },
+                        "vad_thresh": {
+                            "type": "integer",
+                            "description": "VAD aggressiveness."
+                        },
+                        "debug_level": {
+                            "type": "integer",
+                            "description": "Engine debug verbosity."
+                        },
+                        "idle_timeout_ms": {
+                            "type": "integer",
+                            "minimum": 50,
+                            "maximum": 5000,
+                            "description": "Sidecar turn-end debounce (ms). Default 800."
+                        },
+                        "min_interval_ms": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 60000,
+                            "description": "Min interval between LLM calls (ms). Default 0."
+                        },
+                        "max_iters_per_tick": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 20,
+                            "description": "Tool-loop iteration cap per tick. Default 5."
+                        },
+                        "max_history_tokens": {
+                            "type": "integer",
+                            "minimum": 1000,
+                            "maximum": 200000,
+                            "description": "History token budget. Default 8000."
+                        },
+                        "act_on_channel": {
+                            "type": "boolean",
+                            "description": "Whether SWAIG actions execute against the call. Default true."
+                        },
+                        "final_summary": {
+                            "type": "boolean",
+                            "description": "Run a closing LLM call to summarize the helper session. Default false."
+                        },
+                        "global_data": {
+                            "type": "object",
+                            "additionalProperties": true,
+                            "description": "Initial sidecar global_data."
+                        },
+                        "SWAIG": {
+                            "$ref": "#/$defs/SWAIG",
+                            "description": "SWAIG functions and MCP servers."
+                        },
+                        "permissions": {
+                            "type": "object",
+                            "properties": {
+                                "swaig_allow_swml": {
+                                    "type": "boolean"
+                                },
+                                "swaig_allow_settings": {
+                                    "type": "boolean"
+                                },
+                                "swaig_set_global_data": {
+                                    "type": "boolean"
+                                }
+                            },
+                            "additionalProperties": false,
+                            "description": "Sidecar SWAIG permission overrides."
+                        },
+                        "debug": {
+                            "type": "boolean",
+                            "description": "Verbose mod_openai logging."
+                        },
+                        "action": {
+                            "description": "Reserved for future runtime sub-actions."
+                        }
+                    },
+                    "required": [
+                        "prompt",
+                        "lang"
+                    ],
+                    "additionalProperties": false,
+                    "description": "Start ai_sidecar mode — live_transcribe with an LLM/SWAIG/MCP loop on top. Ticks on each customer turn-end and emits agent-facing advice events on calling.ai.sidecar.",
+                    "title": "ai_sidecar"
+                }
+            },
+            "required": [
+                "ai_sidecar"
+            ],
+            "additionalProperties": false,
+            "title": "AiSidecar object"
         }
     }
 }
