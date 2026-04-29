@@ -46,30 +46,25 @@ class SalesSidecar(SWMLService):
         #    add_verb_to_section accept arbitrary verb dicts, so new platform
         #    verbs work without an SDK release.
         self.add_verb("answer", {})
-        # `ai_sidecar` isn't in the embedded SWML schema yet, so add_verb's
-        # schema validation would reject it. Append the verb dict directly
-        # to the main section to bypass validation. Once the schema bundles
-        # ai_sidecar, switch this to `self.add_verb_to_section("main",
-        # "ai_sidecar", {...})`.
-        self._current_document["sections"]["main"].append(
+        self.add_verb_to_section(
+            "main",
+            "ai_sidecar",
             {
-                "ai_sidecar": {
-                    "prompt": (
-                        "You are a real-time sales copilot. Listen to the call "
-                        "and surface competitor pricing comparisons when relevant."
-                    ),
-                    "lang": "en-US",
-                    "direction": ["remote-caller", "local-caller"],
-                    # Where the sidecar POSTs lifecycle/transcription events.
-                    # Optional — skip if you don't need an event sink.
-                    "url": f"{public_url}/events",
-                    # Where the sidecar's LLM POSTs SWAIG tool calls. This
-                    # SDK's /swaig route is what answers them.
-                    "swaig": {
-                        "defaults": {"web_hook_url": f"{public_url}/swaig"},
-                    },
-                }
-            }
+                "prompt": (
+                    "You are a real-time sales copilot. Listen to the call "
+                    "and surface competitor pricing comparisons when relevant."
+                ),
+                "lang": "en-US",
+                "direction": ["remote-caller", "local-caller"],
+                # Where the sidecar POSTs lifecycle/transcription events.
+                # Optional — skip if you don't need an event sink.
+                "url": f"{public_url}/events",
+                # Where the sidecar's LLM POSTs SWAIG tool calls. This
+                # SDK's /swaig route is what answers them.
+                "SWAIG": {
+                    "defaults": {"web_hook_url": f"{public_url}/swaig"},
+                },
+            },
         )
         self.add_verb("hangup", {})
 
