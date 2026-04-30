@@ -12498,9 +12498,16 @@
                             "description": "Initial sidecar global_data.",
                             "additionalProperties": true
                         },
+                        "hints": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            },
+                            "description": "Speech-recognition hints biasing ASR toward specific terms."
+                        },
                         "params": {
                             "type": "object",
-                            "description": "Tunable knobs (idle_timeout_ms, hints, ai_summary, etc.) — pass-through to mod_openai which validates them strictly. New tunables only land here.",
+                            "description": "Tunable knobs (idle_timeout_ms, ai_summary, etc.) — pass-through to mod_openai which validates them strictly. New tunables only land here.",
                             "additionalProperties": true
                         },
                         "action": {
