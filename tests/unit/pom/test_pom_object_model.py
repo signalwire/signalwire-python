@@ -106,3 +106,33 @@ class TestSectionBasics:
         s = Section(title="T", body="b", bullets=["x"])
         md = s.render_markdown()
         assert "T" in md and "b" in md and "x" in md
+
+
+class TestPromptObjectModelYaml:
+    """Round-trip tests for the YAML serialization API."""
+
+    def test_to_yaml_returns_string_with_section_title(self):
+        pom = PromptObjectModel()
+        pom.add_section(title="Greeting", body="Hello")
+        y = pom.to_yaml()
+        assert isinstance(y, str)
+        assert "Greeting" in y
+        assert "Hello" in y
+
+    def test_from_yaml_round_trip(self):
+        pom = PromptObjectModel()
+        pom.add_section(title="A", body="body-A", bullets=["x", "y"])
+        y = pom.to_yaml()
+        restored = PromptObjectModel.from_yaml(y)
+        titles = [s.title for s in restored.sections]
+        assert "A" in titles
+        # Bullets survive the round trip
+        a = restored.find_section("A")
+        assert a is not None
+        assert a.bullets == ["x", "y"]
+
+    def test_from_yaml_accepts_dict_input(self):
+        # The Python contract accepts either a YAML string OR a parsed dict.
+        data = [{"title": "B", "body": "y"}]
+        pom = PromptObjectModel.from_yaml(data)
+        assert pom.find_section("B") is not None
