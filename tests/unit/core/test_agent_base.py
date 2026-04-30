@@ -117,6 +117,34 @@ class TestAgentBasePromptMethods:
 
         assert result is None
 
+    def test_get_raw_prompt_when_set(self):
+        """get_raw_prompt returns the raw prompt text once set."""
+        self.agent.set_prompt_text("Raw prompt text")
+        assert self.agent._prompt_manager.get_raw_prompt() == "Raw prompt text"
+
+    def test_get_raw_prompt_none_when_unset(self):
+        """get_raw_prompt returns None when no prompt text is set."""
+        assert self.agent._prompt_manager.get_raw_prompt() is None
+
+    def test_get_contexts_none_when_unset(self):
+        """get_contexts returns None before any contexts are defined."""
+        assert self.agent._prompt_manager.get_contexts() is None
+
+    def test_set_prompt_pom_raises_when_use_pom_false(self):
+        """set_prompt_pom raises ValueError when use_pom is False."""
+        # ``self.agent`` is constructed with ``use_pom=False``
+        with pytest.raises(ValueError, match="use_pom must be True"):
+            self.agent._prompt_manager.set_prompt_pom([{"title": "X", "body": "y"}])
+
+    def test_set_prompt_pom_succeeds_when_use_pom_true(self):
+        """set_prompt_pom assigns the POM list when use_pom is True."""
+        with pytest.MonkeyPatch().context() as m:
+            m.setattr("signalwire.core.agent_base.uvicorn", Mock())
+            agent = AgentBase("pom_agent", use_pom=True, schema_validation=False)
+        sections = [{"title": "Greeting", "body": "Hello"}]
+        agent._prompt_manager.set_prompt_pom(sections)
+        assert agent.pom == sections
+
 
 class TestAgentBaseConfigurationMethods:
     """Test AgentBase configuration methods"""
