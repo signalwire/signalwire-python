@@ -1728,3 +1728,39 @@ class TestSwitchContextEdgeCases:
         result = FunctionResult()
         ret = result.switch_context(system_prompt="test")
         assert ret is result
+
+
+class TestFunctionResultReplaceInHistory:
+    """``replace_in_history`` rewrites a turn in the agent's chat history.
+    Signature: ``replace_in_history(text: Union[str, bool] = True)``.
+    Bool ``True`` (default) emits a summary placeholder; a string emits
+    that exact text. Both forms are documented in
+    docs/swaig_reference.md and used by prefabs/info_gatherer but had no
+    unit test until now — closes a Python-side scaffolding gap so the
+    cross-language audit can detect any port that doesn't support both
+    calling shapes."""
+
+    def test_replace_in_history_default_true(self):
+        """Default arg ``True`` emits replace_in_history action with True."""
+        result = FunctionResult().replace_in_history()
+        action = result.action[0]
+        assert "replace_in_history" in action
+        assert action["replace_in_history"] is True
+
+    def test_replace_in_history_with_string(self):
+        """Passing a string emits that text into the history slot."""
+        result = FunctionResult().replace_in_history("I've saved your data.")
+        action = result.action[0]
+        assert action["replace_in_history"] == "I've saved your data."
+
+    def test_replace_in_history_with_false(self):
+        """Passing ``False`` is a valid form (suppresses the placeholder)."""
+        result = FunctionResult().replace_in_history(False)
+        action = result.action[0]
+        assert action["replace_in_history"] is False
+
+    def test_replace_in_history_chaining(self):
+        """Returns self for fluent chaining."""
+        result = FunctionResult()
+        ret = result.replace_in_history()
+        assert ret is result
