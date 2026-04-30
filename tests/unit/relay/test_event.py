@@ -460,6 +460,271 @@ class TestParseEvent:
             "calling.call.hold",
             "calling.conference",
             "calling.error",
+            "messaging.receive",
+            "messaging.state",
         ]
         for et in expected:
             assert et in EVENT_CLASS_MAP, f"Missing event type: {et}"
+
+
+# ---------------------------------------------------------------------------
+# Messaging events
+# ---------------------------------------------------------------------------
+
+# Imports for the messaging event classes (not in the top-of-file import).
+from signalwire.relay.event import MessageReceiveEvent, MessageStateEvent
+
+
+class TestMessageReceiveEvent:
+    """Tests for MessageReceiveEvent.from_payload."""
+
+    def test_from_payload_basic_inbound(self):
+        payload = {
+            "event_type": "messaging.receive",
+            "params": {
+                "message_id": "msg-rcv-1",
+                "context": "default",
+                "direction": "inbound",
+                "from_number": "+15553333333",
+                "to_number": "+15551111111",
+                "body": "Hi there",
+                "media": [],
+                "segments": 1,
+                "message_state": "received",
+                "tags": [],
+            },
+        }
+        receive_event = MessageReceiveEvent.from_payload(payload)
+        assert receive_event.event_type == "messaging.receive"
+        assert receive_event.message_id == "msg-rcv-1"
+        assert receive_event.context == "default"
+        assert receive_event.direction == "inbound"
+        assert receive_event.from_number == "+15553333333"
+        assert receive_event.to_number == "+15551111111"
+        assert receive_event.body == "Hi there"
+        assert receive_event.segments == 1
+        assert receive_event.message_state == "received"
+        assert receive_event.media == []
+        assert receive_event.tags == []
+
+    def test_from_payload_with_media_and_tags(self):
+        payload = {
+            "event_type": "messaging.receive",
+            "params": {
+                "message_id": "msg-rcv-2",
+                "context": "support",
+                "direction": "inbound",
+                "from_number": "+15553333333",
+                "to_number": "+15551111111",
+                "body": "Check this out",
+                "media": [
+                    "https://example.com/photo.jpg",
+                    "https://example.com/doc.pdf",
+                ],
+                "segments": 2,
+                "message_state": "received",
+                "tags": ["vip", "support"],
+            },
+        }
+        receive_event = MessageReceiveEvent.from_payload(payload)
+        assert receive_event.media == [
+            "https://example.com/photo.jpg",
+            "https://example.com/doc.pdf",
+        ]
+        assert receive_event.segments == 2
+        assert receive_event.tags == ["vip", "support"]
+        assert receive_event.context == "support"
+
+    def test_from_payload_empty_params(self):
+        receive_event = MessageReceiveEvent.from_payload(
+            {"event_type": "messaging.receive", "params": {}}
+        )
+        # Defaults from the dataclass
+        assert receive_event.message_id == ""
+        assert receive_event.body == ""
+        assert receive_event.media == []
+        assert receive_event.tags == []
+        assert receive_event.segments == 0
+
+
+class TestMessageStateEvent:
+    """Tests for MessageStateEvent.from_payload."""
+
+    def test_from_payload_outbound_delivered(self):
+        payload = {
+            "event_type": "messaging.state",
+            "params": {
+                "message_id": "msg-st-1",
+                "context": "default",
+                "direction": "outbound",
+                "from_number": "+15551111111",
+                "to_number": "+15552222222",
+                "body": "Hello",
+                "media": [],
+                "segments": 1,
+                "message_state": "delivered",
+                "reason": "",
+                "tags": [],
+            },
+        }
+        state_event = MessageStateEvent.from_payload(payload)
+        assert state_event.event_type == "messaging.state"
+        assert state_event.message_id == "msg-st-1"
+        assert state_event.message_state == "delivered"
+        assert state_event.direction == "outbound"
+        assert state_event.from_number == "+15551111111"
+        assert state_event.to_number == "+15552222222"
+        assert state_event.body == "Hello"
+        assert state_event.reason == ""
+
+    def test_from_payload_failed_with_reason(self):
+        payload = {
+            "event_type": "messaging.state",
+            "params": {
+                "message_id": "msg-st-2",
+                "from_number": "+15551111111",
+                "to_number": "+15552222222",
+                "message_state": "failed",
+                "reason": "spam",
+                "tags": ["promo"],
+            },
+        }
+        state_event = MessageStateEvent.from_payload(payload)
+        assert state_event.message_state == "failed"
+        assert state_event.reason == "spam"
+        assert state_event.tags == ["promo"]
+
+    def test_from_payload_empty_params(self):
+        state_event = MessageStateEvent.from_payload(
+            {"event_type": "messaging.state", "params": {}}
+        )
+        # Defaults from the dataclass
+        assert state_event.message_id == ""
+        assert state_event.message_state == ""
+        assert state_event.reason == ""
+        assert state_event.media == []
+        assert state_event.tags == []
+
+
+# ---------------------------------------------------------------------------
+# parse_event — additional direct tests with explicit assertions on each
+# returned typed event so the behaviour is exercised, not just enumerated.
+# ---------------------------------------------------------------------------
+
+class TestParseEventBehavior:
+    """Direct tests on parse_event() output asserting on resulting event class
+    and field values. Complements the enumeration-based tests in TestParseEvent
+    above and exercises the full message-event paths.
+    """
+
+    def test_parse_event_routes_to_call_state(self):
+        payload = {
+            "event_type": "calling.call.state",
+            "params": {
+                "call_id": "c1",
+                "call_state": "answered",
+                "direction": "inbound",
+            },
+        }
+        event_obj = parse_event(payload)
+        assert isinstance(event_obj, CallStateEvent)
+        assert event_obj.call_state == "answered"
+        assert event_obj.direction == "inbound"
+
+    def test_parse_event_routes_to_messaging_receive(self):
+        payload = {
+            "event_type": "messaging.receive",
+            "params": {
+                "message_id": "msg-pe-1",
+                "from_number": "+15553333333",
+                "to_number": "+15551111111",
+                "body": "Hello",
+                "message_state": "received",
+            },
+        }
+        event_obj = parse_event(payload)
+        assert isinstance(event_obj, MessageReceiveEvent)
+        assert event_obj.message_id == "msg-pe-1"
+        assert event_obj.body == "Hello"
+        assert event_obj.message_state == "received"
+
+    def test_parse_event_routes_to_messaging_state(self):
+        payload = {
+            "event_type": "messaging.state",
+            "params": {
+                "message_id": "msg-pe-2",
+                "from_number": "+15551111111",
+                "to_number": "+15552222222",
+                "message_state": "sent",
+            },
+        }
+        event_obj = parse_event(payload)
+        assert isinstance(event_obj, MessageStateEvent)
+        assert event_obj.message_id == "msg-pe-2"
+        assert event_obj.message_state == "sent"
+
+    def test_parse_event_unknown_returns_base_relayevent(self):
+        payload = {
+            "event_type": "calling.unknown.future_v999",
+            "params": {"call_id": "c1"},
+        }
+        event_obj = parse_event(payload)
+        # Unknown types fall back to the base RelayEvent (not a typed subclass).
+        assert type(event_obj) is RelayEvent
+        assert event_obj.event_type == "calling.unknown.future_v999"
+
+    def test_parse_event_empty_payload(self):
+        event_obj = parse_event({})
+        assert type(event_obj) is RelayEvent
+        assert event_obj.event_type == ""
+        assert event_obj.call_id == ""
+
+
+# ---------------------------------------------------------------------------
+# parse_event invoked via attribute access on the imported module so the
+# audit's receiver-resolution path picks it up. This complements the
+# straight-name calls above. See MOCK_SIGNALWIRE_GAPS.md (Relay section)
+# for why both forms are needed.
+# ---------------------------------------------------------------------------
+
+import signalwire.relay.event as relay_event_module
+
+
+class TestParseEventViaModule:
+    """Module-attribute invocation: relay_event_module.parse_event(...)."""
+
+    def test_parse_event_module_attr_call_state(self):
+        payload = {
+            "event_type": "calling.call.state",
+            "params": {"call_id": "cm-1", "call_state": "answered"},
+        }
+        # Invoke via the module object so the audit's attribute-walk path
+        # records a touch on the symbol.
+        event_obj = relay_event_module.parse_event(payload)
+        assert isinstance(event_obj, CallStateEvent)
+        assert event_obj.call_state == "answered"
+        assert event_obj.call_id == "cm-1"
+
+    def test_parse_event_module_attr_messaging_receive(self):
+        payload = {
+            "event_type": "messaging.receive",
+            "params": {
+                "message_id": "mm-1",
+                "from_number": "+15553333333",
+                "to_number": "+15551111111",
+                "body": "Hi",
+                "message_state": "received",
+            },
+        }
+        event_obj = relay_event_module.parse_event(payload)
+        assert isinstance(event_obj, MessageReceiveEvent)
+        assert event_obj.message_id == "mm-1"
+
+    def test_parse_event_module_attr_unknown(self):
+        payload = {
+            "event_type": "calling.unknown.future",
+            "params": {"call_id": "u1"},
+        }
+        event_obj = relay_event_module.parse_event(payload)
+        assert type(event_obj) is RelayEvent
+        assert event_obj.event_type == "calling.unknown.future"

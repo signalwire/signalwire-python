@@ -561,3 +561,151 @@ class TestMessagingEventRouting:
 
             await client.disconnect()
         _active_clients.clear()
+
+
+# ---------------------------------------------------------------------------
+# Symbol-level coverage tests for Message — distinct variable names so the
+# coverage audit binds receivers correctly (tests above shadow `msg` via
+# `msg = json.loads(raw)` inside an inner function).
+# ---------------------------------------------------------------------------
+
+class TestMessageProperties:
+    """Direct property access on a uniquely-named Message variable."""
+
+    @pytest.mark.asyncio
+    async def test_message_is_done_initial(self):
+        outbound_msg = Message(
+            message_id="m-prop-1", direction="outbound", state="queued"
+        )
+        # Property access — should return False before any state change
+        assert outbound_msg.is_done is False
+
+    @pytest.mark.asyncio
+    async def test_message_is_done_after_terminal(self):
+        outbound_msg = Message(message_id="m-prop-2", state="queued")
+        await outbound_msg._dispatch_event({
+            "event_type": EVENT_MESSAGING_STATE,
+            "params": {"message_id": "m-prop-2", "message_state": "delivered"},
+        })
+        assert outbound_msg.is_done is True
+
+    @pytest.mark.asyncio
+    async def test_message_result_initial(self):
+        outbound_msg = Message(message_id="m-prop-3", state="queued")
+        # Property access — should be None until terminal state
+        assert outbound_msg.result is None
+
+    @pytest.mark.asyncio
+    async def test_message_result_after_terminal(self):
+        outbound_msg = Message(message_id="m-prop-4", state="queued")
+        await outbound_msg._dispatch_event({
+            "event_type": EVENT_MESSAGING_STATE,
+            "params": {"message_id": "m-prop-4", "message_state": "delivered"},
+        })
+        # The result should be the terminal RelayEvent
+        terminal_event = outbound_msg.result
+        assert terminal_event is not None
+        assert terminal_event.params["message_state"] == "delivered"
+
+
+class TestMessageOn:
+    """Direct method call to Message.on so the audit binds it to Message."""
+
+    @pytest.mark.asyncio
+    async def test_message_on_registers_listener(self):
+        outbound_msg = Message(message_id="m-on-1", state="queued")
+        events_seen: list = []
+        outbound_msg.on(lambda event: events_seen.append(event))
+        await outbound_msg._dispatch_event({
+            "event_type": EVENT_MESSAGING_STATE,
+            "params": {"message_id": "m-on-1", "message_state": "sent"},
+        })
+        assert len(events_seen) == 1
+        assert events_seen[0].params["message_state"] == "sent"
+
+    @pytest.mark.asyncio
+    async def test_message_on_multiple_listeners(self):
+        outbound_msg = Message(message_id="m-on-2", state="queued")
+        events_a: list = []
+        events_b: list = []
+        outbound_msg.on(lambda event: events_a.append(event))
+        outbound_msg.on(lambda event: events_b.append(event))
+        await outbound_msg._dispatch_event({
+            "event_type": EVENT_MESSAGING_STATE,
+            "params": {"message_id": "m-on-2", "message_state": "sent"},
+        })
+        assert len(events_a) == 1
+        assert len(events_b) == 1
+
+
+class TestMessageWait:
+    """Direct method call to Message.wait so the audit binds it to Message."""
+
+    @pytest.mark.asyncio
+    async def test_message_wait_returns_terminal_event(self):
+        outbound_msg = Message(message_id="m-wait-1", state="queued")
+
+        async def deliver_later():
+            await asyncio.sleep(0.01)
+            await outbound_msg._dispatch_event({
+                "event_type": EVENT_MESSAGING_STATE,
+                "params": {
+                    "message_id": "m-wait-1",
+                    "message_state": "delivered",
+                },
+            })
+
+        asyncio.ensure_future(deliver_later())
+        terminal_event = await outbound_msg.wait(timeout=2.0)
+        assert terminal_event.params["message_state"] == "delivered"
+
+    @pytest.mark.asyncio
+    async def test_message_wait_timeout_raises(self):
+        outbound_msg = Message(message_id="m-wait-2", state="queued")
+        with pytest.raises(asyncio.TimeoutError):
+            await outbound_msg.wait(timeout=0.01)
+
+    @pytest.mark.asyncio
+    async def test_message_wait_no_timeout(self):
+        """wait() without timeout returns immediately if already done."""
+        outbound_msg = Message(message_id="m-wait-3", state="queued")
+        await outbound_msg._dispatch_event({
+            "event_type": EVENT_MESSAGING_STATE,
+            "params": {
+                "message_id": "m-wait-3",
+                "message_state": "delivered",
+            },
+        })
+        terminal_event = await outbound_msg.wait()
+        assert terminal_event.params["message_state"] == "delivered"
+
+
+class TestMessageRepr:
+    """Direct __repr__ call so the audit picks up Message.__repr__."""
+
+    @pytest.mark.asyncio
+    async def test_message_repr_contains_id_and_direction(self):
+        outbound_msg = Message(
+            message_id="m-repr-1",
+            direction="outbound",
+            state="queued",
+            from_number="+15551111111",
+            to_number="+15552222222",
+        )
+        rendered = outbound_msg.__repr__()
+        assert "m-repr-1" in rendered
+        assert "outbound" in rendered
+        assert "queued" in rendered
+
+    @pytest.mark.asyncio
+    async def test_message_repr_includes_phone_numbers(self):
+        outbound_msg = Message(
+            message_id="m-repr-2",
+            direction="inbound",
+            state="received",
+            from_number="+15553333333",
+            to_number="+15554444444",
+        )
+        rendered = outbound_msg.__repr__()
+        assert "+15553333333" in rendered
+        assert "+15554444444" in rendered

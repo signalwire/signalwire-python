@@ -1650,3 +1650,173 @@ class TestDisconnectRestart:
 
         assert client._relay_protocol == "proto-123"
         assert client._authorization_state == "auth-state-abc"
+
+
+# ===================================================================
+# RelayClient.on_call / on_message — direct method invocation
+# ===================================================================
+
+class TestOnCallMethod:
+    """Direct invocation of client.on_call(handler) so the audit binds it."""
+
+    def setup_method(self):
+        _active_clients.clear()
+
+    def teardown_method(self):
+        _active_clients.clear()
+
+    def test_on_call_returns_handler(self):
+        """on_call returns the registered handler so it can be used as a
+        decorator. Verify both the side effect and the return value."""
+        client = RelayClient(project="p", token="t")
+
+        async def handler(call):
+            pass
+
+        # Direct invocation (not as decorator).
+        returned = client.on_call(handler)
+        assert returned is handler
+        assert client._on_call_handler is handler
+
+    def test_on_call_overwrites_previous(self):
+        client = RelayClient(project="p", token="t")
+
+        async def handler_first(call):
+            pass
+
+        async def handler_second(call):
+            pass
+
+        client.on_call(handler_first)
+        client.on_call(handler_second)
+        assert client._on_call_handler is handler_second
+
+
+class TestOnMessageMethod:
+    """Direct invocation of client.on_message(handler) so the audit binds it."""
+
+    def setup_method(self):
+        _active_clients.clear()
+
+    def teardown_method(self):
+        _active_clients.clear()
+
+    def test_on_message_returns_handler(self):
+        client = RelayClient(project="p", token="t")
+
+        async def handler(message):
+            pass
+
+        returned = client.on_message(handler)
+        assert returned is handler
+        assert client._on_message_handler is handler
+
+    def test_on_message_overwrites_previous(self):
+        client = RelayClient(project="p", token="t")
+
+        async def handler_first(message):
+            pass
+
+        async def handler_second(message):
+            pass
+
+        client.on_message(handler_first)
+        client.on_message(handler_second)
+        assert client._on_message_handler is handler_second
+
+
+# ===================================================================
+# RelayClient async context manager (__aenter__ / __aexit__)
+# ===================================================================
+
+class TestAsyncContextManager:
+    """Tests for `async with RelayClient(...)` — covers __aenter__/__aexit__."""
+
+    def setup_method(self):
+        _active_clients.clear()
+
+    def teardown_method(self):
+        _active_clients.clear()
+
+    @pytest.mark.asyncio
+    async def test_aenter_connects_and_returns_self(self):
+        ws = AutoAuthMockWebSocket()
+        with patch(
+            "signalwire.relay.client.websockets.connect",
+            new_callable=AsyncMock,
+            return_value=ws,
+        ):
+            ctx_client = RelayClient(project="p", token="t")
+            entered = await ctx_client.__aenter__()
+            try:
+                assert entered is ctx_client
+                assert ctx_client._connected is True
+                # Verify the connect handshake was sent.
+                connect_msgs = [
+                    m for m in ws.sent_messages
+                    if m.get("method") == METHOD_SIGNALWIRE_CONNECT
+                ]
+                assert len(connect_msgs) == 1
+            finally:
+                await ctx_client.__aexit__(None, None, None)
+
+    @pytest.mark.asyncio
+    async def test_aexit_disconnects(self):
+        ws = AutoAuthMockWebSocket()
+        with patch(
+            "signalwire.relay.client.websockets.connect",
+            new_callable=AsyncMock,
+            return_value=ws,
+        ):
+            ctx_client = RelayClient(project="p", token="t")
+            await ctx_client.__aenter__()
+            assert ctx_client._connected is True
+            await ctx_client.__aexit__(None, None, None)
+            # After __aexit__, the client must be disconnected.
+            assert ctx_client._connected is False
+
+    @pytest.mark.asyncio
+    async def test_async_with_full_lifecycle(self):
+        """End-to-end ``async with`` block exercises both __aenter__/__aexit__
+        through the natural with-statement protocol."""
+        ws = AutoAuthMockWebSocket()
+        with patch(
+            "signalwire.relay.client.websockets.connect",
+            new_callable=AsyncMock,
+            return_value=ws,
+        ):
+            async with RelayClient(project="p", token="t") as ctx_client:
+                assert ctx_client._connected is True
+                assert isinstance(ctx_client, RelayClient)
+            # After exiting the context, the client must be disconnected.
+            assert ctx_client._connected is False
+
+
+# ===================================================================
+# RelayError.__init__
+# ===================================================================
+
+class TestRelayErrorInit:
+    """Direct construction of RelayError (covers RelayError.__init__)."""
+
+    def test_relay_error_stores_code_and_message(self):
+        relay_err = RelayError(404, "Call not found")
+        assert relay_err.code == 404
+        assert relay_err.message == "Call not found"
+        # The Exception args tuple should also have the formatted message.
+        assert "RELAY error 404" in str(relay_err)
+        assert "Call not found" in str(relay_err)
+
+    def test_relay_error_is_exception_subclass(self):
+        relay_err = RelayError(500, "Server error")
+        assert isinstance(relay_err, Exception)
+        # Can be raised and caught as Exception.
+        with pytest.raises(RelayError) as exc_info:
+            raise relay_err
+        assert exc_info.value.code == 500
+
+    def test_relay_error_string_format(self):
+        relay_err = RelayError(-1, "Dial timeout")
+        rendered = str(relay_err)
+        assert "RELAY error -1" in rendered
+        assert "Dial timeout" in rendered
