@@ -29,7 +29,9 @@ once (no one ever needs both).
 from __future__ import annotations
 
 import socket
+import sys
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 from unittest.mock import MagicMock, patch
 
@@ -38,14 +40,48 @@ import pytest
 from signalwire.rest._base import HttpClient
 from signalwire.rest.client import RestClient
 
-# The mock_signalwire package is installed in editable mode from
-# /usr/local/home/devuser/src/porting-sdk/test_harness/mock_signalwire.
-# If it isn't available we fall back to skipping the new fixtures rather
-# than failing collection of the entire rest test suite.
+
+# ---------------------------------------------------------------------------
+# Adjacency-based discovery for porting-sdk mock packages.
+#
+# Contract: ``~/src/porting-sdk/`` must sit next to ``~/src/signalwire-python/``.
+# That single layout is all the tests need to find the mock harness — no pip
+# install of ``mock_signalwire`` / ``mock_relay`` is required.
+#
+# We walk this file's parents looking for ``../porting-sdk/test_harness/<name>/``
+# and prepend it to ``sys.path`` so ``import mock_signalwire`` resolves. If the
+# discovery fails we fall back to whatever is on ``sys.path`` (e.g. a prior
+# editable install) and ultimately to the per-fixture skip.
+# ---------------------------------------------------------------------------
+
+
+def _discover_mock_package(name: str) -> bool:
+    """Walk up from this file looking for ``../porting-sdk/test_harness/<name>/``.
+
+    Returns True when a sibling ``porting-sdk`` clone is found and the package
+    root has been prepended to ``sys.path``. Idempotent — multiple calls don't
+    duplicate ``sys.path`` entries.
+    """
+    here = Path(__file__).resolve()
+    for parent in (here.parent, *here.parents):
+        candidate = parent.parent / "porting-sdk" / "test_harness" / name
+        if (candidate / name / "__init__.py").is_file():
+            entry = str(candidate)
+            if entry not in sys.path:
+                sys.path.insert(0, entry)
+            return True
+    return False
+
+
+# Try the relative-path discovery first; this works in fresh adjacent clones
+# without any prior pip install.
+_MOCK_AVAILABLE = _discover_mock_package("mock_signalwire")
+_RELAY_MOCK_AVAILABLE = _discover_mock_package("mock_relay")
+
 try:
     from mock_signalwire import MockServer  # type: ignore
     _MOCK_AVAILABLE = True
-except ImportError:  # pragma: no cover - env without porting-sdk on path
+except ImportError:  # pragma: no cover - env without porting-sdk available
     MockServer = None  # type: ignore
     _MOCK_AVAILABLE = False
 
@@ -174,7 +210,10 @@ class _MockHarness:
 def _mock_server_instance():
     """Boot one real mock server for the whole test session."""
     if not _MOCK_AVAILABLE:
-        pytest.skip("mock_signalwire package is not importable")
+        pytest.skip(
+            "mock_signalwire package not found - clone porting-sdk adjacent "
+            "to this repo so tests can find porting-sdk/test_harness/mock_signalwire/"
+        )
     server = MockServer(host="127.0.0.1", port=_free_port(), log_level="error").start()
     try:
         yield server
