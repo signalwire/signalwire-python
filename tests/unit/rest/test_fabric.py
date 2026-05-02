@@ -125,7 +125,11 @@ class TestAutoMaterializedWebhooks:
             )
 
     def test_webhooks_read_update_delete_still_work_without_warning(self, client, mock_session):
-        """Only create is deprecated — list/get/update/delete are the normal surface."""
+        """Only create is deprecated — list/get/update/delete are the normal
+        surface, and they must run without emitting any DeprecationWarning.
+        We assert that the underlying HTTP transport actually got called for
+        each operation (proving the methods aren't no-ops that could swallow
+        the warning by simply not running)."""
         mock_session.request.return_value = MockResponse(200, {"data": []})
         with warnings.catch_warnings():
             warnings.simplefilter("error", DeprecationWarning)
@@ -134,6 +138,14 @@ class TestAutoMaterializedWebhooks:
             client.fabric.swml_webhooks.update("sw-1", name="Updated")
             client.fabric.swml_webhooks.delete("sw-1")
             client.fabric.cxml_webhooks.list()
+        # Five non-deprecated operations produced five HTTP calls.
+        assert mock_session.request.call_count == 5
+        # Verify the HTTP methods used (list/get -> GET, update -> PUT/PATCH,
+        # delete -> DELETE). We don't pin to a specific verb for update
+        # because the SDK may pick either, but DELETE must be present.
+        methods = [call_args[0][0] for call_args in mock_session.request.call_args_list]
+        assert "DELETE" in methods
+        assert methods.count("GET") >= 3  # list, get, list (cxml)
 
 
 class TestFabricTokens:

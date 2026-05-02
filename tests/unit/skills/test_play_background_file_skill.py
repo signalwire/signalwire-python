@@ -455,5 +455,14 @@ class TestPlayBackgroundFileSkillMiscMethods:
         assert "swaig_fields" in schema
 
     def test_cleanup_does_not_raise(self):
+        """The skill inherits cleanup from SkillBase (a no-op). It must
+        not raise and must not mutate the skill's tool_name/files state."""
         skill = _make_skill()
-        skill.cleanup()  # Should not raise
+        files_before = list(skill.params.get("files", []))
+        tool_name_before = skill.params.get("tool_name")
+        result = skill.cleanup()
+        # cleanup() returns None per the base contract.
+        assert result is None
+        # No state mutation.
+        assert skill.params.get("files") == files_before
+        assert skill.params.get("tool_name") == tool_name_before

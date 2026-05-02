@@ -830,7 +830,9 @@ class TestServeStaticFiles:
         assert result is None
 
     def test_serve_static_file_existing_file(self):
-        """Test _serve_static_file returns FileResponse for existing file"""
+        """_serve_static_file returns a FileResponse pointed at the
+        requested file, not at some other path."""
+        from fastapi.responses import FileResponse
         server = AgentServer()
         with tempfile.TemporaryDirectory() as tmpdir:
             resolved_dir = Path(tmpdir).resolve()
@@ -840,7 +842,10 @@ class TestServeStaticFiles:
 
             server._static_directories = {"": resolved_dir}
             result = server._serve_static_file("hello.txt", route="")
-            assert result is not None
+            assert isinstance(result, FileResponse)
+            # The FileResponse is pointed at our hello.txt, not at index.html
+            # or some other accidental file.
+            assert str(result.path) == str(test_file)
 
     def test_serve_static_file_nonexistent_file(self):
         """Test _serve_static_file returns None for nonexistent file"""
@@ -852,19 +857,29 @@ class TestServeStaticFiles:
             assert result is None
 
     def test_serve_static_file_empty_path_serves_index(self):
-        """Test _serve_static_file defaults to index.html for empty path"""
+        """An empty file_path argument must default to index.html — the
+        returned FileResponse must point at index.html, not at the
+        directory or some sibling file."""
+        from fastapi.responses import FileResponse
         server = AgentServer()
         with tempfile.TemporaryDirectory() as tmpdir:
             resolved_dir = Path(tmpdir).resolve()
             index_file = resolved_dir / "index.html"
             index_file.write_text("<html></html>")
+            # Add a sibling file the test should NOT be served accidentally.
+            (resolved_dir / "other.txt").write_text("nope")
 
             server._static_directories = {"": resolved_dir}
             result = server._serve_static_file("", route="")
-            assert result is not None
+            assert isinstance(result, FileResponse)
+            assert str(result.path) == str(index_file)
 
     def test_serve_static_file_directory_with_index(self):
-        """Test _serve_static_file serves index.html from a directory"""
+        """When file_path resolves to a DIRECTORY containing index.html,
+        the returned FileResponse must point at <dir>/index.html
+        specifically — not at the directory itself, and not at any
+        sibling file the directory happens to contain."""
+        from fastapi.responses import FileResponse
         server = AgentServer()
         with tempfile.TemporaryDirectory() as tmpdir:
             resolved_dir = Path(tmpdir).resolve()
@@ -872,10 +887,13 @@ class TestServeStaticFiles:
             subdir.mkdir()
             index_file = subdir / "index.html"
             index_file.write_text("<html></html>")
+            # Sibling file in the subdir; must NOT be served.
+            (subdir / "data.txt").write_text("no")
 
             server._static_directories = {"": resolved_dir}
             result = server._serve_static_file("subdir", route="")
-            assert result is not None
+            assert isinstance(result, FileResponse)
+            assert str(result.path) == str(index_file)
 
     def test_serve_static_file_route_not_found(self):
         """Test _serve_static_file returns None for unknown route"""

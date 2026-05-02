@@ -134,10 +134,18 @@ class TestHandleDialEvent:
 
     @pytest.mark.asyncio
     async def test_dial_unknown_tag_ignored(self):
+        """A dial event for a tag we have no pending dial on must be silently
+        ignored — it must NOT add anything to _pending_dials and must NOT
+        register a Call from the event payload."""
         client = _make_client()
+        # Sanity: nothing pending before.
+        assert client._pending_dials == {}
+        assert client._calls == {}
         payload = _make_dial_event("unknown-tag", "answered")
-        # Should not raise
         await client._handle_dial_event(payload)
+        # State unchanged — no future created, no call registered.
+        assert "unknown-tag" not in client._pending_dials
+        assert client._pending_dials == {}
 
 
 # ---------------------------------------------------------------------------
@@ -300,13 +308,19 @@ class TestHandleEventCallIdRouting:
 
     @pytest.mark.asyncio
     async def test_unknown_call_id_ignored(self):
+        """A play event whose call_id is not registered must be dropped:
+        the client must not auto-create a Call entry for an unknown id."""
         client = _make_client()
+        # Sanity: nothing registered.
+        assert client._calls == {}
 
-        # Should not raise
         await client._handle_event({
             "event_type": "calling.call.play",
             "params": {"call_id": "unknown-id", "control_id": "ctl1", "state": "playing"},
         })
+        # Unknown call_id must NOT be added to the registry as a side effect.
+        assert "unknown-id" not in client._calls
+        assert client._calls == {}
 
 
 # ---------------------------------------------------------------------------

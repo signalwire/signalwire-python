@@ -1122,20 +1122,37 @@ class TestCleanup:
         assert len(default_skill.cache) == 0
 
     def test_cleanup_with_none_cache(self, custom_skill):
-        # custom_skill has cache_enabled=False, so cache is None
-        # Should not raise an error
+        """custom_skill has cache_enabled=False so cache is None — cleanup
+        must skip the .clear() call (calling .clear on None would crash)
+        but still close the session."""
+        # Pre-condition.
+        assert custom_skill.cache is None
         custom_skill.cleanup()
+        # Session was still closed even though cache branch was skipped.
+        custom_skill.session.close.assert_called_once()
+        # Cache stays None — no surprise re-init.
+        assert custom_skill.cache is None
 
     def test_cleanup_without_session_attribute(self, default_skill):
-        # Remove session to simulate edge case
+        """If `session` was never created, the hasattr guard must skip the
+        close path. We verify cache.clear() still ran (the second guard
+        is independent)."""
         del default_skill.session
-        # Should not raise
+        default_skill.cache["https://example.com"] = "cached"
         default_skill.cleanup()
+        # Cache was cleared even though session attribute was missing.
+        assert len(default_skill.cache) == 0
+        # Session still missing — no re-creation.
+        assert not hasattr(default_skill, "session")
 
     def test_cleanup_without_cache_attribute(self, default_skill):
+        """If `cache` was never created, the hasattr guard must skip the
+        clear path while still closing the session."""
         del default_skill.cache
-        # Should not raise
         default_skill.cleanup()
+        # Session was closed even though cache attribute was missing.
+        default_skill.session.close.assert_called_once()
+        assert not hasattr(default_skill, "cache")
 
     def test_cleanup_logs_info(self, default_skill):
         with patch.object(default_skill.logger, "info") as mock_info:

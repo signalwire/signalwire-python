@@ -1212,10 +1212,17 @@ class TestMiscMethods:
         assert skill.get_prompt_sections() == []
 
     def test_cleanup_no_temp_dirs(self):
-        """cleanup with no _temp_dirs attribute does nothing."""
+        """cleanup must early-return when _temp_dirs is unset, and must NOT
+        invoke shutil.rmtree at all in that path."""
         skill = _make_skill()
-        # Should not raise
-        skill.cleanup()
+        # Pre-condition: skill has no _temp_dirs attribute.
+        assert not hasattr(skill, '_temp_dirs')
+        with patch("shutil.rmtree") as mock_rmtree:
+            skill.cleanup()
+        # No rmtree calls because the hasattr guard short-circuits.
+        assert mock_rmtree.call_count == 0
+        # The attribute is still absent — cleanup didn't invent one.
+        assert not hasattr(skill, '_temp_dirs')
 
     def test_cleanup_with_temp_dirs(self):
         """cleanup removes temp directories."""
@@ -1228,13 +1235,18 @@ class TestMiscMethods:
         assert mock_rmtree.call_count == 2
 
     def test_cleanup_rmtree_error_ignored(self):
-        """cleanup ignores errors from rmtree."""
+        """cleanup must swallow rmtree errors so a single bad path doesn't
+        block teardown — and it must still ATTEMPT to remove every temp
+        dir even when one fails."""
         skill = _make_skill()
-        skill._temp_dirs = ["/tmp/fake_dir"]
+        skill._temp_dirs = ["/tmp/fake_dir1", "/tmp/fake_dir2", "/tmp/fake_dir3"]
 
-        with patch("shutil.rmtree", side_effect=OSError("permission denied")):
-            # Should not raise
+        with patch("shutil.rmtree", side_effect=OSError("permission denied")) as mock_rmtree:
             skill.cleanup()
+        # All three dirs were attempted even though every call raised.
+        assert mock_rmtree.call_count == 3
+        attempted_paths = [c[0][0] for c in mock_rmtree.call_args_list]
+        assert attempted_paths == ["/tmp/fake_dir1", "/tmp/fake_dir2", "/tmp/fake_dir3"]
 
 
 # ===========================================================================
@@ -1257,13 +1269,23 @@ class TestAddPromptSection:
         assert "my_search" in call_kwargs["body"]
 
     def test_add_prompt_section_error_handled(self):
+        """A failure inside agent.prompt_add_section must be caught and
+        logged — the skill must not propagate the exception. We assert the
+        agent method was actually invoked AND the logger captured the
+        failure (proving the except branch ran)."""
         skill = _make_skill()
         skill.tool_name = "search"
         mock_agent = Mock()
         mock_agent.prompt_add_section.side_effect = Exception("prompt error")
 
-        # Should not raise
-        skill._add_prompt_section(mock_agent)
+        with patch.object(skill, "logger") as mock_logger:
+            skill._add_prompt_section(mock_agent)
+        # The agent was invoked exactly once before the exception bubbled.
+        mock_agent.prompt_add_section.assert_called_once()
+        # And the error path logged the failure.
+        assert mock_logger.error.call_count == 1
+        logged = mock_logger.error.call_args[0][0]
+        assert "prompt error" in logged or "prompt section" in logged.lower()
 
 
 # ===========================================================================

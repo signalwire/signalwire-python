@@ -305,16 +305,26 @@ class TestContextBuilder:
             builder.add_context("customer_service")
     
     def test_validate_success(self):
-        """Test successful validation with default context"""
+        """Test successful validation with default context — returns None
+        and the validated config is reachable via to_dict() with the right
+        shape."""
         mock_agent = Mock()
         builder = ContextBuilder(mock_agent)
-        
+
         context = builder.add_context("default")  # Must be named 'default' for single context
         step = context.add_step("greeting")
         step.set_text("Hello!")
-        
-        # Should not raise any exceptions
-        builder.validate()
+
+        # validate() returns None when the configuration is valid.
+        result = builder.validate()
+        assert result is None
+        # And the validated structure round-trips through to_dict.
+        d = builder.to_dict()
+        assert "default" in d
+        # Context.to_dict() puts steps in a list of dicts; verify the
+        # named step survives the round trip.
+        step_names = [s["name"] for s in d["default"]["steps"]]
+        assert "greeting" in step_names
     
     def test_validate_no_contexts(self):
         """Test validation with no contexts"""
@@ -961,14 +971,20 @@ class TestContextBuilderValidation:
             builder.validate()
 
     def test_validate_next_is_allowed_in_valid_steps(self):
-        """Test validation allows 'next' as a valid step reference"""
+        """Test validation allows 'next' as a valid step reference — it is
+        a reserved keyword that the validator must accept without resolving
+        it as a real step name."""
         mock_agent = Mock()
         builder = ContextBuilder(mock_agent)
         context = builder.add_context("default")
         step = context.add_step("greeting")
         step.set_text("Hello!")
         step.set_valid_steps(["next"])
-        builder.validate()  # Should not raise
+        # validate() returns None and "next" was preserved on the step.
+        assert builder.validate() is None
+        d = builder.to_dict()
+        greeting = d["default"]["steps"][0]
+        assert greeting["valid_steps"] == ["next"]
 
     def test_validate_invalid_context_reference_at_context_level(self):
         """Test validation fails for unknown context in context-level valid_contexts"""
@@ -996,7 +1012,9 @@ class TestContextBuilderValidation:
             builder.validate()
 
     def test_validate_valid_context_references(self):
-        """Test validation passes with valid context references at both levels"""
+        """Test validation passes with valid context references at BOTH the
+        context level and the step level. The to_dict() output must reflect
+        both references (proving validation didn't strip them)."""
         mock_agent = Mock()
         builder = ContextBuilder(mock_agent)
         ctx1 = builder.add_context("ctx1")
@@ -1006,7 +1024,11 @@ class TestContextBuilderValidation:
         ctx1.set_valid_contexts(["ctx2"])
         ctx2 = builder.add_context("ctx2")
         ctx2.add_step("s2").set_text("Hi!")
-        builder.validate()  # Should not raise
+        # Returns None on success; both refs survive serialisation.
+        assert builder.validate() is None
+        d = builder.to_dict()
+        assert d["ctx1"]["valid_contexts"] == ["ctx2"]
+        assert d["ctx1"]["steps"][0]["valid_contexts"] == ["ctx2"]
 
     def test_to_dict_preserves_order(self):
         """Test that to_dict preserves context insertion order"""
@@ -1125,6 +1147,8 @@ class TestGatherInfoValidation:
         return ContextBuilder(Mock())
 
     def test_next_step_valid_when_following_step_exists(self):
+        """When `completion_action='next_step'` is set on a step that has a
+        following step in the same context, validate() must accept it."""
         builder = self._make_builder()
         ctx = builder.add_context("default")
         ctx.add_step("gather") \
@@ -1132,7 +1156,11 @@ class TestGatherInfoValidation:
             .set_gather_info(completion_action="next_step") \
             .add_gather_question("name", "Name?")
         ctx.add_step("process").set_text("Process")
-        builder.validate()  # Should not raise
+        # validate() returns None and to_dict() preserves the action verbatim.
+        assert builder.validate() is None
+        d = builder.to_dict()
+        gather_step = d["default"]["steps"][0]
+        assert gather_step["gather_info"]["completion_action"] == "next_step"
 
     def test_next_step_invalid_on_last_step(self):
         builder = self._make_builder()
@@ -1145,6 +1173,9 @@ class TestGatherInfoValidation:
             builder.validate()
 
     def test_named_step_valid(self):
+        """When `completion_action` names a step that exists ANYWHERE in
+        the same context (not necessarily the next one), validate() must
+        accept it."""
         builder = self._make_builder()
         ctx = builder.add_context("default")
         ctx.add_step("gather") \
@@ -1153,7 +1184,13 @@ class TestGatherInfoValidation:
             .add_gather_question("name", "Name?")
         ctx.add_step("middle").set_text("Middle")
         ctx.add_step("review").set_text("Review")
-        builder.validate()  # Should not raise
+        assert builder.validate() is None
+        d = builder.to_dict()
+        # The named step is preserved and the target step exists in the dict.
+        step_names = [s["name"] for s in d["default"]["steps"]]
+        assert "review" in step_names
+        gather_step = next(s for s in d["default"]["steps"] if s["name"] == "gather")
+        assert gather_step["gather_info"]["completion_action"] == "review"
 
     def test_named_step_invalid_when_not_defined(self):
         builder = self._make_builder()
@@ -1167,15 +1204,26 @@ class TestGatherInfoValidation:
             builder.validate()
 
     def test_no_completion_action_always_valid(self):
+        """When no `completion_action` is set on gather_info, validate()
+        must always accept it — even on the last (only) step in the
+        context. The gather_info dict in the output must NOT contain a
+        completion_action key."""
         builder = self._make_builder()
         ctx = builder.add_context("default")
         ctx.add_step("only_step") \
             .set_text("Gather") \
             .set_gather_info() \
             .add_gather_question("name", "Name?")
-        builder.validate()  # Should not raise
+        assert builder.validate() is None
+        d = builder.to_dict()
+        only_step = d["default"]["steps"][0]
+        # No completion_action was set, so it must not appear in the output.
+        assert "completion_action" not in only_step["gather_info"]
 
     def test_next_step_valid_not_last_in_multi_step(self):
+        """In a context with three steps where step1 and step2 both use
+        `completion_action='next_step'`, validate() must accept BOTH
+        because each has a following step."""
         builder = self._make_builder()
         ctx = builder.add_context("default")
         ctx.add_step("step1") \
@@ -1187,7 +1235,14 @@ class TestGatherInfoValidation:
             .set_gather_info(completion_action="next_step") \
             .add_gather_question("b", "Q?")
         ctx.add_step("step3").set_text("S3")
-        builder.validate()  # Both step1 and step2 have a following step
+        assert builder.validate() is None
+        d = builder.to_dict()
+        names = [s["name"] for s in d["default"]["steps"]]
+        # Both gather steps remain present; step3 (the terminal) was
+        # what made the next_step refs valid.
+        assert names == ["step1", "step2", "step3"]
+        assert d["default"]["steps"][0]["gather_info"]["completion_action"] == "next_step"
+        assert d["default"]["steps"][1]["gather_info"]["completion_action"] == "next_step"
 
     def test_second_to_last_next_step_valid_last_next_step_invalid(self):
         builder = self._make_builder()

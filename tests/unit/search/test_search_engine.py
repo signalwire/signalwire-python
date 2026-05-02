@@ -1906,8 +1906,16 @@ class TestAddVectorScoresToCandidates:
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
     def test_db_error_handled(self, mock_cosine, mock_np):
-        """Database errors are handled gracefully."""
+        """When the SQLite db cannot be opened (path doesn't exist), the
+        method must catch the error and leave the candidates dict
+        unchanged — specifically NO vector_score gets attached because
+        no embedding row was ever read."""
         engine = SearchEngine(backend='sqlite', index_path='/nonexistent/path.db')
         candidates = {1: {'id': 1, 'sources': {}, 'metadata': {}}}
-        # Should not raise
         engine._add_vector_scores_to_candidates(candidates, [[0.1]], 0.5)
+        # Candidate dict still exists with same key.
+        assert list(candidates.keys()) == [1]
+        # But no vector score was attached because the read failed.
+        assert 'vector_score' not in candidates[1]
+        assert 'vector_distance' not in candidates[1]
+        assert 'vector_rerank' not in candidates[1]['sources']

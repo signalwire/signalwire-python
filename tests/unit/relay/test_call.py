@@ -1175,16 +1175,25 @@ class TestQueueOptionalParams:
 class TestEventHandlerError:
     @pytest.mark.asyncio
     async def test_listener_exception_does_not_crash(self, call):
-        """Verify that an exception in an event handler is caught."""
+        """Verify that an exception in one event handler is caught and the
+        OTHER handlers still get the event. If exception handling were
+        broken, the second handler would never run."""
         def bad_handler(event):
             raise RuntimeError("handler crashed")
 
+        good_calls = []
+        def good_handler(event):
+            good_calls.append(event)
+
         call.on(EVENT_CALL_PLAY, bad_handler)
-        # Should not raise
+        call.on(EVENT_CALL_PLAY, good_handler)
         await call._dispatch_event({
             "event_type": EVENT_CALL_PLAY,
             "params": {"call_id": "call-1", "control_id": "ctl1", "state": "playing"},
         })
+        # The bad handler raised, but the good handler still fired exactly once.
+        assert len(good_calls) == 1
+        assert good_calls[0].event_type == EVENT_CALL_PLAY
 
 
 class TestWaitForTimeout:

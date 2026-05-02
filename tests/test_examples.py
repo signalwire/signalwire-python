@@ -432,6 +432,12 @@ class TestSpecialExamples:
         if returncode != 0:
             if "no agent" in stderr.lower() or "not found" in stderr.lower():
                 pytest.skip("test_lambda_handler.py doesn't export a standard agent")
+        # If we got this far, the swaig-test invocation must have succeeded;
+        # demand a recognisable handler shape, not just "didn't crash".
+        assert returncode == 0, (
+            f"swaig-test returned {returncode} for lambda handler example\n"
+            f"stderr: {stderr}\nstdout: {stdout}"
+        )
 
 
 class TestSWMLGeneration:

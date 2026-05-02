@@ -1318,18 +1318,29 @@ class TestEdgeCases:
         assert gw1.mcp_manager is not gw2.mcp_manager
 
     def test_config_without_server_section_uses_defaults(self):
+        """When the [server] section is missing, the gateway must still
+        construct successfully and the stored config must reflect the
+        absence (no server key) — i.e., we don't silently fabricate one."""
         config = _minimal_config()
         del config["server"]
         gateway, _ = _create_gateway(config)
-        # Should not blow up; run() would use defaults
+        # The gateway honours the input config — no synthetic [server].
+        assert "server" not in gateway.config
+        # And the Flask app was still constructed.
+        assert gateway.app is not None
 
     def test_config_without_logging_section(self):
+        """When [logging] is missing, construction succeeds and the config
+        dict is preserved as-given (no logging key fabricated)."""
         config = _minimal_config()
         del config["logging"]
         gateway, _ = _create_gateway(config)
-        # No error
+        assert "logging" not in gateway.config
+        assert gateway.app is not None
 
     def test_config_with_log_file(self):
+        """When [logging].file is set, a FileHandler must be installed on
+        the root logger pointed at that file path."""
         config = _minimal_config()
         config["logging"] = {"level": "DEBUG", "file": "/tmp/test_gateway.log"}
         # Create a real-ish mock handler that won't break the logging system
@@ -1337,8 +1348,11 @@ class TestEdgeCases:
         mock_handler.level = logging.DEBUG
         mock_handler.formatter = None
         mock_handler.filters = []
-        with patch("logging.FileHandler", return_value=mock_handler):
+        with patch("logging.FileHandler", return_value=mock_handler) as mock_fh:
             gateway, _ = _create_gateway(config)
+        # FileHandler was constructed targeting the configured path.
+        assert mock_fh.call_count >= 1
+        assert mock_fh.call_args[0][0] == "/tmp/test_gateway.log"
         # Clean up: remove the mock handler from the root logger to avoid
         # poisoning other tests
         root = logging.getLogger()

@@ -698,8 +698,15 @@ class TestAddRemoveDirectory:
         assert "/gone" not in web_service.directories
 
     def test_remove_nonexistent_is_noop(self, web_service):
-        # Should not raise
+        """Removing an unknown route must be a silent no-op — and must not
+        accidentally clobber the existing directories dict."""
+        # Seed an existing route so we can verify it survives.
+        before = dict(web_service.directories)
         web_service.remove_directory("/does_not_exist")
+        # The directories dict is unchanged by a no-op removal.
+        assert web_service.directories == before
+        # And the unknown route is still absent (i.e., we didn't create it).
+        assert "/does_not_exist" not in web_service.directories
 
 
 # ---------------------------------------------------------------------------
@@ -787,9 +794,18 @@ class TestSetupSecurity:
     """Tests for the _setup_security method."""
 
     def test_no_app_returns_early(self):
+        """When fastapi is unavailable self.app is None; _setup_security
+        must early-return without trying to call any method on the missing
+        app. We confirm this by asserting that the WebService still has
+        app=None and that no side effect attached headers/middleware to a
+        non-existent app."""
         ws = _make_web_service(fastapi_available=False)
-        # Should not raise even though app is None
+        # Pre-condition: app is genuinely missing.
+        assert ws.app is None
+        # Calling _setup_security must not error (the early return).
         ws._setup_security()
+        # Post-condition: no app was conjured by side effect.
+        assert ws.app is None
         _stop_patches(ws)
 
     def test_cors_added_when_enabled(self, web_service):

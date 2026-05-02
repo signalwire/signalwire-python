@@ -1703,17 +1703,32 @@ class TestOnSummary:
         return _make_agent(name="summary_hook_test", use_pom=False, **kw)
 
     def test_on_summary_does_not_raise(self):
+        """The default on_summary is a no-op: returns None and leaves the
+        agent's name unchanged."""
         agent = self._make()
-        # Default does nothing
-        agent.on_summary({"summary": "test"})
+        name_before = agent.name
+        result = agent.on_summary({"summary": "test"})
+        assert result is None
+        assert agent.name == name_before
 
     def test_on_summary_with_raw_data(self):
+        """on_summary accepts an optional raw_data kwarg without echoing
+        it back into agent state."""
         agent = self._make()
-        agent.on_summary({"summary": "test"}, raw_data={"call_id": "123"})
+        name_before = agent.name
+        result = agent.on_summary(
+            {"summary": "test"},
+            raw_data={"call_id": "marker-call-id-zzz"},
+        )
+        assert result is None
+        assert agent.name == name_before
 
     def test_on_summary_none(self):
+        """on_summary must accept summary=None (e.g. when no summary was
+        found in the post data) and still no-op."""
         agent = self._make()
-        agent.on_summary(None)
+        result = agent.on_summary(None)
+        assert result is None
 
 
 class TestAgentId:

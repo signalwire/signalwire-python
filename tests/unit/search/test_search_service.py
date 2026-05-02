@@ -855,9 +855,15 @@ class TestStartStop:
             assert call_args[1]["port"] == 5555
 
     def test_stop_does_not_raise(self):
+        """stop() is currently a placeholder no-op: it must return None
+        and must NOT mutate the service's port or backend state."""
         svc = SearchService()
-        # stop() is a no-op placeholder
-        svc.stop()
+        port_before = svc.port
+        backend_before = svc.backend
+        result = svc.stop()
+        assert result is None
+        assert svc.port == port_before
+        assert svc.backend == backend_before
 
 
 # ===================================================================
@@ -970,7 +976,10 @@ class TestEdgeCasesAndSecurity:
             assert len(response.results) == 0
 
     def test_very_long_query(self):
-        """Ensure long queries do not cause issues."""
+        """A 10k-word query must not cause issues — the SearchService
+        forwards it to the backing engine and returns the engine's
+        results verbatim. Empty engine results yield an empty
+        SearchResponse.results list."""
         svc = SearchService()
 
         mock_engine = MagicMock()
@@ -988,10 +997,15 @@ class TestEdgeCasesAndSecurity:
             long_query = "word " * 10000
             request = _make_search_request(query=long_query)
             response = _run_async(svc._handle_search(request))
-            assert response is not None
+            # Empty engine results -> empty response.results list (not None).
+            assert response.results == []
+            # The engine was actually called once — proves we exercised it.
+            assert mock_engine.search.call_count == 1
 
     def test_special_characters_in_query(self):
-        """Ensure special characters in queries are handled."""
+        """A query containing HTML/script characters must be passed through
+        to the engine unchanged (no sanitisation that would alter the
+        query); the response shape is the engine's empty results."""
         svc = SearchService()
 
         mock_engine = MagicMock()
@@ -1006,9 +1020,13 @@ class TestEdgeCasesAndSecurity:
                 "language": "en",
             }
 
-            request = _make_search_request(query='<script>alert("xss")</script>')
+            xss_query = '<script>alert("xss")</script>'
+            request = _make_search_request(query=xss_query)
             response = _run_async(svc._handle_search(request))
-            assert response is not None
+            # Engine search was called once.
+            assert mock_engine.search.call_count == 1
+            # The empty engine result shows up as an empty results list.
+            assert response.results == []
 
     def test_health_endpoint_masks_connection_string(self):
         """Connection strings should be masked in health endpoint responses."""

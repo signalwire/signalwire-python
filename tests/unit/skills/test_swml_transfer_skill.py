@@ -431,13 +431,18 @@ class TestRegisterTools:
         assert len(global_data_actions) >= 1
 
     def test_register_tools_fallback_without_register_swaig_function(self):
-        """When agent lacks register_swaig_function, error is logged."""
+        """When agent lacks register_swaig_function, the skill must take
+        the else-branch and log an error — it must NOT silently do nothing."""
         skill = _make_skill()
         skill.setup()
-        # Remove register_swaig_function
+        # Remove register_swaig_function so the fallback branch is taken.
         delattr(skill.agent, 'register_swaig_function')
-        # Should not raise, just logs error
-        skill.register_tools()
+        with patch.object(skill, "logger") as mock_logger:
+            skill.register_tools()
+        # The fallback branch logged the missing-method error.
+        assert mock_logger.error.call_count == 1
+        msg = mock_logger.error.call_args[0][0]
+        assert "register_swaig_function" in msg
 
 
 # ---------------------------------------------------------------------------

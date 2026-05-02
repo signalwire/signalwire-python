@@ -401,14 +401,17 @@ class TestCheckAvailability:
         assert "room service" in result.response.lower()
 
     def test_raw_data_passed_through(self):
-        """raw_data is accepted but not used internally."""
+        """raw_data is accepted but not used internally — output only depends
+        on the service argument, regardless of what raw_data is."""
         sentinel = {"call_id": "abc-123"}
-        # Should not raise
         result = self.agent.check_availability(
             {"service": "spa bookings", "date": "2025-01-01", "time": "12:00"},
             raw_data=sentinel,
         )
-        assert result is not None
+        # raw_data shouldn't appear in the response — confirms it's not echoed.
+        assert "abc-123" not in result.response
+        # Response should mention the service name we asked about.
+        assert "spa bookings" in result.response.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -446,8 +449,10 @@ class TestGetDirections:
 
     def test_empty_location_arg(self):
         result = self.agent.get_directions({}, raw_data={})
-        # Empty string won't match any amenity
-        assert result is not None
+        # Empty/missing location must hit the fallback branch — there is
+        # no amenity called "", so we expect the same fallback wording as
+        # an unknown location.
+        assert "front desk" in result.response.lower() or "don't have" in result.response.lower()
 
     def test_location_case_sensitivity(self):
         """Location lookup is lowercased; amenity keys in our fixture are lowercase."""
@@ -456,9 +461,14 @@ class TestGetDirections:
         assert "2nd Floor" in result.response
 
     def test_raw_data_accepted(self):
-        sentinel = {"meta": "data"}
+        """raw_data is accepted but not echoed back into the response —
+        only the location argument shapes the answer."""
+        sentinel = {"meta": "secret-marker-xyz"}
         result = self.agent.get_directions({"location": "pool"}, raw_data=sentinel)
-        assert result is not None
+        # Same answer the canonical pool test verifies.
+        assert "2nd Floor" in result.response
+        # raw_data shouldn't leak into the response text.
+        assert "secret-marker-xyz" not in result.response
 
 
 # ---------------------------------------------------------------------------

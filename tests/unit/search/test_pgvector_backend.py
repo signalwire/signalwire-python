@@ -860,14 +860,21 @@ class TestPgVectorBackendClose:
     @patch('signalwire.search.pgvector_backend.psycopg2')
     @patch('signalwire.search.pgvector_backend.register_vector')
     def test_close_when_conn_is_none(self, mock_reg, mock_pg):
-        """Test close does nothing when conn is None"""
+        """close() must early-return when conn is None — no connection.close()
+        is invoked because there is no connection."""
         mock_conn = MagicMock()
         mock_conn.closed = False
         mock_pg.connect.return_value = mock_conn
 
         backend = PgVectorBackend("postgresql://localhost/testdb")
         backend.conn = None
-        backend.close()  # Should not raise
+        backend.close()
+        # The mock connection (from mock_pg.connect) was created during
+        # __init__ but our close() targets backend.conn which is None,
+        # so no .close() is called on any connection object.
+        assert mock_conn.close.call_count == 0
+        # State remains unchanged.
+        assert backend.conn is None
 
 
 # ===================================================================
@@ -1687,7 +1694,8 @@ class TestPgVectorSearchBackendClose:
     @patch('signalwire.search.pgvector_backend.psycopg2')
     @patch('signalwire.search.pgvector_backend.register_vector')
     def test_close_when_conn_is_none(self, mock_reg, mock_pg):
-        """Test close does nothing when conn is None"""
+        """close() must early-return when conn is None and not invoke
+        connection.close() on anything."""
         mock_conn = MagicMock()
         mock_conn.closed = False
         mock_pg.connect.return_value = mock_conn
@@ -1699,7 +1707,11 @@ class TestPgVectorSearchBackendClose:
 
         sb = PgVectorSearchBackend("postgresql://localhost/testdb", "col")
         sb.conn = None
-        sb.close()  # Should not raise
+        # Reset any setup-path calls and observe the close path only.
+        mock_conn.close.reset_mock()
+        sb.close()
+        assert mock_conn.close.call_count == 0
+        assert sb.conn is None
 
 
 class TestPgVectorSearchBackendEnsureConnection:

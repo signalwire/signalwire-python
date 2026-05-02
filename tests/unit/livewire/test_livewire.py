@@ -122,18 +122,33 @@ class TestAgentLifecycleHooks:
 
     @pytest.mark.asyncio
     async def test_on_enter(self):
+        """Default on_enter is a no-op — must return None and must not
+        mutate the agent's instructions."""
         agent = Agent(instructions="test")
-        await agent.on_enter()  # Should not raise
+        result = await agent.on_enter()
+        assert result is None
+        # No-op contract: state unchanged.
+        assert agent.instructions == "test"
 
     @pytest.mark.asyncio
     async def test_on_exit(self):
+        """Default on_exit returns None and leaves instructions intact."""
         agent = Agent(instructions="test")
-        await agent.on_exit()
+        result = await agent.on_exit()
+        assert result is None
+        assert agent.instructions == "test"
 
     @pytest.mark.asyncio
     async def test_on_user_turn_completed(self):
+        """Default on_user_turn_completed returns None and accepts the
+        optional turn_ctx/new_message kwargs without modifying state."""
         agent = Agent(instructions="test")
-        await agent.on_user_turn_completed()
+        result = await agent.on_user_turn_completed(
+            turn_ctx={"role": "user"},
+            new_message={"text": "hi"},
+        )
+        assert result is None
+        assert agent.instructions == "test"
 
     @pytest.mark.asyncio
     async def test_update_instructions(self):

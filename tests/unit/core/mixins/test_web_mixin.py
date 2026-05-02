@@ -176,14 +176,35 @@ class TestGetApp:
         assert agent.get_app() is fake_app
 
     def test_get_app_root_route_no_prefix(self):
+        """When the agent's route is "/", the FastAPI app must include
+        the agent router WITHOUT a prefix. Health/ready must be
+        reachable at the bare paths "/health" and "/ready"."""
         agent = _build_mixin(route="/")
         app = agent.get_app()
-        assert app is not None
+        # Always-present probe routes register at the literal paths.
+        paths = {getattr(r, "path", None) for r in app.routes}
+        assert "/health" in paths
+        assert "/ready" in paths
+        # No path got accidentally prefixed with anything for the root case.
+        # Concretely, any router-mounted path should NOT start with a
+        # double-slash or include a stray "/myagent"-like prefix.
+        for p in paths:
+            if p:
+                assert not p.startswith("//")
 
     def test_get_app_non_root_route_uses_prefix(self):
+        """When the agent's route is "/myagent", the agent router's paths
+        must be MOUNTED under that prefix. Health/ready remain at the
+        bare paths because they're attached to the root app."""
         agent = _build_mixin(route="/myagent")
         app = agent.get_app()
-        assert app is not None
+        paths = {getattr(r, "path", None) for r in app.routes}
+        # Bare probes still exist (attached to the parent app).
+        assert "/health" in paths
+        assert "/ready" in paths
+        # At least one route must live under the prefix.
+        prefixed = [p for p in paths if p and p.startswith("/myagent")]
+        assert len(prefixed) >= 1, f"No routes mounted under /myagent: {sorted(paths)}"
 
 
 # ===========================================================================
@@ -767,11 +788,22 @@ class TestHandlePostPromptRequest:
         assert response.status_code == 500
 
     def test_suppress_logs_flag(self):
+        """When _suppress_logs=True the handler must STILL produce a
+        valid response — log suppression must not break the response
+        path. We assert the flag was honoured by the agent and that the
+        handler returned a normal HTTP-style result."""
         agent = _build_mixin(_suppress_logs=True)
+        # The flag must actually be set on the agent.
+        assert agent._suppress_logs is True
         agent.on_swml_request = MagicMock(return_value=None)
         request = _make_request("GET", url_path="/agent/post_prompt")
-        _run(agent._handle_post_prompt_request(request))
-        # Just verify it doesn't error; log suppression is internal
+        result = _run(agent._handle_post_prompt_request(request))
+        # The handler returned SOMETHING — either a status response or a
+        # FastAPI-style Response. It's not None (which would indicate the
+        # handler bailed silently).
+        assert result is not None
+        # The flag is still set after the call (no accidental flip).
+        assert agent._suppress_logs is True
 
 
 # ===========================================================================
@@ -981,15 +1013,25 @@ class TestRoutePrefixHandling:
         assert app is not None
 
     def test_custom_route_uses_prefix(self):
+        """A multi-segment route like "/v1/mybot" must mount the agent
+        router under that exact prefix — at least one route on the app
+        must begin with "/v1/mybot"."""
         agent = _build_mixin(route="/v1/mybot")
         app = agent.get_app()
-        assert app is not None
+        paths = [getattr(r, "path", "") for r in app.routes]
+        prefixed = [p for p in paths if p and p.startswith("/v1/mybot")]
+        assert len(prefixed) >= 1, f"No routes under /v1/mybot prefix: {paths}"
 
     def test_serve_root_route(self):
+        """When the agent is mounted at the root ("/"), the agent's own
+        routes must NOT carry an unintended prefix. Bare /health must be
+        a registered route on the assembled app."""
         agent = _build_mixin(route="/")
-        # We can at least verify the app creation logic doesn't crash
         app = agent.get_app()
-        assert app is not None
+        paths = {getattr(r, "path", None) for r in app.routes}
+        # Probe routes are present at the bare path.
+        assert "/health" in paths
+        assert "/ready" in paths
 
     def test_serve_with_prefix(self):
         agent = _build_mixin(route="/bot")

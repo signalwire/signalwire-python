@@ -1073,7 +1073,8 @@ class TestRunForever:
 
     @pytest.mark.asyncio
     async def test_run_forever_cancelled(self):
-        """_run_forever breaks on CancelledError — line 339."""
+        """_run_forever must break on CancelledError from the connect path
+        AND ensure disconnect() runs (which clears _connected)."""
         _active_clients.clear()
 
         async def cancel_connect(*args, **kwargs):
@@ -1082,8 +1083,11 @@ class TestRunForever:
         with patch("signalwire.relay.client.websockets.connect",
                    side_effect=cancel_connect):
             client = RelayClient(project="p", token="t")
-            # Should exit cleanly without raising
             await client._run_forever()
+            # On exit, disconnect() ran and _connected was cleared.
+            assert client._connected is False
+            # Loop did not stash a live websocket either.
+            assert client._ws is None
         _active_clients.clear()
 
 
@@ -1404,11 +1408,22 @@ class TestPingLoopInternals:
 
     @pytest.mark.asyncio
     async def test_check_ping_timeout_fires(self, connected_client):
-        """_on_check_ping_timeout executes when timer fires — line 695."""
+        """_on_check_ping_timeout is a logging-only handler. It must NOT
+        flip _connected, must NOT close the websocket, and must NOT mutate
+        the ping-failure counter — the actual probing is the client ping
+        loop's job."""
         client, ws = connected_client
-        # Manually call the timeout handler
+        # Capture state before the handler runs.
+        was_connected = client._connected
+        prior_failures = client._ping_failures
+        prior_ws = client._ws
+
         client._on_check_ping_timeout()
-        # Should not crash, just logs
+
+        # Pure logger — connection state untouched.
+        assert client._connected is was_connected
+        assert client._ping_failures == prior_failures
+        assert client._ws is prior_ws
 
 
 # ===================================================================

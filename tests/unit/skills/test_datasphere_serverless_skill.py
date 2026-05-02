@@ -1045,7 +1045,10 @@ class TestDataSphereServerlessSkillEdgeCases:
         assert skill.setup() is False
 
     def test_cleanup_inherited_from_base(self):
-        """Test that cleanup method is inherited and does not raise"""
+        """Test that cleanup is the inherited SkillBase no-op: returns
+        None and does not mutate the skill's space_name/params state."""
         skill, _ = _create_skill()
-        # cleanup is a no-op inherited from SkillBase
-        skill.cleanup()  # Should not raise
+        params_before = dict(skill.params)
+        result = skill.cleanup()
+        assert result is None
+        assert skill.params == params_before
