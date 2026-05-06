@@ -23,6 +23,35 @@ CALLS_PATH = "/api/calling/calls"
 
 
 class TestCallingLifecycle:
+    def test_dial_with_codecs_array(self, signalwire_client, mock):
+        body = signalwire_client.calling.dial(
+            url="https://example.com/swml",
+            to="+15551234567",
+            codecs=["OPUS", "G729", "VP8", "PCMA"],
+        )
+        assert isinstance(body, dict)
+        assert "id" in body
+        last = mock.last_request()
+        assert last.method == "POST"
+        assert last.path == CALLS_PATH
+        assert last.body.get("command") == "dial"
+        assert "id" not in last.body
+        assert last.body.get("params", {}).get("codecs") == [
+            "OPUS", "G729", "VP8", "PCMA",
+        ]
+        assert last.body.get("params", {}).get("to") == "+15551234567"
+
+    def test_dial_with_codecs_string(self, signalwire_client, mock):
+        body = signalwire_client.calling.dial(
+            url="https://example.com/swml",
+            to="+15551234567",
+            codecs="OPUS,G729,VP8,PCMA",
+        )
+        assert isinstance(body, dict)
+        last = mock.last_request()
+        assert last.body.get("command") == "dial"
+        assert last.body.get("params", {}).get("codecs") == "OPUS,G729,VP8,PCMA"
+
     def test_update(self, signalwire_client, mock):
         body = signalwire_client.calling.update(id="call-1", state="hold")
         assert isinstance(body, dict)
