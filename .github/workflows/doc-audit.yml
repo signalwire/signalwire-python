@@ -33,6 +33,7 @@ jobs:
         with:
           repository: signalwire/porting-sdk
           path: porting-sdk
+          token: ${{ secrets.PORTING_SDK_TOKEN }}
           # porting-sdk is the source of truth for the Python surface — pin to
           # main so the audit reflects the latest reference.
           ref: main
