@@ -13,4 +13,14 @@ freezegun>=1.2.0      # For mocking datetime
 factory-boy>=3.3.0    # For test data factories
 faker>=19.0.0         # For generating fake data
 httpx>=0.24.0         # For async HTTP testing
-aiofiles>=23.0.0      # For async file operations in tests 
+aiofiles>=23.0.0      # For async file operations in tests
+
+# Optional-feature deps required by tests under tests/unit/search/.
+# These mirror the [search-queryonly] extra in pyproject.toml so the
+# search test modules can collect (query_processor.py imports nltk
+# at module scope) and patch real attributes (test_vectorize_query_success
+# patches sentence_transformers.SentenceTransformer).
+nltk>=3.8
+numpy>=1.24.0
+scikit-learn>=1.3.0
+sentence-transformers>=2.2.0
