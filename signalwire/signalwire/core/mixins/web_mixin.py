@@ -17,11 +17,14 @@ import contextvars
 from typing import Optional, Dict, Any, Callable
 from urllib.parse import urlparse, urlunparse
 
-from fastapi import FastAPI, APIRouter, Request, Response
+from fastapi import Depends, FastAPI, APIRouter, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from signalwire.core.logging_config import get_execution_mode
 from signalwire.core.function_result import FunctionResult
+from signalwire.core.security.webhook_middleware import (
+    make_webhook_validation_dependency,
+)
 
 # Per-request proxy URL to avoid race conditions in concurrent async contexts
 _request_proxy_url = contextvars.ContextVar('_request_proxy_url', default=None)
@@ -343,22 +346,37 @@ class WebMixin:
     def _register_routes(self, router):
         """
         Register routes for this agent
-        
-        This method ensures proper route registration by handling the routes 
+
+        This method ensures proper route registration by handling the routes
         directly in AgentBase rather than inheriting from SWMLService.
-        
+
         Args:
             router: FastAPI router to register routes with
         """
         # Health check endpoints are now registered directly on the main app
-        
+
+        # Build webhook signature validation dependency once if signing_key is set.
+        # See porting-sdk/webhooks.md and signalwire.core.security.webhook_middleware.
+        # When unset, signed_post_deps stays empty and routes register without it.
+        signed_post_deps = []
+        if getattr(self, "signing_key", None):
+            sig_dep = make_webhook_validation_dependency(
+                self.signing_key,
+                trust_proxy=getattr(self, "_trust_proxy_for_signature", False),
+            )
+            signed_post_deps = [Depends(sig_dep)]
+
         # Root endpoint (handles both with and without trailing slash)
         @router.get("/")
-        @router.post("/")
-        async def handle_root(request: Request, response: Response):
-            """Handle GET/POST requests to the root endpoint"""
+        async def handle_root_get(request: Request, response: Response):
+            """Handle GET requests to the root endpoint"""
             return await self._handle_root_request(request)
-            
+
+        @router.post("/", dependencies=signed_post_deps)
+        async def handle_root_post(request: Request, response: Response):
+            """Handle POST requests to the root endpoint (signature-validated when signing_key is set)"""
+            return await self._handle_root_request(request)
+
         # Debug endpoint - Both versions
         @router.get("/debug")
         @router.get("/debug/")
@@ -367,23 +385,31 @@ class WebMixin:
         async def handle_debug(request: Request):
             """Handle GET/POST requests to the debug endpoint"""
             return await self._handle_debug_request(request)
-            
-        # SWAIG endpoint - Both versions 
+
+        # SWAIG endpoint - Both versions
         @router.get("/swaig")
         @router.get("/swaig/")
-        @router.post("/swaig")
-        @router.post("/swaig/")
-        async def handle_swaig(request: Request, response: Response):
-            """Handle GET/POST requests to the SWAIG endpoint"""
+        async def handle_swaig_get(request: Request, response: Response):
+            """Handle GET requests to the SWAIG endpoint"""
             return await self._handle_swaig_request(request, response)
-            
+
+        @router.post("/swaig", dependencies=signed_post_deps)
+        @router.post("/swaig/", dependencies=signed_post_deps)
+        async def handle_swaig_post(request: Request, response: Response):
+            """Handle POST requests to the SWAIG endpoint (signature-validated when signing_key is set)"""
+            return await self._handle_swaig_request(request, response)
+
         # Post prompt endpoint - Both versions
         @router.get("/post_prompt")
         @router.get("/post_prompt/")
-        @router.post("/post_prompt")
-        @router.post("/post_prompt/")
-        async def handle_post_prompt(request: Request):
-            """Handle GET/POST requests to the post_prompt endpoint"""
+        async def handle_post_prompt_get(request: Request):
+            """Handle GET requests to the post_prompt endpoint"""
+            return await self._handle_post_prompt_request(request)
+
+        @router.post("/post_prompt", dependencies=signed_post_deps)
+        @router.post("/post_prompt/", dependencies=signed_post_deps)
+        async def handle_post_prompt_post(request: Request):
+            """Handle POST requests to the post_prompt endpoint (signature-validated when signing_key is set)"""
             return await self._handle_post_prompt_request(request)
             
         # Check for input endpoint - Both versions

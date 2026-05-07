@@ -276,6 +276,78 @@ If you encounter CORS errors:
    export SWML_CORS_ORIGINS="https://app.example.com,https://admin.example.com"
    ```
 
+## Webhook Signature Validation
+
+SignalWire signs every outbound webhook (SWML callbacks, SWAIG dispatch, post-prompt summaries, RELAY async events) with HMAC-SHA1 derived from a **Signing Key** the customer copies from the Dashboard → API Credentials page. SDKs MUST verify the signature before acting on a request.
+
+The contract is shared across all SignalWire SDK ports — see [`porting-sdk/webhooks.md`](https://github.com/signalwire/porting-sdk/blob/main/webhooks.md) for the canonical spec.
+
+### AgentBase: enable validation
+
+Pass `signing_key` to the AgentBase constructor (or set `SIGNALWIRE_SIGNING_KEY` in the environment):
+
+```python
+from signalwire import AgentBase
+
+agent = AgentBase(
+    name="my-agent",
+    signing_key="PSK...",        # or set SIGNALWIRE_SIGNING_KEY env var
+    trust_proxy_for_signature=False,  # opt in if you control the proxy
+)
+agent.serve()
+```
+
+When `signing_key` is set, signature validation is auto-mounted on `POST /`, `POST /swaig`, `POST /post_prompt`. Requests without a valid `X-SignalWire-Signature` header are rejected with HTTP 403 — the handler is never invoked. The `X-Twilio-Signature` header is accepted as an alias for cXML compatibility.
+
+When `signing_key` is unset, AgentBase emits a prominent startup warning:
+
+```
+[signalwire] webhook signature validation is disabled — set signing_key or SIGNALWIRE_SIGNING_KEY to enable
+```
+
+This is intentional: silently accepting unsigned webhooks in production is a footgun. Set the key, or accept the warning if you're behind a private network and have a documented reason.
+
+### Standalone validator (custom servers)
+
+If you're not using AgentBase, the validator function is exposed directly:
+
+```python
+from signalwire.core.security import validate_webhook_signature
+
+ok = validate_webhook_signature(
+    signing_key="PSK...",
+    signature=request.headers["X-SignalWire-Signature"],
+    url="https://my-public-host.example.com/webhook",
+    raw_body=raw_request_body_bytes.decode("utf-8"),
+)
+if not ok:
+    abort(403)
+```
+
+A legacy alias `validate_request(signing_key, signature, url, params_or_raw_body)` is provided for users migrating from the old `@signalwire/compatibility-api` shape — pass a string raw body for the combined validator, or a pre-parsed dict for direct Scheme B (form-encoded).
+
+### URL reconstruction behind proxies
+
+The validator signs against the URL SignalWire POSTed to, which differs from what your app sees behind a reverse proxy. The middleware honors:
+
+1. `SWML_PROXY_URL_BASE` env var (highest priority).
+2. `X-Forwarded-Proto` / `X-Forwarded-Host` headers when `trust_proxy_for_signature=True`.
+3. `request.url` (FastAPI's view) as fallback.
+
+Proxy headers are spoofable, so opt in only when you control the entire proxy chain.
+
+### Error modes
+
+| Condition | Behavior |
+|---|---|
+| Valid signature | request passes through |
+| Invalid signature | HTTP 403, handler not called |
+| Missing header | HTTP 403, handler not called |
+| Empty signing key (programming error) | `ValueError` at construction |
+| Non-string raw body (programming error) | `TypeError` from validator |
+
+The validator never logs the signing key, the expected signature, or which scheme branch matched/failed.
+
 ## Security Checklist
 
 Before deploying to production:
@@ -288,4 +360,5 @@ Before deploying to production:
 - [ ] Security headers verified in responses
 - [ ] Logs monitored for security events
 - [ ] SSL certificate expiration monitoring in place
+- [ ] `signing_key` (or `SIGNALWIRE_SIGNING_KEY` env) configured on every AgentBase
 - [ ] Regular security updates applied

@@ -126,11 +126,13 @@ class AgentBase(
         enable_post_prompt_override: bool = False,
         check_for_input_override: bool = False,
         config_file: Optional[str] = None,
-        schema_validation: bool = True
+        schema_validation: bool = True,
+        signing_key: Optional[str] = None,
+        trust_proxy_for_signature: bool = False
     ):
         """
         Initialize a new agent
-        
+
         Args:
             name: Agent name/identifier
             route: HTTP route path for this agent
@@ -153,6 +155,17 @@ class AgentBase(
             config_file: Optional path to configuration file
             schema_validation: Enable SWML schema validation. Default True. Can also
                               be disabled via SWML_SKIP_SCHEMA_VALIDATION=1 env var.
+            signing_key: Optional SignalWire Signing Key (from Dashboard → API
+                         Credentials). When set, webhook signature validation is
+                         enforced on POST /, /swaig, /post_prompt — unsigned or
+                         invalidly-signed requests get a 403. Falls back to the
+                         SIGNALWIRE_SIGNING_KEY env var if not passed.
+                         See porting-sdk/webhooks.md for the contract.
+            trust_proxy_for_signature: If True, honor X-Forwarded-Proto /
+                         X-Forwarded-Host when reconstructing the URL during
+                         signature validation. Default False — proxy headers
+                         are spoofable, so opt in only when you control the
+                         proxy chain.
         """
         # Import SWMLService here to avoid circular imports
         from signalwire.core.swml_service import SWMLService
@@ -214,7 +227,24 @@ class AgentBase(
         
         # Initialize session manager
         self._session_manager = SessionManager(token_expiry_secs=token_expiry_secs)
-        
+
+        # Webhook signature validation (porting-sdk/webhooks.md).
+        # Resolution order: explicit constructor arg → SIGNALWIRE_SIGNING_KEY env.
+        # When unset, web_mixin._register_routes does NOT mount the validator
+        # and the SDK logs a one-time WARNING so users notice in production.
+        self.signing_key = signing_key or os.environ.get("SIGNALWIRE_SIGNING_KEY")
+        self._trust_proxy_for_signature = trust_proxy_for_signature
+        if self.signing_key:
+            self.log.info("webhook_signature_validation_enabled")
+        else:
+            self.log.warning(
+                "webhook_signature_validation_disabled",
+                message=(
+                    "[signalwire] webhook signature validation is disabled — "
+                    "set signing_key or SIGNALWIRE_SIGNING_KEY to enable"
+                ),
+            )
+
         # URL override variables
         self._web_hook_url_override = None
         self._post_prompt_url_override = None
