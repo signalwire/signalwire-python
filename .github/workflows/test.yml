@@ -42,6 +42,9 @@ jobs:
           pip install -e porting-sdk/test_harness/mock_relay
           pip install -e porting-sdk/test_harness/mock_signalwire
 
+      - name: Install griffe (used by porting-sdk's enumerate_python_signatures.py for the SIGNATURES gate)
+        run: pip install griffe
+
       - name: Install signalwire-python (editable + dev deps)
         working-directory: signalwire-python
         run: |
