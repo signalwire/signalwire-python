@@ -1,0 +1,55 @@
+name: Test
+
+# Runs the full per-port CI gate set: pytest, signature-oracle regen,
+# oracle-drift gate, and the no-cheat-tests audit. Mirrors
+# `bash scripts/run-ci.sh` so there's no drift between local and CI.
+#
+# Python is the *reference* implementation. The DRIFT gate here doesn't
+# compare against another port — it regenerates porting-sdk's
+# python_signatures.json oracle from the live signalwire/ source and
+# fails if the regenerated file differs from what's checked in. That
+# way a Python-side surface change can't silently invalidate every
+# other port's drift report.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout signalwire-python
+        uses: actions/checkout@v5
+        with:
+          path: signalwire-python
+
+      - name: Checkout porting-sdk (mock_relay + mock_signalwire test harnesses + audit scripts)
+        uses: actions/checkout@v5
+        with:
+          repository: signalwire/porting-sdk
+          path: porting-sdk
+          token: ${{ secrets.PORTING_SDK_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python test harnesses (mock_relay + mock_signalwire)
+        run: |
+          pip install -e porting-sdk/test_harness/mock_relay
+          pip install -e porting-sdk/test_harness/mock_signalwire
+
+      - name: Install signalwire-python (editable + dev deps)
+        working-directory: signalwire-python
+        run: |
+          pip install -e .
+          pip install -r requirements-dev.txt
+
+      - name: Run CI gate script (TEST -> SIGNATURES -> DRIFT -> NO-CHEAT)
+        working-directory: signalwire-python
+        env:
+          PORTING_SDK: ${{ github.workspace }}/porting-sdk
+        run: bash scripts/run-ci.sh
