@@ -5,6 +5,10 @@ name: Doc Audit
 # in DOC_AUDIT_IGNORE.md with a rationale. Also runs `python -m py_compile`
 # over every example script to catch syntax errors introduced by a drift fix.
 
+env:
+  # Opt into Node.js 24 ahead of GitHub's 2026-06-02 default switch.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   push:
     branches:
