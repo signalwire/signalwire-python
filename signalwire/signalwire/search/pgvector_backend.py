@@ -103,6 +103,7 @@ class PgVectorBackend:
             tbl = psycopg2_sql.Identifier(table_name)
             idx_embedding = psycopg2_sql.Identifier(f"idx_{table_name}_embedding")
             idx_content = psycopg2_sql.Identifier(f"idx_{table_name}_content")
+            idx_content_fts = psycopg2_sql.Identifier(f"idx_{table_name}_fts")
             idx_tags = psycopg2_sql.Identifier(f"idx_{table_name}_tags")
             idx_metadata = psycopg2_sql.Identifier(f"idx_{table_name}_metadata")
             idx_metadata_text = psycopg2_sql.Identifier(f"idx_{table_name}_metadata_text")
@@ -133,6 +134,16 @@ class PgVectorBackend:
                 CREATE INDEX IF NOT EXISTS {idx}
                 ON {tbl} USING gin (content gin_trgm_ops)
             """).format(idx=idx_content, tbl=tbl))
+
+            # Full-text-search GIN index on tsvector(content). _keyword_search
+            # filters with to_tsvector(content) @@ plainto_tsquery(...) which
+            # cannot use the trigram index above; without this FTS index the
+            # planner falls back to a parallel sequential scan that parses
+            # every row's tsvector at query time - 1.4s for 35k rows.
+            cursor.execute(psycopg2_sql.SQL("""
+                CREATE INDEX IF NOT EXISTS {idx}
+                ON {tbl} USING gin (to_tsvector('english', content))
+            """).format(idx=idx_content_fts, tbl=tbl))
 
             cursor.execute(psycopg2_sql.SQL("""
                 CREATE INDEX IF NOT EXISTS {idx}

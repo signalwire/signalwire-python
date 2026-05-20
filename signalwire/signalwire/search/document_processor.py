@@ -421,7 +421,10 @@ class DocumentProcessor:
                     current_open = None
             else:
                 # Leaf block at top level (fence, code_block, hr, html_block).
-                if depth == 0 and tok.map is not None:
+                # Skip thematic breaks ('---', '***', '___') - they are pure
+                # presentational markup with no semantic content; embedding
+                # them produces noise chunks that pollute search relevance.
+                if depth == 0 and tok.map is not None and tok.type != "hr":
                     blocks.append(self._leaf_md_block(tok, lines))
 
         # Walk blocks, maintain heading hierarchy, emit chunks.
