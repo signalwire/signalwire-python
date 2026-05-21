@@ -72,39 +72,48 @@ class AIConfigMixin:
             })
         return self
 
-    def add_language(self, 
-                     name: str, 
-                     code: str, 
+    def add_language(self,
+                     name: str,
+                     code: str,
                      voice: str,
                      speech_fillers: Optional[List[str]] = None,
                      function_fillers: Optional[List[str]] = None,
                      engine: Optional[str] = None,
-                     model: Optional[str] = None) -> 'AgentBase':
+                     model: Optional[str] = None,
+                     params: Optional[Dict[str, Any]] = None) -> 'AgentBase':
         """
         Add a language configuration to support multilingual conversations
-        
+
         Args:
             name: Name of the language (e.g., "English", "French")
             code: Language code (e.g., "en-US", "fr-FR")
-            voice: TTS voice to use. Can be a simple name (e.g., "en-US-Neural2-F") 
+            voice: TTS voice to use. Can be a simple name (e.g., "en-US-Neural2-F")
                   or a combined format "engine.voice:model" (e.g., "elevenlabs.josh:eleven_turbo_v2_5")
             speech_fillers: Optional list of filler phrases for natural speech
             function_fillers: Optional list of filler phrases during function calls
             engine: Optional explicit engine name (e.g., "elevenlabs", "rime")
             model: Optional explicit model name (e.g., "eleven_turbo_v2_5", "arcana")
-            
+            params: Optional per-language params dict (engine-specific tuning,
+                voice settings, etc.). Emitted as the language object's
+                ``params`` key in SWML.
+
         Returns:
             Self for method chaining
-            
+
         Examples:
             # Simple voice name
             agent.add_language("English", "en-US", "en-US-Neural2-F")
-            
+
             # Explicit parameters
             agent.add_language("English", "en-US", "josh", engine="elevenlabs", model="eleven_turbo_v2_5")
-            
+
             # Combined format
             agent.add_language("English", "en-US", "elevenlabs.josh:eleven_turbo_v2_5")
+
+            # Per-language params (engine-specific knobs)
+            agent.add_language("English", "en-US", "josh",
+                               engine="elevenlabs",
+                               params={"stability": 0.5, "similarity_boost": 0.75})
         """
         language = {
             "name": name,
@@ -143,9 +152,53 @@ class AIConfigMixin:
             # If only one type of fillers is provided, use the deprecated "fillers" field
             fillers = speech_fillers or function_fillers
             language["fillers"] = fillers
-        
+
+        # Per-language params (engine-specific tuning, voice settings, etc.).
+        # Only emit the key when non-empty so we don't pollute SWML with
+        # empty objects.
+        if params:
+            language["params"] = params
+
         self._languages.append(language)
         return self
+
+    def set_language_params(self, code: str, params: Dict[str, Any]) -> 'AgentBase':
+        """
+        Set (or replace) the per-language ``params`` dict on an already-added
+        language. Useful when language entries are built up via add_language()
+        first and engine-specific tuning is added later (e.g., from a config
+        loader). Returns self for chaining.
+
+        Args:
+            code: Language code as previously passed to ``add_language`` (e.g. ``"en-US"``).
+            params: Engine-specific params dict to attach. Empty dict removes the key.
+
+        Returns:
+            Self for method chaining. No-op if the code isn't found.
+        """
+        for language in self._languages:
+            if language.get("code") == code:
+                if params:
+                    language["params"] = params
+                else:
+                    language.pop("params", None)
+                break
+        return self
+
+    def get_language_params(self, code: str) -> Optional[Dict[str, Any]]:
+        """
+        Read the per-language ``params`` dict for a previously-added language.
+
+        Args:
+            code: Language code as previously passed to ``add_language``.
+
+        Returns:
+            The params dict if set, ``None`` otherwise (including when the code is unknown).
+        """
+        for language in self._languages:
+            if language.get("code") == code:
+                return language.get("params")
+        return None
 
     def set_languages(self, languages: List[Dict[str, Any]]) -> 'AgentBase':
         """

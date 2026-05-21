@@ -209,6 +209,65 @@ class TestAddLanguage:
 
 
 # ===========================================================================
+# Tests for per-language params: add_language(params=...), set_language_params,
+# get_language_params
+# ===========================================================================
+
+class TestPerLanguageParams:
+    """Tests for the per-language ``params`` dict support."""
+
+    def test_add_language_with_params_attaches_params(self, host):
+        host.add_language("English", "en-US", "josh", engine="elevenlabs",
+                          params={"stability": 0.5, "similarity_boost": 0.75})
+        assert host._languages[0]["params"] == {"stability": 0.5, "similarity_boost": 0.75}
+
+    def test_add_language_without_params_omits_key(self, host):
+        host.add_language("French", "fr-FR", "fr-FR-Neural2-A")
+        assert "params" not in host._languages[0]
+
+    def test_add_language_with_empty_params_omits_key(self, host):
+        host.add_language("French", "fr-FR", "v", params={})
+        assert "params" not in host._languages[0]
+
+    def test_get_language_params_returns_set_dict(self, host):
+        host.add_language("English", "en-US", "v", params={"a": 1})
+        assert host.get_language_params("en-US") == {"a": 1}
+
+    def test_get_language_params_returns_none_when_unset(self, host):
+        host.add_language("English", "en-US", "v")
+        assert host.get_language_params("en-US") is None
+
+    def test_get_language_params_returns_none_for_unknown_code(self, host):
+        assert host.get_language_params("zh-CN") is None
+
+    def test_set_language_params_replaces_existing(self, host):
+        host.add_language("English", "en-US", "v", params={"a": 1})
+        host.set_language_params("en-US", {"b": 2})
+        assert host.get_language_params("en-US") == {"b": 2}
+
+    def test_set_language_params_adds_when_unset(self, host):
+        host.add_language("English", "en-US", "v")
+        host.set_language_params("en-US", {"c": 3})
+        assert host.get_language_params("en-US") == {"c": 3}
+
+    def test_set_language_params_empty_dict_removes_key(self, host):
+        host.add_language("English", "en-US", "v", params={"a": 1})
+        host.set_language_params("en-US", {})
+        assert host.get_language_params("en-US") is None
+        assert "params" not in host._languages[0]
+
+    def test_set_language_params_unknown_code_is_noop(self, host):
+        host.add_language("English", "en-US", "v")
+        host.set_language_params("zh-CN", {"a": 1})
+        # The known language remains untouched.
+        assert host._languages[0].get("params") is None
+
+    def test_set_language_params_returns_self_for_chaining(self, host):
+        host.add_language("English", "en-US", "v")
+        assert host.set_language_params("en-US", {"a": 1}) is host
+
+
+# ===========================================================================
 # Tests for set_languages (lines 159-161)
 # ===========================================================================
 
