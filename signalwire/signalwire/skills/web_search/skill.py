@@ -587,6 +587,14 @@ class WebSearchSkill(SkillBase):
             "Try rephrasing your search or asking about a different topic."
         )
 
+        # Optional prefix/postfix wrapped around every non-empty search result.
+        # Use these to give the calling agent a mechanical cue (e.g. "tell the
+        # user this came from a public web search") without needing prompt-side
+        # rules. Mirrors the response_format_callback pattern used by the
+        # native_vector_search skill.
+        self.response_prefix = self.params.get('response_prefix', '')
+        self.response_postfix = self.params.get('response_postfix', '')
+
         # Tool name (for multiple instances)
         self.tool_name = self.params.get('tool_name', 'web_search')
 
@@ -642,6 +650,10 @@ class WebSearchSkill(SkillBase):
                 return FunctionResult(formatted_message)
 
             response = f"Quality web search results for '{query}':\n\n{search_results}"
+            if self.response_prefix:
+                response = f"{self.response_prefix}\n\n{response}"
+            if self.response_postfix:
+                response = f"{response}\n\n{self.response_postfix}"
             return FunctionResult(response)
 
         except Exception as e:
