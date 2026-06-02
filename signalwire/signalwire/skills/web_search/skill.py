@@ -852,6 +852,44 @@ class WebSearchSkill(SkillBase):
                 "description": "Message to show when no quality results are found. Use {query} as placeholder.",
                 "default": "I couldn't find quality results for '{query}'. The search returned only low-quality or inaccessible pages. Try rephrasing your search or asking about a different topic.",
                 "required": False
+            },
+            "response_prefix": {
+                "type": "string",
+                "description": "Optional text prepended to every non-empty search result.",
+                "default": "",
+                "required": False
+            },
+            "response_postfix": {
+                "type": "string",
+                "description": "Optional text appended to every non-empty search result.",
+                "default": "",
+                "required": False
+            },
+            "per_page_timeout": {
+                "type": "number",
+                "description": "Maximum seconds to wait on a single page scrape.",
+                "default": 2.0,
+                "required": False,
+                "min": 0.1
+            },
+            "overall_deadline": {
+                "type": "number",
+                "description": "Wall-clock budget in seconds for the whole tool call. In-flight scrapes are abandoned past this so the response beats the kernel webhook timeout.",
+                "default": 10.0,
+                "required": False,
+                "min": 1.0
+            },
+            "parallel_scrape": {
+                "type": "boolean",
+                "description": "Scrape all candidate pages concurrently in a thread pool instead of sequentially.",
+                "default": True,
+                "required": False
+            },
+            "snippets_only": {
+                "type": "boolean",
+                "description": "Skip page scraping entirely and return Google CSE snippets only. Fastest mode (sub-second).",
+                "default": False,
+                "required": False
             }
         })
 

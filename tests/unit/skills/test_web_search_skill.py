@@ -175,6 +175,42 @@ class TestGetParameterSchema:
         schema = WebSearchSkill.get_parameter_schema()
         assert "tool_name" in schema
 
+    def test_response_prefix_postfix_advertised(self):
+        schema = WebSearchSkill.get_parameter_schema()
+        for key in ("response_prefix", "response_postfix"):
+            assert key in schema, f"Missing param: {key}"
+            assert schema[key]["required"] is False
+            assert schema[key]["default"] == ""
+
+    def test_per_page_timeout_defaults(self):
+        schema = WebSearchSkill.get_parameter_schema()
+        assert schema["per_page_timeout"]["default"] == 2.0
+        assert schema["per_page_timeout"]["required"] is False
+
+    def test_overall_deadline_defaults(self):
+        schema = WebSearchSkill.get_parameter_schema()
+        assert schema["overall_deadline"]["default"] == 10.0
+        assert schema["overall_deadline"]["required"] is False
+
+    def test_parallel_scrape_defaults(self):
+        schema = WebSearchSkill.get_parameter_schema()
+        assert schema["parallel_scrape"]["type"] == "boolean"
+        assert schema["parallel_scrape"]["default"] is True
+
+    def test_snippets_only_defaults(self):
+        schema = WebSearchSkill.get_parameter_schema()
+        assert schema["snippets_only"]["type"] == "boolean"
+        assert schema["snippets_only"]["default"] is False
+
+    def test_every_setup_param_is_advertised(self):
+        """Guard against the recurring 'committer added a self.params read
+        but forgot the schema entry' drift. Every latency/response param
+        read in setup() must appear in the advertised schema."""
+        schema = WebSearchSkill.get_parameter_schema()
+        for key in ("response_prefix", "response_postfix", "per_page_timeout",
+                     "overall_deadline", "parallel_scrape", "snippets_only"):
+            assert key in schema, f"setup() reads {key!r} but schema omits it"
+
 
 # ---------------------------------------------------------------------------
 # get_instance_key
@@ -452,6 +488,10 @@ class TestWebSearchHandler:
             "oversample_factor": 3.0,
             "delay": 1.0,
             "min_quality_score": 0.5,
+            "per_page_timeout": 3.5,
+            "overall_deadline": 12.0,
+            "parallel_scrape": False,
+            "snippets_only": True,
         })
         with patch.object(skill.search_scraper, 'search_and_scrape_best',
                           return_value="some results") as mock_search:
@@ -462,6 +502,10 @@ class TestWebSearchHandler:
                 oversample_factor=3.0,
                 delay=1.0,
                 min_quality_score=0.5,
+                per_page_timeout=3.5,
+                overall_deadline=12.0,
+                parallel_scrape=False,
+                snippets_only=True,
             )
 
     def test_handler_strips_query_whitespace(self):
@@ -876,15 +920,37 @@ class TestSearchAndScrapeBest:
             result = scraper.search_and_scrape_best("test query")
             assert "No search results found" in result
 
-    def test_all_results_below_threshold(self):
+    def test_all_results_below_threshold_falls_back_to_snippets(self):
+        # When every scraped page is below the quality threshold, the skill
+        # now formats the CSE snippets it already has rather than returning
+        # an empty "no results" message — so the kernel never sees a webhook
+        # timeout and the model always gets useful context back.
         scraper = GoogleSearchScraper("key", "engine_id")
         search_results = [
-            {"title": "Bad", "url": "https://bad.com", "snippet": "bad"}
+            {"title": "Bad", "url": "https://bad.com", "snippet": "bad snippet text"}
         ]
         with patch.object(scraper, 'search_google', return_value=search_results):
             with patch.object(scraper, 'extract_text_from_url', return_value=("", {"quality_score": 0})):
-                result = scraper.search_and_scrape_best("test query", delay=0)
-                assert "No quality results found" in result
+                result = scraper.search_and_scrape_best("test query", delay=0,
+                                                        parallel_scrape=False)
+                # Snippet fallback: non-empty, carries the snippet + title.
+                assert "Snippet-only results" in result
+                assert "bad snippet text" in result
+                assert "No quality results found" not in result
+
+    def test_snippets_only_skips_scraping(self):
+        # snippets_only short-circuits before any page fetch.
+        scraper = GoogleSearchScraper("key", "engine_id")
+        search_results = [
+            {"title": "T", "url": "https://x.com", "snippet": "snip"}
+        ]
+        with patch.object(scraper, 'search_google', return_value=search_results):
+            with patch.object(scraper, 'extract_text_from_url') as mock_extract:
+                result = scraper.search_and_scrape_best("test query",
+                                                        snippets_only=True)
+                mock_extract.assert_not_called()
+                assert "Snippet-only results" in result
+                assert "snip" in result
 
     def test_successful_search_and_scrape(self):
         scraper = GoogleSearchScraper("key", "engine_id")
