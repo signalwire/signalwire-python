@@ -413,57 +413,136 @@ class GoogleSearchScraper:
 
         return metrics
 
+    def _format_snippet_results(self, query: str, search_results: list,
+                                num_results: int) -> str:
+        """Format Google CSE snippets without fetching the underlying pages.
+
+        Used when snippets_only is True, or as a graceful fallback when page
+        scraping is abandoned by the overall_deadline. The result is shorter
+        than a fully-scraped response but always non-empty when CSE returned
+        anything at all, so the kernel never sees a webhook timeout.
+        """
+        if not search_results:
+            return f"No search results found for query: {query}"
+
+        top = search_results[:max(num_results, 1)]
+        lines = [
+            f"Snippet-only results for '{query}' "
+            f"(page content not scraped):\n"
+        ]
+        for i, result in enumerate(top, 1):
+            lines.append(f"=== RESULT {i} ===")
+            lines.append(f"Title: {result.get('title', '')}")
+            lines.append(f"URL: {result.get('url', '')}")
+            snippet = (result.get('snippet') or '').strip()
+            lines.append(f"Snippet: {snippet}")
+            lines.append("")
+        return "\n".join(lines)
+
     def search_and_scrape_best(self, query: str, num_results: int = 3,
                                oversample_factor: float = 4.0, delay: float = 0.5,
-                               min_quality_score: float = 0.2) -> str:
+                               min_quality_score: float = 0.2,
+                               per_page_timeout: float = 2.0,
+                               overall_deadline: float = 10.0,
+                               parallel_scrape: bool = True,
+                               snippets_only: bool = False) -> str:
         """
-        Search and scrape with quality filtering and source diversity
+        Search and scrape with quality filtering and source diversity.
 
         Args:
             query: Search query
             num_results: Number of best results to return
             oversample_factor: How many extra results to fetch (e.g., 4.0 = fetch 4x)
-            delay: Delay between requests
+            delay: Delay between scrape requests (ignored in parallel mode)
             min_quality_score: Minimum quality score to include a result
+            per_page_timeout: Max seconds to wait on each page scrape
+            overall_deadline: Wall-clock budget (seconds) for the whole call.
+                Anything not yet returned by this deadline is abandoned.
+            parallel_scrape: Run all page scrapes concurrently in a thread pool
+            snippets_only: Skip page scraping entirely; format the CSE
+                snippets directly. Use for fast voice answers when full page
+                content is not required.
 
         Returns:
             Formatted string with the best N results from diverse sources
         """
-        # Fetch more results than requested (increased to 4x for better pool)
+        import concurrent.futures
+
+        deadline_at = time.monotonic() + overall_deadline
+
+        # Fetch CSE results. search_google() already uses a 15s timeout
+        # internally; this is the slowest non-cancelable step.
         fetch_count = min(10, int(num_results * oversample_factor))
         search_results = self.search_google(query, fetch_count)
 
         if not search_results:
             return f"No search results found for query: {query}"
 
-        # Process all results and collect quality metrics
+        # Snippets-only fast path: skip scraping entirely. Returns in ~1s.
+        if snippets_only:
+            return self._format_snippet_results(query, search_results, num_results)
+
+        def _scrape_one(result):
+            """Fetch + score one candidate. Returns enriched dict or None."""
+            if time.monotonic() >= deadline_at:
+                return None
+            try:
+                page_text, metrics = self.extract_text_from_url(
+                    result['url'], timeout=per_page_timeout
+                )
+            except Exception:
+                return None
+            if not page_text:
+                return None
+            metrics = self._calculate_content_quality(page_text, result['url'], query)
+            if metrics.get('quality_score', 0) < min_quality_score:
+                return None
+            return {
+                'title': result['title'],
+                'url': result['url'],
+                'snippet': result['snippet'],
+                'content': page_text,
+                'metrics': metrics,
+                'quality_score': metrics.get('quality_score', 0),
+                'domain': metrics.get('domain', '')
+            }
+
         processed_results = []
-
-        for result in search_results:
-            # Extract content and quality metrics (pass query for relevance scoring)
-            page_text, metrics = self.extract_text_from_url(result['url'])
-
-            # Recalculate metrics with query relevance
-            if page_text:
-                metrics = self._calculate_content_quality(page_text, result['url'], query)
-
-            if metrics.get('quality_score', 0) >= min_quality_score and page_text:
-                processed_results.append({
-                    'title': result['title'],
-                    'url': result['url'],
-                    'snippet': result['snippet'],
-                    'content': page_text,
-                    'metrics': metrics,
-                    'quality_score': metrics.get('quality_score', 0),
-                    'domain': metrics.get('domain', '')
-                })
-
-            # Small delay between requests
-            if delay > 0:
-                time.sleep(delay)
+        if parallel_scrape:
+            # Dispatch all scrapes at once, harvest whatever finishes before
+            # the deadline. Abandon the rest.
+            with concurrent.futures.ThreadPoolExecutor(
+                max_workers=min(8, len(search_results))
+            ) as executor:
+                future_to_result = {
+                    executor.submit(_scrape_one, r): r for r in search_results
+                }
+                for future in concurrent.futures.as_completed(future_to_result):
+                    if time.monotonic() >= deadline_at:
+                        # Cancel everything still queued; we are out of time.
+                        for f in future_to_result:
+                            if not f.done():
+                                f.cancel()
+                        break
+                    item = future.result()
+                    if item is not None:
+                        processed_results.append(item)
+        else:
+            # Sequential mode (legacy). Still honors overall_deadline.
+            for result in search_results:
+                if time.monotonic() >= deadline_at:
+                    break
+                item = _scrape_one(result)
+                if item is not None:
+                    processed_results.append(item)
+                if delay > 0:
+                    time.sleep(delay)
 
         if not processed_results:
-            return f"No quality results found for query: {query}. All results were below quality threshold."
+            # Time ran out or every page was below quality threshold. Fall
+            # back to snippet-only results so we return SOMETHING useful
+            # before the kernel webhook timeout fires.
+            return self._format_snippet_results(query, search_results, num_results)
 
         # Sort by quality score
         processed_results.sort(key=lambda x: x['quality_score'], reverse=True)
@@ -581,6 +660,22 @@ class WebSearchSkill(SkillBase):
         self.oversample_factor = self.params.get('oversample_factor', 2.5)
         self.min_quality_score = self.params.get('min_quality_score', 0.3)
 
+        # Latency-control parameters. The SignalWire kernel times out webhook
+        # responses around 55s, so the handler MUST finish under that.
+        #   per_page_timeout: max seconds to wait on a single page scrape.
+        #   overall_deadline: wall-clock budget for the whole tool call. Once
+        #     exceeded, any in-flight scrapes are abandoned and we format
+        #     whatever results we already have (or fall back to snippets).
+        #   parallel_scrape: fetch all candidate pages concurrently via a
+        #     ThreadPoolExecutor instead of one-after-the-other.
+        #   snippets_only: skip scraping entirely and return Google CSE
+        #     snippets only. Fastest mode (sub-second) and good enough for
+        #     most voice answers.
+        self.per_page_timeout = float(self.params.get('per_page_timeout', 2.0))
+        self.overall_deadline = float(self.params.get('overall_deadline', 10.0))
+        self.parallel_scrape = bool(self.params.get('parallel_scrape', True))
+        self.snippets_only = bool(self.params.get('snippets_only', False))
+
         self.no_results_message = self.params.get('no_results_message',
             "I couldn't find quality results for '{query}'. "
             "The search returned only low-quality or inaccessible pages. "
@@ -642,7 +737,11 @@ class WebSearchSkill(SkillBase):
                 num_results=num_results,
                 oversample_factor=self.oversample_factor,
                 delay=self.default_delay,
-                min_quality_score=self.min_quality_score
+                min_quality_score=self.min_quality_score,
+                per_page_timeout=self.per_page_timeout,
+                overall_deadline=self.overall_deadline,
+                parallel_scrape=self.parallel_scrape,
+                snippets_only=self.snippets_only,
             )
 
             if not search_results or "No quality results found" in search_results or "No search results found" in search_results:
