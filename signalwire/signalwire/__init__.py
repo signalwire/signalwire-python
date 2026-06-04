@@ -42,23 +42,6 @@ def _get_skill_registry():
     import signalwire.skills
     return signalwire.skills.skill_registry
 
-# Lazy import convenience functions from the CLI (if available)
-def start_agent(*args, **kwargs):
-    """Start an agent (lazy import)"""
-    try:
-        from signalwire.cli.helpers import start_agent as _start_agent
-        return _start_agent(*args, **kwargs)
-    except ImportError:
-        raise NotImplementedError("CLI helpers not available")
-
-def run_agent(*args, **kwargs):
-    """Run an agent (lazy import)"""
-    try:
-        from signalwire.cli.helpers import run_agent as _run_agent
-        return _run_agent(*args, **kwargs)
-    except ImportError:
-        raise NotImplementedError("CLI helpers not available")
-
 def list_skills():
     """List all available skills with metadata.
 
@@ -149,8 +132,6 @@ __all__ = [
     "Step",
     "create_simple_context",
     "WebService",
-    "start_agent",
-    "run_agent",
     "list_skills",
     "list_skills_with_params",
     "register_skill",
