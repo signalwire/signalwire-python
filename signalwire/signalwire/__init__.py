@@ -59,13 +59,14 @@ def run_agent(*args, **kwargs):
     except ImportError:
         raise NotImplementedError("CLI helpers not available")
 
-def list_skills(*args, **kwargs):
-    """List available skills (lazy import)"""
-    try:
-        from signalwire.cli.helpers import list_skills as _list_skills
-        return _list_skills(*args, **kwargs)
-    except ImportError:
-        raise NotImplementedError("CLI helpers not available")
+def list_skills():
+    """List all available skills with metadata.
+
+    Returns one dict per skill (name, description, version, required packages /
+    env vars, multi-instance support). Delegates to the skill registry — the
+    same source as ``list_skills_with_params()``, but the lighter summary."""
+    from signalwire.skills.registry import skill_registry
+    return skill_registry.list_skills()
 
 def list_skills_with_params():
     """

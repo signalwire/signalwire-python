@@ -119,10 +119,13 @@ class SkillRegistry:
             self.logger.error(f"Failed to load skill '{skill_name}' from {skill_file}: {e}")
             return None
     
-    def discover_skills(self) -> None:
-        """Deprecated: Skills are now loaded on-demand"""
-        # Keep this method for backwards compatibility but make it a no-op
-        pass
+    def discover_skills(self) -> List[Dict[str, str]]:
+        """Discover and return all available skills.
+
+        Skills load on-demand, so there is nothing to eagerly register; this
+        scans the skills package and returns metadata for everything
+        discoverable, so callers can enumerate what is available."""
+        return self.list_skills()
     
     def _load_skill_from_directory(self, skill_dir: Path) -> None:
         """Deprecated: Skills are now loaded on-demand"""
