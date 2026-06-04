@@ -515,6 +515,74 @@ class Call:
         action = PlayAction(self, cid)
         return await self._start_action(action, "play", params, on_completed=on_completed)
 
+    async def play_tts(
+        self,
+        text: str,
+        *,
+        language: Optional[str] = None,
+        gender: Optional[str] = None,
+        voice: Optional[str] = None,
+        volume: Optional[float] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+    ) -> PlayAction:
+        """Play text-to-speech. Typed convenience over :meth:`play`.
+
+        Restores the legacy ``call.play_tts(text=...)`` ergonomics so callers
+        don't hand-build the ``{"type": "tts", "params": {...}}`` media shape.
+        """
+        tts: dict[str, Any] = {"text": text}
+        if language is not None:
+            tts["language"] = language
+        if gender is not None:
+            tts["gender"] = gender
+        if voice is not None:
+            tts["voice"] = voice
+        return await self.play(
+            [{"type": "tts", "params": tts}], volume=volume, on_completed=on_completed
+        )
+
+    async def play_audio(
+        self,
+        url: str,
+        *,
+        volume: Optional[float] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+    ) -> PlayAction:
+        """Play an audio file from a URL. Typed convenience over :meth:`play`."""
+        return await self.play(
+            [{"type": "audio", "params": {"url": url}}],
+            volume=volume,
+            on_completed=on_completed,
+        )
+
+    async def play_silence(
+        self,
+        duration: float,
+        *,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+    ) -> PlayAction:
+        """Play silence for ``duration`` seconds. Typed convenience over :meth:`play`."""
+        return await self.play(
+            [{"type": "silence", "params": {"duration": duration}}],
+            on_completed=on_completed,
+        )
+
+    async def play_ringtone(
+        self,
+        name: str,
+        *,
+        duration: Optional[float] = None,
+        volume: Optional[float] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+    ) -> PlayAction:
+        """Play a named ringtone by country code. Typed convenience over :meth:`play`."""
+        rt: dict[str, Any] = {"name": name}
+        if duration is not None:
+            rt["duration"] = duration
+        return await self.play(
+            [{"type": "ringtone", "params": rt}], volume=volume, on_completed=on_completed
+        )
+
     # ------------------------------------------------------------------
     # Recording
     # ------------------------------------------------------------------

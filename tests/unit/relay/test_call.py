@@ -172,6 +172,42 @@ class TestPlayMethod:
         assert params["loop"] == 2
 
     @pytest.mark.asyncio
+    async def test_play_tts_builds_tts_media(self, call, mock_client):
+        # Restored convenience: caller doesn't hand-build the {type,params} shape.
+        await call.play_tts(text="Welcome!", gender="female")
+        method, params = mock_client.execute.call_args[0]
+        assert method == "calling.play"
+        assert params["play"] == [
+            {"type": "tts", "params": {"text": "Welcome!", "gender": "female"}}
+        ]
+
+    @pytest.mark.asyncio
+    async def test_play_audio_builds_audio_media(self, call, mock_client):
+        await call.play_audio(url="https://example.com/a.mp3", volume=2.0)
+        method, params = mock_client.execute.call_args[0]
+        assert method == "calling.play"
+        assert params["play"] == [
+            {"type": "audio", "params": {"url": "https://example.com/a.mp3"}}
+        ]
+        assert params["volume"] == 2.0
+
+    @pytest.mark.asyncio
+    async def test_play_silence_builds_silence_media(self, call, mock_client):
+        await call.play_silence(duration=1.5)
+        method, params = mock_client.execute.call_args[0]
+        assert method == "calling.play"
+        assert params["play"] == [{"type": "silence", "params": {"duration": 1.5}}]
+
+    @pytest.mark.asyncio
+    async def test_play_ringtone_builds_ringtone_media(self, call, mock_client):
+        await call.play_ringtone(name="us", duration=3.0)
+        method, params = mock_client.execute.call_args[0]
+        assert method == "calling.play"
+        assert params["play"] == [
+            {"type": "ringtone", "params": {"name": "us", "duration": 3.0}}
+        ]
+
+    @pytest.mark.asyncio
     async def test_play_action_stop(self, call, mock_client):
         action = await call.play([{"type": "tts", "params": {"text": "Hi"}}], control_id="ctl1")
         mock_client.execute.reset_mock()
