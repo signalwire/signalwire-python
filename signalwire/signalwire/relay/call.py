@@ -9,6 +9,10 @@ from typing import Any, Callable, Coroutine, Optional, TYPE_CHECKING
 from signalwire.core.logging_config import get_logger
 
 from .constants import (
+    CALL_STATE_CREATED,
+    CALL_STATE_RINGING,
+    CALL_STATE_ANSWERED,
+    CALL_STATE_ENDING,
     CALL_STATE_ENDED,
     EVENT_CALL_PLAY,
     EVENT_CALL_RECORD,
@@ -582,6 +586,148 @@ class Call:
         return await self.play(
             [{"type": "ringtone", "params": rt}], volume=volume, on_completed=on_completed
         )
+
+    # ------------------------------------------------------------------
+    # Detect convenience (typed wrappers over detect())
+    # ------------------------------------------------------------------
+
+    async def detect_digit(
+        self,
+        *,
+        digits: Optional[str] = None,
+        timeout: Optional[float] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+    ) -> DetectAction:
+        """Detect DTMF digits. Typed convenience over :meth:`detect`."""
+        params: dict[str, Any] = {}
+        if digits is not None:
+            params["digits"] = digits
+        return await self.detect(
+            {"type": "digit", "params": params}, timeout=timeout, on_completed=on_completed
+        )
+
+    async def detect_answering_machine(
+        self,
+        *,
+        initial_timeout: Optional[float] = None,
+        end_silence_timeout: Optional[float] = None,
+        machine_voice_threshold: Optional[float] = None,
+        machine_words_threshold: Optional[int] = None,
+        detect_interruptions: Optional[bool] = None,
+        detect_message_end: Optional[bool] = None,
+        timeout: Optional[float] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+    ) -> DetectAction:
+        """Detect human vs answering machine (AMD). Typed convenience over :meth:`detect`."""
+        params: dict[str, Any] = {}
+        for key, val in (
+            ("initial_timeout", initial_timeout),
+            ("end_silence_timeout", end_silence_timeout),
+            ("machine_voice_threshold", machine_voice_threshold),
+            ("machine_words_threshold", machine_words_threshold),
+            ("detect_interruptions", detect_interruptions),
+            ("detect_message_end", detect_message_end),
+        ):
+            if val is not None:
+                params[key] = val
+        return await self.detect(
+            {"type": "machine", "params": params}, timeout=timeout, on_completed=on_completed
+        )
+
+    async def detect_fax(
+        self,
+        *,
+        tone: Optional[str] = None,
+        timeout: Optional[float] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+    ) -> DetectAction:
+        """Detect a fax tone (CED/CNG). Typed convenience over :meth:`detect`."""
+        params: dict[str, Any] = {}
+        if tone is not None:
+            params["tone"] = tone
+        return await self.detect(
+            {"type": "fax", "params": params}, timeout=timeout, on_completed=on_completed
+        )
+
+    # ------------------------------------------------------------------
+    # Prompt convenience (typed media over play_and_collect())
+    # ------------------------------------------------------------------
+
+    async def prompt_tts(
+        self,
+        text: str,
+        collect: dict[str, Any],
+        *,
+        language: Optional[str] = None,
+        gender: Optional[str] = None,
+        voice: Optional[str] = None,
+        volume: Optional[float] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+    ) -> CollectAction:
+        """Play TTS then collect input. Typed media over :meth:`play_and_collect`."""
+        tts: dict[str, Any] = {"text": text}
+        if language is not None:
+            tts["language"] = language
+        if gender is not None:
+            tts["gender"] = gender
+        if voice is not None:
+            tts["voice"] = voice
+        return await self.play_and_collect(
+            [{"type": "tts", "params": tts}], collect, volume=volume, on_completed=on_completed
+        )
+
+    async def prompt_audio(
+        self,
+        url: str,
+        collect: dict[str, Any],
+        *,
+        volume: Optional[float] = None,
+        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+    ) -> CollectAction:
+        """Play an audio file then collect input. Typed media over :meth:`play_and_collect`."""
+        return await self.play_and_collect(
+            [{"type": "audio", "params": {"url": url}}],
+            collect,
+            volume=volume,
+            on_completed=on_completed,
+        )
+
+    # ------------------------------------------------------------------
+    # State-wait convenience (typed waits over wait_for())
+    # ------------------------------------------------------------------
+
+    async def _wait_for_state(self, target: str, timeout: Optional[float]) -> RelayEvent:
+        order = (
+            CALL_STATE_CREATED,
+            CALL_STATE_RINGING,
+            CALL_STATE_ANSWERED,
+            CALL_STATE_ENDING,
+            CALL_STATE_ENDED,
+        )
+
+        def rank(s: str) -> int:
+            return order.index(s) if s in order else -1
+
+        # Already at or past the target -> return immediately (matches legacy SDK).
+        if rank(self.state) >= rank(target):
+            return RelayEvent(event_type=EVENT_CALL_STATE, params={"call_state": self.state})
+        return await self.wait_for(
+            EVENT_CALL_STATE,
+            lambda e: e.params.get("call_state") == target,
+            timeout=timeout,
+        )
+
+    async def wait_for_answered(self, timeout: Optional[float] = None) -> RelayEvent:
+        """Wait until the call is answered (immediate if already answered or past it)."""
+        return await self._wait_for_state(CALL_STATE_ANSWERED, timeout)
+
+    async def wait_for_ringing(self, timeout: Optional[float] = None) -> RelayEvent:
+        """Wait until the call is ringing (immediate if already ringing or past it)."""
+        return await self._wait_for_state(CALL_STATE_RINGING, timeout)
+
+    async def wait_for_ending(self, timeout: Optional[float] = None) -> RelayEvent:
+        """Wait until the call is ending (immediate if already ending or past it)."""
+        return await self._wait_for_state(CALL_STATE_ENDING, timeout)
 
     # ------------------------------------------------------------------
     # Recording

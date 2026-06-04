@@ -208,6 +208,66 @@ class TestPlayMethod:
         ]
 
     @pytest.mark.asyncio
+    async def test_detect_digit_builds_detect(self, call, mock_client):
+        await call.detect_digit(digits="123")
+        method, params = mock_client.execute.call_args[0]
+        assert method == "calling.detect"
+        assert params["detect"] == {"type": "digit", "params": {"digits": "123"}}
+
+    @pytest.mark.asyncio
+    async def test_detect_answering_machine_builds_detect(self, call, mock_client):
+        await call.detect_answering_machine(end_silence_timeout=2.0, machine_words_threshold=5)
+        method, params = mock_client.execute.call_args[0]
+        assert method == "calling.detect"
+        assert params["detect"] == {
+            "type": "machine",
+            "params": {"end_silence_timeout": 2.0, "machine_words_threshold": 5},
+        }
+
+    @pytest.mark.asyncio
+    async def test_detect_fax_builds_detect(self, call, mock_client):
+        await call.detect_fax(tone="CED")
+        method, params = mock_client.execute.call_args[0]
+        assert method == "calling.detect"
+        assert params["detect"] == {"type": "fax", "params": {"tone": "CED"}}
+
+    @pytest.mark.asyncio
+    async def test_prompt_tts_builds_play_and_collect(self, call, mock_client):
+        await call.prompt_tts("Press 1", {"digits": {"max": 1}})
+        method, params = mock_client.execute.call_args[0]
+        assert method == "calling.play_and_collect"
+        assert params["play"] == [{"type": "tts", "params": {"text": "Press 1"}}]
+        assert params["collect"] == {"digits": {"max": 1}}
+
+    @pytest.mark.asyncio
+    async def test_prompt_audio_builds_play_and_collect(self, call, mock_client):
+        await call.prompt_audio("https://example.com/menu.mp3", {"speech": {}})
+        method, params = mock_client.execute.call_args[0]
+        assert method == "calling.play_and_collect"
+        assert params["play"] == [
+            {"type": "audio", "params": {"url": "https://example.com/menu.mp3"}}
+        ]
+        assert params["collect"] == {"speech": {}}
+
+    @pytest.mark.asyncio
+    async def test_wait_for_answered_immediate_when_already_answered(self, call):
+        call.state = "answered"
+        event = await asyncio.wait_for(call.wait_for_answered(), timeout=0.5)
+        assert event.params.get("call_state") == "answered"
+
+    @pytest.mark.asyncio
+    async def test_wait_for_ringing_immediate_when_past(self, call):
+        call.state = "answered"  # already past ringing
+        event = await asyncio.wait_for(call.wait_for_ringing(), timeout=0.5)
+        assert event.params.get("call_state") == "answered"
+
+    @pytest.mark.asyncio
+    async def test_wait_for_ending_immediate_when_ended(self, call):
+        call.state = "ended"  # past ending
+        event = await asyncio.wait_for(call.wait_for_ending(), timeout=0.5)
+        assert event.params.get("call_state") == "ended"
+
+    @pytest.mark.asyncio
     async def test_play_action_stop(self, call, mock_client):
         action = await call.play([{"type": "tts", "params": {"text": "Hi"}}], control_id="ctl1")
         mock_client.execute.reset_mock()
