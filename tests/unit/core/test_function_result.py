@@ -1151,6 +1151,34 @@ class TestRecordCall:
         ret = result.record_call()
         assert ret is result
 
+    def test_validated_closed_sets_declared_as_literal(self):
+        """Wave-1: the 9 ValueError-validated closed sets are declared as
+        typing.Literal in the signature (explicit set + mypy/IDE checking), not
+        bare str. Guards against silently regressing the annotations to str."""
+        import inspect
+        import typing
+        cases = [
+            (FunctionResult.record_call, "format", ("wav", "mp3", "mp4")),
+            (FunctionResult.record_call, "direction", ("speak", "listen", "both")),
+            (FunctionResult.tap, "direction", ("speak", "hear", "both")),
+            (FunctionResult.tap, "codec", ("PCMU", "PCMA")),
+            (FunctionResult.join_conference, "beep",
+             ("true", "false", "onEnter", "onExit")),
+            (FunctionResult.join_conference, "record",
+             ("do-not-record", "record-from-start")),
+            (FunctionResult.join_conference, "trim",
+             ("trim-silence", "do-not-trim")),
+            (FunctionResult.join_conference, "status_callback_method", ("GET", "POST")),
+            (FunctionResult.join_conference, "recording_status_callback_method",
+             ("GET", "POST")),
+        ]
+        for fn, param, expected in cases:
+            ann = inspect.signature(fn).parameters[param].annotation
+            assert typing.get_origin(ann) is typing.Literal, \
+                f"{fn.__name__}.{param} should be Literal, got {ann!r}"
+            assert typing.get_args(ann) == expected, \
+                f"{fn.__name__}.{param} literal={typing.get_args(ann)} != {expected}"
+
 
 class TestStopRecordCall:
     """Test stop_record_call() method"""

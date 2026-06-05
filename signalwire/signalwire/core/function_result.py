@@ -11,7 +11,7 @@ See LICENSE file in the project root for full license information.
 FunctionResult class for handling the response format of SWAIG function calls
 """
 
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Literal, Optional, Union
 
 
 class FunctionResult:
@@ -881,7 +881,7 @@ class FunctionResult:
         return self.execute_swml(swml_doc)
 
     def record_call(self, control_id: Optional[str] = None, stereo: bool = False,
-                   format: str = "wav", direction: str = "both",
+                   format: Literal["wav", "mp3", "mp4"] = "wav", direction: Literal["speak", "listen", "both"] = "both",
                    terminators: Optional[str] = None, beep: bool = False,
                    input_sensitivity: float = 44.0, initial_timeout: Optional[float] = None,
                    end_silence_timeout: Optional[float] = None, max_length: Optional[float] = None,
@@ -1044,16 +1044,16 @@ class FunctionResult:
         # Use execute_swml to add the action
         return self.execute_swml(swml_doc)
 
-    def join_conference(self, name: str, muted: bool = False, beep: str = "true", 
+    def join_conference(self, name: str, muted: bool = False, beep: Literal["true", "false", "onEnter", "onExit"] = "true",
                        start_on_enter: bool = True, end_on_exit: bool = False,
                        wait_url: Optional[str] = None, max_participants: int = 250,
-                       record: str = "do-not-record", region: Optional[str] = None,
-                       trim: str = "trim-silence", coach: Optional[str] = None,
+                       record: Literal["do-not-record", "record-from-start"] = "do-not-record", region: Optional[str] = None,
+                       trim: Literal["trim-silence", "do-not-trim"] = "trim-silence", coach: Optional[str] = None,
                        status_callback_event: Optional[str] = None, 
                        status_callback: Optional[str] = None,
-                       status_callback_method: str = "POST",
+                       status_callback_method: Literal["GET", "POST"] = "POST",
                        recording_status_callback: Optional[str] = None,
-                       recording_status_callback_method: str = "POST",
+                       recording_status_callback_method: Literal["GET", "POST"] = "POST",
                        recording_status_callback_event: str = "completed",
                        result: Optional[Any] = None) -> 'FunctionResult':
         """
@@ -1181,8 +1181,8 @@ class FunctionResult:
         # Use execute_swml to add the action
         return self.execute_swml(swml_doc)
 
-    def tap(self, uri: str, control_id: Optional[str] = None, direction: str = "both",
-           codec: str = "PCMU", rtp_ptime: int = 20, 
+    def tap(self, uri: str, control_id: Optional[str] = None, direction: Literal["speak", "hear", "both"] = "both",
+           codec: Literal["PCMU", "PCMA"] = "PCMU", rtp_ptime: int = 20,
            status_url: Optional[str] = None) -> 'FunctionResult':
         """
         Start background call tap using SWML.
