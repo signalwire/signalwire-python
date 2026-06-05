@@ -1124,8 +1124,15 @@ class TestRecordCall:
 
     def test_record_call_invalid_format(self):
         """Test record_call with invalid format raises ValueError"""
-        with pytest.raises(ValueError, match="format must be 'wav' or 'mp3'"):
+        with pytest.raises(ValueError, match="format must be 'wav', 'mp3', or 'mp4'"):
             FunctionResult().record_call(format="ogg")
+
+    def test_record_call_format_mp4(self):
+        """Test record_call accepts mp4 (SWML record_call verb schema allows wav/mp3/mp4;
+        the validator used to wrongly reject mp4)."""
+        result = FunctionResult().record_call(format="mp4")
+        rec_params = result.action[0]["SWML"]["sections"]["main"][0]["record_call"]
+        assert rec_params["format"] == "mp4"
 
     def test_record_call_invalid_direction(self):
         """Test record_call with invalid direction raises ValueError"""

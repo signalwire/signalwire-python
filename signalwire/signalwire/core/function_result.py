@@ -896,7 +896,7 @@ class FunctionResult:
         Args:
             control_id: Identifier for this recording (for use with stop_record_call)
             stereo: Record in stereo (default: False)
-            format: Recording format - "wav" or "mp3" (default: "wav")
+            format: Recording format - "wav", "mp3", or "mp4" (default: "wav")
             direction: Audio direction - "speak", "listen", or "both" (default: "both")
             terminators: Digits that stop recording when pressed
             beep: Play beep before recording (default: False)
@@ -909,9 +909,10 @@ class FunctionResult:
         Returns:
             self for method chaining
         """
-        # Validate format parameter
-        if format not in ["wav", "mp3"]:
-            raise ValueError("format must be 'wav' or 'mp3'")
+        # Validate format parameter (matches the SWML record_call verb schema,
+        # $defs/RecordCall.format = {wav, mp3, mp4})
+        if format not in ["wav", "mp3", "mp4"]:
+            raise ValueError("format must be 'wav', 'mp3', or 'mp4'")
         
         # Validate direction parameter    
         if direction not in ["speak", "listen", "both"]:
