@@ -811,7 +811,9 @@ class FunctionResult:
         
         Args:
             payment_connector_url: URL to make payment requests to (required)
-            input_method: Method to collect payment details ("dtmf" or "voice")
+            input_method: Method to collect payment details. The SWML pay verb
+                only accepts "dtmf" (schema ``input`` is ``const: "dtmf"``); the
+                earlier "voice" option was never valid.
             status_url: URL for status change notifications
             payment_method: Payment method ("credit-card" currently supported)
             timeout: Seconds to wait for next digit (default: 5)
@@ -1044,16 +1046,16 @@ class FunctionResult:
         # Use execute_swml to add the action
         return self.execute_swml(swml_doc)
 
-    def join_conference(self, name: str, muted: bool = False, beep: Literal["true", "false", "onEnter", "onExit"] = "true",
+    def join_conference(self, name: str, muted: bool = False, beep: str = "true",
                        start_on_enter: bool = True, end_on_exit: bool = False,
                        wait_url: Optional[str] = None, max_participants: int = 250,
-                       record: Literal["do-not-record", "record-from-start"] = "do-not-record", region: Optional[str] = None,
-                       trim: Literal["trim-silence", "do-not-trim"] = "trim-silence", coach: Optional[str] = None,
+                       record: str = "do-not-record", region: Optional[str] = None,
+                       trim: str = "trim-silence", coach: Optional[str] = None,
                        status_callback_event: Optional[str] = None, 
                        status_callback: Optional[str] = None,
-                       status_callback_method: Literal["GET", "POST"] = "POST",
+                       status_callback_method: str = "POST",
                        recording_status_callback: Optional[str] = None,
-                       recording_status_callback_method: Literal["GET", "POST"] = "POST",
+                       recording_status_callback_method: str = "POST",
                        recording_status_callback_event: str = "completed",
                        result: Optional[Any] = None) -> 'FunctionResult':
         """

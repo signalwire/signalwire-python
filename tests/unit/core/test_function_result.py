@@ -1152,32 +1152,36 @@ class TestRecordCall:
         assert ret is result
 
     def test_validated_closed_sets_declared_as_literal(self):
-        """Wave-1: the 9 ValueError-validated closed sets are declared as
-        typing.Literal in the signature (explicit set + mypy/IDE checking), not
-        bare str. Guards against silently regressing the annotations to str."""
+        """Wave-1 (record/tap): the 4 ENFORCED closed sets are declared as
+        typing.Literal — explicit set + mypy/IDE checking, AND the audit oracle
+        emits ``enum<...>`` for them so every port must type them (not a bare
+        string). The conference sets stay bare ``str`` ON PURPOSE: still
+        ValueError-validated at runtime, but not type-enforced — typing 5 enums
+        inside a 19-param join_conference is bad design (go sidesteps it via an
+        options pattern). This test guards BOTH decisions against regression."""
         import inspect
         import typing
-        cases = [
+        literal_cases = [
             (FunctionResult.record_call, "format", ("wav", "mp3", "mp4")),
             (FunctionResult.record_call, "direction", ("speak", "listen", "both")),
             (FunctionResult.tap, "direction", ("speak", "hear", "both")),
             (FunctionResult.tap, "codec", ("PCMU", "PCMA")),
-            (FunctionResult.join_conference, "beep",
-             ("true", "false", "onEnter", "onExit")),
-            (FunctionResult.join_conference, "record",
-             ("do-not-record", "record-from-start")),
-            (FunctionResult.join_conference, "trim",
-             ("trim-silence", "do-not-trim")),
-            (FunctionResult.join_conference, "status_callback_method", ("GET", "POST")),
-            (FunctionResult.join_conference, "recording_status_callback_method",
-             ("GET", "POST")),
         ]
-        for fn, param, expected in cases:
+        for fn, param, expected in literal_cases:
             ann = inspect.signature(fn).parameters[param].annotation
             assert typing.get_origin(ann) is typing.Literal, \
                 f"{fn.__name__}.{param} should be Literal, got {ann!r}"
             assert typing.get_args(ann) == expected, \
                 f"{fn.__name__}.{param} literal={typing.get_args(ann)} != {expected}"
+        # Conference sets are deliberately bare str (validated at runtime, not
+        # type-enforced). Re-adding Literal here means also typing them across
+        # every full-param port, or the audit drifts — see Literal wave-1.
+        for param in ("beep", "record", "trim", "status_callback_method",
+                      "recording_status_callback_method"):
+            ann = inspect.signature(
+                FunctionResult.join_conference).parameters[param].annotation
+            assert ann is str, \
+                f"join_conference.{param} should stay bare str, got {ann!r}"
 
 
 class TestStopRecordCall:
