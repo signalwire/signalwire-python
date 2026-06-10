@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0,<81", "wheel"]
+requires = ["setuptools>=78.1.1", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -27,8 +27,7 @@ dependencies = [
     "fastapi>=0.115.12",
     "pydantic>=2.11.4",
     "PyYAML>=6.0.2",
-    "Requests>=2.32.3",
-    "setuptools>=66.1.1,<81",
+    "Requests>=2.32.4",
     "docopt>=0.6.2",
     "structlog>=25.3.0",
     "uvicorn>=0.34.2",
