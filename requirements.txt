@@ -7,5 +7,5 @@ docopt==0.6.2
 structlog==25.3.0
 uvicorn==0.34.2
 beautifulsoup4==4.12.3
-pytz==2023.3
+pytz==2026.2
 lxml==5.3.0
