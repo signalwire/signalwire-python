@@ -233,13 +233,22 @@ class TestSkillRegistry:
 class TestSkillDiscovery:
     """Test skill discovery functionality (on-demand loading)"""
 
-    def test_discover_skills_is_noop(self):
-        """Test that discover_skills is a no-op for backwards compatibility"""
+    def test_discover_skills_returns_and_registers_inventory(self):
+        """discover_skills() scans the skills package and registers what it finds.
+
+        It used to be a deprecated no-op returning None; commit 8f0100f wired it
+        to list_skills() so it returns the real skill inventory and populates the
+        registry on demand. Assert the current contract (return value + state),
+        not the old no-op one."""
         registry = SkillRegistry()
 
-        # Should not raise and should not change state
-        registry.discover_skills()
-        assert registry._skills == {}
+        discovered = registry.discover_skills()
+
+        # Returns the discovered inventory (a list of skill-metadata dicts), and
+        # loading them on demand populates the registry's _skills cache.
+        assert isinstance(discovered, list)
+        assert len(discovered) == len(registry._skills)
+        assert registry._skills, "discover_skills() should have registered the scanned skills"
 
     def test_entry_points_loaded_idempotent(self):
         """Test that _load_entry_points is idempotent"""
