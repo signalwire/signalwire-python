@@ -56,9 +56,19 @@ class TestPhoneCallHandlerEnum:
         assert {h.value for h in PhoneCallHandler} == expected
 
     def test_enum_members_are_strings(self):
-        """Members are str subclasses so they serialize without .value."""
+        """Members serialize to their wire value on all supported Python versions."""
+        import json
+
+        # str-equality — the wire guarantee
         assert PhoneCallHandler.RELAY_SCRIPT == "relay_script"
-        assert f"{PhoneCallHandler.AI_AGENT}" == "PhoneCallHandler.AI_AGENT"
+        assert PhoneCallHandler.AI_AGENT == "ai_agent"
+        # .value exposes the same wire string
+        assert PhoneCallHandler.AI_AGENT.value == "ai_agent"
+        # JSON serialization produces the wire value (not the enum repr)
+        assert (
+            json.dumps({"call_handler": PhoneCallHandler.AI_AGENT})
+            == '{"call_handler": "ai_agent"}'
+        )
 
     def test_no_collision_with_relay_callhandler(self):
         """PhoneCallHandler is explicitly named to dodge the RELAY CallHandler type."""
