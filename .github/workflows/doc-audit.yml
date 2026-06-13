@@ -45,7 +45,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: '3.11'
+          python-version: '3.14'
 
       - name: Compile every example (catches syntax-level phantom APIs)
         # py_compile only verifies syntax, but any example that calls a phantom
