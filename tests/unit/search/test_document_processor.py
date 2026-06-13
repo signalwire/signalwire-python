@@ -1107,18 +1107,32 @@ class TestChunkingStrategies:
         assert len(chunks) == 1
         assert chunks[0]['metadata']['chunk_method'] == 'semantic'
 
+    @patch('signalwire.search.query_processor._get_cached_model', return_value=None)
     @patch('signalwire.search.document_processor.sent_tokenize', None)
-    def test_semantic_import_error_falls_back(self):
-        """When sentence_transformers is missing, fall back to sentence-based."""
+    def test_semantic_import_error_falls_back(self, _mock_model):
+        """When the embedding model is unavailable, fall back to sentence-based.
+
+        Deterministically forces the model-unavailable condition by patching
+        _get_cached_model to return None (the contract it honors when
+        sentence-transformers is missing or the model fails to load). Without
+        the code guard this previously crashed with AttributeError on
+        model.encode(None); it must now degrade to sentence chunking regardless
+        of whether the model is actually installed.
+        """
         proc = DocumentProcessor(chunking_strategy='semantic')
         text = "Hello there. How are you. I am fine. Thanks for asking."
         chunks = proc.create_chunks(text, "f.txt", "txt")
-        # Should get chunks (via fallback)
+        # Should get chunks (via fallback), not a crash.
         assert len(chunks) >= 1
 
+    @patch('signalwire.search.query_processor._get_cached_model', return_value=None)
     @patch('signalwire.search.document_processor.sent_tokenize')
-    def test_semantic_with_tokenizer_import_error(self, mock_tok):
-        """Semantic with NLTK available but sentence_transformers missing."""
+    def test_semantic_with_tokenizer_import_error(self, mock_tok, _mock_model):
+        """Semantic with NLTK available but the embedding model unavailable.
+
+        Same deterministic forcing of model-None as above, with NLTK's
+        sent_tokenize mocked in so the sentence-splitting path is exercised too.
+        """
         mock_tok.side_effect = lambda t: [s.strip()+'.' for s in t.split('.') if s.strip()]
         proc = DocumentProcessor(chunking_strategy='semantic')
         text = "Alpha sentence. Beta sentence. Gamma sentence. Delta sentence."

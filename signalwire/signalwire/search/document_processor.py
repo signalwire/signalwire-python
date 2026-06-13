@@ -1098,6 +1098,15 @@ class DocumentProcessor:
             
             from signalwire.search.query_processor import _get_cached_model
             model = _get_cached_model('sentence-transformers/all-mpnet-base-v2')
+            if model is None:
+                # Model unavailable (sentence-transformers missing or load/download
+                # failed, e.g. offline). Degrade gracefully to sentence chunking
+                # instead of crashing on model.encode(None).
+                logger.warning(
+                    "Semantic chunking model unavailable; "
+                    "falling back to sentence-based chunking"
+                )
+                return self._chunk_by_sentences(content, filename, file_type)
             embeddings = model.encode(sentences, show_progress_bar=False)
             
             # Calculate similarity between adjacent sentences
@@ -1142,8 +1151,11 @@ class DocumentProcessor:
             return chunks if chunks else [self._create_chunk(content, filename, "Section 1",
                                                            metadata={'chunk_method': 'semantic', 'chunk_index': 0})]
             
-        except ImportError:
-            # Fallback to sentence-based chunking
+        except (ImportError, OSError) as e:
+            # ImportError: optional deps (sentence-transformers/sklearn/numpy) missing.
+            # OSError: model download/load failed at runtime (e.g. offline CI).
+            # Either way, degrade gracefully to sentence-based chunking.
+            logger.warning(f"Semantic chunking unavailable ({e}); falling back to sentence-based chunking")
             return self._chunk_by_sentences(content, filename, file_type)
 
     def _chunk_by_topics(self, content: str, filename: str, file_type: str) -> List[Dict[str, Any]]:
