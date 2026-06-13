@@ -23,6 +23,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.11', '3.12', '3.13']
     steps:
       - name: Checkout signalwire-python
         uses: actions/checkout@v5
@@ -39,7 +43,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python }}
 
       - name: Install Python test harnesses (mock_relay + mock_signalwire)
         run: |
