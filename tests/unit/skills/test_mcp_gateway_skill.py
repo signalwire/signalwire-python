@@ -635,6 +635,44 @@ class TestRegisterMCPTool:
 
         assert params["kind"]["enum"] == ["a", "b"]
 
+    def test_register_mcp_tool_forwards_required_list(self):
+        """The MCP inputSchema's required list must be forwarded to define_tool
+        so the registered SWAIG tool advertises its mandatory arguments."""
+        skill, agent = _make_skill()
+
+        tool_def = {
+            "name": "create",
+            "description": "Create item",
+            "inputSchema": {
+                "properties": {
+                    "name": {"type": "string", "description": "Item name"},
+                    "tag": {"type": "string", "description": "Optional tag"},
+                },
+                "required": ["name"],
+            },
+        }
+
+        skill._register_mcp_tool("svc", tool_def)
+
+        call_kwargs = agent.define_tool.call_args.kwargs
+        assert call_kwargs["required"] == ["name"]
+
+    def test_register_mcp_tool_required_defaults_empty(self):
+        """A tool whose inputSchema omits 'required' forwards an empty list
+        (SWAIGFunction omits the wire key for an empty required list)."""
+        skill, agent = _make_skill()
+
+        tool_def = {
+            "name": "ping",
+            "description": "Ping",
+            "inputSchema": {"properties": {"msg": {"type": "string"}}},
+        }
+
+        skill._register_mcp_tool("svc", tool_def)
+
+        call_kwargs = agent.define_tool.call_args.kwargs
+        assert call_kwargs["required"] == []
+
     def test_register_mcp_tool_skips_tool_without_name(self):
         """Should skip tools without a name."""
         skill, agent = _make_skill()
