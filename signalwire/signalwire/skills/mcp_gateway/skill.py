@@ -265,12 +265,17 @@ class MCPGatewaySkill(SkillBase):
         def handler(args, raw_data):
             return self._call_mcp_tool(service_name, tool_name, args, raw_data)
         
-        # Register the SWAIG function
+        # Register the SWAIG function. Forward the MCP tool's required-argument
+        # list so the model sees which parameters are mandatory; without this the
+        # registered tool would advertise no required arguments regardless of the
+        # upstream MCP schema. `required` is `[]` when the schema omits it, which
+        # SWAIGFunction treats as "no required key emitted".
         self.define_tool(
             name=swaig_name,
             description=f"[{service_name}] {tool_def.get('description', tool_name)}",
             parameters=swaig_params,
-            handler=handler
+            handler=handler,
+            required=required
         )
         
         self.logger.info(f"Registered SWAIG function: {swaig_name}")
