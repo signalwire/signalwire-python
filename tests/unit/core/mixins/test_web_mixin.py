@@ -39,6 +39,26 @@ def _make_auth_header(username, password):
     return f"Basic {encoded}"
 
 
+def _router_mounted_under(app, prefix):
+    """Whether the agent's router is mounted under ``prefix`` on ``app``.
+
+    Robust across Starlette versions. Starlette 0.x flattened
+    ``include_router(prefix=...)`` into ``app.routes`` with the prefix baked
+    into each ``.path`` (so a flat path starts with the prefix). Starlette 1.x
+    wraps the included routes in an ``_IncludedRouter`` (or ``Mount``) container
+    whose ``.path`` is ``None``/``''`` and resolves the prefix at match time, so
+    the flat-path check no longer applies. Accept either shape.
+    """
+    for r in app.routes:
+        p = getattr(r, "path", None)
+        if p and p.startswith(prefix):
+            return True
+    # Starlette 1.x: a non-leaf container route holds the prefixed sub-router.
+    return any(
+        type(r).__name__ in ("_IncludedRouter", "Mount") for r in app.routes
+    )
+
+
 def _make_request(method="GET", headers=None, body=None, query_params=None, url_path="/"):
     """Create a mock FastAPI Request object."""
     request = AsyncMock()
@@ -202,9 +222,12 @@ class TestGetApp:
         # Bare probes still exist (attached to the parent app).
         assert "/health" in paths
         assert "/ready" in paths
-        # At least one route must live under the prefix.
-        prefixed = [p for p in paths if p and p.startswith("/myagent")]
-        assert len(prefixed) >= 1, f"No routes mounted under /myagent: {sorted(paths)}"
+        # The agent router must be mounted under the prefix (Starlette-version
+        # agnostic — see _router_mounted_under).
+        assert _router_mounted_under(app, "/myagent"), (
+            f"Router not mounted under /myagent: "
+            f"{[(type(r).__name__, getattr(r, 'path', None)) for r in app.routes]}"
+        )
 
 
 # ===========================================================================
@@ -1018,9 +1041,10 @@ class TestRoutePrefixHandling:
         must begin with "/v1/mybot"."""
         agent = _build_mixin(route="/v1/mybot")
         app = agent.get_app()
-        paths = [getattr(r, "path", "") for r in app.routes]
-        prefixed = [p for p in paths if p and p.startswith("/v1/mybot")]
-        assert len(prefixed) >= 1, f"No routes under /v1/mybot prefix: {paths}"
+        assert _router_mounted_under(app, "/v1/mybot"), (
+            f"Router not mounted under /v1/mybot: "
+            f"{[(type(r).__name__, getattr(r, 'path', None)) for r in app.routes]}"
+        )
 
     def test_serve_root_route(self):
         """When the agent is mounted at the root ("/"), the agent's own
