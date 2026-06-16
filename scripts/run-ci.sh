@@ -55,7 +55,13 @@ run_gate() {
         return 0
     fi
     echo "[$name] $description ... FAIL: exit $rc"
-    sed 's/^/    /' "$logfile" | tail -40
+    # On failure show the LAST 400 lines (was 40) so pytest's per-test
+    # tracebacks — which print before the short-summary — actually reach the CI
+    # log. A blind `tail -40` on a multi-thousand-test run captured only the
+    # FAILED summary lines and discarded every traceback, making CI-only
+    # failures undiagnosable. 400 lines covers a realistic handful of failing
+    # tests; a fully green run prints nothing here regardless.
+    sed 's/^/    /' "$logfile" | tail -400
     rm -f "$logfile"
     FAILED_GATES="$FAILED_GATES $name"
     return $rc
@@ -64,6 +70,14 @@ run_gate() {
 cd "$PORT_ROOT"
 
 echo "==> running CI gates for $PORT_NAME (porting-sdk at $PORTING_SDK_DIR)"
+
+# Record the resolved web-stack versions up front. CI-only test failures in the
+# web layer have been impossible to diagnose because the runner's fresh
+# dependency resolution differs from local envs; logging it makes that visible.
+echo "==> environment: $(python3 --version 2>&1)"
+python3 -m pip freeze 2>/dev/null \
+    | grep -iE '^(fastapi|starlette|pydantic|pydantic-core|anyio|uvicorn|httpx|requests)==' \
+    | sed 's/^/    /' || true
 
 # Gate 1: pytest unit suite
 run_gate "TEST" "python -m pytest tests/unit/" \
