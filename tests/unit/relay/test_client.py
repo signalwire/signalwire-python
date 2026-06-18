@@ -220,10 +220,17 @@ class TestConnectionLimits:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_default_limit_is_one(self):
+    async def test_limit_of_one_is_enforced(self):
+        # Pin the limit to 1 for this test rather than relying on the module
+        # default: the real-mock relay conftest raises RELAY_MAX_CONNECTIONS to
+        # 16 (so a single test can hold several live clients), and that env var
+        # is read once at client-module import — making any assertion about the
+        # *default* value order-dependent under pytest-xdist. Patching the
+        # module global makes the limit-enforcement behavior deterministic.
         ws1 = AutoAuthMockWebSocket()
         ws2 = AutoAuthMockWebSocket()
-        with patch("signalwire.relay.client.websockets.connect",
+        with patch("signalwire.relay.client._MAX_CONNECTIONS", 1), \
+             patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws1):
             c1 = RelayClient(project="p", token="t")
             await c1.connect()

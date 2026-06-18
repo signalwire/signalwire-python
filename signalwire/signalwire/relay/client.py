@@ -168,6 +168,11 @@ class RelayClient:
         # Sent back on reconnect to resume the same session.
         self._relay_protocol: str = ""
         self._identity: str = ""
+        # Server-assigned session id from the connect response's ``sessionid``
+        # key (test mock only; the real server omits it). Internal-only — used
+        # by the test harness to scope the mock journal to this client's
+        # session. Not part of the public surface.
+        self._session_id: str = ""
         # Encrypted authorization state from signalwire.authorization.state
         # events. Sent back on reconnect for fast re-auth without full
         # authentication round-trip.
@@ -281,6 +286,11 @@ class RelayClient:
         # Capture server-assigned protocol and identity
         self._relay_protocol = result.get("protocol", self._relay_protocol)
         self._identity = result.get("identity", self._identity)
+        # Capture the server-assigned session id when present. The real RELAY
+        # server omits this; the test mock returns it as ``sessionid`` (NO
+        # underscore) so a test can scope its journal/scenarios to its own
+        # session. Internal-only — not part of the public surface.
+        self._session_id = result.get("sessionid", self._session_id)
         logger.debug(f"Auth response: protocol={self._relay_protocol} identity={self._identity}")
 
     async def disconnect(self) -> None:

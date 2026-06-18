@@ -275,6 +275,10 @@ async def test_dial_event_routes_via_tag_when_no_top_level_call_id(
         )
         try:
             await client.connect()
+            # Scope the harness view to THIS client's session so arm_dial /
+            # journal_send don't collide with a concurrent dial test under
+            # ``pytest -n auto`` (the bare ``mock_relay`` is otherwise unscoped).
+            mock_relay.session_id = client._session_id
             mock_relay.arm_dial(
                 tag="ec-tag-route",
                 winner_call_id="WINTAG",
