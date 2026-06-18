@@ -233,8 +233,16 @@ async def test_connect_with_jwt_carries_jwt_on_wire(mock_relay, relay_ws_redirec
             await client.disconnect()
     _active_clients.clear()
 
-    [entry] = mock_relay.journal_recv(method=METHOD_SIGNALWIRE_CONNECT)
-    auth = entry.frame["params"]["authentication"]
+    # This test uses a bare (unscoped) ``mock_relay`` because it builds its own
+    # client, so the shared mock's journal also holds connect frames from other
+    # tests/sessions. Identify ours by the unique jwt_token we sent.
+    jwt_connects = [
+        e for e in mock_relay.journal_recv(method=METHOD_SIGNALWIRE_CONNECT)
+        if e.frame["params"].get("authentication", {}).get("jwt_token")
+        == "fake-jwt-eyJ.AaaA.BbB"
+    ]
+    assert jwt_connects, "no connect frame carried our jwt_token"
+    auth = jwt_connects[-1].frame["params"]["authentication"]
     assert auth.get("jwt_token") == "fake-jwt-eyJ.AaaA.BbB"
     # JWT path doesn't include project/token.
     assert "token" not in auth or not auth["token"]

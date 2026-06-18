@@ -13,8 +13,6 @@ following the ``links.next`` cursor. We test it end-to-end by:
 
 from __future__ import annotations
 
-import requests
-
 from signalwire.rest._pagination import PaginatedIterator
 
 
@@ -26,12 +24,12 @@ _FABRIC_ADDRESSES_ENDPOINT_ID = "fabric.list_fabric_addresses"
 
 
 def _push_scenario(mock, endpoint_id: str, status: int, response: dict) -> None:
-    """Push one consume-once scenario via the mock control plane."""
-    r = requests.post(
-        f"{mock.url}/__mock__/scenarios/{endpoint_id}",
-        json={"status": status, "response": response},
-    )
-    r.raise_for_status()
+    """Push one consume-once scenario, scoped to THIS client's auth header.
+
+    Scoping (``mock.push_scenario`` -> ``?session_id=<auth header>``) keeps a
+    concurrent test from consuming this override under ``pytest -n auto``.
+    """
+    mock.push_scenario(endpoint_id, status, response)
 
 
 class TestPaginatedIterator:
@@ -70,7 +68,11 @@ class TestPaginatedIterator:
         assert mock.journal == []
 
     def test_next_pages_through_all_items(self, signalwire_client, mock):
-        """Walks two pages and stops on the page without ``links.next``."""
+        """Walks two pages and stops on the page without ``links.next``.
+
+        A fresh per-test client starts with an empty (auth-scoped) journal and
+        scenario queue, so we stage the two pages exactly once — no reset dance.
+        """
         # Page 1 — has a next cursor.
         _push_scenario(
             mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
@@ -84,31 +86,6 @@ class TestPaginatedIterator:
             },
         )
         # Page 2 — terminal (no next).
-        _push_scenario(
-            mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
-            status=200,
-            response={
-                "data": [
-                    {"id": "addr-3", "name": "third"},
-                ],
-                "links": {},
-            },
-        )
-
-        # Reset journal so only our paginated fetches are recorded.
-        mock.reset()
-        # Re-stage scenarios after reset (reset() clears scenarios too).
-        _push_scenario(
-            mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
-            status=200,
-            response={
-                "data": [
-                    {"id": "addr-1", "name": "first"},
-                    {"id": "addr-2", "name": "second"},
-                ],
-                "links": {"next": "http://example.com/api/fabric/addresses?cursor=page2"},
-            },
-        )
         _push_scenario(
             mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
             status=200,

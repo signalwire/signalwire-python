@@ -497,8 +497,15 @@ async def test_inbound_without_handler_does_not_crash(mock_relay, relay_ws_redir
         )
         try:
             await client.connect()
-            # No on_call registered.
-            mock_relay.inbound_call(call_id="c-nohandler", auto_states=["created"])
+            # No on_call registered. Target THIS client's session explicitly
+            # (the bare ``mock_relay`` is unscoped; without a target the inbound
+            # call would broadcast to every connected session, including a
+            # concurrent test's client under ``pytest -n auto``).
+            mock_relay.inbound_call(
+                call_id="c-nohandler",
+                auto_states=["created"],
+                session_id=client._session_id,
+            )
             # Give the recv loop time to process.
             await asyncio.sleep(0.2)
             # Client is still alive.
