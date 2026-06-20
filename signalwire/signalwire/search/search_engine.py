@@ -1010,8 +1010,6 @@ class SearchEngine:
                     try:
                         # Look for metadata in JSON structure
                         if '"metadata":' in content:
-                            import re
-
                             # More robust regex to extract nested JSON object
                             # This handles nested braces properly
                             start = content.find('"metadata":')

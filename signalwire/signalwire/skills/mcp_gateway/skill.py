@@ -7,9 +7,8 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-import json
 import requests
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from requests.auth import HTTPBasicAuth
 
 from signalwire.core.skill_base import SkillBase

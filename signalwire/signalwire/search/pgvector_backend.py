@@ -12,7 +12,6 @@ import re
 from typing import List, Dict, Any, Optional
 
 from signalwire.core.logging_config import get_logger
-from datetime import datetime
 
 
 def _sanitize_collection_name(collection_name: str) -> str:

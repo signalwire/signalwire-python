@@ -13,7 +13,7 @@ It allows for chaining method calls to build up a document step by step.
 """
 
 import types
-from typing import Dict, List, Any, Optional, Union, TypeVar
+from typing import Dict, List, Any, Optional, TypeVar
 
 try:
     from typing import Self  # Python 3.11+

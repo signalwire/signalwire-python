@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import requests
 import json
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult

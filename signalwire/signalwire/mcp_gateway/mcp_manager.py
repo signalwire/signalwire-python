@@ -22,10 +22,8 @@ import queue
 import logging
 import time
 import pwd
-import tempfile
 import shutil
 import resource
-import select
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 

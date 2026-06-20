@@ -11,7 +11,7 @@ PomBuilder for creating structured POM prompts for SignalWire AI Agents
 
 from signalwire.pom.pom import PromptObjectModel, Section
 
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional
 
 
 class PomBuilder:

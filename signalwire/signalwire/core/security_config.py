@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import os
 import secrets
-from typing import Dict, Any, Optional, Tuple, List, Union
+from typing import Dict, Any, Optional, Tuple, Union
 from signalwire.core.logging_config import get_logger
 from signalwire.core.config_loader import ConfigLoader
 

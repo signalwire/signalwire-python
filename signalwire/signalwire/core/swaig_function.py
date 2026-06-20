@@ -9,8 +9,7 @@ See LICENSE file in the project root for full license information.
 SwaigFunction class for defining and managing SWAIG function interfaces
 """
 
-from typing import Dict, Any, Optional, Callable, List, Type, Union
-import inspect
+from typing import Dict, Any, Optional, Callable, List
 import logging
 
 # Import here to avoid circular imports

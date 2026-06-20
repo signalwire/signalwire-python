@@ -363,8 +363,6 @@ class AgentServer:
         Returns:
             Response for serverless modes, None for server mode
         """
-        import os
-        import json
 
         # Imported lazily here so tests can patch
         # signalwire.core.logging_config.get_execution_mode at call time.
@@ -760,8 +758,6 @@ class AgentServer:
             # / -> ./web/index.html
         """
         from pathlib import Path
-        from fastapi.responses import FileResponse
-        from fastapi import HTTPException
 
         # Normalize directory path
         static_dir = Path(directory).resolve()
@@ -800,7 +796,6 @@ class AgentServer:
         Returns:
             FileResponse if file exists, None otherwise
         """
-        from pathlib import Path
         from fastapi.responses import FileResponse
 
         if not hasattr(self, "_static_directories"):

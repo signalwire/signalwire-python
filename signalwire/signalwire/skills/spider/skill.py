@@ -10,7 +10,6 @@ Spider skill for fast web scraping with SignalWire AI Agents.
 """
 
 import re
-import logging
 import collections
 from typing import Dict, Any, Optional, List
 from urllib.parse import urljoin, urlparse

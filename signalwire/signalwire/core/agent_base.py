@@ -12,59 +12,46 @@ Base class for all SignalWire AI Agents
 
 import os
 import json
-import time
 import uuid
-import base64
-import logging
-import inspect
-import functools
 import re
-import signal
-import sys
-from typing import Optional, Union, List, Dict, Any, Tuple, Callable, Type
-from urllib.parse import urlparse, urlencode, urlunparse
+from typing import Optional, List, Dict, Any, Tuple, Callable
 
+# These imports double as a required-dependency check: a missing package
+# re-raises a helpful ImportError. Several names are not referenced directly
+# in this module, so they are intentionally unused (F401).
 try:
-    import fastapi
+    import fastapi  # noqa: F401
     from fastapi import (
-        FastAPI,
-        APIRouter,
-        Depends,
-        HTTPException,
-        Query,
-        Body,
+        FastAPI,  # noqa: F401
+        APIRouter,  # noqa: F401
+        Depends,  # noqa: F401
+        HTTPException,  # noqa: F401
+        Query,  # noqa: F401
+        Body,  # noqa: F401
         Request,
         Response,
     )
-    from fastapi.security import HTTPBasic, HTTPBasicCredentials
-    from pydantic import BaseModel
+    from fastapi.security import HTTPBasic, HTTPBasicCredentials  # noqa: F401
+    from pydantic import BaseModel  # noqa: F401
 except ImportError:
     raise ImportError("fastapi is required. Install it with: pip install fastapi")
 
 try:
-    import uvicorn
+    import uvicorn  # noqa: F401
 except ImportError:
     raise ImportError("uvicorn is required. Install it with: pip install uvicorn")
 
-from signalwire.core.pom_builder import PomBuilder
-from signalwire.core.swaig_function import SWAIGFunction
-from signalwire.core.function_result import FunctionResult
-from signalwire.core.swml_renderer import SwmlRenderer
 from signalwire.core.security.session_manager import SessionManager
 from signalwire.core.swml_service import SWMLService
-from signalwire.core.swml_handler import AIVerbHandler
 from signalwire.core.skill_manager import SkillManager
-from signalwire.utils.schema_utils import SchemaUtils
 from signalwire.core.logging_config import get_logger, get_execution_mode
 
 # Import refactored components
 from signalwire.core.agent.prompt.manager import PromptManager
 from signalwire.core.agent.tools.registry import ToolRegistry
-from signalwire.core.agent.tools.decorator import ToolDecorator
 
 # Import all mixins
 from signalwire.core.mixins.prompt_mixin import PromptMixin
-from signalwire.core.mixins.tool_mixin import ToolMixin
 from signalwire.core.mixins.web_mixin import WebMixin
 from signalwire.core.mixins.auth_mixin import AuthMixin
 from signalwire.core.mixins.skill_mixin import SkillMixin
@@ -170,7 +157,6 @@ class AgentBase(
                          proxy chain.
         """
         # Import SWMLService here to avoid circular imports
-        from signalwire.core.swml_service import SWMLService
 
         # If schema_path is not provided, we'll let SWMLService find it through its _find_schema_path method
         # which will be called in its __init__

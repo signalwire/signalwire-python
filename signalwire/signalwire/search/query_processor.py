@@ -7,7 +7,6 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-import os
 import nltk
 import re
 import threading
@@ -317,7 +316,7 @@ def vectorize_query(query: str, model=None, model_name: str = None):
         model_name: Optional model name to use if loading a new model
     """
     try:
-        import numpy as np
+        import numpy as np  # noqa: F401  availability probe; ImportError handled below
 
         # Use provided model or get cached one
         if model is None:

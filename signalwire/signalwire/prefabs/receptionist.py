@@ -9,8 +9,7 @@ See LICENSE file in the project root for full license information.
 ReceptionistAgent - Prefab agent for greeting callers and transferring them to appropriate departments
 """
 
-from typing import List, Dict, Any, Optional, Union
-import json
+from typing import List, Dict
 
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.function_result import FunctionResult

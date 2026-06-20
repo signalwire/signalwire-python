@@ -10,7 +10,7 @@ See LICENSE file in the project root for full license information.
 import os
 import re
 import json
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional
 from signalwire.core.logging_config import get_logger
 
 logger = get_logger("config_loader")

@@ -12,9 +12,8 @@ Service discovery and loading functionality - new simplified approach
 
 import importlib.util
 from pathlib import Path
-from typing import List, Dict, Any, Optional, Callable
+from typing import List, Dict, Any, Optional
 import asyncio
-import sys
 import io
 import contextlib
 

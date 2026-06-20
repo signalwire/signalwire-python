@@ -9,7 +9,6 @@ See LICENSE file in the project root for full license information.
 SWML document rendering utilities for SignalWire AI Agents.
 """
 
-import json
 from typing import Dict, List, Any, Optional, Union
 
 from signalwire.core.swml_service import SWMLService

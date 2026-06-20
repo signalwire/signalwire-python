@@ -8,9 +8,8 @@ See LICENSE file in the project root for full license information.
 """
 
 import os
-import tempfile
 import shutil
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 from pathlib import Path
 
 from signalwire.core.skill_base import SkillBase
@@ -371,7 +370,9 @@ class NativeVectorSearchSkill(SkillBase):
         # Check if local search functionality is available (heavy imports only for local mode)
         try:
             from signalwire.search import IndexBuilder, SearchEngine
-            from signalwire.search.query_processor import preprocess_query
+            from signalwire.search.query_processor import (  # noqa: F401  probe for optional search deps
+                preprocess_query,
+            )
 
             self.search_available = True
         except ImportError as e:

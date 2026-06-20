@@ -7,14 +7,12 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-import os
 import requests
 import time
 import re
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urlparse
 from bs4 import BeautifulSoup
-import json
-from typing import Optional, List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult

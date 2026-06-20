@@ -12,8 +12,7 @@ Supports both static (questions provided at init) and dynamic (questions determi
 by a callback function) configuration modes.
 """
 
-from typing import List, Dict, Any, Optional, Union, Callable
-import json
+from typing import List, Dict, Optional, Callable
 
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.function_result import FunctionResult

@@ -10,8 +10,7 @@ See LICENSE file in the project root for full license information.
 import os
 import mimetypes
 from pathlib import Path
-from typing import Dict, Optional, Tuple, Any
-import logging
+from typing import Dict, Optional, Tuple
 
 try:
     from fastapi import FastAPI, HTTPException, Request, Response, Depends

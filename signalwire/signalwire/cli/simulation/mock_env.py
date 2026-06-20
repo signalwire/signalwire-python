@@ -13,7 +13,6 @@ Mock environment and serverless simulation functionality
 import os
 import json
 from typing import Optional, Dict, Any
-from ..types import PostData
 
 
 class MockQueryParams:

@@ -10,7 +10,6 @@ See LICENSE file in the project root for full license information.
 import os
 import json
 import re
-import sys
 from typing import Optional, Dict, Any
 
 from signalwire.core.logging_config import get_execution_mode

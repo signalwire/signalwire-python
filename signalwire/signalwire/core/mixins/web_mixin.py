@@ -10,18 +10,14 @@ See LICENSE file in the project root for full license information.
 import os
 import re
 import json
-import base64
 import signal
 import sys
 import contextvars
 from typing import Optional, Dict, Any, Callable
-from urllib.parse import urlparse, urlunparse
 
 from fastapi import Depends, FastAPI, APIRouter, Request, Response
-from fastapi.middleware.cors import CORSMiddleware
 
 from signalwire.core.logging_config import get_execution_mode
-from signalwire.core.function_result import FunctionResult
 from signalwire.core.security.webhook_middleware import (
     make_webhook_validation_dependency,
 )

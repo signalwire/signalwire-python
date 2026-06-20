@@ -15,12 +15,10 @@ import hmac
 import inspect
 import json
 import re
-import secrets
 import base64
-import logging
 import sys
 import types
-from typing import Dict, List, Any, Optional, Union, Callable, Tuple, Type
+from typing import Dict, Any, Optional, Union, Callable, Tuple
 from urllib.parse import urlparse
 
 # Import centralized logging system
@@ -29,20 +27,23 @@ from signalwire.core.logging_config import get_logger
 # Create the module logger using centralized system
 logger = get_logger("swml_service")
 
+# These imports double as a required-dependency check: a missing package
+# re-raises a helpful ImportError. Several names are not referenced directly
+# in this module, so they are intentionally unused (F401).
 try:
-    import fastapi
+    import fastapi  # noqa: F401
     from fastapi import (
         FastAPI,
         APIRouter,
-        Depends,
+        Depends,  # noqa: F401
         HTTPException,
-        Query,
-        Body,
+        Query,  # noqa: F401
+        Body,  # noqa: F401
         Request,
         Response,
     )
-    from fastapi.security import HTTPBasic, HTTPBasicCredentials
-    from pydantic import BaseModel
+    from fastapi.security import HTTPBasic, HTTPBasicCredentials  # noqa: F401
+    from pydantic import BaseModel  # noqa: F401
 except ImportError:
     raise ImportError("fastapi is required. Install it with: pip install fastapi")
 

@@ -9,8 +9,6 @@ See LICENSE file in the project root for full license information.
 
 import hashlib
 import json
-import logging
-from functools import lru_cache
 from typing import Dict, Any, List, Optional, Tuple
 
 try:

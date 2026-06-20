@@ -9,10 +9,8 @@ See LICENSE file in the project root for full license information.
 SurveyAgent - Prefab agent for conducting automated surveys
 """
 
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional
 import json
-import os
-from datetime import datetime
 
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.function_result import FunctionResult

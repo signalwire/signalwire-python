@@ -15,7 +15,6 @@ from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase
-    from signalwire.core.function_result import FunctionResult
 
 
 def display_agent_tools(agent: "AgentBase", verbose: bool = False) -> None:

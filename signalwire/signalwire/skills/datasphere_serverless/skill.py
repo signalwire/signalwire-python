@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 import base64
-from typing import Optional, List, Dict, Any
+from typing import List, Dict, Any
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.data_map import DataMap

@@ -7,7 +7,7 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult

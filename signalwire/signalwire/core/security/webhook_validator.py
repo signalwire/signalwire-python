@@ -24,7 +24,7 @@ import base64
 import hashlib
 import hmac
 from typing import Any, Dict, List, Mapping, Tuple, Union
-from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+from urllib.parse import parse_qsl, urlparse, urlunparse
 
 
 # ---------------------------------------------------------------------------

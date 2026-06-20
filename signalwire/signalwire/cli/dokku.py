@@ -17,14 +17,13 @@ Usage:
     sw-agent-dokku scale web=2                     # Scale processes
 """
 
-import os
 import sys
 import subprocess
 import secrets
 import argparse
 import shutil
 from pathlib import Path
-from typing import Optional, Dict, List, Any
+from typing import Dict, Any
 
 
 # =============================================================================

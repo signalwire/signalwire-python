@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import sqlite3
 import json
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any
 
 from signalwire.core.logging_config import get_logger
 from pathlib import Path
@@ -293,7 +293,6 @@ class SearchIndexMigrator:
             Migration statistics
         """
         from .pgvector_backend import PgVectorBackend
-        from .index_builder import IndexBuilder
 
         # Ensure output has .swsearch extension
         if not output_path.endswith(".swsearch"):

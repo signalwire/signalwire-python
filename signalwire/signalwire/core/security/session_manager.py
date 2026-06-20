@@ -9,13 +9,13 @@ See LICENSE file in the project root for full license information.
 Session manager for handling call sessions and security tokens
 """
 
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional
 import secrets
 import time
 import hmac
 import hashlib
 import base64
-from datetime import datetime, timedelta
+from datetime import datetime
 
 
 class SessionManager:

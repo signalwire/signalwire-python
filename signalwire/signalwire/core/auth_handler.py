@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 import secrets
-from typing import Optional, Tuple, Dict, Any, Callable
+from typing import Optional, Dict, Any, Callable
 from functools import wraps
 
 try:

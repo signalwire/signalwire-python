@@ -14,7 +14,6 @@ import uuid
 import json
 from datetime import datetime
 from typing import Dict, Any, Optional
-from ..types import CallData, VarsData, PostData
 
 
 def generate_fake_uuid() -> str:

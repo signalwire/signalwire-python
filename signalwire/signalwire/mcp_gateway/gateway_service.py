@@ -14,16 +14,13 @@ Manages sessions, handles authentication, and translates between protocols.
 """
 
 import os
-import sys
 import json
 import logging
 import argparse
 import signal
 import re
-import hashlib
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from datetime import datetime
-import base64
 import ssl
 import concurrent.futures
 

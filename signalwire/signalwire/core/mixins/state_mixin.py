@@ -7,10 +7,6 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import Callable
-
-from signalwire.core.function_result import FunctionResult
-
 
 class StateMixin:
     """

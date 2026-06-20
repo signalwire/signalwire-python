@@ -9,10 +9,8 @@ See LICENSE file in the project root for full license information.
 ConciergeAgent - Prefab agent for providing virtual concierge services
 """
 
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Optional
 import json
-import os
-from datetime import datetime
 
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.function_result import FunctionResult

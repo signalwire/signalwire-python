@@ -8,9 +8,8 @@ Exposes @tool decorated functions as an MCP server endpoint at /mcp.
 Handles the MCP JSON-RPC 2.0 protocol: initialize, tools/list, tools/call.
 """
 
-import json
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 logger = logging.getLogger(__name__)
 

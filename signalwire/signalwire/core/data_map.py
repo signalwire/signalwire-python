@@ -10,7 +10,6 @@ DataMap class for building SWAIG data_map configurations
 """
 
 from typing import Dict, List, Any, Optional, Union, Pattern, Tuple
-import re
 from .function_result import FunctionResult
 
 

@@ -13,7 +13,7 @@ Provides Wikipedia search capabilities using the Wikipedia API.
 
 import requests
 from urllib.parse import quote
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 from signalwire.core.skill_base import SkillBase
 
 

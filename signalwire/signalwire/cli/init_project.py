@@ -15,7 +15,7 @@ import sys
 import secrets
 import subprocess
 from pathlib import Path
-from typing import Optional, Dict, List, Any
+from typing import Dict, List, Any
 
 
 # Cloud platform options

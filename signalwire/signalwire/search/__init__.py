@@ -23,26 +23,28 @@ import warnings
 _SEARCH_AVAILABLE = True
 _MISSING_DEPS = []
 
+# These bare imports probe for optional-dependency availability; the import
+# itself is the test, so the bound name is intentionally unused (F401).
 try:
-    import numpy
+    import numpy  # noqa: F401
 except ImportError:
     _SEARCH_AVAILABLE = False
     _MISSING_DEPS.append("numpy")
 
 try:
-    import sklearn
+    import sklearn  # noqa: F401
 except ImportError:
     _SEARCH_AVAILABLE = False
     _MISSING_DEPS.append("scikit-learn")
 
 try:
-    import sentence_transformers
+    import sentence_transformers  # noqa: F401
 except ImportError:
     _SEARCH_AVAILABLE = False
     _MISSING_DEPS.append("sentence-transformers")
 
 try:
-    import nltk
+    import nltk  # noqa: F401
 except ImportError:
     _SEARCH_AVAILABLE = False
     _MISSING_DEPS.append("nltk")

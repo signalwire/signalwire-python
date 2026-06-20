@@ -14,7 +14,7 @@ with all SignalWire agent features like skills, POM, and SWAIG functions.
 """
 
 import json
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, Any, Optional
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.logging_config import get_logger
 

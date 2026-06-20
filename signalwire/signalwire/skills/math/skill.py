@@ -8,7 +8,6 @@ See LICENSE file in the project root for full license information.
 """
 
 import ast
-import re
 from typing import List, Dict, Any
 
 from signalwire.core.skill_base import SkillBase

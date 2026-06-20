@@ -20,7 +20,6 @@ import inspect
 import logging
 import threading
 import asyncio
-import typing
 from typing import Any, Callable, Dict, List, Optional
 
 # ---------------------------------------------------------------------------

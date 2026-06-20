@@ -10,7 +10,7 @@ See LICENSE file in the project root for full license information.
 Type definitions for the CLI tools
 """
 
-from typing import TypedDict, Dict, Any, Optional, List, Union
+from typing import TypedDict, Dict, Any, Optional
 
 
 class CallData(TypedDict, total=False):

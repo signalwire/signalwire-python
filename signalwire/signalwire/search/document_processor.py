@@ -8,7 +8,6 @@ See LICENSE file in the project root for full license information.
 """
 
 import re
-import hashlib
 import json
 from typing import List, Dict, Any, Optional
 from pathlib import Path
@@ -72,7 +71,6 @@ try:
 except ImportError:
     magic = None
 
-from .query_processor import preprocess_document_content
 from signalwire.core.logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -1222,9 +1220,11 @@ class DocumentProcessor:
 
         # Generate embeddings for sentences (using the same model as the index)
         try:
-            from sentence_transformers import SentenceTransformer
+            # SentenceTransformer/np are availability probes here (ImportError
+            # handled below); only cosine_similarity is referenced directly.
+            from sentence_transformers import SentenceTransformer  # noqa: F401
             from sklearn.metrics.pairwise import cosine_similarity
-            import numpy as np
+            import numpy as np  # noqa: F401
 
             from signalwire.search.query_processor import _get_cached_model
 
@@ -1328,7 +1328,6 @@ class DocumentProcessor:
 
         try:
             # Simple topic detection using keyword overlap
-            from collections import Counter
             import re
 
             # Extract keywords from each sentence

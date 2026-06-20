@@ -9,9 +9,8 @@ See LICENSE file in the project root for full license information.
 FAQBotAgent - Prefab agent for answering frequently asked questions
 """
 
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Optional
 import json
-import os
 
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.function_result import FunctionResult
