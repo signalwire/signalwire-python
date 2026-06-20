@@ -18,6 +18,10 @@ from typing import TYPE_CHECKING, Optional, Dict, Any, Callable
 from fastapi import Depends, FastAPI, APIRouter, Request, Response
 
 from signalwire.core.logging_config import get_execution_mode
+from signalwire.core.security.security_utils import (
+    filter_sensitive_headers,
+    redact_url,
+)
 from signalwire.core.security.webhook_middleware import (
     make_webhook_validation_dependency,
 )
@@ -519,7 +523,7 @@ class WebMixin:
         # Debug logging to understand the state before any changes
         self.log.debug(
             "_handle_root_request entry",
-            proxy_url_base=getattr(self, "_proxy_url_base", None),
+            proxy_url_base=redact_url(getattr(self, "_proxy_url_base", None)),
             proxy_url_base_from_env=getattr(self, "_proxy_url_base_from_env", False),
             env_var=os.environ.get("SWML_PROXY_URL_BASE"),
         )
@@ -561,7 +565,7 @@ class WebMixin:
 
                     self.log.debug(
                         "proxy_detected_for_request",
-                        proxy_url_base=computed_proxy,
+                        proxy_url_base=redact_url(computed_proxy),
                         source="X-Forwarded headers",
                     )
                 else:
@@ -588,7 +592,7 @@ class WebMixin:
             else:
                 self.log.debug(
                     "No proxy headers found, but keeping env proxy URL",
-                    proxy_url_base=getattr(self, "_proxy_url_base", None),
+                    proxy_url_base=redact_url(getattr(self, "_proxy_url_base", None)),
                     proxy_url_base_from_env=True,
                 )
 
@@ -933,7 +937,9 @@ class WebMixin:
                 try:
                     # Extract request data
                     query_params = dict(request.query_params)
-                    headers = dict(request.headers)
+                    # Strip credential-bearing headers before handing them to
+                    # the user callback (matches the TS SDK's filtering).
+                    headers = filter_sensitive_headers(dict(request.headers))
 
                     # Call the dynamic config callback with the ephemeral agent
                     self._dynamic_config_callback(
@@ -1300,7 +1306,10 @@ class WebMixin:
             if hasattr(super(), "_proxy_detection_done"):
                 super()._proxy_detection_done = True
 
-            self.log.info("proxy_url_manually_set", proxy_url_base=self._proxy_url_base)
+            self.log.info(
+                "proxy_url_manually_set",
+                proxy_url_base=redact_url(self._proxy_url_base),
+            )
 
         return self
 

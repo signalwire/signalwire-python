@@ -57,6 +57,7 @@ from signalwire.core.swml_handler import (  # noqa: E402
     SWMLVerbHandler,
 )
 from signalwire.core.security_config import SecurityConfig  # noqa: E402
+from signalwire.core.security.security_utils import redact_url  # noqa: E402
 from signalwire.core.function_result import FunctionResult  # noqa: E402
 from signalwire.core.agent.tools.registry import ToolRegistry  # noqa: E402
 from signalwire.core.mixins.tool_mixin import ToolMixin  # noqa: E402
@@ -1284,7 +1285,9 @@ class SWMLService(ToolMixin):
             ctx_proxy = _request_proxy_url.get(None)
             if ctx_proxy:
                 base = ctx_proxy.rstrip("/")
-                self.log.debug("Using per-request proxy URL", proxy_url_base=base)
+                self.log.debug(
+                    "Using per-request proxy URL", proxy_url_base=redact_url(base)
+                )
                 if include_auth:
                     username, password = self._basic_auth
                     url = urlparse(base)
@@ -1298,7 +1301,7 @@ class SWMLService(ToolMixin):
         # Check if we have proxy information from instance attribute (fallback)
         if hasattr(self, "_proxy_url_base") and self._proxy_url_base:
             base = self._proxy_url_base.rstrip("/")
-            self.log.debug("Using proxy URL base", proxy_url_base=base)
+            self.log.debug("Using proxy URL base", proxy_url_base=redact_url(base))
 
             # Add auth credentials if requested
             if include_auth:
@@ -1555,5 +1558,8 @@ class SWMLService(ToolMixin):
         """
         if proxy_url:
             self._proxy_url_base = proxy_url.rstrip("/")
-            self.log.info("proxy_url_manually_set", proxy_url_base=self._proxy_url_base)
+            self.log.info(
+                "proxy_url_manually_set",
+                proxy_url_base=redact_url(self._proxy_url_base),
+            )
             self._proxy_detection_done = True
