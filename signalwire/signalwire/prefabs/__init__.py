@@ -22,5 +22,5 @@ __all__ = [
     "FAQBotAgent",
     "ConciergeAgent",
     "SurveyAgent",
-    "ReceptionistAgent"
+    "ReceptionistAgent",
 ]

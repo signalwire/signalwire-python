@@ -11,4 +11,4 @@ See LICENSE file in the project root for full license information.
 
 from .manager import PromptManager
 
-__all__ = ['PromptManager']
+__all__ = ["PromptManager"]

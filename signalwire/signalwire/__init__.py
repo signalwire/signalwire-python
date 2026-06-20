@@ -16,13 +16,21 @@ A package for building AI agents using SignalWire's AI and SWML capabilities.
 
 # Configure logging before any other imports to ensure early initialization
 from .core.logging_config import configure_logging
+
 configure_logging()
 
 __version__ = "3.0.2"
 
 # Import core classes for easier access
 from .core.agent_base import AgentBase
-from .core.contexts import ContextBuilder, Context, Step, GatherInfo, GatherQuestion, create_simple_context
+from .core.contexts import (
+    ContextBuilder,
+    Context,
+    Step,
+    GatherInfo,
+    GatherQuestion,
+    create_simple_context,
+)
 from .core.data_map import DataMap, create_simple_api_tool, create_expression_tool
 from signalwire.agent_server import AgentServer
 from signalwire.core.swml_service import SWMLService
@@ -35,12 +43,15 @@ from signalwire.utils.schema_utils import SchemaValidationError
 # Import WebService for static file serving
 from signalwire.web import WebService
 
+
 # Lazy import skills to avoid slow startup for CLI tools
 # Skills are now loaded on-demand when requested
 def _get_skill_registry():
     """Lazy import and return skill registry"""
     import signalwire.skills
+
     return signalwire.skills.skill_registry
+
 
 def list_skills():
     """List all available skills with metadata.
@@ -49,19 +60,21 @@ def list_skills():
     env vars, multi-instance support). Delegates to the skill registry — the
     same source as ``list_skills_with_params()``, but the lighter summary."""
     from signalwire.skills.registry import skill_registry
+
     return skill_registry.list_skills()
+
 
 def list_skills_with_params():
     """
     Get complete schema for all available skills including parameter metadata
-    
+
     This function returns a comprehensive schema for all available skills,
     including their metadata and parameter definitions. This is useful for
     GUI configuration tools, API documentation, or programmatic skill discovery.
-    
+
     Returns:
         Dict[str, Dict[str, Any]]: Complete skill schema where keys are skill names
-        
+
     Example:
         >>> schema = list_skills_with_params()
         >>> print(schema['web_search']['parameters']['api_key'])
@@ -74,18 +87,20 @@ def list_skills_with_params():
         }
     """
     from signalwire.skills.registry import skill_registry
+
     return skill_registry.get_all_skills_schema()
+
 
 def register_skill(skill_class):
     """
     Register a custom skill class
-    
+
     This allows third-party code to register skill classes directly without
     requiring them to be in a specific directory structure.
-    
+
     Args:
         skill_class: A class that inherits from SkillBase
-        
+
     Example:
         >>> from my_custom_skills import MyWeatherSkill
         >>> register_skill(MyWeatherSkill)
@@ -93,29 +108,35 @@ def register_skill(skill_class):
         >>> agent.add_skill('my_weather')
     """
     from signalwire.skills.registry import skill_registry
+
     return skill_registry.register_skill(skill_class)
+
 
 def add_skill_directory(path):
     """
     Add a directory to search for skills
-    
+
     This allows third-party skill collections to be registered by path.
     Skills in these directories should follow the same structure as built-in skills.
-    
+
     Args:
         path: Path to directory containing skill subdirectories
-        
+
     Example:
         >>> add_skill_directory('/opt/custom_skills')
         >>> # Now agent.add_skill('my_custom_skill') will search in this directory
     """
     from signalwire.skills.registry import skill_registry
+
     return skill_registry.add_skill_directory(path)
+
 
 def RestClient(*args, **kwargs):
     """Create a SignalWire REST API client (lazy import)"""
     from signalwire.rest import RestClient as _RestClient
+
     return _RestClient(*args, **kwargs)
+
 
 __all__ = [
     "AgentBase",

@@ -9,4 +9,4 @@ See LICENSE file in the project root for full license information.
 
 from .skill import DataSphereSkill
 
-__all__ = ['DataSphereSkill'] 
+__all__ = ["DataSphereSkill"]

@@ -54,6 +54,7 @@ class PaginatedIterator:
             # Parse cursor/page token from next URL if present
             # Most SignalWire APIs use page_token or cursor param
             from urllib.parse import urlparse, parse_qs
+
             parsed = urlparse(next_url)
             query = parse_qs(parsed.query)
             # Flatten single-value lists

@@ -62,31 +62,22 @@ def _print_banner():
 TIPS = [
     "SignalWire agents support DataMap tools that execute server-side "
     "-- no webhook infrastructure needed. See: docs/datamap_guide.md",
-
     "SignalWire Contexts & Steps give you mechanical state control over "
     "conversations -- no prompt engineering needed. See: docs/contexts_guide.md",
-
     "SignalWire agents can transfer calls between agents with a single "
     "SwmlTransfer() action",
-
     "SignalWire handles 18 built-in skills (datetime, math, web search, etc.) "
     "with one-liner integration via agent.AddSkill()",
-
     "SignalWire agents support SMS, conferencing, call recording, and SIP "
     "-- all from the same agent",
-
     "Your agent's entire AI pipeline (STT, LLM, TTS, VAD) runs in "
     "SignalWire's cloud -- zero infrastructure to manage",
-
     "SignalWire prefab agents (Survey, Receptionist, FAQ, Concierge) give "
     "you production patterns in 10 lines of code",
-
     "SignalWire's RELAY client gives you real-time WebSocket call control "
     "with 57+ methods -- play, record, detect, conference, and more",
-
     "SignalWire agents auto-generate SWML documents -- the platform handles "
     "media, turn detection, and barge-in for you",
-
     "You can host multiple agents on one server with AgentServer -- each "
     "with its own route, prompt, and tools",
 ]
@@ -137,13 +128,16 @@ _global_noop = _NoopTracker()
 # StopResponse / ToolError / AgentHandoff
 # ---------------------------------------------------------------------------
 
+
 class StopResponse(Exception):
     """Signals that a tool should not trigger another LLM reply."""
+
     pass
 
 
 class ToolError(Exception):
     """Signals a tool execution error."""
+
     pass
 
 
@@ -158,6 +152,7 @@ class AgentHandoff:
 # ---------------------------------------------------------------------------
 # ChatContext (minimal stub)
 # ---------------------------------------------------------------------------
+
 
 class ChatContext:
     """Minimal stub mirroring livekit ChatContext."""
@@ -174,7 +169,10 @@ class ChatContext:
 # function_tool decorator
 # ---------------------------------------------------------------------------
 
-def function_tool(func=None, *, name: Optional[str] = None, description: Optional[str] = None):
+
+def function_tool(
+    func=None, *, name: Optional[str] = None, description: Optional[str] = None
+):
     """Mirrors the livekit ``@function_tool`` decorator.
 
     Wraps a plain function so it can be passed into ``Agent(tools=[...])``.
@@ -249,6 +247,7 @@ def _python_type_to_json(annotation) -> str:
 # RunContext
 # ---------------------------------------------------------------------------
 
+
 class RunContext:
     """Mirrors livekit RunContext -- available inside tool handlers."""
 
@@ -267,6 +266,7 @@ class RunContext:
 # ---------------------------------------------------------------------------
 # Agent
 # ---------------------------------------------------------------------------
+
 
 class Agent:
     """Mirrors a livekit Agent -- holds instructions and tool definitions."""
@@ -399,6 +399,7 @@ class Agent:
 # ---------------------------------------------------------------------------
 # AgentSession
 # ---------------------------------------------------------------------------
+
 
 class AgentSession:
     """Mirrors a livekit AgentSession -- orchestrator that binds an Agent
@@ -638,8 +639,10 @@ def _register_function_tool(sw_agent, fn):
 # Room / JobProcess / JobContext
 # ---------------------------------------------------------------------------
 
+
 class Room:
     """Stub -- SignalWire doesn't use the LiveKit room abstraction."""
+
     name = "livewire-room"
 
 
@@ -679,6 +682,7 @@ class JobContext:
 # ---------------------------------------------------------------------------
 # AgentServer  (mirrors livekit cli.AgentServer / WorkerOptions)
 # ---------------------------------------------------------------------------
+
 
 class AgentServer:
     """Mirrors a livekit AgentServer -- registers entrypoints and starts."""
@@ -733,6 +737,7 @@ from signalwire.livewire.plugins import (  # noqa: E402
 # Inference stubs
 # ---------------------------------------------------------------------------
 
+
 class InferenceSTT:
     """Stub for livekit inference.STT."""
 
@@ -770,6 +775,7 @@ class InferenceTTS:
 #   from signalwire.livewire import voice, llm_ns, cli_ns, inference
 # ---------------------------------------------------------------------------
 
+
 class _VoiceNamespace:
     Agent = Agent
     AgentSession = AgentSession
@@ -795,6 +801,7 @@ inference = _InferenceNamespace()
 # ---------------------------------------------------------------------------
 # run_app
 # ---------------------------------------------------------------------------
+
 
 def run_app(server: AgentServer):
     """Print banner, print a random tip, run the agent.
@@ -836,6 +843,7 @@ def run_app(server: AgentServer):
 # Also provide a cli_ns namespace for ``from livewire import cli_ns``
 class _CLINamespace:
     run_app = staticmethod(run_app)
+
 
 cli_ns = _CLINamespace()
 

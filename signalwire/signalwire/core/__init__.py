@@ -19,11 +19,11 @@ from signalwire.core.swml_handler import SWMLVerbHandler, VerbHandlerRegistry
 from signalwire.core.swml_builder import SWMLBuilder
 
 __all__ = [
-    'AgentBase', 
-    'FunctionResult', 
-    'SWAIGFunction',
-    'SWMLService',
-    'SWMLVerbHandler',
-    'VerbHandlerRegistry',
-    'SWMLBuilder'
+    "AgentBase",
+    "FunctionResult",
+    "SWAIGFunction",
+    "SWMLService",
+    "SWMLVerbHandler",
+    "VerbHandlerRegistry",
+    "SWMLBuilder",
 ]

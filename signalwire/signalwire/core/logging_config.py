@@ -27,15 +27,16 @@ import sys
 
 import structlog
 
-_CONTROL_CHAR_RE = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]')
+_CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]")
 
 
 def strip_control_chars(logger, method_name, event_dict):
     """Strip control characters from log event values to prevent log injection."""
     for key, value in event_dict.items():
         if isinstance(value, str):
-            event_dict[key] = _CONTROL_CHAR_RE.sub('', value)
+            event_dict[key] = _CONTROL_CHAR_RE.sub("", value)
     return event_dict
+
 
 # Global flag to ensure configuration only happens once
 _logging_configured = False
@@ -49,27 +50,31 @@ def get_execution_mode():
         str: 'server', 'cgi', 'lambda', 'google_cloud_function', 'azure_function', or 'unknown'
     """
     # Check for CGI environment
-    if os.getenv('GATEWAY_INTERFACE'):
-        return 'cgi'
+    if os.getenv("GATEWAY_INTERFACE"):
+        return "cgi"
 
     # Check for AWS Lambda environment
-    if os.getenv('AWS_LAMBDA_FUNCTION_NAME') or os.getenv('LAMBDA_TASK_ROOT'):
-        return 'lambda'
+    if os.getenv("AWS_LAMBDA_FUNCTION_NAME") or os.getenv("LAMBDA_TASK_ROOT"):
+        return "lambda"
 
     # Check for Google Cloud Functions environment
-    if (os.getenv('FUNCTION_TARGET') or
-        os.getenv('K_SERVICE') or
-        os.getenv('GOOGLE_CLOUD_PROJECT')):
-        return 'google_cloud_function'
+    if (
+        os.getenv("FUNCTION_TARGET")
+        or os.getenv("K_SERVICE")
+        or os.getenv("GOOGLE_CLOUD_PROJECT")
+    ):
+        return "google_cloud_function"
 
     # Check for Azure Functions environment
-    if (os.getenv('AZURE_FUNCTIONS_ENVIRONMENT') or
-        os.getenv('FUNCTIONS_WORKER_RUNTIME') or
-        os.getenv('AzureWebJobsStorage')):
-        return 'azure_function'
+    if (
+        os.getenv("AZURE_FUNCTIONS_ENVIRONMENT")
+        or os.getenv("FUNCTIONS_WORKER_RUNTIME")
+        or os.getenv("AzureWebJobsStorage")
+    ):
+        return "azure_function"
 
     # Default to server mode
-    return 'server'
+    return "server"
 
 
 def reset_logging_configuration():
@@ -85,12 +90,16 @@ def reset_logging_configuration():
 
 def _detect_colors():
     """Auto-detect whether the output stream supports colors."""
-    stream = sys.stderr if os.getenv('SIGNALWIRE_LOG_MODE', '').lower() == 'stderr' else sys.stdout
-    if not hasattr(stream, 'isatty'):
+    stream = (
+        sys.stderr
+        if os.getenv("SIGNALWIRE_LOG_MODE", "").lower() == "stderr"
+        else sys.stdout
+    )
+    if not hasattr(stream, "isatty"):
         return False
     if not stream.isatty():
         return False
-    if '--raw' in sys.argv or '--dump-swml' in sys.argv:
+    if "--raw" in sys.argv or "--dump-swml" in sys.argv:
         return False
     return True
 
@@ -110,22 +119,22 @@ def configure_logging():
         return
 
     # Get configuration from environment
-    log_mode = os.getenv('SIGNALWIRE_LOG_MODE', '').lower()
-    log_level = os.getenv('SIGNALWIRE_LOG_LEVEL', 'info').lower()
-    log_format = os.getenv('SIGNALWIRE_LOG_FORMAT', 'console').lower()
+    log_mode = os.getenv("SIGNALWIRE_LOG_MODE", "").lower()
+    log_level = os.getenv("SIGNALWIRE_LOG_LEVEL", "info").lower()
+    log_format = os.getenv("SIGNALWIRE_LOG_FORMAT", "console").lower()
 
     # Determine log mode if auto or not specified
-    if not log_mode or log_mode == 'auto':
+    if not log_mode or log_mode == "auto":
         execution_mode = get_execution_mode()
-        if execution_mode == 'cgi':
-            log_mode = 'off'
+        if execution_mode == "cgi":
+            log_mode = "off"
         else:
-            log_mode = 'default'
+            log_mode = "default"
 
     # Configure based on mode
-    if log_mode == 'off':
+    if log_mode == "off":
         _configure_off_mode()
-    elif log_mode == 'stderr':
+    elif log_mode == "stderr":
         _configure_stderr_mode(log_level, log_format)
     else:  # default mode
         _configure_default_mode(log_level, log_format)
@@ -184,14 +193,15 @@ def _configure_structlog(level_num, log_format, stream):
         stream: output stream (sys.stdout or sys.stderr)
     """
     # Choose final renderer
-    if log_format == 'json':
+    if log_format == "json":
         renderer = structlog.processors.JSONRenderer()
     else:
         renderer = structlog.dev.ConsoleRenderer(colors=_detect_colors())
 
     # Configure structlog itself (for structlog.get_logger() callers)
     structlog.configure(
-        processors=_get_structlog_processors() + [
+        processors=_get_structlog_processors()
+        + [
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
         logger_factory=structlog.stdlib.LoggerFactory(),
@@ -230,10 +240,19 @@ def _get_sdk_logger_names():
     They need to be handled alongside the signalwire namespace logger.
     """
     return [
-        "swml_service", "agent_base", "AgentServer", "skill_registry",
-        "skill_manager", "security_config", "config_loader", "auth_handler",
-        "web_service", "search_service", "bedrock_agent",
-        "relay_client", "relay_call",
+        "swml_service",
+        "agent_base",
+        "AgentServer",
+        "skill_registry",
+        "skill_manager",
+        "security_config",
+        "config_loader",
+        "auth_handler",
+        "web_service",
+        "search_service",
+        "bedrock_agent",
+        "relay_client",
+        "relay_call",
     ]
 
 
@@ -265,13 +284,13 @@ def _configure_off_mode():
     )
 
 
-def _configure_stderr_mode(log_level, log_format='console'):
+def _configure_stderr_mode(log_level, log_format="console"):
     """Configure logging to stderr."""
     numeric_level = getattr(logging, log_level.upper(), logging.INFO)
     _configure_structlog(numeric_level, log_format, sys.stderr)
 
 
-def _configure_default_mode(log_level, log_format='console'):
+def _configure_default_mode(log_level, log_format="console"):
     """Configure standard logging to stdout."""
     numeric_level = getattr(logging, log_level.upper(), logging.INFO)
     _configure_structlog(numeric_level, log_format, sys.stdout)

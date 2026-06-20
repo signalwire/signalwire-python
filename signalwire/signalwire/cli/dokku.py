@@ -31,16 +31,17 @@ from typing import Optional, Dict, List, Any
 # ANSI Colors
 # =============================================================================
 
+
 class Colors:
-    RED = '\033[0;31m'
-    GREEN = '\033[0;32m'
-    YELLOW = '\033[1;33m'
-    BLUE = '\033[0;34m'
-    CYAN = '\033[0;36m'
-    MAGENTA = '\033[0;35m'
-    BOLD = '\033[1m'
-    DIM = '\033[2m'
-    NC = '\033[0m'
+    RED = "\033[0;31m"
+    GREEN = "\033[0;32m"
+    YELLOW = "\033[1;33m"
+    BLUE = "\033[0;34m"
+    CYAN = "\033[0;36m"
+    MAGENTA = "\033[0;35m"
+    BOLD = "\033[1m"
+    DIM = "\033[2m"
+    NC = "\033[0m"
 
 
 def print_step(msg: str):
@@ -75,7 +76,7 @@ def prompt_yes_no(question: str, default: bool = True) -> bool:
     result = input(f"{question} [{hint}]: ").strip().lower()
     if not result:
         return default
-    return result in ('y', 'yes')
+    return result in ("y", "yes")
 
 
 def generate_password(length: int = 32) -> str:
@@ -576,7 +577,7 @@ if __name__ == "__main__":
     server.run()
 '''
 
-WEB_INDEX_TEMPLATE = '''<!DOCTYPE html>
+WEB_INDEX_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -1292,9 +1293,9 @@ curl -X POST <span class="base-url"></span>/swml/swaig/ \\
     </script>
 </body>
 </html>
-'''
+"""
 
-APP_JSON_TEMPLATE = '''{{
+APP_JSON_TEMPLATE = """{{
   "name": "{app_name}",
   "description": "SignalWire AI Agent with WebRTC calling support",
   "keywords": ["signalwire", "ai", "agent", "python", "webrtc"],
@@ -1355,13 +1356,13 @@ APP_JSON_TEMPLATE = '''{{
     ]
   }}
 }}
-'''
+"""
 
 # =============================================================================
 # Templates - Simple Mode
 # =============================================================================
 
-DEPLOY_SCRIPT_TEMPLATE = '''#!/bin/bash
+DEPLOY_SCRIPT_TEMPLATE = """#!/bin/bash
 # Dokku deployment helper for {app_name}
 set -e
 
@@ -1417,9 +1418,9 @@ echo ""
 echo "  Configure SignalWire phone number SWML URL to:"
 echo "  https://admin:$AUTH_PASS@$APP_NAME.$DOKKU_HOST/{route}"
 echo "═══════════════════════════════════════════════════════════"
-'''
+"""
 
-README_SIMPLE_TEMPLATE = '''# {app_name}
+README_SIMPLE_TEMPLATE = """# {app_name}
 
 A SignalWire AI Agent deployed to Dokku.
 
@@ -1493,13 +1494,13 @@ Test with swaig-test:
 ```bash
 swaig-test app.py --list-tools
 ```
-'''
+"""
 
 # =============================================================================
 # Templates - CI/CD Mode
 # =============================================================================
 
-DEPLOY_WORKFLOW_TEMPLATE = '''# Deploy to Dokku - calls reusable workflow from dokku-deploy-system
+DEPLOY_WORKFLOW_TEMPLATE = """# Deploy to Dokku - calls reusable workflow from dokku-deploy-system
 name: Deploy
 
 on:
@@ -1522,9 +1523,9 @@ jobs:
     # Optional: customize health check path
     # with:
     #   health_check_path: '/health'
-'''
+"""
 
-PREVIEW_WORKFLOW_TEMPLATE = '''# Preview environments for pull requests - calls reusable workflow from dokku-deploy-system
+PREVIEW_WORKFLOW_TEMPLATE = """# Preview environments for pull requests - calls reusable workflow from dokku-deploy-system
 name: Preview
 
 on:
@@ -1541,9 +1542,9 @@ jobs:
     # Optional: customize memory limit for previews
     # with:
     #   memory_limit: '256m'
-'''
+"""
 
-DOKKU_CONFIG_TEMPLATE = '''# ═══════════════════════════════════════════════════════════════════════════════
+DOKKU_CONFIG_TEMPLATE = """# ═══════════════════════════════════════════════════════════════════════════════
 # Dokku App Configuration
 # ═══════════════════════════════════════════════════════════════════════════════
 #
@@ -1606,9 +1607,9 @@ environments:
     resources:
       memory: 256m
       cpu: 0.5
-'''
+"""
 
-SERVICES_TEMPLATE = '''# ═══════════════════════════════════════════════════════════════════════════════
+SERVICES_TEMPLATE = """# ═══════════════════════════════════════════════════════════════════════════════
 # Dokku Services Configuration
 # ═══════════════════════════════════════════════════════════════════════════════
 #
@@ -1716,9 +1717,9 @@ services:
 #     REDIS_URL: "${secrets.PROD_REDIS_URL}"
 #   staging:
 #     DATABASE_URL: "${secrets.STAGING_DATABASE_URL}"
-'''
+"""
 
-README_CICD_TEMPLATE = '''# {app_name}
+README_CICD_TEMPLATE = """# {app_name}
 
 A SignalWire AI Agent with automated GitHub → Dokku deployments.
 
@@ -1803,12 +1804,13 @@ Test with swaig-test:
 ```bash
 swaig-test app.py --list-tools
 ```
-'''
+"""
 
 
 # =============================================================================
 # Project Generator
 # =============================================================================
+
 
 class DokkuProjectGenerator:
     """Generates Dokku deployment files for SignalWire agents."""
@@ -1816,14 +1818,17 @@ class DokkuProjectGenerator:
     def __init__(self, app_name: str, options: Dict[str, Any]):
         self.app_name = app_name
         self.options = options
-        self.project_dir = Path(options.get('project_dir', f'./{app_name}'))
+        self.project_dir = Path(options.get("project_dir", f"./{app_name}"))
 
         # Derived names
-        self.agent_slug = app_name.lower().replace(' ', '-').replace('_', '-')
-        self.agent_class = ''.join(
-            word.capitalize()
-            for word in app_name.replace('-', ' ').replace('_', ' ').split()
-        ) + 'Agent'
+        self.agent_slug = app_name.lower().replace(" ", "-").replace("_", "-")
+        self.agent_class = (
+            "".join(
+                word.capitalize()
+                for word in app_name.replace("-", " ").replace("_", " ").split()
+            )
+            + "Agent"
+        )
 
     def generate(self) -> bool:
         """Generate the project files."""
@@ -1835,7 +1840,7 @@ class DokkuProjectGenerator:
             self._write_core_files()
 
             # Mode-specific files
-            if self.options.get('cicd'):
+            if self.options.get("cicd"):
                 self._write_cicd_files()
             else:
                 self._write_simple_files()
@@ -1848,108 +1853,110 @@ class DokkuProjectGenerator:
     def _write_core_files(self):
         """Write files common to both modes."""
         # Procfile
-        self._write_file('Procfile', PROCFILE_TEMPLATE)
+        self._write_file("Procfile", PROCFILE_TEMPLATE)
 
         # runtime.txt
-        self._write_file('runtime.txt', RUNTIME_TEMPLATE)
+        self._write_file("runtime.txt", RUNTIME_TEMPLATE)
 
         # requirements.txt
-        self._write_file('requirements.txt', REQUIREMENTS_TEMPLATE)
+        self._write_file("requirements.txt", REQUIREMENTS_TEMPLATE)
 
         # CHECKS
-        self._write_file('CHECKS', CHECKS_TEMPLATE)
+        self._write_file("CHECKS", CHECKS_TEMPLATE)
 
         # .gitignore
-        self._write_file('.gitignore', GITIGNORE_TEMPLATE)
+        self._write_file(".gitignore", GITIGNORE_TEMPLATE)
 
         # .env.example
-        self._write_file('.env.example', ENV_EXAMPLE_TEMPLATE.format(
-            app_name=self.app_name
-        ))
+        self._write_file(
+            ".env.example", ENV_EXAMPLE_TEMPLATE.format(app_name=self.app_name)
+        )
 
         # app.json
-        self._write_file('app.json', APP_JSON_TEMPLATE.format(
-            app_name=self.app_name
-        ))
+        self._write_file("app.json", APP_JSON_TEMPLATE.format(app_name=self.app_name))
 
         # app.py - use web template if web option is enabled
-        if self.options.get('web'):
-            self._write_file('app.py', APP_TEMPLATE_WITH_WEB.format(
-                agent_name=self.app_name,
-                agent_class=self.agent_class,
-                agent_slug=self.agent_slug
-            ))
+        if self.options.get("web"):
+            self._write_file(
+                "app.py",
+                APP_TEMPLATE_WITH_WEB.format(
+                    agent_name=self.app_name,
+                    agent_class=self.agent_class,
+                    agent_slug=self.agent_slug,
+                ),
+            )
             self._write_web_files()
         else:
-            self._write_file('app.py', APP_TEMPLATE.format(
-                agent_name=self.app_name,
-                agent_class=self.agent_class,
-                agent_slug=self.agent_slug
-            ))
+            self._write_file(
+                "app.py",
+                APP_TEMPLATE.format(
+                    agent_name=self.app_name,
+                    agent_class=self.agent_class,
+                    agent_slug=self.agent_slug,
+                ),
+            )
 
     def _write_web_files(self):
         """Write web interface files."""
         # Create web directory
-        web_dir = self.project_dir / 'web'
+        web_dir = self.project_dir / "web"
         web_dir.mkdir(parents=True, exist_ok=True)
 
-        route = self.options.get('route', 'swaig')
+        route = self.options.get("route", "swaig")
 
         # index.html
-        self._write_file('web/index.html', WEB_INDEX_TEMPLATE.format(
-            agent_name=self.app_name,
-            route=route
-        ))
+        self._write_file(
+            "web/index.html",
+            WEB_INDEX_TEMPLATE.format(agent_name=self.app_name, route=route),
+        )
 
     def _write_simple_files(self):
         """Write files for simple deployment mode."""
-        dokku_host = self.options.get('dokku_host', 'dokku.yourdomain.com')
-        route = self.options.get('route', 'swaig')
+        dokku_host = self.options.get("dokku_host", "dokku.yourdomain.com")
+        route = self.options.get("route", "swaig")
 
         # deploy.sh
         deploy_script = DEPLOY_SCRIPT_TEMPLATE.format(
-            app_name=self.app_name,
-            dokku_host=dokku_host,
-            route=route
+            app_name=self.app_name, dokku_host=dokku_host, route=route
         )
-        self._write_file('deploy.sh', deploy_script, executable=True)
+        self._write_file("deploy.sh", deploy_script, executable=True)
 
         # README.md
         readme = README_SIMPLE_TEMPLATE.format(
             app_name=self.app_name,
             dokku_host=dokku_host,
-            dokku_host_domain=dokku_host.replace('dokku.', ''),
-            route=route
+            dokku_host_domain=dokku_host.replace("dokku.", ""),
+            route=route,
         )
-        self._write_file('README.md', readme)
+        self._write_file("README.md", readme)
 
     def _write_cicd_files(self):
         """Write files for CI/CD deployment mode."""
         # Create .github/workflows directory
-        workflows_dir = self.project_dir / '.github' / 'workflows'
+        workflows_dir = self.project_dir / ".github" / "workflows"
         workflows_dir.mkdir(parents=True, exist_ok=True)
 
         # deploy.yml
         deploy_workflow = DEPLOY_WORKFLOW_TEMPLATE.format(app_name=self.app_name)
-        self._write_file('.github/workflows/deploy.yml', deploy_workflow)
+        self._write_file(".github/workflows/deploy.yml", deploy_workflow)
 
         # preview.yml
         preview_workflow = PREVIEW_WORKFLOW_TEMPLATE.format(app_name=self.app_name)
-        self._write_file('.github/workflows/preview.yml', preview_workflow)
+        self._write_file(".github/workflows/preview.yml", preview_workflow)
 
         # Create .dokku directory
-        dokku_dir = self.project_dir / '.dokku'
+        dokku_dir = self.project_dir / ".dokku"
         dokku_dir.mkdir(parents=True, exist_ok=True)
 
         # config.yml
-        self._write_file('.dokku/config.yml', DOKKU_CONFIG_TEMPLATE)
+        self._write_file(".dokku/config.yml", DOKKU_CONFIG_TEMPLATE)
 
         # services.yml
-        self._write_file('.dokku/services.yml', SERVICES_TEMPLATE)
+        self._write_file(".dokku/services.yml", SERVICES_TEMPLATE)
 
         # README.md
         readme = README_CICD_TEMPLATE.format(app_name=self.app_name)
-        self._write_file('README.md', readme)
+        self._write_file("README.md", readme)
 
     def _write_file(self, path: str, content: str, executable: bool = False):
         """Write a file to the project directory."""
@@ -1967,6 +1974,7 @@ class DokkuProjectGenerator:
 # CLI Commands
 # =============================================================================
 
+
 def cmd_init(args):
     """Initialize a new Dokku project."""
     app_name = args.name
@@ -1975,30 +1983,36 @@ def cmd_init(args):
 
     # Gather options
     options = {
-        'project_dir': args.dir or f'./{app_name}',
-        'cicd': args.cicd,
-        'dokku_host': args.host or 'dokku.yourdomain.com',
-        'route': 'swaig',
-        'web': args.web,
+        "project_dir": args.dir or f"./{app_name}",
+        "cicd": args.cicd,
+        "dokku_host": args.host or "dokku.yourdomain.com",
+        "route": "swaig",
+        "web": args.web,
     }
 
     # Interactive mode if not all options provided
     if not args.host and not args.cicd:
         print("\n")
         if prompt_yes_no("Enable GitHub Actions CI/CD?", default=False):
-            options['cicd'] = True
+            options["cicd"] = True
         else:
-            options['dokku_host'] = prompt("Dokku server hostname", "dokku.yourdomain.com")
+            options["dokku_host"] = prompt(
+                "Dokku server hostname", "dokku.yourdomain.com"
+            )
 
         # Ask about web interface if not specified
         if not args.web:
-            options['web'] = prompt_yes_no("Include web interface (static files at /)?", default=True)
+            options["web"] = prompt_yes_no(
+                "Include web interface (static files at /)?", default=True
+            )
 
     # Check if directory exists
-    project_dir = Path(options['project_dir'])
+    project_dir = Path(options["project_dir"])
     if project_dir.exists():
         if not args.force:
-            if not prompt_yes_no(f"Directory {project_dir} exists. Overwrite?", default=False):
+            if not prompt_yes_no(
+                f"Directory {project_dir} exists. Overwrite?", default=False
+            ):
                 print("Aborted.")
                 return 1
         shutil.rmtree(project_dir)
@@ -2006,12 +2020,14 @@ def cmd_init(args):
     # Generate project
     generator = DokkuProjectGenerator(app_name, options)
     if generator.generate():
-        print(f"\n{Colors.GREEN}{Colors.BOLD}Project created successfully!{Colors.NC}\n")
+        print(
+            f"\n{Colors.GREEN}{Colors.BOLD}Project created successfully!{Colors.NC}\n"
+        )
 
-        if options['cicd']:
+        if options["cicd"]:
             _print_cicd_instructions(app_name)
         else:
-            _print_simple_instructions(app_name, options['dokku_host'], project_dir)
+            _print_simple_instructions(app_name, options["dokku_host"], project_dir)
 
         return 0
     return 1
@@ -2071,7 +2087,7 @@ def _print_cicd_instructions(app_name: str):
 def cmd_deploy(args):
     """Deploy to Dokku."""
     # Check if we're in a Dokku project
-    if not Path('Procfile').exists():
+    if not Path("Procfile").exists():
         print_error("No Procfile found. Are you in a Dokku project directory?")
         print("Run 'sw-agent-dokku init <name>' to create a new project.")
         return 1
@@ -2080,12 +2096,13 @@ def cmd_deploy(args):
     app_name = args.app
 
     # Try to get app name from app.json
-    if not app_name and Path('app.json').exists():
+    if not app_name and Path("app.json").exists():
         import json
+
         try:
-            with open('app.json') as f:
+            with open("app.json") as f:
                 app_json = json.load(f)
-                app_name = app_json.get('name')
+                app_name = app_json.get("name")
         except Exception:
             pass
 
@@ -2098,34 +2115,34 @@ def cmd_deploy(args):
     print_header(f"Deploying {app_name} to {dokku_host}")
 
     # Check git status
-    if not Path('.git').exists():
+    if not Path(".git").exists():
         print_step("Initializing git repository...")
-        subprocess.run(['git', 'init'], check=True)
-        subprocess.run(['git', 'add', '.'], check=True)
-        subprocess.run(['git', 'commit', '-m', 'Initial commit'], check=True)
+        subprocess.run(["git", "init"], check=True)
+        subprocess.run(["git", "add", "."], check=True)
+        subprocess.run(["git", "commit", "-m", "Initial commit"], check=True)
 
     # Create app
     print_step("Creating app (if not exists)...")
     subprocess.run(
-        ['ssh', f'dokku@{dokku_host}', 'apps:create', app_name],
-        capture_output=True
+        ["ssh", f"dokku@{dokku_host}", "apps:create", app_name], capture_output=True
     )
 
     # Set up git remote
     print_step("Configuring git remote...")
-    remote_url = f'dokku@{dokku_host}:{app_name}'
-    subprocess.run(['git', 'remote', 'remove', 'dokku'], capture_output=True)
-    subprocess.run(['git', 'remote', 'add', 'dokku', remote_url], check=True)
+    remote_url = f"dokku@{dokku_host}:{app_name}"
+    subprocess.run(["git", "remote", "remove", "dokku"], capture_output=True)
+    subprocess.run(["git", "remote", "add", "dokku", remote_url], check=True)
 
     # Deploy
     print_step("Pushing to Dokku...")
     result = subprocess.run(
-        ['git', 'push', 'dokku', 'HEAD:main', '--force'],
-        capture_output=False
+        ["git", "push", "dokku", "HEAD:main", "--force"], capture_output=False
     )
 
     if result.returncode == 0:
-        print_success(f"Deployed to https://{app_name}.{dokku_host.replace('dokku.', '')}")
+        print_success(
+            f"Deployed to https://{app_name}.{dokku_host.replace('dokku.', '')}"
+        )
     else:
         print_error("Deployment failed")
         return 1
@@ -2145,11 +2162,11 @@ def cmd_logs(args):
 
     print_header(f"Tailing logs for {app_name}")
 
-    cmd = ['ssh', f'dokku@{dokku_host}', 'logs', app_name]
+    cmd = ["ssh", f"dokku@{dokku_host}", "logs", app_name]
     if args.tail:
-        cmd.append('-t')
+        cmd.append("-t")
     if args.num:
-        cmd.extend(['--num', str(args.num)])
+        cmd.extend(["--num", str(args.num)])
 
     subprocess.run(cmd)
     return 0
@@ -2165,19 +2182,21 @@ def cmd_config(args):
     if not dokku_host:
         dokku_host = prompt("Dokku host", "dokku.yourdomain.com")
 
-    if args.config_action == 'show':
-        subprocess.run(['ssh', f'dokku@{dokku_host}', 'config:show', app_name])
-    elif args.config_action == 'set':
+    if args.config_action == "show":
+        subprocess.run(["ssh", f"dokku@{dokku_host}", "config:show", app_name])
+    elif args.config_action == "set":
         if not args.vars:
-            print_error("No variables provided. Use: sw-agent-dokku config set KEY=value")
+            print_error(
+                "No variables provided. Use: sw-agent-dokku config set KEY=value"
+            )
             return 1
-        cmd = ['ssh', f'dokku@{dokku_host}', 'config:set', app_name] + args.vars
+        cmd = ["ssh", f"dokku@{dokku_host}", "config:set", app_name] + args.vars
         subprocess.run(cmd)
-    elif args.config_action == 'unset':
+    elif args.config_action == "unset":
         if not args.vars:
             print_error("No variables provided. Use: sw-agent-dokku config unset KEY")
             return 1
-        cmd = ['ssh', f'dokku@{dokku_host}', 'config:unset', app_name] + args.vars
+        cmd = ["ssh", f"dokku@{dokku_host}", "config:unset", app_name] + args.vars
         subprocess.run(cmd)
 
     return 0
@@ -2195,10 +2214,10 @@ def cmd_scale(args):
 
     if not args.scale_args:
         # Show current scale
-        subprocess.run(['ssh', f'dokku@{dokku_host}', 'ps:scale', app_name])
+        subprocess.run(["ssh", f"dokku@{dokku_host}", "ps:scale", app_name])
     else:
         # Set scale
-        cmd = ['ssh', f'dokku@{dokku_host}', 'ps:scale', app_name] + args.scale_args
+        cmd = ["ssh", f"dokku@{dokku_host}", "ps:scale", app_name] + args.scale_args
         subprocess.run(cmd)
 
     return 0
@@ -2206,11 +2225,12 @@ def cmd_scale(args):
 
 def _get_app_name() -> str:
     """Try to get app name from app.json or prompt."""
-    if Path('app.json').exists():
+    if Path("app.json").exists():
         import json
+
         try:
-            with open('app.json') as f:
-                return json.load(f).get('name', '')
+            with open("app.json") as f:
+                return json.load(f).get("name", "")
         except Exception:
             pass
     return prompt("App name", Path.cwd().name)
@@ -2220,11 +2240,12 @@ def _get_app_name() -> str:
 # Main Entry Point
 # =============================================================================
 
+
 def main():
     parser = argparse.ArgumentParser(
-        description='SignalWire Agent Dokku Deployment Tool',
+        description="SignalWire Agent Dokku Deployment Tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog='''
+        epilog="""
 Examples:
   sw-agent-dokku init myagent                    # Create simple project (with prompts)
   sw-agent-dokku init myagent --web              # Create with web interface at /
@@ -2235,48 +2256,52 @@ Examples:
   sw-agent-dokku config show                     # Show config
   sw-agent-dokku config set KEY=value            # Set config
   sw-agent-dokku scale web=2                     # Scale processes
-'''
+""",
     )
 
-    subparsers = parser.add_subparsers(dest='command', help='Commands')
+    subparsers = parser.add_subparsers(dest="command", help="Commands")
 
     # init command
-    init_parser = subparsers.add_parser('init', help='Initialize a new Dokku project')
-    init_parser.add_argument('name', help='Project/app name')
-    init_parser.add_argument('--cicd', action='store_true',
-                            help='Include GitHub Actions CI/CD workflows')
-    init_parser.add_argument('--web', action='store_true',
-                            help='Include web interface (static files at /)')
-    init_parser.add_argument('--host', help='Dokku server hostname')
-    init_parser.add_argument('--dir', help='Project directory')
-    init_parser.add_argument('--force', '-f', action='store_true',
-                            help='Overwrite existing directory')
+    init_parser = subparsers.add_parser("init", help="Initialize a new Dokku project")
+    init_parser.add_argument("name", help="Project/app name")
+    init_parser.add_argument(
+        "--cicd", action="store_true", help="Include GitHub Actions CI/CD workflows"
+    )
+    init_parser.add_argument(
+        "--web", action="store_true", help="Include web interface (static files at /)"
+    )
+    init_parser.add_argument("--host", help="Dokku server hostname")
+    init_parser.add_argument("--dir", help="Project directory")
+    init_parser.add_argument(
+        "--force", "-f", action="store_true", help="Overwrite existing directory"
+    )
 
     # deploy command
-    deploy_parser = subparsers.add_parser('deploy', help='Deploy to Dokku')
-    deploy_parser.add_argument('--app', '-a', help='App name')
-    deploy_parser.add_argument('--host', '-H', help='Dokku server hostname')
+    deploy_parser = subparsers.add_parser("deploy", help="Deploy to Dokku")
+    deploy_parser.add_argument("--app", "-a", help="App name")
+    deploy_parser.add_argument("--host", "-H", help="Dokku server hostname")
 
     # logs command
-    logs_parser = subparsers.add_parser('logs', help='View Dokku logs')
-    logs_parser.add_argument('--app', '-a', help='App name')
-    logs_parser.add_argument('--host', '-H', help='Dokku server hostname')
-    logs_parser.add_argument('--tail', '-t', action='store_true', help='Tail logs')
-    logs_parser.add_argument('--num', '-n', type=int, help='Number of lines')
+    logs_parser = subparsers.add_parser("logs", help="View Dokku logs")
+    logs_parser.add_argument("--app", "-a", help="App name")
+    logs_parser.add_argument("--host", "-H", help="Dokku server hostname")
+    logs_parser.add_argument("--tail", "-t", action="store_true", help="Tail logs")
+    logs_parser.add_argument("--num", "-n", type=int, help="Number of lines")
 
     # config command
-    config_parser = subparsers.add_parser('config', help='Manage config variables')
-    config_parser.add_argument('config_action', choices=['show', 'set', 'unset'],
-                              help='Config action')
-    config_parser.add_argument('vars', nargs='*', help='Variables (KEY=value)')
-    config_parser.add_argument('--app', '-a', help='App name')
-    config_parser.add_argument('--host', '-H', help='Dokku server hostname')
+    config_parser = subparsers.add_parser("config", help="Manage config variables")
+    config_parser.add_argument(
+        "config_action", choices=["show", "set", "unset"], help="Config action"
+    )
+    config_parser.add_argument("vars", nargs="*", help="Variables (KEY=value)")
+    config_parser.add_argument("--app", "-a", help="App name")
+    config_parser.add_argument("--host", "-H", help="Dokku server hostname")
 
     # scale command
-    scale_parser = subparsers.add_parser('scale', help='Scale processes')
-    scale_parser.add_argument('scale_args', nargs='*', help='Scale args (web=2)')
-    scale_parser.add_argument('--app', '-a', help='App name')
-    scale_parser.add_argument('--host', '-H', help='Dokku server hostname')
+    scale_parser = subparsers.add_parser("scale", help="Scale processes")
+    scale_parser.add_argument("scale_args", nargs="*", help="Scale args (web=2)")
+    scale_parser.add_argument("--app", "-a", help="App name")
+    scale_parser.add_argument("--host", "-H", help="Dokku server hostname")
 
     args = parser.parse_args()
 
@@ -2285,15 +2310,15 @@ Examples:
         return 1
 
     commands = {
-        'init': cmd_init,
-        'deploy': cmd_deploy,
-        'logs': cmd_logs,
-        'config': cmd_config,
-        'scale': cmd_scale,
+        "init": cmd_init,
+        "deploy": cmd_deploy,
+        "logs": cmd_logs,
+        "config": cmd_config,
+        "scale": cmd_scale,
     }
 
     return commands[args.command](args)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

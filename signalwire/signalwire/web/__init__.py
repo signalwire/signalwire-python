@@ -14,4 +14,4 @@ This module provides static file serving capabilities for the SignalWire Agents 
 
 from .web_service import WebService
 
-__all__ = ['WebService']
+__all__ = ["WebService"]

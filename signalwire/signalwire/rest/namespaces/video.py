@@ -49,7 +49,9 @@ class VideoRoomSessions(BaseResource):
         return self._http.get(self._path(session_id, "members"), params=params or None)
 
     def list_recordings(self, session_id, **params):
-        return self._http.get(self._path(session_id, "recordings"), params=params or None)
+        return self._http.get(
+            self._path(session_id, "recordings"), params=params or None
+        )
 
 
 class VideoRoomRecordings(BaseResource):
@@ -80,7 +82,9 @@ class VideoConferences(CrudResource):
         )
 
     def list_streams(self, conference_id, **params):
-        return self._http.get(self._path(conference_id, "streams"), params=params or None)
+        return self._http.get(
+            self._path(conference_id, "streams"), params=params or None
+        )
 
     def create_stream(self, conference_id, **kwargs):
         return self._http.post(self._path(conference_id, "streams"), body=kwargs)
@@ -119,5 +123,7 @@ class VideoNamespace:
         self.room_sessions = VideoRoomSessions(http, f"{base}/room_sessions")
         self.room_recordings = VideoRoomRecordings(http, f"{base}/room_recordings")
         self.conferences = VideoConferences(http, f"{base}/conferences")
-        self.conference_tokens = VideoConferenceTokens(http, f"{base}/conference_tokens")
+        self.conference_tokens = VideoConferenceTokens(
+            http, f"{base}/conference_tokens"
+        )
         self.streams = VideoStreams(http, f"{base}/streams")

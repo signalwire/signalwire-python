@@ -35,7 +35,11 @@ class NumberGroupsResource(CrudResource):
         )
 
     def get_membership(self, membership_id):
-        return self._http.get(f"/api/relay/rest/number_group_memberships/{membership_id}")
+        return self._http.get(
+            f"/api/relay/rest/number_group_memberships/{membership_id}"
+        )
 
     def delete_membership(self, membership_id):
-        return self._http.delete(f"/api/relay/rest/number_group_memberships/{membership_id}")
+        return self._http.delete(
+            f"/api/relay/rest/number_group_memberships/{membership_id}"
+        )

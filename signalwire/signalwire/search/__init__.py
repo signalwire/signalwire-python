@@ -28,35 +28,37 @@ try:
     import numpy
 except ImportError:
     _SEARCH_AVAILABLE = False
-    _MISSING_DEPS.append('numpy')
+    _MISSING_DEPS.append("numpy")
 
 try:
     import sklearn
 except ImportError:
     _SEARCH_AVAILABLE = False
-    _MISSING_DEPS.append('scikit-learn')
+    _MISSING_DEPS.append("scikit-learn")
 
 try:
     import sentence_transformers
 except ImportError:
     _SEARCH_AVAILABLE = False
-    _MISSING_DEPS.append('sentence-transformers')
+    _MISSING_DEPS.append("sentence-transformers")
 
 try:
     import nltk
 except ImportError:
     _SEARCH_AVAILABLE = False
-    _MISSING_DEPS.append('nltk')
+    _MISSING_DEPS.append("nltk")
+
 
 def _check_search_dependencies():
     """Check if search dependencies are available and provide helpful error message"""
     if not _SEARCH_AVAILABLE:
-        missing = ', '.join(_MISSING_DEPS)
+        missing = ", ".join(_MISSING_DEPS)
         raise ImportError(
             f"Search functionality requires additional dependencies: {missing}\n"
             f"Install with: pip install signalwire-sdk[search]\n"
             f"For full features: pip install signalwire-sdk[search-all]"
         )
+
 
 # Conditional imports based on available dependencies
 __all__ = []
@@ -70,68 +72,70 @@ if _SEARCH_AVAILABLE:
         from .search_service import SearchService
         from .models import MODEL_ALIASES, DEFAULT_MODEL, resolve_model_alias
         from .migration import SearchIndexMigrator
-        
+
         __all__ = [
-            'preprocess_query',
-            'preprocess_document_content', 
-            'DocumentProcessor',
-            'IndexBuilder',
-            'SearchEngine',
-            'SearchService',
-            'MODEL_ALIASES',
-            'DEFAULT_MODEL',
-            'resolve_model_alias',
-            'SearchIndexMigrator'
+            "preprocess_query",
+            "preprocess_document_content",
+            "DocumentProcessor",
+            "IndexBuilder",
+            "SearchEngine",
+            "SearchService",
+            "MODEL_ALIASES",
+            "DEFAULT_MODEL",
+            "resolve_model_alias",
+            "SearchIndexMigrator",
         ]
     except ImportError as e:
         # Some search components failed to import
         warnings.warn(
             f"Some search components failed to import: {e}\n"
             f"For full search functionality, install: pip install signalwire-sdk[search-all]",
-            ImportWarning
+            ImportWarning,
         )
-        
+
         # Try to import what we can
         try:
             from .query_processor import preprocess_query, preprocess_document_content
-            __all__.extend(['preprocess_query', 'preprocess_document_content'])
+
+            __all__.extend(["preprocess_query", "preprocess_document_content"])
         except ImportError:
             pass
-            
+
         try:
             from .document_processor import DocumentProcessor
-            __all__.append('DocumentProcessor')
+
+            __all__.append("DocumentProcessor")
         except ImportError:
             pass
 else:
     # Provide stub functions that give helpful error messages
     def preprocess_query(*args, **kwargs):
         _check_search_dependencies()
-    
+
     def preprocess_document_content(*args, **kwargs):
         _check_search_dependencies()
-    
+
     class DocumentProcessor:
         def __init__(self, *args, **kwargs):
             _check_search_dependencies()
-    
+
     class IndexBuilder:
         def __init__(self, *args, **kwargs):
             _check_search_dependencies()
-    
+
     class SearchEngine:
         def __init__(self, *args, **kwargs):
             _check_search_dependencies()
-    
+
     class SearchService:
         def __init__(self, *args, **kwargs):
             _check_search_dependencies()
-    
+
     __all__ = [
-        'preprocess_query',
-        'preprocess_document_content', 
-        'DocumentProcessor',
-        'IndexBuilder',
-        'SearchEngine',
-        'SearchService'
-    ] 
+        "preprocess_query",
+        "preprocess_document_content",
+        "DocumentProcessor",
+        "IndexBuilder",
+        "SearchEngine",
+        "SearchService",
+    ]

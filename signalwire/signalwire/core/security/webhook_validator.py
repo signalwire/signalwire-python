@@ -31,6 +31,7 @@ from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
 # Internal helpers
 # ---------------------------------------------------------------------------
 
+
 def _hex_hmac_sha1(key: str, message: str) -> str:
     """Scheme-A digest: lowercase hex of HMAC-SHA1."""
     return hmac.new(
@@ -195,6 +196,7 @@ def _check_body_sha256(url: str, raw_body: str) -> bool:
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def validate_webhook_signature(
     signing_key: str,
     signature: str,
@@ -229,9 +231,7 @@ def validate_webhook_signature(
     if not signing_key:
         raise ValueError("signing_key is required")
     if not isinstance(raw_body, str):
-        raise TypeError(
-            "raw_body must be a str — did you pass parsed JSON by mistake?"
-        )
+        raise TypeError("raw_body must be a str — did you pass parsed JSON by mistake?")
     if signature is None or signature == "":
         return False
 
@@ -300,15 +300,16 @@ def validate_request(
         return False
 
     if isinstance(params_or_raw_body, str):
-        return validate_webhook_signature(signing_key, signature, url, params_or_raw_body)
+        return validate_webhook_signature(
+            signing_key, signature, url, params_or_raw_body
+        )
 
     if params_or_raw_body is None:
         params_or_raw_body = []
 
     if not isinstance(params_or_raw_body, (Mapping, list, tuple)):
         raise TypeError(
-            "params_or_raw_body must be a str (raw body) or a dict/list of "
-            "form params"
+            "params_or_raw_body must be a str (raw body) or a dict/list of form params"
         )
 
     # Pre-parsed form params → Scheme B only.

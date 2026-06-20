@@ -18,11 +18,13 @@ from .._base import BaseResource, CrudWithAddresses
 
 class FabricResource(CrudWithAddresses):
     """Standard fabric resource with CRUD + addresses."""
+
     pass
 
 
 class FabricResourcePUT(CrudWithAddresses):
     """Fabric resource that uses PUT for updates."""
+
     _update_method = "PUT"
 
 
@@ -166,7 +168,9 @@ class GenericResources(BaseResource):
         return self._http.post(self._path(resource_id, "phone_routes"), body=kwargs)
 
     def assign_domain_application(self, resource_id, **kwargs):
-        return self._http.post(self._path(resource_id, "domain_applications"), body=kwargs)
+        return self._http.post(
+            self._path(resource_id, "domain_applications"), body=kwargs
+        )
 
 
 class FabricAddresses(BaseResource):
@@ -189,7 +193,9 @@ class FabricTokens(BaseResource):
         return self._http.post(self._path("subscribers", "tokens"), body=kwargs)
 
     def refresh_subscriber_token(self, **kwargs):
-        return self._http.post(self._path("subscribers", "tokens", "refresh"), body=kwargs)
+        return self._http.post(
+            self._path("subscribers", "tokens", "refresh"), body=kwargs
+        )
 
     def create_invite_token(self, **kwargs):
         return self._http.post(self._path("subscriber", "invites"), body=kwargs)
@@ -211,12 +217,18 @@ class FabricNamespace:
         self.swml_scripts = FabricResourcePUT(http, f"{base}/swml_scripts")
         self.relay_applications = FabricResourcePUT(http, f"{base}/relay_applications")
         self.call_flows = CallFlowsResource(http, f"{base}/call_flows")
-        self.conference_rooms = ConferenceRoomsResource(http, f"{base}/conference_rooms")
-        self.freeswitch_connectors = FabricResourcePUT(http, f"{base}/freeswitch_connectors")
+        self.conference_rooms = ConferenceRoomsResource(
+            http, f"{base}/conference_rooms"
+        )
+        self.freeswitch_connectors = FabricResourcePUT(
+            http, f"{base}/freeswitch_connectors"
+        )
         self.subscribers = SubscribersResource(http, f"{base}/subscribers")
         self.sip_endpoints = FabricResourcePUT(http, f"{base}/sip_endpoints")
         self.cxml_scripts = FabricResourcePUT(http, f"{base}/cxml_scripts")
-        self.cxml_applications = CxmlApplicationsResource(http, f"{base}/cxml_applications")
+        self.cxml_applications = CxmlApplicationsResource(
+            http, f"{base}/cxml_applications"
+        )
 
         # PATCH-update resources
         # swml_webhooks and cxml_webhooks are normally auto-materialized by

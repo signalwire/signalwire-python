@@ -15,14 +15,14 @@ class AIConfigMixin:
     """
     Mixin class containing all AI configuration methods for AgentBase
     """
-    
-    def add_hint(self, hint: str) -> 'AgentBase':
+
+    def add_hint(self, hint: str) -> "AgentBase":
         """
         Add a simple string hint to help the AI agent understand certain words better
-        
+
         Args:
             hint: The hint string to add
-            
+
         Returns:
             Self for method chaining
         """
@@ -30,13 +30,13 @@ class AIConfigMixin:
             self._hints.append(hint)
         return self
 
-    def add_hints(self, hints: List[str]) -> 'AgentBase':
+    def add_hints(self, hints: List[str]) -> "AgentBase":
         """
         Add multiple string hints
-        
+
         Args:
             hints: List of hint strings
-            
+
         Returns:
             Self for method chaining
         """
@@ -46,41 +46,43 @@ class AIConfigMixin:
                     self._hints.append(hint)
         return self
 
-    def add_pattern_hint(self, 
-                         hint: str, 
-                         pattern: str, 
-                         replace: str, 
-                         ignore_case: bool = False) -> 'AgentBase':
+    def add_pattern_hint(
+        self, hint: str, pattern: str, replace: str, ignore_case: bool = False
+    ) -> "AgentBase":
         """
         Add a complex hint with pattern matching
-        
+
         Args:
             hint: The hint to match
             pattern: Regular expression pattern
             replace: Text to replace the hint with
             ignore_case: Whether to ignore case when matching
-            
+
         Returns:
             Self for method chaining
         """
         if hint and pattern and replace:
-            self._hints.append({
-                "hint": hint,
-                "pattern": pattern,
-                "replace": replace,
-                "ignore_case": ignore_case
-            })
+            self._hints.append(
+                {
+                    "hint": hint,
+                    "pattern": pattern,
+                    "replace": replace,
+                    "ignore_case": ignore_case,
+                }
+            )
         return self
 
-    def add_language(self,
-                     name: str,
-                     code: str,
-                     voice: str,
-                     speech_fillers: Optional[List[str]] = None,
-                     function_fillers: Optional[List[str]] = None,
-                     engine: Optional[str] = None,
-                     model: Optional[str] = None,
-                     params: Optional[Dict[str, Any]] = None) -> 'AgentBase':
+    def add_language(
+        self,
+        name: str,
+        code: str,
+        voice: str,
+        speech_fillers: Optional[List[str]] = None,
+        function_fillers: Optional[List[str]] = None,
+        engine: Optional[str] = None,
+        model: Optional[str] = None,
+        params: Optional[Dict[str, Any]] = None,
+    ) -> "AgentBase":
         """
         Add a language configuration to support multilingual conversations
 
@@ -115,11 +117,8 @@ class AIConfigMixin:
                                engine="elevenlabs",
                                params={"stability": 0.5, "similarity_boost": 0.75})
         """
-        language = {
-            "name": name,
-            "code": code
-        }
-        
+        language = {"name": name, "code": code}
+
         # Handle voice formatting (either explicit params or combined string)
         if engine or model:
             # Use explicit parameters if provided
@@ -133,7 +132,7 @@ class AIConfigMixin:
             try:
                 engine_voice, model_part = voice.split(":", 1)
                 engine_part, voice_part = engine_voice.split(".", 1)
-                
+
                 language["voice"] = voice_part
                 language["engine"] = engine_part
                 language["model"] = model_part
@@ -143,7 +142,7 @@ class AIConfigMixin:
         else:
             # Simple voice string
             language["voice"] = voice
-        
+
         # Add fillers if provided
         if speech_fillers and function_fillers:
             language["speech_fillers"] = speech_fillers
@@ -162,7 +161,7 @@ class AIConfigMixin:
         self._languages.append(language)
         return self
 
-    def set_language_params(self, code: str, params: Dict[str, Any]) -> 'AgentBase':
+    def set_language_params(self, code: str, params: Dict[str, Any]) -> "AgentBase":
         """
         Set (or replace) the per-language ``params`` dict on an already-added
         language. Useful when language entries are built up via add_language()
@@ -200,13 +199,13 @@ class AIConfigMixin:
                 return language.get("params")
         return None
 
-    def set_languages(self, languages: List[Dict[str, Any]]) -> 'AgentBase':
+    def set_languages(self, languages: List[Dict[str, Any]]) -> "AgentBase":
         """
         Set all language configurations at once
-        
+
         Args:
             languages: List of language configuration dictionaries
-            
+
         Returns:
             Self for method chaining
         """
@@ -214,39 +213,35 @@ class AIConfigMixin:
             self._languages = languages
         return self
 
-    def add_pronunciation(self, 
-                         replace: str, 
-                         with_text: str, 
-                         ignore_case: bool = False) -> 'AgentBase':
+    def add_pronunciation(
+        self, replace: str, with_text: str, ignore_case: bool = False
+    ) -> "AgentBase":
         """
         Add a pronunciation rule to help the AI speak certain words correctly
-        
+
         Args:
             replace: The expression to replace
             with_text: The phonetic spelling to use instead
             ignore_case: Whether to ignore case when matching
-            
+
         Returns:
             Self for method chaining
         """
         if replace and with_text:
-            rule = {
-                "replace": replace,
-                "with": with_text
-            }
+            rule = {"replace": replace, "with": with_text}
             if ignore_case:
                 rule["ignore_case"] = True
-            
+
             self._pronounce.append(rule)
         return self
 
-    def set_pronunciations(self, pronunciations: List[Dict[str, Any]]) -> 'AgentBase':
+    def set_pronunciations(self, pronunciations: List[Dict[str, Any]]) -> "AgentBase":
         """
         Set all pronunciation rules at once
-        
+
         Args:
             pronunciations: List of pronunciation rule dictionaries
-            
+
         Returns:
             Self for method chaining
         """
@@ -254,14 +249,14 @@ class AIConfigMixin:
             self._pronounce = pronunciations
         return self
 
-    def set_param(self, key: str, value: Any) -> 'AgentBase':
+    def set_param(self, key: str, value: Any) -> "AgentBase":
         """
         Set a single AI parameter
-        
+
         Args:
             key: Parameter name
             value: Parameter value
-            
+
         Returns:
             Self for method chaining
         """
@@ -269,13 +264,13 @@ class AIConfigMixin:
             self._params[key] = value
         return self
 
-    def set_params(self, params: Dict[str, Any]) -> 'AgentBase':
+    def set_params(self, params: Dict[str, Any]) -> "AgentBase":
         """
         Set multiple AI parameters at once
-        
+
         Args:
             params: Dictionary of parameter name/value pairs
-            
+
         Returns:
             Self for method chaining
         """
@@ -283,7 +278,7 @@ class AIConfigMixin:
             self._params.update(params)
         return self
 
-    def set_global_data(self, data: Dict[str, Any]) -> 'AgentBase':
+    def set_global_data(self, data: Dict[str, Any]) -> "AgentBase":
         """
         Merge data into the global data available to the AI throughout the conversation.
 
@@ -297,13 +292,13 @@ class AIConfigMixin:
             Self for method chaining
         """
         if data and isinstance(data, dict):
-            if not hasattr(self, '_global_data_lock'):
+            if not hasattr(self, "_global_data_lock"):
                 self._global_data_lock = threading.Lock()
             with self._global_data_lock:
                 self._global_data.update(data)
         return self
 
-    def update_global_data(self, data: Dict[str, Any]) -> 'AgentBase':
+    def update_global_data(self, data: Dict[str, Any]) -> "AgentBase":
         """
         Update the global data with new values
 
@@ -314,43 +309,49 @@ class AIConfigMixin:
             Self for method chaining
         """
         if data and isinstance(data, dict):
-            if not hasattr(self, '_global_data_lock'):
+            if not hasattr(self, "_global_data_lock"):
                 self._global_data_lock = threading.Lock()
             with self._global_data_lock:
                 self._global_data.update(data)
         return self
 
-    def set_native_functions(self, function_names: List[str]) -> 'AgentBase':
+    def set_native_functions(self, function_names: List[str]) -> "AgentBase":
         """
         Set the list of native functions to enable
-        
+
         Args:
             function_names: List of native function names
-            
+
         Returns:
             Self for method chaining
         """
         if function_names and isinstance(function_names, list):
-            self.native_functions = [name for name in function_names if isinstance(name, str)]
+            self.native_functions = [
+                name for name in function_names if isinstance(name, str)
+            ]
         return self
 
     #: The complete set of internal SWAIG function names that accept fillers,
     #: matching the SWAIGInternalFiller schema definition. Any name outside
     #: this set is rejected by the runtime — set_internal_fillers /
     #: add_internal_filler will warn if you pass an unknown name.
-    SUPPORTED_INTERNAL_FILLER_NAMES = frozenset({
-        "hangup",                  # AI is hanging up the call
-        "check_time",              # AI is checking the time
-        "wait_for_user",           # AI is waiting for user input
-        "wait_seconds",            # deliberate pause / wait period
-        "adjust_response_latency", # AI is adjusting response timing
-        "next_step",               # transitioning between steps in prompt.contexts
-        "change_context",          # switching between contexts in prompt.contexts
-        "get_visual_input",        # processing visual input (enable_vision)
-        "get_ideal_strategy",      # thinking (enable_thinking)
-    })
+    SUPPORTED_INTERNAL_FILLER_NAMES = frozenset(
+        {
+            "hangup",  # AI is hanging up the call
+            "check_time",  # AI is checking the time
+            "wait_for_user",  # AI is waiting for user input
+            "wait_seconds",  # deliberate pause / wait period
+            "adjust_response_latency",  # AI is adjusting response timing
+            "next_step",  # transitioning between steps in prompt.contexts
+            "change_context",  # switching between contexts in prompt.contexts
+            "get_visual_input",  # processing visual input (enable_vision)
+            "get_ideal_strategy",  # thinking (enable_thinking)
+        }
+    )
 
-    def set_internal_fillers(self, internal_fillers: Dict[str, Dict[str, List[str]]]) -> 'AgentBase':
+    def set_internal_fillers(
+        self, internal_fillers: Dict[str, Dict[str, List[str]]]
+    ) -> "AgentBase":
         """
         Set internal fillers for native SWAIG functions.
 
@@ -403,9 +404,12 @@ class AIConfigMixin:
             })
         """
         if internal_fillers and isinstance(internal_fillers, dict):
-            unknown = sorted(set(internal_fillers.keys()) - self.SUPPORTED_INTERNAL_FILLER_NAMES)
+            unknown = sorted(
+                set(internal_fillers.keys()) - self.SUPPORTED_INTERNAL_FILLER_NAMES
+            )
             if unknown:
                 from signalwire.core.logging_config import get_logger
+
                 get_logger("ai_config_mixin").warning(
                     "unknown_internal_filler_names",
                     unknown=unknown,
@@ -417,12 +421,14 @@ class AIConfigMixin:
                         "names listed in 'supported'."
                     ),
                 )
-            if not hasattr(self, '_internal_fillers'):
+            if not hasattr(self, "_internal_fillers"):
                 self._internal_fillers = {}
             self._internal_fillers.update(internal_fillers)
         return self
 
-    def add_internal_filler(self, function_name: str, language_code: str, fillers: List[str]) -> 'AgentBase':
+    def add_internal_filler(
+        self, function_name: str, language_code: str, fillers: List[str]
+    ) -> "AgentBase":
         """
         Add internal fillers for a single internal function and language.
 
@@ -450,6 +456,7 @@ class AIConfigMixin:
         if function_name and language_code and fillers and isinstance(fillers, list):
             if function_name not in self.SUPPORTED_INTERNAL_FILLER_NAMES:
                 from signalwire.core.logging_config import get_logger
+
                 get_logger("ai_config_mixin").warning(
                     "unknown_internal_filler_name",
                     function_name=function_name,
@@ -460,7 +467,7 @@ class AIConfigMixin:
                         "stored but the runtime will not play these fillers."
                     ),
                 )
-            if not hasattr(self, '_internal_fillers'):
+            if not hasattr(self, "_internal_fillers"):
                 self._internal_fillers = {}
 
             if function_name not in self._internal_fillers:
@@ -469,7 +476,7 @@ class AIConfigMixin:
             self._internal_fillers[function_name][language_code] = fillers
         return self
 
-    def enable_debug_events(self, level: int = 1) -> 'AgentBase':
+    def enable_debug_events(self, level: int = 1) -> "AgentBase":
         """
         Enable debug event webhook for this agent.
 
@@ -499,36 +506,35 @@ class AIConfigMixin:
         self._debug_events_level = level
         return self
 
-    def add_function_include(self, url: str, functions: List[str], meta_data: Optional[Dict[str, Any]] = None) -> 'AgentBase':
+    def add_function_include(
+        self, url: str, functions: List[str], meta_data: Optional[Dict[str, Any]] = None
+    ) -> "AgentBase":
         """
         Add a remote function include to the SWAIG configuration
-        
+
         Args:
             url: URL to fetch remote functions from
             functions: List of function names to include
             meta_data: Optional metadata to include with the function include
-            
+
         Returns:
             Self for method chaining
         """
         if url and functions and isinstance(functions, list):
-            include = {
-                "url": url,
-                "functions": functions
-            }
+            include = {"url": url, "functions": functions}
             if meta_data and isinstance(meta_data, dict):
                 include["meta_data"] = meta_data
-            
+
             self._function_includes.append(include)
         return self
 
-    def set_function_includes(self, includes: List[Dict[str, Any]]) -> 'AgentBase':
+    def set_function_includes(self, includes: List[Dict[str, Any]]) -> "AgentBase":
         """
         Set the complete list of function includes
-        
+
         Args:
             includes: List of include objects, each with url and functions properties
-            
+
         Returns:
             Self for method chaining
         """
@@ -536,15 +542,24 @@ class AIConfigMixin:
             # Validate each include has required properties
             valid_includes = []
             for include in includes:
-                if isinstance(include, dict) and "url" in include and "functions" in include:
+                if (
+                    isinstance(include, dict)
+                    and "url" in include
+                    and "functions" in include
+                ):
                     if isinstance(include["functions"], list):
                         valid_includes.append(include)
-            
+
             self._function_includes = valid_includes
         return self
-    
-    def add_mcp_server(self, url: str, headers: Optional[Dict[str, str]] = None,
-                       resources: bool = False, resource_vars: Optional[Dict[str, str]] = None) -> 'AgentBase':
+
+    def add_mcp_server(
+        self,
+        url: str,
+        headers: Optional[Dict[str, str]] = None,
+        resources: bool = False,
+        resource_vars: Optional[Dict[str, str]] = None,
+    ) -> "AgentBase":
         """
         Add an external MCP server for tool discovery and invocation.
 
@@ -571,7 +586,7 @@ class AIConfigMixin:
         self._mcp_servers.append(server)
         return self
 
-    def enable_mcp_server(self) -> 'AgentBase':
+    def enable_mcp_server(self) -> "AgentBase":
         """
         Expose this agent's @tool functions as an MCP server endpoint.
 
@@ -586,13 +601,13 @@ class AIConfigMixin:
         self._mcp_server_enabled = True
         return self
 
-    def set_prompt_llm_params(self, **params) -> 'AgentBase':
+    def set_prompt_llm_params(self, **params) -> "AgentBase":
         """
         Set LLM parameters for the main prompt.
-        
+
         Accepts any parameters which will be passed through to the SignalWire server.
         The server will validate and apply parameters based on the target model's capabilities.
-        
+
         Common parameters include:
             model: The AI model to use (gpt-4o-mini, gpt-4.1-mini, gpt-4.1-nano, nova-micro, nova-lite, qwen3-235b-A22b-instruct)
             temperature: Randomness setting. Lower values make output more deterministic.
@@ -600,13 +615,13 @@ class AIConfigMixin:
             barge_confidence: ASR confidence to interrupt. Higher values make it harder to interrupt.
             presence_penalty: Topic diversity. Positive values encourage new topics.
             frequency_penalty: Repetition control. Positive values reduce repetition.
-        
+
         Note: Parameters are model-specific and will be validated by the server.
         Invalid parameters for the selected model will be handled/ignored by the server.
-        
+
         Returns:
             Self for method chaining
-            
+
         Example:
             agent.set_prompt_llm_params(
                 model="nova-micro",  # Using Amazon's nova-micro model
@@ -618,30 +633,30 @@ class AIConfigMixin:
         # Accept any parameters without validation
         if params:
             self._prompt_llm_params.update(params)
-        
+
         return self
-    
-    def set_post_prompt_llm_params(self, **params) -> 'AgentBase':
+
+    def set_post_prompt_llm_params(self, **params) -> "AgentBase":
         """
         Set LLM parameters for the post-prompt.
-        
+
         Accepts any parameters which will be passed through to the SignalWire server.
         The server will validate and apply parameters based on the target model's capabilities.
-        
+
         Common parameters include:
             model: The AI model to use (gpt-4o-mini, gpt-4.1-mini, gpt-4.1-nano, nova-micro, nova-lite, qwen3-235b-A22b-instruct)
             temperature: Randomness setting. Lower values make output more deterministic.
             top_p: Alternative to temperature. Controls nucleus sampling.
             presence_penalty: Topic diversity. Positive values encourage new topics.
             frequency_penalty: Repetition control. Positive values reduce repetition.
-        
+
         Note: Parameters are model-specific and will be validated by the server.
         Invalid parameters for the selected model will be handled/ignored by the server.
         barge_confidence is not applicable to post-prompt.
-        
+
         Returns:
             Self for method chaining
-            
+
         Example:
             agent.set_post_prompt_llm_params(
                 model="gpt-4o-mini",
@@ -652,5 +667,5 @@ class AIConfigMixin:
         # Accept any parameters without validation
         if params:
             self._post_prompt_llm_params.update(params)
-        
+
         return self

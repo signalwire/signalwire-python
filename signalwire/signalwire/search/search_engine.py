@@ -16,6 +16,7 @@ from signalwire.core.logging_config import get_logger
 try:
     import numpy as np
     from sklearn.metrics.pairwise import cosine_similarity
+
     NDArray = np.ndarray
 except ImportError:
     np = None
@@ -24,15 +25,21 @@ except ImportError:
 
 logger = get_logger(__name__)
 
+
 class SearchEngine:
     """Hybrid search engine for vector and keyword search"""
-    
-    def __init__(self, backend: str = 'sqlite', index_path: Optional[str] = None, 
-                 connection_string: Optional[str] = None, collection_name: Optional[str] = None,
-                 model=None):
+
+    def __init__(
+        self,
+        backend: str = "sqlite",
+        index_path: Optional[str] = None,
+        connection_string: Optional[str] = None,
+        collection_name: Optional[str] = None,
+        model=None,
+    ):
         """
         Initialize search engine
-        
+
         Args:
             backend: Storage backend ('sqlite' or 'pgvector')
             index_path: Path to .swsearch file (for sqlite backend)
@@ -42,24 +49,29 @@ class SearchEngine:
         """
         self.backend = backend
         self.model = model
-        
-        if backend == 'sqlite':
+
+        if backend == "sqlite":
             if not index_path:
                 raise ValueError("index_path is required for sqlite backend")
             self.index_path = index_path
             self.config = self._load_config()
-            self.embedding_dim = int(self.config.get('embedding_dimensions', 768))
+            self.embedding_dim = int(self.config.get("embedding_dimensions", 768))
             self._backend = None  # SQLite uses direct connection
-        elif backend == 'pgvector':
+        elif backend == "pgvector":
             if not connection_string or not collection_name:
-                raise ValueError("connection_string and collection_name are required for pgvector backend")
+                raise ValueError(
+                    "connection_string and collection_name are required for pgvector backend"
+                )
             from .pgvector_backend import PgVectorSearchBackend
+
             self._backend = PgVectorSearchBackend(connection_string, collection_name)
             self.config = self._backend.config
-            self.embedding_dim = int(self.config.get('embedding_dimensions', 768))
+            self.embedding_dim = int(self.config.get("embedding_dimensions", 768))
         else:
-            raise ValueError(f"Invalid backend '{backend}'. Must be 'sqlite' or 'pgvector'")
-    
+            raise ValueError(
+                f"Invalid backend '{backend}'. Must be 'sqlite' or 'pgvector'"
+            )
+
     def _load_config(self) -> Dict[str, str]:
         """Load index configuration"""
         conn = None
@@ -75,12 +87,17 @@ class SearchEngine:
         finally:
             if conn:
                 conn.close()
-    
-    def search(self, query_vector: List[float], enhanced_text: str,
-              count: int = 3, similarity_threshold: float = 0.0,
-              tags: Optional[List[str]] = None,
-              keyword_weight: Optional[float] = None,
-              original_query: Optional[str] = None) -> List[Dict[str, Any]]:
+
+    def search(
+        self,
+        query_vector: List[float],
+        enhanced_text: str,
+        count: int = 3,
+        similarity_threshold: float = 0.0,
+        tags: Optional[List[str]] = None,
+        keyword_weight: Optional[float] = None,
+        original_query: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         """
         Unified hybrid search: backends fetch candidates, SearchEngine post-processes.
 
@@ -112,8 +129,10 @@ class SearchEngine:
         # unified pipeline entirely and return keyword-only results directly.
         # The fallback results don't have per-source signal structure, so the
         # post-processing pipeline would choke on them.
-        if self.backend == 'sqlite' and (not np or not cosine_similarity):
-            logger.warning("NumPy or scikit-learn not available. Using keyword search only.")
+        if self.backend == "sqlite" and (not np or not cosine_similarity):
+            logger.warning(
+                "NumPy or scikit-learn not available. Using keyword search only."
+            )
             return self._keyword_search_only(enhanced_text, count, tags, original_query)
 
         # Pool size: always over-fetch so diversity has room to work
@@ -137,10 +156,15 @@ class SearchEngine:
             original_query=original_query,
         )
 
-    def _fetch_candidates(self, query_vector: List[float], enhanced_text: str,
-                         count: int, similarity_threshold: float = 0.0,
-                         tags: Optional[List[str]] = None,
-                         original_query: Optional[str] = None) -> List[Dict[str, Any]]:
+    def _fetch_candidates(
+        self,
+        query_vector: List[float],
+        enhanced_text: str,
+        count: int,
+        similarity_threshold: float = 0.0,
+        tags: Optional[List[str]] = None,
+        original_query: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         """Dispatch candidate fetching to the active backend.
 
         Returns a list of raw candidates (not yet scored/deduped/diversified).
@@ -149,7 +173,7 @@ class SearchEngine:
         and vector_distance.
         """
         # pgvector backend: delegate to its own fetch
-        if self.backend == 'pgvector':
+        if self.backend == "pgvector":
             return self._backend.fetch_candidates(
                 query_vector=query_vector,
                 enhanced_text=enhanced_text,
@@ -161,7 +185,9 @@ class SearchEngine:
 
         # sqlite path: available only when numpy + sklearn are installed
         if not np or not cosine_similarity:
-            logger.warning("NumPy or scikit-learn not available. Using keyword search only.")
+            logger.warning(
+                "NumPy or scikit-learn not available. Using keyword search only."
+            )
             # Keyword-only fallback returns FINAL results, not raw candidates.
             # Caller detects this by inspecting the shape.
             return self._keyword_search_only(enhanced_text, count, tags, original_query)
@@ -177,7 +203,9 @@ class SearchEngine:
         # Apply similarity threshold on raw vector scores before merging
         # (keeps threshold intuitive: "vector similarity >= N")
         if similarity_threshold > 0:
-            vector_results = [r for r in vector_results if r.get('score', 0) >= similarity_threshold]
+            vector_results = [
+                r for r in vector_results if r.get("score", 0) >= similarity_threshold
+            ]
 
         filename_results = self._filename_search(original_query or enhanced_text, count)
         metadata_results = self._metadata_search(original_query or enhanced_text, count)
@@ -193,35 +221,39 @@ class SearchEngine:
 
         # Vector first (primary signal)
         for r in vector_results:
-            cid = r['id']
+            cid = r["id"]
             candidates[cid] = r
-            candidates[cid]['vector_score'] = r['score']
-            candidates[cid]['vector_distance'] = 1 - r['score']
-            candidates[cid]['sources'] = {'vector': True}
-            candidates[cid]['source_scores'] = {'vector': r['score']}
+            candidates[cid]["vector_score"] = r["score"]
+            candidates[cid]["vector_distance"] = 1 - r["score"]
+            candidates[cid]["sources"] = {"vector": True}
+            candidates[cid]["source_scores"] = {"vector": r["score"]}
 
         # Other signals: fill in or add as backfill
         for result_set, source_type in [
-            (filename_results, 'filename'),
-            (metadata_results, 'metadata'),
-            (keyword_results, 'keyword'),
+            (filename_results, "filename"),
+            (metadata_results, "metadata"),
+            (keyword_results, "keyword"),
         ]:
             for r in result_set:
-                cid = r['id']
+                cid = r["id"]
                 if cid not in candidates:
                     candidates[cid] = r
-                    candidates[cid]['sources'] = {source_type: True}
-                    candidates[cid]['source_scores'] = {source_type: r['score']}
+                    candidates[cid]["sources"] = {source_type: True}
+                    candidates[cid]["source_scores"] = {source_type: r["score"]}
                 else:
-                    candidates[cid]['sources'][source_type] = True
-                    candidates[cid]['source_scores'][source_type] = r['score']
+                    candidates[cid]["sources"][source_type] = True
+                    candidates[cid]["source_scores"][source_type] = r["score"]
 
         return list(candidates.values())
 
-    def _process_candidates(self, candidates: List[Dict[str, Any]], count: int,
-                           similarity_threshold: float = 0.0,
-                           tags: Optional[List[str]] = None,
-                           original_query: Optional[str] = None) -> List[Dict[str, Any]]:
+    def _process_candidates(
+        self,
+        candidates: List[Dict[str, Any]],
+        count: int,
+        similarity_threshold: float = 0.0,
+        tags: Optional[List[str]] = None,
+        original_query: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         """Backend-agnostic post-processing pipeline.
 
         Steps (in order):
@@ -237,24 +269,32 @@ class SearchEngine:
         # 1. score
         final_results = []
         for candidate in candidates:
-            candidate['final_score'] = self._calculate_combined_score(candidate, similarity_threshold)
+            candidate["final_score"] = self._calculate_combined_score(
+                candidate, similarity_threshold
+            )
             final_results.append(candidate)
-        final_results.sort(key=lambda x: x['final_score'], reverse=True)
+        final_results.sort(key=lambda x: x["final_score"], reverse=True)
 
         # 2. tag filter
         if tags:
-            final_results = [r for r in final_results
-                           if any(tag in r['metadata'].get('tags', []) for tag in tags)]
+            final_results = [
+                r
+                for r in final_results
+                if any(tag in r["metadata"].get("tags", []) for tag in tags)
+            ]
 
         # 3. threshold on final score (defense in depth)
         if similarity_threshold > 0:
-            final_results = [r for r in final_results
-                           if r.get('final_score', 0) >= similarity_threshold]
+            final_results = [
+                r
+                for r in final_results
+                if r.get("final_score", 0) >= similarity_threshold
+            ]
 
         # 4. exact-match boost
         if original_query:
             final_results = self._boost_exact_matches(final_results, original_query)
-            final_results.sort(key=lambda x: x['final_score'], reverse=True)
+            final_results.sort(key=lambda x: x["final_score"], reverse=True)
 
         # 5. content dedup (sorted best-first, so the kept copy is the winner)
         final_results = self._dedupe_by_content(final_results)
@@ -271,21 +311,28 @@ class SearchEngine:
         # combined, boosted, penalized final value — which misorders output.
         # pgvector's legacy path has done this for a long time; unify here.
         for r in final_results:
-            r['score'] = r.get('final_score', r.get('score', 0.0))
+            r["score"] = r.get("final_score", r.get("score", 0.0))
 
         return final_results[:count]
-    
-    def _keyword_search_only(self, enhanced_text: str, count: int, 
-                           tags: Optional[List[str]] = None, original_query: Optional[str] = None) -> List[Dict[str, Any]]:
+
+    def _keyword_search_only(
+        self,
+        enhanced_text: str,
+        count: int,
+        tags: Optional[List[str]] = None,
+        original_query: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         """Fallback to keyword search only when vector search is unavailable"""
         keyword_results = self._keyword_search(enhanced_text, count, original_query)
-        
+
         if tags:
             keyword_results = self._filter_by_tags(keyword_results, tags)
-        
+
         return keyword_results[:count]
-    
-    def _vector_search(self, query_vector: Union[NDArray, Any], count: int) -> List[Dict[str, Any]]:
+
+    def _vector_search(
+        self, query_vector: Union[NDArray, Any], count: int
+    ) -> List[Dict[str, Any]]:
         """Perform vector similarity search"""
         if not np or not cosine_similarity:
             return []
@@ -294,48 +341,64 @@ class SearchEngine:
         try:
             conn = sqlite3.connect(self.index_path)
             cursor = conn.cursor()
-            
+
             # Get all embeddings (for small datasets, this is fine)
             # For large datasets, we'd use FAISS or similar
-            cursor.execute('''
+            cursor.execute("""
                 SELECT id, content, embedding, filename, section, tags, metadata
                 FROM chunks
                 WHERE embedding IS NOT NULL AND embedding != ''
                 LIMIT 10000
-            ''')
-            
+            """)
+
             results = []
             for row in cursor.fetchall():
-                chunk_id, content, embedding_blob, filename, section, tags_json, metadata_json = row
-                
+                (
+                    chunk_id,
+                    content,
+                    embedding_blob,
+                    filename,
+                    section,
+                    tags_json,
+                    metadata_json,
+                ) = row
+
                 if not embedding_blob:
                     continue
-                
+
                 try:
                     # Convert embedding back to numpy array
-                    embedding = np.frombuffer(embedding_blob, dtype=np.float32).reshape(1, -1)
-                    
+                    embedding = np.frombuffer(embedding_blob, dtype=np.float32).reshape(
+                        1, -1
+                    )
+
                     # Calculate similarity
                     similarity = cosine_similarity(query_vector, embedding)[0][0]
-                    
-                    results.append({
-                        'id': chunk_id,
-                        'content': content,
-                        'score': float(similarity),
-                        'metadata': {
-                            'filename': filename,
-                            'section': section,
-                            'tags': json.loads(tags_json) if tags_json else [],
-                            'metadata': json.loads(metadata_json) if metadata_json else {}
-                        },
-                        'search_type': 'vector'
-                    })
+
+                    results.append(
+                        {
+                            "id": chunk_id,
+                            "content": content,
+                            "score": float(similarity),
+                            "metadata": {
+                                "filename": filename,
+                                "section": section,
+                                "tags": json.loads(tags_json) if tags_json else [],
+                                "metadata": json.loads(metadata_json)
+                                if metadata_json
+                                else {},
+                            },
+                            "search_type": "vector",
+                        }
+                    )
                 except Exception as e:
-                    logger.warning(f"Error processing embedding for chunk {chunk_id}: {e}")
+                    logger.warning(
+                        f"Error processing embedding for chunk {chunk_id}: {e}"
+                    )
                     continue
 
             # Sort by similarity score
-            results.sort(key=lambda x: x['score'], reverse=True)
+            results.sort(key=lambda x: x["score"], reverse=True)
             return results[:count]
 
         except Exception as e:
@@ -345,18 +408,21 @@ class SearchEngine:
             if conn:
                 conn.close()
 
-    def _keyword_search(self, enhanced_text: str, count: int, original_query: Optional[str] = None) -> List[Dict[str, Any]]:
+    def _keyword_search(
+        self, enhanced_text: str, count: int, original_query: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
         """Perform full-text search"""
         conn = None
         try:
             conn = sqlite3.connect(self.index_path)
             cursor = conn.cursor()
-            
+
             # Escape FTS5 special characters
             escaped_text = self._escape_fts_query(enhanced_text)
-            
+
             # FTS5 search
-            cursor.execute('''
+            cursor.execute(
+                """
                 SELECT c.id, c.content, c.filename, c.section, c.tags, c.metadata,
                        chunks_fts.rank
                 FROM chunks_fts
@@ -364,32 +430,42 @@ class SearchEngine:
                 WHERE chunks_fts MATCH ?
                 ORDER BY chunks_fts.rank
                 LIMIT ?
-            ''', (escaped_text, count))
-            
+            """,
+                (escaped_text, count),
+            )
+
             results = []
             for row in cursor.fetchall():
-                chunk_id, content, filename, section, tags_json, metadata_json, rank = row
-                
+                chunk_id, content, filename, section, tags_json, metadata_json, rank = (
+                    row
+                )
+
                 # Convert FTS rank to similarity score (higher rank = lower score)
                 # FTS5 rank is negative, so we convert it to a positive similarity score
                 score = 1.0 / (1.0 + abs(rank))
-                
-                results.append({
-                    'id': chunk_id,
-                    'content': content,
-                    'score': float(score),
-                    'metadata': {
-                        'filename': filename,
-                        'section': section,
-                        'tags': json.loads(tags_json) if tags_json else [],
-                        'metadata': json.loads(metadata_json) if metadata_json else {}
-                    },
-                    'search_type': 'keyword'
-                })
-            
+
+                results.append(
+                    {
+                        "id": chunk_id,
+                        "content": content,
+                        "score": float(score),
+                        "metadata": {
+                            "filename": filename,
+                            "section": section,
+                            "tags": json.loads(tags_json) if tags_json else [],
+                            "metadata": json.loads(metadata_json)
+                            if metadata_json
+                            else {},
+                        },
+                        "search_type": "keyword",
+                    }
+                )
+
             # If FTS returns no results, try fallback LIKE search
             if not results:
-                logger.debug(f"FTS returned no results for '{enhanced_text}', trying fallback search")
+                logger.debug(
+                    f"FTS returned no results for '{enhanced_text}', trying fallback search"
+                )
                 return self._fallback_search(enhanced_text, count)
 
             return results
@@ -401,31 +477,33 @@ class SearchEngine:
         finally:
             if conn:
                 conn.close()
-    
+
     def _escape_fts_query(self, query: str) -> str:
         """Escape special characters for FTS5 queries"""
         # FTS5 uses double quotes to escape terms with special characters
         # Remove characters that can't be quoted, then wrap each term in double quotes
         # First remove any existing double quotes from the query
-        cleaned = query.replace('"', '')
+        cleaned = query.replace('"', "")
         # Split into terms and quote each one to neutralize special chars
         terms = cleaned.split()
         escaped_terms = [f'"{term}"' for term in terms if term]
-        return ' '.join(escaped_terms)
-    
+        return " ".join(escaped_terms)
+
     def _fallback_search(self, enhanced_text: str, count: int) -> List[Dict[str, Any]]:
         """Fallback search using LIKE when FTS fails"""
         conn = None
         try:
             conn = sqlite3.connect(self.index_path)
             cursor = conn.cursor()
-            
+
             # Simple LIKE search with word boundaries
             search_terms = enhanced_text.lower().split()
             like_conditions = []
             params = []
-            
-            for term in search_terms[:5]:  # Limit to 5 terms to avoid too complex queries
+
+            for term in search_terms[
+                :5
+            ]:  # Limit to 5 terms to avoid too complex queries
                 # Search for term with word boundaries (space or punctuation)
                 like_conditions.append("""
                     (LOWER(processed_content) LIKE ? 
@@ -433,16 +511,18 @@ class SearchEngine:
                      OR LOWER(processed_content) LIKE ?
                      OR LOWER(processed_content) LIKE ?)
                 """)
-                params.extend([
-                    f"% {term} %",  # space on both sides
-                    f"{term} %",    # at beginning
-                    f"% {term}",    # at end
-                    f"{term}"       # exact match
-                ])
-            
+                params.extend(
+                    [
+                        f"% {term} %",  # space on both sides
+                        f"{term} %",  # at beginning
+                        f"% {term}",  # at end
+                        f"{term}",  # exact match
+                    ]
+                )
+
             if not like_conditions:
                 return []
-            
+
             # Also search in original content
             content_conditions = []
             for term in search_terms[:5]:
@@ -452,29 +532,30 @@ class SearchEngine:
                      OR LOWER(content) LIKE ?
                      OR LOWER(content) LIKE ?)
                 """)
-                params.extend([
-                    f"% {term} %",  # with spaces
-                    f"{term} %",    # at beginning
-                    f"% {term}",    # at end
-                    f"{term}"       # exact match
-                ])
-            
-            query = f'''
+                params.extend(
+                    [
+                        f"% {term} %",  # with spaces
+                        f"{term} %",  # at beginning
+                        f"% {term}",  # at end
+                        f"{term}",  # exact match
+                    ]
+                )
+
+            query = f"""
                 SELECT id, content, filename, section, tags, metadata
                 FROM chunks
                 WHERE ({" OR ".join(like_conditions)}) 
                    OR ({" OR ".join(content_conditions)})
                 LIMIT ?
-            '''
+            """
             params.append(count)
-            
-            
+
             cursor.execute(query, params)
-            
+
             results = []
             for row in cursor.fetchall():
                 chunk_id, content, filename, section, tags_json, metadata_json = row
-                
+
                 # Simple scoring based on term matches with word boundaries
                 content_lower = content.lower()
                 # Check for whole word matches
@@ -482,28 +563,34 @@ class SearchEngine:
                 for term in search_terms:
                     term_lower = term.lower()
                     # Check word boundaries
-                    if (f" {term_lower} " in f" {content_lower} " or 
-                        content_lower.startswith(f"{term_lower} ") or 
-                        content_lower.endswith(f" {term_lower}") or
-                        content_lower == term_lower):
+                    if (
+                        f" {term_lower} " in f" {content_lower} "
+                        or content_lower.startswith(f"{term_lower} ")
+                        or content_lower.endswith(f" {term_lower}")
+                        or content_lower == term_lower
+                    ):
                         word_matches += 1
                 score = word_matches / len(search_terms) if search_terms else 0.0
-                
-                results.append({
-                    'id': chunk_id,
-                    'content': content,
-                    'score': float(score),
-                    'metadata': {
-                        'filename': filename,
-                        'section': section,
-                        'tags': json.loads(tags_json) if tags_json else [],
-                        'metadata': json.loads(metadata_json) if metadata_json else {}
-                    },
-                    'search_type': 'fallback'
-                })
-            
+
+                results.append(
+                    {
+                        "id": chunk_id,
+                        "content": content,
+                        "score": float(score),
+                        "metadata": {
+                            "filename": filename,
+                            "section": section,
+                            "tags": json.loads(tags_json) if tags_json else [],
+                            "metadata": json.loads(metadata_json)
+                            if metadata_json
+                            else {},
+                        },
+                        "search_type": "fallback",
+                    }
+                )
+
             # Sort by score
-            results.sort(key=lambda x: x['score'], reverse=True)
+            results.sort(key=lambda x: x["score"], reverse=True)
 
             return results
 
@@ -513,98 +600,119 @@ class SearchEngine:
         finally:
             if conn:
                 conn.close()
-    
-    def _merge_results(self, vector_results: List[Dict], keyword_results: List[Dict],
-                      vector_weight: Optional[float] = None, 
-                      keyword_weight: Optional[float] = None) -> List[Dict[str, Any]]:
+
+    def _merge_results(
+        self,
+        vector_results: List[Dict],
+        keyword_results: List[Dict],
+        vector_weight: Optional[float] = None,
+        keyword_weight: Optional[float] = None,
+    ) -> List[Dict[str, Any]]:
         """Merge and rank vector and keyword search results"""
         # Use provided weights or defaults
         if vector_weight is None:
             vector_weight = 0.7
         if keyword_weight is None:
             keyword_weight = 0.3
-        
+
         # Create a combined list with weighted scores
         combined = {}
-        
+
         # Add vector results with weight
         for result in vector_results:
-            chunk_id = result['id']
+            chunk_id = result["id"]
             combined[chunk_id] = result.copy()
-            combined[chunk_id]['vector_score'] = result['score']
-            combined[chunk_id]['keyword_score'] = 0.0
-        
+            combined[chunk_id]["vector_score"] = result["score"]
+            combined[chunk_id]["keyword_score"] = 0.0
+
         # Add keyword results with weight
         for result in keyword_results:
-            chunk_id = result['id']
+            chunk_id = result["id"]
             if chunk_id in combined:
-                combined[chunk_id]['keyword_score'] = result['score']
+                combined[chunk_id]["keyword_score"] = result["score"]
             else:
                 combined[chunk_id] = result.copy()
-                combined[chunk_id]['vector_score'] = 0.0
-                combined[chunk_id]['keyword_score'] = result['score']
-        
+                combined[chunk_id]["vector_score"] = 0.0
+                combined[chunk_id]["keyword_score"] = result["score"]
+
         # Calculate combined score (weighted average)
-        
+
         for chunk_id, result in combined.items():
-            vector_score = result.get('vector_score', 0.0)
-            keyword_score = result.get('keyword_score', 0.0)
-            result['score'] = (vector_score * vector_weight + keyword_score * keyword_weight)
-            
+            vector_score = result.get("vector_score", 0.0)
+            keyword_score = result.get("keyword_score", 0.0)
+            result["score"] = (
+                vector_score * vector_weight + keyword_score * keyword_weight
+            )
+
             # Add debug info
-            result['metadata']['search_scores'] = {
-                'vector': vector_score,
-                'keyword': keyword_score,
-                'combined': result['score']
+            result["metadata"]["search_scores"] = {
+                "vector": vector_score,
+                "keyword": keyword_score,
+                "combined": result["score"],
             }
-        
+
         # Sort by combined score
-        sorted_results = sorted(combined.values(), key=lambda x: x['score'], reverse=True)
+        sorted_results = sorted(
+            combined.values(), key=lambda x: x["score"], reverse=True
+        )
         return sorted_results
-    
-    def _filter_by_tags(self, results: List[Dict], required_tags: List[str]) -> List[Dict[str, Any]]:
+
+    def _filter_by_tags(
+        self, results: List[Dict], required_tags: List[str]
+    ) -> List[Dict[str, Any]]:
         """Filter results by required tags"""
         filtered = []
         for result in results:
-            result_tags = result['metadata'].get('tags', [])
+            result_tags = result["metadata"].get("tags", [])
             if any(tag in result_tags for tag in required_tags):
                 filtered.append(result)
         return filtered
-    
-    def _boost_exact_matches(self, results: List[Dict[str, Any]], original_query: str) -> List[Dict[str, Any]]:
+
+    def _boost_exact_matches(
+        self, results: List[Dict[str, Any]], original_query: str
+    ) -> List[Dict[str, Any]]:
         """Boost scores for results that contain exact matches of the original query"""
         if not original_query:
             return results
-            
+
         # Extract key phrases to look for
         query_lower = original_query.lower()
-        
+
         for result in results:
-            content_lower = result['content'].lower()
-            filename_lower = result['metadata'].get('filename', '').lower()
-            
+            content_lower = result["content"].lower()
+            filename_lower = result["metadata"].get("filename", "").lower()
+
             # Boost for exact phrase match in content
             if query_lower in content_lower:
-                result['score'] *= 2.0  # Double score for exact match
-                result['final_score'] = result.get('final_score', result['score']) * 2.0
+                result["score"] *= 2.0  # Double score for exact match
+                result["final_score"] = result.get("final_score", result["score"]) * 2.0
 
             # Boost for matches in filenames that suggest relevance
-            if any(term in filename_lower for term in ['example', 'sample', 'demo', 'tutorial', 'guide']):
-                if 'example' in query_lower or 'sample' in query_lower or 'code' in query_lower:
-                    result['score'] *= 1.5
-                    result['final_score'] = result.get('final_score', result['score']) * 1.5
+            if any(
+                term in filename_lower
+                for term in ["example", "sample", "demo", "tutorial", "guide"]
+            ):
+                if (
+                    "example" in query_lower
+                    or "sample" in query_lower
+                    or "code" in query_lower
+                ):
+                    result["score"] *= 1.5
+                    result["final_score"] = (
+                        result.get("final_score", result["score"]) * 1.5
+                    )
 
             # Boost for "getting started" type queries
-            if 'getting started' in query_lower and 'start' in content_lower:
-                result['score'] *= 1.5
-                result['final_score'] = result.get('final_score', result['score']) * 1.5
-                
+            if "getting started" in query_lower and "start" in content_lower:
+                result["score"] *= 1.5
+                result["final_score"] = result.get("final_score", result["score"]) * 1.5
+
         return results
-    
+
     @staticmethod
     def _escape_like(value: str) -> str:
         """Escape LIKE wildcard characters in user input"""
-        return value.replace('\\', '\\\\').replace('%', '\\%').replace('_', '\\_')
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
     def _filename_search(self, query: str, count: int) -> List[Dict[str, Any]]:
         """Search for query in filenames with term coverage scoring"""
@@ -618,43 +726,54 @@ class SearchEngine:
 
             # First try exact phrase match (escape LIKE wildcards in user input)
             escaped_query = self._escape_like(query_lower)
-            cursor.execute('''
+            cursor.execute(
+                """
                 SELECT DISTINCT id, content, filename, section, tags, metadata
                 FROM chunks
                 WHERE LOWER(filename) LIKE ? ESCAPE '\\'
                 LIMIT ?
-            ''', (f'%{escaped_query}%', count))
-            
+            """,
+                (f"%{escaped_query}%", count),
+            )
+
             results = []
             seen_ids = set()
-            
+
             # Process exact matches
             for row in cursor.fetchall():
                 chunk_id, content, filename, section, tags_json, metadata_json = row
                 seen_ids.add(chunk_id)
-                
+
                 # High score for exact phrase match
                 filename_lower = filename.lower()
-                basename = filename_lower.split('/')[-1] if '/' in filename_lower else filename_lower
+                basename = (
+                    filename_lower.split("/")[-1]
+                    if "/" in filename_lower
+                    else filename_lower
+                )
                 if query_lower in basename:
                     score = 3.0  # Exact match in basename (increased weight)
                 else:
                     score = 2.0  # Exact match in path
-                
-                results.append({
-                    'id': chunk_id,
-                    'content': content,
-                    'score': float(score),
-                    'metadata': {
-                        'filename': filename,
-                        'section': section,
-                        'tags': json.loads(tags_json) if tags_json else [],
-                        'metadata': json.loads(metadata_json) if metadata_json else {}
-                    },
-                    'search_type': 'filename',
-                    'match_coverage': 1.0  # Exact match = 100% coverage
-                })
-            
+
+                results.append(
+                    {
+                        "id": chunk_id,
+                        "content": content,
+                        "score": float(score),
+                        "metadata": {
+                            "filename": filename,
+                            "section": section,
+                            "tags": json.loads(tags_json) if tags_json else [],
+                            "metadata": json.loads(metadata_json)
+                            if metadata_json
+                            else {},
+                        },
+                        "search_type": "filename",
+                        "match_coverage": 1.0,  # Exact match = 100% coverage
+                    }
+                )
+
             # Then search for files containing ANY of the terms
             if terms and len(results) < count * 3:  # Get more candidates
                 # Build OR query for any term match (escape LIKE wildcards)
@@ -662,69 +781,80 @@ class SearchEngine:
                 params = []
                 for term in terms:
                     conditions.append("LOWER(filename) LIKE ? ESCAPE '\\'")
-                    params.append(f'%{self._escape_like(term)}%')
-                
-                sql = f'''
+                    params.append(f"%{self._escape_like(term)}%")
+
+                sql = f"""
                     SELECT DISTINCT id, content, filename, section, tags, metadata
                     FROM chunks
-                    WHERE ({' OR '.join(conditions)})
-                    AND id NOT IN ({','.join(['?' for _ in seen_ids]) if seen_ids else '0'})
+                    WHERE ({" OR ".join(conditions)})
+                    AND id NOT IN ({",".join(["?" for _ in seen_ids]) if seen_ids else "0"})
                     LIMIT ?
-                '''
+                """
                 if seen_ids:
                     params.extend(seen_ids)
                 params.append(count * 3)
-                
+
                 cursor.execute(sql, params)
-                
+
                 for row in cursor.fetchall():
                     chunk_id, content, filename, section, tags_json, metadata_json = row
-                    
+
                     # Enhanced scoring based on term coverage
                     filename_lower = filename.lower()
-                    basename = filename_lower.split('/')[-1] if '/' in filename_lower else filename_lower
-                    
+                    basename = (
+                        filename_lower.split("/")[-1]
+                        if "/" in filename_lower
+                        else filename_lower
+                    )
+
                     # Count matches in basename vs full path
                     basename_matches = sum(1 for term in terms if term in basename)
                     path_matches = sum(1 for term in terms if term in filename_lower)
-                    
+
                     # Calculate term coverage (what % of query terms are matched)
                     term_coverage = path_matches / len(terms) if terms else 0
                     basename_coverage = basename_matches / len(terms) if terms else 0
-                    
+
                     # Check for substring bonus (e.g., "code_examples" contains both terms together)
                     substring_bonus = 0
                     if len(terms) > 1:
                         # Check if terms appear consecutively
                         for i in range(len(terms) - 1):
-                            if f"{terms[i]}_{terms[i+1]}" in filename_lower or f"{terms[i]}{terms[i+1]}" in filename_lower:
+                            if (
+                                f"{terms[i]}_{terms[i + 1]}" in filename_lower
+                                or f"{terms[i]}{terms[i + 1]}" in filename_lower
+                            ):
                                 substring_bonus = 0.3
                                 break
-                    
+
                     # Score based on coverage with exponential boost for more matches
                     if basename_coverage > 0:
                         # Exponential scoring for basename matches
-                        score = basename_coverage ** 1.5 + substring_bonus
+                        score = basename_coverage**1.5 + substring_bonus
                     else:
                         # Lower score for path-only matches
                         score = (term_coverage * 0.5) ** 1.5 + substring_bonus
-                    
-                    results.append({
-                        'id': chunk_id,
-                        'content': content,
-                        'score': float(score),
-                        'metadata': {
-                            'filename': filename,
-                            'section': section,
-                            'tags': json.loads(tags_json) if tags_json else [],
-                            'metadata': json.loads(metadata_json) if metadata_json else {}
-                        },
-                        'search_type': 'filename',
-                        'match_coverage': term_coverage
-                    })
-            
+
+                    results.append(
+                        {
+                            "id": chunk_id,
+                            "content": content,
+                            "score": float(score),
+                            "metadata": {
+                                "filename": filename,
+                                "section": section,
+                                "tags": json.loads(tags_json) if tags_json else [],
+                                "metadata": json.loads(metadata_json)
+                                if metadata_json
+                                else {},
+                            },
+                            "search_type": "filename",
+                            "match_coverage": term_coverage,
+                        }
+                    )
+
             # Sort by score and return top results
-            results.sort(key=lambda x: x['score'], reverse=True)
+            results.sort(key=lambda x: x["score"], reverse=True)
             return results[:count]
 
         except Exception as e:
@@ -733,28 +863,28 @@ class SearchEngine:
         finally:
             if conn:
                 conn.close()
-    
+
     def _metadata_search(self, query: str, count: int) -> List[Dict[str, Any]]:
         """Search in all metadata fields (tags, sections, category, product, source)"""
         conn = None
         try:
             conn = sqlite3.connect(self.index_path)
             cursor = conn.cursor()
-            
+
             query_lower = query.lower()
             terms = query_lower.split()
             results = []
             seen_ids = set()
-            
+
             # First, try to use the metadata_text column if it exists
             try:
                 # Check if metadata_text column exists
                 cursor.execute("PRAGMA table_info(chunks)")
                 columns = [col[1] for col in cursor.fetchall()]
-                has_metadata_text = 'metadata_text' in columns
+                has_metadata_text = "metadata_text" in columns
             except Exception:
                 has_metadata_text = False
-            
+
             if has_metadata_text:
                 # Use the new metadata_text column for efficient searching
                 # Build conditions for each term (escape LIKE wildcards)
@@ -765,25 +895,32 @@ class SearchEngine:
                     params.append(f"%{self._escape_like(term)}%")
 
                 if conditions:
-                    query_sql = f'''
+                    query_sql = f"""
                         SELECT id, content, filename, section, tags, metadata
                         FROM chunks
-                        WHERE {' AND '.join(conditions)}
+                        WHERE {" AND ".join(conditions)}
                         LIMIT ?
-                    '''
+                    """
                     params.append(count * 10)
                     cursor.execute(query_sql, params)
-                    
+
                     for row in cursor.fetchall():
-                        chunk_id, content, filename, section, tags_json, metadata_json = row
-                        
+                        (
+                            chunk_id,
+                            content,
+                            filename,
+                            section,
+                            tags_json,
+                            metadata_json,
+                        ) = row
+
                         if chunk_id in seen_ids:
                             continue
-                        
+
                         # Parse metadata
                         metadata = json.loads(metadata_json) if metadata_json else {}
                         tags = json.loads(tags_json) if tags_json else []
-                        
+
                         # Calculate score based on how many terms match
                         score = 0
                         for term in terms:
@@ -797,22 +934,24 @@ class SearchEngine:
                             # Check section
                             if section and term in section.lower():
                                 score += 0.8
-                        
+
                         if score > 0:
                             seen_ids.add(chunk_id)
-                            results.append({
-                                'id': chunk_id,
-                                'content': content,
-                                'score': score,
-                                'metadata': {
-                                    'filename': filename,
-                                    'section': section,
-                                    'tags': tags,
-                                    'metadata': metadata
-                                },
-                                'search_type': 'metadata'
-                            })
-            
+                            results.append(
+                                {
+                                    "id": chunk_id,
+                                    "content": content,
+                                    "score": score,
+                                    "metadata": {
+                                        "filename": filename,
+                                        "section": section,
+                                        "tags": tags,
+                                        "metadata": metadata,
+                                    },
+                                    "search_type": "metadata",
+                                }
+                            )
+
             # Fallback: search for JSON metadata embedded in content
             # This ensures backwards compatibility
             if len(results) < count:
@@ -821,11 +960,15 @@ class SearchEngine:
                 specific_params = []
 
                 # Look for specific high-value patterns first
-                if 'code' in terms and 'examples' in terms:
-                    specific_conditions.append('content LIKE \'%"category": "Code Examples"%\'')
-                if 'sdk' in terms:
-                    specific_conditions.append('content LIKE \'%"product": "%\' || \'SDK\' || \'%"%\'')
-                
+                if "code" in terms and "examples" in terms:
+                    specific_conditions.append(
+                        'content LIKE \'%"category": "Code Examples"%\''
+                    )
+                if "sdk" in terms:
+                    specific_conditions.append(
+                        "content LIKE '%\"product\": \"%' || 'SDK' || '%\"%'"
+                    )
+
                 # General term search in JSON content
                 for term in terms:
                     specific_conditions.append("content LIKE ?")
@@ -837,153 +980,175 @@ class SearchEngine:
                     params_to_use = specific_params[:10]
                     # Use parameterized query for seen_ids to prevent SQL injection
                     if seen_ids:
-                        seen_placeholders = ','.join(['?' for _ in seen_ids])
-                        not_in_clause = f'AND id NOT IN ({seen_placeholders})'
+                        seen_placeholders = ",".join(["?" for _ in seen_ids])
+                        not_in_clause = f"AND id NOT IN ({seen_placeholders})"
                         params_to_use.extend(list(seen_ids))
                     else:
-                        not_in_clause = 'AND id NOT IN (0)'
-                    query_sql = f'''
+                        not_in_clause = "AND id NOT IN (0)"
+                    query_sql = f"""
                         SELECT id, content, filename, section, tags, metadata
                         FROM chunks
-                        WHERE ({' OR '.join(conditions_to_use)})
+                        WHERE ({" OR ".join(conditions_to_use)})
                         {not_in_clause}
                         LIMIT ?
-                    '''
+                    """
                     params_to_use.append(count * 5)
                     cursor.execute(query_sql, params_to_use)
 
                     rows = cursor.fetchall()
                 else:
                     rows = []
-                
+
                 for row in rows:
                     chunk_id, content, filename, section, tags_json, metadata_json = row
-                    
+
                     if chunk_id in seen_ids:
                         continue
-                        
+
                     # Try to extract metadata from JSON content
                     json_metadata = {}
                     try:
                         # Look for metadata in JSON structure
                         if '"metadata":' in content:
                             import re
+
                             # More robust regex to extract nested JSON object
                             # This handles nested braces properly
                             start = content.find('"metadata":')
                             if start != -1:
                                 # Find the opening brace
-                                brace_start = content.find('{', start)
+                                brace_start = content.find("{", start)
                                 if brace_start != -1:
                                     # Count braces to find matching closing brace
                                     brace_count = 0
                                     i = brace_start
                                     while i < len(content):
-                                        if content[i] == '{':
+                                        if content[i] == "{":
                                             brace_count += 1
-                                        elif content[i] == '}':
+                                        elif content[i] == "}":
                                             brace_count -= 1
                                             if brace_count == 0:
                                                 # Found matching closing brace
-                                                metadata_str = content[brace_start:i+1]
+                                                metadata_str = content[
+                                                    brace_start : i + 1
+                                                ]
                                                 json_metadata = json.loads(metadata_str)
                                                 break
                                         i += 1
                     except:
                         pass
-                    
+
                     # Calculate score based on matches
                     score = 0
                     fields_matched = 0
-                    
+
                     # Check JSON metadata extracted from content
                     if json_metadata:
                         # Check category - count how many terms match
-                        category = json_metadata.get('category', '').lower()
+                        category = json_metadata.get("category", "").lower()
                         if category:
-                            category_matches = sum(1 for term in terms if term in category)
+                            category_matches = sum(
+                                1 for term in terms if term in category
+                            )
                             if category_matches > 0:
-                                score += 1.8 * (category_matches / len(terms) if terms else 1)
+                                score += 1.8 * (
+                                    category_matches / len(terms) if terms else 1
+                                )
                                 fields_matched += 1
-                        
+
                         # Check product - count how many terms match
-                        product = json_metadata.get('product', '').lower() 
+                        product = json_metadata.get("product", "").lower()
                         if product:
-                            product_matches = sum(1 for term in terms if term in product)
+                            product_matches = sum(
+                                1 for term in terms if term in product
+                            )
                             if product_matches > 0:
-                                score += 1.5 * (product_matches / len(terms) if terms else 1)
+                                score += 1.5 * (
+                                    product_matches / len(terms) if terms else 1
+                                )
                                 fields_matched += 1
-                            
+
                         # Check source
-                        source = json_metadata.get('source', '').lower()
+                        source = json_metadata.get("source", "").lower()
                         if source:
                             source_matches = sum(1 for term in terms if term in source)
                             if source_matches > 0:
-                                score += 1.2 * (source_matches / len(terms) if terms else 1)
+                                score += 1.2 * (
+                                    source_matches / len(terms) if terms else 1
+                                )
                                 fields_matched += 1
-                    
+
                     # Also check tags from JSON metadata
-                    json_tags = json_metadata.get('tags', [])
+                    json_tags = json_metadata.get("tags", [])
                     if json_tags:
                         tags_str = str(json_tags).lower()
                         tag_matches = sum(1 for term in terms if term in tags_str)
                         if tag_matches > 0:
                             score += 1.3 * (tag_matches / len(terms) if terms else 1)
                             fields_matched += 1
-                    
+
                     if score > 0:
                         seen_ids.add(chunk_id)
-                        results.append({
-                            'id': chunk_id,
-                            'content': content,
-                            'score': float(score),
-                            'metadata': {
-                                'filename': filename,
-                                'section': section,
-                                'tags': json.loads(tags_json) if tags_json else [],
-                                'metadata': json.loads(metadata_json) if metadata_json else {}
-                            },
-                            'search_type': 'metadata',
-                            'fields_matched': fields_matched
-                        })
-                        logger.debug(f"Metadata match: {filename} - score={score:.2f}, fields_matched={fields_matched}, json_metadata={json_metadata}")
-            
+                        results.append(
+                            {
+                                "id": chunk_id,
+                                "content": content,
+                                "score": float(score),
+                                "metadata": {
+                                    "filename": filename,
+                                    "section": section,
+                                    "tags": json.loads(tags_json) if tags_json else [],
+                                    "metadata": json.loads(metadata_json)
+                                    if metadata_json
+                                    else {},
+                                },
+                                "search_type": "metadata",
+                                "fields_matched": fields_matched,
+                            }
+                        )
+                        logger.debug(
+                            f"Metadata match: {filename} - score={score:.2f}, fields_matched={fields_matched}, json_metadata={json_metadata}"
+                        )
+
             # Also get chunks with regular metadata
-            cursor.execute('''
+            cursor.execute(
+                """
                 SELECT id, content, filename, section, tags, metadata
                 FROM chunks
                 WHERE (tags IS NOT NULL AND tags != '') 
                    OR (metadata IS NOT NULL AND metadata != '{}')
                    OR (section IS NOT NULL AND section != '')
                 LIMIT ?
-            ''', (count * 10,))  # Get more to search through
-            
+            """,
+                (count * 10,),
+            )  # Get more to search through
+
             for row in cursor.fetchall():
                 chunk_id, content, filename, section, tags_json, metadata_json = row
-                
+
                 if chunk_id in seen_ids:
                     continue
-                
+
                 # Parse metadata
                 tags = json.loads(tags_json) if tags_json else []
                 metadata = json.loads(metadata_json) if metadata_json else {}
-                
+
                 # Flatten nested metadata if present
-                if 'metadata' in metadata:
+                if "metadata" in metadata:
                     # Handle double-nested metadata from some indexes
-                    nested_meta = metadata['metadata']
+                    nested_meta = metadata["metadata"]
                     metadata.update(nested_meta)
-                
+
                 # Initialize scoring components
                 score_components = {
-                    'tags': 0,
-                    'section': 0,
-                    'category': 0,
-                    'product': 0,
-                    'source': 0,
-                    'description': 0
+                    "tags": 0,
+                    "section": 0,
+                    "category": 0,
+                    "product": 0,
+                    "source": 0,
+                    "description": 0,
                 }
-                
+
                 # Check tags
                 if tags:
                     tag_matches = 0
@@ -996,103 +1161,137 @@ class SearchEngine:
                             # Individual term matches
                             term_matches = sum(1 for term in terms if term in tag_lower)
                             tag_matches += term_matches * 0.5
-                    
+
                     if tag_matches > 0:
-                        score_components['tags'] = min(1.0, tag_matches / len(tags))
-                
+                        score_components["tags"] = min(1.0, tag_matches / len(tags))
+
                 # Check section
-                if section and section.lower() != 'none':
+                if section and section.lower() != "none":
                     section_lower = section.lower()
                     if query_lower in section_lower:
-                        score_components['section'] = 1.0
+                        score_components["section"] = 1.0
                     else:
                         term_matches = sum(1 for term in terms if term in section_lower)
-                        score_components['section'] = (term_matches / len(terms)) * 0.8 if terms else 0
-                
+                        score_components["section"] = (
+                            (term_matches / len(terms)) * 0.8 if terms else 0
+                        )
+
                 # Check category field
-                category = metadata.get('category', '')
+                category = metadata.get("category", "")
                 if category:
                     category_lower = category.lower()
                     if query_lower in category_lower:
-                        score_components['category'] = 1.0
+                        score_components["category"] = 1.0
                     else:
-                        term_matches = sum(1 for term in terms if term in category_lower)
-                        score_components['category'] = (term_matches / len(terms)) * 0.9 if terms else 0
-                
+                        term_matches = sum(
+                            1 for term in terms if term in category_lower
+                        )
+                        score_components["category"] = (
+                            (term_matches / len(terms)) * 0.9 if terms else 0
+                        )
+
                 # Check product field
-                product = metadata.get('product', '')
+                product = metadata.get("product", "")
                 if product:
                     product_lower = product.lower()
                     if query_lower in product_lower:
-                        score_components['product'] = 1.0
+                        score_components["product"] = 1.0
                     else:
                         term_matches = sum(1 for term in terms if term in product_lower)
-                        score_components['product'] = (term_matches / len(terms)) * 0.8 if terms else 0
-                
+                        score_components["product"] = (
+                            (term_matches / len(terms)) * 0.8 if terms else 0
+                        )
+
                 # Check source field (original filename)
-                source = metadata.get('source', '')
+                source = metadata.get("source", "")
                 if source:
                     source_lower = source.lower()
                     if query_lower in source_lower:
-                        score_components['source'] = 1.0
+                        score_components["source"] = 1.0
                     else:
                         term_matches = sum(1 for term in terms if term in source_lower)
-                        score_components['source'] = (term_matches / len(terms)) * 0.7 if terms else 0
-                
+                        score_components["source"] = (
+                            (term_matches / len(terms)) * 0.7 if terms else 0
+                        )
+
                 # Check description or title fields
-                description = metadata.get('description', metadata.get('title', ''))
+                description = metadata.get("description", metadata.get("title", ""))
                 if description:
                     desc_lower = description.lower()
                     if query_lower in desc_lower:
-                        score_components['description'] = 0.8
+                        score_components["description"] = 0.8
                     else:
                         term_matches = sum(1 for term in terms if term in desc_lower)
-                        score_components['description'] = (term_matches / len(terms)) * 0.6 if terms else 0
-                
+                        score_components["description"] = (
+                            (term_matches / len(terms)) * 0.6 if terms else 0
+                        )
+
                 # Calculate total score with weights
                 weights = {
-                    'category': 1.8,    # Strong signal
-                    'product': 1.5,     # Strong signal
-                    'tags': 1.3,        # Good signal
-                    'source': 1.2,      # Good signal
-                    'section': 1.0,     # Moderate signal
-                    'description': 0.8  # Weaker signal
+                    "category": 1.8,  # Strong signal
+                    "product": 1.5,  # Strong signal
+                    "tags": 1.3,  # Good signal
+                    "source": 1.2,  # Good signal
+                    "section": 1.0,  # Moderate signal
+                    "description": 0.8,  # Weaker signal
                 }
-                
-                total_score = sum(score_components[field] * weights.get(field, 1.0) 
-                                for field in score_components)
-                
+
+                total_score = sum(
+                    score_components[field] * weights.get(field, 1.0)
+                    for field in score_components
+                )
+
                 # Track match coverage
-                fields_matched = sum(1 for score in score_components.values() if score > 0)
-                match_coverage = sum(1 for term in terms if any(
-                    term in str(field_value).lower() 
-                    for field_value in [tags, section, category, product, source, description]
-                    if field_value
-                )) / len(terms) if terms else 0
-                
+                fields_matched = sum(
+                    1 for score in score_components.values() if score > 0
+                )
+                match_coverage = (
+                    sum(
+                        1
+                        for term in terms
+                        if any(
+                            term in str(field_value).lower()
+                            for field_value in [
+                                tags,
+                                section,
+                                category,
+                                product,
+                                source,
+                                description,
+                            ]
+                            if field_value
+                        )
+                    )
+                    / len(terms)
+                    if terms
+                    else 0
+                )
+
                 if total_score > 0:
-                    results.append({
-                        'id': chunk_id,
-                        'content': content,
-                        'score': float(total_score),
-                        'metadata': {
-                            'filename': filename,
-                            'section': section,
-                            'tags': tags,
-                            'metadata': metadata,
-                            'category': category,
-                            'product': product,
-                            'source': source
-                        },
-                        'search_type': 'metadata',
-                        'metadata_matches': score_components,
-                        'fields_matched': fields_matched,
-                        'match_coverage': match_coverage
-                    })
+                    results.append(
+                        {
+                            "id": chunk_id,
+                            "content": content,
+                            "score": float(total_score),
+                            "metadata": {
+                                "filename": filename,
+                                "section": section,
+                                "tags": tags,
+                                "metadata": metadata,
+                                "category": category,
+                                "product": product,
+                                "source": source,
+                            },
+                            "search_type": "metadata",
+                            "metadata_matches": score_components,
+                            "fields_matched": fields_matched,
+                            "match_coverage": match_coverage,
+                        }
+                    )
                     seen_ids.add(chunk_id)
-            
+
             # Sort by score and return top results
-            results.sort(key=lambda x: x['score'], reverse=True)
+            results.sort(key=lambda x: x["score"], reverse=True)
             return results[:count]
 
         except Exception as e:
@@ -1102,8 +1301,12 @@ class SearchEngine:
             if conn:
                 conn.close()
 
-    def _add_vector_scores_to_candidates(self, candidates: Dict[str, Dict], query_vector: NDArray, 
-                                       similarity_threshold: float):
+    def _add_vector_scores_to_candidates(
+        self,
+        candidates: Dict[str, Dict],
+        query_vector: NDArray,
+        similarity_threshold: float,
+    ):
         """Add vector similarity scores to existing candidates"""
         if not candidates or not np:
             return
@@ -1112,47 +1315,56 @@ class SearchEngine:
         try:
             conn = sqlite3.connect(self.index_path)
             cursor = conn.cursor()
-            
+
             # Get embeddings for candidate chunks only
             chunk_ids = list(candidates.keys())
-            placeholders = ','.join(['?' for _ in chunk_ids])
-            
-            cursor.execute(f'''
+            placeholders = ",".join(["?" for _ in chunk_ids])
+
+            cursor.execute(
+                f"""
                 SELECT id, embedding
                 FROM chunks
                 WHERE id IN ({placeholders}) AND embedding IS NOT NULL AND embedding != ''
-            ''', chunk_ids)
-            
+            """,
+                chunk_ids,
+            )
+
             for row in cursor.fetchall():
                 chunk_id, embedding_blob = row
-                
+
                 if not embedding_blob:
                     continue
-                
+
                 try:
                     # Convert embedding back to numpy array
-                    embedding = np.frombuffer(embedding_blob, dtype=np.float32).reshape(1, -1)
-                    
+                    embedding = np.frombuffer(embedding_blob, dtype=np.float32).reshape(
+                        1, -1
+                    )
+
                     # Calculate similarity
                     similarity = cosine_similarity(query_vector, embedding)[0][0]
                     distance = 1 - similarity
-                    
+
                     # Add vector scores to candidate
-                    candidates[chunk_id]['vector_score'] = float(similarity)
-                    candidates[chunk_id]['vector_distance'] = float(distance)
-                    candidates[chunk_id]['sources']['vector_rerank'] = True
-                    
+                    candidates[chunk_id]["vector_score"] = float(similarity)
+                    candidates[chunk_id]["vector_distance"] = float(distance)
+                    candidates[chunk_id]["sources"]["vector_rerank"] = True
+
                 except Exception as e:
-                    logger.debug(f"Error processing embedding for chunk {chunk_id}: {e}")
+                    logger.debug(
+                        f"Error processing embedding for chunk {chunk_id}: {e}"
+                    )
                     continue
-            
+
         except Exception as e:
             logger.error(f"Error in vector re-ranking: {e}")
         finally:
             if conn:
                 conn.close()
-    
-    def _calculate_combined_score(self, candidate: Dict, similarity_threshold: float) -> float:
+
+    def _calculate_combined_score(
+        self, candidate: Dict, similarity_threshold: float
+    ) -> float:
         """Calculate final score using max-signal-wins approach.
 
         The strongest signal (vector, keyword, filename, or metadata) becomes
@@ -1164,10 +1376,10 @@ class SearchEngine:
 
         # Collect all available scores
         scores = {}
-        if 'vector_score' in candidate:
-            scores['vector'] = candidate['vector_score']
+        if "vector_score" in candidate:
+            scores["vector"] = candidate["vector_score"]
 
-        source_scores = candidate.get('source_scores', {})
+        source_scores = candidate.get("source_scores", {})
         for source_type, score in source_scores.items():
             if source_type not in scores:
                 scores[source_type] = score
@@ -1178,7 +1390,7 @@ class SearchEngine:
         base = max(scores.values())
         boost = agreement_boost * (len(scores) - 1)
         return min(1.0, base + boost)
-    
+
     def _dedupe_by_content(self, results: List[Dict]) -> List[Dict]:
         """Collapse exact/near-exact content duplicates, keeping the highest-scoring copy.
 
@@ -1202,90 +1414,102 @@ class SearchEngine:
         seen_hashes = {}
         deduped = []
         for result in results:
-            content = result.get('content') or ''
-            normalized = re.sub(r'\s+', ' ', content.strip().lower())
-            normalized = normalized.strip('*_`#>- \t\n')
+            content = result.get("content") or ""
+            normalized = re.sub(r"\s+", " ", content.strip().lower())
+            normalized = normalized.strip("*_`#>- \t\n")
             if not normalized:
                 deduped.append(result)
                 continue
-            h = hashlib.sha1(normalized.encode('utf-8')).hexdigest()
+            h = hashlib.sha1(normalized.encode("utf-8")).hexdigest()
             if h in seen_hashes:
                 continue
             seen_hashes[h] = True
             deduped.append(result)
         return deduped
 
-    def _apply_diversity_penalties(self, results: List[Dict], target_count: int) -> List[Dict]:
+    def _apply_diversity_penalties(
+        self, results: List[Dict], target_count: int
+    ) -> List[Dict]:
         """Apply penalties to prevent single-file dominance while maintaining quality"""
         if not results:
             return results
-        
+
         # Track file occurrences
         file_counts = {}
         penalized_results = []
-        
+
         # Define penalty multipliers
         occurrence_penalties = {
-            1: 1.0,    # First chunk: no penalty
-            2: 0.85,   # Second chunk: 15% penalty
-            3: 0.7,    # Third chunk: 30% penalty
-            4: 0.5,    # Fourth chunk: 50% penalty
+            1: 1.0,  # First chunk: no penalty
+            2: 0.85,  # Second chunk: 15% penalty
+            3: 0.7,  # Third chunk: 30% penalty
+            4: 0.5,  # Fourth chunk: 50% penalty
         }
-        
+
         for result in results:
-            filename = (result.get('metadata') or {}).get('filename')
+            filename = (result.get("metadata") or {}).get("filename")
             if filename is None:
                 # No filename signal - skip penalty logic for this result
                 penalized_result = result.copy()
-                penalized_result['diversity_penalty'] = 1.0
-                penalized_result['final_score'] = result.get('final_score', result.get('score', 0))
+                penalized_result["diversity_penalty"] = 1.0
+                penalized_result["final_score"] = result.get(
+                    "final_score", result.get("score", 0)
+                )
                 penalized_results.append(penalized_result)
                 continue
-            
+
             # Get current count for this file
             current_count = file_counts.get(filename, 0) + 1
             file_counts[filename] = current_count
-            
+
             # Apply penalty based on occurrence
-            penalty = occurrence_penalties.get(current_count, 0.4)  # 60% penalty for 5+ chunks
-            
+            penalty = occurrence_penalties.get(
+                current_count, 0.4
+            )  # 60% penalty for 5+ chunks
+
             # Create a copy to avoid modifying original
             penalized_result = result.copy()
-            penalized_result['diversity_penalty'] = penalty
-            penalized_result['final_score'] = result.get('final_score', result.get('score', 0)) * penalty
-            
+            penalized_result["diversity_penalty"] = penalty
+            penalized_result["final_score"] = (
+                result.get("final_score", result.get("score", 0)) * penalty
+            )
+
             penalized_results.append(penalized_result)
-        
+
         # Re-sort by penalized scores
-        penalized_results.sort(key=lambda x: x['final_score'], reverse=True)
-        
+        penalized_results.sort(key=lambda x: x["final_score"], reverse=True)
+
         # Ensure minimum diversity if we have enough results
         if len(penalized_results) > target_count:
-            unique_files = len(set(r['metadata']['filename'] for r in penalized_results[:target_count]))
-            
+            unique_files = len(
+                set(r["metadata"]["filename"] for r in penalized_results[:target_count])
+            )
+
             # If top results are too homogeneous (e.g., all from 1-2 files)
             if unique_files < min(3, target_count):
                 # Try to inject some diversity
                 selected = penalized_results[:target_count]
-                seen_files = set(r['metadata']['filename'] for r in selected)
-                
+                seen_files = set(r["metadata"]["filename"] for r in selected)
+
                 # Look for high-quality results from other files
                 for result in penalized_results[target_count:]:
-                    if result['metadata']['filename'] not in seen_files:
+                    if result["metadata"]["filename"] not in seen_files:
                         # If it's reasonably good (within 50% of top score), include it
-                        if result['final_score'] > 0.5 * selected[0]['final_score']:
+                        if result["final_score"] > 0.5 * selected[0]["final_score"]:
                             # Replace the lowest scoring result from an over-represented file
                             for i in range(len(selected) - 1, -1, -1):
-                                if file_counts[selected[i]['metadata']['filename']] > 2:
+                                if file_counts[selected[i]["metadata"]["filename"]] > 2:
                                     selected[i] = result
-                                    seen_files.add(result['metadata']['filename'])
+                                    seen_files.add(result["metadata"]["filename"])
                                     break
-                
+
                 penalized_results[:target_count] = selected
-        
+
         return penalized_results
 
-    def _apply_match_type_diversity(self, results: List[Dict], target_count: int) -> List[Dict]:
+    def _apply_match_type_diversity(
+        self, results: List[Dict], target_count: int
+    ) -> List[Dict]:
         """Ensure diversity of match types in final results
 
         Ensures we have a mix of:
@@ -1302,9 +1526,9 @@ class SearchEngine:
         hybrid = []
 
         for result in results:
-            sources = result.get('sources', {})
-            has_vector = 'vector' in sources
-            has_keyword = any(k in sources for k in ['keyword', 'filename', 'metadata'])
+            sources = result.get("sources", {})
+            has_vector = "vector" in sources
+            has_keyword = any(k in sources for k in ["keyword", "filename", "metadata"])
 
             if has_vector and not has_keyword:
                 vector_only.append(result)
@@ -1334,38 +1558,38 @@ class SearchEngine:
         remaining_slots = target_count - len(diversified)
         if remaining_slots > 0:
             # Get all unused results
-            used_ids = set(r['id'] for r in diversified)
-            unused = [r for r in results if r['id'] not in used_ids]
+            used_ids = set(r["id"] for r in diversified)
+            unused = [r for r in results if r["id"] not in used_ids]
             diversified.extend(unused[:remaining_slots])
 
         # Sort by final score to maintain quality ordering
-        diversified.sort(key=lambda x: x['final_score'], reverse=True)
+        diversified.sort(key=lambda x: x["final_score"], reverse=True)
 
         return diversified
 
     def get_stats(self) -> Dict[str, Any]:
         """Get statistics about the search index"""
         # Use pgvector backend if available
-        if self.backend == 'pgvector':
+        if self.backend == "pgvector":
             return self._backend.get_stats()
-        
+
         # Original SQLite implementation
         conn = sqlite3.connect(self.index_path)
         cursor = conn.cursor()
-        
+
         try:
             # Get total chunks
             cursor.execute("SELECT COUNT(*) FROM chunks")
             total_chunks = cursor.fetchone()[0]
-            
+
             # Get total files
             cursor.execute("SELECT COUNT(DISTINCT filename) FROM chunks")
             total_files = cursor.fetchone()[0]
-            
+
             # Get average chunk size
             cursor.execute("SELECT AVG(LENGTH(content)) FROM chunks")
             avg_chunk_size = cursor.fetchone()[0] or 0
-            
+
             # Get file types
             cursor.execute("""
                 SELECT 
@@ -1382,19 +1606,19 @@ class SearchEngine:
                 GROUP BY file_type
             """)
             file_types = dict(cursor.fetchall())
-            
+
             # Get languages
             cursor.execute("SELECT language, COUNT(*) FROM chunks GROUP BY language")
             languages = dict(cursor.fetchall())
-            
+
             return {
-                'total_chunks': total_chunks,
-                'total_files': total_files,
-                'avg_chunk_size': int(avg_chunk_size),
-                'file_types': file_types,
-                'languages': languages,
-                'config': self.config
+                "total_chunks": total_chunks,
+                "total_files": total_files,
+                "avg_chunk_size": int(avg_chunk_size),
+                "file_types": file_types,
+                "languages": languages,
+                "config": self.config,
             }
-            
+
         finally:
-            conn.close() 
+            conn.close()

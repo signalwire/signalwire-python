@@ -36,11 +36,13 @@ class HttpClient:
         self._base_url = f"https://{host}"
         self._session = requests.Session()
         self._session.auth = (project, token)
-        self._session.headers.update({
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "User-Agent": "signalwire-agents-python-rest/1.0",
-        })
+        self._session.headers.update(
+            {
+                "Content-Type": "application/json",
+                "Accept": "application/json",
+                "User-Agent": "signalwire-agents-python-rest/1.0",
+            }
+        )
         logger.debug("HttpClient initialized", host=host, project=project[:8] + "...")
 
     def _request(self, method, path, body=None, params=None):
@@ -110,4 +112,6 @@ class CrudWithAddresses(CrudResource):
     """CRUD resource that also supports listing addresses."""
 
     def list_addresses(self, resource_id, **params):
-        return self._http.get(self._path(resource_id, "addresses"), params=params or None)
+        return self._http.get(
+            self._path(resource_id, "addresses"), params=params or None
+        )

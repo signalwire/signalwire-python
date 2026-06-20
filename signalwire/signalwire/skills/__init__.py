@@ -23,4 +23,4 @@ from signalwire.core.skill_base import SkillBase
 # Trigger skill discovery on import
 # skill_registry.discover_skills()
 
-__all__ = ["skill_registry", "SkillBase"] 
+__all__ = ["skill_registry", "SkillBase"]

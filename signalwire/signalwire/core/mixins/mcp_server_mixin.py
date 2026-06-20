@@ -22,7 +22,7 @@ class MCPServerMixin:
         """Convert registered @tool functions to MCP tool format"""
         tools = []
 
-        if not hasattr(self, '_swaig_functions'):
+        if not hasattr(self, "_swaig_functions"):
             return tools
 
         for func in self._swaig_functions.values():
@@ -32,15 +32,12 @@ class MCPServerMixin:
             }
 
             # Convert SWAIG parameter format to MCP inputSchema
-            if hasattr(func, '_ensure_parameter_structure'):
+            if hasattr(func, "_ensure_parameter_structure"):
                 tool["inputSchema"] = func._ensure_parameter_structure()
             elif func.parameters:
                 tool["inputSchema"] = func.parameters
             else:
-                tool["inputSchema"] = {
-                    "type": "object",
-                    "properties": {}
-                }
+                tool["inputSchema"] = {"type": "object", "properties": {}}
 
             tools.append(tool)
 
@@ -63,14 +60,12 @@ class MCPServerMixin:
                 "id": req_id,
                 "result": {
                     "protocolVersion": "2025-06-18",
-                    "capabilities": {
-                        "tools": {}
-                    },
+                    "capabilities": {"tools": {}},
                     "serverInfo": {
-                        "name": getattr(self, 'name', 'signalwire-agent'),
-                        "version": "1.0.0"
-                    }
-                }
+                        "name": getattr(self, "name", "signalwire-agent"),
+                        "version": "1.0.0",
+                    },
+                },
             }
 
         # Initialized notification — no response needed
@@ -82,9 +77,7 @@ class MCPServerMixin:
             return {
                 "jsonrpc": "2.0",
                 "id": req_id,
-                "result": {
-                    "tools": self._build_mcp_tool_list()
-                }
+                "result": {"tools": self._build_mcp_tool_list()},
             }
 
         # Call tool
@@ -92,7 +85,10 @@ class MCPServerMixin:
             tool_name = params.get("name", "")
             arguments = params.get("arguments", {})
 
-            if not hasattr(self, '_swaig_functions') or tool_name not in self._swaig_functions:
+            if (
+                not hasattr(self, "_swaig_functions")
+                or tool_name not in self._swaig_functions
+            ):
                 return self._mcp_error(req_id, -32602, f"Unknown tool: {tool_name}")
 
             func = self._swaig_functions[tool_name]
@@ -108,7 +104,7 @@ class MCPServerMixin:
 
                 # Extract text from FunctionResult
                 response_text = ""
-                if hasattr(result, 'response'):
+                if hasattr(result, "response"):
                     response_text = result.response or ""
                 elif isinstance(result, str):
                     response_text = result
@@ -119,11 +115,9 @@ class MCPServerMixin:
                     "jsonrpc": "2.0",
                     "id": req_id,
                     "result": {
-                        "content": [
-                            {"type": "text", "text": response_text}
-                        ],
-                        "isError": False
-                    }
+                        "content": [{"type": "text", "text": response_text}],
+                        "isError": False,
+                    },
                 }
             except Exception as e:
                 logger.error(f"MCP tool call error: {tool_name}: {e}")
@@ -131,11 +125,9 @@ class MCPServerMixin:
                     "jsonrpc": "2.0",
                     "id": req_id,
                     "result": {
-                        "content": [
-                            {"type": "text", "text": f"Error: {str(e)}"}
-                        ],
-                        "isError": True
-                    }
+                        "content": [{"type": "text", "text": f"Error: {str(e)}"}],
+                        "isError": True,
+                    },
                 }
 
         # Ping
@@ -150,8 +142,5 @@ class MCPServerMixin:
         return {
             "jsonrpc": "2.0",
             "id": req_id,
-            "error": {
-                "code": code,
-                "message": message
-            }
+            "error": {"code": code, "message": message},
         }

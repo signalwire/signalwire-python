@@ -19,15 +19,15 @@ logger = logging.getLogger("signalwire.url_validator")
 
 # Private/reserved IP ranges that should be blocked
 _BLOCKED_NETWORKS = [
-    ipaddress.ip_network('10.0.0.0/8'),
-    ipaddress.ip_network('172.16.0.0/12'),
-    ipaddress.ip_network('192.168.0.0/16'),
-    ipaddress.ip_network('127.0.0.0/8'),
-    ipaddress.ip_network('169.254.0.0/16'),  # Link-local / cloud metadata
-    ipaddress.ip_network('0.0.0.0/8'),
-    ipaddress.ip_network('::1/128'),
-    ipaddress.ip_network('fc00::/7'),  # IPv6 private
-    ipaddress.ip_network('fe80::/10'),  # IPv6 link-local
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+    ipaddress.ip_network("127.0.0.0/8"),
+    ipaddress.ip_network("169.254.0.0/16"),  # Link-local / cloud metadata
+    ipaddress.ip_network("0.0.0.0/8"),
+    ipaddress.ip_network("::1/128"),
+    ipaddress.ip_network("fc00::/7"),  # IPv6 private
+    ipaddress.ip_network("fe80::/10"),  # IPv6 link-local
 ]
 
 
@@ -46,7 +46,7 @@ def validate_url(url: str, allow_private: bool = False) -> bool:
         parsed = urlparse(url)
 
         # Require http or https scheme
-        if parsed.scheme not in ('http', 'https'):
+        if parsed.scheme not in ("http", "https"):
             logger.warning("URL rejected: invalid scheme %s", parsed.scheme)
             return False
 
@@ -56,7 +56,11 @@ def validate_url(url: str, allow_private: bool = False) -> bool:
             logger.warning("URL rejected: no hostname")
             return False
 
-        if allow_private or os.getenv('SWML_ALLOW_PRIVATE_URLS', '').lower() in ('1', 'true', 'yes'):
+        if allow_private or os.getenv("SWML_ALLOW_PRIVATE_URLS", "").lower() in (
+            "1",
+            "true",
+            "yes",
+        ):
             return True
 
         # Resolve hostname to IP addresses
@@ -75,7 +79,9 @@ def validate_url(url: str, allow_private: bool = False) -> bool:
                     if ip in network:
                         logger.warning(
                             "URL rejected: %s resolves to blocked IP %s (in %s)",
-                            hostname, ip_str, network
+                            hostname,
+                            ip_str,
+                            network,
                         )
                         return False
             except ValueError:

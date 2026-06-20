@@ -36,14 +36,14 @@ DEFAULT_REGIONS = {
 
 # ANSI colors
 class Colors:
-    RED = '\033[0;31m'
-    GREEN = '\033[0;32m'
-    YELLOW = '\033[1;33m'
-    BLUE = '\033[0;34m'
-    CYAN = '\033[0;36m'
-    BOLD = '\033[1m'
-    DIM = '\033[2m'
-    NC = '\033[0m'  # No Color
+    RED = "\033[0;31m"
+    GREEN = "\033[0;32m"
+    YELLOW = "\033[1;33m"
+    BLUE = "\033[0;34m"
+    CYAN = "\033[0;36m"
+    BOLD = "\033[1m"
+    DIM = "\033[2m"
+    NC = "\033[0m"  # No Color
 
 
 def print_step(msg: str):
@@ -77,7 +77,7 @@ def prompt_yes_no(question: str, default: bool = True) -> bool:
     result = input(f"{question} [{hint}]: ").strip().lower()
     if not result:
         return default
-    return result in ('y', 'yes')
+    return result in ("y", "yes")
 
 
 def prompt_select(question: str, options: List[str], default: int = 1) -> int:
@@ -98,7 +98,9 @@ def prompt_select(question: str, options: List[str], default: int = 1) -> int:
         print(f"Please enter a number between 1 and {len(options)}")
 
 
-def prompt_multiselect(question: str, options: List[str], defaults: List[bool]) -> List[bool]:
+def prompt_multiselect(
+    question: str, options: List[str], defaults: List[bool]
+) -> List[bool]:
     """Prompt user to toggle multiple options. Returns list of booleans."""
     selected = defaults.copy()
 
@@ -130,9 +132,9 @@ def mask_token(token: str) -> str:
 def get_env_credentials() -> Dict[str, str]:
     """Get SignalWire credentials from environment variables."""
     return {
-        'space': os.environ.get('SIGNALWIRE_SPACE_NAME', ''),
-        'project': os.environ.get('SIGNALWIRE_PROJECT_ID', ''),
-        'token': os.environ.get('SIGNALWIRE_TOKEN', ''),
+        "space": os.environ.get("SIGNALWIRE_SPACE_NAME", ""),
+        "project": os.environ.get("SIGNALWIRE_PROJECT_ID", ""),
+        "token": os.environ.get("SIGNALWIRE_TOKEN", ""),
     }
 
 
@@ -145,10 +147,10 @@ def generate_password(length: int = 32) -> str:
 # Templates
 # =============================================================================
 
-TEMPLATE_AGENTS_INIT = '''from .main_agent import MainAgent
+TEMPLATE_AGENTS_INIT = """from .main_agent import MainAgent
 
 __all__ = ["MainAgent"]
-'''
+"""
 
 TEMPLATE_SKILLS_INIT = '''"""Skills module - Add reusable agent skills here."""
 '''
@@ -156,7 +158,7 @@ TEMPLATE_SKILLS_INIT = '''"""Skills module - Add reusable agent skills here."""
 TEMPLATE_TESTS_INIT = '''"""Test package."""
 '''
 
-TEMPLATE_GITIGNORE = '''# Environment
+TEMPLATE_GITIGNORE = """# Environment
 .env
 .venv/
 venv/
@@ -186,9 +188,9 @@ build/
 # OS
 .DS_Store
 Thumbs.db
-'''
+"""
 
-TEMPLATE_ENV_EXAMPLE = '''# SignalWire Credentials
+TEMPLATE_ENV_EXAMPLE = """# SignalWire Credentials
 SIGNALWIRE_SPACE_NAME=your-space
 SIGNALWIRE_PROJECT_ID=your-project-id
 SIGNALWIRE_TOKEN=your-api-token
@@ -209,25 +211,25 @@ SWML_PROXY_URL_BASE=https://your-domain.ngrok.io
 
 # Debug settings (0=off, 1=basic, 2=verbose)
 DEBUG_WEBHOOK_LEVEL=1
-'''
+"""
 
-TEMPLATE_REQUIREMENTS = '''signalwire-agents>=1.0.10
+TEMPLATE_REQUIREMENTS = """signalwire-agents>=1.0.10
 python-dotenv>=1.0.0
 requests>=2.28.0
 pytest>=7.0.0
-'''
+"""
 
 # =============================================================================
 # Cloud Function Templates
 # =============================================================================
 
 # AWS Lambda Templates
-AWS_REQUIREMENTS_TEMPLATE = '''signalwire-agents>=1.0.10
+AWS_REQUIREMENTS_TEMPLATE = """signalwire-agents>=1.0.10
 h11>=0.13,<0.15
 fastapi
 mangum
 uvicorn
-'''
+"""
 
 AWS_HANDLER_TEMPLATE = '''#!/usr/bin/env python3
 """AWS Lambda handler for {agent_name} agent.
@@ -320,7 +322,7 @@ def lambda_handler(event, context):
     return agent.run(event, context)
 '''
 
-AWS_DEPLOY_TEMPLATE = '''#!/bin/bash
+AWS_DEPLOY_TEMPLATE = """#!/bin/bash
 # AWS Lambda deployment script for {agent_name} agent
 #
 # Prerequisites:
@@ -605,12 +607,12 @@ echo ""
 echo "Configure SignalWire:"
 echo "  Set your phone number's SWML URL to: https://$AUTH_USER:$AUTH_PASS@${{API_ID}}.execute-api.${{REGION}}.amazonaws.com/"
 echo ""
-'''
+"""
 
 # GCP Cloud Function Templates
-GCP_REQUIREMENTS_TEMPLATE = '''signalwire-agents>=1.0.10
+GCP_REQUIREMENTS_TEMPLATE = """signalwire-agents>=1.0.10
 functions-framework>=3.0.0
-'''
+"""
 
 GCP_MAIN_TEMPLATE = '''#!/usr/bin/env python3
 """Google Cloud Functions handler for {agent_name} agent.
@@ -716,7 +718,7 @@ def main(request):
     return agent.run(request)
 '''
 
-GCP_DEPLOY_TEMPLATE = '''#!/bin/bash
+GCP_DEPLOY_TEMPLATE = """#!/bin/bash
 # Google Cloud Functions deployment script for {agent_name} agent
 #
 # Prerequisites:
@@ -836,12 +838,12 @@ echo "    --region=$REGION \\\\"
 echo "    --gen2 \\\\"
 echo "    --update-env-vars SWML_BASIC_AUTH_USER=myuser,SWML_BASIC_AUTH_PASSWORD=mypass"
 echo ""
-'''
+"""
 
 # Azure Function Templates
-AZURE_REQUIREMENTS_TEMPLATE = '''azure-functions>=1.17.0
+AZURE_REQUIREMENTS_TEMPLATE = """azure-functions>=1.17.0
 signalwire-agents>=1.0.10
-'''
+"""
 
 AZURE_INIT_TEMPLATE = '''#!/usr/bin/env python3
 """Azure Functions handler for {agent_name} agent.
@@ -934,7 +936,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
     return agent.run(req)
 '''
 
-AZURE_FUNCTION_JSON_TEMPLATE = '''{{
+AZURE_FUNCTION_JSON_TEMPLATE = """{{
     "scriptFile": "__init__.py",
     "bindings": [
         {{
@@ -952,9 +954,9 @@ AZURE_FUNCTION_JSON_TEMPLATE = '''{{
         }}
     ]
 }}
-'''
+"""
 
-AZURE_HOST_JSON_TEMPLATE = '''{{
+AZURE_HOST_JSON_TEMPLATE = """{{
     "version": "2.0",
     "logging": {{
         "applicationInsights": {{
@@ -974,18 +976,18 @@ AZURE_HOST_JSON_TEMPLATE = '''{{
         }}
     }}
 }}
-'''
+"""
 
-AZURE_LOCAL_SETTINGS_TEMPLATE = '''{{
+AZURE_LOCAL_SETTINGS_TEMPLATE = """{{
     "IsEncrypted": false,
     "Values": {{
         "FUNCTIONS_WORKER_RUNTIME": "python",
         "AzureWebJobsStorage": ""
     }}
 }}
-'''
+"""
 
-AZURE_DEPLOY_TEMPLATE = '''#!/bin/bash
+AZURE_DEPLOY_TEMPLATE = """#!/bin/bash
 # Azure Functions deployment script for {agent_name} agent
 #
 # Prerequisites:
@@ -1171,27 +1173,27 @@ echo "To set environment variables (optional):"
 echo "  az functionapp config appsettings set --name $APP_NAME --resource-group $RESOURCE_GROUP \\\\"
 echo "    --settings SWML_BASIC_AUTH_USER=myuser SWML_BASIC_AUTH_PASSWORD=mypass"
 echo ""
-'''
+"""
 
 
 def get_agent_template(agent_type: str, features: Dict[str, bool]) -> str:
     """Generate the main agent template based on type and features."""
 
-    has_tool = features.get('example_tool', True)
-    has_debug = features.get('debug_webhooks', False)
-    has_auth = features.get('basic_auth', False)
+    has_tool = features.get("example_tool", True)
+    has_debug = features.get("debug_webhooks", False)
+    has_auth = features.get("basic_auth", False)
 
-    imports = ['from signalwire import AgentBase']
+    imports = ["from signalwire import AgentBase"]
     if has_tool:
-        imports.append('from signalwire import FunctionResult')
+        imports.append("from signalwire import FunctionResult")
 
-    imports_str = '\n'.join(imports)
+    imports_str = "\n".join(imports)
 
     # Build the __init__ method
     init_parts = []
 
     if has_auth:
-        init_parts.append('''
+        init_parts.append("""
         # Set basic auth if configured
         user = os.getenv("SWML_BASIC_AUTH_USER")
         password = os.getenv("SWML_BASIC_AUTH_PASSWORD")
@@ -1199,17 +1201,17 @@ def get_agent_template(agent_type: str, features: Dict[str, bool]) -> str:
             self.set_params({
                 "swml_basic_auth_user": user,
                 "swml_basic_auth_password": password,
-            })''')
+            })""")
 
-    init_parts.append('''
+    init_parts.append("""
         self._configure_voice()
-        self._configure_prompts()''')
+        self._configure_prompts()""")
 
     if has_debug:
-        init_parts.append('''
-        self._configure_debug_webhooks()''')
+        init_parts.append("""
+        self._configure_debug_webhooks()""")
 
-    init_body = ''.join(init_parts)
+    init_body = "".join(init_parts)
 
     # Build optional methods
     extra_methods = []
@@ -1274,10 +1276,10 @@ def get_agent_template(agent_type: str, features: Dict[str, bool]) -> str:
         # TODO: Implement your logic here
         return FunctionResult(f"Information about {topic}: This is a placeholder response.")''')
 
-    extra_methods_str = ''.join(extra_methods)
+    extra_methods_str = "".join(extra_methods)
 
     # Need os import if auth or debug
-    os_import = 'import os\n' if (has_auth or has_debug) else ''
+    os_import = "import os\n" if (has_auth or has_debug) else ""
 
     return f'''#!/usr/bin/env python3
 """Main Agent - SignalWire AI Agent"""
@@ -1329,39 +1331,39 @@ class MainAgent(AgentBase):
 def get_app_template(features: Dict[str, bool]) -> str:
     """Generate the app.py template based on features."""
 
-    has_debug = features.get('debug_webhooks', False)
-    has_web_ui = features.get('web_ui', False)
+    has_debug = features.get("debug_webhooks", False)
+    has_web_ui = features.get("web_ui", False)
 
     # Base imports
     imports = [
-        'import os',
-        'from pathlib import Path',
-        'from dotenv import load_dotenv',
-        '',
-        '# Load environment variables from .env file',
-        'load_dotenv()',
-        '',
-        'from signalwire import AgentServer',
-        'from agents import MainAgent',
+        "import os",
+        "from pathlib import Path",
+        "from dotenv import load_dotenv",
+        "",
+        "# Load environment variables from .env file",
+        "load_dotenv()",
+        "",
+        "from signalwire import AgentServer",
+        "from agents import MainAgent",
     ]
 
     if has_debug:
-        imports.insert(1, 'import sys')
-        imports.insert(2, 'import json')
-        imports.insert(3, 'from datetime import datetime')
-        imports.insert(4, 'from starlette.requests import Request')
+        imports.insert(1, "import sys")
+        imports.insert(2, "import json")
+        imports.insert(3, "from datetime import datetime")
+        imports.insert(4, "from starlette.requests import Request")
 
-    imports_str = '\n'.join(imports)
+    imports_str = "\n".join(imports)
 
     # Create agent at module level for swaig-test compatibility
-    agent_instance = '''
+    agent_instance = """
 
 # Create agent instance at module level for swaig-test compatibility
 agent = MainAgent()
-'''
+"""
 
     # Debug webhook code
-    debug_code = ''
+    debug_code = ""
     if has_debug:
         debug_code = '''
 
@@ -1452,7 +1454,8 @@ def print_post_prompt_data(data):
 '''
 
     # Main function
-    main_body_parts = ['''
+    main_body_parts = [
+        """
 def main():
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "5000"))
@@ -1460,15 +1463,16 @@ def main():
     # Create server and register agent
     server = AgentServer(host=host, port=port)
     server.register(agent)
-''']
+"""
+    ]
 
     if has_web_ui:
-        main_body_parts.append('''
+        main_body_parts.append("""
     # Serve static files from web/ directory
     web_dir = Path(__file__).parent / "web"
     if web_dir.exists():
         server.serve_static_files(str(web_dir))
-''')
+""")
 
     if has_debug:
         main_body_parts.append('''
@@ -1497,7 +1501,7 @@ def main():
         return {'status': 'received'}
 ''')
 
-    main_body_parts.append('''
+    main_body_parts.append("""
     # Print startup info
     print(f"\\nSignalWire Agent Server")
     print(f"SWML endpoint:  http://{host}:{port}/swml")
@@ -1509,9 +1513,9 @@ def main():
 
 if __name__ == "__main__":
     main()
-''')
+""")
 
-    main_body = ''.join(main_body_parts)
+    main_body = "".join(main_body_parts)
 
     return f'''#!/usr/bin/env python3
 """Main entry point for the agent server."""
@@ -1525,7 +1529,7 @@ if __name__ == "__main__":
 def get_test_template(has_tool: bool) -> str:
     """Generate test template."""
 
-    tool_tests = ''
+    tool_tests = ""
     if has_tool:
         tool_tests = '''
 
@@ -1559,12 +1563,16 @@ class TestDirectImport:
         assert "test" in result.response
 '''
 
-    tool_check = '''
+    tool_check = (
+        '''
     def test_agent_has_tools(self):
         """Test agent has expected tools defined."""
         tools = list_tools()
         assert "get_info" in tools, f"Missing get_info tool. Found: {tools}"
-''' if has_tool else ''
+'''
+        if has_tool
+        else ""
+    )
 
     return f'''#!/usr/bin/env python3
 """
@@ -1656,16 +1664,20 @@ def get_readme_template(project_name: str, features: Dict[str, bool]) -> str:
         "| `/swml` | POST | Main SWML endpoint - point your SignalWire phone number here |",
     ]
 
-    if features.get('debug_webhooks'):
-        endpoints.append("| `/debug` | POST | Debug webhook - receives real-time call data |")
-        endpoints.append("| `/post_prompt` | POST | Post-prompt webhook - receives call summaries |")
+    if features.get("debug_webhooks"):
+        endpoints.append(
+            "| `/debug` | POST | Debug webhook - receives real-time call data |"
+        )
+        endpoints.append(
+            "| `/post_prompt` | POST | Post-prompt webhook - receives call summaries |"
+        )
 
-    if features.get('web_ui'):
+    if features.get("web_ui"):
         endpoints.append("| `/` | GET | Static files from `web/` directory |")
 
-    endpoints_table = '\n'.join(endpoints)
+    endpoints_table = "\n".join(endpoints)
 
-    return f'''# {project_name}
+    return f"""# {project_name}
 
 A SignalWire AI Agent built with signalwire-agents.
 
@@ -1738,12 +1750,12 @@ def my_tool(self, args, raw_data):
     param1 = args.get("param1")
     return FunctionResult(f"Result: {{param1}}")
 ```
-'''
+"""
 
 
 def get_web_index_template() -> str:
     """Generate a simple web UI template."""
-    return '''<!DOCTYPE html>
+    return """<!DOCTYPE html>
 <html>
 <head>
     <title>SignalWire Agent</title>
@@ -1837,35 +1849,36 @@ pytest tests/ -v</pre>
     <a href="https://github.com/signalwire/signalwire-agents">SignalWire Agents SDK</a></p>
 </body>
 </html>
-'''
+"""
 
 
 # =============================================================================
 # Project Generator
 # =============================================================================
 
+
 class ProjectGenerator:
     """Generates a new SignalWire agent project."""
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
-        self.project_dir = Path(config['project_dir'])
-        self.project_name = config['project_name']
-        self.features = config['features']
-        self.credentials = config.get('credentials', {})
-        self.platform = config.get('platform', 'local')
-        self.cloud_config = config.get('cloud_config', {})
+        self.project_dir = Path(config["project_dir"])
+        self.project_name = config["project_name"]
+        self.features = config["features"]
+        self.credentials = config.get("credentials", {})
+        self.platform = config.get("platform", "local")
+        self.cloud_config = config.get("cloud_config", {})
 
     def generate(self) -> bool:
         """Generate the project. Returns True on success."""
         try:
-            if self.platform == 'local':
+            if self.platform == "local":
                 return self._generate_local()
-            elif self.platform == 'aws':
+            elif self.platform == "aws":
                 return self._generate_aws()
-            elif self.platform == 'gcp':
+            elif self.platform == "gcp":
                 return self._generate_gcp()
-            elif self.platform == 'azure':
+            elif self.platform == "azure":
                 return self._generate_azure()
             else:
                 print_error(f"Unknown platform: {self.platform}")
@@ -1881,15 +1894,15 @@ class ProjectGenerator:
         self._create_app_file()
         self._create_config_files()
 
-        if self.features.get('tests'):
+        if self.features.get("tests"):
             self._create_test_files()
 
-        if self.features.get('web_ui'):
+        if self.features.get("web_ui"):
             self._create_web_files()
 
         self._create_readme()
 
-        if self.config.get('create_venv'):
+        if self.config.get("create_venv"):
             self._create_virtualenv()
 
         return True
@@ -1904,29 +1917,29 @@ class ProjectGenerator:
 
         # handler.py
         handler_code = AWS_HANDLER_TEMPLATE.format(**template_vars)
-        (self.project_dir / 'handler.py').write_text(handler_code)
+        (self.project_dir / "handler.py").write_text(handler_code)
         print_success("Created handler.py")
 
         # requirements.txt
-        (self.project_dir / 'requirements.txt').write_text(AWS_REQUIREMENTS_TEMPLATE)
+        (self.project_dir / "requirements.txt").write_text(AWS_REQUIREMENTS_TEMPLATE)
         print_success("Created requirements.txt")
 
         # deploy.sh
         deploy_code = AWS_DEPLOY_TEMPLATE.format(**template_vars)
-        deploy_path = self.project_dir / 'deploy.sh'
+        deploy_path = self.project_dir / "deploy.sh"
         deploy_path.write_text(deploy_code)
         deploy_path.chmod(0o755)
         print_success("Created deploy.sh")
 
         # .env.example
-        self._create_cloud_env_example('aws')
+        self._create_cloud_env_example("aws")
 
         # .gitignore
-        (self.project_dir / '.gitignore').write_text(TEMPLATE_GITIGNORE)
+        (self.project_dir / ".gitignore").write_text(TEMPLATE_GITIGNORE)
         print_success("Created .gitignore")
 
         # README.md
-        self._create_cloud_readme('aws')
+        self._create_cloud_readme("aws")
 
         return True
 
@@ -1940,29 +1953,29 @@ class ProjectGenerator:
 
         # main.py
         main_code = GCP_MAIN_TEMPLATE.format(**template_vars)
-        (self.project_dir / 'main.py').write_text(main_code)
+        (self.project_dir / "main.py").write_text(main_code)
         print_success("Created main.py")
 
         # requirements.txt
-        (self.project_dir / 'requirements.txt').write_text(GCP_REQUIREMENTS_TEMPLATE)
+        (self.project_dir / "requirements.txt").write_text(GCP_REQUIREMENTS_TEMPLATE)
         print_success("Created requirements.txt")
 
         # deploy.sh
         deploy_code = GCP_DEPLOY_TEMPLATE.format(**template_vars)
-        deploy_path = self.project_dir / 'deploy.sh'
+        deploy_path = self.project_dir / "deploy.sh"
         deploy_path.write_text(deploy_code)
         deploy_path.chmod(0o755)
         print_success("Created deploy.sh")
 
         # .env.example
-        self._create_cloud_env_example('gcp')
+        self._create_cloud_env_example("gcp")
 
         # .gitignore
-        (self.project_dir / '.gitignore').write_text(TEMPLATE_GITIGNORE)
+        (self.project_dir / ".gitignore").write_text(TEMPLATE_GITIGNORE)
         print_success("Created .gitignore")
 
         # README.md
-        self._create_cloud_readme('gcp')
+        self._create_cloud_readme("gcp")
 
         return True
 
@@ -1972,7 +1985,7 @@ class ProjectGenerator:
         print_success(f"Created {self.project_dir}/")
 
         # Create function_app directory
-        function_dir = self.project_dir / 'function_app'
+        function_dir = self.project_dir / "function_app"
         function_dir.mkdir(exist_ok=True)
 
         # Get template variables
@@ -1980,41 +1993,43 @@ class ProjectGenerator:
 
         # function_app/__init__.py
         init_code = AZURE_INIT_TEMPLATE.format(**template_vars)
-        (function_dir / '__init__.py').write_text(init_code)
+        (function_dir / "__init__.py").write_text(init_code)
         print_success("Created function_app/__init__.py")
 
         # function_app/function.json
-        (function_dir / 'function.json').write_text(AZURE_FUNCTION_JSON_TEMPLATE)
+        (function_dir / "function.json").write_text(AZURE_FUNCTION_JSON_TEMPLATE)
         print_success("Created function_app/function.json")
 
         # host.json
-        (self.project_dir / 'host.json').write_text(AZURE_HOST_JSON_TEMPLATE)
+        (self.project_dir / "host.json").write_text(AZURE_HOST_JSON_TEMPLATE)
         print_success("Created host.json")
 
         # local.settings.json
-        (self.project_dir / 'local.settings.json').write_text(AZURE_LOCAL_SETTINGS_TEMPLATE)
+        (self.project_dir / "local.settings.json").write_text(
+            AZURE_LOCAL_SETTINGS_TEMPLATE
+        )
         print_success("Created local.settings.json")
 
         # requirements.txt
-        (self.project_dir / 'requirements.txt').write_text(AZURE_REQUIREMENTS_TEMPLATE)
+        (self.project_dir / "requirements.txt").write_text(AZURE_REQUIREMENTS_TEMPLATE)
         print_success("Created requirements.txt")
 
         # deploy.sh
         deploy_code = AZURE_DEPLOY_TEMPLATE.format(**template_vars)
-        deploy_path = self.project_dir / 'deploy.sh'
+        deploy_path = self.project_dir / "deploy.sh"
         deploy_path.write_text(deploy_code)
         deploy_path.chmod(0o755)
         print_success("Created deploy.sh")
 
         # .env.example
-        self._create_cloud_env_example('azure')
+        self._create_cloud_env_example("azure")
 
         # .gitignore
-        (self.project_dir / '.gitignore').write_text(TEMPLATE_GITIGNORE)
+        (self.project_dir / ".gitignore").write_text(TEMPLATE_GITIGNORE)
         print_success("Created .gitignore")
 
         # README.md
-        self._create_cloud_readme('azure')
+        self._create_cloud_readme("azure")
 
         return True
 
@@ -2022,43 +2037,59 @@ class ProjectGenerator:
         """Get template variables for cloud function templates."""
         # Convert project name to various formats
         agent_name = self.project_name
-        agent_name_slug = self.project_name.lower().replace(' ', '-').replace('_', '-')
-        agent_class = ''.join(word.capitalize() for word in self.project_name.replace('-', ' ').replace('_', ' ').split()) + 'Agent'
+        agent_name_slug = self.project_name.lower().replace(" ", "-").replace("_", "-")
+        agent_class = (
+            "".join(
+                word.capitalize()
+                for word in self.project_name.replace("-", " ")
+                .replace("_", " ")
+                .split()
+            )
+            + "Agent"
+        )
         function_name = agent_name_slug
 
         # Auth credentials
-        auth_user = 'admin'
+        auth_user = "admin"
         auth_password = generate_password(16)
 
         return {
-            'agent_name': agent_name,
-            'agent_name_slug': agent_name_slug,
-            'agent_class': agent_class,
-            'function_name': function_name,
-            'region': self.cloud_config.get('region', DEFAULT_REGIONS.get(self.platform, '')),
-            'resource_group': self.cloud_config.get('resource_group', f'{function_name}-rg'),
-            'auth_user': auth_user,
-            'auth_password': auth_password,
+            "agent_name": agent_name,
+            "agent_name_slug": agent_name_slug,
+            "agent_class": agent_class,
+            "function_name": function_name,
+            "region": self.cloud_config.get(
+                "region", DEFAULT_REGIONS.get(self.platform, "")
+            ),
+            "resource_group": self.cloud_config.get(
+                "resource_group", f"{function_name}-rg"
+            ),
+            "auth_user": auth_user,
+            "auth_password": auth_password,
         }
 
     def _create_cloud_env_example(self, platform: str):
         """Create .env.example for cloud platforms."""
-        env_content = '''# Optional: Basic authentication credentials
+        env_content = """# Optional: Basic authentication credentials
 # If not set, the SDK will auto-generate secure credentials
 SWML_BASIC_AUTH_USER=admin
 SWML_BASIC_AUTH_PASSWORD=your-secure-password
-'''
-        (self.project_dir / '.env.example').write_text(env_content)
+"""
+        (self.project_dir / ".env.example").write_text(env_content)
         print_success("Created .env.example")
 
     def _create_cloud_readme(self, platform: str):
         """Create README.md for cloud platforms."""
         template_vars = self._get_template_vars()
-        platform_names = {'aws': 'AWS Lambda', 'gcp': 'Google Cloud Functions', 'azure': 'Azure Functions'}
+        platform_names = {
+            "aws": "AWS Lambda",
+            "gcp": "Google Cloud Functions",
+            "azure": "Azure Functions",
+        }
         platform_name = platform_names.get(platform, platform)
 
-        if platform == 'aws':
-            readme = f'''# {self.project_name}
+        if platform == "aws":
+            readme = f"""# {self.project_name}
 
 A SignalWire AI Agent deployed on {platform_name}.
 
@@ -2115,10 +2146,10 @@ curl -u admin:password -X POST https://YOUR-API-ID.execute-api.REGION.amazonaws.
 ## Configure SignalWire
 
 Set your phone number's SWML URL to the endpoint URL shown after deployment.
-'''
+"""
 
-        elif platform == 'gcp':
-            readme = f'''# {self.project_name}
+        elif platform == "gcp":
+            readme = f"""# {self.project_name}
 
 A SignalWire AI Agent deployed on {platform_name}.
 
@@ -2175,10 +2206,10 @@ curl -X POST https://YOUR-FUNCTION-URL/swaig \\
 ## Configure SignalWire
 
 Set your phone number's SWML URL to the endpoint URL shown after deployment.
-'''
+"""
 
         else:  # azure
-            readme = f'''# {self.project_name}
+            readme = f"""# {self.project_name}
 
 A SignalWire AI Agent deployed on {platform_name}.
 
@@ -2239,18 +2270,18 @@ curl -X POST https://YOUR-APP.azurewebsites.net/api/function_app/swaig \\
 ## Configure SignalWire
 
 Set your phone number's SWML URL to the endpoint URL shown after deployment.
-'''
+"""
 
-        (self.project_dir / 'README.md').write_text(readme)
+        (self.project_dir / "README.md").write_text(readme)
         print_success("Created README.md")
 
     def _create_directories(self):
         """Create project directory structure."""
-        dirs = ['agents', 'skills']
-        if self.features.get('tests'):
-            dirs.append('tests')
-        if self.features.get('web_ui'):
-            dirs.append('web')
+        dirs = ["agents", "skills"]
+        if self.features.get("tests"):
+            dirs.append("tests")
+        if self.features.get("web_ui"):
+            dirs.append("web")
 
         self.project_dir.mkdir(parents=True, exist_ok=True)
         print_success(f"Created {self.project_dir}/")
@@ -2260,34 +2291,36 @@ Set your phone number's SWML URL to the endpoint URL shown after deployment.
 
     def _create_agent_files(self):
         """Create agent module files."""
-        agents_dir = self.project_dir / 'agents'
+        agents_dir = self.project_dir / "agents"
 
         # __init__.py
-        (agents_dir / '__init__.py').write_text(TEMPLATE_AGENTS_INIT)
+        (agents_dir / "__init__.py").write_text(TEMPLATE_AGENTS_INIT)
         print_success("Created agents/__init__.py")
 
         # main_agent.py
-        agent_code = get_agent_template(self.config.get('agent_type', 'basic'), self.features)
-        (agents_dir / 'main_agent.py').write_text(agent_code)
+        agent_code = get_agent_template(
+            self.config.get("agent_type", "basic"), self.features
+        )
+        (agents_dir / "main_agent.py").write_text(agent_code)
         print_success("Created agents/main_agent.py")
 
         # skills/__init__.py
-        (self.project_dir / 'skills' / '__init__.py').write_text(TEMPLATE_SKILLS_INIT)
+        (self.project_dir / "skills" / "__init__.py").write_text(TEMPLATE_SKILLS_INIT)
         print_success("Created skills/__init__.py")
 
     def _create_app_file(self):
         """Create main app.py entry point."""
         app_code = get_app_template(self.features)
-        (self.project_dir / 'app.py').write_text(app_code)
+        (self.project_dir / "app.py").write_text(app_code)
         print_success("Created app.py")
 
     def _create_config_files(self):
         """Create configuration files."""
         # .env
-        env_content = f'''# SignalWire Credentials
-SIGNALWIRE_SPACE_NAME={self.credentials.get('space', '')}
-SIGNALWIRE_PROJECT_ID={self.credentials.get('project', '')}
-SIGNALWIRE_TOKEN={self.credentials.get('token', '')}
+        env_content = f"""# SignalWire Credentials
+SIGNALWIRE_SPACE_NAME={self.credentials.get("space", "")}
+SIGNALWIRE_PROJECT_ID={self.credentials.get("project", "")}
+SIGNALWIRE_TOKEN={self.credentials.get("token", "")}
 
 # Agent Server Configuration
 HOST=0.0.0.0
@@ -2295,85 +2328,91 @@ PORT=5000
 
 # Agent name
 AGENT_NAME={self.project_name}
-'''
-        if self.features.get('basic_auth'):
-            env_content += f'''
+"""
+        if self.features.get("basic_auth"):
+            env_content += f"""
 # Basic Auth for SWML webhooks
 SWML_BASIC_AUTH_USER=signalwire
 SWML_BASIC_AUTH_PASSWORD={generate_password()}
-'''
+"""
 
-        if self.features.get('debug_webhooks'):
-            env_content += '''
+        if self.features.get("debug_webhooks"):
+            env_content += """
 # Public URL (ngrok tunnel or production domain)
 SWML_PROXY_URL_BASE=
 
 # Debug settings (0=off, 1=basic, 2=verbose)
 DEBUG_WEBHOOK_LEVEL=1
-'''
+"""
 
-        (self.project_dir / '.env').write_text(env_content)
+        (self.project_dir / ".env").write_text(env_content)
         print_success("Created .env")
 
         # .env.example
-        (self.project_dir / '.env.example').write_text(TEMPLATE_ENV_EXAMPLE)
+        (self.project_dir / ".env.example").write_text(TEMPLATE_ENV_EXAMPLE)
         print_success("Created .env.example")
 
         # .gitignore
-        (self.project_dir / '.gitignore').write_text(TEMPLATE_GITIGNORE)
+        (self.project_dir / ".gitignore").write_text(TEMPLATE_GITIGNORE)
         print_success("Created .gitignore")
 
         # requirements.txt
-        (self.project_dir / 'requirements.txt').write_text(TEMPLATE_REQUIREMENTS)
+        (self.project_dir / "requirements.txt").write_text(TEMPLATE_REQUIREMENTS)
         print_success("Created requirements.txt")
 
     def _create_test_files(self):
         """Create test files."""
-        tests_dir = self.project_dir / 'tests'
+        tests_dir = self.project_dir / "tests"
 
-        (tests_dir / '__init__.py').write_text(TEMPLATE_TESTS_INIT)
+        (tests_dir / "__init__.py").write_text(TEMPLATE_TESTS_INIT)
         print_success("Created tests/__init__.py")
 
-        test_code = get_test_template(self.features.get('example_tool', True))
-        (tests_dir / 'test_agent.py').write_text(test_code)
+        test_code = get_test_template(self.features.get("example_tool", True))
+        (tests_dir / "test_agent.py").write_text(test_code)
         print_success("Created tests/test_agent.py")
 
     def _create_web_files(self):
         """Create web UI files."""
-        web_dir = self.project_dir / 'web'
+        web_dir = self.project_dir / "web"
 
-        (web_dir / 'index.html').write_text(get_web_index_template())
+        (web_dir / "index.html").write_text(get_web_index_template())
         print_success("Created web/index.html")
 
     def _create_readme(self):
         """Create README.md."""
         readme = get_readme_template(self.project_name, self.features)
-        (self.project_dir / 'README.md').write_text(readme)
+        (self.project_dir / "README.md").write_text(readme)
         print_success("Created README.md")
 
     def _create_virtualenv(self):
         """Create and set up virtual environment."""
-        venv_dir = self.project_dir / '.venv'
+        venv_dir = self.project_dir / ".venv"
 
         print_step("Creating virtual environment...")
         try:
             subprocess.run(
-                [sys.executable, '-m', 'venv', str(venv_dir)],
+                [sys.executable, "-m", "venv", str(venv_dir)],
                 check=True,
-                capture_output=True
+                capture_output=True,
             )
             print_success("Created virtual environment")
 
             # Install dependencies
             print_step("Installing dependencies...")
-            pip_path = venv_dir / 'bin' / 'pip'
-            if sys.platform == 'win32':
-                pip_path = venv_dir / 'Scripts' / 'pip.exe'
+            pip_path = venv_dir / "bin" / "pip"
+            if sys.platform == "win32":
+                pip_path = venv_dir / "Scripts" / "pip.exe"
 
             subprocess.run(
-                [str(pip_path), 'install', '-q', '-r', str(self.project_dir / 'requirements.txt')],
+                [
+                    str(pip_path),
+                    "install",
+                    "-q",
+                    "-r",
+                    str(self.project_dir / "requirements.txt"),
+                ],
                 check=True,
-                capture_output=True
+                capture_output=True,
             )
             print_success("Installed dependencies")
 
@@ -2384,6 +2423,7 @@ DEBUG_WEBHOOK_LEVEL=1
 # =============================================================================
 # CLI Entry Point
 # =============================================================================
+
 
 def run_interactive() -> Dict[str, Any]:
     """Run interactive prompts and return configuration."""
@@ -2405,30 +2445,34 @@ def run_interactive() -> Dict[str, Any]:
 
     # Check if directory exists
     if os.path.exists(project_dir):
-        if not prompt_yes_no(f"Directory {project_dir} exists. Overwrite?", default=False):
+        if not prompt_yes_no(
+            f"Directory {project_dir} exists. Overwrite?", default=False
+        ):
             print("Aborted.")
             sys.exit(0)
 
     # Cloud-specific configuration
     cloud_config = {}
-    if platform != 'local':
-        default_region = DEFAULT_REGIONS.get(platform, '')
-        cloud_config['region'] = prompt("Region", default_region)
+    if platform != "local":
+        default_region = DEFAULT_REGIONS.get(platform, "")
+        cloud_config["region"] = prompt("Region", default_region)
 
-        if platform == 'azure':
-            cloud_config['resource_group'] = prompt("Resource group", f"{project_name}-rg")
+        if platform == "azure":
+            cloud_config["resource_group"] = prompt(
+                "Resource group", f"{project_name}-rg"
+            )
 
     # Agent type (for local) or simplified for cloud
-    if platform == 'local':
+    if platform == "local":
         agent_types = [
             "Basic - Minimal agent with example tool",
             "Full - Debug webhooks, web UI, all features",
         ]
         agent_type_idx = prompt_select("Agent type:", agent_types, default=1)
-        agent_type = 'basic' if agent_type_idx == 1 else 'full'
+        agent_type = "basic" if agent_type_idx == 1 else "full"
 
         # Set default features based on type
-        if agent_type == 'full':
+        if agent_type == "full":
             default_features = [True, True, True, True, True, True]
         else:
             default_features = [False, False, False, True, True, False]
@@ -2442,136 +2486,148 @@ def run_interactive() -> Dict[str, Any]:
             "Test scaffolding (pytest)",
             "Basic authentication",
         ]
-        selected = prompt_multiselect("Include features:", feature_names, default_features)
+        selected = prompt_multiselect(
+            "Include features:", feature_names, default_features
+        )
 
         features = {
-            'debug_webhooks': selected[0],
-            'post_prompt': selected[1],
-            'web_ui': selected[2],
-            'example_tool': selected[3],
-            'tests': selected[4],
-            'basic_auth': selected[5],
+            "debug_webhooks": selected[0],
+            "post_prompt": selected[1],
+            "web_ui": selected[2],
+            "example_tool": selected[3],
+            "tests": selected[4],
+            "basic_auth": selected[5],
         }
     else:
         # Cloud platforms have simplified features
-        agent_type = 'basic'
+        agent_type = "basic"
         features = {
-            'debug_webhooks': False,
-            'post_prompt': False,
-            'web_ui': False,
-            'example_tool': True,
-            'tests': False,
-            'basic_auth': prompt_yes_no("Enable basic authentication?", default=True),
+            "debug_webhooks": False,
+            "post_prompt": False,
+            "web_ui": False,
+            "example_tool": True,
+            "tests": False,
+            "basic_auth": prompt_yes_no("Enable basic authentication?", default=True),
         }
 
     # Credentials (only for local)
-    credentials = {'space': '', 'project': '', 'token': ''}
-    if platform == 'local':
+    credentials = {"space": "", "project": "", "token": ""}
+    if platform == "local":
         env_creds = get_env_credentials()
 
-        if env_creds['space'] or env_creds['project'] or env_creds['token']:
-            print(f"\n{Colors.GREEN}SignalWire credentials found in environment:{Colors.NC}")
-            if env_creds['space']:
+        if env_creds["space"] or env_creds["project"] or env_creds["token"]:
+            print(
+                f"\n{Colors.GREEN}SignalWire credentials found in environment:{Colors.NC}"
+            )
+            if env_creds["space"]:
                 print(f"  Space: {env_creds['space']}")
-            if env_creds['project']:
-                print(f"  Project: {env_creds['project'][:12]}...{env_creds['project'][-4:]}")
-            if env_creds['token']:
+            if env_creds["project"]:
+                print(
+                    f"  Project: {env_creds['project'][:12]}...{env_creds['project'][-4:]}"
+                )
+            if env_creds["token"]:
                 print(f"  Token: {mask_token(env_creds['token'])}")
 
             if prompt_yes_no("Use these credentials?", default=True):
                 credentials = env_creds
             else:
-                credentials['space'] = prompt("Space name", env_creds['space'])
-                credentials['project'] = prompt("Project ID", env_creds['project'])
-                credentials['token'] = prompt("Token", env_creds['token'])
+                credentials["space"] = prompt("Space name", env_creds["space"])
+                credentials["project"] = prompt("Project ID", env_creds["project"])
+                credentials["token"] = prompt("Token", env_creds["token"])
         else:
-            print(f"\n{Colors.YELLOW}No SignalWire credentials found in environment.{Colors.NC}")
+            print(
+                f"\n{Colors.YELLOW}No SignalWire credentials found in environment.{Colors.NC}"
+            )
             if prompt_yes_no("Enter credentials now?", default=False):
-                credentials['space'] = prompt("Space name")
-                credentials['project'] = prompt("Project ID")
-                credentials['token'] = prompt("Token")
+                credentials["space"] = prompt("Space name")
+                credentials["project"] = prompt("Project ID")
+                credentials["token"] = prompt("Token")
 
     # Virtual environment (only for local)
     create_venv = False
-    if platform == 'local':
+    if platform == "local":
         create_venv = prompt_yes_no("\nCreate virtual environment?", default=True)
 
     return {
-        'project_name': project_name,
-        'project_dir': project_dir,
-        'platform': platform,
-        'agent_type': agent_type,
-        'features': features,
-        'credentials': credentials,
-        'create_venv': create_venv,
-        'cloud_config': cloud_config,
+        "project_name": project_name,
+        "project_dir": project_dir,
+        "platform": platform,
+        "agent_type": agent_type,
+        "features": features,
+        "credentials": credentials,
+        "create_venv": create_venv,
+        "cloud_config": cloud_config,
     }
 
 
 def run_quick(project_name: str, args: Any) -> Dict[str, Any]:
     """Run in quick mode with minimal prompts."""
-    project_dir = os.path.abspath(os.path.join('.', project_name))
+    project_dir = os.path.abspath(os.path.join(".", project_name))
 
     # Get platform from args
-    platform = getattr(args, 'platform', 'local') or 'local'
+    platform = getattr(args, "platform", "local") or "local"
 
     # Get region from args or use default
-    region = getattr(args, 'region', None)
-    if not region and platform != 'local':
-        region = DEFAULT_REGIONS.get(platform, '')
+    region = getattr(args, "region", None)
+    if not region and platform != "local":
+        region = DEFAULT_REGIONS.get(platform, "")
 
     # Build cloud config
     cloud_config = {}
-    if platform != 'local':
-        cloud_config['region'] = region
-        if platform == 'azure':
-            cloud_config['resource_group'] = f"{project_name}-rg"
+    if platform != "local":
+        cloud_config["region"] = region
+        if platform == "azure":
+            cloud_config["resource_group"] = f"{project_name}-rg"
 
     # Determine features from args
-    agent_type = getattr(args, 'type', 'basic') or 'basic'
+    agent_type = getattr(args, "type", "basic") or "basic"
 
-    if platform == 'local':
-        if agent_type == 'full':
+    if platform == "local":
+        if agent_type == "full":
             features = {
-                'debug_webhooks': True,
-                'post_prompt': True,
-                'web_ui': True,
-                'example_tool': True,
-                'tests': True,
-                'basic_auth': True,
+                "debug_webhooks": True,
+                "post_prompt": True,
+                "web_ui": True,
+                "example_tool": True,
+                "tests": True,
+                "basic_auth": True,
             }
         else:
             features = {
-                'debug_webhooks': False,
-                'post_prompt': False,
-                'web_ui': False,
-                'example_tool': True,
-                'tests': True,
-                'basic_auth': False,
+                "debug_webhooks": False,
+                "post_prompt": False,
+                "web_ui": False,
+                "example_tool": True,
+                "tests": True,
+                "basic_auth": False,
             }
     else:
         # Cloud platforms have simplified features
         features = {
-            'debug_webhooks': False,
-            'post_prompt': False,
-            'web_ui': False,
-            'example_tool': True,
-            'tests': False,
-            'basic_auth': True,
+            "debug_webhooks": False,
+            "post_prompt": False,
+            "web_ui": False,
+            "example_tool": True,
+            "tests": False,
+            "basic_auth": True,
         }
 
     # Get credentials from environment (only for local)
-    credentials = get_env_credentials() if platform == 'local' else {'space': '', 'project': '', 'token': ''}
+    credentials = (
+        get_env_credentials()
+        if platform == "local"
+        else {"space": "", "project": "", "token": ""}
+    )
 
     return {
-        'project_name': project_name,
-        'project_dir': project_dir,
-        'platform': platform,
-        'agent_type': agent_type,
-        'features': features,
-        'credentials': credentials,
-        'create_venv': not getattr(args, 'no_venv', False) and platform == 'local',
-        'cloud_config': cloud_config,
+        "project_name": project_name,
+        "project_dir": project_dir,
+        "platform": platform,
+        "agent_type": agent_type,
+        "features": features,
+        "credentials": credentials,
+        "create_venv": not getattr(args, "no_venv", False) and platform == "local",
+        "cloud_config": cloud_config,
     }
 
 
@@ -2580,9 +2636,9 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(
-        description='Create a new SignalWire agent project',
+        description="Create a new SignalWire agent project",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog='''
+        epilog="""
 Examples:
   sw-agent-init                        Interactive mode
   sw-agent-init myagent                Quick mode with defaults
@@ -2591,17 +2647,29 @@ Examples:
   sw-agent-init myagent -p gcp         Google Cloud Function
   sw-agent-init myagent -p azure       Azure Function
   sw-agent-init myagent -p aws -r us-west-2  Custom region
-'''
+""",
     )
-    parser.add_argument('name', nargs='?', help='Project name')
-    parser.add_argument('--type', choices=['basic', 'full'], default='basic',
-                        help='Agent type (default: basic)')
-    parser.add_argument('--platform', '-p', choices=['local', 'aws', 'gcp', 'azure'],
-                        default='local', help='Target platform (default: local)')
-    parser.add_argument('--region', '-r', help='Cloud region (e.g., us-east-1, us-central1, eastus)')
-    parser.add_argument('--no-venv', action='store_true',
-                        help='Skip virtual environment creation')
-    parser.add_argument('--dir', help='Parent directory for project')
+    parser.add_argument("name", nargs="?", help="Project name")
+    parser.add_argument(
+        "--type",
+        choices=["basic", "full"],
+        default="basic",
+        help="Agent type (default: basic)",
+    )
+    parser.add_argument(
+        "--platform",
+        "-p",
+        choices=["local", "aws", "gcp", "azure"],
+        default="local",
+        help="Target platform (default: local)",
+    )
+    parser.add_argument(
+        "--region", "-r", help="Cloud region (e.g., us-east-1, us-central1, eastus)"
+    )
+    parser.add_argument(
+        "--no-venv", action="store_true", help="Skip virtual environment creation"
+    )
+    parser.add_argument("--dir", help="Parent directory for project")
 
     args = parser.parse_args()
 
@@ -2609,7 +2677,7 @@ Examples:
     if args.name:
         config = run_quick(args.name, args)
         if args.dir:
-            config['project_dir'] = os.path.abspath(os.path.join(args.dir, args.name))
+            config["project_dir"] = os.path.abspath(os.path.join(args.dir, args.name))
     else:
         config = run_interactive()
 
@@ -2618,11 +2686,13 @@ Examples:
 
     generator = ProjectGenerator(config)
     if generator.generate():
-        print(f"\n{Colors.GREEN}{Colors.BOLD}Project created successfully!{Colors.NC}\n")
+        print(
+            f"\n{Colors.GREEN}{Colors.BOLD}Project created successfully!{Colors.NC}\n"
+        )
         print("To start your agent:\n")
         print(f"  cd {config['project_dir']}")
-        if config.get('create_venv'):
-            if sys.platform == 'win32':
+        if config.get("create_venv"):
+            if sys.platform == "win32":
                 print("  .venv\\Scripts\\activate")
             else:
                 print("  source .venv/bin/activate")
@@ -2632,5 +2702,5 @@ Examples:
         sys.exit(1)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

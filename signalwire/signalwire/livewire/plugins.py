@@ -46,6 +46,7 @@ def _reset_logged():
 # STT plugins
 # ---------------------------------------------------------------------------
 
+
 class DeepgramSTT:
     """Stub for livekit Deepgram STT plugin."""
 
@@ -61,6 +62,7 @@ class DeepgramSTT:
 # ---------------------------------------------------------------------------
 # LLM plugins
 # ---------------------------------------------------------------------------
+
 
 class OpenAILLM:
     """Stub for livekit OpenAI LLM plugin."""
@@ -78,6 +80,7 @@ class OpenAILLM:
 # ---------------------------------------------------------------------------
 # TTS plugins
 # ---------------------------------------------------------------------------
+
 
 class CartesiaTTS:
     """Stub for livekit Cartesia TTS plugin."""
@@ -106,6 +109,7 @@ class ElevenLabsTTS:
 # ---------------------------------------------------------------------------
 # VAD plugins
 # ---------------------------------------------------------------------------
+
 
 class SileroVAD:
     """Stub for livekit Silero VAD plugin."""
