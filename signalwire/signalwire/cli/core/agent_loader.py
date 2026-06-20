@@ -403,7 +403,7 @@ def _load_service_impl(
                     f"Warning: Multiple services found, using '{services_found[0][0]}'"
                 )
                 print(
-                    f"Hint: Use --route or service identifier to choose specific service"
+                    "Hint: Use --route or service identifier to choose specific service"
                 )
 
     # Strategy 3: Look for SWMLService subclass and try to instantiate it
@@ -489,12 +489,12 @@ def _load_service_impl(
 
             def mock_serve(self, *args, **kwargs):
                 captured_services.append(self)
-                print(f"  (Intercepted serve() call, service captured for testing)")
+                print("  (Intercepted serve() call, service captured for testing)")
                 return self
 
             def mock_run(self, *args, **kwargs):
                 captured_services.append(self)
-                print(f"  (Intercepted run() call, service captured for testing)")
+                print("  (Intercepted run() call, service captured for testing)")
                 return self
 
             # Apply patches to both base classes

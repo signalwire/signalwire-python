@@ -166,7 +166,7 @@ class WeatherApiSkill(SkillBase):
         # Create the tool configuration with DataMap webhook
         tool = {
             "function": self.tool_name,
-            "description": f"Get current weather information for any location",
+            "description": "Get current weather information for any location",
             "parameters": {
                 "type": "object",
                 "properties": {

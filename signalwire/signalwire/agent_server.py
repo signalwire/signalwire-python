@@ -23,7 +23,7 @@ except ImportError:
 
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.swml_service import SWMLService
-from signalwire.core.logging_config import get_logger, get_execution_mode
+from signalwire.core.logging_config import get_logger
 
 
 class AgentServer:
@@ -363,9 +363,12 @@ class AgentServer:
         Returns:
             Response for serverless modes, None for server mode
         """
-        from signalwire.core.logging_config import get_execution_mode
         import os
         import json
+
+        # Imported lazily here so tests can patch
+        # signalwire.core.logging_config.get_execution_mode at call time.
+        from signalwire.core.logging_config import get_execution_mode
 
         # Detect execution mode
         mode = get_execution_mode()

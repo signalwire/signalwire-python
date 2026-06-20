@@ -486,7 +486,7 @@ class SchemaUtils:
             docstring += f"        Args:\n            {param_name}: {description}\n"
 
         # Add return documentation
-        docstring += f'        \n        Returns:\n            True if the verb was added successfully, False otherwise\n        """\n'
+        docstring += '        \n        Returns:\n            True if the verb was added successfully, False otherwise\n        """\n'
 
         # Create the full method signature with docstring
         method_signature = (

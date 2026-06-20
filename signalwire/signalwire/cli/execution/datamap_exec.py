@@ -364,7 +364,7 @@ def execute_datamap_function(
                 if "foreach" in webhook:
                     foreach_config = webhook["foreach"]
                     if verbose:
-                        print(f"\n--- Processing Webhook Foreach ---")
+                        print("\n--- Processing Webhook Foreach ---")
                         print(f"Foreach config: {json.dumps(foreach_config, indent=2)}")
 
                     input_key = foreach_config.get("input_key", "data")
@@ -421,7 +421,7 @@ def execute_datamap_function(
                 if "output" in webhook:
                     webhook_output = webhook["output"]
                     if verbose:
-                        print(f"\n--- Processing Webhook Output ---")
+                        print("\n--- Processing Webhook Output ---")
                         print(
                             f"Output template: {json.dumps(webhook_output, indent=2)}"
                         )
@@ -467,7 +467,7 @@ def execute_datamap_function(
     # Step 5: All webhooks failed, use fallback output if available
     if "output" in actual_datamap:
         if verbose:
-            print(f"\n--- Using DataMap Fallback Output ---")
+            print("\n--- Using DataMap Fallback Output ---")
         datamap_output = actual_datamap["output"]
         if verbose:
             print(f"Fallback output template: {json.dumps(datamap_output, indent=2)}")
@@ -488,7 +488,7 @@ def execute_datamap_function(
                 print(f"Fallback result = {result}")
 
         if verbose:
-            print(f"\n--- DataMap Fallback Final Result ---")
+            print("\n--- DataMap Fallback Final Result ---")
             print(
                 f"Result: {json.dumps(result, indent=2) if isinstance(result, dict) else result}"
             )
@@ -501,7 +501,7 @@ def execute_datamap_function(
         "status": "failed",
     }
     if verbose:
-        print(f"\n--- DataMap Error Result ---")
+        print("\n--- DataMap Error Result ---")
         print(f"Result: {json.dumps(error_result, indent=2)}")
 
     return error_result

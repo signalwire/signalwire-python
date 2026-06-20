@@ -137,7 +137,7 @@ class GoogleSearchScraper:
             text_content += f"Title: {result['title']}\n"
             text_content += f"URL: {result['url']}\n"
             text_content += f"Snippet: {result['snippet']}\n"
-            text_content += f"Content:\n"
+            text_content += "Content:\n"
 
             # Pass the calculated per-result limit
             page_text = self.extract_text_from_url(

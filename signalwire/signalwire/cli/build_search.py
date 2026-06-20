@@ -431,7 +431,7 @@ Examples:
     tags = [tag.strip() for tag in args.tags.split(",")] if args.tags else None
 
     if args.verbose:
-        print(f"Building search index:")
+        print("Building search index:")
         print(f"  Backend: {args.backend}")
         print(f"  Sources: {[str(s) for s in valid_sources]}")
         if args.backend == "sqlite":
@@ -454,9 +454,9 @@ Examples:
             print(f"  Chunk size (words): {args.chunk_size}")
             print(f"  Overlap size (words): {args.overlap_size}")
         elif args.chunking_strategy == "paragraph":
-            print(f"  Chunking by paragraphs (double newlines)")
+            print("  Chunking by paragraphs (double newlines)")
         elif args.chunking_strategy == "page":
-            print(f"  Chunking by pages")
+            print("  Chunking by pages")
         elif args.chunking_strategy == "semantic":
             print(
                 f"  Semantic chunking (similarity threshold: {args.semantic_threshold})"
@@ -466,7 +466,7 @@ Examples:
                 f"  Topic-based chunking (similarity threshold: {args.topic_threshold})"
             )
         elif args.chunking_strategy == "qa":
-            print(f"  QA-optimized chunking")
+            print("  QA-optimized chunking")
 
         print(f"  Tags: {tags}")
         print()
@@ -620,7 +620,7 @@ Examples:
 
             validation = builder.validate_index(args.output)
             if validation["valid"]:
-                print(f"✓ Index validation successful:")
+                print("✓ Index validation successful:")
                 print(f"  Chunks: {validation['chunk_count']}")
                 print(f"  Files: {validation['file_count']}")
                 if args.verbose:
@@ -636,7 +636,7 @@ Examples:
             if os.path.exists(args.output):
                 print(f"\n✓ Search index created successfully: {args.output}")
             else:
-                print(f"\n✗ Search index creation failed - no files were processed")
+                print("\n✗ Search index creation failed - no files were processed")
                 sys.exit(1)
         else:
             print(f"\n✓ Search collection created successfully: {args.output}")
@@ -791,7 +791,7 @@ def search_command():
             from signalwire.search.query_processor import preprocess_query
         except ImportError as e:
             print(
-                f"Error: Search functionality not available. Install with: pip install signalwire-sdk[search]"
+                "Error: Search functionality not available. Install with: pip install signalwire-sdk[search]"
             )
             print(f"Details: {e}")
             sys.exit(1)
@@ -1216,7 +1216,7 @@ Examples:
                 batch_size=args.batch_size,
             )
 
-            print(f"\n✓ Migration completed successfully!")
+            print("\n✓ Migration completed successfully!")
             print(f"  Chunks migrated: {stats['chunks_migrated']}")
             print(f"  Errors: {stats['errors']}")
 

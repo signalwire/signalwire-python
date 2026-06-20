@@ -486,7 +486,7 @@ def preprocess_query(
         query_nlp_backend = nlp_backend
         if debug:
             logger.info(
-                f"Using deprecated 'nlp_backend' parameter, please use 'query_nlp_backend' instead"
+                "Using deprecated 'nlp_backend' parameter, please use 'query_nlp_backend' instead"
             )
 
     if vectorize_query_param:

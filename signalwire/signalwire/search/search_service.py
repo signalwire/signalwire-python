@@ -619,12 +619,12 @@ class SearchService:
         )
 
         # Print user-friendly startup message
-        print(f"\nSignalWire Search Service starting...")
+        print("\nSignalWire Search Service starting...")
         print(f"URL: {startup_url}")
         print(f"Indexes: {', '.join(self.indexes.keys()) if self.indexes else 'None'}")
         print(f"Basic Auth: {username}:(credentials configured)")
         if ssl_kwargs:
-            print(f"SSL: Enabled")
+            print("SSL: Enabled")
         print("")
 
         try:

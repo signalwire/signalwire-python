@@ -615,7 +615,7 @@ def main():
                                     )
 
                                     if functions:
-                                        print(f"  Tools:")
+                                        print("  Tools:")
                                         for name, func in functions.items():
                                             if isinstance(func, dict):
                                                 description = func.get(
@@ -627,7 +627,7 @@ def main():
                                                     f"    - {name}: {func.description}"
                                                 )
                                     else:
-                                        print(f"  Tools: (none)")
+                                        print("  Tools: (none)")
                                 except Exception as load_error:
                                     print(
                                         f"  Tools: (error loading agent: {load_error})"
@@ -638,7 +638,7 @@ def main():
                                         traceback.print_exc()
 
                         print("\n" + "=" * 60)
-                        print(f"\nTo use a specific agent, run:")
+                        print("\nTo use a specific agent, run:")
                         print(
                             f"  swaig-test {args.agent_path} --agent-class <AgentClassName>"
                         )
@@ -740,7 +740,7 @@ def main():
                 if args.verbose:
                     print(f"\nCalling DataMap function: {args.tool_name}")
                     print(f"Arguments: {json.dumps(function_args, indent=2)}")
-                    print(f"Function type: DataMap (serverless)")
+                    print("Function type: DataMap (serverless)")
                     print("-" * 60)
 
                 # Execute DataMap function
@@ -753,10 +753,10 @@ def main():
                     print(f"\nCalling function: {args.tool_name}")
                     print(f"Arguments: {json.dumps(function_args, indent=2)}")
                     if is_external_webhook:
-                        print(f"Function type: EXTERNAL webhook")
+                        print("Function type: EXTERNAL webhook")
                         print(f"External URL: {func.webhook_url}")
                     else:
-                        print(f"Function type: LOCAL webhook")
+                        print("Function type: LOCAL webhook")
 
                 # Generate post_data based on options
                 if args.minimal:

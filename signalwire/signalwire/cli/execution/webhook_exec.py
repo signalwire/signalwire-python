@@ -92,14 +92,14 @@ def execute_external_webhook_function(
             try:
                 result = response.json()
                 if verbose:
-                    print(f"✓ External webhook succeeded")
+                    print("✓ External webhook succeeded")
                     print(f"Response: {json.dumps(result, indent=2)}")
                 return result
             except json.JSONDecodeError:
                 # If response is not JSON, wrap it in a response field
                 result = {"response": response.text}
                 if verbose:
-                    print(f"✓ External webhook succeeded (text response)")
+                    print("✓ External webhook succeeded (text response)")
                     print(f"Response: {response.text}")
                 return result
         else:

@@ -91,7 +91,7 @@ class SearchIndexMigrator:
             embedding_dim = int(config.get("embedding_dimensions", 768))
 
             if self.verbose:
-                print(f"Source configuration:")
+                print("Source configuration:")
                 print(f"  Model: {model_name}")
                 print(f"  Dimensions: {embedding_dim}")
                 print(f"  Created: {config.get('created_at', 'Unknown')}")
@@ -258,7 +258,7 @@ class SearchIndexMigrator:
 
                 # Success
                 if self.verbose:
-                    print(f"\nMigration completed successfully!")
+                    print("\nMigration completed successfully!")
                     print(f"  Chunks migrated: {stats['chunks_migrated']}")
                     print(f"  Errors: {stats['errors']}")
 
@@ -322,7 +322,7 @@ class SearchIndexMigrator:
             total_chunks = pg_stats.get("total_chunks", 0)
 
             if self.verbose:
-                print(f"Source configuration:")
+                print("Source configuration:")
                 print(f"  Model: {config.get('model_name', 'Unknown')}")
                 print(f"  Dimensions: {config.get('embedding_dimensions', 'Unknown')}")
                 print(f"  Total chunks: {total_chunks}")

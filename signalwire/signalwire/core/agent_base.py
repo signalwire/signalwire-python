@@ -436,7 +436,7 @@ class AgentBase(
                 )
             else:
                 # Fallback for local testing or incomplete environment
-                base_url = f"https://localhost:8080"
+                base_url = "https://localhost:8080"
         elif mode == "azure_function":
             # Azure Functions URL format
             function_app_name = os.getenv("WEBSITE_SITE_NAME") or os.getenv(
@@ -1596,7 +1596,6 @@ class AgentBase(
         # Create new manager instances that point to the ephemeral agent
         # This breaks the circular reference and allows independent modification
         from signalwire.core.agent.prompt.manager import PromptManager
-        from signalwire.core.agent.tools.registry import ToolRegistry
 
         # Create new prompt manager for the ephemeral agent
         ephemeral_agent._prompt_manager = PromptManager(ephemeral_agent)

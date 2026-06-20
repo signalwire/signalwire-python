@@ -425,14 +425,14 @@ class AgentSession:
         if stt is not None:
             _global_noop.once(
                 "stt",
-                f"AgentSession(stt=...): SignalWire's control plane handles "
-                f"speech recognition at scale -- no configuration needed",
+                "AgentSession(stt=...): SignalWire's control plane handles "
+                "speech recognition at scale -- no configuration needed",
             )
         if tts is not None:
             _global_noop.once(
                 "tts",
-                f"AgentSession(tts=...): SignalWire's control plane handles "
-                f"text-to-speech at scale -- no configuration needed",
+                "AgentSession(tts=...): SignalWire's control plane handles "
+                "text-to-speech at scale -- no configuration needed",
             )
         if vad is not None:
             _global_noop.once(
@@ -443,8 +443,8 @@ class AgentSession:
         if turn_detection is not None:
             _global_noop.once(
                 "turn_detection",
-                f"AgentSession(turn_detection=...): SignalWire's control "
-                f"plane handles turn detection at scale automatically",
+                "AgentSession(turn_detection=...): SignalWire's control "
+                "plane handles turn detection at scale automatically",
             )
         if mcp_servers is not None:
             _global_noop.once(

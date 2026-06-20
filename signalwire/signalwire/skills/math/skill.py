@@ -103,7 +103,7 @@ class MathSkill(SkillBase):
             return FunctionResult("Error: Division by zero is not allowed.")
         except (ValueError, SyntaxError, TypeError) as e:
             return FunctionResult(
-                f"Error: Invalid expression. Only numbers and basic math operators (+, -, *, /, %, **, parentheses) are allowed."
+                "Error: Invalid expression. Only numbers and basic math operators (+, -, *, /, %, **, parentheses) are allowed."
             )
         except Exception as e:
             return FunctionResult(

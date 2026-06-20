@@ -64,7 +64,7 @@ def adapt_for_call_type(call_data: Dict[str, Any], call_type: str) -> Dict[str, 
     if call_type == "sip":
         call_data["type"] = "phone"
         call_data["headers"] = {
-            "User-Agent": f"Test-SIP-Client/1.0.0",
+            "User-Agent": "Test-SIP-Client/1.0.0",
             "From": f"<sip:{call_data['from']}@test.sip.provider>",
             "To": f"<sip:{call_data['to']}@test.sip.provider>",
             "Call-ID": call_data["call_id"],

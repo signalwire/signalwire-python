@@ -586,10 +586,10 @@ class NativeVectorSearchSkill(SkillBase):
         self.logger.info(f"Query bool value: {bool(query)}")
 
         if not query:
-            self.logger.error(f"Query validation failed - returning error message")
+            self.logger.error("Query validation failed - returning error message")
             return FunctionResult("Please provide a search query.")
 
-        self.logger.info(f"Query validation passed - proceeding with search")
+        self.logger.info("Query validation passed - proceeding with search")
         count = args.get("count", self.count)
 
         try:

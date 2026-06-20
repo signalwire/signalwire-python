@@ -129,7 +129,7 @@ def handle_dump_swml(agent: "AgentBase", args: argparse.Namespace) -> int:
         )
 
         if args.verbose and not args.raw:
-            print(f"Using fake SWML post_data:")
+            print("Using fake SWML post_data:")
             print(json.dumps(post_data, indent=2))
             print(f"\nMock request headers: {dict(mock_request.headers.items())}")
             print(

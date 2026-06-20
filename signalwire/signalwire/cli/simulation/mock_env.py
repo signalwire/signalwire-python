@@ -244,7 +244,7 @@ class ServerlessSimulator:
             if proxy_url:
                 print(f"  WARNING: SWML_PROXY_URL_BASE still set: {proxy_url}")
             else:
-                print(f"  ✓ SWML_PROXY_URL_BASE cleared successfully")
+                print("  ✓ SWML_PROXY_URL_BASE cleared successfully")
 
     def deactivate(self, verbose: bool = False):
         """Restore original environment"""

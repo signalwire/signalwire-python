@@ -206,7 +206,7 @@ class MCPGateway:
                 import shutil
 
                 shutil.copy(sample_path, config_path)
-                logger.info(f"Created config.json from sample_config.json")
+                logger.info("Created config.json from sample_config.json")
             else:
                 # Create minimal default config if no sample exists
                 default_config = {
@@ -567,7 +567,6 @@ class MCPGateway:
         logger.info("Shutting down MCP Gateway...")
 
         # Shutdown components in parallel for faster shutdown
-        import concurrent.futures
 
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
             # Submit shutdown tasks

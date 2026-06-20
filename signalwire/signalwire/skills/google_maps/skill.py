@@ -171,14 +171,14 @@ class GoogleMapsClient:
             # When we have pickup coordinates, try Nearby Search first
             # to find the closest matching business
             if bias_lat is not None and bias_lng is not None:
-                logger.debug(f"Trying Nearby Search first (bias coords available)")
+                logger.debug("Trying Nearby Search first (bias coords available)")
                 result = self._nearby_search(input_text, bias_lat, bias_lng)
                 if result:
-                    logger.debug(f"Nearby Search succeeded, returning result")
+                    logger.debug("Nearby Search succeeded, returning result")
                     _debug_json("validate_address final result", result)
                     return result
                 logger.debug(
-                    f"Nearby Search returned nothing, falling back to Autocomplete"
+                    "Nearby Search returned nothing, falling back to Autocomplete"
                 )
 
             # Fall back to Autocomplete (always used for pickup, and for
@@ -552,7 +552,7 @@ class GoogleMapsSkill(SkillBase):
         )
         if not result:
             return FunctionResult(
-                f"I couldn't find that address. Could you provide a more specific address?"
+                "I couldn't find that address. Could you provide a more specific address?"
             )
 
         parts = [f"Address: {result['address']}"]

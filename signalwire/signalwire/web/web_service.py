@@ -581,7 +581,7 @@ class WebService:
         )
 
         # Print user-friendly startup message
-        print(f"\nSignalWire Web Service starting...")
+        print("\nSignalWire Web Service starting...")
         print(f"URL: {startup_url}")
         print(
             f"Directories: {', '.join(self.directories.keys()) if self.directories else 'None'}"
@@ -591,7 +591,7 @@ class WebService:
             f"Directory Browsing: {'Enabled' if self.enable_directory_browsing else 'Disabled'}"
         )
         if ssl_kwargs:
-            print(f"SSL: Enabled")
+            print("SSL: Enabled")
         print("")
 
         try:

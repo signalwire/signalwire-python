@@ -55,7 +55,7 @@ def display_agent_tools(agent: "AgentBase", verbose: bool = False) -> None:
                         required_fields = []
 
                     if properties:
-                        print(f"    Parameters:")
+                        print("    Parameters:")
                         for param_name, param_def in properties.items():
                             param_type = param_def.get("type", "unknown")
                             param_desc = param_def.get("description", "No description")
@@ -142,9 +142,9 @@ def display_agent_tools(agent: "AgentBase", verbose: bool = False) -> None:
                                 f"      {param_name} ({param_type_full}){required_marker}: {param_desc}"
                             )
                     else:
-                        print(f"    Parameters: None")
+                        print("    Parameters: None")
                 else:
-                    print(f"    Parameters: None")
+                    print("    Parameters: None")
 
                 if verbose:
                     print(f"    Config: {json.dumps(func, indent=6)}")
@@ -184,7 +184,7 @@ def display_agent_tools(agent: "AgentBase", verbose: bool = False) -> None:
                         required_fields = []
 
                     if properties:
-                        print(f"    Parameters:")
+                        print("    Parameters:")
                         for param_name, param_def in properties.items():
                             param_type = param_def.get("type", "unknown")
                             param_desc = param_def.get("description", "No description")
@@ -271,9 +271,9 @@ def display_agent_tools(agent: "AgentBase", verbose: bool = False) -> None:
                                 f"      {param_name} ({param_type_full}){required_marker}: {param_desc}"
                             )
                     else:
-                        print(f"    Parameters: None")
+                        print("    Parameters: None")
                 else:
-                    print(f"    Parameters: None")
+                    print("    Parameters: None")
 
                 if verbose:
                     print(f"    Function object: {func}")

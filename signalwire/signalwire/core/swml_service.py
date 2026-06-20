@@ -428,7 +428,6 @@ class SWMLService(ToolMixin):
             pass
 
         # Fall back to manual search in various locations
-        import sys
 
         # Get package directory
         package_dir = os.path.dirname(os.path.dirname(__file__))
@@ -490,7 +489,7 @@ class SWMLService(ToolMixin):
         # Ensure config is a dictionary for other verbs
         if not isinstance(config, dict):
             self.log.warning(
-                f"invalid_config_type",
+                "invalid_config_type",
                 verb=verb_name,
                 expected="dict",
                 got=type(config).__name__,
@@ -557,7 +556,7 @@ class SWMLService(ToolMixin):
         # Ensure config is a dictionary for other verbs
         if not isinstance(config, dict):
             self.log.warning(
-                f"invalid_config_type",
+                "invalid_config_type",
                 verb=verb_name,
                 section=section_name,
                 expected="dict",
@@ -1166,7 +1165,7 @@ class SWMLService(ToolMixin):
 
         # Check if SIP routing is enabled and log additional info
         if self._routing_callbacks:
-            print(f"Callback endpoints:")
+            print("Callback endpoints:")
             for path in self._routing_callbacks:
                 callback_url = self._build_full_url(
                     endpoint=path.lstrip("/"), include_auth=False

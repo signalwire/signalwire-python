@@ -750,7 +750,7 @@ class GoogleSearchScraper:
             text_content += f"{metrics.get('sentence_count', 0)} sentences\n"
             text_content += f"Query Relevance: {metrics.get('query_relevance', 0):.2f} "
             text_content += f"(keywords: {metrics.get('query_words_found', 'N/A')})\n"
-            text_content += f"Content:\n"
+            text_content += "Content:\n"
 
             # Truncate content if needed
             content = result["content"]

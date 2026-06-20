@@ -396,7 +396,7 @@ class GoogleSearchScraper:
             text_content += f"Content Quality: {metrics.get('text_length', 0)} chars, "
             text_content += f"{metrics.get('sentence_count', 0)} sentences, "
             text_content += f"diversity: {metrics.get('word_diversity', 0):.2f}\n"
-            text_content += f"Content:\n"
+            text_content += "Content:\n"
 
             # Truncate content if needed
             content = result["content"]

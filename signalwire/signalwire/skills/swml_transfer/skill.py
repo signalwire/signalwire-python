@@ -167,7 +167,7 @@ class SWMLTransferSkill(SkillBase):
                 return False
 
             # Set defaults for optional fields
-            config.setdefault("message", f"Transferring you now...")
+            config.setdefault("message", "Transferring you now...")
             config.setdefault(
                 "return_message", "The transfer is complete. How else can I help you?"
             )
@@ -361,7 +361,7 @@ class SWMLTransferSkill(SkillBase):
 
             bullets.extend(
                 [
-                    f"The system will match patterns and handle the transfer automatically",
+                    "The system will match patterns and handle the transfer automatically",
                     "After transfer completes, you'll regain control of the conversation",
                 ]
             )
@@ -369,7 +369,7 @@ class SWMLTransferSkill(SkillBase):
             sections.append(
                 {
                     "title": "Transfer Instructions",
-                    "body": f"How to use the transfer capability:",
+                    "body": "How to use the transfer capability:",
                     "bullets": bullets,
                 }
             )

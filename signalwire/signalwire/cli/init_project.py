@@ -109,7 +109,7 @@ def prompt_multiselect(
         for i, (opt, sel) in enumerate(zip(options, selected), 1):
             marker = "x" if sel else " "
             print(f"  {i}) [{marker}] {opt}")
-        print(f"  Enter number to toggle, or press Enter to continue")
+        print("  Enter number to toggle, or press Enter to continue")
 
         result = input("Toggle: ").strip()
         if not result:
