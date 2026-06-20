@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Claude Code local session settings (not part of the SDK)
+.claude/
+
 # C extensions
 *.so
 
