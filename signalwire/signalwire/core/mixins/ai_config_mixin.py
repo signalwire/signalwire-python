@@ -8,7 +8,10 @@ See LICENSE file in the project root for full license information.
 """
 
 import threading
-from typing import List, Dict, Any, Optional
+from typing import TYPE_CHECKING, List, Dict, Any, Optional
+
+if TYPE_CHECKING:
+    from signalwire.core.agent_base import AgentBase
 
 
 class AIConfigMixin:

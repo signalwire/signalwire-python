@@ -7,13 +7,16 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import Dict, Any, List, Optional, Callable
+from typing import TYPE_CHECKING, Dict, Any, List, Optional, Callable
 import json
 import logging
 
 from signalwire.core.swaig_function import SWAIGFunction
 from signalwire.core.function_result import FunctionResult
 from signalwire.core.agent.tools.decorator import ToolDecorator
+
+if TYPE_CHECKING:
+    from signalwire.core.agent_base import AgentBase
 
 _tool_mixin_logger = logging.getLogger(__name__)
 

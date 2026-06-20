@@ -13,7 +13,7 @@ import json
 import signal
 import sys
 import contextvars
-from typing import Optional, Dict, Any, Callable
+from typing import TYPE_CHECKING, Optional, Dict, Any, Callable
 
 from fastapi import Depends, FastAPI, APIRouter, Request, Response
 
@@ -21,6 +21,9 @@ from signalwire.core.logging_config import get_execution_mode
 from signalwire.core.security.webhook_middleware import (
     make_webhook_validation_dependency,
 )
+
+if TYPE_CHECKING:
+    from signalwire.core.agent_base import AgentBase
 
 # Per-request proxy URL to avoid race conditions in concurrent async contexts
 _request_proxy_url = contextvars.ContextVar("_request_proxy_url", default=None)

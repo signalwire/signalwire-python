@@ -7,7 +7,10 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import TYPE_CHECKING, List, Dict, Any, Optional
+
+if TYPE_CHECKING:
+    from signalwire.core.agent_base import AgentBase
 
 
 class SkillMixin:
