@@ -1035,7 +1035,7 @@ class SearchEngine:
                                                 json_metadata = json.loads(metadata_str)
                                                 break
                                         i += 1
-                    except:
+                    except Exception:
                         pass
 
                     # Calculate score based on matches

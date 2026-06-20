@@ -444,9 +444,6 @@ class SchemaUtils:
         Returns:
             A Python method signature string
         """
-        # Get the verb properties
-        verb_props = self.get_verb_properties(verb_name)
-
         # Get verb parameters
         verb_params = self.get_verb_parameters(verb_name)
 

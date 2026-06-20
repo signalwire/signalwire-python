@@ -67,7 +67,7 @@ class GoogleSearchScraper:
 
             return results
 
-        except Exception as e:
+        except Exception:
             return []
 
     def is_reddit_url(self, url: str) -> bool:
@@ -215,7 +215,7 @@ class GoogleSearchScraper:
 
             return text, metrics
 
-        except Exception as e:
+        except Exception:
             # Fall back to HTML extraction if JSON fails
             return self.extract_html_content(url, content_limit, timeout)
 

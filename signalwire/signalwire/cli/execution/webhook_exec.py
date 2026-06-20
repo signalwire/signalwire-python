@@ -109,7 +109,7 @@ def execute_external_webhook_function(
                 try:
                     error_detail = response.json()
                     print(f"Error details: {json.dumps(error_detail, indent=2)}")
-                except:
+                except Exception:
                     print(f"Error response: {response.text}")
 
             return {

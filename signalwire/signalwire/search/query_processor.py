@@ -550,7 +550,7 @@ def preprocess_query(
         try:
             nltk.download("stopwords", quiet=True)
             stop_words = set(nltk.corpus.stopwords.words(nltk_language))
-        except:
+        except Exception:
             logger.warning(
                 f"Could not load stopwords for language '{nltk_language}', using English"
             )
@@ -705,7 +705,7 @@ def preprocess_document_content(
 
         try:
             stop_words = set(nltk.corpus.stopwords.words(nltk_language))
-        except:
+        except Exception:
             stop_words = set(nltk.corpus.stopwords.words("english"))
 
         keywords = [

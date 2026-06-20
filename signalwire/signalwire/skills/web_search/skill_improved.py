@@ -67,7 +67,7 @@ class GoogleSearchScraper:
 
             return results
 
-        except Exception as e:
+        except Exception:
             return []
 
     def extract_text_from_url(

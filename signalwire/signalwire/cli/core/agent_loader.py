@@ -233,8 +233,6 @@ def load_agent_from_file(
     # We can detect this by checking the call stack or environment
     import inspect
 
-    suppress_output = False
-
     # Check if we're in a context where output should be suppressed
     frame = inspect.currentframe()
     try:
@@ -244,7 +242,6 @@ def load_agent_from_file(
                 "dump_swml" in frame.f_code.co_filename
                 or "swml_dump" in frame.f_code.co_filename
             ):
-                suppress_output = True
                 break
             frame = frame.f_back
     finally:

@@ -99,7 +99,6 @@ def parse_function_arguments(
 
     # Get parameter schema
     parameters = {}
-    required_params = []
 
     if isinstance(func_schema, dict):
         # DataMap function
@@ -107,7 +106,6 @@ def parse_function_arguments(
             params = func_schema["parameters"]
             if "properties" in params:
                 parameters = params["properties"]
-                required_params = params.get("required", [])
             else:
                 parameters = params
         else:
@@ -118,7 +116,6 @@ def parse_function_arguments(
             params = func_schema.parameters
             if "properties" in params:
                 parameters = params["properties"]
-                required_params = params.get("required", [])
             else:
                 parameters = params
 

@@ -101,11 +101,11 @@ class MathSkill(SkillBase):
 
         except ZeroDivisionError:
             return FunctionResult("Error: Division by zero is not allowed.")
-        except (ValueError, SyntaxError, TypeError) as e:
+        except (ValueError, SyntaxError, TypeError):
             return FunctionResult(
                 "Error: Invalid expression. Only numbers and basic math operators (+, -, *, /, %, **, parentheses) are allowed."
             )
-        except Exception as e:
+        except Exception:
             return FunctionResult(
                 f"Error calculating '{expression}': Invalid expression"
             )

@@ -134,7 +134,7 @@ class IndexBuilder:
                         # Merge all found metadata
                         if isinstance(json_metadata, dict):
                             metadata_dict.update(json_metadata)
-                    except:
+                    except Exception:
                         pass
             except Exception as e:
                 logger.debug(f"Error extracting JSON metadata: {e}")
@@ -669,7 +669,7 @@ class IndexBuilder:
                             chunks[0]["embedding"], dtype=np.float32
                         )
                         embedding_dimensions = len(embedding_array)
-                except:
+                except Exception:
                     pass
 
             config_data = {

@@ -382,7 +382,7 @@ class MCPClient:
                             f"Notification from '{self.service.name}': {message}"
                         )
 
-                except json.JSONDecodeError as e:
+                except json.JSONDecodeError:
                     logger.error(
                         f"Invalid JSON from '{self.service.name}': {line.strip()}"
                     )

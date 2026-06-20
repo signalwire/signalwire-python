@@ -512,10 +512,10 @@ class DocumentProcessor:
                 current_lines = list(block["source_lines"])
                 current_start_line = block["start_line"]
                 current_end_line = block["end_line"]
-                current_size = sum(len(l) + 1 for l in block["source_lines"])
+                current_size = sum(len(line) + 1 for line in block["source_lines"])
                 continue
 
-            block_size = sum(len(l) + 1 for l in block["source_lines"])
+            block_size = sum(len(line) + 1 for line in block["source_lines"])
             # If adding this block would push us over and we already have real
             # content, flush first. Keep the hierarchy for the follow-on chunk
             # so breadcrumbs continue across the split.
@@ -555,8 +555,8 @@ class DocumentProcessor:
             level = int(tok.tag[1]) if tok.tag and tok.tag.startswith("h") else 1
             # Extract heading text from the first non-empty source line.
             heading_text = ""
-            for l in source_lines:
-                stripped = re.sub(r"^#{1,6}\s+", "", l).strip()
+            for line in source_lines:
+                stripped = re.sub(r"^#{1,6}\s+", "", line).strip()
                 if stripped:
                     heading_text = stripped
                     break
@@ -607,7 +607,6 @@ class DocumentProcessor:
         chunks = []
         lines = content.split("\n")
 
-        current_section = None
         current_hierarchy = []  # Track header hierarchy
         current_chunk = []
         current_size = 0
@@ -656,7 +655,6 @@ class DocumentProcessor:
                 current_hierarchy = current_hierarchy[: header_level - 1] + [
                     header_text
                 ]
-                current_section = header_text
                 current_chunk = [line]
                 current_size = len(line)
                 line_start = line_num

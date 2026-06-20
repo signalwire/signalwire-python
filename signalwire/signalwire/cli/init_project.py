@@ -2080,7 +2080,6 @@ SWML_BASIC_AUTH_PASSWORD=your-secure-password
 
     def _create_cloud_readme(self, platform: str):
         """Create README.md for cloud platforms."""
-        template_vars = self._get_template_vars()
         platform_names = {
             "aws": "AWS Lambda",
             "gcp": "Google Cloud Functions",

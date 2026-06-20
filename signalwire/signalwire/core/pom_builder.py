@@ -146,9 +146,7 @@ class PomBuilder:
             self.add_section(parent_title)
 
         parent = self._sections[parent_title]
-        subsection = parent.add_subsection(
-            title=title, body=body, bullets=bullets or []
-        )
+        parent.add_subsection(title=title, body=body, bullets=bullets or [])
         return self
 
     def has_section(self, title: str) -> bool:

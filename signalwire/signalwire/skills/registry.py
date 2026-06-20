@@ -212,7 +212,7 @@ class SkillRegistry:
                                 f"{skill_class.__name__} must override get_parameter_schema() to define its specific parameters"
                             )
 
-            except AttributeError as e:
+            except AttributeError:
                 raise ValueError(
                     f"{skill_class.__name__} must properly implement get_parameter_schema() classmethod"
                 )

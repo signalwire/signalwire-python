@@ -106,7 +106,6 @@ class StateMixin:
                         components = debug_info["components"]
                         token_call_id = components.get("call_id")
                         token_function = components.get("function")
-                        token_expiry = components.get("expiry")
 
                         # Log parameter mismatches
                         if token_function != function_name:

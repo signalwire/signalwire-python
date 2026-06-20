@@ -280,17 +280,14 @@ class SurveyAgent(AgentBase):
             return FunctionResult(f"Error: Question with ID '{question_id}' not found.")
 
         # Validate based on question type
-        valid = True
         message = f"Response to '{question_id}' is valid."
 
         if question["type"] == "rating":
             try:
                 rating = int(response.strip())
                 if rating < 1 or rating > question.get("scale", 5):
-                    valid = False
                     message = f"Invalid rating. Please provide a number between 1 and {question.get('scale', 5)}."
             except ValueError:
-                valid = False
                 message = f"Invalid rating. Please provide a number between 1 and {question.get('scale', 5)}."
 
         elif question["type"] == "multiple_choice":
@@ -298,19 +295,16 @@ class SurveyAgent(AgentBase):
             if not any(
                 response.lower().strip() == option.lower() for option in options
             ):
-                valid = False
                 message = f"Invalid choice. Please select one of: {', '.join(options)}."
 
         elif question["type"] == "yes_no":
             response_lower = response.lower().strip()
             if response_lower not in ["yes", "no", "y", "n"]:
-                valid = False
                 message = "Please answer with 'yes' or 'no'."
 
         # For open-ended, any non-empty response is valid
         elif question["type"] == "open_ended":
             if not response.strip() and question.get("required", True):
-                valid = False
                 message = "A response is required for this question."
 
         return FunctionResult(message)
@@ -334,7 +328,6 @@ class SurveyAgent(AgentBase):
         In this example, it just acknowledges that the response was received.
         """
         question_id = args.get("question_id", "")
-        response = args.get("response", "")
 
         # Find the question by ID for a more informative message
         question_text = ""

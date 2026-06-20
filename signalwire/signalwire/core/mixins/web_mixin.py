@@ -878,7 +878,6 @@ class WebMixin:
             token = request.query_params.get("__token") or request.query_params.get(
                 "token"
             )  # Check __token first, fallback to token
-            token_validated = False
 
             if token:
                 req_log.debug("token_found", token_length=len(token))
@@ -891,7 +890,6 @@ class WebMixin:
                         )
                         if is_valid:
                             req_log.debug("token_valid")
-                            token_validated = True
                         else:
                             req_log.warning("invalid_token")
                             # Debug information for token validation issues

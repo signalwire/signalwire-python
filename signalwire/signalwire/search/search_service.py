@@ -553,7 +553,9 @@ class SearchService:
         import asyncio
 
         try:
-            loop = asyncio.get_running_loop()
+            # Raises RuntimeError if no loop is running; the return value is
+            # unused — we only need the running-loop check for control flow.
+            asyncio.get_running_loop()
             # Already in an async context - use a thread to avoid blocking
             import concurrent.futures
 

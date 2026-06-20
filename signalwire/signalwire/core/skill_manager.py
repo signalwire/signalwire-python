@@ -105,7 +105,7 @@ class SkillManager:
                         self.logger.error(error_msg)
                         return False, error_msg
 
-        except AttributeError as e:
+        except AttributeError:
             error_msg = f"Skill '{skill_name}' must properly implement get_parameter_schema() classmethod"
             self.logger.error(error_msg)
             return False, error_msg

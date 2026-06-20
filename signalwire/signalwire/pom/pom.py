@@ -519,7 +519,7 @@ class PromptObjectModel:
             if section.title is not None:
                 section_counter += 1
                 # If any section is numbered, number ALL siblings unless explicitly false
-                if any_section_numbered and section.numbered != False:
+                if any_section_numbered and section.numbered is not False:
                     section_number = [section_counter]
                 else:
                     section_number = []
