@@ -5,9 +5,8 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""SignalWire Agents Local Search Module
+SignalWire Agents Local Search Module
 
 This module provides local search capabilities for the SignalWire Agents SDK.
 It requires additional dependencies that can be installed with:

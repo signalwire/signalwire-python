@@ -6,9 +6,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Session Manager for MCP Gateway
 
 Manages lifecycle of MCP server sessions tied to SignalWire call IDs.

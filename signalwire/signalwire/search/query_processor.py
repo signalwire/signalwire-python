@@ -10,6 +10,7 @@ See LICENSE file in the project root for full license information.
 import os
 import nltk
 import re
+import threading
 from typing import Dict, Any, List, Optional
 from nltk.corpus import wordnet as wn
 from nltk.stem import PorterStemmer
@@ -234,7 +235,6 @@ def load_spacy_model(language: str):
 # Model cache - stores multiple models by name
 _model_cache = {}  # model_name -> SentenceTransformer instance
 _MAX_MODEL_CACHE_SIZE = 5
-import threading
 
 _model_lock = threading.Lock()
 

@@ -5,9 +5,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 SignalWire Agents CLI Tools
 
 This package contains command-line tools for working with SignalWire AI Agents.

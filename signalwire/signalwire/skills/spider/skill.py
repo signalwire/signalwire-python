@@ -5,9 +5,10 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
+
+Spider skill for fast web scraping with SignalWire AI Agents.
 """
 
-"""Spider skill for fast web scraping with SignalWire AI Agents."""
 import re
 import logging
 import collections

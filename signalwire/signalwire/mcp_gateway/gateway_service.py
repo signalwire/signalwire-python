@@ -6,9 +6,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 MCP-SWAIG Gateway Service
 
 HTTP/HTTPS server that bridges MCP servers with SignalWire SWAIG functions.

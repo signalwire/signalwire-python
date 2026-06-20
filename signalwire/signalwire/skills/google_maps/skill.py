@@ -5,9 +5,8 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""Google Maps skill — address validation and route computation.
+Google Maps skill — address validation and route computation.
 
 Library layer: GoogleMapsClient (reusable by any agent)
 Skill layer:   GoogleMapsSkill  (plug-and-play SWAIG tools)

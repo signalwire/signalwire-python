@@ -5,12 +5,10 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 InfoGathererAgent - Prefab agent for collecting answers to a series of questions
 
-Supports both static (questions provided at init) and dynamic (questions determined 
+Supports both static (questions provided at init) and dynamic (questions determined
 by a callback function) configuration modes.
 """
 

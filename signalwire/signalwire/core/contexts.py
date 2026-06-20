@@ -5,9 +5,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Contexts and Steps System for SignalWire Agents
 
 This module provides an alternative to traditional POM-based prompts by allowing

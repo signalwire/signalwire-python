@@ -5,9 +5,9 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""Tool registration and management."""
+Tool registration and management.
+"""
 
 from typing import Dict, Any, Optional, List, Callable, Union
 import inspect

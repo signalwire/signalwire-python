@@ -5,9 +5,10 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
+
+Spider skill for web scraping.
 """
 
-"""Spider skill for web scraping."""
 from .skill import SpiderSkill
 
 __all__ = ["SpiderSkill"]

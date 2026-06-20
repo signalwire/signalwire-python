@@ -5,9 +5,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 SignalWire SDK
 =======================
 
@@ -21,9 +19,11 @@ configure_logging()
 
 __version__ = "3.0.2"
 
-# Import core classes for easier access
-from .core.agent_base import AgentBase
-from .core.contexts import (
+# Import core classes for easier access.
+# These imports are intentionally placed after configure_logging() so the SDK's
+# logging is initialized before any submodule is imported (E402 expected).
+from .core.agent_base import AgentBase  # noqa: E402
+from .core.contexts import (  # noqa: E402
     ContextBuilder,
     Context,
     Step,
@@ -31,17 +31,24 @@ from .core.contexts import (
     GatherQuestion,
     create_simple_context,
 )
-from .core.data_map import DataMap, create_simple_api_tool, create_expression_tool
-from signalwire.agent_server import AgentServer
-from signalwire.core.swml_service import SWMLService
-from signalwire.core.swml_builder import SWMLBuilder
-from signalwire.core.function_result import FunctionResult, SwaigFunctionResult
-from signalwire.core.swaig_function import SWAIGFunction
-from signalwire.agents.bedrock import BedrockAgent
-from signalwire.utils.schema_utils import SchemaValidationError
+from .core.data_map import (  # noqa: E402
+    DataMap,
+    create_simple_api_tool,
+    create_expression_tool,
+)
+from signalwire.agent_server import AgentServer  # noqa: E402
+from signalwire.core.swml_service import SWMLService  # noqa: E402
+from signalwire.core.swml_builder import SWMLBuilder  # noqa: E402
+from signalwire.core.function_result import (  # noqa: E402
+    FunctionResult,
+    SwaigFunctionResult,
+)
+from signalwire.core.swaig_function import SWAIGFunction  # noqa: E402
+from signalwire.agents.bedrock import BedrockAgent  # noqa: E402
+from signalwire.utils.schema_utils import SchemaValidationError  # noqa: E402
 
 # Import WebService for static file serving
-from signalwire.web import WebService
+from signalwire.web import WebService  # noqa: E402
 
 
 # Lazy import skills to avoid slow startup for CLI tools

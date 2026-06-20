@@ -5,9 +5,9 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""Tool decorator functionality."""
+Tool decorator functionality.
+"""
 
 from functools import wraps
 from typing import Callable, Optional, Dict, Any

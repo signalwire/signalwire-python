@@ -5,9 +5,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Calling API namespace — REST-based call control via command dispatch.
 
 All commands are sent as POST /api/calling/calls with a command field.

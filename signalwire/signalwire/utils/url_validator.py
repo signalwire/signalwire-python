@@ -5,9 +5,9 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""URL validation utility to prevent SSRF attacks"""
+URL validation utility to prevent SSRF attacks
+"""
 
 import ipaddress
 import os

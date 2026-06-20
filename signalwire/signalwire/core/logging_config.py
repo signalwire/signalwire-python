@@ -5,9 +5,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Central logging configuration for SignalWire Agents SDK
 
 This module provides a single point of control for all logging across the SDK.

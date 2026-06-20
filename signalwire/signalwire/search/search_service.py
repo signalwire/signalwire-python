@@ -7,7 +7,10 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
+import hashlib
+import json
 import logging
+from functools import lru_cache
 from typing import Dict, Any, List, Optional, Tuple
 
 try:
@@ -38,11 +41,6 @@ from signalwire.core.config_loader import ConfigLoader
 from signalwire.core.logging_config import get_logger
 
 logger = get_logger("search_service")
-
-# Simple LRU cache for query results
-from functools import lru_cache
-import hashlib
-import json
 
 # Pydantic models for API
 if BaseModel:

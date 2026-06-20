@@ -6,9 +6,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 SWAIG Function CLI Testing Tool
 
 This tool loads an agent application and calls SWAIG functions with comprehensive

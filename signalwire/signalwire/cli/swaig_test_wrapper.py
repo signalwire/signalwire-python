@@ -6,9 +6,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Wrapper script for swaig-test that sets environment variables before importing any modules.
 This allows proper control of logging before the logging system is initialized.
 """

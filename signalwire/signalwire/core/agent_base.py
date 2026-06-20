@@ -6,10 +6,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-# -*- coding: utf-8 -*-
-"""
 Base class for all SignalWire AI Agents
 """
 

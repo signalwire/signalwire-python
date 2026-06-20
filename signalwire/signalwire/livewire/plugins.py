@@ -5,9 +5,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 LiveWire plugin stubs.
 
 These classes mirror popular livekit-agents plugin constructors so that

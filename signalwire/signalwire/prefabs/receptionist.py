@@ -5,9 +5,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 ReceptionistAgent - Prefab agent for greeting callers and transferring them to appropriate departments
 """
 

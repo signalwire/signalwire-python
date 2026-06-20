@@ -6,10 +6,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-# -*- coding: utf-8 -*-
-"""
 Base SWML Service for SignalWire Agents
 """
 
@@ -49,12 +46,19 @@ try:
 except ImportError:
     raise ImportError("fastapi is required. Install it with: pip install fastapi")
 
-from signalwire.utils.schema_utils import SchemaUtils, SchemaValidationError
-from signalwire.core.swml_handler import VerbHandlerRegistry, SWMLVerbHandler
-from signalwire.core.security_config import SecurityConfig
-from signalwire.core.function_result import FunctionResult
-from signalwire.core.agent.tools.registry import ToolRegistry
-from signalwire.core.mixins.tool_mixin import ToolMixin
+# SDK imports placed after the optional-fastapi guard above (E402 expected).
+from signalwire.utils.schema_utils import (  # noqa: E402
+    SchemaUtils,
+    SchemaValidationError,
+)
+from signalwire.core.swml_handler import (  # noqa: E402
+    VerbHandlerRegistry,
+    SWMLVerbHandler,
+)
+from signalwire.core.security_config import SecurityConfig  # noqa: E402
+from signalwire.core.function_result import FunctionResult  # noqa: E402
+from signalwire.core.agent.tools.registry import ToolRegistry  # noqa: E402
+from signalwire.core.mixins.tool_mixin import ToolMixin  # noqa: E402
 
 # Maximum request body size (10MB, matches CGI limit). Mirrors WebMixin.
 MAX_REQUEST_BODY_SIZE = 10 * 1024 * 1024

@@ -5,9 +5,9 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""Type-hint-based schema inference for SWAIG tool functions."""
+Type-hint-based schema inference for SWAIG tool functions.
+"""
 
 import inspect
 import re
