@@ -15,6 +15,8 @@
 #   2. signature regen                    — porting-sdk's enumerate_python_signatures.py
 #   3. drift gate                         — git-diff python_signatures.json (must be unchanged)
 #   4. no-cheat gate                      — porting-sdk audit_no_cheat_tests.py
+#   5. fmt gate                           — ruff format (local: apply; CI: --check)
+#   6. lint gate                          — ruff check, zero findings
 
 set -u
 set -o pipefail
@@ -99,6 +101,29 @@ run_gate "DRIFT" "python_signatures.json unchanged after regen" \
 # Gate 4: no-cheat
 run_gate "NO-CHEAT" "audit_no_cheat_tests" \
     python3 "$PORTING_SDK_DIR/scripts/audit_no_cheat_tests.py" --root "$PORT_ROOT"
+
+# Gate 5: FMT — ruff format. Config in pyproject.toml [tool.ruff]. Source-style
+# only (no public-API change → the SIGNATURES/DRIFT oracle is unaffected).
+#   * LOCAL ($CI unset)  → `ruff format` reformats the tree in place.
+#   * CI ($CI=true)      → `ruff format --check` (read-only): fails on unformatted.
+fmt_gate() {
+    if [ -n "${CI:-}" ]; then
+        python3 -m ruff format --check "$PORT_ROOT/signalwire"
+    else
+        python3 -m ruff format "$PORT_ROOT/signalwire" >/dev/null
+        if ! (cd "$PORT_ROOT" && git diff --quiet 2>/dev/null); then
+            echo "    (FMT auto-applied formatting to your working tree — review & stage)"
+        fi
+        python3 -m ruff format --check "$PORT_ROOT/signalwire"
+    fi
+}
+run_gate "FMT" "ruff format (local: apply; CI: --check)" fmt_gate
+
+# Gate 6: LINT — ruff check, zero findings. Burned to zero (the DISABLE list is
+# none; the few intentional lazy-import / re-export sites carry per-line # noqa
+# with a rationale). Mirrors the go golangci / ruby rubocop blocking-lint gate.
+run_gate "LINT" "ruff check zero findings" \
+    python3 -m ruff check "$PORT_ROOT/signalwire"
 
 if [ -z "$FAILED_GATES" ]; then
     echo "==> CI PASS"
