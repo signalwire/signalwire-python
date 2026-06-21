@@ -27,14 +27,14 @@ class CompatAccounts(BaseResource):
     def get(self, sid):
         return self._http.get(self._path(sid))
 
-    def update(self, sid, **kwargs):
+    def update(self, sid, /, **kwargs):
         return self._http.post(self._path(sid), body=kwargs)
 
 
 class CompatCalls(CrudResource):
     """Compat call management with recording and stream sub-resources."""
 
-    def update(self, sid, **kwargs):
+    def update(self, sid, /, **kwargs):
         return self._http.post(self._path(sid), body=kwargs)
 
     def start_recording(self, call_sid, **kwargs):
@@ -55,7 +55,7 @@ class CompatCalls(CrudResource):
 class CompatMessages(CrudResource):
     """Compat message management with media sub-resources."""
 
-    def update(self, sid, **kwargs):
+    def update(self, sid, /, **kwargs):
         return self._http.post(self._path(sid), body=kwargs)
 
     def list_media(self, message_sid, **params):
@@ -71,7 +71,7 @@ class CompatMessages(CrudResource):
 class CompatFaxes(CrudResource):
     """Compat fax management with media sub-resources."""
 
-    def update(self, sid, **kwargs):
+    def update(self, sid, /, **kwargs):
         return self._http.post(self._path(sid), body=kwargs)
 
     def list_media(self, fax_sid, **params):
@@ -93,7 +93,7 @@ class CompatConferences(BaseResource):
     def get(self, sid):
         return self._http.get(self._path(sid))
 
-    def update(self, sid, **kwargs):
+    def update(self, sid, /, **kwargs):
         return self._http.post(self._path(sid), body=kwargs)
 
     # Participants
@@ -165,7 +165,7 @@ class CompatPhoneNumbers(BaseResource):
     def get(self, sid):
         return self._http.get(self._path(sid))
 
-    def update(self, sid, **kwargs):
+    def update(self, sid, /, **kwargs):
         return self._http.post(self._path(sid), body=kwargs)
 
     def delete(self, sid):
@@ -192,21 +192,21 @@ class CompatPhoneNumbers(BaseResource):
 class CompatApplications(CrudResource):
     """Compat application management."""
 
-    def update(self, sid, **kwargs):
+    def update(self, sid, /, **kwargs):
         return self._http.post(self._path(sid), body=kwargs)
 
 
 class CompatLamlBins(CrudResource):
     """Compat cXML/LaML script management."""
 
-    def update(self, sid, **kwargs):
+    def update(self, sid, /, **kwargs):
         return self._http.post(self._path(sid), body=kwargs)
 
 
 class CompatQueues(CrudResource):
     """Compat queue management with members."""
 
-    def update(self, sid, **kwargs):
+    def update(self, sid, /, **kwargs):
         return self._http.post(self._path(sid), body=kwargs)
 
     def list_members(self, queue_sid, **params):

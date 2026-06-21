@@ -98,7 +98,9 @@ class CrudResource(BaseResource):
     def get(self, resource_id):
         return self._http.get(self._path(resource_id))
 
-    def update(self, resource_id, **kwargs):
+    def update(self, resource_id, /, **kwargs):
+        # resource_id is positional-only so compat subclasses may name it
+        # `sid` (Twilio convention) without an LSP override conflict.
         method = getattr(self._http, self._update_method.lower())
         return method(self._path(resource_id), body=kwargs)
 
