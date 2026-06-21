@@ -7,8 +7,10 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
+from signalwire.core.mixins._mixin_host import _HostTyped
 
-class StateMixin:
+
+class StateMixin(_HostTyped):
     """
     Mixin class containing all state and session management methods for AgentBase
     """

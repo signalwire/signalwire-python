@@ -16,7 +16,10 @@ else:
     from signalwire.core.contexts import ContextBuilder
 
 
-class PromptMixin:
+from signalwire.core.mixins._mixin_host import _HostTyped
+
+
+class PromptMixin(_HostTyped):
     """
     Mixin class containing all prompt-related methods for AgentBase
     """

@@ -16,7 +16,10 @@ from typing import Union, Tuple
 from fastapi import Request
 
 
-class AuthMixin:
+from signalwire.core.mixins._mixin_host import _HostTyped
+
+
+class AuthMixin(_HostTyped):
     """
     Mixin class containing all authentication-related methods for AgentBase
     """

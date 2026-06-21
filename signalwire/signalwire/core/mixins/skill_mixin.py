@@ -13,7 +13,10 @@ if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase
 
 
-class SkillMixin:
+from signalwire.core.mixins._mixin_host import _HostTyped
+
+
+class SkillMixin(_HostTyped):
     """
     Mixin class containing all skill management methods for AgentBase
     """

@@ -14,6 +14,7 @@ import logging
 from signalwire.core.swaig_function import SWAIGFunction
 from signalwire.core.function_result import FunctionResult
 from signalwire.core.agent.tools.decorator import ToolDecorator
+from signalwire.core.mixins._mixin_host import _HostTyped
 
 if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase
@@ -21,7 +22,7 @@ if TYPE_CHECKING:
 _tool_mixin_logger = logging.getLogger(__name__)
 
 
-class ToolMixin:
+class ToolMixin(_HostTyped):
     """
     Mixin class containing all tool/function-related methods for AgentBase
     """

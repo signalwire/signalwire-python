@@ -14,12 +14,13 @@ from typing import Optional, Dict, Any
 
 from signalwire.core.logging_config import get_execution_mode
 from signalwire.core.function_result import FunctionResult
+from signalwire.core.mixins._mixin_host import _HostTyped
 
 # Maximum allowed CGI request body size (10MB)
 MAX_CGI_BODY_SIZE = 10 * 1024 * 1024
 
 
-class ServerlessMixin:
+class ServerlessMixin(_HostTyped):
     """
     Mixin class containing all serverless/cloud platform methods for AgentBase
     """

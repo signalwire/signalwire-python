@@ -14,7 +14,10 @@ if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase
 
 
-class AIConfigMixin:
+from signalwire.core.mixins._mixin_host import _HostTyped
+
+
+class AIConfigMixin(_HostTyped):
     """
     Mixin class containing all AI configuration methods for AgentBase
     """

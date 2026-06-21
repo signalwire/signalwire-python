@@ -25,6 +25,7 @@ from signalwire.core.security.security_utils import (
 from signalwire.core.security.webhook_middleware import (
     make_webhook_validation_dependency,
 )
+from signalwire.core.mixins._mixin_host import _HostTyped
 
 if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase
@@ -36,7 +37,7 @@ _request_proxy_url = contextvars.ContextVar("_request_proxy_url", default=None)
 MAX_REQUEST_BODY_SIZE = 10 * 1024 * 1024
 
 
-class WebMixin:
+class WebMixin(_HostTyped):
     """
     Mixin class containing all web server and routing-related methods for AgentBase
     """
