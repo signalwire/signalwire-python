@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import re
 import json
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 from pathlib import Path
 
 # Document processing imports
@@ -23,10 +23,13 @@ try:
 except ImportError:
     DocxDocument = None
 
-try:
+if TYPE_CHECKING:
     from bs4 import BeautifulSoup
-except ImportError:
-    BeautifulSoup = None
+else:
+    try:
+        from bs4 import BeautifulSoup
+    except ImportError:
+        BeautifulSoup = None
 
 try:
     import markdown
@@ -250,7 +253,7 @@ class DocumentProcessor:
 
     def _extract_docx(self, file_path: str):
         """Extract text from DOCX files"""
-        if not DocxDocument:
+        if DocxDocument is None:
             return json.dumps(
                 {"error": "python-docx not available for DOCX processing"}
             )
@@ -271,7 +274,7 @@ class DocumentProcessor:
 
     def _extract_html(self, file_path: str):
         """Extract text from HTML files"""
-        if not BeautifulSoup:
+        if BeautifulSoup is None:
             return json.dumps(
                 {"error": "beautifulsoup4 not available for HTML processing"}
             )
@@ -288,7 +291,7 @@ class DocumentProcessor:
         try:
             with open(file_path, "r", encoding="utf-8") as file:
                 content = file.read()
-                if markdown and BeautifulSoup:
+                if markdown is not None and BeautifulSoup is not None:
                     html = markdown.markdown(content)
                     soup = BeautifulSoup(html, "html.parser")
                     return soup.get_text(separator="\n")
