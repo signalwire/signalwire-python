@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 import secrets
-from typing import Optional, Dict, Any, Callable
+from typing import Optional, Dict, Any, Callable, TYPE_CHECKING
 from functools import wraps
 
 try:
@@ -20,14 +20,21 @@ try:
         HTTPAuthorizationCredentials,
     )
 except ImportError:
-    HTTPException = None
-    Depends = None
-    HTTPBasic = None
-    HTTPBasicCredentials = None
-    HTTPBearer = None
-    HTTPAuthorizationCredentials = None
+    # Optional dependency: FastAPI may be absent in non-web installs. These
+    # fallbacks let the module import; auth handlers guard on availability at
+    # call time. mypy can't model "name is a type when imported, None when not",
+    # so the fallback assignments are explicitly ignored (third-party-shape gap).
+    HTTPException = None  # type: ignore[assignment,misc]
+    Depends = None  # type: ignore[assignment]
+    HTTPBasic = None  # type: ignore[assignment,misc]
+    HTTPBasicCredentials = None  # type: ignore[assignment,misc]
+    HTTPBearer = None  # type: ignore[assignment,misc]
+    HTTPAuthorizationCredentials = None  # type: ignore[assignment,misc]
 
 from signalwire.core.logging_config import get_logger
+
+if TYPE_CHECKING:
+    from signalwire.core.security_config import SecurityConfig
 
 logger = get_logger("auth_handler")
 
@@ -48,15 +55,17 @@ class AuthHandler:
             security_config: SecurityConfig instance with auth settings
         """
         self.security_config = security_config
-        self.basic_auth = HTTPBasic(auto_error=False) if HTTPBasic else None
-        self.bearer_auth = HTTPBearer(auto_error=False) if HTTPBearer else None
+        self.basic_auth = HTTPBasic(auto_error=False) if HTTPBasic is not None else None
+        self.bearer_auth = (
+            HTTPBearer(auto_error=False) if HTTPBearer is not None else None
+        )
 
         # Get auth methods from config
         self._setup_auth_methods()
 
     def _setup_auth_methods(self):
         """Setup enabled authentication methods from config"""
-        self.auth_methods = {}
+        self.auth_methods: Dict[str, Dict[str, Any]] = {}
 
         # Basic auth (always available for backward compatibility)
         username, password = self.security_config.get_basic_auth()
@@ -121,7 +130,7 @@ class AuthHandler:
         Returns:
             FastAPI dependency function
         """
-        if not Depends:
+        if Depends is None:
             return None
 
         async def auth_dependency(
