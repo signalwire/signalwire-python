@@ -51,7 +51,13 @@ jobs:
           pip install -e porting-sdk/test_harness/mock_signalwire
 
       - name: Install griffe (used by porting-sdk's enumerate_python_signatures.py for the SIGNATURES gate)
-        run: pip install griffe
+        # PINNED. The SIGNATURES gate regenerates the oracle and DRIFT diffs it
+        # byte-for-byte against the committed file. An unpinned `pip install
+        # griffe` floated 2.0.2 -> 2.1.0 and tripped DRIFT on a no-op surface.
+        # The oracle no longer embeds the griffe version (provenance dropped),
+        # so this pin is belt-and-suspenders: it keeps the regen deterministic
+        # if a future griffe release changes the actual signature serialization.
+        run: pip install 'griffe==2.1.0'
 
       - name: Install signalwire-python (editable + dev deps)
         working-directory: signalwire-python
