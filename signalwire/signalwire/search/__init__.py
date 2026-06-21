@@ -93,6 +93,7 @@ if _SEARCH_AVAILABLE:
             f"Some search components failed to import: {e}\n"
             f"For full search functionality, install: pip install signalwire-sdk[search-all]",
             ImportWarning,
+            stacklevel=2,
         )
 
         # Try to import what we can

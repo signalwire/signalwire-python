@@ -139,10 +139,10 @@ class AuthHandler:
             return None
 
         async def auth_dependency(
-            basic_credentials: Optional[HTTPBasicCredentials] = Depends(self.basic_auth)
+            basic_credentials: Optional[HTTPBasicCredentials] = Depends(self.basic_auth)  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom (Depends is lazy-imported so the config-level extend-immutable-calls can't resolve it)
             if self.basic_auth
             else None,
-            bearer_credentials: Optional[HTTPAuthorizationCredentials] = Depends(
+            bearer_credentials: Optional[HTTPAuthorizationCredentials] = Depends(  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom
                 self.bearer_auth
             )
             if self.bearer_auth

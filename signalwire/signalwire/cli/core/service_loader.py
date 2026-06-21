@@ -108,7 +108,7 @@ class ServiceCapture:
                     # Module might have called run/serve which we intercepted
                     if not self.captured_services:
                         # If we didn't capture anything, the error is real
-                        raise ImportError(f"Failed to load service module: {e}")
+                        raise ImportError(f"Failed to load service module: {e}") from e
         finally:
             # Always restore original methods
             self._restore_patches()
@@ -263,7 +263,7 @@ def load_and_simulate_service(
             )
 
     # Simulate the request
-    assert service is not None  # guaranteed by the selection logic above
+    assert service is not None  # noqa: S101  # type-narrowing invariant (not input validation): guaranteed by the selection logic above
     return asyncio.run(
         simulate_request_to_service(
             service,

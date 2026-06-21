@@ -124,7 +124,7 @@ def _discover_services_impl(service_path: str) -> List[Dict[str, Any]]:
         # Clean up sys.path if we added to it
         if sys_path_added:
             sys.path.remove(module_dir)
-        raise ImportError(f"Failed to load service module: {e}")
+        raise ImportError(f"Failed to load service module: {e}") from e
     finally:
         # Clean up sys.path after successful load too
         if sys_path_added and module_dir in sys.path:
@@ -308,7 +308,7 @@ def _load_service_impl(
         # Clean up sys.path if we added to it
         if sys_path_added:
             sys.path.remove(module_dir)
-        raise ImportError(f"Failed to load service module: {e}")
+        raise ImportError(f"Failed to load service module: {e}") from e
     finally:
         # Clean up sys.path after successful load too
         if sys_path_added and module_dir in sys.path:
@@ -320,7 +320,7 @@ def _load_service_impl(
     # If service_identifier is specified and prefer_route is True, try to find by route first
     if service_identifier and prefer_route:
         # First, try to find an existing instance with matching route
-        for name, obj in vars(module).items():
+        for _name, obj in vars(module).items():
             if isinstance(obj, SWMLService) and hasattr(obj, "route"):
                 if obj.route == service_identifier:
                     service = obj
@@ -328,7 +328,7 @@ def _load_service_impl(
 
         # If not found, try instantiating classes to check their routes
         if service is None:
-            for name, obj in vars(module).items():
+            for _name, obj in vars(module).items():
                 if (
                     isinstance(obj, type)
                     and issubclass(obj, SWMLService)
@@ -344,7 +344,7 @@ def _load_service_impl(
                         ):
                             service = temp_instance
                             break
-                    except Exception:
+                    except Exception:  # noqa: S110  # intentional: skip classes that can't be instantiated during discovery
                         # Skip classes that can't be instantiated
                         pass
 
@@ -357,7 +357,7 @@ def _load_service_impl(
                 except Exception as e:
                     raise ValueError(
                         f"No service found with route '{service_identifier}' and failed to instantiate class '{service_identifier}': {e}"
-                    )
+                    ) from e
             elif isinstance(obj, SWMLService):
                 service = obj
 
@@ -382,7 +382,7 @@ def _load_service_impl(
                 except Exception as e:
                     raise ValueError(
                         f"Failed to instantiate service class '{service_identifier}': {e}"
-                    )
+                    ) from e
             elif isinstance(obj, SWMLService):
                 # It's already an instance
                 service = obj

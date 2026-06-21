@@ -19,7 +19,7 @@ try:
 except ImportError:
     raise ImportError(
         "fastapi and uvicorn are required. Install them with: pip install fastapi uvicorn"
-    )
+    ) from None
 
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.swml_service import SWMLService
@@ -41,7 +41,10 @@ class AgentServer:
     """
 
     def __init__(
-        self, host: str = "0.0.0.0", port: int = 3000, log_level: str = "info"
+        self,
+        host: str = "0.0.0.0",  # noqa: S104  # intended server default: listen on all interfaces (overridable)
+        port: int = 3000,
+        log_level: str = "info",
     ):
         """
         Initialize a new agent server
@@ -687,7 +690,7 @@ class AgentServer:
             display_host = f"{host}:{port}"
 
         self.logger.info(f"Starting server on {protocol}://{display_host}")
-        for route, agent in self.agents.items():
+        for _route, agent in self.agents.items():
             # include_source defaults False -> 2-tuple at runtime; index to
             # avoid the union-tuple unpack ambiguity mypy sees.
             creds = agent.get_basic_auth_credentials()
@@ -885,7 +888,7 @@ class AgentServer:
                     if hasattr(agent, "_routing_callbacks"):
                         for (
                             callback_path,
-                            callback_fn,
+                            _callback_fn,
                         ) in agent._routing_callbacks.items():
                             cb_path_clean = callback_path.strip("/")
                             if clean_path == cb_path_clean:
@@ -895,7 +898,7 @@ class AgentServer:
             # No matching agent - check for static files
             if hasattr(self, "_static_directories"):
                 # Check each static directory route
-                for static_route, static_dir in self._static_directories.items():
+                for static_route, _static_dir in self._static_directories.items():
                     # For root static route, serve any unmatched path
                     if static_route == "" or static_route == "/":
                         response = self._serve_static_file(full_path, "")

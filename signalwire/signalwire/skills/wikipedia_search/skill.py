@@ -143,7 +143,7 @@ class WikipediaSearchSkill(SkillBase):
 
             # Step 2: Get article extracts for each result
             articles = []
-            for i, result in enumerate(search_results[: self.num_results]):
+            for _i, result in enumerate(search_results[: self.num_results]):
                 title = result["title"]
 
                 # Get the page extract

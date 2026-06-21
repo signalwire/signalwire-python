@@ -48,7 +48,7 @@ def main():
     ] + args
 
     # Run the command and exit with its exit code
-    result = subprocess.run(cmd)
+    result = subprocess.run(cmd)  # noqa: S603  # shell=False; cmd runs the current interpreter against an internal module, args are this CLI's own passthrough flags — no shell involved
     sys.exit(result.returncode)
 
 

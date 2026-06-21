@@ -106,7 +106,7 @@ def prompt_multiselect(
 
     while True:
         print(f"\n{question}")
-        for i, (opt, sel) in enumerate(zip(options, selected), 1):
+        for i, (opt, sel) in enumerate(zip(options, selected, strict=False), 1):
             marker = "x" if sel else " "
             print(f"  {i}) [{marker}] {opt}")
         print("  Enter number to toggle, or press Enter to continue")
@@ -2389,7 +2389,7 @@ DEBUG_WEBHOOK_LEVEL=1
 
         print_step("Creating virtual environment...")
         try:
-            subprocess.run(
+            subprocess.run(  # noqa: S603  # fixed arg list, shell=False; runs the current interpreter to create a venv — no user input reaches a shell
                 [sys.executable, "-m", "venv", str(venv_dir)],
                 check=True,
                 capture_output=True,
@@ -2402,7 +2402,7 @@ DEBUG_WEBHOOK_LEVEL=1
             if sys.platform == "win32":
                 pip_path = venv_dir / "Scripts" / "pip.exe"
 
-            subprocess.run(
+            subprocess.run(  # noqa: S603  # fixed arg list, shell=False; pip_path/requirements path are code-derived from the scaffolded project dir — no user input reaches a shell
                 [
                     str(pip_path),
                     "install",

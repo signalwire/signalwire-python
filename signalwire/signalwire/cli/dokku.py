@@ -2102,7 +2102,7 @@ def cmd_deploy(args):
             with open("app.json") as f:
                 app_json = json.load(f)
                 app_name = app_json.get("name")
-        except Exception:
+        except Exception:  # noqa: S110  # best-effort read of optional app.json; app_name stays unset on failure
             pass
 
     if not app_name:
@@ -2230,7 +2230,7 @@ def _get_app_name() -> str:
         try:
             with open("app.json") as f:
                 return json.load(f).get("name", "")
-        except Exception:
+        except Exception:  # noqa: S110  # best-effort read of optional app.json; falls through to interactive prompt on failure
             pass
     return prompt("App name", Path.cwd().name)
 

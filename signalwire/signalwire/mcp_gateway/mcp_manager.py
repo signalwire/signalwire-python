@@ -186,7 +186,7 @@ class MCPClient:
                 "enabled", True
             ) and sys.platform != "win32"
 
-            self.process = subprocess.Popen(
+            self.process = subprocess.Popen(  # noqa: S603  # shell=False; service.command is an operator-configured List[str] MCP server spec (not end-user input), launched under a sandbox (drop_privileges/rlimits/preexec) — no shell interpolation
                 self.service.command,
                 stdin=subprocess.PIPE,
                 stdout=subprocess.PIPE,
@@ -243,7 +243,7 @@ class MCPClient:
                         }
                     self._send_message(request)
                     time.sleep(0.2)  # Very brief wait
-                except Exception:
+                except Exception:  # noqa: S110  # best-effort graceful shutdown request; process is force-killed next if this fails
                     pass
 
                 # Check if still running
@@ -266,7 +266,7 @@ class MCPClient:
                 try:
                     if self.process.poll() is None:
                         self.process.kill()
-                except Exception:
+                except Exception:  # noqa: S110  # last-resort force-kill during teardown; nothing more to do if it fails
                     pass
 
             self.process = None
@@ -348,7 +348,7 @@ class MCPClient:
 
         json_str = json.dumps(message)
         # stdin is guaranteed non-None: the process is started with stdin=PIPE.
-        assert self.process.stdin is not None
+        assert self.process.stdin is not None  # noqa: S101  # type-narrowing invariant: process started with stdin=PIPE
         self.process.stdin.write(json_str + "\n")
         self.process.stdin.flush()
         logger.debug(f"Sent to '{self.service.name}': {json_str}")
@@ -361,7 +361,7 @@ class MCPClient:
             try:
                 # Simple blocking read - the thread will be interrupted on shutdown
                 # stdout is guaranteed non-None: process started with stdout=PIPE.
-                assert self.process.stdout is not None
+                assert self.process.stdout is not None  # noqa: S101  # type-narrowing invariant: process started with stdout=PIPE
                 line = self.process.stdout.readline()
                 if not line:
                     break
@@ -401,14 +401,14 @@ class MCPClient:
         ):
             try:
                 # stderr is guaranteed non-None: process started with stderr=PIPE.
-                assert self.process.stderr is not None
+                assert self.process.stderr is not None  # noqa: S101  # type-narrowing invariant: process started with stderr=PIPE
                 stderr_output = self.process.stderr.read()
                 if stderr_output:
                     logger.error(
                         f"Process '{self.service.name}' exited with code {self.process.returncode}"
                     )
                     logger.error(f"Stderr: {stderr_output}")
-            except Exception:
+            except Exception:  # noqa: S110  # best-effort stderr drain for diagnostics; must not raise from the reader thread
                 pass
 
         logger.info(f"Read loop ended for '{self.service.name}'")

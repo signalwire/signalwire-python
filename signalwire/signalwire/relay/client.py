@@ -413,7 +413,9 @@ class RelayClient:
             call = await asyncio.wait_for(dial_future, timeout=timeout)
             return call
         except asyncio.TimeoutError:
-            raise RelayError(-1, f"Dial timed out waiting for answer (tag={dial_tag})")
+            raise RelayError(
+                -1, f"Dial timed out waiting for answer (tag={dial_tag})"
+            ) from None
         except Exception:
             # Cancel the future if it hasn't resolved yet
             if not dial_future.done():
@@ -640,7 +642,7 @@ class RelayClient:
             # Timeout may indicate a half-open connection — force reconnect
             if method != METHOD_SIGNALWIRE_CONNECT:
                 self._force_close()
-            raise RelayError(-1, f"Request timeout for {method}")
+            raise RelayError(-1, f"Request timeout for {method}") from None
         finally:
             self._pending.pop(req_id, None)
             self._pending_methods.pop(req_id, None)

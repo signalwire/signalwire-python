@@ -177,14 +177,14 @@ def parse_function_arguments(
                     except ValueError:
                         raise ValueError(
                             f"Parameter --{param_name} must be an integer, got: {value}"
-                        )
+                        ) from None
                 elif param_type == "number":
                     try:
                         parsed_args[param_key] = float(value)
                     except ValueError:
                         raise ValueError(
                             f"Parameter --{param_name} must be a number, got: {value}"
-                        )
+                        ) from None
                 elif param_type == "array":
                     # Handle comma-separated arrays
                     parsed_args[param_key] = [item.strip() for item in value.split(",")]

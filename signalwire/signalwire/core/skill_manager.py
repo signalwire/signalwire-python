@@ -56,7 +56,7 @@ class SkillManager:
 
         # Validate that the skill has a proper parameter schema
         if not hasattr(skill_class, "get_parameter_schema") or not callable(
-            getattr(skill_class, "get_parameter_schema")
+            skill_class.get_parameter_schema
         ):
             error_msg = (
                 f"Skill '{skill_name}' must have get_parameter_schema() classmethod"

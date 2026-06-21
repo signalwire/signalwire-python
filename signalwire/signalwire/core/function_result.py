@@ -820,7 +820,7 @@ class FunctionResult:
         security_code: bool = True,
         postal_code: Union[bool, str] = True,
         min_postal_code_length: int = 0,
-        token_type: str = "reusable",
+        token_type: str = "reusable",  # noqa: S107  # false positive: SWML pay-verb field name, the value "reusable" is a mode, not a secret
         charge_amount: Optional[str] = None,
         currency: str = "usd",
         language: str = "en-US",

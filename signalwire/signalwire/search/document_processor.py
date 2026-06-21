@@ -1403,7 +1403,6 @@ class DocumentProcessor:
                     "way",
                     "she",
                     "use",
-                    "her",
                     "many",
                     "oil",
                     "sit",

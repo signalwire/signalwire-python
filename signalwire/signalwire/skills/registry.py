@@ -111,7 +111,7 @@ class SkillRegistry:
             spec.loader.exec_module(module)
 
             # Find SkillBase subclasses in the module
-            for name, obj in inspect.getmembers(module):
+            for _name, obj in inspect.getmembers(module):
                 if (
                     inspect.isclass(obj)
                     and issubclass(obj, SkillBase)
@@ -169,7 +169,7 @@ class SkillRegistry:
 
             # Validate that the skill has a proper parameter schema
             if not hasattr(skill_class, "get_parameter_schema") or not callable(
-                getattr(skill_class, "get_parameter_schema")
+                skill_class.get_parameter_schema
             ):
                 raise ValueError(
                     f"{skill_class.__name__} must have get_parameter_schema() classmethod"
@@ -217,13 +217,13 @@ class SkillRegistry:
             except AttributeError:
                 raise ValueError(
                     f"{skill_class.__name__} must properly implement get_parameter_schema() classmethod"
-                )
+                ) from None
             except ValueError:
                 raise  # Re-raise our validation errors
             except Exception as e:
                 raise ValueError(
                     f"{skill_class.__name__}.get_parameter_schema() failed: {e}"
-                )
+                ) from e
 
             if skill_class.SKILL_NAME in self._skills:
                 self.logger.warning(
@@ -347,7 +347,7 @@ class SkillRegistry:
                 )
 
         # Add already registered skills first (includes entry points)
-        for skill_name, skill_class in self._skills.items():
+        for _skill_name, skill_class in self._skills.items():
             add_skill_to_schema(skill_class, "registered")
 
         # Scan built-in skills directory

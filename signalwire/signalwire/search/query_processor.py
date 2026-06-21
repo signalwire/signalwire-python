@@ -149,7 +149,6 @@ def detect_language(text: str) -> str:
         "mi",
         "mis",
         "tú",
-        "te",
         "ti",
         "tu",
         "tus",

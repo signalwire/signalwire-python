@@ -88,9 +88,9 @@ class ServerlessMixin(_HostTyped):
                                             args = json.loads(
                                                 raw_data["argument"]["raw"]
                                             )
-                                        except Exception:
+                                        except Exception:  # noqa: S110  # best-effort optional arg parse; args stays empty on failure
                                             pass
-                        except Exception:
+                        except Exception:  # noqa: S110  # best-effort parse; continue with empty args on failure
                             # If parsing fails, continue with empty args
                             pass
 
@@ -146,9 +146,9 @@ class ServerlessMixin(_HostTyped):
                                 elif "raw" in raw_data["argument"]:
                                     try:
                                         args = json.loads(raw_data["argument"]["raw"])
-                                    except Exception:
+                                    except Exception:  # noqa: S110  # best-effort optional arg parse; args stays empty on failure
                                         pass
-                        except Exception:
+                        except Exception:  # noqa: S110  # best-effort parse; continue with empty args on failure
                             # If parsing fails, continue with empty args
                             pass
 
@@ -374,9 +374,9 @@ class ServerlessMixin(_HostTyped):
                         elif "raw" in raw_data["argument"]:
                             try:
                                 args = json.loads(raw_data["argument"]["raw"])
-                            except Exception:
+                            except Exception:  # noqa: S110  # best-effort optional arg parse; args stays empty on failure
                                 pass
-                except Exception:
+                except Exception:  # noqa: S110  # best-effort parse; continue with empty args on failure
                     # If parsing fails, continue with empty args
                     pass
 
@@ -498,9 +498,9 @@ class ServerlessMixin(_HostTyped):
                             elif "raw" in raw_data["argument"]:
                                 try:
                                     args = json.loads(raw_data["argument"]["raw"])
-                                except Exception:
+                                except Exception:  # noqa: S110  # best-effort optional arg parse; args stays empty on failure
                                     pass
-                except Exception:
+                except Exception:  # noqa: S110  # best-effort parse; continue with empty args on failure
                     # If parsing fails, continue with empty args
                     pass
 

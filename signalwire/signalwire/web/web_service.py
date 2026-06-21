@@ -411,7 +411,7 @@ class WebService:
                 file_path: str,
                 request: Request,
                 credentials: Optional["HTTPBasicCredentials"] = (
-                    None if not security else Depends(security)
+                    None if not security else Depends(security)  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom
                 ),
                 route=route,
                 directory=directory,
@@ -435,7 +435,9 @@ class WebService:
                 except HTTPException:
                     raise
                 except Exception:
-                    raise HTTPException(status_code=403, detail="Invalid path")
+                    raise HTTPException(
+                        status_code=403, detail="Invalid path"
+                    ) from None
 
                 # Check if path exists
                 if not full_path.exists():
@@ -539,7 +541,7 @@ class WebService:
 
     def start(
         self,
-        host: str = "0.0.0.0",
+        host: str = "0.0.0.0",  # noqa: S104  # intended server default: listen on all interfaces (overridable)
         port: Optional[int] = None,
         ssl_cert: Optional[str] = None,
         ssl_key: Optional[str] = None,
@@ -602,7 +604,9 @@ class WebService:
 
             uvicorn.run(self.app, host=host, port=port, **ssl_kwargs)
         except ImportError:
-            raise RuntimeError("uvicorn not available. Cannot start HTTP service.")
+            raise RuntimeError(
+                "uvicorn not available. Cannot start HTTP service."
+            ) from None
 
     def stop(self):
         """Stop the service (placeholder for cleanup)"""

@@ -208,7 +208,7 @@ class MCPGateway:
                 # Create minimal default config if no sample exists
                 default_config = {
                     "server": {
-                        "host": "0.0.0.0",
+                        "host": "0.0.0.0",  # noqa: S104  # intended server default: listen on all interfaces (overridable)
                         "port": 8080,
                         "auth_user": "admin",
                         "auth_password": "changeme",
@@ -513,7 +513,7 @@ class MCPGateway:
     def run(self):
         """Run the gateway service"""
         server_config = self.config.get("server", {})
-        host = server_config.get("host", "0.0.0.0")
+        host = server_config.get("host", "0.0.0.0")  # noqa: S104  # intended server default: listen on all interfaces (overridable)
         port = server_config.get("port", 8080)
 
         # Check for SSL certificate
@@ -585,7 +585,7 @@ class MCPGateway:
         if self.server and hasattr(self.server, "shutdown"):
             try:
                 self.server.shutdown()
-            except Exception:
+            except Exception:  # noqa: S110  # best-effort shutdown during cleanup; failures here must not block teardown
                 pass
 
         logger.info("MCP Gateway shutdown complete")

@@ -110,7 +110,7 @@ def _cache_key(
         "tags": sorted(tags) if tags else [],
     }
     key_str = json.dumps(key_data, sort_keys=True)
-    return hashlib.md5(key_str.encode()).hexdigest()
+    return hashlib.md5(key_str.encode(), usedforsecurity=False).hexdigest()
 
 
 class SearchService:
@@ -274,7 +274,7 @@ class SearchService:
             request: SearchRequest,
             credentials: Optional[HTTPBasicCredentials] = None
             if not security
-            else Depends(security),
+            else Depends(security),  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom
         ):
             if security:
                 self._get_current_username(credentials)
@@ -299,7 +299,7 @@ class SearchService:
             index_path: str,
             credentials: Optional[HTTPBasicCredentials] = None
             if not security
-            else Depends(security),
+            else Depends(security),  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom
         ):
             """Reload or add new index/collection"""
             if security:
@@ -336,7 +336,7 @@ class SearchService:
                     raise HTTPException(
                         status_code=500,
                         detail=f"Failed to load pgvector collection: {e}",
-                    )
+                    ) from e
             else:
                 # SQLite backend
                 self.indexes[index_name] = index_path
@@ -583,7 +583,7 @@ class SearchService:
 
     def start(
         self,
-        host: str = "0.0.0.0",
+        host: str = "0.0.0.0",  # noqa: S104  # intended server default: listen on all interfaces (overridable)
         port: Optional[int] = None,
         ssl_cert: Optional[str] = None,
         ssl_key: Optional[str] = None,
@@ -641,7 +641,9 @@ class SearchService:
 
             uvicorn.run(self.app, host=host, port=port, **ssl_kwargs)
         except ImportError:
-            raise RuntimeError("uvicorn not available. Cannot start HTTP service.")
+            raise RuntimeError(
+                "uvicorn not available. Cannot start HTTP service."
+            ) from None
 
     def stop(self):
         """Stop the service (placeholder for cleanup)"""

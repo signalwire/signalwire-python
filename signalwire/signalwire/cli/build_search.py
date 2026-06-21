@@ -27,7 +27,7 @@ def _mask_connection_string(conn_str):
                 + (f":{parsed.port}" if parsed.port else "")
             )
             return urlunparse(masked)
-    except Exception:
+    except Exception:  # noqa: S110  # best-effort password masking for display; falls through to "****" on any parse failure
         pass
     return "****"
 

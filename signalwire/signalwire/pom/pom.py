@@ -377,7 +377,7 @@ class PromptObjectModel:
             section = Section(**kwargs)
 
             # Process subsections
-            for i, sub in enumerate(d.get("subsections", [])):
+            for _i, sub in enumerate(d.get("subsections", [])):
                 section.subsections.append(build_section(sub, is_subsection=True))
 
             return section
@@ -552,7 +552,7 @@ class PromptObjectModel:
         any_section_numbered = any(section.numbered for section in self.sections)
 
         section_counter = 0
-        for i, section in enumerate(self.sections, 1):
+        for _i, section in enumerate(self.sections, 1):
             # Only increment the section counter for sections with titles
             if section.title is not None:
                 section_counter += 1

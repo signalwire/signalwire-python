@@ -37,12 +37,16 @@ try:
     from fastapi.security import HTTPBasic, HTTPBasicCredentials  # noqa: F401
     from pydantic import BaseModel  # noqa: F401
 except ImportError:
-    raise ImportError("fastapi is required. Install it with: pip install fastapi")
+    raise ImportError(
+        "fastapi is required. Install it with: pip install fastapi"
+    ) from None
 
 try:
     import uvicorn  # noqa: F401
 except ImportError:
-    raise ImportError("uvicorn is required. Install it with: pip install uvicorn")
+    raise ImportError(
+        "uvicorn is required. Install it with: pip install uvicorn"
+    ) from None
 
 from signalwire.core.security.session_manager import SessionManager
 from signalwire.core.swml_service import SWMLService
@@ -107,7 +111,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         self,
         name: str,
         route: str = "/",
-        host: str = "0.0.0.0",
+        host: str = "0.0.0.0",  # noqa: S104  # intended server default: listen on all interfaces (overridable)
         port: Optional[int] = None,
         basic_auth: Optional[Tuple[str, str]] = None,
         use_pom: bool = True,
@@ -175,7 +179,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         # Apply service config values, with constructor parameters taking precedence
         final_route = route if route != "/" else service_config.get("route", route)
-        final_host = host if host != "0.0.0.0" else service_config.get("host", host)
+        final_host = host if host != "0.0.0.0" else service_config.get("host", host)  # noqa: S104  # literal compared against the bind-all default, not a new bind
         # For port: use explicit param if provided, else config file, else let SWMLService use PORT env var
         final_port = port if port is not None else service_config.get("port", None)
         final_name = service_config.get("name", name)
@@ -1609,10 +1613,8 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         ephemeral_agent._prompt_manager = PromptManager(ephemeral_agent)
         # Copy ALL PromptManager state
         if hasattr(self._prompt_manager, "_sections"):
-            setattr(
-                ephemeral_agent._prompt_manager,
-                "_sections",
-                copy.deepcopy(getattr(self._prompt_manager, "_sections")),
+            ephemeral_agent._prompt_manager._sections = copy.deepcopy(  # type: ignore[attr-defined]  # PromptManager internal state, guarded by hasattr above
+                self._prompt_manager._sections
             )
         ephemeral_agent._prompt_manager._prompt_text = copy.deepcopy(
             self._prompt_manager._prompt_text
@@ -1633,10 +1635,8 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
                 self._tool_registry._swaig_functions.copy()
             )
         if hasattr(self._tool_registry, "_tool_instances"):
-            setattr(
-                ephemeral_agent._tool_registry,
-                "_tool_instances",
-                getattr(self._tool_registry, "_tool_instances").copy(),
+            ephemeral_agent._tool_registry._tool_instances = (  # type: ignore[attr-defined]  # ToolRegistry internal state, guarded by hasattr above
+                self._tool_registry._tool_instances.copy()
             )
 
         # Create a new skill manager for the ephemeral agent
@@ -1648,7 +1648,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         # Copy any already loaded skills from the original agent
         # This ensures skills loaded during __init__ are available in the ephemeral agent
         if hasattr(self.skill_manager, "loaded_skills"):
-            for skill_key, skill_instance in self.skill_manager.loaded_skills.items():
+            for _skill_key, skill_instance in self.skill_manager.loaded_skills.items():
                 # Re-load the skill in the ephemeral agent's context
                 # We need to get the skill name and params from the existing instance
                 skill_name = skill_instance.SKILL_NAME
@@ -1694,7 +1694,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             if request.method == "POST":
                 try:
                     body = await request.json()
-                except Exception:
+                except Exception:  # noqa: S110  # best-effort body parse; body stays {} for non-JSON/empty requests
                     pass
 
             # Get call_id

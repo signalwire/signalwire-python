@@ -542,7 +542,7 @@ class NativeVectorSearchSkill(SkillBase):
         try:
             if hasattr(self.agent, "prompt_has_section"):
                 section_exists = self.agent.prompt_has_section(section_title)
-        except Exception:
+        except Exception:  # noqa: S110  # best-effort feature probe; assume section absent if the method misbehaves
             # Method might not work, assume section doesn't exist
             pass
 
@@ -616,7 +616,7 @@ class NativeVectorSearchSkill(SkillBase):
 
                 # Guaranteed non-None here: the guard above returns early when
                 # not use_remote and search_engine is falsy.
-                assert self.search_engine is not None
+                assert self.search_engine is not None  # noqa: S101  # type-narrowing invariant: the guard above returns early when search_engine is falsy
 
                 # Get model name from index config if available
                 model_for_query: Optional[str] = None
@@ -876,7 +876,7 @@ class NativeVectorSearchSkill(SkillBase):
             try:
                 stats = self.search_engine.get_stats()
                 global_data["search_stats"] = stats
-            except Exception:
+            except Exception:  # noqa: S110  # best-effort optional stats enrichment; global_data is returned without it on failure
                 pass
 
         return global_data
@@ -910,5 +910,5 @@ class NativeVectorSearchSkill(SkillBase):
             for temp_dir in self._temp_dirs:
                 try:
                     shutil.rmtree(temp_dir)
-                except Exception:
+                except Exception:  # noqa: S110  # best-effort temp-dir cleanup; OS reclaims tmp anyway, must not raise during teardown
                     pass

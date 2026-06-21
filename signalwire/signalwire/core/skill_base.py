@@ -95,7 +95,7 @@ class SkillBase(ABC):
         """Override this in subclasses to provide prompt sections."""
         return []
 
-    def cleanup(self) -> None:
+    def cleanup(self) -> None:  # noqa: B027  # intentional overridable no-op hook, not an abstract method (subclasses override only if they hold resources)
         """Cleanup when skill is removed or agent shuts down"""
         pass
 

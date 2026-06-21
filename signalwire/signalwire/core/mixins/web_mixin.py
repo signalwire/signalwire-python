@@ -266,7 +266,7 @@ class WebMixin(_HostTyped):
 
                 # Check for custom routing callbacks
                 if hasattr(self, "_routing_callbacks"):
-                    for callback_path, callback_fn in self._routing_callbacks.items():
+                    for callback_path, _callback_fn in self._routing_callbacks.items():
                         cb_path_clean = callback_path.strip("/")
                         if clean_path == cb_path_clean:
                             # Found a matching callback
@@ -501,7 +501,7 @@ class WebMixin(_HostTyped):
 
         # Register callback routes for routing callbacks if available
         if hasattr(self, "_routing_callbacks") and self._routing_callbacks:
-            for callback_path, callback_fn in self._routing_callbacks.items():
+            for callback_path, _callback_fn in self._routing_callbacks.items():
                 # Skip the root path as it's already handled
                 if callback_path == "/":
                     continue
@@ -876,7 +876,7 @@ class WebMixin(_HostTyped):
                         if call_id is None:
                             call_id = body_data.get("call_id")
                         # Save body_data for later use
-                        setattr(request, "_post_prompt_body", body_data)
+                        request._post_prompt_body = body_data  # type: ignore[attr-defined]  # stashing parsed body on the request object for later reuse
                 except Exception as e:
                     req_log.error("error_extracting_call_id", error=str(e))
 
@@ -923,7 +923,7 @@ class WebMixin(_HostTyped):
             try:
                 # Try to reuse the body we already parsed for call_id extraction
                 if hasattr(request, "_post_prompt_body"):
-                    body = getattr(request, "_post_prompt_body")
+                    body = request._post_prompt_body
                 else:
                     body = await request.json()
 
@@ -1175,9 +1175,7 @@ class WebMixin(_HostTyped):
             None to use the default SWML rendering (which will call _render_swml)
         """
         # Call on_swml_request for customization
-        if hasattr(self, "on_swml_request") and callable(
-            getattr(self, "on_swml_request")
-        ):
+        if hasattr(self, "on_swml_request") and callable(self.on_swml_request):
             return self.on_swml_request(request_data, callback_path, None)
 
         # If no on_swml_request or it returned None, we'll proceed with default rendering

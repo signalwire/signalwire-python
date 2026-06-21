@@ -448,7 +448,7 @@ class ClaudeSkillsSkill(SkillBase):
         def replace_command(match):
             command = match.group(1)
             try:
-                result = subprocess.run(
+                result = subprocess.run(  # noqa: S602  # intentional feature: runs shell snippets authored in skill body files (developer-controlled, like Claude Skills), gated behind opt-in allow_shell_injection (default False) which logs a warning; shell=True is required to support pipes/redirection in authored commands; not reachable from end-user runtime input
                     command,
                     shell=True,
                     capture_output=True,

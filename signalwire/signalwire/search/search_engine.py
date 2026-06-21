@@ -181,7 +181,7 @@ class SearchEngine:
         """
         # pgvector backend: delegate to its own fetch
         if self.backend == "pgvector":
-            assert self._backend is not None  # set whenever backend == "pgvector"
+            assert self._backend is not None  # noqa: S101  # type-narrowing invariant: set whenever backend == "pgvector"
             return self._backend.fetch_candidates(
                 query_vector=query_vector,
                 enhanced_text=enhanced_text,
@@ -552,10 +552,10 @@ class SearchEngine:
             query = f"""
                 SELECT id, content, filename, section, tags, metadata
                 FROM chunks
-                WHERE ({" OR ".join(like_conditions)}) 
+                WHERE ({" OR ".join(like_conditions)})
                    OR ({" OR ".join(content_conditions)})
                 LIMIT ?
-            """
+            """  # noqa: S608  # interpolated parts are internal static SQL fragments ("col LIKE ?"); all user terms bind via ? params
             params.append(count)
 
             cursor.execute(query, params)
@@ -645,7 +645,7 @@ class SearchEngine:
 
         # Calculate combined score (weighted average)
 
-        for chunk_id, result in combined.items():
+        for _chunk_id, result in combined.items():
             vector_score = result.get("vector_score", 0.0)
             keyword_score = result.get("keyword_score", 0.0)
             result["score"] = (
@@ -797,7 +797,7 @@ class SearchEngine:
                     WHERE ({" OR ".join(conditions)})
                     AND id NOT IN ({",".join(["?" for _ in seen_ids]) if seen_ids else "0"})
                     LIMIT ?
-                """
+                """  # noqa: S608  # interpolated parts are internal static fragments + "?" placeholders; all user/seen-id values bind via ? params
                 if seen_ids:
                     params.extend(seen_ids)
                 params.append(count * 3)
@@ -908,7 +908,7 @@ class SearchEngine:
                         FROM chunks
                         WHERE {" AND ".join(conditions)}
                         LIMIT ?
-                    """
+                    """  # noqa: S608  # interpolated conditions are internal static "metadata_text LIKE ?" fragments; user terms bind via ? params
                     params.append(count * 10)
                     cursor.execute(query_sql, params)
 
@@ -999,7 +999,7 @@ class SearchEngine:
                         WHERE ({" OR ".join(conditions_to_use)})
                         {not_in_clause}
                         LIMIT ?
-                    """
+                    """  # noqa: S608  # interpolated parts are internal static fragments + "?" placeholders (not_in_clause); all values bind via ? params
                     params_to_use.append(count * 5)
                     cursor.execute(query_sql, params_to_use)
 
@@ -1041,7 +1041,7 @@ class SearchEngine:
                                                 json_metadata = json.loads(metadata_str)
                                                 break
                                         i += 1
-                    except Exception:
+                    except Exception:  # noqa: S110  # best-effort optional metadata JSON parse; scoring continues without it
                         pass
 
                     # Calculate score based on matches
@@ -1333,7 +1333,7 @@ class SearchEngine:
                 SELECT id, embedding
                 FROM chunks
                 WHERE id IN ({placeholders}) AND embedding IS NOT NULL AND embedding != ''
-            """,
+            """,  # noqa: S608  # {placeholders} is a generated "?,?,..." bind-placeholder string; chunk ids bind via ? params
                 chunk_ids,
             )
 
@@ -1428,7 +1428,9 @@ class SearchEngine:
             if not normalized:
                 deduped.append(result)
                 continue
-            h = hashlib.sha1(normalized.encode("utf-8")).hexdigest()
+            h = hashlib.sha1(
+                normalized.encode("utf-8"), usedforsecurity=False
+            ).hexdigest()
             if h in seen_hashes:
                 continue
             seen_hashes[h] = True
@@ -1579,7 +1581,7 @@ class SearchEngine:
         """Get statistics about the search index"""
         # Use pgvector backend if available
         if self.backend == "pgvector":
-            assert self._backend is not None  # set whenever backend == "pgvector"
+            assert self._backend is not None  # noqa: S101  # type-narrowing invariant: set whenever backend == "pgvector"
             return self._backend.get_stats()
 
         # Original SQLite implementation

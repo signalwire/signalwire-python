@@ -185,7 +185,7 @@ class MCPGatewaySkill(SkillBase):
         kwargs["timeout"] = kwargs.get("timeout", self.request_timeout)
         kwargs["verify"] = kwargs.get("verify", self.verify_ssl)
 
-        return requests.request(method, url, **kwargs)
+        return requests.request(method, url, **kwargs)  # noqa: S113  # timeout set above via kwargs["timeout"] (default self.request_timeout=30); ruff can't see it through **kwargs
 
     def register_tools(self) -> None:
         """Register SWAIG tools from MCP services"""

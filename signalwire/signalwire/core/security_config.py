@@ -42,7 +42,7 @@ class SecurityConfig:
 
     # Authentication
     BASIC_AUTH_USER = "SWML_BASIC_AUTH_USER"
-    BASIC_AUTH_PASSWORD = "SWML_BASIC_AUTH_PASSWORD"
+    BASIC_AUTH_PASSWORD = "SWML_BASIC_AUTH_PASSWORD"  # noqa: S105  # false positive: this is the env-var NAME constant, not a password value
 
     # Defaults (secure by default)
     DEFAULTS: Dict[str, Any] = {
