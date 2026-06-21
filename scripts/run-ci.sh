@@ -118,8 +118,15 @@ run_gate "NO-CHEAT" "audit_no_cheat_tests" \
 # Self-contained: spins up its own mock on an ephemeral port, runs the rest/ suite
 # serially against it (MOCK_SIGNALWIRE_PORT so all traffic lands in one journal),
 # then checks that journal. Same shape on every port.
+#
+# The mock + checker are run as `-m mock_signalwire.<mod>`; that package lives at
+# porting-sdk/test_harness/mock_signalwire/ and is NOT pip-installed in CI (the
+# runner only checks porting-sdk out). Put the package parent on PYTHONPATH so the
+# module resolves regardless of install state — local and CI, every port.
 rest_coverage_gate() {
     local port=8951
+    local mock_pkg_parent="$PORTING_SDK_DIR/test_harness/mock_signalwire"
+    export PYTHONPATH="$mock_pkg_parent${PYTHONPATH:+:$PYTHONPATH}"
     python3 -m mock_signalwire.cli --port "$port" >/tmp/rest_cov_mock.$$.log 2>&1 &
     local mock_pid=$!
     # shellcheck disable=SC2064
