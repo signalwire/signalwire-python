@@ -7,7 +7,7 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import TYPE_CHECKING, Dict, Any, List, Optional, Callable
+from typing import TYPE_CHECKING, Dict, Any, List, Optional, Callable, Union
 import json
 import logging
 
@@ -203,7 +203,7 @@ class ToolMixin(_HostTyped):
         """
         return ToolDecorator.create_class_decorator()(name, **kwargs)
 
-    def define_tools(self) -> List[SWAIGFunction]:
+    def define_tools(self) -> List[Union[SWAIGFunction, Dict[str, Any]]]:
         """
         Define the tools this agent can use
 
@@ -212,7 +212,7 @@ class ToolMixin(_HostTyped):
 
         This method can be overridden by subclasses.
         """
-        tools = []
+        tools: List[Union[SWAIGFunction, Dict[str, Any]]] = []
         for func in self._tool_registry._swaig_functions.values():
             if isinstance(func, dict):
                 # Raw dictionary from register_swaig_function (e.g., DataMap)

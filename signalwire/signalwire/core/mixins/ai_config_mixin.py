@@ -123,7 +123,7 @@ class AIConfigMixin(_HostTyped):
                                engine="elevenlabs",
                                params={"stability": 0.5, "similarity_boost": 0.75})
         """
-        language = {"name": name, "code": code}
+        language: Dict[str, Any] = {"name": name, "code": code}
 
         # Handle voice formatting (either explicit params or combined string)
         if engine or model:
@@ -234,7 +234,7 @@ class AIConfigMixin(_HostTyped):
             Self for method chaining
         """
         if replace and with_text:
-            rule = {"replace": replace, "with": with_text}
+            rule: Dict[str, Any] = {"replace": replace, "with": with_text}
             if ignore_case:
                 rule["ignore_case"] = True
 
@@ -527,7 +527,7 @@ class AIConfigMixin(_HostTyped):
             Self for method chaining
         """
         if url and functions and isinstance(functions, list):
-            include = {"url": url, "functions": functions}
+            include: Dict[str, Any] = {"url": url, "functions": functions}
             if meta_data and isinstance(meta_data, dict):
                 include["meta_data"] = meta_data
 
@@ -582,7 +582,7 @@ class AIConfigMixin(_HostTyped):
         Returns:
             Self for method chaining
         """
-        server = {"url": url}
+        server: Dict[str, Any] = {"url": url}
         if headers:
             server["headers"] = headers
         if resources:

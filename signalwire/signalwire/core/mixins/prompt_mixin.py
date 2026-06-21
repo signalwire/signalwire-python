@@ -24,6 +24,10 @@ class PromptMixin(_HostTyped):
     Mixin class containing all prompt-related methods for AgentBase
     """
 
+    # Host attribute PromptMixin reads/writes; owned by AgentBase. Declared here
+    # (Optional) so the checker resolves it without a cross-class has-type gap.
+    _contexts_builder: Optional[Any]
+
     def _process_prompt_sections(self):
         """
         Process declarative PROMPT_SECTIONS attribute from a subclass

@@ -31,7 +31,9 @@ if TYPE_CHECKING:
     from signalwire.core._agent_host import AgentHost as AgentBase
 
 # Per-request proxy URL to avoid race conditions in concurrent async contexts
-_request_proxy_url = contextvars.ContextVar("_request_proxy_url", default=None)
+_request_proxy_url: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+    "_request_proxy_url", default=None
+)
 
 # Maximum request body size (10MB, matches CGI limit)
 MAX_REQUEST_BODY_SIZE = 10 * 1024 * 1024
@@ -41,6 +43,13 @@ class WebMixin(_HostTyped):
     """
     Mixin class containing all web server and routing-related methods for AgentBase
     """
+
+    # Host attributes WebMixin reads and writes. They are owned/initialised by
+    # SWMLService/AgentBase; declared here (with their true Optional types) so the
+    # checker resolves them at WebMixin's read/write sites without a cross-class
+    # has-type ordering gap. Runtime is unaffected (no assignment here).
+    _app: Optional[Any]
+    _proxy_url_base: Optional[str]
 
     def get_app(self):
         """
@@ -156,7 +165,7 @@ class WebMixin(_HostTyped):
         # Log all registered routes for debugging
         self.log.debug("routes_registered", agent=self.name)
         for route in router.routes:
-            self.log.debug("route_registered", path=route.path)
+            self.log.debug("route_registered", path=getattr(route, "path", None))
 
         return router
 
@@ -561,8 +570,6 @@ class WebMixin(_HostTyped):
                     _request_proxy_url.set(computed_proxy)
                     # Also set on self for backward compatibility with non-async codepaths
                     self._proxy_url_base = computed_proxy
-                    if hasattr(super(), "_proxy_url_base"):
-                        super()._proxy_url_base = computed_proxy
 
                     self.log.debug(
                         "proxy_detected_for_request",
@@ -588,8 +595,6 @@ class WebMixin(_HostTyped):
                 )
                 _request_proxy_url.set(None)
                 self._proxy_url_base = None
-                if hasattr(super(), "_proxy_url_base"):
-                    super()._proxy_url_base = None
             else:
                 self.log.debug(
                     "No proxy headers found, but keeping env proxy URL",
@@ -931,7 +936,7 @@ class WebMixin(_HostTyped):
 
             # Check if we need to use an ephemeral agent for dynamic configuration
             agent_to_use = self
-            if self._dynamic_config_callback and request:
+            if self._dynamic_config_callback is not None and request:
                 # Create ephemeral copy and apply dynamic config
                 agent_to_use = self._create_ephemeral_copy()
 
@@ -1207,7 +1212,9 @@ class WebMixin(_HostTyped):
             has_request=bool(request),
         )
 
-        if self._dynamic_config_callback and not getattr(self, "_is_ephemeral", False):
+        if self._dynamic_config_callback is not None and not getattr(
+            self, "_is_ephemeral", False
+        ):
             # Return a special marker that _render_swml will recognize
             self.log.debug("returning_ephemeral_marker")
             return {
@@ -1300,12 +1307,6 @@ class WebMixin(_HostTyped):
             # Set on self
             self._proxy_url_base = proxy_url.rstrip("/")
             self._proxy_detection_done = True
-
-            # Set on parent if it has these attributes
-            if hasattr(super(), "_proxy_url_base"):
-                super()._proxy_url_base = self._proxy_url_base
-            if hasattr(super(), "_proxy_detection_done"):
-                super()._proxy_detection_done = True
 
             self.log.info(
                 "proxy_url_manually_set",
