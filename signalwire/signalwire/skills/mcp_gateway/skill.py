@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 import requests
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from requests.auth import HTTPBasicAuth
 
 from signalwire.core.skill_base import SkillBase
@@ -126,7 +126,7 @@ class MCPGatewaySkill(SkillBase):
             if missing_params:
                 self.logger.error(f"Missing required parameters: {missing_params}")
                 return False
-            self.auth = HTTPBasicAuth(
+            self.auth: Optional[HTTPBasicAuth] = HTTPBasicAuth(
                 self.params["auth_user"], self.params["auth_password"]
             )
         else:

@@ -62,7 +62,9 @@ class InfoGathererAgent(AgentBase):
 
         # Store whether we're in static or dynamic mode
         self._static_questions = questions
-        self._question_callback = None
+        self._question_callback: Optional[
+            Callable[[dict, dict, dict], List[Dict[str, str]]]
+        ] = None
 
         if questions is not None:
             # Static mode: validate questions and set up immediately

@@ -9,67 +9,98 @@ See LICENSE file in the project root for full license information.
 
 import re
 import json
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 from pathlib import Path
 
 # Document processing imports
-try:
+if TYPE_CHECKING:
     import pdfplumber
-except ImportError:
-    pdfplumber = None
+else:
+    try:
+        import pdfplumber
+    except ImportError:
+        pdfplumber = None
 
-try:
+if TYPE_CHECKING:
     from docx import Document as DocxDocument
-except ImportError:
-    DocxDocument = None
+else:
+    try:
+        from docx import Document as DocxDocument
+    except ImportError:
+        DocxDocument = None
 
-try:
+if TYPE_CHECKING:
     from bs4 import BeautifulSoup
-except ImportError:
-    BeautifulSoup = None
+else:
+    try:
+        from bs4 import BeautifulSoup
+    except ImportError:
+        BeautifulSoup = None
 
-try:
+if TYPE_CHECKING:
     import markdown
-except ImportError:
-    markdown = None
+else:
+    try:
+        import markdown
+    except ImportError:
+        markdown = None
 
-try:
+if TYPE_CHECKING:
     from markdown_it import MarkdownIt
-except ImportError:
-    MarkdownIt = None
+else:
+    try:
+        from markdown_it import MarkdownIt
+    except ImportError:
+        MarkdownIt = None
 
-try:
+if TYPE_CHECKING:
     from striprtf.striprtf import rtf_to_text
-except ImportError:
-    rtf_to_text = None
+else:
+    try:
+        from striprtf.striprtf import rtf_to_text
+    except ImportError:
+        rtf_to_text = None
 
-try:
+if TYPE_CHECKING:
     from openpyxl import load_workbook
-except ImportError:
-    load_workbook = None
+else:
+    try:
+        from openpyxl import load_workbook
+    except ImportError:
+        load_workbook = None
 
-try:
+if TYPE_CHECKING:
     from pptx import Presentation
-except ImportError:
-    Presentation = None
+else:
+    try:
+        from pptx import Presentation
+    except ImportError:
+        Presentation = None
 
-try:
+if TYPE_CHECKING:
     from nltk.tokenize import sent_tokenize
     import nltk
-
-    # Ensure NLTK data is available
+else:
     try:
-        nltk.data.find("tokenizers/punkt")
-    except LookupError:
-        nltk.download("punkt", quiet=True)
-except ImportError:
-    sent_tokenize = None
-    nltk = None
+        from nltk.tokenize import sent_tokenize
+        import nltk
 
-try:
+        # Ensure NLTK data is available
+        try:
+            nltk.data.find("tokenizers/punkt")
+        except LookupError:
+            nltk.download("punkt", quiet=True)
+    except ImportError:
+        sent_tokenize = None
+        nltk = None
+
+if TYPE_CHECKING:
     import magic
-except ImportError:
-    magic = None
+else:
+    try:
+        import magic
+    except ImportError:
+        magic = None
 
 from signalwire.core.logging_config import get_logger
 
@@ -250,7 +281,7 @@ class DocumentProcessor:
 
     def _extract_docx(self, file_path: str):
         """Extract text from DOCX files"""
-        if not DocxDocument:
+        if DocxDocument is None:
             return json.dumps(
                 {"error": "python-docx not available for DOCX processing"}
             )
@@ -271,7 +302,7 @@ class DocumentProcessor:
 
     def _extract_html(self, file_path: str):
         """Extract text from HTML files"""
-        if not BeautifulSoup:
+        if BeautifulSoup is None:
             return json.dumps(
                 {"error": "beautifulsoup4 not available for HTML processing"}
             )
@@ -288,7 +319,7 @@ class DocumentProcessor:
         try:
             with open(file_path, "r", encoding="utf-8") as file:
                 content = file.read()
-                if markdown and BeautifulSoup:
+                if markdown is not None and BeautifulSoup is not None:
                     html = markdown.markdown(content)
                     soup = BeautifulSoup(html, "html.parser")
                     return soup.get_text(separator="\n")
@@ -605,8 +636,8 @@ class DocumentProcessor:
         chunks = []
         lines = content.split("\n")
 
-        current_hierarchy = []  # Track header hierarchy
-        current_chunk = []
+        current_hierarchy: List[str] = []  # Track header hierarchy
+        current_chunk: List[str] = []
         current_size = 0
         line_start = 1
         in_code_block = False
@@ -724,7 +755,7 @@ class DocumentProcessor:
 
         current_function = None
         current_class = None
-        current_chunk = []
+        current_chunk: List[str] = []
         current_size = 0
         line_start = 1
         indent_level = 0
@@ -909,7 +940,7 @@ class DocumentProcessor:
         optimal_sentences = max(1, int(self.chunk_size / avg_sentence_length))
         return min(optimal_sentences, 10)  # Cap at 10 sentences for readability
 
-    def _build_section_path(self, hierarchy: List[str]) -> str:
+    def _build_section_path(self, hierarchy: List[str]) -> Optional[str]:
         """Build hierarchical section path from header hierarchy"""
         return " > ".join(hierarchy) if hierarchy else None
 
@@ -926,7 +957,7 @@ class DocumentProcessor:
         Returns:
             Dictionary with markdown-specific metadata including tags
         """
-        metadata = {
+        metadata: Dict[str, Any] = {
             "chunk_type": "markdown",
         }
 
@@ -960,7 +991,7 @@ class DocumentProcessor:
 
     def _build_python_section(
         self, class_name: Optional[str], function_name: Optional[str]
-    ) -> str:
+    ) -> Optional[str]:
         """Build section name for Python code"""
         if class_name and function_name:
             return f"{class_name}.{function_name}"
@@ -1034,7 +1065,7 @@ class DocumentProcessor:
 
         # Calculate overlap size in characters
         overlap_chars = self.chunk_overlap
-        overlap_lines = []
+        overlap_lines: List[str] = []
         char_count = 0
 
         # Take lines from the end until we reach overlap size
@@ -1254,7 +1285,7 @@ class DocumentProcessor:
             split_points.append(len(sentences))
 
             # Create chunks
-            chunks = []
+            chunks: List[Dict[str, Any]] = []
             for i in range(len(split_points) - 1):
                 start_idx = split_points[i]
                 end_idx = split_points[i + 1]
@@ -1417,7 +1448,7 @@ class DocumentProcessor:
                 sentence_keywords.append(set(keywords))
 
             # Find topic boundaries based on keyword overlap
-            chunks = []
+            chunks: List[Dict[str, Any]] = []
             current_chunk = [sentences[0]]
             current_keywords = sentence_keywords[0]
 
@@ -1513,8 +1544,8 @@ class DocumentProcessor:
             r"(definition|meaning|refers to|means)",
         ]
 
-        chunks = []
-        current_chunk = []
+        chunks: List[Dict[str, Any]] = []
+        current_chunk: List[str] = []
         current_context = []
 
         for i, sentence in enumerate(sentences):

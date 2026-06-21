@@ -516,7 +516,7 @@ class Step:
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert step to dictionary for SWML generation"""
-        step_dict = {"name": self.name, "text": self._render_text()}
+        step_dict: Dict[str, Any] = {"name": self.name, "text": self._render_text()}
 
         if self._step_criteria:
             step_dict["step_criteria"] = self._step_criteria
@@ -540,7 +540,7 @@ class Step:
             step_dict["skip_to_next_step"] = True
 
         # Add reset object if any reset parameters are set
-        reset_obj = {}
+        reset_obj: Dict[str, Any] = {}
         if self._reset_system_prompt is not None:
             reset_obj["system_prompt"] = self._reset_system_prompt
         if self._reset_user_prompt is not None:
@@ -1082,7 +1082,7 @@ class Context:
         if not self._steps:
             raise ValueError(f"Context '{self.name}' has no steps defined")
 
-        context_dict = {
+        context_dict: Dict[str, Any] = {
             "steps": [self._steps[name].to_dict() for name in self._step_order]
         }
 

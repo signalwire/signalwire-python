@@ -12,7 +12,7 @@ A configurable skill for getting weather information from WeatherAPI.com with cu
 temperature units and TTS-friendly responses.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from signalwire.core import FunctionResult
 from signalwire.core.skill_base import SkillBase
 
@@ -72,7 +72,7 @@ class WeatherApiSkill(SkillBase):
         )
         return schema
 
-    def __init__(self, agent, params: Dict[str, Any] = None):
+    def __init__(self, agent, params: Optional[Dict[str, Any]] = None):
         """
         Initialize the skill with configuration parameters.
 

@@ -14,7 +14,10 @@ import os
 import json
 import uuid
 import re
-from typing import Optional, List, Dict, Any, Tuple, Callable
+from typing import Optional, List, Dict, Any, Tuple, Callable, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from signalwire.core.contexts import ContextBuilder
 
 # These imports double as a required-dependency check: a missing package
 # re-raises a helpful ImportError. Several names are not referenced directly
@@ -64,7 +67,7 @@ from signalwire.core.mixins.mcp_server_mixin import MCPServerMixin
 logger = get_logger("agent_base")
 
 
-class AgentBase(
+class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/_proxy_url_base override SWMLService/ServerlessMixin's by MRO order; mypy flags the base-vs-base shape diff but the resolution is deliberate
     AuthMixin,
     WebMixin,
     SWMLService,  # ToolMixin is now composed into SWMLService — inherited via SWMLService
@@ -93,6 +96,12 @@ class AgentBase(
 
     # Subclasses can define this to declaratively set prompt sections
     PROMPT_SECTIONS = None
+
+    # Attributes set dynamically (on ephemeral copies / when native functions are
+    # configured) rather than unconditionally in __init__. Declared here so the
+    # type checker knows their types at the guarded access sites.
+    _native_functions: List[Any]
+    _is_ephemeral: bool
 
     def __init__(
         self,
@@ -211,6 +220,7 @@ class AgentBase(
         self._use_pom = use_pom
 
         # Initialize POM if needed
+        self.pom: Optional["PromptObjectModel"]
         if self._use_pom:
             from signalwire.pom.pom import PromptObjectModel
 
@@ -241,11 +251,11 @@ class AgentBase(
             )
 
         # URL override variables
-        self._web_hook_url_override = None
-        self._post_prompt_url_override = None
+        self._web_hook_url_override: Optional[str] = None
+        self._post_prompt_url_override: Optional[str] = None
 
         # Register the tool decorator on this instance
-        self.tool = self._tool_decorator
+        self.tool = self._tool_decorator  # type: ignore[method-assign]  # intentional per-instance decorator binding
 
         # Call settings
         self._auto_answer = auto_answer
@@ -265,17 +275,17 @@ class AgentBase(
         self.native_functions = native_functions or []
 
         # Initialize new configuration containers
-        self._hints = []
+        self._hints: List[Any] = []
         self._languages = []
         self._pronounce = []
-        self._params = {}
-        self._global_data = {}
+        self._params: Dict[str, Any] = {}
+        self._global_data: Dict[str, Any] = {}
         self._function_includes = []
-        self._mcp_servers = []
+        self._mcp_servers: List[Any] = []
         self._mcp_server_enabled = False
         # Initialize LLM params as empty - only send if explicitly set
-        self._prompt_llm_params = {}
-        self._post_prompt_llm_params = {}
+        self._prompt_llm_params: Dict[str, Any] = {}
+        self._post_prompt_llm_params: Dict[str, Any] = {}
 
         # Dynamic configuration callback
         self._dynamic_config_callback = None
@@ -284,22 +294,29 @@ class AgentBase(
         self.skill_manager = SkillManager(self)
 
         # Initialize contexts system
-        self._contexts_builder = None
+        self._contexts_builder: Optional["ContextBuilder"] = None
         self._contexts_defined = False
 
         # Initialize SWAIG query params for dynamic config
-        self._swaig_query_params = {}
+        self._swaig_query_params: Dict[str, Any] = {}
 
         # Debug events
         self._debug_events_enabled = False
         self._debug_events_level = 1
-        self._debug_event_handler = None
+        self._debug_event_handler: Optional[Callable[..., Any]] = None
 
-        # Initialize verb insertion points for call flow customization
-        self._pre_answer_verbs = []  # Verbs to run before answer (e.g., ringback, screening)
-        self._answer_config = {}  # Configuration for the answer verb
-        self._post_answer_verbs = []  # Verbs to run after answer, before AI (e.g., announcements)
-        self._post_ai_verbs = []  # Verbs to run after AI ends (e.g., cleanup, transfers)
+        # Initialize verb insertion points for call flow customization.
+        # The verb lists hold (verb_name, config) tuples; _answer_config is a dict.
+        self._pre_answer_verbs: List[
+            Tuple[str, Dict[str, Any]]
+        ] = []  # Verbs to run before answer (e.g., ringback, screening)
+        self._answer_config: Dict[str, Any] = {}  # Configuration for the answer verb
+        self._post_answer_verbs: List[
+            Tuple[str, Dict[str, Any]]
+        ] = []  # Verbs to run after answer, before AI (e.g., announcements)
+        self._post_ai_verbs: List[
+            Tuple[str, Dict[str, Any]]
+        ] = []  # Verbs to run after AI ends (e.g., cleanup, transfers)
 
     # Verb categories for pre-answer validation
     _PRE_ANSWER_SAFE_VERBS = {
@@ -372,7 +389,8 @@ class AgentBase(
             base_url = self._proxy_url_base.rstrip("/")
             # Add authentication if requested
             if include_auth:
-                username, password = self.get_basic_auth_credentials()
+                creds = self.get_basic_auth_credentials()
+                username, password = creds[0], creds[1]
                 if username and password:
                     from urllib.parse import urlparse, urlunparse
 
@@ -409,8 +427,10 @@ class AgentBase(
         elif mode == "google_cloud_function":
             # Google Cloud Functions URL format
             project_id = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GCP_PROJECT")
-            region = os.getenv("FUNCTION_REGION") or os.getenv(
-                "GOOGLE_CLOUD_REGION", "us-central1"
+            region = (
+                os.getenv("FUNCTION_REGION")
+                or os.getenv("GOOGLE_CLOUD_REGION", "us-central1")
+                or ""
             )
             service_name = os.getenv("K_SERVICE") or os.getenv(
                 "FUNCTION_TARGET", "unknown"
@@ -445,7 +465,8 @@ class AgentBase(
 
         # For serverless modes, add authentication if requested
         if include_auth:
-            username, password = self.get_basic_auth_credentials()
+            creds = self.get_basic_auth_credentials()
+            username, password = creds[0], creds[1]
             if username and password:
                 # Parse URL to insert auth
                 from urllib.parse import urlparse, urlunparse
@@ -828,7 +849,7 @@ class AgentBase(
         return self
 
     def _render_swml(
-        self, call_id: str = None, modifications: Optional[dict] = None
+        self, call_id: Optional[str] = None, modifications: Optional[dict] = None
     ) -> str:
         """
         Render the complete SWML document using SWMLService methods
@@ -942,7 +963,7 @@ class AgentBase(
             default_webhook_url = agent_to_use._web_hook_url_override
 
         # Prepare SWAIG object (correct format)
-        swaig_obj = {}
+        swaig_obj: Dict[str, Any] = {}
 
         # Add native_functions if any are defined
         if agent_to_use.native_functions:
@@ -1374,6 +1395,7 @@ class AgentBase(
             if (
                 hasattr(self, "_session_manager")
                 and function_name in self._tool_registry._swaig_functions
+                and call_id is not None
             ):
                 is_valid = self._session_manager.validate_tool_token(
                     function_name, token, call_id
@@ -1587,8 +1609,10 @@ class AgentBase(
         ephemeral_agent._prompt_manager = PromptManager(ephemeral_agent)
         # Copy ALL PromptManager state
         if hasattr(self._prompt_manager, "_sections"):
-            ephemeral_agent._prompt_manager._sections = copy.deepcopy(
-                self._prompt_manager._sections
+            setattr(
+                ephemeral_agent._prompt_manager,
+                "_sections",
+                copy.deepcopy(getattr(self._prompt_manager, "_sections")),
             )
         ephemeral_agent._prompt_manager._prompt_text = copy.deepcopy(
             self._prompt_manager._prompt_text
@@ -1609,8 +1633,10 @@ class AgentBase(
                 self._tool_registry._swaig_functions.copy()
             )
         if hasattr(self._tool_registry, "_tool_instances"):
-            ephemeral_agent._tool_registry._tool_instances = (
-                self._tool_registry._tool_instances.copy()
+            setattr(
+                ephemeral_agent._tool_registry,
+                "_tool_instances",
+                getattr(self._tool_registry, "_tool_instances").copy(),
             )
 
         # Create a new skill manager for the ephemeral agent
@@ -1628,9 +1654,10 @@ class AgentBase(
                 skill_name = skill_instance.SKILL_NAME
                 skill_params = getattr(skill_instance, "params", {})
                 try:
-                    ephemeral_agent.skill_manager.load_skill(
-                        skill_name, type(skill_instance), skill_params
-                    )
+                    if skill_name is not None:
+                        ephemeral_agent.skill_manager.load_skill(
+                            skill_name, type(skill_instance), skill_params
+                        )
                 except Exception as e:
                     self.log.warning(
                         "failed_to_copy_skill_to_ephemeral",
@@ -1639,7 +1666,7 @@ class AgentBase(
                     )
 
         # Re-bind the tool decorator method to the new instance
-        ephemeral_agent.tool = ephemeral_agent._tool_decorator
+        ephemeral_agent.tool = ephemeral_agent._tool_decorator  # type: ignore[method-assign]  # intentional per-instance decorator binding
 
         # Share the logger but bind it to indicate ephemeral copy
         ephemeral_agent.log = self.log.bind(ephemeral=True)

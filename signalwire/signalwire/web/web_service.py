@@ -10,26 +10,27 @@ See LICENSE file in the project root for full license information.
 import os
 import mimetypes
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
-try:
+if TYPE_CHECKING:
     from fastapi import FastAPI, HTTPException, Request, Response, Depends
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.security import HTTPBasic, HTTPBasicCredentials
     from fastapi.staticfiles import StaticFiles
     from fastapi.responses import FileResponse, HTMLResponse
-except ImportError:
-    FastAPI = None
-    HTTPException = None
-    Request = None
-    Response = None
-    Depends = None
-    CORSMiddleware = None
-    HTTPBasic = None
-    HTTPBasicCredentials = None
-    StaticFiles = None
-    FileResponse = None
-    HTMLResponse = None
+else:
+    # Optional-dep shim: FastAPI is an optional dependency; these names are
+    # types when imported and None when absent.
+    try:
+        from fastapi import FastAPI, HTTPException, Request, Response, Depends
+        from fastapi.middleware.cors import CORSMiddleware
+        from fastapi.security import HTTPBasic, HTTPBasicCredentials
+        from fastapi.staticfiles import StaticFiles
+        from fastapi.responses import FileResponse, HTMLResponse
+    except ImportError:
+        FastAPI = HTTPException = Request = Response = Depends = None
+        CORSMiddleware = HTTPBasic = HTTPBasicCredentials = None
+        StaticFiles = FileResponse = HTMLResponse = None
 
 from signalwire.core.security_config import SecurityConfig
 from signalwire.core.config_loader import ConfigLoader
@@ -44,7 +45,7 @@ class WebService:
     def __init__(
         self,
         port: int = 8002,
-        directories: Dict[str, str] = None,
+        directories: Optional[Dict[str, str]] = None,
         basic_auth: Optional[Tuple[str, str]] = None,
         config_file: Optional[str] = None,
         enable_directory_browsing: bool = False,
@@ -108,7 +109,8 @@ class WebService:
         # Set up authentication
         self._basic_auth = basic_auth or self.security.get_basic_auth()
 
-        if FastAPI:
+        self.app: Optional["FastAPI"] = None
+        if FastAPI is not None:
             self.app = FastAPI(
                 title="SignalWire Web Service",
                 description="Static file serving for SignalWire Agents",
@@ -171,7 +173,7 @@ class WebService:
             return
 
         # Add CORS middleware if enabled
-        if self.enable_cors and CORSMiddleware:
+        if self.enable_cors and CORSMiddleware is not None:
             self.app.add_middleware(CORSMiddleware, **self.security.get_cors_config())
 
         # Add security headers middleware
@@ -201,7 +203,9 @@ class WebService:
 
             return await call_next(request)
 
-    def _get_current_username(self, credentials: HTTPBasicCredentials = None) -> str:
+    def _get_current_username(
+        self, credentials: Optional["HTTPBasicCredentials"] = None
+    ) -> Optional[str]:
         """Validate basic auth credentials"""
         if not credentials:
             return None
@@ -326,7 +330,7 @@ class WebService:
             return
 
         # Create security dependency if HTTPBasic is available
-        security = HTTPBasic() if HTTPBasic else None
+        security = HTTPBasic() if HTTPBasic is not None else None
 
         @self.app.get("/health")
         async def health():
@@ -371,18 +375,18 @@ class WebService:
             </html>
             """
 
-            if HTMLResponse:
+            if HTMLResponse is not None:
                 return HTMLResponse(content=html)
             else:
                 return {"directories": list(self.directories.keys())}
 
     def _mount_directories(self):
         """Mount static file directories"""
-        if not self.app or not StaticFiles:
+        if not self.app or StaticFiles is None:
             return
 
         # Create security dependency if HTTPBasic is available
-        security = HTTPBasic() if HTTPBasic else None
+        security = HTTPBasic() if HTTPBasic is not None else None
 
         for route, directory in self.directories.items():
             # Ensure directory exists
@@ -406,9 +410,9 @@ class WebService:
             async def serve_file(
                 file_path: str,
                 request: Request,
-                credentials: HTTPBasicCredentials = None
-                if not security
-                else Depends(security),
+                credentials: Optional["HTTPBasicCredentials"] = (
+                    None if not security else Depends(security)
+                ),
                 route=route,
                 directory=directory,
             ):
@@ -453,7 +457,7 @@ class WebService:
                         html = self._generate_directory_listing(
                             full_path, request.url.path
                         )
-                        if HTMLResponse:
+                        if HTMLResponse is not None:
                             return HTMLResponse(content=html)
                         else:
                             raise HTTPException(
@@ -471,7 +475,7 @@ class WebService:
                     or "application/octet-stream"
                 )
 
-                if FileResponse:
+                if FileResponse is not None:
                     return FileResponse(
                         full_path,
                         media_type=mime_type,
@@ -555,7 +559,7 @@ class WebService:
         port = port or self.port
 
         # Get SSL configuration
-        ssl_kwargs = {}
+        ssl_kwargs: Dict[str, Any] = {}
         if ssl_cert and ssl_key:
             # Use provided SSL files
             ssl_kwargs = {"ssl_certfile": ssl_cert, "ssl_keyfile": ssl_key}

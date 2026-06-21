@@ -23,6 +23,7 @@ if "--raw" in sys.argv or "--dump-swml" in sys.argv:
 import json
 import argparse
 from pathlib import Path
+from typing import Any, Dict, cast
 
 # Import submodules
 from .config import (
@@ -738,8 +739,10 @@ def main():
                     print("Function type: DataMap (serverless)")
                     print("-" * 60)
 
-                # Execute DataMap function
-                result = execute_datamap_function(func, function_args, args.verbose)
+                # Execute DataMap function (is_datamap implies func is a dict)
+                result = execute_datamap_function(
+                    cast(Dict[str, Any], func), function_args, args.verbose
+                )
                 print("RESULT:")
                 print(format_result(result))
             else:
@@ -749,7 +752,7 @@ def main():
                     print(f"Arguments: {json.dumps(function_args, indent=2)}")
                     if is_external_webhook:
                         print("Function type: EXTERNAL webhook")
-                        print(f"External URL: {func.webhook_url}")
+                        print(f"External URL: {cast(Any, func).webhook_url}")
                     else:
                         print("Function type: LOCAL webhook")
 
@@ -791,7 +794,11 @@ def main():
                     if is_external_webhook:
                         # For external webhook functions, make HTTP request to external service
                         result = execute_external_webhook_function(
-                            func, args.tool_name, function_args, post_data, args.verbose
+                            cast(Any, func),
+                            args.tool_name,
+                            function_args,
+                            post_data,
+                            args.verbose,
                         )
                     else:
                         # For local webhook functions, call the agent's handler

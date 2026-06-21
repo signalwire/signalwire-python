@@ -11,10 +11,13 @@ import threading
 from typing import TYPE_CHECKING, List, Dict, Any, Optional
 
 if TYPE_CHECKING:
-    from signalwire.core.agent_base import AgentBase
+    from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports the mixins; the name resolves at type-check time but mypy flags the back-reference
 
 
-class AIConfigMixin:
+from signalwire.core.mixins._mixin_host import _HostTyped
+
+
+class AIConfigMixin(_HostTyped):
     """
     Mixin class containing all AI configuration methods for AgentBase
     """
@@ -120,7 +123,7 @@ class AIConfigMixin:
                                engine="elevenlabs",
                                params={"stability": 0.5, "similarity_boost": 0.75})
         """
-        language = {"name": name, "code": code}
+        language: Dict[str, Any] = {"name": name, "code": code}
 
         # Handle voice formatting (either explicit params or combined string)
         if engine or model:
@@ -231,7 +234,7 @@ class AIConfigMixin:
             Self for method chaining
         """
         if replace and with_text:
-            rule = {"replace": replace, "with": with_text}
+            rule: Dict[str, Any] = {"replace": replace, "with": with_text}
             if ignore_case:
                 rule["ignore_case"] = True
 
@@ -524,7 +527,7 @@ class AIConfigMixin:
             Self for method chaining
         """
         if url and functions and isinstance(functions, list):
-            include = {"url": url, "functions": functions}
+            include: Dict[str, Any] = {"url": url, "functions": functions}
             if meta_data and isinstance(meta_data, dict):
                 include["meta_data"] = meta_data
 
@@ -579,7 +582,7 @@ class AIConfigMixin:
         Returns:
             Self for method chaining
         """
-        server = {"url": url}
+        server: Dict[str, Any] = {"url": url}
         if headers:
             server["headers"] = headers
         if resources:

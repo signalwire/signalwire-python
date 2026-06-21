@@ -206,12 +206,12 @@ def function_tool(
         if required:
             schema["required"] = required
 
-        # Attach metadata to the function
-        fn._livewire_tool = True
-        fn._tool_name = tool_name
-        fn._tool_description = tool_desc
-        fn._tool_parameters = schema
-        fn._tool_handler = fn
+        # Attach metadata to the function (dynamic attrs; setattr for mypy)
+        setattr(fn, "_livewire_tool", True)
+        setattr(fn, "_tool_name", tool_name)
+        setattr(fn, "_tool_description", tool_desc)
+        setattr(fn, "_tool_parameters", schema)
+        setattr(fn, "_tool_handler", fn)
         return fn
 
     if func is not None:
@@ -473,7 +473,7 @@ class AgentSession:
 
         # Internal state
         self._agent: Optional[Agent] = None
-        self._sw_agent = None  # Will hold the real AgentBase
+        self._sw_agent: Any = None  # Will hold the real AgentBase
         self._say_queue: List[str] = []
         self._history: List[Dict[str, str]] = []
         self._noop = _NoopTracker()
@@ -558,8 +558,9 @@ class AgentSession:
                 model_str = model_str.split("/", 1)[1]
             sw.set_param("model", model_str)
 
-        # Interruption / barge
-        allow = self._allow_interruptions
+        # Interruption / barge. Locals are Any: the per-Agent override comes
+        # from getattr(..., NOT_GIVEN) whose sentinel default is `object`.
+        allow: Any = self._allow_interruptions
         agent_allow = getattr(agent, "_allow_interruptions", NOT_GIVEN)
         if agent_allow is not NOT_GIVEN:
             allow = agent_allow
@@ -567,14 +568,14 @@ class AgentSession:
             sw.set_param("barge_confidence", 1.0)
 
         # Endpointing delays
-        min_ep = self._min_endpointing_delay
+        min_ep: Any = self._min_endpointing_delay
         agent_min = getattr(agent, "_min_endpointing_delay", NOT_GIVEN)
         if agent_min is not NOT_GIVEN:
             min_ep = agent_min
         if min_ep and min_ep > 0:
             sw.set_param("end_of_speech_timeout", int(min_ep * 1000))
 
-        max_ep = self._max_endpointing_delay
+        max_ep: Any = self._max_endpointing_delay
         agent_max = getattr(agent, "_max_endpointing_delay", NOT_GIVEN)
         if agent_max is not NOT_GIVEN:
             max_ep = agent_max
@@ -597,9 +598,9 @@ class AgentSession:
 
 def _register_function_tool(sw_agent, fn):
     """Register a @function_tool-decorated function on a SignalWire AgentBase."""
-    tool_name = fn._tool_name
-    tool_desc = fn._tool_description
-    tool_params = fn._tool_parameters
+    tool_name = getattr(fn, "_tool_name")
+    tool_desc = getattr(fn, "_tool_description")
+    tool_params = getattr(fn, "_tool_parameters")
 
     # Build a handler compatible with define_tool expectations
     def handler(args, raw_data=None):

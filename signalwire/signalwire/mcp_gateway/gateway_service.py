@@ -19,13 +19,13 @@ import logging
 import argparse
 import signal
 import re
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from datetime import datetime
 import ssl
 import concurrent.futures
 
 from flask import Flask, request, jsonify, Response
-from werkzeug.serving import make_server
+from werkzeug.serving import make_server, BaseWSGIServer
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from functools import wraps
@@ -68,7 +68,7 @@ class MCPGateway:
         self.app = Flask(__name__)
         self.mcp_manager = MCPManager(self.config)
         self.session_manager = SessionManager(self.config)
-        self.server = None
+        self.server: Optional[BaseWSGIServer] = None
         self._shutdown_requested = False
         self._shutdown_cleanup_done = False
 

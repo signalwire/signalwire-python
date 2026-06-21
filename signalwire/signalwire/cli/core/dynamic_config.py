@@ -10,7 +10,7 @@ See LICENSE file in the project root for full license information.
 Apply dynamic configuration to agents
 """
 
-from typing import Optional, TYPE_CHECKING
+from typing import Optional, Dict, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase
@@ -47,7 +47,7 @@ def apply_dynamic_config(
 
             # Extract request data
             query_params = dict(mock_request.query_params)
-            body_params = {}  # Empty for GET requests
+            body_params: Dict[str, Any] = {}  # Empty for GET requests
             headers = dict(mock_request.headers)
 
             if verbose:

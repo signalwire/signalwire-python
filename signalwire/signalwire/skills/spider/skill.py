@@ -177,7 +177,9 @@ class SpiderSkill(SkillBase):
         self.session.headers.update(self.headers)
 
         # Cache for responses (bounded OrderedDict for LRU-style eviction)
-        self.cache = collections.OrderedDict() if self.cache_enabled else None
+        self._cache: Optional["collections.OrderedDict[str, Any]"] = (
+            collections.OrderedDict() if self.cache_enabled else None
+        )
         self._cache_max_size = 100
 
         # XPath expressions for unwanted elements
@@ -273,19 +275,19 @@ class SpiderSkill(SkillBase):
     def _fetch_url(self, url: str) -> Optional[requests.Response]:
         """Fetch a URL with caching and error handling."""
         # Check cache first
-        if self.cache_enabled and url in self.cache:
+        if self.cache_enabled and self._cache is not None and url in self._cache:
             self.logger.debug(f"Cache hit for {url}")
-            return self.cache[url]
+            return self._cache[url]
 
         try:
             response = self.session.get(url, timeout=self.timeout)
             response.raise_for_status()
 
             # Cache successful responses (with size limit)
-            if self.cache_enabled and self.cache is not None:
-                if len(self.cache) >= self._cache_max_size:
-                    self.cache.popitem(last=False)  # Evict oldest
-                self.cache[url] = response
+            if self.cache_enabled and self._cache is not None:
+                if len(self._cache) >= self._cache_max_size:
+                    self._cache.popitem(last=False)  # Evict oldest
+                self._cache[url] = response
 
             return response
 
@@ -382,12 +384,12 @@ class SpiderSkill(SkillBase):
             return self._fast_text_extract(response)
 
     def _structured_extract(
-        self, response: requests.Response, selectors: Dict[str, str] = None
+        self, response: requests.Response, selectors: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         """Extract structured data using selectors."""
         try:
             tree = html.fromstring(response.content)
-            result = {
+            result: Dict[str, Any] = {
                 "url": response.url,
                 "status_code": response.status_code,
                 "title": "",
@@ -514,7 +516,7 @@ class SpiderSkill(SkillBase):
             return FunctionResult("Max pages must be at least 1")
 
         # Simple breadth-first crawl
-        visited = set()
+        visited: set = set()
         to_visit = [(start_url, 0)]  # (url, depth)
         results = []
 
@@ -662,6 +664,6 @@ class SpiderSkill(SkillBase):
         """Clean up resources when skill is unloaded."""
         if hasattr(self, "session"):
             self.session.close()
-        if hasattr(self, "cache") and self.cache is not None:
-            self.cache.clear()
+        if hasattr(self, "_cache") and self._cache is not None:
+            self._cache.clear()
         self.logger.info("Spider skill cleaned up")

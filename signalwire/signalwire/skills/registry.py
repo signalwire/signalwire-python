@@ -102,6 +102,8 @@ class SkillRegistry:
                 f"signalwire_agents_external.{base_path.name}.{skill_name}.skill"
             )
             spec = importlib.util.spec_from_file_location(module_name, skill_file)
+            if spec is None or spec.loader is None:
+                return None
             module = importlib.util.module_from_spec(spec)
 
             # Add to sys.modules to handle relative imports
@@ -243,7 +245,7 @@ class SkillRegistry:
         # Try to load on-demand
         return self._load_skill_on_demand(skill_name)
 
-    def list_skills(self) -> List[Dict[str, str]]:
+    def list_skills(self) -> List[Dict[str, Any]]:
         """List all available skills by scanning directories (only when explicitly requested)"""
         # Only scan when this method is explicitly called (e.g., for CLI tools)
         skills_dir = Path(__file__).parent
@@ -355,9 +357,9 @@ class SkillRegistry:
                 skill_file = item / "skill.py"
                 if skill_file.exists() and item.name not in skills_schema:
                     try:
-                        skill_class = self._load_skill_on_demand(item.name)
-                        if skill_class:
-                            add_skill_to_schema(skill_class, "built-in")
+                        loaded_class = self._load_skill_on_demand(item.name)
+                        if loaded_class:
+                            add_skill_to_schema(loaded_class, "built-in")
                     except Exception as e:
                         self.logger.error(f"Failed to load skill '{item.name}': {e}")
 
@@ -369,9 +371,9 @@ class SkillRegistry:
                         skill_file = item / "skill.py"
                         if skill_file.exists() and item.name not in skills_schema:
                             try:
-                                skill_class = self._load_skill_on_demand(item.name)
-                                if skill_class:
-                                    add_skill_to_schema(skill_class, "external")
+                                loaded_class = self._load_skill_on_demand(item.name)
+                                if loaded_class:
+                                    add_skill_to_schema(loaded_class, "external")
                             except Exception as e:
                                 self.logger.error(
                                     f"Failed to load skill '{item.name}': {e}"
@@ -388,9 +390,9 @@ class SkillRegistry:
                             skill_file = item / "skill.py"
                             if skill_file.exists() and item.name not in skills_schema:
                                 try:
-                                    skill_class = self._load_skill_on_demand(item.name)
-                                    if skill_class:
-                                        add_skill_to_schema(skill_class, "external")
+                                    loaded_class = self._load_skill_on_demand(item.name)
+                                    if loaded_class:
+                                        add_skill_to_schema(loaded_class, "external")
                                 except Exception as e:
                                     self.logger.error(
                                         f"Failed to load skill '{item.name}': {e}"
@@ -447,10 +449,12 @@ class SkillRegistry:
             from importlib.metadata import entry_points
 
             all_eps = entry_points()
+            skill_entries: Any
             if hasattr(all_eps, "select"):
                 # Python 3.12+ returns SelectableGroups; 3.10-3.11 also support select
                 skill_entries = all_eps.select(group="signalwire.skills")
             else:
+                # Legacy (pre-3.10) dict-style API
                 skill_entries = all_eps.get("signalwire.skills", [])
 
             # Determine built-in skill names for conflict detection
@@ -505,7 +509,7 @@ class SkillRegistry:
             'registered': ['my_skill', ...]
         }
         """
-        sources = {
+        sources: Dict[str, List[str]] = {
             "built-in": [],
             "external_paths": [],
             "entry_points": [],

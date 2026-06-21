@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 SWML document rendering utilities for SignalWire AI Agents.
 """
 
-from typing import Dict, List, Any, Optional, Union
+from typing import Dict, List, Any, Optional, Union, cast
 
 from signalwire.core.swml_service import SWMLService
 from signalwire.core.swml_builder import SWMLBuilder
@@ -80,7 +80,7 @@ class SwmlRenderer:
             )
 
         # Configure SWAIG object for AI verb
-        swaig_config = {}
+        swaig_config: Dict[str, Any] = {}
         functions = []
 
         # Add startup hook if provided
@@ -123,9 +123,12 @@ class SwmlRenderer:
                 swaig_config["functions"] = functions
 
         # Add AI verb with appropriate configuration
+        # prompt_is_pom selects which shape `prompt` holds: a POM list when True,
+        # a text string when False. mypy can't correlate the flag with the union,
+        # so cast each branch to the type it is guaranteed to be.
         builder.ai(
-            prompt_text=None if prompt_is_pom else prompt,
-            prompt_pom=prompt if prompt_is_pom else None,
+            prompt_text=None if prompt_is_pom else cast(str, prompt),
+            prompt_pom=cast(List[Dict[str, Any]], prompt) if prompt_is_pom else None,
             post_prompt=post_prompt,
             post_prompt_url=post_prompt_url,
             swaig=swaig_config if swaig_config else None,

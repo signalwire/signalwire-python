@@ -81,7 +81,7 @@ def simple_template_expand(template: str, data: Dict[str, Any]) -> str:
                     parts.append(current_part)
 
                 # Navigate through the data structure
-                value = data
+                value: Any = data
                 try:
                     for part in parts:
                         if part.startswith("[") and part.endswith("]"):
@@ -121,7 +121,7 @@ def simple_template_expand(template: str, data: Dict[str, Any]) -> str:
 
 def execute_datamap_function(
     datamap_config: Dict[str, Any], args: Dict[str, Any], verbose: bool = False
-) -> Dict[str, Any]:
+) -> Any:
     """
     Execute a DataMap function following the actual DataMap processing pipeline:
     1. Expressions (pattern matching)
@@ -151,7 +151,7 @@ def execute_datamap_function(
         print(f"Extracted data_map: {json.dumps(actual_datamap, indent=2)}")
 
     # Initialize context with function arguments
-    context = {"args": args}
+    context: Dict[str, Any] = {"args": args}
     context.update(
         args
     )  # Also make args available at top level for backward compatibility
@@ -171,7 +171,7 @@ def execute_datamap_function(
                 if pattern in str(args):
                     if verbose:
                         print(f"Expression matched: {pattern}")
-                    result = simple_template_expand(str(expr["output"]), context)
+                    result: Any = simple_template_expand(str(expr["output"]), context)
                     if verbose:
                         print(f"Expression result: {result}")
                     return result
@@ -428,7 +428,7 @@ def execute_datamap_function(
 
                     if isinstance(webhook_output, dict):
                         # Process each key-value pair in the output
-                        final_result = {}
+                        final_result: Any = {}
                         for key, template in webhook_output.items():
                             expanded_value = simple_template_expand(
                                 str(template), webhook_context

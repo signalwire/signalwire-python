@@ -11,6 +11,7 @@ import argparse
 import sys
 from pathlib import Path
 from datetime import datetime
+from typing import List, cast
 from urllib.parse import urlparse, urlunparse
 
 from signalwire.search.models import MODEL_ALIASES, DEFAULT_MODEL, resolve_model_alias
@@ -518,7 +519,7 @@ Examples:
                         relative_path = (
                             file_path.relative_to(base_dir)
                             if base_dir
-                            else file_path.name
+                            else Path(file_path.name)
                         )
                         json_filename = relative_path.with_suffix(".json")
                         json_path = Path(args.output_dir) / json_filename
@@ -575,8 +576,8 @@ Examples:
                     f"✓ Created {len(chunk_files_created)} JSON files in {args.output_dir}"
                 )
                 total_chunks = 0
-                for f in chunk_files_created:
-                    with open(f) as fh:
+                for chunk_file in chunk_files_created:
+                    with open(chunk_file) as fh:
                         total_chunks += len(json.load(fh)["chunks"])
                 print(f"  Total chunks: {total_chunks}")
 
@@ -920,7 +921,9 @@ def search_command():
 
                     # Perform search
                     results = engine.search(
-                        query_vector=enhanced.get("vector"),
+                        query_vector=cast(
+                            List[float], enhanced.get("vector")
+                        ),  # vector is None for keyword-only search; search() tolerates it at runtime
                         enhanced_text=enhanced.get("enhanced_text", query),
                         count=args.count,
                         similarity_threshold=args.distance_threshold,
@@ -1003,7 +1006,9 @@ def search_command():
 
         # Perform search
         results = engine.search(
-            query_vector=enhanced.get("vector"),
+            query_vector=cast(
+                List[float], enhanced.get("vector")
+            ),  # vector is None for keyword-only search; search() tolerates it at runtime
             enhanced_text=enhanced.get("enhanced_text", args.query),
             count=args.count,
             similarity_threshold=args.distance_threshold,

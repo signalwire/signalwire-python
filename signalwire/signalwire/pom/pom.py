@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 import json
 import yaml
 
@@ -101,9 +101,9 @@ class Section:
         self.subsections.append(subsection)
         return subsection
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         """Convert the section to a dictionary representation."""
-        data = {}
+        data: Dict[str, Any] = {}
 
         # Add keys in specific order: title, body, bullets, subsections
         if self.title is not None:
@@ -277,12 +277,13 @@ class PromptObjectModel:
     """
 
     @staticmethod
-    def from_json(json_data: Union[str, dict]) -> "PromptObjectModel":
+    def from_json(json_data: Union[str, dict, list]) -> "PromptObjectModel":
         """
         Create a PromptObjectModel instance from JSON data.
 
         Args:
-            json_data: Either a JSON string or a parsed dictionary
+            json_data: A JSON string, or already-parsed data (a dict, or a list
+                of section dictionaries as produced by PomBuilder.from_sections)
 
         Returns:
             A new PromptObjectModel populated with the data from the JSON
@@ -319,7 +320,7 @@ class PromptObjectModel:
         return PromptObjectModel._from_dict(data)
 
     @staticmethod
-    def _from_dict(data: dict) -> "PromptObjectModel":
+    def _from_dict(data: Union[str, dict, list]) -> "PromptObjectModel":
         """
         Internal method to create a PromptObjectModel from a dictionary.
         Used by both from_json and from_yaml.

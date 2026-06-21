@@ -45,7 +45,7 @@ class SecurityConfig:
     BASIC_AUTH_PASSWORD = "SWML_BASIC_AUTH_PASSWORD"
 
     # Defaults (secure by default)
-    DEFAULTS = {
+    DEFAULTS: Dict[str, Any] = {
         SSL_ENABLED: False,  # Off by default, but secure when enabled
         SSL_VERIFY_MODE: "CERT_REQUIRED",
         ALLOWED_HOSTS: "*",  # Accept all hosts by default for backward compatibility

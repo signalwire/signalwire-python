@@ -126,7 +126,7 @@ class SWMLService(ToolMixin):
         self.ssl_key_path = self.security.ssl_key_path
 
         # Initialize proxy detection attributes
-        self._proxy_url_base = os.environ.get("SWML_PROXY_URL_BASE")
+        self._proxy_url_base: Optional[str] = os.environ.get("SWML_PROXY_URL_BASE")
         self._proxy_url_base_from_env = bool(
             self._proxy_url_base
         )  # Track if it came from environment
@@ -172,21 +172,21 @@ class SWMLService(ToolMixin):
         self.verb_registry = VerbHandlerRegistry()
 
         # Server state
-        self._app = None
-        self._router = None
+        self._app: Optional[Any] = None
+        self._router: Optional[Any] = None
         self._running = False
 
         # Initialize SWML document state
         self._current_document = self._create_empty_document()
 
         # Dictionary to cache dynamically created methods (instance level cache)
-        self._verb_methods_cache = {}
+        self._verb_methods_cache: Dict[str, Any] = {}
 
         # Create auto-vivified methods for all verbs
         self._create_verb_methods()
 
         # Initialize routing callbacks dictionary (path -> callback)
-        self._routing_callbacks = {}
+        self._routing_callbacks: Dict[str, Any] = {}
 
         # SWAIG tool registry — lifted from AgentBase so that any SWMLService
         # (sidecar, custom verb host, etc.) can register and dispatch SWAIG
@@ -410,6 +410,11 @@ class SWMLService(ToolMixin):
 
             try:
                 # Python 3.9+
+                # `path` is an importlib.resources Traversable here, not a str.
+                # Annotate Any so it doesn't conflict with the str-typed `path`
+                # in the manual-search loop below, and so the version-compat
+                # branches (Traversable is not a context manager on 3.13+) check.
+                path: Any
                 try:
                     # Python 3.13+
                     path = importlib.resources.files("signalwire").joinpath(
@@ -418,7 +423,7 @@ class SWMLService(ToolMixin):
                     return str(path)
                 except Exception:
                     # Python 3.9-3.12
-                    with importlib.resources.files("signalwire").joinpath(
+                    with importlib.resources.files("signalwire").joinpath(  # type: ignore[attr-defined]
                         "schema.json"
                     ) as path:
                         return str(path)
@@ -484,7 +489,7 @@ class SWMLService(ToolMixin):
         # Special case for verbs that take direct values (like sleep)
         if verb_name == "sleep" and isinstance(config, int):
             # Sleep verb takes a direct integer value
-            verb_obj = {verb_name: config}
+            verb_obj: Dict[str, Any] = {verb_name: config}
             self._current_document["sections"]["main"].append(verb_obj)
             return True
 
@@ -501,6 +506,7 @@ class SWMLService(ToolMixin):
         # Check if we have a specialized handler for this verb
         if self.verb_registry.has_handler(verb_name):
             handler = self.verb_registry.get_handler(verb_name)
+            assert handler is not None  # guaranteed by has_handler() above
             is_valid, errors = handler.validate_config(config)
         else:
             # Use schema-based validation for standard verbs
@@ -551,7 +557,7 @@ class SWMLService(ToolMixin):
         # Special case for verbs that take direct values (like sleep)
         if verb_name == "sleep" and isinstance(config, int):
             # Sleep verb takes a direct integer value
-            verb_obj = {verb_name: config}
+            verb_obj: Dict[str, Any] = {verb_name: config}
             self._current_document["sections"][section_name].append(verb_obj)
             return True
 
@@ -569,6 +575,7 @@ class SWMLService(ToolMixin):
         # Check if we have a specialized handler for this verb
         if self.verb_registry.has_handler(verb_name):
             handler = self.verb_registry.get_handler(verb_name)
+            assert handler is not None  # guaranteed by has_handler() above
             is_valid, errors = handler.validate_config(config)
         else:
             # Use schema-based validation for standard verbs

@@ -232,7 +232,7 @@ def load_spacy_model(language: str):
 
 
 # Model cache - stores multiple models by name
-_model_cache = {}  # model_name -> SentenceTransformer instance
+_model_cache: Dict[str, Any] = {}  # model_name -> SentenceTransformer instance
 _MAX_MODEL_CACHE_SIZE = 5
 
 _model_lock = threading.Lock()
@@ -259,7 +259,7 @@ def set_global_model(model):
             logger.info(f"Model added to cache: {model_name}")
 
 
-def _get_cached_model(model_name: str = None):
+def _get_cached_model(model_name: Optional[str] = None):
     """Get or create cached sentence transformer model
 
     Args:
@@ -305,7 +305,7 @@ def _get_cached_model(model_name: str = None):
             return None
 
 
-def vectorize_query(query: str, model=None, model_name: str = None):
+def vectorize_query(query: str, model=None, model_name: Optional[str] = None):
     """
     Vectorize query using sentence transformers
     Returns numpy array of embeddings
@@ -457,9 +457,9 @@ def preprocess_query(
     debug: bool = False,
     vector: bool = False,
     vectorize_query_param: bool = False,
-    nlp_backend: str = None,
+    nlp_backend: Optional[str] = None,
     query_nlp_backend: str = "nltk",
-    model_name: str = None,
+    model_name: Optional[str] = None,
     preserve_original: bool = True,
 ) -> Dict[str, Any]:
     """
@@ -642,7 +642,7 @@ def preprocess_query(
             f"NLP Backend Used: {query_nlp_backend if nlp or query_nlp_backend == 'nltk' else 'nltk (fallback)'}"
         )
 
-    formatted_output = {
+    formatted_output: Dict[str, Any] = {
         "input": final_query_str,
         "enhanced_text": final_query_str,  # Alias for compatibility
         "language": language,
@@ -666,7 +666,7 @@ def preprocess_query(
 def preprocess_document_content(
     content: str,
     language: str = "en",
-    nlp_backend: str = None,
+    nlp_backend: Optional[str] = None,
     index_nlp_backend: str = "nltk",
 ) -> Dict[str, Any]:
     """

@@ -9,7 +9,7 @@ Handles the MCP JSON-RPC 2.0 protocol: initialize, tools/list, tools/call.
 """
 
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ class MCPServerMixin:
 
     def _build_mcp_tool_list(self) -> list:
         """Convert registered @tool functions to MCP tool format"""
-        tools = []
+        tools: List[Dict[str, Any]] = []
 
         if not hasattr(self, "_swaig_functions"):
             return tools

@@ -13,7 +13,7 @@ from typing import List, Dict, Any, TYPE_CHECKING, Optional
 from signalwire.core.logging_config import get_logger
 
 if TYPE_CHECKING:
-    from signalwire.core.agent_base import AgentBase
+    from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports skill_base; name resolves at type-check time
     from signalwire.core.function_result import FunctionResult
 
 
@@ -21,8 +21,8 @@ class SkillBase(ABC):
     """Abstract base class for all agent skills"""
 
     # Subclasses must define these
-    SKILL_NAME: str = None  # Required: unique identifier
-    SKILL_DESCRIPTION: str = None  # Required: human-readable description
+    SKILL_NAME: Optional[str] = None  # Required: unique identifier
+    SKILL_DESCRIPTION: Optional[str] = None  # Required: human-readable description
     SKILL_VERSION: str = "1.0.0"  # Semantic version
     REQUIRED_PACKAGES: List[str] = []  # Python packages needed
     REQUIRED_ENV_VARS: List[str] = []  # Environment variables needed
@@ -140,7 +140,7 @@ class SkillBase(ABC):
             str: Unique key for this skill instance
         """
         if not self.SUPPORTS_MULTIPLE_INSTANCES:
-            return self.SKILL_NAME
+            return self.SKILL_NAME or ""
 
         # For multi-instance skills, create key from skill name + tool name
         tool_name = self.params.get("tool_name", self.SKILL_NAME)

@@ -10,10 +10,13 @@ See LICENSE file in the project root for full license information.
 from typing import TYPE_CHECKING, List, Dict, Any, Optional
 
 if TYPE_CHECKING:
-    from signalwire.core.agent_base import AgentBase
+    from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports the mixins; the name resolves at type-check time but mypy flags the back-reference
 
 
-class SkillMixin:
+from signalwire.core.mixins._mixin_host import _HostTyped
+
+
+class SkillMixin(_HostTyped):
     """
     Mixin class containing all skill management methods for AgentBase
     """

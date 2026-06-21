@@ -35,7 +35,7 @@ class ConfigLoader:
         """
         self.config_paths = config_paths or self._get_default_paths()
         self._config = None
-        self._config_file = None
+        self._config_file: Optional[str] = None
         self._load_config()
 
     def _get_default_paths(self) -> List[str]:
@@ -182,7 +182,9 @@ class ConfigLoader:
             Merged configuration dictionary
         """
         # Start with substituted config
-        result = self.substitute_vars(self._config) if self._config else {}
+        result: Dict[str, Any] = (
+            self.substitute_vars(self._config) if self._config else {}
+        )
 
         # Only add env vars that aren't already in config
         # This preserves config file precedence

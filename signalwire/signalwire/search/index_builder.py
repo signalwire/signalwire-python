@@ -13,18 +13,24 @@ import json
 import hashlib
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, TYPE_CHECKING
 import fnmatch
 
-try:
+if TYPE_CHECKING:
     import numpy as np
-except ImportError:
-    np = None
+else:
+    try:
+        import numpy as np
+    except ImportError:
+        np = None
 
-try:
+if TYPE_CHECKING:
     from sentence_transformers import SentenceTransformer
-except ImportError:
-    SentenceTransformer = None
+else:
+    try:
+        from sentence_transformers import SentenceTransformer
+    except ImportError:
+        SentenceTransformer = None
 
 from .document_processor import DocumentProcessor
 from .query_processor import preprocess_document_content
@@ -80,7 +86,9 @@ class IndexBuilder:
         self.topic_threshold = topic_threshold
         self.backend = backend
         self.connection_string = connection_string
-        self.model = None
+        # SentenceTransformer instance, loaded lazily in _load_model(); the lib
+        # ships no stubs, so this is effectively Any once populated.
+        self.model: Any = None
 
         # Validate backend
         if self.backend not in ["sqlite", "pgvector"]:
@@ -177,7 +185,7 @@ class IndexBuilder:
         output_file: str,
         file_types: List[str],
         exclude_patterns: Optional[List[str]] = None,
-        languages: List[str] = None,
+        languages: Optional[List[str]] = None,
         tags: Optional[List[str]] = None,
         overwrite: bool = False,
     ):
@@ -312,7 +320,7 @@ class IndexBuilder:
         output_file: str,
         file_types: List[str],
         exclude_patterns: Optional[List[str]] = None,
-        languages: List[str] = None,
+        languages: Optional[List[str]] = None,
         tags: Optional[List[str]] = None,
     ):
         """
@@ -829,6 +837,9 @@ class IndexBuilder:
             languages: List of supported languages
         """
         from .pgvector_backend import PgVectorBackend
+
+        if self.connection_string is None:
+            raise ValueError("connection_string is required for the pgvector backend")
 
         # Extract collection name from the provided name
         if collection_name.endswith(".swsearch"):

@@ -292,6 +292,6 @@ def create_typed_handler_wrapper(func, has_raw_data: bool):
     # Preserve original function metadata for debugging
     wrapper.__name__ = getattr(func, "__name__", "typed_handler")
     wrapper.__doc__ = getattr(func, "__doc__", None)
-    wrapper.__wrapped__ = func
+    wrapper.__wrapped__ = func  # type: ignore[attr-defined]  # standard functools __wrapped__ convention
 
     return wrapper

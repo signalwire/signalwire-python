@@ -25,3 +25,4 @@ nltk>=3.8
 numpy>=1.24.0
 scikit-learn>=1.3.0
 sentence-transformers>=2.2.0
+mypy>=1.8

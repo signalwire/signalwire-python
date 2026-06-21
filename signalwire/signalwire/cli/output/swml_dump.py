@@ -14,7 +14,7 @@ import sys
 import json
 import warnings
 import argparse
-from typing import TYPE_CHECKING
+from typing import Any, cast, TYPE_CHECKING
 from ..simulation.data_generation import generate_fake_swml_post_data
 from ..simulation.data_overrides import apply_convenience_mappings, apply_overrides
 from ..simulation.mock_env import create_mock_request
@@ -146,7 +146,10 @@ def handle_dump_swml(agent: "AgentBase", args: argparse.Namespace) -> int:
             try:
                 # Dynamic agents expect (request_data, callback_path, request)
                 call_id = post_data.get("call", {}).get("call_id", "test-call-id")
-                modifications = agent.on_swml_request(post_data, "/swml", mock_request)
+                # mock_request is a duck-typed stand-in for a FastAPI Request
+                modifications = agent.on_swml_request(
+                    post_data, "/swml", cast(Any, mock_request)
+                )
 
                 if args.verbose and not args.raw:
                     print(f"Dynamic agent modifications: {modifications}")

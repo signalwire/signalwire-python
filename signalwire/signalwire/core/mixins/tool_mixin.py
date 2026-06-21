@@ -7,21 +7,22 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import TYPE_CHECKING, Dict, Any, List, Optional, Callable
+from typing import TYPE_CHECKING, Dict, Any, List, Optional, Callable, Union
 import json
 import logging
 
 from signalwire.core.swaig_function import SWAIGFunction
 from signalwire.core.function_result import FunctionResult
 from signalwire.core.agent.tools.decorator import ToolDecorator
+from signalwire.core.mixins._mixin_host import _HostTyped
 
 if TYPE_CHECKING:
-    from signalwire.core.agent_base import AgentBase
+    from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports the mixins; the name resolves at type-check time but mypy flags the back-reference
 
 _tool_mixin_logger = logging.getLogger(__name__)
 
 
-class ToolMixin:
+class ToolMixin(_HostTyped):
     """
     Mixin class containing all tool/function-related methods for AgentBase
     """
@@ -202,7 +203,7 @@ class ToolMixin:
         """
         return ToolDecorator.create_class_decorator()(name, **kwargs)
 
-    def define_tools(self) -> List[SWAIGFunction]:
+    def define_tools(self) -> List[Union[SWAIGFunction, Dict[str, Any]]]:
         """
         Define the tools this agent can use
 
@@ -211,7 +212,7 @@ class ToolMixin:
 
         This method can be overridden by subclasses.
         """
-        tools = []
+        tools: List[Union[SWAIGFunction, Dict[str, Any]]] = []
         for func in self._tool_registry._swaig_functions.values():
             if isinstance(func, dict):
                 # Raw dictionary from register_swaig_function (e.g., DataMap)

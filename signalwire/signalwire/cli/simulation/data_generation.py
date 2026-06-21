@@ -165,7 +165,7 @@ def generate_comprehensive_post_data(
     current_time = datetime.now().isoformat()
 
     # Base structure with all keys
-    post_data = {
+    post_data: Dict[str, Any] = {
         "call_id": call_id,
         "call": {
             "call_id": call_id,
