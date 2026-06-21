@@ -12,7 +12,7 @@ Agent discovery and loading functionality
 
 import importlib.util
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, cast, Type
 
 # Import after checking if available
 try:
@@ -26,10 +26,13 @@ try:
     SWML_SERVICE_AVAILABLE = True
     NEW_LOADER_AVAILABLE = True
 except ImportError:
-    AgentBase = None
-    SWMLService = None
-    ServiceCapture = None
-    new_load_agent = None
+    # Optional-dependency shims: these names are real types/callables when the
+    # signalwire-agents package is importable, None otherwise. mypy cannot model
+    # the dual nature, so the fallback assignments are explicitly ignored.
+    AgentBase = None  # type: ignore[assignment,misc]
+    SWMLService = None  # type: ignore[assignment,misc]
+    ServiceCapture = None  # type: ignore[assignment,misc]
+    new_load_agent = None  # type: ignore[assignment]
     AGENT_BASE_AVAILABLE = False
     SWML_SERVICE_AVAILABLE = False
     NEW_LOADER_AVAILABLE = False
@@ -77,25 +80,27 @@ def _discover_services_impl(service_path: str) -> List[Dict[str, Any]]:
     """
     Internal implementation for discovering services
     """
-    service_path = Path(service_path).resolve()
+    resolved_path = Path(service_path).resolve()
 
-    if not service_path.exists():
-        raise FileNotFoundError(f"Service file not found: {service_path}")
+    if not resolved_path.exists():
+        raise FileNotFoundError(f"Service file not found: {resolved_path}")
 
-    if not service_path.suffix == ".py":
-        raise ValueError(f"Service file must be a Python file (.py): {service_path}")
+    if not resolved_path.suffix == ".py":
+        raise ValueError(f"Service file must be a Python file (.py): {resolved_path}")
 
     # Add the module's directory to sys.path temporarily to allow local imports
     import sys
 
-    module_dir = str(service_path.parent)
+    module_dir = str(resolved_path.parent)
     sys_path_added = False
     if module_dir not in sys.path:
         sys.path.insert(0, module_dir)
         sys_path_added = True
 
     # Load the module, but prevent main() execution by setting __name__ to something other than "__main__"
-    spec = importlib.util.spec_from_file_location("service_module", service_path)
+    spec = importlib.util.spec_from_file_location("service_module", resolved_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Failed to create module spec for: {resolved_path}")
     module = importlib.util.module_from_spec(spec)
 
     try:
@@ -112,12 +117,12 @@ def _discover_services_impl(service_path: str) -> List[Dict[str, Any]]:
         if sys_path_added and module_dir in sys.path:
             sys.path.remove(module_dir)
 
-    services_found = []
+    services_found: List[Dict[str, Any]] = []
 
     # Look for SWMLService instances (including AgentBase which inherits from it)
     for name, obj in vars(module).items():
         if isinstance(obj, SWMLService):
-            is_agent = isinstance(obj, AgentBase) if AgentBase else False
+            is_agent = isinstance(obj, AgentBase) if AgentBase is not None else False
             services_found.append(
                 {
                     "name": name,
@@ -144,7 +149,7 @@ def _discover_services_impl(service_path: str) -> List[Dict[str, Any]]:
                 service["class_name"] == name for service in services_found
             )
             if not instance_found:
-                is_agent = AgentBase and issubclass(obj, AgentBase)
+                is_agent = AgentBase is not None and issubclass(obj, AgentBase)
                 try:
                     # Try to get class information without instantiating
                     service_info = {
@@ -259,25 +264,27 @@ def _load_service_impl(
     """
     Internal implementation for loading services with smart detection
     """
-    service_path = Path(service_path).resolve()
+    resolved_path = Path(service_path).resolve()
 
-    if not service_path.exists():
-        raise FileNotFoundError(f"Service file not found: {service_path}")
+    if not resolved_path.exists():
+        raise FileNotFoundError(f"Service file not found: {resolved_path}")
 
-    if not service_path.suffix == ".py":
-        raise ValueError(f"Service file must be a Python file (.py): {service_path}")
+    if not resolved_path.suffix == ".py":
+        raise ValueError(f"Service file must be a Python file (.py): {resolved_path}")
 
     # Add the module's directory to sys.path temporarily to allow local imports
     import sys
 
-    module_dir = str(service_path.parent)
+    module_dir = str(resolved_path.parent)
     sys_path_added = False
     if module_dir not in sys.path:
         sys.path.insert(0, module_dir)
         sys_path_added = True
 
     # Load the module, but prevent main() execution by setting __name__ to something other than "__main__"
-    spec = importlib.util.spec_from_file_location("service_module", service_path)
+    spec = importlib.util.spec_from_file_location("service_module", resolved_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Failed to create module spec for: {resolved_path}")
     module = importlib.util.module_from_spec(spec)
 
     try:
@@ -315,7 +322,9 @@ def _load_service_impl(
                     and obj not in (SWMLService, AgentBase)
                 ):
                     try:
-                        temp_instance = obj()
+                        # Discovered subclasses define their own (often no-arg)
+                        # constructors; cast away the abstract base signature.
+                        temp_instance = cast(Type[Any], obj)()
                         if (
                             hasattr(temp_instance, "route")
                             and temp_instance.route == service_identifier
@@ -331,7 +340,7 @@ def _load_service_impl(
             obj = getattr(module, service_identifier)
             if isinstance(obj, type) and issubclass(obj, SWMLService):
                 try:
-                    service = obj()
+                    service = cast(Type[Any], obj)()
                 except Exception as e:
                     raise ValueError(
                         f"No service found with route '{service_identifier}' and failed to instantiate class '{service_identifier}': {e}"
@@ -348,13 +357,15 @@ def _load_service_impl(
             obj = getattr(module, service_identifier)
             if isinstance(obj, type) and issubclass(obj, SWMLService):
                 try:
-                    service = obj()
+                    service = cast(Type[Any], obj)()
                     if service and not service.route.endswith(
                         "dummy"
                     ):  # Avoid test services with dummy routes
                         pass  # Successfully created specific service
                     else:
-                        service = obj()  # Create anyway if requested specifically
+                        service = cast(
+                            Type[Any], obj
+                        )()  # Create anyway if requested specifically
                 except Exception as e:
                     raise ValueError(
                         f"Failed to instantiate service class '{service_identifier}': {e}"
@@ -416,7 +427,7 @@ def _load_service_impl(
 
         if len(service_classes_found) == 1:
             try:
-                service = service_classes_found[0][1]()
+                service = cast(Type[Any], service_classes_found[0][1])()
             except Exception as e:
                 print(
                     f"Warning: Failed to instantiate {service_classes_found[0][0]}: {e}"
@@ -427,7 +438,7 @@ def _load_service_impl(
             for name, cls in service_classes_found:
                 try:
                     # Try to instantiate temporarily to get route
-                    temp_instance = cls()
+                    temp_instance = cast(Type[Any], cls)()
                     route = getattr(temp_instance, "route", "Unknown")
                     service_name = getattr(temp_instance, "name", "Unknown")
                     service_info.append(
@@ -469,7 +480,7 @@ def _load_service_impl(
                     and obj not in (SWMLService, AgentBase)
                 ):
                     try:
-                        service = obj()
+                        service = cast(Type[Any], obj)()
                         break
                     except Exception as e:
                         print(f"Warning: Failed to instantiate {name}: {e}")

@@ -41,6 +41,8 @@ def execute_external_webhook_function(
         Response from the external webhook service
     """
     webhook_url = func.webhook_url
+    if not webhook_url:
+        raise ValueError(f"Function '{function_name}' has no webhook_url configured")
 
     if verbose:
         print(f"\nCalling EXTERNAL webhook: {function_name}")
@@ -49,7 +51,7 @@ def execute_external_webhook_function(
         print("-" * 60)
 
     # Prepare the SWAIG function call payload that SignalWire would send
-    swaig_payload = {
+    swaig_payload: Dict[str, Any] = {
         "function": function_name,
         "argument": {
             "parsed": [function_args] if function_args else [{}],

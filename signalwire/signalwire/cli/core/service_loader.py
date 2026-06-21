@@ -12,7 +12,7 @@ Service discovery and loading functionality - new simplified approach
 
 import importlib.util
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, cast
 import asyncio
 import io
 import contextlib
@@ -25,10 +25,12 @@ try:
 
     DEPENDENCIES_AVAILABLE = True
 except ImportError:
-    AgentBase = None
-    SWMLService = None
-    Request = None
-    Response = None
+    # Optional-dependency shims: real types when signalwire-agents/fastapi are
+    # importable, None otherwise. mypy cannot model the dual nature.
+    AgentBase = None  # type: ignore[assignment,misc]
+    SWMLService = None  # type: ignore[assignment,misc]
+    Request = None  # type: ignore[assignment,misc]
+    Response = None  # type: ignore[assignment,misc]
     DEPENDENCIES_AVAILABLE = False
 
 
@@ -57,14 +59,14 @@ class ServiceCapture:
                 "Required dependencies not available. Please install signalwire-agents package."
             )
 
-        service_path = Path(service_path).resolve()
+        resolved_path = Path(service_path).resolve()
 
-        if not service_path.exists():
-            raise FileNotFoundError(f"Service file not found: {service_path}")
+        if not resolved_path.exists():
+            raise FileNotFoundError(f"Service file not found: {resolved_path}")
 
-        if not service_path.suffix == ".py":
+        if not resolved_path.suffix == ".py":
             raise ValueError(
-                f"Service file must be a Python file (.py): {service_path}"
+                f"Service file must be a Python file (.py): {resolved_path}"
             )
 
         # Reset captured services
@@ -83,7 +85,11 @@ class ServiceCapture:
                 else contextlib.nullcontext()
             ):
                 # Load and execute the module
-                spec = importlib.util.spec_from_file_location("__main__", service_path)
+                spec = importlib.util.spec_from_file_location("__main__", resolved_path)
+                if spec is None or spec.loader is None:
+                    raise ImportError(
+                        f"Failed to create module spec for: {resolved_path}"
+                    )
                 module = importlib.util.module_from_spec(spec)
 
                 # Set __name__ to "__main__" to trigger if __name__ == "__main__": blocks
@@ -173,8 +179,9 @@ async def simulate_request_to_service(
     # Create a mock response
     response = Response()
 
-    # Call the service's request handler
-    result = await service._handle_request(request, response)
+    # Call the service's request handler. `request` is a duck-typed MockRequest
+    # that stands in for a FastAPI Request at runtime; cast for the type checker.
+    result = await service._handle_request(cast(Any, request), response)
 
     # If result is a Response object, extract the content
     if hasattr(result, "body"):
@@ -249,6 +256,7 @@ def load_and_simulate_service(
             )
 
     # Simulate the request
+    assert service is not None  # guaranteed by the selection logic above
     return asyncio.run(
         simulate_request_to_service(
             service,
