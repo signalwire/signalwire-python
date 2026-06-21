@@ -220,10 +220,10 @@ class TestSpiderSkillInit:
         assert custom_skill.headers["User-Agent"] == "TestBot/1.0"
 
     def test_cache_is_dict_when_enabled(self, default_skill):
-        assert default_skill.cache == {}
+        assert default_skill._cache == {}
 
     def test_cache_is_none_when_disabled(self, custom_skill):
-        assert custom_skill.cache is None
+        assert custom_skill._cache is None
 
     def test_session_created(self, default_skill):
         assert default_skill.session is not None
@@ -346,7 +346,7 @@ class TestFetchUrl:
 
     def test_returns_cached_response(self, default_skill):
         cached = _make_mock_response()
-        default_skill.cache["https://cached.com"] = cached
+        default_skill._cache["https://cached.com"] = cached
         result = default_skill._fetch_url("https://cached.com")
         assert result is cached
 
@@ -355,14 +355,14 @@ class TestFetchUrl:
         default_skill.session.get = Mock(return_value=resp)
         result = default_skill._fetch_url("https://example.com")
         assert result is resp
-        assert "https://example.com" in default_skill.cache
+        assert "https://example.com" in default_skill._cache
 
     def test_successful_fetch_no_cache_when_disabled(self, custom_skill):
         resp = _make_mock_response()
         custom_skill.session.get = Mock(return_value=resp)
         result = custom_skill._fetch_url("https://example.com")
         assert result is resp
-        assert custom_skill.cache is None
+        assert custom_skill._cache is None
 
     def test_timeout_returns_none(self, default_skill):
         import requests as req_mod
@@ -1117,38 +1117,38 @@ class TestCleanup:
         default_skill.session.close.assert_called_once()
 
     def test_clears_cache(self, default_skill):
-        default_skill.cache["https://example.com"] = "cached"
+        default_skill._cache["https://example.com"] = "cached"
         default_skill.cleanup()
-        assert len(default_skill.cache) == 0
+        assert len(default_skill._cache) == 0
 
     def test_cleanup_with_none_cache(self, custom_skill):
         """custom_skill has cache_enabled=False so cache is None — cleanup
         must skip the .clear() call (calling .clear on None would crash)
         but still close the session."""
         # Pre-condition.
-        assert custom_skill.cache is None
+        assert custom_skill._cache is None
         custom_skill.cleanup()
         # Session was still closed even though cache branch was skipped.
         custom_skill.session.close.assert_called_once()
         # Cache stays None — no surprise re-init.
-        assert custom_skill.cache is None
+        assert custom_skill._cache is None
 
     def test_cleanup_without_session_attribute(self, default_skill):
         """If `session` was never created, the hasattr guard must skip the
         close path. We verify cache.clear() still ran (the second guard
         is independent)."""
         del default_skill.session
-        default_skill.cache["https://example.com"] = "cached"
+        default_skill._cache["https://example.com"] = "cached"
         default_skill.cleanup()
         # Cache was cleared even though session attribute was missing.
-        assert len(default_skill.cache) == 0
+        assert len(default_skill._cache) == 0
         # Session still missing — no re-creation.
         assert not hasattr(default_skill, "session")
 
     def test_cleanup_without_cache_attribute(self, default_skill):
         """If `cache` was never created, the hasattr guard must skip the
         clear path while still closing the session."""
-        del default_skill.cache
+        del default_skill._cache
         default_skill.cleanup()
         # Session was closed even though cache attribute was missing.
         default_skill.session.close.assert_called_once()
@@ -1203,7 +1203,7 @@ class TestEdgeCases:
             from signalwire.skills.spider.skill import SpiderSkill
             skill = SpiderSkill(mock_agent, {})
             assert skill.delay == 0.1
-            assert skill.cache == {}
+            assert skill._cache == {}
 
     def test_init_with_none_params(self, mock_agent):
         """Skill should handle None params gracefully (via SkillBase default)."""

@@ -177,7 +177,7 @@ class SpiderSkill(SkillBase):
         self.session.headers.update(self.headers)
 
         # Cache for responses (bounded OrderedDict for LRU-style eviction)
-        self.cache: Optional["collections.OrderedDict[str, Any]"] = (
+        self._cache: Optional["collections.OrderedDict[str, Any]"] = (
             collections.OrderedDict() if self.cache_enabled else None
         )
         self._cache_max_size = 100
@@ -275,19 +275,19 @@ class SpiderSkill(SkillBase):
     def _fetch_url(self, url: str) -> Optional[requests.Response]:
         """Fetch a URL with caching and error handling."""
         # Check cache first
-        if self.cache_enabled and self.cache is not None and url in self.cache:
+        if self.cache_enabled and self._cache is not None and url in self._cache:
             self.logger.debug(f"Cache hit for {url}")
-            return self.cache[url]
+            return self._cache[url]
 
         try:
             response = self.session.get(url, timeout=self.timeout)
             response.raise_for_status()
 
             # Cache successful responses (with size limit)
-            if self.cache_enabled and self.cache is not None:
-                if len(self.cache) >= self._cache_max_size:
-                    self.cache.popitem(last=False)  # Evict oldest
-                self.cache[url] = response
+            if self.cache_enabled and self._cache is not None:
+                if len(self._cache) >= self._cache_max_size:
+                    self._cache.popitem(last=False)  # Evict oldest
+                self._cache[url] = response
 
             return response
 
@@ -664,6 +664,6 @@ class SpiderSkill(SkillBase):
         """Clean up resources when skill is unloaded."""
         if hasattr(self, "session"):
             self.session.close()
-        if hasattr(self, "cache") and self.cache is not None:
-            self.cache.clear()
+        if hasattr(self, "_cache") and self._cache is not None:
+            self._cache.clear()
         self.logger.info("Spider skill cleaned up")
