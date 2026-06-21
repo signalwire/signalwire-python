@@ -28,7 +28,7 @@ from signalwire.core.security.webhook_middleware import (
 from signalwire.core.mixins._mixin_host import _HostTyped
 
 if TYPE_CHECKING:
-    from signalwire.core._agent_host import AgentHost as AgentBase
+    from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports the mixins; the name resolves at type-check time but mypy flags the back-reference
 
 # Per-request proxy URL to avoid race conditions in concurrent async contexts
 _request_proxy_url: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(

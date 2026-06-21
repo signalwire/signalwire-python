@@ -17,7 +17,7 @@ from signalwire.core.agent.tools.decorator import ToolDecorator
 from signalwire.core.mixins._mixin_host import _HostTyped
 
 if TYPE_CHECKING:
-    from signalwire.core._agent_host import AgentHost as AgentBase
+    from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports the mixins; the name resolves at type-check time but mypy flags the back-reference
 
 _tool_mixin_logger = logging.getLogger(__name__)
 

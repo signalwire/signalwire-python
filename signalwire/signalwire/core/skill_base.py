@@ -13,7 +13,7 @@ from typing import List, Dict, Any, TYPE_CHECKING, Optional
 from signalwire.core.logging_config import get_logger
 
 if TYPE_CHECKING:
-    from signalwire.core._agent_host import AgentHost as AgentBase  # type: ignore[attr-defined]  # intentional TYPE_CHECKING-only re-export; resolves the agent_base import cycle
+    from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports skill_base; name resolves at type-check time
     from signalwire.core.function_result import FunctionResult
 
 

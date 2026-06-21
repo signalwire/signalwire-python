@@ -125,6 +125,15 @@ run_gate "FMT" "ruff format (local: apply; CI: --check)" fmt_gate
 run_gate "LINT" "ruff check zero findings" \
     python3 -m ruff check "$PORT_ROOT/signalwire"
 
+# Gate 7: TYPECHECK — mypy, zero findings. Config in pyproject.toml [tool.mypy]
+# (files=signalwire/signalwire, ignore_missing_imports, check_untyped_defs). Burned
+# to zero across all 176 source files. `# type: ignore` is reserved for genuine
+# third-party-stub gaps / optional-dependency import shims, each with an error code
+# and rationale (warn_unused_ignores keeps them honest). Source-type only — mypy is
+# dev-time and adds no runtime validation, so wire payloads stay forward-compatible.
+run_gate "TYPECHECK" "mypy zero findings" \
+    python3 -m mypy --config-file "$PORT_ROOT/pyproject.toml"
+
 if [ -z "$FAILED_GATES" ]; then
     echo "==> CI PASS"
     exit 0

@@ -11,7 +11,7 @@ import threading
 from typing import TYPE_CHECKING, List, Dict, Any, Optional
 
 if TYPE_CHECKING:
-    from signalwire.core._agent_host import AgentHost as AgentBase
+    from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports the mixins; the name resolves at type-check time but mypy flags the back-reference
 
 
 from signalwire.core.mixins._mixin_host import _HostTyped
