@@ -226,7 +226,7 @@ class ClaudeSkillsSkill(SkillBase):
             Dictionary with keys 'scripts', 'assets', 'other' mapping to
             lists of relative file paths.
         """
-        files = {"scripts": [], "assets": [], "other": []}
+        files: Dict[str, List[str]] = {"scripts": [], "assets": [], "other": []}
 
         for file_path in skill_dir.rglob("*"):
             if not file_path.is_file():

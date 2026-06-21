@@ -10,7 +10,7 @@ See LICENSE file in the project root for full license information.
 import requests
 import time
 from bs4 import BeautifulSoup
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
@@ -36,7 +36,7 @@ class GoogleSearchScraper:
         """Search Google using Custom Search JSON API"""
         url = "https://www.googleapis.com/customsearch/v1"
 
-        params = {
+        params: Dict[str, Any] = {
             "key": self.api_key,
             "cx": self.search_engine_id,
             "q": query,
@@ -67,7 +67,7 @@ class GoogleSearchScraper:
             return []
 
     def extract_text_from_url(
-        self, url: str, content_limit: int = None, timeout: int = 10
+        self, url: str, content_limit: Optional[int] = None, timeout: int = 10
     ) -> str:
         """Scrape a URL and extract readable text content
 

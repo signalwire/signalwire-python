@@ -12,7 +12,7 @@ A configurable skill for getting trivia questions from API Ninjas with customiza
 categories and multiple tool instances.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from signalwire.core import FunctionResult
 from signalwire.core.skill_base import SkillBase
 
@@ -76,7 +76,7 @@ class ApiNinjasTriviaSkill(SkillBase):
         "sportsleisure": "Sports and Leisure",
     }
 
-    def __init__(self, agent, params: Dict[str, Any] = None):
+    def __init__(self, agent, params: Optional[Dict[str, Any]] = None):
         """
         Initialize the skill with configuration parameters.
 

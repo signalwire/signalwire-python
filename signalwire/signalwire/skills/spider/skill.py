@@ -177,7 +177,9 @@ class SpiderSkill(SkillBase):
         self.session.headers.update(self.headers)
 
         # Cache for responses (bounded OrderedDict for LRU-style eviction)
-        self.cache = collections.OrderedDict() if self.cache_enabled else None
+        self.cache: Optional["collections.OrderedDict[str, Any]"] = (
+            collections.OrderedDict() if self.cache_enabled else None
+        )
         self._cache_max_size = 100
 
         # XPath expressions for unwanted elements
@@ -273,7 +275,7 @@ class SpiderSkill(SkillBase):
     def _fetch_url(self, url: str) -> Optional[requests.Response]:
         """Fetch a URL with caching and error handling."""
         # Check cache first
-        if self.cache_enabled and url in self.cache:
+        if self.cache_enabled and self.cache is not None and url in self.cache:
             self.logger.debug(f"Cache hit for {url}")
             return self.cache[url]
 
@@ -382,12 +384,12 @@ class SpiderSkill(SkillBase):
             return self._fast_text_extract(response)
 
     def _structured_extract(
-        self, response: requests.Response, selectors: Dict[str, str] = None
+        self, response: requests.Response, selectors: Optional[Dict[str, str]] = None
     ) -> Dict[str, Any]:
         """Extract structured data using selectors."""
         try:
             tree = html.fromstring(response.content)
-            result = {
+            result: Dict[str, Any] = {
                 "url": response.url,
                 "status_code": response.status_code,
                 "title": "",
@@ -514,7 +516,7 @@ class SpiderSkill(SkillBase):
             return FunctionResult("Max pages must be at least 1")
 
         # Simple breadth-first crawl
-        visited = set()
+        visited: set = set()
         to_visit = [(start_url, 0)]  # (url, depth)
         results = []
 

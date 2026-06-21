@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import os
 import shutil
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from pathlib import Path
 
 from signalwire.core.skill_base import SkillBase
@@ -440,13 +440,16 @@ class NativeVectorSearchSkill(SkillBase):
                             index_nlp_backend=self.index_nlp_backend,
                         )
 
+                        # NOTE: IndexBuilder.build_index() does not accept an
+                        # "overwrite" parameter; passing it raised TypeError at
+                        # runtime (silently swallowed by the except below), so
+                        # pgvector auto-build never actually succeeded. Removed.
                         builder.build_index(
                             source_dir=self.source_dir,
                             output_file=self.collection_name,  # pgvector uses this as collection name
                             file_types=self.params.get("file_types", ["md", "txt"]),
                             exclude_patterns=self.params.get("exclude_patterns"),
                             tags=self.params.get("global_tags"),
-                            overwrite=self.params.get("overwrite", False),
                         )
                         self.logger.info(
                             f"pgvector collection created: {self.collection_name}"
@@ -611,19 +614,29 @@ class NativeVectorSearchSkill(SkillBase):
                 # For local searches, preprocess the query locally
                 from signalwire.search.query_processor import preprocess_query
 
+                # Guaranteed non-None here: the guard above returns early when
+                # not use_remote and search_engine is falsy.
+                assert self.search_engine is not None
+
                 # Get model name from index config if available
-                model_for_query = None
+                model_for_query: Optional[str] = None
                 if hasattr(self.search_engine, "config"):
                     model_for_query = self.search_engine.config.get("embedding_model")
+
+                # preprocess_query's model_name defaults to None when unspecified,
+                # so omit the kwarg entirely when we don't have a model name.
+                extra_kwargs: Dict[str, Any] = {}
+                if model_for_query is not None:
+                    extra_kwargs["model_name"] = model_for_query  # Use model from index
 
                 enhanced = preprocess_query(
                     query,
                     language="en",
                     vector=True,
                     query_nlp_backend=self.query_nlp_backend,
-                    model_name=model_for_query,  # Use model from index
                     preserve_original=True,  # Keep original query terms
                     max_synonyms=2,  # Reduce synonym expansion
+                    **extra_kwargs,
                 )
                 results = self.search_engine.search(
                     query_vector=enhanced.get("vector", []),
@@ -797,7 +810,7 @@ class NativeVectorSearchSkill(SkillBase):
 
             return FunctionResult(user_msg)
 
-    def _search_remote(self, query: str, enhanced: dict, count: int) -> list:
+    def _search_remote(self, query: str, enhanced: Optional[dict], count: int) -> list:
         """Perform search using remote search server"""
         try:
             import requests
