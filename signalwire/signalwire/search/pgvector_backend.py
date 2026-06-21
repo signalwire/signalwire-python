@@ -35,7 +35,7 @@ except ImportError:
 try:
     import numpy as np
 except ImportError:
-    np = None
+    np = None  # type: ignore[assignment]  # optional-dep shim
 
 logger = get_logger(__name__)
 
@@ -57,7 +57,8 @@ class PgVectorBackend:
             )
 
         self.connection_string = connection_string
-        self.conn = None
+        # psycopg2 connection, established in _connect(); psycopg2 ships no stubs.
+        self.conn: Any = None
         self._connect()
 
     def _connect(self):
@@ -466,7 +467,8 @@ class PgVectorSearchBackend:
         self.connection_string = connection_string
         self.collection_name = _sanitize_collection_name(collection_name)
         self.table_name = f"chunks_{self.collection_name}"
-        self.conn = None
+        # psycopg2 connection, established in _connect(); psycopg2 ships no stubs.
+        self.conn: Any = None
         self._connect()
         self.config = self._load_config()
 
@@ -629,7 +631,7 @@ class PgVectorSearchBackend:
             """).format(tbl=tbl)
             ]
 
-            params = [query_vector]
+            params: List[Any] = [query_vector]
 
             # Add tag filter if specified
             if tags:
@@ -690,7 +692,7 @@ class PgVectorSearchBackend:
             """).format(tbl=tbl)
             ]
 
-            params = [enhanced_text, enhanced_text]
+            params: List[Any] = [enhanced_text, enhanced_text]
 
             # Add tag filter if specified
             if tags:
@@ -738,7 +740,7 @@ class PgVectorSearchBackend:
         with self.conn.cursor() as cursor:
             # Build WHERE conditions
             where_conditions = []
-            params = []
+            params: List[Any] = []
 
             # Use metadata_text for trigram search
             if query_terms:
@@ -853,7 +855,7 @@ class PgVectorSearchBackend:
                 WHERE LOWER(filename) LIKE %s
             """).format(tbl=tbl)
             ]
-            params = [f"%{query_lower}%"]
+            params: List[Any] = [f"%{query_lower}%"]
             if tags:
                 parts.append(psycopg2_sql.SQL(" AND tags ?| %s"))
                 params.append(tags)
@@ -1048,7 +1050,7 @@ class PgVectorSearchBackend:
 
         # Collect per-source scores for each result
         results_map = {}
-        all_sources = {}
+        all_sources: Dict[str, Any] = {}
 
         for result in vector_results:
             chunk_id = result["id"]
@@ -1092,7 +1094,7 @@ class PgVectorSearchBackend:
 
         # Collect per-source scores for each result
         results_map = {}
-        all_sources = {}
+        all_sources: Dict[str, Any] = {}
 
         for result in vector_results:
             chunk_id = result["id"]

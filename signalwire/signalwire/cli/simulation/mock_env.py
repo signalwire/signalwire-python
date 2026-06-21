@@ -12,7 +12,7 @@ Mock environment and serverless simulation functionality
 
 import os
 import json
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 
 class MockQueryParams:
@@ -186,7 +186,7 @@ class ServerlessSimulator:
         self.preset_env = self.PLATFORM_PRESETS.get(platform, {}).copy()
         self.overrides = overrides or {}
         self.active = False
-        self._cleared_vars = {}
+        self._cleared_vars: Dict[str, str] = {}
 
     def activate(self, verbose: bool = False):
         """Apply serverless environment simulation"""
@@ -260,7 +260,7 @@ class ServerlessSimulator:
     def _clear_conflicting_env(self):
         """Clear environment variables that might conflict with simulation"""
         # Remove variables from other platforms
-        conflicting_vars = []
+        conflicting_vars: List[str] = []
         for platform, preset in self.PLATFORM_PRESETS.items():
             if platform != self.platform:
                 conflicting_vars.extend(preset.keys())

@@ -36,7 +36,7 @@ except ImportError:
 try:
     from markdown_it import MarkdownIt
 except ImportError:
-    MarkdownIt = None
+    MarkdownIt = None  # type: ignore[assignment,misc]  # optional-dep shim
 
 try:
     from striprtf.striprtf import rtf_to_text
@@ -605,8 +605,8 @@ class DocumentProcessor:
         chunks = []
         lines = content.split("\n")
 
-        current_hierarchy = []  # Track header hierarchy
-        current_chunk = []
+        current_hierarchy: List[str] = []  # Track header hierarchy
+        current_chunk: List[str] = []
         current_size = 0
         line_start = 1
         in_code_block = False
@@ -724,7 +724,7 @@ class DocumentProcessor:
 
         current_function = None
         current_class = None
-        current_chunk = []
+        current_chunk: List[str] = []
         current_size = 0
         line_start = 1
         indent_level = 0
@@ -909,7 +909,7 @@ class DocumentProcessor:
         optimal_sentences = max(1, int(self.chunk_size / avg_sentence_length))
         return min(optimal_sentences, 10)  # Cap at 10 sentences for readability
 
-    def _build_section_path(self, hierarchy: List[str]) -> str:
+    def _build_section_path(self, hierarchy: List[str]) -> Optional[str]:
         """Build hierarchical section path from header hierarchy"""
         return " > ".join(hierarchy) if hierarchy else None
 
@@ -926,7 +926,7 @@ class DocumentProcessor:
         Returns:
             Dictionary with markdown-specific metadata including tags
         """
-        metadata = {
+        metadata: Dict[str, Any] = {
             "chunk_type": "markdown",
         }
 
@@ -960,7 +960,7 @@ class DocumentProcessor:
 
     def _build_python_section(
         self, class_name: Optional[str], function_name: Optional[str]
-    ) -> str:
+    ) -> Optional[str]:
         """Build section name for Python code"""
         if class_name and function_name:
             return f"{class_name}.{function_name}"
@@ -1034,7 +1034,7 @@ class DocumentProcessor:
 
         # Calculate overlap size in characters
         overlap_chars = self.chunk_overlap
-        overlap_lines = []
+        overlap_lines: List[str] = []
         char_count = 0
 
         # Take lines from the end until we reach overlap size
@@ -1254,7 +1254,7 @@ class DocumentProcessor:
             split_points.append(len(sentences))
 
             # Create chunks
-            chunks = []
+            chunks: List[Dict[str, Any]] = []
             for i in range(len(split_points) - 1):
                 start_idx = split_points[i]
                 end_idx = split_points[i + 1]
@@ -1417,7 +1417,7 @@ class DocumentProcessor:
                 sentence_keywords.append(set(keywords))
 
             # Find topic boundaries based on keyword overlap
-            chunks = []
+            chunks: List[Dict[str, Any]] = []
             current_chunk = [sentences[0]]
             current_keywords = sentence_keywords[0]
 
@@ -1513,8 +1513,8 @@ class DocumentProcessor:
             r"(definition|meaning|refers to|means)",
         ]
 
-        chunks = []
-        current_chunk = []
+        chunks: List[Dict[str, Any]] = []
+        current_chunk: List[str] = []
         current_context = []
 
         for i, sentence in enumerate(sentences):

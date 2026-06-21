@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 import ast
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Callable, Type
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
@@ -43,7 +43,7 @@ class MathSkill(SkillBase):
         )
 
     # Allowed AST node types for safe math evaluation
-    _SAFE_OPERATORS = {
+    _SAFE_OPERATORS: Dict[Type[ast.AST], Callable[..., Any]] = {
         ast.Add: lambda a, b: a + b,
         ast.Sub: lambda a, b: a - b,
         ast.Mult: lambda a, b: a * b,
@@ -63,7 +63,7 @@ class MathSkill(SkillBase):
                 return node.value
             raise ValueError(f"Unsupported constant type: {type(node.value).__name__}")
         elif isinstance(node, ast.BinOp):
-            op_type = type(node.op)
+            op_type: Type[ast.AST] = type(node.op)
             if op_type not in self._SAFE_OPERATORS:
                 raise ValueError(f"Unsupported binary operator: {op_type.__name__}")
             left = self._safe_eval(node.left)

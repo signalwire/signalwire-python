@@ -87,7 +87,7 @@ class AgentServer:
 
         # Keep track of SIP routing configuration
         self._sip_routing_enabled = False
-        self._sip_route = None
+        self._sip_route: Optional[str] = None
         self._sip_username_mapping: Dict[str, str] = {}  # Maps SIP usernames to routes
 
         # Register health endpoints immediately so they're available
@@ -145,10 +145,9 @@ class AgentServer:
                 self._auto_map_agent_sip_usernames(agent, route)
 
             # Register the SIP routing callback with this agent if we have one
-            if hasattr(self, "_sip_routing_callback") and self._sip_routing_callback:
-                agent.register_routing_callback(
-                    self._sip_routing_callback, path=self._sip_route
-                )
+            sip_cb = getattr(self, "_sip_routing_callback", None)
+            if sip_cb is not None and self._sip_route is not None:
+                agent.register_routing_callback(sip_cb, path=self._sip_route)
 
     def setup_sip_routing(self, route: str = "/sip", auto_map: bool = True) -> None:
         """
@@ -689,7 +688,10 @@ class AgentServer:
 
         self.logger.info(f"Starting server on {protocol}://{display_host}")
         for route, agent in self.agents.items():
-            username, password = agent.get_basic_auth_credentials()
+            # include_source defaults False -> 2-tuple at runtime; index to
+            # avoid the union-tuple unpack ambiguity mypy sees.
+            creds = agent.get_basic_auth_credentials()
+            username = creds[0]
             agent_url = agent.get_full_url(include_auth=False)
             self.logger.info(f"Agent '{agent.get_name()}' available at:")
             self.logger.info(f"URL: {agent_url}")

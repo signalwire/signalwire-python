@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from typing import Any, Callable, Coroutine, Optional, TYPE_CHECKING
+from typing import Any, Callable, Coroutine, Optional, TypeVar, TYPE_CHECKING
 
 from signalwire.core.logging_config import get_logger
 
@@ -37,6 +37,10 @@ if TYPE_CHECKING:
 logger = get_logger("relay_call")
 
 EventHandler = Callable[[RelayEvent], Coroutine[Any, Any, None] | None]
+
+# Bound to Action so _start_action returns the SAME concrete subtype it was
+# given (PlayAction in -> PlayAction out), instead of the base Action.
+_ActionT = TypeVar("_ActionT", bound="Action")
 
 
 # ======================================================================
@@ -470,11 +474,11 @@ class Call:
 
     async def _start_action(
         self,
-        action: Action,
+        action: _ActionT,
         method: str,
         params: dict[str, Any],
         on_completed: Optional[Callable[[RelayEvent], Any]] = None,
-    ) -> Action:
+    ) -> _ActionT:
         """Register an action, execute the RPC, and clean up on failure.
 
         If _execute raises, the action is removed from _actions and its

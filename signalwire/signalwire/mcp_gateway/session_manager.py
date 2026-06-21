@@ -15,7 +15,7 @@ Handles timeouts, cleanup, and resource limits.
 
 import threading
 import logging
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Union
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 
@@ -31,7 +31,7 @@ class Session:
     process: Any  # MCPClient instance
     created_at: datetime = field(default_factory=datetime.now)
     last_accessed: datetime = field(default_factory=datetime.now)
-    timeout: int = 300  # seconds
+    timeout: Union[int, float] = 300  # seconds (wire-supplied; may be float)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     @property
@@ -83,7 +83,7 @@ class SessionManager:
         session_id: str,
         service_name: str,
         process: Any,
-        timeout: Optional[int] = None,
+        timeout: Optional[Union[int, float]] = None,
         metadata: Optional[Dict[str, Any]] = None,
     ) -> Session:
         """Create and register a new session"""

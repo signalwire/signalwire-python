@@ -12,7 +12,7 @@ import time
 import re
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
@@ -38,7 +38,7 @@ class GoogleSearchScraper:
         """Search Google using Custom Search JSON API"""
         url = "https://www.googleapis.com/customsearch/v1"
 
-        params = {
+        params: Dict[str, Any] = {
             "key": self.api_key,
             "cx": self.search_engine_id,
             "q": query,
@@ -74,7 +74,7 @@ class GoogleSearchScraper:
         return "reddit.com" in domain or "redd.it" in domain
 
     def extract_reddit_content(
-        self, url: str, content_limit: int = None, timeout: int = 10
+        self, url: str, content_limit: Optional[int] = None, timeout: float = 10
     ) -> Tuple[str, Dict[str, Any]]:
         """
         Extract Reddit content using JSON API for better quality
@@ -218,7 +218,7 @@ class GoogleSearchScraper:
             return self.extract_html_content(url, content_limit, timeout)
 
     def extract_text_from_url(
-        self, url: str, content_limit: int = None, timeout: int = 10
+        self, url: str, content_limit: Optional[int] = None, timeout: float = 10
     ) -> Tuple[str, Dict[str, Any]]:
         """
         Main extraction method that routes to appropriate extractor
@@ -232,7 +232,7 @@ class GoogleSearchScraper:
             return self.extract_html_content(url, content_limit, timeout)
 
     def extract_html_content(
-        self, url: str, content_limit: int = None, timeout: int = 10
+        self, url: str, content_limit: Optional[int] = None, timeout: float = 10
     ) -> Tuple[str, Dict[str, Any]]:
         """
         Original HTML extraction method (renamed from extract_text_from_url)
@@ -366,11 +366,12 @@ class GoogleSearchScraper:
         if not text:
             return {"quality_score": 0, "text_length": 0}
 
-        metrics = {}
+        metrics: Dict[str, Any] = {}
 
         # Text length (MUCH stricter - prefer 2000-10000 chars of actual content)
         text_length = len(text)
         metrics["text_length"] = text_length
+        length_score: float
         if text_length < 500:
             length_score = 0  # Too short to be useful
         elif text_length < 2000:
@@ -488,7 +489,7 @@ class GoogleSearchScraper:
         metrics["domain"] = domain
 
         # Query relevance scoring - check for query terms in content
-        relevance_score = 0
+        relevance_score: float = 0
         if query:
             # Split query into meaningful words (skip common words)
             stop_words = {
@@ -525,7 +526,7 @@ class GoogleSearchScraper:
                 words_found = sum(1 for word in query_words if word in lower_content)
 
                 # Also check for exact phrase matches (bonus points)
-                exact_phrase_bonus = 0
+                exact_phrase_bonus: float = 0
                 if len(query_words) > 1:
                     # Check for consecutive word pairs
                     for i in range(len(query_words) - 1):
@@ -699,7 +700,7 @@ class GoogleSearchScraper:
         processed_results.sort(key=lambda x: x["quality_score"], reverse=True)
 
         # Select diverse results (prefer different domains)
-        best_results = []
+        best_results: List[Dict[str, Any]] = []
         seen_domains = set()
 
         # First pass: Add highest quality result from each unique domain

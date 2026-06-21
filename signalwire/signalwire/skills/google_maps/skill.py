@@ -392,7 +392,7 @@ class GoogleMapsClient:
                 "X-Goog-Api-Key": self.api_key,
                 "X-Goog-FieldMask": "routes.distanceMeters,routes.duration",
             }
-            body = {
+            body: Dict[str, Any] = {
                 "origin": {
                     "location": {
                         "latLng": {"latitude": origin_lat, "longitude": origin_lng}

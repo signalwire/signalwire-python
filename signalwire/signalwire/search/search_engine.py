@@ -13,13 +13,16 @@ from typing import List, Dict, Any, Optional, Union
 
 from signalwire.core.logging_config import get_logger
 
+# NDArray is the runtime numpy array type when available, else Any; typed Any
+# because the fallback makes the two branches incompatible to mypy.
+NDArray: Any
 try:
     import numpy as np
     from sklearn.metrics.pairwise import cosine_similarity
 
     NDArray = np.ndarray
 except ImportError:
-    np = None
+    np = None  # type: ignore[assignment]  # optional-dep shim
     cosine_similarity = None
     NDArray = Any  # Fallback type for when numpy is not available
 
@@ -174,6 +177,7 @@ class SearchEngine:
         """
         # pgvector backend: delegate to its own fetch
         if self.backend == "pgvector":
+            assert self._backend is not None  # set whenever backend == "pgvector"
             return self._backend.fetch_candidates(
                 query_vector=query_vector,
                 enhanced_text=enhanced_text,
@@ -499,7 +503,7 @@ class SearchEngine:
             # Simple LIKE search with word boundaries
             search_terms = enhanced_text.lower().split()
             like_conditions = []
-            params = []
+            params: List[Any] = []
 
             for term in search_terms[
                 :5
@@ -778,7 +782,7 @@ class SearchEngine:
             if terms and len(results) < count * 3:  # Get more candidates
                 # Build OR query for any term match (escape LIKE wildcards)
                 conditions = []
-                params = []
+                params: List[Any] = []
                 for term in terms:
                     conditions.append("LOWER(filename) LIKE ? ESCAPE '\\'")
                     params.append(f"%{self._escape_like(term)}%")
@@ -816,7 +820,7 @@ class SearchEngine:
                     basename_coverage = basename_matches / len(terms) if terms else 0
 
                     # Check for substring bonus (e.g., "code_examples" contains both terms together)
-                    substring_bonus = 0
+                    substring_bonus = 0.0
                     if len(terms) > 1:
                         # Check if terms appear consecutively
                         for i in range(len(terms) - 1):
@@ -889,7 +893,7 @@ class SearchEngine:
                 # Use the new metadata_text column for efficient searching
                 # Build conditions for each term (escape LIKE wildcards)
                 conditions = []
-                params = []
+                params: List[Any] = []
                 for term in terms:
                     conditions.append("metadata_text LIKE ? ESCAPE '\\'")
                     params.append(f"%{self._escape_like(term)}%")
@@ -922,7 +926,7 @@ class SearchEngine:
                         tags = json.loads(tags_json) if tags_json else []
 
                         # Calculate score based on how many terms match
-                        score = 0
+                        score = 0.0
                         for term in terms:
                             # Check metadata values
                             metadata_str = json.dumps(metadata).lower()
@@ -957,7 +961,7 @@ class SearchEngine:
             if len(results) < count:
                 # Build specific conditions for known patterns
                 specific_conditions = []
-                specific_params = []
+                specific_params: List[Any] = []
 
                 # Look for specific high-value patterns first
                 if "code" in terms and "examples" in terms:
@@ -1037,7 +1041,7 @@ class SearchEngine:
                         pass
 
                     # Calculate score based on matches
-                    score = 0
+                    score = 0.0
                     fields_matched = 0
 
                     # Check JSON metadata extracted from content
@@ -1080,7 +1084,9 @@ class SearchEngine:
                     json_tags = json_metadata.get("tags", [])
                     if json_tags:
                         tags_str = str(json_tags).lower()
-                        tag_matches = sum(1 for term in terms if term in tags_str)
+                        tag_matches: float = sum(
+                            1 for term in terms if term in tags_str
+                        )
                         if tag_matches > 0:
                             score += 1.3 * (tag_matches / len(terms) if terms else 1)
                             fields_matched += 1
@@ -1138,7 +1144,7 @@ class SearchEngine:
                     metadata.update(nested_meta)
 
                 # Initialize scoring components
-                score_components = {
+                score_components: Dict[str, float] = {
                     "tags": 0,
                     "section": 0,
                     "category": 0,
@@ -1149,7 +1155,7 @@ class SearchEngine:
 
                 # Check tags
                 if tags:
-                    tag_matches = 0
+                    tag_matches = 0.0
                     for tag in tags:
                         tag_lower = tag.lower()
                         # Full query match in tag
@@ -1433,7 +1439,7 @@ class SearchEngine:
             return results
 
         # Track file occurrences
-        file_counts = {}
+        file_counts: Dict[str, int] = {}
         penalized_results = []
 
         # Define penalty multipliers
@@ -1569,6 +1575,7 @@ class SearchEngine:
         """Get statistics about the search index"""
         # Use pgvector backend if available
         if self.backend == "pgvector":
+            assert self._backend is not None  # set whenever backend == "pgvector"
             return self._backend.get_stats()
 
         # Original SQLite implementation

@@ -18,7 +18,7 @@ from datetime import datetime
 try:
     import numpy as np
 except ImportError:
-    np = None
+    np = None  # type: ignore[assignment]  # optional-dep shim
 
 logger = get_logger(__name__)
 
@@ -62,7 +62,7 @@ class SearchIndexMigrator:
         # Import pgvector backend
         from .pgvector_backend import PgVectorBackend
 
-        stats = {
+        stats: Dict[str, Any] = {
             "source": sqlite_path,
             "target": collection_name,
             "chunks_migrated": 0,
@@ -298,7 +298,7 @@ class SearchIndexMigrator:
         if not output_path.endswith(".swsearch"):
             output_path += ".swsearch"
 
-        stats = {
+        stats: Dict[str, Any] = {
             "source": f"{collection_name} (pgvector)",
             "target": output_path,
             "chunks_migrated": 0,
@@ -439,7 +439,7 @@ class SearchIndexMigrator:
         Returns:
             Index information including type, config, and statistics
         """
-        info = {}
+        info: Dict[str, Any] = {}
 
         if index_path.endswith(".swsearch") and Path(index_path).exists():
             # SQLite index

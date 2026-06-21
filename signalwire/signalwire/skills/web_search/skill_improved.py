@@ -12,7 +12,7 @@ import time
 import re
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
@@ -38,7 +38,7 @@ class GoogleSearchScraper:
         """Search Google using Custom Search JSON API"""
         url = "https://www.googleapis.com/customsearch/v1"
 
-        params = {
+        params: Dict[str, Any] = {
             "key": self.api_key,
             "cx": self.search_engine_id,
             "q": query,
@@ -69,7 +69,7 @@ class GoogleSearchScraper:
             return []
 
     def extract_text_from_url(
-        self, url: str, content_limit: int = None, timeout: int = 10
+        self, url: str, content_limit: Optional[int] = None, timeout: int = 10
     ) -> Tuple[str, Dict[str, Any]]:
         """
         Scrape a URL and extract readable text content with quality metrics
@@ -196,11 +196,12 @@ class GoogleSearchScraper:
         if not text:
             return {"quality_score": 0, "text_length": 0}
 
-        metrics = {}
+        metrics: Dict[str, Any] = {}
 
         # Text length (prefer 500-5000 chars of actual content)
         text_length = len(text)
         metrics["text_length"] = text_length
+        length_score: float
         if text_length < 100:
             length_score = 0
         elif text_length < 500:

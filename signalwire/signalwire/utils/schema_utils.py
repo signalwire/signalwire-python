@@ -79,7 +79,7 @@ class SchemaUtils:
             self.log.debug("first_verbs_extracted", verbs=list(self.verbs.keys())[:5])
 
         # Initialize full schema validator if validation is enabled
-        self._full_validator = None
+        self._full_validator: Optional["jsonschema_rs.Draft202012Validator"] = None
         if self._validation_enabled and self.schema:
             self._init_full_validator()
         elif not self._validation_enabled:
@@ -114,20 +114,21 @@ class SchemaUtils:
                 # Python 3.9+
                 try:
                     # Python 3.13+
-                    path = importlib.resources.files("signalwire").joinpath(
+                    res_path = importlib.resources.files("signalwire").joinpath(
                         "schema.json"
                     )
-                    return str(path)
+                    return str(res_path)
                 except Exception:
-                    # Python 3.9-3.12
-                    with importlib.resources.files("signalwire").joinpath(
-                        "schema.json"
-                    ) as path:
-                        return str(path)
+                    # Python 3.9-3.12 — as_file yields a real filesystem path
+                    # (and a proper context manager) for the resource.
+                    with importlib.resources.as_file(
+                        importlib.resources.files("signalwire").joinpath("schema.json")
+                    ) as res_file:
+                        return str(res_file)
             except AttributeError:
                 # Python 3.7-3.8
-                with importlib.resources.path("signalwire", "schema.json") as path:
-                    return str(path)
+                with importlib.resources.path("signalwire", "schema.json") as res_file:
+                    return str(res_file)
         except (ImportError, ModuleNotFoundError):
             pass
 
@@ -338,6 +339,10 @@ class SchemaUtils:
         Returns:
             (is_valid, error_messages) tuple
         """
+        # Fall back to lightweight if the full validator isn't initialized.
+        if self._full_validator is None:
+            return self._validate_verb_lightweight(verb_name, verb_config)
+
         # Check if schema supports document structure (has 'sections' in properties)
         # Use lightweight for partial/test schemas that don't have full document structure
         schema_props = self.schema.get("properties", {})

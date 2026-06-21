@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 import json
 import yaml
 
@@ -101,9 +101,9 @@ class Section:
         self.subsections.append(subsection)
         return subsection
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
         """Convert the section to a dictionary representation."""
-        data = {}
+        data: Dict[str, Any] = {}
 
         # Add keys in specific order: title, body, bullets, subsections
         if self.title is not None:
