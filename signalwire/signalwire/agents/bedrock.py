@@ -77,7 +77,7 @@ class BedrockAgent(AgentBase):
         logger.info(f"BedrockAgent initialized: {name} on route {route}")
 
     def _render_swml(
-        self, call_id: str = None, modifications: Optional[dict] = None
+        self, call_id: Optional[str] = None, modifications: Optional[dict] = None
     ) -> str:
         """
         Render SWML document with amazon_bedrock verb
