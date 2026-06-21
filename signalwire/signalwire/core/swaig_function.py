@@ -157,19 +157,18 @@ class SWAIGFunction:
             if isinstance(result, FunctionResult):
                 # Already a FunctionResult - just convert to dict
                 return result.to_dict()
-            elif isinstance(result, dict) and "response" in result:
+            if isinstance(result, dict) and "response" in result:
                 # Already in the correct format - use as is
                 return result
-            elif isinstance(result, dict):
+            if isinstance(result, dict):
                 # Dictionary without response - create a FunctionResult
                 return FunctionResult("Function completed successfully").to_dict()
-            else:
-                # String or other type - create a FunctionResult with the string representation
-                return FunctionResult(str(result)).to_dict()
+            # String or other type - create a FunctionResult with the string representation
+            return FunctionResult(str(result)).to_dict()
 
         except Exception as e:
             # Log the error for debugging but don't expose details to the AI
-            logging.error(f"Error executing SWAIG function {self.name}: {str(e)}")
+            logging.error(f"Error executing SWAIG function {self.name}: {e!s}")
             # Return a generic error message
             return FunctionResult(
                 "Sorry, I couldn't complete that action. Please try again or contact support if the issue persists."
@@ -200,11 +199,8 @@ class SWAIGFunction:
             validator = jsonschema_rs.JSONSchema(schema)  # type: ignore[attr-defined]  # jsonschema_rs ships no type stubs
             if validator.is_valid(args):
                 return True, []
-            else:
-                errors = []
-                for error in validator.iter_errors(args):
-                    errors.append(str(error))
-                return False, errors
+            errors = [str(error) for error in validator.iter_errors(args)]
+            return False, errors
         except ImportError:
             pass
         except Exception as e:
@@ -219,9 +215,8 @@ class SWAIGFunction:
             validation_errors = list(validator.iter_errors(args))
             if not validation_errors:
                 return True, []
-            else:
-                errors = [str(e.message) for e in validation_errors]
-                return False, errors
+            errors = [str(e.message) for e in validation_errors]
+            return False, errors
         except ImportError:
             pass
         except Exception as e:

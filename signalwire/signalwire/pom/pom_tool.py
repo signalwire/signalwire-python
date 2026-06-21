@@ -13,9 +13,9 @@ Options:
     --merge_pom=<arg>   Merge another POM into a section: "<section name>:<filename>"
 """
 
-import os
 import sys
 import json
+from pathlib import Path
 import yaml
 from docopt import docopt
 from signalwire.pom import PromptObjectModel
@@ -23,16 +23,16 @@ from signalwire.pom import PromptObjectModel
 
 def detect_file_format(file_path):
     """Detect if the file is JSON or YAML based on extension and content."""
-    ext = os.path.splitext(file_path)[1].lower()
+    ext = Path(file_path).suffix.lower()
 
     # First try to determine by extension
     if ext in [".json"]:
         return "json"
-    elif ext in [".yaml", ".yml"]:
+    if ext in [".yaml", ".yml"]:
         return "yaml"
 
     # If extension doesn't clearly indicate, try to parse the content
-    with open(file_path, "r", encoding="utf-8") as file:
+    with Path(file_path).open("r", encoding="utf-8") as file:
         content = file.read().strip()
 
     # Simple heuristic: JSON typically starts with { or [
@@ -58,27 +58,26 @@ def load_pom(file_path):
     """Load a POM from a file, auto-detecting the format."""
     format_type = detect_file_format(file_path)
 
-    with open(file_path, "r", encoding="utf-8") as file:
+    with Path(file_path).open("r", encoding="utf-8") as file:
         content = file.read()
 
     if format_type == "json":
         return PromptObjectModel.from_json(content)
-    else:  # yaml
-        return PromptObjectModel.from_yaml(content)
+    # yaml
+    return PromptObjectModel.from_yaml(content)
 
 
 def render_pom(pom, output_format):
     """Render the POM in the specified format."""
     if output_format == "md":
         return pom.render_markdown()
-    elif output_format == "xml":
+    if output_format == "xml":
         return pom.render_xml()
-    elif output_format == "json":
+    if output_format == "json":
         return pom.to_json()
-    elif output_format == "yaml":
+    if output_format == "yaml":
         return pom.to_yaml()
-    else:
-        raise ValueError(f"Unsupported output format: {output_format}")
+    raise ValueError(f"Unsupported output format: {output_format}")
 
 
 def main():
@@ -112,14 +111,14 @@ def main():
 
         # Output to file or stdout
         if output_file:
-            with open(output_file, "w", encoding="utf-8") as file:
+            with Path(output_file).open("w", encoding="utf-8") as file:
                 file.write(output)
             print(f"Output written to {output_file}")
         else:
             print(output)
 
     except Exception as e:
-        print(f"Error: {str(e)}")
+        print(f"Error: {e!s}")
         sys.exit(1)
 
 

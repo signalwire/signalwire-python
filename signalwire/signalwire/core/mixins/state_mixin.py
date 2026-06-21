@@ -60,14 +60,9 @@ class StateMixin(_HostTyped):
 
             # Get the function and check if it's secure
             func = self._tool_registry._swaig_functions[function_name]
-            is_secure = True  # Default to secure
-
-            if isinstance(func, dict):
-                # For raw dictionaries (DataMap functions), they're always secure
-                is_secure = True
-            else:
-                # For SWAIGFunction objects, check the secure attribute
-                is_secure = func.secure
+            # Raw dictionaries (DataMap functions) are always secure; SWAIGFunction
+            # objects carry their own secure attribute.
+            is_secure = True if isinstance(func, dict) else func.secure
 
             # Always allow non-secure functions
             if not is_secure:

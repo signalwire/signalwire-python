@@ -61,6 +61,7 @@ from .constants import (
     RECONNECT_MIN_DELAY,
 )
 from .message import Message
+import contextlib
 
 logger = get_logger("relay_client")
 
@@ -174,6 +175,11 @@ class RelayClient:
         self._reconnect_delay = RECONNECT_MIN_DELAY
         self._recv_task: Optional[asyncio.Task] = None
         self._ping_task: Optional[asyncio.Task] = None
+        # Strong references to fire-and-forget background tasks (queued sends,
+        # inbound call/message handler dispatch, ws close). asyncio only keeps
+        # a weak reference to a running task, so without this the task could be
+        # garbage-collected mid-flight; we discard on completion.
+        self._bg_tasks: set[asyncio.Task[Any]] = set()
         # Server-assigned protocol string from signalwire.connect response.
         # Sent back on reconnect to resume the same session.
         self._relay_protocol: str = ""
@@ -204,6 +210,18 @@ class RelayClient:
 
     async def __aexit__(self, *exc: Any) -> None:
         await self.disconnect()
+
+    def _spawn_bg(self, coro: Coroutine[Any, Any, Any]) -> "asyncio.Task[Any]":
+        """Schedule a fire-and-forget coroutine, holding a strong reference.
+
+        asyncio keeps only a weak reference to a running task, so a bare
+        ``ensure_future`` can be garbage-collected mid-flight. We retain the
+        task in ``_bg_tasks`` and drop it on completion.
+        """
+        task = asyncio.ensure_future(coro)
+        self._bg_tasks.add(task)
+        task.add_done_callback(self._bg_tasks.discard)
+        return task
 
     @property
     def relay_protocol(self) -> str:
@@ -410,10 +428,11 @@ class RelayClient:
 
             # Wait for the calling.call.dial event to resolve the call
             timeout = dial_timeout if dial_timeout is not None else 120.0
-            call = await asyncio.wait_for(dial_future, timeout=timeout)
-            return call
+            return await asyncio.wait_for(dial_future, timeout=timeout)
         except asyncio.TimeoutError:
-            raise RelayError(-1, f"Dial timed out waiting for answer (tag={dial_tag})")
+            raise RelayError(
+                -1, f"Dial timed out waiting for answer (tag={dial_tag})"
+            ) from None
         except Exception:
             # Cancel the future if it hasn't resolved yet
             if not dial_future.done():
@@ -541,10 +560,8 @@ class RelayClient:
 
     def run(self) -> None:
         """Blocking entry point — runs the event loop until interrupted."""
-        try:
+        with contextlib.suppress(KeyboardInterrupt):
             asyncio.run(self._run_forever())
-        except KeyboardInterrupt:
-            pass
         logger.info("RELAY client stopped")
 
     async def _run_forever(self) -> None:
@@ -640,7 +657,7 @@ class RelayClient:
             # Timeout may indicate a half-open connection — force reconnect
             if method != METHOD_SIGNALWIRE_CONNECT:
                 self._force_close()
-            raise RelayError(-1, f"Request timeout for {method}")
+            raise RelayError(-1, f"Request timeout for {method}") from None
         finally:
             self._pending.pop(req_id, None)
             self._pending_methods.pop(req_id, None)
@@ -659,7 +676,7 @@ class RelayClient:
             logger.debug(
                 f">> (queued) {message.get('method', '?')} id={message.get('id', '?')}"
             )
-            asyncio.ensure_future(self._safe_send(raw, future))
+            self._spawn_bg(self._safe_send(raw, future))
 
     async def _safe_send(self, raw: str, future: asyncio.Future) -> None:
         """Send a queued message, rejecting its future on failure."""
@@ -864,9 +881,13 @@ class RelayClient:
         # subsequent events (play, record, etc.) can route to it.
         if event_type == EVENT_CALL_STATE:
             tag = event_params.get("tag", "")
-            if tag and tag in self._pending_dials and call_id:
-                if call_id not in self._calls:
-                    self._register_dial_leg(tag, event_params)
+            if (
+                tag
+                and tag in self._pending_dials
+                and call_id
+                and call_id not in self._calls
+            ):
+                self._register_dial_leg(tag, event_params)
                 # Fall through to normal routing below so the Call gets
                 # the state update dispatched to it.
 
@@ -905,7 +926,7 @@ class RelayClient:
         self._calls[call_id] = call
 
         if self._on_call_handler:
-            asyncio.ensure_future(self._safe_call_handler(call))
+            self._spawn_bg(self._safe_call_handler(call))
         else:
             logger.warning(f"Inbound call {call_id} but no on_call handler registered")
 
@@ -935,7 +956,7 @@ class RelayClient:
         )
 
         if self._on_message_handler:
-            asyncio.ensure_future(self._safe_message_handler(message))
+            self._spawn_bg(self._safe_message_handler(message))
         else:
             logger.warning(
                 f"Inbound message {message.message_id} but no on_message handler registered"
@@ -1153,7 +1174,7 @@ class RelayClient:
             self._ping_task.cancel()
             self._ping_task = None
         if self._ws:
-            asyncio.ensure_future(self._ws.close())
+            self._spawn_bg(self._ws.close())
 
 
 class RelayError(Exception):

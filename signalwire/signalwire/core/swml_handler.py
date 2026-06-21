@@ -162,7 +162,7 @@ class AIVerbHandler(SWMLVerbHandler):
             raise ValueError(
                 "Either prompt_text or prompt_pom must be provided as base prompt"
             )
-        elif base_prompt_count > 1:
+        if base_prompt_count > 1:
             raise ValueError("prompt_text and prompt_pom are mutually exclusive")
 
         # Build prompt object with base prompt

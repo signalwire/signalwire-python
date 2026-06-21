@@ -12,7 +12,7 @@ import time
 import re
 from urllib.parse import urlparse
 from bs4 import BeautifulSoup
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Tuple, Optional, ClassVar
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
@@ -53,17 +53,14 @@ class GoogleSearchScraper:
             if "items" not in data:
                 return []
 
-            results = []
-            for item in data["items"][:num_results]:
-                results.append(
-                    {
-                        "title": item.get("title", ""),
-                        "url": item.get("link", ""),
-                        "snippet": item.get("snippet", ""),
-                    }
-                )
-
-            return results
+            return [
+                {
+                    "title": item.get("title", ""),
+                    "url": item.get("link", ""),
+                    "snippet": item.get("snippet", ""),
+                }
+                for item in data["items"][:num_results]
+            ]
 
         except Exception:
             return []
@@ -92,10 +89,7 @@ class GoogleSearchScraper:
                 }
 
             # Convert to JSON endpoint
-            if not url.endswith(".json"):
-                json_url = url.rstrip("/") + ".json"
-            else:
-                json_url = url
+            json_url = url.rstrip("/") + ".json" if not url.endswith(".json") else url
 
             # Fetch with proper headers (Reddit requires User-Agent)
             headers = {"User-Agent": "SignalWire-WebSearch/2.0"}
@@ -228,8 +222,7 @@ class GoogleSearchScraper:
         """
         if self.is_reddit_url(url):
             return self.extract_reddit_content(url, content_limit, timeout)
-        else:
-            return self.extract_html_content(url, content_limit, timeout)
+        return self.extract_html_content(url, content_limit, timeout)
 
     def extract_html_content(
         self, url: str, content_limit: Optional[int] = None, timeout: float = 10
@@ -783,8 +776,8 @@ class WebSearchSkill(SkillBase):
     SKILL_NAME = "web_search"
     SKILL_DESCRIPTION = "Search the web for information using Google Custom Search API"
     SKILL_VERSION = "2.0.0"  # Bumped version for improved functionality
-    REQUIRED_PACKAGES = ["bs4", "requests"]
-    REQUIRED_ENV_VARS = []
+    REQUIRED_PACKAGES: ClassVar[List[str]] = ["bs4", "requests"]
+    REQUIRED_ENV_VARS: ClassVar[List[str]] = []
 
     # Enable multiple instances support
     SUPPORTS_MULTIPLE_INSTANCES = True

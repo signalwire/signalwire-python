@@ -13,7 +13,7 @@ Skill layer:   GoogleMapsSkill  (plug-and-play SWAIG tools)
 """
 
 import json
-from typing import List, Dict, Any
+from typing import List, Dict, Any, ClassVar
 
 import requests
 
@@ -211,7 +211,7 @@ class GoogleMapsClient:
         logger.debug(
             f"Nearby Search request: keyword='{keyword}', location={lat},{lng}, rankby=distance"
         )
-        resp = requests.get(url, params=params)
+        resp = requests.get(url, params=params, timeout=30)
         data = resp.json()
         logger.debug(
             f"Nearby Search status: {data.get('status')}, results count: {len(data.get('results', []))}"
@@ -286,7 +286,7 @@ class GoogleMapsClient:
         logger.debug(
             f"Autocomplete request: input='{input_text}', bias={bias_lat},{bias_lng}"
         )
-        ac_resp = requests.get(autocomplete_url, params=params)
+        ac_resp = requests.get(autocomplete_url, params=params, timeout=30)
         ac_data = ac_resp.json()
         logger.debug(
             f"Autocomplete status: {ac_data.get('status')}, predictions count: {len(ac_data.get('predictions', []))}"
@@ -321,6 +321,7 @@ class GoogleMapsClient:
                 "fields": "name,formatted_address,geometry,types",
                 "key": self.api_key,
             },
+            timeout=30,
         )
         det_data = det_resp.json()
         logger.debug(f"Place Details status: {det_data.get('status')}")
@@ -408,7 +409,7 @@ class GoogleMapsClient:
             }
 
             _debug_json("Routes API request body", body)
-            resp = requests.post(url, json=body, headers=headers)
+            resp = requests.post(url, json=body, headers=headers, timeout=30)
             data = resp.json()
             _debug_json("Routes API response", data)
 
@@ -448,8 +449,8 @@ class GoogleMapsSkill(SkillBase):
         "Validate addresses and compute driving routes using Google Maps"
     )
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES = ["requests"]
-    REQUIRED_ENV_VARS = []
+    REQUIRED_PACKAGES: ClassVar[List[str]] = ["requests"]
+    REQUIRED_ENV_VARS: ClassVar[List[str]] = []
 
     @classmethod
     def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:

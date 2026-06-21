@@ -86,8 +86,7 @@ class SearchEngine:
             conn = sqlite3.connect(self.index_path)
             cursor = conn.cursor()
             cursor.execute("SELECT key, value FROM config")
-            config = dict(cursor.fetchall())
-            return config
+            return dict(cursor.fetchall())
         except Exception as e:
             logger.error(f"Error loading config from {self.index_path}: {e}")
             return {}
@@ -181,7 +180,7 @@ class SearchEngine:
         """
         # pgvector backend: delegate to its own fetch
         if self.backend == "pgvector":
-            assert self._backend is not None  # set whenever backend == "pgvector"
+            assert self._backend is not None  # noqa: S101  # type-narrowing invariant: set whenever backend == "pgvector"
             return self._backend.fetch_candidates(
                 query_vector=query_vector,
                 enhanced_text=enhanced_text,
@@ -552,10 +551,10 @@ class SearchEngine:
             query = f"""
                 SELECT id, content, filename, section, tags, metadata
                 FROM chunks
-                WHERE ({" OR ".join(like_conditions)}) 
+                WHERE ({" OR ".join(like_conditions)})
                    OR ({" OR ".join(content_conditions)})
                 LIMIT ?
-            """
+            """  # noqa: S608  # interpolated parts are internal static SQL fragments ("col LIKE ?"); all user terms bind via ? params
             params.append(count)
 
             cursor.execute(query, params)
@@ -645,7 +644,7 @@ class SearchEngine:
 
         # Calculate combined score (weighted average)
 
-        for chunk_id, result in combined.items():
+        for result in combined.values():
             vector_score = result.get("vector_score", 0.0)
             keyword_score = result.get("keyword_score", 0.0)
             result["score"] = (
@@ -660,10 +659,7 @@ class SearchEngine:
             }
 
         # Sort by combined score
-        sorted_results = sorted(
-            combined.values(), key=lambda x: x["score"], reverse=True
-        )
-        return sorted_results
+        return sorted(combined.values(), key=lambda x: x["score"], reverse=True)
 
     def _filter_by_tags(
         self, results: List[Dict], required_tags: List[str]
@@ -699,16 +695,13 @@ class SearchEngine:
             if any(
                 term in filename_lower
                 for term in ["example", "sample", "demo", "tutorial", "guide"]
+            ) and (
+                "example" in query_lower
+                or "sample" in query_lower
+                or "code" in query_lower
             ):
-                if (
-                    "example" in query_lower
-                    or "sample" in query_lower
-                    or "code" in query_lower
-                ):
-                    result["score"] *= 1.5
-                    result["final_score"] = (
-                        result.get("final_score", result["score"]) * 1.5
-                    )
+                result["score"] *= 1.5
+                result["final_score"] = result.get("final_score", result["score"]) * 1.5
 
             # Boost for "getting started" type queries
             if "getting started" in query_lower and "start" in content_lower:
@@ -759,10 +752,8 @@ class SearchEngine:
                     if "/" in filename_lower
                     else filename_lower
                 )
-                if query_lower in basename:
-                    score = 3.0  # Exact match in basename (increased weight)
-                else:
-                    score = 2.0  # Exact match in path
+                # Exact match in basename gets increased weight over a path match
+                score = 3.0 if query_lower in basename else 2.0
 
                 results.append(
                     {
@@ -797,7 +788,7 @@ class SearchEngine:
                     WHERE ({" OR ".join(conditions)})
                     AND id NOT IN ({",".join(["?" for _ in seen_ids]) if seen_ids else "0"})
                     LIMIT ?
-                """
+                """  # noqa: S608  # interpolated parts are internal static fragments + "?" placeholders; all user/seen-id values bind via ? params
                 if seen_ids:
                     params.extend(seen_ids)
                 params.append(count * 3)
@@ -908,7 +899,7 @@ class SearchEngine:
                         FROM chunks
                         WHERE {" AND ".join(conditions)}
                         LIMIT ?
-                    """
+                    """  # noqa: S608  # interpolated conditions are internal static "metadata_text LIKE ?" fragments; user terms bind via ? params
                     params.append(count * 10)
                     cursor.execute(query_sql, params)
 
@@ -999,7 +990,7 @@ class SearchEngine:
                         WHERE ({" OR ".join(conditions_to_use)})
                         {not_in_clause}
                         LIMIT ?
-                    """
+                    """  # noqa: S608  # interpolated parts are internal static fragments + "?" placeholders (not_in_clause); all values bind via ? params
                     params_to_use.append(count * 5)
                     cursor.execute(query_sql, params_to_use)
 
@@ -1041,7 +1032,7 @@ class SearchEngine:
                                                 json_metadata = json.loads(metadata_str)
                                                 break
                                         i += 1
-                    except Exception:
+                    except Exception:  # noqa: S110  # best-effort optional metadata JSON parse; scoring continues without it
                         pass
 
                     # Calculate score based on matches
@@ -1333,7 +1324,7 @@ class SearchEngine:
                 SELECT id, embedding
                 FROM chunks
                 WHERE id IN ({placeholders}) AND embedding IS NOT NULL AND embedding != ''
-            """,
+            """,  # noqa: S608  # {placeholders} is a generated "?,?,..." bind-placeholder string; chunk ids bind via ? params
                 chunk_ids,
             )
 
@@ -1428,7 +1419,9 @@ class SearchEngine:
             if not normalized:
                 deduped.append(result)
                 continue
-            h = hashlib.sha1(normalized.encode("utf-8")).hexdigest()
+            h = hashlib.sha1(
+                normalized.encode("utf-8"), usedforsecurity=False
+            ).hexdigest()
             if h in seen_hashes:
                 continue
             seen_hashes[h] = True
@@ -1490,26 +1483,29 @@ class SearchEngine:
         # Ensure minimum diversity if we have enough results
         if len(penalized_results) > target_count:
             unique_files = len(
-                set(r["metadata"]["filename"] for r in penalized_results[:target_count])
+                {r["metadata"]["filename"] for r in penalized_results[:target_count]}
             )
 
             # If top results are too homogeneous (e.g., all from 1-2 files)
             if unique_files < min(3, target_count):
                 # Try to inject some diversity
                 selected = penalized_results[:target_count]
-                seen_files = set(r["metadata"]["filename"] for r in selected)
+                seen_files = {r["metadata"]["filename"] for r in selected}
 
                 # Look for high-quality results from other files
                 for result in penalized_results[target_count:]:
-                    if result["metadata"]["filename"] not in seen_files:
-                        # If it's reasonably good (within 50% of top score), include it
-                        if result["final_score"] > 0.5 * selected[0]["final_score"]:
-                            # Replace the lowest scoring result from an over-represented file
-                            for i in range(len(selected) - 1, -1, -1):
-                                if file_counts[selected[i]["metadata"]["filename"]] > 2:
-                                    selected[i] = result
-                                    seen_files.add(result["metadata"]["filename"])
-                                    break
+                    # Only inject a result from a new file that's reasonably good
+                    # (within 50% of top score)
+                    if (
+                        result["metadata"]["filename"] not in seen_files
+                        and result["final_score"] > 0.5 * selected[0]["final_score"]
+                    ):
+                        # Replace the lowest scoring result from an over-represented file
+                        for i in range(len(selected) - 1, -1, -1):
+                            if file_counts[selected[i]["metadata"]["filename"]] > 2:
+                                selected[i] = result
+                                seen_files.add(result["metadata"]["filename"])
+                                break
 
                 penalized_results[:target_count] = selected
 
@@ -1566,7 +1562,7 @@ class SearchEngine:
         remaining_slots = target_count - len(diversified)
         if remaining_slots > 0:
             # Get all unused results
-            used_ids = set(r["id"] for r in diversified)
+            used_ids = {r["id"] for r in diversified}
             unused = [r for r in results if r["id"] not in used_ids]
             diversified.extend(unused[:remaining_slots])
 
@@ -1579,7 +1575,7 @@ class SearchEngine:
         """Get statistics about the search index"""
         # Use pgvector backend if available
         if self.backend == "pgvector":
-            assert self._backend is not None  # set whenever backend == "pgvector"
+            assert self._backend is not None  # noqa: S101  # type-narrowing invariant: set whenever backend == "pgvector"
             return self._backend.get_stats()
 
         # Original SQLite implementation

@@ -68,7 +68,7 @@ def get_execution_mode():
     if (
         os.getenv("AZURE_FUNCTIONS_ENVIRONMENT")
         or os.getenv("FUNCTIONS_WORKER_RUNTIME")
-        or os.getenv("AzureWebJobsStorage")
+        or os.getenv("AzureWebJobsStorage")  # noqa: SIM112  # Azure-defined env var; name is case-sensitive and must stay mixed-case
     ):
         return "azure_function"
 
@@ -98,9 +98,7 @@ def _detect_colors():
         return False
     if not stream.isatty():
         return False
-    if "--raw" in sys.argv or "--dump-swml" in sys.argv:
-        return False
-    return True
+    return not ("--raw" in sys.argv or "--dump-swml" in sys.argv)
 
 
 def configure_logging():
@@ -125,10 +123,7 @@ def configure_logging():
     # Determine log mode if auto or not specified
     if not log_mode or log_mode == "auto":
         execution_mode = get_execution_mode()
-        if execution_mode == "cgi":
-            log_mode = "off"
-        else:
-            log_mode = "default"
+        log_mode = "off" if execution_mode == "cgi" else "default"
 
     # Configure based on mode
     if log_mode == "off":
@@ -199,8 +194,8 @@ def _configure_structlog(level_num, log_format, stream):
 
     # Configure structlog itself (for structlog.get_logger() callers)
     structlog.configure(
-        processors=_get_structlog_processors()
-        + [
+        processors=[
+            *_get_structlog_processors(),
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
         logger_factory=structlog.stdlib.LoggerFactory(),
@@ -212,7 +207,7 @@ def _configure_structlog(level_num, log_format, stream):
     handler = logging.StreamHandler(stream)
     handler.setLevel(level_num)
     formatter = structlog.stdlib.ProcessorFormatter(
-        processors=_get_formatter_processors() + [renderer],
+        processors=[*_get_formatter_processors(), renderer],
     )
     handler.setFormatter(formatter)
 

@@ -174,26 +174,25 @@ class DocumentProcessor:
         # Apply chunking strategy
         if self.chunking_strategy == "sentence":
             return self._chunk_by_sentences(content, filename, file_type)
-        elif self.chunking_strategy == "sliding":
+        if self.chunking_strategy == "sliding":
             return self._chunk_by_sliding_window(content, filename, file_type)
-        elif self.chunking_strategy == "paragraph":
+        if self.chunking_strategy == "paragraph":
             return self._chunk_by_paragraphs(content, filename, file_type)
-        elif self.chunking_strategy == "page":
+        if self.chunking_strategy == "page":
             return self._chunk_by_pages(content, filename, file_type)
-        elif self.chunking_strategy == "semantic":
+        if self.chunking_strategy == "semantic":
             return self._chunk_by_semantic(content, filename, file_type)
-        elif self.chunking_strategy == "topic":
+        if self.chunking_strategy == "topic":
             return self._chunk_by_topics(content, filename, file_type)
-        elif self.chunking_strategy == "qa":
+        if self.chunking_strategy == "qa":
             return self._chunk_by_qa_optimization(content, filename, file_type)
-        elif self.chunking_strategy == "json":
+        if self.chunking_strategy == "json":
             return self._chunk_from_json(content, filename, file_type)
-        elif self.chunking_strategy == "markdown":
+        if self.chunking_strategy == "markdown":
             # Use markdown-aware chunking for better structure preservation
             return self._chunk_markdown_enhanced(content, filename)
-        else:
-            # Fallback to sentence-based chunking
-            return self._chunk_by_sentences(content, filename, file_type)
+        # Fallback to sentence-based chunking
+        return self._chunk_by_sentences(content, filename, file_type)
 
     def _extract_text_from_file(self, file_path: str) -> Any:
         """Extract text from various file formats"""
@@ -242,24 +241,21 @@ class DocumentProcessor:
 
         if "pdf" in file_type:
             return self._extract_pdf(file_path)
-        elif "vnd.openxmlformats-officedocument.wordprocessingml.document" in file_type:
+        if "vnd.openxmlformats-officedocument.wordprocessingml.document" in file_type:
             return self._extract_docx(file_path)
-        elif "plain" in file_type or "text" in file_type:
+        if "plain" in file_type or "text" in file_type:
             return self._extract_text(file_path)
-        elif "html" in file_type:
+        if "html" in file_type:
             return self._extract_html(file_path)
-        elif "markdown" in file_type or file_path.endswith(".md"):
+        if "markdown" in file_type or file_path.endswith(".md"):
             return self._extract_markdown(file_path)
-        elif "rtf" in file_type:
+        if "rtf" in file_type:
             return self._extract_rtf(file_path)
-        elif "vnd.openxmlformats-officedocument.spreadsheetml.sheet" in file_type:
+        if "vnd.openxmlformats-officedocument.spreadsheetml.sheet" in file_type:
             return self._extract_excel(file_path)
-        elif (
-            "vnd.openxmlformats-officedocument.presentationml.presentation" in file_type
-        ):
+        if "vnd.openxmlformats-officedocument.presentationml.presentation" in file_type:
             return self._extract_powerpoint(file_path)
-        else:
-            return json.dumps({"error": f"Unsupported file type: {file_type}"})
+        return json.dumps({"error": f"Unsupported file type: {file_type}"})
 
     def _extract_pdf(self, file_path: str):
         """Extract text from PDF files"""
@@ -295,7 +291,9 @@ class DocumentProcessor:
     def _extract_text(self, file_path: str):
         """Extract text from plain text files"""
         try:
-            with open(file_path, "r", encoding="utf-8") as file:
+            with open(  # noqa: PTH123  # tests patch builtins.open; Path.open() would bypass the mock seam
+                file_path, "r", encoding="utf-8"
+            ) as file:
                 return file.read()
         except Exception as e:
             return json.dumps({"error": f"Error processing TXT: {e}"})
@@ -308,7 +306,9 @@ class DocumentProcessor:
             )
 
         try:
-            with open(file_path, "r", encoding="utf-8") as file:
+            with open(  # noqa: PTH123  # tests patch builtins.open; Path.open() would bypass the mock seam
+                file_path, "r", encoding="utf-8"
+            ) as file:
                 soup = BeautifulSoup(file, "html.parser")
                 return soup.get_text(separator="\n")
         except Exception as e:
@@ -317,15 +317,16 @@ class DocumentProcessor:
     def _extract_markdown(self, file_path: str):
         """Extract text from Markdown files"""
         try:
-            with open(file_path, "r", encoding="utf-8") as file:
+            with open(  # noqa: PTH123  # tests patch builtins.open; Path.open() would bypass the mock seam
+                file_path, "r", encoding="utf-8"
+            ) as file:
                 content = file.read()
                 if markdown is not None and BeautifulSoup is not None:
                     html = markdown.markdown(content)
                     soup = BeautifulSoup(html, "html.parser")
                     return soup.get_text(separator="\n")
-                else:
-                    # Fallback to raw markdown
-                    return content
+                # Fallback to raw markdown
+                return content
         except Exception as e:
             return json.dumps({"error": f"Error processing Markdown: {e}"})
 
@@ -335,7 +336,9 @@ class DocumentProcessor:
             return json.dumps({"error": "striprtf not available for RTF processing"})
 
         try:
-            with open(file_path, "r", encoding="utf-8") as file:
+            with open(  # noqa: PTH123  # tests patch builtins.open; Path.open() would bypass the mock seam
+                file_path, "r", encoding="utf-8"
+            ) as file:
                 return rtf_to_text(file.read())
         except Exception as e:
             return json.dumps({"error": f"Error processing RTF: {e}"})
@@ -367,10 +370,9 @@ class DocumentProcessor:
             prs = Presentation(file_path)
             slides_text = []
             for slide in prs.slides:
-                slide_text = []
-                for shape in slide.shapes:
-                    if hasattr(shape, "text"):
-                        slide_text.append(shape.text)
+                slide_text = [
+                    shape.text for shape in slide.shapes if hasattr(shape, "text")
+                ]
                 slides_text.append("\n".join(slide_text))
             return slides_text
         except Exception as e:
@@ -535,7 +537,7 @@ class DocumentProcessor:
                 # Flush whatever preceded this heading under the old hierarchy.
                 flush()
                 level = block["level"]
-                hierarchy = hierarchy[: level - 1] + [block["heading_text"]]
+                hierarchy = [*hierarchy[: level - 1], block["heading_text"]]
                 # Seed the new chunk with the heading line(s) themselves.
                 current_hierarchy = list(hierarchy)
                 current_lines = list(block["source_lines"])
@@ -681,8 +683,9 @@ class DocumentProcessor:
                     )
 
                 # Update hierarchy
-                current_hierarchy = current_hierarchy[: header_level - 1] + [
-                    header_text
+                current_hierarchy = [
+                    *current_hierarchy[: header_level - 1],
+                    header_text,
                 ]
                 current_chunk = [line]
                 current_size = len(line)
@@ -926,11 +929,8 @@ class DocumentProcessor:
 
     def _calculate_sentences_per_chunk(self, text: str) -> int:
         """Calculate optimal sentences per chunk based on average sentence length"""
-        if not sent_tokenize:
-            # Fallback calculation
-            sentences = text.split(". ")
-        else:
-            sentences = sent_tokenize(text)
+        # Fallback to naive split when nltk's sent_tokenize is unavailable
+        sentences = text.split(". ") if not sent_tokenize else sent_tokenize(text)
 
         if not sentences:
             return 1
@@ -977,8 +977,7 @@ class DocumentProcessor:
         if has_code:
             tags.append("code")
             # Add language-specific tags
-            for lang in code_languages:
-                tags.append(f"code:{lang}")
+            tags.extend(f"code:{lang}" for lang in code_languages)
 
         # Add tags for header levels (searchable by section depth)
         if len(hierarchy) > 0:
@@ -995,12 +994,11 @@ class DocumentProcessor:
         """Build section name for Python code"""
         if class_name and function_name:
             return f"{class_name}.{function_name}"
-        elif class_name:
+        if class_name:
             return class_name
-        elif function_name:
+        if function_name:
             return function_name
-        else:
-            return None
+        return None
 
     def _find_best_split_point(self, lines: List[str]) -> int:
         """Find the best point to split a chunk (prefer paragraph boundaries)"""
@@ -1403,7 +1401,6 @@ class DocumentProcessor:
                     "way",
                     "she",
                     "use",
-                    "her",
                     "many",
                     "oil",
                     "sit",
@@ -1457,10 +1454,7 @@ class DocumentProcessor:
                 overlap = len(current_keywords.intersection(sentence_keywords[i]))
                 total_keywords = len(current_keywords.union(sentence_keywords[i]))
 
-                if total_keywords > 0:
-                    similarity = overlap / total_keywords
-                else:
-                    similarity = 0
+                similarity = overlap / total_keywords if total_keywords > 0 else 0
 
                 # If similarity is low, start new chunk
                 if similarity < self.topic_threshold and len(current_chunk) >= 2:
@@ -1577,8 +1571,7 @@ class DocumentProcessor:
             # Create chunk when we have enough content or reach a natural break
             if len(current_chunk) >= 3 and (
                 i == len(sentences) - 1  # Last sentence
-                or sentence.endswith(".")
-                and len(current_chunk) >= 5
+                or (sentence.endswith(".") and len(current_chunk) >= 5)
             ):  # Natural break
                 # Combine chunk with context
                 full_content = current_context + current_chunk

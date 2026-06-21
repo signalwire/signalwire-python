@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import os
 import secrets
-from typing import Dict, Any, Optional, Tuple, Union
+from typing import Dict, Any, ClassVar, Optional, Tuple, Union
 from signalwire.core.logging_config import get_logger
 from signalwire.core.config_loader import ConfigLoader
 
@@ -42,10 +42,10 @@ class SecurityConfig:
 
     # Authentication
     BASIC_AUTH_USER = "SWML_BASIC_AUTH_USER"
-    BASIC_AUTH_PASSWORD = "SWML_BASIC_AUTH_PASSWORD"
+    BASIC_AUTH_PASSWORD = "SWML_BASIC_AUTH_PASSWORD"  # noqa: S105  # false positive: this is the env-var NAME constant, not a password value
 
     # Defaults (secure by default)
-    DEFAULTS: Dict[str, Any] = {
+    DEFAULTS: ClassVar[Dict[str, Any]] = {
         SSL_ENABLED: False,  # Off by default, but secure when enabled
         SSL_VERIFY_MODE: "CERT_REQUIRED",
         ALLOWED_HOSTS: "*",  # Accept all hosts by default for backward compatibility
@@ -235,10 +235,14 @@ class SecurityConfig:
         if not self.ssl_key_path:
             return False, "SSL enabled but SWML_SSL_KEY_PATH not set"
 
-        if not os.path.exists(self.ssl_cert_path):
+        if not os.path.exists(  # noqa: PTH110  # tests patch global os.path.exists; Path.exists() would bypass the mock seam
+            self.ssl_cert_path
+        ):
             return False, f"SSL certificate file not found: {self.ssl_cert_path}"
 
-        if not os.path.exists(self.ssl_key_path):
+        if not os.path.exists(  # noqa: PTH110  # tests patch global os.path.exists; Path.exists() would bypass the mock seam
+            self.ssl_key_path
+        ):
             return False, f"SSL key file not found: {self.ssl_key_path}"
 
         return True, None

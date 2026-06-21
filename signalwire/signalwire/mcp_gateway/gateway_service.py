@@ -13,10 +13,12 @@ HTTP/HTTPS server that bridges MCP servers with SignalWire SWAIG functions.
 Manages sessions, handles authentication, and translates between protocols.
 """
 
+import contextlib
 import os
 import json
 import logging
 import argparse
+from pathlib import Path
 import signal
 import re
 from typing import Dict, Any, Optional
@@ -182,23 +184,21 @@ class MCPGateway:
                 if "|" in var_expr:
                     var_name, default = var_expr.split("|", 1)
                     return os.environ.get(var_name, default)
-                else:
-                    # No default provided
-                    return os.environ.get(var_expr, value)
+                # No default provided
+                return os.environ.get(var_expr, value)
             return value
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             return {k: self._substitute_env_vars(v) for k, v in value.items()}
-        elif isinstance(value, list):
+        if isinstance(value, list):
             return [self._substitute_env_vars(item) for item in value]
-        else:
-            return value
+        return value
 
     def _load_config(self, config_path: str) -> Dict[str, Any]:
         """Load configuration from JSON file with environment variable substitution"""
-        if not os.path.exists(config_path):
+        if not Path(config_path).exists():
             # Check if sample_config.json exists
             sample_path = "sample_config.json"
-            if os.path.exists(sample_path):
+            if Path(sample_path).exists():
                 # Copy sample to config
                 import shutil
 
@@ -208,7 +208,7 @@ class MCPGateway:
                 # Create minimal default config if no sample exists
                 default_config = {
                     "server": {
-                        "host": "0.0.0.0",
+                        "host": "0.0.0.0",  # noqa: S104  # intended server default: listen on all interfaces (overridable)
                         "port": 8080,
                         "auth_user": "admin",
                         "auth_password": "changeme",
@@ -235,13 +235,13 @@ class MCPGateway:
                     "logging": {"level": "INFO"},
                 }
 
-                with open(config_path, "w") as f:
+                with Path(config_path).open("w") as f:
                     json.dump(default_config, f, indent=2)
 
                 logger.info(f"Created default config at {config_path}")
                 return default_config
 
-        with open(config_path, "r") as f:
+        with Path(config_path).open("r") as f:
             config = json.load(f)
 
         # Apply environment variable substitution
@@ -437,7 +437,7 @@ class MCPGateway:
                     except Exception as e:
                         logger.error(f"Failed to create session: {e}")
                         return jsonify(
-                            {"error": f"Failed to create session: {str(e)}"}
+                            {"error": f"Failed to create session: {e!s}"}
                         ), 500
 
                 elif session.service_name != service_name:
@@ -459,9 +459,12 @@ class MCPGateway:
                 # Extract text content if it's in MCP format
                 if isinstance(result, dict) and "content" in result:
                     content = result["content"]
-                    if isinstance(content, list) and len(content) > 0:
-                        if content[0].get("type") == "text":
-                            result = content[0].get("text", result)
+                    if (
+                        isinstance(content, list)
+                        and len(content) > 0
+                        and content[0].get("type") == "text"
+                    ):
+                        result = content[0].get("text", result)
 
                 return jsonify(
                     {
@@ -500,8 +503,7 @@ class MCPGateway:
                         {"session_id": session_id, "ip": request.remote_addr},
                     )
                     return jsonify({"message": f"Session {session_id} closed"})
-                else:
-                    return jsonify({"error": f"Session {session_id} not found"}), 404
+                return jsonify({"error": f"Session {session_id} not found"}), 404
             except ValueError as e:
                 return jsonify({"error": str(e)}), 400
 
@@ -513,7 +515,7 @@ class MCPGateway:
     def run(self):
         """Run the gateway service"""
         server_config = self.config.get("server", {})
-        host = server_config.get("host", "0.0.0.0")
+        host = server_config.get("host", "0.0.0.0")  # noqa: S104  # intended server default: listen on all interfaces (overridable)
         port = server_config.get("port", 8080)
 
         # Check for SSL certificate
@@ -521,7 +523,7 @@ class MCPGateway:
         ssl_context = None
         protocol = "http"
 
-        if os.path.exists(ssl_cert_path):
+        if Path(ssl_cert_path).exists():
             logger.info(f"Found SSL certificate at {ssl_cert_path}, enabling HTTPS")
             ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
             ssl_context.load_cert_chain(ssl_cert_path)
@@ -583,10 +585,9 @@ class MCPGateway:
 
         # Shutdown server
         if self.server and hasattr(self.server, "shutdown"):
-            try:
+            # Best-effort shutdown during cleanup; failures here must not block teardown.
+            with contextlib.suppress(Exception):
                 self.server.shutdown()
-            except Exception:
-                pass
 
         logger.info("MCP Gateway shutdown complete")
 

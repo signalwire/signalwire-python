@@ -85,7 +85,7 @@ from .constants import (
     MESSAGE_STATE_RECEIVED,
 )
 
-__all__ = [
+__all__ = [  # noqa: RUF022  # deliberately grouped by category (Client / Actions / Events / Constants) with section comments for readability, not alphabetized
     # Client
     "RelayClient",
     "RelayError",

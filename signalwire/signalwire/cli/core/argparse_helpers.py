@@ -104,20 +104,14 @@ def parse_function_arguments(
         # DataMap function
         if "parameters" in func_schema:
             params = func_schema["parameters"]
-            if "properties" in params:
-                parameters = params["properties"]
-            else:
-                parameters = params
+            parameters = params.get("properties", params)
         else:
             parameters = func_schema
     else:
         # Regular SWAIG function
         if hasattr(func_schema, "parameters") and func_schema.parameters:
             params = func_schema.parameters
-            if "properties" in params:
-                parameters = params["properties"]
-            else:
-                parameters = params
+            parameters = params.get("properties", params)
 
     # Parse arguments
     while i < len(function_args_list):
@@ -165,8 +159,7 @@ def parse_function_arguments(
                             f"CLI flag --{param_name} must come BEFORE --exec, not after.\n"
                             f"Example: swaig-test file.py --{param_name} --exec function_name"
                         )
-                    else:
-                        raise ValueError(f"Parameter --{param_name} requires a value")
+                    raise ValueError(f"Parameter --{param_name} requires a value")
 
                 value = function_args_list[i + 1]
 
@@ -177,14 +170,14 @@ def parse_function_arguments(
                     except ValueError:
                         raise ValueError(
                             f"Parameter --{param_name} must be an integer, got: {value}"
-                        )
+                        ) from None
                 elif param_type == "number":
                     try:
                         parsed_args[param_key] = float(value)
                     except ValueError:
                         raise ValueError(
                             f"Parameter --{param_name} must be a number, got: {value}"
-                        )
+                        ) from None
                 elif param_type == "array":
                     # Handle comma-separated arrays
                     parsed_args[param_key] = [item.strip() for item in value.split(",")]

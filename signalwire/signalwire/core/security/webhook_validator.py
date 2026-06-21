@@ -84,8 +84,7 @@ def _sorted_concat_params(
         items: List[Tuple[str, Any]] = []
         for k, v in params.items():
             if isinstance(v, (list, tuple)):
-                for vi in v:
-                    items.append((k, vi))
+                items.extend((k, vi) for vi in v)
             else:
                 items.append((k, v))
     else:
@@ -256,11 +255,12 @@ def validate_webhook_signature(
         for shape in param_shapes:
             concat = _sorted_concat_params(shape)
             expected_b = _b64_hmac_sha1(signing_key, candidate_url + concat)
-            if _safe_eq(expected_b, signature):
-                # If the URL carries bodySHA256, the body hash must match too.
-                if _check_body_sha256(candidate_url, raw_body):
-                    return True
-                # bodySHA256 mismatched — keep trying other shapes/urls.
+            # If the URL carries bodySHA256, the body hash must match too;
+            # otherwise keep trying other shapes/urls.
+            if _safe_eq(expected_b, signature) and _check_body_sha256(
+                candidate_url, raw_body
+            ):
+                return True
 
     return False
 
@@ -323,6 +323,6 @@ def validate_request(
 
 
 __all__ = [
-    "validate_webhook_signature",
     "validate_request",
+    "validate_webhook_signature",
 ]

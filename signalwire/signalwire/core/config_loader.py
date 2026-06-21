@@ -10,6 +10,7 @@ See LICENSE file in the project root for full license information.
 import os
 import re
 import json
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 from signalwire.core.logging_config import get_logger
 
@@ -45,16 +46,16 @@ class ConfigLoader:
             "agent_config.json",
             "swml_config.json",
             ".swml/config.json",
-            os.path.expanduser("~/.swml/config.json"),
+            str(Path("~/.swml/config.json").expanduser()),
             "/etc/swml/config.json",
         ]
 
     def _load_config(self) -> None:
         """Load configuration from the first available config file."""
         for path in self.config_paths:
-            if os.path.exists(path):
+            if Path(path).exists():
                 try:
-                    with open(path, "r") as f:
+                    with Path(path).open("r") as f:
                         self._config = json.load(f)
                         self._config_file = path
                         logger.info("config_loaded", path=path)
@@ -107,24 +108,22 @@ class ConfigLoader:
             # Try to parse as JSON to get proper types
             if result.lower() in ("true", "false"):
                 return result.lower() == "true"
-            elif result.isdigit():
+            if result.isdigit():
                 return int(result)
-            elif result.replace(".", "", 1).isdigit():
+            if result.replace(".", "", 1).isdigit():
                 return float(result)
-            else:
-                return result
+            return result
 
-        elif isinstance(value, dict):
+        if isinstance(value, dict):
             # Recursively process dictionary
             return {k: self.substitute_vars(v, max_depth - 1) for k, v in value.items()}
 
-        elif isinstance(value, list):
+        if isinstance(value, list):
             # Recursively process list
             return [self.substitute_vars(item, max_depth - 1) for item in value]
 
-        else:
-            # Return other types as-is
-            return value
+        # Return other types as-is
+        return value
 
     def get(self, key_path: str, default: Any = None) -> Any:
         """
@@ -255,13 +254,13 @@ class ConfigLoader:
                 "config.json",
                 "agent_config.json",
                 ".swml/config.json",
-                os.path.expanduser("~/.swml/config.json"),
+                str(Path("~/.swml/config.json").expanduser()),
                 "/etc/swml/config.json",
             ]
         )
 
         for path in paths:
-            if os.path.exists(path):
+            if Path(path).exists():
                 return path
 
         return None

@@ -301,9 +301,10 @@ class SurveyAgent(AgentBase):
                 message = "Please answer with 'yes' or 'no'."
 
         # For open-ended, any non-empty response is valid
-        elif question["type"] == "open_ended":
-            if not response.strip() and question.get("required", True):
-                message = "A response is required for this question."
+        elif question["type"] == "open_ended" and (
+            not response.strip() and question.get("required", True)
+        ):
+            message = "A response is required for this question."
 
         return FunctionResult(message)
 
@@ -363,4 +364,4 @@ class SurveyAgent(AgentBase):
                     print(f"Survey summary (unstructured): {summary}")
 
             except Exception as e:
-                print(f"Error processing survey summary: {str(e)}")
+                print(f"Error processing survey summary: {e!s}")

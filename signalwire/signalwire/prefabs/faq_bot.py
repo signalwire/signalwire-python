@@ -193,11 +193,11 @@ class FAQBotAgent(AgentBase):
             {
                 "faq_count": len(self.faqs),
                 "categories": list(
-                    set(
+                    {
                         category
                         for faq in self.faqs
                         for category in faq.get("categories", [])
-                    )
+                    }
                 ),
             }
         )
@@ -267,8 +267,7 @@ class FAQBotAgent(AgentBase):
                 result_text += f"{i}. {result['question']}\n"
 
             return FunctionResult(result_text)
-        else:
-            return FunctionResult("No matching FAQs found.")
+        return FunctionResult("No matching FAQs found.")
 
     def on_summary(self, summary, raw_data=None):
         """
@@ -288,4 +287,4 @@ class FAQBotAgent(AgentBase):
 
                 # Subclasses can override this to log or save the interaction
             except Exception as e:
-                print(f"Error processing summary: {str(e)}")
+                print(f"Error processing summary: {e!s}")

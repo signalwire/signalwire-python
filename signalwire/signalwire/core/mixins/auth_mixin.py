@@ -115,13 +115,11 @@ class AuthMixin(_HostTyped):
         if not auth_header:
             # Only trust REMOTE_USER if explicitly configured
             remote_user = os.getenv("REMOTE_USER")
-            if remote_user and os.getenv("SWML_TRUST_REMOTE_USER", "").lower() in (
-                "1",
-                "true",
-                "yes",
-            ):
-                return True
-            return False
+            return bool(
+                remote_user
+                and os.getenv("SWML_TRUST_REMOTE_USER", "").lower()
+                in ("1", "true", "yes")
+            )
 
         if not auth_header.startswith("Basic "):
             return False

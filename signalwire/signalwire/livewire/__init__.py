@@ -82,7 +82,7 @@ TIPS = [
 
 def _print_tip():
     """Print a random 'Did you know?' tip to stderr."""
-    tip = random.choice(TIPS)
+    tip = random.choice(TIPS)  # noqa: S311  # not cryptographic: picks a cosmetic "Did you know?" CLI tip to print
     sys.stderr.write(f"\n\U0001f4a1 Did you know?  {tip}\n\n")
 
 
@@ -206,12 +206,13 @@ def function_tool(
         if required:
             schema["required"] = required
 
-        # Attach metadata to the function (dynamic attrs; setattr for mypy)
-        setattr(fn, "_livewire_tool", True)
-        setattr(fn, "_tool_name", tool_name)
-        setattr(fn, "_tool_description", tool_desc)
-        setattr(fn, "_tool_parameters", schema)
-        setattr(fn, "_tool_handler", fn)
+        # Attach metadata to the function object. These are dynamic attrs on a
+        # Callable, so each assignment carries an attr-defined ignore.
+        fn._livewire_tool = True  # type: ignore[attr-defined]
+        fn._tool_name = tool_name  # type: ignore[attr-defined]
+        fn._tool_description = tool_desc  # type: ignore[attr-defined]
+        fn._tool_parameters = schema  # type: ignore[attr-defined]
+        fn._tool_handler = fn  # type: ignore[attr-defined]
         return fn
 
     if func is not None:
@@ -598,9 +599,9 @@ class AgentSession:
 
 def _register_function_tool(sw_agent, fn):
     """Register a @function_tool-decorated function on a SignalWire AgentBase."""
-    tool_name = getattr(fn, "_tool_name")
-    tool_desc = getattr(fn, "_tool_description")
-    tool_params = getattr(fn, "_tool_parameters")
+    tool_name = fn._tool_name
+    tool_desc = fn._tool_description
+    tool_params = fn._tool_parameters
 
     # Build a handler compatible with define_tool expectations
     def handler(args, raw_data=None):
@@ -850,7 +851,7 @@ cli_ns = _CLINamespace()
 # __all__
 # ---------------------------------------------------------------------------
 
-__all__ = [
+__all__ = [  # noqa: RUF022  # deliberately grouped by category (Core types / Exceptions / etc.) with section comments for readability, not alphabetized
     # Core types
     "Agent",
     "AgentSession",

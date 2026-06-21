@@ -514,8 +514,7 @@ class FunctionResult:
         """
         if wait:
             return self.add_action("playback_bg", {"file": filename, "wait": True})
-        else:
-            return self.add_action("playback_bg", filename)
+        return self.add_action("playback_bg", filename)
 
     def stop_background_file(self) -> "FunctionResult":
         """
@@ -726,18 +725,17 @@ class FunctionResult:
         if system_prompt and not user_prompt and not consolidate and not full_reset:
             # Simple string context switch
             return self.add_action("context_switch", system_prompt)
-        else:
-            # Advanced object context switch
-            context_data: Dict[str, Any] = {}
-            if system_prompt:
-                context_data["system_prompt"] = system_prompt
-            if user_prompt:
-                context_data["user_prompt"] = user_prompt
-            if consolidate:
-                context_data["consolidate"] = True
-            if full_reset:
-                context_data["full_reset"] = True
-            return self.add_action("context_switch", context_data)
+        # Advanced object context switch
+        context_data: Dict[str, Any] = {}
+        if system_prompt:
+            context_data["system_prompt"] = system_prompt
+        if user_prompt:
+            context_data["user_prompt"] = user_prompt
+        if consolidate:
+            context_data["consolidate"] = True
+        if full_reset:
+            context_data["full_reset"] = True
+        return self.add_action("context_switch", context_data)
 
     def simulate_user_input(self, text: str) -> "FunctionResult":
         """
@@ -820,7 +818,7 @@ class FunctionResult:
         security_code: bool = True,
         postal_code: Union[bool, str] = True,
         min_postal_code_length: int = 0,
-        token_type: str = "reusable",
+        token_type: str = "reusable",  # noqa: S107  # false positive: SWML pay-verb field name, the value "reusable" is a mode, not a secret
         charge_amount: Optional[str] = None,
         currency: str = "usd",
         language: str = "en-US",
@@ -1307,12 +1305,8 @@ class FunctionResult:
         Returns:
             self for method chaining
         """
-        # Build the stop_tap parameters
-        if control_id:
-            stop_params = {"control_id": control_id}
-        else:
-            # For simple case with no control_id, use empty object
-            stop_params = {}
+        # Build the stop_tap parameters (empty object when no control_id)
+        stop_params = {"control_id": control_id} if control_id else {}
 
         # Generate SWML document
         swml_doc = {

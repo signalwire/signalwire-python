@@ -7,6 +7,7 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
+import contextlib
 import os
 import json
 import re
@@ -49,56 +50,48 @@ class ServerlessMixin(_HostTyped):
                 path_info = os.getenv("PATH_INFO", "").strip("/")
                 if not path_info:
                     return self._render_swml()
-                else:
-                    # Parse CGI request for SWAIG function call
-                    args = {}
-                    call_id = None
-                    raw_data = None
+                # Parse CGI request for SWAIG function call
+                args = {}
+                call_id = None
+                raw_data = None
 
-                    # Try to parse POST data from stdin for CGI
-                    import sys
+                # Try to parse POST data from stdin for CGI
+                import sys
 
-                    content_length = os.getenv("CONTENT_LENGTH")
-                    if content_length and content_length.isdigit():
-                        if int(content_length) > MAX_CGI_BODY_SIZE:
-                            return {
-                                "error": "Request body too large",
-                                "max_size": MAX_CGI_BODY_SIZE,
-                            }
-                        try:
-                            post_data = sys.stdin.read(int(content_length))
-                            if post_data:
-                                raw_data = json.loads(post_data)
-                                call_id = raw_data.get("call_id")
+                content_length = os.getenv("CONTENT_LENGTH")
+                if content_length and content_length.isdigit():
+                    if int(content_length) > MAX_CGI_BODY_SIZE:
+                        return {
+                            "error": "Request body too large",
+                            "max_size": MAX_CGI_BODY_SIZE,
+                        }
+                    try:
+                        post_data = sys.stdin.read(int(content_length))
+                        if post_data:
+                            raw_data = json.loads(post_data)
+                            call_id = raw_data.get("call_id")
 
-                                # Extract arguments like the FastAPI handler does
-                                if "argument" in raw_data and isinstance(
-                                    raw_data["argument"], dict
+                            # Extract arguments like the FastAPI handler does
+                            if "argument" in raw_data and isinstance(
+                                raw_data["argument"], dict
+                            ):
+                                if (
+                                    "parsed" in raw_data["argument"]
+                                    and isinstance(raw_data["argument"]["parsed"], list)
+                                    and raw_data["argument"]["parsed"]
                                 ):
-                                    if (
-                                        "parsed" in raw_data["argument"]
-                                        and isinstance(
-                                            raw_data["argument"]["parsed"], list
-                                        )
-                                        and raw_data["argument"]["parsed"]
-                                    ):
-                                        args = raw_data["argument"]["parsed"][0]
-                                    elif "raw" in raw_data["argument"]:
-                                        try:
-                                            args = json.loads(
-                                                raw_data["argument"]["raw"]
-                                            )
-                                        except Exception:
-                                            pass
-                        except Exception:
-                            # If parsing fails, continue with empty args
-                            pass
+                                    args = raw_data["argument"]["parsed"][0]
+                                elif "raw" in raw_data["argument"]:
+                                    # Best-effort optional arg parse; args stays empty on failure.
+                                    with contextlib.suppress(Exception):
+                                        args = json.loads(raw_data["argument"]["raw"])
+                    except Exception:  # noqa: S110  # best-effort parse; continue with empty args on failure
+                        # If parsing fails, continue with empty args
+                        pass
 
-                    return self._execute_swaig_function(
-                        path_info, args, call_id, raw_data
-                    )
+                return self._execute_swaig_function(path_info, args, call_id, raw_data)
 
-            elif mode == "lambda":
+            if mode == "lambda":
                 # Check authentication in Lambda mode
                 if not self._check_lambda_auth(event):
                     return self._send_lambda_auth_challenge()
@@ -144,11 +137,10 @@ class ServerlessMixin(_HostTyped):
                                 ):
                                     args = raw_data["argument"]["parsed"][0]
                                 elif "raw" in raw_data["argument"]:
-                                    try:
+                                    # Best-effort optional arg parse; args stays empty on failure.
+                                    with contextlib.suppress(Exception):
                                         args = json.loads(raw_data["argument"]["raw"])
-                                    except Exception:
-                                        pass
-                        except Exception:
+                        except Exception:  # noqa: S110  # best-effort parse; continue with empty args on failure
                             # If parsing fails, continue with empty args
                             pass
 
@@ -169,7 +161,7 @@ class ServerlessMixin(_HostTyped):
                             if isinstance(result, dict)
                             else str(result),
                         }
-                    elif path and path not in ("", "swaig", "swaig/"):
+                    if path and path not in ("", "swaig", "swaig/"):
                         # Path-based function routing (e.g., /say_hello)
                         result = self._execute_swaig_function(
                             path, args, call_id, raw_data
@@ -181,31 +173,29 @@ class ServerlessMixin(_HostTyped):
                             if isinstance(result, dict)
                             else str(result),
                         }
-                    else:
-                        # Root path or /swaig without function - return SWML
-                        swml_response = self._render_swml()
-                        return {
-                            "statusCode": 200,
-                            "headers": {"Content-Type": "application/json"},
-                            "body": swml_response,
-                        }
-                else:
-                    # Handle case when event is None (direct Lambda call with no event)
+                    # Root path or /swaig without function - return SWML
                     swml_response = self._render_swml()
                     return {
                         "statusCode": 200,
                         "headers": {"Content-Type": "application/json"},
                         "body": swml_response,
                     }
+                # Handle case when event is None (direct Lambda call with no event)
+                swml_response = self._render_swml()
+                return {
+                    "statusCode": 200,
+                    "headers": {"Content-Type": "application/json"},
+                    "body": swml_response,
+                }
 
-            elif mode == "google_cloud_function":
+            if mode == "google_cloud_function":
                 # Check authentication in Google Cloud Functions mode
                 if not self._check_google_cloud_function_auth(event):
                     return self._send_google_cloud_function_auth_challenge()
 
                 return self._handle_google_cloud_function_request(event)
 
-            elif mode == "azure_function":
+            if mode == "azure_function":
                 # Check authentication in Azure Functions mode
                 if not self._check_azure_function_auth(event):
                     return self._send_azure_function_auth_challenge()
@@ -224,8 +214,7 @@ class ServerlessMixin(_HostTyped):
                     "headers": {"Content-Type": "application/json"},
                     "body": json.dumps({"error": str(e)}),
                 }
-            else:
-                raise
+            raise
 
     def _execute_swaig_function(
         self,
@@ -372,11 +361,10 @@ class ServerlessMixin(_HostTyped):
                         ):
                             args = raw_data["argument"]["parsed"][0]
                         elif "raw" in raw_data["argument"]:
-                            try:
+                            # Best-effort optional arg parse; args stays empty on failure.
+                            with contextlib.suppress(Exception):
                                 args = json.loads(raw_data["argument"]["raw"])
-                            except Exception:
-                                pass
-                except Exception:
+                except Exception:  # noqa: S110  # best-effort parse; continue with empty args on failure
                     # If parsing fails, continue with empty args
                     pass
 
@@ -399,7 +387,7 @@ class ServerlessMixin(_HostTyped):
                     status=200,
                     headers={"Content-Type": "application/json"},
                 )
-            elif path and path not in ("", "swaig", "swaig/"):
+            if path and path not in ("", "swaig", "swaig/"):
                 # Path-based function routing (e.g., /say_hello)
                 result = self._execute_swaig_function(path, args, call_id, raw_data)
                 return Response(
@@ -409,14 +397,13 @@ class ServerlessMixin(_HostTyped):
                     status=200,
                     headers={"Content-Type": "application/json"},
                 )
-            else:
-                # Root path or /swaig without function - return SWML
-                swml_response = self._render_swml()
-                return Response(
-                    response=swml_response,
-                    status=200,
-                    headers={"Content-Type": "application/json"},
-                )
+            # Root path or /swaig without function - return SWML
+            swml_response = self._render_swml()
+            return Response(
+                response=swml_response,
+                status=200,
+                headers={"Content-Type": "application/json"},
+            )
 
         except Exception as e:
             import logging
@@ -496,11 +483,10 @@ class ServerlessMixin(_HostTyped):
                             ):
                                 args = raw_data["argument"]["parsed"][0]
                             elif "raw" in raw_data["argument"]:
-                                try:
+                                # Best-effort optional arg parse; args stays empty on failure.
+                                with contextlib.suppress(Exception):
                                     args = json.loads(raw_data["argument"]["raw"])
-                                except Exception:
-                                    pass
-                except Exception:
+                except Exception:  # noqa: S110  # best-effort parse; continue with empty args on failure
                     # If parsing fails, continue with empty args
                     pass
 
@@ -521,7 +507,7 @@ class ServerlessMixin(_HostTyped):
                     status_code=200,
                     headers={"Content-Type": "application/json"},
                 )
-            elif path and path not in ("", "api", "swaig", "swaig/"):
+            if path and path not in ("", "api", "swaig", "swaig/"):
                 # Path-based function routing (e.g., /say_hello)
                 result = self._execute_swaig_function(path, args, call_id, raw_data)
                 return func.HttpResponse(
@@ -531,14 +517,13 @@ class ServerlessMixin(_HostTyped):
                     status_code=200,
                     headers={"Content-Type": "application/json"},
                 )
-            else:
-                # Root path or /swaig without function - return SWML
-                swml_response = self._render_swml()
-                return func.HttpResponse(
-                    body=swml_response,
-                    status_code=200,
-                    headers={"Content-Type": "application/json"},
-                )
+            # Root path or /swaig without function - return SWML
+            swml_response = self._render_swml()
+            return func.HttpResponse(
+                body=swml_response,
+                status_code=200,
+                headers={"Content-Type": "application/json"},
+            )
 
         except Exception as e:
             import logging

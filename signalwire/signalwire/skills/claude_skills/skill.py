@@ -11,7 +11,7 @@ import re
 import subprocess
 import fnmatch
 from pathlib import Path
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, ClassVar
 
 import yaml
 
@@ -55,8 +55,8 @@ class ClaudeSkillsSkill(SkillBase):
     SKILL_NAME = "claude_skills"
     SKILL_DESCRIPTION = "Load Claude SKILL.md files as agent tools"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES = ["yaml"]  # PyYAML - import name is 'yaml'
-    REQUIRED_ENV_VARS = []
+    REQUIRED_PACKAGES: ClassVar[List[str]] = ["yaml"]  # PyYAML - import name is 'yaml'
+    REQUIRED_ENV_VARS: ClassVar[List[str]] = []
     SUPPORTS_MULTIPLE_INSTANCES = True
 
     def setup(self) -> bool:
@@ -204,7 +204,7 @@ class ClaudeSkillsSkill(SkillBase):
             relative = md_file.relative_to(skill_dir)
 
             # Build section key: parent_folder/filename_stem for nested, just stem for top-level
-            if relative.parent != Path("."):
+            if relative.parent != Path():
                 # Nested file: include parent path
                 key = str(relative.parent / md_file.stem)
             else:
@@ -266,11 +266,7 @@ class ClaudeSkillsSkill(SkillBase):
                 return False
 
         # Check includes
-        for pattern in self._include_patterns:
-            if fnmatch.fnmatch(name, pattern):
-                return True
-
-        return False
+        return any(fnmatch.fnmatch(name, pattern) for pattern in self._include_patterns)
 
     def _parse_skill_md(self, path: Path) -> Optional[Dict[str, Any]]:
         """
@@ -448,7 +444,7 @@ class ClaudeSkillsSkill(SkillBase):
         def replace_command(match):
             command = match.group(1)
             try:
-                result = subprocess.run(
+                result = subprocess.run(  # noqa: S602  # intentional feature: runs shell snippets authored in skill body files (developer-controlled, like Claude Skills), gated behind opt-in allow_shell_injection (default False) which logs a warning; shell=True is required to support pipes/redirection in authored commands; not reachable from end-user runtime input
                     command,
                     shell=True,
                     capture_output=True,
@@ -483,9 +479,7 @@ class ClaudeSkillsSkill(SkillBase):
         session_id = ""
         if raw_data:
             session_id = raw_data.get("call_id", "")
-        content = content.replace("${CLAUDE_SESSION_ID}", session_id)
-
-        return content
+        return content.replace("${CLAUDE_SESSION_ID}", session_id)
 
     def _substitute_arguments(self, body: str, arguments: str) -> str:
         """
@@ -597,7 +591,7 @@ class ClaudeSkillsSkill(SkillBase):
                         # No section specified or invalid - return SKILL.md body
                         content = s["body"]
 
-                    skill_dir = s.get("skill_dir", Path("."))
+                    skill_dir = s.get("skill_dir", Path())
 
                     # 1. Shell injection (if enabled)
                     if self._allow_shell_injection:

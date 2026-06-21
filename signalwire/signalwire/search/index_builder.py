@@ -7,7 +7,6 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-import os
 import sqlite3
 import json
 import hashlib
@@ -142,7 +141,7 @@ class IndexBuilder:
                         # Merge all found metadata
                         if isinstance(json_metadata, dict):
                             metadata_dict.update(json_metadata)
-                    except Exception:
+                    except Exception:  # noqa: S110, PERF203  # best-effort optional metadata JSON parse; skip malformed matches per-iteration
                         pass
             except Exception as e:
                 logger.debug(f"Error extracting JSON metadata: {e}")
@@ -224,7 +223,7 @@ class IndexBuilder:
                 chunks.extend(file_chunks)
                 if self.verbose or file_path.suffix == ".json":
                     print(f"  {file_path}: {len(file_chunks)} chunks")
-            except Exception as e:
+            except Exception as e:  # noqa: PERF203  # per-iteration error isolation: one failed file must not abort indexing the rest
                 logger.error(f"Error processing {file_path}: {e}")
                 if self.verbose:
                     print(f"Error processing {file_path}: {e}")
@@ -285,7 +284,7 @@ class IndexBuilder:
                         f"  Progress: {i + 1}/{len(chunks)} chunks ({progress_pct:.1f}%)"
                     )
 
-            except Exception as e:
+            except Exception as e:  # noqa: PERF203  # per-iteration error isolation: one failed chunk falls back without aborting the rest
                 logger.error(f"Error processing chunk {i}: {e}")
                 # Use original content as fallback
                 chunk["processed_content"] = chunk["content"]
@@ -391,7 +390,7 @@ class IndexBuilder:
         """
 
         files = []
-        supported_extensions = set(ft.lstrip(".").lower() for ft in file_types)
+        supported_extensions = {ft.lstrip(".").lower() for ft in file_types}
 
         for source in sources:
             if source.is_file():
@@ -457,11 +456,7 @@ class IndexBuilder:
         import fnmatch
 
         file_str = str(file_path)
-        for pattern in exclude_patterns:
-            if fnmatch.fnmatch(file_str, pattern):
-                return True
-
-        return False
+        return any(fnmatch.fnmatch(file_str, pattern) for pattern in exclude_patterns)
 
     def _discover_files(
         self,
@@ -608,8 +603,8 @@ class IndexBuilder:
         """Create SQLite database with all data"""
 
         # Remove existing file
-        if os.path.exists(output_file):
-            os.remove(output_file)
+        if Path(output_file).exists():
+            Path(output_file).unlink()
 
         conn = sqlite3.connect(output_file)
         cursor = conn.cursor()
@@ -677,7 +672,7 @@ class IndexBuilder:
                             chunks[0]["embedding"], dtype=np.float32
                         )
                         embedding_dimensions = len(embedding_array)
-                except Exception:
+                except Exception:  # noqa: S110  # best-effort embedding-dimension probe; left unset if the sample row can't be decoded
                     pass
 
             config_data = {
@@ -780,7 +775,7 @@ class IndexBuilder:
 
     def validate_index(self, index_file: str) -> Dict[str, Any]:
         """Validate an existing search index"""
-        if not os.path.exists(index_file):
+        if not Path(index_file).exists():
             return {"valid": False, "error": "Index file does not exist"}
 
         try:

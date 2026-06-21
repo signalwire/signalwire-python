@@ -175,7 +175,7 @@ class Section:
             if self.title is not None or section_number:
                 # If any subsection is numbered, number all siblings unless explicitly false
                 if any_subsection_numbered and subsection.numbered is not False:
-                    new_section_number = section_number + [i]
+                    new_section_number = [*section_number, i]
                 else:
                     new_section_number = section_number
                 next_level = level + 1
@@ -246,7 +246,7 @@ class Section:
                 if self.title is not None or section_number:
                     # If any subsection is numbered, number all siblings unless explicitly false
                     if any_subsection_numbered and subsection.numbered is not False:
-                        new_section_number = section_number + [i]
+                        new_section_number = [*section_number, i]
                     else:
                         new_section_number = section_number
                 else:
@@ -291,10 +291,7 @@ class PromptObjectModel:
         Raises:
             ValueError: If the JSON is not properly formatted
         """
-        if isinstance(json_data, str):
-            data = json.loads(json_data)
-        else:
-            data = json_data
+        data = json.loads(json_data) if isinstance(json_data, str) else json_data
 
         return PromptObjectModel._from_dict(data)
 
@@ -312,10 +309,7 @@ class PromptObjectModel:
         Raises:
             ValueError: If the YAML is not properly formatted
         """
-        if isinstance(yaml_data, str):
-            data = yaml.safe_load(yaml_data)
-        else:
-            data = yaml_data
+        data = yaml.safe_load(yaml_data) if isinstance(yaml_data, str) else yaml_data
 
         return PromptObjectModel._from_dict(data)
 
@@ -377,7 +371,7 @@ class PromptObjectModel:
             section = Section(**kwargs)
 
             # Process subsections
-            for i, sub in enumerate(d.get("subsections", [])):
+            for _i, sub in enumerate(d.get("subsections", [])):
                 section.subsections.append(build_section(sub, is_subsection=True))
 
             return section
@@ -426,10 +420,7 @@ class PromptObjectModel:
             raise ValueError("Only the first section can have no title")
 
         # Convert bullets to a list if it's a string
-        if isinstance(bullets, str):
-            bullets_list = [bullets]
-        else:
-            bullets_list = bullets or []
+        bullets_list = [bullets] if isinstance(bullets, str) else bullets or []
 
         # Create the section (validation will happen when content is added)
         section = Section(
@@ -552,7 +543,7 @@ class PromptObjectModel:
         any_section_numbered = any(section.numbered for section in self.sections)
 
         section_counter = 0
-        for i, section in enumerate(self.sections, 1):
+        for _i, section in enumerate(self.sections, 1):
             # Only increment the section counter for sections with titles
             if section.title is not None:
                 section_counter += 1

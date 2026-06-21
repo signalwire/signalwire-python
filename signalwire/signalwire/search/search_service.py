@@ -110,7 +110,7 @@ def _cache_key(
         "tags": sorted(tags) if tags else [],
     }
     key_str = json.dumps(key_data, sort_keys=True)
-    return hashlib.md5(key_str.encode()).hexdigest()
+    return hashlib.md5(key_str.encode(), usedforsecurity=False).hexdigest()
 
 
 class SearchService:
@@ -274,7 +274,7 @@ class SearchService:
             request: SearchRequest,
             credentials: Optional[HTTPBasicCredentials] = None
             if not security
-            else Depends(security),
+            else Depends(security),  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom
         ):
             if security:
                 self._get_current_username(credentials)
@@ -299,7 +299,7 @@ class SearchService:
             index_path: str,
             credentials: Optional[HTTPBasicCredentials] = None
             if not security
-            else Depends(security),
+            else Depends(security),  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom
         ):
             """Reload or add new index/collection"""
             if security:
@@ -313,9 +313,9 @@ class SearchService:
                     status_code=400, detail="Index path must end with .swsearch"
                 )
             if self.backend != "pgvector":
-                import os
+                from pathlib import Path
 
-                if not os.path.exists(index_path):
+                if not Path(index_path).exists():
                     raise HTTPException(status_code=400, detail="Index file not found")
 
             if self.backend == "pgvector":
@@ -336,7 +336,7 @@ class SearchService:
                     raise HTTPException(
                         status_code=500,
                         detail=f"Failed to load pgvector collection: {e}",
-                    )
+                    ) from e
             else:
                 # SQLite backend
                 self.indexes[index_name] = index_path
@@ -356,7 +356,7 @@ class SearchService:
             self.collection_models: Dict[str, Any] = {}  # collection_name -> model_name
 
             # Load search engines for each collection and their models
-            for collection_name in self.indexes.keys():
+            for collection_name in self.indexes:
                 try:
                     search_engine = SearchEngine(
                         backend="pgvector",
@@ -394,7 +394,7 @@ class SearchService:
                         )
 
                     logger.info(f"Loaded pgvector collection: {collection_name}")
-                except Exception as e:
+                except Exception as e:  # noqa: PERF203  # per-iteration error isolation: one collection's load failure must not abort loading the rest
                     logger.error(
                         f"Error loading pgvector collection {collection_name}: {e}"
                     )
@@ -419,7 +419,7 @@ class SearchService:
                     self.search_engines[index_name] = SearchEngine(
                         backend="sqlite", index_path=index_path, model=self.model
                     )
-                except Exception as e:
+                except Exception as e:  # noqa: PERF203  # per-iteration error isolation: one index's engine load failure must not abort loading the rest
                     logger.error(f"Error loading search engine for {index_name}: {e}")
 
     def _get_model_name(self, index_path: str) -> str:
@@ -428,22 +428,19 @@ class SearchService:
             # For pgvector, we might want to store model info in the database
             # For now, return default model
             return "sentence-transformers/all-mpnet-base-v2"
-        else:
-            # SQLite backend
-            try:
-                import sqlite3
+        # SQLite backend
+        try:
+            import sqlite3
 
-                conn = sqlite3.connect(index_path)
-                cursor = conn.cursor()
-                cursor.execute("SELECT value FROM config WHERE key = 'embedding_model'")
-                result = cursor.fetchone()
-                conn.close()
-                return (
-                    result[0] if result else "sentence-transformers/all-mpnet-base-v2"
-                )
-            except Exception as e:
-                logger.warning(f"Could not get model name from index: {e}")
-                return "sentence-transformers/all-mpnet-base-v2"
+            conn = sqlite3.connect(index_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM config WHERE key = 'embedding_model'")
+            result = cursor.fetchone()
+            conn.close()
+            return result[0] if result else "sentence-transformers/all-mpnet-base-v2"
+        except Exception as e:
+            logger.warning(f"Could not get model name from index: {e}")
+            return "sentence-transformers/all-mpnet-base-v2"
 
     async def _handle_search(self, request: SearchRequest) -> SearchResponse:
         """Handle search request with caching"""
@@ -452,8 +449,7 @@ class SearchService:
                 raise HTTPException(
                     status_code=404, detail=f"Index '{request.index_name}' not found"
                 )
-            else:
-                raise ValueError(f"Index '{request.index_name}' not found")
+            raise ValueError(f"Index '{request.index_name}' not found")
 
         # Check cache first
         cache_key = _cache_key(
@@ -583,7 +579,7 @@ class SearchService:
 
     def start(
         self,
-        host: str = "0.0.0.0",
+        host: str = "0.0.0.0",  # noqa: S104  # intended server default: listen on all interfaces (overridable)
         port: Optional[int] = None,
         ssl_cert: Optional[str] = None,
         ssl_key: Optional[str] = None,
@@ -616,7 +612,7 @@ class SearchService:
         startup_url = f"{scheme}://{host}:{port}"
 
         # Get auth credentials
-        username, password = self._basic_auth
+        username, _password = self._basic_auth
 
         # Log startup information
         logger.info(
@@ -641,7 +637,9 @@ class SearchService:
 
             uvicorn.run(self.app, host=host, port=port, **ssl_kwargs)
         except ImportError:
-            raise RuntimeError("uvicorn not available. Cannot start HTTP service.")
+            raise RuntimeError(
+                "uvicorn not available. Cannot start HTTP service."
+            ) from None
 
     def stop(self):
         """Stop the service (placeholder for cleanup)"""

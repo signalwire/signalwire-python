@@ -11,7 +11,7 @@ Spider skill for fast web scraping with SignalWire AI Agents.
 
 import re
 import collections
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional, List, ClassVar
 from urllib.parse import urljoin, urlparse
 import requests
 from lxml import html
@@ -27,8 +27,10 @@ class SpiderSkill(SkillBase):
     SKILL_NAME = "spider"
     SKILL_DESCRIPTION = "Fast web scraping and crawling capabilities"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES = ["lxml"]  # beautifulsoup4 and requests are in base dependencies
-    REQUIRED_ENV_VARS = []  # No required env vars by default
+    REQUIRED_PACKAGES: ClassVar[List[str]] = [
+        "lxml"
+    ]  # beautifulsoup4 and requests are in base dependencies
+    REQUIRED_ENV_VARS: ClassVar[List[str]] = []  # No required env vars by default
     SUPPORTS_MULTIPLE_INSTANCES = True
 
     # Compiled regex for performance
@@ -225,7 +227,7 @@ class SpiderSkill(SkillBase):
         for pattern in follow_patterns:
             try:
                 self._compiled_follow_patterns.append(re.compile(pattern))
-            except re.error as e:
+            except re.error as e:  # noqa: PERF203  # per-iteration error isolation: one invalid pattern must not abort compiling the rest
                 self.logger.error(f"Invalid follow pattern '{pattern}': {e}")
 
         self.logger.info(
@@ -421,7 +423,7 @@ class SpiderSkill(SkillBase):
                                 result["data"][field] = [
                                     v.text_content().strip() for v in values
                                 ]
-                    except (XPathEvalError, Exception) as e:
+                    except (XPathEvalError, Exception) as e:  # noqa: PERF203  # per-iteration error isolation: one bad selector must not abort extracting the other fields
                         self.logger.warning(f"Error with selector {selector}: {e}")
                         result["data"][field] = None
 
@@ -466,7 +468,7 @@ class SpiderSkill(SkillBase):
                 selectors = self.params.get("selectors", {})
                 result = self._structured_extract(response, selectors)
                 return FunctionResult(f"Extracted structured data from {url}: {result}")
-            elif extract_type == "markdown":
+            if extract_type == "markdown":
                 content = self._markdown_extract(response)
             else:  # fast_text (default)
                 content = self._fast_text_extract(response)
@@ -482,7 +484,7 @@ class SpiderSkill(SkillBase):
 
         except Exception as e:
             self.logger.error(f"Error processing {url}: {e}")
-            return FunctionResult(f"Error processing {url}: {str(e)}")
+            return FunctionResult(f"Error processing {url}: {e!s}")
 
     def _crawl_site_handler(
         self, args: Dict[str, Any], raw_data: Dict[str, Any]
@@ -561,17 +563,17 @@ class SpiderSkill(SkillBase):
                         absolute_url = urljoin(url, link)
 
                         # Check if we should follow this link
-                        if follow_patterns:
-                            if not any(
-                                pattern.search(absolute_url)
-                                for pattern in follow_patterns
-                            ):
-                                continue
+                        if follow_patterns and not any(
+                            pattern.search(absolute_url) for pattern in follow_patterns
+                        ):
+                            continue
 
                         # Only follow same domain by default
-                        if urlparse(absolute_url).netloc == urlparse(start_url).netloc:
-                            if absolute_url not in visited:
-                                to_visit.append((absolute_url, depth + 1))
+                        if (
+                            urlparse(absolute_url).netloc == urlparse(start_url).netloc
+                            and absolute_url not in visited
+                        ):
+                            to_visit.append((absolute_url, depth + 1))
 
                 except Exception as e:
                     self.logger.warning(f"Error extracting links from {url}: {e}")

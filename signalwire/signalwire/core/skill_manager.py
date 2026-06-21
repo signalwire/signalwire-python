@@ -56,7 +56,7 @@ class SkillManager:
 
         # Validate that the skill has a proper parameter schema
         if not hasattr(skill_class, "get_parameter_schema") or not callable(
-            getattr(skill_class, "get_parameter_schema")
+            skill_class.get_parameter_schema
         ):
             error_msg = (
                 f"Skill '{skill_name}' must have get_parameter_schema() classmethod"
@@ -126,12 +126,11 @@ class SkillManager:
                     error_msg = f"Skill '{skill_name}' is already loaded and does not support multiple instances"
                     self.logger.error(error_msg)
                     return False, error_msg
-                else:
-                    # For multi-instance skills, just warn and return success
-                    self.logger.warning(
-                        f"Skill instance '{instance_key}' is already loaded"
-                    )
-                    return True, ""
+                # For multi-instance skills, just warn and return success
+                self.logger.warning(
+                    f"Skill instance '{instance_key}' is already loaded"
+                )
+                return True, ""
 
             # Validate environment variables with specific error details
             import os
@@ -153,7 +152,7 @@ class SkillManager:
             for package in skill_instance.REQUIRED_PACKAGES:
                 try:
                     importlib.import_module(package)
-                except ImportError:
+                except ImportError:  # noqa: PERF203  # per-iteration error isolation: must check every package to report all missing ones
                     missing_packages.append(package)
             if missing_packages:
                 error_msg = f"Missing required packages: {missing_packages}"
@@ -196,10 +195,9 @@ class SkillManager:
                 debug_msg = f"Skill '{skill_name}' already loaded, skipping duplicate registration"
                 self.logger.debug(debug_msg)
                 return True, ""  # Not an error, skill is already available
-            else:
-                error_msg = f"Error loading skill '{skill_name}': {e}"
-                self.logger.error(error_msg)
-                return False, error_msg
+            error_msg = f"Error loading skill '{skill_name}': {e}"
+            self.logger.error(error_msg)
+            return False, error_msg
         except Exception as e:
             error_msg = f"Error loading skill '{skill_name}': {e}"
             self.logger.error(error_msg)
@@ -252,10 +250,7 @@ class SkillManager:
             bool: True if loaded, False otherwise
         """
         # First try as direct instance key
-        if skill_identifier in self.loaded_skills:
-            return True
-
-        return False
+        return skill_identifier in self.loaded_skills
 
     def get_skill(self, skill_identifier: str) -> Optional[SkillBase]:
         """

@@ -60,26 +60,25 @@ def handle_dump_swml(agent: "AgentBase", args: argparse.Namespace) -> int:
     Returns:
         Exit code (0 for success, 1 for error)
     """
-    if not args.raw:
-        if args.verbose:
-            print(f"Agent: {agent.get_name()}")
-            print(f"Route: {agent.route}")
+    if not args.raw and args.verbose:
+        print(f"Agent: {agent.get_name()}")
+        print(f"Route: {agent.route}")
 
-            # Show loaded skills
-            skills = agent.list_skills()
-            if skills:
-                print(f"Skills: {', '.join(skills)}")
+        # Show loaded skills
+        skills = agent.list_skills()
+        if skills:
+            print(f"Skills: {', '.join(skills)}")
 
-            # Show available functions
-            functions = (
-                agent._tool_registry.get_all_functions()
-                if hasattr(agent, "_tool_registry")
-                else {}
-            )
-            if functions:
-                print(f"Functions: {', '.join(functions.keys())}")
+        # Show available functions
+        functions = (
+            agent._tool_registry.get_all_functions()
+            if hasattr(agent, "_tool_registry")
+            else {}
+        )
+        if functions:
+            print(f"Functions: {', '.join(functions.keys())}")
 
-            print("-" * 60)
+        print("-" * 60)
 
     try:
         # Generate fake SWML post_data

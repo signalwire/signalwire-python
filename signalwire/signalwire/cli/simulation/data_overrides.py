@@ -51,17 +51,16 @@ def parse_value(value_str: str) -> Any:
     # Handle special values
     if value_str.lower() == "null":
         return None
-    elif value_str.lower() == "true":
+    if value_str.lower() == "true":
         return True
-    elif value_str.lower() == "false":
+    if value_str.lower() == "false":
         return False
 
     # Try parsing as number
     try:
         if "." in value_str:
             return float(value_str)
-        else:
-            return int(value_str)
+        return int(value_str)
     except ValueError:
         pass
 

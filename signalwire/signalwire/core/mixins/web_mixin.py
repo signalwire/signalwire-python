@@ -139,6 +139,7 @@ class WebMixin(_HostTyped):
                 relative_path = full_path[len(self.route.lstrip("/")) :]
                 relative_path = relative_path.lstrip("/")
                 self.log.debug("relative_path_extracted", path=relative_path)
+                return None
 
             # Log all app routes for debugging
             self.log.debug("app_routes_registered")
@@ -255,18 +256,18 @@ class WebMixin(_HostTyped):
                 # Check for standard endpoints
                 if clean_path == "debug":
                     return await self._handle_debug_request(request)
-                elif clean_path == "swaig":
+                if clean_path == "swaig":
                     return await self._handle_swaig_request(request, Response())
-                elif clean_path == "post_prompt":
+                if clean_path == "post_prompt":
                     return await self._handle_post_prompt_request(request)
-                elif clean_path == "check_for_input":
+                if clean_path == "check_for_input":
                     return await self._handle_check_for_input_request(request)
-                elif clean_path == "debug_events":
+                if clean_path == "debug_events":
                     return await self._handle_debug_events_request(request)
 
                 # Check for custom routing callbacks
                 if hasattr(self, "_routing_callbacks"):
-                    for callback_path, callback_fn in self._routing_callbacks.items():
+                    for callback_path in self._routing_callbacks:
                         cb_path_clean = callback_path.strip("/")
                         if clean_path == cb_path_clean:
                             # Found a matching callback
@@ -364,14 +365,12 @@ class WebMixin(_HostTyped):
                 response = self.handle_serverless_request(event, context, mode)
                 print(response)
                 return response
-            elif mode == "azure_function":
-                response = self.handle_serverless_request(event, context, mode)
-                return response
-            elif mode in ["lambda", "google_cloud_function"]:
+            if mode == "azure_function":
                 return self.handle_serverless_request(event, context, mode)
-            else:
-                # Server mode - use existing serve method
-                self.serve(host, port)
+            if mode in ["lambda", "google_cloud_function"]:
+                return self.handle_serverless_request(event, context, mode)
+            # Server mode - use existing serve method
+            self.serve(host, port)
         except Exception as e:
             import logging
 
@@ -382,8 +381,7 @@ class WebMixin(_HostTyped):
                     "headers": {"Content-Type": "application/json"},
                     "body": json.dumps({"error": str(e)}),
                 }
-            else:
-                raise
+            raise
 
     def _register_routes(self, router):
         """
@@ -494,14 +492,14 @@ class WebMixin(_HostTyped):
                             "id": None,
                             "error": {
                                 "code": -32700,
-                                "message": f"Parse error: {str(e)}",
+                                "message": f"Parse error: {e!s}",
                             },
                         }
                     )
 
         # Register callback routes for routing callbacks if available
         if hasattr(self, "_routing_callbacks") and self._routing_callbacks:
-            for callback_path, callback_fn in self._routing_callbacks.items():
+            for callback_path in self._routing_callbacks:
                 # Skip the root path as it's already handled
                 if callback_path == "/":
                     continue
@@ -876,7 +874,7 @@ class WebMixin(_HostTyped):
                         if call_id is None:
                             call_id = body_data.get("call_id")
                         # Save body_data for later use
-                        setattr(request, "_post_prompt_body", body_data)
+                        request._post_prompt_body = body_data  # type: ignore[attr-defined]  # stashing parsed body on the request object for later reuse
                 except Exception as e:
                     req_log.error("error_extracting_call_id", error=str(e))
 
@@ -923,7 +921,7 @@ class WebMixin(_HostTyped):
             try:
                 # Try to reuse the body we already parsed for call_id extraction
                 if hasattr(request, "_post_prompt_body"):
-                    body = getattr(request, "_post_prompt_body")
+                    body = request._post_prompt_body
                 else:
                     body = await request.json()
 
@@ -1074,7 +1072,7 @@ class WebMixin(_HostTyped):
         except Exception as e:
             req_log.error("request_failed", error=str(e))
             return Response(
-                content=json.dumps({"error": f"unexpected error: {str(e)}"}),
+                content=json.dumps({"error": f"unexpected error: {e!s}"}),
                 status_code=500,
                 media_type="application/json",
             )
@@ -1175,9 +1173,7 @@ class WebMixin(_HostTyped):
             None to use the default SWML rendering (which will call _render_swml)
         """
         # Call on_swml_request for customization
-        if hasattr(self, "on_swml_request") and callable(
-            getattr(self, "on_swml_request")
-        ):
+        if hasattr(self, "on_swml_request") and callable(self.on_swml_request):
             return self.on_swml_request(request_data, callback_path, None)
 
         # If no on_swml_request or it returned None, we'll proceed with default rendering

@@ -189,10 +189,7 @@ class DataMap:
         Returns:
             Self for method chaining
         """
-        if isinstance(pattern, Pattern):
-            pattern_str = pattern.pattern
-        else:
-            pattern_str = str(pattern)
+        pattern_str = pattern.pattern if isinstance(pattern, Pattern) else str(pattern)
 
         expr_def = {
             "string": test_value,
@@ -434,14 +431,12 @@ class DataMap:
             data_map["error_keys"] = self._error_keys
 
         # Build final function definition with correct field names
-        function_def = {
+        return {
             "function": self.function_name,
             "description": self._purpose or f"Execute {self.function_name}",
             "parameters": param_schema,
             "data_map": data_map,
         }
-
-        return function_def
 
 
 def create_simple_api_tool(

@@ -334,7 +334,7 @@ class InfoGathererAgent(AgentBase):
 
         # Store the answer
         new_answer = {"key_name": key_name, "answer": answer}
-        new_answers = answers + [new_answer]
+        new_answers = [*answers, new_answer]
 
         # Increment question index
         new_question_index = question_index + 1
@@ -371,16 +371,15 @@ class InfoGathererAgent(AgentBase):
             )
 
             return result
-        else:
-            # No more questions - create response with global data update and completion message
-            result = FunctionResult(
-                "Thank you! All questions have been answered. You can now summarize the information collected or ask if there's anything else the user would like to discuss."
-            )
-            result.replace_in_history()
+        # No more questions - create response with global data update and completion message
+        result = FunctionResult(
+            "Thank you! All questions have been answered. You can now summarize the information collected or ask if there's anything else the user would like to discuss."
+        )
+        result.replace_in_history()
 
-            # Use the helper method to update global data
-            result.update_global_data(
-                {"answers": new_answers, "question_index": new_question_index}
-            )
+        # Use the helper method to update global data
+        result.update_global_data(
+            {"answers": new_answers, "question_index": new_question_index}
+        )
 
-            return result
+        return result

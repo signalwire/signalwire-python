@@ -14,6 +14,7 @@ Uses jsonschema-rs for full JSON Schema validation with type checking.
 
 import os
 import json
+from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 
 import jsonschema_rs
@@ -135,29 +136,39 @@ class SchemaUtils:
         # Fall back to manual search in various locations
         import sys
 
-        # Get package directory relative to this file
-        package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # Get package directory relative to this file.
+        # Rationale for the PTH100/PTH109/PTH118/PTH120/PTH110 suppressions
+        # below: the unit tests patch the global os.getcwd / os.path.exists
+        # seams and assert on exact os.path.join string output; pathlib
+        # equivalents would bypass the mocks and change the asserted strings,
+        # so this block stays on os.path.
+        package_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # noqa: PTH100, PTH120
 
         # Potential locations for schema.json
         potential_paths = [
-            os.path.join(os.getcwd(), "schema.json"),  # Current working directory
-            os.path.join(package_dir, "schema.json"),  # Package directory
-            os.path.join(
-                os.path.dirname(package_dir), "schema.json"
+            os.path.join(os.getcwd(), "schema.json"),  # noqa: PTH109, PTH118  # Current working directory
+            os.path.join(package_dir, "schema.json"),  # noqa: PTH118  # Package directory
+            os.path.join(  # noqa: PTH118
+                os.path.dirname(package_dir),  # noqa: PTH120
+                "schema.json",
             ),  # Parent of package directory
-            os.path.join(sys.prefix, "schema.json"),  # Python installation directory
-            os.path.join(package_dir, "data", "schema.json"),  # Data subdirectory
-            os.path.join(
-                os.path.dirname(package_dir), "data", "schema.json"
+            os.path.join(sys.prefix, "schema.json"),  # noqa: PTH118  # Python installation directory
+            os.path.join(package_dir, "data", "schema.json"),  # noqa: PTH118  # Data subdirectory
+            os.path.join(  # noqa: PTH118
+                os.path.dirname(package_dir),  # noqa: PTH120
+                "data",
+                "schema.json",
             ),  # Parent's data subdirectory
         ]
 
         # Try to find the schema file
         for path in potential_paths:
             self.log.debug(
-                "checking_schema_path", path=path, exists=os.path.exists(path)
+                "checking_schema_path",
+                path=path,
+                exists=os.path.exists(path),  # noqa: PTH110
             )
-            if os.path.exists(path):
+            if os.path.exists(path):  # noqa: PTH110
                 self.log.debug("schema_found_at", path=path)
                 return path
 
@@ -179,14 +190,14 @@ class SchemaUtils:
             self.log.debug(
                 "loading_schema",
                 path=self.schema_path,
-                exists=os.path.exists(self.schema_path),
+                exists=Path(self.schema_path).exists(),
             )
 
-            if os.path.exists(self.schema_path):
+            if Path(self.schema_path).exists():
                 # encoding="utf-8" is required for Windows where the default
                 # locale encoding (cp1252) breaks on non-ASCII chars in the
                 # schema file.
-                with open(self.schema_path, "r", encoding="utf-8") as f:
+                with Path(self.schema_path).open("r", encoding="utf-8") as f:
                     schema = json.load(f)
                 self.log.debug(
                     "schema_loaded_successfully",
@@ -198,9 +209,8 @@ class SchemaUtils:
                         "schema_definitions_found", count=len(schema["$defs"])
                     )
                 return schema
-            else:
-                self.log.error("schema_file_not_found", path=self.schema_path)
-                return {}
+            self.log.error("schema_file_not_found", path=self.schema_path)
+            return {}
         except (FileNotFoundError, json.JSONDecodeError) as e:
             self.log.error("schema_loading_error", error=str(e), path=self.schema_path)
             return {}
@@ -385,11 +395,11 @@ class SchemaUtils:
         required_props = self.get_verb_required_properties(verb_name)
 
         # Check if all required properties are present
-        for prop in required_props:
-            if prop not in verb_config:
-                errors.append(
-                    f"Missing required property '{prop}' for verb '{verb_name}'"
-                )
+        errors = [
+            f"Missing required property '{prop}' for verb '{verb_name}'"
+            for prop in required_props
+            if prop not in verb_config
+        ]
 
         return len(errors) == 0, errors
 
@@ -491,11 +501,7 @@ class SchemaUtils:
         docstring += '        \n        Returns:\n            True if the verb was added successfully, False otherwise\n        """\n'
 
         # Create the full method signature with docstring
-        method_signature = (
-            f"def {verb_name}({', '.join(param_list)}) -> bool:\n{docstring}"
-        )
-
-        return method_signature
+        return f"def {verb_name}({', '.join(param_list)}) -> bool:\n{docstring}"
 
     def generate_method_body(self, verb_name: str) -> str:
         """
@@ -515,7 +521,7 @@ class SchemaUtils:
         body.append("        config = {}")
 
         # Add handling for each parameter
-        for param_name in verb_params.keys():
+        for param_name in verb_params:
             body.append(f"        if {param_name} is not None:")
             body.append(f"            config['{param_name}'] = {param_name}")
 
@@ -546,24 +552,23 @@ class SchemaUtils:
 
         if schema_type == "string":
             return "str"
-        elif schema_type == "integer":
+        if schema_type == "integer":
             return "int"
-        elif schema_type == "number":
+        if schema_type == "number":
             return "float"
-        elif schema_type == "boolean":
+        if schema_type == "boolean":
             return "bool"
-        elif schema_type == "array":
+        if schema_type == "array":
             item_type = "Any"
             if "items" in param_def:
                 item_def = param_def["items"]
                 item_type = self._get_type_annotation(item_def)
             return f"List[{item_type}]"
-        elif schema_type == "object":
+        if schema_type == "object":
             return "Dict[str, Any]"
-        else:
-            # Handle complex types or oneOf/anyOf
-            if "anyOf" in param_def or "oneOf" in param_def:
-                return "Any"
-            if "$ref" in param_def:
-                return "Any"  # Could be enhanced to resolve references
+        # Handle complex types or oneOf/anyOf
+        if "anyOf" in param_def or "oneOf" in param_def:
             return "Any"
+        if "$ref" in param_def:
+            return "Any"  # Could be enhanced to resolve references
+        return "Any"

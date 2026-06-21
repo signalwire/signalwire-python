@@ -166,6 +166,40 @@ signalwire = [
 target-version = "py310"
 line-length = 88
 
+[tool.ruff.lint]
+# E4/E7/E9 + F are the ruff defaults (E501 line-length intentionally excluded —
+# formatting is owned by `ruff format`, not the linter). B = flake8-bugbear
+# (likely-bug patterns), S = flake8-bandit (security smells).
+select = ["E4", "E7", "E9", "F", "B", "S", "C4", "PERF", "SIM", "PTH", "RET", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# Tests are built on assert; bandit's S101 is noise there.
+"tests/**" = ["S101"]
+# sw-agent-dokku is a developer-run deploy CLI that shells out to git/ssh with
+# fixed list-form arg vectors (shell=False, so no shell interpolation). The
+# dynamic parts (app name, dokku host, config vars) are the operator's own CLI
+# args for their own deployment — not untrusted server input. S603 (subprocess
+# call) and S607 (partial executable path: git/ssh resolved via PATH, the normal
+# idiom) are expected and safe across this file.
+"signalwire/signalwire/cli/dokku.py" = ["S603", "S607"]
+
+[tool.ruff.lint.flake8-bugbear]
+# FastAPI's dependency-injection idiom puts Depends()/Query()/etc. in argument
+# defaults on purpose; B008 (function-call-in-default) is a false positive for it.
+# Both the bare (`from fastapi import Depends`) and qualified forms are listed
+# because the code imports these names directly.
+extend-immutable-calls = [
+    "Depends", "fastapi.Depends",
+    "Query", "fastapi.Query",
+    "Body", "fastapi.Body",
+    "Header", "fastapi.Header",
+    "Cookie", "fastapi.Cookie",
+    "Path", "fastapi.Path",
+    "Form", "fastapi.Form",
+    "File", "fastapi.File",
+    "Security", "fastapi.Security",
+]
+
 [tool.mypy]
 python_version = "3.10"
 files = ["signalwire/signalwire"]

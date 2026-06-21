@@ -12,7 +12,8 @@ Mock environment and serverless simulation functionality
 
 import os
 import json
-from typing import Optional, Dict, Any, List
+from pathlib import Path
+from typing import Optional, Dict, Any, ClassVar, List
 
 
 class MockQueryParams:
@@ -153,7 +154,7 @@ class ServerlessSimulator:
     """Manages serverless environment simulation for different platforms"""
 
     # Default environment presets for each platform
-    PLATFORM_PRESETS = {
+    PLATFORM_PRESETS: ClassVar[Dict[str, Dict[str, str]]] = {
         "lambda": {
             "AWS_LAMBDA_FUNCTION_NAME": "test-agent-function",
             "AWS_LAMBDA_FUNCTION_URL": "https://abc123.lambda-url.us-east-1.on.aws/",
@@ -290,10 +291,10 @@ class ServerlessSimulator:
 def load_env_file(env_file_path: str) -> Dict[str, str]:
     """Load environment variables from a file"""
     env_vars = {}
-    if not os.path.exists(env_file_path):
+    if not Path(env_file_path).exists():
         raise FileNotFoundError(f"Environment file not found: {env_file_path}")
 
-    with open(env_file_path, "r") as f:
+    with Path(env_file_path).open("r") as f:
         for line in f:
             line = line.strip()
             if line and not line.startswith("#") and "=" in line:

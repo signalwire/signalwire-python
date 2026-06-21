@@ -67,8 +67,7 @@ def prompt(question: str, default: str = "") -> str:
     if default:
         result = input(f"{question} [{default}]: ").strip()
         return result if result else default
-    else:
-        return input(f"{question}: ").strip()
+    return input(f"{question}: ").strip()
 
 
 def prompt_yes_no(question: str, default: bool = True) -> bool:
@@ -106,7 +105,7 @@ def prompt_multiselect(
 
     while True:
         print(f"\n{question}")
-        for i, (opt, sel) in enumerate(zip(options, selected), 1):
+        for i, (opt, sel) in enumerate(zip(options, selected, strict=False), 1):
             marker = "x" if sel else " "
             print(f"  {i}) [{marker}] {opt}")
         print("  Enter number to toggle, or press Enter to continue")
@@ -1874,15 +1873,14 @@ class ProjectGenerator:
         try:
             if self.platform == "local":
                 return self._generate_local()
-            elif self.platform == "aws":
+            if self.platform == "aws":
                 return self._generate_aws()
-            elif self.platform == "gcp":
+            if self.platform == "gcp":
                 return self._generate_gcp()
-            elif self.platform == "azure":
+            if self.platform == "azure":
                 return self._generate_azure()
-            else:
-                print_error(f"Unknown platform: {self.platform}")
-                return False
+            print_error(f"Unknown platform: {self.platform}")
+            return False
         except Exception as e:
             print_error(f"Failed to generate project: {e}")
             return False
@@ -2389,7 +2387,7 @@ DEBUG_WEBHOOK_LEVEL=1
 
         print_step("Creating virtual environment...")
         try:
-            subprocess.run(
+            subprocess.run(  # noqa: S603  # fixed arg list, shell=False; runs the current interpreter to create a venv — no user input reaches a shell
                 [sys.executable, "-m", "venv", str(venv_dir)],
                 check=True,
                 capture_output=True,
@@ -2402,7 +2400,7 @@ DEBUG_WEBHOOK_LEVEL=1
             if sys.platform == "win32":
                 pip_path = venv_dir / "Scripts" / "pip.exe"
 
-            subprocess.run(
+            subprocess.run(  # noqa: S603  # fixed arg list, shell=False; pip_path/requirements path are code-derived from the scaffolded project dir — no user input reaches a shell
                 [
                     str(pip_path),
                     "install",
@@ -2440,15 +2438,14 @@ def run_interactive() -> Dict[str, Any]:
     # Project directory
     default_dir = f"./{project_name}"
     project_dir = prompt("Project directory", default_dir)
-    project_dir = os.path.abspath(os.path.expanduser(project_dir))
+    project_dir = str(Path(project_dir).expanduser().absolute())
 
     # Check if directory exists
-    if os.path.exists(project_dir):
-        if not prompt_yes_no(
-            f"Directory {project_dir} exists. Overwrite?", default=False
-        ):
-            print("Aborted.")
-            sys.exit(0)
+    if Path(project_dir).exists() and not prompt_yes_no(
+        f"Directory {project_dir} exists. Overwrite?", default=False
+    ):
+        print("Aborted.")
+        sys.exit(0)
 
     # Cloud-specific configuration
     cloud_config = {}
@@ -2561,7 +2558,7 @@ def run_interactive() -> Dict[str, Any]:
 
 def run_quick(project_name: str, args: Any) -> Dict[str, Any]:
     """Run in quick mode with minimal prompts."""
-    project_dir = os.path.abspath(os.path.join(".", project_name))
+    project_dir = str(Path(project_name).absolute())
 
     # Get platform from args
     platform = getattr(args, "platform", "local") or "local"
@@ -2676,7 +2673,7 @@ Examples:
     if args.name:
         config = run_quick(args.name, args)
         if args.dir:
-            config["project_dir"] = os.path.abspath(os.path.join(args.dir, args.name))
+            config["project_dir"] = str((Path(args.dir) / args.name).absolute())
     else:
         config = run_interactive()
 

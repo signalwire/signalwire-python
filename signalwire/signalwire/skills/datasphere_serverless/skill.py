@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 import base64
-from typing import List, Dict, Any
+from typing import List, Dict, Any, ClassVar
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.data_map import DataMap
@@ -23,8 +23,12 @@ class DataSphereServerlessSkill(SkillBase):
         "Search knowledge using SignalWire DataSphere with serverless DataMap execution"
     )
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES = []  # DataMap handles API calls serverlessly
-    REQUIRED_ENV_VARS = []  # No required env vars since all config comes from params
+    REQUIRED_PACKAGES: ClassVar[
+        List[str]
+    ] = []  # DataMap handles API calls serverlessly
+    REQUIRED_ENV_VARS: ClassVar[
+        List[str]
+    ] = []  # No required env vars since all config comes from params
 
     # Enable multiple instances support
     SUPPORTS_MULTIPLE_INSTANCES = True
