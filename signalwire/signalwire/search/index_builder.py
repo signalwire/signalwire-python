@@ -13,18 +13,24 @@ import json
 import hashlib
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, TYPE_CHECKING
 import fnmatch
 
-try:
+if TYPE_CHECKING:
     import numpy as np
-except ImportError:
-    np = None  # type: ignore[assignment]  # optional-dep shim
+else:
+    try:
+        import numpy as np
+    except ImportError:
+        np = None
 
-try:
+if TYPE_CHECKING:
     from sentence_transformers import SentenceTransformer
-except ImportError:
-    SentenceTransformer = None  # type: ignore[misc]  # optional-dep shim
+else:
+    try:
+        from sentence_transformers import SentenceTransformer
+    except ImportError:
+        SentenceTransformer = None
 
 from .document_processor import DocumentProcessor
 from .query_processor import preprocess_document_content

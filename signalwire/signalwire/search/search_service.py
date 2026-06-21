@@ -9,30 +9,32 @@ See LICENSE file in the project root for full license information.
 
 import hashlib
 import json
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Dict, Any, List, Optional, Tuple, TYPE_CHECKING
 
-try:
+if TYPE_CHECKING:
     from fastapi import FastAPI, HTTPException, Request, Response, Depends
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.security import HTTPBasic, HTTPBasicCredentials
     from pydantic import BaseModel
-except ImportError:
-    # Optional-dependency shims: fastapi/pydantic are absent in query-only
-    # installs. mypy can't model "type when imported, None when absent".
-    FastAPI = None  # type: ignore[assignment,misc]  # optional-dep shim
-    HTTPException = None  # type: ignore[assignment,misc]  # optional-dep shim
-    BaseModel = None  # type: ignore[assignment,misc]  # optional-dep shim
-    Request = None  # type: ignore[assignment,misc]  # optional-dep shim
-    Response = None  # type: ignore[assignment,misc]  # optional-dep shim
-    Depends = None  # type: ignore[assignment]  # optional-dep shim (callable, not a type)
-    CORSMiddleware = None  # type: ignore[assignment,misc]  # optional-dep shim
-    HTTPBasic = None  # type: ignore[assignment,misc]  # optional-dep shim
-    HTTPBasicCredentials = None  # type: ignore[assignment,misc]  # optional-dep shim
+else:
+    try:
+        from fastapi import FastAPI, HTTPException, Request, Response, Depends
+        from fastapi.middleware.cors import CORSMiddleware
+        from fastapi.security import HTTPBasic, HTTPBasicCredentials
+        from pydantic import BaseModel
+    except ImportError:
+        # Optional-dependency shims: fastapi/pydantic are absent in query-only
+        # installs.
+        FastAPI = HTTPException = BaseModel = Request = Response = Depends = None
+        CORSMiddleware = HTTPBasic = HTTPBasicCredentials = None
 
-try:
+if TYPE_CHECKING:
     from sentence_transformers import SentenceTransformer
-except ImportError:
-    SentenceTransformer = None  # type: ignore[misc]  # optional-dep shim
+else:
+    try:
+        from sentence_transformers import SentenceTransformer
+    except ImportError:
+        SentenceTransformer = None
 
 from .query_processor import preprocess_query, set_global_model
 from .search_engine import SearchEngine

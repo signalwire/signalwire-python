@@ -13,15 +13,21 @@ from typing import List, Dict, Any, Optional, TYPE_CHECKING
 from pathlib import Path
 
 # Document processing imports
-try:
+if TYPE_CHECKING:
     import pdfplumber
-except ImportError:
-    pdfplumber = None
+else:
+    try:
+        import pdfplumber
+    except ImportError:
+        pdfplumber = None
 
-try:
+if TYPE_CHECKING:
     from docx import Document as DocxDocument
-except ImportError:
-    DocxDocument = None
+else:
+    try:
+        from docx import Document as DocxDocument
+    except ImportError:
+        DocxDocument = None
 
 if TYPE_CHECKING:
     from bs4 import BeautifulSoup
@@ -31,48 +37,70 @@ else:
     except ImportError:
         BeautifulSoup = None
 
-try:
+if TYPE_CHECKING:
     import markdown
-except ImportError:
-    markdown = None
+else:
+    try:
+        import markdown
+    except ImportError:
+        markdown = None
 
-try:
+if TYPE_CHECKING:
     from markdown_it import MarkdownIt
-except ImportError:
-    MarkdownIt = None  # type: ignore[assignment,misc]  # optional-dep shim
+else:
+    try:
+        from markdown_it import MarkdownIt
+    except ImportError:
+        MarkdownIt = None
 
-try:
+if TYPE_CHECKING:
     from striprtf.striprtf import rtf_to_text
-except ImportError:
-    rtf_to_text = None
+else:
+    try:
+        from striprtf.striprtf import rtf_to_text
+    except ImportError:
+        rtf_to_text = None
 
-try:
+if TYPE_CHECKING:
     from openpyxl import load_workbook
-except ImportError:
-    load_workbook = None
+else:
+    try:
+        from openpyxl import load_workbook
+    except ImportError:
+        load_workbook = None
 
-try:
+if TYPE_CHECKING:
     from pptx import Presentation
-except ImportError:
-    Presentation = None
+else:
+    try:
+        from pptx import Presentation
+    except ImportError:
+        Presentation = None
 
-try:
+if TYPE_CHECKING:
     from nltk.tokenize import sent_tokenize
     import nltk
-
-    # Ensure NLTK data is available
+else:
     try:
-        nltk.data.find("tokenizers/punkt")
-    except LookupError:
-        nltk.download("punkt", quiet=True)
-except ImportError:
-    sent_tokenize = None
-    nltk = None
+        from nltk.tokenize import sent_tokenize
+        import nltk
 
-try:
+        # Ensure NLTK data is available
+        try:
+            nltk.data.find("tokenizers/punkt")
+        except LookupError:
+            nltk.download("punkt", quiet=True)
+    except ImportError:
+        sent_tokenize = None
+        nltk = None
+
+if TYPE_CHECKING:
     import magic
-except ImportError:
-    magic = None
+else:
+    try:
+        import magic
+    except ImportError:
+        magic = None
 
 from signalwire.core.logging_config import get_logger
 

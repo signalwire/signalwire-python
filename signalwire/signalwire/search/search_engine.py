@@ -9,22 +9,26 @@ See LICENSE file in the project root for full license information.
 
 import sqlite3
 import json
-from typing import List, Dict, Any, Optional, Union
+from typing import List, Dict, Any, Optional, Union, TYPE_CHECKING
 
 from signalwire.core.logging_config import get_logger
 
 # NDArray is the runtime numpy array type when available, else Any; typed Any
 # because the fallback makes the two branches incompatible to mypy.
 NDArray: Any
-try:
+if TYPE_CHECKING:
     import numpy as np
     from sklearn.metrics.pairwise import cosine_similarity
+else:
+    try:
+        import numpy as np
+        from sklearn.metrics.pairwise import cosine_similarity
 
-    NDArray = np.ndarray
-except ImportError:
-    np = None  # type: ignore[assignment]  # optional-dep shim
-    cosine_similarity = None
-    NDArray = Any  # Fallback type for when numpy is not available
+        NDArray = np.ndarray
+    except ImportError:
+        np = None
+        cosine_similarity = None
+        NDArray = Any  # Fallback type for when numpy is not available
 
 logger = get_logger(__name__)
 

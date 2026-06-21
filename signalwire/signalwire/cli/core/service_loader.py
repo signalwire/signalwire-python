@@ -12,26 +12,33 @@ Service discovery and loading functionality - new simplified approach
 
 import importlib.util
 from pathlib import Path
-from typing import List, Dict, Any, Optional, cast
+from typing import List, Dict, Any, Optional, cast, TYPE_CHECKING
 import asyncio
 import io
 import contextlib
 
 # Import after checking if available
-try:
+if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase
     from signalwire.core.swml_service import SWMLService
     from fastapi import Request, Response
 
     DEPENDENCIES_AVAILABLE = True
-except ImportError:
+else:
     # Optional-dependency shims: real types when signalwire-agents/fastapi are
-    # importable, None otherwise. mypy cannot model the dual nature.
-    AgentBase = None  # type: ignore[assignment,misc]
-    SWMLService = None  # type: ignore[assignment,misc]
-    Request = None  # type: ignore[assignment,misc]
-    Response = None  # type: ignore[assignment,misc]
-    DEPENDENCIES_AVAILABLE = False
+    # importable, None otherwise.
+    try:
+        from signalwire.core.agent_base import AgentBase
+        from signalwire.core.swml_service import SWMLService
+        from fastapi import Request, Response
+
+        DEPENDENCIES_AVAILABLE = True
+    except ImportError:
+        AgentBase = None
+        SWMLService = None
+        Request = None
+        Response = None
+        DEPENDENCIES_AVAILABLE = False
 
 
 class ServiceCapture:

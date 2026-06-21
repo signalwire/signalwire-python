@@ -12,10 +12,10 @@ Agent discovery and loading functionality
 
 import importlib.util
 from pathlib import Path
-from typing import List, Dict, Any, Optional, cast, Type
+from typing import List, Dict, Any, Optional, cast, Type, TYPE_CHECKING
 
 # Import after checking if available
-try:
+if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase
     from signalwire.core.swml_service import SWMLService
 
@@ -25,17 +25,30 @@ try:
     AGENT_BASE_AVAILABLE = True
     SWML_SERVICE_AVAILABLE = True
     NEW_LOADER_AVAILABLE = True
-except ImportError:
+else:
     # Optional-dependency shims: these names are real types/callables when the
-    # signalwire-agents package is importable, None otherwise. mypy cannot model
-    # the dual nature, so the fallback assignments are explicitly ignored.
-    AgentBase = None  # type: ignore[assignment,misc]
-    SWMLService = None  # type: ignore[assignment,misc]
-    ServiceCapture = None  # type: ignore[assignment,misc]
-    new_load_agent = None  # type: ignore[assignment]
-    AGENT_BASE_AVAILABLE = False
-    SWML_SERVICE_AVAILABLE = False
-    NEW_LOADER_AVAILABLE = False
+    # signalwire-agents package is importable, None otherwise.
+    try:
+        from signalwire.core.agent_base import AgentBase
+        from signalwire.core.swml_service import SWMLService
+
+        # Import the new service loader
+        from .service_loader import (
+            ServiceCapture,
+            load_agent_from_file as new_load_agent,
+        )
+
+        AGENT_BASE_AVAILABLE = True
+        SWML_SERVICE_AVAILABLE = True
+        NEW_LOADER_AVAILABLE = True
+    except ImportError:
+        AgentBase = None
+        SWMLService = None
+        ServiceCapture = None
+        new_load_agent = None
+        AGENT_BASE_AVAILABLE = False
+        SWML_SERVICE_AVAILABLE = False
+        NEW_LOADER_AVAILABLE = False
 
 
 def discover_services_in_file(service_path: str) -> List[Dict[str, Any]]:

@@ -11,7 +11,7 @@ import secrets
 from typing import Optional, Dict, Any, Callable, TYPE_CHECKING
 from functools import wraps
 
-try:
+if TYPE_CHECKING:
     from fastapi import HTTPException, Depends
     from fastapi.security import (
         HTTPBasic,
@@ -19,17 +19,22 @@ try:
         HTTPBearer,
         HTTPAuthorizationCredentials,
     )
-except ImportError:
+else:
     # Optional dependency: FastAPI may be absent in non-web installs. These
     # fallbacks let the module import; auth handlers guard on availability at
-    # call time. mypy can't model "name is a type when imported, None when not",
-    # so the fallback assignments are explicitly ignored (third-party-shape gap).
-    HTTPException = None  # type: ignore[assignment,misc]
-    Depends = None  # type: ignore[assignment]
-    HTTPBasic = None  # type: ignore[assignment,misc]
-    HTTPBasicCredentials = None  # type: ignore[assignment,misc]
-    HTTPBearer = None  # type: ignore[assignment,misc]
-    HTTPAuthorizationCredentials = None  # type: ignore[assignment,misc]
+    # call time.
+    try:
+        from fastapi import HTTPException, Depends
+        from fastapi.security import (
+            HTTPBasic,
+            HTTPBasicCredentials,
+            HTTPBearer,
+            HTTPAuthorizationCredentials,
+        )
+    except ImportError:
+        HTTPException = Depends = None
+        HTTPBasic = HTTPBasicCredentials = None
+        HTTPBearer = HTTPAuthorizationCredentials = None
 
 from signalwire.core.logging_config import get_logger
 

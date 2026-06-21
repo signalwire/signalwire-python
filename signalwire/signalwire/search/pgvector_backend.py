@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import json
 import re
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, TYPE_CHECKING
 
 from signalwire.core.logging_config import get_logger
 
@@ -32,10 +32,13 @@ except ImportError:
     psycopg2_sql = None
     register_vector = None
 
-try:
+if TYPE_CHECKING:
     import numpy as np
-except ImportError:
-    np = None  # type: ignore[assignment]  # optional-dep shim
+else:
+    try:
+        import numpy as np
+    except ImportError:
+        np = None
 
 logger = get_logger(__name__)
 

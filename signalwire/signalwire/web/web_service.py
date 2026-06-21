@@ -10,28 +10,27 @@ See LICENSE file in the project root for full license information.
 import os
 import mimetypes
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
 
-try:
+if TYPE_CHECKING:
     from fastapi import FastAPI, HTTPException, Request, Response, Depends
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.security import HTTPBasic, HTTPBasicCredentials
     from fastapi.staticfiles import StaticFiles
     from fastapi.responses import FileResponse, HTMLResponse
-except ImportError:
+else:
     # Optional-dep shim: FastAPI is an optional dependency; these names are
     # types when imported and None when absent.
-    FastAPI = None  # type: ignore[assignment,misc]
-    HTTPException = None  # type: ignore[assignment,misc]
-    Request = None  # type: ignore[assignment,misc]
-    Response = None  # type: ignore[assignment,misc]
-    Depends = None  # type: ignore[assignment]
-    CORSMiddleware = None  # type: ignore[assignment,misc]
-    HTTPBasic = None  # type: ignore[assignment,misc]
-    HTTPBasicCredentials = None  # type: ignore[assignment,misc]
-    StaticFiles = None  # type: ignore[assignment,misc]
-    FileResponse = None  # type: ignore[assignment,misc]
-    HTMLResponse = None  # type: ignore[assignment,misc]
+    try:
+        from fastapi import FastAPI, HTTPException, Request, Response, Depends
+        from fastapi.middleware.cors import CORSMiddleware
+        from fastapi.security import HTTPBasic, HTTPBasicCredentials
+        from fastapi.staticfiles import StaticFiles
+        from fastapi.responses import FileResponse, HTMLResponse
+    except ImportError:
+        FastAPI = HTTPException = Request = Response = Depends = None
+        CORSMiddleware = HTTPBasic = HTTPBasicCredentials = None
+        StaticFiles = FileResponse = HTMLResponse = None
 
 from signalwire.core.security_config import SecurityConfig
 from signalwire.core.config_loader import ConfigLoader
