@@ -15,8 +15,12 @@
 #   2. signature regen                    — porting-sdk's enumerate_python_signatures.py
 #   3. drift gate                         — git-diff python_signatures.json (must be unchanged)
 #   4. no-cheat gate                      — porting-sdk audit_no_cheat_tests.py
+#   4b. rest-coverage gate                — porting-sdk rest_coverage.py over a REST-suite
+#                                           journal: every implemented route hit success+error
+#                                           (parity), accepted gaps allowlisted
 #   5. fmt gate                           — ruff format (local: apply; CI: --check)
 #   6. lint gate                          — ruff check, zero findings
+#   7. typecheck gate                     — mypy, zero findings
 
 set -u
 set -o pipefail
@@ -101,6 +105,43 @@ run_gate "DRIFT" "python_signatures.json unchanged after regen" \
 # Gate 4: no-cheat
 run_gate "NO-CHEAT" "audit_no_cheat_tests" \
     python3 "$PORTING_SDK_DIR/scripts/audit_no_cheat_tests.py" --root "$PORT_ROOT"
+
+# Gate 4b: REST-COVERAGE — every canonical REST route the SDK implements must be
+# exercised with BOTH a success (2xx) AND an error (4xx/5xx) response, on the
+# correct on-the-wire path (parity). Measured by replaying the mock journal of a
+# REST-suite run through porting-sdk's rest_coverage checker. Accepted gaps —
+# routes with no SDK method, malformed canonical routes, mock-router collisions —
+# are allowlisted: the shared baseline (porting-sdk/REST_COVERAGE_BASELINE.md) for
+# universal gaps + this port's REST_COVERAGE_GAPS.md for its own sdk-gaps. A
+# stale allowlist entry (a route now actually covered) fails the gate.
+#
+# Self-contained: spins up its own mock on an ephemeral port, runs the rest/ suite
+# serially against it (MOCK_SIGNALWIRE_PORT so all traffic lands in one journal),
+# then checks that journal. Same shape on every port.
+rest_coverage_gate() {
+    local port=8951
+    python3 -m mock_signalwire.cli --port "$port" >/tmp/rest_cov_mock.$$.log 2>&1 &
+    local mock_pid=$!
+    # shellcheck disable=SC2064
+    trap "kill $mock_pid 2>/dev/null" RETURN
+    # wait for the control plane to answer
+    local i
+    for i in $(seq 1 30); do
+        if python3 -c "import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:$port/__mock__/health',timeout=1)" 2>/dev/null; then
+            break
+        fi
+        sleep 0.5
+    done
+    python3 -c "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:$port/__mock__/journal/reset',method='POST'),timeout=5).read()"
+    MOCK_SIGNALWIRE_PORT="$port" python3 -m pytest "$PORT_ROOT/tests/unit/rest/" -k full_mock -p no:xdist -q -o addopts="" || return 1
+    python3 -m mock_signalwire.rest_coverage \
+        --mock-url "http://127.0.0.1:$port" \
+        --spec-root "$PORTING_SDK_DIR/rest-apis" \
+        --allowlist "$PORTING_SDK_DIR/REST_COVERAGE_BASELINE.md" \
+        --allowlist "$PORT_ROOT/REST_COVERAGE_GAPS.md"
+}
+run_gate "REST-COVERAGE" "every implemented REST route covered success+error (parity + allowlist)" \
+    rest_coverage_gate
 
 # Gate 5: FMT — ruff format. Config in pyproject.toml [tool.ruff]. Source-style
 # only (no public-API change → the SIGNATURES/DRIFT oracle is unaffected).

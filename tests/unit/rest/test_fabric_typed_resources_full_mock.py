@@ -34,7 +34,11 @@ _ID = "rid-1001"
 
 
 def _crud_success(client, mock, resource, base, *, update_method, prefix, addresses=True):
-    """Drive list/create/get/update/delete (+addresses) and assert each route."""
+    """Drive list/create/get/update/delete (+addresses) and assert each route.
+
+    Returns the number of routes exercised so the calling test can assert on it
+    (a content-shaped in-body check that fails if the helper is short-circuited).
+    """
     # list (some list endpoints return a JSON array, others a paged object)
     body = resource.list()
     assert isinstance(body, (dict, list))
@@ -85,10 +89,14 @@ def _crud_success(client, mock, resource, base, *, update_method, prefix, addres
         assert last.matched_route == f"fabric.list_{prefix}_addresses", (
             last.matched_route
         )
+    return 6 if addresses else 5
 
 
 def _crud_errors(client, mock, resource, *, prefix, addresses=True):
-    """Drive a representative error per CRUD route and assert SignalWireRestError."""
+    """Drive a representative error per CRUD route and assert SignalWireRestError.
+
+    Returns the number of error routes exercised (see _crud_success for why).
+    """
     mock.push_scenario(f"fabric.list_{prefix}s", 500, {"error": "internal"})
     with pytest.raises(SignalWireRestError) as exc:
         resource.list()
@@ -131,6 +139,7 @@ def _crud_errors(client, mock, resource, *, prefix, addresses=True):
         assert exc.value.status_code == 404
         assert mock.last_request().matched_route == f"fabric.list_{prefix}_addresses"
         assert mock.last_request().response_status == 404
+    return 6 if addresses else 5
 
 
 _BASE = "/api/fabric/resources"
@@ -141,60 +150,70 @@ class TestFabricPutResourceFamilies:
 
     def test_swml_scripts(self, signalwire_client, mock):
         r = signalwire_client.fabric.swml_scripts
-        _crud_success(
+        n = _crud_success(
             signalwire_client, mock, r, f"{_BASE}/swml_scripts",
             update_method="PUT", prefix="swml_script",
         )
+        assert n == 6
 
     def test_swml_scripts_errors(self, signalwire_client, mock):
-        _crud_errors(signalwire_client, mock, signalwire_client.fabric.swml_scripts,
-                     prefix="swml_script")
+        n = _crud_errors(signalwire_client, mock, signalwire_client.fabric.swml_scripts,
+                         prefix="swml_script")
+        assert n == 6
 
     def test_relay_applications(self, signalwire_client, mock):
         r = signalwire_client.fabric.relay_applications
-        _crud_success(
+        n = _crud_success(
             signalwire_client, mock, r, f"{_BASE}/relay_applications",
             update_method="PUT", prefix="relay_application",
         )
+        assert n == 6
 
     def test_relay_applications_errors(self, signalwire_client, mock):
-        _crud_errors(signalwire_client, mock,
-                     signalwire_client.fabric.relay_applications,
-                     prefix="relay_application")
+        n = _crud_errors(signalwire_client, mock,
+                         signalwire_client.fabric.relay_applications,
+                         prefix="relay_application")
+        assert n == 6
 
     def test_freeswitch_connectors(self, signalwire_client, mock):
         r = signalwire_client.fabric.freeswitch_connectors
-        _crud_success(
+        n = _crud_success(
             signalwire_client, mock, r, f"{_BASE}/freeswitch_connectors",
             update_method="PUT", prefix="freeswitch_connector",
         )
+        assert n == 6
 
     def test_freeswitch_connectors_errors(self, signalwire_client, mock):
-        _crud_errors(signalwire_client, mock,
-                     signalwire_client.fabric.freeswitch_connectors,
-                     prefix="freeswitch_connector")
+        n = _crud_errors(signalwire_client, mock,
+                         signalwire_client.fabric.freeswitch_connectors,
+                         prefix="freeswitch_connector")
+        assert n == 6
 
     def test_cxml_scripts(self, signalwire_client, mock):
         r = signalwire_client.fabric.cxml_scripts
-        _crud_success(
+        n = _crud_success(
             signalwire_client, mock, r, f"{_BASE}/cxml_scripts",
             update_method="PUT", prefix="cxml_script",
         )
+        assert n == 6
 
     def test_cxml_scripts_errors(self, signalwire_client, mock):
-        _crud_errors(signalwire_client, mock, signalwire_client.fabric.cxml_scripts,
-                     prefix="cxml_script")
+        n = _crud_errors(signalwire_client, mock, signalwire_client.fabric.cxml_scripts,
+                         prefix="cxml_script")
+        assert n == 6
 
     def test_sip_endpoints(self, signalwire_client, mock):
         r = signalwire_client.fabric.sip_endpoints
-        _crud_success(
+        n = _crud_success(
             signalwire_client, mock, r, f"{_BASE}/sip_endpoints",
             update_method="PUT", prefix="sip_endpoint",
         )
+        assert n == 6
 
     def test_sip_endpoints_errors(self, signalwire_client, mock):
-        _crud_errors(signalwire_client, mock, signalwire_client.fabric.sip_endpoints,
-                     prefix="sip_endpoint")
+        n = _crud_errors(signalwire_client, mock, signalwire_client.fabric.sip_endpoints,
+                         prefix="sip_endpoint")
+        assert n == 6
 
 
 class TestFabricPatchResourceFamilies:
