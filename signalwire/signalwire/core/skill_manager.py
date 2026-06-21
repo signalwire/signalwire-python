@@ -23,7 +23,7 @@ class SkillManager:
     def load_skill(
         self,
         skill_name: str,
-        skill_class: Type[SkillBase] = None,
+        skill_class: Optional[Type[SkillBase]] = None,
         params: Optional[Dict[str, Any]] = None,
     ) -> tuple[bool, str]:
         """
@@ -224,7 +224,7 @@ class SkillManager:
             instance_key = skill_identifier
             skill_instance = self.loaded_skills[skill_identifier]
 
-        if skill_instance is None:
+        if skill_instance is None or instance_key is None:
             self.logger.warning(f"Skill '{skill_identifier}' is not loaded")
             return False
 

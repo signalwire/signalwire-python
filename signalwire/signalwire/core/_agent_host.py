@@ -19,6 +19,6 @@ runtime ``AgentHost`` is ``object``.
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from signalwire.core.agent_base import AgentBase as AgentHost
+    from signalwire.core.agent_base import AgentBase as AgentHost  # type: ignore[attr-defined]  # intentional TYPE_CHECKING-only re-export; agent_base imports this module's consumers (the mixins), so the name resolves for them but not in self-check
 else:
     AgentHost = object

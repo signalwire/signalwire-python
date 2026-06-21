@@ -45,7 +45,7 @@ class SWAIGFunction:
         name: str,
         handler: Callable,
         description: str,
-        parameters: Dict[str, Dict] = None,
+        parameters: Optional[Dict[str, Dict]] = None,
         secure: bool = False,
         fillers: Optional[Dict[str, List[str]]] = None,
         wait_file: Optional[str] = None,
@@ -197,7 +197,7 @@ class SWAIGFunction:
         try:
             import jsonschema_rs
 
-            validator = jsonschema_rs.JSONSchema(schema)
+            validator = jsonschema_rs.JSONSchema(schema)  # type: ignore[attr-defined]  # jsonschema_rs ships no type stubs
             if validator.is_valid(args):
                 return True, []
             else:

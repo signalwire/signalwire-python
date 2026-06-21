@@ -24,6 +24,7 @@ import re
 import sys
 
 import structlog
+from typing import Any
 
 _CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]")
 
@@ -192,7 +193,7 @@ def _configure_structlog(level_num, log_format, stream):
     """
     # Choose final renderer
     if log_format == "json":
-        renderer = structlog.processors.JSONRenderer()
+        renderer: Any = structlog.processors.JSONRenderer()
     else:
         renderer = structlog.dev.ConsoleRenderer(colors=_detect_colors())
 

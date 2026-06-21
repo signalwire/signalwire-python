@@ -154,7 +154,7 @@ class AIVerbHandler(SWMLVerbHandler):
         Returns:
             AI verb configuration dictionary
         """
-        config = {}
+        config: Dict[str, Any] = {}
 
         # Require either text or pom as base prompt (mutually exclusive)
         base_prompt_count = sum(x is not None for x in [prompt_text, prompt_pom])
@@ -166,7 +166,7 @@ class AIVerbHandler(SWMLVerbHandler):
             raise ValueError("prompt_text and prompt_pom are mutually exclusive")
 
         # Build prompt object with base prompt
-        prompt_config = {}
+        prompt_config: Dict[str, Any] = {}
         if prompt_text is not None:
             prompt_config["text"] = prompt_text
         elif prompt_pom is not None:
