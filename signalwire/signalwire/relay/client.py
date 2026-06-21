@@ -25,10 +25,17 @@ import json
 import os
 import re
 import uuid
-from typing import Any, Callable, Coroutine, Optional
+from typing import Any, Callable, Coroutine, Optional, TYPE_CHECKING
 
 import websockets
 import websockets.exceptions
+
+if TYPE_CHECKING:
+    # `await websockets.connect(...)` resolves to the asyncio ClientConnection
+    # in websockets>=14. Imported under TYPE_CHECKING only (annotation use):
+    # the legacy `websockets.WebSocketClientProtocol` alias is deprecated and
+    # not exported on the top-level package for mypy.
+    from websockets.asyncio.client import ClientConnection
 
 from signalwire.core.logging_config import get_logger
 
@@ -149,7 +156,7 @@ class RelayClient:
                 self._max_active_calls = _DEFAULT_MAX_ACTIVE_CALLS
 
         # Internal state
-        self._ws: Optional[websockets.WebSocketClientProtocol] = None
+        self._ws: Optional["ClientConnection"] = None
         self._pending: dict[str, asyncio.Future[dict]] = {}
         # Track the method for each pending request (for code-checking decisions)
         self._pending_methods: dict[str, str] = {}
@@ -333,9 +340,9 @@ class RelayClient:
         self._execute_queue.clear()
 
         # Cancel any pending dials
-        for fut in self._pending_dials.values():
-            if not fut.done():
-                fut.cancel()
+        for dial_fut in self._pending_dials.values():
+            if not dial_fut.done():
+                dial_fut.cancel()
         self._pending_dials.clear()
         self._dial_calls_by_tag.clear()
 
@@ -673,23 +680,25 @@ class RelayClient:
         self._pending.clear()
         self._pending_methods.clear()
         # Also reject pending dials
-        for fut in self._pending_dials.values():
-            if not fut.done():
-                fut.set_exception(RelayError(-1, "Connection closed during dial"))
+        for dial_fut in self._pending_dials.values():
+            if not dial_fut.done():
+                dial_fut.set_exception(RelayError(-1, "Connection closed during dial"))
         self._pending_dials.clear()
         self._dial_calls_by_tag.clear()
 
     async def _recv_loop(self) -> None:
         """Read messages from the WebSocket until closed."""
+        if self._ws is None:
+            return
         try:
             async for raw in self._ws:
                 try:
                     msg = json.loads(raw)
                 except json.JSONDecodeError:
-                    logger.warning(f"Invalid JSON received: {raw}")
+                    logger.warning(f"Invalid JSON received: {raw!r}")
                     continue
 
-                logger.debug(f"<< {raw}")
+                logger.debug(f"<< {raw!r}")
                 await self._handle_message(msg)
         except websockets.exceptions.ConnectionClosed:
             logger.info("WebSocket connection closed")
@@ -748,7 +757,7 @@ class RelayClient:
                     code_str = str(code) if code is not None else None
                     if code_str is not None and not _SUCCESS_CODE_RE.match(code_str):
                         try:
-                            int_code = int(code)
+                            int_code = int(code_str)
                         except (ValueError, TypeError):
                             int_code = -1
                         future.set_exception(
@@ -902,6 +911,8 @@ class RelayClient:
 
     async def _safe_call_handler(self, call: Call) -> None:
         """Run the on_call handler as a free task so the recv loop is never blocked."""
+        if self._on_call_handler is None:
+            return
         try:
             await self._on_call_handler(call)
         except Exception:
@@ -932,6 +943,8 @@ class RelayClient:
 
     async def _safe_message_handler(self, message: Message) -> None:
         """Run the on_message handler as a free task so the recv loop is never blocked."""
+        if self._on_message_handler is None:
+            return
         try:
             await self._on_message_handler(message)
         except Exception:

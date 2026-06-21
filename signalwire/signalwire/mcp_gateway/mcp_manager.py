@@ -38,9 +38,9 @@ class MCPService:
     command: List[str]
     description: str
     enabled: bool = True
-    sandbox_config: Dict[str, Any] = None
+    sandbox_config: Optional[Dict[str, Any]] = None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         # Default sandbox config if not provided
         if self.sandbox_config is None:
             self.sandbox_config = {
@@ -58,15 +58,15 @@ class MCPClient:
 
     def __init__(self, service: MCPService, sandbox_base_dir: str = "./sandbox"):
         self.service = service
-        self.process = None
+        self.process: Optional["subprocess.Popen[str]"] = None
         self.request_id = 0
-        self.pending_requests = {}
-        self.response_queue = queue.Queue()
-        self.reader_thread = None
+        self.pending_requests: Dict[Any, Any] = {}
+        self.response_queue: "queue.Queue[Any]" = queue.Queue()
+        self.reader_thread: Optional[threading.Thread] = None
         self.lock = threading.Lock()
-        self.tools = []
+        self.tools: List[Any] = []
         self.sandbox_base_dir = sandbox_base_dir
-        self.sandbox_dir = None
+        self.sandbox_dir: Optional[str] = None
         self._shutdown = threading.Event()
 
     def _setup_sandbox_env(self) -> Tuple[Dict[str, str], Optional[str]]:
@@ -75,7 +75,7 @@ class MCPClient:
         Returns:
             Tuple of (environment dict, working directory)
         """
-        sandbox_config = self.service.sandbox_config
+        sandbox_config = self.service.sandbox_config or {}
 
         # Check if sandboxing is disabled
         if not sandbox_config.get("enabled", True):
@@ -124,7 +124,7 @@ class MCPClient:
 
     def _sandbox_preexec(self):
         """Pre-exec function to sandbox the process"""
-        sandbox_config = self.service.sandbox_config
+        sandbox_config = self.service.sandbox_config or {}
 
         # Check if sandboxing is disabled
         if not sandbox_config.get("enabled", True):
@@ -182,10 +182,9 @@ class MCPClient:
                 logger.info(f"Sandbox directory: {self.sandbox_dir}")
 
             # Check if we should use preexec function
-            use_preexec = (
-                self.service.sandbox_config.get("enabled", True)
-                and sys.platform != "win32"
-            )
+            use_preexec = (self.service.sandbox_config or {}).get(
+                "enabled", True
+            ) and sys.platform != "win32"
 
             self.process = subprocess.Popen(
                 self.service.command,
@@ -348,6 +347,8 @@ class MCPClient:
             raise RuntimeError("MCP server process is not running")
 
         json_str = json.dumps(message)
+        # stdin is guaranteed non-None: the process is started with stdin=PIPE.
+        assert self.process.stdin is not None
         self.process.stdin.write(json_str + "\n")
         self.process.stdin.flush()
         logger.debug(f"Sent to '{self.service.name}': {json_str}")
@@ -359,6 +360,8 @@ class MCPClient:
         ):
             try:
                 # Simple blocking read - the thread will be interrupted on shutdown
+                # stdout is guaranteed non-None: process started with stdout=PIPE.
+                assert self.process.stdout is not None
                 line = self.process.stdout.readline()
                 if not line:
                     break
@@ -397,6 +400,8 @@ class MCPClient:
             and not self._shutdown.is_set()
         ):
             try:
+                # stderr is guaranteed non-None: process started with stderr=PIPE.
+                assert self.process.stderr is not None
                 stderr_output = self.process.stderr.read()
                 if stderr_output:
                     logger.error(
