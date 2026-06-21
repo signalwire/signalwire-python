@@ -2008,12 +2008,11 @@ def cmd_init(args):
     # Check if directory exists
     project_dir = Path(options["project_dir"])
     if project_dir.exists():
-        if not args.force:
-            if not prompt_yes_no(
-                f"Directory {project_dir} exists. Overwrite?", default=False
-            ):
-                print("Aborted.")
-                return 1
+        if not args.force and not prompt_yes_no(
+            f"Directory {project_dir} exists. Overwrite?", default=False
+        ):
+            print("Aborted.")
+            return 1
         shutil.rmtree(project_dir)
 
     # Generate project
@@ -2099,7 +2098,9 @@ def cmd_deploy(args):
         import json
 
         try:
-            with open("app.json") as f:
+            with open(  # noqa: PTH123  # tests patch builtins.open while mocking Path; Path.open() would bypass the mock seam
+                "app.json"
+            ) as f:
                 app_json = json.load(f)
                 app_name = app_json.get("name")
         except Exception:  # noqa: S110  # best-effort read of optional app.json; app_name stays unset on failure
@@ -2189,13 +2190,13 @@ def cmd_config(args):
                 "No variables provided. Use: sw-agent-dokku config set KEY=value"
             )
             return 1
-        cmd = ["ssh", f"dokku@{dokku_host}", "config:set", app_name] + args.vars
+        cmd = ["ssh", f"dokku@{dokku_host}", "config:set", app_name, *args.vars]
         subprocess.run(cmd)
     elif args.config_action == "unset":
         if not args.vars:
             print_error("No variables provided. Use: sw-agent-dokku config unset KEY")
             return 1
-        cmd = ["ssh", f"dokku@{dokku_host}", "config:unset", app_name] + args.vars
+        cmd = ["ssh", f"dokku@{dokku_host}", "config:unset", app_name, *args.vars]
         subprocess.run(cmd)
 
     return 0
@@ -2216,7 +2217,7 @@ def cmd_scale(args):
         subprocess.run(["ssh", f"dokku@{dokku_host}", "ps:scale", app_name])
     else:
         # Set scale
-        cmd = ["ssh", f"dokku@{dokku_host}", "ps:scale", app_name] + args.scale_args
+        cmd = ["ssh", f"dokku@{dokku_host}", "ps:scale", app_name, *args.scale_args]
         subprocess.run(cmd)
 
     return 0
@@ -2228,7 +2229,9 @@ def _get_app_name() -> str:
         import json
 
         try:
-            with open("app.json") as f:
+            with open(  # noqa: PTH123  # tests patch builtins.open while mocking Path; Path.open() would bypass the mock seam
+                "app.json"
+            ) as f:
                 return json.load(f).get("name", "")
         except Exception:  # noqa: S110  # best-effort read of optional app.json; falls through to interactive prompt on failure
             pass

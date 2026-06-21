@@ -7,7 +7,7 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, ClassVar
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
@@ -26,8 +26,8 @@ class InfoGathererSkill(SkillBase):
     SKILL_NAME = "info_gatherer"
     SKILL_DESCRIPTION = "Gather answers to a configurable list of questions"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES = []
-    REQUIRED_ENV_VARS = []
+    REQUIRED_PACKAGES: ClassVar[List[str]] = []
+    REQUIRED_ENV_VARS: ClassVar[List[str]] = []
     SUPPORTS_MULTIPLE_INSTANCES = True
 
     @classmethod
@@ -233,7 +233,7 @@ class InfoGathererSkill(SkillBase):
                 f"confirmed set to true. If the user says it is wrong, ask the question again."
             )
 
-        new_answers = answers + [{"key_name": key_name, "answer": answer}]
+        new_answers = [*answers, {"key_name": key_name, "answer": answer}]
         new_index = question_index + 1
 
         if new_index < len(questions):

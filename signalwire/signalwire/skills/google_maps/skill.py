@@ -13,7 +13,7 @@ Skill layer:   GoogleMapsSkill  (plug-and-play SWAIG tools)
 """
 
 import json
-from typing import List, Dict, Any
+from typing import List, Dict, Any, ClassVar
 
 import requests
 
@@ -449,8 +449,8 @@ class GoogleMapsSkill(SkillBase):
         "Validate addresses and compute driving routes using Google Maps"
     )
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES = ["requests"]
-    REQUIRED_ENV_VARS = []
+    REQUIRED_PACKAGES: ClassVar[List[str]] = ["requests"]
+    REQUIRED_ENV_VARS: ClassVar[List[str]] = []
 
     @classmethod
     def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:

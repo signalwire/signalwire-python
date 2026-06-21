@@ -300,7 +300,7 @@ class WebService:
                     f'<li>📄 <a href="{safe_name}">{safe_name}</a> ({size_str})</li>'
                 )
 
-        html = f"""
+        return f"""
         <!DOCTYPE html>
         <html>
         <head>
@@ -322,7 +322,6 @@ class WebService:
         </body>
         </html>
         """
-        return html
 
     def _setup_routes(self):
         """Setup FastAPI routes"""
@@ -377,8 +376,7 @@ class WebService:
 
             if HTMLResponse is not None:
                 return HTMLResponse(content=html)
-            else:
-                return {"directories": list(self.directories.keys())}
+            return {"directories": list(self.directories.keys())}
 
     def _mount_directories(self):
         """Mount static file directories"""
@@ -450,22 +448,17 @@ class WebService:
                         index_path = full_path / "index.html"
                         if index_path.exists() and self._is_file_allowed(index_path):
                             return FileResponse(index_path)
-                        else:
-                            raise HTTPException(
-                                status_code=403, detail="Directory browsing disabled"
-                            )
-                    else:
-                        # Generate directory listing
-                        html = self._generate_directory_listing(
-                            full_path, request.url.path
+                        raise HTTPException(
+                            status_code=403, detail="Directory browsing disabled"
                         )
-                        if HTMLResponse is not None:
-                            return HTMLResponse(content=html)
-                        else:
-                            raise HTTPException(
-                                status_code=403,
-                                detail="Directory browsing not available",
-                            )
+                    # Generate directory listing
+                    html = self._generate_directory_listing(full_path, request.url.path)
+                    if HTMLResponse is not None:
+                        return HTMLResponse(content=html)
+                    raise HTTPException(
+                        status_code=403,
+                        detail="Directory browsing not available",
+                    )
 
                 # Check if file is allowed
                 if not self._is_file_allowed(full_path):
@@ -486,18 +479,17 @@ class WebService:
                             "X-Content-Type-Options": "nosniff",
                         },
                     )
-                else:
-                    # Fallback if FileResponse not available
-                    with open(full_path, "rb") as f:
-                        content = f.read()
-                    return Response(
-                        content=content,
-                        media_type=mime_type,
-                        headers={
-                            "Cache-Control": "public, max-age=3600",
-                            "X-Content-Type-Options": "nosniff",
-                        },
-                    )
+                # Fallback if FileResponse not available
+                with full_path.open("rb") as f:
+                    content = f.read()
+                return Response(
+                    content=content,
+                    media_type=mime_type,
+                    headers={
+                        "Cache-Control": "public, max-age=3600",
+                        "X-Content-Type-Options": "nosniff",
+                    },
+                )
 
     def add_directory(self, route: str, directory: str) -> None:
         """
@@ -574,7 +566,7 @@ class WebService:
         startup_url = f"{scheme}://{host}:{port}"
 
         # Get auth credentials
-        username, password = self._basic_auth
+        username, _password = self._basic_auth
 
         # Log startup information
         logger.info(

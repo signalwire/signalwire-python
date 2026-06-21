@@ -52,7 +52,7 @@ class AuthHandler:
     and API keys across all SignalWire services.
     """
 
-    def __init__(self, security_config: "SecurityConfig"):  # noqa: F821  forward ref; importing signalwire.core.security_config would alter the signature oracle
+    def __init__(self, security_config: "SecurityConfig"):
         """
         Initialize auth handler with security configuration.
 

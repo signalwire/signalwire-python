@@ -107,10 +107,12 @@ class SwmlRenderer:
 
         # Add regular functions if provided
         if swaig_functions:
-            for func in swaig_functions:
-                # Skip special hooks as we've already added them
-                if func.get("function") not in ["startup_hook", "hangup_hook"]:
-                    functions.append(func)
+            # Skip special hooks as we've already added them
+            functions.extend(
+                func
+                for func in swaig_functions
+                if func.get("function") not in ["startup_hook", "hangup_hook"]
+            )
 
         # Only add SWAIG if we have functions or a default URL
         if functions or default_webhook_url:
@@ -140,8 +142,7 @@ class SwmlRenderer:
             import yaml
 
             return yaml.dump(builder.build(), sort_keys=False)
-        else:
-            return builder.render()
+        return builder.render()
 
     @staticmethod
     def render_function_response_swml(
@@ -187,5 +188,4 @@ class SwmlRenderer:
             import yaml
 
             return yaml.dump(service.get_document(), sort_keys=False)
-        else:
-            return service.render_document()
+        return service.render_document()

@@ -546,15 +546,16 @@ class AIConfigMixin(_HostTyped):
         """
         if includes and isinstance(includes, list):
             # Validate each include has required properties
-            valid_includes = []
-            for include in includes:
+            valid_includes = [
+                include
+                for include in includes
                 if (
                     isinstance(include, dict)
                     and "url" in include
                     and "functions" in include
-                ):
-                    if isinstance(include["functions"], list):
-                        valid_includes.append(include)
+                )
+                and isinstance(include["functions"], list)
+            ]
 
             self._function_includes = valid_includes
         return self

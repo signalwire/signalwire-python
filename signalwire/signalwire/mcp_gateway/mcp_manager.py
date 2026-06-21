@@ -24,6 +24,7 @@ import time
 import pwd
 import shutil
 import resource
+from pathlib import Path
 from typing import Dict, Any, List, Optional, Tuple
 from dataclasses import dataclass
 
@@ -80,13 +81,13 @@ class MCPClient:
         # Check if sandboxing is disabled
         if not sandbox_config.get("enabled", True):
             logger.warning(f"Sandboxing disabled for '{self.service.name}'")
-            return os.environ.copy(), sandbox_config.get("working_dir", os.getcwd())
+            return os.environ.copy(), sandbox_config.get("working_dir", str(Path.cwd()))
 
         # Create a subdirectory in the sandbox base for this process
-        self.sandbox_dir = os.path.join(
-            self.sandbox_base_dir, f"mcp_{self.service.name}_{os.getpid()}"
+        self.sandbox_dir = str(
+            Path(self.sandbox_base_dir) / f"mcp_{self.service.name}_{os.getpid()}"
         )
-        os.makedirs(self.sandbox_dir, exist_ok=True)
+        Path(self.sandbox_dir).mkdir(parents=True, exist_ok=True)
 
         # Start with appropriate environment
         if sandbox_config.get("restricted_env", True):
@@ -118,7 +119,7 @@ class MCPClient:
             env.pop(var, None)
 
         # Determine working directory
-        working_dir = sandbox_config.get("working_dir", os.getcwd())
+        working_dir = sandbox_config.get("working_dir", str(Path.cwd()))
 
         return env, working_dir
 
@@ -284,7 +285,7 @@ class MCPClient:
         if (
             hasattr(self, "sandbox_dir")
             and self.sandbox_dir
-            and os.path.exists(self.sandbox_dir)
+            and Path(self.sandbox_dir).exists()
         ):
             try:
                 shutil.rmtree(self.sandbox_dir)
@@ -460,7 +461,7 @@ class MCPManager:
         )
 
         # Ensure sandbox directory exists
-        os.makedirs(self.sandbox_base_dir, exist_ok=True)
+        Path(self.sandbox_base_dir).mkdir(parents=True, exist_ok=True)
         logger.info(f"Using sandbox base directory: {self.sandbox_base_dir}")
 
         # Load services from config
@@ -554,7 +555,7 @@ class MCPManager:
                         del self.clients[client_key]
                     results[service_name] = True
                     logger.info(f"Service '{service_name}' validation: OK")
-                except Exception as e:
+                except Exception as e:  # noqa: PERF203  # per-iteration error isolation: one service's validation failure must not abort the rest
                     results[service_name] = False
                     logger.error(f"Service '{service_name}' validation failed: {e}")
 
@@ -570,5 +571,5 @@ class MCPManager:
                 try:
                     client.stop()
                     self.clients.pop(client_id, None)
-                except Exception as e:
+                except Exception as e:  # noqa: PERF203  # per-iteration error isolation: one client's stop failure must not abort shutting down the rest
                     logger.error(f"Error stopping client {client_id}: {e}")

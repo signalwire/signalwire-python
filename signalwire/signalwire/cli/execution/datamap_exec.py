@@ -308,7 +308,7 @@ def execute_datamap_function(
                 if not webhook_failed:
                     explicit_error_keys = ["parse_error", "protocol_error"]
                     for error_key in explicit_error_keys:
-                        if error_key in response_data and response_data[error_key]:
+                        if response_data.get(error_key):
                             webhook_failed = True
                             if verbose:
                                 print(
@@ -325,7 +325,7 @@ def execute_datamap_function(
                         error_keys = []
 
                     for error_key in error_keys:
-                        if error_key in response_data and response_data[error_key]:
+                        if response_data.get(error_key):
                             webhook_failed = True
                             if verbose:
                                 print(
@@ -452,17 +452,15 @@ def execute_datamap_function(
 
                     return final_result
 
-                else:
-                    # No output template defined, return the response data
-                    if verbose:
-                        print("No output template defined, returning response data")
-                    return response_data
-
-            else:
-                # This webhook failed, try next webhook
+                # No output template defined, return the response data
                 if verbose:
-                    print(f"Webhook {i + 1} failed, trying next webhook...")
-                continue
+                    print("No output template defined, returning response data")
+                return response_data
+
+            # This webhook failed, try next webhook
+            if verbose:
+                print(f"Webhook {i + 1} failed, trying next webhook...")
+            continue
 
     # Step 5: All webhooks failed, use fallback output if available
     if "output" in actual_datamap:

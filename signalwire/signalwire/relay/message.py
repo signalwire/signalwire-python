@@ -8,7 +8,7 @@ undelivered/failed).  Inbound messages arrive fully formed with state "received"
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Callable, Optional
+from typing import Any, Callable, Coroutine, Optional
 
 from signalwire.core.logging_config import get_logger
 
@@ -16,6 +16,20 @@ from .constants import MESSAGE_TERMINAL_STATES
 from .event import RelayEvent
 
 logger = get_logger("relay_message")
+
+# Strong references to fire-and-forget callback tasks. asyncio only keeps a
+# weak reference to a running task, so a bare ensure_future on a coroutine
+# returned by a user callback could be garbage-collected mid-flight. The
+# Message instance may be short-lived, so the set is module-level; tasks are
+# discarded on completion.
+_bg_tasks: set["asyncio.Task[Any]"] = set()
+
+
+def _spawn_bg(coro: "Coroutine[Any, Any, Any]") -> None:
+    """Schedule a fire-and-forget coroutine while holding a strong reference."""
+    task = asyncio.ensure_future(coro)
+    _bg_tasks.add(task)
+    task.add_done_callback(_bg_tasks.discard)
 
 
 class Message:
@@ -102,7 +116,7 @@ class Message:
                 result = handler(event)
                 if asyncio.iscoroutine(result):
                     await result
-            except Exception:
+            except Exception:  # noqa: PERF203  # per-iteration error isolation: one listener's failure must not prevent notifying the others
                 logger.exception(
                     f"Error in message event handler for {self.message_id}"
                 )
@@ -120,7 +134,7 @@ class Message:
             try:
                 result = self._on_completed(event)
                 if asyncio.iscoroutine(result):
-                    asyncio.ensure_future(result)
+                    _spawn_bg(result)
             except Exception:
                 logger.exception(
                     f"Error in on_completed callback for message {self.message_id}"

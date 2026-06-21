@@ -223,7 +223,7 @@ class PgVectorBackend:
                         # Merge all found metadata
                         if isinstance(json_metadata, dict):
                             metadata_dict.update(json_metadata)
-                    except Exception:  # noqa: S110  # best-effort optional metadata JSON parse; skip malformed matches
+                    except Exception:  # noqa: S110, PERF203  # best-effort optional metadata JSON parse; skip malformed matches per-iteration
                         pass
             except Exception as e:
                 logger.debug(f"Error extracting JSON metadata: {e}")
@@ -250,10 +250,9 @@ class PgVectorBackend:
         data = []
         for chunk in chunks:
             embedding = chunk.get("embedding")
-            if embedding is not None:
-                # Convert to list if it's a numpy array
-                if hasattr(embedding, "tolist"):
-                    embedding = embedding.tolist()
+            # Convert to list if it's a numpy array
+            if embedding is not None and hasattr(embedding, "tolist"):
+                embedding = embedding.tolist()
 
             metadata = chunk.get("metadata", {})
 
@@ -266,21 +265,27 @@ class PgVectorBackend:
             json_metadata = self._extract_metadata_from_json_content(chunk["content"])
 
             # Build metadata from all fields except the ones we store separately
-            chunk_metadata = {}
-            for key, value in chunk.items():
-                if key not in [
+            chunk_metadata = {
+                key: value
+                for key, value in chunk.items()
+                if key
+                not in [
                     "content",
                     "processed_content",
                     "embedding",
                     "filename",
                     "section",
                     "tags",
-                ]:
-                    chunk_metadata[key] = value
+                ]
+            }
             # Also include any extra metadata
-            for key, value in metadata.items():
-                if key not in ["filename", "section", "tags"]:
-                    chunk_metadata[key] = value
+            chunk_metadata.update(
+                {
+                    key: value
+                    for key, value in metadata.items()
+                    if key not in ["filename", "section", "tags"]
+                }
+            )
 
             # Merge metadata: chunk metadata takes precedence over JSON metadata
             merged_metadata = {**json_metadata, **chunk_metadata}

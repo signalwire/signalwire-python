@@ -851,7 +851,7 @@ cli_ns = _CLINamespace()
 # __all__
 # ---------------------------------------------------------------------------
 
-__all__ = [
+__all__ = [  # noqa: RUF022  # deliberately grouped by category (Core types / Exceptions / etc.) with section comments for readability, not alphabetized
     # Core types
     "Agent",
     "AgentSession",

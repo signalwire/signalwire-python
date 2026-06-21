@@ -313,9 +313,9 @@ class SearchService:
                     status_code=400, detail="Index path must end with .swsearch"
                 )
             if self.backend != "pgvector":
-                import os
+                from pathlib import Path
 
-                if not os.path.exists(index_path):
+                if not Path(index_path).exists():
                     raise HTTPException(status_code=400, detail="Index file not found")
 
             if self.backend == "pgvector":
@@ -356,7 +356,7 @@ class SearchService:
             self.collection_models: Dict[str, Any] = {}  # collection_name -> model_name
 
             # Load search engines for each collection and their models
-            for collection_name in self.indexes.keys():
+            for collection_name in self.indexes:
                 try:
                     search_engine = SearchEngine(
                         backend="pgvector",
@@ -394,7 +394,7 @@ class SearchService:
                         )
 
                     logger.info(f"Loaded pgvector collection: {collection_name}")
-                except Exception as e:
+                except Exception as e:  # noqa: PERF203  # per-iteration error isolation: one collection's load failure must not abort loading the rest
                     logger.error(
                         f"Error loading pgvector collection {collection_name}: {e}"
                     )
@@ -419,7 +419,7 @@ class SearchService:
                     self.search_engines[index_name] = SearchEngine(
                         backend="sqlite", index_path=index_path, model=self.model
                     )
-                except Exception as e:
+                except Exception as e:  # noqa: PERF203  # per-iteration error isolation: one index's engine load failure must not abort loading the rest
                     logger.error(f"Error loading search engine for {index_name}: {e}")
 
     def _get_model_name(self, index_path: str) -> str:
@@ -428,22 +428,19 @@ class SearchService:
             # For pgvector, we might want to store model info in the database
             # For now, return default model
             return "sentence-transformers/all-mpnet-base-v2"
-        else:
-            # SQLite backend
-            try:
-                import sqlite3
+        # SQLite backend
+        try:
+            import sqlite3
 
-                conn = sqlite3.connect(index_path)
-                cursor = conn.cursor()
-                cursor.execute("SELECT value FROM config WHERE key = 'embedding_model'")
-                result = cursor.fetchone()
-                conn.close()
-                return (
-                    result[0] if result else "sentence-transformers/all-mpnet-base-v2"
-                )
-            except Exception as e:
-                logger.warning(f"Could not get model name from index: {e}")
-                return "sentence-transformers/all-mpnet-base-v2"
+            conn = sqlite3.connect(index_path)
+            cursor = conn.cursor()
+            cursor.execute("SELECT value FROM config WHERE key = 'embedding_model'")
+            result = cursor.fetchone()
+            conn.close()
+            return result[0] if result else "sentence-transformers/all-mpnet-base-v2"
+        except Exception as e:
+            logger.warning(f"Could not get model name from index: {e}")
+            return "sentence-transformers/all-mpnet-base-v2"
 
     async def _handle_search(self, request: SearchRequest) -> SearchResponse:
         """Handle search request with caching"""
@@ -452,8 +449,7 @@ class SearchService:
                 raise HTTPException(
                     status_code=404, detail=f"Index '{request.index_name}' not found"
                 )
-            else:
-                raise ValueError(f"Index '{request.index_name}' not found")
+            raise ValueError(f"Index '{request.index_name}' not found")
 
         # Check cache first
         cache_key = _cache_key(
@@ -616,7 +612,7 @@ class SearchService:
         startup_url = f"{scheme}://{host}:{port}"
 
         # Get auth credentials
-        username, password = self._basic_auth
+        username, _password = self._basic_auth
 
         # Log startup information
         logger.info(

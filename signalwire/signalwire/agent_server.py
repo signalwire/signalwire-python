@@ -11,6 +11,7 @@ AgentServer - Class for hosting multiple SignalWire AI Agents in a single server
 
 import os
 import re
+from pathlib import Path
 from typing import Dict, Any, Optional, List, Tuple, Callable
 
 try:
@@ -24,6 +25,7 @@ except ImportError:
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.swml_service import SWMLService
 from signalwire.core.logging_config import get_logger
+import contextlib
 
 
 class AgentServer:
@@ -201,10 +203,7 @@ class AgentServer:
                 if target_route:
                     self.logger.info(f"Routing SIP request to {target_route}")
                     return target_route
-                else:
-                    self.logger.warning(
-                        f"No route found for SIP username: {sip_username}"
-                    )
+                self.logger.warning(f"No route found for SIP username: {sip_username}")
 
             # No routing needed (will be handled by the current agent)
             return None
@@ -375,11 +374,10 @@ class AgentServer:
 
         if mode == "cgi":
             return self._handle_cgi_request()
-        elif mode == "lambda":
+        if mode == "lambda":
             return self._handle_lambda_request(event, context)
-        else:
-            # Server mode - use existing logic
-            return self._run_server(host, port)
+        # Server mode - use existing logic
+        return self._run_server(host, port)
 
     def _handle_cgi_request(self) -> str:
         """Handle CGI request using same routing logic as server"""
@@ -408,7 +406,7 @@ class AgentServer:
                         swml, content_type="application/json"
                     )
                 except Exception as e:
-                    self.logger.error(f"Failed to generate SWML: {str(e)}")
+                    self.logger.error(f"Failed to generate SWML: {e!s}")
                     error_response = {"error": "Failed to generate SWML"}
                     return self._format_cgi_response(
                         error_response, status="500 Internal Server Error"
@@ -452,7 +450,7 @@ class AgentServer:
                         )
 
                     except Exception as e:
-                        self.logger.error(f"SWAIG function failed: {str(e)}")
+                        self.logger.error(f"SWAIG function failed: {e!s}")
                         error_response = {"error": "SWAIG function failed"}
                         return self._format_cgi_response(
                             error_response, status="500 Internal Server Error"
@@ -502,7 +500,7 @@ class AgentServer:
                         )
 
                     except Exception as e:
-                        self.logger.error(f"Function call failed: {str(e)}")
+                        self.logger.error(f"Function call failed: {e!s}")
                         error_response = {"error": "Function call failed"}
                         return self._format_cgi_response(
                             error_response, status="500 Internal Server Error"
@@ -547,7 +545,7 @@ class AgentServer:
                         "body": json.dumps(swml) if isinstance(swml, dict) else swml,
                     }
                 except Exception as e:
-                    self.logger.error(f"Failed to generate SWML: {str(e)}")
+                    self.logger.error(f"Failed to generate SWML: {e!s}")
                     return {
                         "statusCode": 500,
                         "headers": {"Content-Type": "application/json"},
@@ -571,10 +569,8 @@ class AgentServer:
                         # Get POST data from Lambda event body
                         post_data = {}
                         if event and "body" in event and event["body"]:
-                            try:
+                            with contextlib.suppress(json.JSONDecodeError, ValueError):
                                 post_data = json.loads(event["body"])
-                            except (json.JSONDecodeError, ValueError):
-                                pass
 
                         result = agent._execute_swaig_function(
                             function_name, post_data, None, None
@@ -588,7 +584,7 @@ class AgentServer:
                         }
 
                     except Exception as e:
-                        self.logger.error(f"Function call failed: {str(e)}")
+                        self.logger.error(f"Function call failed: {e!s}")
                         return {
                             "statusCode": 500,
                             "headers": {"Content-Type": "application/json"},
@@ -610,10 +606,7 @@ class AgentServer:
         import sys
 
         # Format the body
-        if isinstance(data, dict):
-            body = json.dumps(data)
-        else:
-            body = str(data)
+        body = json.dumps(data) if isinstance(data, dict) else str(data)
 
         # Build CGI response with headers
         response_lines = [
@@ -671,10 +664,10 @@ class AgentServer:
 
         # Validate SSL configuration if enabled
         if ssl_enabled:
-            if not ssl_cert_path or not os.path.exists(ssl_cert_path):
+            if not ssl_cert_path or not Path(ssl_cert_path).exists():
                 self.logger.warning(f"SSL cert not found: {ssl_cert_path}")
                 ssl_enabled = False
-            elif not ssl_key_path or not os.path.exists(ssl_key_path):
+            elif not ssl_key_path or not Path(ssl_key_path).exists():
                 self.logger.warning(f"SSL key not found: {ssl_key_path}")
                 ssl_enabled = False
 
@@ -690,7 +683,7 @@ class AgentServer:
             display_host = f"{host}:{port}"
 
         self.logger.info(f"Starting server on {protocol}://{display_host}")
-        for _route, agent in self.agents.items():
+        for agent in self.agents.values():
             # include_source defaults False -> 2-tuple at runtime; index to
             # avoid the union-tuple unpack ambiguity mypy sees.
             creds = agent.get_basic_auth_credentials()
@@ -863,7 +856,7 @@ class AgentServer:
                 if full_path == route.lstrip("/"):
                     # This is a request to an agent's root without trailing slash
                     return await agent._handle_root_request(request)
-                elif full_path.startswith(route.lstrip("/") + "/"):
+                if full_path.startswith(route.lstrip("/") + "/"):
                     # This is a request to an agent's sub-path
                     relative_path = full_path[len(route.lstrip("/")) :]
                     relative_path = relative_path.lstrip("/")
@@ -875,21 +868,18 @@ class AgentServer:
                     clean_path = relative_path.rstrip("/")
                     if clean_path == "debug":
                         return await agent._handle_debug_request(request)
-                    elif clean_path == "swaig":
+                    if clean_path == "swaig":
                         from fastapi import Response
 
                         return await agent._handle_swaig_request(request, Response())
-                    elif clean_path == "post_prompt":
+                    if clean_path == "post_prompt":
                         return await agent._handle_post_prompt_request(request)
-                    elif clean_path == "check_for_input":
+                    if clean_path == "check_for_input":
                         return await agent._handle_check_for_input_request(request)
 
                     # Check for custom routing callbacks
                     if hasattr(agent, "_routing_callbacks"):
-                        for (
-                            callback_path,
-                            _callback_fn,
-                        ) in agent._routing_callbacks.items():
+                        for callback_path in agent._routing_callbacks:
                             cb_path_clean = callback_path.strip("/")
                             if clean_path == cb_path_clean:
                                 request.state.callback_path = callback_path
@@ -898,7 +888,7 @@ class AgentServer:
             # No matching agent - check for static files
             if hasattr(self, "_static_directories"):
                 # Check each static directory route
-                for static_route, _static_dir in self._static_directories.items():
+                for static_route in self._static_directories:
                     # For root static route, serve any unmatched path
                     if static_route == "" or static_route == "/":
                         response = self._serve_static_file(full_path, "")

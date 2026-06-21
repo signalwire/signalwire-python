@@ -13,7 +13,7 @@ Provides Wikipedia search capabilities using the Wikipedia API.
 
 import requests
 from urllib.parse import quote
-from typing import Dict, Any
+from typing import Dict, Any, List, ClassVar
 from signalwire.core.skill_base import SkillBase
 
 
@@ -31,8 +31,8 @@ class WikipediaSearchSkill(SkillBase):
         "Search Wikipedia for information about a topic and get article summaries"
     )
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES = ["requests"]
-    REQUIRED_ENV_VARS = []  # No environment variables required
+    REQUIRED_PACKAGES: ClassVar[List[str]] = ["requests"]
+    REQUIRED_ENV_VARS: ClassVar[List[str]] = []  # No environment variables required
 
     # Does not support multiple instances
     SUPPORTS_MULTIPLE_INSTANCES = False
@@ -178,13 +178,12 @@ class WikipediaSearchSkill(SkillBase):
             # Join multiple articles with separators
             if len(articles) == 1:
                 return articles[0]
-            else:
-                return ("\n\n" + "=" * 50 + "\n\n").join(articles)
+            return ("\n\n" + "=" * 50 + "\n\n").join(articles)
 
         except requests.exceptions.RequestException as e:
-            return f"Error accessing Wikipedia: {str(e)}"
+            return f"Error accessing Wikipedia: {e!s}"
         except Exception as e:
-            return f"Error searching Wikipedia: {str(e)}"
+            return f"Error searching Wikipedia: {e!s}"
 
     def get_prompt_sections(self) -> list:
         """

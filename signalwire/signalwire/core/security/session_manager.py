@@ -157,10 +157,7 @@ class SessionManager:
 
             # Finally, verify the call_id matches unless we're in special case
             # This check is done last to ensure the token is otherwise valid
-            if token_call_id != call_id:
-                return False
-
-            return True
+            return token_call_id == call_id
         except Exception:
             # Any exception during validation means the token is invalid
             return False

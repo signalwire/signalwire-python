@@ -20,8 +20,8 @@ __all__ = [
     "AgentBase",
     "FunctionResult",
     "SWAIGFunction",
+    "SWMLBuilder",
     "SWMLService",
     "SWMLVerbHandler",
     "VerbHandlerRegistry",
-    "SWMLBuilder",
 ]

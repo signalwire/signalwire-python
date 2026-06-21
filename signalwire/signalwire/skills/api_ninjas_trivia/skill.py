@@ -12,7 +12,7 @@ A configurable skill for getting trivia questions from API Ninjas with customiza
 categories and multiple tool instances.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, ClassVar
 from signalwire.core import FunctionResult
 from signalwire.core.skill_base import SkillBase
 
@@ -56,10 +56,10 @@ class ApiNinjasTriviaSkill(SkillBase):
     SKILL_NAME = "api_ninjas_trivia"
     SKILL_DESCRIPTION = "Get trivia questions from API Ninjas"
     SUPPORTS_MULTIPLE_INSTANCES = True
-    REQUIRED_ENV_VARS = []  # API key can be passed via params
+    REQUIRED_ENV_VARS: ClassVar[List[str]] = []  # API key can be passed via params
 
     # Valid API Ninjas trivia categories with human-readable descriptions
-    VALID_CATEGORIES = {
+    VALID_CATEGORIES: ClassVar[Dict[str, str]] = {
         "artliterature": "Art and Literature",
         "language": "Language",
         "sciencenature": "Science and Nature",

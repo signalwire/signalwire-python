@@ -7,9 +7,10 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
+import contextlib
 import os
 import shutil
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, ClassVar
 from pathlib import Path
 
 from signalwire.core.skill_base import SkillBase
@@ -22,8 +23,10 @@ class NativeVectorSearchSkill(SkillBase):
     SKILL_NAME = "native_vector_search"
     SKILL_DESCRIPTION = "Search document indexes using vector similarity and keyword search (local or remote)"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES = []  # Optional packages checked at runtime
-    REQUIRED_ENV_VARS = []  # No required env vars since all config comes from params
+    REQUIRED_PACKAGES: ClassVar[List[str]] = []  # Optional packages checked at runtime
+    REQUIRED_ENV_VARS: ClassVar[
+        List[str]
+    ] = []  # No required env vars since all config comes from params
 
     # Enable multiple instances support
     SUPPORTS_MULTIPLE_INSTANCES = True
@@ -316,18 +319,17 @@ class NativeVectorSearchSkill(SkillBase):
                     )
                     self.search_available = True
                     return True  # Success - skip all local setup
-                elif response.status_code == 401:
+                if response.status_code == 401:
                     self.logger.error(
                         "Authentication failed for remote search server. Check credentials."
                     )
                     self.search_available = False
                     return False
-                else:
-                    self.logger.error(
-                        f"Remote search server returned status {response.status_code}"
-                    )
-                    self.search_available = False
-                    return False
+                self.logger.error(
+                    f"Remote search server returned status {response.status_code}"
+                )
+                self.search_available = False
+                return False
             except Exception as e:
                 self.logger.error(f"Failed to connect to remote search server: {e}")
                 self.search_available = False
@@ -391,7 +393,9 @@ class NativeVectorSearchSkill(SkillBase):
                     self.index_file = f"{source_name}.swsearch"
 
                 # Build index if it doesn't exist
-                if not os.path.exists(self.index_file):
+                if not os.path.exists(  # noqa: PTH110  # tests patch global os.path.exists; Path.exists() would bypass the mock seam
+                    self.index_file
+                ):
                     try:
                         self.logger.info(
                             f"Building search index from {self.source_dir}..."
@@ -487,7 +491,9 @@ class NativeVectorSearchSkill(SkillBase):
                         "pgvector backend requires connection_string and collection_name"
                     )
                     self.search_available = False
-            elif self.index_file and os.path.exists(self.index_file):
+            elif self.index_file and os.path.exists(  # noqa: PTH110  # tests patch global os.path.exists; Path.exists() would bypass the mock seam
+                self.index_file
+            ):
                 # Initialize SQLite backend
                 try:
                     from signalwire.search import SearchEngine
@@ -790,9 +796,7 @@ class NativeVectorSearchSkill(SkillBase):
 
         except Exception as e:
             # Log the full error details for debugging
-            self.logger.error(
-                f"Search error for query '{query}': {str(e)}", exc_info=True
-            )
+            self.logger.error(f"Search error for query '{query}': {e!s}", exc_info=True)
 
             # Return user-friendly error message
             user_msg = "I'm sorry, I encountered an issue while searching. "
@@ -838,21 +842,18 @@ class NativeVectorSearchSkill(SkillBase):
                     f"DEBUG: Got response with {len(data.get('results', []))} results"
                 )
                 # Convert remote response format to local format
-                results = []
-                for result in data.get("results", []):
-                    results.append(
-                        {
-                            "content": result["content"],
-                            "score": result["score"],
-                            "metadata": result["metadata"],
-                        }
-                    )
-                return results
-            else:
-                self.logger.error(
-                    f"Remote search failed with status {response.status_code}: {response.text}"
-                )
-                return []
+                return [
+                    {
+                        "content": result["content"],
+                        "score": result["score"],
+                        "metadata": result["metadata"],
+                    }
+                    for result in data.get("results", [])
+                ]
+            self.logger.error(
+                f"Remote search failed with status {response.status_code}: {response.text}"
+            )
+            return []
 
         except Exception as e:
             self.logger.error(f"Remote search error: {e}")
@@ -908,7 +909,7 @@ class NativeVectorSearchSkill(SkillBase):
         # Clean up any temporary files if we created them
         if hasattr(self, "_temp_dirs"):
             for temp_dir in self._temp_dirs:
-                try:
+                # Best-effort temp-dir cleanup; OS reclaims tmp anyway, and this
+                # must not raise during teardown.
+                with contextlib.suppress(Exception):
                     shutil.rmtree(temp_dir)
-                except Exception:  # noqa: S110  # best-effort temp-dir cleanup; OS reclaims tmp anyway, must not raise during teardown
-                    pass

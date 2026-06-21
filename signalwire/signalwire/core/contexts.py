@@ -505,8 +505,7 @@ class Step:
         for section in self._sections:
             if "bullets" in section:
                 markdown_parts.append(f"## {section['title']}")
-                for bullet in section["bullets"]:
-                    markdown_parts.append(f"- {bullet}")
+                markdown_parts.extend(f"- {bullet}" for bullet in section["bullets"])
             else:
                 markdown_parts.append(f"## {section['title']}")
                 markdown_parts.append(section["body"])
@@ -1046,8 +1045,7 @@ class Context:
         for section in self._prompt_sections:
             if "bullets" in section:
                 markdown_parts.append(f"## {section['title']}")
-                for bullet in section["bullets"]:
-                    markdown_parts.append(f"- {bullet}")
+                markdown_parts.extend(f"- {bullet}" for bullet in section["bullets"])
             else:
                 markdown_parts.append(f"## {section['title']}")
                 markdown_parts.append(section["body"])
@@ -1068,8 +1066,7 @@ class Context:
         for section in self._system_prompt_sections:
             if "bullets" in section:
                 markdown_parts.append(f"## {section['title']}")
-                for bullet in section["bullets"]:
-                    markdown_parts.append(f"- {bullet}")
+                markdown_parts.extend(f"- {bullet}" for bullet in section["bullets"])
             else:
                 markdown_parts.append(f"## {section['title']}")
                 markdown_parts.append(section["body"])
@@ -1261,7 +1258,7 @@ class ContextBuilder:
 
         # If only one context, it must be named "default"
         if len(self._contexts) == 1:
-            context_name = list(self._contexts.keys())[0]
+            context_name = next(iter(self._contexts.keys()))
             if context_name != "default":
                 raise ValueError(
                     "When using a single context, it must be named 'default'"
@@ -1276,13 +1273,15 @@ class ContextBuilder:
 
         # Validate initial_step references a real step in the context
         for context_name, context in self._contexts.items():
-            if context._initial_step is not None:
-                if context._initial_step not in context._steps:
-                    available = sorted(context._steps.keys())
-                    raise ValueError(
-                        f"Context '{context_name}' has initial_step='{context._initial_step}' "
-                        f"but that step does not exist. Available steps: {available}"
-                    )
+            if (
+                context._initial_step is not None
+                and context._initial_step not in context._steps
+            ):
+                available = sorted(context._steps.keys())
+                raise ValueError(
+                    f"Context '{context_name}' has initial_step='{context._initial_step}' "
+                    f"but that step does not exist. Available steps: {available}"
+                )
 
         # Validate step references in valid_steps
         for context_name, context in self._contexts.items():

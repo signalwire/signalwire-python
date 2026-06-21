@@ -43,7 +43,7 @@ def display_agent_tools(agent: "AgentBase", verbose: bool = False) -> None:
                 print(f"  {name} - {description}")
 
                 # Show parameters for DataMap functions
-                if "parameters" in func and func["parameters"]:
+                if func.get("parameters"):
                     params = func["parameters"]
                     # Handle both formats: direct properties dict or full schema
                     if "properties" in params:
@@ -112,10 +112,7 @@ def display_agent_tools(agent: "AgentBase", verbose: bool = False) -> None:
                                     constraints.append(
                                         f"max items: {param_def['maxItems']}"
                                     )
-                                if (
-                                    "uniqueItems" in param_def
-                                    and param_def["uniqueItems"]
-                                ):
+                                if param_def.get("uniqueItems"):
                                     constraints.append("unique items")
                                 if (
                                     "items" in param_def
@@ -241,10 +238,7 @@ def display_agent_tools(agent: "AgentBase", verbose: bool = False) -> None:
                                     constraints.append(
                                         f"max items: {param_def['maxItems']}"
                                     )
-                                if (
-                                    "uniqueItems" in param_def
-                                    and param_def["uniqueItems"]
-                                ):
+                                if param_def.get("uniqueItems"):
                                     constraints.append("unique items")
                                 if (
                                     "items" in param_def
@@ -299,20 +293,17 @@ def format_result(result: Any) -> str:
         # Show actions if present
         if hasattr(result, "action") and result.action:
             output.append("\nActions:")
-            for action in result.action:
-                output.append(json.dumps(action, indent=2))
+            output.extend(json.dumps(action, indent=2) for action in result.action)
 
         # Show post_process flag if set
         if hasattr(result, "post_process") and result.post_process:
             output.append(f"\nPost-process: {result.post_process}")
 
         return "\n".join(output)
-    elif isinstance(result, dict):
+    if isinstance(result, dict):
         if "response" in result:
             return f"Response: {result['response']}"
-        else:
-            return f"Dict: {json.dumps(result, indent=2)}"
-    elif isinstance(result, str):
+        return f"Dict: {json.dumps(result, indent=2)}"
+    if isinstance(result, str):
         return f"String: {result}"
-    else:
-        return f"Other ({type(result).__name__}): {result}"
+    return f"Other ({type(result).__name__}): {result}"

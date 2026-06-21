@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 import requests
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, ClassVar
 from requests.auth import HTTPBasicAuth
 
 from signalwire.core.skill_base import SkillBase
@@ -29,8 +29,8 @@ class MCPGatewaySkill(SkillBase):
     SKILL_NAME = "mcp_gateway"
     SKILL_DESCRIPTION = "Bridge MCP servers with SWAIG functions"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES = ["requests"]
-    REQUIRED_ENV_VARS = []
+    REQUIRED_PACKAGES: ClassVar[List[str]] = ["requests"]
+    REQUIRED_ENV_VARS: ClassVar[List[str]] = []
 
     @classmethod
     def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
@@ -195,7 +195,7 @@ class MCPGatewaySkill(SkillBase):
                 response = self._make_request("GET", f"{self.gateway_url}/services")
                 response.raise_for_status()
                 all_services = response.json()
-                self.services = [{"name": name} for name in all_services.keys()]
+                self.services = [{"name": name} for name in all_services]
             except Exception as e:
                 self.logger.error(f"Failed to list services: {e}")
                 return
@@ -341,27 +341,21 @@ class MCPGatewaySkill(SkillBase):
                     # Create SWAIG result
                     return FunctionResult(result_text)
 
-                else:
-                    try:
-                        error_data = response.json()
-                        error_msg = error_data.get(
-                            "error", f"HTTP {response.status_code}"
-                        )
-                    except (ValueError, requests.exceptions.JSONDecodeError):
-                        error_msg = (
-                            f"HTTP {response.status_code}: {response.text[:200]}"
-                        )
-                    last_error = error_msg
+                try:
+                    error_data = response.json()
+                    error_msg = error_data.get("error", f"HTTP {response.status_code}")
+                except (ValueError, requests.exceptions.JSONDecodeError):
+                    error_msg = f"HTTP {response.status_code}: {response.text[:200]}"
+                last_error = error_msg
 
-                    if response.status_code >= 500:
-                        # Server error, retry
-                        self.logger.warning(
-                            f"Gateway error (attempt {attempt + 1}): {error_msg}"
-                        )
-                        continue
-                    else:
-                        # Client error, don't retry
-                        break
+                if response.status_code >= 500:
+                    # Server error, retry
+                    self.logger.warning(
+                        f"Gateway error (attempt {attempt + 1}): {error_msg}"
+                    )
+                    continue
+                # Client error, don't retry
+                break
 
             except requests.exceptions.Timeout:
                 last_error = "Request timeout"
@@ -418,9 +412,11 @@ class MCPGatewaySkill(SkillBase):
         hints = ["MCP", "gateway"]
 
         # Add service names as hints
-        for service in self.services:
-            if isinstance(service, dict) and "name" in service:
-                hints.append(service["name"])
+        hints.extend(
+            service["name"]
+            for service in self.services
+            if isinstance(service, dict) and "name" in service
+        )
 
         return hints
 

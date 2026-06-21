@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import requests
 import json
-from typing import List, Dict, Any
+from typing import List, Dict, Any, ClassVar
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
@@ -21,8 +21,10 @@ class DataSphereSkill(SkillBase):
     SKILL_NAME = "datasphere"
     SKILL_DESCRIPTION = "Search knowledge using SignalWire DataSphere RAG stack"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES = ["requests"]
-    REQUIRED_ENV_VARS = []  # No required env vars since all config comes from params
+    REQUIRED_PACKAGES: ClassVar[List[str]] = ["requests"]
+    REQUIRED_ENV_VARS: ClassVar[
+        List[str]
+    ] = []  # No required env vars since all config comes from params
 
     # Enable multiple instances support
     SUPPORTS_MULTIPLE_INSTANCES = True

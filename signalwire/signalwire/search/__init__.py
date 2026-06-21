@@ -76,16 +76,16 @@ if _SEARCH_AVAILABLE:
         from .migration import SearchIndexMigrator
 
         __all__ = [
-            "preprocess_query",
-            "preprocess_document_content",
+            "DEFAULT_MODEL",
+            "MODEL_ALIASES",
             "DocumentProcessor",
             "IndexBuilder",
             "SearchEngine",
-            "SearchService",
-            "MODEL_ALIASES",
-            "DEFAULT_MODEL",
-            "resolve_model_alias",
             "SearchIndexMigrator",
+            "SearchService",
+            "preprocess_document_content",
+            "preprocess_query",
+            "resolve_model_alias",
         ]
     except ImportError as e:
         # Some search components failed to import
@@ -100,7 +100,7 @@ if _SEARCH_AVAILABLE:
         try:
             from .query_processor import preprocess_query, preprocess_document_content
 
-            __all__.extend(["preprocess_query", "preprocess_document_content"])
+            __all__.extend(["preprocess_document_content", "preprocess_query"])
         except ImportError:
             pass
 
@@ -137,10 +137,10 @@ else:
             _check_search_dependencies()
 
     __all__ = [
-        "preprocess_query",
-        "preprocess_document_content",
         "DocumentProcessor",
         "IndexBuilder",
         "SearchEngine",
         "SearchService",
+        "preprocess_document_content",
+        "preprocess_query",
     ]

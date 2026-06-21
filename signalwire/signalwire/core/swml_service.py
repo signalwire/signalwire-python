@@ -11,6 +11,7 @@ Base SWML Service for SignalWire Agents
 """
 
 import os
+from pathlib import Path
 import hmac
 import inspect
 import json
@@ -233,13 +234,12 @@ class SWMLService(ToolMixin):
                     # Sleep verb takes a direct integer parameter in SWML
                     if duration is not None:
                         return self_instance.add_verb("sleep", duration)
-                    elif kwargs:
+                    if kwargs:
                         # Try to get the value from kwargs
                         return self_instance.add_verb(
                             "sleep", next(iter(kwargs.values()))
                         )
-                    else:
-                        raise TypeError("sleep() missing required argument: 'duration'")
+                    raise TypeError("sleep() missing required argument: 'duration'")
 
                 # Set it as an attribute of self
                 setattr(self, verb_name, types.MethodType(sleep_method, self))
@@ -259,10 +259,9 @@ class SWMLService(ToolMixin):
                     self.log.debug(
                         "executing_verb_method", verb=name, kwargs_count=len(kwargs)
                     )
-                    config = {}
-                    for key, value in kwargs.items():
-                        if value is not None:
-                            config[key] = value
+                    config = {
+                        key: value for key, value in kwargs.items() if value is not None
+                    }
                     return self_instance.add_verb(name, config)
 
                 # Add docstring to the method
@@ -339,13 +338,12 @@ class SWMLService(ToolMixin):
                     # Sleep verb takes a direct integer parameter in SWML
                     if duration is not None:
                         return self_instance.add_verb("sleep", duration)
-                    elif kwargs:
+                    if kwargs:
                         # Try to get the value from kwargs
                         return self_instance.add_verb(
                             "sleep", next(iter(kwargs.values()))
                         )
-                    else:
-                        raise TypeError("sleep() missing required argument: 'duration'")
+                    raise TypeError("sleep() missing required argument: 'duration'")
 
                 # Cache the method for future use
                 self.log.debug("caching_sleep_method", verb=name)
@@ -362,10 +360,9 @@ class SWMLService(ToolMixin):
                 self.log.debug(
                     "executing_dynamic_verb", verb=name, kwargs_count=len(kwargs)
                 )
-                config = {}
-                for key, value in kwargs.items():
-                    if value is not None:
-                        config[key] = value
+                config = {
+                    key: value for key, value in kwargs.items() if value is not None
+                }
                 return self_instance.add_verb(name, config)
 
             # Add docstring to the method
@@ -439,25 +436,25 @@ class SWMLService(ToolMixin):
         # Fall back to manual search in various locations
 
         # Get package directory
-        package_dir = os.path.dirname(os.path.dirname(__file__))
+        package_dir = Path(__file__).parent.parent
 
         # Potential locations for schema.json
         potential_paths = [
-            os.path.join(os.getcwd(), "schema.json"),  # Current working directory
-            os.path.join(package_dir, "schema.json"),  # Package directory
-            os.path.join(
-                os.path.dirname(package_dir), "schema.json"
-            ),  # Parent of package directory
-            os.path.join(sys.prefix, "schema.json"),  # Python installation directory
-            os.path.join(package_dir, "data", "schema.json"),  # Data subdirectory
-            os.path.join(
-                os.path.dirname(package_dir), "data", "schema.json"
+            str(Path.cwd() / "schema.json"),  # Current working directory
+            str(package_dir / "schema.json"),  # Package directory
+            str(package_dir.parent / "schema.json"),  # Parent of package directory
+            str(Path(sys.prefix) / "schema.json"),  # Python installation directory
+            str(package_dir / "data" / "schema.json"),  # Data subdirectory
+            str(
+                package_dir.parent / "data" / "schema.json"
             ),  # Parent's data subdirectory
         ]
 
         # Try to find the schema file
         for path in potential_paths:
-            if os.path.exists(path):
+            if os.path.exists(  # noqa: PTH110  # tests patch global os.path.exists; Path.exists() would bypass the mock seam
+                path
+            ):
                 return path
 
         return None
@@ -644,7 +641,7 @@ class SWMLService(ToolMixin):
 
         # Register routing callbacks as needed
         if hasattr(self, "_routing_callbacks") and self._routing_callbacks:
-            for callback_path, _callback_fn in self._routing_callbacks.items():
+            for callback_path in self._routing_callbacks:
                 # Skip the root path which is already handled
                 if callback_path == "/":
                     continue
@@ -1113,7 +1110,7 @@ class SWMLService(ToolMixin):
                     return await self._handle_request(request, response)
 
                 # Check for our route with a trailing slash or subpaths
-                elif full_path == route_with_slash or full_path.startswith(
+                if full_path == route_with_slash or full_path.startswith(
                     route_with_slash
                 ):
                     # This is our route with a trailing slash
@@ -1127,10 +1124,7 @@ class SWMLService(ToolMixin):
 
                     # Check for routing callbacks if there are any
                     if hasattr(self, "_routing_callbacks"):
-                        for (
-                            callback_path,
-                            _callback_fn,
-                        ) in self._routing_callbacks.items():
+                        for callback_path in self._routing_callbacks:
                             cb_path_clean = callback_path.strip("/")
                             if sub_path == cb_path_clean or sub_path.startswith(
                                 cb_path_clean + "/"

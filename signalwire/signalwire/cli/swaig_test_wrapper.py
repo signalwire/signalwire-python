@@ -45,7 +45,8 @@ def main():
         "ignore::RuntimeWarning",
         "-m",
         "signalwire.cli.test_swaig",
-    ] + args
+        *args,
+    ]
 
     # Run the command and exit with its exit code
     result = subprocess.run(cmd)  # noqa: S603  # shell=False; cmd runs the current interpreter against an internal module, args are this CLI's own passthrough flags — no shell involved

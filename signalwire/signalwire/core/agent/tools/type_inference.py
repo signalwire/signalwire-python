@@ -53,10 +53,9 @@ def _resolve_type(annotation) -> Tuple[Dict[str, Any], bool]:
         # Determine type from first value
         if all(isinstance(v, str) for v in values):
             return {"type": "string", "enum": values}, False
-        elif all(isinstance(v, int) for v in values):
+        if all(isinstance(v, int) for v in values):
             return {"type": "integer", "enum": values}, False
-        else:
-            return {"type": "string", "enum": [str(v) for v in values]}, False
+        return {"type": "string", "enum": [str(v) for v in values]}, False
 
     # Handle List[X]
     if origin is list:
@@ -255,7 +254,7 @@ def infer_schema(func) -> Tuple[Dict[str, Dict], List[str], Optional[str], bool,
             prop, is_optional = _resolve_type(annotation)
 
         # Add description from docstring if available
-        if p.name in param_docs and param_docs[p.name]:
+        if param_docs.get(p.name):
             prop["description"] = param_docs[p.name]
 
         parameters[p.name] = prop
@@ -286,8 +285,7 @@ def create_typed_handler_wrapper(func, has_raw_data: bool):
     def wrapper(args, raw_data):
         if has_raw_data:
             return func(raw_data=raw_data, **args)
-        else:
-            return func(**args)
+        return func(**args)
 
     # Preserve original function metadata for debugging
     wrapper.__name__ = getattr(func, "__name__", "typed_handler")

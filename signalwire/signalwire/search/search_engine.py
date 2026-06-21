@@ -86,8 +86,7 @@ class SearchEngine:
             conn = sqlite3.connect(self.index_path)
             cursor = conn.cursor()
             cursor.execute("SELECT key, value FROM config")
-            config = dict(cursor.fetchall())
-            return config
+            return dict(cursor.fetchall())
         except Exception as e:
             logger.error(f"Error loading config from {self.index_path}: {e}")
             return {}
@@ -645,7 +644,7 @@ class SearchEngine:
 
         # Calculate combined score (weighted average)
 
-        for _chunk_id, result in combined.items():
+        for result in combined.values():
             vector_score = result.get("vector_score", 0.0)
             keyword_score = result.get("keyword_score", 0.0)
             result["score"] = (
@@ -660,10 +659,7 @@ class SearchEngine:
             }
 
         # Sort by combined score
-        sorted_results = sorted(
-            combined.values(), key=lambda x: x["score"], reverse=True
-        )
-        return sorted_results
+        return sorted(combined.values(), key=lambda x: x["score"], reverse=True)
 
     def _filter_by_tags(
         self, results: List[Dict], required_tags: List[str]
@@ -699,16 +695,13 @@ class SearchEngine:
             if any(
                 term in filename_lower
                 for term in ["example", "sample", "demo", "tutorial", "guide"]
+            ) and (
+                "example" in query_lower
+                or "sample" in query_lower
+                or "code" in query_lower
             ):
-                if (
-                    "example" in query_lower
-                    or "sample" in query_lower
-                    or "code" in query_lower
-                ):
-                    result["score"] *= 1.5
-                    result["final_score"] = (
-                        result.get("final_score", result["score"]) * 1.5
-                    )
+                result["score"] *= 1.5
+                result["final_score"] = result.get("final_score", result["score"]) * 1.5
 
             # Boost for "getting started" type queries
             if "getting started" in query_lower and "start" in content_lower:
@@ -759,10 +752,8 @@ class SearchEngine:
                     if "/" in filename_lower
                     else filename_lower
                 )
-                if query_lower in basename:
-                    score = 3.0  # Exact match in basename (increased weight)
-                else:
-                    score = 2.0  # Exact match in path
+                # Exact match in basename gets increased weight over a path match
+                score = 3.0 if query_lower in basename else 2.0
 
                 results.append(
                     {
@@ -1492,26 +1483,29 @@ class SearchEngine:
         # Ensure minimum diversity if we have enough results
         if len(penalized_results) > target_count:
             unique_files = len(
-                set(r["metadata"]["filename"] for r in penalized_results[:target_count])
+                {r["metadata"]["filename"] for r in penalized_results[:target_count]}
             )
 
             # If top results are too homogeneous (e.g., all from 1-2 files)
             if unique_files < min(3, target_count):
                 # Try to inject some diversity
                 selected = penalized_results[:target_count]
-                seen_files = set(r["metadata"]["filename"] for r in selected)
+                seen_files = {r["metadata"]["filename"] for r in selected}
 
                 # Look for high-quality results from other files
                 for result in penalized_results[target_count:]:
-                    if result["metadata"]["filename"] not in seen_files:
-                        # If it's reasonably good (within 50% of top score), include it
-                        if result["final_score"] > 0.5 * selected[0]["final_score"]:
-                            # Replace the lowest scoring result from an over-represented file
-                            for i in range(len(selected) - 1, -1, -1):
-                                if file_counts[selected[i]["metadata"]["filename"]] > 2:
-                                    selected[i] = result
-                                    seen_files.add(result["metadata"]["filename"])
-                                    break
+                    # Only inject a result from a new file that's reasonably good
+                    # (within 50% of top score)
+                    if (
+                        result["metadata"]["filename"] not in seen_files
+                        and result["final_score"] > 0.5 * selected[0]["final_score"]
+                    ):
+                        # Replace the lowest scoring result from an over-represented file
+                        for i in range(len(selected) - 1, -1, -1):
+                            if file_counts[selected[i]["metadata"]["filename"]] > 2:
+                                selected[i] = result
+                                seen_files.add(result["metadata"]["filename"])
+                                break
 
                 penalized_results[:target_count] = selected
 
@@ -1568,7 +1562,7 @@ class SearchEngine:
         remaining_slots = target_count - len(diversified)
         if remaining_slots > 0:
             # Get all unused results
-            used_ids = set(r["id"] for r in diversified)
+            used_ids = {r["id"] for r in diversified}
             unused = [r for r in results if r["id"] not in used_ids]
             diversified.extend(unused[:remaining_slots])
 

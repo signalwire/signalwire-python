@@ -117,7 +117,7 @@ class SkillRegistry:
                     and issubclass(obj, SkillBase)
                     and obj != SkillBase
                     and hasattr(obj, "SKILL_NAME")
-                    and obj.SKILL_NAME == skill_name
+                    and skill_name == obj.SKILL_NAME
                 ):  # Match exact skill name
                     self.register_skill(obj)
                     return obj
@@ -347,7 +347,7 @@ class SkillRegistry:
                 )
 
         # Add already registered skills first (includes entry points)
-        for _skill_name, skill_class in self._skills.items():
+        for skill_class in self._skills.values():
             add_skill_to_schema(skill_class, "registered")
 
         # Scan built-in skills directory

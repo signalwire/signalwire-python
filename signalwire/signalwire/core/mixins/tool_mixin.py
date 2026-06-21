@@ -281,7 +281,7 @@ class ToolMixin(_HostTyped):
             return result
         except Exception as e:
             # If the handler raises an exception, return an error response
-            return {"response": f"Error executing function '{name}': {str(e)}"}
+            return {"response": f"Error executing function '{name}': {e!s}"}
 
     def _execute_swaig_function(
         self,

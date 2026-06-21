@@ -538,7 +538,7 @@ Examples:
                             },
                         }
 
-                        with open(json_path, "w", encoding="utf-8") as f:
+                        with json_path.open("w", encoding="utf-8") as f:
                             json.dump(chunk_data, f, indent=2, ensure_ascii=False)
 
                         chunk_files_created.append(json_path)
@@ -548,7 +548,7 @@ Examples:
                         # Accumulate all chunks for single file output
                         all_chunks.extend(chunks)
 
-                except Exception as e:
+                except Exception as e:  # noqa: PERF203  # per-iteration error isolation: one failed file must not abort the batch
                     print(f"Error processing {file_path}: {e}")
                     if args.verbose:
                         import traceback
@@ -567,7 +567,7 @@ Examples:
                     },
                 }
 
-                with open(args.output, "w", encoding="utf-8") as f:
+                with Path(args.output).open("w", encoding="utf-8") as f:
                     json.dump(output_data, f, indent=2, ensure_ascii=False)
 
                 print(f"✓ Exported {len(all_chunks)} chunks to {args.output}")
@@ -577,7 +577,7 @@ Examples:
                 )
                 total_chunks = 0
                 for chunk_file in chunk_files_created:
-                    with open(chunk_file) as fh:
+                    with chunk_file.open() as fh:
                         total_chunks += len(json.load(fh)["chunks"])
                 print(f"  Total chunks: {total_chunks}")
 
@@ -634,7 +634,11 @@ Examples:
             # Check if the index was actually created
             import os
 
-            if os.path.exists(args.output):
+            # Rationale for PTH110 suppression below: tests patch global
+            # os.path.exists separately from pathlib.Path.exists to drive this
+            # post-build check; Path.exists() would pick up the unrelated Path
+            # mock and break the test seam.
+            if os.path.exists(args.output):  # noqa: PTH110
                 print(f"\n✓ Search index created successfully: {args.output}")
             else:
                 print("\n✗ Search index creation failed - no files were processed")
@@ -771,10 +775,11 @@ def search_command():
         args.model = MODEL_ALIASES[args.model]
 
     # Validate keyword weight if provided
-    if args.keyword_weight is not None:
-        if args.keyword_weight < 0.0 or args.keyword_weight > 1.0:
-            print("Error: --keyword-weight must be between 0.0 and 1.0")
-            sys.exit(1)
+    if args.keyword_weight is not None and (
+        args.keyword_weight < 0.0 or args.keyword_weight > 1.0
+    ):
+        print("Error: --keyword-weight must be between 0.0 and 1.0")
+        sys.exit(1)
 
     # Validate backend configuration
     if args.backend == "pgvector" and not args.connection_string:
@@ -1540,17 +1545,17 @@ Examples:
             sys.argv.pop(1)
             validate_command()
             return
-        elif sys.argv[1] == "search":
+        if sys.argv[1] == "search":
             # Remove 'search' from argv and call search_command
             sys.argv.pop(1)
             search_command()
             return
-        elif sys.argv[1] == "remote":
+        if sys.argv[1] == "remote":
             # Remove 'remote' from argv and call remote_command
             sys.argv.pop(1)
             remote_command()
             return
-        elif sys.argv[1] == "migrate":
+        if sys.argv[1] == "migrate":
             # Remove 'migrate' from argv and call migrate_command
             sys.argv.pop(1)
             migrate_command()

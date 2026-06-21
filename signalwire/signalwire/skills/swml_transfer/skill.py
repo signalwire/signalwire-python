@@ -7,7 +7,7 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, ClassVar
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.data_map import DataMap
@@ -20,8 +20,8 @@ class SWMLTransferSkill(SkillBase):
     SKILL_NAME = "swml_transfer"
     SKILL_DESCRIPTION = "Transfer calls between agents based on pattern matching"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES = []
-    REQUIRED_ENV_VARS = []
+    REQUIRED_PACKAGES: ClassVar[List[str]] = []
+    REQUIRED_ENV_VARS: ClassVar[List[str]] = []
 
     # Enable multiple instances support
     SUPPORTS_MULTIPLE_INSTANCES = True
@@ -222,7 +222,7 @@ class SWMLTransferSkill(SkillBase):
             # Add required fields to global data under call_data key
             if self.required_fields:
                 call_data = {}
-                for field_name in self.required_fields.keys():
+                for field_name in self.required_fields:
                     call_data[field_name] = f"${{args.{field_name}}}"
                 result = result.update_global_data({"call_data": call_data})
 
@@ -253,7 +253,7 @@ class SWMLTransferSkill(SkillBase):
         # For fallback, still save required fields if provided
         if self.required_fields:
             call_data = {}
-            for field_name in self.required_fields.keys():
+            for field_name in self.required_fields:
                 call_data[field_name] = f"${{args.{field_name}}}"
             default_result = default_result.update_global_data({"call_data": call_data})
 
@@ -272,10 +272,10 @@ class SWMLTransferSkill(SkillBase):
 
     def get_hints(self) -> List[str]:
         """Return speech recognition hints"""
-        hints = []
+        hints: List[str] = []
 
         # Extract common words from patterns for hints
-        for pattern in self.transfers.keys():
+        for pattern in self.transfers:
             # Remove regex delimiters and flags
             clean_pattern = pattern
             # Remove leading and trailing slashes
@@ -291,8 +291,9 @@ class SWMLTransferSkill(SkillBase):
             if clean_pattern and not clean_pattern.startswith("."):
                 # Handle patterns with alternatives (e.g., "sales|billing")
                 if "|" in clean_pattern:
-                    for part in clean_pattern.split("|"):
-                        hints.append(part.strip().lower())
+                    hints.extend(
+                        part.strip().lower() for part in clean_pattern.split("|")
+                    )
                 else:
                     hints.append(clean_pattern.lower())
 

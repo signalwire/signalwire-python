@@ -16,9 +16,9 @@ from signalwire.prefabs.survey import SurveyAgent
 from signalwire.prefabs.receptionist import ReceptionistAgent
 
 __all__ = [
-    "InfoGathererAgent",
-    "FAQBotAgent",
     "ConciergeAgent",
-    "SurveyAgent",
+    "FAQBotAgent",
+    "InfoGathererAgent",
     "ReceptionistAgent",
+    "SurveyAgent",
 ]

@@ -312,10 +312,9 @@ class SWMLBuilder:
                     """
                     Dynamically generated method for SWML verb - returns self for chaining
                     """
-                    config: Dict[str, Any] = {}
-                    for key, value in kwargs.items():
-                        if value is not None:
-                            config[key] = value
+                    config: Dict[str, Any] = {
+                        key: value for key, value in kwargs.items() if value is not None
+                    }
                     self_instance.service.add_verb(name, config)
                     return self_instance
 
@@ -408,10 +407,9 @@ class SWMLBuilder:
                 """
                 Dynamically generated method for SWML verb - returns self for chaining
                 """
-                config: Dict[str, Any] = {}
-                for key, value in kwargs.items():
-                    if value is not None:
-                        config[key] = value
+                config: Dict[str, Any] = {
+                    key: value for key, value in kwargs.items() if value is not None
+                }
                 self_instance.service.add_verb(name, config)
                 return self_instance
 

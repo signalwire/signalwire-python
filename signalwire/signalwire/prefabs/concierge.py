@@ -213,11 +213,10 @@ class ConciergeAgent(AgentBase):
             return FunctionResult(
                 f"Yes, {service} is available on {date} at {time}. Would you like to make a reservation?"
             )
-        else:
-            return FunctionResult(
-                f"I'm sorry, we don't offer {service} at {self.venue_name}. "
-                f"Our available services are: {', '.join(self.services)}."
-            )
+        return FunctionResult(
+            f"I'm sorry, we don't offer {service} at {self.venue_name}. "
+            f"Our available services are: {', '.join(self.services)}."
+        )
 
     @AgentBase.tool(
         name="get_directions",
@@ -240,11 +239,10 @@ class ConciergeAgent(AgentBase):
                 f"The {location} is located at {amenity_location}. "
                 f"From the main entrance, follow the signs to {amenity_location}."
             )
-        else:
-            return FunctionResult(
-                f"I don't have specific directions to {location}. "
-                f"You can ask our staff at the front desk for assistance."
-            )
+        return FunctionResult(
+            f"I don't have specific directions to {location}. "
+            f"You can ask our staff at the front desk for assistance."
+        )
 
     def on_summary(self, summary, raw_data=None):
         """
@@ -266,4 +264,4 @@ class ConciergeAgent(AgentBase):
 
                 # Subclasses can override this to log or process the interaction
             except Exception as e:
-                print(f"Error processing summary: {str(e)}")
+                print(f"Error processing summary: {e!s}")

@@ -30,16 +30,16 @@ def generate_fake_sip_from(call_type: str) -> str:
     """Generate a fake 'from' address based on call type"""
     if call_type == "sip":
         return f"+1555{uuid.uuid4().hex[:7]}"  # Fake phone number
-    else:  # webrtc
-        return f"user-{uuid.uuid4().hex[:8]}@test.domain"
+    # webrtc
+    return f"user-{uuid.uuid4().hex[:8]}@test.domain"
 
 
 def generate_fake_sip_to(call_type: str) -> str:
     """Generate a fake 'to' address based on call type"""
     if call_type == "sip":
         return f"+1444{uuid.uuid4().hex[:7]}"  # Fake phone number
-    else:  # webrtc
-        return f"agent-{uuid.uuid4().hex[:8]}@test.domain"
+    # webrtc
+    return f"agent-{uuid.uuid4().hex[:8]}@test.domain"
 
 
 def adapt_for_call_type(call_data: Dict[str, Any], call_type: str) -> Dict[str, Any]:
@@ -128,15 +128,13 @@ def generate_fake_swml_post_data(
     call_data = adapt_for_call_type(call_data, call_type)
 
     # Complete post_data structure
-    post_data = {
+    return {
         "call": call_data,
         "vars": {
             "userVariables": {}  # Empty by default, can be filled via overrides
         },
         "envs": {},  # Empty by default, can be filled via overrides
     }
-
-    return post_data
 
 
 def generate_comprehensive_post_data(

@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 from datetime import datetime, timezone
 import pytz
-from typing import List, Dict, Any
+from typing import List, Dict, Any, ClassVar
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
@@ -21,8 +21,8 @@ class DateTimeSkill(SkillBase):
     SKILL_NAME = "datetime"
     SKILL_DESCRIPTION = "Get current date, time, and timezone information"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES = ["pytz"]
-    REQUIRED_ENV_VARS = []
+    REQUIRED_PACKAGES: ClassVar[List[str]] = ["pytz"]
+    REQUIRED_ENV_VARS: ClassVar[List[str]] = []
 
     def setup(self) -> bool:
         """Setup the datetime skill"""
@@ -71,7 +71,7 @@ class DateTimeSkill(SkillBase):
             return FunctionResult(f"The current time is {time_str}")
 
         except Exception as e:
-            return FunctionResult(f"Error getting time: {str(e)}")
+            return FunctionResult(f"Error getting time: {e!s}")
 
     def _get_date_handler(self, args, raw_data):
         """Handler for get_current_date tool"""
@@ -89,7 +89,7 @@ class DateTimeSkill(SkillBase):
             return FunctionResult(f"Today's date is {date_str}")
 
         except Exception as e:
-            return FunctionResult(f"Error getting date: {str(e)}")
+            return FunctionResult(f"Error getting date: {e!s}")
 
     def get_hints(self) -> List[str]:
         """Return speech recognition hints"""
@@ -120,8 +120,6 @@ class DateTimeSkill(SkillBase):
         the base parameters from SkillBase.
         """
         # Get base schema from parent
-        schema = super().get_parameter_schema()
+        return super().get_parameter_schema()
 
         # No additional parameters for datetime skill
-
-        return schema

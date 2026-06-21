@@ -30,11 +30,27 @@ from .constants import (
     RECORD_STATE_NO_INPUT,
 )
 from .event import RelayEvent, parse_event
+import contextlib
 
 if TYPE_CHECKING:
     from .client import RelayClient
 
 logger = get_logger("relay_call")
+
+# Strong references to fire-and-forget callback tasks. asyncio only keeps a
+# weak reference to a running task, so a bare ensure_future on a coroutine
+# returned by a user callback could be garbage-collected mid-flight. These
+# callbacks run on short-lived Action/Call instances, so the set is module-
+# level (outliving any single instance); tasks are discarded on completion.
+_bg_tasks: set["asyncio.Task[Any]"] = set()
+
+
+def _spawn_bg(coro: "Coroutine[Any, Any, Any]") -> None:
+    """Schedule a fire-and-forget coroutine while holding a strong reference."""
+    task = asyncio.ensure_future(coro)
+    _bg_tasks.add(task)
+    task.add_done_callback(_bg_tasks.discard)
+
 
 EventHandler = Callable[[RelayEvent], Coroutine[Any, Any, None] | None]
 
@@ -88,7 +104,7 @@ class Action:
             try:
                 result = self._on_completed(event)
                 if asyncio.iscoroutine(result):
-                    asyncio.ensure_future(result)
+                    _spawn_bg(result)
             except Exception:
                 logger.exception(
                     f"Error in on_completed callback for {self.control_id}"
@@ -430,8 +446,8 @@ class Call:
             try:
                 result = handler(event)
                 if asyncio.iscoroutine(result):
-                    asyncio.ensure_future(result)
-            except Exception:
+                    _spawn_bg(result)
+            except Exception:  # noqa: PERF203  # per-iteration error isolation: one listener's failure must not prevent notifying the others
                 logger.exception(f"Error in event handler for {event_type}")
 
     async def wait_for(
@@ -457,10 +473,8 @@ class Call:
         finally:
             # Clean up the one-shot handler
             if event_type in self._listeners:
-                try:
+                with contextlib.suppress(ValueError):
                     self._listeners[event_type].remove(_handler)
-                except ValueError:
-                    pass
 
     async def wait_for_ended(self, timeout: Optional[float] = None) -> RelayEvent:
         """Wait for the call to reach the ended state."""
@@ -667,17 +681,18 @@ class Call:
         on_completed: Optional[Callable[[RelayEvent], Any]] = None,
     ) -> DetectAction:
         """Detect human vs answering machine (AMD). Typed convenience over :meth:`detect`."""
-        params: dict[str, Any] = {}
-        for key, val in (
-            ("initial_timeout", initial_timeout),
-            ("end_silence_timeout", end_silence_timeout),
-            ("machine_voice_threshold", machine_voice_threshold),
-            ("machine_words_threshold", machine_words_threshold),
-            ("detect_interruptions", detect_interruptions),
-            ("detect_message_end", detect_message_end),
-        ):
-            if val is not None:
-                params[key] = val
+        params: dict[str, Any] = {
+            key: val
+            for key, val in (
+                ("initial_timeout", initial_timeout),
+                ("end_silence_timeout", end_silence_timeout),
+                ("machine_voice_threshold", machine_voice_threshold),
+                ("machine_words_threshold", machine_words_threshold),
+                ("detect_interruptions", detect_interruptions),
+                ("detect_message_end", detect_message_end),
+            )
+            if val is not None
+        }
         return await self.detect(
             {"type": "machine", "params": params},
             timeout=timeout,

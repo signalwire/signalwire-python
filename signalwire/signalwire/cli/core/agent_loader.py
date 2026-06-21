@@ -320,15 +320,18 @@ def _load_service_impl(
     # If service_identifier is specified and prefer_route is True, try to find by route first
     if service_identifier and prefer_route:
         # First, try to find an existing instance with matching route
-        for _name, obj in vars(module).items():
-            if isinstance(obj, SWMLService) and hasattr(obj, "route"):
-                if obj.route == service_identifier:
-                    service = obj
-                    break
+        for obj in vars(module).values():
+            if (
+                isinstance(obj, SWMLService)
+                and hasattr(obj, "route")
+                and obj.route == service_identifier
+            ):
+                service = obj
+                break
 
         # If not found, try instantiating classes to check their routes
         if service is None:
-            for _name, obj in vars(module).items():
+            for obj in vars(module).values():
                 if (
                     isinstance(obj, type)
                     and issubclass(obj, SWMLService)
@@ -461,7 +464,7 @@ def _load_service_impl(
                             "service_name": service_name,
                         }
                     )
-                except Exception:
+                except Exception:  # noqa: PERF203  # per-iteration error isolation: one class that fails to instantiate must not abort discovery
                     # If instantiation fails, still include the class
                     service_info.append(
                         {

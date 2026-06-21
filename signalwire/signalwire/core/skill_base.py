@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, TYPE_CHECKING, Optional
+from typing import List, Dict, Any, ClassVar, TYPE_CHECKING, Optional
 
 from signalwire.core.logging_config import get_logger
 
@@ -24,8 +24,8 @@ class SkillBase(ABC):
     SKILL_NAME: Optional[str] = None  # Required: unique identifier
     SKILL_DESCRIPTION: Optional[str] = None  # Required: human-readable description
     SKILL_VERSION: str = "1.0.0"  # Semantic version
-    REQUIRED_PACKAGES: List[str] = []  # Python packages needed
-    REQUIRED_ENV_VARS: List[str] = []  # Environment variables needed
+    REQUIRED_PACKAGES: ClassVar[List[str]] = []  # Python packages needed
+    REQUIRED_ENV_VARS: ClassVar[List[str]] = []  # Environment variables needed
 
     # Multiple instance support
     SUPPORTS_MULTIPLE_INSTANCES: bool = False  # Set to True to allow multiple instances
@@ -117,7 +117,7 @@ class SkillBase(ABC):
         for package in self.REQUIRED_PACKAGES:
             try:
                 importlib.import_module(package)
-            except ImportError:
+            except ImportError:  # noqa: PERF203  # per-iteration error isolation: must check every package to report all missing ones
                 missing.append(package)
         if missing:
             self.logger.error(f"Missing required packages: {missing}")

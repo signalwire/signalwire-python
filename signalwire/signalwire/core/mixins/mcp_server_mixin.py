@@ -124,7 +124,7 @@ class MCPServerMixin:
                     "jsonrpc": "2.0",
                     "id": req_id,
                     "result": {
-                        "content": [{"type": "text", "text": f"Error: {str(e)}"}],
+                        "content": [{"type": "text", "text": f"Error: {e!s}"}],
                         "isError": True,
                     },
                 }

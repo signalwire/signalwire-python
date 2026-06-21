@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 import ast
-from typing import List, Dict, Any, Callable, Type
+from typing import List, Dict, Any, Callable, ClassVar, Type
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
@@ -20,8 +20,8 @@ class MathSkill(SkillBase):
     SKILL_NAME = "math"
     SKILL_DESCRIPTION = "Perform basic mathematical calculations"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES = []
-    REQUIRED_ENV_VARS = []
+    REQUIRED_PACKAGES: ClassVar[List[str]] = []
+    REQUIRED_ENV_VARS: ClassVar[List[str]] = []
 
     def setup(self) -> bool:
         """Setup the math skill"""
@@ -43,7 +43,7 @@ class MathSkill(SkillBase):
         )
 
     # Allowed AST node types for safe math evaluation
-    _SAFE_OPERATORS: Dict[Type[ast.AST], Callable[..., Any]] = {
+    _SAFE_OPERATORS: ClassVar[Dict[Type[ast.AST], Callable[..., Any]]] = {
         ast.Add: lambda a, b: a + b,
         ast.Sub: lambda a, b: a - b,
         ast.Mult: lambda a, b: a * b,
@@ -58,11 +58,11 @@ class MathSkill(SkillBase):
         """Recursively evaluate an AST node, allowing only safe math operations."""
         if isinstance(node, ast.Expression):
             return self._safe_eval(node.body)
-        elif isinstance(node, ast.Constant):
+        if isinstance(node, ast.Constant):
             if isinstance(node.value, (int, float)):
                 return node.value
             raise ValueError(f"Unsupported constant type: {type(node.value).__name__}")
-        elif isinstance(node, ast.BinOp):
+        if isinstance(node, ast.BinOp):
             op_type: Type[ast.AST] = type(node.op)
             if op_type not in self._SAFE_OPERATORS:
                 raise ValueError(f"Unsupported binary operator: {op_type.__name__}")
@@ -72,14 +72,13 @@ class MathSkill(SkillBase):
             if op_type is ast.Pow and isinstance(right, (int, float)) and right > 1000:
                 raise ValueError("Exponent too large (maximum is 1000)")
             return self._SAFE_OPERATORS[op_type](left, right)
-        elif isinstance(node, ast.UnaryOp):
+        if isinstance(node, ast.UnaryOp):
             op_type = type(node.op)
             if op_type not in self._SAFE_OPERATORS:
                 raise ValueError(f"Unsupported unary operator: {op_type.__name__}")
             operand = self._safe_eval(node.operand)
             return self._SAFE_OPERATORS[op_type](operand)
-        else:
-            raise ValueError(f"Unsupported expression node: {type(node).__name__}")
+        raise ValueError(f"Unsupported expression node: {type(node).__name__}")
 
     def _calculate_handler(self, args, raw_data):
         """Handler for calculate tool"""
@@ -141,8 +140,6 @@ class MathSkill(SkillBase):
         the base parameters from SkillBase.
         """
         # Get base schema from parent
-        schema = super().get_parameter_schema()
+        return super().get_parameter_schema()
 
         # No additional parameters for math skill
-
-        return schema

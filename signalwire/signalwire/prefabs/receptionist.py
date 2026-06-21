@@ -121,9 +121,9 @@ class ReceptionistAgent(AgentBase):
         global_data = self._global_data
         departments = global_data.get("departments", [])
 
-        department_bullets = []
-        for dept in departments:
-            department_bullets.append(f"{dept['name']}: {dept['description']}")
+        department_bullets = [
+            f"{dept['name']}: {dept['description']}" for dept in departments
+        ]
 
         self.prompt_add_section("Available Departments", bullets=department_bullets)
 

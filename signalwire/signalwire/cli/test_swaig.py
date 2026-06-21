@@ -258,7 +258,7 @@ def main():
 
     # Temporarily modify sys.argv for argparse (exclude --exec and its args)
     original_argv = sys.argv[:]
-    sys.argv = [sys.argv[0]] + cli_args
+    sys.argv = [sys.argv[0], *cli_args]
 
     parser = CustomArgumentParser(
         description=HELP_DESCRIPTION,
@@ -425,10 +425,14 @@ def main():
     if args.route and args.agent_class:
         parser.error("Cannot specify both --route and --agent-class. Choose one.")
 
-    if not args.list_tools and not args.dump_swml and not args.list_agents:
-        if not args.tool_name:
-            # If no tool_name and no special flags, default to listing tools
-            args.list_tools = True
+    if (
+        not args.list_tools
+        and not args.dump_swml
+        and not args.list_agents
+        and not args.tool_name
+    ):
+        # If no tool_name and no special flags, default to listing tools
+        args.list_tools = True
 
     # ===== SERVERLESS SIMULATION SETUP =====
     serverless_simulator = None
@@ -811,7 +815,7 @@ def main():
 
                     if args.verbose:
                         print(f"\nRaw result type: {type(result).__name__}")
-                        print(f"Raw result: {repr(result)}")
+                        print(f"Raw result: {result!r}")
 
                 except Exception as e:
                     print(f"Error calling function: {e}")

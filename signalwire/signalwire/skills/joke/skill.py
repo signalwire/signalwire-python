@@ -7,7 +7,7 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import List, Dict, Any
+from typing import List, Dict, Any, ClassVar
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.data_map import DataMap
@@ -20,8 +20,10 @@ class JokeSkill(SkillBase):
     SKILL_NAME = "joke"
     SKILL_DESCRIPTION = "Tell jokes using the API Ninjas joke API"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES = []  # DataMap doesn't require local packages
-    REQUIRED_ENV_VARS = []  # API key comes from parameters
+    REQUIRED_PACKAGES: ClassVar[
+        List[str]
+    ] = []  # DataMap doesn't require local packages
+    REQUIRED_ENV_VARS: ClassVar[List[str]] = []  # API key comes from parameters
 
     @classmethod
     def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:

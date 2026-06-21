@@ -176,7 +176,7 @@ class SearchIndexMigrator:
                         # Handle both old and new schema (with or without metadata_text)
                         if len(row) == 14:  # New schema with metadata_text
                             (
-                                chunk_id,
+                                _chunk_id,
                                 content,
                                 processed_content,
                                 keywords_json,
@@ -193,7 +193,7 @@ class SearchIndexMigrator:
                             ) = row
                         else:  # Old schema without metadata_text
                             (
-                                chunk_id,
+                                _chunk_id,
                                 content,
                                 processed_content,
                                 keywords_json,

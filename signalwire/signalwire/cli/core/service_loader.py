@@ -196,11 +196,10 @@ async def simulate_request_to_service(
         import json
 
         return json.loads(result.body.decode())
-    elif isinstance(result, dict):
+    if isinstance(result, dict):
         return result
-    else:
-        # Try to get content from response
-        return {"error": "Unable to parse response"}
+    # Try to get content from response
+    return {"error": "Unable to parse response"}
 
 
 def load_and_simulate_service(
@@ -317,19 +316,16 @@ def discover_agents_in_file(agent_path: str) -> List[Dict[str, Any]]:
     services = capturer.capture(agent_path)
 
     # Convert to old format
-    agents_found = []
-    for service in services:
-        if isinstance(service, AgentBase):
-            agents_found.append(
-                {
-                    "name": service.name,
-                    "class_name": service.__class__.__name__,
-                    "type": "instance",
-                    "agent_name": service.name,
-                    "route": service.route,
-                    "description": service.__class__.__doc__,
-                    "object": service,
-                }
-            )
-
-    return agents_found
+    return [
+        {
+            "name": service.name,
+            "class_name": service.__class__.__name__,
+            "type": "instance",
+            "agent_name": service.name,
+            "route": service.route,
+            "description": service.__class__.__doc__,
+            "object": service,
+        }
+        for service in services
+        if isinstance(service, AgentBase)
+    ]

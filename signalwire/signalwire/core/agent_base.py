@@ -10,11 +10,22 @@ See LICENSE file in the project root for full license information.
 Base class for all SignalWire AI Agents
 """
 
+import contextlib
 import os
 import json
 import uuid
 import re
-from typing import Optional, List, Dict, Any, Tuple, Callable, TYPE_CHECKING
+from typing import (
+    Optional,
+    List,
+    Dict,
+    Any,
+    Tuple,
+    Callable,
+    ClassVar,
+    Set,
+    TYPE_CHECKING,
+)
 
 if TYPE_CHECKING:
     from signalwire.core.contexts import ContextBuilder
@@ -323,7 +334,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         ] = []  # Verbs to run after AI ends (e.g., cleanup, transfers)
 
     # Verb categories for pre-answer validation
-    _PRE_ANSWER_SAFE_VERBS = {
+    _PRE_ANSWER_SAFE_VERBS: ClassVar[Set[str]] = {
         "transfer",
         "execute",
         "return",
@@ -343,7 +354,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         "stop_denoise",
         "stop_tap",
     }
-    _AUTO_ANSWER_VERBS = {"play", "connect"}
+    _AUTO_ANSWER_VERBS: ClassVar[Set[str]] = {"play", "connect"}
 
     @staticmethod
     def _load_service_config(config_file: Optional[str], service_name: str) -> dict:
@@ -464,8 +475,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         else:
             # Server mode - use the SWMLService's unified URL building
             # Build the full URL using the parent's method
-            base_url = self._build_full_url(endpoint="", include_auth=include_auth)
-            return base_url
+            return self._build_full_url(endpoint="", include_auth=include_auth)
 
         # For serverless modes, add authentication if requested
         if include_auth:
@@ -730,9 +740,8 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
                     self.log.info("sip_username_matched", username=sip_username)
                     # This route is already being handled by the agent, no need to redirect
                     return None
-                else:
-                    self.log.info("sip_username_not_matched", username=sip_username)
-                    # Not registered with this agent, let routing continue
+                self.log.info("sip_username_not_matched", username=sip_username)
+                # Not registered with this agent, let routing continue
 
             return None
 
@@ -1252,33 +1261,33 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
                 if agent_to_use._global_data:
                     ai_config["global_data"] = agent_to_use._global_data
 
-                # Always add LLM parameters to prompt
-                if "prompt" in ai_config:
-                    # Only add LLM params if explicitly set
-                    if agent_to_use._prompt_llm_params:
-                        if isinstance(ai_config["prompt"], dict):
-                            ai_config["prompt"].update(agent_to_use._prompt_llm_params)
-                        elif isinstance(ai_config["prompt"], str):
-                            # Convert string prompt to dict format
-                            ai_config["prompt"] = {
-                                "text": ai_config["prompt"],
-                                **agent_to_use._prompt_llm_params,
-                            }
+                # Always add LLM parameters to prompt (only if explicitly set)
+                if "prompt" in ai_config and agent_to_use._prompt_llm_params:
+                    if isinstance(ai_config["prompt"], dict):
+                        ai_config["prompt"].update(agent_to_use._prompt_llm_params)
+                    elif isinstance(ai_config["prompt"], str):
+                        # Convert string prompt to dict format
+                        ai_config["prompt"] = {
+                            "text": ai_config["prompt"],
+                            **agent_to_use._prompt_llm_params,
+                        }
 
                 # Only add LLM parameters to post_prompt if explicitly set
-                if post_prompt and "post_prompt" in ai_config:
-                    # Only add LLM params if explicitly set
-                    if agent_to_use._post_prompt_llm_params:
-                        if isinstance(ai_config["post_prompt"], dict):
-                            ai_config["post_prompt"].update(
-                                agent_to_use._post_prompt_llm_params
-                            )
-                        elif isinstance(ai_config["post_prompt"], str):
-                            # Convert string post_prompt to dict format
-                            ai_config["post_prompt"] = {
-                                "text": ai_config["post_prompt"],
-                                **agent_to_use._post_prompt_llm_params,
-                            }
+                if (
+                    post_prompt
+                    and "post_prompt" in ai_config
+                    and agent_to_use._post_prompt_llm_params
+                ):
+                    if isinstance(ai_config["post_prompt"], dict):
+                        ai_config["post_prompt"].update(
+                            agent_to_use._post_prompt_llm_params
+                        )
+                    elif isinstance(ai_config["post_prompt"], str):
+                        # Convert string post_prompt to dict format
+                        ai_config["post_prompt"] = {
+                            "text": ai_config["post_prompt"],
+                            **agent_to_use._post_prompt_llm_params,
+                        }
 
             except ValueError as e:
                 if not agent_to_use._suppress_logs:
@@ -1323,13 +1332,12 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         # Apply any modifications from the callback to agent state
         if modifications and isinstance(modifications, dict):
             # Handle global_data modifications by updating the AI config directly
-            if "global_data" in modifications:
-                if modifications["global_data"]:
-                    # Merge the modification global_data with existing global_data
-                    ai_config["global_data"] = {
-                        **ai_config.get("global_data", {}),
-                        **modifications["global_data"],
-                    }
+            if modifications.get("global_data"):
+                # Merge the modification global_data with existing global_data
+                ai_config["global_data"] = {
+                    **ai_config.get("global_data", {}),
+                    **modifications["global_data"],
+                }
 
             # Handle other modifications by updating the AI config
             for key, value in modifications.items():
@@ -1518,11 +1526,10 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
                     and pdata["parsed"]
                 ):
                     return pdata["parsed"][0]
-                elif "raw" in pdata and pdata["raw"]:
+                if pdata.get("raw"):
                     try:
                         # Try to parse JSON from raw text
-                        parsed = json.loads(pdata["raw"])
-                        return parsed
+                        return json.loads(pdata["raw"])
                     except (json.JSONDecodeError, ValueError, TypeError):
                         return pdata["raw"]
 
@@ -1648,7 +1655,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         # Copy any already loaded skills from the original agent
         # This ensures skills loaded during __init__ are available in the ephemeral agent
         if hasattr(self.skill_manager, "loaded_skills"):
-            for _skill_key, skill_instance in self.skill_manager.loaded_skills.items():
+            for skill_instance in self.skill_manager.loaded_skills.values():
                 # Re-load the skill in the ephemeral agent's context
                 # We need to get the skill name and params from the existing instance
                 skill_name = skill_instance.SKILL_NAME
@@ -1692,10 +1699,9 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             # Parse body if POST request
             body = {}
             if request.method == "POST":
-                try:
+                # Best-effort body parse; body stays {} for non-JSON/empty requests.
+                with contextlib.suppress(Exception):
                     body = await request.json()
-                except Exception:  # noqa: S110  # best-effort body parse; body stays {} for non-JSON/empty requests
-                    pass
 
             # Get call_id
             call_id = (

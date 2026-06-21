@@ -91,45 +91,42 @@ class PromptMixin(_HostTyped):
                                         bullets=sub_bullets if sub_bullets else None,
                                     )
         # If sections is a list of section objects, use the POM format directly
-        elif isinstance(sections, list):
-            if self.pom:
-                # Process each section using auto-vivifying methods
-                for section in sections:
-                    if "title" in section:
-                        title = section["title"]
-                        body = section.get("body", "")
-                        bullets = section.get("bullets", [])
-                        numbered = section.get("numbered", False)
-                        numbered_bullets = section.get("numberedBullets", False)
+        elif isinstance(sections, list) and self.pom:
+            # Process each section using auto-vivifying methods
+            for section in sections:
+                if "title" in section:
+                    title = section["title"]
+                    body = section.get("body", "")
+                    bullets = section.get("bullets", [])
+                    numbered = section.get("numbered", False)
+                    numbered_bullets = section.get("numberedBullets", False)
 
-                        # Only create section if it has content
-                        if body or bullets or "subsections" in section:
-                            self.prompt_add_section(
-                                title,
-                                body=body,
-                                bullets=bullets if bullets else None,
-                                numbered=numbered,
-                                numbered_bullets=numbered_bullets,
-                            )
+                    # Only create section if it has content
+                    if body or bullets or "subsections" in section:
+                        self.prompt_add_section(
+                            title,
+                            body=body,
+                            bullets=bullets if bullets else None,
+                            numbered=numbered,
+                            numbered_bullets=numbered_bullets,
+                        )
 
-                            # Process subsections if any
-                            subsections = section.get("subsections", [])
-                            for subsection in subsections:
-                                if "title" in subsection:
-                                    sub_title = subsection["title"]
-                                    sub_body = subsection.get("body", "")
-                                    sub_bullets = subsection.get("bullets", [])
+                        # Process subsections if any
+                        subsections = section.get("subsections", [])
+                        for subsection in subsections:
+                            if "title" in subsection:
+                                sub_title = subsection["title"]
+                                sub_body = subsection.get("body", "")
+                                sub_bullets = subsection.get("bullets", [])
 
-                                    # Only add subsection if it has content
-                                    if sub_body or sub_bullets:
-                                        self.prompt_add_subsection(
-                                            title,
-                                            sub_title,
-                                            body=sub_body,
-                                            bullets=sub_bullets
-                                            if sub_bullets
-                                            else None,
-                                        )
+                                # Only add subsection if it has content
+                                if sub_body or sub_bullets:
+                                    self.prompt_add_subsection(
+                                        title,
+                                        sub_title,
+                                        body=sub_body,
+                                        bullets=sub_bullets if sub_bullets else None,
+                                    )
 
     def define_contexts(self, contexts=None) -> Union["AgentBase", "ContextBuilder"]:
         """
@@ -149,13 +146,12 @@ class PromptMixin(_HostTyped):
             # New behavior - set contexts
             self._prompt_manager.define_contexts(contexts)
             return self
-        else:
-            # Legacy behavior - return ContextBuilder
-            if self._contexts_builder is None:
-                self._contexts_builder = ContextBuilder(self)
-                self._contexts_defined = True
+        # Legacy behavior - return ContextBuilder
+        if self._contexts_builder is None:
+            self._contexts_builder = ContextBuilder(self)
+            self._contexts_defined = True
 
-            return self._contexts_builder
+        return self._contexts_builder
 
     @property
     def contexts(self) -> "ContextBuilder":
@@ -349,11 +345,11 @@ class PromptMixin(_HostTyped):
                 # Try different methods that might be available on the POM implementation
                 if hasattr(self.pom, "render_dict"):
                     return self.pom.render_dict()
-                elif hasattr(self.pom, "to_dict"):
+                if hasattr(self.pom, "to_dict"):
                     return self.pom.to_dict()
-                elif hasattr(self.pom, "to_list"):
+                if hasattr(self.pom, "to_list"):
                     return self.pom.to_list()
-                elif hasattr(self.pom, "render"):
+                if hasattr(self.pom, "render"):
                     render_result = self.pom.render()
                     # If render returns a string, we need to convert it to JSON
                     if isinstance(render_result, str):
@@ -365,14 +361,11 @@ class PromptMixin(_HostTyped):
                             # If we can't parse as JSON, fall back to raw text
                             pass
                     return render_result
-                else:
-                    # Last resort: attempt to convert the POM object directly to a list/dict
-                    # This assumes the POM object has a reasonable __str__ or __repr__ method
-                    pom_data = self.pom.__dict__
-                    if "_sections" in pom_data and isinstance(
-                        pom_data["_sections"], list
-                    ):
-                        return pom_data["_sections"]
+                # Last resort: attempt to convert the POM object directly to a list/dict
+                # This assumes the POM object has a reasonable __str__ or __repr__ method
+                pom_data = self.pom.__dict__
+                if "_sections" in pom_data and isinstance(pom_data["_sections"], list):
+                    return pom_data["_sections"]
                     # Fall through to default if nothing worked
             except Exception as e:
                 self.log.error("pom_rendering_failed", error=str(e))

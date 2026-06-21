@@ -187,8 +187,7 @@ def detect_language(text: str) -> str:
 
     if spanish_count > english_count:
         return "es"
-    else:
-        return "en"
+    return "en"
 
 
 def load_spacy_model(language: str):
@@ -323,8 +322,7 @@ def vectorize_query(query: str, model=None, model_name: Optional[str] = None):
             if model is None:
                 return None
 
-        embedding = model.encode(query, show_progress_bar=False)
-        return embedding
+        return model.encode(query, show_progress_bar=False)
 
     except ImportError:
         logger.error("numpy not available. Cannot vectorize query.")
@@ -378,7 +376,7 @@ def ensure_nltk_resources():
                 nltk.data.find(f"corpora/{resource}")
             else:
                 nltk.data.find(f"corpora/{resource}")
-        except LookupError:
+        except LookupError:  # noqa: PERF203  # per-iteration error isolation: download each missing NLTK resource independently
             try:
                 logger.info(f"Downloading NLTK resource '{resource}'...")
                 nltk.download(resource, quiet=True)
@@ -492,8 +490,7 @@ def preprocess_query(
         vectorized_query = vectorize_query(query)
         if vectorized_query is not None:
             return {"input": query, "vector": vectorized_query.tolist()}
-        else:
-            return {"input": query, "vector": None}
+        return {"input": query, "vector": None}
 
     if pos_to_expand is None:
         pos_to_expand = [
