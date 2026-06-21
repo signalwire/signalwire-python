@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import sqlite3
 import json
-from typing import Dict, Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from signalwire.core.logging_config import get_logger
 from pathlib import Path
@@ -45,7 +45,7 @@ class SearchIndexMigrator:
         collection_name: str,
         overwrite: bool = False,
         batch_size: int = 100,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Migrate a .swsearch SQLite index to pgvector
 
@@ -65,7 +65,7 @@ class SearchIndexMigrator:
         # Import pgvector backend
         from .pgvector_backend import PgVectorBackend
 
-        stats: Dict[str, Any] = {
+        stats: dict[str, Any] = {
             "source": sqlite_path,
             "target": collection_name,
             "chunks_migrated": 0,
@@ -282,7 +282,7 @@ class SearchIndexMigrator:
         collection_name: str,
         output_path: str,
         batch_size: int = 100,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Migrate a pgvector collection to SQLite .swsearch format
 
@@ -301,7 +301,7 @@ class SearchIndexMigrator:
         if not output_path.endswith(".swsearch"):
             output_path += ".swsearch"
 
-        stats: Dict[str, Any] = {
+        stats: dict[str, Any] = {
             "source": f"{collection_name} (pgvector)",
             "target": output_path,
             "chunks_migrated": 0,
@@ -432,7 +432,7 @@ class SearchIndexMigrator:
 
         return stats
 
-    def get_index_info(self, index_path: str) -> Dict[str, Any]:
+    def get_index_info(self, index_path: str) -> dict[str, Any]:
         """
         Get information about a search index
 
@@ -442,7 +442,7 @@ class SearchIndexMigrator:
         Returns:
             Index information including type, config, and statistics
         """
-        info: Dict[str, Any] = {}
+        info: dict[str, Any] = {}
 
         if index_path.endswith(".swsearch") and Path(index_path).exists():
             # SQLite index

@@ -8,7 +8,8 @@ undelivered/failed).  Inbound messages arrive fully formed with state "received"
 from __future__ import annotations
 
 import asyncio
-from typing import Any, Callable, Coroutine, Optional
+from typing import Any
+from collections.abc import Callable, Coroutine
 
 from signalwire.core.logging_config import get_logger
 
@@ -22,10 +23,10 @@ logger = get_logger("relay_message")
 # returned by a user callback could be garbage-collected mid-flight. The
 # Message instance may be short-lived, so the set is module-level; tasks are
 # discarded on completion.
-_bg_tasks: set["asyncio.Task[Any]"] = set()
+_bg_tasks: set[asyncio.Task[Any]] = set()
 
 
-def _spawn_bg(coro: "Coroutine[Any, Any, Any]") -> None:
+def _spawn_bg(coro: Coroutine[Any, Any, Any]) -> None:
     """Schedule a fire-and-forget coroutine while holding a strong reference."""
     task = asyncio.ensure_future(coro)
     _bg_tasks.add(task)
@@ -48,11 +49,11 @@ class Message:
         from_number: str = "",
         to_number: str = "",
         body: str = "",
-        media: Optional[list[str]] = None,
+        media: list[str] | None = None,
         segments: int = 0,
         state: str = "",
         reason: str = "",
-        tags: Optional[list[str]] = None,
+        tags: list[str] | None = None,
     ):
         self.message_id = message_id
         self.context = context
@@ -70,7 +71,7 @@ class Message:
         self._done: asyncio.Future[RelayEvent] = (
             asyncio.get_event_loop().create_future()
         )
-        self._on_completed: Optional[Callable[[RelayEvent], Any]] = None
+        self._on_completed: Callable[[RelayEvent], Any] | None = None
         self._listeners: list[Callable] = []
 
     @property
@@ -79,7 +80,7 @@ class Message:
         return self._done.done()
 
     @property
-    def result(self) -> Optional[RelayEvent]:
+    def result(self) -> RelayEvent | None:
         """The terminal RelayEvent, or None if not yet done."""
         if self._done.done():
             return self._done.result()
@@ -89,7 +90,7 @@ class Message:
         """Register an event listener for state changes on this message."""
         self._listeners.append(handler)
 
-    async def wait(self, timeout: Optional[float] = None) -> RelayEvent:
+    async def wait(self, timeout: float | None = None) -> RelayEvent:
         """Block until the message reaches a terminal state.
 
         Returns the terminal RelayEvent. Raises asyncio.TimeoutError if

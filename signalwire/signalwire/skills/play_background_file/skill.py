@@ -12,7 +12,7 @@ A configurable skill for managing background file playback with custom tool name
 and multiple file collections. Supports both audio and video files.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Any
 from signalwire.core import FunctionResult
 from signalwire.core.skill_base import SkillBase
 
@@ -47,7 +47,7 @@ class PlayBackgroundFileSkill(SkillBase):
     SUPPORTS_MULTIPLE_INSTANCES = True
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """Get parameter schema for Play Background File skill"""
         schema = super().get_parameter_schema()
         schema.update(
@@ -84,7 +84,7 @@ class PlayBackgroundFileSkill(SkillBase):
         )
         return schema
 
-    def __init__(self, agent, params: Optional[Dict[str, Any]] = None):
+    def __init__(self, agent, params: dict[str, Any] | None = None):
         """
         Initialize the skill with configuration parameters.
 
@@ -159,7 +159,7 @@ class PlayBackgroundFileSkill(SkillBase):
                 tool.update(self.swaig_fields)
             self.agent.register_swaig_function(tool)
 
-    def get_tools(self) -> List[Dict[str, Any]]:
+    def get_tools(self) -> list[dict[str, Any]]:
         """
         Generate the SWAIG tool with DataMap expressions.
 
@@ -202,7 +202,7 @@ class PlayBackgroundFileSkill(SkillBase):
 
         return [tool]
 
-    def _build_expressions(self) -> List[Dict[str, Any]]:
+    def _build_expressions(self) -> list[dict[str, Any]]:
         """
         Build DataMap expressions for file playback and stop actions.
 

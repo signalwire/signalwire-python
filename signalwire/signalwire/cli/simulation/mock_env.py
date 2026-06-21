@@ -13,16 +13,16 @@ Mock environment and serverless simulation functionality
 import os
 import json
 from pathlib import Path
-from typing import Optional, Dict, Any, ClassVar, List
+from typing import Any, ClassVar
 
 
 class MockQueryParams:
     """Mock FastAPI QueryParams (simple dict-like)"""
 
-    def __init__(self, params: Optional[Dict[str, str]] = None):
+    def __init__(self, params: dict[str, str] | None = None):
         self._params = params or {}
 
-    def get(self, key: str, default: Optional[str] = None) -> Optional[str]:
+    def get(self, key: str, default: str | None = None) -> str | None:
         return self._params.get(key, default)
 
     def __getitem__(self, key: str) -> str:
@@ -44,14 +44,14 @@ class MockQueryParams:
 class MockHeaders:
     """Mock FastAPI Headers (case-insensitive dict-like)"""
 
-    def __init__(self, headers: Optional[Dict[str, str]] = None):
+    def __init__(self, headers: dict[str, str] | None = None):
         # Store headers with lowercase keys for case-insensitive lookup
         self._headers = {}
         if headers:
             for k, v in headers.items():
                 self._headers[k.lower()] = v
 
-    def get(self, key: str, default: Optional[str] = None) -> Optional[str]:
+    def get(self, key: str, default: str | None = None) -> str | None:
         return self._headers.get(key.lower(), default)
 
     def __getitem__(self, key: str) -> str:
@@ -105,9 +105,9 @@ class MockRequest:
         self,
         method: str = "POST",
         url: str = "http://localhost:8080/swml",
-        headers: Optional[Dict[str, str]] = None,
-        query_params: Optional[Dict[str, str]] = None,
-        json_body: Optional[Dict[str, Any]] = None,
+        headers: dict[str, str] | None = None,
+        query_params: dict[str, str] | None = None,
+        json_body: dict[str, Any] | None = None,
     ):
         self.method = method
         self.url = MockURL(url)
@@ -118,7 +118,7 @@ class MockRequest:
         # Add state object for request state (used by FastAPI)
         self.state = type("State", (), {})()
 
-    async def json(self) -> Dict[str, Any]:
+    async def json(self) -> dict[str, Any]:
         """Return the JSON body"""
         return self._json_body
 
@@ -134,9 +134,9 @@ class MockRequest:
 def create_mock_request(
     method: str = "POST",
     url: str = "http://localhost:8080/swml",
-    headers: Optional[Dict[str, str]] = None,
-    query_params: Optional[Dict[str, str]] = None,
-    body: Optional[Dict[str, Any]] = None,
+    headers: dict[str, str] | None = None,
+    query_params: dict[str, str] | None = None,
+    body: dict[str, Any] | None = None,
 ) -> MockRequest:
     """
     Factory function to create a mock FastAPI Request object
@@ -154,7 +154,7 @@ class ServerlessSimulator:
     """Manages serverless environment simulation for different platforms"""
 
     # Default environment presets for each platform
-    PLATFORM_PRESETS: ClassVar[Dict[str, Dict[str, str]]] = {
+    PLATFORM_PRESETS: ClassVar[dict[str, dict[str, str]]] = {
         "lambda": {
             "AWS_LAMBDA_FUNCTION_NAME": "test-agent-function",
             "AWS_LAMBDA_FUNCTION_URL": "https://abc123.lambda-url.us-east-1.on.aws/",
@@ -181,13 +181,13 @@ class ServerlessSimulator:
         },
     }
 
-    def __init__(self, platform: str, overrides: Optional[Dict[str, str]] = None):
+    def __init__(self, platform: str, overrides: dict[str, str] | None = None):
         self.platform = platform
         self.original_env = dict(os.environ)
         self.preset_env = self.PLATFORM_PRESETS.get(platform, {}).copy()
         self.overrides = overrides or {}
         self.active = False
-        self._cleared_vars: Dict[str, str] = {}
+        self._cleared_vars: dict[str, str] = {}
 
     def activate(self, verbose: bool = False):
         """Apply serverless environment simulation"""
@@ -261,7 +261,7 @@ class ServerlessSimulator:
     def _clear_conflicting_env(self):
         """Clear environment variables that might conflict with simulation"""
         # Remove variables from other platforms
-        conflicting_vars: List[str] = []
+        conflicting_vars: list[str] = []
         for platform, preset in self.PLATFORM_PRESETS.items():
             if platform != self.platform:
                 conflicting_vars.extend(preset.keys())
@@ -281,14 +281,14 @@ class ServerlessSimulator:
         if self.active:
             os.environ[key] = value
 
-    def get_current_env(self) -> Dict[str, str]:
+    def get_current_env(self) -> dict[str, str]:
         """Get the current environment that would be applied"""
         env = self.preset_env.copy()
         env.update(self.overrides)
         return env
 
 
-def load_env_file(env_file_path: str) -> Dict[str, str]:
+def load_env_file(env_file_path: str) -> dict[str, str]:
     """Load environment variables from a file"""
     env_vars = {}
     if not Path(env_file_path).exists():

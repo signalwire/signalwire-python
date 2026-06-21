@@ -10,7 +10,7 @@ See LICENSE file in the project root for full license information.
 import contextlib
 import os
 import shutil
-from typing import Dict, Any, List, Optional, ClassVar
+from typing import Any, ClassVar
 from pathlib import Path
 
 from signalwire.core.skill_base import SkillBase
@@ -23,16 +23,16 @@ class NativeVectorSearchSkill(SkillBase):
     SKILL_NAME = "native_vector_search"
     SKILL_DESCRIPTION = "Search document indexes using vector similarity and keyword search (local or remote)"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES: ClassVar[List[str]] = []  # Optional packages checked at runtime
+    REQUIRED_PACKAGES: ClassVar[list[str]] = []  # Optional packages checked at runtime
     REQUIRED_ENV_VARS: ClassVar[
-        List[str]
+        list[str]
     ] = []  # No required env vars since all config comes from params
 
     # Enable multiple instances support
     SUPPORTS_MULTIPLE_INSTANCES = True
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """Get parameter schema for Native Vector Search skill
 
         This skill supports three modes of operation:
@@ -625,13 +625,13 @@ class NativeVectorSearchSkill(SkillBase):
                 assert self.search_engine is not None  # noqa: S101  # type-narrowing invariant: the guard above returns early when search_engine is falsy
 
                 # Get model name from index config if available
-                model_for_query: Optional[str] = None
+                model_for_query: str | None = None
                 if hasattr(self.search_engine, "config"):
                     model_for_query = self.search_engine.config.get("embedding_model")
 
                 # preprocess_query's model_name defaults to None when unspecified,
                 # so omit the kwarg entirely when we don't have a model name.
-                extra_kwargs: Dict[str, Any] = {}
+                extra_kwargs: dict[str, Any] = {}
                 if model_for_query is not None:
                     extra_kwargs["model_name"] = model_for_query  # Use model from index
 
@@ -814,7 +814,7 @@ class NativeVectorSearchSkill(SkillBase):
 
             return FunctionResult(user_msg)
 
-    def _search_remote(self, query: str, enhanced: Optional[dict], count: int) -> list:
+    def _search_remote(self, query: str, enhanced: dict | None, count: int) -> list:
         """Perform search using remote search server"""
         try:
             import requests
@@ -859,7 +859,7 @@ class NativeVectorSearchSkill(SkillBase):
             self.logger.error(f"Remote search error: {e}")
             return []
 
-    def get_hints(self) -> List[str]:
+    def get_hints(self) -> list[str]:
         """Return speech recognition hints for this skill"""
         hints = ["search", "find", "look up", "documentation", "knowledge base"]
 
@@ -869,7 +869,7 @@ class NativeVectorSearchSkill(SkillBase):
 
         return hints
 
-    def get_global_data(self) -> Dict[str, Any]:
+    def get_global_data(self) -> dict[str, Any]:
         """Return data to add to agent's global context"""
         global_data = {}
 
@@ -882,7 +882,7 @@ class NativeVectorSearchSkill(SkillBase):
 
         return global_data
 
-    def get_prompt_sections(self) -> List[Dict[str, Any]]:
+    def get_prompt_sections(self) -> list[dict[str, Any]]:
         """Return prompt sections to add to agent"""
         # We'll handle this in register_tools after the agent is set
         return []

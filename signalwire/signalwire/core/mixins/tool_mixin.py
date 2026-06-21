@@ -7,7 +7,8 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import TYPE_CHECKING, Dict, Any, List, Optional, Callable, Union
+from typing import TYPE_CHECKING, Any
+from collections.abc import Callable
 import json
 import logging
 
@@ -31,12 +32,12 @@ class ToolMixin(_HostTyped):
         self,
         name: str,
         description: str,
-        parameters: Dict[str, Any],
+        parameters: dict[str, Any],
         handler: Callable,
         secure: bool = True,
-        fillers: Optional[Dict[str, List[str]]] = None,
-        webhook_url: Optional[str] = None,
-        required: Optional[List[str]] = None,
+        fillers: dict[str, list[str]] | None = None,
+        webhook_url: str | None = None,
+        required: list[str] | None = None,
         is_typed_handler: bool = False,
         **swaig_fields,
     ) -> "AgentBase":
@@ -163,7 +164,7 @@ class ToolMixin(_HostTyped):
         )
         return self
 
-    def register_swaig_function(self, function_dict: Dict[str, Any]) -> "AgentBase":
+    def register_swaig_function(self, function_dict: dict[str, Any]) -> "AgentBase":
         """
         Register a raw SWAIG function dictionary (e.g., from DataMap.to_swaig_function())
 
@@ -203,7 +204,7 @@ class ToolMixin(_HostTyped):
         """
         return ToolDecorator.create_class_decorator()(name, **kwargs)
 
-    def define_tools(self) -> List[Union[SWAIGFunction, Dict[str, Any]]]:
+    def define_tools(self) -> list[SWAIGFunction | dict[str, Any]]:
         """
         Define the tools this agent can use
 
@@ -212,7 +213,7 @@ class ToolMixin(_HostTyped):
 
         This method can be overridden by subclasses.
         """
-        tools: List[Union[SWAIGFunction, Dict[str, Any]]] = []
+        tools: list[SWAIGFunction | dict[str, Any]] = []
         for func in self._tool_registry._swaig_functions.values():
             if isinstance(func, dict):
                 # Raw dictionary from register_swaig_function (e.g., DataMap)
@@ -223,7 +224,7 @@ class ToolMixin(_HostTyped):
         return tools
 
     def on_function_call(
-        self, name: str, args: Dict[str, Any], raw_data: Optional[Dict[str, Any]] = None
+        self, name: str, args: dict[str, Any], raw_data: dict[str, Any] | None = None
     ) -> Any:
         """
         Called when a SWAIG function is invoked
@@ -286,9 +287,9 @@ class ToolMixin(_HostTyped):
     def _execute_swaig_function(
         self,
         function_name: str,
-        args: Optional[Dict[str, Any]] = None,
-        call_id: Optional[str] = None,
-        raw_data: Optional[Dict[str, Any]] = None,
+        args: dict[str, Any] | None = None,
+        call_id: str | None = None,
+        raw_data: dict[str, Any] | None = None,
     ):
         """
         Execute a SWAIG function in serverless context

@@ -9,8 +9,6 @@ See LICENSE file in the project root for full license information.
 ReceptionistAgent - Prefab agent for greeting callers and transferring them to appropriate departments
 """
 
-from typing import List, Dict
-
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.function_result import FunctionResult
 
@@ -33,7 +31,7 @@ class ReceptionistAgent(AgentBase):
 
     def __init__(
         self,
-        departments: List[Dict[str, str]],
+        departments: list[dict[str, str]],
         name: str = "receptionist",
         route: str = "/receptionist",
         greeting: str = "Thank you for calling. How can I help you today?",

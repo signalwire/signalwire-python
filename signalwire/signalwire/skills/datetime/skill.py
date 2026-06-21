@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 from datetime import datetime, timezone
 import pytz
-from typing import List, Dict, Any, ClassVar
+from typing import Any, ClassVar
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
@@ -21,8 +21,8 @@ class DateTimeSkill(SkillBase):
     SKILL_NAME = "datetime"
     SKILL_DESCRIPTION = "Get current date, time, and timezone information"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES: ClassVar[List[str]] = ["pytz"]
-    REQUIRED_ENV_VARS: ClassVar[List[str]] = []
+    REQUIRED_PACKAGES: ClassVar[list[str]] = ["pytz"]
+    REQUIRED_ENV_VARS: ClassVar[list[str]] = []
 
     def setup(self) -> bool:
         """Setup the datetime skill"""
@@ -91,13 +91,13 @@ class DateTimeSkill(SkillBase):
         except Exception as e:
             return FunctionResult(f"Error getting date: {e!s}")
 
-    def get_hints(self) -> List[str]:
+    def get_hints(self) -> list[str]:
         """Return speech recognition hints"""
         # Currently no hints provided, but you could add them like:
         # return ["time", "date", "today", "now", "current", "timezone"]
         return []
 
-    def get_prompt_sections(self) -> List[Dict[str, Any]]:
+    def get_prompt_sections(self) -> list[dict[str, Any]]:
         """Return prompt sections to add to agent"""
         return [
             {
@@ -112,7 +112,7 @@ class DateTimeSkill(SkillBase):
         ]
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """
         Get the parameter schema for the datetime skill
 

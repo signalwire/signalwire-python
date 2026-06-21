@@ -10,7 +10,7 @@ See LICENSE file in the project root for full license information.
 import requests
 import time
 from bs4 import BeautifulSoup
-from typing import List, Dict, Any, Optional, ClassVar
+from typing import Any, ClassVar
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
@@ -36,7 +36,7 @@ class GoogleSearchScraper:
         """Search Google using Custom Search JSON API"""
         url = "https://www.googleapis.com/customsearch/v1"
 
-        params: Dict[str, Any] = {
+        params: dict[str, Any] = {
             "key": self.api_key,
             "cx": self.search_engine_id,
             "q": query,
@@ -64,7 +64,7 @@ class GoogleSearchScraper:
             return []
 
     def extract_text_from_url(
-        self, url: str, content_limit: Optional[int] = None, timeout: int = 10
+        self, url: str, content_limit: int | None = None, timeout: int = 10
     ) -> str:
         """Scrape a URL and extract readable text content
 
@@ -158,9 +158,9 @@ class WebSearchSkill(SkillBase):
     SKILL_NAME = "web_search"
     SKILL_DESCRIPTION = "Search the web for information using Google Custom Search API"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES: ClassVar[List[str]] = ["bs4", "requests"]
+    REQUIRED_PACKAGES: ClassVar[list[str]] = ["bs4", "requests"]
     REQUIRED_ENV_VARS: ClassVar[
-        List[str]
+        list[str]
     ] = []  # No required env vars since all config comes from params
 
     # Enable multiple instances support
@@ -269,7 +269,7 @@ class WebSearchSkill(SkillBase):
                 "Sorry, I encountered an error while searching. Please try again later."
             )
 
-    def get_hints(self) -> List[str]:
+    def get_hints(self) -> list[str]:
         """Return speech recognition hints"""
         # Currently no hints provided, but you could add them like:
         # return [
@@ -278,11 +278,11 @@ class WebSearchSkill(SkillBase):
         # ]
         return []
 
-    def get_global_data(self) -> Dict[str, Any]:
+    def get_global_data(self) -> dict[str, Any]:
         """Return global data for agent context"""
         return {"web_search_enabled": True, "search_provider": "Google Custom Search"}
 
-    def get_prompt_sections(self) -> List[Dict[str, Any]]:
+    def get_prompt_sections(self) -> list[dict[str, Any]]:
         """Return prompt sections to add to agent"""
         return [
             {
@@ -298,7 +298,7 @@ class WebSearchSkill(SkillBase):
         ]
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """
         Get the parameter schema for the web search skill
 

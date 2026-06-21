@@ -20,7 +20,8 @@ import inspect
 import logging
 import threading
 import asyncio
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Optional
+from collections.abc import Callable
 
 # ---------------------------------------------------------------------------
 # Sentinel for "not given" keyword arguments (distinct from None)
@@ -98,7 +99,7 @@ class _NoopTracker:
 
     def __init__(self):
         self._lock = threading.Lock()
-        self._logged: Dict[str, bool] = {}
+        self._logged: dict[str, bool] = {}
 
     def once(self, key: str, message: str) -> bool:
         """Log *message* once for *key*.  Returns True if it was logged."""
@@ -155,7 +156,7 @@ class ChatContext:
     """Minimal stub mirroring livekit ChatContext."""
 
     def __init__(self):
-        self.messages: List[Dict[str, str]] = []
+        self.messages: list[dict[str, str]] = []
 
     def append(self, *, role: str = "user", text: str = ""):
         self.messages.append({"role": role, "content": text})
@@ -168,7 +169,7 @@ class ChatContext:
 
 
 def function_tool(
-    func=None, *, name: Optional[str] = None, description: Optional[str] = None
+    func=None, *, name: str | None = None, description: str | None = None
 ):
     """Mirrors the livekit ``@function_tool`` decorator.
 
@@ -183,8 +184,8 @@ def function_tool(
 
         # Build a JSON-schema-style parameter dict from type hints
         sig = inspect.signature(fn)
-        properties: Dict[str, Any] = {}
-        required: List[str] = []
+        properties: dict[str, Any] = {}
+        required: list[str] = []
 
         for pname, param in sig.parameters.items():
             # Skip 'self' and RunContext parameters
@@ -273,7 +274,7 @@ class Agent:
         self,
         *,
         instructions: str = "",
-        tools: Optional[List[Any]] = None,
+        tools: list[Any] | None = None,
         chat_ctx: Any = NOT_GIVEN,
         stt: Any = NOT_GIVEN,
         tts: Any = NOT_GIVEN,
@@ -286,9 +287,9 @@ class Agent:
         max_endpointing_delay: Any = NOT_GIVEN,
     ):
         self.instructions = instructions
-        self._tools: List[Any] = list(tools or [])
+        self._tools: list[Any] = list(tools or [])
         self._chat_ctx = chat_ctx
-        self._session: Optional["AgentSession"] = None
+        self._session: AgentSession | None = None
         self._userdata: Any = {}
 
         # Pipeline config (noop when not NOT_GIVEN)
@@ -389,7 +390,7 @@ class Agent:
         """Update the agent's instructions mid-session."""
         self.instructions = instructions
 
-    async def update_tools(self, tools: List[Any]):
+    async def update_tools(self, tools: list[Any]):
         """Update the agent's tool list mid-session."""
         self._tools = list(tools)
 
@@ -411,7 +412,7 @@ class AgentSession:
         llm: Any = None,
         vad: Any = None,
         turn_detection: Any = None,
-        tools: Optional[List[Any]] = None,
+        tools: list[Any] | None = None,
         mcp_servers: Any = None,
         userdata: Any = None,
         allow_interruptions: bool = True,
@@ -473,10 +474,10 @@ class AgentSession:
             )
 
         # Internal state
-        self._agent: Optional[Agent] = None
+        self._agent: Agent | None = None
         self._sw_agent: Any = None  # Will hold the real AgentBase
-        self._say_queue: List[str] = []
-        self._history: List[Dict[str, str]] = []
+        self._say_queue: list[str] = []
+        self._history: list[dict[str, str]] = []
         self._noop = _NoopTracker()
         self._started = False
 
@@ -493,7 +494,7 @@ class AgentSession:
         self._userdata = val
 
     @property
-    def history(self) -> List[Dict[str, str]]:
+    def history(self) -> list[dict[str, str]]:
         return self._history
 
     # ------------------------------------------------------------------
@@ -510,7 +511,7 @@ class AgentSession:
         """Queue text to be spoken by the agent."""
         self._say_queue.append(text)
 
-    def generate_reply(self, *, instructions: Optional[str] = None):
+    def generate_reply(self, *, instructions: str | None = None):
         """Trigger the agent to generate a reply.  On SignalWire the prompt
         handles this; if *instructions* is provided they are noted."""
         if instructions:
@@ -649,7 +650,7 @@ class JobProcess:
     """Mirrors a livekit JobProcess -- used for prewarm/setup."""
 
     def __init__(self):
-        self.userdata: Dict[str, Any] = {}
+        self.userdata: dict[str, Any] = {}
 
 
 class JobContext:
@@ -687,8 +688,8 @@ class AgentServer:
     """Mirrors a livekit AgentServer -- registers entrypoints and starts."""
 
     def __init__(self, **kwargs):
-        self.setup_fnc: Optional[Callable] = None
-        self._entrypoint: Optional[Callable] = None
+        self.setup_fnc: Callable | None = None
+        self._entrypoint: Callable | None = None
         self._agent_name: str = ""
 
     def rtc_session(

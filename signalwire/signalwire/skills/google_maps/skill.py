@@ -13,7 +13,7 @@ Skill layer:   GoogleMapsSkill  (plug-and-play SWAIG tools)
 """
 
 import json
-from typing import List, Dict, Any, ClassVar
+from typing import Any, ClassVar
 
 import requests
 
@@ -393,7 +393,7 @@ class GoogleMapsClient:
                 "X-Goog-Api-Key": self.api_key,
                 "X-Goog-FieldMask": "routes.distanceMeters,routes.duration",
             }
-            body: Dict[str, Any] = {
+            body: dict[str, Any] = {
                 "origin": {
                     "location": {
                         "latLng": {"latitude": origin_lat, "longitude": origin_lng}
@@ -449,11 +449,11 @@ class GoogleMapsSkill(SkillBase):
         "Validate addresses and compute driving routes using Google Maps"
     )
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES: ClassVar[List[str]] = ["requests"]
-    REQUIRED_ENV_VARS: ClassVar[List[str]] = []
+    REQUIRED_PACKAGES: ClassVar[list[str]] = ["requests"]
+    REQUIRED_ENV_VARS: ClassVar[list[str]] = []
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """Get parameter schema for google_maps skill"""
         schema = super().get_parameter_schema()
         schema.update(
@@ -589,11 +589,11 @@ class GoogleMapsSkill(SkillBase):
             f"Estimated travel time: {int(duration_min)} minutes"
         )
 
-    def get_hints(self) -> List[str]:
+    def get_hints(self) -> list[str]:
         """Return speech recognition hints"""
         return ["address", "location", "route", "directions", "miles", "distance"]
 
-    def get_prompt_sections(self) -> List[Dict[str, Any]]:
+    def get_prompt_sections(self) -> list[dict[str, Any]]:
         """Return prompt sections to add to agent"""
         return [
             {

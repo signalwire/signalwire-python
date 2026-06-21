@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 SWML document rendering utilities for SignalWire AI Agents.
 """
 
-from typing import Dict, List, Any, Optional, Union, cast
+from typing import Any, cast
 
 from signalwire.core.swml_service import SWMLService
 from signalwire.core.swml_builder import SWMLBuilder
@@ -24,21 +24,21 @@ class SwmlRenderer:
 
     @staticmethod
     def render_swml(
-        prompt: Union[str, List[Dict[str, Any]]],
+        prompt: str | list[dict[str, Any]],
         service: SWMLService,
-        post_prompt: Optional[str] = None,
-        post_prompt_url: Optional[str] = None,
-        swaig_functions: Optional[List[Dict[str, Any]]] = None,
-        startup_hook_url: Optional[str] = None,
-        hangup_hook_url: Optional[str] = None,
+        post_prompt: str | None = None,
+        post_prompt_url: str | None = None,
+        swaig_functions: list[dict[str, Any]] | None = None,
+        startup_hook_url: str | None = None,
+        hangup_hook_url: str | None = None,
         prompt_is_pom: bool = False,
-        params: Optional[Dict[str, Any]] = None,
+        params: dict[str, Any] | None = None,
         add_answer: bool = False,
         record_call: bool = False,
         record_format: str = "mp4",
         record_stereo: bool = True,
         format: str = "json",
-        default_webhook_url: Optional[str] = None,
+        default_webhook_url: str | None = None,
     ) -> str:
         """
         Generate a complete SWML document with AI configuration
@@ -80,7 +80,7 @@ class SwmlRenderer:
             )
 
         # Configure SWAIG object for AI verb
-        swaig_config: Dict[str, Any] = {}
+        swaig_config: dict[str, Any] = {}
         functions = []
 
         # Add startup hook if provided
@@ -130,7 +130,7 @@ class SwmlRenderer:
         # so cast each branch to the type it is guaranteed to be.
         builder.ai(
             prompt_text=None if prompt_is_pom else cast(str, prompt),
-            prompt_pom=cast(List[Dict[str, Any]], prompt) if prompt_is_pom else None,
+            prompt_pom=cast(list[dict[str, Any]], prompt) if prompt_is_pom else None,
             post_prompt=post_prompt,
             post_prompt_url=post_prompt_url,
             swaig=swaig_config if swaig_config else None,
@@ -148,7 +148,7 @@ class SwmlRenderer:
     def render_function_response_swml(
         response_text: str,
         service: SWMLService,
-        actions: Optional[List[Dict[str, Any]]] = None,
+        actions: list[dict[str, Any]] | None = None,
         format: str = "json",
     ) -> str:
         """

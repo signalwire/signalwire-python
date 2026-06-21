@@ -15,7 +15,7 @@ import sys
 import secrets
 import subprocess
 from pathlib import Path
-from typing import Dict, List, Any
+from typing import Any
 
 
 # Cloud platform options
@@ -79,7 +79,7 @@ def prompt_yes_no(question: str, default: bool = True) -> bool:
     return result in ("y", "yes")
 
 
-def prompt_select(question: str, options: List[str], default: int = 1) -> int:
+def prompt_select(question: str, options: list[str], default: int = 1) -> int:
     """Prompt user to select from numbered options. Returns 1-based index."""
     print(f"\n{question}")
     for i, opt in enumerate(options, 1):
@@ -98,8 +98,8 @@ def prompt_select(question: str, options: List[str], default: int = 1) -> int:
 
 
 def prompt_multiselect(
-    question: str, options: List[str], defaults: List[bool]
-) -> List[bool]:
+    question: str, options: list[str], defaults: list[bool]
+) -> list[bool]:
     """Prompt user to toggle multiple options. Returns list of booleans."""
     selected = defaults.copy()
 
@@ -128,7 +128,7 @@ def mask_token(token: str) -> str:
     return f"{token[:4]}...{token[-3:]}"
 
 
-def get_env_credentials() -> Dict[str, str]:
+def get_env_credentials() -> dict[str, str]:
     """Get SignalWire credentials from environment variables."""
     return {
         "space": os.environ.get("SIGNALWIRE_SPACE_NAME", ""),
@@ -1175,7 +1175,7 @@ echo ""
 """
 
 
-def get_agent_template(agent_type: str, features: Dict[str, bool]) -> str:
+def get_agent_template(agent_type: str, features: dict[str, bool]) -> str:
     """Generate the main agent template based on type and features."""
 
     has_tool = features.get("example_tool", True)
@@ -1327,7 +1327,7 @@ class MainAgent(AgentBase):
 '''
 
 
-def get_app_template(features: Dict[str, bool]) -> str:
+def get_app_template(features: dict[str, bool]) -> str:
     """Generate the app.py template based on features."""
 
     has_debug = features.get("debug_webhooks", False)
@@ -1656,7 +1656,7 @@ if __name__ == "__main__":
 '''
 
 
-def get_readme_template(project_name: str, features: Dict[str, bool]) -> str:
+def get_readme_template(project_name: str, features: dict[str, bool]) -> str:
     """Generate README template."""
 
     endpoints = [
@@ -1859,7 +1859,7 @@ pytest tests/ -v</pre>
 class ProjectGenerator:
     """Generates a new SignalWire agent project."""
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
         self.project_dir = Path(config["project_dir"])
         self.project_name = config["project_name"]
@@ -2031,7 +2031,7 @@ class ProjectGenerator:
 
         return True
 
-    def _get_template_vars(self) -> Dict[str, str]:
+    def _get_template_vars(self) -> dict[str, str]:
         """Get template variables for cloud function templates."""
         # Convert project name to various formats
         agent_name = self.project_name
@@ -2422,7 +2422,7 @@ DEBUG_WEBHOOK_LEVEL=1
 # =============================================================================
 
 
-def run_interactive() -> Dict[str, Any]:
+def run_interactive() -> dict[str, Any]:
     """Run interactive prompts and return configuration."""
     print(f"\n{Colors.BOLD}{Colors.CYAN}Welcome to SignalWire Agent Init!{Colors.NC}\n")
 
@@ -2556,7 +2556,7 @@ def run_interactive() -> Dict[str, Any]:
     }
 
 
-def run_quick(project_name: str, args: Any) -> Dict[str, Any]:
+def run_quick(project_name: str, args: Any) -> dict[str, Any]:
     """Run in quick mode with minimal prompts."""
     project_dir = str(Path(project_name).absolute())
 

@@ -7,7 +7,7 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import List, Dict, Any, ClassVar
+from typing import Any, ClassVar
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.data_map import DataMap
@@ -21,12 +21,12 @@ class JokeSkill(SkillBase):
     SKILL_DESCRIPTION = "Tell jokes using the API Ninjas joke API"
     SKILL_VERSION = "1.0.0"
     REQUIRED_PACKAGES: ClassVar[
-        List[str]
+        list[str]
     ] = []  # DataMap doesn't require local packages
-    REQUIRED_ENV_VARS: ClassVar[List[str]] = []  # API key comes from parameters
+    REQUIRED_ENV_VARS: ClassVar[list[str]] = []  # API key comes from parameters
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """Get parameter schema for joke skill"""
         schema = super().get_parameter_schema()
         schema.update(
@@ -98,7 +98,7 @@ class JokeSkill(SkillBase):
         # Register the DataMap tool with the agent
         self.agent.register_swaig_function(joke_tool.to_swaig_function())
 
-    def get_hints(self) -> List[str]:
+    def get_hints(self) -> list[str]:
         """Return speech recognition hints"""
         # Currently no hints are provided, but you could add them like:
         # return [
@@ -107,11 +107,11 @@ class JokeSkill(SkillBase):
         # ]
         return []
 
-    def get_global_data(self) -> Dict[str, Any]:
+    def get_global_data(self) -> dict[str, Any]:
         """Return global data to be available in DataMap variables"""
         return {"joke_skill_enabled": True}
 
-    def get_prompt_sections(self) -> List[Dict[str, Any]]:
+    def get_prompt_sections(self) -> list[dict[str, Any]]:
         """Return prompt sections to add to agent"""
         return [
             {

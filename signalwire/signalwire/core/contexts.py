@@ -13,7 +13,7 @@ agents to be defined as structured contexts with sequential steps. Each step
 contains its own prompt, completion criteria, and function restrictions.
 """
 
-from typing import Dict, List, Optional, Union, Any
+from typing import Optional, Any
 
 MAX_CONTEXTS = 50
 MAX_STEPS_PER_CONTEXT = 100
@@ -28,8 +28,8 @@ class GatherQuestion:
         question: str,
         type: str = "string",
         confirm: bool = False,
-        prompt: Optional[str] = None,
-        functions: Optional[List[str]] = None,
+        prompt: str | None = None,
+        functions: list[str] | None = None,
     ):
         self.key = key
         self.question = question
@@ -38,9 +38,9 @@ class GatherQuestion:
         self.prompt = prompt
         self.functions = functions
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert question to dictionary for SWML generation"""
-        d: Dict[str, Any] = {"key": self.key, "question": self.question}
+        d: dict[str, Any] = {"key": self.key, "question": self.question}
         if self.type != "string":
             d["type"] = self.type
         if self.confirm:
@@ -62,11 +62,11 @@ class GatherInfo:
 
     def __init__(
         self,
-        output_key: Optional[str] = None,
-        completion_action: Optional[str] = None,
-        prompt: Optional[str] = None,
+        output_key: str | None = None,
+        completion_action: str | None = None,
+        prompt: str | None = None,
     ):
-        self._questions: List[GatherQuestion] = []
+        self._questions: list[GatherQuestion] = []
         self._output_key = output_key
         self._completion_action = completion_action
         self._prompt = prompt
@@ -94,11 +94,11 @@ class GatherInfo:
         self._questions.append(q)
         return self
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for SWML generation"""
         if not self._questions:
             raise ValueError("gather_info must have at least one question")
-        d: Dict[str, Any] = {"questions": [q.to_dict() for q in self._questions]}
+        d: dict[str, Any] = {"questions": [q.to_dict() for q in self._questions]}
         if self._prompt:
             d["prompt"] = self._prompt
         if self._output_key:
@@ -113,17 +113,17 @@ class Step:
 
     def __init__(self, name: str):
         self.name = name
-        self._text: Optional[str] = None
-        self._step_criteria: Optional[str] = None
-        self._functions: Optional[Union[str, List[str]]] = None
-        self._valid_steps: Optional[List[str]] = None
-        self._valid_contexts: Optional[List[str]] = None
+        self._text: str | None = None
+        self._step_criteria: str | None = None
+        self._functions: str | list[str] | None = None
+        self._valid_steps: list[str] | None = None
+        self._valid_contexts: list[str] | None = None
 
         # POM-style sections for rich prompts
-        self._sections: List[Dict[str, Any]] = []
+        self._sections: list[dict[str, Any]] = []
 
         # Gather info configuration
-        self._gather_info: Optional[GatherInfo] = None
+        self._gather_info: GatherInfo | None = None
 
         # Step behavior flags
         self._end: bool = False
@@ -131,8 +131,8 @@ class Step:
         self._skip_to_next_step: bool = False
 
         # Reset object for context switching from steps
-        self._reset_system_prompt: Optional[str] = None
-        self._reset_user_prompt: Optional[str] = None
+        self._reset_system_prompt: str | None = None
+        self._reset_user_prompt: str | None = None
         self._reset_consolidate: bool = False
         self._reset_full_reset: bool = False
 
@@ -171,7 +171,7 @@ class Step:
         self._sections.append({"title": title, "body": body})
         return self
 
-    def add_bullets(self, title: str, bullets: List[str]) -> "Step":
+    def add_bullets(self, title: str, bullets: list[str]) -> "Step":
         """
         Add a POM section with bullet points
 
@@ -202,7 +202,7 @@ class Step:
         self._step_criteria = criteria
         return self
 
-    def set_functions(self, functions: Union[str, List[str]]) -> "Step":
+    def set_functions(self, functions: str | list[str]) -> "Step":
         """
         Set which non-internal functions are callable while this step is active.
 
@@ -262,7 +262,7 @@ class Step:
         self._functions = functions
         return self
 
-    def set_valid_steps(self, steps: List[str]) -> "Step":
+    def set_valid_steps(self, steps: list[str]) -> "Step":
         """
         Set which steps can be navigated to from this step
 
@@ -275,7 +275,7 @@ class Step:
         self._valid_steps = steps
         return self
 
-    def set_valid_contexts(self, contexts: List[str]) -> "Step":
+    def set_valid_contexts(self, contexts: list[str]) -> "Step":
         """
         Set which contexts can be navigated to from this step
 
@@ -341,9 +341,9 @@ class Step:
 
     def set_gather_info(
         self,
-        output_key: Optional[str] = None,
-        completion_action: Optional[str] = None,
-        prompt: Optional[str] = None,
+        output_key: str | None = None,
+        completion_action: str | None = None,
+        prompt: str | None = None,
     ) -> "Step":
         """
         Enable info gathering for this step. Questions are presented one at a time
@@ -377,8 +377,8 @@ class Step:
         question: str,
         type: str = "string",
         confirm: bool = False,
-        prompt: Optional[str] = None,
-        functions: Optional[List[str]] = None,
+        prompt: str | None = None,
+        functions: list[str] | None = None,
     ) -> "Step":
         """
         Add a question to this step's gather_info configuration.
@@ -513,9 +513,9 @@ class Step:
 
         return "\n".join(markdown_parts).strip()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert step to dictionary for SWML generation"""
-        step_dict: Dict[str, Any] = {"name": self.name, "text": self._render_text()}
+        step_dict: dict[str, Any] = {"name": self.name, "text": self._render_text()}
 
         if self._step_criteria:
             step_dict["step_criteria"] = self._step_criteria
@@ -539,7 +539,7 @@ class Step:
             step_dict["skip_to_next_step"] = True
 
         # Add reset object if any reset parameters are set
-        reset_obj: Dict[str, Any] = {}
+        reset_obj: dict[str, Any] = {}
         if self._reset_system_prompt is not None:
             reset_obj["system_prompt"] = self._reset_system_prompt
         if self._reset_user_prompt is not None:
@@ -593,40 +593,40 @@ class Context:
 
     def __init__(self, name: str):
         self.name = name
-        self._steps: Dict[str, Step] = {}
-        self._step_order: List[str] = []
-        self._valid_contexts: Optional[List[str]] = None
-        self._valid_steps: Optional[List[str]] = None
-        self._initial_step: Optional[str] = None
+        self._steps: dict[str, Step] = {}
+        self._step_order: list[str] = []
+        self._valid_contexts: list[str] | None = None
+        self._valid_steps: list[str] | None = None
+        self._initial_step: str | None = None
 
         # Context entry parameters
-        self._post_prompt: Optional[str] = None
-        self._system_prompt: Optional[str] = None
-        self._system_prompt_sections: List[
-            Dict[str, Any]
+        self._post_prompt: str | None = None
+        self._system_prompt: str | None = None
+        self._system_prompt_sections: list[
+            dict[str, Any]
         ] = []  # For POM-style system prompts
         self._consolidate: bool = False
         self._full_reset: bool = False
-        self._user_prompt: Optional[str] = None
+        self._user_prompt: str | None = None
         self._isolated: bool = False
 
         # Context prompt (separate from system_prompt)
-        self._prompt_text: Optional[str] = None
-        self._prompt_sections: List[Dict[str, Any]] = []
+        self._prompt_text: str | None = None
+        self._prompt_sections: list[dict[str, Any]] = []
 
         # Context fillers
-        self._enter_fillers: Optional[Dict[str, List[str]]] = None
-        self._exit_fillers: Optional[Dict[str, List[str]]] = None
+        self._enter_fillers: dict[str, list[str]] | None = None
+        self._exit_fillers: dict[str, list[str]] | None = None
 
     def add_step(
         self,
         name: str,
         *,
-        task: Optional[str] = None,
-        bullets: Optional[List[str]] = None,
-        criteria: Optional[str] = None,
-        functions: Optional[Union[str, List[str]]] = None,
-        valid_steps: Optional[List[str]] = None,
+        task: str | None = None,
+        bullets: list[str] | None = None,
+        criteria: str | None = None,
+        functions: str | list[str] | None = None,
+        valid_steps: list[str] | None = None,
     ) -> Step:
         """
         Add a new step to this context.
@@ -721,7 +721,7 @@ class Context:
         self._step_order.insert(position, name)
         return self
 
-    def set_valid_contexts(self, contexts: List[str]) -> "Context":
+    def set_valid_contexts(self, contexts: list[str]) -> "Context":
         """
         Set which contexts can be navigated to from this context
 
@@ -734,7 +734,7 @@ class Context:
         self._valid_contexts = contexts
         return self
 
-    def set_valid_steps(self, steps: List[str]) -> "Context":
+    def set_valid_steps(self, steps: list[str]) -> "Context":
         """
         Set which steps can be navigated to from any step in this context
 
@@ -897,7 +897,7 @@ class Context:
         self._system_prompt_sections.append({"title": title, "body": body})
         return self
 
-    def add_system_bullets(self, title: str, bullets: List[str]) -> "Context":
+    def add_system_bullets(self, title: str, bullets: list[str]) -> "Context":
         """
         Add a POM section with bullet points to the system prompt
 
@@ -950,7 +950,7 @@ class Context:
         self._prompt_sections.append({"title": title, "body": body})
         return self
 
-    def add_bullets(self, title: str, bullets: List[str]) -> "Context":
+    def add_bullets(self, title: str, bullets: list[str]) -> "Context":
         """
         Add a POM section with bullet points to the context prompt
 
@@ -968,7 +968,7 @@ class Context:
         self._prompt_sections.append({"title": title, "bullets": bullets})
         return self
 
-    def set_enter_fillers(self, enter_fillers: Dict[str, List[str]]) -> "Context":
+    def set_enter_fillers(self, enter_fillers: dict[str, list[str]]) -> "Context":
         """
         Set fillers that the AI says when entering this context
 
@@ -983,7 +983,7 @@ class Context:
             self._enter_fillers = enter_fillers
         return self
 
-    def set_exit_fillers(self, exit_fillers: Dict[str, List[str]]) -> "Context":
+    def set_exit_fillers(self, exit_fillers: dict[str, list[str]]) -> "Context":
         """
         Set fillers that the AI says when exiting this context
 
@@ -998,7 +998,7 @@ class Context:
             self._exit_fillers = exit_fillers
         return self
 
-    def add_enter_filler(self, language_code: str, fillers: List[str]) -> "Context":
+    def add_enter_filler(self, language_code: str, fillers: list[str]) -> "Context":
         """
         Add enter fillers for a specific language
 
@@ -1015,7 +1015,7 @@ class Context:
             self._enter_fillers[language_code] = fillers
         return self
 
-    def add_exit_filler(self, language_code: str, fillers: List[str]) -> "Context":
+    def add_exit_filler(self, language_code: str, fillers: list[str]) -> "Context":
         """
         Add exit fillers for a specific language
 
@@ -1032,7 +1032,7 @@ class Context:
             self._exit_fillers[language_code] = fillers
         return self
 
-    def _render_prompt(self) -> Optional[str]:
+    def _render_prompt(self) -> str | None:
         """Render the context's prompt text"""
         if self._prompt_text is not None:
             return self._prompt_text
@@ -1053,7 +1053,7 @@ class Context:
 
         return "\n".join(markdown_parts).strip()
 
-    def _render_system_prompt(self) -> Optional[str]:
+    def _render_system_prompt(self) -> str | None:
         """Render the system prompt text"""
         if self._system_prompt is not None:
             return self._system_prompt
@@ -1074,12 +1074,12 @@ class Context:
 
         return "\n".join(markdown_parts).strip()
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert context to dictionary for SWML generation"""
         if not self._steps:
             raise ValueError(f"Context '{self.name}' has no steps defined")
 
-        context_dict: Dict[str, Any] = {
+        context_dict: dict[str, Any] = {
             "steps": [self._steps[name].to_dict() for name in self._step_order]
         }
 
@@ -1192,8 +1192,8 @@ class ContextBuilder:
 
     def __init__(self, agent):
         self._agent = agent
-        self._contexts: Dict[str, Context] = {}
-        self._context_order: List[str] = []
+        self._contexts: dict[str, Context] = {}
+        self._context_order: list[str] = []
 
     def reset(self) -> "ContextBuilder":
         """
@@ -1239,7 +1239,7 @@ class ContextBuilder:
         self._context_order.append(name)
         return context
 
-    def get_context(self, name: str) -> Optional[Context]:
+    def get_context(self, name: str) -> Context | None:
         """
         Get an existing context by name for inspection or modification.
 
@@ -1385,7 +1385,7 @@ class ContextBuilder:
                         f"avoid the collision."
                     )
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert all contexts to dictionary for SWML generation"""
         self.validate()
 

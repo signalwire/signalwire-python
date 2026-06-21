@@ -23,7 +23,7 @@ if "--raw" in sys.argv or "--dump-swml" in sys.argv:
 import json
 import argparse
 from pathlib import Path
-from typing import Any, Dict, cast
+from typing import Any, cast
 
 # Import submodules
 from .config import (
@@ -745,7 +745,7 @@ def main():
 
                 # Execute DataMap function (is_datamap implies func is a dict)
                 result = execute_datamap_function(
-                    cast(Dict[str, Any], func), function_args, args.verbose
+                    cast(dict[str, Any], func), function_args, args.verbose
                 )
                 print("RESULT:")
                 print(format_result(result))

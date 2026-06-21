@@ -13,7 +13,7 @@ import importlib.util
 import inspect
 import sys
 import threading
-from typing import Dict, List, Type, Optional, Any
+from typing import Any
 from pathlib import Path
 
 from signalwire.core.skill_base import SkillBase
@@ -24,13 +24,13 @@ class SkillRegistry:
     """Global registry for on-demand skill loading"""
 
     def __init__(self):
-        self._skills: Dict[str, Type[SkillBase]] = {}
-        self._external_paths: List[Path] = []  # Additional paths to search for skills
+        self._skills: dict[str, type[SkillBase]] = {}
+        self._external_paths: list[Path] = []  # Additional paths to search for skills
         self._entry_points_loaded = False
         self._lock = threading.RLock()
         self.logger = get_logger("skill_registry")
 
-    def _load_skill_on_demand(self, skill_name: str) -> Optional[Type[SkillBase]]:
+    def _load_skill_on_demand(self, skill_name: str) -> type[SkillBase] | None:
         """Load a skill on-demand by name"""
         with self._lock:
             if skill_name in self._skills:
@@ -68,7 +68,7 @@ class SkillRegistry:
 
     def _load_skill_from_path(
         self, skill_name: str, base_path: Path
-    ) -> Optional[Type[SkillBase]]:
+    ) -> type[SkillBase] | None:
         """Try to load a skill from a specific base path"""
         # Prevent path traversal in skill names
         if ".." in skill_name or os.sep in skill_name or "/" in skill_name:
@@ -133,7 +133,7 @@ class SkillRegistry:
             )
             return None
 
-    def discover_skills(self) -> List[Dict[str, str]]:
+    def discover_skills(self) -> list[dict[str, str]]:
         """Discover and return all available skills.
 
         Skills load on-demand, so there is nothing to eagerly register; this
@@ -146,7 +146,7 @@ class SkillRegistry:
         # Keep this method for backwards compatibility but make it a no-op
         pass
 
-    def register_skill(self, skill_class: Type[SkillBase]) -> None:
+    def register_skill(self, skill_class: type[SkillBase]) -> None:
         """
         Register a skill class directly
 
@@ -236,7 +236,7 @@ class SkillRegistry:
                 "skill_registered", extra={"skill": skill_class.SKILL_NAME}
             )
 
-    def get_skill_class(self, skill_name: str) -> Optional[Type[SkillBase]]:
+    def get_skill_class(self, skill_name: str) -> type[SkillBase] | None:
         """Get skill class by name, loading on-demand if needed"""
         # First check if already loaded
         if skill_name in self._skills:
@@ -245,7 +245,7 @@ class SkillRegistry:
         # Try to load on-demand
         return self._load_skill_on_demand(skill_name)
 
-    def list_skills(self) -> List[Dict[str, Any]]:
+    def list_skills(self) -> list[dict[str, Any]]:
         """List all available skills by scanning directories (only when explicitly requested)"""
         # Only scan when this method is explicitly called (e.g., for CLI tools)
         skills_dir = Path(__file__).parent
@@ -271,7 +271,7 @@ class SkillRegistry:
 
         return available_skills
 
-    def get_all_skills_schema(self) -> Dict[str, Dict[str, Any]]:
+    def get_all_skills_schema(self) -> dict[str, dict[str, Any]]:
         """
         Get complete schema for all available skills including parameter metadata
 
@@ -497,7 +497,7 @@ class SkillRegistry:
         except Exception as e:
             self.logger.debug(f"Entry point loading failed: {e}")
 
-    def list_all_skill_sources(self) -> Dict[str, List[str]]:
+    def list_all_skill_sources(self) -> dict[str, list[str]]:
         """
         List all skill sources and the skills available from each
 
@@ -509,7 +509,7 @@ class SkillRegistry:
             'registered': ['my_skill', ...]
         }
         """
-        sources: Dict[str, List[str]] = {
+        sources: dict[str, list[str]] = {
             "built-in": [],
             "external_paths": [],
             "entry_points": [],

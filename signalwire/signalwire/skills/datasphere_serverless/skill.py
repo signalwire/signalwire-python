@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 import base64
-from typing import List, Dict, Any, ClassVar
+from typing import Any, ClassVar
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.data_map import DataMap
@@ -24,17 +24,17 @@ class DataSphereServerlessSkill(SkillBase):
     )
     SKILL_VERSION = "1.0.0"
     REQUIRED_PACKAGES: ClassVar[
-        List[str]
+        list[str]
     ] = []  # DataMap handles API calls serverlessly
     REQUIRED_ENV_VARS: ClassVar[
-        List[str]
+        list[str]
     ] = []  # No required env vars since all config comes from params
 
     # Enable multiple instances support
     SUPPORTS_MULTIPLE_INSTANCES = True
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """Get parameter schema for DataSphere Serverless skill"""
         schema = super().get_parameter_schema()
         schema.update(
@@ -239,11 +239,11 @@ class DataSphereServerlessSkill(SkillBase):
         # Register the enhanced DataMap tool with the agent
         self.agent.register_swaig_function(swaig_function)
 
-    def get_hints(self) -> List[str]:
+    def get_hints(self) -> list[str]:
         """Return speech recognition hints"""
         return []
 
-    def get_global_data(self) -> Dict[str, Any]:
+    def get_global_data(self) -> dict[str, Any]:
         """Return global data for agent context"""
         return {
             "datasphere_serverless_enabled": True,
@@ -251,7 +251,7 @@ class DataSphereServerlessSkill(SkillBase):
             "knowledge_provider": "SignalWire DataSphere (Serverless)",
         }
 
-    def get_prompt_sections(self) -> List[Dict[str, Any]]:
+    def get_prompt_sections(self) -> list[dict[str, Any]]:
         """Return prompt sections to add to agent"""
         return [
             {

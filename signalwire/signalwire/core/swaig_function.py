@@ -9,7 +9,8 @@ See LICENSE file in the project root for full license information.
 SwaigFunction class for defining and managing SWAIG function interfaces
 """
 
-from typing import Dict, Any, Optional, Callable, List
+from typing import Any
+from collections.abc import Callable
 import logging
 
 # Import here to avoid circular imports
@@ -45,13 +46,13 @@ class SWAIGFunction:
         name: str,
         handler: Callable,
         description: str,
-        parameters: Optional[Dict[str, Dict]] = None,
+        parameters: dict[str, dict] | None = None,
         secure: bool = False,
-        fillers: Optional[Dict[str, List[str]]] = None,
-        wait_file: Optional[str] = None,
-        wait_file_loops: Optional[int] = None,
-        webhook_url: Optional[str] = None,
-        required: Optional[List[str]] = None,
+        fillers: dict[str, list[str]] | None = None,
+        wait_file: str | None = None,
+        wait_file_loops: int | None = None,
+        webhook_url: str | None = None,
+        required: list[str] | None = None,
         is_typed_handler: bool = False,
         **extra_swaig_fields,
     ):
@@ -103,7 +104,7 @@ class SWAIGFunction:
         # Mark as external if webhook_url is provided
         self.is_external = webhook_url is not None
 
-    def _ensure_parameter_structure(self) -> Dict:
+    def _ensure_parameter_structure(self) -> dict:
         """
         Ensure the parameters are correctly structured for SWML
 
@@ -133,8 +134,8 @@ class SWAIGFunction:
         return self.handler(*args, **kwargs)
 
     def execute(
-        self, args: Dict[str, Any], raw_data: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+        self, args: dict[str, Any], raw_data: dict[str, Any] | None = None
+    ) -> dict[str, Any]:
         """
         Execute the function with the given arguments
 
@@ -174,7 +175,7 @@ class SWAIGFunction:
                 "Sorry, I couldn't complete that action. Please try again or contact support if the issue persists."
             ).to_dict()
 
-    def validate_args(self, args: Dict[str, Any]) -> tuple:
+    def validate_args(self, args: dict[str, Any]) -> tuple:
         """
         Validate the arguments against the parameter schema.
 
@@ -229,10 +230,10 @@ class SWAIGFunction:
     def to_swaig(
         self,
         base_url: str,
-        token: Optional[str] = None,
-        call_id: Optional[str] = None,
+        token: str | None = None,
+        call_id: str | None = None,
         include_auth: bool = True,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Convert this function to a SWAIG-compatible JSON object for SWML
 

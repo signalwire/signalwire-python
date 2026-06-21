@@ -12,7 +12,7 @@ import json
 import hashlib
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional, Dict, Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 import fnmatch
 
 if TYPE_CHECKING:
@@ -48,13 +48,13 @@ class IndexBuilder:
         max_sentences_per_chunk: int = 5,
         chunk_size: int = 50,
         chunk_overlap: int = 10,
-        split_newlines: Optional[int] = None,
+        split_newlines: int | None = None,
         index_nlp_backend: str = "nltk",
         verbose: bool = False,
         semantic_threshold: float = 0.5,
         topic_threshold: float = 0.3,
         backend: str = "sqlite",
-        connection_string: Optional[str] = None,
+        connection_string: str | None = None,
     ):
         """
         Initialize the index builder
@@ -116,7 +116,7 @@ class IndexBuilder:
 
     def _extract_metadata_from_json_content(
         self, content: str
-    ) -> tuple[Dict[str, Any], str]:
+    ) -> tuple[dict[str, Any], str]:
         """
         Extract metadata from JSON content if present
 
@@ -180,12 +180,12 @@ class IndexBuilder:
 
     def build_index_from_sources(
         self,
-        sources: List[Path],
+        sources: list[Path],
         output_file: str,
-        file_types: List[str],
-        exclude_patterns: Optional[List[str]] = None,
-        languages: Optional[List[str]] = None,
-        tags: Optional[List[str]] = None,
+        file_types: list[str],
+        exclude_patterns: list[str] | None = None,
+        languages: list[str] | None = None,
+        tags: list[str] | None = None,
         overwrite: bool = False,
     ):
         """
@@ -317,10 +317,10 @@ class IndexBuilder:
         self,
         source_dir: str,
         output_file: str,
-        file_types: List[str],
-        exclude_patterns: Optional[List[str]] = None,
-        languages: Optional[List[str]] = None,
-        tags: Optional[List[str]] = None,
+        file_types: list[str],
+        exclude_patterns: list[str] | None = None,
+        languages: list[str] | None = None,
+        tags: list[str] | None = None,
     ):
         """
         Build complete search index from a single directory
@@ -340,7 +340,7 @@ class IndexBuilder:
             sources, output_file, file_types, exclude_patterns, languages, tags
         )
 
-    def _get_base_directory_for_file(self, file_path: Path, sources: List[Path]) -> str:
+    def _get_base_directory_for_file(self, file_path: Path, sources: list[Path]) -> str:
         """
         Determine the appropriate base directory for a file to calculate relative paths
 
@@ -373,10 +373,10 @@ class IndexBuilder:
 
     def _discover_files_from_sources(
         self,
-        sources: List[Path],
-        file_types: List[str],
-        exclude_patterns: Optional[List[str]] = None,
-    ) -> List[Path]:
+        sources: list[Path],
+        file_types: list[str],
+        exclude_patterns: list[str] | None = None,
+    ) -> list[Path]:
         """
         Discover files from multiple sources (files and directories)
 
@@ -437,7 +437,7 @@ class IndexBuilder:
         return unique_files
 
     def _is_file_excluded(
-        self, file_path: Path, exclude_patterns: Optional[List[str]] = None
+        self, file_path: Path, exclude_patterns: list[str] | None = None
     ) -> bool:
         """
         Check if a file should be excluded based on exclude patterns
@@ -461,9 +461,9 @@ class IndexBuilder:
     def _discover_files(
         self,
         source_dir: str,
-        file_types: List[str],
-        exclude_patterns: Optional[List[str]] = None,
-    ) -> List[Path]:
+        file_types: list[str],
+        exclude_patterns: list[str] | None = None,
+    ) -> list[Path]:
         """Discover files to index"""
         files = []
         source_path = Path(source_dir)
@@ -498,8 +498,8 @@ class IndexBuilder:
         return files
 
     def _process_file(
-        self, file_path: Path, source_dir: str, global_tags: Optional[List[str]] = None
-    ) -> List[Dict[str, Any]]:
+        self, file_path: Path, source_dir: str, global_tags: list[str] | None = None
+    ) -> list[dict[str, Any]]:
         """Process single file into chunks"""
         try:
             relative_path = str(file_path.relative_to(source_dir))
@@ -595,10 +595,10 @@ class IndexBuilder:
     def _create_database(
         self,
         output_file: str,
-        chunks: List[Dict[str, Any]],
-        languages: List[str],
-        sources_info: List[str],
-        file_types: List[str],
+        chunks: list[dict[str, Any]],
+        languages: list[str],
+        sources_info: list[str],
+        file_types: list[str],
     ):
         """Create SQLite database with all data"""
 
@@ -773,7 +773,7 @@ class IndexBuilder:
         finally:
             conn.close()
 
-    def validate_index(self, index_file: str) -> Dict[str, Any]:
+    def validate_index(self, index_file: str) -> dict[str, Any]:
         """Validate an existing search index"""
         if not Path(index_file).exists():
             return {"valid": False, "error": "Index file does not exist"}
@@ -818,9 +818,9 @@ class IndexBuilder:
 
     def _store_chunks_pgvector(
         self,
-        chunks: List[Dict[str, Any]],
+        chunks: list[dict[str, Any]],
         collection_name: str,
-        languages: List[str],
+        languages: list[str],
         overwrite: bool = False,
     ):
         """

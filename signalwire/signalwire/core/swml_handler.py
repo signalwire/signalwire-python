@@ -13,7 +13,7 @@ implementations for specific verbs that require special handling.
 """
 
 from abc import ABC, abstractmethod
-from typing import Dict, List, Any, Optional, Tuple
+from typing import Any
 
 
 class SWMLVerbHandler(ABC):
@@ -36,7 +36,7 @@ class SWMLVerbHandler(ABC):
         pass
 
     @abstractmethod
-    def validate_config(self, config: Dict[str, Any]) -> Tuple[bool, List[str]]:
+    def validate_config(self, config: dict[str, Any]) -> tuple[bool, list[str]]:
         """
         Validate the configuration for this verb
 
@@ -49,7 +49,7 @@ class SWMLVerbHandler(ABC):
         pass
 
     @abstractmethod
-    def build_config(self, **kwargs) -> Dict[str, Any]:
+    def build_config(self, **kwargs) -> dict[str, Any]:
         """
         Build a configuration for this verb from the provided arguments
 
@@ -79,7 +79,7 @@ class AIVerbHandler(SWMLVerbHandler):
         """
         return "ai"
 
-    def validate_config(self, config: Dict[str, Any]) -> Tuple[bool, List[str]]:
+    def validate_config(self, config: dict[str, Any]) -> tuple[bool, list[str]]:
         """
         Validate the configuration for the AI verb
 
@@ -131,14 +131,14 @@ class AIVerbHandler(SWMLVerbHandler):
 
     def build_config(
         self,
-        prompt_text: Optional[str] = None,
-        prompt_pom: Optional[List[Dict[str, Any]]] = None,
-        contexts: Optional[Dict[str, Any]] = None,
-        post_prompt: Optional[str] = None,
-        post_prompt_url: Optional[str] = None,
-        swaig: Optional[Dict[str, Any]] = None,
+        prompt_text: str | None = None,
+        prompt_pom: list[dict[str, Any]] | None = None,
+        contexts: dict[str, Any] | None = None,
+        post_prompt: str | None = None,
+        post_prompt_url: str | None = None,
+        swaig: dict[str, Any] | None = None,
         **kwargs,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """
         Build a configuration for the AI verb
 
@@ -154,7 +154,7 @@ class AIVerbHandler(SWMLVerbHandler):
         Returns:
             AI verb configuration dictionary
         """
-        config: Dict[str, Any] = {}
+        config: dict[str, Any] = {}
 
         # Require either text or pom as base prompt (mutually exclusive)
         base_prompt_count = sum(x is not None for x in [prompt_text, prompt_pom])
@@ -166,7 +166,7 @@ class AIVerbHandler(SWMLVerbHandler):
             raise ValueError("prompt_text and prompt_pom are mutually exclusive")
 
         # Build prompt object with base prompt
-        prompt_config: Dict[str, Any] = {}
+        prompt_config: dict[str, Any] = {}
         if prompt_text is not None:
             prompt_config["text"] = prompt_text
         elif prompt_pom is not None:
@@ -236,7 +236,7 @@ class VerbHandlerRegistry:
         verb_name = handler.get_verb_name()
         self._handlers[verb_name] = handler
 
-    def get_handler(self, verb_name: str) -> Optional[SWMLVerbHandler]:
+    def get_handler(self, verb_name: str) -> SWMLVerbHandler | None:
         """
         Get the handler for a specific verb
 

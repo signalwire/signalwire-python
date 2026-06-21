@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 Prompt management functionality for AgentBase.
 """
 
-from typing import Dict, Any, Optional, List, Union
+from typing import Any
 import inspect
 
 from signalwire.core.logging_config import get_logger
@@ -49,7 +49,7 @@ class PromptManager:
                     "Please use either set_prompt_text() OR the prompt_add_* methods, not both."
                 )
 
-    def _process_prompt_sections(self) -> Optional[Union[str, List[Dict[str, Any]]]]:
+    def _process_prompt_sections(self) -> str | list[dict[str, Any]] | None:
         """
         Process prompt sections from POM or raw prompt text.
 
@@ -72,7 +72,7 @@ class PromptManager:
 
         return None
 
-    def define_contexts(self, contexts: Union[Dict[str, Any], Any]) -> None:
+    def define_contexts(self, contexts: dict[str, Any] | Any) -> None:
         """
         Define contexts for the agent.
 
@@ -111,7 +111,7 @@ class PromptManager:
         self._post_prompt_text = text
         logger.debug(f"Set post-prompt text: {text[:100]}...")
 
-    def set_prompt_pom(self, pom: List[Dict[str, Any]]) -> None:
+    def set_prompt_pom(self, pom: list[dict[str, Any]]) -> None:
         """
         Set the prompt as a POM dictionary.
 
@@ -130,10 +130,10 @@ class PromptManager:
         self,
         title: str,
         body: str = "",
-        bullets: Optional[List[str]] = None,
+        bullets: list[str] | None = None,
         numbered: bool = False,
         numbered_bullets: bool = False,
-        subsections: Optional[List[Dict[str, Any]]] = None,
+        subsections: list[dict[str, Any]] | None = None,
     ) -> None:
         """
         Add a section to the prompt.
@@ -149,7 +149,7 @@ class PromptManager:
         self._validate_prompt_mode_exclusivity()
         if self.agent._use_pom and self.agent.pom:
             # Create parameters for add_section based on what's supported
-            kwargs: Dict[str, Any] = {}
+            kwargs: dict[str, Any] = {}
 
             # Start with basic parameters
             kwargs["title"] = title
@@ -181,9 +181,9 @@ class PromptManager:
     def prompt_add_to_section(
         self,
         title: str,
-        body: Optional[str] = None,
-        bullet: Optional[str] = None,
-        bullets: Optional[List[str]] = None,
+        body: str | None = None,
+        bullet: str | None = None,
+        bullets: list[str] | None = None,
     ) -> None:
         """
         Add content to an existing section (creating it if needed).
@@ -224,7 +224,7 @@ class PromptManager:
         parent_title: str,
         title: str,
         body: str = "",
-        bullets: Optional[List[str]] = None,
+        bullets: list[str] | None = None,
     ) -> None:
         """
         Add a subsection to an existing section (creating parent if needed).
@@ -268,7 +268,7 @@ class PromptManager:
             return self.agent.pom.find_section(title) is not None
         return False
 
-    def get_prompt(self) -> Optional[Union[str, List[Dict[str, Any]]]]:
+    def get_prompt(self) -> str | list[dict[str, Any]] | None:
         """
         Get the prompt configuration.
 
@@ -277,7 +277,7 @@ class PromptManager:
         """
         return self._process_prompt_sections()
 
-    def get_raw_prompt(self) -> Optional[str]:
+    def get_raw_prompt(self) -> str | None:
         """
         Get the raw prompt text if set.
 
@@ -286,7 +286,7 @@ class PromptManager:
         """
         return self._prompt_text
 
-    def get_post_prompt(self) -> Optional[str]:
+    def get_post_prompt(self) -> str | None:
         """
         Get the post-prompt text.
 
@@ -295,7 +295,7 @@ class PromptManager:
         """
         return self._post_prompt_text
 
-    def get_contexts(self) -> Optional[Dict[str, Any]]:
+    def get_contexts(self) -> dict[str, Any] | None:
         """
         Get the contexts configuration.
 

@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import sqlite3
 import json
-from typing import List, Dict, Any, Optional, Union, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from signalwire.core.logging_config import get_logger
 
@@ -39,9 +39,9 @@ class SearchEngine:
     def __init__(
         self,
         backend: str = "sqlite",
-        index_path: Optional[str] = None,
-        connection_string: Optional[str] = None,
-        collection_name: Optional[str] = None,
+        index_path: str | None = None,
+        connection_string: str | None = None,
+        collection_name: str | None = None,
         model=None,
     ):
         """
@@ -79,7 +79,7 @@ class SearchEngine:
                 f"Invalid backend '{backend}'. Must be 'sqlite' or 'pgvector'"
             )
 
-    def _load_config(self) -> Dict[str, str]:
+    def _load_config(self) -> dict[str, str]:
         """Load index configuration"""
         conn = None
         try:
@@ -96,14 +96,14 @@ class SearchEngine:
 
     def search(
         self,
-        query_vector: List[float],
+        query_vector: list[float],
         enhanced_text: str,
         count: int = 3,
         similarity_threshold: float = 0.0,
-        tags: Optional[List[str]] = None,
-        keyword_weight: Optional[float] = None,
-        original_query: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        tags: list[str] | None = None,
+        keyword_weight: float | None = None,
+        original_query: str | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Unified hybrid search: backends fetch candidates, SearchEngine post-processes.
 
@@ -164,13 +164,13 @@ class SearchEngine:
 
     def _fetch_candidates(
         self,
-        query_vector: List[float],
+        query_vector: list[float],
         enhanced_text: str,
         count: int,
         similarity_threshold: float = 0.0,
-        tags: Optional[List[str]] = None,
-        original_query: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        tags: list[str] | None = None,
+        original_query: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Dispatch candidate fetching to the active backend.
 
         Returns a list of raw candidates (not yet scored/deduped/diversified).
@@ -224,7 +224,7 @@ class SearchEngine:
             f"keyword={len(keyword_results)}"
         )
 
-        candidates: Dict[Any, Dict[str, Any]] = {}
+        candidates: dict[Any, dict[str, Any]] = {}
 
         # Vector first (primary signal)
         for r in vector_results:
@@ -255,12 +255,12 @@ class SearchEngine:
 
     def _process_candidates(
         self,
-        candidates: List[Dict[str, Any]],
+        candidates: list[dict[str, Any]],
         count: int,
         similarity_threshold: float = 0.0,
-        tags: Optional[List[str]] = None,
-        original_query: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        tags: list[str] | None = None,
+        original_query: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Backend-agnostic post-processing pipeline.
 
         Steps (in order):
@@ -326,9 +326,9 @@ class SearchEngine:
         self,
         enhanced_text: str,
         count: int,
-        tags: Optional[List[str]] = None,
-        original_query: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        tags: list[str] | None = None,
+        original_query: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Fallback to keyword search only when vector search is unavailable"""
         keyword_results = self._keyword_search(enhanced_text, count, original_query)
 
@@ -338,8 +338,8 @@ class SearchEngine:
         return keyword_results[:count]
 
     def _vector_search(
-        self, query_vector: Union[NDArray, Any], count: int
-    ) -> List[Dict[str, Any]]:
+        self, query_vector: NDArray | Any, count: int
+    ) -> list[dict[str, Any]]:
         """Perform vector similarity search"""
         if not np or not cosine_similarity:
             return []
@@ -416,8 +416,8 @@ class SearchEngine:
                 conn.close()
 
     def _keyword_search(
-        self, enhanced_text: str, count: int, original_query: Optional[str] = None
-    ) -> List[Dict[str, Any]]:
+        self, enhanced_text: str, count: int, original_query: str | None = None
+    ) -> list[dict[str, Any]]:
         """Perform full-text search"""
         conn = None
         try:
@@ -496,7 +496,7 @@ class SearchEngine:
         escaped_terms = [f'"{term}"' for term in terms if term]
         return " ".join(escaped_terms)
 
-    def _fallback_search(self, enhanced_text: str, count: int) -> List[Dict[str, Any]]:
+    def _fallback_search(self, enhanced_text: str, count: int) -> list[dict[str, Any]]:
         """Fallback search using LIKE when FTS fails"""
         conn = None
         try:
@@ -506,7 +506,7 @@ class SearchEngine:
             # Simple LIKE search with word boundaries
             search_terms = enhanced_text.lower().split()
             like_conditions = []
-            params: List[Any] = []
+            params: list[Any] = []
 
             for term in search_terms[
                 :5
@@ -610,11 +610,11 @@ class SearchEngine:
 
     def _merge_results(
         self,
-        vector_results: List[Dict],
-        keyword_results: List[Dict],
-        vector_weight: Optional[float] = None,
-        keyword_weight: Optional[float] = None,
-    ) -> List[Dict[str, Any]]:
+        vector_results: list[dict],
+        keyword_results: list[dict],
+        vector_weight: float | None = None,
+        keyword_weight: float | None = None,
+    ) -> list[dict[str, Any]]:
         """Merge and rank vector and keyword search results"""
         # Use provided weights or defaults
         if vector_weight is None:
@@ -662,8 +662,8 @@ class SearchEngine:
         return sorted(combined.values(), key=lambda x: x["score"], reverse=True)
 
     def _filter_by_tags(
-        self, results: List[Dict], required_tags: List[str]
-    ) -> List[Dict[str, Any]]:
+        self, results: list[dict], required_tags: list[str]
+    ) -> list[dict[str, Any]]:
         """Filter results by required tags"""
         filtered = []
         for result in results:
@@ -673,8 +673,8 @@ class SearchEngine:
         return filtered
 
     def _boost_exact_matches(
-        self, results: List[Dict[str, Any]], original_query: str
-    ) -> List[Dict[str, Any]]:
+        self, results: list[dict[str, Any]], original_query: str
+    ) -> list[dict[str, Any]]:
         """Boost scores for results that contain exact matches of the original query"""
         if not original_query:
             return results
@@ -715,7 +715,7 @@ class SearchEngine:
         """Escape LIKE wildcard characters in user input"""
         return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
-    def _filename_search(self, query: str, count: int) -> List[Dict[str, Any]]:
+    def _filename_search(self, query: str, count: int) -> list[dict[str, Any]]:
         """Search for query in filenames with term coverage scoring"""
         conn = None
         try:
@@ -777,7 +777,7 @@ class SearchEngine:
             if terms and len(results) < count * 3:  # Get more candidates
                 # Build OR query for any term match (escape LIKE wildcards)
                 conditions = []
-                params: List[Any] = []
+                params: list[Any] = []
                 for term in terms:
                     conditions.append("LOWER(filename) LIKE ? ESCAPE '\\'")
                     params.append(f"%{self._escape_like(term)}%")
@@ -863,7 +863,7 @@ class SearchEngine:
             if conn:
                 conn.close()
 
-    def _metadata_search(self, query: str, count: int) -> List[Dict[str, Any]]:
+    def _metadata_search(self, query: str, count: int) -> list[dict[str, Any]]:
         """Search in all metadata fields (tags, sections, category, product, source)"""
         conn = None
         try:
@@ -888,7 +888,7 @@ class SearchEngine:
                 # Use the new metadata_text column for efficient searching
                 # Build conditions for each term (escape LIKE wildcards)
                 conditions = []
-                params: List[Any] = []
+                params: list[Any] = []
                 for term in terms:
                     conditions.append("metadata_text LIKE ? ESCAPE '\\'")
                     params.append(f"%{self._escape_like(term)}%")
@@ -956,7 +956,7 @@ class SearchEngine:
             if len(results) < count:
                 # Build specific conditions for known patterns
                 specific_conditions = []
-                specific_params: List[Any] = []
+                specific_params: list[Any] = []
 
                 # Look for specific high-value patterns first
                 if "code" in terms and "examples" in terms:
@@ -1139,7 +1139,7 @@ class SearchEngine:
                     metadata.update(nested_meta)
 
                 # Initialize scoring components
-                score_components: Dict[str, float] = {
+                score_components: dict[str, float] = {
                     "tags": 0,
                     "section": 0,
                     "category": 0,
@@ -1302,7 +1302,7 @@ class SearchEngine:
 
     def _add_vector_scores_to_candidates(
         self,
-        candidates: Dict[str, Dict],
+        candidates: dict[str, dict],
         query_vector: NDArray,
         similarity_threshold: float,
     ):
@@ -1362,7 +1362,7 @@ class SearchEngine:
                 conn.close()
 
     def _calculate_combined_score(
-        self, candidate: Dict, similarity_threshold: float
+        self, candidate: dict, similarity_threshold: float
     ) -> float:
         """Calculate final score using max-signal-wins approach.
 
@@ -1390,7 +1390,7 @@ class SearchEngine:
         boost = agreement_boost * (len(scores) - 1)
         return min(1.0, base + boost)
 
-    def _dedupe_by_content(self, results: List[Dict]) -> List[Dict]:
+    def _dedupe_by_content(self, results: list[dict]) -> list[dict]:
         """Collapse exact/near-exact content duplicates, keeping the highest-scoring copy.
 
         Index quality varies: some source docs contain repeated boilerplate (footers,
@@ -1429,14 +1429,14 @@ class SearchEngine:
         return deduped
 
     def _apply_diversity_penalties(
-        self, results: List[Dict], target_count: int
-    ) -> List[Dict]:
+        self, results: list[dict], target_count: int
+    ) -> list[dict]:
         """Apply penalties to prevent single-file dominance while maintaining quality"""
         if not results:
             return results
 
         # Track file occurrences
-        file_counts: Dict[str, int] = {}
+        file_counts: dict[str, int] = {}
         penalized_results = []
 
         # Define penalty multipliers
@@ -1512,8 +1512,8 @@ class SearchEngine:
         return penalized_results
 
     def _apply_match_type_diversity(
-        self, results: List[Dict], target_count: int
-    ) -> List[Dict]:
+        self, results: list[dict], target_count: int
+    ) -> list[dict]:
         """Ensure diversity of match types in final results
 
         Ensures we have a mix of:
@@ -1571,7 +1571,7 @@ class SearchEngine:
 
         return diversified
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get statistics about the search index"""
         # Use pgvector backend if available
         if self.backend == "pgvector":

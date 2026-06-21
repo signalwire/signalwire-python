@@ -8,7 +8,8 @@ See LICENSE file in the project root for full license information.
 """
 
 import secrets
-from typing import Optional, Dict, Any, Callable, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+from collections.abc import Callable
 from functools import wraps
 
 if TYPE_CHECKING:
@@ -70,7 +71,7 @@ class AuthHandler:
 
     def _setup_auth_methods(self):
         """Setup enabled authentication methods from config"""
-        self.auth_methods: Dict[str, Dict[str, Any]] = {}
+        self.auth_methods: dict[str, dict[str, Any]] = {}
 
         # Basic auth (always available for backward compatibility)
         username, password = self.security_config.get_basic_auth()
@@ -139,15 +140,15 @@ class AuthHandler:
             return None
 
         async def auth_dependency(
-            basic_credentials: Optional[HTTPBasicCredentials] = Depends(self.basic_auth)  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom (Depends is lazy-imported so the config-level extend-immutable-calls can't resolve it)
+            basic_credentials: HTTPBasicCredentials | None = Depends(self.basic_auth)  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom (Depends is lazy-imported so the config-level extend-immutable-calls can't resolve it)
             if self.basic_auth
             else None,
-            bearer_credentials: Optional[HTTPAuthorizationCredentials] = Depends(  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom
+            bearer_credentials: HTTPAuthorizationCredentials | None = Depends(  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom
                 self.bearer_auth
             )
             if self.bearer_auth
             else None,
-            api_key: Optional[str] = None,  # Get from header in request
+            api_key: str | None = None,  # Get from header in request
         ):
             # Try each auth method
             authenticated = False
@@ -230,7 +231,7 @@ class AuthHandler:
 
         return decorated
 
-    def get_auth_info(self) -> Dict[str, Any]:
+    def get_auth_info(self) -> dict[str, Any]:
         """Get information about configured auth methods"""
         info = {}
 

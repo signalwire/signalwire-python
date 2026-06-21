@@ -9,7 +9,8 @@ See LICENSE file in the project root for full license information.
 DataMap class for building SWAIG data_map configurations
 """
 
-from typing import Dict, List, Any, Optional, Union, Pattern, Tuple
+from typing import Any
+from re import Pattern
 from .function_result import FunctionResult
 
 
@@ -70,11 +71,11 @@ class DataMap:
         """
         self.function_name = function_name
         self._purpose = ""
-        self._parameters: Dict[str, Any] = {}
-        self._expressions: List[Dict[str, Any]] = []
-        self._webhooks: List[Dict[str, Any]] = []
-        self._output: Optional[Dict[str, Any]] = None
-        self._error_keys: List[str] = []
+        self._parameters: dict[str, Any] = {}
+        self._expressions: list[dict[str, Any]] = []
+        self._webhooks: list[dict[str, Any]] = []
+        self._output: dict[str, Any] | None = None
+        self._error_keys: list[str] = []
 
     def purpose(self, description: str) -> "DataMap":
         """
@@ -126,7 +127,7 @@ class DataMap:
         param_type: str,
         description: str,
         required: bool = False,
-        enum: Optional[List[str]] = None,
+        enum: list[str] | None = None,
     ) -> "DataMap":
         """
         Add a function parameter.
@@ -155,7 +156,7 @@ class DataMap:
         Returns:
             Self for method chaining.
         """
-        param_def: Dict[str, Any] = {"type": param_type, "description": description}
+        param_def: dict[str, Any] = {"type": param_type, "description": description}
 
         if enum:
             param_def["enum"] = enum
@@ -173,9 +174,9 @@ class DataMap:
     def expression(
         self,
         test_value: str,
-        pattern: Union[str, Pattern],
+        pattern: str | Pattern,
         output: FunctionResult,
-        nomatch_output: Optional[FunctionResult] = None,
+        nomatch_output: FunctionResult | None = None,
     ) -> "DataMap":
         """
         Add an expression pattern for pattern-based responses
@@ -207,10 +208,10 @@ class DataMap:
         self,
         method: str,
         url: str,
-        headers: Optional[Dict[str, str]] = None,
-        form_param: Optional[str] = None,
+        headers: dict[str, str] | None = None,
+        form_param: str | None = None,
         input_args_as_params: bool = False,
-        require_args: Optional[List[str]] = None,
+        require_args: list[str] | None = None,
     ) -> "DataMap":
         """
         Add a webhook API call
@@ -226,7 +227,7 @@ class DataMap:
         Returns:
             Self for method chaining
         """
-        webhook_def: Dict[str, Any] = {"url": url, "method": method.upper()}
+        webhook_def: dict[str, Any] = {"url": url, "method": method.upper()}
 
         if headers:
             webhook_def["headers"] = headers
@@ -240,7 +241,7 @@ class DataMap:
         self._webhooks.append(webhook_def)
         return self
 
-    def webhook_expressions(self, expressions: List[Dict[str, Any]]) -> "DataMap":
+    def webhook_expressions(self, expressions: list[dict[str, Any]]) -> "DataMap":
         """
         Add expressions that run after the most recent webhook completes
 
@@ -256,7 +257,7 @@ class DataMap:
         self._webhooks[-1]["expressions"] = expressions
         return self
 
-    def body(self, data: Dict[str, Any]) -> "DataMap":
+    def body(self, data: dict[str, Any]) -> "DataMap":
         """
         Set request body for the last added webhook (POST/PUT requests)
 
@@ -272,7 +273,7 @@ class DataMap:
         self._webhooks[-1]["body"] = data
         return self
 
-    def params(self, data: Dict[str, Any]) -> "DataMap":
+    def params(self, data: dict[str, Any]) -> "DataMap":
         """
         Set request params for the last added webhook (alias for body)
 
@@ -288,7 +289,7 @@ class DataMap:
         self._webhooks[-1]["params"] = data
         return self
 
-    def foreach(self, foreach_config: Dict[str, Any]) -> "DataMap":
+    def foreach(self, foreach_config: dict[str, Any]) -> "DataMap":
         """
         Process an array from the webhook response using foreach mechanism
 
@@ -359,7 +360,7 @@ class DataMap:
         self._output = result.to_dict()
         return self
 
-    def error_keys(self, keys: List[str]) -> "DataMap":
+    def error_keys(self, keys: list[str]) -> "DataMap":
         """
         Set error keys for the most recent webhook (if webhooks exist) or top-level
 
@@ -377,7 +378,7 @@ class DataMap:
             self._error_keys = keys
         return self
 
-    def global_error_keys(self, keys: List[str]) -> "DataMap":
+    def global_error_keys(self, keys: list[str]) -> "DataMap":
         """
         Set top-level error keys (applies to all webhooks)
 
@@ -390,7 +391,7 @@ class DataMap:
         self._error_keys = keys
         return self
 
-    def to_swaig_function(self) -> Dict[str, Any]:
+    def to_swaig_function(self) -> dict[str, Any]:
         """
         Convert this DataMap to a SWAIG function definition
 
@@ -412,7 +413,7 @@ class DataMap:
             param_schema = {"type": "object", "properties": {}}
 
         # Build data_map structure
-        data_map: Dict[str, Any] = {}
+        data_map: dict[str, Any] = {}
 
         # Add expressions if present
         if self._expressions:
@@ -443,11 +444,11 @@ def create_simple_api_tool(
     name: str,
     url: str,
     response_template: str,
-    parameters: Optional[Dict[str, Dict]] = None,
+    parameters: dict[str, dict] | None = None,
     method: str = "GET",
-    headers: Optional[Dict[str, str]] = None,
-    body: Optional[Dict[str, Any]] = None,
-    error_keys: Optional[List[str]] = None,
+    headers: dict[str, str] | None = None,
+    body: dict[str, Any] | None = None,
+    error_keys: list[str] | None = None,
 ) -> DataMap:
     """
     Create a simple API tool with minimal configuration
@@ -497,8 +498,8 @@ def create_simple_api_tool(
 
 def create_expression_tool(
     name: str,
-    patterns: Dict[str, Tuple[str, FunctionResult]],
-    parameters: Optional[Dict[str, Dict]] = None,
+    patterns: dict[str, tuple[str, FunctionResult]],
+    parameters: dict[str, dict] | None = None,
 ) -> DataMap:
     """
     Create an expression-based tool for pattern matching responses

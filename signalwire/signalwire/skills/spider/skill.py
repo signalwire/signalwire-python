@@ -11,7 +11,7 @@ Spider skill for fast web scraping with SignalWire AI Agents.
 
 import re
 import collections
-from typing import Dict, Any, Optional, List, ClassVar
+from typing import Any, ClassVar
 from urllib.parse import urljoin, urlparse
 import requests
 from lxml import html
@@ -27,17 +27,17 @@ class SpiderSkill(SkillBase):
     SKILL_NAME = "spider"
     SKILL_DESCRIPTION = "Fast web scraping and crawling capabilities"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES: ClassVar[List[str]] = [
+    REQUIRED_PACKAGES: ClassVar[list[str]] = [
         "lxml"
     ]  # beautifulsoup4 and requests are in base dependencies
-    REQUIRED_ENV_VARS: ClassVar[List[str]] = []  # No required env vars by default
+    REQUIRED_ENV_VARS: ClassVar[list[str]] = []  # No required env vars by default
     SUPPORTS_MULTIPLE_INSTANCES = True
 
     # Compiled regex for performance
     WHITESPACE_REGEX = re.compile(r"\s+")
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """Get parameter schema for Spider skill"""
         schema = super().get_parameter_schema()
         schema.update(
@@ -145,7 +145,7 @@ class SpiderSkill(SkillBase):
         )
         return schema
 
-    def __init__(self, agent, params: Dict[str, Any]):
+    def __init__(self, agent, params: dict[str, Any]):
         """Initialize the spider skill with configuration parameters."""
         super().__init__(agent, params)
 
@@ -179,7 +179,7 @@ class SpiderSkill(SkillBase):
         self.session.headers.update(self.headers)
 
         # Cache for responses (bounded OrderedDict for LRU-style eviction)
-        self._cache: Optional["collections.OrderedDict[str, Any]"] = (
+        self._cache: collections.OrderedDict[str, Any] | None = (
             collections.OrderedDict() if self.cache_enabled else None
         )
         self._cache_max_size = 100
@@ -274,7 +274,7 @@ class SpiderSkill(SkillBase):
             handler=self._extract_structured_handler,
         )
 
-    def _fetch_url(self, url: str) -> Optional[requests.Response]:
+    def _fetch_url(self, url: str) -> requests.Response | None:
         """Fetch a URL with caching and error handling."""
         # Check cache first
         if self.cache_enabled and self._cache is not None and url in self._cache:
@@ -386,12 +386,12 @@ class SpiderSkill(SkillBase):
             return self._fast_text_extract(response)
 
     def _structured_extract(
-        self, response: requests.Response, selectors: Optional[Dict[str, str]] = None
-    ) -> Dict[str, Any]:
+        self, response: requests.Response, selectors: dict[str, str] | None = None
+    ) -> dict[str, Any]:
         """Extract structured data using selectors."""
         try:
             tree = html.fromstring(response.content)
-            result: Dict[str, Any] = {
+            result: dict[str, Any] = {
                 "url": response.url,
                 "status_code": response.status_code,
                 "title": "",
@@ -434,7 +434,7 @@ class SpiderSkill(SkillBase):
             return {"error": str(e)}
 
     def _scrape_url_handler(
-        self, args: Dict[str, Any], raw_data: Dict[str, Any]
+        self, args: dict[str, Any], raw_data: dict[str, Any]
     ) -> FunctionResult:
         """Handle single page scraping."""
         url = args.get("url", "").strip()
@@ -487,7 +487,7 @@ class SpiderSkill(SkillBase):
             return FunctionResult(f"Error processing {url}: {e!s}")
 
     def _crawl_site_handler(
-        self, args: Dict[str, Any], raw_data: Dict[str, Any]
+        self, args: dict[str, Any], raw_data: dict[str, Any]
     ) -> FunctionResult:
         """Handle multi-page crawling."""
         start_url = args.get("start_url", "").strip()
@@ -602,7 +602,7 @@ class SpiderSkill(SkillBase):
         return FunctionResult(summary)
 
     def _extract_structured_handler(
-        self, args: Dict[str, Any], raw_data: Dict[str, Any]
+        self, args: dict[str, Any], raw_data: dict[str, Any]
     ) -> FunctionResult:
         """Handle structured data extraction."""
         url = args.get("url", "").strip()
@@ -649,7 +649,7 @@ class SpiderSkill(SkillBase):
 
         return FunctionResult(output)
 
-    def get_hints(self) -> List[str]:
+    def get_hints(self) -> list[str]:
         """Return speech recognition hints for this skill."""
         return [
             "scrape",

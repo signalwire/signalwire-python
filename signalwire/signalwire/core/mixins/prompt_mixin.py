@@ -7,7 +7,7 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import Optional, Union, List, Dict, Any, TYPE_CHECKING
+from typing import Union, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports the mixins; the name resolves at type-check time but mypy flags the back-reference
@@ -26,7 +26,7 @@ class PromptMixin(_HostTyped):
 
     # Host attribute PromptMixin reads/writes; owned by AgentBase. Declared here
     # (Optional) so the checker resolves it without a cross-class has-type gap.
-    _contexts_builder: Optional[Any]
+    _contexts_builder: Any | None
 
     def _process_prompt_sections(self):
         """
@@ -221,7 +221,7 @@ class PromptMixin(_HostTyped):
         self._prompt_manager.set_post_prompt(text)
         return self
 
-    def set_prompt_pom(self, pom: List[Dict[str, Any]]) -> "AgentBase":
+    def set_prompt_pom(self, pom: list[dict[str, Any]]) -> "AgentBase":
         """
         Set the prompt as a POM dictionary
 
@@ -238,10 +238,10 @@ class PromptMixin(_HostTyped):
         self,
         title: str,
         body: str = "",
-        bullets: Optional[List[str]] = None,
+        bullets: list[str] | None = None,
         numbered: bool = False,
         numbered_bullets: bool = False,
-        subsections: Optional[List[Dict[str, Any]]] = None,
+        subsections: list[dict[str, Any]] | None = None,
     ) -> "AgentBase":
         """
         Add a section to the prompt
@@ -270,9 +270,9 @@ class PromptMixin(_HostTyped):
     def prompt_add_to_section(
         self,
         title: str,
-        body: Optional[str] = None,
-        bullet: Optional[str] = None,
-        bullets: Optional[List[str]] = None,
+        body: str | None = None,
+        bullet: str | None = None,
+        bullets: list[str] | None = None,
     ) -> "AgentBase":
         """
         Add content to an existing section (creating it if needed)
@@ -296,7 +296,7 @@ class PromptMixin(_HostTyped):
         parent_title: str,
         title: str,
         body: str = "",
-        bullets: Optional[List[str]] = None,
+        bullets: list[str] | None = None,
     ) -> "AgentBase":
         """
         Add a subsection to an existing section (creating parent if needed)
@@ -327,7 +327,7 @@ class PromptMixin(_HostTyped):
         """
         return self._prompt_manager.prompt_has_section(title)
 
-    def get_prompt(self) -> Union[str, List[Dict[str, Any]]]:
+    def get_prompt(self) -> str | list[dict[str, Any]]:
         """
         Get the prompt for the agent
 
@@ -374,7 +374,7 @@ class PromptMixin(_HostTyped):
         # Return default text
         return f"You are {self.name}, a helpful AI assistant."
 
-    def get_post_prompt(self) -> Optional[str]:
+    def get_post_prompt(self) -> str | None:
         """
         Get the post-prompt for the agent
 

@@ -19,7 +19,8 @@ import re
 import base64
 import sys
 import types
-from typing import Dict, Any, Optional, Union, Callable, Tuple
+from typing import Any
+from collections.abc import Callable
 from urllib.parse import urlparse
 
 # Import centralized logging system
@@ -88,10 +89,10 @@ class SWMLService(ToolMixin):
         name: str,
         route: str = "/",
         host: str = "0.0.0.0",  # noqa: S104  # intended server default: listen on all interfaces (overridable)
-        port: Optional[int] = None,
-        basic_auth: Optional[Tuple[str, str]] = None,
-        schema_path: Optional[str] = None,
-        config_file: Optional[str] = None,
+        port: int | None = None,
+        basic_auth: tuple[str, str] | None = None,
+        schema_path: str | None = None,
+        config_file: str | None = None,
         schema_validation: bool = True,
     ):
         """
@@ -129,7 +130,7 @@ class SWMLService(ToolMixin):
         self.ssl_key_path = self.security.ssl_key_path
 
         # Initialize proxy detection attributes
-        self._proxy_url_base: Optional[str] = os.environ.get("SWML_PROXY_URL_BASE")
+        self._proxy_url_base: str | None = os.environ.get("SWML_PROXY_URL_BASE")
         self._proxy_url_base_from_env = bool(
             self._proxy_url_base
         )  # Track if it came from environment
@@ -175,21 +176,21 @@ class SWMLService(ToolMixin):
         self.verb_registry = VerbHandlerRegistry()
 
         # Server state
-        self._app: Optional[Any] = None
-        self._router: Optional[Any] = None
+        self._app: Any | None = None
+        self._router: Any | None = None
         self._running = False
 
         # Initialize SWML document state
         self._current_document = self._create_empty_document()
 
         # Dictionary to cache dynamically created methods (instance level cache)
-        self._verb_methods_cache: Dict[str, Any] = {}
+        self._verb_methods_cache: dict[str, Any] = {}
 
         # Create auto-vivified methods for all verbs
         self._create_verb_methods()
 
         # Initialize routing callbacks dictionary (path -> callback)
-        self._routing_callbacks: Dict[str, Any] = {}
+        self._routing_callbacks: dict[str, Any] = {}
 
         # SWAIG tool registry — lifted from AgentBase so that any SWMLService
         # (sidecar, custom verb host, etc.) can register and dispatch SWAIG
@@ -396,7 +397,7 @@ class SWMLService(ToolMixin):
             self.schema_utils.full_validation_available if self.schema_utils else False
         )
 
-    def _find_schema_path(self) -> Optional[str]:
+    def _find_schema_path(self) -> str | None:
         """
         Find the schema.json file location
 
@@ -459,7 +460,7 @@ class SWMLService(ToolMixin):
 
         return None
 
-    def _create_empty_document(self) -> Dict[str, Any]:
+    def _create_empty_document(self) -> dict[str, Any]:
         """
         Create an empty SWML document
 
@@ -474,7 +475,7 @@ class SWMLService(ToolMixin):
         """
         self._current_document = self._create_empty_document()
 
-    def add_verb(self, verb_name: str, config: Union[Dict[str, Any], int]) -> bool:
+    def add_verb(self, verb_name: str, config: dict[str, Any] | int) -> bool:
         """
         Add a verb to the main section of the current document
 
@@ -488,7 +489,7 @@ class SWMLService(ToolMixin):
         # Special case for verbs that take direct values (like sleep)
         if verb_name == "sleep" and isinstance(config, int):
             # Sleep verb takes a direct integer value
-            verb_obj: Dict[str, Any] = {verb_name: config}
+            verb_obj: dict[str, Any] = {verb_name: config}
             self._current_document["sections"]["main"].append(verb_obj)
             return True
 
@@ -536,7 +537,7 @@ class SWMLService(ToolMixin):
         return True
 
     def add_verb_to_section(
-        self, section_name: str, verb_name: str, config: Union[Dict[str, Any], int]
+        self, section_name: str, verb_name: str, config: dict[str, Any] | int
     ) -> bool:
         """
         Add a verb to a specific section
@@ -556,7 +557,7 @@ class SWMLService(ToolMixin):
         # Special case for verbs that take direct values (like sleep)
         if verb_name == "sleep" and isinstance(config, int):
             # Sleep verb takes a direct integer value
-            verb_obj: Dict[str, Any] = {verb_name: config}
+            verb_obj: dict[str, Any] = {verb_name: config}
             self._current_document["sections"][section_name].append(verb_obj)
             return True
 
@@ -588,7 +589,7 @@ class SWMLService(ToolMixin):
         self._current_document["sections"][section_name].append(verb_obj)
         return True
 
-    def get_document(self) -> Dict[str, Any]:
+    def get_document(self) -> dict[str, Any]:
         """
         Get the current SWML document
 
@@ -695,7 +696,7 @@ class SWMLService(ToolMixin):
         return "application/json" in content_type
 
     async def _swaig_render_get_response(
-        self, request: Request, call_id: Optional[str]
+        self, request: Request, call_id: str | None
     ) -> Response:
         """Extension point: render the SWML document for a GET on /swaig.
 
@@ -708,10 +709,10 @@ class SWMLService(ToolMixin):
     def _swaig_pre_dispatch(
         self,
         request: Request,
-        body: Dict[str, Any],
-        call_id: Optional[str],
+        body: dict[str, Any],
+        call_id: str | None,
         function_name: str,
-    ) -> Tuple[Any, Optional[Dict[str, Any]]]:
+    ) -> tuple[Any, dict[str, Any] | None]:
         """Extension point: invoked between argument parsing and function dispatch.
 
         Returns a tuple (target, short_circuit):
@@ -800,7 +801,7 @@ class SWMLService(ToolMixin):
             # Argument extraction. Handle both AgentBase's nested
             # {"argument": {"parsed": [...], "raw": "..."}} shape AND a flat
             # {"arguments": {...}} shape used by some external integrations.
-            args: Dict[str, Any] = {}
+            args: dict[str, Any] = {}
             if "argument" in body and isinstance(body["argument"], dict):
                 if (
                     "parsed" in body["argument"]
@@ -861,7 +862,7 @@ class SWMLService(ToolMixin):
 
     def register_routing_callback(
         self,
-        callback_fn: Callable[[Request, Dict[str, Any]], Optional[str]],
+        callback_fn: Callable[[Request, dict[str, Any]], str | None],
         path: str = "/sip",
     ) -> None:
         """
@@ -889,7 +890,7 @@ class SWMLService(ToolMixin):
         self._routing_callbacks[normalized_path] = callback_fn
 
     @staticmethod
-    def extract_sip_username(request_body: Dict[str, Any]) -> Optional[str]:
+    def extract_sip_username(request_body: dict[str, Any]) -> str | None:
         """
         Extract SIP username from request body
 
@@ -1016,8 +1017,8 @@ class SWMLService(ToolMixin):
         return Response(content=swml, media_type="application/json")
 
     def on_request(
-        self, request_data: Optional[dict] = None, callback_path: Optional[str] = None
-    ) -> Optional[dict]:
+        self, request_data: dict | None = None, callback_path: str | None = None
+    ) -> dict | None:
         """
         Called when SWML is requested, with request data when available
 
@@ -1035,12 +1036,12 @@ class SWMLService(ToolMixin):
 
     def serve(
         self,
-        host: Optional[str] = None,
-        port: Optional[int] = None,
-        ssl_cert: Optional[str] = None,
-        ssl_key: Optional[str] = None,
-        ssl_enabled: Optional[bool] = None,
-        domain: Optional[str] = None,
+        host: str | None = None,
+        port: int | None = None,
+        ssl_cert: str | None = None,
+        ssl_key: str | None = None,
+        ssl_enabled: bool | None = None,
+        domain: str | None = None,
     ) -> None:
         """
         Start a web server for this service
@@ -1229,7 +1230,7 @@ class SWMLService(ToolMixin):
 
     def get_basic_auth_credentials(
         self, include_source: bool = False
-    ) -> Union[Tuple[str, str], Tuple[str, str, str]]:
+    ) -> tuple[str, str] | tuple[str, str, str]:
         """
         Get the basic auth credentials
 
@@ -1372,7 +1373,7 @@ class SWMLService(ToolMixin):
         self,
         endpoint: str = "",
         include_auth: bool = True,
-        query_params: Optional[Dict[str, str]] = None,
+        query_params: dict[str, str] | None = None,
     ) -> str:
         """
         Build the full URL for this service or a specific endpoint
@@ -1417,7 +1418,7 @@ class SWMLService(ToolMixin):
         return url
 
     def _build_webhook_url(
-        self, endpoint: str, query_params: Optional[Dict[str, str]] = None
+        self, endpoint: str, query_params: dict[str, str] | None = None
     ) -> str:
         """
         Helper method to build webhook URLs consistently

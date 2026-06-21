@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import os
 import secrets
-from typing import Dict, Any, ClassVar, Optional, Tuple, Union
+from typing import Any, ClassVar
 from signalwire.core.logging_config import get_logger
 from signalwire.core.config_loader import ConfigLoader
 
@@ -45,7 +45,7 @@ class SecurityConfig:
     BASIC_AUTH_PASSWORD = "SWML_BASIC_AUTH_PASSWORD"  # noqa: S105  # false positive: this is the env-var NAME constant, not a password value
 
     # Defaults (secure by default)
-    DEFAULTS: ClassVar[Dict[str, Any]] = {
+    DEFAULTS: ClassVar[dict[str, Any]] = {
         SSL_ENABLED: False,  # Off by default, but secure when enabled
         SSL_VERIFY_MODE: "CERT_REQUIRED",
         ALLOWED_HOSTS: "*",  # Accept all hosts by default for backward compatibility
@@ -57,9 +57,7 @@ class SecurityConfig:
         HSTS_MAX_AGE: 31536000,  # 1 year
     }
 
-    def __init__(
-        self, config_file: Optional[str] = None, service_name: Optional[str] = None
-    ):
+    def __init__(self, config_file: str | None = None, service_name: str | None = None):
         """
         Initialize security configuration.
 
@@ -98,9 +96,7 @@ class SecurityConfig:
         self.basic_auth_user = None
         self.basic_auth_password = None
 
-    def _load_config_file(
-        self, config_file: Optional[str], service_name: Optional[str]
-    ):
+    def _load_config_file(self, config_file: str | None, service_name: str | None):
         """Load configuration from config file if available"""
         # Find config file
         if not config_file:
@@ -211,7 +207,7 @@ class SecurityConfig:
         self.basic_auth_user = os.environ.get(self.BASIC_AUTH_USER)
         self.basic_auth_password = os.environ.get(self.BASIC_AUTH_PASSWORD)
 
-    def _parse_list(self, value: Union[str, list]) -> list:
+    def _parse_list(self, value: str | list) -> list:
         """Parse comma-separated list from environment variable or list from config"""
         if isinstance(value, list):
             return value
@@ -219,7 +215,7 @@ class SecurityConfig:
             return ["*"]
         return [item.strip() for item in value.split(",") if item.strip()]
 
-    def validate_ssl_config(self) -> Tuple[bool, Optional[str]]:
+    def validate_ssl_config(self) -> tuple[bool, str | None]:
         """
         Validate SSL configuration.
 
@@ -247,7 +243,7 @@ class SecurityConfig:
 
         return True, None
 
-    def get_ssl_context_kwargs(self) -> Dict[str, Any]:
+    def get_ssl_context_kwargs(self) -> dict[str, Any]:
         """
         Get SSL context kwargs for uvicorn.
 
@@ -268,7 +264,7 @@ class SecurityConfig:
             # Additional SSL options can be added here
         }
 
-    def get_basic_auth(self) -> Tuple[str, str]:
+    def get_basic_auth(self) -> tuple[str, str]:
         """
         Get basic auth credentials, generating if not set.
 
@@ -311,7 +307,7 @@ class SecurityConfig:
 
         return username, password
 
-    def get_security_headers(self, is_https: bool = False) -> Dict[str, str]:
+    def get_security_headers(self, is_https: bool = False) -> dict[str, str]:
         """
         Get security headers to add to responses.
 
@@ -351,7 +347,7 @@ class SecurityConfig:
 
         return host in self.allowed_hosts
 
-    def get_cors_config(self) -> Dict[str, Any]:
+    def get_cors_config(self) -> dict[str, Any]:
         """
         Get CORS configuration for FastAPI.
 

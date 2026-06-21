@@ -7,7 +7,7 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import List, Dict, Any, ClassVar
+from typing import Any, ClassVar
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.data_map import DataMap
@@ -20,14 +20,14 @@ class SWMLTransferSkill(SkillBase):
     SKILL_NAME = "swml_transfer"
     SKILL_DESCRIPTION = "Transfer calls between agents based on pattern matching"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES: ClassVar[List[str]] = []
-    REQUIRED_ENV_VARS: ClassVar[List[str]] = []
+    REQUIRED_PACKAGES: ClassVar[list[str]] = []
+    REQUIRED_ENV_VARS: ClassVar[list[str]] = []
 
     # Enable multiple instances support
     SUPPORTS_MULTIPLE_INSTANCES = True
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """Get parameter schema for SWML Transfer skill"""
         schema = super().get_parameter_schema()
         schema.update(
@@ -270,9 +270,9 @@ class SWMLTransferSkill(SkillBase):
             # Fallback to define_tool if register_swaig_function is not available
             self.logger.error("Agent does not have register_swaig_function method")
 
-    def get_hints(self) -> List[str]:
+    def get_hints(self) -> list[str]:
         """Return speech recognition hints"""
-        hints: List[str] = []
+        hints: list[str] = []
 
         # Extract common words from patterns for hints
         for pattern in self.transfers:
@@ -302,7 +302,7 @@ class SWMLTransferSkill(SkillBase):
 
         return hints
 
-    def get_prompt_sections(self) -> List[Dict[str, Any]]:
+    def get_prompt_sections(self) -> list[dict[str, Any]]:
         """Return prompt sections to add to agent"""
         sections = []
 

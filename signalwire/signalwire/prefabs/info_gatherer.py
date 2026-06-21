@@ -12,7 +12,7 @@ Supports both static (questions provided at init) and dynamic (questions determi
 by a callback function) configuration modes.
 """
 
-from typing import List, Dict, Optional, Callable
+from collections.abc import Callable
 
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.function_result import FunctionResult
@@ -39,7 +39,7 @@ class InfoGathererAgent(AgentBase):
 
     def __init__(
         self,
-        questions: Optional[List[Dict[str, str]]] = None,
+        questions: list[dict[str, str]] | None = None,
         name: str = "info_gatherer",
         route: str = "/info_gatherer",
         **kwargs,
@@ -62,9 +62,9 @@ class InfoGathererAgent(AgentBase):
 
         # Store whether we're in static or dynamic mode
         self._static_questions = questions
-        self._question_callback: Optional[
-            Callable[[dict, dict, dict], List[Dict[str, str]]]
-        ] = None
+        self._question_callback: (
+            Callable[[dict, dict, dict], list[dict[str, str]]] | None
+        ) = None
 
         if questions is not None:
             # Static mode: validate questions and set up immediately
@@ -83,7 +83,7 @@ class InfoGathererAgent(AgentBase):
         self._configure_agent_settings()
 
     def set_question_callback(
-        self, callback: Callable[[dict, dict, dict], List[Dict[str, str]]]
+        self, callback: Callable[[dict, dict, dict], list[dict[str, str]]]
     ):
         """
         Set a callback function for dynamic question configuration

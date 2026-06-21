@@ -12,7 +12,7 @@ Webhook function execution (including external)
 
 import json
 import requests
-from typing import Dict, Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 from ..config import HTTP_REQUEST_TIMEOUT
 
 if TYPE_CHECKING:
@@ -22,10 +22,10 @@ if TYPE_CHECKING:
 def execute_external_webhook_function(
     func: "SWAIGFunction",
     function_name: str,
-    function_args: Dict[str, Any],
-    post_data: Dict[str, Any],
+    function_args: dict[str, Any],
+    post_data: dict[str, Any],
     verbose: bool = False,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Execute an external webhook SWAIG function by making an HTTP request to the external service.
     This simulates what SignalWire would do when calling an external webhook function.
@@ -51,7 +51,7 @@ def execute_external_webhook_function(
         print("-" * 60)
 
     # Prepare the SWAIG function call payload that SignalWire would send
-    swaig_payload: Dict[str, Any] = {
+    swaig_payload: dict[str, Any] = {
         "function": function_name,
         "argument": {
             "parsed": [function_args] if function_args else [{}],

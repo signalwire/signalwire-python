@@ -11,7 +11,7 @@ PomBuilder for creating structured POM prompts for SignalWire AI Agents
 
 from signalwire.pom.pom import PromptObjectModel, Section
 
-from typing import List, Dict, Any, Optional
+from typing import Any
 
 
 class PomBuilder:
@@ -31,16 +31,16 @@ class PomBuilder:
     def __init__(self):
         """Initialize a new POM builder with an empty POM"""
         self.pom = PromptObjectModel()
-        self._sections: Dict[str, Section] = {}
+        self._sections: dict[str, Section] = {}
 
     def add_section(
         self,
         title: str,
         body: str = "",
-        bullets: Optional[List[str]] = None,
+        bullets: list[str] | None = None,
         numbered: bool = False,
         numbered_bullets: bool = False,
-        subsections: Optional[List[Dict[str, Any]]] = None,
+        subsections: list[dict[str, Any]] | None = None,
     ) -> "PomBuilder":
         """
         Add a new section to the POM
@@ -84,9 +84,9 @@ class PomBuilder:
     def add_to_section(
         self,
         title: str,
-        body: Optional[str] = None,
-        bullet: Optional[str] = None,
-        bullets: Optional[List[str]] = None,
+        body: str | None = None,
+        bullet: str | None = None,
+        bullets: list[str] | None = None,
     ) -> "PomBuilder":
         """
         Add content to an existing section
@@ -127,7 +127,7 @@ class PomBuilder:
         parent_title: str,
         title: str,
         body: str = "",
-        bullets: Optional[List[str]] = None,
+        bullets: list[str] | None = None,
     ) -> "PomBuilder":
         """
         Add a subsection to an existing section, creating the parent if needed
@@ -161,7 +161,7 @@ class PomBuilder:
         """
         return title in self._sections
 
-    def get_section(self, title: str) -> Optional[Section]:
+    def get_section(self, title: str) -> Section | None:
         """
         Get a section by title
 
@@ -181,7 +181,7 @@ class PomBuilder:
         """Render the POM as XML"""
         return self.pom.render_xml()
 
-    def to_dict(self) -> List[Dict[str, Any]]:
+    def to_dict(self) -> list[dict[str, Any]]:
         """Convert the POM to a list of section dictionaries"""
         return self.pom.to_dict()
 
@@ -190,7 +190,7 @@ class PomBuilder:
         return self.pom.to_json()
 
     @classmethod
-    def from_sections(cls, sections: List[Dict[str, Any]]) -> "PomBuilder":
+    def from_sections(cls, sections: list[dict[str, Any]]) -> "PomBuilder":
         """
         Create a PomBuilder from a list of section dictionaries
 

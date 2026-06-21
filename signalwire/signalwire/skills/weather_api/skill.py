@@ -12,7 +12,7 @@ A configurable skill for getting weather information from WeatherAPI.com with cu
 temperature units and TTS-friendly responses.
 """
 
-from typing import Dict, Any, List, ClassVar, Optional
+from typing import Any, ClassVar
 from signalwire.core import FunctionResult
 from signalwire.core.skill_base import SkillBase
 
@@ -40,10 +40,10 @@ class WeatherApiSkill(SkillBase):
     SKILL_NAME = "weather_api"
     SKILL_DESCRIPTION = "Get current weather information from WeatherAPI.com"
     SUPPORTS_MULTIPLE_INSTANCES = False
-    REQUIRED_ENV_VARS: ClassVar[List[str]] = []  # API key can be passed via params
+    REQUIRED_ENV_VARS: ClassVar[list[str]] = []  # API key can be passed via params
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """Get parameter schema for weather API skill"""
         schema = super().get_parameter_schema()
         schema.update(
@@ -72,7 +72,7 @@ class WeatherApiSkill(SkillBase):
         )
         return schema
 
-    def __init__(self, agent, params: Optional[Dict[str, Any]] = None):
+    def __init__(self, agent, params: dict[str, Any] | None = None):
         """
         Initialize the skill with configuration parameters.
 
@@ -126,7 +126,7 @@ class WeatherApiSkill(SkillBase):
                 tool.update(self.swaig_fields)
             self.agent.register_swaig_function(tool)
 
-    def get_tools(self) -> List[Dict[str, Any]]:
+    def get_tools(self) -> list[dict[str, Any]]:
         """
         Generate the SWAIG tool with DataMap webhook.
 

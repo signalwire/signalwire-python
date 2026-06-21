@@ -8,7 +8,8 @@ See LICENSE file in the project root for full license information.
 """
 
 import ast
-from typing import List, Dict, Any, Callable, ClassVar, Type
+from typing import Any, ClassVar
+from collections.abc import Callable
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
@@ -20,8 +21,8 @@ class MathSkill(SkillBase):
     SKILL_NAME = "math"
     SKILL_DESCRIPTION = "Perform basic mathematical calculations"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES: ClassVar[List[str]] = []
-    REQUIRED_ENV_VARS: ClassVar[List[str]] = []
+    REQUIRED_PACKAGES: ClassVar[list[str]] = []
+    REQUIRED_ENV_VARS: ClassVar[list[str]] = []
 
     def setup(self) -> bool:
         """Setup the math skill"""
@@ -43,7 +44,7 @@ class MathSkill(SkillBase):
         )
 
     # Allowed AST node types for safe math evaluation
-    _SAFE_OPERATORS: ClassVar[Dict[Type[ast.AST], Callable[..., Any]]] = {
+    _SAFE_OPERATORS: ClassVar[dict[type[ast.AST], Callable[..., Any]]] = {
         ast.Add: lambda a, b: a + b,
         ast.Sub: lambda a, b: a - b,
         ast.Mult: lambda a, b: a * b,
@@ -63,7 +64,7 @@ class MathSkill(SkillBase):
                 return node.value
             raise ValueError(f"Unsupported constant type: {type(node.value).__name__}")
         if isinstance(node, ast.BinOp):
-            op_type: Type[ast.AST] = type(node.op)
+            op_type: type[ast.AST] = type(node.op)
             if op_type not in self._SAFE_OPERATORS:
                 raise ValueError(f"Unsupported binary operator: {op_type.__name__}")
             left = self._safe_eval(node.left)
@@ -108,7 +109,7 @@ class MathSkill(SkillBase):
                 f"Error calculating '{expression}': Invalid expression"
             )
 
-    def get_hints(self) -> List[str]:
+    def get_hints(self) -> list[str]:
         """Return speech recognition hints"""
         # Currently no hints provided, but you could add them like:
         # return [
@@ -117,7 +118,7 @@ class MathSkill(SkillBase):
         # ]
         return []
 
-    def get_prompt_sections(self) -> List[Dict[str, Any]]:
+    def get_prompt_sections(self) -> list[dict[str, Any]]:
         """Return prompt sections to add to agent"""
         return [
             {
@@ -132,7 +133,7 @@ class MathSkill(SkillBase):
         ]
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """
         Get the parameter schema for the math skill
 

@@ -9,7 +9,8 @@ See LICENSE file in the project root for full license information.
 Tool registration and management.
 """
 
-from typing import Dict, Any, Optional, List, Callable, Union
+from typing import Any
+from collections.abc import Callable
 import inspect
 
 from signalwire.core.swaig_function import SWAIGFunction
@@ -36,14 +37,14 @@ class ToolRegistry:
         self,
         name: str,
         description: str,
-        parameters: Dict[str, Any],
+        parameters: dict[str, Any],
         handler: Callable,
         secure: bool = True,
-        fillers: Optional[Dict[str, List[str]]] = None,
-        wait_file: Optional[str] = None,
-        wait_file_loops: Optional[int] = None,
-        webhook_url: Optional[str] = None,
-        required: Optional[List[str]] = None,
+        fillers: dict[str, list[str]] | None = None,
+        wait_file: str | None = None,
+        wait_file_loops: int | None = None,
+        webhook_url: str | None = None,
+        required: list[str] | None = None,
         is_typed_handler: bool = False,
         **swaig_fields,
     ) -> None:
@@ -87,7 +88,7 @@ class ToolRegistry:
 
         logger.debug(f"Defined tool: {name}")
 
-    def register_swaig_function(self, function_dict: Dict[str, Any]) -> None:
+    def register_swaig_function(self, function_dict: dict[str, Any]) -> None:
         """
         Register a raw SWAIG function dictionary (e.g., from DataMap.to_swaig_function()).
 
@@ -203,7 +204,7 @@ class ToolRegistry:
 
                 logger.debug(f"Registered class-decorated tool: {tool_name}")
 
-    def get_function(self, name: str) -> Optional[Union[SWAIGFunction, Dict[str, Any]]]:
+    def get_function(self, name: str) -> SWAIGFunction | dict[str, Any] | None:
         """
         Get a registered function by name.
 
@@ -215,7 +216,7 @@ class ToolRegistry:
         """
         return self._swaig_functions.get(name)
 
-    def get_all_functions(self) -> Dict[str, Union[SWAIGFunction, Dict[str, Any]]]:
+    def get_all_functions(self) -> dict[str, SWAIGFunction | dict[str, Any]]:
         """
         Get all registered functions.
 

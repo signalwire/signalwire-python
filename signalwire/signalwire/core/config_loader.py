@@ -11,7 +11,7 @@ import os
 import re
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 from signalwire.core.logging_config import get_logger
 
 logger = get_logger("config_loader")
@@ -26,7 +26,7 @@ class ConfigLoader:
     configuration across all SignalWire services.
     """
 
-    def __init__(self, config_paths: Optional[List[str]] = None):
+    def __init__(self, config_paths: list[str] | None = None):
         """
         Initialize config loader.
 
@@ -36,10 +36,10 @@ class ConfigLoader:
         """
         self.config_paths = config_paths or self._get_default_paths()
         self._config = None
-        self._config_file: Optional[str] = None
+        self._config_file: str | None = None
         self._load_config()
 
-    def _get_default_paths(self) -> List[str]:
+    def _get_default_paths(self) -> list[str]:
         """Get default configuration file search paths."""
         return [
             "config.json",
@@ -67,11 +67,11 @@ class ConfigLoader:
         """Check if a configuration was loaded."""
         return self._config is not None
 
-    def get_config_file(self) -> Optional[str]:
+    def get_config_file(self) -> str | None:
         """Get the path of the loaded config file."""
         return self._config_file
 
-    def get_config(self) -> Dict[str, Any]:
+    def get_config(self) -> dict[str, Any]:
         """Get the raw configuration (before substitution)."""
         return self._config or {}
 
@@ -152,7 +152,7 @@ class ConfigLoader:
         # Substitute variables before returning
         return self.substitute_vars(value)
 
-    def get_section(self, section: str) -> Dict[str, Any]:
+    def get_section(self, section: str) -> dict[str, Any]:
         """
         Get an entire configuration section.
 
@@ -167,7 +167,7 @@ class ConfigLoader:
 
         return self.substitute_vars(self._config[section])
 
-    def merge_with_env(self, env_prefix: str = "SWML_") -> Dict[str, Any]:
+    def merge_with_env(self, env_prefix: str = "SWML_") -> dict[str, Any]:
         """
         Merge configuration with environment variables.
 
@@ -181,7 +181,7 @@ class ConfigLoader:
             Merged configuration dictionary
         """
         # Start with substituted config
-        result: Dict[str, Any] = (
+        result: dict[str, Any] = (
             self.substitute_vars(self._config) if self._config else {}
         )
 
@@ -198,7 +198,7 @@ class ConfigLoader:
 
         return result
 
-    def _has_nested_key(self, data: Dict, key_path: str) -> bool:
+    def _has_nested_key(self, data: dict, key_path: str) -> bool:
         """Check if a nested key exists in dictionary."""
         keys = key_path.split("_")
         current = data
@@ -210,7 +210,7 @@ class ConfigLoader:
                 return False
         return True
 
-    def _set_nested_key(self, data: Dict, key_path: str, value: Any) -> None:
+    def _set_nested_key(self, data: dict, key_path: str, value: Any) -> None:
         """Set a value in dictionary using underscore-separated path."""
         keys = key_path.split("_")
         current = data
@@ -224,8 +224,8 @@ class ConfigLoader:
 
     @staticmethod
     def find_config_file(
-        service_name: Optional[str] = None, additional_paths: Optional[List[str]] = None
-    ) -> Optional[str]:
+        service_name: str | None = None, additional_paths: list[str] | None = None
+    ) -> str | None:
         """
         Static method to find a config file for a service.
 

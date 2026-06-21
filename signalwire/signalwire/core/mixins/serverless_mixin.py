@@ -11,7 +11,7 @@ import contextlib
 import os
 import json
 import re
-from typing import Optional, Dict, Any
+from typing import Any
 
 from signalwire.core.logging_config import get_execution_mode
 from signalwire.core.function_result import FunctionResult
@@ -219,9 +219,9 @@ class ServerlessMixin(_HostTyped):
     def _execute_swaig_function(
         self,
         function_name: str,
-        args: Optional[Dict[str, Any]] = None,
-        call_id: Optional[str] = None,
-        raw_data: Optional[Dict[str, Any]] = None,
+        args: dict[str, Any] | None = None,
+        call_id: str | None = None,
+        raw_data: dict[str, Any] | None = None,
     ):
         """
         Execute a SWAIG function in serverless context

@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import hashlib
 import json
-from typing import Dict, Any, List, Optional, Tuple, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from fastapi import FastAPI, HTTPException, Request, Response, Depends
@@ -52,17 +52,17 @@ if BaseModel is not None:
         index_name: str = "default"
         count: int = 3
         similarity_threshold: float = 0.0
-        tags: Optional[List[str]] = None
-        language: Optional[str] = None
+        tags: list[str] | None = None
+        language: str | None = None
 
     class SearchResult(BaseModel):
         content: str
         score: float
-        metadata: Dict[str, Any]
+        metadata: dict[str, Any]
 
     class SearchResponse(BaseModel):
-        results: List[SearchResult]
-        query_analysis: Optional[Dict[str, Any]] = None
+        results: list[SearchResult]
+        query_analysis: dict[str, Any] | None = None
 else:
     # Fallback classes when FastAPI is not available; these intentionally
     # shadow the pydantic versions above when the optional dep is absent.
@@ -73,8 +73,8 @@ else:
             index_name: str = "default",
             count: int = 3,
             similarity_threshold: float = 0.0,
-            tags: Optional[List[str]] = None,
-            language: Optional[str] = None,
+            tags: list[str] | None = None,
+            language: str | None = None,
         ):
             self.query = query
             self.index_name = index_name
@@ -84,7 +84,7 @@ else:
             self.language = language
 
     class SearchResult:  # type: ignore[no-redef]
-        def __init__(self, content: str, score: float, metadata: Dict[str, Any]):
+        def __init__(self, content: str, score: float, metadata: dict[str, Any]):
             self.content = content
             self.score = score
             self.metadata = metadata
@@ -92,15 +92,15 @@ else:
     class SearchResponse:  # type: ignore[no-redef]
         def __init__(
             self,
-            results: List[SearchResult],
-            query_analysis: Optional[Dict[str, Any]] = None,
+            results: list[SearchResult],
+            query_analysis: dict[str, Any] | None = None,
         ):
             self.results = results
             self.query_analysis = query_analysis
 
 
 def _cache_key(
-    query: str, index_name: str, count: int, tags: Optional[List[str]] = None
+    query: str, index_name: str, count: int, tags: list[str] | None = None
 ) -> str:
     """Generate cache key for query results"""
     key_data = {
@@ -119,11 +119,11 @@ class SearchService:
     def __init__(
         self,
         port: int = 8001,
-        indexes: Optional[Dict[str, str]] = None,
-        basic_auth: Optional[Tuple[str, str]] = None,
-        config_file: Optional[str] = None,
+        indexes: dict[str, str] | None = None,
+        basic_auth: tuple[str, str] | None = None,
+        config_file: str | None = None,
         backend: str = "sqlite",
-        connection_string: Optional[str] = None,
+        connection_string: str | None = None,
     ):
         # Load configuration first
         self._load_config(config_file)
@@ -136,9 +136,9 @@ class SearchService:
         if indexes is not None:
             self.indexes = indexes
 
-        self.search_engines: Dict[str, SearchEngine] = {}
+        self.search_engines: dict[str, SearchEngine] = {}
         self.model: Any = None
-        self._query_cache: Dict[str, Any] = {}  # Simple query result cache
+        self._query_cache: dict[str, Any] = {}  # Simple query result cache
         self._cache_size = 100  # Max number of cached queries
 
         # Load security configuration with optional config file
@@ -148,7 +148,7 @@ class SearchService:
         # Set up authentication
         self._basic_auth = basic_auth or self.security.get_basic_auth()
 
-        self.app: Optional["FastAPI"] = None
+        self.app: FastAPI | None = None
         if FastAPI is not None:
             self.app = FastAPI(title="SignalWire Local Search Service")
             self._setup_security()
@@ -158,7 +158,7 @@ class SearchService:
 
         self._load_resources()
 
-    def _load_config(self, config_file: Optional[str]):
+    def _load_config(self, config_file: str | None):
         """Load configuration from file if available"""
         # Initialize defaults
         self.indexes = {}
@@ -228,8 +228,8 @@ class SearchService:
             return await call_next(request)
 
     def _get_current_username(
-        self, credentials: Optional[HTTPBasicCredentials] = None
-    ) -> Optional[str]:
+        self, credentials: HTTPBasicCredentials | None = None
+    ) -> str | None:
         """Validate basic auth credentials"""
         if not credentials:
             return None
@@ -272,7 +272,7 @@ class SearchService:
         @self.app.post("/search", response_model=SearchResponse)
         async def search(
             request: SearchRequest,
-            credentials: Optional[HTTPBasicCredentials] = None
+            credentials: HTTPBasicCredentials | None = None
             if not security
             else Depends(security),  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom
         ):
@@ -297,7 +297,7 @@ class SearchService:
         async def reload_index(
             index_name: str,
             index_path: str,
-            credentials: Optional[HTTPBasicCredentials] = None
+            credentials: HTTPBasicCredentials | None = None
             if not security
             else Depends(security),  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom
         ):
@@ -350,10 +350,10 @@ class SearchService:
         if self.backend == "pgvector":
             # For pgvector, we need to load models for query embeddings
             # Different collections might use different models
-            self.models: Dict[
+            self.models: dict[
                 str, Any
             ] = {}  # model_name -> SentenceTransformer instance
-            self.collection_models: Dict[str, Any] = {}  # collection_name -> model_name
+            self.collection_models: dict[str, Any] = {}  # collection_name -> model_name
 
             # Load search engines for each collection and their models
             for collection_name in self.indexes:
@@ -539,9 +539,9 @@ class SearchService:
         index_name: str = "default",
         count: int = 3,
         distance: float = 0.0,
-        tags: Optional[List[str]] = None,
-        language: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        tags: list[str] | None = None,
+        language: str | None = None,
+    ) -> dict[str, Any]:
         """Direct search method (non-async) for programmatic use"""
         request = SearchRequest(
             query=query,
@@ -580,9 +580,9 @@ class SearchService:
     def start(
         self,
         host: str = "0.0.0.0",  # noqa: S104  # intended server default: listen on all interfaces (overridable)
-        port: Optional[int] = None,
-        ssl_cert: Optional[str] = None,
-        ssl_key: Optional[str] = None,
+        port: int | None = None,
+        ssl_cert: str | None = None,
+        ssl_key: str | None = None,
     ):
         """
         Start the service with optional HTTPS support.
@@ -599,7 +599,7 @@ class SearchService:
         port = port or self.port
 
         # Get SSL configuration
-        ssl_kwargs: Dict[str, Any] = {}
+        ssl_kwargs: dict[str, Any] = {}
         if ssl_cert and ssl_key:
             # Use provided SSL files
             ssl_kwargs = {"ssl_certfile": ssl_cert, "ssl_keyfile": ssl_key}

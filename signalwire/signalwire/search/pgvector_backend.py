@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import json
 import re
-from typing import List, Dict, Any, Optional, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 from signalwire.core.logging_config import get_logger
 
@@ -199,7 +199,7 @@ class PgVectorBackend:
             self.conn.commit()
             logger.info(f"Created schema for collection '{collection_name}'")
 
-    def _extract_metadata_from_json_content(self, content: str) -> Dict[str, Any]:
+    def _extract_metadata_from_json_content(self, content: str) -> dict[str, Any]:
         """
         Extract metadata from JSON content if present
 
@@ -231,7 +231,7 @@ class PgVectorBackend:
         return metadata_dict
 
     def store_chunks(
-        self, chunks: List[Dict[str, Any]], collection_name: str, config: Dict[str, Any]
+        self, chunks: list[dict[str, Any]], collection_name: str, config: dict[str, Any]
     ):
         """
         Store document chunks in the database
@@ -369,7 +369,7 @@ class PgVectorBackend:
                 f"Stored {len(chunks)} chunks in collection '{collection_name}'"
             )
 
-    def get_stats(self, collection_name: str) -> Dict[str, Any]:
+    def get_stats(self, collection_name: str) -> dict[str, Any]:
         """Get statistics for a collection"""
         self._ensure_connection()
 
@@ -417,7 +417,7 @@ class PgVectorBackend:
                 "config": config,
             }
 
-    def list_collections(self) -> List[str]:
+    def list_collections(self) -> list[str]:
         """List all collections in the database"""
         self._ensure_connection()
 
@@ -503,7 +503,7 @@ class PgVectorSearchBackend:
         if self.conn is None or self.conn.closed:
             self._connect()
 
-    def _load_config(self) -> Dict[str, Any]:
+    def _load_config(self) -> dict[str, Any]:
         """Load collection configuration"""
         self._ensure_connection()
 
@@ -526,13 +526,13 @@ class PgVectorSearchBackend:
 
     def search(
         self,
-        query_vector: List[float],
+        query_vector: list[float],
         enhanced_text: str,
         count: int = 5,
         similarity_threshold: float = 0.0,
-        tags: Optional[List[str]] = None,
-        keyword_weight: Optional[float] = None,
-    ) -> List[Dict[str, Any]]:
+        tags: list[str] | None = None,
+        keyword_weight: float | None = None,
+    ) -> list[dict[str, Any]]:
         """
         Perform hybrid search (vector + keyword + metadata).
 
@@ -597,7 +597,7 @@ class PgVectorSearchBackend:
 
         return merged_results[:count]
 
-    def _dedupe_by_content(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _dedupe_by_content(self, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Drop duplicate-content chunks, keeping the first (highest-scoring) occurrence."""
         import hashlib
         import re
@@ -624,8 +624,8 @@ class PgVectorSearchBackend:
         return out
 
     def _vector_search(
-        self, query_vector: List[float], count: int, tags: Optional[List[str]] = None
-    ) -> List[Dict[str, Any]]:
+        self, query_vector: list[float], count: int, tags: list[str] | None = None
+    ) -> list[dict[str, Any]]:
         """Perform vector similarity search"""
         with self.conn.cursor() as cursor:
             # Set probes for IVFFlat index to ensure we get enough results
@@ -641,7 +641,7 @@ class PgVectorSearchBackend:
             """).format(tbl=tbl)
             ]
 
-            params: List[Any] = [query_vector]
+            params: list[Any] = [query_vector]
 
             # Add tag filter if specified
             if tags:
@@ -686,8 +686,8 @@ class PgVectorSearchBackend:
             return results
 
     def _keyword_search(
-        self, enhanced_text: str, count: int, tags: Optional[List[str]] = None
-    ) -> List[Dict[str, Any]]:
+        self, enhanced_text: str, count: int, tags: list[str] | None = None
+    ) -> list[dict[str, Any]]:
         """Perform full-text search"""
         with self.conn.cursor() as cursor:
             # Use PostgreSQL text search
@@ -702,7 +702,7 @@ class PgVectorSearchBackend:
             """).format(tbl=tbl)
             ]
 
-            params: List[Any] = [enhanced_text, enhanced_text]
+            params: list[Any] = [enhanced_text, enhanced_text]
 
             # Add tag filter if specified
             if tags:
@@ -742,15 +742,15 @@ class PgVectorSearchBackend:
             return results
 
     def _metadata_search(
-        self, query_terms: List[str], count: int, tags: Optional[List[str]] = None
-    ) -> List[Dict[str, Any]]:
+        self, query_terms: list[str], count: int, tags: list[str] | None = None
+    ) -> list[dict[str, Any]]:
         """
         Perform metadata search using JSONB operators and metadata_text
         """
         with self.conn.cursor() as cursor:
             # Build WHERE conditions
             where_conditions = []
-            params: List[Any] = []
+            params: list[Any] = []
 
             # Use metadata_text for trigram search
             if query_terms:
@@ -838,8 +838,8 @@ class PgVectorSearchBackend:
             return results[:count]
 
     def _filename_search(
-        self, query: str, count: int, tags: Optional[List[str]] = None
-    ) -> List[Dict[str, Any]]:
+        self, query: str, count: int, tags: list[str] | None = None
+    ) -> list[dict[str, Any]]:
         """Search for query in filenames with term coverage scoring.
 
         Phase 1: exact phrase match on filename (highest score).
@@ -865,7 +865,7 @@ class PgVectorSearchBackend:
                 WHERE LOWER(filename) LIKE %s
             """).format(tbl=tbl)
             ]
-            params: List[Any] = [f"%{query_lower}%"]
+            params: list[Any] = [f"%{query_lower}%"]
             if tags:
                 parts.append(psycopg2_sql.SQL(" AND tags ?| %s"))
                 params.append(tags)
@@ -969,13 +969,13 @@ class PgVectorSearchBackend:
 
     def fetch_candidates(
         self,
-        query_vector: List[float],
+        query_vector: list[float],
         enhanced_text: str,
         count: int,
         similarity_threshold: float = 0.0,
-        tags: Optional[List[str]] = None,
-        original_query: Optional[str] = None,
-    ) -> List[Dict[str, Any]]:
+        tags: list[str] | None = None,
+        original_query: str | None = None,
+    ) -> list[dict[str, Any]]:
         """Fetch raw candidates with per-source signal scores.
 
         Runs vector/keyword/metadata/filename searches, applies similarity
@@ -1015,7 +1015,7 @@ class PgVectorSearchBackend:
             f"keyword={len(keyword_results)}"
         )
 
-        candidates: Dict[Any, Dict[str, Any]] = {}
+        candidates: dict[Any, dict[str, Any]] = {}
 
         # Vector first (primary signal)
         for r in vector_results:
@@ -1046,10 +1046,10 @@ class PgVectorSearchBackend:
 
     def _merge_results(
         self,
-        vector_results: List[Dict[str, Any]],
-        keyword_results: List[Dict[str, Any]],
-        keyword_weight: Optional[float] = None,
-    ) -> List[Dict[str, Any]]:
+        vector_results: list[dict[str, Any]],
+        keyword_results: list[dict[str, Any]],
+        keyword_weight: float | None = None,
+    ) -> list[dict[str, Any]]:
         """Merge and rank results from vector and keyword search.
 
         Uses max-signal-wins scoring: the strongest signal (vector or keyword)
@@ -1060,7 +1060,7 @@ class PgVectorSearchBackend:
 
         # Collect per-source scores for each result
         results_map = {}
-        all_sources: Dict[str, Any] = {}
+        all_sources: dict[str, Any] = {}
 
         for result in vector_results:
             chunk_id = result["id"]
@@ -1088,11 +1088,11 @@ class PgVectorSearchBackend:
 
     def _merge_all_results(
         self,
-        vector_results: List[Dict[str, Any]],
-        keyword_results: List[Dict[str, Any]],
-        metadata_results: List[Dict[str, Any]],
-        keyword_weight: Optional[float] = None,
-    ) -> List[Dict[str, Any]]:
+        vector_results: list[dict[str, Any]],
+        keyword_results: list[dict[str, Any]],
+        metadata_results: list[dict[str, Any]],
+        keyword_weight: float | None = None,
+    ) -> list[dict[str, Any]]:
         """Merge and rank results from vector, keyword, and metadata search.
 
         Uses max-signal-wins scoring: the strongest signal (vector, keyword,
@@ -1104,7 +1104,7 @@ class PgVectorSearchBackend:
 
         # Collect per-source scores for each result
         results_map = {}
-        all_sources: Dict[str, Any] = {}
+        all_sources: dict[str, Any] = {}
 
         for result in vector_results:
             chunk_id = result["id"]
@@ -1138,7 +1138,7 @@ class PgVectorSearchBackend:
 
         return merged
 
-    def get_stats(self) -> Dict[str, Any]:
+    def get_stats(self) -> dict[str, Any]:
         """Get statistics for the collection"""
         backend = PgVectorBackend(self.connection_string)
         stats = backend.get_stats(self.collection_name)

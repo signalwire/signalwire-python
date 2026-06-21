@@ -10,7 +10,7 @@ See LICENSE file in the project root for full license information.
 import os
 import mimetypes
 from pathlib import Path
-from typing import Any, Dict, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from fastapi import FastAPI, HTTPException, Request, Response, Depends
@@ -45,12 +45,12 @@ class WebService:
     def __init__(
         self,
         port: int = 8002,
-        directories: Optional[Dict[str, str]] = None,
-        basic_auth: Optional[Tuple[str, str]] = None,
-        config_file: Optional[str] = None,
+        directories: dict[str, str] | None = None,
+        basic_auth: tuple[str, str] | None = None,
+        config_file: str | None = None,
         enable_directory_browsing: bool = False,
-        allowed_extensions: Optional[list] = None,
-        blocked_extensions: Optional[list] = None,
+        allowed_extensions: list | None = None,
+        blocked_extensions: list | None = None,
         max_file_size: int = 100 * 1024 * 1024,  # 100MB default
         enable_cors: bool = True,
     ):
@@ -109,7 +109,7 @@ class WebService:
         # Set up authentication
         self._basic_auth = basic_auth or self.security.get_basic_auth()
 
-        self.app: Optional["FastAPI"] = None
+        self.app: FastAPI | None = None
         if FastAPI is not None:
             self.app = FastAPI(
                 title="SignalWire Web Service",
@@ -122,7 +122,7 @@ class WebService:
             self.app = None
             logger.warning("FastAPI not available. HTTP service will not be available.")
 
-    def _load_config(self, config_file: Optional[str]):
+    def _load_config(self, config_file: str | None):
         """Load configuration from file if available"""
         # Initialize defaults
         self.directories = {}
@@ -205,7 +205,7 @@ class WebService:
 
     def _get_current_username(
         self, credentials: Optional["HTTPBasicCredentials"] = None
-    ) -> Optional[str]:
+    ) -> str | None:
         """Validate basic auth credentials"""
         if not credentials:
             return None
@@ -534,9 +534,9 @@ class WebService:
     def start(
         self,
         host: str = "0.0.0.0",  # noqa: S104  # intended server default: listen on all interfaces (overridable)
-        port: Optional[int] = None,
-        ssl_cert: Optional[str] = None,
-        ssl_key: Optional[str] = None,
+        port: int | None = None,
+        ssl_cert: str | None = None,
+        ssl_key: str | None = None,
     ):
         """
         Start the service with optional HTTPS support
@@ -553,7 +553,7 @@ class WebService:
         port = port or self.port
 
         # Get SSL configuration
-        ssl_kwargs: Dict[str, Any] = {}
+        ssl_kwargs: dict[str, Any] = {}
         if ssl_cert and ssl_key:
             # Use provided SSL files
             ssl_kwargs = {"ssl_certfile": ssl_cert, "ssl_keyfile": ssl_key}
