@@ -39,7 +39,7 @@ Usage::
 from __future__ import annotations
 
 import os
-from typing import Awaitable, Callable, Optional
+from typing import Awaitable, Callable, NoReturn, Optional
 
 from fastapi import HTTPException, Request, Response, status
 
@@ -120,7 +120,7 @@ def make_webhook_validation_dependency(
     if not signing_key:
         raise ValueError("signing_key is required")
 
-    def _forbidden() -> None:
+    def _forbidden() -> NoReturn:
         # Single canonical 403 short-circuit. No body detail (would leak
         # which branch failed); validators MUST NOT log scheme details.
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)

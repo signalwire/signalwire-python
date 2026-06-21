@@ -149,7 +149,7 @@ class PromptManager:
         self._validate_prompt_mode_exclusivity()
         if self.agent._use_pom and self.agent.pom:
             # Create parameters for add_section based on what's supported
-            kwargs = {}
+            kwargs: Dict[str, Any] = {}
 
             # Start with basic parameters
             kwargs["title"] = title

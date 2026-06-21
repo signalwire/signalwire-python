@@ -153,7 +153,7 @@ class ToolRegistry:
                     required = tool_params_copy.pop("required", None)
 
                     # Bind the method to this instance
-                    bound_handler = attr.__get__(self.agent, cls)
+                    bound_handler = attr.__get__(self.agent, cls)  # type: ignore[union-attr]  # MethodType/FunctionType both bind via __get__ at runtime; stdlib stubs omit it on MethodType
                     is_typed = False
 
                     # If parameters not explicitly provided, try type inference
