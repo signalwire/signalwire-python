@@ -54,6 +54,7 @@ from .constants import (
     RECONNECT_MIN_DELAY,
 )
 from .message import Message
+
 logger = get_logger("relay_client")
 
 CallHandler = Callable[["Call"], Coroutine[Any, Any, None]]
@@ -130,7 +131,7 @@ class RelayClient:
             )
 
         # Validate host to prevent SSRF / header injection
-        if any(c in self.host for c in ('@', '/', '?', '\r', '\n', ' ')):
+        if any(c in self.host for c in ("@", "/", "?", "\r", "\n", " ")):
             raise ValueError(
                 f"Invalid host: {self.host!r}. Must be a hostname, not a URL."
             )
@@ -141,7 +142,9 @@ class RelayClient:
         else:
             try:
                 env_val = os.environ.get("RELAY_MAX_ACTIVE_CALLS", "")
-                self._max_active_calls = max(1, int(env_val)) if env_val else _DEFAULT_MAX_ACTIVE_CALLS
+                self._max_active_calls = (
+                    max(1, int(env_val)) if env_val else _DEFAULT_MAX_ACTIVE_CALLS
+                )
             except ValueError:
                 self._max_active_calls = _DEFAULT_MAX_ACTIVE_CALLS
 
@@ -235,7 +238,9 @@ class RelayClient:
         uri = f"wss://{self.host}"
         logger.info(f"Connecting to {uri}")
 
-        self._ws = await websockets.connect(uri, ping_interval=None, max_size=10 * 1024 * 1024)
+        self._ws = await websockets.connect(
+            uri, ping_interval=None, max_size=10 * 1024 * 1024
+        )
         self._connected = True
         self._reconnect_delay = RECONNECT_MIN_DELAY
 
@@ -291,7 +296,9 @@ class RelayClient:
         # underscore) so a test can scope its journal/scenarios to its own
         # session. Internal-only — not part of the public surface.
         self._session_id = result.get("sessionid", self._session_id)
-        logger.debug(f"Auth response: protocol={self._relay_protocol} identity={self._identity}")
+        logger.debug(
+            f"Auth response: protocol={self._relay_protocol} identity={self._identity}"
+        )
 
     async def disconnect(self) -> None:
         """Cleanly close the connection."""
@@ -497,9 +504,12 @@ class RelayClient:
         """
         if not contexts:
             return
-        await self._send_request(METHOD_SIGNALWIRE_RECEIVE, {
-            "contexts": contexts,
-        })
+        await self._send_request(
+            METHOD_SIGNALWIRE_RECEIVE,
+            {
+                "contexts": contexts,
+            },
+        )
         logger.info(f"Subscribed to contexts: {contexts}")
 
     async def unreceive(self, contexts: list[str]) -> None:
@@ -510,9 +520,12 @@ class RelayClient:
         """
         if not contexts:
             return
-        await self._send_request(METHOD_SIGNALWIRE_UNRECEIVE, {
-            "contexts": contexts,
-        })
+        await self._send_request(
+            METHOD_SIGNALWIRE_UNRECEIVE,
+            {
+                "contexts": contexts,
+            },
+        )
         logger.info(f"Unsubscribed from contexts: {contexts}")
 
     # ------------------------------------------------------------------
@@ -604,7 +617,9 @@ class RelayClient:
             if not self._ws or not self._connected:
                 # Queue for delivery after reconnect (like JS executeQueue)
                 if len(self._execute_queue) >= _MAX_QUEUE_SIZE:
-                    raise RelayError(-1, "Execute queue full — too many requests while disconnected")
+                    raise RelayError(
+                        -1, "Execute queue full — too many requests while disconnected"
+                    )
                 self._execute_queue.append((message, future))
                 logger.debug(f"Request queued (not connected): {method}")
             else:
@@ -634,7 +649,9 @@ class RelayClient:
             if future.done():
                 continue
             raw = json.dumps(message)
-            logger.debug(f">> (queued) {message.get('method', '?')} id={message.get('id', '?')}")
+            logger.debug(
+                f">> (queued) {message.get('method', '?')} id={message.get('id', '?')}"
+            )
             asyncio.ensure_future(self._safe_send(raw, future))
 
     async def _safe_send(self, raw: str, future: asyncio.Future) -> None:
@@ -652,17 +669,13 @@ class RelayClient:
         """Reject all pending request futures (connection lost)."""
         for fut in self._pending.values():
             if not fut.done():
-                fut.set_exception(
-                    RelayError(-1, "Connection closed")
-                )
+                fut.set_exception(RelayError(-1, "Connection closed"))
         self._pending.clear()
         self._pending_methods.clear()
         # Also reject pending dials
         for fut in self._pending_dials.values():
             if not fut.done():
-                fut.set_exception(
-                    RelayError(-1, "Connection closed during dial")
-                )
+                fut.set_exception(RelayError(-1, "Connection closed during dial"))
         self._pending_dials.clear()
         self._dial_calls_by_tag.clear()
 
@@ -706,7 +719,10 @@ class RelayClient:
                 if not isinstance(error, dict):
                     error = {"code": -1, "message": str(error)}
                 future.set_exception(
-                    RelayError(error.get("code", -1), str(error.get("message", "Unknown error")))
+                    RelayError(
+                        error.get("code", -1),
+                        str(error.get("message", "Unknown error")),
+                    )
                 )
             else:
                 logger.debug(f"Error response for unknown/expired request {req_id}")
@@ -736,7 +752,9 @@ class RelayClient:
                         except (ValueError, TypeError):
                             int_code = -1
                         future.set_exception(
-                            RelayError(int_code, str(result.get("message", "Unknown error")))
+                            RelayError(
+                                int_code, str(result.get("message", "Unknown error"))
+                            )
                         )
                     else:
                         future.set_result(result)
@@ -765,7 +783,9 @@ class RelayClient:
             # Server is telling us to disconnect (e.g. during deployment).
             # Respond with empty result, then let the server close the socket.
             restart = params.get("restart", False)
-            logger.info(f"Received signalwire.disconnect from server (restart={restart})")
+            logger.info(
+                f"Received signalwire.disconnect from server (restart={restart})"
+            )
             if "id" in msg:
                 await self._send_event_ack(msg["id"])
             if restart:
@@ -853,7 +873,9 @@ class RelayClient:
     async def _handle_inbound_call(self, payload: dict[str, Any]) -> None:
         """Create a Call object for an inbound call and invoke the handler."""
         if len(self._calls) >= self._max_active_calls:
-            logger.error(f"Max active calls ({self._max_active_calls}) reached, dropping inbound call")
+            logger.error(
+                f"Max active calls ({self._max_active_calls}) reached, dropping inbound call"
+            )
             return
         params = payload.get("params", {})
         call_id = params.get("call_id", "")
@@ -863,7 +885,8 @@ class RelayClient:
             call_id=call_id,
             node_id=params.get("node_id", ""),
             project_id=params.get("project_id", self.project),
-            context=self._relay_protocol or params.get("context", params.get("protocol", "")),
+            context=self._relay_protocol
+            or params.get("context", params.get("protocol", "")),
             tag=params.get("tag", ""),
             direction=params.get("direction", "inbound"),
             device=params.get("device"),
@@ -903,7 +926,9 @@ class RelayClient:
         if self._on_message_handler:
             asyncio.ensure_future(self._safe_message_handler(message))
         else:
-            logger.warning(f"Inbound message {message.message_id} but no on_message handler registered")
+            logger.warning(
+                f"Inbound message {message.message_id} but no on_message handler registered"
+            )
 
     async def _safe_message_handler(self, message: Message) -> None:
         """Run the on_message handler as a free task so the recv loop is never blocked."""
@@ -1009,9 +1034,7 @@ class RelayClient:
             dial_future.set_result(call)
 
         elif dial_state == "failed":
-            dial_future.set_exception(
-                RelayError(-1, f"Dial failed (tag={tag})")
-            )
+            dial_future.set_exception(RelayError(-1, f"Dial failed (tag={tag})"))
 
         # "dialing" events are progress — don't resolve the future yet
 
@@ -1019,22 +1042,26 @@ class RelayClient:
         """Respond to a server ping."""
         if not self._ws:
             return
-        msg = json.dumps({
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "result": {},
-        })
+        msg = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": {},
+            }
+        )
         await self._ws.send(msg)
 
     async def _send_event_ack(self, req_id: str) -> None:
         """Acknowledge a signalwire.event back to the server."""
         if not self._ws:
             return
-        msg = json.dumps({
-            "jsonrpc": "2.0",
-            "id": req_id,
-            "result": {},
-        })
+        msg = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": req_id,
+                "result": {},
+            }
+        )
         await self._ws.send(msg)
 
     # ------------------------------------------------------------------
@@ -1061,7 +1088,8 @@ class RelayClient:
                 except Exception:
                     self._ping_failures += 1
                     backoff = min(
-                        RECONNECT_MIN_DELAY * (RECONNECT_BACKOFF_FACTOR ** self._ping_failures),
+                        RECONNECT_MIN_DELAY
+                        * (RECONNECT_BACKOFF_FACTOR**self._ping_failures),
                         RECONNECT_MAX_DELAY,
                     )
                     logger.warning(
@@ -1100,7 +1128,9 @@ class RelayClient:
         The client ping loop will handle failures with exponential backoff.
         This just logs; the ping loop does the actual probing.
         """
-        logger.debug(f"No server ping received in {_CHECK_PING_DELAY:.1f}s, client pings will probe")
+        logger.debug(
+            f"No server ping received in {_CHECK_PING_DELAY:.1f}s, client pings will probe"
+        )
 
     def _force_close(self) -> None:
         """Force-close the WebSocket to trigger reconnect."""

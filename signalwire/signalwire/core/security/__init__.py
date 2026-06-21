@@ -16,6 +16,12 @@ from signalwire.core.security.webhook_middleware import (
     TWILIO_COMPAT_SIGNATURE_HEADER,
     make_webhook_validation_dependency,
 )
+from signalwire.core.security.security_utils import (
+    filter_sensitive_headers,
+    redact_url,
+    is_valid_hostname,
+    SENSITIVE_HEADERS,
+)
 
 __all__ = [
     "validate_request",
@@ -23,4 +29,8 @@ __all__ = [
     "make_webhook_validation_dependency",
     "SIGNALWIRE_SIGNATURE_HEADER",
     "TWILIO_COMPAT_SIGNATURE_HEADER",
+    "filter_sensitive_headers",
+    "redact_url",
+    "is_valid_hostname",
+    "SENSITIVE_HEADERS",
 ]

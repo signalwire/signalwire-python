@@ -7,7 +7,6 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-import os
 import re
 import subprocess
 import fnmatch
@@ -77,11 +76,15 @@ class ClaudeSkillsSkill(SkillBase):
         self._skills_path = Path(skills_path).expanduser().resolve()
 
         if not self._skills_path.exists():
-            logger.error(f"claude_skills: skills_path does not exist: {self._skills_path}")
+            logger.error(
+                f"claude_skills: skills_path does not exist: {self._skills_path}"
+            )
             return False
 
         if not self._skills_path.is_dir():
-            logger.error(f"claude_skills: skills_path is not a directory: {self._skills_path}")
+            logger.error(
+                f"claude_skills: skills_path is not a directory: {self._skills_path}"
+            )
             return False
 
         # Load include/exclude patterns
@@ -91,7 +94,9 @@ class ClaudeSkillsSkill(SkillBase):
         # Store safety/control flags
         self._allow_shell_injection = self.params.get("allow_shell_injection", False)
         self._allow_script_execution = self.params.get("allow_script_execution", False)
-        self._ignore_invocation_control = self.params.get("ignore_invocation_control", False)
+        self._ignore_invocation_control = self.params.get(
+            "ignore_invocation_control", False
+        )
         self._shell_timeout = self.params.get("shell_timeout", 30)
 
         if self._allow_shell_injection:
@@ -107,7 +112,9 @@ class ClaudeSkillsSkill(SkillBase):
             logger.warning(f"claude_skills: no skills found in {self._skills_path}")
             # Return True anyway - empty skill set is valid
 
-        logger.info(f"claude_skills: loaded {len(self._skills)} skills from {self._skills_path}")
+        logger.info(
+            f"claude_skills: loaded {len(self._skills)} skills from {self._skills_path}"
+        )
         return True
 
     def _discover_skills(self) -> List[Dict[str, Any]]:
@@ -131,7 +138,9 @@ class ClaudeSkillsSkill(SkillBase):
             # Check include/exclude patterns
             skill_name = item.name
             if not self._matches_patterns(skill_name):
-                logger.debug(f"claude_skills: skipping {skill_name} (excluded by patterns)")
+                logger.debug(
+                    f"claude_skills: skipping {skill_name} (excluded by patterns)"
+                )
                 continue
 
             # Parse the skill
@@ -164,7 +173,9 @@ class ClaudeSkillsSkill(SkillBase):
 
                 skills.append(parsed)
                 section_count = len(parsed["sections"])
-                logger.debug(f"claude_skills: loaded skill '{parsed['name']}' from {skill_file} with {section_count} sections")
+                logger.debug(
+                    f"claude_skills: loaded skill '{parsed['name']}' from {skill_file} with {section_count} sections"
+                )
 
         return skills
 
@@ -285,22 +296,14 @@ class ClaudeSkillsSkill(SkillBase):
         # Check for YAML frontmatter
         if not content.startswith("---"):
             # No frontmatter - treat entire content as body
-            return {
-                "name": None,
-                "description": None,
-                "body": content.strip()
-            }
+            return {"name": None, "description": None, "body": content.strip()}
 
         # Split frontmatter from body
         parts = content.split("---", 2)
         if len(parts) < 3:
             # Malformed frontmatter
             logger.warning(f"claude_skills: malformed frontmatter in {path}")
-            return {
-                "name": None,
-                "description": None,
-                "body": content.strip()
-            }
+            return {"name": None, "description": None, "body": content.strip()}
 
         frontmatter_str = parts[1].strip()
         body = parts[2].strip()
@@ -317,7 +320,9 @@ class ClaudeSkillsSkill(SkillBase):
             "description": frontmatter.get("description"),
             "body": body,
             # Invocation control
-            "disable_model_invocation": frontmatter.get("disable-model-invocation", False),
+            "disable_model_invocation": frontmatter.get(
+                "disable-model-invocation", False
+            ),
             "user_invocable": frontmatter.get("user-invocable", True),
             "argument_hint": frontmatter.get("argument-hint"),
             # Informational fields
@@ -330,7 +335,7 @@ class ClaudeSkillsSkill(SkillBase):
             "model": frontmatter.get("model"),
             "hooks": frontmatter.get("hooks"),
             # Store full frontmatter for potential future use
-            "_frontmatter": frontmatter
+            "_frontmatter": frontmatter,
         }
 
     def _warn_unsupported_fields(self, parsed: Dict[str, Any]) -> None:
@@ -354,9 +359,13 @@ class ClaudeSkillsSkill(SkillBase):
 
         # Log informational fields at debug level
         if parsed.get("license"):
-            logger.debug(f"claude_skills: skill '{name}' has license: {parsed['license']}")
+            logger.debug(
+                f"claude_skills: skill '{name}' has license: {parsed['license']}"
+            )
         if parsed.get("compatibility"):
-            logger.debug(f"claude_skills: skill '{name}' has compatibility: {parsed['compatibility']}")
+            logger.debug(
+                f"claude_skills: skill '{name}' has compatibility: {parsed['compatibility']}"
+            )
 
     def _warn_shell_patterns(self, parsed: Dict[str, Any]) -> None:
         """Warn about shell injection patterns when allow_shell_injection is disabled."""
@@ -389,12 +398,16 @@ class ClaudeSkillsSkill(SkillBase):
             # disable-model-invocation: true → no tool, no prompt
             parsed["_skip_tool"] = True
             parsed["_skip_prompt"] = True
-            logger.debug(f"claude_skills: skill '{parsed['name']}' has disable-model-invocation=true — skipping tool and prompt")
+            logger.debug(
+                f"claude_skills: skill '{parsed['name']}' has disable-model-invocation=true — skipping tool and prompt"
+            )
         elif not user_invocable:
             # user-invocable: false → no tool, yes prompt (knowledge-only)
             parsed["_skip_tool"] = True
             parsed["_skip_prompt"] = False
-            logger.debug(f"claude_skills: skill '{parsed['name']}' has user-invocable=false — skipping tool, keeping prompt")
+            logger.debug(
+                f"claude_skills: skill '{parsed['name']}' has user-invocable=false — skipping tool, keeping prompt"
+            )
         else:
             # Default: register both
             parsed["_skip_tool"] = False
@@ -415,7 +428,9 @@ class ClaudeSkillsSkill(SkillBase):
             sanitized = "_" + sanitized
         return sanitized or "unnamed"
 
-    def _execute_shell_injection(self, content: str, skill_dir: Path, timeout: int) -> str:
+    def _execute_shell_injection(
+        self, content: str, skill_dir: Path, timeout: int
+    ) -> str:
         """
         Process shell injection patterns in content.
 
@@ -429,6 +444,7 @@ class ClaudeSkillsSkill(SkillBase):
         Returns:
             Content with shell patterns replaced by command output
         """
+
         def replace_command(match):
             command = match.group(1)
             try:
@@ -438,11 +454,13 @@ class ClaudeSkillsSkill(SkillBase):
                     capture_output=True,
                     text=True,
                     timeout=timeout,
-                    cwd=str(skill_dir)
+                    cwd=str(skill_dir),
                 )
                 return result.stdout.rstrip("\n")
             except subprocess.TimeoutExpired:
-                logger.error(f"claude_skills: shell command timed out after {timeout}s: {command}")
+                logger.error(
+                    f"claude_skills: shell command timed out after {timeout}s: {command}"
+                )
                 return f"[command timed out: {command}]"
             except Exception as e:
                 logger.error(f"claude_skills: shell command failed: {command}: {e}")
@@ -450,7 +468,9 @@ class ClaudeSkillsSkill(SkillBase):
 
         return _SHELL_INJECTION_RE.sub(replace_command, content)
 
-    def _substitute_variables(self, content: str, skill_dir: Path, raw_data: Optional[Dict] = None) -> str:
+    def _substitute_variables(
+        self, content: str, skill_dir: Path, raw_data: Optional[Dict] = None
+    ) -> str:
         """
         Substitute variable placeholders in content.
 
@@ -521,7 +541,9 @@ class ClaudeSkillsSkill(SkillBase):
         for skill in self._skills:
             # Check invocation control — skip tool registration if flagged
             if skill.get("_skip_tool", False):
-                logger.debug(f"claude_skills: skipping tool registration for '{skill['name']}' (invocation control)")
+                logger.debug(
+                    f"claude_skills: skipping tool registration for '{skill['name']}' (invocation control)"
+                )
                 continue
 
             tool_name = f"{prefix}{self._sanitize_tool_name(skill['name'])}"
@@ -529,16 +551,17 @@ class ClaudeSkillsSkill(SkillBase):
             # Get description (with override support)
             overrides = self.params.get("skill_descriptions", {})
             description = (
-                overrides.get(skill["name"]) or
-                skill.get("description") or
-                f"Use the {skill['name']} skill"
+                overrides.get(skill["name"])
+                or skill.get("description")
+                or f"Use the {skill['name']} skill"
             )
 
             # Build parameters
             parameters = {
                 "arguments": {
                     "type": "string",
-                    "description": skill.get("argument_hint") or "Arguments or context to pass to the skill"
+                    "description": skill.get("argument_hint")
+                    or "Arguments or context to pass to the skill",
                 }
             }
 
@@ -548,7 +571,7 @@ class ClaudeSkillsSkill(SkillBase):
                 parameters["section"] = {
                     "type": "string",
                     "description": "Which reference section to load",
-                    "enum": sorted(section_names)
+                    "enum": sorted(section_names),
                 }
 
             # Get response prefix/postfix for wrapping results
@@ -566,7 +589,9 @@ class ClaudeSkillsSkill(SkillBase):
                         try:
                             content = s["sections"][section].read_text(encoding="utf-8")
                         except Exception as e:
-                            logger.error(f"claude_skills: failed to read section '{section}': {e}")
+                            logger.error(
+                                f"claude_skills: failed to read section '{section}': {e}"
+                            )
                             content = f"Error loading section '{section}'"
                     else:
                         # No section specified or invalid - return SKILL.md body
@@ -576,7 +601,9 @@ class ClaudeSkillsSkill(SkillBase):
 
                     # 1. Shell injection (if enabled)
                     if self._allow_shell_injection:
-                        content = self._execute_shell_injection(content, skill_dir, self._shell_timeout)
+                        content = self._execute_shell_injection(
+                            content, skill_dir, self._shell_timeout
+                        )
 
                     # 2. Variable substitution
                     content = self._substitute_variables(content, skill_dir, raw_data)
@@ -595,13 +622,14 @@ class ClaudeSkillsSkill(SkillBase):
                         content = "\n\n".join(parts)
 
                     return FunctionResult(content)
+
                 return handler
 
             self.define_tool(
                 name=tool_name,
                 description=description,
                 parameters=parameters,
-                handler=make_handler(skill, response_prefix, response_postfix)
+                handler=make_handler(skill, response_prefix, response_postfix),
             )
 
             section_info = f" with sections: {section_names}" if section_names else ""
@@ -646,7 +674,7 @@ class ClaudeSkillsSkill(SkillBase):
             if skill_sections and has_tool:
                 section_list = ", ".join(sorted(skill_sections.keys()))
                 body += f"\n\nAvailable reference sections: {section_list}"
-                body += f"\nCall {tool_name}(section=\"<name>\") to load a section."
+                body += f'\nCall {tool_name}(section="<name>") to load a section.'
 
             # Append discovered files if script execution is enabled
             if self._allow_script_execution:
@@ -654,13 +682,14 @@ class ClaudeSkillsSkill(SkillBase):
                 for category in ("scripts", "assets", "other"):
                     file_list = skill_files.get(category, [])
                     if file_list:
-                        label = category.capitalize() if category != "other" else "Other files"
+                        label = (
+                            category.capitalize()
+                            if category != "other"
+                            else "Other files"
+                        )
                         body += f"\n\n{label}: {', '.join(file_list)}"
 
-            sections.append({
-                "title": skill["name"],
-                "body": body
-            })
+            sections.append({"title": skill["name"], "body": body})
 
         return sections
 
@@ -675,84 +704,86 @@ class ClaudeSkillsSkill(SkillBase):
         """Get the parameter schema for the Claude skills loader."""
         schema = super().get_parameter_schema()
 
-        schema.update({
-            "skills_path": {
-                "type": "string",
-                "description": "Path to directory containing Claude skill folders (each with SKILL.md)",
-                "required": True
-            },
-            "include": {
-                "type": "array",
-                "description": "Glob patterns for skills to include (default: ['*'])",
-                "default": ["*"],
-                "required": False
-            },
-            "exclude": {
-                "type": "array",
-                "description": "Glob patterns for skills to exclude",
-                "default": [],
-                "required": False
-            },
-            "prompt_title": {
-                "type": "string",
-                "description": "Title for the prompt section listing skills",
-                "default": "Claude Skills",
-                "required": False
-            },
-            "prompt_intro": {
-                "type": "string",
-                "description": "Introductory text for the prompt section",
-                "default": "You have access to specialized skills. Call the appropriate tool when the user's question matches:",
-                "required": False
-            },
-            "skill_descriptions": {
-                "type": "object",
-                "description": "Override descriptions for specific skills (skill_name -> description)",
-                "default": {},
-                "required": False
-            },
-            "tool_prefix": {
-                "type": "string",
-                "description": "Prefix for generated tool names (default: 'claude_'). Use empty string for no prefix.",
-                "default": "claude_",
-                "required": False
-            },
-            "response_prefix": {
-                "type": "string",
-                "description": "Text to prepend to skill results (e.g., instructions for the AI)",
-                "default": "",
-                "required": False
-            },
-            "response_postfix": {
-                "type": "string",
-                "description": "Text to append to skill results (e.g., reminders or constraints)",
-                "default": "",
-                "required": False
-            },
-            "allow_shell_injection": {
-                "type": "boolean",
-                "description": "Enable !`command` preprocessing in skill bodies. DANGEROUS: allows arbitrary shell execution.",
-                "default": False,
-                "required": False
-            },
-            "allow_script_execution": {
-                "type": "boolean",
-                "description": "Discover and list scripts/, assets/ files in prompt sections",
-                "default": False,
-                "required": False
-            },
-            "ignore_invocation_control": {
-                "type": "boolean",
-                "description": "Override disable-model-invocation and user-invocable flags, register everything",
-                "default": False,
-                "required": False
-            },
-            "shell_timeout": {
-                "type": "integer",
-                "description": "Timeout in seconds for shell injection commands",
-                "default": 30,
-                "required": False
+        schema.update(
+            {
+                "skills_path": {
+                    "type": "string",
+                    "description": "Path to directory containing Claude skill folders (each with SKILL.md)",
+                    "required": True,
+                },
+                "include": {
+                    "type": "array",
+                    "description": "Glob patterns for skills to include (default: ['*'])",
+                    "default": ["*"],
+                    "required": False,
+                },
+                "exclude": {
+                    "type": "array",
+                    "description": "Glob patterns for skills to exclude",
+                    "default": [],
+                    "required": False,
+                },
+                "prompt_title": {
+                    "type": "string",
+                    "description": "Title for the prompt section listing skills",
+                    "default": "Claude Skills",
+                    "required": False,
+                },
+                "prompt_intro": {
+                    "type": "string",
+                    "description": "Introductory text for the prompt section",
+                    "default": "You have access to specialized skills. Call the appropriate tool when the user's question matches:",
+                    "required": False,
+                },
+                "skill_descriptions": {
+                    "type": "object",
+                    "description": "Override descriptions for specific skills (skill_name -> description)",
+                    "default": {},
+                    "required": False,
+                },
+                "tool_prefix": {
+                    "type": "string",
+                    "description": "Prefix for generated tool names (default: 'claude_'). Use empty string for no prefix.",
+                    "default": "claude_",
+                    "required": False,
+                },
+                "response_prefix": {
+                    "type": "string",
+                    "description": "Text to prepend to skill results (e.g., instructions for the AI)",
+                    "default": "",
+                    "required": False,
+                },
+                "response_postfix": {
+                    "type": "string",
+                    "description": "Text to append to skill results (e.g., reminders or constraints)",
+                    "default": "",
+                    "required": False,
+                },
+                "allow_shell_injection": {
+                    "type": "boolean",
+                    "description": "Enable !`command` preprocessing in skill bodies. DANGEROUS: allows arbitrary shell execution.",
+                    "default": False,
+                    "required": False,
+                },
+                "allow_script_execution": {
+                    "type": "boolean",
+                    "description": "Discover and list scripts/, assets/ files in prompt sections",
+                    "default": False,
+                    "required": False,
+                },
+                "ignore_invocation_control": {
+                    "type": "boolean",
+                    "description": "Override disable-model-invocation and user-invocable flags, register everything",
+                    "default": False,
+                    "required": False,
+                },
+                "shell_timeout": {
+                    "type": "integer",
+                    "description": "Timeout in seconds for shell injection commands",
+                    "default": 30,
+                    "required": False,
+                },
             }
-        })
+        )
 
         return schema

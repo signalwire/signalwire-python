@@ -6,17 +6,16 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Type definitions for the CLI tools
 """
 
-from typing import TypedDict, Dict, Any, Optional, List, Union
+from typing import TypedDict, Dict, Any, Optional
 
 
 class CallData(TypedDict, total=False):
     """Call data structure for SWML post_data"""
+
     id: str
     node_id: str
     state: str
@@ -36,6 +35,7 @@ class CallData(TypedDict, total=False):
 
 class VarsData(TypedDict, total=False):
     """Variables data structure for SWML post_data"""
+
     userVariables: Dict[str, Any]
     environment: str
     call_data: Dict[str, Any]
@@ -43,6 +43,7 @@ class VarsData(TypedDict, total=False):
 
 class PostData(TypedDict, total=False):
     """Complete post_data structure for SWML requests"""
+
     call_id: str
     call: CallData
     vars: VarsData
@@ -58,6 +59,7 @@ class PostData(TypedDict, total=False):
 
 class DataMapConfig(TypedDict, total=False):
     """DataMap function configuration"""
+
     function: str
     data_map: Dict[str, Any]
     description: str
@@ -66,6 +68,7 @@ class DataMapConfig(TypedDict, total=False):
 
 class AgentInfo(TypedDict):
     """Information about a discovered agent"""
+
     class_name: str
     file_path: str
     is_instance: bool
@@ -74,6 +77,7 @@ class AgentInfo(TypedDict):
 
 class FunctionInfo(TypedDict):
     """Information about a SWAIG function"""
+
     name: str
     description: str
     parameters: Dict[str, Any]

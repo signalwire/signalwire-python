@@ -5,9 +5,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Compatibility API namespace — Twilio-compatible LAML API with AccountSid scoping.
 """
 
@@ -43,7 +41,9 @@ class CompatCalls(CrudResource):
         return self._http.post(self._path(call_sid, "Recordings"), body=kwargs)
 
     def update_recording(self, call_sid, recording_sid, **kwargs):
-        return self._http.post(self._path(call_sid, "Recordings", recording_sid), body=kwargs)
+        return self._http.post(
+            self._path(call_sid, "Recordings", recording_sid), body=kwargs
+        )
 
     def start_stream(self, call_sid, **kwargs):
         return self._http.post(self._path(call_sid, "Streams"), body=kwargs)
@@ -132,7 +132,9 @@ class CompatConferences(BaseResource):
         )
 
     def delete_recording(self, conference_sid, recording_sid):
-        return self._http.delete(self._path(conference_sid, "Recordings", recording_sid))
+        return self._http.delete(
+            self._path(conference_sid, "Recordings", recording_sid)
+        )
 
     # Conference streams
     def start_stream(self, conference_sid, **kwargs):
@@ -150,7 +152,9 @@ class CompatPhoneNumbers(BaseResource):
 
     def __init__(self, http, base):
         super().__init__(http, base)
-        self._available_base = base.replace("/IncomingPhoneNumbers", "/AvailablePhoneNumbers")
+        self._available_base = base.replace(
+            "/IncomingPhoneNumbers", "/AvailablePhoneNumbers"
+        )
 
     def list(self, **params):
         return self._http.get(self._base_path, params=params or None)
@@ -175,10 +179,14 @@ class CompatPhoneNumbers(BaseResource):
         return self._http.get(self._available_base, params=params or None)
 
     def search_local(self, country, **params):
-        return self._http.get(f"{self._available_base}/{country}/Local", params=params or None)
+        return self._http.get(
+            f"{self._available_base}/{country}/Local", params=params or None
+        )
 
     def search_toll_free(self, country, **params):
-        return self._http.get(f"{self._available_base}/{country}/TollFree", params=params or None)
+        return self._http.get(
+            f"{self._available_base}/{country}/TollFree", params=params or None
+        )
 
 
 class CompatApplications(CrudResource):

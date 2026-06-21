@@ -7,4 +7,4 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-"""DataSphere Serverless Skill for SignalWire Agents using DataMap""" 
+"""DataSphere Serverless Skill for SignalWire Agents using DataMap"""

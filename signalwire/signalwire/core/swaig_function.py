@@ -5,18 +5,16 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 SwaigFunction class for defining and managing SWAIG function interfaces
 """
 
-from typing import Dict, Any, Optional, Callable, List, Type, Union
-import inspect
+from typing import Dict, Any, Optional, Callable, List
 import logging
 
 # Import here to avoid circular imports
 from signalwire.core.function_result import FunctionResult
+
 
 class SWAIGFunction:
     """
@@ -41,6 +39,7 @@ class SWAIGFunction:
     SWAIGFunction for you and registers it). Use the @agent.tool()
     decorator for the same thing in class-based agents.
     """
+
     def __init__(
         self,
         name: str,
@@ -54,7 +53,7 @@ class SWAIGFunction:
         webhook_url: Optional[str] = None,
         required: Optional[List[str]] = None,
         is_typed_handler: bool = False,
-        **extra_swaig_fields
+        **extra_swaig_fields,
     ):
         """
         Initialize a new SWAIG function.
@@ -100,50 +99,49 @@ class SWAIGFunction:
         self.required = required or []
         self.is_typed_handler = is_typed_handler
         self.extra_swaig_fields = extra_swaig_fields
-        
+
         # Mark as external if webhook_url is provided
         self.is_external = webhook_url is not None
-        
+
     def _ensure_parameter_structure(self) -> Dict:
         """
         Ensure the parameters are correctly structured for SWML
-        
+
         Returns:
             Parameters dict with correct structure
         """
         if not self.parameters:
             return {"type": "object", "properties": {}}
-            
-        # Check if we already have the correct structure 
+
+        # Check if we already have the correct structure
         if "type" in self.parameters and "properties" in self.parameters:
             return self.parameters
-            
+
         # Otherwise, wrap the parameters in the expected structure
-        result = {
-            "type": "object",
-            "properties": self.parameters
-        }
-        
+        result = {"type": "object", "properties": self.parameters}
+
         # Add required fields if specified
         if self.required:
             result["required"] = self.required
-            
+
         return result
-        
+
     def __call__(self, *args, **kwargs):
         """
         Call the underlying handler function
         """
         return self.handler(*args, **kwargs)
 
-    def execute(self, args: Dict[str, Any], raw_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def execute(
+        self, args: Dict[str, Any], raw_data: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Execute the function with the given arguments
-        
+
         Args:
             args: Parsed arguments for the function
             raw_data: Optional raw request data
-            
+
         Returns:
             Function result as a dictionary (from FunctionResult.to_dict())
         """
@@ -154,7 +152,7 @@ class SWAIGFunction:
 
             # Call the handler with both args and raw_data
             result = self.handler(args, raw_data)
-                
+
             # Handle different result types - everything must end up as a FunctionResult
             if isinstance(result, FunctionResult):
                 # Already a FunctionResult - just convert to dict
@@ -168,7 +166,7 @@ class SWAIGFunction:
             else:
                 # String or other type - create a FunctionResult with the string representation
                 return FunctionResult(str(result)).to_dict()
-                
+
         except Exception as e:
             # Log the error for debugging but don't expose details to the AI
             logging.error(f"Error executing SWAIG function {self.name}: {str(e)}")
@@ -176,7 +174,7 @@ class SWAIGFunction:
             return FunctionResult(
                 "Sorry, I couldn't complete that action. Please try again or contact support if the issue persists."
             ).to_dict()
-        
+
     def validate_args(self, args: Dict[str, Any]) -> tuple:
         """
         Validate the arguments against the parameter schema.
@@ -192,12 +190,13 @@ class SWAIGFunction:
             If no validation library is available, returns (True, [])
         """
         schema = self._ensure_parameter_structure()
-        if not schema or not schema.get('properties'):
+        if not schema or not schema.get("properties"):
             return True, []
 
         # Try jsonschema_rs first (fast Rust-based validator)
         try:
             import jsonschema_rs
+
             validator = jsonschema_rs.JSONSchema(schema)
             if validator.is_valid(args):
                 return True, []
@@ -215,6 +214,7 @@ class SWAIGFunction:
         # Fall back to jsonschema (pure Python)
         try:
             import jsonschema
+
             validator = jsonschema.Draft7Validator(schema)
             validation_errors = list(validator.iter_errors(args))
             if not validation_errors:
@@ -230,45 +230,50 @@ class SWAIGFunction:
 
         # No validation library available - skip validation
         return True, []
-        
-    def to_swaig(self, base_url: str, token: Optional[str] = None, call_id: Optional[str] = None, include_auth: bool = True) -> Dict[str, Any]:
+
+    def to_swaig(
+        self,
+        base_url: str,
+        token: Optional[str] = None,
+        call_id: Optional[str] = None,
+        include_auth: bool = True,
+    ) -> Dict[str, Any]:
         """
         Convert this function to a SWAIG-compatible JSON object for SWML
-        
+
         Args:
             base_url: Base URL for the webhook
             token: Optional auth token to include
             call_id: Optional call ID for session tracking
             include_auth: Whether to include auth credentials in URL
-            
+
         Returns:
             Dictionary representation for the SWAIG array in SWML
         """
         # All functions use a single /swaig endpoint
         url = f"{base_url}/swaig"
-        
+
         # Add token and call_id parameters if provided
         if token and call_id:
             url = f"{url}?token={token}&call_id={call_id}"
-        
+
         # Create properly structured function definition
         function_def = {
             "function": self.name,
             "description": self.description,
             "parameters": self._ensure_parameter_structure(),
         }
-        
+
         # Only add web_hook_url if not using defaults
         # This will be handled by the defaults section in the SWAIG array
         if url:
             function_def["web_hook_url"] = url
-            
+
         # Add fillers if provided
         if self.fillers and len(self.fillers) > 0:
             function_def["fillers"] = self.fillers
-        
+
         # Add any extra SWAIG fields
         function_def.update(self.extra_swaig_fields)
-            
-        return function_def
 
+        return function_def

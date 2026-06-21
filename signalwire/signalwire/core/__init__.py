@@ -5,9 +5,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Core components for SignalWire AI Agents
 """
 
@@ -19,11 +17,11 @@ from signalwire.core.swml_handler import SWMLVerbHandler, VerbHandlerRegistry
 from signalwire.core.swml_builder import SWMLBuilder
 
 __all__ = [
-    'AgentBase', 
-    'FunctionResult', 
-    'SWAIGFunction',
-    'SWMLService',
-    'SWMLVerbHandler',
-    'VerbHandlerRegistry',
-    'SWMLBuilder'
+    "AgentBase",
+    "FunctionResult",
+    "SWAIGFunction",
+    "SWMLService",
+    "SWMLVerbHandler",
+    "VerbHandlerRegistry",
+    "SWMLBuilder",
 ]

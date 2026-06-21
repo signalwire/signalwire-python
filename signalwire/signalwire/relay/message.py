@@ -53,7 +53,9 @@ class Message:
         self.tags: list[str] = tags or []
 
         # Completion tracking
-        self._done: asyncio.Future[RelayEvent] = asyncio.get_event_loop().create_future()
+        self._done: asyncio.Future[RelayEvent] = (
+            asyncio.get_event_loop().create_future()
+        )
         self._on_completed: Optional[Callable[[RelayEvent], Any]] = None
         self._listeners: list[Callable] = []
 
@@ -101,7 +103,9 @@ class Message:
                 if asyncio.iscoroutine(result):
                     await result
             except Exception:
-                logger.exception(f"Error in message event handler for {self.message_id}")
+                logger.exception(
+                    f"Error in message event handler for {self.message_id}"
+                )
 
         # Check terminal state
         if new_state in MESSAGE_TERMINAL_STATES:
@@ -118,7 +122,9 @@ class Message:
                 if asyncio.iscoroutine(result):
                     asyncio.ensure_future(result)
             except Exception:
-                logger.exception(f"Error in on_completed callback for message {self.message_id}")
+                logger.exception(
+                    f"Error in on_completed callback for message {self.message_id}"
+                )
 
     def __repr__(self) -> str:
         return (

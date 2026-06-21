@@ -17,12 +17,12 @@ from .serverless_mixin import ServerlessMixin
 from .state_mixin import StateMixin
 
 __all__ = [
-    'PromptMixin',
-    'ToolMixin',
-    'WebMixin',
-    'AuthMixin',
-    'SkillMixin',
-    'AIConfigMixin',
-    'ServerlessMixin',
-    'StateMixin'
+    "PromptMixin",
+    "ToolMixin",
+    "WebMixin",
+    "AuthMixin",
+    "SkillMixin",
+    "AIConfigMixin",
+    "ServerlessMixin",
+    "StateMixin",
 ]

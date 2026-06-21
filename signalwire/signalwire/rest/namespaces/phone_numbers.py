@@ -5,9 +5,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Phone Numbers namespace — list, search, purchase, get, update, release, bind.
 """
 
@@ -83,7 +81,9 @@ class PhoneNumbersResource(CrudResource):
         body.update(extra)
         return self.update(resource_id, **body)
 
-    def set_cxml_application(self, resource_id: str, application_id: str, **extra) -> dict:
+    def set_cxml_application(
+        self, resource_id: str, application_id: str, **extra
+    ) -> dict:
         """Route inbound calls to an existing cXML application by ID."""
         return self.update(
             resource_id,

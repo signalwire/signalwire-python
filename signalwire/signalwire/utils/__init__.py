@@ -11,6 +11,7 @@ from .schema_utils import SchemaUtils
 from .url_validator import validate_url
 from signalwire.core.logging_config import get_execution_mode
 
+
 def is_serverless_mode() -> bool:
     """
     Check if running in any serverless environment.
@@ -18,7 +19,7 @@ def is_serverless_mode() -> bool:
     Returns:
         bool: True if in serverless mode, False if in server mode
     """
-    return get_execution_mode() != 'server'
+    return get_execution_mode() != "server"
+
 
 __all__ = ["SchemaUtils", "get_execution_mode", "is_serverless_mode", "validate_url"]
-

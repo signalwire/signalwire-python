@@ -5,9 +5,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 PhoneCallHandler — enum of ``call_handler`` values accepted by phone_numbers.update.
 
 Named ``PhoneCallHandler`` (not ``CallHandler``) to avoid colliding with the

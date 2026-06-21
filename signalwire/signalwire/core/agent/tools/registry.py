@@ -5,9 +5,9 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""Tool registration and management."""
+Tool registration and management.
+"""
 
 from typing import Dict, Any, Optional, List, Callable, Union
 import inspect
@@ -20,18 +20,18 @@ logger = get_logger(__name__)
 
 class ToolRegistry:
     """Manages SWAIG function registration."""
-    
+
     def __init__(self, agent):
         """
         Initialize ToolRegistry with reference to parent agent.
-        
+
         Args:
             agent: Parent AgentBase instance
         """
         self.agent = agent
         self._swaig_functions = {}
         self._class_decorated_tools = []
-    
+
     def define_tool(
         self,
         name: str,
@@ -45,7 +45,7 @@ class ToolRegistry:
         webhook_url: Optional[str] = None,
         required: Optional[List[str]] = None,
         is_typed_handler: bool = False,
-        **swaig_fields
+        **swaig_fields,
     ) -> None:
         """
         Define a SWAIG function that the AI can call.
@@ -82,37 +82,41 @@ class ToolRegistry:
             webhook_url=webhook_url,
             required=required,
             is_typed_handler=is_typed_handler,
-            **swaig_fields
+            **swaig_fields,
         )
-        
+
         logger.debug(f"Defined tool: {name}")
-    
+
     def register_swaig_function(self, function_dict: Dict[str, Any]) -> None:
         """
         Register a raw SWAIG function dictionary (e.g., from DataMap.to_swaig_function()).
-        
+
         Args:
             function_dict: Complete SWAIG function definition dictionary
-            
+
         Raises:
             ValueError: If function name missing or already exists
         """
-        function_name = function_dict.get('function')
+        function_name = function_dict.get("function")
         if not function_name:
-            raise ValueError("Function dictionary must contain 'function' field with the function name")
-            
+            raise ValueError(
+                "Function dictionary must contain 'function' field with the function name"
+            )
+
         if function_name in self._swaig_functions:
             raise ValueError(f"Tool with name '{function_name}' already exists")
-        
+
         # Store the raw function dictionary for data_map tools
         # These don't have handlers since they execute on SignalWire's server
         self._swaig_functions[function_name] = function_dict
-        
+
         # Debug logging using the module logger with proper format
-        logger.debug(f"Registered SWAIG function in registry: {function_name} (registry_id={id(self)}, agent_id={id(self.agent) if hasattr(self, 'agent') else None}, total_functions={len(self._swaig_functions)})")
-        
+        logger.debug(
+            f"Registered SWAIG function in registry: {function_name} (registry_id={id(self)}, agent_id={id(self.agent) if hasattr(self, 'agent') else None}, total_functions={len(self._swaig_functions)})"
+        )
+
         logger.debug(f"Registered SWAIG function: {function_name}")
-    
+
     def register_class_decorated_tools(self) -> None:
         """
         Register tools defined with @AgentBase.tool class decorator.
@@ -158,14 +162,23 @@ class ToolRegistry:
                             infer_schema,
                             create_typed_handler_wrapper,
                         )
-                        inferred_params, inferred_required, inferred_desc, is_typed, has_raw_data = infer_schema(attr)
+
+                        (
+                            inferred_params,
+                            inferred_required,
+                            inferred_desc,
+                            is_typed,
+                            has_raw_data,
+                        ) = infer_schema(attr)
                         if is_typed:
                             parameters = inferred_params
                             if inferred_required and required is None:
                                 required = inferred_required
                             if inferred_desc and description is None:
                                 description = inferred_desc
-                            bound_handler = create_typed_handler_wrapper(bound_handler, has_raw_data)
+                            bound_handler = create_typed_handler_wrapper(
+                                bound_handler, has_raw_data
+                            )
 
                     # Fall back to docstring or default description
                     if description is None:
@@ -184,51 +197,51 @@ class ToolRegistry:
                         webhook_url=webhook_url,
                         required=required,
                         is_typed_handler=is_typed,
-                        **tool_params_copy  # Pass through any additional swaig_fields
+                        **tool_params_copy,  # Pass through any additional swaig_fields
                     )
 
                     logger.debug(f"Registered class-decorated tool: {tool_name}")
-    
+
     def get_function(self, name: str) -> Optional[Union[SWAIGFunction, Dict[str, Any]]]:
         """
         Get a registered function by name.
-        
+
         Args:
             name: Function name
-            
+
         Returns:
             SWAIGFunction instance or raw function dict, or None if not found
         """
         return self._swaig_functions.get(name)
-    
+
     def get_all_functions(self) -> Dict[str, Union[SWAIGFunction, Dict[str, Any]]]:
         """
         Get all registered functions.
-        
+
         Returns:
             Dictionary of function name to function object/dict
         """
         return self._swaig_functions.copy()
-    
+
     def has_function(self, name: str) -> bool:
         """
         Check if a function is registered.
-        
+
         Args:
             name: Function name
-            
+
         Returns:
             True if function exists, False otherwise
         """
         return name in self._swaig_functions
-    
+
     def remove_function(self, name: str) -> bool:
         """
         Remove a registered function.
-        
+
         Args:
             name: Function name
-            
+
         Returns:
             True if removed, False if not found
         """

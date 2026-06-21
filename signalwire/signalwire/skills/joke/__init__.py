@@ -7,4 +7,4 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-"""Joke Skill for SignalWire Agents using DataMap""" 
+"""Joke Skill for SignalWire Agents using DataMap"""

@@ -7,7 +7,7 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
@@ -33,45 +33,47 @@ class InfoGathererSkill(SkillBase):
     @classmethod
     def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
         schema = super().get_parameter_schema()
-        schema.update({
-            "questions": {
-                "type": "array",
-                "description": (
-                    "List of question objects. Each must have 'key_name' (str) and "
-                    "'question_text' (str). Optional 'confirm' (bool) asks the agent "
-                    "to confirm the answer before proceeding."
-                ),
-                "required": True,
-                "items": {
-                    "type": "object",
-                    "properties": {
-                        "key_name": {"type": "string"},
-                        "question_text": {"type": "string"},
-                        "confirm": {"type": "boolean"},
-                        "prompt_add": {"type": "string"},
+        schema.update(
+            {
+                "questions": {
+                    "type": "array",
+                    "description": (
+                        "List of question objects. Each must have 'key_name' (str) and "
+                        "'question_text' (str). Optional 'confirm' (bool) asks the agent "
+                        "to confirm the answer before proceeding."
+                    ),
+                    "required": True,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "key_name": {"type": "string"},
+                            "question_text": {"type": "string"},
+                            "confirm": {"type": "boolean"},
+                            "prompt_add": {"type": "string"},
+                        },
                     },
                 },
-            },
-            "prefix": {
-                "type": "string",
-                "description": (
-                    "Optional prefix for tool names and namespace. When set, tools "
-                    "are named <prefix>_start_questions / <prefix>_submit_answer and "
-                    "state is stored under 'skill:<prefix>' in global_data."
-                ),
-                "required": False,
-            },
-            "completion_message": {
-                "type": "string",
-                "description": "Message returned after all questions are answered",
-                "default": (
-                    "Thank you! All questions have been answered. You can now "
-                    "summarize the information collected or ask if there's anything "
-                    "else the user would like to discuss."
-                ),
-                "required": False,
-            },
-        })
+                "prefix": {
+                    "type": "string",
+                    "description": (
+                        "Optional prefix for tool names and namespace. When set, tools "
+                        "are named <prefix>_start_questions / <prefix>_submit_answer and "
+                        "state is stored under 'skill:<prefix>' in global_data."
+                    ),
+                    "required": False,
+                },
+                "completion_message": {
+                    "type": "string",
+                    "description": "Message returned after all questions are answered",
+                    "default": (
+                        "Thank you! All questions have been answered. You can now "
+                        "summarize the information collected or ask if there's anything "
+                        "else the user would like to discuss."
+                    ),
+                    "required": False,
+                },
+            }
+        )
         return schema
 
     # ------------------------------------------------------------------ #
@@ -226,7 +228,7 @@ class InfoGathererSkill(SkillBase):
         # confirmation but the confirmed flag was not set to true.
         if current.get("confirm", False) and not confirmed:
             return FunctionResult(
-                f"Before submitting, you must read the answer \"{answer}\" back to the user "
+                f'Before submitting, you must read the answer "{answer}" back to the user '
                 f"and ask them to confirm it is correct. Then call this function again with "
                 f"confirmed set to true. If the user says it is wrong, ask the question again."
             )
@@ -248,10 +250,12 @@ class InfoGathererSkill(SkillBase):
             result = FunctionResult(instruction)
         else:
             result = FunctionResult(self.completion_message)
-            result.toggle_functions([
-                {"function": self.start_tool_name, "active": False},
-                {"function": self.submit_tool_name, "active": False},
-            ])
+            result.toggle_functions(
+                [
+                    {"function": self.start_tool_name, "active": False},
+                    {"function": self.submit_tool_name, "active": False},
+                ]
+            )
 
         new_state = {
             "questions": questions,
@@ -279,10 +283,10 @@ class InfoGathererSkill(SkillBase):
             instruction = (
                 f"Ask each question one at a time, wait for the user's answer, "
                 f"then call {submit_tool_name} with their answer. Do not reuse previous answers.\n\n"
-                f"[Question {question_number} of {total_questions}]: \"{question_text}\""
+                f'[Question {question_number} of {total_questions}]: "{question_text}"'
             )
         else:
-            instruction = f"Previous answer saved. [Question {question_number} of {total_questions}]: \"{question_text}\""
+            instruction = f'Previous answer saved. [Question {question_number} of {total_questions}]: "{question_text}"'
 
         if prompt_add:
             instruction += f"\nNote: {prompt_add}"
@@ -304,8 +308,8 @@ class InfoGathererSkill(SkillBase):
             raise ValueError("Questions must be a list")
         for i, question in enumerate(questions):
             if not isinstance(question, dict):
-                raise ValueError(f"Question {i+1} must be a dictionary")
+                raise ValueError(f"Question {i + 1} must be a dictionary")
             if "key_name" not in question:
-                raise ValueError(f"Question {i+1} is missing 'key_name' field")
+                raise ValueError(f"Question {i + 1} is missing 'key_name' field")
             if "question_text" not in question:
-                raise ValueError(f"Question {i+1} is missing 'question_text' field")
+                raise ValueError(f"Question {i + 1} is missing 'question_text' field")

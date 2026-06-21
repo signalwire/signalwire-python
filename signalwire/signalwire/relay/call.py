@@ -24,7 +24,6 @@ from .constants import (
     EVENT_CALL_STREAM,
     EVENT_CALL_PAY,
     EVENT_CALL_TRANSCRIBE,
-    EVENT_CALL_ECHO,
     PLAY_STATE_FINISHED,
     PLAY_STATE_ERROR,
     RECORD_STATE_FINISHED,
@@ -44,6 +43,7 @@ EventHandler = Callable[[RelayEvent], Coroutine[Any, Any, None] | None]
 # Action classes — async handles for controllable operations
 # ======================================================================
 
+
 class Action:
     """Base class for async action handles (play, record, detect, etc.).
 
@@ -51,13 +51,20 @@ class Action:
     server sends a terminal event for this control_id.
     """
 
-    def __init__(self, call: "Call", control_id: str, terminal_event: str,
-                 terminal_states: tuple[str, ...]):
+    def __init__(
+        self,
+        call: "Call",
+        control_id: str,
+        terminal_event: str,
+        terminal_states: tuple[str, ...],
+    ):
         self.call = call
         self.control_id = control_id
         self._terminal_event = terminal_event
         self._terminal_states = terminal_states
-        self._done: asyncio.Future[RelayEvent] = asyncio.get_running_loop().create_future()
+        self._done: asyncio.Future[RelayEvent] = (
+            asyncio.get_running_loop().create_future()
+        )
         self.result: Optional[RelayEvent] = None
         self.completed = False
         self._on_completed: Optional[Callable[[RelayEvent], Any]] = None
@@ -79,7 +86,9 @@ class Action:
                 if asyncio.iscoroutine(result):
                     asyncio.ensure_future(result)
             except Exception:
-                logger.exception(f"Error in on_completed callback for {self.control_id}")
+                logger.exception(
+                    f"Error in on_completed callback for {self.control_id}"
+                )
 
     async def wait(self, timeout: Optional[float] = None) -> RelayEvent:
         """Wait for the action to complete. Returns the terminal event."""
@@ -96,8 +105,9 @@ class PlayAction(Action):
     """Handle for an active play operation."""
 
     def __init__(self, call: "Call", control_id: str):
-        super().__init__(call, control_id, EVENT_CALL_PLAY,
-                         (PLAY_STATE_FINISHED, PLAY_STATE_ERROR))
+        super().__init__(
+            call, control_id, EVENT_CALL_PLAY, (PLAY_STATE_FINISHED, PLAY_STATE_ERROR)
+        )
 
     async def stop(self) -> dict:
         return await self.call._execute("play.stop", {"control_id": self.control_id})
@@ -109,17 +119,25 @@ class PlayAction(Action):
         return await self.call._execute("play.resume", {"control_id": self.control_id})
 
     async def volume(self, volume: float) -> dict:
-        return await self.call._execute("play.volume", {
-            "control_id": self.control_id, "volume": volume,
-        })
+        return await self.call._execute(
+            "play.volume",
+            {
+                "control_id": self.control_id,
+                "volume": volume,
+            },
+        )
 
 
 class RecordAction(Action):
     """Handle for an active record operation."""
 
     def __init__(self, call: "Call", control_id: str):
-        super().__init__(call, control_id, EVENT_CALL_RECORD,
-                         (RECORD_STATE_FINISHED, RECORD_STATE_NO_INPUT))
+        super().__init__(
+            call,
+            control_id,
+            EVENT_CALL_RECORD,
+            (RECORD_STATE_FINISHED, RECORD_STATE_NO_INPUT),
+        )
 
     async def stop(self) -> dict:
         return await self.call._execute("record.stop", {"control_id": self.control_id})
@@ -131,7 +149,9 @@ class RecordAction(Action):
         return await self.call._execute("record.pause", params)
 
     async def resume(self) -> dict:
-        return await self.call._execute("record.resume", {"control_id": self.control_id})
+        return await self.call._execute(
+            "record.resume", {"control_id": self.control_id}
+        )
 
 
 class DetectAction(Action):
@@ -156,8 +176,12 @@ class CollectAction(Action):
     """Handle for play_and_collect or standalone collect."""
 
     def __init__(self, call: "Call", control_id: str):
-        super().__init__(call, control_id, EVENT_CALL_COLLECT,
-                         ("finished", "error", "no_input", "no_match"))
+        super().__init__(
+            call,
+            control_id,
+            EVENT_CALL_COLLECT,
+            ("finished", "error", "no_input", "no_match"),
+        )
 
     def _check_event(self, event: RelayEvent) -> None:
         # play_and_collect shares a control_id across play and collect
@@ -171,26 +195,36 @@ class CollectAction(Action):
             super()._check_event(event)
 
     async def stop(self) -> dict:
-        return await self.call._execute("play_and_collect.stop",
-                                        {"control_id": self.control_id})
+        return await self.call._execute(
+            "play_and_collect.stop", {"control_id": self.control_id}
+        )
 
     async def volume(self, volume: float) -> dict:
-        return await self.call._execute("play_and_collect.volume", {
-            "control_id": self.control_id, "volume": volume,
-        })
+        return await self.call._execute(
+            "play_and_collect.volume",
+            {
+                "control_id": self.control_id,
+                "volume": volume,
+            },
+        )
 
     async def start_input_timers(self) -> dict:
         """Start the initial_timeout timer on an active collect."""
-        return await self.call._execute("collect.start_input_timers",
-                                        {"control_id": self.control_id})
+        return await self.call._execute(
+            "collect.start_input_timers", {"control_id": self.control_id}
+        )
 
 
 class StandaloneCollectAction(Action):
     """Handle for standalone calling.collect (without play)."""
 
     def __init__(self, call: "Call", control_id: str):
-        super().__init__(call, control_id, EVENT_CALL_COLLECT,
-                         ("finished", "error", "no_input", "no_match"))
+        super().__init__(
+            call,
+            control_id,
+            EVENT_CALL_COLLECT,
+            ("finished", "error", "no_input", "no_match"),
+        )
 
     def _check_event(self, event: RelayEvent) -> None:
         if event.event_type != EVENT_CALL_COLLECT:
@@ -201,34 +235,33 @@ class StandaloneCollectAction(Action):
             self._resolve(event)
 
     async def stop(self) -> dict:
-        return await self.call._execute("collect.stop",
-                                        {"control_id": self.control_id})
+        return await self.call._execute("collect.stop", {"control_id": self.control_id})
 
     async def start_input_timers(self) -> dict:
         """Start the initial_timeout timer on an active collect."""
-        return await self.call._execute("collect.start_input_timers",
-                                        {"control_id": self.control_id})
+        return await self.call._execute(
+            "collect.start_input_timers", {"control_id": self.control_id}
+        )
 
 
 class FaxAction(Action):
     """Handle for an active send_fax or receive_fax operation."""
 
     def __init__(self, call: "Call", control_id: str, method_prefix: str):
-        super().__init__(call, control_id, EVENT_CALL_FAX,
-                         ("finished", "error"))
+        super().__init__(call, control_id, EVENT_CALL_FAX, ("finished", "error"))
         self._method_prefix = method_prefix
 
     async def stop(self) -> dict:
-        return await self.call._execute(f"{self._method_prefix}.stop",
-                                        {"control_id": self.control_id})
+        return await self.call._execute(
+            f"{self._method_prefix}.stop", {"control_id": self.control_id}
+        )
 
 
 class TapAction(Action):
     """Handle for an active tap operation."""
 
     def __init__(self, call: "Call", control_id: str):
-        super().__init__(call, control_id, EVENT_CALL_TAP,
-                         ("finished",))
+        super().__init__(call, control_id, EVENT_CALL_TAP, ("finished",))
 
     async def stop(self) -> dict:
         return await self.call._execute("tap.stop", {"control_id": self.control_id})
@@ -238,8 +271,7 @@ class StreamAction(Action):
     """Handle for an active stream operation."""
 
     def __init__(self, call: "Call", control_id: str):
-        super().__init__(call, control_id, EVENT_CALL_STREAM,
-                         ("finished",))
+        super().__init__(call, control_id, EVENT_CALL_STREAM, ("finished",))
 
     async def stop(self) -> dict:
         return await self.call._execute("stream.stop", {"control_id": self.control_id})
@@ -249,8 +281,7 @@ class PayAction(Action):
     """Handle for an active pay operation."""
 
     def __init__(self, call: "Call", control_id: str):
-        super().__init__(call, control_id, EVENT_CALL_PAY,
-                         ("finished", "error"))
+        super().__init__(call, control_id, EVENT_CALL_PAY, ("finished", "error"))
 
     async def stop(self) -> dict:
         return await self.call._execute("pay.stop", {"control_id": self.control_id})
@@ -260,11 +291,12 @@ class TranscribeAction(Action):
     """Handle for an active transcribe operation."""
 
     def __init__(self, call: "Call", control_id: str):
-        super().__init__(call, control_id, EVENT_CALL_TRANSCRIBE,
-                         ("finished",))
+        super().__init__(call, control_id, EVENT_CALL_TRANSCRIBE, ("finished",))
 
     async def stop(self) -> dict:
-        return await self.call._execute("transcribe.stop", {"control_id": self.control_id})
+        return await self.call._execute(
+            "transcribe.stop", {"control_id": self.control_id}
+        )
 
 
 class AIAction(Action):
@@ -274,8 +306,7 @@ class AIAction(Action):
         # AI sessions don't have a standard event type with state field —
         # they end when the call ends or when stopped. We treat "finished"
         # and "error" as terminal states from calling.call.ai events if any.
-        super().__init__(call, control_id, "calling.call.ai",
-                         ("finished", "error"))
+        super().__init__(call, control_id, "calling.call.ai", ("finished", "error"))
 
     async def stop(self) -> dict:
         return await self.call._execute("ai.stop", {"control_id": self.control_id})
@@ -284,6 +315,7 @@ class AIAction(Action):
 # ======================================================================
 # Call class
 # ======================================================================
+
 
 class Call:
     """Represents a live RELAY call.
@@ -322,13 +354,17 @@ class Call:
         # Active actions indexed by control_id
         self._actions: dict[str, Action] = {}
         # Future that resolves when the call ends
-        self._ended: asyncio.Future[RelayEvent] = asyncio.get_running_loop().create_future()
+        self._ended: asyncio.Future[RelayEvent] = (
+            asyncio.get_running_loop().create_future()
+        )
 
     # ------------------------------------------------------------------
     # Internal RPC primitive
     # ------------------------------------------------------------------
 
-    async def _execute(self, method: str, extra_params: Optional[dict[str, Any]] = None) -> dict:
+    async def _execute(
+        self, method: str, extra_params: Optional[dict[str, Any]] = None
+    ) -> dict:
         """Send a ``calling.<method>`` JSON-RPC request for this call.
 
         The outer JSON-RPC method is ``"calling.<method>"`` (e.g.
@@ -350,7 +386,9 @@ class Call:
         except Exception as exc:
             code = getattr(exc, "code", None)
             if code is not None:
-                logger.warning(f"Call {self.call_id} error during {method} (code={code}): {exc}")
+                logger.warning(
+                    f"Call {self.call_id} error during {method} (code={code}): {exc}"
+                )
                 return {}
             raise
 
@@ -517,7 +555,9 @@ class Call:
             params["loop"] = loop
         params.update(kwargs)
         action = PlayAction(self, cid)
-        return await self._start_action(action, "play", params, on_completed=on_completed)
+        return await self._start_action(
+            action, "play", params, on_completed=on_completed
+        )
 
     async def play_tts(
         self,
@@ -584,7 +624,9 @@ class Call:
         if duration is not None:
             rt["duration"] = duration
         return await self.play(
-            [{"type": "ringtone", "params": rt}], volume=volume, on_completed=on_completed
+            [{"type": "ringtone", "params": rt}],
+            volume=volume,
+            on_completed=on_completed,
         )
 
     # ------------------------------------------------------------------
@@ -603,7 +645,9 @@ class Call:
         if digits is not None:
             params["digits"] = digits
         return await self.detect(
-            {"type": "digit", "params": params}, timeout=timeout, on_completed=on_completed
+            {"type": "digit", "params": params},
+            timeout=timeout,
+            on_completed=on_completed,
         )
 
     async def detect_answering_machine(
@@ -631,7 +675,9 @@ class Call:
             if val is not None:
                 params[key] = val
         return await self.detect(
-            {"type": "machine", "params": params}, timeout=timeout, on_completed=on_completed
+            {"type": "machine", "params": params},
+            timeout=timeout,
+            on_completed=on_completed,
         )
 
     async def detect_fax(
@@ -646,7 +692,9 @@ class Call:
         if tone is not None:
             params["tone"] = tone
         return await self.detect(
-            {"type": "fax", "params": params}, timeout=timeout, on_completed=on_completed
+            {"type": "fax", "params": params},
+            timeout=timeout,
+            on_completed=on_completed,
         )
 
     # ------------------------------------------------------------------
@@ -673,7 +721,10 @@ class Call:
         if voice is not None:
             tts["voice"] = voice
         return await self.play_and_collect(
-            [{"type": "tts", "params": tts}], collect, volume=volume, on_completed=on_completed
+            [{"type": "tts", "params": tts}],
+            collect,
+            volume=volume,
+            on_completed=on_completed,
         )
 
     async def prompt_audio(
@@ -696,7 +747,9 @@ class Call:
     # State-wait convenience (typed waits over wait_for())
     # ------------------------------------------------------------------
 
-    async def _wait_for_state(self, target: str, timeout: Optional[float]) -> RelayEvent:
+    async def _wait_for_state(
+        self, target: str, timeout: Optional[float]
+    ) -> RelayEvent:
         order = (
             CALL_STATE_CREATED,
             CALL_STATE_RINGING,
@@ -710,7 +763,9 @@ class Call:
 
         # Already at or past the target -> return immediately (matches legacy SDK).
         if rank(self.state) >= rank(target):
-            return RelayEvent(event_type=EVENT_CALL_STATE, params={"call_state": self.state})
+            return RelayEvent(
+                event_type=EVENT_CALL_STATE, params={"call_state": self.state}
+            )
         return await self.wait_for(
             EVENT_CALL_STATE,
             lambda e: e.params.get("call_state") == target,
@@ -747,7 +802,9 @@ class Call:
         params: dict[str, Any] = {"control_id": cid, "record": record_obj}
         params.update(kwargs)
         action = RecordAction(self, cid)
-        return await self._start_action(action, "record", params, on_completed=on_completed)
+        return await self._start_action(
+            action, "record", params, on_completed=on_completed
+        )
 
     # ------------------------------------------------------------------
     # Input collection
@@ -774,7 +831,9 @@ class Call:
             params["volume"] = volume
         params.update(kwargs)
         action = CollectAction(self, cid)
-        return await self._start_action(action, "play_and_collect", params, on_completed=on_completed)
+        return await self._start_action(
+            action, "play_and_collect", params, on_completed=on_completed
+        )
 
     async def collect(
         self,
@@ -809,7 +868,9 @@ class Call:
             params["start_input_timers"] = start_input_timers
         params.update(kwargs)
         action = StandaloneCollectAction(self, cid)
-        return await self._start_action(action, "collect", params, on_completed=on_completed)
+        return await self._start_action(
+            action, "collect", params, on_completed=on_completed
+        )
 
     # ------------------------------------------------------------------
     # Bridging & connectivity
@@ -857,9 +918,13 @@ class Call:
     ) -> dict:
         """Send DTMF digits on the call."""
         cid = control_id or str(uuid.uuid4())
-        return await self._execute("send_digits", {
-            "control_id": cid, "digits": digits,
-        })
+        return await self._execute(
+            "send_digits",
+            {
+                "control_id": cid,
+                "digits": digits,
+            },
+        )
 
     # ------------------------------------------------------------------
     # Detection
@@ -881,7 +946,9 @@ class Call:
             params["timeout"] = timeout
         params.update(kwargs)
         action = DetectAction(self, cid)
-        return await self._start_action(action, "detect", params, on_completed=on_completed)
+        return await self._start_action(
+            action, "detect", params, on_completed=on_completed
+        )
 
     # ------------------------------------------------------------------
     # SIP Refer (transfer)
@@ -972,7 +1039,9 @@ class Call:
             params["prompts"] = prompts
         params.update(kwargs)
         action = PayAction(self, cid)
-        return await self._start_action(action, "pay", params, on_completed=on_completed)
+        return await self._start_action(
+            action, "pay", params, on_completed=on_completed
+        )
 
     # ------------------------------------------------------------------
     # Faxing
@@ -997,7 +1066,9 @@ class Call:
             params["header_info"] = header_info
         params.update(kwargs)
         action = FaxAction(self, cid, "send_fax")
-        return await self._start_action(action, "send_fax", params, on_completed=on_completed)
+        return await self._start_action(
+            action, "send_fax", params, on_completed=on_completed
+        )
 
     async def receive_fax(
         self,
@@ -1011,7 +1082,9 @@ class Call:
         params: dict[str, Any] = {"control_id": cid}
         params.update(kwargs)
         action = FaxAction(self, cid, "receive_fax")
-        return await self._start_action(action, "receive_fax", params, on_completed=on_completed)
+        return await self._start_action(
+            action, "receive_fax", params, on_completed=on_completed
+        )
 
     # ------------------------------------------------------------------
     # Tap (media interception)
@@ -1035,7 +1108,9 @@ class Call:
         }
         params.update(kwargs)
         action = TapAction(self, cid)
-        return await self._start_action(action, "tap", params, on_completed=on_completed)
+        return await self._start_action(
+            action, "tap", params, on_completed=on_completed
+        )
 
     # ------------------------------------------------------------------
     # Streaming
@@ -1075,7 +1150,9 @@ class Call:
             params["custom_parameters"] = custom_parameters
         params.update(kwargs)
         action = StreamAction(self, cid)
-        return await self._start_action(action, "stream", params, on_completed=on_completed)
+        return await self._start_action(
+            action, "stream", params, on_completed=on_completed
+        )
 
     # ------------------------------------------------------------------
     # Transfer
@@ -1155,9 +1232,13 @@ class Call:
         if recording_status_callback_event is not None:
             params["recording_status_callback_event"] = recording_status_callback_event
         if recording_status_callback_event_type is not None:
-            params["recording_status_callback_event_type"] = recording_status_callback_event_type
+            params["recording_status_callback_event_type"] = (
+                recording_status_callback_event_type
+            )
         if recording_status_callback_method is not None:
-            params["recording_status_callback_method"] = recording_status_callback_method
+            params["recording_status_callback_method"] = (
+                recording_status_callback_method
+            )
         if stream_obj is not None:
             params["stream"] = stream_obj
         params.update(kwargs)
@@ -1212,7 +1293,9 @@ class Call:
             params["status_url"] = status_url
         params.update(kwargs)
         action = TranscribeAction(self, cid)
-        return await self._start_action(action, "transcribe", params, on_completed=on_completed)
+        return await self._start_action(
+            action, "transcribe", params, on_completed=on_completed
+        )
 
     # ------------------------------------------------------------------
     # Echo

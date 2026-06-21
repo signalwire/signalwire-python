@@ -5,9 +5,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Prefab agents with specific functionality that can be used out-of-the-box
 """
 
@@ -22,5 +20,5 @@ __all__ = [
     "FAQBotAgent",
     "ConciergeAgent",
     "SurveyAgent",
-    "ReceptionistAgent"
+    "ReceptionistAgent",
 ]

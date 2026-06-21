@@ -5,12 +5,9 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
+
+Tool decorator functionality.
 """
-
-"""Tool decorator functionality."""
-
-from functools import wraps
-from typing import Callable, Optional, Dict, Any
 
 from signalwire.core.logging_config import get_logger
 
@@ -19,7 +16,7 @@ logger = get_logger(__name__)
 
 class ToolDecorator:
     """Handles tool decoration logic."""
-    
+
     @staticmethod
     def create_instance_decorator(registry):
         """
@@ -31,6 +28,7 @@ class ToolDecorator:
         Returns:
             Decorator function
         """
+
         def decorator(name=None, **kwargs):
             """
             Decorator for defining SWAIG tools in a class.
@@ -79,6 +77,7 @@ class ToolDecorator:
             See AgentBase.define_tool() for the full description-writing
             guidance.
             """
+
             def inner_decorator(func):
                 nonlocal name
                 if name is None:
@@ -100,7 +99,14 @@ class ToolDecorator:
                         infer_schema,
                         create_typed_handler_wrapper,
                     )
-                    inferred_params, inferred_required, inferred_desc, is_typed, has_raw_data = infer_schema(func)
+
+                    (
+                        inferred_params,
+                        inferred_required,
+                        inferred_desc,
+                        is_typed,
+                        has_raw_data,
+                    ) = infer_schema(func)
                     if is_typed:
                         parameters = inferred_params
                         if inferred_required and required is None:
@@ -123,20 +129,23 @@ class ToolDecorator:
                     webhook_url=webhook_url,
                     required=required,
                     is_typed_handler=is_typed,
-                    **kwargs  # Pass through any additional swaig_fields
+                    **kwargs,  # Pass through any additional swaig_fields
                 )
                 return func
+
             return inner_decorator
+
         return decorator
-    
+
     @classmethod
     def create_class_decorator(cls):
         """
         Create class tool decorator.
-        
+
         Returns:
             Decorator function
         """
+
         def tool(name=None, **kwargs):
             """
             Class method decorator for defining SWAIG tools.
@@ -170,13 +179,16 @@ class ToolDecorator:
                 def lookup_account(self, args, raw_data):
                     ...
             """
+
             def decorator(func):
                 # Mark the function as a tool
                 func._is_tool = True
                 func._tool_name = name if name else func.__name__
                 func._tool_params = kwargs
-                
+
                 # Return the original function
                 return func
+
             return decorator
+
         return tool

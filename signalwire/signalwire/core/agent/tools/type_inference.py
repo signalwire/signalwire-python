@@ -5,9 +5,9 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""Type-hint-based schema inference for SWAIG tool functions."""
+Type-hint-based schema inference for SWAIG tool functions.
+"""
 
 import inspect
 import re
@@ -115,24 +115,35 @@ def _parse_docstring_args(docstring: str) -> Tuple[str, Dict[str, str]]:
             continue
 
         # Detect end of Args block (another section header like Returns:, Raises:, etc.)
-        if in_args and stripped and stripped.endswith(":") and not stripped.startswith("-"):
+        if (
+            in_args
+            and stripped
+            and stripped.endswith(":")
+            and not stripped.startswith("-")
+        ):
             # Check if this looks like a section header (single word followed by colon)
             maybe_section = stripped.rstrip(":")
             if " " not in maybe_section and maybe_section[0].isupper():
                 # Flush current param
                 if current_param:
-                    param_descriptions[current_param] = " ".join(current_desc_lines).strip()
+                    param_descriptions[current_param] = " ".join(
+                        current_desc_lines
+                    ).strip()
                 break
 
         if in_args:
             # Match parameter line: "  param_name: description" or "  param_name (type): description"
-            match = re.match(r'^\s+(\w+)\s*(?:\([^)]*\))?\s*:\s*(.*)', line)
+            match = re.match(r"^\s+(\w+)\s*(?:\([^)]*\))?\s*:\s*(.*)", line)
             if match:
                 # Flush previous param
                 if current_param:
-                    param_descriptions[current_param] = " ".join(current_desc_lines).strip()
+                    param_descriptions[current_param] = " ".join(
+                        current_desc_lines
+                    ).strip()
                 current_param = match.group(1)
-                current_desc_lines = [match.group(2).strip()] if match.group(2).strip() else []
+                current_desc_lines = (
+                    [match.group(2).strip()] if match.group(2).strip() else []
+                )
             elif current_param and stripped:
                 # Continuation line for current param
                 current_desc_lines.append(stripped)
@@ -178,7 +189,12 @@ def infer_schema(func) -> Tuple[Dict[str, Dict], List[str], Optional[str], bool,
         # Check if any have type annotations that aren't basic dict/Any
         has_meaningful_hints = False
         for p in params:
-            if p.annotation is not inspect.Parameter.empty and p.annotation not in (dict, Dict, Any, Dict[str, Any]):
+            if p.annotation is not inspect.Parameter.empty and p.annotation not in (
+                dict,
+                Dict,
+                Any,
+                Dict[str, Any],
+            ):
                 has_meaningful_hints = True
                 break
         if not has_meaningful_hints:
@@ -203,7 +219,9 @@ def infer_schema(func) -> Tuple[Dict[str, Dict], List[str], Optional[str], bool,
         return {}, [], summary or None, True, has_raw_data
 
     # Check if parameters have type annotations
-    has_annotations = any(p.annotation is not inspect.Parameter.empty for p in schema_params)
+    has_annotations = any(
+        p.annotation is not inspect.Parameter.empty for p in schema_params
+    )
     if not has_annotations:
         # No type hints — can't infer schema, fall back
         return {}, [], None, False, False
@@ -212,7 +230,11 @@ def infer_schema(func) -> Tuple[Dict[str, Dict], List[str], Optional[str], bool,
     try:
         hints = get_type_hints(func)
     except Exception:
-        hints = {p.name: p.annotation for p in schema_params if p.annotation is not inspect.Parameter.empty}
+        hints = {
+            p.name: p.annotation
+            for p in schema_params
+            if p.annotation is not inspect.Parameter.empty
+        }
 
     # Parse docstring for description and per-param descriptions
     docstring = inspect.getdoc(func)
@@ -260,6 +282,7 @@ def create_typed_handler_wrapper(func, has_raw_data: bool):
     Returns:
         A wrapper function with signature (args, raw_data).
     """
+
     def wrapper(args, raw_data):
         if has_raw_data:
             return func(raw_data=raw_data, **args)
