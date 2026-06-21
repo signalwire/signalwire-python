@@ -54,6 +54,14 @@ if TYPE_CHECKING:
         _mcp_servers: Any
         _prompt_llm_params: Dict[str, Any]
         _post_prompt_llm_params: Dict[str, Any]
+        # Mutable host state the web/prompt mixins read AND write — declared with
+        # their true Optional types so a mixin's assignment doesn't infer a
+        # narrower (non-Optional) type that then clashes with AgentBase's init.
+        _app: Optional[Any]
+        _router: Optional[Any]
+        _proxy_url_base: Optional[str]
+        _dynamic_config_callback: Optional[Any]
+        _contexts_builder: Optional[Any]
         ssl_cert_path: Optional[str]
         ssl_key_path: Optional[str]
         host: str

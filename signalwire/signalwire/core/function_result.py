@@ -408,7 +408,7 @@ class FunctionResult:
             try:
                 import json
 
-                swml_data = json.loads(swml_content)
+                swml_data: Dict[str, Any] = json.loads(swml_content)
             except (json.JSONDecodeError, ValueError):
                 swml_data = {"raw_swml": swml_content}
         elif hasattr(swml_content, "to_dict"):
@@ -466,6 +466,7 @@ class FunctionResult:
         Returns:
             self for method chaining
         """
+        wait_value: Union[str, int, bool]
         if answer_first:
             wait_value = "answer_first"
         elif timeout is not None:
@@ -727,7 +728,7 @@ class FunctionResult:
             return self.add_action("context_switch", system_prompt)
         else:
             # Advanced object context switch
-            context_data = {}
+            context_data: Dict[str, Any] = {}
             if system_prompt:
                 context_data["system_prompt"] = system_prompt
             if user_prompt:
@@ -784,7 +785,10 @@ class FunctionResult:
             raise ValueError("Either body or media must be provided")
 
         # Build the send_sms parameters
-        sms_params = {"to_number": to_number, "from_number": from_number}
+        sms_params: Dict[str, Any] = {
+            "to_number": to_number,
+            "from_number": from_number,
+        }
 
         # Add optional parameters
         if body:
@@ -860,7 +864,7 @@ class FunctionResult:
             self for method chaining
         """
         # Build the pay parameters
-        pay_params = {
+        pay_params: Dict[str, Any] = {
             "payment_connector_url": payment_connector_url,
             "input": input_method,
             "payment_method": payment_method,
@@ -951,7 +955,7 @@ class FunctionResult:
             raise ValueError("direction must be 'speak', 'listen', or 'both'")
 
         # Build the record_call parameters
-        record_params = {
+        record_params: Dict[str, Any] = {
             "stereo": stereo,
             "format": format,
             "direction": direction,
@@ -1166,7 +1170,7 @@ class FunctionResult:
             and result is None
         ):
             # Simple form - just the conference name
-            join_params = name
+            join_params: Union[str, Dict[str, Any]] = name
         else:
             # Full object form with parameters
             join_params = {"name": name}
@@ -1269,7 +1273,7 @@ class FunctionResult:
             raise ValueError("rtp_ptime must be a positive integer")
 
         # Build the tap parameters
-        tap_params = {"uri": uri}
+        tap_params: Dict[str, Any] = {"uri": uri}
 
         # Add optional parameters if they differ from defaults
         if control_id:
@@ -1541,7 +1545,7 @@ class FunctionResult:
             Dictionary in SWAIG function response format
         """
         # Create the result object
-        result = {}
+        result: Dict[str, Any] = {}
 
         # Add response if present
         if self.response:

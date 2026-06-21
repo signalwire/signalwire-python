@@ -126,7 +126,7 @@ class SWMLService(ToolMixin):
         self.ssl_key_path = self.security.ssl_key_path
 
         # Initialize proxy detection attributes
-        self._proxy_url_base = os.environ.get("SWML_PROXY_URL_BASE")
+        self._proxy_url_base: Optional[str] = os.environ.get("SWML_PROXY_URL_BASE")
         self._proxy_url_base_from_env = bool(
             self._proxy_url_base
         )  # Track if it came from environment
@@ -172,8 +172,8 @@ class SWMLService(ToolMixin):
         self.verb_registry = VerbHandlerRegistry()
 
         # Server state
-        self._app = None
-        self._router = None
+        self._app: Optional[Any] = None
+        self._router: Optional[Any] = None
         self._running = False
 
         # Initialize SWML document state

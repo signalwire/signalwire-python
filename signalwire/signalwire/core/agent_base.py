@@ -14,7 +14,10 @@ import os
 import json
 import uuid
 import re
-from typing import Optional, List, Dict, Any, Tuple, Callable
+from typing import Optional, List, Dict, Any, Tuple, Callable, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from signalwire.core.contexts import ContextBuilder
 
 # These imports double as a required-dependency check: a missing package
 # re-raises a helpful ImportError. Several names are not referenced directly
@@ -93,6 +96,12 @@ class AgentBase(
 
     # Subclasses can define this to declaratively set prompt sections
     PROMPT_SECTIONS = None
+
+    # Attributes set dynamically (on ephemeral copies / when native functions are
+    # configured) rather than unconditionally in __init__. Declared here so the
+    # type checker knows their types at the guarded access sites.
+    _native_functions: List[Any]
+    _is_ephemeral: bool
 
     def __init__(
         self,
@@ -205,12 +214,13 @@ class AgentBase(
         self.agent_id = agent_id or str(uuid.uuid4())
 
         # Check for proxy URL base in environment
-        self._proxy_url_base = os.environ.get("SWML_PROXY_URL_BASE")
+        self._proxy_url_base: Optional[str] = os.environ.get("SWML_PROXY_URL_BASE")
 
         # Initialize prompt handling
         self._use_pom = use_pom
 
         # Initialize POM if needed
+        self.pom: Optional["PromptObjectModel"]
         if self._use_pom:
             from signalwire.pom.pom import PromptObjectModel
 
@@ -274,32 +284,41 @@ class AgentBase(
         self._mcp_servers = []
         self._mcp_server_enabled = False
         # Initialize LLM params as empty - only send if explicitly set
-        self._prompt_llm_params = {}
-        self._post_prompt_llm_params = {}
+        self._prompt_llm_params: Dict[str, Any] = {}
+        self._post_prompt_llm_params: Dict[str, Any] = {}
 
         # Dynamic configuration callback
-        self._dynamic_config_callback = None
+        self._dynamic_config_callback: Optional[
+            Callable[[dict, dict, dict, "AgentBase"], None]
+        ] = None
 
         # Initialize skill manager
         self.skill_manager = SkillManager(self)
 
         # Initialize contexts system
-        self._contexts_builder = None
+        self._contexts_builder: Optional["ContextBuilder"] = None
         self._contexts_defined = False
 
         # Initialize SWAIG query params for dynamic config
-        self._swaig_query_params = {}
+        self._swaig_query_params: Dict[str, Any] = {}
 
         # Debug events
         self._debug_events_enabled = False
         self._debug_events_level = 1
-        self._debug_event_handler = None
+        self._debug_event_handler: Optional[Callable[..., Any]] = None
 
-        # Initialize verb insertion points for call flow customization
-        self._pre_answer_verbs = []  # Verbs to run before answer (e.g., ringback, screening)
-        self._answer_config = {}  # Configuration for the answer verb
-        self._post_answer_verbs = []  # Verbs to run after answer, before AI (e.g., announcements)
-        self._post_ai_verbs = []  # Verbs to run after AI ends (e.g., cleanup, transfers)
+        # Initialize verb insertion points for call flow customization.
+        # The verb lists hold (verb_name, config) tuples; _answer_config is a dict.
+        self._pre_answer_verbs: List[
+            Tuple[str, Dict[str, Any]]
+        ] = []  # Verbs to run before answer (e.g., ringback, screening)
+        self._answer_config: Dict[str, Any] = {}  # Configuration for the answer verb
+        self._post_answer_verbs: List[
+            Tuple[str, Dict[str, Any]]
+        ] = []  # Verbs to run after answer, before AI (e.g., announcements)
+        self._post_ai_verbs: List[
+            Tuple[str, Dict[str, Any]]
+        ] = []  # Verbs to run after AI ends (e.g., cleanup, transfers)
 
     # Verb categories for pre-answer validation
     _PRE_ANSWER_SAFE_VERBS = {
@@ -372,7 +391,8 @@ class AgentBase(
             base_url = self._proxy_url_base.rstrip("/")
             # Add authentication if requested
             if include_auth:
-                username, password = self.get_basic_auth_credentials()
+                creds = self.get_basic_auth_credentials()
+                username, password = creds[0], creds[1]
                 if username and password:
                     from urllib.parse import urlparse, urlunparse
 
@@ -445,7 +465,8 @@ class AgentBase(
 
         # For serverless modes, add authentication if requested
         if include_auth:
-            username, password = self.get_basic_auth_credentials()
+            creds = self.get_basic_auth_credentials()
+            username, password = creds[0], creds[1]
             if username and password:
                 # Parse URL to insert auth
                 from urllib.parse import urlparse, urlunparse
@@ -828,7 +849,7 @@ class AgentBase(
         return self
 
     def _render_swml(
-        self, call_id: str = None, modifications: Optional[dict] = None
+        self, call_id: Optional[str] = None, modifications: Optional[dict] = None
     ) -> str:
         """
         Render the complete SWML document using SWMLService methods
@@ -942,7 +963,7 @@ class AgentBase(
             default_webhook_url = agent_to_use._web_hook_url_override
 
         # Prepare SWAIG object (correct format)
-        swaig_obj = {}
+        swaig_obj: Dict[str, Any] = {}
 
         # Add native_functions if any are defined
         if agent_to_use.native_functions:
