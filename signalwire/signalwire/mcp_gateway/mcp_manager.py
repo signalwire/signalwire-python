@@ -25,7 +25,7 @@ import pwd
 import shutil
 import resource
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -36,10 +36,10 @@ class MCPService:
     """Configuration for an MCP service"""
 
     name: str
-    command: List[str]
+    command: list[str]
     description: str
     enabled: bool = True
-    sandbox_config: Optional[Dict[str, Any]] = None
+    sandbox_config: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
         # Default sandbox config if not provided
@@ -59,18 +59,18 @@ class MCPClient:
 
     def __init__(self, service: MCPService, sandbox_base_dir: str = "./sandbox"):
         self.service = service
-        self.process: Optional["subprocess.Popen[str]"] = None
+        self.process: subprocess.Popen[str] | None = None
         self.request_id = 0
-        self.pending_requests: Dict[Any, Any] = {}
-        self.response_queue: "queue.Queue[Any]" = queue.Queue()
-        self.reader_thread: Optional[threading.Thread] = None
+        self.pending_requests: dict[Any, Any] = {}
+        self.response_queue: queue.Queue[Any] = queue.Queue()
+        self.reader_thread: threading.Thread | None = None
         self.lock = threading.Lock()
-        self.tools: List[Any] = []
+        self.tools: list[Any] = []
         self.sandbox_base_dir = sandbox_base_dir
-        self.sandbox_dir: Optional[str] = None
+        self.sandbox_dir: str | None = None
         self._shutdown = threading.Event()
 
-    def _setup_sandbox_env(self) -> Tuple[Dict[str, str], Optional[str]]:
+    def _setup_sandbox_env(self) -> tuple[dict[str, str], str | None]:
         """Create environment for the MCP process based on sandbox config
 
         Returns:
@@ -293,13 +293,13 @@ class MCPClient:
             except Exception as e:
                 logger.warning(f"Failed to clean up sandbox directory: {e}")
 
-    def call_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
+    def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Call a tool on the MCP server"""
         return self.call_method(
             "tools/call", {"name": tool_name, "arguments": arguments}
         )
 
-    def call_method(self, method: str, params: Dict[str, Any]) -> Any:
+    def call_method(self, method: str, params: dict[str, Any]) -> Any:
         """Call an RPC method and wait for response"""
         if self._shutdown.is_set():
             raise RuntimeError("Client is shutting down")
@@ -338,11 +338,11 @@ class MCPClient:
 
         return response.get("result")
 
-    def get_tools(self) -> List[Dict[str, Any]]:
+    def get_tools(self) -> list[dict[str, Any]]:
         """Get the list of available tools"""
         return self.tools.copy()
 
-    def _send_message(self, message: Dict[str, Any]):
+    def _send_message(self, message: dict[str, Any]):
         """Send a JSON-RPC message to the server"""
         if not self.process or self.process.poll() is not None:
             raise RuntimeError("MCP server process is not running")
@@ -435,7 +435,7 @@ class MCPClient:
             logger.error(f"Failed to initialize '{self.service.name}': {e}")
             return False
 
-    def _list_tools(self) -> List[Dict[str, Any]]:
+    def _list_tools(self) -> list[dict[str, Any]]:
         """Get the list of available tools from the server"""
         try:
             result = self.call_method("tools/list", {})
@@ -449,10 +449,10 @@ class MCPClient:
 class MCPManager:
     """Manages multiple MCP services and their lifecycles"""
 
-    def __init__(self, config: Dict[str, Any]):
+    def __init__(self, config: dict[str, Any]):
         self.config = config
-        self.services: Dict[str, MCPService] = {}
-        self.clients: Dict[str, MCPClient] = {}
+        self.services: dict[str, MCPService] = {}
+        self.clients: dict[str, MCPClient] = {}
         self._clients_lock = threading.RLock()
 
         # Get sandbox directory from config or use default
@@ -490,11 +490,11 @@ class MCPManager:
                 extra={"service": name, "description": service.description},
             )
 
-    def get_service(self, service_name: str) -> Optional[MCPService]:
+    def get_service(self, service_name: str) -> MCPService | None:
         """Get a service definition by name"""
         return self.services.get(service_name)
 
-    def list_services(self) -> Dict[str, Dict[str, Any]]:
+    def list_services(self) -> dict[str, dict[str, Any]]:
         """List all available services"""
         result = {}
 
@@ -526,7 +526,7 @@ class MCPManager:
 
             return client
 
-    def get_service_tools(self, service_name: str) -> List[Dict[str, Any]]:
+    def get_service_tools(self, service_name: str) -> list[dict[str, Any]]:
         """Get tools for a service by starting a temporary instance"""
         with self._clients_lock:
             client = None
@@ -541,7 +541,7 @@ class MCPManager:
                     if client_key and client_key in self.clients:
                         del self.clients[client_key]
 
-    def validate_services(self) -> Dict[str, bool]:
+    def validate_services(self) -> dict[str, bool]:
         """Validate that all services can be started"""
         with self._clients_lock:
             results = {}

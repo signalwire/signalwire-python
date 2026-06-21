@@ -21,7 +21,7 @@ import argparse
 from pathlib import Path
 import signal
 import re
-from typing import Dict, Any, Optional
+from typing import Any
 from datetime import datetime
 import ssl
 import concurrent.futures
@@ -70,7 +70,7 @@ class MCPGateway:
         self.app = Flask(__name__)
         self.mcp_manager = MCPManager(self.config)
         self.session_manager = SessionManager(self.config)
-        self.server: Optional[BaseWSGIServer] = None
+        self.server: BaseWSGIServer | None = None
         self._shutdown_requested = False
         self._shutdown_cleanup_done = False
 
@@ -154,7 +154,7 @@ class MCPGateway:
             raise ValueError("Tool name contains invalid characters")
         return name
 
-    def _log_security_event(self, event_type: str, details: Dict[str, Any]):
+    def _log_security_event(self, event_type: str, details: dict[str, Any]):
         """Log security-relevant events with proper sanitization"""
         # Sanitize any user input in details
         sanitized = {}
@@ -193,7 +193,7 @@ class MCPGateway:
             return [self._substitute_env_vars(item) for item in value]
         return value
 
-    def _load_config(self, config_path: str) -> Dict[str, Any]:
+    def _load_config(self, config_path: str) -> dict[str, Any]:
         """Load configuration from JSON file with environment variable substitution"""
         if not Path(config_path).exists():
             # Check if sample_config.json exists

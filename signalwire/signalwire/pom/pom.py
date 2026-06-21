@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 import json
 import yaml
 
@@ -21,11 +21,11 @@ class Section:
 
     def __init__(
         self,
-        title: Optional[str] = None,
+        title: str | None = None,
         *,
         body: str = "",
-        bullets: Optional[List[str]] = None,
-        numbered: Optional[bool] = None,
+        bullets: list[str] | None = None,
+        numbered: bool | None = None,
         numberedBullets: bool = False,
     ):
         self.title = title
@@ -45,7 +45,7 @@ class Section:
             )
         self.bullets = bullets or []
 
-        self.subsections: List["Section"] = []
+        self.subsections: list[Section] = []
         self.numbered = numbered
         self.numberedBullets = numberedBullets
 
@@ -55,7 +55,7 @@ class Section:
             raise TypeError(f"body must be a string, not {type(body).__name__}")
         self.body = body
 
-    def add_bullets(self, bullets: List[str]):
+    def add_bullets(self, bullets: list[str]):
         """Add bullet points to this section."""
         if not isinstance(bullets, list):
             raise TypeError(f"bullets must be a list, not {type(bullets).__name__}")
@@ -66,7 +66,7 @@ class Section:
         title: str,
         *,
         body: str = "",
-        bullets: Optional[List[str]] = None,
+        bullets: list[str] | None = None,
         numbered: bool = False,
         numberedBullets: bool = False,
     ) -> "Section":
@@ -101,9 +101,9 @@ class Section:
         self.subsections.append(subsection)
         return subsection
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert the section to a dictionary representation."""
-        data: Dict[str, Any] = {}
+        data: dict[str, Any] = {}
 
         # Add keys in specific order: title, body, bullets, subsections
         if self.title is not None:
@@ -126,7 +126,7 @@ class Section:
         return data
 
     def render_markdown(
-        self, level: int = 2, section_number: Optional[List[int]] = None
+        self, level: int = 2, section_number: list[int] | None = None
     ) -> str:
         """
         Render this section and all its subsections as markdown.
@@ -189,7 +189,7 @@ class Section:
         return "\n".join(md)
 
     def render_xml(
-        self, indent: int = 0, section_number: Optional[List[int]] = None
+        self, indent: int = 0, section_number: list[int] | None = None
     ) -> str:
         """
         Render this section and all its subsections as XML.
@@ -277,7 +277,7 @@ class PromptObjectModel:
     """
 
     @staticmethod
-    def from_json(json_data: Union[str, dict, list]) -> "PromptObjectModel":
+    def from_json(json_data: str | dict | list) -> "PromptObjectModel":
         """
         Create a PromptObjectModel instance from JSON data.
 
@@ -296,7 +296,7 @@ class PromptObjectModel:
         return PromptObjectModel._from_dict(data)
 
     @staticmethod
-    def from_yaml(yaml_data: Union[str, dict]) -> "PromptObjectModel":
+    def from_yaml(yaml_data: str | dict) -> "PromptObjectModel":
         """
         Create a PromptObjectModel instance from YAML data.
 
@@ -314,7 +314,7 @@ class PromptObjectModel:
         return PromptObjectModel._from_dict(data)
 
     @staticmethod
-    def _from_dict(data: Union[str, dict, list]) -> "PromptObjectModel":
+    def _from_dict(data: str | dict | list) -> "PromptObjectModel":
         """
         Internal method to create a PromptObjectModel from a dictionary.
         Used by both from_json and from_yaml.
@@ -387,16 +387,16 @@ class PromptObjectModel:
         return pom
 
     def __init__(self, debug: bool = False):
-        self.sections: List[Section] = []
+        self.sections: list[Section] = []
         self.debug = debug
 
     def add_section(
         self,
-        title: Optional[str] = None,
+        title: str | None = None,
         *,
         body: str = "",
-        bullets: Optional[Union[List[str], str]] = None,
-        numbered: Optional[bool] = None,
+        bullets: list[str] | str | None = None,
+        numbered: bool | None = None,
         numberedBullets: bool = False,
     ) -> Section:
         """
@@ -433,7 +433,7 @@ class PromptObjectModel:
         self.sections.append(section)
         return section
 
-    def find_section(self, title: str) -> Optional[Section]:
+    def find_section(self, title: str) -> Section | None:
         """
         Find a section by its title.
 
@@ -446,7 +446,7 @@ class PromptObjectModel:
             The Section object if found, None otherwise
         """
 
-        def recurse(sections: List[Section]) -> Optional[Section]:
+        def recurse(sections: list[Section]) -> Section | None:
             for section in sections:
                 if section.title == title:
                     return section
@@ -479,7 +479,7 @@ class PromptObjectModel:
             sort_keys=False,
         )
 
-    def to_dict(self) -> List[dict]:
+    def to_dict(self) -> list[dict]:
         """
         Convert the entire model to a list of dictionaries.
 
@@ -562,7 +562,7 @@ class PromptObjectModel:
         return "\n".join(xml)
 
     def add_pom_as_subsection(
-        self, target: Union[str, Section], pom_to_add: "PromptObjectModel"
+        self, target: str | Section, pom_to_add: "PromptObjectModel"
     ):
         """
         Add another PromptObjectModel as a subsection to a section with the given title or section object.

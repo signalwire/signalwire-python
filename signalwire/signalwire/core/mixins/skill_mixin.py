@@ -7,7 +7,7 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import TYPE_CHECKING, List, Dict, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports the mixins; the name resolves at type-check time but mypy flags the back-reference
@@ -22,7 +22,7 @@ class SkillMixin(_HostTyped):
     """
 
     def add_skill(
-        self, skill_name: str, params: Optional[Dict[str, Any]] = None
+        self, skill_name: str, params: dict[str, Any] | None = None
     ) -> "AgentBase":
         """
         Add a skill to this agent
@@ -60,7 +60,7 @@ class SkillMixin(_HostTyped):
         self.skill_manager.unload_skill(skill_name)
         return self
 
-    def list_skills(self) -> List[str]:
+    def list_skills(self) -> list[str]:
         """List currently loaded skills"""
         return self.skill_manager.list_loaded_skills()
 

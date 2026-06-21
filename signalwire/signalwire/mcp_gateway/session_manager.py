@@ -15,7 +15,7 @@ Handles timeouts, cleanup, and resource limits.
 
 import threading
 import logging
-from typing import Dict, Optional, Any, Union
+from typing import Any
 from datetime import datetime, timedelta
 from dataclasses import dataclass, field
 
@@ -31,8 +31,8 @@ class Session:
     process: Any  # MCPClient instance
     created_at: datetime = field(default_factory=datetime.now)
     last_accessed: datetime = field(default_factory=datetime.now)
-    timeout: Union[int, float] = 300  # seconds (wire-supplied; may be float)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    timeout: int | float = 300  # seconds (wire-supplied; may be float)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
     @property
     def is_expired(self) -> bool:
@@ -56,9 +56,9 @@ class Session:
 class SessionManager:
     """Manages MCP server sessions with automatic cleanup"""
 
-    def __init__(self, config: Dict[str, Any], max_total_sessions: int = 500):
+    def __init__(self, config: dict[str, Any], max_total_sessions: int = 500):
         self.config = config
-        self.sessions: Dict[str, Session] = {}
+        self.sessions: dict[str, Session] = {}
         self.lock = threading.RLock()
         self.cleanup_interval = config.get("session", {}).get("cleanup_interval", 60)
         self.max_sessions_per_service = config.get("session", {}).get(
@@ -83,8 +83,8 @@ class SessionManager:
         session_id: str,
         service_name: str,
         process: Any,
-        timeout: Optional[Union[int, float]] = None,
-        metadata: Optional[Dict[str, Any]] = None,
+        timeout: int | float | None = None,
+        metadata: dict[str, Any] | None = None,
     ) -> Session:
         """Create and register a new session"""
         with self.lock:
@@ -124,7 +124,7 @@ class SessionManager:
 
             return session
 
-    def get_session(self, session_id: str) -> Optional[Session]:
+    def get_session(self, session_id: str) -> Session | None:
         """Get an active session by ID"""
         with self.lock:
             session = self.sessions.get(session_id)
@@ -167,7 +167,7 @@ class SessionManager:
             logger.info(f"Closed session {session_id}")
             return True
 
-    def list_sessions(self) -> Dict[str, Dict[str, Any]]:
+    def list_sessions(self) -> dict[str, dict[str, Any]]:
         """List all active sessions with their info"""
         with self.lock:
             result = {}

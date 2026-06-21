@@ -12,7 +12,7 @@ Service discovery and loading functionality - new simplified approach
 
 import importlib.util
 from pathlib import Path
-from typing import List, Dict, Any, Optional, cast, TYPE_CHECKING
+from typing import Any, cast, TYPE_CHECKING
 import asyncio
 import io
 import contextlib
@@ -45,12 +45,12 @@ class ServiceCapture:
     """Captures SWMLService instances when they try to run/serve"""
 
     def __init__(self):
-        self.captured_services: List[SWMLService] = []
+        self.captured_services: list[SWMLService] = []
         self.original_methods = {}
 
     def capture(
         self, service_path: str, suppress_output: bool = False
-    ) -> List[SWMLService]:
+    ) -> list[SWMLService]:
         """
         Execute a service file and capture any services that try to run
 
@@ -156,9 +156,9 @@ class ServiceCapture:
 async def simulate_request_to_service(
     service: SWMLService,
     method: str = "POST",
-    body: Optional[dict] = None,
-    query_params: Optional[dict] = None,
-    headers: Optional[dict] = None,
+    body: dict | None = None,
+    query_params: dict | None = None,
+    headers: dict | None = None,
 ) -> dict:
     """
     Simulate a request to a SWMLService instance
@@ -204,11 +204,11 @@ async def simulate_request_to_service(
 
 def load_and_simulate_service(
     service_path: str,
-    route: Optional[str] = None,
+    route: str | None = None,
     method: str = "POST",
-    body: Optional[dict] = None,
-    query_params: Optional[dict] = None,
-    headers: Optional[dict] = None,
+    body: dict | None = None,
+    query_params: dict | None = None,
+    headers: dict | None = None,
     suppress_output: bool = False,
 ) -> dict:
     """
@@ -277,7 +277,7 @@ def load_and_simulate_service(
 # Backward compatibility
 def load_agent_from_file(
     agent_path: str,
-    agent_class_name: Optional[str] = None,
+    agent_class_name: str | None = None,
     suppress_output: bool = False,
 ) -> "AgentBase":
     """
@@ -308,7 +308,7 @@ def load_agent_from_file(
     return agents[0]
 
 
-def discover_agents_in_file(agent_path: str) -> List[Dict[str, Any]]:
+def discover_agents_in_file(agent_path: str) -> list[dict[str, Any]]:
     """
     Backward compatibility wrapper
     """

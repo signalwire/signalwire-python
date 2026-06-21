@@ -13,11 +13,11 @@ DataMap function execution and template expansion
 import re
 import json
 import requests
-from typing import Dict, Any
+from typing import Any
 from ..config import HTTP_REQUEST_TIMEOUT
 
 
-def simple_template_expand(template: str, data: Dict[str, Any]) -> str:
+def simple_template_expand(template: str, data: dict[str, Any]) -> str:
     """
     Simple template expansion for DataMap testing
     Supports both ${key} and %{key} syntax with nested object access and array indexing
@@ -120,7 +120,7 @@ def simple_template_expand(template: str, data: Dict[str, Any]) -> str:
 
 
 def execute_datamap_function(
-    datamap_config: Dict[str, Any], args: Dict[str, Any], verbose: bool = False
+    datamap_config: dict[str, Any], args: dict[str, Any], verbose: bool = False
 ) -> Any:
     """
     Execute a DataMap function following the actual DataMap processing pipeline:
@@ -151,7 +151,7 @@ def execute_datamap_function(
         print(f"Extracted data_map: {json.dumps(actual_datamap, indent=2)}")
 
     # Initialize context with function arguments
-    context: Dict[str, Any] = {"args": args}
+    context: dict[str, Any] = {"args": args}
     context.update(
         args
     )  # Also make args available at top level for backward compatibility

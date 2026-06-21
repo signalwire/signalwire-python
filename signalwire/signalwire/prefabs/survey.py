@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 SurveyAgent - Prefab agent for conducting automated surveys
 """
 
-from typing import List, Dict, Any, Optional
+from typing import Any
 import json
 
 from signalwire.core.agent_base import AgentBase
@@ -51,10 +51,10 @@ class SurveyAgent(AgentBase):
     def __init__(
         self,
         survey_name: str,
-        questions: List[Dict[str, Any]],
-        introduction: Optional[str] = None,
-        conclusion: Optional[str] = None,
-        brand_name: Optional[str] = None,
+        questions: list[dict[str, Any]],
+        introduction: str | None = None,
+        conclusion: str | None = None,
+        brand_name: str | None = None,
         max_retries: int = 2,
         name: str = "survey",
         route: str = "/survey",

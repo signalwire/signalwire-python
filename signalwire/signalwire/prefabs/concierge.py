@@ -9,7 +9,6 @@ See LICENSE file in the project root for full license information.
 ConciergeAgent - Prefab agent for providing virtual concierge services
 """
 
-from typing import List, Dict, Optional
 import json
 
 from signalwire.core.agent_base import AgentBase
@@ -41,11 +40,11 @@ class ConciergeAgent(AgentBase):
     def __init__(
         self,
         venue_name: str,
-        services: List[str],
-        amenities: Dict[str, Dict[str, str]],
-        hours_of_operation: Optional[Dict[str, str]] = None,
-        special_instructions: Optional[List[str]] = None,
-        welcome_message: Optional[str] = None,
+        services: list[str],
+        amenities: dict[str, dict[str, str]],
+        hours_of_operation: dict[str, str] | None = None,
+        special_instructions: list[str] | None = None,
+        welcome_message: str | None = None,
         name: str = "concierge",
         route: str = "/concierge",
         **kwargs,
@@ -77,7 +76,7 @@ class ConciergeAgent(AgentBase):
         # Set up the agent's configuration
         self._setup_concierge_agent(welcome_message)
 
-    def _setup_concierge_agent(self, welcome_message: Optional[str] = None):
+    def _setup_concierge_agent(self, welcome_message: str | None = None):
         """Configure the concierge agent with appropriate settings"""
         # Basic personality and instructions
         self.prompt_add_section(

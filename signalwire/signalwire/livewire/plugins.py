@@ -15,13 +15,13 @@ STT/TTS/LLM/VAD infrastructure -- these are no-ops that log once.
 
 import logging
 import threading
-from typing import Any, Dict
+from typing import Any
 
 _logger = logging.getLogger("LiveWire")
 
 # Reuse a simple once-tracker scoped to this module
 _lock = threading.Lock()
-_logged: Dict[str, bool] = {}
+_logged: dict[str, bool] = {}
 
 
 def _log_once(key: str, message: str):

@@ -11,7 +11,7 @@ import re
 import subprocess
 import fnmatch
 from pathlib import Path
-from typing import List, Dict, Any, Optional, ClassVar
+from typing import Any, ClassVar
 
 import yaml
 
@@ -55,8 +55,8 @@ class ClaudeSkillsSkill(SkillBase):
     SKILL_NAME = "claude_skills"
     SKILL_DESCRIPTION = "Load Claude SKILL.md files as agent tools"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES: ClassVar[List[str]] = ["yaml"]  # PyYAML - import name is 'yaml'
-    REQUIRED_ENV_VARS: ClassVar[List[str]] = []
+    REQUIRED_PACKAGES: ClassVar[list[str]] = ["yaml"]  # PyYAML - import name is 'yaml'
+    REQUIRED_ENV_VARS: ClassVar[list[str]] = []
     SUPPORTS_MULTIPLE_INSTANCES = True
 
     def setup(self) -> bool:
@@ -117,7 +117,7 @@ class ClaudeSkillsSkill(SkillBase):
         )
         return True
 
-    def _discover_skills(self) -> List[Dict[str, Any]]:
+    def _discover_skills(self) -> list[dict[str, Any]]:
         """
         Discover and parse all SKILL.md files in the skills directory.
 
@@ -179,7 +179,7 @@ class ClaudeSkillsSkill(SkillBase):
 
         return skills
 
-    def _discover_sections(self, skill_dir: Path) -> Dict[str, Path]:
+    def _discover_sections(self, skill_dir: Path) -> dict[str, Path]:
         """
         Find all .md files in skill directory (recursive), excluding SKILL.md.
 
@@ -218,7 +218,7 @@ class ClaudeSkillsSkill(SkillBase):
 
         return sections
 
-    def _discover_all_files(self, skill_dir: Path) -> Dict[str, List[str]]:
+    def _discover_all_files(self, skill_dir: Path) -> dict[str, list[str]]:
         """
         Discover non-.md files recursively, categorized by location.
 
@@ -226,7 +226,7 @@ class ClaudeSkillsSkill(SkillBase):
             Dictionary with keys 'scripts', 'assets', 'other' mapping to
             lists of relative file paths.
         """
-        files: Dict[str, List[str]] = {"scripts": [], "assets": [], "other": []}
+        files: dict[str, list[str]] = {"scripts": [], "assets": [], "other": []}
 
         for file_path in skill_dir.rglob("*"):
             if not file_path.is_file():
@@ -268,7 +268,7 @@ class ClaudeSkillsSkill(SkillBase):
         # Check includes
         return any(fnmatch.fnmatch(name, pattern) for pattern in self._include_patterns)
 
-    def _parse_skill_md(self, path: Path) -> Optional[Dict[str, Any]]:
+    def _parse_skill_md(self, path: Path) -> dict[str, Any] | None:
         """
         Parse a SKILL.md file with YAML frontmatter and markdown body.
 
@@ -334,7 +334,7 @@ class ClaudeSkillsSkill(SkillBase):
             "_frontmatter": frontmatter,
         }
 
-    def _warn_unsupported_fields(self, parsed: Dict[str, Any]) -> None:
+    def _warn_unsupported_fields(self, parsed: dict[str, Any]) -> None:
         """Log warnings for unsupported frontmatter fields that are set."""
         name = parsed.get("name", "unknown")
 
@@ -363,7 +363,7 @@ class ClaudeSkillsSkill(SkillBase):
                 f"claude_skills: skill '{name}' has compatibility: {parsed['compatibility']}"
             )
 
-    def _warn_shell_patterns(self, parsed: Dict[str, Any]) -> None:
+    def _warn_shell_patterns(self, parsed: dict[str, Any]) -> None:
         """Warn about shell injection patterns when allow_shell_injection is disabled."""
         name = parsed.get("name", "unknown")
         body = parsed.get("body", "")
@@ -376,7 +376,7 @@ class ClaudeSkillsSkill(SkillBase):
                 f"passed through as-is. Set allow_shell_injection=True to enable."
             )
 
-    def _apply_invocation_control(self, parsed: Dict[str, Any]) -> None:
+    def _apply_invocation_control(self, parsed: dict[str, Any]) -> None:
         """
         Set _skip_tool and _skip_prompt flags based on invocation control frontmatter.
 
@@ -465,7 +465,7 @@ class ClaudeSkillsSkill(SkillBase):
         return _SHELL_INJECTION_RE.sub(replace_command, content)
 
     def _substitute_variables(
-        self, content: str, skill_dir: Path, raw_data: Optional[Dict] = None
+        self, content: str, skill_dir: Path, raw_data: dict | None = None
     ) -> str:
         """
         Substitute variable placeholders in content.
@@ -629,7 +629,7 @@ class ClaudeSkillsSkill(SkillBase):
             section_info = f" with sections: {section_names}" if section_names else ""
             logger.debug(f"claude_skills: registered tool '{tool_name}'{section_info}")
 
-    def get_hints(self) -> List[str]:
+    def get_hints(self) -> list[str]:
         """Return speech recognition hints based on loaded skills."""
         hints = []
         for skill in self._skills:
@@ -638,7 +638,7 @@ class ClaudeSkillsSkill(SkillBase):
             hints.extend(name.replace("-", " ").replace("_", " ").split())
         return list(set(hints))  # Deduplicate
 
-    def _get_prompt_sections(self) -> List[Dict[str, Any]]:
+    def _get_prompt_sections(self) -> list[dict[str, Any]]:
         """
         Return prompt sections describing available Claude skills.
 
@@ -694,7 +694,7 @@ class ClaudeSkillsSkill(SkillBase):
         return f"{self.SKILL_NAME}_{hash(skills_path) % 10000}"
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """Get the parameter schema for the Claude skills loader."""
         schema = super().get_parameter_schema()
 

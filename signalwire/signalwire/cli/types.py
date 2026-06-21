@@ -10,7 +10,7 @@ See LICENSE file in the project root for full license information.
 Type definitions for the CLI tools
 """
 
-from typing import TypedDict, Dict, Any, Optional
+from typing import TypedDict, Any
 
 
 class CallData(TypedDict, total=False):
@@ -28,7 +28,7 @@ class CallData(TypedDict, total=False):
     from_: str
     to: str
     from_name: str
-    headers: Dict[str, str]
+    headers: dict[str, str]
     timeout: int
     tag: str
 
@@ -36,9 +36,9 @@ class CallData(TypedDict, total=False):
 class VarsData(TypedDict, total=False):
     """Variables data structure for SWML post_data"""
 
-    userVariables: Dict[str, Any]
+    userVariables: dict[str, Any]
     environment: str
-    call_data: Dict[str, Any]
+    call_data: dict[str, Any]
 
 
 class PostData(TypedDict, total=False):
@@ -47,23 +47,23 @@ class PostData(TypedDict, total=False):
     call_id: str
     call: CallData
     vars: VarsData
-    params: Dict[str, Any]
+    params: dict[str, Any]
     project_id: str
     space_id: str
-    meta_data: Dict[str, Any]
-    post_prompt_data: Dict[str, Any]
-    error: Optional[str]
-    protocol_error: Optional[bool]
-    parse_error: Optional[bool]
+    meta_data: dict[str, Any]
+    post_prompt_data: dict[str, Any]
+    error: str | None
+    protocol_error: bool | None
+    parse_error: bool | None
 
 
 class DataMapConfig(TypedDict, total=False):
     """DataMap function configuration"""
 
     function: str
-    data_map: Dict[str, Any]
+    data_map: dict[str, Any]
     description: str
-    parameters: Dict[str, Any]
+    parameters: dict[str, Any]
 
 
 class AgentInfo(TypedDict):
@@ -72,7 +72,7 @@ class AgentInfo(TypedDict):
     class_name: str
     file_path: str
     is_instance: bool
-    instance_name: Optional[str]
+    instance_name: str | None
 
 
 class FunctionInfo(TypedDict):
@@ -80,6 +80,6 @@ class FunctionInfo(TypedDict):
 
     name: str
     description: str
-    parameters: Dict[str, Any]
+    parameters: dict[str, Any]
     type: str  # 'local', 'external', 'datamap'
-    webhook_url: Optional[str]
+    webhook_url: str | None

@@ -11,7 +11,7 @@ import argparse
 import sys
 from pathlib import Path
 from datetime import datetime
-from typing import List, cast
+from typing import cast
 from urllib.parse import urlparse, urlunparse
 
 from signalwire.search.models import MODEL_ALIASES, DEFAULT_MODEL, resolve_model_alias
@@ -866,9 +866,7 @@ def search_command():
                         print("  help           - Show this help")
                         print("  exit/quit/q    - Exit shell")
                         print(
-                            "  count=N        - Set result count (current: {})".format(
-                                args.count
-                            )
+                            f"  count=N        - Set result count (current: {args.count})"
                         )
                         print(
                             "  tags=tag1,tag2 - Set tag filter (current: {})".format(
@@ -927,7 +925,7 @@ def search_command():
                     # Perform search
                     results = engine.search(
                         query_vector=cast(
-                            List[float], enhanced.get("vector")
+                            list[float], enhanced.get("vector")
                         ),  # vector is None for keyword-only search; search() tolerates it at runtime
                         enhanced_text=enhanced.get("enhanced_text", query),
                         count=args.count,
@@ -1012,7 +1010,7 @@ def search_command():
         # Perform search
         results = engine.search(
             query_vector=cast(
-                List[float], enhanced.get("vector")
+                list[float], enhanced.get("vector")
             ),  # vector is None for keyword-only search; search() tolerates it at runtime
             enhanced_text=enhanced.get("enhanced_text", args.query),
             count=args.count,

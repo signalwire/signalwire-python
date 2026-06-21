@@ -15,7 +15,7 @@ Uses jsonschema-rs for full JSON Schema validation with type checking.
 import os
 import json
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Tuple
+from typing import Any
 
 import jsonschema_rs
 
@@ -25,7 +25,7 @@ from signalwire.core.logging_config import get_logger
 class SchemaValidationError(Exception):
     """Raised when SWML schema validation fails."""
 
-    def __init__(self, verb_name: str, errors: List[str]):
+    def __init__(self, verb_name: str, errors: list[str]):
         self.verb_name = verb_name
         self.errors = errors
         message = f"Schema validation failed for '{verb_name}': {'; '.join(errors)}"
@@ -41,9 +41,7 @@ class SchemaUtils:
     Utility class for loading and working with SWML schemas
     """
 
-    def __init__(
-        self, schema_path: Optional[str] = None, schema_validation: bool = True
-    ):
+    def __init__(self, schema_path: str | None = None, schema_validation: bool = True):
         """
         Initialize the schema utilities.
 
@@ -80,7 +78,7 @@ class SchemaUtils:
             self.log.debug("first_verbs_extracted", verbs=list(self.verbs.keys())[:5])
 
         # Initialize full schema validator if validation is enabled
-        self._full_validator: Optional["jsonschema_rs.Draft202012Validator"] = None
+        self._full_validator: jsonschema_rs.Draft202012Validator | None = None
         if self._validation_enabled and self.schema:
             self._init_full_validator()
         elif not self._validation_enabled:
@@ -100,7 +98,7 @@ class SchemaUtils:
         """Check if full JSON Schema validation is available."""
         return self._full_validator is not None
 
-    def _get_default_schema_path(self) -> Optional[str]:
+    def _get_default_schema_path(self) -> str | None:
         """
         Get the default path to the schema file using the same robust logic as SWMLService
 
@@ -175,7 +173,7 @@ class SchemaUtils:
         self.log.warning("schema_not_found_in_any_location")
         return None
 
-    def load_schema(self) -> Dict[str, Any]:
+    def load_schema(self) -> dict[str, Any]:
         """
         Load the JSON schema from the specified path
 
@@ -215,7 +213,7 @@ class SchemaUtils:
             self.log.error("schema_loading_error", error=str(e), path=self.schema_path)
             return {}
 
-    def _extract_verb_definitions(self) -> Dict[str, Dict[str, Any]]:
+    def _extract_verb_definitions(self) -> dict[str, dict[str, Any]]:
         """
         Extract verb definitions from the schema
 
@@ -265,7 +263,7 @@ class SchemaUtils:
 
         return verbs
 
-    def get_verb_properties(self, verb_name: str) -> Dict[str, Any]:
+    def get_verb_properties(self, verb_name: str) -> dict[str, Any]:
         """
         Get the properties for a specific verb
 
@@ -281,7 +279,7 @@ class SchemaUtils:
                 return verb_def["properties"][verb_name]
         return {}
 
-    def get_verb_required_properties(self, verb_name: str) -> List[str]:
+    def get_verb_required_properties(self, verb_name: str) -> list[str]:
         """
         Get the required properties for a specific verb
 
@@ -299,8 +297,8 @@ class SchemaUtils:
         return []
 
     def validate_verb(
-        self, verb_name: str, verb_config: Dict[str, Any]
-    ) -> Tuple[bool, List[str]]:
+        self, verb_name: str, verb_config: dict[str, Any]
+    ) -> tuple[bool, list[str]]:
         """
         Validate a verb configuration against the schema.
 
@@ -334,8 +332,8 @@ class SchemaUtils:
         return self._validate_verb_lightweight(verb_name, verb_config)
 
     def _validate_verb_full(
-        self, verb_name: str, verb_config: Dict[str, Any]
-    ) -> Tuple[bool, List[str]]:
+        self, verb_name: str, verb_config: dict[str, Any]
+    ) -> tuple[bool, list[str]]:
         """
         Perform full JSON Schema validation using jsonschema-rs.
 
@@ -375,8 +373,8 @@ class SchemaUtils:
             return False, [f"Schema validation error for '{verb_name}': {error_msg}"]
 
     def _validate_verb_lightweight(
-        self, verb_name: str, verb_config: Dict[str, Any]
-    ) -> Tuple[bool, List[str]]:
+        self, verb_name: str, verb_config: dict[str, Any]
+    ) -> tuple[bool, list[str]]:
         """
         Perform lightweight validation (verb existence + required fields only).
 
@@ -403,7 +401,7 @@ class SchemaUtils:
 
         return len(errors) == 0, errors
 
-    def validate_document(self, document: Dict[str, Any]) -> Tuple[bool, List[str]]:
+    def validate_document(self, document: dict[str, Any]) -> tuple[bool, list[str]]:
         """
         Validate a complete SWML document against the schema.
 
@@ -425,7 +423,7 @@ class SchemaUtils:
                 error_msg = error_msg[:500] + "..."
             return False, [f"Document validation error: {error_msg}"]
 
-    def get_all_verb_names(self) -> List[str]:
+    def get_all_verb_names(self) -> list[str]:
         """
         Get all verb names defined in the schema
 
@@ -434,7 +432,7 @@ class SchemaUtils:
         """
         return list(self.verbs.keys())
 
-    def get_verb_parameters(self, verb_name: str) -> Dict[str, Any]:
+    def get_verb_parameters(self, verb_name: str) -> dict[str, Any]:
         """
         Get the parameter definitions for a specific verb
 
@@ -538,7 +536,7 @@ class SchemaUtils:
 
         return "\n".join(body)
 
-    def _get_type_annotation(self, param_def: Dict[str, Any]) -> str:
+    def _get_type_annotation(self, param_def: dict[str, Any]) -> str:
         """
         Get the Python type annotation for a parameter
 

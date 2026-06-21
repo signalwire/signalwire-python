@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import uuid
-from typing import Any, Callable, Coroutine, Optional, TypeVar, TYPE_CHECKING
+from typing import Any, TypeVar, TYPE_CHECKING
+from collections.abc import Callable, Coroutine
 
 from signalwire.core.logging_config import get_logger
 
@@ -42,10 +43,10 @@ logger = get_logger("relay_call")
 # returned by a user callback could be garbage-collected mid-flight. These
 # callbacks run on short-lived Action/Call instances, so the set is module-
 # level (outliving any single instance); tasks are discarded on completion.
-_bg_tasks: set["asyncio.Task[Any]"] = set()
+_bg_tasks: set[asyncio.Task[Any]] = set()
 
 
-def _spawn_bg(coro: "Coroutine[Any, Any, Any]") -> None:
+def _spawn_bg(coro: Coroutine[Any, Any, Any]) -> None:
     """Schedule a fire-and-forget coroutine while holding a strong reference."""
     task = asyncio.ensure_future(coro)
     _bg_tasks.add(task)
@@ -73,7 +74,7 @@ class Action:
 
     def __init__(
         self,
-        call: "Call",
+        call: Call,
         control_id: str,
         terminal_event: str,
         terminal_states: tuple[str, ...],
@@ -85,9 +86,9 @@ class Action:
         self._done: asyncio.Future[RelayEvent] = (
             asyncio.get_running_loop().create_future()
         )
-        self.result: Optional[RelayEvent] = None
+        self.result: RelayEvent | None = None
         self.completed = False
-        self._on_completed: Optional[Callable[[RelayEvent], Any]] = None
+        self._on_completed: Callable[[RelayEvent], Any] | None = None
 
     def _check_event(self, event: RelayEvent) -> None:
         """Called by Call when an event matches our control_id."""
@@ -110,7 +111,7 @@ class Action:
                     f"Error in on_completed callback for {self.control_id}"
                 )
 
-    async def wait(self, timeout: Optional[float] = None) -> RelayEvent:
+    async def wait(self, timeout: float | None = None) -> RelayEvent:
         """Wait for the action to complete. Returns the terminal event."""
         if timeout is not None:
             return await asyncio.wait_for(self._done, timeout=timeout)
@@ -124,7 +125,7 @@ class Action:
 class PlayAction(Action):
     """Handle for an active play operation."""
 
-    def __init__(self, call: "Call", control_id: str):
+    def __init__(self, call: Call, control_id: str):
         super().__init__(
             call, control_id, EVENT_CALL_PLAY, (PLAY_STATE_FINISHED, PLAY_STATE_ERROR)
         )
@@ -151,7 +152,7 @@ class PlayAction(Action):
 class RecordAction(Action):
     """Handle for an active record operation."""
 
-    def __init__(self, call: "Call", control_id: str):
+    def __init__(self, call: Call, control_id: str):
         super().__init__(
             call,
             control_id,
@@ -162,7 +163,7 @@ class RecordAction(Action):
     async def stop(self) -> dict:
         return await self.call._execute("record.stop", {"control_id": self.control_id})
 
-    async def pause(self, behavior: Optional[str] = None) -> dict:
+    async def pause(self, behavior: str | None = None) -> dict:
         params: dict[str, Any] = {"control_id": self.control_id}
         if behavior:
             params["behavior"] = behavior
@@ -177,7 +178,7 @@ class RecordAction(Action):
 class DetectAction(Action):
     """Handle for an active detect operation."""
 
-    def __init__(self, call: "Call", control_id: str):
+    def __init__(self, call: Call, control_id: str):
         super().__init__(call, control_id, EVENT_CALL_DETECT, ("finished", "error"))
 
     def _check_event(self, event: RelayEvent) -> None:
@@ -195,7 +196,7 @@ class DetectAction(Action):
 class CollectAction(Action):
     """Handle for play_and_collect or standalone collect."""
 
-    def __init__(self, call: "Call", control_id: str):
+    def __init__(self, call: Call, control_id: str):
         super().__init__(
             call,
             control_id,
@@ -238,7 +239,7 @@ class CollectAction(Action):
 class StandaloneCollectAction(Action):
     """Handle for standalone calling.collect (without play)."""
 
-    def __init__(self, call: "Call", control_id: str):
+    def __init__(self, call: Call, control_id: str):
         super().__init__(
             call,
             control_id,
@@ -267,7 +268,7 @@ class StandaloneCollectAction(Action):
 class FaxAction(Action):
     """Handle for an active send_fax or receive_fax operation."""
 
-    def __init__(self, call: "Call", control_id: str, method_prefix: str):
+    def __init__(self, call: Call, control_id: str, method_prefix: str):
         super().__init__(call, control_id, EVENT_CALL_FAX, ("finished", "error"))
         self._method_prefix = method_prefix
 
@@ -280,7 +281,7 @@ class FaxAction(Action):
 class TapAction(Action):
     """Handle for an active tap operation."""
 
-    def __init__(self, call: "Call", control_id: str):
+    def __init__(self, call: Call, control_id: str):
         super().__init__(call, control_id, EVENT_CALL_TAP, ("finished",))
 
     async def stop(self) -> dict:
@@ -290,7 +291,7 @@ class TapAction(Action):
 class StreamAction(Action):
     """Handle for an active stream operation."""
 
-    def __init__(self, call: "Call", control_id: str):
+    def __init__(self, call: Call, control_id: str):
         super().__init__(call, control_id, EVENT_CALL_STREAM, ("finished",))
 
     async def stop(self) -> dict:
@@ -300,7 +301,7 @@ class StreamAction(Action):
 class PayAction(Action):
     """Handle for an active pay operation."""
 
-    def __init__(self, call: "Call", control_id: str):
+    def __init__(self, call: Call, control_id: str):
         super().__init__(call, control_id, EVENT_CALL_PAY, ("finished", "error"))
 
     async def stop(self) -> dict:
@@ -310,7 +311,7 @@ class PayAction(Action):
 class TranscribeAction(Action):
     """Handle for an active transcribe operation."""
 
-    def __init__(self, call: "Call", control_id: str):
+    def __init__(self, call: Call, control_id: str):
         super().__init__(call, control_id, EVENT_CALL_TRANSCRIBE, ("finished",))
 
     async def stop(self) -> dict:
@@ -322,7 +323,7 @@ class TranscribeAction(Action):
 class AIAction(Action):
     """Handle for an active AI agent session."""
 
-    def __init__(self, call: "Call", control_id: str):
+    def __init__(self, call: Call, control_id: str):
         # AI sessions don't have a standard event type with state field —
         # they end when the call ends or when stopped. We treat "finished"
         # and "error" as terminal states from calling.call.ai events if any.
@@ -346,7 +347,7 @@ class Call:
 
     def __init__(
         self,
-        client: "RelayClient",
+        client: RelayClient,
         call_id: str,
         node_id: str,
         project_id: str,
@@ -354,7 +355,7 @@ class Call:
         *,
         tag: str = "",
         direction: str = "",
-        device: Optional[dict[str, Any]] = None,
+        device: dict[str, Any] | None = None,
         state: str = "",
         segment_id: str = "",
     ):
@@ -383,7 +384,7 @@ class Call:
     # ------------------------------------------------------------------
 
     async def _execute(
-        self, method: str, extra_params: Optional[dict[str, Any]] = None
+        self, method: str, extra_params: dict[str, Any] | None = None
     ) -> dict:
         """Send a ``calling.<method>`` JSON-RPC request for this call.
 
@@ -453,8 +454,8 @@ class Call:
     async def wait_for(
         self,
         event_type: str,
-        predicate: Optional[Callable[[RelayEvent], bool]] = None,
-        timeout: Optional[float] = None,
+        predicate: Callable[[RelayEvent], bool] | None = None,
+        timeout: float | None = None,
     ) -> RelayEvent:
         """Wait for a specific event, optionally filtered by predicate."""
         future: asyncio.Future[RelayEvent] = asyncio.get_running_loop().create_future()
@@ -476,7 +477,7 @@ class Call:
                 with contextlib.suppress(ValueError):
                     self._listeners[event_type].remove(_handler)
 
-    async def wait_for_ended(self, timeout: Optional[float] = None) -> RelayEvent:
+    async def wait_for_ended(self, timeout: float | None = None) -> RelayEvent:
         """Wait for the call to reach the ended state."""
         if timeout is not None:
             return await asyncio.wait_for(self._ended, timeout=timeout)
@@ -491,7 +492,7 @@ class Call:
         action: _ActionT,
         method: str,
         params: dict[str, Any],
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
     ) -> _ActionT:
         """Register an action, execute the RPC, and clean up on failure.
 
@@ -555,11 +556,11 @@ class Call:
         self,
         media: list[dict[str, Any]],
         *,
-        volume: Optional[float] = None,
-        direction: Optional[str] = None,
-        loop: Optional[int] = None,
-        control_id: Optional[str] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        volume: float | None = None,
+        direction: str | None = None,
+        loop: int | None = None,
+        control_id: str | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
         **kwargs: Any,
     ) -> PlayAction:
         """Play audio content. Returns a PlayAction for stop/pause/resume/wait."""
@@ -581,11 +582,11 @@ class Call:
         self,
         text: str,
         *,
-        language: Optional[str] = None,
-        gender: Optional[str] = None,
-        voice: Optional[str] = None,
-        volume: Optional[float] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        language: str | None = None,
+        gender: str | None = None,
+        voice: str | None = None,
+        volume: float | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
     ) -> PlayAction:
         """Play text-to-speech. Typed convenience over :meth:`play`.
 
@@ -607,8 +608,8 @@ class Call:
         self,
         url: str,
         *,
-        volume: Optional[float] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        volume: float | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
     ) -> PlayAction:
         """Play an audio file from a URL. Typed convenience over :meth:`play`."""
         return await self.play(
@@ -621,7 +622,7 @@ class Call:
         self,
         duration: float,
         *,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
     ) -> PlayAction:
         """Play silence for ``duration`` seconds. Typed convenience over :meth:`play`."""
         return await self.play(
@@ -633,9 +634,9 @@ class Call:
         self,
         name: str,
         *,
-        duration: Optional[float] = None,
-        volume: Optional[float] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        duration: float | None = None,
+        volume: float | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
     ) -> PlayAction:
         """Play a named ringtone by country code. Typed convenience over :meth:`play`."""
         rt: dict[str, Any] = {"name": name}
@@ -654,9 +655,9 @@ class Call:
     async def detect_digit(
         self,
         *,
-        digits: Optional[str] = None,
-        timeout: Optional[float] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        digits: str | None = None,
+        timeout: float | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
     ) -> DetectAction:
         """Detect DTMF digits. Typed convenience over :meth:`detect`."""
         params: dict[str, Any] = {}
@@ -671,14 +672,14 @@ class Call:
     async def detect_answering_machine(
         self,
         *,
-        initial_timeout: Optional[float] = None,
-        end_silence_timeout: Optional[float] = None,
-        machine_voice_threshold: Optional[float] = None,
-        machine_words_threshold: Optional[int] = None,
-        detect_interruptions: Optional[bool] = None,
-        detect_message_end: Optional[bool] = None,
-        timeout: Optional[float] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        initial_timeout: float | None = None,
+        end_silence_timeout: float | None = None,
+        machine_voice_threshold: float | None = None,
+        machine_words_threshold: int | None = None,
+        detect_interruptions: bool | None = None,
+        detect_message_end: bool | None = None,
+        timeout: float | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
     ) -> DetectAction:
         """Detect human vs answering machine (AMD). Typed convenience over :meth:`detect`."""
         params: dict[str, Any] = {
@@ -702,9 +703,9 @@ class Call:
     async def detect_fax(
         self,
         *,
-        tone: Optional[str] = None,
-        timeout: Optional[float] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        tone: str | None = None,
+        timeout: float | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
     ) -> DetectAction:
         """Detect a fax tone (CED/CNG). Typed convenience over :meth:`detect`."""
         params: dict[str, Any] = {}
@@ -725,11 +726,11 @@ class Call:
         text: str,
         collect: dict[str, Any],
         *,
-        language: Optional[str] = None,
-        gender: Optional[str] = None,
-        voice: Optional[str] = None,
-        volume: Optional[float] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        language: str | None = None,
+        gender: str | None = None,
+        voice: str | None = None,
+        volume: float | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
     ) -> CollectAction:
         """Play TTS then collect input. Typed media over :meth:`play_and_collect`."""
         tts: dict[str, Any] = {"text": text}
@@ -751,8 +752,8 @@ class Call:
         url: str,
         collect: dict[str, Any],
         *,
-        volume: Optional[float] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        volume: float | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
     ) -> CollectAction:
         """Play an audio file then collect input. Typed media over :meth:`play_and_collect`."""
         return await self.play_and_collect(
@@ -766,9 +767,7 @@ class Call:
     # State-wait convenience (typed waits over wait_for())
     # ------------------------------------------------------------------
 
-    async def _wait_for_state(
-        self, target: str, timeout: Optional[float]
-    ) -> RelayEvent:
+    async def _wait_for_state(self, target: str, timeout: float | None) -> RelayEvent:
         order = (
             CALL_STATE_CREATED,
             CALL_STATE_RINGING,
@@ -791,15 +790,15 @@ class Call:
             timeout=timeout,
         )
 
-    async def wait_for_answered(self, timeout: Optional[float] = None) -> RelayEvent:
+    async def wait_for_answered(self, timeout: float | None = None) -> RelayEvent:
         """Wait until the call is answered (immediate if already answered or past it)."""
         return await self._wait_for_state(CALL_STATE_ANSWERED, timeout)
 
-    async def wait_for_ringing(self, timeout: Optional[float] = None) -> RelayEvent:
+    async def wait_for_ringing(self, timeout: float | None = None) -> RelayEvent:
         """Wait until the call is ringing (immediate if already ringing or past it)."""
         return await self._wait_for_state(CALL_STATE_RINGING, timeout)
 
-    async def wait_for_ending(self, timeout: Optional[float] = None) -> RelayEvent:
+    async def wait_for_ending(self, timeout: float | None = None) -> RelayEvent:
         """Wait until the call is ending (immediate if already ending or past it)."""
         return await self._wait_for_state(CALL_STATE_ENDING, timeout)
 
@@ -809,10 +808,10 @@ class Call:
 
     async def record(
         self,
-        audio: Optional[dict[str, Any]] = None,
+        audio: dict[str, Any] | None = None,
         *,
-        control_id: Optional[str] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        control_id: str | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
         **kwargs: Any,
     ) -> RecordAction:
         """Record audio from the call. Returns a RecordAction."""
@@ -834,9 +833,9 @@ class Call:
         media: list[dict[str, Any]],
         collect: dict[str, Any],
         *,
-        volume: Optional[float] = None,
-        control_id: Optional[str] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        volume: float | None = None,
+        control_id: str | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
         **kwargs: Any,
     ) -> CollectAction:
         """Play audio and collect digit/speech input."""
@@ -857,15 +856,15 @@ class Call:
     async def collect(
         self,
         *,
-        digits: Optional[dict[str, Any]] = None,
-        speech: Optional[dict[str, Any]] = None,
-        initial_timeout: Optional[float] = None,
-        partial_results: Optional[bool] = None,
-        continuous: Optional[bool] = None,
-        send_start_of_input: Optional[bool] = None,
-        start_input_timers: Optional[bool] = None,
-        control_id: Optional[str] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        digits: dict[str, Any] | None = None,
+        speech: dict[str, Any] | None = None,
+        initial_timeout: float | None = None,
+        partial_results: bool | None = None,
+        continuous: bool | None = None,
+        send_start_of_input: bool | None = None,
+        start_input_timers: bool | None = None,
+        control_id: str | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
         **kwargs: Any,
     ) -> StandaloneCollectAction:
         """Collect digit/speech input without playing media."""
@@ -899,11 +898,11 @@ class Call:
         self,
         devices: list[list[dict[str, Any]]],
         *,
-        ringback: Optional[list[dict[str, Any]]] = None,
-        tag: Optional[str] = None,
-        max_duration: Optional[int] = None,
-        max_price_per_minute: Optional[float] = None,
-        status_url: Optional[str] = None,
+        ringback: list[dict[str, Any]] | None = None,
+        tag: str | None = None,
+        max_duration: int | None = None,
+        max_price_per_minute: float | None = None,
+        status_url: str | None = None,
         **kwargs: Any,
     ) -> dict:
         """Bridge the call to one or more destinations."""
@@ -933,7 +932,7 @@ class Call:
         self,
         digits: str,
         *,
-        control_id: Optional[str] = None,
+        control_id: str | None = None,
     ) -> dict:
         """Send DTMF digits on the call."""
         cid = control_id or str(uuid.uuid4())
@@ -953,9 +952,9 @@ class Call:
         self,
         detect: dict[str, Any],
         *,
-        timeout: Optional[float] = None,
-        control_id: Optional[str] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        timeout: float | None = None,
+        control_id: str | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
         **kwargs: Any,
     ) -> DetectAction:
         """Start audio detection (machine, fax, digit). Returns a DetectAction."""
@@ -977,7 +976,7 @@ class Call:
         self,
         device: dict[str, Any],
         *,
-        status_url: Optional[str] = None,
+        status_url: str | None = None,
         **kwargs: Any,
     ) -> dict:
         """Transfer a SIP call to an external SIP endpoint via REFER."""
@@ -995,25 +994,25 @@ class Call:
         self,
         payment_connector_url: str,
         *,
-        control_id: Optional[str] = None,
-        input_method: Optional[str] = None,
-        status_url: Optional[str] = None,
-        payment_method: Optional[str] = None,
-        timeout: Optional[str] = None,
-        max_attempts: Optional[str] = None,
-        security_code: Optional[str] = None,
-        postal_code: Optional[str] = None,
-        min_postal_code_length: Optional[str] = None,
-        token_type: Optional[str] = None,
-        charge_amount: Optional[str] = None,
-        currency: Optional[str] = None,
-        language: Optional[str] = None,
-        voice: Optional[str] = None,
-        description: Optional[str] = None,
-        valid_card_types: Optional[str] = None,
-        parameters: Optional[list[dict[str, Any]]] = None,
-        prompts: Optional[list[dict[str, Any]]] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        control_id: str | None = None,
+        input_method: str | None = None,
+        status_url: str | None = None,
+        payment_method: str | None = None,
+        timeout: str | None = None,
+        max_attempts: str | None = None,
+        security_code: str | None = None,
+        postal_code: str | None = None,
+        min_postal_code_length: str | None = None,
+        token_type: str | None = None,
+        charge_amount: str | None = None,
+        currency: str | None = None,
+        language: str | None = None,
+        voice: str | None = None,
+        description: str | None = None,
+        valid_card_types: str | None = None,
+        parameters: list[dict[str, Any]] | None = None,
+        prompts: list[dict[str, Any]] | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
         **kwargs: Any,
     ) -> PayAction:
         """Start a payment collection. Returns a PayAction."""
@@ -1070,10 +1069,10 @@ class Call:
         self,
         document: str,
         *,
-        identity: Optional[str] = None,
-        header_info: Optional[str] = None,
-        control_id: Optional[str] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        identity: str | None = None,
+        header_info: str | None = None,
+        control_id: str | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
         **kwargs: Any,
     ) -> FaxAction:
         """Send a fax document. Returns a FaxAction."""
@@ -1092,8 +1091,8 @@ class Call:
     async def receive_fax(
         self,
         *,
-        control_id: Optional[str] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        control_id: str | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
         **kwargs: Any,
     ) -> FaxAction:
         """Receive a fax. Returns a FaxAction."""
@@ -1114,8 +1113,8 @@ class Call:
         tap: dict[str, Any],
         device: dict[str, Any],
         *,
-        control_id: Optional[str] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        control_id: str | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
         **kwargs: Any,
     ) -> TapAction:
         """Intercept call media and stream it. Returns a TapAction."""
@@ -1139,15 +1138,15 @@ class Call:
         self,
         url: str,
         *,
-        name: Optional[str] = None,
-        codec: Optional[str] = None,
-        track: Optional[str] = None,
-        status_url: Optional[str] = None,
-        status_url_method: Optional[str] = None,
-        authorization_bearer_token: Optional[str] = None,
-        custom_parameters: Optional[dict[str, Any]] = None,
-        control_id: Optional[str] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        name: str | None = None,
+        codec: str | None = None,
+        track: str | None = None,
+        status_url: str | None = None,
+        status_url_method: str | None = None,
+        authorization_bearer_token: str | None = None,
+        custom_parameters: dict[str, Any] | None = None,
+        control_id: str | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
         **kwargs: Any,
     ) -> StreamAction:
         """Start streaming call audio to a WebSocket endpoint. Returns a StreamAction."""
@@ -1195,25 +1194,25 @@ class Call:
         self,
         name: str,
         *,
-        muted: Optional[bool] = None,
-        beep: Optional[str] = None,
-        start_on_enter: Optional[bool] = None,
-        end_on_exit: Optional[bool] = None,
-        wait_url: Optional[str] = None,
-        max_participants: Optional[int] = None,
-        record: Optional[str] = None,
-        region: Optional[str] = None,
-        trim: Optional[str] = None,
-        coach: Optional[str] = None,
-        status_callback: Optional[str] = None,
-        status_callback_event: Optional[str] = None,
-        status_callback_event_type: Optional[str] = None,
-        status_callback_method: Optional[str] = None,
-        recording_status_callback: Optional[str] = None,
-        recording_status_callback_event: Optional[str] = None,
-        recording_status_callback_event_type: Optional[str] = None,
-        recording_status_callback_method: Optional[str] = None,
-        stream_obj: Optional[dict[str, Any]] = None,
+        muted: bool | None = None,
+        beep: str | None = None,
+        start_on_enter: bool | None = None,
+        end_on_exit: bool | None = None,
+        wait_url: str | None = None,
+        max_participants: int | None = None,
+        record: str | None = None,
+        region: str | None = None,
+        trim: str | None = None,
+        coach: str | None = None,
+        status_callback: str | None = None,
+        status_callback_event: str | None = None,
+        status_callback_event_type: str | None = None,
+        status_callback_method: str | None = None,
+        recording_status_callback: str | None = None,
+        recording_status_callback_event: str | None = None,
+        recording_status_callback_event_type: str | None = None,
+        recording_status_callback_method: str | None = None,
+        stream_obj: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> dict:
         """Join an ad-hoc audio conference."""
@@ -1300,9 +1299,9 @@ class Call:
     async def transcribe(
         self,
         *,
-        control_id: Optional[str] = None,
-        status_url: Optional[str] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        control_id: str | None = None,
+        status_url: str | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
         **kwargs: Any,
     ) -> TranscribeAction:
         """Start transcribing the call. Returns a TranscribeAction."""
@@ -1323,8 +1322,8 @@ class Call:
     async def echo(
         self,
         *,
-        timeout: Optional[float] = None,
-        status_url: Optional[str] = None,
+        timeout: float | None = None,
+        status_url: str | None = None,
         **kwargs: Any,
     ) -> dict:
         """Echo audio back to the caller (useful for testing)."""
@@ -1345,9 +1344,9 @@ class Call:
         digits: str,
         bind_method: str,
         *,
-        bind_params: Optional[dict[str, Any]] = None,
-        realm: Optional[str] = None,
-        max_triggers: Optional[int] = None,
+        bind_params: dict[str, Any] | None = None,
+        realm: str | None = None,
+        max_triggers: int | None = None,
         **kwargs: Any,
     ) -> dict:
         """Bind a DTMF digit sequence to trigger a RELAY method."""
@@ -1367,7 +1366,7 @@ class Call:
     async def clear_digit_bindings(
         self,
         *,
-        realm: Optional[str] = None,
+        realm: str | None = None,
         **kwargs: Any,
     ) -> dict:
         """Clear all digit bindings, optionally filtered by realm."""
@@ -1395,7 +1394,7 @@ class Call:
         self,
         action: dict[str, Any],
         *,
-        status_url: Optional[str] = None,
+        status_url: str | None = None,
         **kwargs: Any,
     ) -> dict:
         """Start or stop live translation on the call."""
@@ -1413,7 +1412,7 @@ class Call:
         self,
         name: str,
         *,
-        status_url: Optional[str] = None,
+        status_url: str | None = None,
         **kwargs: Any,
     ) -> dict:
         """Join a video/audio room."""
@@ -1434,20 +1433,20 @@ class Call:
     async def ai(
         self,
         *,
-        control_id: Optional[str] = None,
-        agent: Optional[str] = None,
-        prompt: Optional[dict[str, Any]] = None,
-        post_prompt: Optional[dict[str, Any]] = None,
-        post_prompt_url: Optional[str] = None,
-        post_prompt_auth_user: Optional[str] = None,
-        post_prompt_auth_password: Optional[str] = None,
-        global_data: Optional[dict[str, Any]] = None,
-        pronounce: Optional[list[dict[str, Any]]] = None,
-        hints: Optional[list[str]] = None,
-        languages: Optional[list[dict[str, Any]]] = None,
-        SWAIG: Optional[dict[str, Any]] = None,
-        ai_params: Optional[dict[str, Any]] = None,
-        on_completed: Optional[Callable[[RelayEvent], Any]] = None,
+        control_id: str | None = None,
+        agent: str | None = None,
+        prompt: dict[str, Any] | None = None,
+        post_prompt: dict[str, Any] | None = None,
+        post_prompt_url: str | None = None,
+        post_prompt_auth_user: str | None = None,
+        post_prompt_auth_password: str | None = None,
+        global_data: dict[str, Any] | None = None,
+        pronounce: list[dict[str, Any]] | None = None,
+        hints: list[str] | None = None,
+        languages: list[dict[str, Any]] | None = None,
+        SWAIG: dict[str, Any] | None = None,
+        ai_params: dict[str, Any] | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
         **kwargs: Any,
     ) -> AIAction:
         """Start an AI agent session on the call. Returns an AIAction."""
@@ -1484,12 +1483,12 @@ class Call:
     async def amazon_bedrock(
         self,
         *,
-        prompt: Optional[Any] = None,
-        SWAIG: Optional[dict[str, Any]] = None,
-        ai_params: Optional[dict[str, Any]] = None,
-        global_data: Optional[dict[str, Any]] = None,
-        post_prompt: Optional[dict[str, Any]] = None,
-        post_prompt_url: Optional[str] = None,
+        prompt: Any | None = None,
+        SWAIG: dict[str, Any] | None = None,
+        ai_params: dict[str, Any] | None = None,
+        global_data: dict[str, Any] | None = None,
+        post_prompt: dict[str, Any] | None = None,
+        post_prompt_url: str | None = None,
         **kwargs: Any,
     ) -> dict:
         """Connect to an Amazon Bedrock AI agent."""
@@ -1512,10 +1511,10 @@ class Call:
     async def ai_message(
         self,
         *,
-        message_text: Optional[str] = None,
-        role: Optional[str] = None,
-        reset: Optional[dict[str, Any]] = None,
-        global_data: Optional[dict[str, Any]] = None,
+        message_text: str | None = None,
+        role: str | None = None,
+        reset: dict[str, Any] | None = None,
+        global_data: dict[str, Any] | None = None,
         **kwargs: Any,
     ) -> dict:
         """Send a message to an active AI agent session."""
@@ -1534,8 +1533,8 @@ class Call:
     async def ai_hold(
         self,
         *,
-        timeout: Optional[str] = None,
-        prompt: Optional[str] = None,
+        timeout: str | None = None,
+        prompt: str | None = None,
         **kwargs: Any,
     ) -> dict:
         """Put an AI agent session on hold."""
@@ -1550,7 +1549,7 @@ class Call:
     async def ai_unhold(
         self,
         *,
-        prompt: Optional[str] = None,
+        prompt: str | None = None,
         **kwargs: Any,
     ) -> dict:
         """Resume an AI agent session from hold."""
@@ -1567,7 +1566,7 @@ class Call:
     async def user_event(
         self,
         *,
-        event: Optional[str] = None,
+        event: str | None = None,
         **kwargs: Any,
     ) -> dict:
         """Send a custom user-defined event."""
@@ -1585,8 +1584,8 @@ class Call:
         self,
         queue_name: str,
         *,
-        control_id: Optional[str] = None,
-        status_url: Optional[str] = None,
+        control_id: str | None = None,
+        status_url: str | None = None,
         **kwargs: Any,
     ) -> dict:
         """Place the call in a queue."""
@@ -1604,9 +1603,9 @@ class Call:
         self,
         queue_name: str,
         *,
-        control_id: Optional[str] = None,
-        queue_id: Optional[str] = None,
-        status_url: Optional[str] = None,
+        control_id: str | None = None,
+        queue_id: str | None = None,
+        status_url: str | None = None,
         **kwargs: Any,
     ) -> dict:
         """Remove the call from a queue."""

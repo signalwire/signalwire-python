@@ -13,7 +13,7 @@ It allows for chaining method calls to build up a document step by step.
 """
 
 import types
-from typing import Dict, List, Any, Optional, TypeVar
+from typing import Any, TypeVar
 
 try:
     from typing import Self  # type: ignore[attr-defined]  # 3.11+; typing_extensions fallback below
@@ -45,13 +45,13 @@ class SWMLBuilder:
         self.service = service
 
         # Dictionary to cache dynamically created methods
-        self._verb_methods_cache: Dict[str, Any] = {}
+        self._verb_methods_cache: dict[str, Any] = {}
 
         # Create auto-vivified methods for all verbs
         self._create_verb_methods()
 
     def answer(
-        self, max_duration: Optional[int] = None, codecs: Optional[str] = None
+        self, max_duration: int | None = None, codecs: str | None = None
     ) -> Self:
         """
         Add an 'answer' verb to the main section
@@ -63,7 +63,7 @@ class SWMLBuilder:
         Returns:
             Self for method chaining
         """
-        config: Dict[str, Any] = {}
+        config: dict[str, Any] = {}
         if max_duration is not None:
             config["max_duration"] = max_duration
         if codecs is not None:
@@ -71,7 +71,7 @@ class SWMLBuilder:
         self.service.add_verb("answer", config)
         return self
 
-    def hangup(self, reason: Optional[str] = None) -> Self:
+    def hangup(self, reason: str | None = None) -> Self:
         """
         Add a 'hangup' verb to the main section
 
@@ -81,7 +81,7 @@ class SWMLBuilder:
         Returns:
             Self for method chaining
         """
-        config: Dict[str, Any] = {}
+        config: dict[str, Any] = {}
         if reason is not None:
             config["reason"] = reason
         self.service.add_verb("hangup", config)
@@ -89,11 +89,11 @@ class SWMLBuilder:
 
     def ai(
         self,
-        prompt_text: Optional[str] = None,
-        prompt_pom: Optional[List[Dict[str, Any]]] = None,
-        post_prompt: Optional[str] = None,
-        post_prompt_url: Optional[str] = None,
-        swaig: Optional[Dict[str, Any]] = None,
+        prompt_text: str | None = None,
+        prompt_pom: list[dict[str, Any]] | None = None,
+        post_prompt: str | None = None,
+        post_prompt_url: str | None = None,
+        swaig: dict[str, Any] | None = None,
         **kwargs,
     ) -> Self:
         """
@@ -110,7 +110,7 @@ class SWMLBuilder:
         Returns:
             Self for method chaining
         """
-        config: Dict[str, Any] = {}
+        config: dict[str, Any] = {}
 
         # Handle prompt (either text or POM, but not both)
         if prompt_text is not None:
@@ -134,13 +134,13 @@ class SWMLBuilder:
 
     def play(
         self,
-        url: Optional[str] = None,
-        urls: Optional[List[str]] = None,
-        volume: Optional[float] = None,
-        say_voice: Optional[str] = None,
-        say_language: Optional[str] = None,
-        say_gender: Optional[str] = None,
-        auto_answer: Optional[bool] = None,
+        url: str | None = None,
+        urls: list[str] | None = None,
+        volume: float | None = None,
+        say_voice: str | None = None,
+        say_language: str | None = None,
+        say_gender: str | None = None,
+        auto_answer: bool | None = None,
     ) -> Self:
         """
         Add a 'play' verb to the main section
@@ -158,7 +158,7 @@ class SWMLBuilder:
             Self for method chaining
         """
         # Create base config
-        config: Dict[str, Any] = {}
+        config: dict[str, Any] = {}
 
         # Add play config (either single URL or list)
         if url is not None:
@@ -187,10 +187,10 @@ class SWMLBuilder:
     def say(
         self,
         text: str,
-        voice: Optional[str] = None,
-        language: Optional[str] = None,
-        gender: Optional[str] = None,
-        volume: Optional[float] = None,
+        voice: str | None = None,
+        language: str | None = None,
+        gender: str | None = None,
+        volume: float | None = None,
     ) -> Self:
         """
         Add a 'play' verb with say: prefix for text-to-speech
@@ -230,7 +230,7 @@ class SWMLBuilder:
         self.service.add_section(section_name)
         return self
 
-    def build(self) -> Dict[str, Any]:
+    def build(self) -> dict[str, Any]:
         """
         Build and return the SWML document
 
@@ -312,7 +312,7 @@ class SWMLBuilder:
                     """
                     Dynamically generated method for SWML verb - returns self for chaining
                     """
-                    config: Dict[str, Any] = {
+                    config: dict[str, Any] = {
                         key: value for key, value in kwargs.items() if value is not None
                     }
                     self_instance.service.add_verb(name, config)
@@ -407,7 +407,7 @@ class SWMLBuilder:
                 """
                 Dynamically generated method for SWML verb - returns self for chaining
                 """
-                config: Dict[str, Any] = {
+                config: dict[str, Any] = {
                     key: value for key, value in kwargs.items() if value is not None
                 }
                 self_instance.service.add_verb(name, config)

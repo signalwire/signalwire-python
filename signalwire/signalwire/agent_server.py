@@ -12,7 +12,8 @@ AgentServer - Class for hosting multiple SignalWire AI Agents in a single server
 import os
 import re
 from pathlib import Path
-from typing import Dict, Any, Optional, List, Tuple, Callable
+from typing import Any
+from collections.abc import Callable
 
 try:
     from fastapi import FastAPI, Request, Response
@@ -88,12 +89,12 @@ class AgentServer:
             return response
 
         # Keep track of registered agents
-        self.agents: Dict[str, AgentBase] = {}
+        self.agents: dict[str, AgentBase] = {}
 
         # Keep track of SIP routing configuration
         self._sip_routing_enabled = False
-        self._sip_route: Optional[str] = None
-        self._sip_username_mapping: Dict[str, str] = {}  # Maps SIP usernames to routes
+        self._sip_route: str | None = None
+        self._sip_username_mapping: dict[str, str] = {}  # Maps SIP usernames to routes
 
         # Register health endpoints immediately so they're available
         # whether using server.run() or server.app with gunicorn
@@ -106,7 +107,7 @@ class AgentServer:
         async def _setup_catch_all():
             self._register_catch_all_handler()
 
-    def register(self, agent: AgentBase, route: Optional[str] = None) -> None:
+    def register(self, agent: AgentBase, route: str | None = None) -> None:
         """
         Register an agent with the server
 
@@ -188,8 +189,8 @@ class AgentServer:
 
         # Create a unified routing callback that checks all registered usernames
         def server_sip_routing_callback(
-            request: Request, body: Dict[str, Any]
-        ) -> Optional[str]:
+            request: Request, body: dict[str, Any]
+        ) -> str | None:
             """Unified SIP routing callback that checks all registered usernames"""
             # Extract the SIP username
             sip_username = SWMLService.extract_sip_username(body)
@@ -248,7 +249,7 @@ class AgentServer:
         self._sip_username_mapping[username.lower()] = route
         self.logger.info(f"Registered SIP username '{username}' to route '{route}'")
 
-    def _lookup_sip_route(self, username: str) -> Optional[str]:
+    def _lookup_sip_route(self, username: str) -> str | None:
         """
         Look up the route for a SIP username
 
@@ -313,7 +314,7 @@ class AgentServer:
         self.logger.info("agent_unregistered", extra={"route": route})
         return True
 
-    def get_agents(self) -> List[Tuple[str, AgentBase]]:
+    def get_agents(self) -> list[tuple[str, AgentBase]]:
         """
         Get all registered agents
 
@@ -322,7 +323,7 @@ class AgentServer:
         """
         return [(route, agent) for route, agent in self.agents.items()]
 
-    def get_agent(self, route: str) -> Optional[AgentBase]:
+    def get_agent(self, route: str) -> AgentBase | None:
         """
         Get an agent by route
 
@@ -344,8 +345,8 @@ class AgentServer:
         self,
         event=None,
         context=None,
-        host: Optional[str] = None,
-        port: Optional[int] = None,
+        host: str | None = None,
+        port: int | None = None,
     ) -> Any:
         """
         Universal run method that automatically detects environment and handles accordingly
@@ -644,9 +645,7 @@ class AgentServer:
         def readiness_check():
             return {"status": "ready", "agents": len(self.agents)}
 
-    def _run_server(
-        self, host: Optional[str] = None, port: Optional[int] = None
-    ) -> None:
+    def _run_server(self, host: str | None = None, port: int | None = None) -> None:
         """Original server mode logic"""
         if not self.agents:
             self.logger.warning("Starting server with no registered agents")
@@ -710,7 +709,7 @@ class AgentServer:
             uvicorn.run(self.app, host=host, port=port, log_level=self.log_level)
 
     def register_global_routing_callback(
-        self, callback_fn: Callable[[Request, Dict[str, Any]], Optional[str]], path: str
+        self, callback_fn: Callable[[Request, dict[str, Any]], str | None], path: str
     ) -> None:
         """
         Register a routing callback across all agents
@@ -781,9 +780,7 @@ class AgentServer:
             f"Serving static files from '{directory}' at route '{route or '/'}'"
         )
 
-    def _serve_static_file(
-        self, file_path: str, route: str = "/"
-    ) -> Optional[Response]:
+    def _serve_static_file(self, file_path: str, route: str = "/") -> Response | None:
         """
         Internal method to serve a static file.
 

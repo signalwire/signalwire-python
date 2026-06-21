@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 FunctionResult class for handling the response format of SWAIG function calls
 """
 
-from typing import Dict, List, Any, Literal, Optional, Union
+from typing import Any, Literal
 
 
 class FunctionResult:
@@ -67,7 +67,7 @@ class FunctionResult:
         )
     """
 
-    def __init__(self, response: Optional[str] = None, post_process: bool = False):
+    def __init__(self, response: str | None = None, post_process: bool = False):
         """
         Initialize a new SWAIG function result
 
@@ -77,7 +77,7 @@ class FunctionResult:
                          Defaults to False (execute actions immediately after response).
         """
         self.response = response if response is not None else ""
-        self.action: List[Dict[str, Any]] = []
+        self.action: list[dict[str, Any]] = []
         self.post_process = post_process
 
     def set_response(self, response: str) -> "FunctionResult":
@@ -124,7 +124,7 @@ class FunctionResult:
         self.action.append({name: data})
         return self
 
-    def add_actions(self, actions: List[Dict[str, Any]]) -> "FunctionResult":
+    def add_actions(self, actions: list[dict[str, Any]]) -> "FunctionResult":
         """
         Add multiple structured actions to the response
 
@@ -138,7 +138,7 @@ class FunctionResult:
         return self
 
     def connect(
-        self, destination: str, final: bool = True, from_addr: Optional[str] = None
+        self, destination: str, final: bool = True, from_addr: str | None = None
     ) -> "FunctionResult":
         """
         Add a connect action to transfer/connect the call to another destination.
@@ -245,7 +245,7 @@ class FunctionResult:
 
         return self
 
-    def update_global_data(self, data: Dict[str, Any]) -> "FunctionResult":
+    def update_global_data(self, data: dict[str, Any]) -> "FunctionResult":
         """
         Update global agent data variables.
 
@@ -261,7 +261,7 @@ class FunctionResult:
         """
         return self.add_action("set_global_data", data)
 
-    def swml_user_event(self, event_data: Dict[str, Any]) -> "FunctionResult":
+    def swml_user_event(self, event_data: dict[str, Any]) -> "FunctionResult":
         """
         Send a user event through SWML to update the client UI.
 
@@ -408,7 +408,7 @@ class FunctionResult:
             try:
                 import json
 
-                swml_data: Dict[str, Any] = json.loads(swml_content)
+                swml_data: dict[str, Any] = json.loads(swml_content)
             except (json.JSONDecodeError, ValueError):
                 swml_data = {"raw_swml": swml_content}
         elif hasattr(swml_content, "to_dict"):
@@ -451,8 +451,8 @@ class FunctionResult:
 
     def wait_for_user(
         self,
-        enabled: Optional[bool] = None,
-        timeout: Optional[int] = None,
+        enabled: bool | None = None,
+        timeout: int | None = None,
         answer_first: bool = False,
     ) -> "FunctionResult":
         """
@@ -466,7 +466,7 @@ class FunctionResult:
         Returns:
             self for method chaining
         """
-        wait_value: Union[str, int, bool]
+        wait_value: str | int | bool
         if answer_first:
             wait_value = "answer_first"
         elif timeout is not None:
@@ -525,9 +525,7 @@ class FunctionResult:
         """
         return self.add_action("stop_playback_bg", True)
 
-    def add_dynamic_hints(
-        self, hints: List[Union[str, Dict[str, Any]]]
-    ) -> "FunctionResult":
+    def add_dynamic_hints(self, hints: list[str | dict[str, Any]]) -> "FunctionResult":
         """
         Add dynamic speech recognition hints during a call.
 
@@ -594,7 +592,7 @@ class FunctionResult:
         """
         return self.add_action("speech_event_timeout", milliseconds)
 
-    def remove_global_data(self, keys: Union[str, List[str]]) -> "FunctionResult":
+    def remove_global_data(self, keys: str | list[str]) -> "FunctionResult":
         """
         Remove global agent data variables.
 
@@ -606,7 +604,7 @@ class FunctionResult:
         """
         return self.add_action("unset_global_data", keys)
 
-    def set_metadata(self, data: Dict[str, Any]) -> "FunctionResult":
+    def set_metadata(self, data: dict[str, Any]) -> "FunctionResult":
         """
         Set metadata scoped to current function's meta_data_token.
 
@@ -618,7 +616,7 @@ class FunctionResult:
         """
         return self.add_action("set_meta_data", data)
 
-    def remove_metadata(self, keys: Union[str, List[str]]) -> "FunctionResult":
+    def remove_metadata(self, keys: str | list[str]) -> "FunctionResult":
         """
         Remove metadata from current function's meta_data_token scope.
 
@@ -631,7 +629,7 @@ class FunctionResult:
         return self.add_action("unset_meta_data", keys)
 
     def toggle_functions(
-        self, function_toggles: List[Dict[str, Any]]
+        self, function_toggles: list[dict[str, Any]]
     ) -> "FunctionResult":
         """
         Enable/disable specific SWAIG functions.
@@ -669,7 +667,7 @@ class FunctionResult:
         """
         return self.add_action("extensive_data", enabled)
 
-    def replace_in_history(self, text: Union[str, bool] = True) -> "FunctionResult":
+    def replace_in_history(self, text: str | bool = True) -> "FunctionResult":
         """
         After first send, replace tool_call+result pair in conversation history.
 
@@ -682,7 +680,7 @@ class FunctionResult:
         """
         return self.add_action("replace_in_history", text)
 
-    def update_settings(self, settings: Dict[str, Any]) -> "FunctionResult":
+    def update_settings(self, settings: dict[str, Any]) -> "FunctionResult":
         """
         Update agent runtime settings.
 
@@ -705,8 +703,8 @@ class FunctionResult:
 
     def switch_context(
         self,
-        system_prompt: Optional[str] = None,
-        user_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
+        user_prompt: str | None = None,
         consolidate: bool = False,
         full_reset: bool = False,
     ) -> "FunctionResult":
@@ -726,7 +724,7 @@ class FunctionResult:
             # Simple string context switch
             return self.add_action("context_switch", system_prompt)
         # Advanced object context switch
-        context_data: Dict[str, Any] = {}
+        context_data: dict[str, Any] = {}
         if system_prompt:
             context_data["system_prompt"] = system_prompt
         if user_prompt:
@@ -753,10 +751,10 @@ class FunctionResult:
         self,
         to_number: str,
         from_number: str,
-        body: Optional[str] = None,
-        media: Optional[List[str]] = None,
-        tags: Optional[List[str]] = None,
-        region: Optional[str] = None,
+        body: str | None = None,
+        media: list[str] | None = None,
+        tags: list[str] | None = None,
+        region: str | None = None,
     ) -> "FunctionResult":
         """
         Send a text message to a PSTN phone number using SWML.
@@ -783,7 +781,7 @@ class FunctionResult:
             raise ValueError("Either body or media must be provided")
 
         # Build the send_sms parameters
-        sms_params: Dict[str, Any] = {
+        sms_params: dict[str, Any] = {
             "to_number": to_number,
             "from_number": from_number,
         }
@@ -811,25 +809,24 @@ class FunctionResult:
         self,
         payment_connector_url: str,
         input_method: str = "dtmf",
-        status_url: Optional[str] = None,
+        status_url: str | None = None,
         payment_method: str = "credit-card",
         timeout: int = 5,
         max_attempts: int = 1,
         security_code: bool = True,
-        postal_code: Union[bool, str] = True,
+        postal_code: bool | str = True,
         min_postal_code_length: int = 0,
         token_type: str = "reusable",  # noqa: S107  # false positive: SWML pay-verb field name, the value "reusable" is a mode, not a secret
-        charge_amount: Optional[str] = None,
+        charge_amount: str | None = None,
         currency: str = "usd",
         language: str = "en-US",
         voice: str = "woman",
-        description: Optional[str] = None,
+        description: str | None = None,
         valid_card_types: str = "visa mastercard amex",
-        parameters: Optional[List[Dict[str, str]]] = None,
-        prompts: Optional[List[Dict[str, Any]]] = None,
-        ai_response: Optional[
-            str
-        ] = "The payment status is ${pay_result}, do not mention anything else about collecting payment if successful.",
+        parameters: list[dict[str, str]] | None = None,
+        prompts: list[dict[str, Any]] | None = None,
+        ai_response: str
+        | None = "The payment status is ${pay_result}, do not mention anything else about collecting payment if successful.",
     ) -> "FunctionResult":
         """
         Process payment using SWML pay action.
@@ -862,7 +859,7 @@ class FunctionResult:
             self for method chaining
         """
         # Build the pay parameters
-        pay_params: Dict[str, Any] = {
+        pay_params: dict[str, Any] = {
             "payment_connector_url": payment_connector_url,
             "input": input_method,
             "payment_method": payment_method,
@@ -908,17 +905,17 @@ class FunctionResult:
 
     def record_call(
         self,
-        control_id: Optional[str] = None,
+        control_id: str | None = None,
         stereo: bool = False,
         format: Literal["wav", "mp3", "mp4"] = "wav",
         direction: Literal["speak", "listen", "both"] = "both",
-        terminators: Optional[str] = None,
+        terminators: str | None = None,
         beep: bool = False,
         input_sensitivity: float = 44.0,
-        initial_timeout: Optional[float] = None,
-        end_silence_timeout: Optional[float] = None,
-        max_length: Optional[float] = None,
-        status_url: Optional[str] = None,
+        initial_timeout: float | None = None,
+        end_silence_timeout: float | None = None,
+        max_length: float | None = None,
+        status_url: str | None = None,
     ) -> "FunctionResult":
         """
         Start background call recording using SWML.
@@ -953,7 +950,7 @@ class FunctionResult:
             raise ValueError("direction must be 'speak', 'listen', or 'both'")
 
         # Build the record_call parameters
-        record_params: Dict[str, Any] = {
+        record_params: dict[str, Any] = {
             "stereo": stereo,
             "format": format,
             "direction": direction,
@@ -984,7 +981,7 @@ class FunctionResult:
         # Use execute_swml to add the action
         return self.execute_swml(swml_doc)
 
-    def stop_record_call(self, control_id: Optional[str] = None) -> "FunctionResult":
+    def stop_record_call(self, control_id: str | None = None) -> "FunctionResult":
         """
         Stop an active background call recording using SWML.
 
@@ -1069,19 +1066,19 @@ class FunctionResult:
         beep: str = "true",
         start_on_enter: bool = True,
         end_on_exit: bool = False,
-        wait_url: Optional[str] = None,
+        wait_url: str | None = None,
         max_participants: int = 250,
         record: str = "do-not-record",
-        region: Optional[str] = None,
+        region: str | None = None,
         trim: str = "trim-silence",
-        coach: Optional[str] = None,
-        status_callback_event: Optional[str] = None,
-        status_callback: Optional[str] = None,
+        coach: str | None = None,
+        status_callback_event: str | None = None,
+        status_callback: str | None = None,
         status_callback_method: str = "POST",
-        recording_status_callback: Optional[str] = None,
+        recording_status_callback: str | None = None,
         recording_status_callback_method: str = "POST",
         recording_status_callback_event: str = "completed",
-        result: Optional[Any] = None,
+        result: Any | None = None,
     ) -> "FunctionResult":
         """
         Join an ad-hoc audio conference with RELAY and CXML calls using SWML.
@@ -1168,7 +1165,7 @@ class FunctionResult:
             and result is None
         ):
             # Simple form - just the conference name
-            join_params: Union[str, Dict[str, Any]] = name
+            join_params: str | dict[str, Any] = name
         else:
             # Full object form with parameters
             join_params = {"name": name}
@@ -1225,11 +1222,11 @@ class FunctionResult:
     def tap(
         self,
         uri: str,
-        control_id: Optional[str] = None,
+        control_id: str | None = None,
         direction: Literal["speak", "hear", "both"] = "both",
         codec: Literal["PCMU", "PCMA"] = "PCMU",
         rtp_ptime: int = 20,
-        status_url: Optional[str] = None,
+        status_url: str | None = None,
     ) -> "FunctionResult":
         """
         Start background call tap using SWML.
@@ -1271,7 +1268,7 @@ class FunctionResult:
             raise ValueError("rtp_ptime must be a positive integer")
 
         # Build the tap parameters
-        tap_params: Dict[str, Any] = {"uri": uri}
+        tap_params: dict[str, Any] = {"uri": uri}
 
         # Add optional parameters if they differ from defaults
         if control_id:
@@ -1291,7 +1288,7 @@ class FunctionResult:
         # Use execute_swml to add the action
         return self.execute_swml(swml_doc)
 
-    def stop_tap(self, control_id: Optional[str] = None) -> "FunctionResult":
+    def stop_tap(self, control_id: str | None = None) -> "FunctionResult":
         """
         Stop an active tap stream using SWML.
 
@@ -1320,9 +1317,9 @@ class FunctionResult:
     def execute_rpc(
         self,
         method: str,
-        params: Optional[Dict[str, Any]] = None,
-        call_id: Optional[str] = None,
-        node_id: Optional[str] = None,
+        params: dict[str, Any] | None = None,
+        call_id: str | None = None,
+        node_id: str | None = None,
     ) -> "FunctionResult":
         """
         Execute an RPC method on a call using SWML.
@@ -1350,7 +1347,7 @@ class FunctionResult:
             )
         """
         # Build the execute_rpc parameters
-        rpc_params: Dict[str, Any] = {"method": method}
+        rpc_params: dict[str, Any] = {"method": method}
 
         if call_id:
             rpc_params["call_id"] = call_id
@@ -1471,10 +1468,10 @@ class FunctionResult:
     @staticmethod
     def create_payment_prompt(
         for_situation: str,
-        actions: List[Dict[str, str]],
-        card_type: Optional[str] = None,
-        error_type: Optional[str] = None,
-    ) -> Dict[str, Any]:
+        actions: list[dict[str, str]],
+        card_type: str | None = None,
+        error_type: str | None = None,
+    ) -> dict[str, Any]:
         """
         Create a payment prompt structure for use with pay() method.
 
@@ -1497,7 +1494,7 @@ class FunctionResult:
         return prompt
 
     @staticmethod
-    def create_payment_action(action_type: str, phrase: str) -> Dict[str, str]:
+    def create_payment_action(action_type: str, phrase: str) -> dict[str, str]:
         """
         Create a payment action for use in payment prompts.
 
@@ -1511,7 +1508,7 @@ class FunctionResult:
         return {"type": action_type, "phrase": phrase}
 
     @staticmethod
-    def create_payment_parameter(name: str, value: str) -> Dict[str, str]:
+    def create_payment_parameter(name: str, value: str) -> dict[str, str]:
         """
         Create a payment parameter for use with pay() method.
 
@@ -1524,7 +1521,7 @@ class FunctionResult:
         """
         return {"name": name, "value": value}
 
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """
         Convert to the JSON structure expected by SWAIG
 
@@ -1539,7 +1536,7 @@ class FunctionResult:
             Dictionary in SWAIG function response format
         """
         # Create the result object
-        result: Dict[str, Any] = {}
+        result: dict[str, Any] = {}
 
         # Add response if present
         if self.response:

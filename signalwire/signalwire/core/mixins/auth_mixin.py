@@ -11,7 +11,6 @@ import os
 import hmac
 import json
 import base64
-from typing import Union, Tuple
 
 from fastapi import Request
 
@@ -46,7 +45,7 @@ class AuthMixin(_HostTyped):
 
     def get_basic_auth_credentials(
         self, include_source: bool = False
-    ) -> Union[Tuple[str, str], Tuple[str, str, str]]:
+    ) -> tuple[str, str] | tuple[str, str, str]:
         """
         Get the basic auth credentials
 

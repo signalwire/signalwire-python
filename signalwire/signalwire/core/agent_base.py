@@ -16,16 +16,11 @@ import json
 import uuid
 import re
 from typing import (
-    Optional,
-    List,
-    Dict,
     Any,
-    Tuple,
-    Callable,
     ClassVar,
-    Set,
     TYPE_CHECKING,
 )
+from collections.abc import Callable
 
 if TYPE_CHECKING:
     from signalwire.core.contexts import ContextBuilder
@@ -61,6 +56,7 @@ except ImportError:
 
 from signalwire.core.security.session_manager import SessionManager
 from signalwire.core.swml_service import SWMLService
+from signalwire.pom.pom import PromptObjectModel
 from signalwire.core.skill_manager import SkillManager
 from signalwire.core.logging_config import get_logger, get_execution_mode
 
@@ -115,7 +111,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
     # Attributes set dynamically (on ephemeral copies / when native functions are
     # configured) rather than unconditionally in __init__. Declared here so the
     # type checker knows their types at the guarded access sites.
-    _native_functions: List[Any]
+    _native_functions: list[Any]
     _is_ephemeral: bool
 
     def __init__(
@@ -123,24 +119,24 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         name: str,
         route: str = "/",
         host: str = "0.0.0.0",  # noqa: S104  # intended server default: listen on all interfaces (overridable)
-        port: Optional[int] = None,
-        basic_auth: Optional[Tuple[str, str]] = None,
+        port: int | None = None,
+        basic_auth: tuple[str, str] | None = None,
         use_pom: bool = True,
         token_expiry_secs: int = 3600,
         auto_answer: bool = True,
         record_call: bool = False,
         record_format: str = "mp4",
         record_stereo: bool = True,
-        default_webhook_url: Optional[str] = None,
-        agent_id: Optional[str] = None,
-        native_functions: Optional[List[str]] = None,
-        schema_path: Optional[str] = None,
+        default_webhook_url: str | None = None,
+        agent_id: str | None = None,
+        native_functions: list[str] | None = None,
+        schema_path: str | None = None,
         suppress_logs: bool = False,
         enable_post_prompt_override: bool = False,
         check_for_input_override: bool = False,
-        config_file: Optional[str] = None,
+        config_file: str | None = None,
         schema_validation: bool = True,
-        signing_key: Optional[str] = None,
+        signing_key: str | None = None,
         trust_proxy_for_signature: bool = False,
     ):
         """
@@ -235,10 +231,8 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         self._use_pom = use_pom
 
         # Initialize POM if needed
-        self.pom: Optional["PromptObjectModel"]
+        self.pom: PromptObjectModel | None
         if self._use_pom:
-            from signalwire.pom.pom import PromptObjectModel
-
             self.pom = PromptObjectModel()
         else:
             self.pom = None
@@ -266,8 +260,8 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             )
 
         # URL override variables
-        self._web_hook_url_override: Optional[str] = None
-        self._post_prompt_url_override: Optional[str] = None
+        self._web_hook_url_override: str | None = None
+        self._post_prompt_url_override: str | None = None
 
         # Register the tool decorator on this instance
         self.tool = self._tool_decorator  # type: ignore[method-assign]  # intentional per-instance decorator binding
@@ -290,17 +284,17 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         self.native_functions = native_functions or []
 
         # Initialize new configuration containers
-        self._hints: List[Any] = []
+        self._hints: list[Any] = []
         self._languages = []
         self._pronounce = []
-        self._params: Dict[str, Any] = {}
-        self._global_data: Dict[str, Any] = {}
+        self._params: dict[str, Any] = {}
+        self._global_data: dict[str, Any] = {}
         self._function_includes = []
-        self._mcp_servers: List[Any] = []
+        self._mcp_servers: list[Any] = []
         self._mcp_server_enabled = False
         # Initialize LLM params as empty - only send if explicitly set
-        self._prompt_llm_params: Dict[str, Any] = {}
-        self._post_prompt_llm_params: Dict[str, Any] = {}
+        self._prompt_llm_params: dict[str, Any] = {}
+        self._post_prompt_llm_params: dict[str, Any] = {}
 
         # Dynamic configuration callback
         self._dynamic_config_callback = None
@@ -309,32 +303,32 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         self.skill_manager = SkillManager(self)
 
         # Initialize contexts system
-        self._contexts_builder: Optional["ContextBuilder"] = None
+        self._contexts_builder: ContextBuilder | None = None
         self._contexts_defined = False
 
         # Initialize SWAIG query params for dynamic config
-        self._swaig_query_params: Dict[str, Any] = {}
+        self._swaig_query_params: dict[str, Any] = {}
 
         # Debug events
         self._debug_events_enabled = False
         self._debug_events_level = 1
-        self._debug_event_handler: Optional[Callable[..., Any]] = None
+        self._debug_event_handler: Callable[..., Any] | None = None
 
         # Initialize verb insertion points for call flow customization.
         # The verb lists hold (verb_name, config) tuples; _answer_config is a dict.
-        self._pre_answer_verbs: List[
-            Tuple[str, Dict[str, Any]]
+        self._pre_answer_verbs: list[
+            tuple[str, dict[str, Any]]
         ] = []  # Verbs to run before answer (e.g., ringback, screening)
-        self._answer_config: Dict[str, Any] = {}  # Configuration for the answer verb
-        self._post_answer_verbs: List[
-            Tuple[str, Dict[str, Any]]
+        self._answer_config: dict[str, Any] = {}  # Configuration for the answer verb
+        self._post_answer_verbs: list[
+            tuple[str, dict[str, Any]]
         ] = []  # Verbs to run after answer, before AI (e.g., announcements)
-        self._post_ai_verbs: List[
-            Tuple[str, Dict[str, Any]]
+        self._post_ai_verbs: list[
+            tuple[str, dict[str, Any]]
         ] = []  # Verbs to run after AI ends (e.g., cleanup, transfers)
 
     # Verb categories for pre-answer validation
-    _PRE_ANSWER_SAFE_VERBS: ClassVar[Set[str]] = {
+    _PRE_ANSWER_SAFE_VERBS: ClassVar[set[str]] = {
         "transfer",
         "execute",
         "return",
@@ -354,10 +348,10 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         "stop_denoise",
         "stop_tap",
     }
-    _AUTO_ANSWER_VERBS: ClassVar[Set[str]] = {"play", "connect"}
+    _AUTO_ANSWER_VERBS: ClassVar[set[str]] = {"play", "connect"}
 
     @staticmethod
-    def _load_service_config(config_file: Optional[str], service_name: str) -> dict:
+    def _load_service_config(config_file: str | None, service_name: str) -> dict:
         """Load service configuration from config file if available"""
         from signalwire.core.config_loader import ConfigLoader
 
@@ -506,8 +500,8 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
     def on_summary(
         self,
-        summary: Optional[Dict[str, Any]],
-        raw_data: Optional[Dict[str, Any]] = None,
+        summary: dict[str, Any] | None,
+        raw_data: dict[str, Any] | None = None,
     ) -> None:
         """
         Called when a post-prompt summary is received
@@ -550,7 +544,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
     # ==================== Call Flow Verb Insertion Methods ====================
 
     def add_pre_answer_verb(
-        self, verb_name: str, config: Dict[str, Any]
+        self, verb_name: str, config: dict[str, Any]
     ) -> "AgentBase":
         """
         Add a verb to run before the call is answered.
@@ -599,7 +593,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         self._pre_answer_verbs.append((verb_name, config))
         return self
 
-    def add_answer_verb(self, config: Optional[Dict[str, Any]] = None) -> "AgentBase":
+    def add_answer_verb(self, config: dict[str, Any] | None = None) -> "AgentBase":
         """
         Configure the answer verb.
 
@@ -620,7 +614,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         return self
 
     def add_post_answer_verb(
-        self, verb_name: str, config: Dict[str, Any]
+        self, verb_name: str, config: dict[str, Any]
     ) -> "AgentBase":
         """
         Add a verb to run after the call is answered but before the AI starts.
@@ -646,7 +640,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         self._post_answer_verbs.append((verb_name, config))
         return self
 
-    def add_post_ai_verb(self, verb_name: str, config: Dict[str, Any]) -> "AgentBase":
+    def add_post_ai_verb(self, verb_name: str, config: dict[str, Any]) -> "AgentBase":
         """
         Add a verb to run after the AI conversation ends.
 
@@ -723,9 +717,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         """
 
         # Create a routing callback that handles SIP usernames
-        def sip_routing_callback(
-            request: Request, body: Dict[str, Any]
-        ) -> Optional[str]:
+        def sip_routing_callback(request: Request, body: dict[str, Any]) -> str | None:
             # Extract SIP username from the request body
             sip_username = self.extract_sip_username(body)
 
@@ -825,7 +817,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         self._post_prompt_url_override = url
         return self
 
-    def add_swaig_query_params(self, params: Dict[str, str]) -> "AgentBase":
+    def add_swaig_query_params(self, params: dict[str, str]) -> "AgentBase":
         """
         Add query parameters that will be included in all SWAIG webhook URLs
 
@@ -862,7 +854,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         return self
 
     def _render_swml(
-        self, call_id: Optional[str] = None, modifications: Optional[dict] = None
+        self, call_id: str | None = None, modifications: dict | None = None
     ) -> str:
         """
         Render the complete SWML document using SWMLService methods
@@ -976,7 +968,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             default_webhook_url = agent_to_use._web_hook_url_override
 
         # Prepare SWAIG object (correct format)
-        swaig_obj: Dict[str, Any] = {}
+        swaig_obj: dict[str, Any] = {}
 
         # Add native_functions if any are defined
         if agent_to_use.native_functions:
@@ -1385,7 +1377,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
     # token-validation + ephemeral dynamic config on POST dispatch.
 
     async def _swaig_render_get_response(
-        self, request: Request, call_id: Optional[str]
+        self, request: Request, call_id: str | None
     ) -> Response:
         swml = self._render_swml(call_id)
         self.log.debug("swml_rendered", swml_size=len(swml))
@@ -1394,10 +1386,10 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
     def _swaig_pre_dispatch(
         self,
         request: Request,
-        body: Dict[str, Any],
-        call_id: Optional[str],
+        body: dict[str, Any],
+        call_id: str | None,
         function_name: str,
-    ) -> Tuple[Any, Optional[Dict[str, Any]]]:
+    ) -> tuple[Any, dict[str, Any] | None]:
         req_log = self.log.bind(endpoint="swaig", function=function_name)
 
         # Validate security token if present.
@@ -1448,7 +1440,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         return target, None
 
     def _build_webhook_url(
-        self, endpoint: str, query_params: Optional[Dict[str, str]] = None
+        self, endpoint: str, query_params: dict[str, str] | None = None
     ) -> str:
         """
         Helper method to build webhook URLs consistently

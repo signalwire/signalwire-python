@@ -13,7 +13,8 @@ import json
 import signal
 import sys
 import contextvars
-from typing import TYPE_CHECKING, Optional, Dict, Any, Callable
+from typing import TYPE_CHECKING, Any
+from collections.abc import Callable
 
 from fastapi import Depends, FastAPI, APIRouter, Request, Response
 
@@ -31,7 +32,7 @@ if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports the mixins; the name resolves at type-check time but mypy flags the back-reference
 
 # Per-request proxy URL to avoid race conditions in concurrent async contexts
-_request_proxy_url: contextvars.ContextVar[Optional[str]] = contextvars.ContextVar(
+_request_proxy_url: contextvars.ContextVar[str | None] = contextvars.ContextVar(
     "_request_proxy_url", default=None
 )
 
@@ -48,9 +49,9 @@ class WebMixin(_HostTyped):
     # SWMLService/AgentBase; declared here (with their true Optional types) so the
     # checker resolves them at WebMixin's read/write sites without a cross-class
     # has-type ordering gap. Runtime is unaffected (no assignment here).
-    _app: Optional[Any]
-    _proxy_url_base: Optional[str]
-    _dynamic_config_callback: Optional[Callable[[dict, dict, dict, Any], None]]
+    _app: Any | None
+    _proxy_url_base: str | None
+    _dynamic_config_callback: Callable[[dict, dict, dict, Any], None] | None
 
     def get_app(self):
         """
@@ -171,7 +172,7 @@ class WebMixin(_HostTyped):
 
         return router
 
-    def serve(self, host: Optional[str] = None, port: Optional[int] = None) -> None:
+    def serve(self, host: str | None = None, port: int | None = None) -> None:
         """
         Start a web server for this agent
 
@@ -342,8 +343,8 @@ class WebMixin(_HostTyped):
         event=None,
         context=None,
         force_mode=None,
-        host: Optional[str] = None,
-        port: Optional[int] = None,
+        host: str | None = None,
+        port: int | None = None,
     ):
         """
         Smart run method that automatically detects environment and handles accordingly
@@ -1157,8 +1158,8 @@ class WebMixin(_HostTyped):
             )
 
     def on_request(
-        self, request_data: Optional[dict] = None, callback_path: Optional[str] = None
-    ) -> Optional[dict]:
+        self, request_data: dict | None = None, callback_path: str | None = None
+    ) -> dict | None:
         """
         Called when SWML is requested, with request data when available
 
@@ -1181,10 +1182,10 @@ class WebMixin(_HostTyped):
 
     def on_swml_request(
         self,
-        request_data: Optional[dict] = None,
-        callback_path: Optional[str] = None,
-        request: Optional[Request] = None,
-    ) -> Optional[dict]:
+        request_data: dict | None = None,
+        callback_path: str | None = None,
+        request: Request | None = None,
+    ) -> dict | None:
         """
         Customization point for subclasses to modify SWML based on request data
 
@@ -1225,7 +1226,7 @@ class WebMixin(_HostTyped):
 
     def register_routing_callback(
         self,
-        callback_fn: Callable[[Request, Dict[str, Any]], Optional[str]],
+        callback_fn: Callable[[Request, dict[str, Any]], str | None],
         path: str = "/sip",
     ) -> None:
         """

@@ -13,7 +13,7 @@ Provides Wikipedia search capabilities using the Wikipedia API.
 
 import requests
 from urllib.parse import quote
-from typing import Dict, Any, List, ClassVar
+from typing import Any, ClassVar
 from signalwire.core.skill_base import SkillBase
 
 
@@ -31,14 +31,14 @@ class WikipediaSearchSkill(SkillBase):
         "Search Wikipedia for information about a topic and get article summaries"
     )
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES: ClassVar[List[str]] = ["requests"]
-    REQUIRED_ENV_VARS: ClassVar[List[str]] = []  # No environment variables required
+    REQUIRED_PACKAGES: ClassVar[list[str]] = ["requests"]
+    REQUIRED_ENV_VARS: ClassVar[list[str]] = []  # No environment variables required
 
     # Does not support multiple instances
     SUPPORTS_MULTIPLE_INSTANCES = False
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """Get parameter schema for Wikipedia search skill"""
         schema = super().get_parameter_schema()
         schema.update(

@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import requests
 import json
-from typing import List, Dict, Any, ClassVar
+from typing import Any, ClassVar
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
@@ -21,16 +21,16 @@ class DataSphereSkill(SkillBase):
     SKILL_NAME = "datasphere"
     SKILL_DESCRIPTION = "Search knowledge using SignalWire DataSphere RAG stack"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES: ClassVar[List[str]] = ["requests"]
+    REQUIRED_PACKAGES: ClassVar[list[str]] = ["requests"]
     REQUIRED_ENV_VARS: ClassVar[
-        List[str]
+        list[str]
     ] = []  # No required env vars since all config comes from params
 
     # Enable multiple instances support
     SUPPORTS_MULTIPLE_INSTANCES = True
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """Get parameter schema for DataSphere skill"""
         schema = super().get_parameter_schema()
         schema.update(
@@ -270,7 +270,7 @@ class DataSphereSkill(SkillBase):
                 "Sorry, I encountered an error while searching the knowledge base. Please try again later."
             )
 
-    def _format_search_results(self, query: str, chunks: List[Dict[str, Any]]) -> str:
+    def _format_search_results(self, query: str, chunks: list[dict[str, Any]]) -> str:
         """Format search results for display"""
         if len(chunks) == 1:
             result_text = f"I found 1 result for '{query}':\n\n"
@@ -303,7 +303,7 @@ class DataSphereSkill(SkillBase):
         if hasattr(self, "session"):
             self.session.close()
 
-    def get_hints(self) -> List[str]:
+    def get_hints(self) -> list[str]:
         """Return speech recognition hints"""
         # Currently no hints provided, but you could add them like:
         # return [
@@ -312,7 +312,7 @@ class DataSphereSkill(SkillBase):
         # ]
         return []
 
-    def get_global_data(self) -> Dict[str, Any]:
+    def get_global_data(self) -> dict[str, Any]:
         """Return global data for agent context"""
         return {
             "datasphere_enabled": True,
@@ -320,7 +320,7 @@ class DataSphereSkill(SkillBase):
             "knowledge_provider": "SignalWire DataSphere",
         }
 
-    def get_prompt_sections(self) -> List[Dict[str, Any]]:
+    def get_prompt_sections(self) -> list[dict[str, Any]]:
         """Return prompt sections to add to agent"""
         return [
             {

@@ -7,7 +7,7 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import Dict, Any, List, ClassVar
+from typing import Any, ClassVar
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
@@ -26,12 +26,12 @@ class InfoGathererSkill(SkillBase):
     SKILL_NAME = "info_gatherer"
     SKILL_DESCRIPTION = "Gather answers to a configurable list of questions"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES: ClassVar[List[str]] = []
-    REQUIRED_ENV_VARS: ClassVar[List[str]] = []
+    REQUIRED_PACKAGES: ClassVar[list[str]] = []
+    REQUIRED_ENV_VARS: ClassVar[list[str]] = []
     SUPPORTS_MULTIPLE_INSTANCES = True
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         schema = super().get_parameter_schema()
         schema.update(
             {
@@ -126,7 +126,7 @@ class InfoGathererSkill(SkillBase):
     # Global data (initial state)
     # ------------------------------------------------------------------ #
 
-    def get_global_data(self) -> Dict[str, Any]:
+    def get_global_data(self) -> dict[str, Any]:
         namespace = self._get_skill_namespace()
         return {
             namespace: {
@@ -140,7 +140,7 @@ class InfoGathererSkill(SkillBase):
     # Prompt sections
     # ------------------------------------------------------------------ #
 
-    def _get_prompt_sections(self) -> List[Dict[str, Any]]:
+    def _get_prompt_sections(self) -> list[dict[str, Any]]:
         return [
             {
                 "title": f"Info Gatherer ({self.get_instance_key()})",

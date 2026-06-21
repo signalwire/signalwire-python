@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import re
 import json
-from typing import List, Dict, Any, Optional, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 from pathlib import Path
 
 # Document processing imports
@@ -116,7 +116,7 @@ class DocumentProcessor:
         max_sentences_per_chunk: int = 5,
         chunk_size: int = 50,
         chunk_overlap: int = 10,
-        split_newlines: Optional[int] = None,
+        split_newlines: int | None = None,
         index_nlp_backend: str = "nltk",
         verbose: bool = False,
         semantic_threshold: float = 0.5,
@@ -158,7 +158,7 @@ class DocumentProcessor:
 
     def create_chunks(
         self, content: str, filename: str, file_type: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Create chunks from document content using specified chunking strategy
 
@@ -223,7 +223,7 @@ class DocumentProcessor:
             try:
                 mime = magic.Magic(mime=True)
                 file_type = mime.from_file(file_path)
-            except (FileNotFoundError, IOError, OSError):
+            except (FileNotFoundError, OSError):
                 # Fall back to extension-based detection if magic can't read the file
                 file_path_obj = Path(file_path)
                 extension = file_path_obj.suffix.lower()
@@ -292,7 +292,7 @@ class DocumentProcessor:
         """Extract text from plain text files"""
         try:
             with open(  # noqa: PTH123  # tests patch builtins.open; Path.open() would bypass the mock seam
-                file_path, "r", encoding="utf-8"
+                file_path, encoding="utf-8"
             ) as file:
                 return file.read()
         except Exception as e:
@@ -307,7 +307,7 @@ class DocumentProcessor:
 
         try:
             with open(  # noqa: PTH123  # tests patch builtins.open; Path.open() would bypass the mock seam
-                file_path, "r", encoding="utf-8"
+                file_path, encoding="utf-8"
             ) as file:
                 soup = BeautifulSoup(file, "html.parser")
                 return soup.get_text(separator="\n")
@@ -318,7 +318,7 @@ class DocumentProcessor:
         """Extract text from Markdown files"""
         try:
             with open(  # noqa: PTH123  # tests patch builtins.open; Path.open() would bypass the mock seam
-                file_path, "r", encoding="utf-8"
+                file_path, encoding="utf-8"
             ) as file:
                 content = file.read()
                 if markdown is not None and BeautifulSoup is not None:
@@ -337,7 +337,7 @@ class DocumentProcessor:
 
         try:
             with open(  # noqa: PTH123  # tests patch builtins.open; Path.open() would bypass the mock seam
-                file_path, "r", encoding="utf-8"
+                file_path, encoding="utf-8"
             ) as file:
                 return rtf_to_text(file.read())
         except Exception as e:
@@ -380,7 +380,7 @@ class DocumentProcessor:
 
     def _chunk_document_aware(
         self, content: Any, filename: str, file_type: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Smart chunking for documents with natural structure"""
         chunks = []
 
@@ -435,7 +435,7 @@ class DocumentProcessor:
 
     def _chunk_markdown_enhanced(
         self, content: str, filename: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Enhanced markdown chunking with code block detection and rich metadata.
 
         Uses markdown-it-py AST when available to keep tables, fenced code,
@@ -446,7 +446,7 @@ class DocumentProcessor:
             return self._chunk_markdown_ast(content, filename)
         return self._chunk_markdown_line_walker(content, filename)
 
-    def _chunk_markdown_ast(self, content: str, filename: str) -> List[Dict[str, Any]]:
+    def _chunk_markdown_ast(self, content: str, filename: str) -> list[dict[str, Any]]:
         """AST-based markdown chunker.
 
         Parses the doc with markdown-it-py, then walks the top-level block tokens,
@@ -493,14 +493,14 @@ class DocumentProcessor:
                     blocks.append(self._leaf_md_block(tok, lines))
 
         # Walk blocks, maintain heading hierarchy, emit chunks.
-        chunks: List[Dict[str, Any]] = []
-        hierarchy: List[str] = []
-        current_lines: List[str] = []
-        current_hierarchy: List[str] = []
-        current_start_line: Optional[int] = None
-        current_end_line: Optional[int] = None
+        chunks: list[dict[str, Any]] = []
+        hierarchy: list[str] = []
+        current_lines: list[str] = []
+        current_hierarchy: list[str] = []
+        current_start_line: int | None = None
+        current_end_line: int | None = None
         current_size = 0
-        current_code_langs: List[str] = []
+        current_code_langs: list[str] = []
         current_has_code = False
 
         def flush():
@@ -572,8 +572,8 @@ class DocumentProcessor:
         return chunks
 
     def _finalize_md_block(
-        self, opened: Dict[str, Any], lines: List[str]
-    ) -> Optional[Dict[str, Any]]:
+        self, opened: dict[str, Any], lines: list[str]
+    ) -> dict[str, Any] | None:
         """Turn an accumulated container token into a block record."""
         tok = opened["token"]
         tmap = opened["map"]
@@ -608,7 +608,7 @@ class DocumentProcessor:
             "has_code": False,
         }
 
-    def _leaf_md_block(self, tok, lines: List[str]) -> Dict[str, Any]:
+    def _leaf_md_block(self, tok, lines: list[str]) -> dict[str, Any]:
         """Turn a leaf (fence, code_block, hr, html_block) token into a block."""
         start, end = tok.map
         source_lines = lines[start:end]
@@ -630,7 +630,7 @@ class DocumentProcessor:
 
     def _chunk_markdown_line_walker(
         self, content: str, filename: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Legacy line-based markdown chunker. Kept as fallback when
         markdown-it-py is unavailable. Preserves original behavior with the
         empty-chunk guard applied.
@@ -638,8 +638,8 @@ class DocumentProcessor:
         chunks = []
         lines = content.split("\n")
 
-        current_hierarchy: List[str] = []  # Track header hierarchy
-        current_chunk: List[str] = []
+        current_hierarchy: list[str] = []  # Track header hierarchy
+        current_chunk: list[str] = []
         current_size = 0
         line_start = 1
         in_code_block = False
@@ -751,14 +751,14 @@ class DocumentProcessor:
 
     def _chunk_python_enhanced(
         self, content: str, filename: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Enhanced Python code chunking with better function/class detection"""
         chunks = []
         lines = content.split("\n")
 
         current_function = None
         current_class = None
-        current_chunk: List[str] = []
+        current_chunk: list[str] = []
         current_size = 0
         line_start = 1
         indent_level = 0
@@ -865,7 +865,7 @@ class DocumentProcessor:
 
         return chunks
 
-    def _chunk_text_enhanced(self, content: str, filename: str) -> List[Dict[str, Any]]:
+    def _chunk_text_enhanced(self, content: str, filename: str) -> list[dict[str, Any]]:
         """Enhanced text chunking using sentence-based approach"""
         if isinstance(content, list):
             content = "\n".join(content)
@@ -889,7 +889,7 @@ class DocumentProcessor:
 
     def _sentence_based_chunking(
         self, text: str, max_sentences_per_chunk: int, split_newlines: int = 2
-    ) -> List[str]:
+    ) -> list[str]:
         """Sentence-based chunking with enhancements"""
         if not sent_tokenize:
             # Fallback to simple splitting
@@ -900,7 +900,7 @@ class DocumentProcessor:
 
             if split_newlines > 0:
                 # Create regex pattern for specified number of newlines
-                newline_pattern = r"(\n{%d,})" % split_newlines
+                newline_pattern = rf"(\n{{{split_newlines},}})"
                 parts = re.split(newline_pattern, text)
 
                 for part in parts:
@@ -940,13 +940,13 @@ class DocumentProcessor:
         optimal_sentences = max(1, int(self.chunk_size / avg_sentence_length))
         return min(optimal_sentences, 10)  # Cap at 10 sentences for readability
 
-    def _build_section_path(self, hierarchy: List[str]) -> Optional[str]:
+    def _build_section_path(self, hierarchy: list[str]) -> str | None:
         """Build hierarchical section path from header hierarchy"""
         return " > ".join(hierarchy) if hierarchy else None
 
     def _build_markdown_metadata(
-        self, hierarchy: List[str], code_languages: List[str], has_code: bool
-    ) -> Dict[str, Any]:
+        self, hierarchy: list[str], code_languages: list[str], has_code: bool
+    ) -> dict[str, Any]:
         """Build rich metadata for markdown chunks
 
         Args:
@@ -957,7 +957,7 @@ class DocumentProcessor:
         Returns:
             Dictionary with markdown-specific metadata including tags
         """
-        metadata: Dict[str, Any] = {
+        metadata: dict[str, Any] = {
             "chunk_type": "markdown",
         }
 
@@ -989,8 +989,8 @@ class DocumentProcessor:
         return metadata
 
     def _build_python_section(
-        self, class_name: Optional[str], function_name: Optional[str]
-    ) -> Optional[str]:
+        self, class_name: str | None, function_name: str | None
+    ) -> str | None:
         """Build section name for Python code"""
         if class_name and function_name:
             return f"{class_name}.{function_name}"
@@ -1000,7 +1000,7 @@ class DocumentProcessor:
             return function_name
         return None
 
-    def _find_best_split_point(self, lines: List[str]) -> int:
+    def _find_best_split_point(self, lines: list[str]) -> int:
         """Find the best point to split a chunk (prefer paragraph boundaries)"""
         # Look for empty lines (paragraph boundaries) in the last 25% of the chunk
         start_search = max(1, len(lines) * 3 // 4)
@@ -1016,11 +1016,11 @@ class DocumentProcessor:
         self,
         content: str,
         filename: str,
-        section: Optional[str] = None,
-        start_line: Optional[int] = None,
-        end_line: Optional[int] = None,
-        metadata: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        section: str | None = None,
+        start_line: int | None = None,
+        end_line: int | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Create chunk dictionary with enhanced metadata"""
         base_metadata = {
             "file_type": Path(filename).suffix.lstrip("."),
@@ -1056,14 +1056,14 @@ class DocumentProcessor:
             "metadata": base_metadata,
         }
 
-    def _get_overlap_lines(self, lines: List[str]) -> List[str]:
+    def _get_overlap_lines(self, lines: list[str]) -> list[str]:
         """Get overlap lines for chunk continuity"""
         if not lines:
             return []
 
         # Calculate overlap size in characters
         overlap_chars = self.chunk_overlap
-        overlap_lines: List[str] = []
+        overlap_lines: list[str] = []
         char_count = 0
 
         # Take lines from the end until we reach overlap size
@@ -1078,7 +1078,7 @@ class DocumentProcessor:
 
     def _chunk_by_sentences(
         self, content: str, filename: str, file_type: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Chunk content by sentences with specified max sentences per chunk"""
         if isinstance(content, list):
             content = "\n".join(content)
@@ -1109,7 +1109,7 @@ class DocumentProcessor:
 
     def _chunk_by_sliding_window(
         self, content: str, filename: str, file_type: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Chunk content using sliding window approach with word-based chunks"""
         if isinstance(content, list):
             content = "\n".join(content)
@@ -1149,7 +1149,7 @@ class DocumentProcessor:
 
     def _chunk_by_paragraphs(
         self, content: str, filename: str, file_type: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Chunk content by paragraphs (split on double newlines)"""
         if isinstance(content, list):
             content = "\n".join(content)
@@ -1178,7 +1178,7 @@ class DocumentProcessor:
 
     def _chunk_by_pages(
         self, content: str, filename: str, file_type: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Chunk content by pages (for documents that have page boundaries)"""
         if isinstance(content, list):
             # If content is already a list (e.g., from PDF extraction), treat each item as a page
@@ -1225,7 +1225,7 @@ class DocumentProcessor:
 
     def _chunk_by_semantic(
         self, content: str, filename: str, file_type: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Chunk based on semantic similarity between sentences"""
         if isinstance(content, list):
             content = "\n".join(content)
@@ -1283,7 +1283,7 @@ class DocumentProcessor:
             split_points.append(len(sentences))
 
             # Create chunks
-            chunks: List[Dict[str, Any]] = []
+            chunks: list[dict[str, Any]] = []
             for i in range(len(split_points) - 1):
                 start_idx = split_points[i]
                 end_idx = split_points[i + 1]
@@ -1334,7 +1334,7 @@ class DocumentProcessor:
 
     def _chunk_by_topics(
         self, content: str, filename: str, file_type: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Chunk based on topic changes using keyword analysis"""
         if isinstance(content, list):
             content = "\n".join(content)
@@ -1445,7 +1445,7 @@ class DocumentProcessor:
                 sentence_keywords.append(set(keywords))
 
             # Find topic boundaries based on keyword overlap
-            chunks: List[Dict[str, Any]] = []
+            chunks: list[dict[str, Any]] = []
             current_chunk = [sentences[0]]
             current_keywords = sentence_keywords[0]
 
@@ -1518,7 +1518,7 @@ class DocumentProcessor:
 
     def _chunk_by_qa_optimization(
         self, content: str, filename: str, file_type: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Create chunks optimized for question-answering"""
         if isinstance(content, list):
             content = "\n".join(content)
@@ -1538,8 +1538,8 @@ class DocumentProcessor:
             r"(definition|meaning|refers to|means)",
         ]
 
-        chunks: List[Dict[str, Any]] = []
-        current_chunk: List[str] = []
+        chunks: list[dict[str, Any]] = []
+        current_chunk: list[str] = []
         current_context = []
 
         for i, sentence in enumerate(sentences):
@@ -1629,7 +1629,7 @@ class DocumentProcessor:
 
     def _chunk_from_json(
         self, content: str, filename: str, file_type: str
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """
         Create chunks from pre-processed JSON content
 

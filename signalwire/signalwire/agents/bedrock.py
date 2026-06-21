@@ -14,7 +14,7 @@ with all SignalWire agent features like skills, POM, and SWAIG functions.
 """
 
 import json
-from typing import Dict, Any, Optional
+from typing import Any
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.logging_config import get_logger
 
@@ -41,7 +41,7 @@ class BedrockAgent(AgentBase):
         self,
         name: str = "bedrock_agent",
         route: str = "/bedrock",
-        system_prompt: Optional[str] = None,
+        system_prompt: str | None = None,
         voice_id: str = "matthew",
         temperature: float = 0.7,
         top_p: float = 0.9,
@@ -77,7 +77,7 @@ class BedrockAgent(AgentBase):
         logger.info(f"BedrockAgent initialized: {name} on route {route}")
 
     def _render_swml(
-        self, call_id: Optional[str] = None, modifications: Optional[dict] = None
+        self, call_id: str | None = None, modifications: dict | None = None
     ) -> str:
         """
         Render SWML document with amazon_bedrock verb
@@ -143,7 +143,7 @@ class BedrockAgent(AgentBase):
         # Convert back to JSON string
         return json.dumps(swml)
 
-    def _add_voice_to_prompt(self, prompt_config: Dict[str, Any]) -> Dict[str, Any]:
+    def _add_voice_to_prompt(self, prompt_config: dict[str, Any]) -> dict[str, Any]:
         """
         Add voice configuration to the prompt object
 
@@ -176,7 +176,7 @@ class BedrockAgent(AgentBase):
 
         return filtered_config
 
-    def _build_bedrock_params(self, base_params: Dict[str, Any]) -> Dict[str, Any]:
+    def _build_bedrock_params(self, base_params: dict[str, Any]) -> dict[str, Any]:
         """
         Build Bedrock-specific parameters
 
@@ -214,9 +214,9 @@ class BedrockAgent(AgentBase):
 
     def set_inference_params(
         self,
-        temperature: Optional[float] = None,
-        top_p: Optional[float] = None,
-        max_tokens: Optional[int] = None,
+        temperature: float | None = None,
+        top_p: float | None = None,
+        max_tokens: int | None = None,
     ) -> None:
         """
         Update Bedrock inference parameters

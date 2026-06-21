@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 import threading
-from typing import TYPE_CHECKING, List, Dict, Any, Optional
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports the mixins; the name resolves at type-check time but mypy flags the back-reference
@@ -36,7 +36,7 @@ class AIConfigMixin(_HostTyped):
             self._hints.append(hint)
         return self
 
-    def add_hints(self, hints: List[str]) -> "AgentBase":
+    def add_hints(self, hints: list[str]) -> "AgentBase":
         """
         Add multiple string hints
 
@@ -83,11 +83,11 @@ class AIConfigMixin(_HostTyped):
         name: str,
         code: str,
         voice: str,
-        speech_fillers: Optional[List[str]] = None,
-        function_fillers: Optional[List[str]] = None,
-        engine: Optional[str] = None,
-        model: Optional[str] = None,
-        params: Optional[Dict[str, Any]] = None,
+        speech_fillers: list[str] | None = None,
+        function_fillers: list[str] | None = None,
+        engine: str | None = None,
+        model: str | None = None,
+        params: dict[str, Any] | None = None,
     ) -> "AgentBase":
         """
         Add a language configuration to support multilingual conversations
@@ -123,7 +123,7 @@ class AIConfigMixin(_HostTyped):
                                engine="elevenlabs",
                                params={"stability": 0.5, "similarity_boost": 0.75})
         """
-        language: Dict[str, Any] = {"name": name, "code": code}
+        language: dict[str, Any] = {"name": name, "code": code}
 
         # Handle voice formatting (either explicit params or combined string)
         if engine or model:
@@ -167,7 +167,7 @@ class AIConfigMixin(_HostTyped):
         self._languages.append(language)
         return self
 
-    def set_language_params(self, code: str, params: Dict[str, Any]) -> "AgentBase":
+    def set_language_params(self, code: str, params: dict[str, Any]) -> "AgentBase":
         """
         Set (or replace) the per-language ``params`` dict on an already-added
         language. Useful when language entries are built up via add_language()
@@ -190,7 +190,7 @@ class AIConfigMixin(_HostTyped):
                 break
         return self
 
-    def get_language_params(self, code: str) -> Optional[Dict[str, Any]]:
+    def get_language_params(self, code: str) -> dict[str, Any] | None:
         """
         Read the per-language ``params`` dict for a previously-added language.
 
@@ -205,7 +205,7 @@ class AIConfigMixin(_HostTyped):
                 return language.get("params")
         return None
 
-    def set_languages(self, languages: List[Dict[str, Any]]) -> "AgentBase":
+    def set_languages(self, languages: list[dict[str, Any]]) -> "AgentBase":
         """
         Set all language configurations at once
 
@@ -234,14 +234,14 @@ class AIConfigMixin(_HostTyped):
             Self for method chaining
         """
         if replace and with_text:
-            rule: Dict[str, Any] = {"replace": replace, "with": with_text}
+            rule: dict[str, Any] = {"replace": replace, "with": with_text}
             if ignore_case:
                 rule["ignore_case"] = True
 
             self._pronounce.append(rule)
         return self
 
-    def set_pronunciations(self, pronunciations: List[Dict[str, Any]]) -> "AgentBase":
+    def set_pronunciations(self, pronunciations: list[dict[str, Any]]) -> "AgentBase":
         """
         Set all pronunciation rules at once
 
@@ -270,7 +270,7 @@ class AIConfigMixin(_HostTyped):
             self._params[key] = value
         return self
 
-    def set_params(self, params: Dict[str, Any]) -> "AgentBase":
+    def set_params(self, params: dict[str, Any]) -> "AgentBase":
         """
         Set multiple AI parameters at once
 
@@ -284,7 +284,7 @@ class AIConfigMixin(_HostTyped):
             self._params.update(params)
         return self
 
-    def set_global_data(self, data: Dict[str, Any]) -> "AgentBase":
+    def set_global_data(self, data: dict[str, Any]) -> "AgentBase":
         """
         Merge data into the global data available to the AI throughout the conversation.
 
@@ -304,7 +304,7 @@ class AIConfigMixin(_HostTyped):
                 self._global_data.update(data)
         return self
 
-    def update_global_data(self, data: Dict[str, Any]) -> "AgentBase":
+    def update_global_data(self, data: dict[str, Any]) -> "AgentBase":
         """
         Update the global data with new values
 
@@ -321,7 +321,7 @@ class AIConfigMixin(_HostTyped):
                 self._global_data.update(data)
         return self
 
-    def set_native_functions(self, function_names: List[str]) -> "AgentBase":
+    def set_native_functions(self, function_names: list[str]) -> "AgentBase":
         """
         Set the list of native functions to enable
 
@@ -356,7 +356,7 @@ class AIConfigMixin(_HostTyped):
     )
 
     def set_internal_fillers(
-        self, internal_fillers: Dict[str, Dict[str, List[str]]]
+        self, internal_fillers: dict[str, dict[str, list[str]]]
     ) -> "AgentBase":
         """
         Set internal fillers for native SWAIG functions.
@@ -433,7 +433,7 @@ class AIConfigMixin(_HostTyped):
         return self
 
     def add_internal_filler(
-        self, function_name: str, language_code: str, fillers: List[str]
+        self, function_name: str, language_code: str, fillers: list[str]
     ) -> "AgentBase":
         """
         Add internal fillers for a single internal function and language.
@@ -513,7 +513,7 @@ class AIConfigMixin(_HostTyped):
         return self
 
     def add_function_include(
-        self, url: str, functions: List[str], meta_data: Optional[Dict[str, Any]] = None
+        self, url: str, functions: list[str], meta_data: dict[str, Any] | None = None
     ) -> "AgentBase":
         """
         Add a remote function include to the SWAIG configuration
@@ -527,14 +527,14 @@ class AIConfigMixin(_HostTyped):
             Self for method chaining
         """
         if url and functions and isinstance(functions, list):
-            include: Dict[str, Any] = {"url": url, "functions": functions}
+            include: dict[str, Any] = {"url": url, "functions": functions}
             if meta_data and isinstance(meta_data, dict):
                 include["meta_data"] = meta_data
 
             self._function_includes.append(include)
         return self
 
-    def set_function_includes(self, includes: List[Dict[str, Any]]) -> "AgentBase":
+    def set_function_includes(self, includes: list[dict[str, Any]]) -> "AgentBase":
         """
         Set the complete list of function includes
 
@@ -563,9 +563,9 @@ class AIConfigMixin(_HostTyped):
     def add_mcp_server(
         self,
         url: str,
-        headers: Optional[Dict[str, str]] = None,
+        headers: dict[str, str] | None = None,
         resources: bool = False,
-        resource_vars: Optional[Dict[str, str]] = None,
+        resource_vars: dict[str, str] | None = None,
     ) -> "AgentBase":
         """
         Add an external MCP server for tool discovery and invocation.
@@ -583,7 +583,7 @@ class AIConfigMixin(_HostTyped):
         Returns:
             Self for method chaining
         """
-        server: Dict[str, Any] = {"url": url}
+        server: dict[str, Any] = {"url": url}
         if headers:
             server["headers"] = headers
         if resources:

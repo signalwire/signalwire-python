@@ -18,11 +18,11 @@ It requires additional dependencies that can be installed with:
 """
 
 import warnings
-from typing import Any, List
+from typing import Any
 
 # Check for core search dependencies
 _SEARCH_AVAILABLE = True
-_MISSING_DEPS: List[str] = []
+_MISSING_DEPS: list[str] = []
 
 # These bare imports probe for optional-dependency availability; the import
 # itself is the test, so the bound name is intentionally unused (F401).

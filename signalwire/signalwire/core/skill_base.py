@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, ClassVar, TYPE_CHECKING, Optional
+from typing import Any, ClassVar, TYPE_CHECKING
 
 from signalwire.core.logging_config import get_logger
 
@@ -21,16 +21,16 @@ class SkillBase(ABC):
     """Abstract base class for all agent skills"""
 
     # Subclasses must define these
-    SKILL_NAME: Optional[str] = None  # Required: unique identifier
-    SKILL_DESCRIPTION: Optional[str] = None  # Required: human-readable description
+    SKILL_NAME: str | None = None  # Required: unique identifier
+    SKILL_DESCRIPTION: str | None = None  # Required: human-readable description
     SKILL_VERSION: str = "1.0.0"  # Semantic version
-    REQUIRED_PACKAGES: ClassVar[List[str]] = []  # Python packages needed
-    REQUIRED_ENV_VARS: ClassVar[List[str]] = []  # Environment variables needed
+    REQUIRED_PACKAGES: ClassVar[list[str]] = []  # Python packages needed
+    REQUIRED_ENV_VARS: ClassVar[list[str]] = []  # Environment variables needed
 
     # Multiple instance support
     SUPPORTS_MULTIPLE_INSTANCES: bool = False  # Set to True to allow multiple instances
 
-    def __init__(self, agent: "AgentBase", params: Optional[Dict[str, Any]] = None):
+    def __init__(self, agent: "AgentBase", params: dict[str, Any] | None = None):
         if self.SKILL_NAME is None:
             raise ValueError(f"{self.__class__.__name__} must define SKILL_NAME")
         if self.SKILL_DESCRIPTION is None:
@@ -76,22 +76,22 @@ class SkillBase(ABC):
         # Call the agent's define_tool with merged arguments
         return self.agent.define_tool(**merged_kwargs)
 
-    def get_hints(self) -> List[str]:
+    def get_hints(self) -> list[str]:
         """Return speech recognition hints for this skill"""
         return []
 
-    def get_global_data(self) -> Dict[str, Any]:
+    def get_global_data(self) -> dict[str, Any]:
         """Return data to add to agent's global context"""
         return {}
 
-    def get_prompt_sections(self) -> List[Dict[str, Any]]:
+    def get_prompt_sections(self) -> list[dict[str, Any]]:
         """Return prompt sections to add to agent.
         Returns empty list if skip_prompt is set to True in params."""
         if self.params.get("skip_prompt", False):
             return []
         return self._get_prompt_sections()
 
-    def _get_prompt_sections(self) -> List[Dict[str, Any]]:
+    def _get_prompt_sections(self) -> list[dict[str, Any]]:
         """Override this in subclasses to provide prompt sections."""
         return []
 
@@ -162,7 +162,7 @@ class SkillBase(ABC):
             return f"skill:{prefix}"
         return f"skill:{self.get_instance_key()}"
 
-    def get_skill_data(self, raw_data: Dict[str, Any]) -> Dict[str, Any]:
+    def get_skill_data(self, raw_data: dict[str, Any]) -> dict[str, Any]:
         """
         Read this skill instance's namespaced data from raw_data global_data.
 
@@ -178,7 +178,7 @@ class SkillBase(ABC):
         return global_data.get(namespace, {})
 
     def update_skill_data(
-        self, result: "FunctionResult", data: Dict[str, Any]
+        self, result: "FunctionResult", data: dict[str, Any]
     ) -> "FunctionResult":
         """
         Write this skill instance's namespaced data into a FunctionResult.
@@ -198,7 +198,7 @@ class SkillBase(ABC):
         return result
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """
         Get the parameter schema for this skill
 

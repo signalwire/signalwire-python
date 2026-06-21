@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 Session manager for handling call sessions and security tokens
 """
 
-from typing import Dict, Any, Optional
+from typing import Any
 import secrets
 import time
 import hmac
@@ -27,7 +27,7 @@ class SessionManager:
     signatures with the tokens containing all necessary information.
     """
 
-    def __init__(self, token_expiry_secs: int = 900, secret_key: Optional[str] = None):
+    def __init__(self, token_expiry_secs: int = 900, secret_key: str | None = None):
         """
         Initialize the session manager
 
@@ -40,7 +40,7 @@ class SessionManager:
         self.secret_key = secret_key or secrets.token_hex(32)
         self._debug_mode = False
 
-    def create_session(self, call_id: Optional[str] = None) -> str:
+    def create_session(self, call_id: str | None = None) -> str:
         """
         Create a new session ID if one isn't provided
 
@@ -194,7 +194,7 @@ class SessionManager:
         """
         return True
 
-    def get_session_metadata(self, call_id: str) -> Optional[Dict[str, Any]]:
+    def get_session_metadata(self, call_id: str) -> dict[str, Any] | None:
         """
         Legacy method, always returns empty metadata
         """
@@ -206,7 +206,7 @@ class SessionManager:
         """
         return True
 
-    def debug_token(self, token: str) -> Dict[str, Any]:
+    def debug_token(self, token: str) -> dict[str, Any]:
         """
         Debug a token without validating it
 

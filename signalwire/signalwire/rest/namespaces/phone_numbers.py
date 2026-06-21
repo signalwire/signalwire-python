@@ -9,8 +9,6 @@ See LICENSE file in the project root for full license information.
 Phone Numbers namespace — list, search, purchase, get, update, release, bind.
 """
 
-from typing import Optional
-
 from .._base import CrudResource
 from ..call_handler import PhoneCallHandler
 
@@ -59,8 +57,8 @@ class PhoneNumbersResource(CrudResource):
         self,
         resource_id: str,
         url: str,
-        fallback_url: Optional[str] = None,
-        status_callback_url: Optional[str] = None,
+        fallback_url: str | None = None,
+        status_callback_url: str | None = None,
         **extra,
     ) -> dict:
         """Route inbound calls to a cXML (Twilio-compat / LAML) webhook.
@@ -105,7 +103,7 @@ class PhoneNumbersResource(CrudResource):
         self,
         resource_id: str,
         flow_id: str,
-        version: Optional[str] = None,
+        version: str | None = None,
         **extra,
     ) -> dict:
         """Route inbound calls to a Call Flow by ID.
@@ -135,7 +133,7 @@ class PhoneNumbersResource(CrudResource):
         self,
         resource_id: str,
         topic: str,
-        status_callback_url: Optional[str] = None,
+        status_callback_url: str | None = None,
         **extra,
     ) -> dict:
         """Route inbound calls to a RELAY topic (client subscription)."""

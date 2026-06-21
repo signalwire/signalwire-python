@@ -10,7 +10,7 @@ See LICENSE file in the project root for full license information.
 import nltk
 import re
 import threading
-from typing import Dict, Any, List, Optional
+from typing import Any
 from nltk.corpus import wordnet as wn
 from nltk.stem import PorterStemmer
 
@@ -230,7 +230,7 @@ def load_spacy_model(language: str):
 
 
 # Model cache - stores multiple models by name
-_model_cache: Dict[str, Any] = {}  # model_name -> SentenceTransformer instance
+_model_cache: dict[str, Any] = {}  # model_name -> SentenceTransformer instance
 _MAX_MODEL_CACHE_SIZE = 5
 
 _model_lock = threading.Lock()
@@ -257,7 +257,7 @@ def set_global_model(model):
             logger.info(f"Model added to cache: {model_name}")
 
 
-def _get_cached_model(model_name: Optional[str] = None):
+def _get_cached_model(model_name: str | None = None):
     """Get or create cached sentence transformer model
 
     Args:
@@ -303,7 +303,7 @@ def _get_cached_model(model_name: Optional[str] = None):
             return None
 
 
-def vectorize_query(query: str, model=None, model_name: Optional[str] = None):
+def vectorize_query(query: str, model=None, model_name: str | None = None):
     """
     Vectorize query using sentence transformers
     Returns numpy array of embeddings
@@ -404,7 +404,7 @@ def get_wordnet_pos(spacy_pos):
     return pos_mapping.get(spacy_pos, wn.NOUN)
 
 
-def get_synonyms(word: str, pos_tag: str, max_synonyms: int = 5) -> List[str]:
+def get_synonyms(word: str, pos_tag: str, max_synonyms: int = 5) -> list[str]:
     """Get synonyms for a word using WordNet"""
     try:
         wn_pos = get_wordnet_pos(pos_tag)
@@ -449,16 +449,16 @@ def remove_duplicate_words(input_string: str) -> str:
 def preprocess_query(
     query: str,
     language: str = "en",
-    pos_to_expand: Optional[List[str]] = None,
+    pos_to_expand: list[str] | None = None,
     max_synonyms: int = 5,
     debug: bool = False,
     vector: bool = False,
     vectorize_query_param: bool = False,
-    nlp_backend: Optional[str] = None,
+    nlp_backend: str | None = None,
     query_nlp_backend: str = "nltk",
-    model_name: Optional[str] = None,
+    model_name: str | None = None,
     preserve_original: bool = True,
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Advanced query preprocessing with language detection, POS tagging, synonym expansion, and vectorization
 
@@ -638,7 +638,7 @@ def preprocess_query(
             f"NLP Backend Used: {query_nlp_backend if nlp or query_nlp_backend == 'nltk' else 'nltk (fallback)'}"
         )
 
-    formatted_output: Dict[str, Any] = {
+    formatted_output: dict[str, Any] = {
         "input": final_query_str,
         "enhanced_text": final_query_str,  # Alias for compatibility
         "language": language,
@@ -662,9 +662,9 @@ def preprocess_query(
 def preprocess_document_content(
     content: str,
     language: str = "en",
-    nlp_backend: Optional[str] = None,
+    nlp_backend: str | None = None,
     index_nlp_backend: str = "nltk",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Preprocess document content for better searchability
 

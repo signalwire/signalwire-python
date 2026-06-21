@@ -170,7 +170,7 @@ line-length = 88
 # E4/E7/E9 + F are the ruff defaults (E501 line-length intentionally excluded —
 # formatting is owned by `ruff format`, not the linter). B = flake8-bugbear
 # (likely-bug patterns), S = flake8-bandit (security smells).
-select = ["E4", "E7", "E9", "F", "B", "S", "C4", "PERF", "SIM", "PTH", "RET", "RUF"]
+select = ["E4", "E7", "E9", "F", "B", "S", "C4", "PERF", "SIM", "PTH", "RET", "RUF", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
 # Tests are built on assert; bandit's S101 is noise there.

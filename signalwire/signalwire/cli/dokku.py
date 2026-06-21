@@ -23,7 +23,7 @@ import secrets
 import argparse
 import shutil
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 
 # =============================================================================
@@ -1814,7 +1814,7 @@ swaig-test app.py --list-tools
 class DokkuProjectGenerator:
     """Generates Dokku deployment files for SignalWire agents."""
 
-    def __init__(self, app_name: str, options: Dict[str, Any]):
+    def __init__(self, app_name: str, options: dict[str, Any]):
         self.app_name = app_name
         self.options = options
         self.project_dir = Path(options.get("project_dir", f"./{app_name}"))

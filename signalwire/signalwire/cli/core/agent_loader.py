@@ -12,7 +12,7 @@ Agent discovery and loading functionality
 
 import importlib.util
 from pathlib import Path
-from typing import List, Dict, Any, Optional, cast, Type, TYPE_CHECKING
+from typing import Any, cast, TYPE_CHECKING
 
 # Import after checking if available
 if TYPE_CHECKING:
@@ -51,7 +51,7 @@ else:
         NEW_LOADER_AVAILABLE = False
 
 
-def discover_services_in_file(service_path: str) -> List[Dict[str, Any]]:
+def discover_services_in_file(service_path: str) -> list[dict[str, Any]]:
     """
     Discover all available SWML services (including agents) in a Python file without instantiating them
 
@@ -74,7 +74,7 @@ def discover_services_in_file(service_path: str) -> List[Dict[str, Any]]:
     return _discover_services_impl(service_path)
 
 
-def discover_agents_in_file(agent_path: str) -> List[Dict[str, Any]]:
+def discover_agents_in_file(agent_path: str) -> list[dict[str, Any]]:
     """
     Backward compatibility wrapper - discovers agents in a file
 
@@ -89,7 +89,7 @@ def discover_agents_in_file(agent_path: str) -> List[Dict[str, Any]]:
     return [s for s in all_services if s.get("is_agent", False)]
 
 
-def _discover_services_impl(service_path: str) -> List[Dict[str, Any]]:
+def _discover_services_impl(service_path: str) -> list[dict[str, Any]]:
     """
     Internal implementation for discovering services
     """
@@ -130,7 +130,7 @@ def _discover_services_impl(service_path: str) -> List[Dict[str, Any]]:
         if sys_path_added and module_dir in sys.path:
             sys.path.remove(module_dir)
 
-    services_found: List[Dict[str, Any]] = []
+    services_found: list[dict[str, Any]] = []
 
     # Look for SWMLService instances (including AgentBase which inherits from it)
     for name, obj in vars(module).items():
@@ -198,7 +198,7 @@ def _discover_services_impl(service_path: str) -> List[Dict[str, Any]]:
 
 def load_service_from_file(
     service_path: str,
-    service_identifier: Optional[str] = None,
+    service_identifier: str | None = None,
     prefer_route: bool = True,
 ) -> "SWMLService":
     """
@@ -226,7 +226,7 @@ def load_service_from_file(
 
 
 def load_agent_from_file(
-    agent_path: str, agent_class_name: Optional[str] = None
+    agent_path: str, agent_class_name: str | None = None
 ) -> "AgentBase":
     """
     Load an agent from a Python file
@@ -271,7 +271,7 @@ def load_agent_from_file(
 
 def _load_service_impl(
     service_path: str,
-    service_identifier: Optional[str] = None,
+    service_identifier: str | None = None,
     prefer_route: bool = True,
 ) -> "SWMLService":
     """
@@ -340,7 +340,7 @@ def _load_service_impl(
                     try:
                         # Discovered subclasses define their own (often no-arg)
                         # constructors; cast away the abstract base signature.
-                        temp_instance = cast(Type[Any], obj)()
+                        temp_instance = cast(type[Any], obj)()
                         if (
                             hasattr(temp_instance, "route")
                             and temp_instance.route == service_identifier
@@ -356,7 +356,7 @@ def _load_service_impl(
             obj = getattr(module, service_identifier)
             if isinstance(obj, type) and issubclass(obj, SWMLService):
                 try:
-                    service = cast(Type[Any], obj)()
+                    service = cast(type[Any], obj)()
                 except Exception as e:
                     raise ValueError(
                         f"No service found with route '{service_identifier}' and failed to instantiate class '{service_identifier}': {e}"
@@ -373,14 +373,14 @@ def _load_service_impl(
             obj = getattr(module, service_identifier)
             if isinstance(obj, type) and issubclass(obj, SWMLService):
                 try:
-                    service = cast(Type[Any], obj)()
+                    service = cast(type[Any], obj)()
                     if service and not service.route.endswith(
                         "dummy"
                     ):  # Avoid test services with dummy routes
                         pass  # Successfully created specific service
                     else:
                         service = cast(
-                            Type[Any], obj
+                            type[Any], obj
                         )()  # Create anyway if requested specifically
                 except Exception as e:
                     raise ValueError(
@@ -443,7 +443,7 @@ def _load_service_impl(
 
         if len(service_classes_found) == 1:
             try:
-                service = cast(Type[Any], service_classes_found[0][1])()
+                service = cast(type[Any], service_classes_found[0][1])()
             except Exception as e:
                 print(
                     f"Warning: Failed to instantiate {service_classes_found[0][0]}: {e}"
@@ -454,7 +454,7 @@ def _load_service_impl(
             for name, cls in service_classes_found:
                 try:
                     # Try to instantiate temporarily to get route
-                    temp_instance = cast(Type[Any], cls)()
+                    temp_instance = cast(type[Any], cls)()
                     route = getattr(temp_instance, "route", "Unknown")
                     service_name = getattr(temp_instance, "name", "Unknown")
                     service_info.append(
@@ -496,7 +496,7 @@ def _load_service_impl(
                     and obj not in (SWMLService, AgentBase)
                 ):
                     try:
-                        service = cast(Type[Any], obj)()
+                        service = cast(type[Any], obj)()
                         break
                     except Exception as e:
                         print(f"Warning: Failed to instantiate {name}: {e}")

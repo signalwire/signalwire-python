@@ -7,7 +7,7 @@ also accept the raw dict, so these are optional.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -20,7 +20,7 @@ class RelayEvent:
     timestamp: float = 0.0
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "RelayEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> RelayEvent:
         event_type = payload.get("event_type", "")
         params = payload.get("params", {})
         return cls(
@@ -41,7 +41,7 @@ class CallStateEvent(RelayEvent):
     device: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "CallStateEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> CallStateEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -70,7 +70,7 @@ class CallReceiveEvent(RelayEvent):
     tag: str = ""
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "CallReceiveEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> CallReceiveEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -97,7 +97,7 @@ class PlayEvent(RelayEvent):
     state: str = ""
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "PlayEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> PlayEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -122,7 +122,7 @@ class RecordEvent(RelayEvent):
     record: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "RecordEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> RecordEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         rec = p.get("record", {})
@@ -147,10 +147,10 @@ class CollectEvent(RelayEvent):
     control_id: str = ""
     state: str = ""
     result: dict[str, Any] = field(default_factory=dict)
-    final: Optional[bool] = None
+    final: bool | None = None
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "CollectEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> CollectEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -173,7 +173,7 @@ class ConnectEvent(RelayEvent):
     peer: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "ConnectEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> ConnectEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -194,7 +194,7 @@ class DetectEvent(RelayEvent):
     detect: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "DetectEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> DetectEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -215,7 +215,7 @@ class FaxEvent(RelayEvent):
     fax: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "FaxEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> FaxEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -238,7 +238,7 @@ class TapEvent(RelayEvent):
     device: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "TapEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> TapEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -263,7 +263,7 @@ class StreamEvent(RelayEvent):
     name: str = ""
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "StreamEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> StreamEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -286,7 +286,7 @@ class SendDigitsEvent(RelayEvent):
     state: str = ""
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "SendDigitsEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> SendDigitsEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -308,7 +308,7 @@ class DialEvent(RelayEvent):
     call: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "DialEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> DialEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -332,7 +332,7 @@ class ReferEvent(RelayEvent):
     sip_notify_response_code: str = ""
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "ReferEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> ReferEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -354,7 +354,7 @@ class DenoiseEvent(RelayEvent):
     denoised: bool = False
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "DenoiseEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> DenoiseEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -374,7 +374,7 @@ class PayEvent(RelayEvent):
     state: str = ""
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "PayEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> PayEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -399,7 +399,7 @@ class QueueEvent(RelayEvent):
     size: int = 0
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "QueueEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> QueueEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -423,7 +423,7 @@ class EchoEvent(RelayEvent):
     state: str = ""
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "EchoEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> EchoEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -447,7 +447,7 @@ class TranscribeEvent(RelayEvent):
     size: int = 0
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "TranscribeEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> TranscribeEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -471,7 +471,7 @@ class HoldEvent(RelayEvent):
     state: str = ""
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "HoldEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> HoldEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -492,7 +492,7 @@ class ConferenceEvent(RelayEvent):
     status: str = ""
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "ConferenceEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> ConferenceEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -514,7 +514,7 @@ class CallingErrorEvent(RelayEvent):
     message: str = ""
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "CallingErrorEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> CallingErrorEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -543,7 +543,7 @@ class MessageReceiveEvent(RelayEvent):
     tags: list[str] = field(default_factory=list)
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "MessageReceiveEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> MessageReceiveEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -581,7 +581,7 @@ class MessageStateEvent(RelayEvent):
     tags: list[str] = field(default_factory=list)
 
     @classmethod
-    def from_payload(cls, payload: dict[str, Any]) -> "MessageStateEvent":
+    def from_payload(cls, payload: dict[str, Any]) -> MessageStateEvent:
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(

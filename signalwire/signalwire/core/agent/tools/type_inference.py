@@ -12,7 +12,7 @@ Type-hint-based schema inference for SWAIG tool functions.
 import inspect
 import re
 import typing
-from typing import Any, Dict, List, Optional, Tuple, get_type_hints
+from typing import Any, get_type_hints
 
 
 # Map Python types to JSON Schema types
@@ -26,7 +26,7 @@ _TYPE_MAP = {
 }
 
 
-def _resolve_type(annotation) -> Tuple[Dict[str, Any], bool]:
+def _resolve_type(annotation) -> tuple[dict[str, Any], bool]:
     """
     Resolve a Python type annotation to a JSON Schema property dict.
 
@@ -77,7 +77,7 @@ def _resolve_type(annotation) -> Tuple[Dict[str, Any], bool]:
     return {"type": "string"}, False
 
 
-def _parse_docstring_args(docstring: str) -> Tuple[str, Dict[str, str]]:
+def _parse_docstring_args(docstring: str) -> tuple[str, dict[str, str]]:
     """
     Parse a Google-style docstring to extract the summary line
     and per-parameter descriptions from the Args: block.
@@ -154,7 +154,7 @@ def _parse_docstring_args(docstring: str) -> Tuple[str, Dict[str, str]]:
     return summary, param_descriptions
 
 
-def infer_schema(func) -> Tuple[Dict[str, Dict], List[str], Optional[str], bool, bool]:
+def infer_schema(func) -> tuple[dict[str, dict], list[str], str | None, bool, bool]:
     """
     Inspect a function's signature and type hints to infer a JSON Schema
     for SWAIG tool parameters.
@@ -190,9 +190,9 @@ def infer_schema(func) -> Tuple[Dict[str, Dict], List[str], Optional[str], bool,
         for p in params:
             if p.annotation is not inspect.Parameter.empty and p.annotation not in (
                 dict,
-                Dict,
+                dict,
                 Any,
-                Dict[str, Any],
+                dict[str, Any],
             ):
                 has_meaningful_hints = True
                 break

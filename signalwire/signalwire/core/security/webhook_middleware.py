@@ -39,7 +39,8 @@ Usage::
 from __future__ import annotations
 
 import os
-from typing import Awaitable, Callable, NoReturn, Optional
+from typing import NoReturn
+from collections.abc import Awaitable, Callable
 
 from fastapi import HTTPException, Request, Response, status
 
@@ -77,7 +78,7 @@ def _reconstruct_url(request: Request, *, trust_proxy: bool) -> str:
     return str(request.url)
 
 
-def _extract_signature_header(request: Request) -> Optional[str]:
+def _extract_signature_header(request: Request) -> str | None:
     """Return the SignalWire signature header (or ``X-Twilio-Signature`` alias)."""
     sig = request.headers.get(SIGNALWIRE_SIGNATURE_HEADER)
     if sig is None:
@@ -89,7 +90,7 @@ def make_webhook_validation_dependency(
     signing_key: str,
     *,
     trust_proxy: bool = False,
-) -> Callable[[Request, Response], Awaitable[Optional[Response]]]:
+) -> Callable[[Request, Response], Awaitable[Response | None]]:
     """Build a FastAPI dependency that enforces signature validation.
 
     The returned coroutine:

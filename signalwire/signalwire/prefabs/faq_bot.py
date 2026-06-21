@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 FAQBotAgent - Prefab agent for answering frequently asked questions
 """
 
-from typing import Any, List, Dict, Optional
+from typing import Any
 import json
 
 from signalwire.core.agent_base import AgentBase
@@ -43,9 +43,9 @@ class FAQBotAgent(AgentBase):
 
     def __init__(
         self,
-        faqs: List[Dict[str, Any]],
+        faqs: list[dict[str, Any]],
         suggest_related: bool = True,
-        persona: Optional[str] = None,
+        persona: str | None = None,
         name: str = "faq_bot",
         route: str = "/faq",
         **kwargs,
@@ -228,7 +228,7 @@ class FAQBotAgent(AgentBase):
 
         # Simple search logic (in a real implementation, you would use more
         # sophisticated search algorithms such as vector embeddings)
-        results: List[Dict[str, Any]] = []
+        results: list[dict[str, Any]] = []
 
         for faq in self.faqs:
             question = faq.get("question", "").lower()

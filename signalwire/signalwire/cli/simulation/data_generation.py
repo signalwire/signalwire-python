@@ -13,7 +13,7 @@ Generate fake SWML post_data and related helpers
 import uuid
 import json
 from datetime import datetime
-from typing import Dict, Any, Optional
+from typing import Any
 
 
 def generate_fake_uuid() -> str:
@@ -42,7 +42,7 @@ def generate_fake_sip_to(call_type: str) -> str:
     return f"agent-{uuid.uuid4().hex[:8]}@test.domain"
 
 
-def adapt_for_call_type(call_data: Dict[str, Any], call_type: str) -> Dict[str, Any]:
+def adapt_for_call_type(call_data: dict[str, Any], call_type: str) -> dict[str, Any]:
     """
     Adapt call data structure based on call type (sip vs webrtc)
 
@@ -83,7 +83,7 @@ def generate_fake_swml_post_data(
     call_type: str = "webrtc",
     call_direction: str = "inbound",
     call_state: str = "created",
-) -> Dict[str, Any]:
+) -> dict[str, Any]:
     """
     Generate fake SWML post_data that matches real SignalWire structure
 
@@ -139,9 +139,9 @@ def generate_fake_swml_post_data(
 
 def generate_comprehensive_post_data(
     function_name: str,
-    args: Dict[str, Any],
-    custom_data: Optional[Dict[str, Any]] = None,
-) -> Dict[str, Any]:
+    args: dict[str, Any],
+    custom_data: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     """
     Generate comprehensive post_data that matches what SignalWire would send
 
@@ -163,7 +163,7 @@ def generate_comprehensive_post_data(
     current_time = datetime.now().isoformat()
 
     # Base structure with all keys
-    post_data: Dict[str, Any] = {
+    post_data: dict[str, Any] = {
         "call_id": call_id,
         "call": {
             "call_id": call_id,
@@ -333,8 +333,8 @@ def generate_comprehensive_post_data(
 
 
 def generate_minimal_post_data(
-    function_name: str, args: Dict[str, Any]
-) -> Dict[str, Any]:
+    function_name: str, args: dict[str, Any]
+) -> dict[str, Any]:
     """
     Generate minimal post_data with only essential keys
 

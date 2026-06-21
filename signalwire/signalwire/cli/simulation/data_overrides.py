@@ -13,10 +13,10 @@ Handle CLI overrides and mapping to nested data
 import json
 import uuid
 import argparse
-from typing import Dict, Any, List
+from typing import Any
 
 
-def set_nested_value(data: Dict[str, Any], path: str, value: Any) -> None:
+def set_nested_value(data: dict[str, Any], path: str, value: Any) -> None:
     """
     Set a nested value using dot notation path
 
@@ -75,8 +75,8 @@ def parse_value(value_str: str) -> Any:
 
 
 def apply_overrides(
-    data: Dict[str, Any], overrides: List[str], json_overrides: List[str]
-) -> Dict[str, Any]:
+    data: dict[str, Any], overrides: list[str], json_overrides: list[str]
+) -> dict[str, Any]:
     """
     Apply override values to data using dot notation paths
 
@@ -113,8 +113,8 @@ def apply_overrides(
 
 
 def apply_convenience_mappings(
-    data: Dict[str, Any], args: argparse.Namespace
-) -> Dict[str, Any]:
+    data: dict[str, Any], args: argparse.Namespace
+) -> dict[str, Any]:
     """
     Apply convenience CLI arguments to data structure
 

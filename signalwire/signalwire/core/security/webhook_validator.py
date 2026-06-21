@@ -23,7 +23,8 @@ from __future__ import annotations
 import base64
 import hashlib
 import hmac
-from typing import Any, Dict, List, Mapping, Tuple, Union
+from typing import Any
+from collections.abc import Mapping
 from urllib.parse import parse_qsl, urlparse, urlunparse
 
 
@@ -66,7 +67,7 @@ def _safe_eq(a: str, b: str) -> bool:
 
 
 def _sorted_concat_params(
-    params: Union[Mapping[str, Any], List[Tuple[str, Any]], None],
+    params: Mapping[str, Any] | list[tuple[str, Any]] | None,
 ) -> str:
     """Concatenate form params per Scheme B rules.
 
@@ -81,7 +82,7 @@ def _sorted_concat_params(
 
     # Normalize to a list of (key, value) tuples preserving original order.
     if isinstance(params, Mapping):
-        items: List[Tuple[str, Any]] = []
+        items: list[tuple[str, Any]] = []
         for k, v in params.items():
             if isinstance(v, (list, tuple)):
                 items.extend((k, vi) for vi in v)
@@ -96,7 +97,7 @@ def _sorted_concat_params(
     return "".join(f"{k}{'' if v is None else v}" for k, v in items)
 
 
-def _parse_form_body(raw_body: str) -> List[Tuple[str, str]]:
+def _parse_form_body(raw_body: str) -> list[tuple[str, str]]:
     """Best-effort parse of an x-www-form-urlencoded body.
 
     Returns an empty list if the body doesn't decode as form data; the
@@ -110,7 +111,7 @@ def _parse_form_body(raw_body: str) -> List[Tuple[str, str]]:
         return []
 
 
-def _split_url(url: str) -> Tuple[str, str, str, str, str, str, Dict[str, str]]:
+def _split_url(url: str) -> tuple[str, str, str, str, str, str, dict[str, str]]:
     """Split URL into scheme, host (no port), port (or ''), path, query, fragment, query_params.
 
     Empty strings if the field is absent.
@@ -147,7 +148,7 @@ def _build_url(
     return urlunparse((scheme, netloc, path, "", query, fragment))
 
 
-def _candidate_urls(url: str) -> List[str]:
+def _candidate_urls(url: str) -> list[str]:
     """Return the URL variants to try for Scheme B port normalization.
 
     - If the URL already has a non-standard port: just the input URL.
@@ -161,7 +162,7 @@ def _candidate_urls(url: str) -> List[str]:
         return [url]
 
     standard = {"http": "80", "https": "443"}.get(scheme.lower())
-    candidates: List[str] = [url]
+    candidates: list[str] = [url]
 
     if not port and standard is not None:
         # Input has no port; also try with-standard-port.
@@ -269,7 +270,7 @@ def validate_request(
     signing_key: str,
     signature: str,
     url: str,
-    params_or_raw_body: Union[str, Mapping[str, Any], List[Tuple[str, Any]], None],
+    params_or_raw_body: str | Mapping[str, Any] | list[tuple[str, Any]] | None,
 ) -> bool:
     """Legacy ``@signalwire/compatibility-api`` drop-in entry point.
 

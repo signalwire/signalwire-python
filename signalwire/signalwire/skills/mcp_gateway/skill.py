@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 import requests
-from typing import List, Dict, Any, Optional, ClassVar
+from typing import Any, ClassVar
 from requests.auth import HTTPBasicAuth
 
 from signalwire.core.skill_base import SkillBase
@@ -29,11 +29,11 @@ class MCPGatewaySkill(SkillBase):
     SKILL_NAME = "mcp_gateway"
     SKILL_DESCRIPTION = "Bridge MCP servers with SWAIG functions"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES: ClassVar[List[str]] = ["requests"]
-    REQUIRED_ENV_VARS: ClassVar[List[str]] = []
+    REQUIRED_PACKAGES: ClassVar[list[str]] = ["requests"]
+    REQUIRED_ENV_VARS: ClassVar[list[str]] = []
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """Get parameter schema for MCP Gateway skill"""
         schema = super().get_parameter_schema()
         schema.update(
@@ -126,7 +126,7 @@ class MCPGatewaySkill(SkillBase):
             if missing_params:
                 self.logger.error(f"Missing required parameters: {missing_params}")
                 return False
-            self.auth: Optional[HTTPBasicAuth] = HTTPBasicAuth(
+            self.auth: HTTPBasicAuth | None = HTTPBasicAuth(
                 self.params["auth_user"], self.params["auth_password"]
             )
         else:
@@ -238,7 +238,7 @@ class MCPGatewaySkill(SkillBase):
             is_hangup_hook=True,
         )
 
-    def _register_mcp_tool(self, service_name: str, tool_def: Dict[str, Any]):
+    def _register_mcp_tool(self, service_name: str, tool_def: dict[str, Any]):
         """Register a single MCP tool as a SWAIG function"""
         tool_name = tool_def.get("name")
         if not tool_name:
@@ -293,8 +293,8 @@ class MCPGatewaySkill(SkillBase):
         self,
         service_name: str,
         tool_name: str,
-        args: Dict[str, Any],
-        raw_data: Dict[str, Any],
+        args: dict[str, Any],
+        raw_data: dict[str, Any],
     ) -> FunctionResult:
         """Call an MCP tool through the gateway"""
         # Check for mcp_call_id in global_data first, then fall back to top-level call_id
@@ -376,7 +376,7 @@ class MCPGatewaySkill(SkillBase):
         return FunctionResult(error_msg)
 
     def _hangup_handler(
-        self, args: Dict[str, Any], raw_data: Dict[str, Any]
+        self, args: dict[str, Any], raw_data: dict[str, Any]
     ) -> FunctionResult:
         """Handle call hangup - cleanup MCP session"""
         # Check for mcp_call_id in global_data first, then fall back to top-level call_id
@@ -407,7 +407,7 @@ class MCPGatewaySkill(SkillBase):
 
         return FunctionResult("Session cleanup complete")
 
-    def get_hints(self) -> List[str]:
+    def get_hints(self) -> list[str]:
         """Return speech recognition hints"""
         hints = ["MCP", "gateway"]
 
@@ -420,7 +420,7 @@ class MCPGatewaySkill(SkillBase):
 
         return hints
 
-    def get_global_data(self) -> Dict[str, Any]:
+    def get_global_data(self) -> dict[str, Any]:
         """Return global data for DataMap variables"""
         return {
             "mcp_gateway_url": self.gateway_url,
@@ -430,7 +430,7 @@ class MCPGatewaySkill(SkillBase):
             ],
         }
 
-    def get_prompt_sections(self) -> List[Dict[str, Any]]:
+    def get_prompt_sections(self) -> list[dict[str, Any]]:
         """Return prompt sections to add to agent"""
         sections = []
 

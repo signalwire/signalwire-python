@@ -25,7 +25,8 @@ import json
 import os
 import re
 import uuid
-from typing import Any, Callable, Coroutine, Optional, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
+from collections.abc import Callable, Coroutine
 
 import websockets
 import websockets.exceptions
@@ -114,12 +115,12 @@ class RelayClient:
 
     def __init__(
         self,
-        project: Optional[str] = None,
-        token: Optional[str] = None,
-        jwt_token: Optional[str] = None,
-        host: Optional[str] = None,
-        contexts: Optional[list[str]] = None,
-        max_active_calls: Optional[int] = None,
+        project: str | None = None,
+        token: str | None = None,
+        jwt_token: str | None = None,
+        host: str | None = None,
+        contexts: list[str] | None = None,
+        max_active_calls: int | None = None,
     ):
         self.project = project or os.environ.get("SIGNALWIRE_PROJECT_ID", "")
         self.token = token or os.environ.get("SIGNALWIRE_API_TOKEN", "")
@@ -157,24 +158,24 @@ class RelayClient:
                 self._max_active_calls = _DEFAULT_MAX_ACTIVE_CALLS
 
         # Internal state
-        self._ws: Optional["ClientConnection"] = None
+        self._ws: ClientConnection | None = None
         self._pending: dict[str, asyncio.Future[dict]] = {}
         # Track the method for each pending request (for code-checking decisions)
         self._pending_methods: dict[str, str] = {}
         self._calls: dict[str, Call] = {}
-        self._on_call_handler: Optional[CallHandler] = None
-        self._on_message_handler: Optional[MessageHandler] = None
+        self._on_call_handler: CallHandler | None = None
+        self._on_message_handler: MessageHandler | None = None
         self._messages: dict[str, Message] = {}  # message_id → Message
         # Pending outbound dials: tag → Future[Call] resolved when dial completes
-        self._pending_dials: dict[str, asyncio.Future["Call"]] = {}
+        self._pending_dials: dict[str, asyncio.Future[Call]] = {}
         # Calls created during dial, indexed by tag for event routing before
         # the winning call_id is known
-        self._dial_calls_by_tag: dict[str, list["Call"]] = {}
+        self._dial_calls_by_tag: dict[str, list[Call]] = {}
         self._connected = False
         self._closing = False
         self._reconnect_delay = RECONNECT_MIN_DELAY
-        self._recv_task: Optional[asyncio.Task] = None
-        self._ping_task: Optional[asyncio.Task] = None
+        self._recv_task: asyncio.Task | None = None
+        self._ping_task: asyncio.Task | None = None
         # Strong references to fire-and-forget background tasks (queued sends,
         # inbound call/message handler dispatch, ws close). asyncio only keeps
         # a weak reference to a running task, so without this the task could be
@@ -195,7 +196,7 @@ class RelayClient:
         self._authorization_state: str = ""
         # Half-open detection: reset on every server ping; fires if no ping
         # arrives within _CHECK_PING_DELAY seconds.
-        self._check_ping_handle: Optional[asyncio.TimerHandle] = None
+        self._check_ping_handle: asyncio.TimerHandle | None = None
         # Track consecutive client ping failures for exponential backoff
         self._ping_failures: int = 0
         # Queue for requests made while disconnected/reconnecting
@@ -204,14 +205,14 @@ class RelayClient:
     def __del__(self) -> None:
         _active_clients.discard(id(self))
 
-    async def __aenter__(self) -> "RelayClient":
+    async def __aenter__(self) -> RelayClient:
         await self.connect()
         return self
 
     async def __aexit__(self, *exc: Any) -> None:
         await self.disconnect()
 
-    def _spawn_bg(self, coro: Coroutine[Any, Any, Any]) -> "asyncio.Task[Any]":
+    def _spawn_bg(self, coro: Coroutine[Any, Any, Any]) -> asyncio.Task[Any]:
         """Schedule a fire-and-forget coroutine, holding a strong reference.
 
         asyncio keeps only a weak reference to a running task, so a bare
@@ -386,9 +387,9 @@ class RelayClient:
         self,
         devices: list[list[dict[str, Any]]],
         *,
-        tag: Optional[str] = None,
-        max_duration: Optional[int] = None,
-        dial_timeout: Optional[float] = None,
+        tag: str | None = None,
+        max_duration: int | None = None,
+        dial_timeout: float | None = None,
     ) -> Call:
         """Initiate an outbound call using dial. Returns a Call object.
 
@@ -451,12 +452,12 @@ class RelayClient:
         *,
         to_number: str,
         from_number: str,
-        context: Optional[str] = None,
-        body: Optional[str] = None,
-        media: Optional[list[str]] = None,
-        tags: Optional[list[str]] = None,
-        region: Optional[str] = None,
-        on_completed: Optional[Callable] = None,
+        context: str | None = None,
+        body: str | None = None,
+        media: list[str] | None = None,
+        tags: list[str] | None = None,
+        region: str | None = None,
+        on_completed: Callable | None = None,
     ) -> Message:
         """Send an outbound SMS/MMS message.
 

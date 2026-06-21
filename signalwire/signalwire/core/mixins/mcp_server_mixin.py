@@ -9,7 +9,7 @@ Handles the MCP JSON-RPC 2.0 protocol: initialize, tools/list, tools/call.
 """
 
 import logging
-from typing import Dict, Any, List
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ class MCPServerMixin:
 
     def _build_mcp_tool_list(self) -> list:
         """Convert registered @tool functions to MCP tool format"""
-        tools: List[Dict[str, Any]] = []
+        tools: list[dict[str, Any]] = []
 
         if not hasattr(self, "_swaig_functions"):
             return tools
@@ -42,7 +42,7 @@ class MCPServerMixin:
 
         return tools
 
-    def _handle_mcp_request(self, body: Dict[str, Any]) -> Dict[str, Any]:
+    def _handle_mcp_request(self, body: dict[str, Any]) -> dict[str, Any]:
         """Handle a single MCP JSON-RPC 2.0 request"""
         jsonrpc = body.get("jsonrpc", "")
         method = body.get("method", "")
@@ -136,7 +136,7 @@ class MCPServerMixin:
         return self._mcp_error(req_id, -32601, f"Method not found: {method}")
 
     @staticmethod
-    def _mcp_error(req_id, code: int, message: str) -> Dict[str, Any]:
+    def _mcp_error(req_id, code: int, message: str) -> dict[str, Any]:
         """Build a JSON-RPC error response"""
         return {
             "jsonrpc": "2.0",

@@ -12,7 +12,7 @@ Custom argument parsing and function argument parsing
 
 import sys
 import argparse
-from typing import List, Dict, Any
+from typing import Any
 
 
 class CustomArgumentParser(argparse.ArgumentParser):
@@ -82,8 +82,8 @@ class CustomArgumentParser(argparse.ArgumentParser):
 
 
 def parse_function_arguments(
-    function_args_list: List[str], func_schema: Any
-) -> Dict[str, Any]:
+    function_args_list: list[str], func_schema: Any
+) -> dict[str, Any]:
     """
     Parse function arguments from command line with type coercion based on schema
 
@@ -94,7 +94,7 @@ def parse_function_arguments(
     Returns:
         Dictionary of parsed function arguments
     """
-    parsed_args: Dict[str, Any] = {}
+    parsed_args: dict[str, Any] = {}
     i = 0
 
     # Get parameter schema

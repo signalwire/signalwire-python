@@ -7,7 +7,7 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import Dict, List, Type, Any, Optional
+from typing import Any
 from signalwire.core.logging_config import get_logger
 from signalwire.core.skill_base import SkillBase
 
@@ -17,14 +17,14 @@ class SkillManager:
 
     def __init__(self, agent):
         self.agent = agent
-        self.loaded_skills: Dict[str, SkillBase] = {}
+        self.loaded_skills: dict[str, SkillBase] = {}
         self.logger = get_logger("skill_manager")
 
     def load_skill(
         self,
         skill_name: str,
-        skill_class: Optional[Type[SkillBase]] = None,
-        params: Optional[Dict[str, Any]] = None,
+        skill_class: type[SkillBase] | None = None,
+        params: dict[str, Any] | None = None,
     ) -> tuple[bool, str]:
         """
         Load and setup a skill by name
@@ -235,7 +235,7 @@ class SkillManager:
             self.logger.error(f"Error unloading skill '{skill_identifier}': {e}")
             return False
 
-    def list_loaded_skills(self) -> List[str]:
+    def list_loaded_skills(self) -> list[str]:
         """List instance keys of currently loaded skills"""
         return list(self.loaded_skills.keys())
 
@@ -252,7 +252,7 @@ class SkillManager:
         # First try as direct instance key
         return skill_identifier in self.loaded_skills
 
-    def get_skill(self, skill_identifier: str) -> Optional[SkillBase]:
+    def get_skill(self, skill_identifier: str) -> SkillBase | None:
         """
         Get a loaded skill instance by identifier
 

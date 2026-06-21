@@ -12,7 +12,7 @@ A configurable skill for getting trivia questions from API Ninjas with customiza
 categories and multiple tool instances.
 """
 
-from typing import Dict, Any, List, Optional, ClassVar
+from typing import Any, ClassVar
 from signalwire.core import FunctionResult
 from signalwire.core.skill_base import SkillBase
 
@@ -56,10 +56,10 @@ class ApiNinjasTriviaSkill(SkillBase):
     SKILL_NAME = "api_ninjas_trivia"
     SKILL_DESCRIPTION = "Get trivia questions from API Ninjas"
     SUPPORTS_MULTIPLE_INSTANCES = True
-    REQUIRED_ENV_VARS: ClassVar[List[str]] = []  # API key can be passed via params
+    REQUIRED_ENV_VARS: ClassVar[list[str]] = []  # API key can be passed via params
 
     # Valid API Ninjas trivia categories with human-readable descriptions
-    VALID_CATEGORIES: ClassVar[Dict[str, str]] = {
+    VALID_CATEGORIES: ClassVar[dict[str, str]] = {
         "artliterature": "Art and Literature",
         "language": "Language",
         "sciencenature": "Science and Nature",
@@ -76,7 +76,7 @@ class ApiNinjasTriviaSkill(SkillBase):
         "sportsleisure": "Sports and Leisure",
     }
 
-    def __init__(self, agent, params: Optional[Dict[str, Any]] = None):
+    def __init__(self, agent, params: dict[str, Any] | None = None):
         """
         Initialize the skill with configuration parameters.
 
@@ -149,7 +149,7 @@ class ApiNinjasTriviaSkill(SkillBase):
         """
         return f"{self.SKILL_NAME}_{self.tool_name}"
 
-    def get_tools(self) -> List[Dict[str, Any]]:
+    def get_tools(self) -> list[dict[str, Any]]:
         """
         Generate the SWAIG tool with DataMap webhook.
 
@@ -205,7 +205,7 @@ class ApiNinjasTriviaSkill(SkillBase):
         return [tool]
 
     @classmethod
-    def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """
         Get the parameter schema for the API Ninjas Trivia skill.
 
