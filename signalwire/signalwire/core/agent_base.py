@@ -67,7 +67,7 @@ from signalwire.core.mixins.mcp_server_mixin import MCPServerMixin
 logger = get_logger("agent_base")
 
 
-class AgentBase(
+class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/_proxy_url_base override SWMLService/ServerlessMixin's by MRO order; mypy flags the base-vs-base shape diff but the resolution is deliberate
     AuthMixin,
     WebMixin,
     SWMLService,  # ToolMixin is now composed into SWMLService — inherited via SWMLService
@@ -214,7 +214,7 @@ class AgentBase(
         self.agent_id = agent_id or str(uuid.uuid4())
 
         # Check for proxy URL base in environment
-        self._proxy_url_base: Optional[str] = os.environ.get("SWML_PROXY_URL_BASE")
+        self._proxy_url_base = os.environ.get("SWML_PROXY_URL_BASE")
 
         # Initialize prompt handling
         self._use_pom = use_pom
@@ -251,11 +251,11 @@ class AgentBase(
             )
 
         # URL override variables
-        self._web_hook_url_override = None
-        self._post_prompt_url_override = None
+        self._web_hook_url_override: Optional[str] = None
+        self._post_prompt_url_override: Optional[str] = None
 
         # Register the tool decorator on this instance
-        self.tool = self._tool_decorator
+        self.tool = self._tool_decorator  # type: ignore[method-assign]  # intentional per-instance decorator binding
 
         # Call settings
         self._auto_answer = auto_answer
@@ -275,22 +275,20 @@ class AgentBase(
         self.native_functions = native_functions or []
 
         # Initialize new configuration containers
-        self._hints = []
+        self._hints: List[Any] = []
         self._languages = []
         self._pronounce = []
-        self._params = {}
-        self._global_data = {}
+        self._params: Dict[str, Any] = {}
+        self._global_data: Dict[str, Any] = {}
         self._function_includes = []
-        self._mcp_servers = []
+        self._mcp_servers: List[Any] = []
         self._mcp_server_enabled = False
         # Initialize LLM params as empty - only send if explicitly set
         self._prompt_llm_params: Dict[str, Any] = {}
         self._post_prompt_llm_params: Dict[str, Any] = {}
 
         # Dynamic configuration callback
-        self._dynamic_config_callback: Optional[
-            Callable[[dict, dict, dict, "AgentBase"], None]
-        ] = None
+        self._dynamic_config_callback = None
 
         # Initialize skill manager
         self.skill_manager = SkillManager(self)
@@ -429,8 +427,10 @@ class AgentBase(
         elif mode == "google_cloud_function":
             # Google Cloud Functions URL format
             project_id = os.getenv("GOOGLE_CLOUD_PROJECT") or os.getenv("GCP_PROJECT")
-            region = os.getenv("FUNCTION_REGION") or os.getenv(
-                "GOOGLE_CLOUD_REGION", "us-central1"
+            region = (
+                os.getenv("FUNCTION_REGION")
+                or os.getenv("GOOGLE_CLOUD_REGION", "us-central1")
+                or ""
             )
             service_name = os.getenv("K_SERVICE") or os.getenv(
                 "FUNCTION_TARGET", "unknown"
@@ -1395,6 +1395,7 @@ class AgentBase(
             if (
                 hasattr(self, "_session_manager")
                 and function_name in self._tool_registry._swaig_functions
+                and call_id is not None
             ):
                 is_valid = self._session_manager.validate_tool_token(
                     function_name, token, call_id
@@ -1608,8 +1609,10 @@ class AgentBase(
         ephemeral_agent._prompt_manager = PromptManager(ephemeral_agent)
         # Copy ALL PromptManager state
         if hasattr(self._prompt_manager, "_sections"):
-            ephemeral_agent._prompt_manager._sections = copy.deepcopy(
-                self._prompt_manager._sections
+            setattr(
+                ephemeral_agent._prompt_manager,
+                "_sections",
+                copy.deepcopy(getattr(self._prompt_manager, "_sections")),
             )
         ephemeral_agent._prompt_manager._prompt_text = copy.deepcopy(
             self._prompt_manager._prompt_text
@@ -1630,8 +1633,10 @@ class AgentBase(
                 self._tool_registry._swaig_functions.copy()
             )
         if hasattr(self._tool_registry, "_tool_instances"):
-            ephemeral_agent._tool_registry._tool_instances = (
-                self._tool_registry._tool_instances.copy()
+            setattr(
+                ephemeral_agent._tool_registry,
+                "_tool_instances",
+                getattr(self._tool_registry, "_tool_instances").copy(),
             )
 
         # Create a new skill manager for the ephemeral agent
@@ -1649,9 +1654,10 @@ class AgentBase(
                 skill_name = skill_instance.SKILL_NAME
                 skill_params = getattr(skill_instance, "params", {})
                 try:
-                    ephemeral_agent.skill_manager.load_skill(
-                        skill_name, type(skill_instance), skill_params
-                    )
+                    if skill_name is not None:
+                        ephemeral_agent.skill_manager.load_skill(
+                            skill_name, type(skill_instance), skill_params
+                        )
                 except Exception as e:
                     self.log.warning(
                         "failed_to_copy_skill_to_ephemeral",
@@ -1660,7 +1666,7 @@ class AgentBase(
                     )
 
         # Re-bind the tool decorator method to the new instance
-        ephemeral_agent.tool = ephemeral_agent._tool_decorator
+        ephemeral_agent.tool = ephemeral_agent._tool_decorator  # type: ignore[method-assign]  # intentional per-instance decorator binding
 
         # Share the logger but bind it to indicate ephemeral copy
         ephemeral_agent.log = self.log.bind(ephemeral=True)

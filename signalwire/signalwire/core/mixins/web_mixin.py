@@ -50,6 +50,7 @@ class WebMixin(_HostTyped):
     # has-type ordering gap. Runtime is unaffected (no assignment here).
     _app: Optional[Any]
     _proxy_url_base: Optional[str]
+    _dynamic_config_callback: Optional[Callable[[dict, dict, dict, Any], None]]
 
     def get_app(self):
         """
