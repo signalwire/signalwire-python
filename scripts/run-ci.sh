@@ -125,9 +125,15 @@ run_gate "NO-CHEAT" "audit_no_cheat_tests" \
 # module resolves regardless of install state — local and CI, every port.
 rest_coverage_gate() {
     local port=8951
+    # mock_signalwire is pip-installed (-e) in CI from porting-sdk/test_harness/.
+    # Locally it may be discovered via adjacency instead; put the package parent on
+    # PYTHONPATH as a belt-and-suspenders fallback so `-m mock_signalwire.*` imports
+    # regardless of install state. (rest_coverage.py must exist in the checked-out
+    # porting-sdk — it ships in the same change that adds this gate.)
     local mock_pkg_parent="$PORTING_SDK_DIR/test_harness/mock_signalwire"
     export PYTHONPATH="$mock_pkg_parent${PYTHONPATH:+:$PYTHONPATH}"
-    python3 -m mock_signalwire.cli --port "$port" >/tmp/rest_cov_mock.$$.log 2>&1 &
+    python3 -m mock_signalwire --host 127.0.0.1 --port "$port" --log-level error \
+        >/tmp/rest_cov_mock.$$.log 2>&1 &
     local mock_pid=$!
     # shellcheck disable=SC2064
     trap "kill $mock_pid 2>/dev/null" RETURN
