@@ -18,10 +18,11 @@ It requires additional dependencies that can be installed with:
 """
 
 import warnings
+from typing import Any, List
 
 # Check for core search dependencies
 _SEARCH_AVAILABLE = True
-_MISSING_DEPS = []
+_MISSING_DEPS: List[str] = []
 
 # These bare imports probe for optional-dependency availability; the import
 # itself is the test, so the bound name is intentionally unused (F401).
@@ -109,27 +110,29 @@ if _SEARCH_AVAILABLE:
         except ImportError:
             pass
 else:
-    # Provide stub functions that give helpful error messages
-    def preprocess_query(*args, **kwargs):
+    # Provide stub functions that give helpful error messages.
+    # These conditional fallbacks intentionally shadow the real imports above
+    # when optional deps are absent; mypy can't model that mutual exclusion.
+    def preprocess_query(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
         _check_search_dependencies()
 
-    def preprocess_document_content(*args, **kwargs):
+    def preprocess_document_content(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
         _check_search_dependencies()
 
-    class DocumentProcessor:
-        def __init__(self, *args, **kwargs):
+    class DocumentProcessor:  # type: ignore[no-redef]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             _check_search_dependencies()
 
-    class IndexBuilder:
-        def __init__(self, *args, **kwargs):
+    class IndexBuilder:  # type: ignore[no-redef]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             _check_search_dependencies()
 
-    class SearchEngine:
-        def __init__(self, *args, **kwargs):
+    class SearchEngine:  # type: ignore[no-redef]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             _check_search_dependencies()
 
-    class SearchService:
-        def __init__(self, *args, **kwargs):
+    class SearchService:  # type: ignore[no-redef]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             _check_search_dependencies()
 
     __all__ = [

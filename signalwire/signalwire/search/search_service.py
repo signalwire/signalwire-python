@@ -17,20 +17,22 @@ try:
     from fastapi.security import HTTPBasic, HTTPBasicCredentials
     from pydantic import BaseModel
 except ImportError:
-    FastAPI = None
-    HTTPException = None
-    BaseModel = None
-    Request = None
-    Response = None
-    Depends = None
-    CORSMiddleware = None
-    HTTPBasic = None
-    HTTPBasicCredentials = None
+    # Optional-dependency shims: fastapi/pydantic are absent in query-only
+    # installs. mypy can't model "type when imported, None when absent".
+    FastAPI = None  # type: ignore[assignment,misc]  # optional-dep shim
+    HTTPException = None  # type: ignore[assignment,misc]  # optional-dep shim
+    BaseModel = None  # type: ignore[assignment,misc]  # optional-dep shim
+    Request = None  # type: ignore[assignment,misc]  # optional-dep shim
+    Response = None  # type: ignore[assignment,misc]  # optional-dep shim
+    Depends = None  # type: ignore[assignment]  # optional-dep shim (callable, not a type)
+    CORSMiddleware = None  # type: ignore[assignment,misc]  # optional-dep shim
+    HTTPBasic = None  # type: ignore[assignment,misc]  # optional-dep shim
+    HTTPBasicCredentials = None  # type: ignore[assignment,misc]  # optional-dep shim
 
 try:
     from sentence_transformers import SentenceTransformer
 except ImportError:
-    SentenceTransformer = None
+    SentenceTransformer = None  # type: ignore[misc]  # optional-dep shim
 
 from .query_processor import preprocess_query, set_global_model
 from .search_engine import SearchEngine
@@ -41,7 +43,7 @@ from signalwire.core.logging_config import get_logger
 logger = get_logger("search_service")
 
 # Pydantic models for API
-if BaseModel:
+if BaseModel is not None:
 
     class SearchRequest(BaseModel):
         query: str
@@ -60,8 +62,9 @@ if BaseModel:
         results: List[SearchResult]
         query_analysis: Optional[Dict[str, Any]] = None
 else:
-    # Fallback classes when FastAPI is not available
-    class SearchRequest:
+    # Fallback classes when FastAPI is not available; these intentionally
+    # shadow the pydantic versions above when the optional dep is absent.
+    class SearchRequest:  # type: ignore[no-redef]
         def __init__(
             self,
             query: str,
@@ -78,13 +81,13 @@ else:
             self.tags = tags
             self.language = language
 
-    class SearchResult:
+    class SearchResult:  # type: ignore[no-redef]
         def __init__(self, content: str, score: float, metadata: Dict[str, Any]):
             self.content = content
             self.score = score
             self.metadata = metadata
 
-    class SearchResponse:
+    class SearchResponse:  # type: ignore[no-redef]
         def __init__(
             self,
             results: List[SearchResult],
@@ -114,7 +117,7 @@ class SearchService:
     def __init__(
         self,
         port: int = 8001,
-        indexes: Dict[str, str] = None,
+        indexes: Optional[Dict[str, str]] = None,
         basic_auth: Optional[Tuple[str, str]] = None,
         config_file: Optional[str] = None,
         backend: str = "sqlite",
@@ -131,9 +134,9 @@ class SearchService:
         if indexes is not None:
             self.indexes = indexes
 
-        self.search_engines = {}
-        self.model = None
-        self._query_cache = {}  # Simple query result cache
+        self.search_engines: Dict[str, SearchEngine] = {}
+        self.model: Any = None
+        self._query_cache: Dict[str, Any] = {}  # Simple query result cache
         self._cache_size = 100  # Max number of cached queries
 
         # Load security configuration with optional config file
@@ -143,12 +146,12 @@ class SearchService:
         # Set up authentication
         self._basic_auth = basic_auth or self.security.get_basic_auth()
 
-        if FastAPI:
+        self.app: Optional["FastAPI"] = None
+        if FastAPI is not None:
             self.app = FastAPI(title="SignalWire Local Search Service")
             self._setup_security()
             self._setup_routes()
         else:
-            self.app = None
             logger.warning("FastAPI not available. HTTP service will not be available.")
 
         self._load_resources()
@@ -197,7 +200,7 @@ class SearchService:
             return
 
         # Add CORS middleware if FastAPI has it
-        if CORSMiddleware:
+        if CORSMiddleware is not None:
             self.app.add_middleware(CORSMiddleware, **self.security.get_cors_config())
 
         # Add security headers middleware
@@ -222,7 +225,9 @@ class SearchService:
 
             return await call_next(request)
 
-    def _get_current_username(self, credentials: HTTPBasicCredentials = None) -> str:
+    def _get_current_username(
+        self, credentials: Optional[HTTPBasicCredentials] = None
+    ) -> Optional[str]:
         """Validate basic auth credentials"""
         if not credentials:
             return None
@@ -254,7 +259,7 @@ class SearchService:
             return
 
         # Create security dependency if HTTPBasic is available
-        security = HTTPBasic() if HTTPBasic else None
+        security = HTTPBasic() if HTTPBasic is not None else None
 
         # Create dependency for authenticated routes
         def get_authenticated():
@@ -265,7 +270,7 @@ class SearchService:
         @self.app.post("/search", response_model=SearchResponse)
         async def search(
             request: SearchRequest,
-            credentials: HTTPBasicCredentials = None
+            credentials: Optional[HTTPBasicCredentials] = None
             if not security
             else Depends(security),
         ):
@@ -290,7 +295,7 @@ class SearchService:
         async def reload_index(
             index_name: str,
             index_path: str,
-            credentials: HTTPBasicCredentials = None
+            credentials: Optional[HTTPBasicCredentials] = None
             if not security
             else Depends(security),
         ):
@@ -343,8 +348,10 @@ class SearchService:
         if self.backend == "pgvector":
             # For pgvector, we need to load models for query embeddings
             # Different collections might use different models
-            self.models = {}  # model_name -> SentenceTransformer instance
-            self.collection_models = {}  # collection_name -> model_name
+            self.models: Dict[
+                str, Any
+            ] = {}  # model_name -> SentenceTransformer instance
+            self.collection_models: Dict[str, Any] = {}  # collection_name -> model_name
 
             # Load search engines for each collection and their models
             for collection_name in self.indexes.keys():
@@ -439,7 +446,7 @@ class SearchService:
     async def _handle_search(self, request: SearchRequest) -> SearchResponse:
         """Handle search request with caching"""
         if request.index_name not in self.search_engines:
-            if HTTPException:
+            if HTTPException is not None:
                 raise HTTPException(
                     status_code=404, detail=f"Index '{request.index_name}' not found"
                 )
@@ -594,7 +601,7 @@ class SearchService:
         port = port or self.port
 
         # Get SSL configuration
-        ssl_kwargs = {}
+        ssl_kwargs: Dict[str, Any] = {}
         if ssl_cert and ssl_key:
             # Use provided SSL files
             ssl_kwargs = {"ssl_certfile": ssl_cert, "ssl_keyfile": ssl_key}
