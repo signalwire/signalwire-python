@@ -16,7 +16,7 @@ import types
 from typing import Dict, List, Any, Optional, TypeVar
 
 try:
-    from typing import Self  # Python 3.11+
+    from typing import Self  # type: ignore[attr-defined]  # 3.11+; typing_extensions fallback below
 except ImportError:
     from typing_extensions import Self  # For Python 3.9-3.10
 
@@ -45,7 +45,7 @@ class SWMLBuilder:
         self.service = service
 
         # Dictionary to cache dynamically created methods
-        self._verb_methods_cache = {}
+        self._verb_methods_cache: Dict[str, Any] = {}
 
         # Create auto-vivified methods for all verbs
         self._create_verb_methods()
@@ -63,7 +63,7 @@ class SWMLBuilder:
         Returns:
             Self for method chaining
         """
-        config = {}
+        config: Dict[str, Any] = {}
         if max_duration is not None:
             config["max_duration"] = max_duration
         if codecs is not None:
@@ -81,7 +81,7 @@ class SWMLBuilder:
         Returns:
             Self for method chaining
         """
-        config = {}
+        config: Dict[str, Any] = {}
         if reason is not None:
             config["reason"] = reason
         self.service.add_verb("hangup", config)
@@ -110,7 +110,7 @@ class SWMLBuilder:
         Returns:
             Self for method chaining
         """
-        config = {}
+        config: Dict[str, Any] = {}
 
         # Handle prompt (either text or POM, but not both)
         if prompt_text is not None:
@@ -158,7 +158,7 @@ class SWMLBuilder:
             Self for method chaining
         """
         # Create base config
-        config = {}
+        config: Dict[str, Any] = {}
 
         # Add play config (either single URL or list)
         if url is not None:
@@ -312,7 +312,7 @@ class SWMLBuilder:
                     """
                     Dynamically generated method for SWML verb - returns self for chaining
                     """
-                    config = {}
+                    config: Dict[str, Any] = {}
                     for key, value in kwargs.items():
                         if value is not None:
                             config[key] = value
@@ -408,7 +408,7 @@ class SWMLBuilder:
                 """
                 Dynamically generated method for SWML verb - returns self for chaining
                 """
-                config = {}
+                config: Dict[str, Any] = {}
                 for key, value in kwargs.items():
                     if value is not None:
                         config[key] = value

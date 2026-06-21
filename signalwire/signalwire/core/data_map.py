@@ -70,11 +70,11 @@ class DataMap:
         """
         self.function_name = function_name
         self._purpose = ""
-        self._parameters = {}
-        self._expressions = []
-        self._webhooks = []
-        self._output = None
-        self._error_keys = []
+        self._parameters: Dict[str, Any] = {}
+        self._expressions: List[Dict[str, Any]] = []
+        self._webhooks: List[Dict[str, Any]] = []
+        self._output: Optional[Dict[str, Any]] = None
+        self._error_keys: List[str] = []
 
     def purpose(self, description: str) -> "DataMap":
         """
@@ -155,7 +155,7 @@ class DataMap:
         Returns:
             Self for method chaining.
         """
-        param_def = {"type": param_type, "description": description}
+        param_def: Dict[str, Any] = {"type": param_type, "description": description}
 
         if enum:
             param_def["enum"] = enum
@@ -229,7 +229,7 @@ class DataMap:
         Returns:
             Self for method chaining
         """
-        webhook_def = {"url": url, "method": method.upper()}
+        webhook_def: Dict[str, Any] = {"url": url, "method": method.upper()}
 
         if headers:
             webhook_def["headers"] = headers
@@ -415,7 +415,7 @@ class DataMap:
             param_schema = {"type": "object", "properties": {}}
 
         # Build data_map structure
-        data_map = {}
+        data_map: Dict[str, Any] = {}
 
         # Add expressions if present
         if self._expressions:
