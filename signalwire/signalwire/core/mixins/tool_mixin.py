@@ -17,7 +17,7 @@ from signalwire.core.agent.tools.decorator import ToolDecorator
 from signalwire.core.mixins._mixin_host import _HostTyped
 
 if TYPE_CHECKING:
-    from signalwire.core.agent_base import AgentBase
+    from signalwire.core._agent_host import AgentHost as AgentBase
 
 _tool_mixin_logger = logging.getLogger(__name__)
 

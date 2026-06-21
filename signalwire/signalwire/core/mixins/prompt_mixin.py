@@ -10,7 +10,7 @@ See LICENSE file in the project root for full license information.
 from typing import Optional, Union, List, Dict, Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from signalwire.core.agent_base import AgentBase
+    from signalwire.core._agent_host import AgentHost as AgentBase
     from signalwire.core.contexts import ContextBuilder
 else:
     from signalwire.core.contexts import ContextBuilder

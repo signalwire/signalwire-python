@@ -28,7 +28,7 @@ from signalwire.core.security.webhook_middleware import (
 from signalwire.core.mixins._mixin_host import _HostTyped
 
 if TYPE_CHECKING:
-    from signalwire.core.agent_base import AgentBase
+    from signalwire.core._agent_host import AgentHost as AgentBase
 
 # Per-request proxy URL to avoid race conditions in concurrent async contexts
 _request_proxy_url = contextvars.ContextVar("_request_proxy_url", default=None)

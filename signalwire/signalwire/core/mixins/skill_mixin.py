@@ -10,7 +10,7 @@ See LICENSE file in the project root for full license information.
 from typing import TYPE_CHECKING, List, Dict, Any, Optional
 
 if TYPE_CHECKING:
-    from signalwire.core.agent_base import AgentBase
+    from signalwire.core._agent_host import AgentHost as AgentBase
 
 
 from signalwire.core.mixins._mixin_host import _HostTyped
