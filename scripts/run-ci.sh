@@ -151,10 +151,25 @@ rest_coverage_gate() {
         --mock-url "http://127.0.0.1:$port" \
         --spec-root "$PORTING_SDK_DIR/rest-apis" \
         --allowlist "$PORTING_SDK_DIR/REST_COVERAGE_BASELINE.md" \
-        --allowlist "$PORT_ROOT/REST_COVERAGE_GAPS.md"
+        --allowlist "$PORT_ROOT/REST_COVERAGE_GAPS.md" \
+        --gap-baseline "$PORTING_SDK_DIR/REST_COVERAGE_GAP_BASELINE.md"
 }
 run_gate "REST-COVERAGE" "every implemented REST route covered success+error (parity + allowlist)" \
     rest_coverage_gate
+
+# Gate 4c: SPEC-PARITY — the routes the SDK actually IMPLEMENTS must equal the
+# canonical spec route set, modulo a checked-in not-implemented gaps file. This
+# is the spec-first guard: REST-COVERAGE only proves tested routes match the
+# spec, so a route the SDK implements but the spec doesn't define (or vice
+# versa) would slip past it. The route registry is built by driving the live
+# client through a recording HttpClient (not an AST scrape, not the test
+# journal), so it sees every implemented route whether or not it's tested.
+#   * B−A (SDK route absent from the spec) → fail (new API must enter the spec)
+#   * A−B (canonical route not implemented) → fail unless in SPEC_IMPLEMENTATION_GAPS.md
+run_gate "SPEC-PARITY" "implemented routes == canonical spec (modulo SPEC_IMPLEMENTATION_GAPS.md)" \
+    python3 "$PORTING_SDK_DIR/scripts/diff_spec_implementation.py" \
+        --sdk "$PORT_ROOT/signalwire/signalwire" \
+        --gaps "$PORTING_SDK_DIR/SPEC_IMPLEMENTATION_GAPS.md"
 
 # Gate 5: FMT — ruff format. Config in pyproject.toml [tool.ruff]. Source-style
 # only (no public-API change → the SIGNATURES/DRIFT oracle is unaffected).

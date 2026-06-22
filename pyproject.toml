@@ -213,3 +213,14 @@ warn_unused_ignores = true
 # `# type: ignore` is reserved for genuinely-unfixable third-party-stub gaps and
 # must carry an error code + reason. warn_unused_ignores keeps them honest.
 show_error_codes = true
+
+# numpy (a search/relay-extra runtime dep we do NOT type — same class as nltk /
+# sentence_transformers above) ships a `.pyi` that uses the 3.12+ `type X = …`
+# statement. mypy pinned to python_version 3.10 parses that stub under the 3.10
+# grammar and errors ("Type statement is only supported in Python 3.12 and
+# greater") on the 3.12/3.13 CI runners where the new numpy is installed. We
+# don't check numpy's types, so skip following into its stubs entirely.
+[[tool.mypy.overrides]]
+module = "numpy.*"
+follow_imports = "skip"
+follow_imports_for_stubs = true
