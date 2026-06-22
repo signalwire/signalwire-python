@@ -162,7 +162,6 @@ def client(mock_session):
 # ---------------------------------------------------------------------------
 
 
-_DEFAULT_PORT = 8765
 _STARTUP_TIMEOUT_S = 30.0
 _PROBE_TIMEOUT_S = 2.0
 # Project stays constant so LAML ``Accounts/test_proj/...`` paths are stable;
@@ -170,7 +169,34 @@ _PROBE_TIMEOUT_S = 2.0
 _REST_PROJECT = "test_proj"
 
 
+def _pick_free_port() -> int:
+    """Ask the OS for a free TCP port on the loopback (bind to :0).
+
+    Fails LOUD (raises) rather than falling back to a hardcoded port: a
+    silent collision on a fixed port is exactly the self-inflicted hang
+    this replaces.  The singleton picks once per session, so the brief
+    bind/close race between picking and the mock subprocess re-binding the
+    same port is acceptable (loopback, single host, one pick per process).
+    """
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    finally:
+        s.close()
+    if not port:
+        raise RuntimeError("failed to acquire a free port for mock_signalwire")
+    return port
+
+
 def _resolve_port() -> int:
+    """Port for the shared mock server.
+
+    Escape hatch: ``MOCK_SIGNALWIRE_PORT`` (set+valid) wins so the CI gate
+    can pin every test to one journal.  When unset, pick a FREE port
+    dynamically (never a hardcoded default that can collide with a stale
+    listener and hang the suite).
+    """
     raw = os.environ.get("MOCK_SIGNALWIRE_PORT")
     if raw:
         try:
@@ -179,7 +205,7 @@ def _resolve_port() -> int:
                 return p
         except ValueError:
             pass
-    return _DEFAULT_PORT
+    return _pick_free_port()
 
 
 def _probe_health(base_url: str) -> bool:

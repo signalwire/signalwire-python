@@ -73,6 +73,20 @@ run_gate() {
     return $rc
 }
 
+# Ask the OS for a free TCP port (bind :0, read it back, release). Used by the
+# REST-COVERAGE gate so a stale mock_signalwire squatting a fixed port can't
+# silently steal the gate's traffic (a previously hardcoded 8951 did exactly
+# that). Prints the port on stdout; nonzero exit on failure (caller fails loud).
+pick_free_port() {
+    python3 - <<'PY'
+import socket
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind(("127.0.0.1", 0))
+print(s.getsockname()[1])
+s.close()
+PY
+}
+
 cd "$PORT_ROOT"
 
 echo "==> running CI gates for $PORT_NAME (porting-sdk at $PORTING_SDK_DIR)"
@@ -124,7 +138,11 @@ run_gate "NO-CHEAT" "audit_no_cheat_tests" \
 # runner only checks porting-sdk out). Put the package parent on PYTHONPATH so the
 # module resolves regardless of install state — local and CI, every port.
 rest_coverage_gate() {
-    local port=8951
+    local port
+    port="$(pick_free_port)" || {
+        echo "FATAL: could not acquire a free port for mock_signalwire" >&2
+        return 1
+    }
     # mock_signalwire is pip-installed (-e) in CI from porting-sdk/test_harness/.
     # Locally it may be discovered via adjacency instead; put the package parent on
     # PYTHONPATH as a belt-and-suspenders fallback so `-m mock_signalwire.*` imports
@@ -137,14 +155,27 @@ rest_coverage_gate() {
     local mock_pid=$!
     # shellcheck disable=SC2064
     trap "kill $mock_pid 2>/dev/null" RETURN
-    # wait for the control plane to answer
-    local i
+    # Wait for the control plane to answer. Fail LOUD if the mock never becomes
+    # healthy (or dies during startup) instead of proceeding silently into a
+    # journal-reset that 404s/connection-refuses with an opaque traceback.
+    local i healthy=0
     for i in $(seq 1 30); do
+        if ! kill -0 "$mock_pid" 2>/dev/null; then
+            echo "FATAL: mock_signalwire (pid $mock_pid) exited before becoming healthy" >&2
+            sed 's/^/    mock: /' "/tmp/rest_cov_mock.$$.log" >&2 || true
+            return 1
+        fi
         if python3 -c "import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:$port/__mock__/health',timeout=1)" 2>/dev/null; then
+            healthy=1
             break
         fi
         sleep 0.5
     done
+    if [ "$healthy" -ne 1 ]; then
+        echo "FATAL: mock_signalwire never became healthy on port $port within ~15s" >&2
+        sed 's/^/    mock: /' "/tmp/rest_cov_mock.$$.log" >&2 || true
+        return 1
+    fi
     python3 -c "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:$port/__mock__/journal/reset',method='POST'),timeout=5).read()"
     MOCK_SIGNALWIRE_PORT="$port" python3 -m pytest "$PORT_ROOT/tests/unit/rest/" -k full_mock -p no:xdist -q -o addopts="" || return 1
     python3 -m mock_signalwire.rest_coverage \
