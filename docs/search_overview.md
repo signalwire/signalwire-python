@@ -71,7 +71,7 @@ The search system uses optional dependencies to keep the base SDK lightweight. C
 #### Basic Search (~500MB)
 
 ```bash
-pip install "signalwire-agents[search]"
+pip install "signalwire-sdk[search]"
 ```
 
 Includes core search functionality with sentence-transformers for embeddings, scikit-learn, NLTK, numpy, and SQLite FTS5 for keyword search. Supports text and markdown files.
@@ -81,7 +81,7 @@ Best for: Local development, CI/CD, resource-constrained environments.
 #### Full Document Processing (~600MB)
 
 ```bash
-pip install "signalwire-agents[search-full]"
+pip install "signalwire-sdk[search-full]"
 ```
 
 Adds PDF processing (pdfplumber), DOCX processing (python-docx), Excel/PowerPoint (openpyxl, python-pptx), HTML processing (BeautifulSoup4), and additional file format support (markdown, striprtf, python-magic).
@@ -91,7 +91,7 @@ Best for: Production systems that need document processing but prioritize speed.
 #### Advanced NLP (~600MB)
 
 ```bash
-pip install "signalwire-agents[search-nlp]"
+pip install "signalwire-sdk[search-nlp]"
 ```
 
 Adds spaCy for advanced text processing, improved POS tagging, named entity recognition, and enhanced query preprocessing.
@@ -124,7 +124,7 @@ Best for: Applications where search quality is more important than speed.
 #### All Search Features (~700MB)
 
 ```bash
-pip install "signalwire-agents[search-all]"
+pip install "signalwire-sdk[search-all]"
 ```
 
 Includes everything above plus pgvector support for PostgreSQL backends.
@@ -142,7 +142,7 @@ Best for: Full-featured applications with dedicated hardware.
 For production deployments where agents only need to query existing indexes (not build them):
 
 ```bash
-pip install "signalwire-agents[search-queryonly]"
+pip install "signalwire-sdk[search-queryonly]"
 ```
 
 **Size:** ~400MB -- significantly smaller because it excludes the ML models needed to build indexes.
@@ -169,10 +169,10 @@ This option is designed for deploying agents in environments such as Lambda func
 pgvector support can also be installed independently:
 
 ```bash
-pip install "signalwire-agents[pgvector]"
+pip install "signalwire-sdk[pgvector]"
 
 # Or combined with search:
-pip install "signalwire-agents[search,pgvector]"
+pip install "signalwire-sdk[search,pgvector]"
 ```
 
 ### Verifying Installation

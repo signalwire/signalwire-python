@@ -4,7 +4,7 @@ The REST client provides synchronous access to all SignalWire APIs using standar
 
 ## Installation
 
-The REST client is included in the `signalwire-agents` package:
+The REST client is included in the `signalwire-sdk` package:
 
 ```bash
 pip install signalwire-sdk
@@ -25,9 +25,9 @@ You need three things to connect:
 ## Minimal Example
 
 ```python
-from signalwire_agents.rest import SignalWireClient
+from signalwire.rest import RestClient
 
-client = SignalWireClient(
+client = RestClient(
     project="your-project-id",
     token="your-api-token",
     host="example.signalwire.com",
@@ -47,9 +47,9 @@ export SIGNALWIRE_SPACE=example.signalwire.com
 ```
 
 ```python
-from signalwire_agents.rest import SignalWireClient
+from signalwire.rest import RestClient
 
-client = SignalWireClient()
+client = RestClient()
 agents = client.fabric.ai_agents.list()
 ```
 
@@ -83,9 +83,9 @@ addresses = client.fabric.ai_agents.list_addresses("agent-uuid")
 ## Error Handling
 
 ```python
-from signalwire_agents.rest import SignalWireClient, SignalWireRestError
+from signalwire.rest import RestClient, SignalWireRestError
 
-client = SignalWireClient()
+client = RestClient()
 
 try:
     agent = client.fabric.ai_agents.get("nonexistent-id")

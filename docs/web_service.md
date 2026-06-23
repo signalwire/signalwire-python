@@ -425,7 +425,7 @@ agent.serve(port=3000)  # Agent on port 3000, WebService on 8002
 ### Docker Deployment
 
 ```dockerfile
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 WORKDIR /app
 

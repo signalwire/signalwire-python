@@ -131,7 +131,7 @@ For multiple WebSocket connections in one process, set `RELAY_MAX_CONNECTIONS` (
 ## Error Handling
 
 ```python
-from signalwire_agents.relay import RelayError
+from signalwire.relay import RelayError
 
 try:
     await call.play([...])

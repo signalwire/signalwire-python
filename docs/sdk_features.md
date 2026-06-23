@@ -276,7 +276,7 @@ Each mode handles authentication differently (HTTP Basic Auth, API Gateway autho
 
 For standalone mode, the SDK provides:
 - Kubernetes health (`/health`) and readiness (`/ready`) probes
-- SSL/TLS support via `SWML_SSL_ENABLED`, `SWML_SSL_CERT`, `SWML_SSL_KEY`
+- SSL/TLS support via `SWML_SSL_ENABLED`, `SWML_SSL_CERT_PATH`, `SWML_SSL_KEY_PATH`
 - CORS configuration
 - Debug endpoint (`/debug`) for inspection
 

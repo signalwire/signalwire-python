@@ -55,8 +55,8 @@ Search the internet and extract content from web pages.
 - Packages: `beautifulsoup4`, `requests`
 
 **Parameters:**
-- `num_results` (default: 1) - Number of search results to retrieve (1-10)
-- `delay` (default: 0) - Delay in seconds between web requests
+- `num_results` (default: 3) - Number of search results to retrieve (1-10)
+- `delay` (default: 0.5) - Delay in seconds between web requests
 
 **Tools provided:**
 - `web_search(query, num_results)` - Search and scrape web content

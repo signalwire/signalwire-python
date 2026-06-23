@@ -81,7 +81,7 @@ message = await client.send_message(
 Register a handler with `@client.on_message` to receive inbound SMS/MMS.
 
 ```python
-from signalwire_agents.relay import RelayClient
+from signalwire.relay import RelayClient
 
 client = RelayClient(
     project="your-project-id",
@@ -158,7 +158,7 @@ Inbound messages always arrive with state `received`.
 | `MessageStateEvent` | Outbound message state change |
 
 ```python
-from signalwire_agents.relay import MessageReceiveEvent, MessageStateEvent
+from signalwire.relay import MessageReceiveEvent, MessageStateEvent
 ```
 
 ## Combining Calls and Messages

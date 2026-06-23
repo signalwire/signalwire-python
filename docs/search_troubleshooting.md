@@ -852,7 +852,7 @@ sw-search export ./knowledge.swsearch ./inspect.json
 ```
 
 **GitHub Issues:**
-https://github.com/signalwire/signalwire-agents-sdk/issues
+https://github.com/signalwire/signalwire-python/issues
 
 **GitHub Discussions:**
-https://github.com/signalwire/signalwire-agents-sdk/discussions
+https://github.com/signalwire/signalwire-python/discussions
