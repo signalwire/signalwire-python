@@ -451,8 +451,8 @@ CMD ["python", "agent.py"]
 
 | Configuration | Image Size |
 |---------------|------------|
-| Full search (`signalwire-agents[search]`) | ~1.2GB |
-| Query-only (`signalwire-agents[search-queryonly]`) | ~800MB |
+| Full search (`signalwire-sdk[search]`) | ~1.2GB |
+| Query-only (`signalwire-sdk[search-queryonly]`) | ~800MB |
 
 For Kubernetes deployments with multiple replicas, the savings compound:
 

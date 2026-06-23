@@ -13,7 +13,7 @@ BedrockAgent is a specialized agent implementation that integrates Amazon Bedroc
 
 ## Installation
 
-BedrockAgent is included in the signalwire-agents package:
+BedrockAgent is included in the signalwire-sdk package:
 
 ```python
 from signalwire import BedrockAgent
@@ -352,9 +352,9 @@ agent.enable_debug_routes()
 
 ## See Also
 
-- [AgentBase Documentation](agent_base.md)
-- [Skills Documentation](skills.md)
-- [SWAIG Functions Documentation](swaig_functions.md)
+- [AgentBase Documentation](agent_guide.md)
+- [Skills Documentation](skills_system.md)
+- [SWAIG Functions Documentation](swaig_reference.md)
 - [SignalWire AI Gateway Documentation](https://docs.signalwire.com/topics/ai-gateway/)
 
 ## Amazon Bedrock Verb Keys

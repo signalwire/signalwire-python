@@ -1,9 +1,9 @@
-# SignalWireClient Reference
+# RestClient Reference
 
 ## Constructor
 
 ```python
-SignalWireClient(
+RestClient(
     project: str = None,   # SIGNALWIRE_PROJECT_ID
     token: str = None,     # SIGNALWIRE_API_TOKEN
     host: str = None,      # SIGNALWIRE_SPACE
@@ -77,7 +77,7 @@ Every API surface is available as a namespace attribute on the client:
 ## Error Handling
 
 ```python
-from signalwire_agents.rest import SignalWireRestError
+from signalwire.rest import SignalWireRestError
 
 try:
     client.fabric.ai_agents.get("bad-id")

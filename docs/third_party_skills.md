@@ -169,7 +169,7 @@ setup(
     version="1.0.0",
     packages=find_packages(),
     install_requires=[
-        "signalwire-agents",
+        "signalwire-sdk",
         "requests",
     ],
     entry_points={
@@ -504,7 +504,7 @@ setup(
     description="Custom skills for SignalWire AI Agents",
     packages=find_packages(),
     install_requires=[
-        "signalwire-agents>=1.0.12",
+        "signalwire-sdk>=3.0.0",
         "requests>=2.25.0",
     ],
     entry_points={
@@ -513,7 +513,7 @@ setup(
             'translate = my_signalwire_skills.translation.skill:TranslationSkill',
         ]
     },
-    python_requires='>=3.7',
+    python_requires='>=3.10',
 )
 ```
 

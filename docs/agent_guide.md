@@ -667,8 +667,8 @@ Provides web search capabilities using Google Custom Search API with web scrapin
 **Parameters:**
 - `api_key` (required): Google Custom Search API key
 - `search_engine_id` (required): Google Custom Search Engine ID
-- `num_results` (default: 1): Number of search results to return
-- `delay` (default: 0): Delay in seconds between requests
+- `num_results` (default: 3): Number of search results to return
+- `delay` (default: 0.5): Delay in seconds between requests
 - `tool_name` (default: "web_search"): Custom name for the search tool
 - `no_results_message` (default: "I couldn't find any results for '{query}'. This might be due to a very specific query or temporary issues. Try rephrasing your search or asking about a different topic."): Custom message to return when no search results are found. Use `{query}` as a placeholder for the search query.
 
@@ -1107,7 +1107,7 @@ class DynamicSkillAgent(AgentBase):
 
 4. **Test skills in isolation**: Create simple test scripts to verify skill functionality
 
-For more detailed information about the skills system architecture and advanced customization, see the [Skills System README](SKILLS_SYSTEM_README.md).
+For more detailed information about the skills system architecture and advanced customization, see the [Skills System Guide](skills_system.md).
 
 ## Multilingual Support
 

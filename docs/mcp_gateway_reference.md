@@ -9,7 +9,7 @@ The MCP-SWAIG Gateway bridges Model Context Protocol (MCP) servers with SignalWi
 The MCP Gateway is included in the SignalWire Agents SDK. Install with the gateway dependencies:
 
 ```bash
-pip install "signalwire-agents[mcp-gateway]"
+pip install "signalwire-sdk[mcp-gateway]"
 ```
 
 Once installed, the `mcp-gateway` CLI command is available:

@@ -4,7 +4,7 @@ The RELAY client connects to SignalWire via WebSocket and gives you real-time, i
 
 ## Installation
 
-The RELAY client is included in the `signalwire-agents` package:
+The RELAY client is included in the `signalwire-sdk` package:
 
 ```bash
 pip install signalwire-sdk
@@ -31,7 +31,7 @@ Alternatively, you can authenticate with a JWT token:
 ## Minimal Example
 
 ```python
-from signalwire_agents.relay import RelayClient
+from signalwire.relay import RelayClient
 
 client = RelayClient(
     project="your-project-id",
@@ -59,7 +59,7 @@ export SIGNALWIRE_SPACE=example.signalwire.com
 ```
 
 ```python
-from signalwire_agents.relay import RelayClient
+from signalwire.relay import RelayClient
 
 client = RelayClient(contexts=["default"])
 

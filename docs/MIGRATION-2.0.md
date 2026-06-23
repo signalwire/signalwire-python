@@ -4,7 +4,7 @@
 
 ```bash
 # Before
-pip install signalwire-sdk
+pip install signalwire-agents
 
 # After
 pip install signalwire-sdk

@@ -304,7 +304,7 @@ from signalwire.search import SearchService
 service = SearchService(config_file="search_config.json")
 
 # MCP Gateway
-from mcp_gateway.gateway_service import MCPGateway
+from signalwire.mcp_gateway.gateway_service import MCPGateway
 
 gateway = MCPGateway(config_path="mcp_config.json")
 ```

@@ -25,7 +25,7 @@ AgentBase(
     name: str,
     route: str = "/",
     host: str = "0.0.0.0",
-    port: int = 3000,
+    port: Optional[int] = None,
     basic_auth: Optional[Tuple[str, str]] = None,
     use_pom: bool = True,
     token_expiry_secs: int = 3600,
@@ -48,7 +48,7 @@ AgentBase(
 - `name` (str): Human-readable name for the agent
 - `route` (str): HTTP route path for the agent (default: "/")
 - `host` (str): Host address to bind to (default: "0.0.0.0")
-- `port` (int): Port number to listen on (default: 3000)
+- `port` (Optional[int]): Port number to listen on. If unset, defaults to 3000 at serve/run time.
 - `basic_auth` (Optional[Tuple[str, str]]): Username/password for HTTP basic auth
 - `use_pom` (bool): Whether to use Prompt Object Model (default: True)
 - `token_expiry_secs` (int): Security token expiration time (default: 3600)
@@ -1549,12 +1549,13 @@ result = FunctionResult("Transferring you to our sales team")
 result.connect("sales@company.com")
 ```
 
-##### `swml_transfer(dest: str, ai_response: str) -> FunctionResult`
+##### `swml_transfer(dest: str, ai_response: str, final: bool = True) -> FunctionResult`
 Create a SWML-based transfer with AI response setup.
 
 **Parameters:**
 - `dest` (str): Transfer destination
 - `ai_response` (str): AI response when transfer completes
+- `final` (bool): Whether this is a permanent transfer (True) or temporary (False). Defaults to True.
 
 **Usage:**
 ```python
@@ -1644,21 +1645,6 @@ result.stop_background_file()
 ```
 
 ### Data Management Actions
-
-##### `set_global_data(data: Dict[str, Any]) -> FunctionResult`
-Set global data for the conversation.
-
-**Parameters:**
-- `data` (Dict[str, Any]): Global data to set
-
-**Usage:**
-```python
-result.set_global_data({
-    "customer_id": "12345",
-    "order_status": "shipped",
-    "tracking_number": "1Z999AA1234567890"
-})
-```
 
 ##### `update_global_data(data: Dict[str, Any]) -> FunctionResult`
 Update existing global data (merge with existing).
@@ -2870,41 +2856,25 @@ The Skills System provides modular, reusable capabilities that can be easily add
 ### Available Built-in Skills
 
 #### `datetime` Skill
-Provides current date and time information.
+Provides current date and time information. Exposes `get_current_time` and `get_current_date` tools; each accepts a `timezone` argument at call time (defaults to UTC).
 
-**Parameters:**
-- `timezone` (Optional[str]): Timezone for date/time (default: system timezone)
-- `format` (Optional[str]): Custom date/time format string
+**Parameters:** None (the skill takes no configuration parameters beyond the common base parameters).
 
 **Usage:**
 ```python
-# Basic datetime skill
+# Add the datetime skill (no configuration parameters)
 agent.add_skill("datetime")
-
-# With timezone
-agent.add_skill("datetime", {"timezone": "America/New_York"})
-
-# With custom format
-agent.add_skill("datetime", {
-    "timezone": "UTC",
-    "format": "%Y-%m-%d %H:%M:%S %Z"
-})
 ```
 
 #### `math` Skill
-Safe mathematical expression evaluation.
+Safe mathematical expression evaluation. Exposes a `calculate` tool that evaluates an `expression` argument (supports +, -, *, /, %, ** and parentheses).
 
-**Parameters:**
-- `precision` (Optional[int]): Decimal precision for results (default: 2)
-- `max_expression_length` (Optional[int]): Maximum expression length (default: 100)
+**Parameters:** None (the skill takes no configuration parameters beyond the common base parameters).
 
 **Usage:**
 ```python
-# Basic math skill
+# Add the math skill (no configuration parameters)
 agent.add_skill("math")
-
-# With custom precision
-agent.add_skill("math", {"precision": 4})
 ```
 
 #### `web_search` Skill
@@ -2915,7 +2885,7 @@ Google Custom Search API integration with web scraping.
 - `search_engine_id` (str): Google Custom Search Engine ID (required)
 - `num_results` (Optional[int]): Number of results to return (default: 3)
 - `tool_name` (Optional[str]): Custom tool name for multiple instances
-- `delay` (Optional[float]): Delay between requests in seconds
+- `delay` (Optional[float]): Delay between requests in seconds (default: 0.5)
 - `no_results_message` (Optional[str]): Custom message when no results found
 
 **Usage:**
@@ -2952,7 +2922,7 @@ SignalWire DataSphere knowledge search integration.
 - `token` (str): DataSphere access token (required)
 - `document_id` (Optional[str]): Specific document to search
 - `tool_name` (Optional[str]): Custom tool name for multiple instances
-- `count` (Optional[int]): Number of results to return (default: 3)
+- `count` (Optional[int]): Number of results to return (default: 1)
 - `tags` (Optional[List[str]]): Filter by document tags
 
 **Usage:**
@@ -2987,23 +2957,24 @@ agent.add_skill("datasphere", {
 Local document search with vector similarity and keyword search.
 
 **Parameters:**
-- `index_path` (str): Path to search index file (required)
-- `tool_name` (Optional[str]): Custom tool name (default: "search_documents")
-- `max_results` (Optional[int]): Maximum results to return (default: 5)
+- `index_file` (str): Path to search index file (required)
+- `tool_name` (Optional[str]): Custom tool name (default: "search_knowledge")
+- `count` (Optional[int]): Maximum results to return (default: 5)
 - `similarity_threshold` (Optional[float]): Minimum similarity score 0.0-1.0 (default: 0.0). Higher values are stricter, lower values are more permissive. Typical range: 0.2-0.4 for all-MiniLM-L6-v2, 0.3-0.5 for all-mpnet-base-v2
+- `tags` (Optional[List[str]]): Filter results by document tags
 
 **Usage:**
 ```python
 # Basic local search
 agent.add_skill("native_vector_search", {
-    "index_path": "./knowledge.swsearch"
+    "index_file": "./knowledge.swsearch"
 })
 
 # With custom settings
 agent.add_skill("native_vector_search", {
-    "index_path": "./docs.swsearch",
+    "index_file": "./docs.swsearch",
     "tool_name": "search_docs",
-    "max_results": 10,
+    "count": 10,
     "similarity_threshold": 0.25
 })
 ```

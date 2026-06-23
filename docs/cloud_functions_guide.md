@@ -41,7 +41,7 @@ def agent_handler(request):
 2. **Create requirements.txt**:
 ```
 functions-framework==3.*
-signalwire-agents
+signalwire-sdk
 # Add your other dependencies
 ```
 
@@ -143,7 +143,7 @@ def main(req: func.HttpRequest) -> func.HttpResponse:
 4. **Create `requirements.txt`**:
 ```
 azure-functions
-signalwire-agents
+signalwire-sdk
 # Add your other dependencies
 ```
 

@@ -326,6 +326,7 @@ Use boolean parameters for optional features:
 All skills automatically inherit these base parameters from `SkillBase`:
 
 - **`swaig_fields`** (object) - Additional SWAIG function metadata to merge into tool definitions
+- **`skip_prompt`** (boolean, default: False) - If true, the skill will not inject its default prompt section into the POM
 - **`tool_name`** (string) - Custom name for skill instances (only for skills with `SUPPORTS_MULTIPLE_INSTANCES = True`)
 
 ## Examples

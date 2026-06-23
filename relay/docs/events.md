@@ -31,7 +31,7 @@ event = await action.wait(timeout=30.0)
 
 ## Event Types
 
-All event type constants are importable from `signalwire_agents.relay`:
+All event type constants are importable from `signalwire.relay`:
 
 | Constant | Value | Description |
 |----------|-------|-------------|
@@ -63,7 +63,7 @@ All event type constants are importable from `signalwire_agents.relay`:
 Raw events are always `RelayEvent` with a `params` dict. For convenience, typed event classes provide named properties:
 
 ```python
-from signalwire_agents.relay import CallStateEvent, PlayEvent, RecordEvent, parse_event
+from signalwire.relay import CallStateEvent, PlayEvent, RecordEvent, parse_event
 
 # Automatic parsing
 event = parse_event(raw_payload)
