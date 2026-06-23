@@ -20,8 +20,11 @@ import inspect
 import logging
 import threading
 import asyncio
-from typing import Any, Optional
+from typing import Any, Optional, TYPE_CHECKING
 from collections.abc import Callable
+
+if TYPE_CHECKING:
+    from signalwire.core.function_result import FunctionResult
 
 # ---------------------------------------------------------------------------
 # Sentinel for "not given" keyword arguments (distinct from None)
@@ -45,7 +48,7 @@ BANNER = r"""
 """
 
 
-def _print_banner():
+def _print_banner() -> None:
     """Print the ASCII banner to stderr, using ANSI cyan if a terminal."""
     if sys.stderr.isatty():
         sys.stderr.write(f"\033[36m{BANNER}\033[0m\n")
@@ -81,7 +84,7 @@ TIPS = [
 ]
 
 
-def _print_tip():
+def _print_tip() -> None:
     """Print a random 'Did you know?' tip to stderr."""
     tip = random.choice(TIPS)  # noqa: S311  # not cryptographic: picks a cosmetic "Did you know?" CLI tip to print
     sys.stderr.write(f"\n\U0001f4a1 Did you know?  {tip}\n\n")
@@ -97,7 +100,7 @@ _logger = logging.getLogger("LiveWire")
 class _NoopTracker:
     """Ensures each noop message is printed at most once."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._lock = threading.Lock()
         self._logged: dict[str, bool] = {}
 
@@ -114,7 +117,7 @@ class _NoopTracker:
         with self._lock:
             return self._logged.get(key, False)
 
-    def reset(self):
+    def reset(self) -> None:
         with self._lock:
             self._logged.clear()
 
@@ -142,7 +145,7 @@ class ToolError(Exception):
 class AgentHandoff:
     """Signals a handoff to another agent in multi-agent scenarios."""
 
-    def __init__(self, agent, *, returns=None):
+    def __init__(self, agent: Any, *, returns: Any = None) -> None:
         self.agent = agent
         self.returns = returns
 
@@ -155,10 +158,10 @@ class AgentHandoff:
 class ChatContext:
     """Minimal stub mirroring livekit ChatContext."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.messages: list[dict[str, str]] = []
 
-    def append(self, *, role: str = "user", text: str = ""):
+    def append(self, *, role: str = "user", text: str = "") -> "ChatContext":
         self.messages.append({"role": role, "content": text})
         return self
 
@@ -169,8 +172,11 @@ class ChatContext:
 
 
 def function_tool(
-    func=None, *, name: str | None = None, description: str | None = None
-):
+    func: "Callable[..., Any] | None" = None,
+    *,
+    name: str | None = None,
+    description: str | None = None,
+) -> "Callable[..., Any]":
     """Mirrors the livekit ``@function_tool`` decorator.
 
     Wraps a plain function so it can be passed into ``Agent(tools=[...])``.
@@ -178,7 +184,7 @@ def function_tool(
     description when *description* is not provided explicitly.
     """
 
-    def _wrap(fn: Callable) -> Callable:
+    def _wrap(fn: "Callable[..., Any]") -> "Callable[..., Any]":
         tool_name = name or fn.__name__
         tool_desc = description or (inspect.getdoc(fn) or "")
 
@@ -223,7 +229,7 @@ def function_tool(
     return _wrap
 
 
-def _is_run_context(annotation) -> bool:
+def _is_run_context(annotation: Any) -> bool:
     """Return True if *annotation* looks like a RunContext type."""
     if annotation is RunContext:
         return True
@@ -231,7 +237,7 @@ def _is_run_context(annotation) -> bool:
     return "RunContext" in name
 
 
-def _python_type_to_json(annotation) -> str:
+def _python_type_to_json(annotation: Any) -> str:
     """Map a Python type annotation to a JSON-Schema type string."""
     mapping = {
         str: "string",
@@ -250,13 +256,19 @@ def _python_type_to_json(annotation) -> str:
 class RunContext:
     """Mirrors livekit RunContext -- available inside tool handlers."""
 
-    def __init__(self, session=None, *, speech_handle=None, function_call=None):
+    def __init__(
+        self,
+        session: Any = None,
+        *,
+        speech_handle: Any = None,
+        function_call: Any = None,
+    ) -> None:
         self.session = session
         self.speech_handle = speech_handle
         self.function_call = function_call
 
     @property
-    def userdata(self):
+    def userdata(self) -> Any:
         if self.session is not None:
             return self.session.userdata
         return {}
@@ -335,22 +347,24 @@ class Agent:
         return self._session
 
     @session.setter
-    def session(self, value):
+    def session(self, value: "AgentSession | None") -> None:
         self._session = value
 
     # ------------------------------------------------------------------
     # Lifecycle hooks (override in subclass)
     # ------------------------------------------------------------------
 
-    async def on_enter(self):
+    async def on_enter(self) -> None:
         """Called when the agent enters.  Override in subclass."""
         pass
 
-    async def on_exit(self):
+    async def on_exit(self) -> None:
         """Called when the agent exits.  Override in subclass."""
         pass
 
-    async def on_user_turn_completed(self, turn_ctx=None, new_message=None):
+    async def on_user_turn_completed(
+        self, turn_ctx: Any = None, new_message: Any = None
+    ) -> None:
         """Called when the user finishes speaking.  Override in subclass."""
         pass
 
@@ -358,7 +372,7 @@ class Agent:
     # Pipeline nodes -- all noop + log
     # ------------------------------------------------------------------
 
-    async def stt_node(self, audio=None, model_settings=None):
+    async def stt_node(self, audio: Any = None, model_settings: Any = None) -> None:
         """Noop -- SignalWire handles STT in its control plane."""
         _global_noop.once(
             "stt_node",
@@ -366,7 +380,9 @@ class Agent:
             "recognition -- this node is a no-op",
         )
 
-    async def llm_node(self, chat_ctx=None, tools=None, model_settings=None):
+    async def llm_node(
+        self, chat_ctx: Any = None, tools: Any = None, model_settings: Any = None
+    ) -> None:
         """Noop -- SignalWire handles LLM in its control plane."""
         _global_noop.once(
             "llm_node",
@@ -374,7 +390,7 @@ class Agent:
             "inference -- this node is a no-op",
         )
 
-    async def tts_node(self, text=None, model_settings=None):
+    async def tts_node(self, text: Any = None, model_settings: Any = None) -> None:
         """Noop -- SignalWire handles TTS in its control plane."""
         _global_noop.once(
             "tts_node",
@@ -386,11 +402,11 @@ class Agent:
     # Dynamic updates
     # ------------------------------------------------------------------
 
-    async def update_instructions(self, instructions: str):
+    async def update_instructions(self, instructions: str) -> None:
         """Update the agent's instructions mid-session."""
         self.instructions = instructions
 
-    async def update_tools(self, tools: list[Any]):
+    async def update_tools(self, tools: list[Any]) -> None:
         """Update the agent's tool list mid-session."""
         self._tools = list(tools)
 
@@ -486,11 +502,11 @@ class AgentSession:
     # ------------------------------------------------------------------
 
     @property
-    def userdata(self):
+    def userdata(self) -> Any:
         return self._userdata
 
     @userdata.setter
-    def userdata(self, val):
+    def userdata(self, val: Any) -> None:
         self._userdata = val
 
     @property
@@ -501,23 +517,25 @@ class AgentSession:
     # Lifecycle
     # ------------------------------------------------------------------
 
-    async def start(self, agent: Agent, *, room=None, record: bool = False):
+    async def start(
+        self, agent: Agent, *, room: Any = None, record: bool = False
+    ) -> None:
         """Bind to an Agent and prepare the underlying SignalWire AgentBase."""
         self._agent = agent
         agent.session = self
         self._started = True
 
-    def say(self, text: str):
+    def say(self, text: str) -> None:
         """Queue text to be spoken by the agent."""
         self._say_queue.append(text)
 
-    def generate_reply(self, *, instructions: str | None = None):
+    def generate_reply(self, *, instructions: str | None = None) -> None:
         """Trigger the agent to generate a reply.  On SignalWire the prompt
         handles this; if *instructions* is provided they are noted."""
         if instructions:
             self._say_queue.append(instructions)
 
-    def interrupt(self):
+    def interrupt(self) -> None:
         """Noop -- SignalWire handles barge-in automatically."""
         self._noop.once(
             "interrupt",
@@ -525,7 +543,7 @@ class AgentSession:
             "automatically via its control plane",
         )
 
-    def update_agent(self, agent: Agent):
+    def update_agent(self, agent: Agent) -> None:
         """Swap in a new Agent."""
         self._agent = agent
         agent.session = self
@@ -534,7 +552,7 @@ class AgentSession:
     # Build the real SignalWire agent (called by run_app)
     # ------------------------------------------------------------------
 
-    def _build_sw_agent(self):
+    def _build_sw_agent(self) -> Any:
         """Translate the LiveWire session into a SignalWire AgentBase."""
         from signalwire import AgentBase as _AgentBase
 
@@ -598,14 +616,16 @@ class AgentSession:
         return sw
 
 
-def _register_function_tool(sw_agent, fn):
+def _register_function_tool(sw_agent: Any, fn: "Callable[..., Any]") -> None:
     """Register a @function_tool-decorated function on a SignalWire AgentBase."""
-    tool_name = fn._tool_name
-    tool_desc = fn._tool_description
-    tool_params = fn._tool_parameters
+    tool_name = fn._tool_name  # type: ignore[attr-defined]  # dynamic attr set by function_tool()
+    tool_desc = fn._tool_description  # type: ignore[attr-defined]  # dynamic attr set by function_tool()
+    tool_params = fn._tool_parameters  # type: ignore[attr-defined]  # dynamic attr set by function_tool()
 
     # Build a handler compatible with define_tool expectations
-    def handler(args, raw_data=None):
+    def handler(
+        args: dict[str, Any], raw_data: dict[str, Any] | None = None
+    ) -> "FunctionResult":
         from signalwire.core.function_result import FunctionResult
 
         sig = inspect.signature(fn)
@@ -649,19 +669,19 @@ class Room:
 class JobProcess:
     """Mirrors a livekit JobProcess -- used for prewarm/setup."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.userdata: dict[str, Any] = {}
 
 
 class JobContext:
     """Mirrors a livekit JobContext -- provides room and connection info."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.room = Room()
         self.proc = JobProcess()
         self._agent = None
 
-    async def connect(self):
+    async def connect(self) -> None:
         """Noop -- SignalWire agents connect automatically when the platform
         invokes the SWML endpoint."""
         _global_noop.once(
@@ -670,7 +690,7 @@ class JobContext:
             "connection lifecycle at scale automatically",
         )
 
-    async def wait_for_participant(self, *, identity=None):
+    async def wait_for_participant(self, *, identity: Any = None) -> None:
         """Noop -- SignalWire handles participant management automatically."""
         _global_noop.once(
             "wait_for_participant",
@@ -687,20 +707,20 @@ class JobContext:
 class AgentServer:
     """Mirrors a livekit AgentServer -- registers entrypoints and starts."""
 
-    def __init__(self, **kwargs):
-        self.setup_fnc: Callable | None = None
-        self._entrypoint: Callable | None = None
+    def __init__(self, **kwargs: Any) -> None:
+        self.setup_fnc: Callable[..., Any] | None = None
+        self._entrypoint: Callable[..., Any] | None = None
         self._agent_name: str = ""
 
     def rtc_session(
         self,
-        func=None,
+        func: "Callable[..., Any] | None" = None,
         *,
         agent_name: str = "",
         type: str = "room",
-        on_request=None,
-        on_session_end=None,
-    ):
+        on_request: Any = None,
+        on_session_end: Any = None,
+    ) -> "Callable[..., Any]":
         """Decorator that registers the session entrypoint."""
         if type != "room":
             _global_noop.once(
@@ -709,7 +729,7 @@ class AgentServer:
                 f"plane handles server topology at scale automatically",
             )
 
-        def _decorator(fn):
+        def _decorator(fn: "Callable[..., Any]") -> "Callable[..., Any]":
             self._entrypoint = fn
             if agent_name:
                 self._agent_name = agent_name
@@ -741,7 +761,7 @@ from signalwire.livewire.plugins import (  # noqa: E402
 class InferenceSTT:
     """Stub for livekit inference.STT."""
 
-    def __init__(self, model: str = "", **kwargs):
+    def __init__(self, model: str = "", **kwargs: Any) -> None:
         self.model = model
         _global_noop.once(
             "inference_stt",
@@ -753,14 +773,14 @@ class InferenceSTT:
 class InferenceLLM:
     """Stub for livekit inference.LLM."""
 
-    def __init__(self, model: str = "", **kwargs):
+    def __init__(self, model: str = "", **kwargs: Any) -> None:
         self.model = model
 
 
 class InferenceTTS:
     """Stub for livekit inference.TTS."""
 
-    def __init__(self, model: str = "", **kwargs):
+    def __init__(self, model: str = "", **kwargs: Any) -> None:
         self.model = model
         _global_noop.once(
             "inference_tts",
@@ -803,7 +823,7 @@ inference = _InferenceNamespace()
 # ---------------------------------------------------------------------------
 
 
-def run_app(server: AgentServer):
+def run_app(server: AgentServer) -> None:
     """Print banner, print a random tip, run the agent.
 
     This is the main entry point -- mirrors ``livekit.agents.cli.run_app``.

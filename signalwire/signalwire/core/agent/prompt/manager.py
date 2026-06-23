@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 Prompt management functionality for AgentBase.
 """
 
-from typing import Any
+from typing import Any, cast
 import inspect
 
 from signalwire.core.logging_config import get_logger
@@ -28,7 +28,7 @@ class PromptManager:
             agent: Parent AgentBase instance
         """
         self.agent = agent
-        self._prompt_text = None
+        self._prompt_text: str | None = None
         self._post_prompt_text = None
         self._contexts = None
 
@@ -64,9 +64,11 @@ class PromptManager:
         if self._prompt_text:
             return self._prompt_text
 
-        # Otherwise use POM sections if available
+        # Otherwise use POM sections if available. `self.agent` is untyped here
+        # (the PromptManager holds a back-reference to the AgentBase host), so
+        # pom.to_dict() returns Any; narrow it to the POM section-list shape.
         if self.agent._use_pom and self.agent.pom:
-            sections = self.agent.pom.to_dict()
+            sections = cast("list[dict[str, Any]]", self.agent.pom.to_dict())
             if sections:
                 return sections
 

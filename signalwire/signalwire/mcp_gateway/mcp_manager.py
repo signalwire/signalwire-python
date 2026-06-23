@@ -25,7 +25,7 @@ import pwd
 import shutil
 import resource
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -50,7 +50,7 @@ class MCPService:
                 "restricted_env": True,
             }
 
-    def __hash__(self):
+    def __hash__(self) -> int:
         return hash(self.name)
 
 
@@ -123,7 +123,7 @@ class MCPClient:
 
         return env, working_dir
 
-    def _sandbox_preexec(self):
+    def _sandbox_preexec(self) -> None:
         """Pre-exec function to sandbox the process"""
         sandbox_config = self.service.sandbox_config or {}
 
@@ -223,7 +223,7 @@ class MCPClient:
             logger.error(f"Error starting MCP service '{self.service.name}': {e}")
             return False
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop the MCP server process and clean up sandbox"""
         # Signal shutdown to reader thread
         self._shutdown.set()
@@ -295,8 +295,11 @@ class MCPClient:
 
     def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Call a tool on the MCP server"""
-        return self.call_method(
-            "tools/call", {"name": tool_name, "arguments": arguments}
+        # call_method() is declared -> Any (generic RPC); a tools/call result is
+        # a JSON-RPC result object.
+        return cast(
+            dict[str, Any],
+            self.call_method("tools/call", {"name": tool_name, "arguments": arguments}),
         )
 
     def call_method(self, method: str, params: dict[str, Any]) -> Any:
@@ -342,7 +345,7 @@ class MCPClient:
         """Get the list of available tools"""
         return self.tools.copy()
 
-    def _send_message(self, message: dict[str, Any]):
+    def _send_message(self, message: dict[str, Any]) -> None:
         """Send a JSON-RPC message to the server"""
         if not self.process or self.process.poll() is not None:
             raise RuntimeError("MCP server process is not running")
@@ -354,7 +357,7 @@ class MCPClient:
         self.process.stdin.flush()
         logger.debug(f"Sent to '{self.service.name}': {json_str}")
 
-    def _read_loop(self):
+    def _read_loop(self) -> None:
         """Background thread to read responses from the MCP server"""
         while (
             not self._shutdown.is_set() and self.process and self.process.poll() is None
@@ -439,7 +442,8 @@ class MCPClient:
         """Get the list of available tools from the server"""
         try:
             result = self.call_method("tools/list", {})
-            return result.get("tools", [])
+            # result is Any (RPC); "tools" is a JSON array of tool definitions.
+            return cast(list[dict[str, Any]], result.get("tools", []))
 
         except Exception as e:
             logger.error(f"Failed to list tools for '{self.service.name}': {e}")
@@ -467,7 +471,7 @@ class MCPManager:
         # Load services from config
         self._load_services()
 
-    def _load_services(self):
+    def _load_services(self) -> None:
         """Load service definitions from configuration"""
         services_config = self.config.get("services", {})
 
@@ -561,7 +565,7 @@ class MCPManager:
 
             return results
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         """Shutdown all active MCP clients"""
         with self._clients_lock:
             logger.info(f"Shutting down {len(self.clients)} active MCP clients")

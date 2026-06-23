@@ -7,7 +7,7 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import Union, Any, TYPE_CHECKING
+from typing import Union, Any, TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports the mixins; the name resolves at type-check time but mypy flags the back-reference
@@ -325,7 +325,9 @@ class PromptMixin(_HostTyped):
         Returns:
             True if section exists, False otherwise
         """
-        return self._prompt_manager.prompt_has_section(title)
+        # `_prompt_manager` is host-Any (mixin pattern); PromptManager
+        # .prompt_has_section() is declared -> bool.
+        return cast(bool, self._prompt_manager.prompt_has_section(title))
 
     def get_prompt(self) -> str | list[dict[str, Any]]:
         """
@@ -334,21 +336,25 @@ class PromptMixin(_HostTyped):
         Returns:
             Either a string prompt or a POM object as list of dicts
         """
-        # First check if prompt manager has a prompt
+        # First check if prompt manager has a prompt. `_prompt_manager` is
+        # host-Any (mixin pattern); PromptManager.get_prompt() is declared
+        # -> str | list[dict[str, Any]] | None, so narrow the non-None branch.
         prompt_result = self._prompt_manager.get_prompt()
         if prompt_result is not None:
-            return prompt_result
+            return cast("str | list[dict[str, Any]]", prompt_result)
 
-        # If using POM, return the POM structure
+        # If using POM, return the POM structure. `self.pom` is host-Any and the
+        # POM implementation is duck-typed (whichever render method it exposes);
+        # narrow each branch back to this method's declared return contract.
         if self._use_pom and self.pom:
             try:
                 # Try different methods that might be available on the POM implementation
                 if hasattr(self.pom, "render_dict"):
-                    return self.pom.render_dict()
+                    return cast("list[dict[str, Any]]", self.pom.render_dict())
                 if hasattr(self.pom, "to_dict"):
-                    return self.pom.to_dict()
+                    return cast("list[dict[str, Any]]", self.pom.to_dict())
                 if hasattr(self.pom, "to_list"):
-                    return self.pom.to_list()
+                    return cast("list[dict[str, Any]]", self.pom.to_list())
                 if hasattr(self.pom, "render"):
                     render_result = self.pom.render()
                     # If render returns a string, we need to convert it to JSON
@@ -356,11 +362,13 @@ class PromptMixin(_HostTyped):
                         try:
                             import json
 
-                            return json.loads(render_result)
+                            return cast(
+                                "list[dict[str, Any]]", json.loads(render_result)
+                            )
                         except (ValueError, json.JSONDecodeError):
                             # If we can't parse as JSON, fall back to raw text
                             pass
-                    return render_result
+                    return cast("str | list[dict[str, Any]]", render_result)
                 # Last resort: attempt to convert the POM object directly to a list/dict
                 # This assumes the POM object has a reasonable __str__ or __repr__ method
                 pom_data = self.pom.__dict__
@@ -381,4 +389,5 @@ class PromptMixin(_HostTyped):
         Returns:
             Post-prompt text or None if not set
         """
-        return self._prompt_manager.get_post_prompt()
+        # `_prompt_manager` is host-Any; PromptManager.get_post_prompt() -> str | None.
+        return cast("str | None", self._prompt_manager.get_post_prompt())

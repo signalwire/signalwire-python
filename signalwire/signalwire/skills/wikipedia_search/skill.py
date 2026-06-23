@@ -13,8 +13,11 @@ Provides Wikipedia search capabilities using the Wikipedia API.
 
 import requests
 from urllib.parse import quote
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TYPE_CHECKING
 from signalwire.core.skill_base import SkillBase
+
+if TYPE_CHECKING:
+    from signalwire.core.function_result import FunctionResult
 
 
 class WikipediaSearchSkill(SkillBase):
@@ -102,7 +105,9 @@ class WikipediaSearchSkill(SkillBase):
             handler=self._search_wiki_handler,
         )
 
-    def _search_wiki_handler(self, args, raw_data):
+    def _search_wiki_handler(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> "FunctionResult":
         """Handler for search_wiki tool"""
         from signalwire.core.function_result import FunctionResult
 
@@ -185,7 +190,7 @@ class WikipediaSearchSkill(SkillBase):
         except Exception as e:
             return f"Error searching Wikipedia: {e!s}"
 
-    def get_prompt_sections(self) -> list:
+    def get_prompt_sections(self) -> list[dict[str, Any]]:
         """
         Return additional context for the agent prompt.
 
@@ -204,7 +209,7 @@ class WikipediaSearchSkill(SkillBase):
             }
         ]
 
-    def get_hints(self) -> list:
+    def get_hints(self) -> list[str]:
         """
         Return speech recognition hints for better accuracy.
 

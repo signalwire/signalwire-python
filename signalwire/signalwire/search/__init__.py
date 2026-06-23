@@ -51,7 +51,7 @@ except ImportError:
     _MISSING_DEPS.append("nltk")
 
 
-def _check_search_dependencies():
+def _check_search_dependencies() -> None:
     """Check if search dependencies are available and provide helpful error message"""
     if not _SEARCH_AVAILABLE:
         missing = ", ".join(_MISSING_DEPS)

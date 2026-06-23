@@ -46,8 +46,8 @@ class BedrockAgent(AgentBase):
         temperature: float = 0.7,
         top_p: float = 0.9,
         max_tokens: int = 1024,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Initialize BedrockAgent
 
@@ -77,7 +77,7 @@ class BedrockAgent(AgentBase):
         logger.info(f"BedrockAgent initialized: {name} on route {route}")
 
     def _render_swml(
-        self, call_id: str | None = None, modifications: dict | None = None
+        self, call_id: str | None = None, modifications: dict[str, Any] | None = None
     ) -> str:
         """
         Render SWML document with amazon_bedrock verb
@@ -264,7 +264,7 @@ class BedrockAgent(AgentBase):
         """
         self.set_inference_params(temperature=temperature)
 
-    def set_post_prompt_llm_params(self, **params) -> None:
+    def set_post_prompt_llm_params(self, **params: Any) -> None:
         """
         Set post-prompt LLM parameters - not applicable for Bedrock
 
@@ -278,7 +278,7 @@ class BedrockAgent(AgentBase):
             "set_post_prompt_llm_params() called but Bedrock post-prompt uses OpenAI configured in C code"
         )
 
-    def set_prompt_llm_params(self, **params) -> None:
+    def set_prompt_llm_params(self, **params: Any) -> None:
         """
         Set prompt LLM parameters - use set_inference_params instead
 

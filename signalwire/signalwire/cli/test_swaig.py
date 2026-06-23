@@ -53,7 +53,7 @@ from .output.swml_dump import handle_dump_swml, setup_output_suppression
 from .output.output_formatter import display_agent_tools, format_result
 
 
-def print_help_platforms():
+def print_help_platforms() -> None:
     """Print detailed help for serverless platform options"""
     print("""
 Serverless Platform Configuration Options
@@ -97,7 +97,7 @@ Examples:
 """)
 
 
-def print_help_examples():
+def print_help_examples() -> None:
     """Print comprehensive usage examples"""
     print("""
 Comprehensive Usage Examples
@@ -224,7 +224,7 @@ swaig-test agent.py --simulate-serverless cgi --cgi-host example.com --dump-swml
 """)
 
 
-def main():
+def main() -> int:
     """Main entry point for the CLI tool"""
     # Set up suppression early if we're dumping SWML
     if "--dump-swml" in sys.argv:
@@ -840,7 +840,7 @@ def main():
     return 0
 
 
-def console_entry_point():
+def console_entry_point() -> None:
     """Console script entry point for pip installation"""
     # Check for --dump-swml or --raw BEFORE imports happen
     if "--raw" in sys.argv or "--dump-swml" in sys.argv:

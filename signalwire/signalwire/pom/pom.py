@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 import json
 import yaml
 
@@ -49,13 +49,13 @@ class Section:
         self.numbered = numbered
         self.numberedBullets = numberedBullets
 
-    def add_body(self, body: str):
+    def add_body(self, body: str) -> None:
         """Add or replace the body text for this section."""
         if not isinstance(body, str):
             raise TypeError(f"body must be a string, not {type(body).__name__}")
         self.body = body
 
-    def add_bullets(self, bullets: list[str]):
+    def add_bullets(self, bullets: list[str]) -> None:
         """Add bullet points to this section."""
         if not isinstance(bullets, list):
             raise TypeError(f"bullets must be a list, not {type(bullets).__name__}")
@@ -277,7 +277,9 @@ class PromptObjectModel:
     """
 
     @staticmethod
-    def from_json(json_data: str | dict | list) -> "PromptObjectModel":
+    def from_json(
+        json_data: str | dict[str, Any] | list[dict[str, Any]],
+    ) -> "PromptObjectModel":
         """
         Create a PromptObjectModel instance from JSON data.
 
@@ -296,7 +298,7 @@ class PromptObjectModel:
         return PromptObjectModel._from_dict(data)
 
     @staticmethod
-    def from_yaml(yaml_data: str | dict) -> "PromptObjectModel":
+    def from_yaml(yaml_data: str | dict[str, Any]) -> "PromptObjectModel":
         """
         Create a PromptObjectModel instance from YAML data.
 
@@ -473,13 +475,18 @@ class PromptObjectModel:
         Returns:
             A YAML string representation of the model
         """
-        return yaml.dump(
-            [s.to_dict() for s in self.sections],
-            default_flow_style=False,
-            sort_keys=False,
+        # yaml has no type stubs (ignore_missing_imports) so dump() is Any; with
+        # no stream argument it returns the serialized str.
+        return cast(
+            str,
+            yaml.dump(
+                [s.to_dict() for s in self.sections],
+                default_flow_style=False,
+                sort_keys=False,
+            ),
         )
 
-    def to_dict(self) -> list[dict]:
+    def to_dict(self) -> list[dict[str, Any]]:
         """
         Convert the entire model to a list of dictionaries.
 
@@ -563,7 +570,7 @@ class PromptObjectModel:
 
     def add_pom_as_subsection(
         self, target: str | Section, pom_to_add: "PromptObjectModel"
-    ):
+    ) -> None:
         """
         Add another PromptObjectModel as a subsection to a section with the given title or section object.
 

@@ -28,14 +28,14 @@ if TYPE_CHECKING:
 original_print = print
 
 
-def setup_output_suppression():
+def setup_output_suppression() -> None:
     """Set up output suppression for SWML dumping"""
     # The central logging system is already configured via environment variable
     # Just suppress any remaining warnings
     warnings.filterwarnings("ignore")
 
     # Capture and suppress print statements
-    def suppressed_print(*args, **kwargs):
+    def suppressed_print(*args: Any, **kwargs: Any) -> None:
         # If file is specified (like stderr), allow it
         if "file" in kwargs and kwargs["file"] is not sys.stdout:
             original_print(*args, **kwargs)

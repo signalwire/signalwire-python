@@ -13,6 +13,7 @@ by a callback function) configuration modes.
 """
 
 from collections.abc import Callable
+from typing import Any
 
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.function_result import FunctionResult
@@ -42,8 +43,8 @@ class InfoGathererAgent(AgentBase):
         questions: list[dict[str, str]] | None = None,
         name: str = "info_gatherer",
         route: str = "/info_gatherer",
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Initialize an information gathering agent
 
@@ -63,7 +64,11 @@ class InfoGathererAgent(AgentBase):
         # Store whether we're in static or dynamic mode
         self._static_questions = questions
         self._question_callback: (
-            Callable[[dict, dict, dict], list[dict[str, str]]] | None
+            Callable[
+                [dict[str, Any], dict[str, Any], dict[str, Any]],
+                list[dict[str, str]],
+            ]
+            | None
         ) = None
 
         if questions is not None:
@@ -83,8 +88,11 @@ class InfoGathererAgent(AgentBase):
         self._configure_agent_settings()
 
     def set_question_callback(
-        self, callback: Callable[[dict, dict, dict], list[dict[str, str]]]
-    ):
+        self,
+        callback: Callable[
+            [dict[str, Any], dict[str, Any], dict[str, Any]], list[dict[str, str]]
+        ],
+    ) -> None:
         """
         Set a callback function for dynamic question configuration
 
@@ -110,7 +118,7 @@ class InfoGathererAgent(AgentBase):
         """
         self._question_callback = callback
 
-    def _validate_questions(self, questions):
+    def _validate_questions(self, questions: list[dict[str, str]]) -> None:
         """Validate that questions are in the correct format"""
         if not questions:
             raise ValueError("At least one question is required")
@@ -126,7 +134,7 @@ class InfoGathererAgent(AgentBase):
             if "question_text" not in question:
                 raise ValueError(f"Question {i + 1} is missing 'question_text' field")
 
-    def _build_prompt(self, mode="static"):
+    def _build_prompt(self, mode: str = "static") -> None:
         """Build a minimal prompt with just the objective"""
         if mode == "dynamic":
             # Generic prompt for dynamic mode - will be customized later
@@ -141,7 +149,7 @@ class InfoGathererAgent(AgentBase):
                 body="Your role is to get answers to a series of questions. Begin by asking the user if they are ready to answer some questions. If they confirm they are ready, call the start_questions function to begin the process.",
             )
 
-    def _configure_agent_settings(self):
+    def _configure_agent_settings(self) -> None:
         """Configure additional agent settings"""
         # Set AI behavior parameters
         self.set_params(
@@ -151,7 +159,12 @@ class InfoGathererAgent(AgentBase):
             }
         )
 
-    def on_swml_request(self, request_data=None, callback_path=None, request=None):
+    def on_swml_request(
+        self,
+        request_data: dict[str, Any] | None = None,
+        callback_path: str | None = None,
+        request: Any = None,
+    ) -> dict[str, Any] | None:
         """
         Handle dynamic configuration using the callback function
 
@@ -263,7 +276,9 @@ class InfoGathererAgent(AgentBase):
         description="Start the question sequence with the first question",
         parameters={},
     )
-    def start_questions(self, args, raw_data):
+    def start_questions(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """
         Start the question sequence by retrieving the first question
 
@@ -306,7 +321,9 @@ class InfoGathererAgent(AgentBase):
             }
         },
     )
-    def submit_answer(self, args, raw_data):
+    def submit_answer(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """
         Submit an answer to the current question and move to the next one
 

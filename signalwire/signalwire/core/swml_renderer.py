@@ -141,7 +141,9 @@ class SwmlRenderer:
         if format.lower() == "yaml":
             import yaml
 
-            return yaml.dump(builder.build(), sort_keys=False)
+            # yaml has no type stubs (ignore_missing_imports), so dump() is Any;
+            # with no stream argument it returns the serialized str.
+            return cast(str, yaml.dump(builder.build(), sort_keys=False))
         return builder.render()
 
     @staticmethod
@@ -187,5 +189,6 @@ class SwmlRenderer:
         if format.lower() == "yaml":
             import yaml
 
-            return yaml.dump(service.get_document(), sort_keys=False)
+            # yaml.dump() is Any (no stubs); returns the serialized str.
+            return cast(str, yaml.dump(service.get_document(), sort_keys=False))
         return service.render_document()

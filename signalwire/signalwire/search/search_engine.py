@@ -42,7 +42,7 @@ class SearchEngine:
         index_path: str | None = None,
         connection_string: str | None = None,
         collection_name: str | None = None,
-        model=None,
+        model: Any = None,
     ):
         """
         Initialize search engine
@@ -610,8 +610,8 @@ class SearchEngine:
 
     def _merge_results(
         self,
-        vector_results: list[dict],
-        keyword_results: list[dict],
+        vector_results: list[dict[str, Any]],
+        keyword_results: list[dict[str, Any]],
         vector_weight: float | None = None,
         keyword_weight: float | None = None,
     ) -> list[dict[str, Any]]:
@@ -662,7 +662,7 @@ class SearchEngine:
         return sorted(combined.values(), key=lambda x: x["score"], reverse=True)
 
     def _filter_by_tags(
-        self, results: list[dict], required_tags: list[str]
+        self, results: list[dict[str, Any]], required_tags: list[str]
     ) -> list[dict[str, Any]]:
         """Filter results by required tags"""
         filtered = []
@@ -1302,10 +1302,10 @@ class SearchEngine:
 
     def _add_vector_scores_to_candidates(
         self,
-        candidates: dict[str, dict],
+        candidates: dict[str, dict[str, Any]],
         query_vector: NDArray,
         similarity_threshold: float,
-    ):
+    ) -> None:
         """Add vector similarity scores to existing candidates"""
         if not candidates or not np:
             return
@@ -1362,7 +1362,7 @@ class SearchEngine:
                 conn.close()
 
     def _calculate_combined_score(
-        self, candidate: dict, similarity_threshold: float
+        self, candidate: dict[str, Any], similarity_threshold: float
     ) -> float:
         """Calculate final score using max-signal-wins approach.
 
@@ -1373,8 +1373,9 @@ class SearchEngine:
         """
         agreement_boost = 0.1  # Boost per additional agreeing source
 
-        # Collect all available scores
-        scores = {}
+        # Collect all available scores. Typed dict[str, float] so the
+        # max()/arithmetic below yields a concrete float (candidate[...] is Any).
+        scores: dict[str, float] = {}
         if "vector_score" in candidate:
             scores["vector"] = candidate["vector_score"]
 
@@ -1390,7 +1391,7 @@ class SearchEngine:
         boost = agreement_boost * (len(scores) - 1)
         return min(1.0, base + boost)
 
-    def _dedupe_by_content(self, results: list[dict]) -> list[dict]:
+    def _dedupe_by_content(self, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Collapse exact/near-exact content duplicates, keeping the highest-scoring copy.
 
         Index quality varies: some source docs contain repeated boilerplate (footers,
@@ -1429,8 +1430,8 @@ class SearchEngine:
         return deduped
 
     def _apply_diversity_penalties(
-        self, results: list[dict], target_count: int
-    ) -> list[dict]:
+        self, results: list[dict[str, Any]], target_count: int
+    ) -> list[dict[str, Any]]:
         """Apply penalties to prevent single-file dominance while maintaining quality"""
         if not results:
             return results
@@ -1512,8 +1513,8 @@ class SearchEngine:
         return penalized_results
 
     def _apply_match_type_diversity(
-        self, results: list[dict], target_count: int
-    ) -> list[dict]:
+        self, results: list[dict[str, Any]], target_count: int
+    ) -> list[dict[str, Any]]:
         """Ensure diversity of match types in final results
 
         Ensures we have a mix of:

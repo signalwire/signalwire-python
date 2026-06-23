@@ -10,7 +10,10 @@ See LICENSE file in the project root for full license information.
 import contextlib
 import os
 import shutil
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from signalwire.core.agent_base import AgentBase
 from pathlib import Path
 
 from signalwire.core.skill_base import SkillBase
@@ -570,7 +573,9 @@ class NativeVectorSearchSkill(SkillBase):
                 ],
             )
 
-    def _search_handler(self, args, raw_data):
+    def _search_handler(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """Handle search requests"""
 
         # Debug logging to see what arguments are being passed
@@ -814,7 +819,9 @@ class NativeVectorSearchSkill(SkillBase):
 
             return FunctionResult(user_msg)
 
-    def _search_remote(self, query: str, enhanced: dict | None, count: int) -> list:
+    def _search_remote(
+        self, query: str, enhanced: dict[str, Any] | None, count: int
+    ) -> list[dict[str, Any]]:
         """Perform search using remote search server"""
         try:
             import requests
@@ -887,7 +894,7 @@ class NativeVectorSearchSkill(SkillBase):
         # We'll handle this in register_tools after the agent is set
         return []
 
-    def _add_prompt_section(self, agent):
+    def _add_prompt_section(self, agent: "AgentBase") -> None:
         """Add prompt section to agent (called during skill loading)"""
         try:
             agent.prompt_add_section(

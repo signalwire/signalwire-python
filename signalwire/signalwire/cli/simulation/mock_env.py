@@ -12,6 +12,7 @@ Mock environment and serverless simulation functionality
 
 import os
 import json
+from collections.abc import ItemsView, KeysView, ValuesView
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -31,13 +32,13 @@ class MockQueryParams:
     def __contains__(self, key: str) -> bool:
         return key in self._params
 
-    def items(self):
+    def items(self) -> ItemsView[str, str]:
         return self._params.items()
 
-    def keys(self):
+    def keys(self) -> KeysView[str]:
         return self._params.keys()
 
-    def values(self):
+    def values(self) -> ValuesView[str]:
         return self._params.values()
 
 
@@ -60,13 +61,13 @@ class MockHeaders:
     def __contains__(self, key: str) -> bool:
         return key.lower() in self._headers
 
-    def items(self):
+    def items(self) -> ItemsView[str, str]:
         return self._headers.items()
 
-    def keys(self):
+    def keys(self) -> KeysView[str]:
         return self._headers.keys()
 
-    def values(self):
+    def values(self) -> ValuesView[str]:
         return self._headers.values()
 
 
@@ -94,7 +95,7 @@ class MockURL:
             self.scheme = "http"
             self.netloc = "localhost:8080"
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self._url
 
 
@@ -126,7 +127,7 @@ class MockRequest:
         """Return the raw body bytes"""
         return self._body
 
-    def client(self):
+    def client(self) -> Any:
         """Mock client property"""
         return type("MockClient", (), {"host": "127.0.0.1", "port": 0})()
 
@@ -189,7 +190,7 @@ class ServerlessSimulator:
         self.active = False
         self._cleared_vars: dict[str, str] = {}
 
-    def activate(self, verbose: bool = False):
+    def activate(self, verbose: bool = False) -> None:
         """Apply serverless environment simulation"""
         if self.active:
             return
@@ -246,7 +247,7 @@ class ServerlessSimulator:
             else:
                 print("  ✓ SWML_PROXY_URL_BASE cleared successfully")
 
-    def deactivate(self, verbose: bool = False):
+    def deactivate(self, verbose: bool = False) -> None:
         """Restore original environment"""
         if not self.active:
             return
@@ -258,7 +259,7 @@ class ServerlessSimulator:
         if verbose:
             print(f"✓ Deactivated {self.platform} environment simulation")
 
-    def _clear_conflicting_env(self):
+    def _clear_conflicting_env(self) -> None:
         """Clear environment variables that might conflict with simulation"""
         # Remove variables from other platforms
         conflicting_vars: list[str] = []
@@ -275,7 +276,7 @@ class ServerlessSimulator:
                 self._cleared_vars[var] = os.environ[var]
                 os.environ.pop(var)
 
-    def add_override(self, key: str, value: str):
+    def add_override(self, key: str, value: str) -> None:
         """Add an environment variable override"""
         self.overrides[key] = value
         if self.active:

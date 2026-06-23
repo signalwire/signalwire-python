@@ -64,7 +64,7 @@ class PgVectorBackend:
         self.conn: Any = None
         self._connect()
 
-    def _connect(self):
+    def _connect(self) -> None:
         """Establish database connection"""
         try:
             self.conn = psycopg2.connect(self.connection_string)
@@ -81,12 +81,12 @@ class PgVectorBackend:
                 logger.error(f"Failed to connect to database: {e}")
             raise
 
-    def _ensure_connection(self):
+    def _ensure_connection(self) -> None:
         """Ensure database connection is active"""
         if self.conn is None or self.conn.closed:
             self._connect()
 
-    def create_schema(self, collection_name: str, embedding_dim: int = 768):
+    def create_schema(self, collection_name: str, embedding_dim: int = 768) -> None:
         """
         Create database schema for a collection
 
@@ -232,7 +232,7 @@ class PgVectorBackend:
 
     def store_chunks(
         self, chunks: list[dict[str, Any]], collection_name: str, config: dict[str, Any]
-    ):
+    ) -> None:
         """
         Store document chunks in the database
 
@@ -427,7 +427,7 @@ class PgVectorBackend:
             )
             return [row[0] for row in cursor.fetchall()]
 
-    def delete_collection(self, collection_name: str):
+    def delete_collection(self, collection_name: str) -> None:
         """Delete a collection and its data"""
         self._ensure_connection()
 
@@ -448,7 +448,7 @@ class PgVectorBackend:
             self.conn.commit()
             logger.info(f"Deleted collection '{collection_name}'")
 
-    def close(self):
+    def close(self) -> None:
         """Close database connection"""
         if self.conn and not self.conn.closed:
             self.conn.close()
@@ -480,7 +480,7 @@ class PgVectorSearchBackend:
         self._connect()
         self.config = self._load_config()
 
-    def _connect(self):
+    def _connect(self) -> None:
         """Establish database connection.
 
         Autocommit is enabled because this backend is read-only — all methods
@@ -498,7 +498,7 @@ class PgVectorSearchBackend:
             logger.error(f"Failed to connect to database: {e}")
             raise
 
-    def _ensure_connection(self):
+    def _ensure_connection(self) -> None:
         """Ensure database connection is active"""
         if self.conn is None or self.conn.closed:
             self._connect()
@@ -1145,7 +1145,7 @@ class PgVectorSearchBackend:
         backend.close()
         return stats
 
-    def close(self):
+    def close(self) -> None:
         """Close database connection"""
         if self.conn and not self.conn.closed:
             self.conn.close()

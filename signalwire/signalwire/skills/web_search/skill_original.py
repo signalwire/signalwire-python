@@ -32,7 +32,7 @@ class GoogleSearchScraper:
             }
         )
 
-    def search_google(self, query: str, num_results: int = 5) -> list:
+    def search_google(self, query: str, num_results: int = 5) -> list[dict[str, Any]]:
         """Search Google using Custom Search JSON API"""
         url = "https://www.googleapis.com/customsearch/v1"
 
@@ -231,7 +231,9 @@ class WebSearchSkill(SkillBase):
             handler=self._web_search_handler,
         )
 
-    def _web_search_handler(self, args, raw_data):
+    def _web_search_handler(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """Handler for web search tool"""
         query = args.get("query", "").strip()
 

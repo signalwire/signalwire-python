@@ -16,7 +16,7 @@ import sys
 import subprocess
 
 
-def main():
+def main() -> None:
     """Main entry point for the swaig-test command"""
     # Determine if we should show logs based on arguments
     args = sys.argv[1:]

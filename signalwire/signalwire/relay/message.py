@@ -72,7 +72,7 @@ class Message:
             asyncio.get_event_loop().create_future()
         )
         self._on_completed: Callable[[RelayEvent], Any] | None = None
-        self._listeners: list[Callable] = []
+        self._listeners: list[Callable[[RelayEvent], Any]] = []
 
     @property
     def is_done(self) -> bool:
@@ -86,7 +86,7 @@ class Message:
             return self._done.result()
         return None
 
-    def on(self, handler: Callable) -> None:
+    def on(self, handler: Callable[[RelayEvent], Any]) -> None:
         """Register an event listener for state changes on this message."""
         self._listeners.append(handler)
 

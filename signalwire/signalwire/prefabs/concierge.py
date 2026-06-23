@@ -10,6 +10,7 @@ ConciergeAgent - Prefab agent for providing virtual concierge services
 """
 
 import json
+from typing import Any
 
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.function_result import FunctionResult
@@ -47,8 +48,8 @@ class ConciergeAgent(AgentBase):
         welcome_message: str | None = None,
         name: str = "concierge",
         route: str = "/concierge",
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Initialize a concierge agent
 
@@ -76,7 +77,7 @@ class ConciergeAgent(AgentBase):
         # Set up the agent's configuration
         self._setup_concierge_agent(welcome_message)
 
-    def _setup_concierge_agent(self, welcome_message: str | None = None):
+    def _setup_concierge_agent(self, welcome_message: str | None = None) -> None:
         """Configure the concierge agent with appropriate settings"""
         # Basic personality and instructions
         self.prompt_add_section(
@@ -194,7 +195,9 @@ class ConciergeAgent(AgentBase):
             },
         },
     )
-    def check_availability(self, args, raw_data):
+    def check_availability(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """
         Check availability for a service on a specific date and time
 
@@ -227,7 +230,9 @@ class ConciergeAgent(AgentBase):
             }
         },
     )
-    def get_directions(self, args, raw_data):
+    def get_directions(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """Provide directions to a specific location or amenity"""
         location = args.get("location", "").lower()
 
@@ -243,7 +248,11 @@ class ConciergeAgent(AgentBase):
             f"You can ask our staff at the front desk for assistance."
         )
 
-    def on_summary(self, summary, raw_data=None):
+    def on_summary(
+        self,
+        summary: dict[str, Any] | None,
+        raw_data: dict[str, Any] | None = None,
+    ) -> None:
         """
         Process the interaction summary
 

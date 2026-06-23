@@ -24,7 +24,7 @@ _lock = threading.Lock()
 _logged: dict[str, bool] = {}
 
 
-def _log_once(key: str, message: str):
+def _log_once(key: str, message: str) -> None:
     global _logged
     with _lock:
         if _logged.get(key):
@@ -33,7 +33,7 @@ def _log_once(key: str, message: str):
         _logger.info("[LiveWire] %s", message)
 
 
-def _reset_logged():
+def _reset_logged() -> None:
     """Reset the per-module noop tracker (for testing)."""
     global _logged
     with _lock:
@@ -121,6 +121,6 @@ class SileroVAD:
         )
 
     @classmethod
-    def load(cls):
+    def load(cls) -> "SileroVAD":
         """Mirrors the SileroVAD.load() factory."""
         return cls()

@@ -58,8 +58,8 @@ class SurveyAgent(AgentBase):
         max_retries: int = 2,
         name: str = "survey",
         route: str = "/survey",
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Initialize a survey agent
 
@@ -105,7 +105,7 @@ class SurveyAgent(AgentBase):
         # Set up the agent's configuration
         self._setup_survey_agent()
 
-    def _validate_questions(self):
+    def _validate_questions(self) -> None:
         """Validate the question format and structure"""
         valid_types = ["rating", "multiple_choice", "yes_no", "open_ended"]
 
@@ -137,7 +137,7 @@ class SurveyAgent(AgentBase):
             if question["type"] == "rating" and "scale" not in question:
                 question["scale"] = 5  # Default to 5-point scale
 
-    def _setup_survey_agent(self):
+    def _setup_survey_agent(self) -> None:
         """Configure the survey agent with appropriate settings"""
         # Basic personality and instructions
         self.prompt_add_section(
@@ -257,7 +257,9 @@ class SurveyAgent(AgentBase):
             },
         },
     )
-    def validate_response(self, args, raw_data):
+    def validate_response(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """
         Validate if a response meets the requirements for a specific question
 
@@ -319,7 +321,9 @@ class SurveyAgent(AgentBase):
             },
         },
     )
-    def log_response(self, args, raw_data):
+    def log_response(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """
         Log a validated response to a survey question
 
@@ -341,7 +345,11 @@ class SurveyAgent(AgentBase):
 
         return FunctionResult(message)
 
-    def on_summary(self, summary, raw_data=None):
+    def on_summary(
+        self,
+        summary: dict[str, Any] | None,
+        raw_data: dict[str, Any] | None = None,
+    ) -> None:
         """
         Process the survey results summary
 

@@ -46,19 +46,19 @@ class Colors:
     NC = "\033[0m"  # No Color
 
 
-def print_step(msg: str):
+def print_step(msg: str) -> None:
     print(f"{Colors.BLUE}==>{Colors.NC} {msg}")
 
 
-def print_success(msg: str):
+def print_success(msg: str) -> None:
     print(f"{Colors.GREEN}✓{Colors.NC} {msg}")
 
 
-def print_warning(msg: str):
+def print_warning(msg: str) -> None:
     print(f"{Colors.YELLOW}!{Colors.NC} {msg}")
 
 
-def print_error(msg: str):
+def print_error(msg: str) -> None:
     print(f"{Colors.RED}✗{Colors.NC} {msg}")
 
 
@@ -2066,7 +2066,7 @@ class ProjectGenerator:
             "auth_password": auth_password,
         }
 
-    def _create_cloud_env_example(self, platform: str):
+    def _create_cloud_env_example(self, platform: str) -> None:
         """Create .env.example for cloud platforms."""
         env_content = """# Optional: Basic authentication credentials
 # If not set, the SDK will auto-generate secure credentials
@@ -2076,7 +2076,7 @@ SWML_BASIC_AUTH_PASSWORD=your-secure-password
         (self.project_dir / ".env.example").write_text(env_content)
         print_success("Created .env.example")
 
-    def _create_cloud_readme(self, platform: str):
+    def _create_cloud_readme(self, platform: str) -> None:
         """Create README.md for cloud platforms."""
         platform_names = {
             "aws": "AWS Lambda",
@@ -2272,7 +2272,7 @@ Set your phone number's SWML URL to the endpoint URL shown after deployment.
         (self.project_dir / "README.md").write_text(readme)
         print_success("Created README.md")
 
-    def _create_directories(self):
+    def _create_directories(self) -> None:
         """Create project directory structure."""
         dirs = ["agents", "skills"]
         if self.features.get("tests"):
@@ -2286,7 +2286,7 @@ Set your phone number's SWML URL to the endpoint URL shown after deployment.
         for d in dirs:
             (self.project_dir / d).mkdir(exist_ok=True)
 
-    def _create_agent_files(self):
+    def _create_agent_files(self) -> None:
         """Create agent module files."""
         agents_dir = self.project_dir / "agents"
 
@@ -2305,13 +2305,13 @@ Set your phone number's SWML URL to the endpoint URL shown after deployment.
         (self.project_dir / "skills" / "__init__.py").write_text(TEMPLATE_SKILLS_INIT)
         print_success("Created skills/__init__.py")
 
-    def _create_app_file(self):
+    def _create_app_file(self) -> None:
         """Create main app.py entry point."""
         app_code = get_app_template(self.features)
         (self.project_dir / "app.py").write_text(app_code)
         print_success("Created app.py")
 
-    def _create_config_files(self):
+    def _create_config_files(self) -> None:
         """Create configuration files."""
         # .env
         env_content = f"""# SignalWire Credentials
@@ -2357,7 +2357,7 @@ DEBUG_WEBHOOK_LEVEL=1
         (self.project_dir / "requirements.txt").write_text(TEMPLATE_REQUIREMENTS)
         print_success("Created requirements.txt")
 
-    def _create_test_files(self):
+    def _create_test_files(self) -> None:
         """Create test files."""
         tests_dir = self.project_dir / "tests"
 
@@ -2368,20 +2368,20 @@ DEBUG_WEBHOOK_LEVEL=1
         (tests_dir / "test_agent.py").write_text(test_code)
         print_success("Created tests/test_agent.py")
 
-    def _create_web_files(self):
+    def _create_web_files(self) -> None:
         """Create web UI files."""
         web_dir = self.project_dir / "web"
 
         (web_dir / "index.html").write_text(get_web_index_template())
         print_success("Created web/index.html")
 
-    def _create_readme(self):
+    def _create_readme(self) -> None:
         """Create README.md."""
         readme = get_readme_template(self.project_name, self.features)
         (self.project_dir / "README.md").write_text(readme)
         print_success("Created README.md")
 
-    def _create_virtualenv(self):
+    def _create_virtualenv(self) -> None:
         """Create and set up virtual environment."""
         venv_dir = self.project_dir / ".venv"
 
@@ -2627,7 +2627,7 @@ def run_quick(project_name: str, args: Any) -> dict[str, Any]:
     }
 
 
-def main():
+def main() -> None:
     """Main entry point."""
     import argparse
 

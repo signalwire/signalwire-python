@@ -11,7 +11,7 @@ Spider skill for fast web scraping with SignalWire AI Agents.
 
 import re
 import collections
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 from urllib.parse import urljoin, urlparse
 import requests
 from lxml import html
@@ -179,7 +179,7 @@ class SpiderSkill(SkillBase):
         self.session.headers.update(self.headers)
 
         # Cache for responses (bounded OrderedDict for LRU-style eviction)
-        self._cache: collections.OrderedDict[str, Any] | None = (
+        self._cache: collections.OrderedDict[str, requests.Response] | None = (
             collections.OrderedDict() if self.cache_enabled else None
         )
         self._cache_max_size = 100
@@ -311,8 +311,9 @@ class SpiderSkill(SkillBase):
                 for elem in tree.xpath(xpath):
                     elem.drop_tree()
 
-            # Extract text
-            text = tree.text_content()
+            # Extract text. lxml has no type stubs, so text_content() is Any;
+            # it returns the element's concatenated text as a str.
+            text = cast(str, tree.text_content())
 
             # Clean whitespace if requested
             if self.clean_text:

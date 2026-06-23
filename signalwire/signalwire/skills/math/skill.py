@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 import ast
-from typing import Any, ClassVar
+from typing import Any, ClassVar, cast
 from collections.abc import Callable
 
 from signalwire.core.skill_base import SkillBase
@@ -55,7 +55,7 @@ class MathSkill(SkillBase):
         ast.USub: lambda a: -a,
     }
 
-    def _safe_eval(self, node):
+    def _safe_eval(self, node: ast.AST) -> int | float:
         """Recursively evaluate an AST node, allowing only safe math operations."""
         if isinstance(node, ast.Expression):
             return self._safe_eval(node.body)
@@ -72,16 +72,20 @@ class MathSkill(SkillBase):
             # Cap exponent to prevent resource exhaustion
             if op_type is ast.Pow and isinstance(right, (int, float)) and right > 1000:
                 raise ValueError("Exponent too large (maximum is 1000)")
-            return self._SAFE_OPERATORS[op_type](left, right)
+            # _SAFE_OPERATORS values are Callable[..., Any]; arithmetic on
+            # int|float operands yields int|float.
+            return cast("int | float", self._SAFE_OPERATORS[op_type](left, right))
         if isinstance(node, ast.UnaryOp):
             op_type = type(node.op)
             if op_type not in self._SAFE_OPERATORS:
                 raise ValueError(f"Unsupported unary operator: {op_type.__name__}")
             operand = self._safe_eval(node.operand)
-            return self._SAFE_OPERATORS[op_type](operand)
+            return cast("int | float", self._SAFE_OPERATORS[op_type](operand))
         raise ValueError(f"Unsupported expression node: {type(node).__name__}")
 
-    def _calculate_handler(self, args, raw_data):
+    def _calculate_handler(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """Handler for calculate tool"""
         expression = args.get("expression", "").strip()
 

@@ -55,7 +55,9 @@ class DateTimeSkill(SkillBase):
             handler=self._get_date_handler,
         )
 
-    def _get_time_handler(self, args, raw_data):
+    def _get_time_handler(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """Handler for get_current_time tool"""
         timezone_name = args.get("timezone", "UTC")
 
@@ -73,7 +75,9 @@ class DateTimeSkill(SkillBase):
         except Exception as e:
             return FunctionResult(f"Error getting time: {e!s}")
 
-    def _get_date_handler(self, args, raw_data):
+    def _get_date_handler(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """Handler for get_current_date tool"""
         timezone_name = args.get("timezone", "UTC")
 
