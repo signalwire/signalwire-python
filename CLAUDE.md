@@ -123,7 +123,7 @@ mcp-gateway          # MCP Gateway service
 | Module | Purpose |
 |---|---|
 | `core/` | AgentBase, SWML/SWAIG, contexts, data maps, mixins |
-| `skills/` | 19 built-in skill plugins (weather, web_search, datetime, etc.) |
+| `skills/` | 17 built-in skill plugins (weather, web_search, datetime, etc.) |
 | `prefabs/` | Ready-made agent archetypes (InfoGatherer, Survey, FAQ, Receptionist, Concierge) |
 | `relay/` | WebSocket RELAY client (Blade/JSON-RPC 2.0), async call control |
 | `rest/` | Synchronous REST client, namespaced API (Fabric, Calling, Video, Datasphere) |
