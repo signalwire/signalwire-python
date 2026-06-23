@@ -7,6 +7,8 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
+from typing import cast
+
 from signalwire.core.mixins._mixin_host import _HostTyped
 
 
@@ -32,8 +34,10 @@ class StateMixin(_HostTyped):
                 self.log.error("no_session_manager")
                 return ""
 
-            # Create the token using the session manager
-            return self._session_manager.create_tool_token(tool_name, call_id)
+            # Create the token using the session manager. The host attribute
+            # `_session_manager` is typed Any (mixin-host pattern), so narrow the
+            # SessionManager.create_tool_token() -> str result back to str.
+            return cast(str, self._session_manager.create_tool_token(tool_name, call_id))
         except Exception as e:
             self.log.error(
                 "token_creation_error", error=str(e), tool=tool_name, call_id=call_id
@@ -155,7 +159,9 @@ class StateMixin(_HostTyped):
             else:
                 self.log.warning("token_invalid", function=function_name)
 
-            return is_valid
+            # `_session_manager` is host-Any; SessionManager.validate_tool_token
+            # is declared -> bool, so narrow back to bool.
+            return cast(bool, is_valid)
         except Exception as e:
             self.log.error(
                 "token_validation_error", error=str(e), function=function_name

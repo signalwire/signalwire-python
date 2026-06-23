@@ -1373,8 +1373,9 @@ class SearchEngine:
         """
         agreement_boost = 0.1  # Boost per additional agreeing source
 
-        # Collect all available scores
-        scores = {}
+        # Collect all available scores. Typed dict[str, float] so the
+        # max()/arithmetic below yields a concrete float (candidate[...] is Any).
+        scores: dict[str, float] = {}
         if "vector_score" in candidate:
             scores["vector"] = candidate["vector_score"]
 

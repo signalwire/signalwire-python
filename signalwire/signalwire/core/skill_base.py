@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, ClassVar, TYPE_CHECKING
+from typing import Any, ClassVar, TYPE_CHECKING, cast
 
 from signalwire.core.logging_config import get_logger
 
@@ -73,8 +73,10 @@ class SkillBase(ABC):
         merged_kwargs = dict(self.swaig_fields)
         merged_kwargs.update(kwargs)
 
-        # Call the agent's define_tool with merged arguments
-        return self.agent.define_tool(**merged_kwargs)
+        # Call the agent's define_tool with merged arguments. agent.define_tool
+        # returns the AgentBase (fluent), but this wrapper's contract is -> None
+        # and `self.agent` is untyped, so don't propagate the Any return.
+        self.agent.define_tool(**merged_kwargs)
 
     def get_hints(self) -> list[str]:
         """Return speech recognition hints for this skill"""
@@ -174,8 +176,10 @@ class SkillBase(ABC):
             dict: The skill's namespaced state, or empty dict if not found.
         """
         namespace = self._get_skill_namespace()
+        # raw_data is dict[str, Any], so global_data and the namespaced lookup
+        # are Any; the skill's namespaced state is itself a dict.
         global_data = raw_data.get("global_data", {})
-        return global_data.get(namespace, {})
+        return cast(dict[str, Any], global_data.get(namespace, {}))
 
     def update_skill_data(
         self, result: "FunctionResult", data: dict[str, Any]

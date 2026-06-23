@@ -138,7 +138,7 @@ class SearchService:
 
         self.search_engines: dict[str, SearchEngine] = {}
         self.model: Any = None
-        self._query_cache: dict[str, Any] = {}  # Simple query result cache
+        self._query_cache: dict[str, SearchResponse] = {}  # Simple query result cache
         self._cache_size = 100  # Max number of cached queries
 
         # Load security configuration with optional config file

@@ -12,7 +12,7 @@ Webhook function execution (including external)
 
 import json
 import requests
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, cast
 from ..config import HTTP_REQUEST_TIMEOUT
 
 if TYPE_CHECKING:
@@ -92,7 +92,9 @@ def execute_external_webhook_function(
 
         if response.status_code == 200:
             try:
-                result = response.json()
+                # requests' .json() is typed -> Any; a successful webhook returns
+                # a JSON object, matching the declared dict return.
+                result = cast(dict[str, Any], response.json())
                 if verbose:
                     print("✓ External webhook succeeded")
                     print(f"Response: {json.dumps(result, indent=2)}")

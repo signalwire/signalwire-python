@@ -21,7 +21,7 @@ import argparse
 from pathlib import Path
 import signal
 import re
-from typing import Any
+from typing import Any, cast
 from datetime import datetime
 import ssl
 import concurrent.futures
@@ -276,7 +276,9 @@ class MCPGateway:
                     }
                     session_config[key] = defaults.get(key, 60)
 
-        return config
+        # config originates from json.load() (Any); the config file is a JSON
+        # object, matching the declared dict return.
+        return cast(dict[str, Any], config)
 
     def _check_auth(self, f):
         """Decorator for authentication using Bearer tokens or Basic auth"""

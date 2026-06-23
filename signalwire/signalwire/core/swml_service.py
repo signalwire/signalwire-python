@@ -19,7 +19,7 @@ import re
 import base64
 import sys
 import types
-from typing import Any
+from typing import Any, cast
 from collections.abc import Callable
 from urllib.parse import urlparse
 
@@ -451,12 +451,14 @@ class SWMLService(ToolMixin):
             ),  # Parent's data subdirectory
         ]
 
-        # Try to find the schema file
-        for path in potential_paths:
+        # Try to find the schema file. Use a distinct loop variable: the outer
+        # `path` is annotated Any (importlib Traversable, above), and reusing it
+        # here would leak Any into this str-returning function.
+        for candidate in potential_paths:
             if os.path.exists(  # noqa: PTH110  # tests patch global os.path.exists; Path.exists() would bypass the mock seam
-                path
+                candidate
             ):
-                return path
+                return candidate
 
         return None
 
@@ -906,7 +908,9 @@ class SWMLService(ToolMixin):
         try:
             # Check if we have call data with a 'to' field
             if "call" in request_body and "to" in request_body["call"]:
-                to_field = request_body["call"]["to"]
+                # request_body is dict[str, Any], so the 'to' field is Any; it is
+                # a SIP/TEL URI string here (AttributeError below catches non-str).
+                to_field = cast(str, request_body["call"]["to"])
 
                 # Handle SIP URIs like "sip:username@domain"
                 if to_field.startswith("sip:"):

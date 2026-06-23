@@ -2232,7 +2232,9 @@ def _get_app_name() -> str:
             with open(  # noqa: PTH123  # tests patch builtins.open while mocking Path; Path.open() would bypass the mock seam
                 "app.json"
             ) as f:
-                return json.load(f).get("name", "")
+                # json.load() is typed -> Any; the "name" field is a string
+                # (default "" when absent). Coerce to satisfy the str return.
+                return str(json.load(f).get("name", ""))
         except Exception:  # noqa: S110  # best-effort read of optional app.json; falls through to interactive prompt on failure
             pass
     return prompt("App name", Path.cwd().name)

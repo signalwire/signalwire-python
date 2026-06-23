@@ -9,6 +9,8 @@ See LICENSE file in the project root for full license information.
 Phone Numbers namespace — list, search, purchase, get, update, release, bind.
 """
 
+from typing import cast
+
 from .._base import CrudResource
 from ..call_handler import PhoneCallHandler
 
@@ -46,12 +48,12 @@ class PhoneNumbersResource(CrudResource):
         Your backend returns an SWML document per call. The server
         auto-creates a ``swml_webhook`` Fabric resource keyed off this URL.
         """
-        return self.update(
+        return cast(dict, self.update(
             resource_id,
             call_handler=PhoneCallHandler.RELAY_SCRIPT.value,
             call_relay_script_url=url,
             **extra,
-        )
+        ))
 
     def set_cxml_webhook(
         self,
@@ -77,27 +79,27 @@ class PhoneNumbersResource(CrudResource):
         if status_callback_url is not None:
             body["call_status_callback_url"] = status_callback_url
         body.update(extra)
-        return self.update(resource_id, **body)
+        return cast(dict, self.update(resource_id, **body))
 
     def set_cxml_application(
         self, resource_id: str, application_id: str, **extra
     ) -> dict:
         """Route inbound calls to an existing cXML application by ID."""
-        return self.update(
+        return cast(dict, self.update(
             resource_id,
             call_handler=PhoneCallHandler.LAML_APPLICATION.value,
             call_laml_application_id=application_id,
             **extra,
-        )
+        ))
 
     def set_ai_agent(self, resource_id: str, agent_id: str, **extra) -> dict:
         """Route inbound calls to an AI Agent Fabric resource by ID."""
-        return self.update(
+        return cast(dict, self.update(
             resource_id,
             call_handler=PhoneCallHandler.AI_AGENT.value,
             call_ai_agent_id=agent_id,
             **extra,
-        )
+        ))
 
     def set_call_flow(
         self,
@@ -118,16 +120,16 @@ class PhoneNumbersResource(CrudResource):
         if version is not None:
             body["call_flow_version"] = version
         body.update(extra)
-        return self.update(resource_id, **body)
+        return cast(dict, self.update(resource_id, **body))
 
     def set_relay_application(self, resource_id: str, name: str, **extra) -> dict:
         """Route inbound calls to a named RELAY application."""
-        return self.update(
+        return cast(dict, self.update(
             resource_id,
             call_handler=PhoneCallHandler.RELAY_APPLICATION.value,
             call_relay_application=name,
             **extra,
-        )
+        ))
 
     def set_relay_topic(
         self,
@@ -144,4 +146,4 @@ class PhoneNumbersResource(CrudResource):
         if status_callback_url is not None:
             body["call_relay_topic_status_callback_url"] = status_callback_url
         body.update(extra)
-        return self.update(resource_id, **body)
+        return cast(dict, self.update(resource_id, **body))

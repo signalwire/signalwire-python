@@ -7,7 +7,7 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports the mixins; the name resolves at type-check time but mypy flags the back-reference
@@ -62,8 +62,11 @@ class SkillMixin(_HostTyped):
 
     def list_skills(self) -> list[str]:
         """List currently loaded skills"""
-        return self.skill_manager.list_loaded_skills()
+        # `skill_manager` is host-Any (mixin pattern); SkillManager
+        # .list_loaded_skills() is declared -> list[str].
+        return cast(list[str], self.skill_manager.list_loaded_skills())
 
     def has_skill(self, skill_name: str) -> bool:
         """Check if skill is loaded"""
-        return self.skill_manager.has_skill(skill_name)
+        # `skill_manager` is host-Any; SkillManager.has_skill() -> bool.
+        return cast(bool, self.skill_manager.has_skill(skill_name))

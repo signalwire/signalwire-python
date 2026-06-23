@@ -25,7 +25,7 @@ import pwd
 import shutil
 import resource
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from dataclasses import dataclass
 
 logger = logging.getLogger(__name__)
@@ -295,9 +295,11 @@ class MCPClient:
 
     def call_tool(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Call a tool on the MCP server"""
-        return self.call_method(
+        # call_method() is declared -> Any (generic RPC); a tools/call result is
+        # a JSON-RPC result object.
+        return cast(dict[str, Any], self.call_method(
             "tools/call", {"name": tool_name, "arguments": arguments}
-        )
+        ))
 
     def call_method(self, method: str, params: dict[str, Any]) -> Any:
         """Call an RPC method and wait for response"""
@@ -439,7 +441,8 @@ class MCPClient:
         """Get the list of available tools from the server"""
         try:
             result = self.call_method("tools/list", {})
-            return result.get("tools", [])
+            # result is Any (RPC); "tools" is a JSON array of tool definitions.
+            return cast(list[dict[str, Any]], result.get("tools", []))
 
         except Exception as e:
             logger.error(f"Failed to list tools for '{self.service.name}': {e}")

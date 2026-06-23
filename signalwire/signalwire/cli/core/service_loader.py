@@ -195,7 +195,9 @@ async def simulate_request_to_service(
         # FastAPI Response
         import json
 
-        return json.loads(result.body.decode())
+        # json.loads() is typed -> Any; a FastAPI Response body is the rendered
+        # SWML JSON object, matching the declared dict return.
+        return cast(dict[Any, Any], json.loads(result.body.decode()))
     if isinstance(result, dict):
         return result
     # Try to get content from response

@@ -15,7 +15,7 @@ Uses jsonschema-rs for full JSON Schema validation with type checking.
 import os
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import jsonschema_rs
 
@@ -196,7 +196,9 @@ class SchemaUtils:
                 # locale encoding (cp1252) breaks on non-ASCII chars in the
                 # schema file.
                 with Path(self.schema_path).open("r", encoding="utf-8") as f:
-                    schema = json.load(f)
+                    # json.load() is typed -> Any; the SWML schema file is a
+                    # JSON object, so narrow it to the declared dict return.
+                    schema = cast(dict[str, Any], json.load(f))
                 self.log.debug(
                     "schema_loaded_successfully",
                     path=self.schema_path,
@@ -276,7 +278,9 @@ class SchemaUtils:
         if verb_name in self.verbs:
             verb_def = self.verbs[verb_name]["definition"]
             if "properties" in verb_def and verb_name in verb_def["properties"]:
-                return verb_def["properties"][verb_name]
+                # verb_def is built from the parsed schema (dict[str, Any]); the
+                # subscript leaks Any. Narrow to the declared dict return.
+                return cast(dict[str, Any], verb_def["properties"][verb_name])
         return {}
 
     def get_verb_required_properties(self, verb_name: str) -> list[str]:
@@ -293,7 +297,9 @@ class SchemaUtils:
             verb_def = self.verbs[verb_name]["definition"]
             if "properties" in verb_def and verb_name in verb_def["properties"]:
                 verb_props = verb_def["properties"][verb_name]
-                return verb_props.get("required", [])
+                # verb_props is Any (parsed schema); "required" is a JSON array
+                # of property-name strings.
+                return cast(list[str], verb_props.get("required", []))
         return []
 
     def validate_verb(
@@ -444,7 +450,9 @@ class SchemaUtils:
         """
         properties = self.get_verb_properties(verb_name)
         if "properties" in properties:
-            return properties["properties"]
+            # properties is dict[str, Any]; the nested "properties" map is a
+            # JSON object of param-name -> definition.
+            return cast(dict[str, Any], properties["properties"])
         return {}
 
     def generate_method_signature(self, verb_name: str) -> str:
