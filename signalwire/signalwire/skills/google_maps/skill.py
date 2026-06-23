@@ -62,7 +62,7 @@ _WORD_TO_NUM = {
 }
 
 
-def _normalize_spoken_numbers(text):
+def _normalize_spoken_numbers(text: str) -> str:
     """Convert spoken number words to digits for address lookups.
 
     Speech-to-text often transcribes street numbers as words:
@@ -129,7 +129,7 @@ def _normalize_spoken_numbers(text):
     return " ".join(result)
 
 
-def _debug_json(label, data):
+def _debug_json(label: str, data: Any) -> None:
     """Log a JSON payload at DEBUG level with pretty formatting."""
     logger.debug(f"{label}:\n{json.dumps(data, indent=2, default=str)}")
 
@@ -138,7 +138,12 @@ class GoogleMapsClient:
     def __init__(self, api_key):
         self.api_key = api_key
 
-    def validate_address(self, input_text, bias_lat=None, bias_lng=None):
+    def validate_address(
+        self,
+        input_text: str,
+        bias_lat: float | None = None,
+        bias_lng: float | None = None,
+    ) -> dict[str, Any] | None:
         """Validate and geocode an address or business name.
 
         When bias_lat/bias_lng are provided (destination search with known pickup):
@@ -191,7 +196,9 @@ class GoogleMapsClient:
             logger.error(f"Address validation error: {e}")
             return None
 
-    def _nearby_search(self, keyword, lat, lng):
+    def _nearby_search(
+        self, keyword: str, lat: float, lng: float
+    ) -> dict[str, Any] | None:
         """Find the closest matching business using Nearby Search with rankby=distance.
 
         Only returns results whose name actually contains the search keyword,
@@ -269,7 +276,12 @@ class GoogleMapsClient:
             "business_name": name,
         }
 
-    def _autocomplete_search(self, input_text, bias_lat=None, bias_lng=None):
+    def _autocomplete_search(
+        self,
+        input_text: str,
+        bias_lat: float | None = None,
+        bias_lng: float | None = None,
+    ) -> dict[str, Any] | None:
         """Validate address using Places Autocomplete + Place Details.
 
         Returns: {"address": str, "lat": float, "lng": float} or None
@@ -307,7 +319,7 @@ class GoogleMapsClient:
         logger.debug(f"Selected prediction: place_id={place_id}")
         return self._get_place_details(place_id)
 
-    def _get_place_details(self, place_id):
+    def _get_place_details(self, place_id: str) -> dict[str, Any] | None:
         """Get full address and coordinates from a place_id.
 
         Returns: {"address": str, "lat": float, "lng": float} or None
@@ -537,7 +549,9 @@ class GoogleMapsSkill(SkillBase):
             handler=self._compute_route_handler,
         )
 
-    def _lookup_address_handler(self, args, raw_data):
+    def _lookup_address_handler(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """Handler for lookup_address tool"""
         address = args.get("address", "").strip()
         if not address:
@@ -563,7 +577,9 @@ class GoogleMapsSkill(SkillBase):
 
         return FunctionResult("\n".join(parts))
 
-    def _compute_route_handler(self, args, raw_data):
+    def _compute_route_handler(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """Handler for compute_route tool"""
         origin_lat = args.get("origin_lat")
         origin_lng = args.get("origin_lng")

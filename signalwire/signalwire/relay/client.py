@@ -38,6 +38,8 @@ if TYPE_CHECKING:
     # not exported on the top-level package for mypy.
     from websockets.asyncio.client import ClientConnection
 
+    from .event import RelayEvent
+
 from signalwire.core.logging_config import get_logger
 
 from .call import Call
@@ -159,7 +161,7 @@ class RelayClient:
 
         # Internal state
         self._ws: ClientConnection | None = None
-        self._pending: dict[str, asyncio.Future[dict]] = {}
+        self._pending: dict[str, asyncio.Future[dict[str, Any]]] = {}
         # Track the method for each pending request (for code-checking decisions)
         self._pending_methods: dict[str, str] = {}
         self._calls: dict[str, Call] = {}
@@ -174,8 +176,8 @@ class RelayClient:
         self._connected = False
         self._closing = False
         self._reconnect_delay = RECONNECT_MIN_DELAY
-        self._recv_task: asyncio.Task | None = None
-        self._ping_task: asyncio.Task | None = None
+        self._recv_task: asyncio.Task[None] | None = None
+        self._ping_task: asyncio.Task[None] | None = None
         # Strong references to fire-and-forget background tasks (queued sends,
         # inbound call/message handler dispatch, ws close). asyncio only keeps
         # a weak reference to a running task, so without this the task could be
@@ -200,7 +202,9 @@ class RelayClient:
         # Track consecutive client ping failures for exponential backoff
         self._ping_failures: int = 0
         # Queue for requests made while disconnected/reconnecting
-        self._execute_queue: list[tuple[dict, asyncio.Future[dict]]] = []
+        self._execute_queue: list[
+            tuple[dict[str, Any], asyncio.Future[dict[str, Any]]]
+        ] = []
 
     def __del__(self) -> None:
         _active_clients.discard(id(self))
@@ -371,7 +375,7 @@ class RelayClient:
     # Public RPC interface
     # ------------------------------------------------------------------
 
-    async def execute(self, method: str, params: dict[str, Any]) -> dict:
+    async def execute(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
         """Send a JSON-RPC request and await the response.
 
         For calling methods, ``method`` is the full name (e.g.
@@ -457,7 +461,7 @@ class RelayClient:
         media: list[str] | None = None,
         tags: list[str] | None = None,
         region: str | None = None,
-        on_completed: Callable | None = None,
+        on_completed: Callable[[RelayEvent], Any] | None = None,
     ) -> Message:
         """Send an outbound SMS/MMS message.
 
@@ -619,7 +623,9 @@ class RelayClient:
     # Internal: send / receive
     # ------------------------------------------------------------------
 
-    async def _send_request(self, method: str, params: dict[str, Any]) -> dict:
+    async def _send_request(
+        self, method: str, params: dict[str, Any]
+    ) -> dict[str, Any]:
         """Send a JSON-RPC 2.0 request and return the result.
 
         If not connected, queues the request for later delivery.
@@ -634,7 +640,7 @@ class RelayClient:
         }
 
         loop = asyncio.get_running_loop()
-        future: asyncio.Future[dict] = loop.create_future()
+        future: asyncio.Future[dict[str, Any]] = loop.create_future()
         self._pending[req_id] = future
         self._pending_methods[req_id] = method
 
@@ -679,7 +685,9 @@ class RelayClient:
             )
             self._spawn_bg(self._safe_send(raw, future))
 
-    async def _safe_send(self, raw: str, future: asyncio.Future) -> None:
+    async def _safe_send(
+        self, raw: str, future: asyncio.Future[dict[str, Any]]
+    ) -> None:
         """Send a queued message, rejecting its future on failure."""
         try:
             if self._ws:

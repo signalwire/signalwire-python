@@ -12,23 +12,23 @@ Custom argument parsing and function argument parsing
 
 import sys
 import argparse
-from typing import Any
+from typing import Any, NoReturn
 
 
 class CustomArgumentParser(argparse.ArgumentParser):
     """Custom ArgumentParser with better error handling"""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._suppress_usage = False
 
-    def _print_message(self, message, file=None):
+    def _print_message(self, message: str, file: Any = None) -> None:
         """Override to suppress usage output for specific errors"""
         if self._suppress_usage:
             return
         super()._print_message(message, file)
 
-    def error(self, message):
+    def error(self, message: str) -> NoReturn:
         """Override error method to provide user-friendly error messages"""
         if "required" in message.lower() and "agent_path" in message:
             self._suppress_usage = True
@@ -49,13 +49,13 @@ class CustomArgumentParser(argparse.ArgumentParser):
             # For other errors, use the default behavior
             super().error(message)
 
-    def print_usage(self, file=None):
+    def print_usage(self, file: Any = None) -> None:
         """Override print_usage to suppress output when we want custom error handling"""
         if self._suppress_usage:
             return
         super().print_usage(file)
 
-    def parse_args(self, args=None, namespace=None):
+    def parse_args(self, args: Any = None, namespace: Any = None) -> Any:
         """Override parse_args to provide custom error handling for missing arguments"""
         # Check if no arguments provided (just the program name)
         if args is None:

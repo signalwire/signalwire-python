@@ -190,7 +190,7 @@ def detect_language(text: str) -> str:
     return "en"
 
 
-def load_spacy_model(language: str):
+def load_spacy_model(language: str) -> Any:
     """
     Load spaCy model for the given language
     Returns None if spaCy is not available or model not found
@@ -236,7 +236,7 @@ _MAX_MODEL_CACHE_SIZE = 5
 _model_lock = threading.Lock()
 
 
-def set_global_model(model):
+def set_global_model(model: Any) -> None:
     """Legacy function - adds model to cache instead of setting globally"""
     if model:
         # Try to get model name from various attributes
@@ -257,7 +257,7 @@ def set_global_model(model):
             logger.info(f"Model added to cache: {model_name}")
 
 
-def _get_cached_model(model_name: str | None = None):
+def _get_cached_model(model_name: str | None = None) -> Any:
     """Get or create cached sentence transformer model
 
     Args:
@@ -303,7 +303,9 @@ def _get_cached_model(model_name: str | None = None):
             return None
 
 
-def vectorize_query(query: str, model=None, model_name: str | None = None):
+def vectorize_query(
+    query: str, model: Any = None, model_name: str | None = None
+) -> Any:
     """
     Vectorize query using sentence transformers
     Returns numpy array of embeddings
@@ -354,7 +356,7 @@ stopwords_language_map = {
 
 
 # Function to ensure NLTK resources are downloaded
-def ensure_nltk_resources():
+def ensure_nltk_resources() -> None:
     """Download required NLTK resources if not already present"""
     resources = [
         "punkt",
@@ -399,7 +401,7 @@ pos_mapping = {
 }
 
 
-def get_wordnet_pos(spacy_pos):
+def get_wordnet_pos(spacy_pos: Any) -> Any:
     """Map spaCy POS tags to WordNet POS tags."""
     return pos_mapping.get(spacy_pos, wn.NOUN)
 

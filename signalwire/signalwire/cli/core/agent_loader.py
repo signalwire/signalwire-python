@@ -511,12 +511,12 @@ def _load_service_impl(
             captured_services = []
             patches_applied = []
 
-            def mock_serve(self, *args, **kwargs):
+            def mock_serve(self: Any, *args: Any, **kwargs: Any) -> Any:
                 captured_services.append(self)
                 print("  (Intercepted serve() call, service captured for testing)")
                 return self
 
-            def mock_run(self, *args, **kwargs):
+            def mock_run(self: Any, *args: Any, **kwargs: Any) -> Any:
                 captured_services.append(self)
                 print("  (Intercepted run() call, service captured for testing)")
                 return self

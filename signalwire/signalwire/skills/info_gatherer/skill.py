@@ -189,7 +189,9 @@ class InfoGathererSkill(SkillBase):
     # Handlers
     # ------------------------------------------------------------------ #
 
-    def _handle_start_questions(self, args, raw_data):
+    def _handle_start_questions(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         state = self.get_skill_data(raw_data)
         questions = state.get("questions", [])
         question_index = state.get("question_index", 0)
@@ -209,7 +211,9 @@ class InfoGathererSkill(SkillBase):
         )
         return FunctionResult(instruction)
 
-    def _handle_submit_answer(self, args, raw_data):
+    def _handle_submit_answer(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         answer = args.get("answer", "")
         confirmed = args.get("confirmed_by_user", False)
         state = self.get_skill_data(raw_data)
@@ -301,7 +305,7 @@ class InfoGathererSkill(SkillBase):
         return instruction
 
     @staticmethod
-    def _validate_questions(questions):
+    def _validate_questions(questions: Any) -> None:
         if not questions:
             raise ValueError("At least one question is required")
         if not isinstance(questions, list):

@@ -130,16 +130,16 @@ class PlayAction(Action):
             call, control_id, EVENT_CALL_PLAY, (PLAY_STATE_FINISHED, PLAY_STATE_ERROR)
         )
 
-    async def stop(self) -> dict:
+    async def stop(self) -> dict[str, Any]:
         return await self.call._execute("play.stop", {"control_id": self.control_id})
 
-    async def pause(self) -> dict:
+    async def pause(self) -> dict[str, Any]:
         return await self.call._execute("play.pause", {"control_id": self.control_id})
 
-    async def resume(self) -> dict:
+    async def resume(self) -> dict[str, Any]:
         return await self.call._execute("play.resume", {"control_id": self.control_id})
 
-    async def volume(self, volume: float) -> dict:
+    async def volume(self, volume: float) -> dict[str, Any]:
         return await self.call._execute(
             "play.volume",
             {
@@ -160,16 +160,16 @@ class RecordAction(Action):
             (RECORD_STATE_FINISHED, RECORD_STATE_NO_INPUT),
         )
 
-    async def stop(self) -> dict:
+    async def stop(self) -> dict[str, Any]:
         return await self.call._execute("record.stop", {"control_id": self.control_id})
 
-    async def pause(self, behavior: str | None = None) -> dict:
+    async def pause(self, behavior: str | None = None) -> dict[str, Any]:
         params: dict[str, Any] = {"control_id": self.control_id}
         if behavior:
             params["behavior"] = behavior
         return await self.call._execute("record.pause", params)
 
-    async def resume(self) -> dict:
+    async def resume(self) -> dict[str, Any]:
         return await self.call._execute(
             "record.resume", {"control_id": self.control_id}
         )
@@ -189,7 +189,7 @@ class DetectAction(Action):
         if (detect or state in self._terminal_states) and not self._done.done():
             self._resolve(event)
 
-    async def stop(self) -> dict:
+    async def stop(self) -> dict[str, Any]:
         return await self.call._execute("detect.stop", {"control_id": self.control_id})
 
 
@@ -215,12 +215,12 @@ class CollectAction(Action):
         else:
             super()._check_event(event)
 
-    async def stop(self) -> dict:
+    async def stop(self) -> dict[str, Any]:
         return await self.call._execute(
             "play_and_collect.stop", {"control_id": self.control_id}
         )
 
-    async def volume(self, volume: float) -> dict:
+    async def volume(self, volume: float) -> dict[str, Any]:
         return await self.call._execute(
             "play_and_collect.volume",
             {
@@ -229,7 +229,7 @@ class CollectAction(Action):
             },
         )
 
-    async def start_input_timers(self) -> dict:
+    async def start_input_timers(self) -> dict[str, Any]:
         """Start the initial_timeout timer on an active collect."""
         return await self.call._execute(
             "collect.start_input_timers", {"control_id": self.control_id}
@@ -255,10 +255,10 @@ class StandaloneCollectAction(Action):
         if (result or state in self._terminal_states) and not self._done.done():
             self._resolve(event)
 
-    async def stop(self) -> dict:
+    async def stop(self) -> dict[str, Any]:
         return await self.call._execute("collect.stop", {"control_id": self.control_id})
 
-    async def start_input_timers(self) -> dict:
+    async def start_input_timers(self) -> dict[str, Any]:
         """Start the initial_timeout timer on an active collect."""
         return await self.call._execute(
             "collect.start_input_timers", {"control_id": self.control_id}
@@ -272,7 +272,7 @@ class FaxAction(Action):
         super().__init__(call, control_id, EVENT_CALL_FAX, ("finished", "error"))
         self._method_prefix = method_prefix
 
-    async def stop(self) -> dict:
+    async def stop(self) -> dict[str, Any]:
         return await self.call._execute(
             f"{self._method_prefix}.stop", {"control_id": self.control_id}
         )
@@ -284,7 +284,7 @@ class TapAction(Action):
     def __init__(self, call: Call, control_id: str):
         super().__init__(call, control_id, EVENT_CALL_TAP, ("finished",))
 
-    async def stop(self) -> dict:
+    async def stop(self) -> dict[str, Any]:
         return await self.call._execute("tap.stop", {"control_id": self.control_id})
 
 
@@ -294,7 +294,7 @@ class StreamAction(Action):
     def __init__(self, call: Call, control_id: str):
         super().__init__(call, control_id, EVENT_CALL_STREAM, ("finished",))
 
-    async def stop(self) -> dict:
+    async def stop(self) -> dict[str, Any]:
         return await self.call._execute("stream.stop", {"control_id": self.control_id})
 
 
@@ -304,7 +304,7 @@ class PayAction(Action):
     def __init__(self, call: Call, control_id: str):
         super().__init__(call, control_id, EVENT_CALL_PAY, ("finished", "error"))
 
-    async def stop(self) -> dict:
+    async def stop(self) -> dict[str, Any]:
         return await self.call._execute("pay.stop", {"control_id": self.control_id})
 
 
@@ -314,7 +314,7 @@ class TranscribeAction(Action):
     def __init__(self, call: Call, control_id: str):
         super().__init__(call, control_id, EVENT_CALL_TRANSCRIBE, ("finished",))
 
-    async def stop(self) -> dict:
+    async def stop(self) -> dict[str, Any]:
         return await self.call._execute(
             "transcribe.stop", {"control_id": self.control_id}
         )
@@ -329,7 +329,7 @@ class AIAction(Action):
         # and "error" as terminal states from calling.call.ai events if any.
         super().__init__(call, control_id, "calling.call.ai", ("finished", "error"))
 
-    async def stop(self) -> dict:
+    async def stop(self) -> dict[str, Any]:
         return await self.call._execute("ai.stop", {"control_id": self.control_id})
 
 
@@ -385,7 +385,7 @@ class Call:
 
     async def _execute(
         self, method: str, extra_params: dict[str, Any] | None = None
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Send a ``calling.<method>`` JSON-RPC request for this call.
 
         The outer JSON-RPC method is ``"calling.<method>"`` (e.g.
@@ -536,15 +536,15 @@ class Call:
     # Call lifecycle methods
     # ------------------------------------------------------------------
 
-    async def answer(self, **kwargs: Any) -> dict:
+    async def answer(self, **kwargs: Any) -> dict[str, Any]:
         """Answer an inbound call."""
         return await self._execute("answer", kwargs or None)
 
-    async def hangup(self, reason: str = "hangup") -> dict:
+    async def hangup(self, reason: str = "hangup") -> dict[str, Any]:
         """End/hang up the call."""
         return await self._execute("end", {"reason": reason})
 
-    async def pass_(self) -> dict:
+    async def pass_(self) -> dict[str, Any]:
         """Decline control of an inbound call, returning it to routing."""
         return await self._execute("pass")
 
@@ -904,7 +904,7 @@ class Call:
         max_price_per_minute: float | None = None,
         status_url: str | None = None,
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Bridge the call to one or more destinations."""
         params: dict[str, Any] = {"devices": devices}
         if ringback is not None:
@@ -920,7 +920,7 @@ class Call:
         params.update(kwargs)
         return await self._execute("connect", params)
 
-    async def disconnect(self) -> dict:
+    async def disconnect(self) -> dict[str, Any]:
         """Disconnect (unbridge) a connected call."""
         return await self._execute("disconnect")
 
@@ -933,7 +933,7 @@ class Call:
         digits: str,
         *,
         control_id: str | None = None,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Send DTMF digits on the call."""
         cid = control_id or str(uuid.uuid4())
         return await self._execute(
@@ -978,7 +978,7 @@ class Call:
         *,
         status_url: str | None = None,
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Transfer a SIP call to an external SIP endpoint via REFER."""
         params: dict[str, Any] = {"device": device}
         if status_url is not None:
@@ -1180,7 +1180,7 @@ class Call:
         self,
         dest: str,
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Transfer call control to another RELAY app or SWML script."""
         params: dict[str, Any] = {"dest": dest}
         params.update(kwargs)
@@ -1214,7 +1214,7 @@ class Call:
         recording_status_callback_method: str | None = None,
         stream_obj: dict[str, Any] | None = None,
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Join an ad-hoc audio conference."""
         params: dict[str, Any] = {"name": name}
         if muted is not None:
@@ -1262,7 +1262,7 @@ class Call:
         params.update(kwargs)
         return await self._execute("join_conference", params)
 
-    async def leave_conference(self, conference_id: str, **kwargs: Any) -> dict:
+    async def leave_conference(self, conference_id: str, **kwargs: Any) -> dict[str, Any]:
         """Leave an audio conference."""
         params: dict[str, Any] = {"conference_id": conference_id}
         params.update(kwargs)
@@ -1272,11 +1272,11 @@ class Call:
     # Hold / Unhold
     # ------------------------------------------------------------------
 
-    async def hold(self) -> dict:
+    async def hold(self) -> dict[str, Any]:
         """Put the call on hold."""
         return await self._execute("hold")
 
-    async def unhold(self) -> dict:
+    async def unhold(self) -> dict[str, Any]:
         """Release the call from hold."""
         return await self._execute("unhold")
 
@@ -1284,11 +1284,11 @@ class Call:
     # Denoise
     # ------------------------------------------------------------------
 
-    async def denoise(self) -> dict:
+    async def denoise(self) -> dict[str, Any]:
         """Start noise reduction on the call."""
         return await self._execute("denoise")
 
-    async def denoise_stop(self) -> dict:
+    async def denoise_stop(self) -> dict[str, Any]:
         """Stop noise reduction on the call."""
         return await self._execute("denoise.stop")
 
@@ -1325,7 +1325,7 @@ class Call:
         timeout: float | None = None,
         status_url: str | None = None,
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Echo audio back to the caller (useful for testing)."""
         params: dict[str, Any] = {}
         if timeout is not None:
@@ -1348,7 +1348,7 @@ class Call:
         realm: str | None = None,
         max_triggers: int | None = None,
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Bind a DTMF digit sequence to trigger a RELAY method."""
         params: dict[str, Any] = {
             "digits": digits,
@@ -1368,7 +1368,7 @@ class Call:
         *,
         realm: str | None = None,
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Clear all digit bindings, optionally filtered by realm."""
         params: dict[str, Any] = {}
         if realm is not None:
@@ -1384,7 +1384,7 @@ class Call:
         self,
         action: dict[str, Any],
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Start or stop live transcription on the call."""
         params: dict[str, Any] = {"action": action}
         params.update(kwargs)
@@ -1396,7 +1396,7 @@ class Call:
         *,
         status_url: str | None = None,
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Start or stop live translation on the call."""
         params: dict[str, Any] = {"action": action}
         if status_url is not None:
@@ -1414,7 +1414,7 @@ class Call:
         *,
         status_url: str | None = None,
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Join a video/audio room."""
         params: dict[str, Any] = {"name": name}
         if status_url is not None:
@@ -1422,7 +1422,7 @@ class Call:
         params.update(kwargs)
         return await self._execute("join_room", params)
 
-    async def leave_room(self, **kwargs: Any) -> dict:
+    async def leave_room(self, **kwargs: Any) -> dict[str, Any]:
         """Leave the current room."""
         return await self._execute("leave_room", kwargs or None)
 
@@ -1490,7 +1490,7 @@ class Call:
         post_prompt: dict[str, Any] | None = None,
         post_prompt_url: str | None = None,
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Connect to an Amazon Bedrock AI agent."""
         params: dict[str, Any] = {}
         if prompt is not None:
@@ -1516,7 +1516,7 @@ class Call:
         reset: dict[str, Any] | None = None,
         global_data: dict[str, Any] | None = None,
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Send a message to an active AI agent session."""
         params: dict[str, Any] = {}
         if message_text is not None:
@@ -1536,7 +1536,7 @@ class Call:
         timeout: str | None = None,
         prompt: str | None = None,
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Put an AI agent session on hold."""
         params: dict[str, Any] = {}
         if timeout is not None:
@@ -1551,7 +1551,7 @@ class Call:
         *,
         prompt: str | None = None,
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Resume an AI agent session from hold."""
         params: dict[str, Any] = {}
         if prompt is not None:
@@ -1568,7 +1568,7 @@ class Call:
         *,
         event: str | None = None,
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Send a custom user-defined event."""
         params: dict[str, Any] = {}
         if event is not None:
@@ -1587,7 +1587,7 @@ class Call:
         control_id: str | None = None,
         status_url: str | None = None,
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Place the call in a queue."""
         cid = control_id or str(uuid.uuid4())
         params: dict[str, Any] = {
@@ -1607,7 +1607,7 @@ class Call:
         queue_id: str | None = None,
         status_url: str | None = None,
         **kwargs: Any,
-    ) -> dict:
+    ) -> dict[str, Any]:
         """Remove the call from a queue."""
         cid = control_id or str(uuid.uuid4())
         params: dict[str, Any] = {

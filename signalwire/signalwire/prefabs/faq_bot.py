@@ -48,8 +48,8 @@ class FAQBotAgent(AgentBase):
         persona: str | None = None,
         name: str = "faq_bot",
         route: str = "/faq",
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Initialize an FAQ bot agent
 
@@ -83,7 +83,7 @@ class FAQBotAgent(AgentBase):
         # Configure additional agent settings
         self._configure_agent_settings()
 
-    def _build_faq_bot_prompt(self):
+    def _build_faq_bot_prompt(self) -> None:
         """Build the agent prompt for the FAQ bot"""
         # Set up the personality
         self.prompt_add_section("Personality", body=self.persona)
@@ -143,7 +143,7 @@ class FAQBotAgent(AgentBase):
                 body="When appropriate, suggest other related questions from the FAQ database that might be helpful.",
             )
 
-    def _setup_post_prompt(self):
+    def _setup_post_prompt(self) -> None:
         """Set up the post-prompt for summary"""
         post_prompt = """
         Return a JSON summary of this interaction:
@@ -156,7 +156,7 @@ class FAQBotAgent(AgentBase):
         """
         self.set_post_prompt(post_prompt)
 
-    def _configure_agent_settings(self):
+    def _configure_agent_settings(self) -> None:
         """Configure additional agent settings"""
         # Add hints for better recognition of FAQ-related terms
         hints = []
@@ -216,7 +216,9 @@ class FAQBotAgent(AgentBase):
             },
         },
     )
-    def search_faqs(self, args, raw_data):
+    def search_faqs(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """
         Search for FAQs matching a specific query or category
 
@@ -269,7 +271,11 @@ class FAQBotAgent(AgentBase):
             return FunctionResult(result_text)
         return FunctionResult("No matching FAQs found.")
 
-    def on_summary(self, summary, raw_data=None):
+    def on_summary(
+        self,
+        summary: dict[str, Any] | None,
+        raw_data: dict[str, Any] | None = None,
+    ) -> None:
         """
         Process the interaction summary
 

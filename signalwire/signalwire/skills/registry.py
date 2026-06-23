@@ -23,7 +23,7 @@ from signalwire.core.logging_config import get_logger
 class SkillRegistry:
     """Global registry for on-demand skill loading"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self._skills: dict[str, type[SkillBase]] = {}
         self._external_paths: list[Path] = []  # Additional paths to search for skills
         self._entry_points_loaded = False

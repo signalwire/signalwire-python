@@ -43,23 +43,23 @@ class Colors:
     NC = "\033[0m"
 
 
-def print_step(msg: str):
+def print_step(msg: str) -> None:
     print(f"{Colors.BLUE}==>{Colors.NC} {msg}")
 
 
-def print_success(msg: str):
+def print_success(msg: str) -> None:
     print(f"{Colors.GREEN}✓{Colors.NC} {msg}")
 
 
-def print_warning(msg: str):
+def print_warning(msg: str) -> None:
     print(f"{Colors.YELLOW}!{Colors.NC} {msg}")
 
 
-def print_error(msg: str):
+def print_error(msg: str) -> None:
     print(f"{Colors.RED}✗{Colors.NC} {msg}")
 
 
-def print_header(msg: str):
+def print_header(msg: str) -> None:
     print(f"\n{Colors.BOLD}{Colors.CYAN}{msg}{Colors.NC}")
 
 
@@ -1849,7 +1849,7 @@ class DokkuProjectGenerator:
             print_error(f"Failed to generate project: {e}")
             return False
 
-    def _write_core_files(self):
+    def _write_core_files(self) -> None:
         """Write files common to both modes."""
         # Procfile
         self._write_file("Procfile", PROCFILE_TEMPLATE)
@@ -1895,7 +1895,7 @@ class DokkuProjectGenerator:
                 ),
             )
 
-    def _write_web_files(self):
+    def _write_web_files(self) -> None:
         """Write web interface files."""
         # Create web directory
         web_dir = self.project_dir / "web"
@@ -1909,7 +1909,7 @@ class DokkuProjectGenerator:
             WEB_INDEX_TEMPLATE.format(agent_name=self.app_name, route=route),
         )
 
-    def _write_simple_files(self):
+    def _write_simple_files(self) -> None:
         """Write files for simple deployment mode."""
         dokku_host = self.options.get("dokku_host", "dokku.yourdomain.com")
         route = self.options.get("route", "swaig")
@@ -1929,7 +1929,7 @@ class DokkuProjectGenerator:
         )
         self._write_file("README.md", readme)
 
-    def _write_cicd_files(self):
+    def _write_cicd_files(self) -> None:
         """Write files for CI/CD deployment mode."""
         # Create .github/workflows directory
         workflows_dir = self.project_dir / ".github" / "workflows"
@@ -1957,7 +1957,7 @@ class DokkuProjectGenerator:
         readme = README_CICD_TEMPLATE.format(app_name=self.app_name)
         self._write_file("README.md", readme)
 
-    def _write_file(self, path: str, content: str, executable: bool = False):
+    def _write_file(self, path: str, content: str, executable: bool = False) -> None:
         """Write a file to the project directory."""
         file_path = self.project_dir / path
         file_path.parent.mkdir(parents=True, exist_ok=True)
@@ -1974,7 +1974,7 @@ class DokkuProjectGenerator:
 # =============================================================================
 
 
-def cmd_init(args):
+def cmd_init(args: argparse.Namespace) -> int:
     """Initialize a new Dokku project."""
     app_name = args.name
 
@@ -2031,7 +2031,9 @@ def cmd_init(args):
     return 1
 
 
-def _print_simple_instructions(app_name: str, dokku_host: str, project_dir: Path):
+def _print_simple_instructions(
+    app_name: str, dokku_host: str, project_dir: Path
+) -> None:
     """Print instructions for simple mode."""
     print(f"""To deploy your agent:
 
@@ -2046,7 +2048,7 @@ Or manually:
 """)
 
 
-def _print_cicd_instructions(app_name: str):
+def _print_cicd_instructions(app_name: str) -> None:
     """Print instructions for CI/CD mode."""
     print(f"""
 {Colors.BOLD}═══════════════════════════════════════════════════════════{Colors.NC}
@@ -2082,7 +2084,7 @@ def _print_cicd_instructions(app_name: str):
 """)
 
 
-def cmd_deploy(args):
+def cmd_deploy(args: argparse.Namespace) -> int:
     """Deploy to Dokku."""
     # Check if we're in a Dokku project
     if not Path("Procfile").exists():
@@ -2150,7 +2152,7 @@ def cmd_deploy(args):
     return 0
 
 
-def cmd_logs(args):
+def cmd_logs(args: argparse.Namespace) -> int:
     """Tail Dokku logs."""
     app_name = args.app
     dokku_host = args.host
@@ -2172,7 +2174,7 @@ def cmd_logs(args):
     return 0
 
 
-def cmd_config(args):
+def cmd_config(args: argparse.Namespace) -> int:
     """Manage Dokku config."""
     app_name = args.app
     dokku_host = args.host
@@ -2202,7 +2204,7 @@ def cmd_config(args):
     return 0
 
 
-def cmd_scale(args):
+def cmd_scale(args: argparse.Namespace) -> int:
     """Scale Dokku processes."""
     app_name = args.app
     dokku_host = args.host
@@ -2245,7 +2247,7 @@ def _get_app_name() -> str:
 # =============================================================================
 
 
-def main():
+def main() -> int:
     parser = argparse.ArgumentParser(
         description="SignalWire Agent Dokku Deployment Tool",
         formatter_class=argparse.RawDescriptionHelpFormatter,

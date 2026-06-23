@@ -34,7 +34,9 @@ class GoogleSearchScraper:
             }
         )
 
-    def search_google(self, query: str, num_results: int = 5) -> list:
+    def search_google(
+        self, query: str, num_results: int = 5
+    ) -> list[dict[str, Any]]:
         """Search Google using Custom Search JSON API"""
         url = "https://www.googleapis.com/customsearch/v1"
 
@@ -556,7 +558,7 @@ class GoogleSearchScraper:
         return metrics
 
     def _format_snippet_results(
-        self, query: str, search_results: list, num_results: int
+        self, query: str, search_results: list[dict[str, Any]], num_results: int
     ) -> str:
         """Format Google CSE snippets without fetching the underlying pages.
 
@@ -627,7 +629,7 @@ class GoogleSearchScraper:
         if snippets_only:
             return self._format_snippet_results(query, search_results, num_results)
 
-        def _scrape_one(result):
+        def _scrape_one(result: dict[str, Any]) -> dict[str, Any] | None:
             """Fetch + score one candidate. Returns enriched dict or None."""
             if time.monotonic() >= deadline_at:
                 return None
@@ -872,7 +874,9 @@ class WebSearchSkill(SkillBase):
             handler=self._web_search_handler,
         )
 
-    def _web_search_handler(self, args, raw_data):
+    def _web_search_handler(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """Handler for web search tool with quality filtering"""
         query = args.get("query", "").strip()
 

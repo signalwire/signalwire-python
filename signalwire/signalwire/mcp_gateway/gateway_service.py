@@ -14,6 +14,7 @@ Manages sessions, handles authentication, and translates between protocols.
 """
 
 import contextlib
+from collections.abc import Callable
 import os
 import json
 import logging
@@ -48,7 +49,7 @@ logger = logging.getLogger("gateway_service")
 class MCPGateway:
     """Main gateway service class"""
 
-    def __init__(self, config_path: str = "config.json"):
+    def __init__(self, config_path: str = "config.json") -> None:
         # Use unified config loader
         self.config_loader = ConfigLoader([config_path])
 
@@ -90,7 +91,7 @@ class MCPGateway:
 
         # Configure security headers
         @self.app.after_request
-        def set_security_headers(response):
+        def set_security_headers(response: Response) -> Response:
             response.headers["X-Content-Type-Options"] = "nosniff"
             response.headers["X-Frame-Options"] = "DENY"
             response.headers["X-XSS-Protection"] = "1; mode=block"
@@ -154,7 +155,7 @@ class MCPGateway:
             raise ValueError("Tool name contains invalid characters")
         return name
 
-    def _log_security_event(self, event_type: str, details: dict[str, Any]):
+    def _log_security_event(self, event_type: str, details: dict[str, Any]) -> None:
         """Log security-relevant events with proper sanitization"""
         # Sanitize any user input in details
         sanitized = {}
@@ -280,11 +281,11 @@ class MCPGateway:
         # object, matching the declared dict return.
         return cast(dict[str, Any], config)
 
-    def _check_auth(self, f):
+    def _check_auth(self, f: Callable[..., Any]) -> Callable[..., Any]:
         """Decorator for authentication using Bearer tokens or Basic auth"""
 
         @wraps(f)
-        def decorated(*args, **kwargs):
+        def decorated(*args: Any, **kwargs: Any) -> Any:
             # Try Bearer token first
             auth_header = request.headers.get("Authorization", "")
             server_config = self.config.get("server", {})
@@ -327,11 +328,11 @@ class MCPGateway:
 
         return decorated
 
-    def _setup_routes(self):
+    def _setup_routes(self) -> None:
         """Set up Flask routes"""
 
         @self.app.route("/health", methods=["GET"])
-        def health():
+        def health() -> Any:
             """Health check endpoint"""
             return jsonify(
                 {
@@ -343,7 +344,7 @@ class MCPGateway:
 
         @self.app.route("/services", methods=["GET"])
         @self._check_auth
-        def list_services():
+        def list_services() -> Any:
             """List available MCP services"""
             services = self.mcp_manager.list_services()
             return jsonify(services)
@@ -351,7 +352,7 @@ class MCPGateway:
         @self.app.route("/services/<service_name>/tools", methods=["GET"])
         @self.limiter.limit(self.rate_config.get("tools_limit", "30 per minute"))
         @self._check_auth
-        def get_service_tools(service_name):
+        def get_service_tools(service_name: str) -> Any:
             """Get tools for a specific service"""
             try:
                 # Validate input
@@ -368,7 +369,7 @@ class MCPGateway:
         @self.app.route("/services/<service_name>/call", methods=["POST"])
         @self.limiter.limit(self.rate_config.get("call_limit", "10 per minute"))
         @self._check_auth
-        def call_service_tool(service_name):
+        def call_service_tool(service_name: str) -> Any:
             """Call a tool on a service"""
             try:
                 # Validate service name
@@ -483,7 +484,7 @@ class MCPGateway:
 
         @self.app.route("/sessions", methods=["GET"])
         @self._check_auth
-        def list_sessions():
+        def list_sessions() -> Any:
             """List active sessions"""
             sessions = self.session_manager.list_sessions()
             return jsonify(sessions)
@@ -493,7 +494,7 @@ class MCPGateway:
             self.rate_config.get("session_delete_limit", "20 per minute")
         )
         @self._check_auth
-        def close_session(session_id):
+        def close_session(session_id: str) -> Any:
             """Close a specific session"""
             try:
                 # Validate session ID
@@ -510,11 +511,11 @@ class MCPGateway:
                 return jsonify({"error": str(e)}), 400
 
         @self.app.errorhandler(Exception)
-        def handle_error(error):
+        def handle_error(error: Exception) -> Any:
             logger.error(f"Unhandled error: {error}")
             return jsonify({"error": "Internal server error"}), 500
 
-    def run(self):
+    def run(self) -> None:
         """Run the gateway service"""
         server_config = self.config.get("server", {})
         host = server_config.get("host", "0.0.0.0")  # noqa: S104  # intended server default: listen on all interfaces (overridable)
@@ -550,7 +551,7 @@ class MCPGateway:
         finally:
             self.shutdown()
 
-    def _signal_handler(self, signum, frame):
+    def _signal_handler(self, signum: int, frame: Any) -> None:
         """Handle shutdown signals"""
         logger.info(f"Received signal {signum}")
         self._shutdown_requested = True
@@ -558,7 +559,7 @@ class MCPGateway:
         if self.server:
             threading.Thread(target=self.server.shutdown, daemon=True).start()
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         """Shutdown the gateway service"""
         if self._shutdown_cleanup_done:
             # Already cleaned up
@@ -594,7 +595,7 @@ class MCPGateway:
         logger.info("MCP Gateway shutdown complete")
 
 
-def main():
+def main() -> None:
     """Main entry point"""
     parser = argparse.ArgumentParser(description="MCP-SWAIG Gateway Service")
     parser.add_argument(

@@ -9,6 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import os
 import mimetypes
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any, Optional, TYPE_CHECKING
 
@@ -49,8 +50,8 @@ class WebService:
         basic_auth: tuple[str, str] | None = None,
         config_file: str | None = None,
         enable_directory_browsing: bool = False,
-        allowed_extensions: list | None = None,
-        blocked_extensions: list | None = None,
+        allowed_extensions: list[str] | None = None,
+        blocked_extensions: list[str] | None = None,
         max_file_size: int = 100 * 1024 * 1024,  # 100MB default
         enable_cors: bool = True,
     ):
@@ -122,7 +123,7 @@ class WebService:
             self.app = None
             logger.warning("FastAPI not available. HTTP service will not be available.")
 
-    def _load_config(self, config_file: str | None):
+    def _load_config(self, config_file: str | None) -> None:
         """Load configuration from file if available"""
         # Initialize defaults
         self.directories = {}
@@ -167,7 +168,7 @@ class WebService:
             if "blocked_extensions" in service_config:
                 self.blocked_extensions = service_config["blocked_extensions"]
 
-    def _setup_security(self):
+    def _setup_security(self) -> None:
         """Setup security middleware and authentication"""
         if not self.app:
             return
@@ -178,7 +179,10 @@ class WebService:
 
         # Add security headers middleware
         @self.app.middleware("http")
-        async def add_security_headers(request: Request, call_next):
+        async def add_security_headers(
+            request: "Request",
+            call_next: "Callable[[Request], Awaitable[Response]]",
+        ) -> "Response":
             response = await call_next(request)
 
             # Add security headers
@@ -196,7 +200,10 @@ class WebService:
 
         # Add host validation middleware
         @self.app.middleware("http")
-        async def validate_host(request: Request, call_next):
+        async def validate_host(
+            request: "Request",
+            call_next: "Callable[[Request], Awaitable[Response]]",
+        ) -> "Response":
             host = request.headers.get("host", "").split(":")[0]
             if host and not self.security.should_allow_host(host):
                 return Response(content="Invalid host", status_code=400)
@@ -323,7 +330,7 @@ class WebService:
         </html>
         """
 
-    def _setup_routes(self):
+    def _setup_routes(self) -> None:
         """Setup FastAPI routes"""
         if not self.app:
             return
@@ -332,7 +339,7 @@ class WebService:
         security = HTTPBasic() if HTTPBasic is not None else None
 
         @self.app.get("/health")
-        async def health():
+        async def health() -> dict[str, Any]:
             return {
                 "status": "healthy",
                 "directories": list(self.directories.keys()),
@@ -342,7 +349,7 @@ class WebService:
             }
 
         @self.app.get("/")
-        async def root():
+        async def root():  # noqa: ANN202  # FastAPI derives the response model from this handler's return annotation; a Response|dict union is not a valid Pydantic field, so it must stay unannotated.
             """Root endpoint showing available directories"""
             html = """
             <!DOCTYPE html>
@@ -378,7 +385,7 @@ class WebService:
                 return HTMLResponse(content=html)
             return {"directories": list(self.directories.keys())}
 
-    def _mount_directories(self):
+    def _mount_directories(self) -> None:
         """Mount static file directories"""
         if not self.app or StaticFiles is None:
             return
@@ -407,13 +414,13 @@ class WebService:
             @self.app.get(f"{route}/{{file_path:path}}")
             async def serve_file(
                 file_path: str,
-                request: Request,
+                request: "Request",
                 credentials: Optional["HTTPBasicCredentials"] = (
                     None if not security else Depends(security)  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom
                 ),
-                route=route,
-                directory=directory,
-            ):
+                route: str = route,
+                directory: str = directory,
+            ):  # noqa: ANN202  # FastAPI derives the response model from this return annotation; a multi-Response union is not a valid Pydantic field, so it must stay unannotated.
                 """Serve files with security checks"""
                 if security:
                     self._get_current_username(credentials)
@@ -537,7 +544,7 @@ class WebService:
         port: int | None = None,
         ssl_cert: str | None = None,
         ssl_key: str | None = None,
-    ):
+    ) -> None:
         """
         Start the service with optional HTTPS support
 
@@ -600,6 +607,6 @@ class WebService:
                 "uvicorn not available. Cannot start HTTP service."
             ) from None
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop the service (placeholder for cleanup)"""
         pass

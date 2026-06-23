@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import re
 import json
-from typing import Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING, cast
 from pathlib import Path
 
 # Document processing imports
@@ -257,7 +257,7 @@ class DocumentProcessor:
             return self._extract_powerpoint(file_path)
         return json.dumps({"error": f"Unsupported file type: {file_type}"})
 
-    def _extract_pdf(self, file_path: str):
+    def _extract_pdf(self, file_path: str) -> Any:
         """Extract text from PDF files"""
         if not pdfplumber:
             return json.dumps({"error": "pdfplumber not available for PDF processing"})
@@ -275,7 +275,7 @@ class DocumentProcessor:
         except Exception as e:
             return json.dumps({"error": f"Error processing PDF: {e}"})
 
-    def _extract_docx(self, file_path: str):
+    def _extract_docx(self, file_path: str) -> Any:
         """Extract text from DOCX files"""
         if DocxDocument is None:
             return json.dumps(
@@ -288,7 +288,7 @@ class DocumentProcessor:
         except Exception as e:
             return json.dumps({"error": f"Error processing DOCX: {e}"})
 
-    def _extract_text(self, file_path: str):
+    def _extract_text(self, file_path: str) -> str:
         """Extract text from plain text files"""
         try:
             with open(  # noqa: PTH123  # tests patch builtins.open; Path.open() would bypass the mock seam
@@ -298,7 +298,7 @@ class DocumentProcessor:
         except Exception as e:
             return json.dumps({"error": f"Error processing TXT: {e}"})
 
-    def _extract_html(self, file_path: str):
+    def _extract_html(self, file_path: str) -> str:
         """Extract text from HTML files"""
         if BeautifulSoup is None:
             return json.dumps(
@@ -310,11 +310,12 @@ class DocumentProcessor:
                 file_path, encoding="utf-8"
             ) as file:
                 soup = BeautifulSoup(file, "html.parser")
-                return soup.get_text(separator="\n")
+                # bs4 is untyped (ignore_missing_imports); get_text() returns str.
+                return cast(str, soup.get_text(separator="\n"))
         except Exception as e:
             return json.dumps({"error": f"Error processing HTML: {e}"})
 
-    def _extract_markdown(self, file_path: str):
+    def _extract_markdown(self, file_path: str) -> str:
         """Extract text from Markdown files"""
         try:
             with open(  # noqa: PTH123  # tests patch builtins.open; Path.open() would bypass the mock seam
@@ -324,13 +325,13 @@ class DocumentProcessor:
                 if markdown is not None and BeautifulSoup is not None:
                     html = markdown.markdown(content)
                     soup = BeautifulSoup(html, "html.parser")
-                    return soup.get_text(separator="\n")
+                    return cast(str, soup.get_text(separator="\n"))
                 # Fallback to raw markdown
                 return content
         except Exception as e:
             return json.dumps({"error": f"Error processing Markdown: {e}"})
 
-    def _extract_rtf(self, file_path: str):
+    def _extract_rtf(self, file_path: str) -> str:
         """Extract text from RTF files"""
         if not rtf_to_text:
             return json.dumps({"error": "striprtf not available for RTF processing"})
@@ -339,11 +340,12 @@ class DocumentProcessor:
             with open(  # noqa: PTH123  # tests patch builtins.open; Path.open() would bypass the mock seam
                 file_path, encoding="utf-8"
             ) as file:
-                return rtf_to_text(file.read())
+                # striprtf is untyped; rtf_to_text() returns the extracted str.
+                return cast(str, rtf_to_text(file.read()))
         except Exception as e:
             return json.dumps({"error": f"Error processing RTF: {e}"})
 
-    def _extract_excel(self, file_path: str):
+    def _extract_excel(self, file_path: str) -> str:
         """Extract text from Excel files"""
         if not load_workbook:
             return json.dumps({"error": "openpyxl not available for Excel processing"})
@@ -359,7 +361,7 @@ class DocumentProcessor:
         except Exception as e:
             return json.dumps({"error": f"Error processing Excel: {e}"})
 
-    def _extract_powerpoint(self, file_path: str):
+    def _extract_powerpoint(self, file_path: str) -> Any:
         """Extract text from PowerPoint files"""
         if not Presentation:
             return json.dumps(
@@ -503,7 +505,7 @@ class DocumentProcessor:
         current_code_langs: list[str] = []
         current_has_code = False
 
-        def flush():
+        def flush() -> None:
             nonlocal current_lines, current_start_line, current_end_line
             nonlocal \
                 current_size, \
@@ -608,7 +610,7 @@ class DocumentProcessor:
             "has_code": False,
         }
 
-    def _leaf_md_block(self, tok, lines: list[str]) -> dict[str, Any]:
+    def _leaf_md_block(self, tok: Any, lines: list[str]) -> dict[str, Any]:
         """Turn a leaf (fence, code_block, hr, html_block) token into a block."""
         start, end = tok.map
         source_lines = lines[start:end]

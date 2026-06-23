@@ -48,7 +48,7 @@ class Session:
             and self.process.process.poll() is None
         )
 
-    def touch(self):
+    def touch(self) -> None:
         """Update last accessed time"""
         self.last_accessed = datetime.now()
 
@@ -205,7 +205,7 @@ class SessionManager:
                 if s.service_name == service_name and s.is_alive and not s.is_expired
             )
 
-    def _cleanup_loop(self):
+    def _cleanup_loop(self) -> None:
         """Background thread that cleans up expired sessions"""
         logger.info("Session cleanup thread started")
 
@@ -236,7 +236,7 @@ class SessionManager:
 
         logger.info("Session cleanup thread stopped")
 
-    def shutdown(self):
+    def shutdown(self) -> None:
         """Shutdown all sessions and cleanup"""
         logger.info("Shutting down SessionManager")
 

@@ -17,7 +17,7 @@ from urllib.parse import urlparse, urlunparse
 from signalwire.search.models import MODEL_ALIASES, DEFAULT_MODEL, resolve_model_alias
 
 
-def _mask_connection_string(conn_str):
+def _mask_connection_string(conn_str: str) -> str:
     """Mask password in connection string for safe logging."""
     try:
         parsed = urlparse(conn_str)
@@ -32,7 +32,7 @@ def _mask_connection_string(conn_str):
     return "****"
 
 
-def main():
+def main() -> None:
     """Main entry point for the build-search command"""
     parser = argparse.ArgumentParser(
         description="Build local search index from documents",
@@ -659,7 +659,7 @@ Examples:
         sys.exit(1)
 
 
-def validate_command():
+def validate_command() -> None:
     """Validate an existing search index"""
     parser = argparse.ArgumentParser(description="Validate a search index file")
     parser.add_argument("index_file", help="Path to .swsearch file to validate")
@@ -702,7 +702,7 @@ def validate_command():
         sys.exit(1)
 
 
-def search_command():
+def search_command() -> None:
     """Search within an existing search index"""
     parser = argparse.ArgumentParser(
         description="Search within a .swsearch index file or pgvector collection"
@@ -1091,7 +1091,7 @@ def search_command():
         sys.exit(1)
 
 
-def migrate_command():
+def migrate_command() -> None:
     """Migrate search indexes between backends"""
     parser = argparse.ArgumentParser(
         description="Migrate search indexes between SQLite and pgvector backends",
@@ -1242,7 +1242,7 @@ Examples:
         sys.exit(1)
 
 
-def remote_command():
+def remote_command() -> None:
     """Search via remote API endpoint"""
     parser = argparse.ArgumentParser(description="Search via remote API endpoint")
     parser.add_argument(
@@ -1413,7 +1413,7 @@ def remote_command():
         sys.exit(1)
 
 
-def console_entry_point():
+def console_entry_point() -> None:
     """Console script entry point for pip installation"""
     import sys
 

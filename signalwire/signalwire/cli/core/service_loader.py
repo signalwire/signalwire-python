@@ -44,9 +44,9 @@ else:
 class ServiceCapture:
     """Captures SWMLService instances when they try to run/serve"""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.captured_services: list[SWMLService] = []
-        self.original_methods = {}
+        self.original_methods: dict[Any, Any] = {}
 
     def capture(
         self, service_path: str, suppress_output: bool = False
@@ -115,20 +115,20 @@ class ServiceCapture:
 
         return self.captured_services
 
-    def _apply_patches(self):
+    def _apply_patches(self) -> None:
         """Apply patches to capture services"""
 
         # Store reference to self for use in closures
         capture_self = self
 
-        def mock_run(service_instance, *args, **kwargs):
+        def mock_run(service_instance: Any, *args: Any, **kwargs: Any) -> Any:
             """Capture service when run() is called"""
             capture_self.captured_services.append(service_instance)
             # Don't print during stdout suppression
             # Don't actually run - we're just capturing
             return service_instance
 
-        def mock_serve(service_instance, *args, **kwargs):
+        def mock_serve(service_instance: Any, *args: Any, **kwargs: Any) -> Any:
             """Capture service when serve() is called"""
             capture_self.captured_services.append(service_instance)
             # Don't print during stdout suppression
@@ -146,7 +146,7 @@ class ServiceCapture:
                     self.original_methods[(base_class, "serve")] = base_class.serve
                     base_class.serve = mock_serve
 
-    def _restore_patches(self):
+    def _restore_patches(self) -> None:
         """Restore original methods"""
         for (base_class, method_name), original_method in self.original_methods.items():
             setattr(base_class, method_name, original_method)
@@ -156,10 +156,10 @@ class ServiceCapture:
 async def simulate_request_to_service(
     service: SWMLService,
     method: str = "POST",
-    body: dict | None = None,
-    query_params: dict | None = None,
-    headers: dict | None = None,
-) -> dict:
+    body: dict[str, Any] | None = None,
+    query_params: dict[str, str] | None = None,
+    headers: dict[str, str] | None = None,
+) -> dict[str, Any]:
     """
     Simulate a request to a SWMLService instance
 
@@ -197,7 +197,7 @@ async def simulate_request_to_service(
 
         # json.loads() is typed -> Any; a FastAPI Response body is the rendered
         # SWML JSON object, matching the declared dict return.
-        return cast(dict[Any, Any], json.loads(result.body.decode()))
+        return cast(dict[str, Any], json.loads(result.body.decode()))
     if isinstance(result, dict):
         return result
     # Try to get content from response
@@ -208,11 +208,11 @@ def load_and_simulate_service(
     service_path: str,
     route: str | None = None,
     method: str = "POST",
-    body: dict | None = None,
-    query_params: dict | None = None,
-    headers: dict | None = None,
+    body: dict[str, Any] | None = None,
+    query_params: dict[str, str] | None = None,
+    headers: dict[str, str] | None = None,
     suppress_output: bool = False,
-) -> dict:
+) -> dict[str, Any]:
     """
     Load a service file and simulate a request to it
 

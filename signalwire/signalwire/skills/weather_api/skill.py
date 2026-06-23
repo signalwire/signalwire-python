@@ -12,9 +12,12 @@ A configurable skill for getting weather information from WeatherAPI.com with cu
 temperature units and TTS-friendly responses.
 """
 
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TYPE_CHECKING
 from signalwire.core import FunctionResult
 from signalwire.core.skill_base import SkillBase
+
+if TYPE_CHECKING:
+    from signalwire.core.agent_base import AgentBase
 
 
 class WeatherApiSkill(SkillBase):
@@ -72,7 +75,7 @@ class WeatherApiSkill(SkillBase):
         )
         return schema
 
-    def __init__(self, agent, params: dict[str, Any] | None = None):
+    def __init__(self, agent: "AgentBase", params: dict[str, Any] | None = None):
         """
         Initialize the skill with configuration parameters.
 
@@ -93,7 +96,7 @@ class WeatherApiSkill(SkillBase):
         # Validate configuration
         self._validate_config()
 
-    def _validate_config(self):
+    def _validate_config(self) -> None:
         """Validate the skill configuration."""
         # Validate API key
         if not self.api_key or not isinstance(self.api_key, str):

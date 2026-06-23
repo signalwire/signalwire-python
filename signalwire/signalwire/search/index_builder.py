@@ -161,7 +161,7 @@ class IndexBuilder:
 
         return metadata_dict, metadata_text
 
-    def _load_model(self):
+    def _load_model(self) -> None:
         """Load embedding model (lazy loading)"""
         if self.model is None:
             if not SentenceTransformer:
@@ -187,7 +187,7 @@ class IndexBuilder:
         languages: list[str] | None = None,
         tags: list[str] | None = None,
         overwrite: bool = False,
-    ):
+    ) -> None:
         """
         Build complete search index from multiple sources (files and directories)
 
@@ -321,7 +321,7 @@ class IndexBuilder:
         exclude_patterns: list[str] | None = None,
         languages: list[str] | None = None,
         tags: list[str] | None = None,
-    ):
+    ) -> None:
         """
         Build complete search index from a single directory
 
@@ -599,7 +599,7 @@ class IndexBuilder:
         languages: list[str],
         sources_info: list[str],
         file_types: list[str],
-    ):
+    ) -> None:
         """Create SQLite database with all data"""
 
         # Remove existing file
@@ -822,7 +822,7 @@ class IndexBuilder:
         collection_name: str,
         languages: list[str],
         overwrite: bool = False,
-    ):
+    ) -> None:
         """
         Store chunks in pgvector backend
 

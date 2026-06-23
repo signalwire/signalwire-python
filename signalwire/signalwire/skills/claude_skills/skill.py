@@ -10,6 +10,7 @@ See LICENSE file in the project root for full license information.
 import re
 import subprocess
 import fnmatch
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any, ClassVar
 
@@ -441,7 +442,7 @@ class ClaudeSkillsSkill(SkillBase):
             Content with shell patterns replaced by command output
         """
 
-        def replace_command(match):
+        def replace_command(match: re.Match[str]) -> str:
             command = match.group(1)
             try:
                 result = subprocess.run(  # noqa: S602  # intentional feature: runs shell snippets authored in skill body files (developer-controlled, like Claude Skills), gated behind opt-in allow_shell_injection (default False) which logs a warning; shell=True is required to support pipes/redirection in authored commands; not reachable from end-user runtime input
@@ -465,7 +466,7 @@ class ClaudeSkillsSkill(SkillBase):
         return _SHELL_INJECTION_RE.sub(replace_command, content)
 
     def _substitute_variables(
-        self, content: str, skill_dir: Path, raw_data: dict | None = None
+        self, content: str, skill_dir: Path, raw_data: dict[str, Any] | None = None
     ) -> str:
         """
         Substitute variable placeholders in content.
@@ -503,7 +504,7 @@ class ClaudeSkillsSkill(SkillBase):
         positional = arguments.split() if arguments else []
 
         # Replace $ARGUMENTS[N] with positional args
-        def replace_indexed(match):
+        def replace_indexed(match: re.Match[str]) -> str:
             index = int(match.group(1))
             if index < len(positional):
                 return positional[index]
@@ -512,7 +513,7 @@ class ClaudeSkillsSkill(SkillBase):
         result = re.sub(r"\$ARGUMENTS\[(\d+)\]", replace_indexed, body)
 
         # Replace $N shorthand (must do after $ARGUMENTS to avoid conflicts)
-        def replace_shorthand(match):
+        def replace_shorthand(match: re.Match[str]) -> str:
             index = int(match.group(1))
             if index < len(positional):
                 return positional[index]
@@ -573,8 +574,12 @@ class ClaudeSkillsSkill(SkillBase):
             response_postfix = self.params.get("response_postfix", "")
 
             # Create handler that captures the skill and prefix/postfix
-            def make_handler(s, rprefix, rpostfix):
-                def handler(args, raw_data):
+            def make_handler(
+                s: dict[str, Any], rprefix: str, rpostfix: str
+            ) -> Callable[[dict[str, Any], dict[str, Any]], FunctionResult]:
+                def handler(
+                    args: dict[str, Any], raw_data: dict[str, Any]
+                ) -> FunctionResult:
                     section = args.get("section")
                     arguments = args.get("arguments", "")
 

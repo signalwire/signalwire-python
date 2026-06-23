@@ -9,6 +9,8 @@ See LICENSE file in the project root for full license information.
 ReceptionistAgent - Prefab agent for greeting callers and transferring them to appropriate departments
 """
 
+from typing import Any
+
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.function_result import FunctionResult
 
@@ -36,8 +38,8 @@ class ReceptionistAgent(AgentBase):
         route: str = "/receptionist",
         greeting: str = "Thank you for calling. How can I help you today?",
         voice: str = "rime.spore",
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         """
         Initialize a receptionist agent
 
@@ -73,7 +75,7 @@ class ReceptionistAgent(AgentBase):
         # Register tools
         self._register_tools()
 
-    def _validate_departments(self, departments):
+    def _validate_departments(self, departments: list[dict[str, str]]) -> None:
         """Validate that departments are in the correct format"""
         if not departments:
             raise ValueError("At least one department is required")
@@ -86,7 +88,7 @@ class ReceptionistAgent(AgentBase):
             if "number" not in dept:
                 raise ValueError(f"Department {i + 1} is missing 'number' field")
 
-    def _build_prompt(self):
+    def _build_prompt(self) -> None:
         """Build the agent's prompt with personality, goals, and instructions"""
 
         # Set personality
@@ -136,7 +138,7 @@ class ReceptionistAgent(AgentBase):
         }
         """)
 
-    def _configure_agent_settings(self, voice):
+    def _configure_agent_settings(self, voice: str) -> None:
         """Configure additional agent settings"""
 
         # Set AI behavior parameters
@@ -151,7 +153,7 @@ class ReceptionistAgent(AgentBase):
         # Set language with specified voice
         self.add_language(name="English", code="en-US", voice=voice)
 
-    def _register_tools(self):
+    def _register_tools(self) -> None:
         """Register the tools this agent needs"""
 
         # Define collect_caller_info tool
@@ -184,7 +186,9 @@ class ReceptionistAgent(AgentBase):
             handler=self._transfer_call_handler,
         )
 
-    def _collect_caller_info_handler(self, args, raw_data):
+    def _collect_caller_info_handler(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """Handler for collect_caller_info tool"""
 
         # Get the caller info
@@ -203,7 +207,9 @@ class ReceptionistAgent(AgentBase):
 
         return result
 
-    def _transfer_call_handler(self, args, raw_data):
+    def _transfer_call_handler(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """Handler for transfer_call tool"""
 
         # Get the department
@@ -248,7 +254,11 @@ class ReceptionistAgent(AgentBase):
 
         return result
 
-    def on_summary(self, summary, raw_data=None):
+    def on_summary(
+        self,
+        summary: dict[str, Any] | None,
+        raw_data: dict[str, Any] | None = None,
+    ) -> None:
         """
         Process the conversation summary
 

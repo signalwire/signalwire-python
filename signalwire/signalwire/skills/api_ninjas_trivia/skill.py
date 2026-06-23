@@ -12,9 +12,12 @@ A configurable skill for getting trivia questions from API Ninjas with customiza
 categories and multiple tool instances.
 """
 
-from typing import Any, ClassVar
+from typing import Any, ClassVar, TYPE_CHECKING
 from signalwire.core import FunctionResult
 from signalwire.core.skill_base import SkillBase
+
+if TYPE_CHECKING:
+    from signalwire.core.agent_base import AgentBase
 
 
 class ApiNinjasTriviaSkill(SkillBase):
@@ -76,7 +79,7 @@ class ApiNinjasTriviaSkill(SkillBase):
         "sportsleisure": "Sports and Leisure",
     }
 
-    def __init__(self, agent, params: dict[str, Any] | None = None):
+    def __init__(self, agent: "AgentBase", params: dict[str, Any] | None = None):
         """
         Initialize the skill with configuration parameters.
 
@@ -99,7 +102,7 @@ class ApiNinjasTriviaSkill(SkillBase):
         # Validate configuration
         self._validate_config()
 
-    def _validate_config(self):
+    def _validate_config(self) -> None:
         """Validate the skill configuration."""
         # Validate API key
         if not self.api_key or not isinstance(self.api_key, str):

@@ -9,6 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import hashlib
 import json
+from collections.abc import Awaitable, Callable
 from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -158,7 +159,7 @@ class SearchService:
 
         self._load_resources()
 
-    def _load_config(self, config_file: str | None):
+    def _load_config(self, config_file: str | None) -> None:
         """Load configuration from file if available"""
         # Initialize defaults
         self.indexes = {}
@@ -196,7 +197,7 @@ class SearchService:
             ):
                 self.indexes = service_config["indexes"]
 
-    def _setup_security(self):
+    def _setup_security(self) -> None:
         """Setup security middleware and authentication"""
         if not self.app:
             return
@@ -207,7 +208,9 @@ class SearchService:
 
         # Add security headers middleware
         @self.app.middleware("http")
-        async def add_security_headers(request: Request, call_next):
+        async def add_security_headers(
+            request: Request, call_next: Callable[[Request], Awaitable[Response]]
+        ) -> Response:
             response = await call_next(request)
 
             # Add security headers
@@ -220,7 +223,9 @@ class SearchService:
 
         # Add host validation middleware
         @self.app.middleware("http")
-        async def validate_host(request: Request, call_next):
+        async def validate_host(
+            request: Request, call_next: Callable[[Request], Awaitable[Response]]
+        ) -> Response:
             host = request.headers.get("host", "").split(":")[0]
             if host and not self.security.should_allow_host(host):
                 return Response(content="Invalid host", status_code=400)
@@ -255,7 +260,7 @@ class SearchService:
 
         return credentials.username
 
-    def _setup_routes(self):
+    def _setup_routes(self) -> None:
         """Setup FastAPI routes"""
         if not self.app:
             return
@@ -264,7 +269,7 @@ class SearchService:
         security = HTTPBasic() if HTTPBasic is not None else None
 
         # Create dependency for authenticated routes
-        def get_authenticated():
+        def get_authenticated() -> Any:
             if security:
                 return security
             return None
@@ -275,13 +280,13 @@ class SearchService:
             credentials: HTTPBasicCredentials | None = None
             if not security
             else Depends(security),  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom
-        ):
+        ) -> SearchResponse:
             if security:
                 self._get_current_username(credentials)
             return await self._handle_search(request)
 
         @self.app.get("/health")
-        async def health():
+        async def health() -> dict[str, Any]:
             return {
                 "status": "healthy",
                 "backend": self.backend,
@@ -300,7 +305,7 @@ class SearchService:
             credentials: HTTPBasicCredentials | None = None
             if not security
             else Depends(security),  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom
-        ):
+        ) -> dict[str, Any]:
             """Reload or add new index/collection"""
             if security:
                 self._get_current_username(credentials)
@@ -345,7 +350,7 @@ class SearchService:
                 )
                 return {"status": "reloaded", "index": index_name, "backend": "sqlite"}
 
-    def _load_resources(self):
+    def _load_resources(self) -> None:
         """Load embedding model and search indexes"""
         if self.backend == "pgvector":
             # For pgvector, we need to load models for query embeddings
@@ -583,7 +588,7 @@ class SearchService:
         port: int | None = None,
         ssl_cert: str | None = None,
         ssl_key: str | None = None,
-    ):
+    ) -> None:
         """
         Start the service with optional HTTPS support.
 
@@ -641,6 +646,6 @@ class SearchService:
                 "uvicorn not available. Cannot start HTTP service."
             ) from None
 
-    def stop(self):
+    def stop(self) -> None:
         """Stop the service (placeholder for cleanup)"""
         pass

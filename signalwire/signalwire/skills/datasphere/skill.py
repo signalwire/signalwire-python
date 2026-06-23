@@ -182,7 +182,9 @@ class DataSphereSkill(SkillBase):
             handler=self._search_knowledge_handler,
         )
 
-    def _search_knowledge_handler(self, args, raw_data):
+    def _search_knowledge_handler(
+        self, args: dict[str, Any], raw_data: dict[str, Any]
+    ) -> FunctionResult:
         """Handler for knowledge search tool"""
         query = args.get("query", "").strip()
 

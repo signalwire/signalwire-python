@@ -12,9 +12,12 @@ A configurable skill for managing background file playback with custom tool name
 and multiple file collections. Supports both audio and video files.
 """
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
 from signalwire.core import FunctionResult
 from signalwire.core.skill_base import SkillBase
+
+if TYPE_CHECKING:
+    from signalwire.core.agent_base import AgentBase
 
 
 class PlayBackgroundFileSkill(SkillBase):
@@ -84,7 +87,7 @@ class PlayBackgroundFileSkill(SkillBase):
         )
         return schema
 
-    def __init__(self, agent, params: dict[str, Any] | None = None):
+    def __init__(self, agent: "AgentBase", params: dict[str, Any] | None = None):
         """
         Initialize the skill with configuration parameters.
 
@@ -103,7 +106,7 @@ class PlayBackgroundFileSkill(SkillBase):
         # Validate configuration
         self._validate_config()
 
-    def _validate_config(self):
+    def _validate_config(self) -> None:
         """Validate the skill configuration."""
         if not isinstance(self.files, list) or len(self.files) == 0:
             raise ValueError("files parameter must be a non-empty list")
