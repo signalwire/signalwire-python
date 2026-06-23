@@ -1262,7 +1262,9 @@ class Call:
         params.update(kwargs)
         return await self._execute("join_conference", params)
 
-    async def leave_conference(self, conference_id: str, **kwargs: Any) -> dict[str, Any]:
+    async def leave_conference(
+        self, conference_id: str, **kwargs: Any
+    ) -> dict[str, Any]:
         """Leave an audio conference."""
         params: dict[str, Any] = {"conference_id": conference_id}
         params.update(kwargs)

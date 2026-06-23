@@ -34,9 +34,7 @@ class GoogleSearchScraper:
             }
         )
 
-    def search_google(
-        self, query: str, num_results: int = 5
-    ) -> list[dict[str, Any]]:
+    def search_google(self, query: str, num_results: int = 5) -> list[dict[str, Any]]:
         """Search Google using Custom Search JSON API"""
         url = "https://www.googleapis.com/customsearch/v1"
 

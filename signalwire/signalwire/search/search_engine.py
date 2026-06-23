@@ -1391,9 +1391,7 @@ class SearchEngine:
         boost = agreement_boost * (len(scores) - 1)
         return min(1.0, base + boost)
 
-    def _dedupe_by_content(
-        self, results: list[dict[str, Any]]
-    ) -> list[dict[str, Any]]:
+    def _dedupe_by_content(self, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Collapse exact/near-exact content duplicates, keeping the highest-scoring copy.
 
         Index quality varies: some source docs contain repeated boilerplate (footers,

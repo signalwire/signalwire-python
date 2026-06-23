@@ -349,7 +349,7 @@ class WebService:
             }
 
         @self.app.get("/")
-        async def root():  # noqa: ANN202  # FastAPI derives the response model from this handler's return annotation; a Response|dict union is not a valid Pydantic field, so it must stay unannotated.
+        async def root():
             """Root endpoint showing available directories"""
             html = """
             <!DOCTYPE html>
@@ -420,7 +420,7 @@ class WebService:
                 ),
                 route: str = route,
                 directory: str = directory,
-            ):  # noqa: ANN202  # FastAPI derives the response model from this return annotation; a multi-Response union is not a valid Pydantic field, so it must stay unannotated.
+            ):
                 """Serve files with security checks"""
                 if security:
                     self._get_current_username(credentials)

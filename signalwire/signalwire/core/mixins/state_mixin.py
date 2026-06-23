@@ -37,7 +37,9 @@ class StateMixin(_HostTyped):
             # Create the token using the session manager. The host attribute
             # `_session_manager` is typed Any (mixin-host pattern), so narrow the
             # SessionManager.create_tool_token() -> str result back to str.
-            return cast(str, self._session_manager.create_tool_token(tool_name, call_id))
+            return cast(
+                str, self._session_manager.create_tool_token(tool_name, call_id)
+            )
         except Exception as e:
             self.log.error(
                 "token_creation_error", error=str(e), tool=tool_name, call_id=call_id

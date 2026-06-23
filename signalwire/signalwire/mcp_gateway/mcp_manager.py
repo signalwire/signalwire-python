@@ -297,9 +297,10 @@ class MCPClient:
         """Call a tool on the MCP server"""
         # call_method() is declared -> Any (generic RPC); a tools/call result is
         # a JSON-RPC result object.
-        return cast(dict[str, Any], self.call_method(
-            "tools/call", {"name": tool_name, "arguments": arguments}
-        ))
+        return cast(
+            dict[str, Any],
+            self.call_method("tools/call", {"name": tool_name, "arguments": arguments}),
+        )
 
     def call_method(self, method: str, params: dict[str, Any]) -> Any:
         """Call an RPC method and wait for response"""

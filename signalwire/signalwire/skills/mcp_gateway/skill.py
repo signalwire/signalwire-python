@@ -172,9 +172,7 @@ class MCPGatewaySkill(SkillBase):
 
         return True
 
-    def _make_request(
-        self, method: str, url: str, **kwargs: Any
-    ) -> requests.Response:
+    def _make_request(self, method: str, url: str, **kwargs: Any) -> requests.Response:
         """Make HTTP request with appropriate authentication"""
         headers = kwargs.get("headers", {})
         if self.auth_token:
@@ -240,9 +238,7 @@ class MCPGatewaySkill(SkillBase):
             is_hangup_hook=True,
         )
 
-    def _register_mcp_tool(
-        self, service_name: str, tool_def: dict[str, Any]
-    ) -> None:
+    def _register_mcp_tool(self, service_name: str, tool_def: dict[str, Any]) -> None:
         """Register a single MCP tool as a SWAIG function"""
         tool_name = tool_def.get("name")
         if not tool_name:
@@ -275,9 +271,7 @@ class MCPGatewaySkill(SkillBase):
             swaig_params[prop_name] = param_def
 
         # Create handler function
-        def handler(
-            args: dict[str, Any], raw_data: dict[str, Any]
-        ) -> FunctionResult:
+        def handler(args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
             return self._call_mcp_tool(service_name, tool_name, args, raw_data)
 
         # Register the SWAIG function. Forward the MCP tool's required-argument

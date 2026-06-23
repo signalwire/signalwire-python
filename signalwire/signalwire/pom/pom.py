@@ -277,7 +277,9 @@ class PromptObjectModel:
     """
 
     @staticmethod
-    def from_json(json_data: str | dict[str, Any] | list[dict[str, Any]]) -> "PromptObjectModel":
+    def from_json(
+        json_data: str | dict[str, Any] | list[dict[str, Any]],
+    ) -> "PromptObjectModel":
         """
         Create a PromptObjectModel instance from JSON data.
 
