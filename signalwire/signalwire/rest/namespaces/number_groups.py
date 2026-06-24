@@ -15,12 +15,23 @@ from .._base import CrudResource
 
 if TYPE_CHECKING:
     from .relay_rest_types_generated import (
+        CreateNumberGroupRequest,
+        NumberGroup,
+        NumberGroupListResponse,
         NumberGroupMembership,
         NumberGroupMembershipListResponse,
+        UpdateNumberGroupRequest,
     )
 
 
-class NumberGroupsResource(CrudResource):
+class NumberGroupsResource(
+    CrudResource[
+        "NumberGroupListResponse",
+        "NumberGroup",
+        "CreateNumberGroupRequest",
+        "UpdateNumberGroupRequest",
+    ]
+):
     """Number group management with membership operations."""
 
     _update_method = "PUT"

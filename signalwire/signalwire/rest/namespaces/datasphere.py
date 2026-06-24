@@ -17,11 +17,22 @@ if TYPE_CHECKING:
     from .datasphere_types_generated import (
         Chunk,
         ChunkListResponse,
+        Document,
+        DocumentCreateRequest,
+        DocumentListResponse,
+        DocumentUpdateRequest,
         SearchResponse,
     )
 
 
-class DatasphereDocuments(CrudResource):
+class DatasphereDocuments(
+    CrudResource[
+        "DocumentListResponse",
+        "Document",
+        "DocumentCreateRequest",
+        "DocumentUpdateRequest",
+    ]
+):
     """Document management with search and chunk operations."""
 
     def __init__(self, http):

@@ -12,44 +12,109 @@ Fabric API namespace — resource composition, addresses, and tokens.
 import warnings
 from typing import TYPE_CHECKING, Any
 
-from .._base import BaseResource, CrudWithAddresses
+from .._base import (
+    BaseResource,
+    CrudWithAddresses,
+    TCreate,
+    TItem,
+    TList,
+    TUpdate,
+)
 
 if TYPE_CHECKING:
     from .fabric_types_generated import (
+        AIAgentCreateRequest,
+        AIAgentListResponse,
+        AIAgentResponse,
+        AIAgentUpdateRequest,
+        CXMLScriptCreateRequest,
+        CXMLScriptListResponse,
+        CXMLScriptResponse,
+        CXMLScriptUpdateRequest,
+        CXMLWebhookCreateRequest,
+        CXMLWebhookListResponse,
+        CXMLWebhookResponse,
+        CXMLWebhookUpdateRequest,
         CallFlowAddressListResponse,
+        CallFlowCreateRequest,
+        CallFlowListResponse,
+        CallFlowResponse,
+        CallFlowUpdateRequest,
         CallFlowVersionDeployResponse,
         CallFlowVersionListResponse,
         ConferenceRoomAddressListResponse,
+        ConferenceRoomCreateRequest,
+        ConferenceRoomListResponse,
+        ConferenceRoomResponse,
+        ConferenceRoomUpdateRequest,
+        CxmlApplicationListResponse,
+        CxmlApplicationResponse,
+        CxmlApplicationUpdateRequest,
         DomainApplicationResponse,
         EmbedsTokensResponse,
         FabricAddress,
         FabricAddressesResponse,
+        FreeswitchConnectorCreateRequest,
+        FreeswitchConnectorListResponse,
+        FreeswitchConnectorResponse,
+        FreeswitchConnectorUpdateRequest,
         PhoneRouteResponse,
+        RelayApplicationCreateRequest,
+        RelayApplicationListResponse,
+        RelayApplicationResponse,
+        RelayApplicationUpdateRequest,
         ResourceAddressListResponse,
         ResourceListResponse,
         ResourceResponse,
+        SWMLWebhookCreateRequest,
+        SWMLWebhookListResponse,
+        SWMLWebhookResponse,
+        SWMLWebhookUpdateRequest,
+        SipEndpointCreateRequest,
+        SipEndpointListResponse,
+        SipEndpointResponse,
+        SipEndpointUpdateRequest,
+        SipGatewayListResponse,
+        SipGatewayRequest,
+        SipGatewayRequestUpdate,
+        SipGatewayResponse,
         SubscriberGuestTokenCreateResponse,
         SubscriberInviteTokenCreateResponse,
+        SubscriberListResponse,
         SubscriberRefreshTokenResponse,
+        SubscriberRequest,
+        SubscriberResponse,
         SubscriberSIPEndpoint,
         SubscriberSipEndpointListResponse,
         SubscriberTokenResponse,
+        SwmlScriptCreateRequest,
+        SwmlScriptListResponse,
+        SwmlScriptResponse,
+        SwmlScriptUpdateRequest,
     )
 
 
-class FabricResource(CrudWithAddresses):
-    """Standard fabric resource with CRUD + addresses."""
+class FabricResource(CrudWithAddresses[TList, TItem, TCreate, TUpdate]):
+    """Standard fabric resource with CRUD + addresses.
+
+    Intermediate generic base — concrete leaf resources bind the four type
+    parameters. Mirrors the TS port's ``FabricResource<TList, TItem, TCreate,
+    TUpdate>``.
+    """
 
     pass
 
 
-class FabricResourcePUT(CrudWithAddresses):
-    """Fabric resource that uses PUT for updates."""
+class FabricResourcePUT(CrudWithAddresses[TList, TItem, TCreate, TUpdate]):
+    """Fabric resource that uses PUT for updates.
+
+    Intermediate generic base (see :class:`FabricResource`).
+    """
 
     _update_method = "PUT"
 
 
-class AutoMaterializedWebhook(FabricResource):
+class AutoMaterializedWebhook(FabricResource[TList, TItem, TCreate, TUpdate]):
     """Fabric webhook resource that's normally auto-created by phone_numbers.set_*.
 
     Exposed for backwards compatibility. The binding model for these resources
@@ -61,7 +126,11 @@ class AutoMaterializedWebhook(FabricResource):
 
     _auto_helper_name = "phone_numbers.set_*_webhook"
 
-    def create(self, **kwargs: Any) -> dict[str, Any]:
+    def create(self, **kwargs: Any) -> TItem:
+        # Deprecated direct-create override (body-only: adds an orphan-warning, then
+        # delegates to super). Returns TItem to stay LSP-compatible with the generic
+        # base; the enumerator drops this TypeVar-returning intermediate override
+        # from the oracle (the concrete subclasses publish the typed create).
         warnings.warn(
             f"Creating a webhook Fabric resource directly produces an orphan not "
             f"bound to any phone number. Use {self._auto_helper_name} instead; "
@@ -73,15 +142,36 @@ class AutoMaterializedWebhook(FabricResource):
         return super().create(**kwargs)
 
 
-class SwmlWebhooksResource(AutoMaterializedWebhook):
+class SwmlWebhooksResource(
+    AutoMaterializedWebhook[
+        "SWMLWebhookListResponse",
+        "SWMLWebhookResponse",
+        "SWMLWebhookCreateRequest",
+        "SWMLWebhookUpdateRequest",
+    ]
+):
     _auto_helper_name = "phone_numbers.set_swml_webhook(sid, url=...)"
 
 
-class CxmlWebhooksResource(AutoMaterializedWebhook):
+class CxmlWebhooksResource(
+    AutoMaterializedWebhook[
+        "CXMLWebhookListResponse",
+        "CXMLWebhookResponse",
+        "CXMLWebhookCreateRequest",
+        "CXMLWebhookUpdateRequest",
+    ]
+):
     _auto_helper_name = "phone_numbers.set_cxml_webhook(sid, url=...)"
 
 
-class CallFlowsResource(FabricResourcePUT):
+class CallFlowsResource(
+    FabricResourcePUT[
+        "CallFlowListResponse",
+        "CallFlowResponse",
+        "CallFlowCreateRequest",
+        "CallFlowUpdateRequest",
+    ]
+):
     """Call flows with version management.
 
     Note: call_flow (singular) is used in address/version paths per the API spec.
@@ -107,7 +197,14 @@ class CallFlowsResource(FabricResourcePUT):
         return self._http.post(f"{path}/{resource_id}/versions", body=kwargs)
 
 
-class ConferenceRoomsResource(FabricResourcePUT):
+class ConferenceRoomsResource(
+    FabricResourcePUT[
+        "ConferenceRoomListResponse",
+        "ConferenceRoomResponse",
+        "ConferenceRoomCreateRequest",
+        "ConferenceRoomUpdateRequest",
+    ]
+):
     """Conference rooms — uses singular 'conference_room' for sub-resource paths."""
 
     def list_addresses(
@@ -117,7 +214,14 @@ class ConferenceRoomsResource(FabricResourcePUT):
         return self._http.get(f"{path}/{resource_id}/addresses", params=params or None)
 
 
-class SubscribersResource(FabricResourcePUT):
+class SubscribersResource(
+    FabricResourcePUT[
+        "SubscriberListResponse",
+        "SubscriberResponse",
+        "SubscriberRequest",
+        "SubscriberRequest",
+    ]
+):
     """Subscribers with SIP endpoint management."""
 
     def list_sip_endpoints(
@@ -159,10 +263,24 @@ class SubscribersResource(FabricResourcePUT):
         )
 
 
-class CxmlApplicationsResource(FabricResourcePUT):
-    """cXML applications — no create method (read/update/delete only)."""
+class CxmlApplicationsResource(
+    FabricResourcePUT[
+        "CxmlApplicationListResponse",
+        "CxmlApplicationResponse",
+        Any,
+        "CxmlApplicationUpdateRequest",
+    ]
+):
+    """cXML applications — no create method (read/update/delete only).
 
-    def create(self, **kwargs: Any) -> dict[str, Any]:
+    Mirrors the TS port's
+    ``CxmlApplicationsResource extends FabricResourcePUT<…, never, …>``.
+    The create slot has no faithful generated request type (create is
+    disallowed and raises ``NotImplementedError``), so it is bound to ``Any``
+    — Python's closest equivalent to TS ``never`` for this position.
+    """
+
+    def create(self, **kwargs: Any) -> Any:
         raise NotImplementedError("cXML applications cannot be created via this API")
 
 
@@ -262,19 +380,46 @@ class FabricNamespace:
     def __init__(self, http: Any) -> None:
         base = "/api/fabric/resources"
 
-        # PUT-update resources
-        self.swml_scripts = FabricResourcePUT(http, f"{base}/swml_scripts")
-        self.relay_applications = FabricResourcePUT(http, f"{base}/relay_applications")
+        # PUT-update resources. The bare FabricResourcePUT / FabricResource
+        # resources carry their concrete per-operation shapes via an attribute
+        # annotation (mirrors the TS port's typed ``readonly`` fields), so the
+        # signature oracle resolves each one's real list/item/create/update
+        # types rather than the unbound TypeVars.
+        self.swml_scripts: FabricResourcePUT[
+            SwmlScriptListResponse,
+            SwmlScriptResponse,
+            SwmlScriptCreateRequest,
+            SwmlScriptUpdateRequest,
+        ] = FabricResourcePUT(http, f"{base}/swml_scripts")
+        self.relay_applications: FabricResourcePUT[
+            RelayApplicationListResponse,
+            RelayApplicationResponse,
+            RelayApplicationCreateRequest,
+            RelayApplicationUpdateRequest,
+        ] = FabricResourcePUT(http, f"{base}/relay_applications")
         self.call_flows = CallFlowsResource(http, f"{base}/call_flows")
         self.conference_rooms = ConferenceRoomsResource(
             http, f"{base}/conference_rooms"
         )
-        self.freeswitch_connectors = FabricResourcePUT(
-            http, f"{base}/freeswitch_connectors"
-        )
+        self.freeswitch_connectors: FabricResourcePUT[
+            FreeswitchConnectorListResponse,
+            FreeswitchConnectorResponse,
+            FreeswitchConnectorCreateRequest,
+            FreeswitchConnectorUpdateRequest,
+        ] = FabricResourcePUT(http, f"{base}/freeswitch_connectors")
         self.subscribers = SubscribersResource(http, f"{base}/subscribers")
-        self.sip_endpoints = FabricResourcePUT(http, f"{base}/sip_endpoints")
-        self.cxml_scripts = FabricResourcePUT(http, f"{base}/cxml_scripts")
+        self.sip_endpoints: FabricResourcePUT[
+            SipEndpointListResponse,
+            SipEndpointResponse,
+            SipEndpointCreateRequest,
+            SipEndpointUpdateRequest,
+        ] = FabricResourcePUT(http, f"{base}/sip_endpoints")
+        self.cxml_scripts: FabricResourcePUT[
+            CXMLScriptListResponse,
+            CXMLScriptResponse,
+            CXMLScriptCreateRequest,
+            CXMLScriptUpdateRequest,
+        ] = FabricResourcePUT(http, f"{base}/cxml_scripts")
         self.cxml_applications = CxmlApplicationsResource(
             http, f"{base}/cxml_applications"
         )
@@ -284,8 +429,18 @@ class FabricNamespace:
         # phone_numbers.set_swml_webhook / set_cxml_webhook. Direct create
         # still works for backcompat but emits a DeprecationWarning.
         self.swml_webhooks = SwmlWebhooksResource(http, f"{base}/swml_webhooks")
-        self.ai_agents = FabricResource(http, f"{base}/ai_agents")
-        self.sip_gateways = FabricResource(http, f"{base}/sip_gateways")
+        self.ai_agents: FabricResource[
+            AIAgentListResponse,
+            AIAgentResponse,
+            AIAgentCreateRequest,
+            AIAgentUpdateRequest,
+        ] = FabricResource(http, f"{base}/ai_agents")
+        self.sip_gateways: FabricResource[
+            SipGatewayListResponse,
+            SipGatewayResponse,
+            SipGatewayRequest,
+            SipGatewayRequestUpdate,
+        ] = FabricResource(http, f"{base}/sip_gateways")
         self.cxml_webhooks = CxmlWebhooksResource(http, f"{base}/cxml_webhooks")
 
         # Special resources

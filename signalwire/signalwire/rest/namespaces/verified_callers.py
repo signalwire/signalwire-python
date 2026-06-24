@@ -14,10 +14,23 @@ from typing import TYPE_CHECKING, Any
 from .._base import CrudResource
 
 if TYPE_CHECKING:
-    from .relay_rest_types_generated import VerifiedCallerIDResponse
+    from .relay_rest_types_generated import (
+        CreateVerifiedCallerIDRequest,
+        UpdateVerifiedCallerIDRequest,
+        VerifiedCallerID,
+        VerifiedCallerIDListResponse,
+        VerifiedCallerIDResponse,
+    )
 
 
-class VerifiedCallersResource(CrudResource):
+class VerifiedCallersResource(
+    CrudResource[
+        "VerifiedCallerIDListResponse",
+        "VerifiedCallerID",
+        "CreateVerifiedCallerIDRequest",
+        "UpdateVerifiedCallerIDRequest",
+    ]
+):
     """Verified caller ID management with verification flow."""
 
     _update_method = "PUT"

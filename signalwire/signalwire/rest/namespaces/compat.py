@@ -18,9 +18,11 @@ if TYPE_CHECKING:
         Account,
         AccountListResponse,
         AccountResponse,
+        ApplicationListResponse,
         ApplicationResponse,
         AvailablePhoneNumberListResponse,
         AvailablePhoneNumberResourcesResponse,
+        CallListResponse,
         CallRecordingResponse,
         CallResponse,
         CallStreamResponse,
@@ -31,24 +33,40 @@ if TYPE_CHECKING:
         ConferenceRecordingResponse,
         ConferenceResponse,
         ConferenceStreamResponse,
+        CreateApplicationRequest,
+        CreateCallRequest,
+        CreateCxmlScriptRequest,
+        CreateMessageRequest,
+        CreateQueueRequest,
+        CxmlScriptListResponse,
         CxmlScriptResponse,
+        FaxListResponse,
         FaxMediaListResponse,
         FaxMediaResponse,
         FaxResponse,
         IncomingPhoneNumber,
         IncomingPhoneNumberListResponse,
         IncomingPhoneNumberResponse,
+        MessageListResponse,
         MessageMediaListResponse,
         MessageMediaResponse,
         MessageResponse,
+        QueueListResponse,
         QueueMemberListResponse,
         QueueMemberResponse,
         QueueResponse,
         RecordingListResponse,
         RecordingResponse,
+        SendFaxRequest,
         TokenResponse,
         TranscriptionListResponse,
         TranscriptionResponse,
+        UpdateApplicationRequest,
+        UpdateCallRequest,
+        UpdateCxmlScriptRequest,
+        UpdateFaxRequest,
+        UpdateMessageRequest,
+        UpdateQueueRequest,
     )
 
 
@@ -71,7 +89,11 @@ class CompatAccounts(BaseResource):
         return self._http.post(self._path(sid), body=kwargs)
 
 
-class CompatCalls(CrudResource):
+class CompatCalls(
+    CrudResource[
+        "CallListResponse", "CallResponse", "CreateCallRequest", "UpdateCallRequest"
+    ]
+):
     """Compat call management with recording and stream sub-resources."""
 
     def update(self, sid: str, /, **kwargs: Any) -> "CallResponse":
@@ -96,7 +118,14 @@ class CompatCalls(CrudResource):
         return self._http.post(self._path(call_sid, "Streams", stream_sid), body=kwargs)
 
 
-class CompatMessages(CrudResource):
+class CompatMessages(
+    CrudResource[
+        "MessageListResponse",
+        "MessageResponse",
+        "CreateMessageRequest",
+        "UpdateMessageRequest",
+    ]
+):
     """Compat message management with media sub-resources."""
 
     def update(self, sid: str, /, **kwargs: Any) -> "MessageResponse":
@@ -112,7 +141,9 @@ class CompatMessages(CrudResource):
         return self._http.delete(self._path(message_sid, "Media", media_sid))
 
 
-class CompatFaxes(CrudResource):
+class CompatFaxes(
+    CrudResource["FaxListResponse", "FaxResponse", "SendFaxRequest", "UpdateFaxRequest"]
+):
     """Compat fax management with media sub-resources."""
 
     def update(self, sid: str, /, **kwargs: Any) -> "FaxResponse":
@@ -257,21 +288,39 @@ class CompatPhoneNumbers(BaseResource):
         )
 
 
-class CompatApplications(CrudResource):
+class CompatApplications(
+    CrudResource[
+        "ApplicationListResponse",
+        "ApplicationResponse",
+        "CreateApplicationRequest",
+        "UpdateApplicationRequest",
+    ]
+):
     """Compat application management."""
 
     def update(self, sid: str, /, **kwargs: Any) -> "ApplicationResponse":
         return self._http.post(self._path(sid), body=kwargs)
 
 
-class CompatLamlBins(CrudResource):
+class CompatLamlBins(
+    CrudResource[
+        "CxmlScriptListResponse",
+        "CxmlScriptResponse",
+        "CreateCxmlScriptRequest",
+        "UpdateCxmlScriptRequest",
+    ]
+):
     """Compat cXML/LaML script management."""
 
     def update(self, sid: str, /, **kwargs: Any) -> "CxmlScriptResponse":
         return self._http.post(self._path(sid), body=kwargs)
 
 
-class CompatQueues(CrudResource):
+class CompatQueues(
+    CrudResource[
+        "QueueListResponse", "QueueResponse", "CreateQueueRequest", "UpdateQueueRequest"
+    ]
+):
     """Compat queue management with members."""
 
     def update(self, sid: str, /, **kwargs: Any) -> "QueueResponse":

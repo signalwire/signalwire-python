@@ -15,23 +15,35 @@ from .._base import BaseResource, CrudResource
 
 if TYPE_CHECKING:
     from .video_types_generated import (
+        Conference,
         ConferenceToken,
+        CreateConferenceRequest,
+        CreateRoomRequest,
         ListConferenceTokensResponse,
+        ListConferencesResponse,
         ListRoomRecordingEventsResponse,
         ListRoomRecordingsResponse,
         ListRoomSessionEventsResponse,
         ListRoomSessionMembersResponse,
         ListRoomSessionRecordingsResponse,
         ListRoomSessionsResponse,
+        ListRoomsResponse,
         ListStreamsResponse,
         RoomRecording,
+        RoomResponse,
         RoomSessionSummary,
         RoomTokenResponse,
         Stream,
+        UpdateConferenceRequest,
+        UpdateRoomRequest,
     )
 
 
-class VideoRooms(CrudResource):
+class VideoRooms(
+    CrudResource[
+        "ListRoomsResponse", "RoomResponse", "CreateRoomRequest", "UpdateRoomRequest"
+    ]
+):
     """Video room management with streams."""
 
     _update_method = "PUT"
@@ -95,7 +107,14 @@ class VideoRoomRecordings(BaseResource):
         return self._http.get(self._path(recording_id, "events"), params=params or None)
 
 
-class VideoConferences(CrudResource):
+class VideoConferences(
+    CrudResource[
+        "ListConferencesResponse",
+        "Conference",
+        "CreateConferenceRequest",
+        "UpdateConferenceRequest",
+    ]
+):
     """Video conference management with tokens and streams."""
 
     _update_method = "PUT"

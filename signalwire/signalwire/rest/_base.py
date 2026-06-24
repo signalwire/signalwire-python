@@ -9,10 +9,22 @@ See LICENSE file in the project root for full license information.
 HTTP client infrastructure and base resource classes for the REST client.
 """
 
+from typing import Any, Generic, TypeVar
+
 import requests
 from signalwire.core.logging_config import get_logger
 
 logger = get_logger("rest_client")
+
+# CRUD response/request type parameters. Each concrete resource binds these to its
+# spec-generated TypedDicts (e.g. CrudResource[ListRoomsResponse, RoomResponse,
+# CreateRoomRequest, UpdateRoomRequest]); the signature oracle resolves the
+# binding so every resource publishes its real per-operation shapes. Mirrors the
+# TS port's CrudResource<TList, TItem, TCreate, TUpdate>.
+TList = TypeVar("TList")
+TItem = TypeVar("TItem")
+TCreate = TypeVar("TCreate")
+TUpdate = TypeVar("TUpdate")
 
 
 class SignalWireRestError(Exception):
@@ -84,34 +96,40 @@ class BaseResource:
         return "/".join([self._base_path] + [str(p) for p in parts])
 
 
-class CrudResource(BaseResource):
-    """Standard CRUD resource with list/create/get/update/delete."""
+class CrudResource(BaseResource, Generic[TList, TItem, TCreate, TUpdate]):
+    """Standard CRUD resource with list/create/get/update/delete.
+
+    Generic over the spec-generated response/request types so each concrete
+    resource publishes its real per-operation shapes (the signature oracle
+    resolves the subclass's binding). At runtime every method still returns the
+    raw server JSON dict — the type params are static only.
+    """
 
     _update_method = "PATCH"
 
-    def list(self, **params):
+    def list(self, **params: Any) -> TList:
         return self._http.get(self._base_path, params=params or None)
 
-    def create(self, **kwargs):
+    def create(self, **kwargs: TCreate) -> TItem:
         return self._http.post(self._base_path, body=kwargs)
 
-    def get(self, resource_id):
+    def get(self, resource_id: str) -> TItem:
         return self._http.get(self._path(resource_id))
 
-    def update(self, resource_id, /, **kwargs):
+    def update(self, resource_id: str, /, **kwargs: TUpdate) -> TItem:
         # resource_id is positional-only so compat subclasses may name it
         # `sid` (Twilio convention) without an LSP override conflict.
         method = getattr(self._http, self._update_method.lower())
         return method(self._path(resource_id), body=kwargs)
 
-    def delete(self, resource_id):
+    def delete(self, resource_id: str) -> TItem:
         return self._http.delete(self._path(resource_id))
 
 
-class CrudWithAddresses(CrudResource):
+class CrudWithAddresses(CrudResource[TList, TItem, TCreate, TUpdate]):
     """CRUD resource that also supports listing addresses."""
 
-    def list_addresses(self, resource_id, **params):
+    def list_addresses(self, resource_id: str, **params: Any) -> Any:
         return self._http.get(
             self._path(resource_id, "addresses"), params=params or None
         )

@@ -18,10 +18,20 @@ if TYPE_CHECKING:
     from .relay_rest_types_generated import (
         AvailablePhoneNumbersResponse,
         PhoneNumber,
+        PhoneNumberListResponse,
+        PurchasePhoneNumberRequest,
+        UpdatePhoneNumberRequest,
     )
 
 
-class PhoneNumbersResource(CrudResource):
+class PhoneNumbersResource(
+    CrudResource[
+        "PhoneNumberListResponse",
+        "PhoneNumber",
+        "PurchasePhoneNumberRequest",
+        "UpdatePhoneNumberRequest",
+    ]
+):
     """Phone number management.
 
     Supports the standard CRUD surface plus typed helpers for binding an
@@ -37,6 +47,15 @@ class PhoneNumbersResource(CrudResource):
 
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/phone_numbers")
+
+    def update(self, resource_id: str, /, **kwargs: Any) -> "PhoneNumber":
+        # Relaxes the bound ``UpdatePhoneNumberRequest`` body to ``**kwargs:
+        # Any`` for Python's call-without-args / wire-field ergonomics (the
+        # binding helpers below pass ``call_handler`` + companion fields). The
+        # class-level generic binding still publishes the concrete update shape
+        # to the signature oracle; mirrors the TS port's ``update`` override and
+        # the compat namespace's pattern. Behavior is identical to the base.
+        return cast("PhoneNumber", self._http.put(self._path(resource_id), body=kwargs))
 
     def search(self, **params: Any) -> "AvailablePhoneNumbersResponse":
         return cast(

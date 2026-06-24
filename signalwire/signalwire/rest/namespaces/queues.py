@@ -15,12 +15,20 @@ from .._base import CrudResource
 
 if TYPE_CHECKING:
     from .compatibility_types_generated import (
+        CreateQueueRequest,
+        Queue,
+        QueueListResponse,
         QueueMemberListResponse,
         QueueMemberResponse,
+        UpdateQueueRequest,
     )
 
 
-class QueuesResource(CrudResource):
+class QueuesResource(
+    CrudResource[
+        "QueueListResponse", "Queue", "CreateQueueRequest", "UpdateQueueRequest"
+    ]
+):
     """Queue management with member operations."""
 
     _update_method = "PUT"
