@@ -9,138 +9,200 @@ See LICENSE file in the project root for full license information.
 Compatibility API namespace — Twilio-compatible LAML API with AccountSid scoping.
 """
 
+from typing import TYPE_CHECKING, Any
+
 from .._base import BaseResource, CrudResource
+
+if TYPE_CHECKING:
+    from .compatibility_types_generated import (
+        Account,
+        AccountListResponse,
+        AccountResponse,
+        ApplicationResponse,
+        AvailablePhoneNumberListResponse,
+        AvailablePhoneNumberResourcesResponse,
+        CallRecordingResponse,
+        CallResponse,
+        CallStreamResponse,
+        ConferenceListResponse,
+        ConferenceParticipantListResponse,
+        ConferenceParticipantResponse,
+        ConferenceRecordingListResponse,
+        ConferenceRecordingResponse,
+        ConferenceResponse,
+        ConferenceStreamResponse,
+        CxmlScriptResponse,
+        FaxMediaListResponse,
+        FaxMediaResponse,
+        FaxResponse,
+        IncomingPhoneNumber,
+        IncomingPhoneNumberListResponse,
+        IncomingPhoneNumberResponse,
+        MessageMediaListResponse,
+        MessageMediaResponse,
+        MessageResponse,
+        QueueMemberListResponse,
+        QueueMemberResponse,
+        QueueResponse,
+        RecordingListResponse,
+        RecordingResponse,
+        TokenResponse,
+        TranscriptionListResponse,
+        TranscriptionResponse,
+    )
 
 
 class CompatAccounts(BaseResource):
     """Compat account/subproject management."""
 
-    def __init__(self, http):
+    def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/laml/2010-04-01/Accounts")
 
-    def list(self, **params):
+    def list(self, **params: Any) -> "AccountListResponse":
         return self._http.get(self._base_path, params=params or None)
 
-    def create(self, **kwargs):
+    def create(self, **kwargs: Any) -> "Account":
         return self._http.post(self._base_path, body=kwargs)
 
-    def get(self, sid):
+    def get(self, sid: str) -> "AccountResponse":
         return self._http.get(self._path(sid))
 
-    def update(self, sid, /, **kwargs):
+    def update(self, sid: str, /, **kwargs: Any) -> "AccountResponse":
         return self._http.post(self._path(sid), body=kwargs)
 
 
 class CompatCalls(CrudResource):
     """Compat call management with recording and stream sub-resources."""
 
-    def update(self, sid, /, **kwargs):
+    def update(self, sid: str, /, **kwargs: Any) -> "CallResponse":
         return self._http.post(self._path(sid), body=kwargs)
 
-    def start_recording(self, call_sid, **kwargs):
+    def start_recording(self, call_sid: str, **kwargs: Any) -> "CallRecordingResponse":
         return self._http.post(self._path(call_sid, "Recordings"), body=kwargs)
 
-    def update_recording(self, call_sid, recording_sid, **kwargs):
+    def update_recording(
+        self, call_sid: str, recording_sid: str, **kwargs: Any
+    ) -> "CallRecordingResponse":
         return self._http.post(
             self._path(call_sid, "Recordings", recording_sid), body=kwargs
         )
 
-    def start_stream(self, call_sid, **kwargs):
+    def start_stream(self, call_sid: str, **kwargs: Any) -> "CallStreamResponse":
         return self._http.post(self._path(call_sid, "Streams"), body=kwargs)
 
-    def stop_stream(self, call_sid, stream_sid, **kwargs):
+    def stop_stream(
+        self, call_sid: str, stream_sid: str, **kwargs: Any
+    ) -> "CallStreamResponse":
         return self._http.post(self._path(call_sid, "Streams", stream_sid), body=kwargs)
 
 
 class CompatMessages(CrudResource):
     """Compat message management with media sub-resources."""
 
-    def update(self, sid, /, **kwargs):
+    def update(self, sid: str, /, **kwargs: Any) -> "MessageResponse":
         return self._http.post(self._path(sid), body=kwargs)
 
-    def list_media(self, message_sid, **params):
+    def list_media(self, message_sid: str, **params: Any) -> "MessageMediaListResponse":
         return self._http.get(self._path(message_sid, "Media"), params=params or None)
 
-    def get_media(self, message_sid, media_sid):
+    def get_media(self, message_sid: str, media_sid: str) -> "MessageMediaResponse":
         return self._http.get(self._path(message_sid, "Media", media_sid))
 
-    def delete_media(self, message_sid, media_sid):
+    def delete_media(self, message_sid: str, media_sid: str) -> dict[str, Any]:
         return self._http.delete(self._path(message_sid, "Media", media_sid))
 
 
 class CompatFaxes(CrudResource):
     """Compat fax management with media sub-resources."""
 
-    def update(self, sid, /, **kwargs):
+    def update(self, sid: str, /, **kwargs: Any) -> "FaxResponse":
         return self._http.post(self._path(sid), body=kwargs)
 
-    def list_media(self, fax_sid, **params):
+    def list_media(self, fax_sid: str, **params: Any) -> "FaxMediaListResponse":
         return self._http.get(self._path(fax_sid, "Media"), params=params or None)
 
-    def get_media(self, fax_sid, media_sid):
+    def get_media(self, fax_sid: str, media_sid: str) -> "FaxMediaResponse":
         return self._http.get(self._path(fax_sid, "Media", media_sid))
 
-    def delete_media(self, fax_sid, media_sid):
+    def delete_media(self, fax_sid: str, media_sid: str) -> dict[str, Any]:
         return self._http.delete(self._path(fax_sid, "Media", media_sid))
 
 
 class CompatConferences(BaseResource):
     """Compat conference management with participants, recordings, and streams."""
 
-    def list(self, **params):
+    def list(self, **params: Any) -> "ConferenceListResponse":
         return self._http.get(self._base_path, params=params or None)
 
-    def get(self, sid):
+    def get(self, sid: str) -> "ConferenceResponse":
         return self._http.get(self._path(sid))
 
-    def update(self, sid, /, **kwargs):
+    def update(self, sid: str, /, **kwargs: Any) -> "ConferenceResponse":
         return self._http.post(self._path(sid), body=kwargs)
 
     # Participants
-    def list_participants(self, conference_sid, **params):
+    def list_participants(
+        self, conference_sid: str, **params: Any
+    ) -> "ConferenceParticipantListResponse":
         return self._http.get(
             self._path(conference_sid, "Participants"),
             params=params or None,
         )
 
-    def get_participant(self, conference_sid, call_sid):
+    def get_participant(
+        self, conference_sid: str, call_sid: str
+    ) -> "ConferenceParticipantResponse":
         return self._http.get(self._path(conference_sid, "Participants", call_sid))
 
-    def update_participant(self, conference_sid, call_sid, **kwargs):
+    def update_participant(
+        self, conference_sid: str, call_sid: str, **kwargs: Any
+    ) -> "ConferenceParticipantResponse":
         return self._http.post(
             self._path(conference_sid, "Participants", call_sid),
             body=kwargs,
         )
 
-    def remove_participant(self, conference_sid, call_sid):
+    def remove_participant(self, conference_sid: str, call_sid: str) -> dict[str, Any]:
         return self._http.delete(self._path(conference_sid, "Participants", call_sid))
 
     # Conference recordings
-    def list_recordings(self, conference_sid, **params):
+    def list_recordings(
+        self, conference_sid: str, **params: Any
+    ) -> "ConferenceRecordingListResponse":
         return self._http.get(
             self._path(conference_sid, "Recordings"),
             params=params or None,
         )
 
-    def get_recording(self, conference_sid, recording_sid):
+    def get_recording(
+        self, conference_sid: str, recording_sid: str
+    ) -> "ConferenceRecordingResponse":
         return self._http.get(self._path(conference_sid, "Recordings", recording_sid))
 
-    def update_recording(self, conference_sid, recording_sid, **kwargs):
+    def update_recording(
+        self, conference_sid: str, recording_sid: str, **kwargs: Any
+    ) -> "ConferenceRecordingResponse":
         return self._http.post(
             self._path(conference_sid, "Recordings", recording_sid),
             body=kwargs,
         )
 
-    def delete_recording(self, conference_sid, recording_sid):
+    def delete_recording(
+        self, conference_sid: str, recording_sid: str
+    ) -> dict[str, Any]:
         return self._http.delete(
             self._path(conference_sid, "Recordings", recording_sid)
         )
 
     # Conference streams
-    def start_stream(self, conference_sid, **kwargs):
+    def start_stream(
+        self, conference_sid: str, **kwargs: Any
+    ) -> "ConferenceStreamResponse":
         return self._http.post(self._path(conference_sid, "Streams"), body=kwargs)
 
-    def stop_stream(self, conference_sid, stream_sid, **kwargs):
+    def stop_stream(
+        self, conference_sid: str, stream_sid: str, **kwargs: Any
+    ) -> "ConferenceStreamResponse":
         return self._http.post(
             self._path(conference_sid, "Streams", stream_sid),
             body=kwargs,
@@ -150,40 +212,46 @@ class CompatConferences(BaseResource):
 class CompatPhoneNumbers(BaseResource):
     """Compat phone number management."""
 
-    def __init__(self, http, base):
+    def __init__(self, http: Any, base: str) -> None:
         super().__init__(http, base)
         self._available_base = base.replace(
             "/IncomingPhoneNumbers", "/AvailablePhoneNumbers"
         )
 
-    def list(self, **params):
+    def list(self, **params: Any) -> "IncomingPhoneNumberListResponse":
         return self._http.get(self._base_path, params=params or None)
 
-    def purchase(self, **kwargs):
+    def purchase(self, **kwargs: Any) -> "IncomingPhoneNumber":
         return self._http.post(self._base_path, body=kwargs)
 
-    def get(self, sid):
+    def get(self, sid: str) -> "IncomingPhoneNumberResponse":
         return self._http.get(self._path(sid))
 
-    def update(self, sid, /, **kwargs):
+    def update(self, sid: str, /, **kwargs: Any) -> "IncomingPhoneNumberResponse":
         return self._http.post(self._path(sid), body=kwargs)
 
-    def delete(self, sid):
+    def delete(self, sid: str) -> dict[str, Any]:
         return self._http.delete(self._path(sid))
 
-    def import_number(self, **kwargs):
+    def import_number(self, **kwargs: Any) -> "IncomingPhoneNumber":
         path = self._base_path.replace("/IncomingPhoneNumbers", "/ImportedPhoneNumbers")
         return self._http.post(path, body=kwargs)
 
-    def list_available_countries(self, **params):
+    def list_available_countries(
+        self, **params: Any
+    ) -> "AvailablePhoneNumberResourcesResponse":
         return self._http.get(self._available_base, params=params or None)
 
-    def search_local(self, country, **params):
+    def search_local(
+        self, country: str, **params: Any
+    ) -> "AvailablePhoneNumberListResponse":
         return self._http.get(
             f"{self._available_base}/{country}/Local", params=params or None
         )
 
-    def search_toll_free(self, country, **params):
+    def search_toll_free(
+        self, country: str, **params: Any
+    ) -> "AvailablePhoneNumberListResponse":
         return self._http.get(
             f"{self._available_base}/{country}/TollFree", params=params or None
         )
@@ -192,76 +260,78 @@ class CompatPhoneNumbers(BaseResource):
 class CompatApplications(CrudResource):
     """Compat application management."""
 
-    def update(self, sid, /, **kwargs):
+    def update(self, sid: str, /, **kwargs: Any) -> "ApplicationResponse":
         return self._http.post(self._path(sid), body=kwargs)
 
 
 class CompatLamlBins(CrudResource):
     """Compat cXML/LaML script management."""
 
-    def update(self, sid, /, **kwargs):
+    def update(self, sid: str, /, **kwargs: Any) -> "CxmlScriptResponse":
         return self._http.post(self._path(sid), body=kwargs)
 
 
 class CompatQueues(CrudResource):
     """Compat queue management with members."""
 
-    def update(self, sid, /, **kwargs):
+    def update(self, sid: str, /, **kwargs: Any) -> "QueueResponse":
         return self._http.post(self._path(sid), body=kwargs)
 
-    def list_members(self, queue_sid, **params):
+    def list_members(self, queue_sid: str, **params: Any) -> "QueueMemberListResponse":
         return self._http.get(self._path(queue_sid, "Members"), params=params or None)
 
-    def get_member(self, queue_sid, call_sid):
+    def get_member(self, queue_sid: str, call_sid: str) -> "QueueMemberResponse":
         return self._http.get(self._path(queue_sid, "Members", call_sid))
 
-    def dequeue_member(self, queue_sid, call_sid, **kwargs):
+    def dequeue_member(
+        self, queue_sid: str, call_sid: str, **kwargs: Any
+    ) -> "QueueMemberResponse":
         return self._http.post(self._path(queue_sid, "Members", call_sid), body=kwargs)
 
 
 class CompatRecordings(BaseResource):
     """Compat recording management."""
 
-    def list(self, **params):
+    def list(self, **params: Any) -> "RecordingListResponse":
         return self._http.get(self._base_path, params=params or None)
 
-    def get(self, sid):
+    def get(self, sid: str) -> "RecordingResponse":
         return self._http.get(self._path(sid))
 
-    def delete(self, sid):
+    def delete(self, sid: str) -> dict[str, Any]:
         return self._http.delete(self._path(sid))
 
 
 class CompatTranscriptions(BaseResource):
     """Compat transcription management."""
 
-    def list(self, **params):
+    def list(self, **params: Any) -> "TranscriptionListResponse":
         return self._http.get(self._base_path, params=params or None)
 
-    def get(self, sid):
+    def get(self, sid: str) -> "TranscriptionResponse":
         return self._http.get(self._path(sid))
 
-    def delete(self, sid):
+    def delete(self, sid: str) -> dict[str, Any]:
         return self._http.delete(self._path(sid))
 
 
 class CompatTokens(BaseResource):
     """Compat API token management."""
 
-    def create(self, **kwargs):
+    def create(self, **kwargs: Any) -> "TokenResponse":
         return self._http.post(self._base_path, body=kwargs)
 
-    def update(self, token_id, **kwargs):
+    def update(self, token_id: str, **kwargs: Any) -> "TokenResponse":
         return self._http.patch(self._path(token_id), body=kwargs)
 
-    def delete(self, token_id):
+    def delete(self, token_id: str) -> dict[str, Any]:
         return self._http.delete(self._path(token_id))
 
 
 class CompatNamespace:
     """Twilio-compatible LAML API namespace with AccountSid scoping."""
 
-    def __init__(self, http, account_sid):
+    def __init__(self, http: Any, account_sid: str) -> None:
         base = f"/api/laml/2010-04-01/Accounts/{account_sid}"
 
         self.accounts = CompatAccounts(http)

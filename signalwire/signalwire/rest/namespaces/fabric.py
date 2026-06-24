@@ -10,8 +10,31 @@ Fabric API namespace — resource composition, addresses, and tokens.
 """
 
 import warnings
+from typing import TYPE_CHECKING, Any
 
 from .._base import BaseResource, CrudWithAddresses
+
+if TYPE_CHECKING:
+    from .fabric_types_generated import (
+        CallFlowAddressListResponse,
+        CallFlowVersionDeployResponse,
+        CallFlowVersionListResponse,
+        ConferenceRoomAddressListResponse,
+        DomainApplicationResponse,
+        EmbedsTokensResponse,
+        FabricAddress,
+        FabricAddressesResponse,
+        PhoneRouteResponse,
+        ResourceAddressListResponse,
+        ResourceListResponse,
+        ResourceResponse,
+        SubscriberGuestTokenCreateResponse,
+        SubscriberInviteTokenCreateResponse,
+        SubscriberRefreshTokenResponse,
+        SubscriberSIPEndpoint,
+        SubscriberSipEndpointListResponse,
+        SubscriberTokenResponse,
+    )
 
 
 class FabricResource(CrudWithAddresses):
@@ -38,7 +61,7 @@ class AutoMaterializedWebhook(FabricResource):
 
     _auto_helper_name = "phone_numbers.set_*_webhook"
 
-    def create(self, **kwargs):
+    def create(self, **kwargs: Any) -> dict[str, Any]:
         warnings.warn(
             f"Creating a webhook Fabric resource directly produces an orphan not "
             f"bound to any phone number. Use {self._auto_helper_name} instead; "
@@ -64,16 +87,22 @@ class CallFlowsResource(FabricResourcePUT):
     Note: call_flow (singular) is used in address/version paths per the API spec.
     """
 
-    def list_addresses(self, resource_id, **params):
+    def list_addresses(
+        self, resource_id: str, **params: Any
+    ) -> "CallFlowAddressListResponse":
         # API uses singular 'call_flow' for sub-resource paths
         path = self._base_path.replace("/call_flows", "/call_flow")
         return self._http.get(f"{path}/{resource_id}/addresses", params=params or None)
 
-    def list_versions(self, resource_id, **params):
+    def list_versions(
+        self, resource_id: str, **params: Any
+    ) -> "CallFlowVersionListResponse":
         path = self._base_path.replace("/call_flows", "/call_flow")
         return self._http.get(f"{path}/{resource_id}/versions", params=params or None)
 
-    def deploy_version(self, resource_id, **kwargs):
+    def deploy_version(
+        self, resource_id: str, **kwargs: Any
+    ) -> "CallFlowVersionDeployResponse":
         path = self._base_path.replace("/call_flows", "/call_flow")
         return self._http.post(f"{path}/{resource_id}/versions", body=kwargs)
 
@@ -81,7 +110,9 @@ class CallFlowsResource(FabricResourcePUT):
 class ConferenceRoomsResource(FabricResourcePUT):
     """Conference rooms — uses singular 'conference_room' for sub-resource paths."""
 
-    def list_addresses(self, resource_id, **params):
+    def list_addresses(
+        self, resource_id: str, **params: Any
+    ) -> "ConferenceRoomAddressListResponse":
         path = self._base_path.replace("/conference_rooms", "/conference_room")
         return self._http.get(f"{path}/{resource_id}/addresses", params=params or None)
 
@@ -89,30 +120,40 @@ class ConferenceRoomsResource(FabricResourcePUT):
 class SubscribersResource(FabricResourcePUT):
     """Subscribers with SIP endpoint management."""
 
-    def list_sip_endpoints(self, subscriber_id, **params):
+    def list_sip_endpoints(
+        self, subscriber_id: str, **params: Any
+    ) -> "SubscriberSipEndpointListResponse":
         return self._http.get(
             self._path(subscriber_id, "sip_endpoints"),
             params=params or None,
         )
 
-    def create_sip_endpoint(self, subscriber_id, **kwargs):
+    def create_sip_endpoint(
+        self, subscriber_id: str, **kwargs: Any
+    ) -> "SubscriberSIPEndpoint":
         return self._http.post(
             self._path(subscriber_id, "sip_endpoints"),
             body=kwargs,
         )
 
-    def get_sip_endpoint(self, subscriber_id, endpoint_id):
+    def get_sip_endpoint(
+        self, subscriber_id: str, endpoint_id: str
+    ) -> "SubscriberSIPEndpoint":
         return self._http.get(
             self._path(subscriber_id, "sip_endpoints", endpoint_id),
         )
 
-    def update_sip_endpoint(self, subscriber_id, endpoint_id, **kwargs):
+    def update_sip_endpoint(
+        self, subscriber_id: str, endpoint_id: str, **kwargs: Any
+    ) -> "SubscriberSIPEndpoint":
         return self._http.patch(
             self._path(subscriber_id, "sip_endpoints", endpoint_id),
             body=kwargs,
         )
 
-    def delete_sip_endpoint(self, subscriber_id, endpoint_id):
+    def delete_sip_endpoint(
+        self, subscriber_id: str, endpoint_id: str
+    ) -> dict[str, Any]:
         return self._http.delete(
             self._path(subscriber_id, "sip_endpoints", endpoint_id),
         )
@@ -121,29 +162,33 @@ class SubscribersResource(FabricResourcePUT):
 class CxmlApplicationsResource(FabricResourcePUT):
     """cXML applications — no create method (read/update/delete only)."""
 
-    def create(self, **kwargs):
+    def create(self, **kwargs: Any) -> dict[str, Any]:
         raise NotImplementedError("cXML applications cannot be created via this API")
 
 
 class GenericResources(BaseResource):
     """Generic resource operations across all fabric resource types."""
 
-    def list(self, **params):
+    def list(self, **params: Any) -> "ResourceListResponse":
         return self._http.get(self._base_path, params=params or None)
 
-    def get(self, resource_id):
+    def get(self, resource_id: str) -> "ResourceResponse":
         return self._http.get(self._path(resource_id))
 
-    def delete(self, resource_id):
+    def delete(self, resource_id: str) -> dict[str, Any]:
         return self._http.delete(self._path(resource_id))
 
-    def list_addresses(self, resource_id, **params):
+    def list_addresses(
+        self, resource_id: str, **params: Any
+    ) -> "ResourceAddressListResponse":
         return self._http.get(
             self._path(resource_id, "addresses"),
             params=params or None,
         )
 
-    def assign_phone_route(self, resource_id, **kwargs):
+    def assign_phone_route(
+        self, resource_id: str, **kwargs: Any
+    ) -> "PhoneRouteResponse":
         """Deprecated for the common binding cases. Use ``phone_numbers.set_*`` helpers.
 
         This endpoint (``POST /api/fabric/resources/{id}/phone_routes``) accepts
@@ -165,7 +210,9 @@ class GenericResources(BaseResource):
         )
         return self._http.post(self._path(resource_id, "phone_routes"), body=kwargs)
 
-    def assign_domain_application(self, resource_id, **kwargs):
+    def assign_domain_application(
+        self, resource_id: str, **kwargs: Any
+    ) -> "DomainApplicationResponse":
         return self._http.post(
             self._path(resource_id, "domain_applications"), body=kwargs
         )
@@ -174,41 +221,45 @@ class GenericResources(BaseResource):
 class FabricAddresses(BaseResource):
     """Read-only fabric addresses."""
 
-    def list(self, **params):
+    def list(self, **params: Any) -> "FabricAddressesResponse":
         return self._http.get(self._base_path, params=params or None)
 
-    def get(self, address_id):
+    def get(self, address_id: str) -> "FabricAddress":
         return self._http.get(self._path(address_id))
 
 
 class FabricTokens(BaseResource):
     """Subscriber, guest, invite, and embed token creation."""
 
-    def __init__(self, http):
+    def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric")
 
-    def create_subscriber_token(self, **kwargs):
+    def create_subscriber_token(self, **kwargs: Any) -> "SubscriberTokenResponse":
         return self._http.post(self._path("subscribers", "tokens"), body=kwargs)
 
-    def refresh_subscriber_token(self, **kwargs):
+    def refresh_subscriber_token(
+        self, **kwargs: Any
+    ) -> "SubscriberRefreshTokenResponse":
         return self._http.post(
             self._path("subscribers", "tokens", "refresh"), body=kwargs
         )
 
-    def create_invite_token(self, **kwargs):
+    def create_invite_token(
+        self, **kwargs: Any
+    ) -> "SubscriberInviteTokenCreateResponse":
         return self._http.post(self._path("subscriber", "invites"), body=kwargs)
 
-    def create_guest_token(self, **kwargs):
+    def create_guest_token(self, **kwargs: Any) -> "SubscriberGuestTokenCreateResponse":
         return self._http.post(self._path("guests", "tokens"), body=kwargs)
 
-    def create_embed_token(self, **kwargs):
+    def create_embed_token(self, **kwargs: Any) -> "EmbedsTokensResponse":
         return self._http.post(self._path("embeds", "tokens"), body=kwargs)
 
 
 class FabricNamespace:
     """Fabric API namespace grouping all resource types."""
 
-    def __init__(self, http):
+    def __init__(self, http: Any) -> None:
         base = "/api/fabric/resources"
 
         # PUT-update resources

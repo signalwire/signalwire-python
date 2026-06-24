@@ -234,6 +234,16 @@ run_gate "LINT" "ruff check zero findings" \
 run_gate "TYPECHECK" "mypy zero findings" \
     python3 -m mypy --config-file "$PORT_ROOT/pyproject.toml"
 
+# Gate 8: GEN-FRESH — the committed *_types_generated.py modules (REST namespaces +
+# RELAY protocol) must still reproduce EXACTLY from their canonical specs
+# (porting-sdk/rest-apis/*/openapi.yaml + relay-protocol/*.json). Mirror of the TS
+# port's `generate-rest-types.ts --check`. DRIFT can't police these (≈40% of the
+# reference is Any, which matches any generated type), so the only thing proving
+# the committed types still match their source is that they regenerate identically.
+run_gate "GEN-FRESH" "generated REST/RELAY types reproduce from specs" \
+    python3 "$PORTING_SDK_DIR/scripts/generate_python_rest_types.py" \
+        --signalwire-python "$PORT_ROOT/signalwire" --check
+
 if [ -z "$FAILED_GATES" ]; then
     echo "==> CI PASS"
     exit 0
