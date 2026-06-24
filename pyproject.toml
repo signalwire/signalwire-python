@@ -182,6 +182,16 @@ select = ["E4", "E7", "E9", "F", "B", "S", "C4", "PERF", "SIM", "PTH", "RET", "R
 # call) and S607 (partial executable path: git/ssh resolved via PATH, the normal
 # idiom) are expected and safe across this file.
 "signalwire/signalwire/cli/dokku.py" = ["S603", "S607"]
+# REST namespace files import spec-generated types under TYPE_CHECKING and use
+# them ONLY inside quoted forward-refs — method return annotations
+# (`-> "RoomResponse"`) and the generic CRUD-base subscript bindings
+# (`class VideoRooms(CrudResource["ListRoomsResponse", "RoomResponse", ...])`).
+# Ruff's F401 cannot see usages inside a class-base subscript's string literals,
+# so it false-positives "unused import" and `--fix` would strip imports that ARE
+# used (breaking mypy). The bindings must stay quoted (a bare name in the base
+# subscript is a runtime NameError under TYPE_CHECKING). Exempt F401 here; mypy +
+# the SIGNATURES/DRIFT gate prove these imports are real and correct.
+"signalwire/signalwire/rest/namespaces/*.py" = ["F401"]
 
 [tool.ruff.lint.flake8-bugbear]
 # FastAPI's dependency-injection idiom puts Depends()/Query()/etc. in argument
