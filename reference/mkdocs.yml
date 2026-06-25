@@ -1,0 +1,68 @@
+site_name: SignalWire Python SDK
+site_description: API reference for the SignalWire Python SDK, generated from docstrings.
+site_url: https://signalwire.github.io/signalwire-python/
+
+# Generated per-run by gen.sh (one API page per importable subpackage of
+# `signalwire`, plus the SDK README as the landing page). This is NOT the repo's
+# existing top-level docs/ dir (owned by doc-audit.yml) — keep them separate.
+docs_dir: _docs
+site_dir: _site
+use_directory_urls: false
+
+# Mike serves each version under /<version>/, so links must be relative.
+theme:
+  name: material
+  custom_dir: overrides
+  features:
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+  palette:
+    # Light / dark toggle. The injected Fern theme button drives these.
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+extra:
+  version:
+    provider: mike
+    default: latest
+
+extra_css:
+  - assets/fern/tokens.css
+  - assets/fern/fern.css
+  - assets/css/navbar.css
+
+extra_javascript:
+  - assets/js/navbar.js
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [../signalwire]   # the nested package: signalwire/signalwire
+          options:
+            show_source: false
+            show_submodules: true
+            docstring_style: google
+            members_order: source
+            show_root_heading: true
+            show_if_no_docstring: true
+
+markdown_extensions:
+  - admonition
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - toc:
+      permalink: true
