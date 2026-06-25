@@ -1,0 +1,69 @@
+# API reference docs (pilot).
+#
+# Builds the SignalWire Python SDK API reference (MkDocs Material + mkdocstrings)
+# and publishes it to this repo's OWN GitHub Pages via mike (versioned):
+#   https://signalwire.github.io/signalwire-python/
+#
+# PILOT triggers: workflow_dispatch + push to the pilot branch. This is NOT
+# gated on releases yet.
+#   PRODUCTION (later): switch the trigger to `v*` tags so each release version
+#   is deployed and `latest` is re-aliased. See the commented block below.
+#
+# MANUAL REPO SETTING REQUIRED to go live (one-time, in the GitHub UI):
+#   Settings -> Pages -> Build and deployment -> Source = "Deploy from a branch"
+#   -> Branch = `gh-pages` / `(root)`. mike pushes the built site there.
+name: reference-docs
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - docs/api-reference-pilot
+
+  # --- PRODUCTION trigger (enable when promoting out of the pilot) ------------
+  # push:
+  #   tags:
+  #     - "v*"
+
+permissions:
+  contents: write   # mike pushes the built site to the gh-pages branch
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # mike needs full history + the gh-pages branch
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install SDK (editable) + doc toolchain
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+          pip install mkdocs-material "mkdocstrings[python]" mike
+
+      - name: Configure git for mike
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Generate API pages
+        run: bash reference/gen.sh --no-build
+
+      - name: Resolve version
+        id: ver
+        run: |
+          # Pilot: use the package version. Production: derive from the v* tag,
+          # e.g. VERSION="${GITHUB_REF_NAME#v}".
+          VERSION=$(python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Deploy with mike (versioned) to gh-pages
+        run: |
+          mike deploy --config-file reference/mkdocs.yml --push --update-aliases \
+            "${{ steps.ver.outputs.version }}" latest
+          mike set-default --config-file reference/mkdocs.yml --push latest
