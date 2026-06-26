@@ -207,24 +207,20 @@ html { scroll-padding-top: calc(var(--fern-header-height) + var(--md-header-heig
 .fern-dropdown-item-indicator { width: 16px; display: inline-flex; flex-shrink: 0; }
 .fern-dropdown-item-indicator svg { width: 14px; height: 14px; }
 
-/* --- Product mega panel --- */
-#product-panel { width: min(1040px, 95vw); padding: calc(var(--spacing) * 4); }
-.fern-product-selector-radio-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: calc(var(--spacing) * 5); align-items: start; }
-.fern-product-group { display: flex; flex-direction: column; }
-.fern-product-group-title {
-  margin: 0 0 calc(var(--spacing) * 1.5); padding: 0 calc(var(--spacing) * 2.5);
-  font-size: var(--text-xs); font-weight: 600; text-transform: uppercase;
-  letter-spacing: .04em; color: var(--grayscale-a9);
-}
-.fern-product-selector-radio-group > a { text-decoration: none; color: inherit; border-radius: calc(var(--radius) * 2); }
-.fern-product-selector-radio-group > a:hover { background: var(--grayscale-a3); }
-.fern-product-selector-radio-group > a[data-state="active"] { background: var(--accent-a3); box-shadow: inset 0 0 0 1px var(--accent-a8); }
-.fern-selection-item { padding: calc(var(--spacing) * 2.5); }
-.fern-selection-item .item-main { display: flex; gap: calc(var(--spacing) * 3); align-items: flex-start; }
-.fern-selection-item-icon { width: 36px; height: 36px; padding: 2px; border-radius: 8px; color: var(--grayscale-a11); flex-shrink: 0; display: flex; align-items: center; }
-.fern-selection-item-icon svg { width: 100%; height: 100%; }
-.fern-selection-item-title { margin: 0 0 2px; font-size: var(--text-sm); font-weight: 700; }
-.fern-selection-item-subtitle { margin: 0; font-size: var(--text-sm); color: var(--grayscale-a9); line-height: 1.25; }
+/* --- Product mega panel ---
+   fern.css (the cloned production CSS) owns the 3-column grid, group headers,
+   item layout, hover, active ring, and footer — keyed off the flat <a href>
+   list. We only kill the generic panel padding so fern.css's own radio-group
+   padding is the single source, and let the grid size the panel. */
+#product-panel { padding: 0; width: max-content; max-width: 95vw; }
+/* fern.css's mega-menu uses literal rem (grid gaps, group-header size/offset,
+   item radius); Material's 20px root inflates them 1.25x. Re-pin to 16px-root
+   equivalents so the panel matches production density. */
+#product-panel .fern-product-selector-radio-group { column-gap: 24px; row-gap: 8px; padding: 56px 20px 6px; }
+#product-panel .fern-product-selector-radio-group > a .fern-selection-item { border-radius: 16px; }
+#product-panel .fern-product-selector-radio-group > a[href*="/docs/platform"]::before,
+#product-panel .fern-product-selector-radio-group > a[href*="server-sdks"]::before,
+#product-panel .fern-product-selector-radio-group > a[href$="/docs/apis"]::before { top: -28px; font-size: 11px; }
 
 /* --- Language dropdown items --- */
 #lang-panel { min-width: 320px; }
