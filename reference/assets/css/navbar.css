@@ -34,13 +34,29 @@
 }
 
 /* --- Make room for the fixed Fern header ------------------------------------ */
-:root { --fern-header-height: var(--header-height, 64px); }
+:root { --fern-header-height: 65px; --md-header-height: 48px; }
 
-/* Push Material's sticky header and the whole layout down by our bar height. */
+/* The Fern bar is position:fixed (out of flow) so it reserves no space on its
+   own. Reserve its height on <body> so Material's sticky header and content
+   don't ride up underneath it.
+   NOTE: Material sets data-md-color-scheme on <body> itself, so the old
+   `[data-md-color-scheme] body` selector matched nothing — plain `body` is what
+   actually applies. */
+body { padding-top: var(--fern-header-height) !important; }
+
+/* Material's own header sticks just below the Fern bar. */
 .md-header { top: var(--fern-header-height) !important; }
-[data-md-color-scheme] body { padding-top: var(--fern-header-height); }
-/* Material's announce/header offset for the in-page TOC scroll spy. */
-:root { scroll-padding-top: calc(var(--fern-header-height) + 3rem); }
+
+/* Material's sidebars/TOC stick below BOTH bars (their default sticky top is
+   only the 48px Material header; add the Fern bar so they aren't covered on
+   scroll), and shrink their height to match so the bottom isn't clipped. */
+.md-sidebar {
+  top: calc(var(--fern-header-height) + var(--md-header-height)) !important;
+  height: calc(100vh - var(--fern-header-height) - var(--md-header-height)) !important;
+}
+
+/* Anchor / TOC scroll-spy lands below the full header stack. */
+html { scroll-padding-top: calc(var(--fern-header-height) + var(--md-header-height) + 1rem) !important; }
 
 /* =============================================================================
    Header bar (markup ported from POC index.html)
@@ -50,8 +66,10 @@
   top: 0; left: 0; right: 0;
   height: var(--fern-header-height);
   z-index: 1000;            /* above Material's header (z 5) and sidebars */
-  background: var(--background);
-  border-bottom: 1px solid var(--grayscale-a5);
+  background: color-mix(in srgb, var(--background), transparent 30%);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--grayscale-a3);
   font-family: var(--font-body);
 }
 #fern-header .fern-header-content {
@@ -140,7 +158,8 @@
   color: var(--grayscale-12);
   transition: background-color 0.15s;
 }
-.fern-product-selector:hover { background: var(--grayscale-a3); }
+.fern-product-selector:hover,
+.fern-product-selector[data-state="open"] { background: var(--grayscale-a3); }
 .product-dropdown-trigger { display: inline-flex; align-items: center; gap: calc(var(--spacing) * 1.5); }
 .product-item-title { margin: 0; font-size: var(--text-sm); font-weight: 600; }
 .product-dropdown-trigger svg { width: calc(var(--spacing) * 4); height: calc(var(--spacing) * 4); }
@@ -168,23 +187,29 @@
   padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
   border-radius: calc(var(--radius) * 2);
 }
-.fern-dropdown-item:hover { background: var(--accent-a3); }
+.fern-dropdown-item:hover { background: var(--grayscale-a3); }
 .fern-dropdown-item svg { width: calc(var(--spacing) * 4); height: calc(var(--spacing) * 4); flex-shrink: 0; }
 .fern-dropdown-item-indicator { width: 16px; display: inline-flex; flex-shrink: 0; }
 .fern-dropdown-item-indicator svg { width: 14px; height: 14px; }
 
 /* --- Product mega panel --- */
-#product-panel { width: min(680px, 92vw); padding: calc(var(--spacing) * 3); }
-.fern-product-selector-radio-group { display: grid; grid-template-columns: 1fr 1fr; gap: calc(var(--spacing) * 2); }
+#product-panel { width: min(1040px, 95vw); padding: calc(var(--spacing) * 4); }
+.fern-product-selector-radio-group { display: grid; grid-template-columns: repeat(3, 1fr); gap: calc(var(--spacing) * 5); align-items: start; }
+.fern-product-group { display: flex; flex-direction: column; }
+.fern-product-group-title {
+  margin: 0 0 calc(var(--spacing) * 1.5); padding: 0 calc(var(--spacing) * 2.5);
+  font-size: var(--text-xs); font-weight: 600; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--grayscale-a9);
+}
 .fern-product-selector-radio-group > a { text-decoration: none; color: inherit; border-radius: calc(var(--radius) * 2); }
-.fern-product-selector-radio-group > a:hover { background: var(--accent-a3); }
+.fern-product-selector-radio-group > a:hover { background: var(--grayscale-a3); }
 .fern-product-selector-radio-group > a[data-state="active"] { background: var(--accent-a3); box-shadow: inset 0 0 0 1px var(--accent-a8); }
 .fern-selection-item { padding: calc(var(--spacing) * 2.5); }
 .fern-selection-item .item-main { display: flex; gap: calc(var(--spacing) * 3); align-items: flex-start; }
-.fern-selection-item-icon { width: 22px; height: 22px; color: var(--accent); flex-shrink: 0; }
+.fern-selection-item-icon { width: 36px; height: 36px; padding: 2px; border-radius: 8px; color: var(--grayscale-a11); flex-shrink: 0; display: flex; align-items: center; }
 .fern-selection-item-icon svg { width: 100%; height: 100%; }
-.fern-selection-item-title { margin: 0 0 2px; font-size: var(--text-sm); font-weight: 600; }
-.fern-selection-item-subtitle { margin: 0; font-size: var(--text-xs); color: var(--grayscale-a11); line-height: 1.35; }
+.fern-selection-item-title { margin: 0 0 2px; font-size: var(--text-sm); font-weight: 700; }
+.fern-selection-item-subtitle { margin: 0; font-size: var(--text-sm); color: var(--grayscale-a9); line-height: 1.25; }
 
 /* --- Language dropdown items --- */
 #lang-panel { min-width: 320px; }
