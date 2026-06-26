@@ -36,6 +36,21 @@
 /* --- Make room for the fixed Fern header ------------------------------------ */
 :root { --fern-header-height: 65px; --md-header-height: 48px; }
 
+/* MkDocs Material sets the root font-size to 20px, which inflates every
+   rem-based Fern token (--text-sm -> 17.5px, --text-xs -> 15px, etc.). And the
+   dropdown panels sit OUTSIDE #fern-header, so they inherit Material's Roboto
+   instead of the Fern font. Pin BOTH on the whole Fern surface: redeclare the
+   sized tokens in their 16px-equivalent px values, and force the Fern font. */
+#fern-header,
+.fern-dropdown,
+.fern-dropdown-panel {
+  --spacing: 4px;
+  --radius: 4px;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  font-family: var(--font-body);
+}
+
 /* The Fern bar is position:fixed (out of flow) so it reserves no space on its
    own. Reserve its height on <body> so Material's sticky header and content
    don't ride up underneath it.
