@@ -20,8 +20,9 @@ DOCS="$HERE/_docs"
 CFG="$HERE/mkdocs.yml"
 
 # Install the doc toolchain + the SDK (editable, so mkdocstrings can import it).
-pip install -q -r "$HERE/requirements.txt"
-pip install -q -e "$REPO"
+# Use `python3 -m pip` so this works whether or not a bare `pip` is on PATH.
+python3 -m pip install -q -r "$HERE/requirements.txt"
+python3 -m pip install -q -e "$REPO"
 
 # Build the docs tree: generated landing page + one API page per subpackage.
 rm -rf "$DOCS"
@@ -31,7 +32,7 @@ mkdir -p "$DOCS/api"
 # copied into the docs tree so Material ships them with the site.
 cp -r "$HERE/assets" "$DOCS/assets"
 
-PYTHONPATH="$REPO/signalwire" python - "$DOCS/api" <<'PY'
+PYTHONPATH="$REPO/signalwire" python3 - "$DOCS/api" <<'PY'
 import sys, os, pkgutil, importlib
 api_out = sys.argv[1]
 docs_root = os.path.dirname(api_out.rstrip("/"))
@@ -81,5 +82,5 @@ if [ "${1:-}" = "--no-build" ]; then
   exit 0
 fi
 
-mkdocs build --config-file "$CFG"
+python3 -m mkdocs build --config-file "$CFG"
 echo "python -> $HERE/_site ($(find "$HERE/_site" -name '*.html' | wc -l) pages)"
