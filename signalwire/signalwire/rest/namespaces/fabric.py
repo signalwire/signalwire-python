@@ -340,20 +340,20 @@ class FabricNamespace:
         # oracle resolves the real list/item/create/update shapes. ``call_flows``,
         # ``conference_rooms``, ``subscribers`` keep hand-written classes for now (they
         # add sub-resource accessors not yet generated).
-        self.swml_scripts = SwmlScriptsResource(http, f"{base}/swml_scripts")
-        self.relay_applications = RelayApplicationsResource(
-            http, f"{base}/relay_applications"
-        )
+        # Generated resource classes bake their own base path into __init__, so they
+        # construct as ``Resource(http)``. The hand-written classes below
+        # (call_flows / conference_rooms / subscribers / cxml_applications — they add
+        # sub-resource accessors not yet generated) still take ``(http, base_path)``.
+        self.swml_scripts = SwmlScriptsResource(http)
+        self.relay_applications = RelayApplicationsResource(http)
         self.call_flows = CallFlowsResource(http, f"{base}/call_flows")
         self.conference_rooms = ConferenceRoomsResource(
             http, f"{base}/conference_rooms"
         )
-        self.freeswitch_connectors = FreeswitchConnectorsResource(
-            http, f"{base}/freeswitch_connectors"
-        )
+        self.freeswitch_connectors = FreeswitchConnectorsResource(http)
         self.subscribers = SubscribersResource(http, f"{base}/subscribers")
-        self.sip_endpoints = SipEndpointsResource(http, f"{base}/sip_endpoints")
-        self.cxml_scripts = CxmlScriptsResource(http, f"{base}/cxml_scripts")
+        self.sip_endpoints = SipEndpointsResource(http)
+        self.cxml_scripts = CxmlScriptsResource(http)
         self.cxml_applications = CxmlApplicationsResource(
             http, f"{base}/cxml_applications"
         )
@@ -361,10 +361,10 @@ class FabricNamespace:
         # PATCH-update resources. ``swml_webhooks`` / ``cxml_webhooks`` are normally
         # auto-materialized via ``phone_numbers.set_swml_webhook`` /
         # ``set_cxml_webhook``; direct create is a normal operation.
-        self.swml_webhooks = SwmlWebhooksResource(http, f"{base}/swml_webhooks")
-        self.ai_agents = AiAgentsResource(http, f"{base}/ai_agents")
-        self.sip_gateways = SipGatewaysResource(http, f"{base}/sip_gateways")
-        self.cxml_webhooks = CxmlWebhooksResource(http, f"{base}/cxml_webhooks")
+        self.swml_webhooks = SwmlWebhooksResource(http)
+        self.ai_agents = AiAgentsResource(http)
+        self.sip_gateways = SipGatewaysResource(http)
+        self.cxml_webhooks = CxmlWebhooksResource(http)
 
         # Special resources
         self.resources = GenericResources(http, base)

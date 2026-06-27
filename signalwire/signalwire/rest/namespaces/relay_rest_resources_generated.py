@@ -94,9 +94,7 @@ class NumberGroupsResource(
     ) -> NumberGroupMembershipListResponse:
         return cast(
             "NumberGroupMembershipListResponse",
-            self._http.get(
-                self._path("number_groups", number_group_id, "number_group_memberships")
-            ),
+            self._http.get(self._path(number_group_id, "number_group_memberships")),
         )
 
     def add_membership(
@@ -116,23 +114,20 @@ class NumberGroupsResource(
         return cast(
             "NumberGroupMembershipResponse",
             self._http.post(
-                self._path(
-                    "number_groups", number_group_id, "number_group_memberships"
-                ),
-                body=body,
+                self._path(number_group_id, "number_group_memberships"), body=body
             ),
         )
 
     def get_membership(self, id: str) -> NumberGroupMembershipResponse:
         return cast(
             "NumberGroupMembershipResponse",
-            self._http.get(self._path("number_group_memberships", id)),
+            self._http.get(f"/api/relay/rest/number_group_memberships/{id}"),
         )
 
     def delete_membership(self, id: str) -> dict[str, Any]:
         return cast(
             "dict[str, Any]",
-            self._http.delete(self._path("number_group_memberships", id)),
+            self._http.delete(f"/api/relay/rest/number_group_memberships/{id}"),
         )
 
 
@@ -246,8 +241,7 @@ class PhoneNumbersResource(
 
     def search(self) -> AvailablePhoneNumbersResponse:
         return cast(
-            "AvailablePhoneNumbersResponse",
-            self._http.get(self._path("phone_numbers", "search")),
+            "AvailablePhoneNumbersResponse", self._http.get(self._path("search"))
         )
 
 
@@ -299,20 +293,18 @@ class QueuesResource(
 
     def list_members(self, queue_id: str) -> QueueMemberListResponse:
         return cast(
-            "QueueMemberListResponse",
-            self._http.get(self._path("queues", queue_id, "members")),
+            "QueueMemberListResponse", self._http.get(self._path(queue_id, "members"))
         )
 
     def get_next_member(self, queue_id: str) -> QueueMemberResponse:
         return cast(
             "QueueMemberResponse",
-            self._http.get(self._path("queues", queue_id, "members", "next")),
+            self._http.get(self._path(queue_id, "members", "next")),
         )
 
     def get_member(self, queue_id: str, id: str) -> QueueMemberResponse:
         return cast(
-            "QueueMemberResponse",
-            self._http.get(self._path("queues", queue_id, "members", id)),
+            "QueueMemberResponse", self._http.get(self._path(queue_id, "members", id))
         )
 
 
@@ -369,8 +361,7 @@ class VerifiedCallersResource(
 
     def redial_verification(self, id: str) -> VerifiedCallerIDResponse:
         return cast(
-            "VerifiedCallerIDResponse",
-            self._http.post(self._path("verified_caller_ids", id, "verification")),
+            "VerifiedCallerIDResponse", self._http.post(self._path(id, "verification"))
         )
 
     def submit_verification(
@@ -389,7 +380,5 @@ class VerifiedCallersResource(
             body.update(extras)
         return cast(
             "VerifiedCallerIDResponse",
-            self._http.put(
-                self._path("verified_caller_ids", id, "verification"), body=body
-            ),
+            self._http.put(self._path(id, "verification"), body=body),
         )
