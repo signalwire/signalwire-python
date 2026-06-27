@@ -166,14 +166,19 @@ class VideoConferencesResource(
             body.update(extras)
         return cast("Conference", self._http.put(self._path(id), body=body))
 
-    def list_conference_tokens(self, id: str) -> ListConferenceTokensResponse:
+    def list_conference_tokens(
+        self, id: str, **params: Any
+    ) -> ListConferenceTokensResponse:
         return cast(
             "ListConferenceTokensResponse",
-            self._http.get(self._path(id, "conference_tokens")),
+            self._http.get(self._path(id, "conference_tokens"), params=params or None),
         )
 
-    def list_streams(self, id: str) -> ListStreamsResponse:
-        return cast("ListStreamsResponse", self._http.get(self._path(id, "streams")))
+    def list_streams(self, id: str, **params: Any) -> ListStreamsResponse:
+        return cast(
+            "ListStreamsResponse",
+            self._http.get(self._path(id, "streams"), params=params or None),
+        )
 
     def create_stream(
         self, id: str, *, url: str, extras: Mapping[str, Any] | None = None
@@ -282,8 +287,11 @@ class VideoRoomsResource(
             body.update(extras)
         return cast("RoomResponse", self._http.put(self._path(id), body=body))
 
-    def list_streams(self, id: str) -> ListStreamsResponse:
-        return cast("ListStreamsResponse", self._http.get(self._path(id, "streams")))
+    def list_streams(self, id: str, **params: Any) -> ListStreamsResponse:
+        return cast(
+            "ListStreamsResponse",
+            self._http.get(self._path(id, "streams"), params=params or None),
+        )
 
     def create_stream(
         self, id: str, *, url: str, extras: Mapping[str, Any] | None = None

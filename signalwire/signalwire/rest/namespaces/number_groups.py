@@ -7,58 +7,12 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
 Number Groups namespace — CRUD + membership management.
+
+``NumberGroupsResource`` is generated from the canonical spec (see
+``relay_rest_resources_generated``) and re-exported here so existing imports keep
+working.
 """
 
-from typing import TYPE_CHECKING, Any
+from .relay_rest_resources_generated import NumberGroupsResource
 
-from .._base import CrudResource
-
-if TYPE_CHECKING:
-    from .relay_rest_types_generated import (
-        CreateNumberGroupRequest,
-        NumberGroup,
-        NumberGroupListResponse,
-        NumberGroupMembership,
-        NumberGroupMembershipListResponse,
-        UpdateNumberGroupRequest,
-    )
-
-
-class NumberGroupsResource(
-    CrudResource[
-        "NumberGroupListResponse",
-        "NumberGroup",
-        "CreateNumberGroupRequest",
-        "UpdateNumberGroupRequest",
-    ]
-):
-    """Number group management with membership operations."""
-
-    _update_method = "PUT"
-
-    def __init__(self, http: Any) -> None:
-        super().__init__(http, "/api/relay/rest/number_groups")
-
-    def list_memberships(
-        self, group_id: str, **params: Any
-    ) -> "NumberGroupMembershipListResponse":
-        return self._http.get(
-            self._path(group_id, "number_group_memberships"),
-            params=params or None,
-        )
-
-    def add_membership(self, group_id: str, **kwargs: Any) -> "NumberGroupMembership":
-        return self._http.post(
-            self._path(group_id, "number_group_memberships"),
-            body=kwargs,
-        )
-
-    def get_membership(self, membership_id: str) -> "NumberGroupMembership":
-        return self._http.get(
-            f"/api/relay/rest/number_group_memberships/{membership_id}"
-        )
-
-    def delete_membership(self, membership_id: str) -> dict[str, Any]:
-        return self._http.delete(
-            f"/api/relay/rest/number_group_memberships/{membership_id}"
-        )
+__all__ = ["NumberGroupsResource"]

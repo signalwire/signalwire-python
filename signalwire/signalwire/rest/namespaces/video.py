@@ -12,6 +12,7 @@ Video API namespace — rooms, sessions, recordings, conferences, tokens, stream
 from typing import TYPE_CHECKING, Any
 
 from .._base import BaseResource, CrudResource
+from .video_resources_generated import VideoConferencesResource, VideoRoomsResource
 
 if TYPE_CHECKING:
     from .video_types_generated import (
@@ -39,20 +40,11 @@ if TYPE_CHECKING:
     )
 
 
-class VideoRooms(
-    CrudResource[
-        "ListRoomsResponse", "RoomResponse", "CreateRoomRequest", "UpdateRoomRequest"
-    ]
-):
-    """Video room management with streams."""
-
-    _update_method = "PUT"
-
-    def list_streams(self, room_id: str, **params: Any) -> "ListStreamsResponse":
-        return self._http.get(self._path(room_id, "streams"), params=params or None)
-
-    def create_stream(self, room_id: str, **kwargs: Any) -> "Stream":
-        return self._http.post(self._path(room_id, "streams"), body=kwargs)
+# ``VideoRooms`` / ``VideoConferences`` are generated from the spec (see
+# ``video_resources_generated``), imported below. Back-compat aliases keep the old
+# names working.
+VideoRooms = VideoRoomsResource
+VideoConferences = VideoConferencesResource
 
 
 class VideoRoomTokens(BaseResource):
@@ -107,35 +99,6 @@ class VideoRoomRecordings(BaseResource):
         return self._http.get(self._path(recording_id, "events"), params=params or None)
 
 
-class VideoConferences(
-    CrudResource[
-        "ListConferencesResponse",
-        "Conference",
-        "CreateConferenceRequest",
-        "UpdateConferenceRequest",
-    ]
-):
-    """Video conference management with tokens and streams."""
-
-    _update_method = "PUT"
-
-    def list_conference_tokens(
-        self, conference_id: str, **params: Any
-    ) -> "ListConferenceTokensResponse":
-        return self._http.get(
-            self._path(conference_id, "conference_tokens"),
-            params=params or None,
-        )
-
-    def list_streams(self, conference_id: str, **params: Any) -> "ListStreamsResponse":
-        return self._http.get(
-            self._path(conference_id, "streams"), params=params or None
-        )
-
-    def create_stream(self, conference_id: str, **kwargs: Any) -> "Stream":
-        return self._http.post(self._path(conference_id, "streams"), body=kwargs)
-
-
 class VideoConferenceTokens(BaseResource):
     """Video conference token management."""
 
@@ -164,11 +127,11 @@ class VideoNamespace:
 
     def __init__(self, http: Any) -> None:
         base = "/api/video"
-        self.rooms = VideoRooms(http, f"{base}/rooms")
+        self.rooms = VideoRoomsResource(http)
         self.room_tokens = VideoRoomTokens(http, f"{base}/room_tokens")
         self.room_sessions = VideoRoomSessions(http, f"{base}/room_sessions")
         self.room_recordings = VideoRoomRecordings(http, f"{base}/room_recordings")
-        self.conferences = VideoConferences(http, f"{base}/conferences")
+        self.conferences = VideoConferencesResource(http)
         self.conference_tokens = VideoConferenceTokens(
             http, f"{base}/conference_tokens"
         )

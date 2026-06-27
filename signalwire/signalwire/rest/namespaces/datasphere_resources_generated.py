@@ -89,14 +89,20 @@ class DatasphereDocumentsResource(
             body.update(extras)
         return cast("SearchResponse", self._http.post(self._path("search"), body=body))
 
-    def list_chunks(self, document_id: str) -> ChunkListResponse:
+    def list_chunks(self, document_id: str, **params: Any) -> ChunkListResponse:
         return cast(
-            "ChunkListResponse", self._http.get(self._path(document_id, "chunks"))
+            "ChunkListResponse",
+            self._http.get(self._path(document_id, "chunks"), params=params or None),
         )
 
-    def get_chunk(self, document_id: str, chunk_id: str) -> ChunkResponse:
+    def get_chunk(
+        self, document_id: str, chunk_id: str, **params: Any
+    ) -> ChunkResponse:
         return cast(
-            "ChunkResponse", self._http.get(self._path(document_id, "chunks", chunk_id))
+            "ChunkResponse",
+            self._http.get(
+                self._path(document_id, "chunks", chunk_id), params=params or None
+            ),
         )
 
     def delete_chunk(self, document_id: str, chunk_id: str) -> dict[str, Any]:

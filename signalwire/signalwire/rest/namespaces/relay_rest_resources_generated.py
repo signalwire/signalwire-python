@@ -90,11 +90,14 @@ class NumberGroupsResource(
         return cast("NumberGroupResponse", self._http.put(self._path(id), body=body))
 
     def list_memberships(
-        self, number_group_id: str
+        self, number_group_id: str, **params: Any
     ) -> NumberGroupMembershipListResponse:
         return cast(
             "NumberGroupMembershipListResponse",
-            self._http.get(self._path(number_group_id, "number_group_memberships")),
+            self._http.get(
+                self._path(number_group_id, "number_group_memberships"),
+                params=params or None,
+            ),
         )
 
     def add_membership(
@@ -118,10 +121,12 @@ class NumberGroupsResource(
             ),
         )
 
-    def get_membership(self, id: str) -> NumberGroupMembershipResponse:
+    def get_membership(self, id: str, **params: Any) -> NumberGroupMembershipResponse:
         return cast(
             "NumberGroupMembershipResponse",
-            self._http.get(f"/api/relay/rest/number_group_memberships/{id}"),
+            self._http.get(
+                f"/api/relay/rest/number_group_memberships/{id}", params=params or None
+            ),
         )
 
     def delete_membership(self, id: str) -> dict[str, Any]:
@@ -239,9 +244,10 @@ class PhoneNumbersResource(
             body.update(extras)
         return cast("PhoneNumberResponse", self._http.put(self._path(id), body=body))
 
-    def search(self) -> AvailablePhoneNumbersResponse:
+    def search(self, **params: Any) -> AvailablePhoneNumbersResponse:
         return cast(
-            "AvailablePhoneNumbersResponse", self._http.get(self._path("search"))
+            "AvailablePhoneNumbersResponse",
+            self._http.get(self._path("search"), params=params or None),
         )
 
 
@@ -291,20 +297,24 @@ class QueuesResource(
             body.update(extras)
         return cast("QueueResponse", self._http.put(self._path(id), body=body))
 
-    def list_members(self, queue_id: str) -> QueueMemberListResponse:
+    def list_members(self, queue_id: str, **params: Any) -> QueueMemberListResponse:
         return cast(
-            "QueueMemberListResponse", self._http.get(self._path(queue_id, "members"))
+            "QueueMemberListResponse",
+            self._http.get(self._path(queue_id, "members"), params=params or None),
         )
 
-    def get_next_member(self, queue_id: str) -> QueueMemberResponse:
+    def get_next_member(self, queue_id: str, **params: Any) -> QueueMemberResponse:
         return cast(
             "QueueMemberResponse",
-            self._http.get(self._path(queue_id, "members", "next")),
+            self._http.get(
+                self._path(queue_id, "members", "next"), params=params or None
+            ),
         )
 
-    def get_member(self, queue_id: str, id: str) -> QueueMemberResponse:
+    def get_member(self, queue_id: str, id: str, **params: Any) -> QueueMemberResponse:
         return cast(
-            "QueueMemberResponse", self._http.get(self._path(queue_id, "members", id))
+            "QueueMemberResponse",
+            self._http.get(self._path(queue_id, "members", id), params=params or None),
         )
 
 
