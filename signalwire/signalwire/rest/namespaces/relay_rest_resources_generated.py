@@ -52,6 +52,9 @@ class NumberGroupsResource(
 
     _update_method = "PUT"
 
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/relay/rest/number_groups")
+
     def create(  # type: ignore[override]
         self,
         *,
@@ -144,6 +147,9 @@ class PhoneNumbersResource(
     """Typed CRUD resource for ``/phone_numbers`` (generated)."""
 
     _update_method = "PUT"
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/relay/rest/phone_numbers")
 
     def create(  # type: ignore[override]
         self, *, number: str, extras: Mapping[str, Any] | None = None
@@ -254,6 +260,9 @@ class QueuesResource(
 
     _update_method = "PUT"
 
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/relay/rest/queues")
+
     def create(  # type: ignore[override]
         self,
         *,
@@ -318,6 +327,9 @@ class VerifiedCallersResource(
     """Typed CRUD resource for ``/verified_caller_ids`` (generated)."""
 
     _update_method = "PUT"
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/relay/rest/verified_caller_ids")
 
     def create(  # type: ignore[override]
         self,

@@ -34,6 +34,9 @@ class DatasphereDocumentsResource(
 ):
     """Typed CRUD resource for ``/documents`` (generated)."""
 
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/datasphere/documents")
+
     def create(  # type: ignore[override]
         self, body: DocumentCreateRequest, *, extras: Mapping[str, Any] | None = None
     ) -> Document:

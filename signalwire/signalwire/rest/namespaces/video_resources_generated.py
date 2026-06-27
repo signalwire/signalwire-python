@@ -43,6 +43,9 @@ class VideoConferencesResource(
 
     _update_method = "PUT"
 
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/video/conferences")
+
     def create(  # type: ignore[override]
         self,
         *,
@@ -195,6 +198,9 @@ class VideoRoomsResource(
     """Typed CRUD resource for ``/rooms`` (generated)."""
 
     _update_method = "PUT"
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/video/rooms")
 
     def create(  # type: ignore[override]
         self,

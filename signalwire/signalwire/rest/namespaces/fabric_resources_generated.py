@@ -90,6 +90,9 @@ class AiAgentsResource(
 ):
     """Typed CRUD resource for ``/resources/ai_agents`` (generated)."""
 
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/resources/ai_agents")
+
     def create(  # type: ignore[override]
         self,
         *,
@@ -179,6 +182,9 @@ class CallFlowsResource(
 
     _update_method = "PUT"
 
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/resources/call_flows")
+
     def create(  # type: ignore[override]
         self, *, title: str, extras: Mapping[str, Any] | None = None
     ) -> CallFlowResponse:
@@ -219,6 +225,9 @@ class ConferenceRoomsResource(
     """Typed CRUD resource for ``/resources/conference_rooms`` (generated)."""
 
     _update_method = "PUT"
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/resources/conference_rooms")
 
     def create(  # type: ignore[override]
         self,
@@ -335,6 +344,9 @@ class CxmlScriptsResource(
 
     _update_method = "PUT"
 
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/resources/cxml_scripts")
+
     def create(  # type: ignore[override]
         self,
         *,
@@ -393,6 +405,9 @@ class CxmlWebhooksResource(
     ]
 ):
     """Typed CRUD resource for ``/resources/cxml_webhooks`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/resources/cxml_webhooks")
 
     def create(  # type: ignore[override]
         self,
@@ -471,6 +486,9 @@ class FreeswitchConnectorsResource(
 
     _update_method = "PUT"
 
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/resources/freeswitch_connectors")
+
     def create(  # type: ignore[override]
         self, *, name: str, token: uuid, extras: Mapping[str, Any] | None = None
     ) -> FreeswitchConnectorResponse:
@@ -520,6 +538,9 @@ class RelayApplicationsResource(
     """Typed CRUD resource for ``/resources/relay_applications`` (generated)."""
 
     _update_method = "PUT"
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/resources/relay_applications")
 
     def create(  # type: ignore[override]
         self,
@@ -581,6 +602,9 @@ class SipEndpointsResource(
     """Typed CRUD resource for ``/resources/sip_endpoints`` (generated)."""
 
     _update_method = "PUT"
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/resources/sip_endpoints")
 
     def create(  # type: ignore[override]
         self,
@@ -659,6 +683,9 @@ class SipGatewaysResource(
 ):
     """Typed CRUD resource for ``/resources/sip_gateways`` (generated)."""
 
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/resources/sip_gateways")
+
     def create(  # type: ignore[override]
         self,
         *,
@@ -723,6 +750,9 @@ class SubscribersResource(
     """Typed CRUD resource for ``/resources/subscribers`` (generated)."""
 
     _update_method = "PUT"
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/resources/subscribers")
 
     def create(  # type: ignore[override]
         self,
@@ -809,6 +839,9 @@ class SwmlScriptsResource(
 
     _update_method = "PUT"
 
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/resources/swml_scripts")
+
     def create(  # type: ignore[override]
         self,
         *,
@@ -863,6 +896,9 @@ class SwmlWebhooksResource(
     ]
 ):
     """Typed CRUD resource for ``/resources/swml_webhooks`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/resources/swml_webhooks")
 
     def create(  # type: ignore[override]
         self,
