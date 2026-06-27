@@ -24,12 +24,12 @@
 
   --accent-9: #40e0d0;  --accent-11: #32d7c7;  --accent-12: #b9f6ed;
   --accent-a3: #00fe9820; --accent-a5: #00fcc53e; --accent-a9: #47feeadf;
-  --accent-a11: #3affead5; --accent-contrast: #042824;
+  --accent-a2: #00fe980f; --accent-a11: #3affead5; --accent-contrast: #042824;
 
   --grayscale-3: #212225; --grayscale-5: #2e3135; --grayscale-8: #5a6169;
   --grayscale-9: #696e77;  --grayscale-11: #b0b4ba; --grayscale-12: #edeef0;
   --grayscale-a3: #ddeaf814; --grayscale-a5: #d9edfe25; --grayscale-a9: #dfebfd6d;
-  --grayscale-a11: #f1f7feb5;
+  --grayscale-a11: #f1f7feb5; --grayscale-a12: #f7fbffec;
   --grayscale-contrast: #000; --grayscale-surface: rgba(0, 0, 0, 0.05);
 }
 
@@ -164,20 +164,11 @@ html { scroll-padding-top: calc(var(--fern-header-height) + var(--md-header-heig
 .fern-icon-button:hover { background: var(--grayscale-a3); }
 .fern-icon-button svg { width: calc(var(--spacing) * 5); height: calc(var(--spacing) * 5); }
 
-/* --- Product selector trigger --- */
-.fern-product-selector {
-  appearance: none; border: 0; background: transparent; cursor: pointer; font: inherit;
-  display: inline-flex; align-items: center;
-  padding: calc(var(--spacing) * 1.5) calc(var(--spacing) * 2);
-  border-radius: calc(var(--radius) * 2);
-  color: var(--grayscale-12);
-  transition: background-color 0.15s;
-}
-.fern-product-selector:hover,
-.fern-product-selector[data-state="open"] { background: var(--grayscale-a3); }
-.product-dropdown-trigger { display: inline-flex; align-items: center; gap: calc(var(--spacing) * 1.5); }
-.product-item-title { margin: 0; font-size: var(--text-sm); font-weight: 600; }
-.product-dropdown-trigger svg { width: calc(var(--spacing) * 4); height: calc(var(--spacing) * 4); }
+/* --- Product selector trigger ---
+   fern.css owns the trigger: the hover/open box lives on the inner
+   .product-dropdown-trigger, while .fern-product-selector is the transparent,
+   padding:0 button. Do NOT restyle it here — adding padding/border-radius/bg to
+   the button draws a SECOND box around fern.css's inner one (nested double-box). */
 
 /* =============================================================================
    Dropdown panels
