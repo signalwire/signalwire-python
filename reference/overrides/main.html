@@ -35,16 +35,8 @@
         </div>
       </div>
 
-      <!-- Center: language switcher -->
-      <div class="fern-header-center">
-        <button type="button" id="lang-trigger" class="lang-trigger"
-                aria-haspopup="menu" aria-expanded="false" data-state="closed">
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
-          <span class="lang-trigger-label">Python</span>
-          <span class="lang-trigger-meta">MkDocs + mkdocstrings</span>
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide"><path d="m6 9 6 6 6-6"></path></svg>
-        </button>
-      </div>
+      <!-- Center: empty spacer (language switcher removed — other SDK languages out of scope for now) -->
+      <div class="fern-header-center"></div>
 
       <!-- Right: navbar links + theme control -->
       <nav class="fern-button-group fern-header-navbar-links" aria-label="Navbar links">
@@ -118,19 +110,6 @@
         </div></div>
       </a>
     </div>
-  </div>
-
-  <!-- Language dropdown: cross-site links, Python active. Other languages point
-       at the POC demo until per-language hosted sites exist. -->
-  <div class="fern-dropdown" id="lang-panel" data-state="closed" role="menu">
-    <a class="fern-dropdown-item" aria-current="true" href="{{ base_url }}/"><span class="lang-dot" style="--lang-color:#3776AB"></span><span>Python</span><span class="item-meta">MkDocs + mkdocstrings</span></a>
-    <a class="fern-dropdown-item" href="https://signalwire.github.io/sdk-docs-demo/#cpp"><span class="lang-dot" style="--lang-color:#00599C"></span><span>C++</span><span class="item-meta">Doxygen</span></a>
-    <a class="fern-dropdown-item" href="https://signalwire.github.io/sdk-docs-demo/#dotnet"><span class="lang-dot" style="--lang-color:#512BD4"></span><span>C# / .NET</span><span class="item-meta">DocFX</span></a>
-    <a class="fern-dropdown-item" href="https://signalwire.github.io/sdk-docs-demo/#go"><span class="lang-dot" style="--lang-color:#00ADD8"></span><span>Go</span><span class="item-meta">gomarkdoc</span></a>
-    <a class="fern-dropdown-item" href="https://signalwire.github.io/sdk-docs-demo/#java"><span class="lang-dot" style="--lang-color:#ED8B00"></span><span>Java</span><span class="item-meta">Javadoc</span></a>
-    <a class="fern-dropdown-item" href="https://signalwire.github.io/sdk-docs-demo/#ruby"><span class="lang-dot" style="--lang-color:#CC342D"></span><span>Ruby</span><span class="item-meta">YARD</span></a>
-    <a class="fern-dropdown-item" href="https://signalwire.github.io/sdk-docs-demo/#rust"><span class="lang-dot" style="--lang-color:#DEA584"></span><span>Rust</span><span class="item-meta">rustdoc</span></a>
-    <a class="fern-dropdown-item" href="https://signalwire.github.io/sdk-docs-demo/#typescript"><span class="lang-dot" style="--lang-color:#3178C6"></span><span>TypeScript</span><span class="item-meta">TypeDoc</span></a>
   </div>
 
   <!-- Support dropdown -->
