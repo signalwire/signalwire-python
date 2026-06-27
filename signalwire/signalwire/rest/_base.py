@@ -110,15 +110,25 @@ class CrudResource(BaseResource, Generic[TList, TItem, TCreate, TUpdate]):
     def list(self, **params: Any) -> TList:
         return self._http.get(self._base_path, params=params or None)
 
-    def create(self, **kwargs: TCreate) -> TItem:
+    def create(self, **kwargs: Any) -> TItem:
+        # Honest fallback: the body accepts arbitrary wire fields and at runtime
+        # is a plain dict. Concrete resources override this with a generated
+        # CLOSED typed signature (explicit spec fields + an ``extras`` door); the
+        # class-level ``CrudResource[...]`` binding is what publishes the real
+        # TCreate shape to the signature oracle, NOT this base method body. (A
+        # bare ``**kwargs: TCreate`` here is wrong — it would type each kwarg
+        # VALUE as a whole TCreate — and is what the generated overrides replace.)
         return self._http.post(self._base_path, body=kwargs)
 
     def get(self, resource_id: str) -> TItem:
         return self._http.get(self._path(resource_id))
 
-    def update(self, resource_id: str, /, **kwargs: TUpdate) -> TItem:
+    def update(self, resource_id: str, /, **kwargs: Any) -> TItem:
         # resource_id is positional-only so compat subclasses may name it
-        # `sid` (Twilio convention) without an LSP override conflict.
+        # `sid` (Twilio convention) without an LSP override conflict. Same
+        # contract as ``create``: honest ``**kwargs: Any`` fallback; the concrete
+        # generated override carries the closed typed shape, the binding carries
+        # TUpdate for the oracle.
         method = getattr(self._http, self._update_method.lower())
         return method(self._path(resource_id), body=kwargs)
 
@@ -133,3 +143,24 @@ class CrudWithAddresses(CrudResource[TList, TItem, TCreate, TUpdate]):
         return self._http.get(
             self._path(resource_id, "addresses"), params=params or None
         )
+
+
+class FabricResource(CrudWithAddresses[TList, TItem, TCreate, TUpdate]):
+    """Standard fabric resource with CRUD + addresses.
+
+    Intermediate generic base — concrete leaf resources bind the four type
+    parameters. Mirrors the TS port's ``FabricResource<TList, TItem, TCreate,
+    TUpdate>``. Lives here (not in the fabric namespace) so the generated
+    ``fabric_resources_generated`` subclasses can inherit it without a cycle.
+    """
+
+    pass
+
+
+class FabricResourcePUT(CrudWithAddresses[TList, TItem, TCreate, TUpdate]):
+    """Fabric resource that uses PUT for updates.
+
+    Intermediate generic base (see :class:`FabricResource`).
+    """
+
+    _update_method = "PUT"

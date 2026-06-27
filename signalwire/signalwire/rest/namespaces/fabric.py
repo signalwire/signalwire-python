@@ -14,7 +14,8 @@ from typing import TYPE_CHECKING, Any
 
 from .._base import (
     BaseResource,
-    CrudWithAddresses,
+    FabricResource,
+    FabricResourcePUT,
     TCreate,
     TItem,
     TList,
@@ -94,24 +95,9 @@ if TYPE_CHECKING:
     )
 
 
-class FabricResource(CrudWithAddresses[TList, TItem, TCreate, TUpdate]):
-    """Standard fabric resource with CRUD + addresses.
-
-    Intermediate generic base — concrete leaf resources bind the four type
-    parameters. Mirrors the TS port's ``FabricResource<TList, TItem, TCreate,
-    TUpdate>``.
-    """
-
-    pass
-
-
-class FabricResourcePUT(CrudWithAddresses[TList, TItem, TCreate, TUpdate]):
-    """Fabric resource that uses PUT for updates.
-
-    Intermediate generic base (see :class:`FabricResource`).
-    """
-
-    _update_method = "PUT"
+# ``FabricResource`` / ``FabricResourcePUT`` are defined in ``.._base`` (imported
+# above) so the generated ``fabric_resources_generated`` subclasses can inherit them
+# without an import cycle. They remain importable from this module via that import.
 
 
 class AutoMaterializedWebhook(FabricResource[TList, TItem, TCreate, TUpdate]):
