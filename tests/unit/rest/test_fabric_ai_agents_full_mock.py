@@ -37,7 +37,9 @@ class TestFabricAIAgentsSuccess:
         )
 
     def test_create(self, signalwire_client, mock):
-        body = signalwire_client.fabric.ai_agents.create(name="agent-alpha")
+        body = signalwire_client.fabric.ai_agents.create(
+            name="agent-alpha", prompt="be helpful", agent_id="a1"
+        )
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "POST"
@@ -110,10 +112,14 @@ class TestFabricAIAgentsErrors:
         assert last.response_status == 500
 
     def test_create_unprocessable(self, signalwire_client, mock):
-        # 422 = bad/missing required input (the spec marks fields required).
-        mock.push_scenario("fabric.create_ai_agent", 422, {"error": "name required"})
+        # 422 = server-side rejection. The client signature enforces the spec-required
+        # fields, so we send a complete body and the armed scenario returns the 422
+        # (modelling a server-side validation failure, e.g. a bad field value).
+        mock.push_scenario("fabric.create_ai_agent", 422, {"error": "unprocessable"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.ai_agents.create()
+            signalwire_client.fabric.ai_agents.create(
+                name="x", prompt="p", agent_id="a1"
+            )
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "fabric.create_ai_agent"

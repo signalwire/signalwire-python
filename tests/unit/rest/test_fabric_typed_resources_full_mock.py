@@ -26,6 +26,42 @@ from signalwire.rest._base import SignalWireRestError
 
 _ID = "rid-1001"
 
+# Spec-required create fields per resource (the typed generated ``create`` enforces
+# them). Mirrors the ``required:`` lists in porting-sdk/rest-apis/fabric/openapi.yaml;
+# when the REST tests become spec-generated (see the test-generation task) this map is
+# derived, not hand-maintained.
+_CREATE_BODY = {
+    "swml_script": {"name": "thing", "contents": "<swml/>"},
+    "relay_application": {"name": "thing", "topic": "t"},
+    "freeswitch_connector": {"name": "thing", "token": "tok"},
+    "cxml_script": {"display_name": "thing", "contents": "<Response/>"},
+    "sip_endpoint": {
+        "id": _ID, "username": "u", "caller_id": "c", "send_as": "s",
+        "ciphers": ["AEAD_AES_256_GCM"], "codecs": ["PCMU"], "encryption": "required",
+        "call_handler": "relay_context", "calling_handler_resource_id": "h",
+    },
+    "sip_gateway": {
+        "name": "gw", "uri": "sip:gw@example.com", "encryption": "required",
+        "ciphers": ["AEAD_AES_256_GCM"], "codecs": ["PCMU"],
+    },
+    "swml_webhook": {"primary_request_url": "https://example.com"},
+    "cxml_webhook": {"primary_request_url": "https://example.com"},
+    "call_flow": {"title": "cf"},
+    "conference_room": {"name": "room", "enable_room_previews": True},
+}
+
+# A single valid (all-optional) update field per resource. Most expose ``name``;
+# scripts/sip use their own. Derived from the spec ``*UpdateRequest`` shapes.
+_UPDATE_BODY = {
+    "swml_script": {"display_name": "renamed"},
+    "cxml_script": {"display_name": "renamed"},
+    "sip_endpoint": {"username": "renamed"},
+}
+
+
+def _update_for(prefix):
+    return _UPDATE_BODY.get(prefix, {"name": "renamed"})
+
 
 # ---------------------------------------------------------------------------
 # Reusable CRUD(+addresses) exercisers — keep the per-route assertions identical
@@ -33,9 +69,14 @@ _ID = "rid-1001"
 # ---------------------------------------------------------------------------
 
 
-def _crud_success(client, mock, resource, base, *, update_method, prefix, addresses=True):
+def _crud_success(
+    client, mock, resource, base, *, update_method, prefix, create_body,
+    update_body=None, addresses=True
+):
     """Drive list/create/get/update/delete (+addresses) and assert each route.
 
+    ``create_body`` is the resource's spec-required create fields (the typed
+    generated ``create`` enforces them, so a minimal body no longer compiles/runs).
     Returns the number of routes exercised so the calling test can assert on it
     (a content-shaped in-body check that fails if the helper is short-circuited).
     """
@@ -47,14 +88,15 @@ def _crud_success(client, mock, resource, base, *, update_method, prefix, addres
     assert last.path == base
     assert last.matched_route == f"fabric.list_{prefix}s", last.matched_route
 
-    # create
-    body = resource.create(name="thing")
+    # create — pass the full set of spec-required fields
+    body = resource.create(**create_body)
     assert isinstance(body, dict)
     last = mock.last_request()
     assert last.method == "POST"
     assert last.path == base
     assert last.matched_route == f"fabric.create_{prefix}", last.matched_route
-    assert last.body and last.body.get("name") == "thing"
+    _first_key = next(iter(create_body))
+    assert last.body and last.body.get(_first_key) == create_body[_first_key]
 
     # get
     body = resource.get(_ID)
@@ -64,14 +106,16 @@ def _crud_success(client, mock, resource, base, *, update_method, prefix, addres
     assert last.path == f"{base}/{_ID}"
     assert last.matched_route == f"fabric.get_{prefix}", last.matched_route
 
-    # update
-    body = resource.update(_ID, name="renamed")
+    # update — pick a field that exists on this resource's (all-optional) update body
+    update_body = update_body or _update_for(prefix)
+    _ufield, _uval = next(iter(update_body.items()))
+    body = resource.update(_ID, **update_body)
     assert isinstance(body, dict)
     last = mock.last_request()
     assert last.method == update_method
     assert last.path == f"{base}/{_ID}"
     assert last.matched_route == f"fabric.update_{prefix}", last.matched_route
-    assert last.body and last.body.get("name") == "renamed"
+    assert last.body and last.body.get(_ufield) == _uval
 
     # delete
     resource.delete(_ID)
@@ -92,10 +136,13 @@ def _crud_success(client, mock, resource, base, *, update_method, prefix, addres
     return 6 if addresses else 5
 
 
-def _crud_errors(client, mock, resource, *, prefix, addresses=True):
+def _crud_errors(client, mock, resource, *, prefix, create_body, addresses=True):
     """Drive a representative error per CRUD route and assert SignalWireRestError.
 
     Returns the number of error routes exercised (see _crud_success for why).
+    ``create_body`` supplies the spec-required create fields so the request reaches
+    the server; the 422 comes from the armed scenario (a server-side rejection), not
+    from the client signature.
     """
     mock.push_scenario(f"fabric.list_{prefix}s", 500, {"error": "internal"})
     with pytest.raises(SignalWireRestError) as exc:
@@ -106,7 +153,7 @@ def _crud_errors(client, mock, resource, *, prefix, addresses=True):
 
     mock.push_scenario(f"fabric.create_{prefix}", 422, {"error": "bad input"})
     with pytest.raises(SignalWireRestError) as exc:
-        resource.create()
+        resource.create(**create_body)
     assert exc.value.status_code == 422
     assert mock.last_request().matched_route == f"fabric.create_{prefix}"
     assert mock.last_request().response_status == 422
@@ -120,7 +167,7 @@ def _crud_errors(client, mock, resource, *, prefix, addresses=True):
 
     mock.push_scenario(f"fabric.update_{prefix}", 404, {"error": "not found"})
     with pytest.raises(SignalWireRestError) as exc:
-        resource.update("missing", name="x")
+        resource.update("missing", **_update_for(prefix))
     assert exc.value.status_code == 404
     assert mock.last_request().matched_route == f"fabric.update_{prefix}"
     assert mock.last_request().response_status == 404
@@ -145,6 +192,59 @@ def _crud_errors(client, mock, resource, *, prefix, addresses=True):
 _BASE = "/api/fabric/resources"
 
 
+# resource attribute -> create-body key for the enforcement sweep.
+_ENFORCED_RESOURCES = [
+    ("swml_scripts", "swml_script"),
+    ("relay_applications", "relay_application"),
+    ("freeswitch_connectors", "freeswitch_connector"),
+    ("cxml_scripts", "cxml_script"),
+    ("sip_endpoints", "sip_endpoint"),
+    ("sip_gateways", "sip_gateway"),
+    ("swml_webhooks", "swml_webhook"),
+    ("cxml_webhooks", "cxml_webhook"),
+    ("ai_agents", "ai_agents"),
+]
+
+
+class TestRequiredFieldEnforcement:
+    """The typed generated ``create`` is CLOSED and enforces the spec-required
+    fields at the signature: omitting any required field is a ``TypeError`` (not a
+    silent server round-trip), a typo'd field is rejected, and the ``extras`` door
+    accepts deliberately-unknown fields. This positively covers the enforcement
+    itself — not just that valid calls happen to work.
+    """
+
+    def test_create_rejects_each_missing_required_field(self, signalwire_client):
+        for attr, prefix in _ENFORCED_RESOURCES:
+            resource = getattr(signalwire_client.fabric, attr)
+            body = _CREATE_BODY.get(prefix) or {
+                "prompt": "p", "agent_id": "a", "name": "n"
+            }
+            for field in body:
+                partial = {k: v for k, v in body.items() if k != field}
+                with pytest.raises(TypeError):
+                    resource.create(**partial)
+
+    def test_create_rejects_unknown_field(self, signalwire_client):
+        # A field not in the spec is a TypeError (typo protection) — it must go
+        # through ``extras`` instead.
+        r = signalwire_client.fabric.ai_agents
+        with pytest.raises(TypeError):
+            r.create(prompt="p", agent_id="a", name="n", definitely_not_a_field=1)
+
+    def test_extras_accepts_unknown_fields(self, signalwire_client, mock):
+        # ``extras`` is the sanctioned escape hatch for fields not yet typed; the
+        # values are merged into the request body sent to the server.
+        r = signalwire_client.fabric.ai_agents
+        r.create(
+            prompt="p", agent_id="a", name="n",
+            extras={"brand_new_server_field": "v"},
+        )
+        last = mock.last_request()
+        assert last.body and last.body.get("brand_new_server_field") == "v"
+        assert last.body.get("name") == "n"
+
+
 class TestFabricPutResourceFamilies:
     """PUT-update CRUD(+addresses) families."""
 
@@ -153,12 +253,15 @@ class TestFabricPutResourceFamilies:
         n = _crud_success(
             signalwire_client, mock, r, f"{_BASE}/swml_scripts",
             update_method="PUT", prefix="swml_script",
+            create_body=_CREATE_BODY["swml_script"],
         )
         assert n == 6
 
     def test_swml_scripts_errors(self, signalwire_client, mock):
         n = _crud_errors(signalwire_client, mock, signalwire_client.fabric.swml_scripts,
-                         prefix="swml_script")
+                         prefix="swml_script",
+            create_body=_CREATE_BODY["swml_script"],
+        )
         assert n == 6
 
     def test_relay_applications(self, signalwire_client, mock):
@@ -166,13 +269,16 @@ class TestFabricPutResourceFamilies:
         n = _crud_success(
             signalwire_client, mock, r, f"{_BASE}/relay_applications",
             update_method="PUT", prefix="relay_application",
+            create_body=_CREATE_BODY["relay_application"],
         )
         assert n == 6
 
     def test_relay_applications_errors(self, signalwire_client, mock):
         n = _crud_errors(signalwire_client, mock,
                          signalwire_client.fabric.relay_applications,
-                         prefix="relay_application")
+                         prefix="relay_application",
+            create_body=_CREATE_BODY["relay_application"],
+        )
         assert n == 6
 
     def test_freeswitch_connectors(self, signalwire_client, mock):
@@ -180,13 +286,16 @@ class TestFabricPutResourceFamilies:
         n = _crud_success(
             signalwire_client, mock, r, f"{_BASE}/freeswitch_connectors",
             update_method="PUT", prefix="freeswitch_connector",
+            create_body=_CREATE_BODY["freeswitch_connector"],
         )
         assert n == 6
 
     def test_freeswitch_connectors_errors(self, signalwire_client, mock):
         n = _crud_errors(signalwire_client, mock,
                          signalwire_client.fabric.freeswitch_connectors,
-                         prefix="freeswitch_connector")
+                         prefix="freeswitch_connector",
+            create_body=_CREATE_BODY["freeswitch_connector"],
+        )
         assert n == 6
 
     def test_cxml_scripts(self, signalwire_client, mock):
@@ -194,12 +303,15 @@ class TestFabricPutResourceFamilies:
         n = _crud_success(
             signalwire_client, mock, r, f"{_BASE}/cxml_scripts",
             update_method="PUT", prefix="cxml_script",
+            create_body=_CREATE_BODY["cxml_script"],
         )
         assert n == 6
 
     def test_cxml_scripts_errors(self, signalwire_client, mock):
         n = _crud_errors(signalwire_client, mock, signalwire_client.fabric.cxml_scripts,
-                         prefix="cxml_script")
+                         prefix="cxml_script",
+            create_body=_CREATE_BODY["cxml_script"],
+        )
         assert n == 6
 
     def test_sip_endpoints(self, signalwire_client, mock):
@@ -207,12 +319,15 @@ class TestFabricPutResourceFamilies:
         n = _crud_success(
             signalwire_client, mock, r, f"{_BASE}/sip_endpoints",
             update_method="PUT", prefix="sip_endpoint",
+            create_body=_CREATE_BODY["sip_endpoint"],
         )
         assert n == 6
 
     def test_sip_endpoints_errors(self, signalwire_client, mock):
         n = _crud_errors(signalwire_client, mock, signalwire_client.fabric.sip_endpoints,
-                         prefix="sip_endpoint")
+                         prefix="sip_endpoint",
+            create_body=_CREATE_BODY["sip_endpoint"],
+        )
         assert n == 6
 
 
@@ -221,9 +336,8 @@ class TestFabricPatchResourceFamilies:
 
     def test_cxml_webhooks(self, signalwire_client, mock):
         r = signalwire_client.fabric.cxml_webhooks
-        # cxml_webhooks.create is auto-materialized: direct create warns.
-        with pytest.warns(DeprecationWarning):
-            r.create(name="thing")
+        # Webhooks are plain CRUD; direct create is a normal operation (no warning).
+        r.create(primary_request_url="https://example.com")
         last = mock.last_request()
         assert last.method == "POST"
         assert last.path == f"{_BASE}/cxml_webhooks"
@@ -267,16 +381,15 @@ class TestFabricPatchResourceFamilies:
             r.list_addresses("missing")
         assert exc.value.status_code == 404
         mock.push_scenario("fabric.create_cxml_webhook", 422, {"error": "bad"})
-        with pytest.warns(DeprecationWarning), pytest.raises(SignalWireRestError) as exc:
-            r.create(name="thing")
+        with pytest.raises(SignalWireRestError) as exc:
+            r.create(primary_request_url="https://example.com")
         assert exc.value.status_code == 422
         assert mock.last_request().matched_route == "fabric.create_cxml_webhook"
         assert mock.last_request().response_status == 422
 
     def test_swml_webhooks(self, signalwire_client, mock):
         r = signalwire_client.fabric.swml_webhooks
-        with pytest.warns(DeprecationWarning):
-            r.create(name="thing")
+        r.create(primary_request_url="https://example.com")
         last = mock.last_request()
         assert last.method == "POST"
         assert last.path == f"{_BASE}/swml_webhooks"
@@ -318,8 +431,8 @@ class TestFabricPatchResourceFamilies:
             r.list_addresses("missing")
         assert exc.value.status_code == 404
         mock.push_scenario("fabric.create_swml_webhook", 422, {"error": "bad"})
-        with pytest.warns(DeprecationWarning), pytest.raises(SignalWireRestError) as exc:
-            r.create(name="thing")
+        with pytest.raises(SignalWireRestError) as exc:
+            r.create(primary_request_url="https://example.com")
         assert exc.value.status_code == 422
         assert mock.last_request().matched_route == "fabric.create_swml_webhook"
         assert mock.last_request().response_status == 422
@@ -337,7 +450,7 @@ class TestFabricSipGateways:
         assert last.path == f"{_BASE}/sip_gateways"
         assert last.matched_route == "fabric.list_sip_gateways", last.matched_route
 
-        body = r.create(name="gw")
+        body = r.create(**_CREATE_BODY["sip_gateway"])
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "POST"
@@ -368,7 +481,7 @@ class TestFabricSipGateways:
         assert mock.last_request().response_status == 500
         mock.push_scenario("fabric.create_sip_gateway", 422, {"error": "bad"})
         with pytest.raises(SignalWireRestError) as exc:
-            r.create()
+            r.create(**_CREATE_BODY["sip_gateway"])
         assert exc.value.status_code == 422
         mock.push_scenario("fabric.get_sip_gateway", 404, {"error": "nf"})
         with pytest.raises(SignalWireRestError) as exc:
@@ -458,7 +571,7 @@ class TestFabricCallFlows:
         body = r.list()
         assert isinstance(body, (dict, list))
         assert mock.last_request().matched_route == "fabric.list_call_flows"
-        r.create(name="cf")
+        r.create(**_CREATE_BODY["call_flow"])
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "fabric.create_call_flow", last.matched_route
@@ -504,7 +617,7 @@ class TestFabricCallFlows:
         assert exc.value.status_code == 500
         mock.push_scenario("fabric.create_call_flow", 422, {"error": "bad"})
         with pytest.raises(SignalWireRestError) as exc:
-            r.create()
+            r.create(**_CREATE_BODY["call_flow"])
         assert exc.value.status_code == 422
         mock.push_scenario("fabric.get_call_flow", 404, {"error": "nf"})
         with pytest.raises(SignalWireRestError) as exc:
@@ -542,7 +655,7 @@ class TestFabricConferenceRooms:
         body = r.list()
         assert isinstance(body, (dict, list))
         assert mock.last_request().matched_route == "fabric.list_conference_rooms"
-        r.create(name="room")
+        r.create(**_CREATE_BODY["conference_room"])
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "fabric.create_conference_room", last.matched_route
@@ -573,7 +686,7 @@ class TestFabricConferenceRooms:
         assert exc.value.status_code == 500
         mock.push_scenario("fabric.create_conference_room", 422, {"error": "bad"})
         with pytest.raises(SignalWireRestError) as exc:
-            r.create()
+            r.create(**_CREATE_BODY["conference_room"])
         assert exc.value.status_code == 422
         mock.push_scenario("fabric.get_conference_room", 404, {"error": "nf"})
         with pytest.raises(SignalWireRestError) as exc:

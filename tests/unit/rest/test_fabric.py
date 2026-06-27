@@ -18,10 +18,13 @@ class TestFabricResources:
 
     def test_ai_agents_create(self, client, mock_session):
         mock_session.request.return_value = MockResponse(201, {"id": "new"})
-        client.fabric.ai_agents.create(name="Support", prompt="You are helpful")
+        client.fabric.ai_agents.create(
+            name="Support", prompt="You are helpful", agent_id="a1"
+        )
         mock_session.request.assert_called_with(
             "POST", "https://test.signalwire.com/api/fabric/resources/ai_agents",
-            json={"name": "Support", "prompt": "You are helpful"}, params=None,
+            json={"name": "Support", "prompt": "You are helpful", "agent_id": "a1"},
+            params=None,
         )
 
     def test_ai_agents_update_uses_patch(self, client, mock_session):
@@ -102,34 +105,30 @@ class TestGenericResources:
         )
 
 
-class TestAutoMaterializedWebhooks:
-    """swml_webhooks and cxml_webhooks are normally auto-created by phone_numbers.set_*.
-
-    Direct create() still works (backcompat) but must emit DeprecationWarning
-    pointing at the right helper. Creating an orphan resource without binding
-    it to a phone number does nothing useful.
+class TestWebhooks:
+    """swml_webhooks and cxml_webhooks are plain CRUD resources. They are normally
+    auto-materialized via phone_numbers.set_swml_webhook / set_cxml_webhook, but
+    direct create is a normal operation (these SDKs are pre-release — no deprecation).
     """
 
-    def test_swml_webhooks_create_warns(self, client, mock_session):
+    def test_swml_webhooks_create_no_warning(self, client, mock_session, recwarn):
         mock_session.request.return_value = MockResponse(201, {"id": "sw-1"})
-        with pytest.warns(DeprecationWarning, match="phone_numbers.set_swml_webhook"):
-            client.fabric.swml_webhooks.create(
-                name="Orphan", primary_request_url="https://example.com/swml",
-            )
+        client.fabric.swml_webhooks.create(
+            primary_request_url="https://example.com/swml",
+        )
+        assert not [w for w in recwarn if issubclass(w.category, DeprecationWarning)]
 
-    def test_cxml_webhooks_create_warns(self, client, mock_session):
+    def test_cxml_webhooks_create_no_warning(self, client, mock_session, recwarn):
         mock_session.request.return_value = MockResponse(201, {"id": "cw-1"})
-        with pytest.warns(DeprecationWarning, match="phone_numbers.set_cxml_webhook"):
-            client.fabric.cxml_webhooks.create(
-                name="Orphan", primary_request_url="https://example.com/voice.xml",
-            )
+        client.fabric.cxml_webhooks.create(
+            primary_request_url="https://example.com/voice.xml",
+        )
+        assert not [w for w in recwarn if issubclass(w.category, DeprecationWarning)]
 
-    def test_webhooks_read_update_delete_still_work_without_warning(self, client, mock_session):
-        """Only create is deprecated — list/get/update/delete are the normal
-        surface, and they must run without emitting any DeprecationWarning.
-        We assert that the underlying HTTP transport actually got called for
-        each operation (proving the methods aren't no-ops that could swallow
-        the warning by simply not running)."""
+    def test_webhooks_read_update_delete_work_without_warning(self, client, mock_session):
+        """Webhooks are plain CRUD — list/get/update/delete/create all run without
+        emitting any DeprecationWarning. We assert the underlying HTTP transport
+        actually got called for each operation (proving the methods aren't no-ops)."""
         mock_session.request.return_value = MockResponse(200, {"data": []})
         with warnings.catch_warnings():
             warnings.simplefilter("error", DeprecationWarning)

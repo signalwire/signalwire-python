@@ -21,6 +21,17 @@ from .._base import (
     TList,
     TUpdate,
 )
+from .fabric_resources_generated import (
+    AiAgentsResource,
+    CxmlScriptsResource,
+    CxmlWebhooksResource,
+    FreeswitchConnectorsResource,
+    RelayApplicationsResource,
+    SipEndpointsResource,
+    SipGatewaysResource,
+    SwmlScriptsResource,
+    SwmlWebhooksResource,
+)
 
 if TYPE_CHECKING:
     from .fabric_types_generated import (
@@ -100,54 +111,12 @@ if TYPE_CHECKING:
 # without an import cycle. They remain importable from this module via that import.
 
 
-class AutoMaterializedWebhook(FabricResource[TList, TItem, TCreate, TUpdate]):
-    """Fabric webhook resource that's normally auto-created by phone_numbers.set_*.
-
-    Exposed for backwards compatibility. The binding model for these resources
-    is on the phone number (see ``phone_numbers.set_swml_webhook`` /
-    ``set_cxml_webhook``) — setting ``call_handler`` on a phone number
-    auto-materializes the webhook. Calling ``create`` here produces an orphan
-    resource that isn't bound to any phone number.
-    """
-
-    _auto_helper_name = "phone_numbers.set_*_webhook"
-
-    def create(self, **kwargs: Any) -> TItem:
-        # Deprecated direct-create override (body-only: adds an orphan-warning, then
-        # delegates to super). Returns TItem to stay LSP-compatible with the generic
-        # base; the enumerator drops this TypeVar-returning intermediate override
-        # from the oracle (the concrete subclasses publish the typed create).
-        warnings.warn(
-            f"Creating a webhook Fabric resource directly produces an orphan not "
-            f"bound to any phone number. Use {self._auto_helper_name} instead; "
-            f"it updates the phone number and the server auto-materializes the "
-            f"resource. See porting-sdk's phone-binding.md.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return super().create(**kwargs)
-
-
-class SwmlWebhooksResource(
-    AutoMaterializedWebhook[
-        "SWMLWebhookListResponse",
-        "SWMLWebhookResponse",
-        "SWMLWebhookCreateRequest",
-        "SWMLWebhookUpdateRequest",
-    ]
-):
-    _auto_helper_name = "phone_numbers.set_swml_webhook(sid, url=...)"
-
-
-class CxmlWebhooksResource(
-    AutoMaterializedWebhook[
-        "CXMLWebhookListResponse",
-        "CXMLWebhookResponse",
-        "CXMLWebhookCreateRequest",
-        "CXMLWebhookUpdateRequest",
-    ]
-):
-    _auto_helper_name = "phone_numbers.set_cxml_webhook(sid, url=...)"
+# ``SwmlWebhooksResource`` / ``CxmlWebhooksResource`` are now plain generated typed
+# CRUD resources (see ``fabric_resources_generated``), imported above. The former
+# ``AutoMaterializedWebhook`` deprecation-warning wrapper was removed — these SDKs are
+# pre-release, so there is no back-compat to deprecate. The phone-number binding model
+# (``phone_numbers.set_swml_webhook`` / ``set_cxml_webhook``) remains the documented way
+# to auto-materialize a webhook; direct create is just a normal operation.
 
 
 class CallFlowsResource(
@@ -366,67 +335,35 @@ class FabricNamespace:
     def __init__(self, http: Any) -> None:
         base = "/api/fabric/resources"
 
-        # PUT-update resources. The bare FabricResourcePUT / FabricResource
-        # resources carry their concrete per-operation shapes via an attribute
-        # annotation (mirrors the TS port's typed ``readonly`` fields), so the
-        # signature oracle resolves each one's real list/item/create/update
-        # types rather than the unbound TypeVars.
-        self.swml_scripts: FabricResourcePUT[
-            SwmlScriptListResponse,
-            SwmlScriptResponse,
-            SwmlScriptCreateRequest,
-            SwmlScriptUpdateRequest,
-        ] = FabricResourcePUT(http, f"{base}/swml_scripts")
-        self.relay_applications: FabricResourcePUT[
-            RelayApplicationListResponse,
-            RelayApplicationResponse,
-            RelayApplicationCreateRequest,
-            RelayApplicationUpdateRequest,
-        ] = FabricResourcePUT(http, f"{base}/relay_applications")
+        # Generated typed CRUD resources (closed create/update + extras). Each is a
+        # subclass in ``fabric_resources_generated`` bound to its spec types, so the
+        # oracle resolves the real list/item/create/update shapes. ``call_flows``,
+        # ``conference_rooms``, ``subscribers`` keep hand-written classes for now (they
+        # add sub-resource accessors not yet generated).
+        self.swml_scripts = SwmlScriptsResource(http, f"{base}/swml_scripts")
+        self.relay_applications = RelayApplicationsResource(
+            http, f"{base}/relay_applications"
+        )
         self.call_flows = CallFlowsResource(http, f"{base}/call_flows")
         self.conference_rooms = ConferenceRoomsResource(
             http, f"{base}/conference_rooms"
         )
-        self.freeswitch_connectors: FabricResourcePUT[
-            FreeswitchConnectorListResponse,
-            FreeswitchConnectorResponse,
-            FreeswitchConnectorCreateRequest,
-            FreeswitchConnectorUpdateRequest,
-        ] = FabricResourcePUT(http, f"{base}/freeswitch_connectors")
+        self.freeswitch_connectors = FreeswitchConnectorsResource(
+            http, f"{base}/freeswitch_connectors"
+        )
         self.subscribers = SubscribersResource(http, f"{base}/subscribers")
-        self.sip_endpoints: FabricResourcePUT[
-            SipEndpointListResponse,
-            SipEndpointResponse,
-            SipEndpointCreateRequest,
-            SipEndpointUpdateRequest,
-        ] = FabricResourcePUT(http, f"{base}/sip_endpoints")
-        self.cxml_scripts: FabricResourcePUT[
-            CXMLScriptListResponse,
-            CXMLScriptResponse,
-            CXMLScriptCreateRequest,
-            CXMLScriptUpdateRequest,
-        ] = FabricResourcePUT(http, f"{base}/cxml_scripts")
+        self.sip_endpoints = SipEndpointsResource(http, f"{base}/sip_endpoints")
+        self.cxml_scripts = CxmlScriptsResource(http, f"{base}/cxml_scripts")
         self.cxml_applications = CxmlApplicationsResource(
             http, f"{base}/cxml_applications"
         )
 
-        # PATCH-update resources
-        # swml_webhooks and cxml_webhooks are normally auto-materialized by
-        # phone_numbers.set_swml_webhook / set_cxml_webhook. Direct create
-        # still works for backcompat but emits a DeprecationWarning.
+        # PATCH-update resources. ``swml_webhooks`` / ``cxml_webhooks`` are normally
+        # auto-materialized via ``phone_numbers.set_swml_webhook`` /
+        # ``set_cxml_webhook``; direct create is a normal operation.
         self.swml_webhooks = SwmlWebhooksResource(http, f"{base}/swml_webhooks")
-        self.ai_agents: FabricResource[
-            AIAgentListResponse,
-            AIAgentResponse,
-            AIAgentCreateRequest,
-            AIAgentUpdateRequest,
-        ] = FabricResource(http, f"{base}/ai_agents")
-        self.sip_gateways: FabricResource[
-            SipGatewayListResponse,
-            SipGatewayResponse,
-            SipGatewayRequest,
-            SipGatewayRequestUpdate,
-        ] = FabricResource(http, f"{base}/sip_gateways")
+        self.ai_agents = AiAgentsResource(http, f"{base}/ai_agents")
+        self.sip_gateways = SipGatewaysResource(http, f"{base}/sip_gateways")
         self.cxml_webhooks = CxmlWebhooksResource(http, f"{base}/cxml_webhooks")
 
         # Special resources
