@@ -13,10 +13,13 @@ from .._base import CrudResource
 
 if TYPE_CHECKING:
     from .relay_rest_types_generated import (
+        AvailablePhoneNumbersResponse,
         CreateNumberGroupRequest,
         CreateQueueRequest,
         CreateVerifiedCallerIDRequest,
         NumberGroupListResponse,
+        NumberGroupMembershipListResponse,
+        NumberGroupMembershipResponse,
         NumberGroupResponse,
         PhoneNumberCallHandlerRequest,
         PhoneNumberListResponse,
@@ -24,6 +27,8 @@ if TYPE_CHECKING:
         PhoneNumberResponse,
         PurchasePhoneNumberRequest,
         QueueListResponse,
+        QueueMemberListResponse,
+        QueueMemberResponse,
         QueueResponse,
         UpdateNumberGroupRequest,
         UpdatePhoneNumberRequest,
@@ -80,6 +85,52 @@ class NumberGroupsResource(
         if extras:
             body.update(extras)
         return cast("NumberGroupResponse", self._http.put(self._path(id), body=body))
+
+    def list_memberships(
+        self, number_group_id: str
+    ) -> NumberGroupMembershipListResponse:
+        return cast(
+            "NumberGroupMembershipListResponse",
+            self._http.get(
+                self._path("number_groups", number_group_id, "number_group_memberships")
+            ),
+        )
+
+    def add_membership(
+        self,
+        number_group_id: str,
+        *,
+        phone_number_id: uuid,
+        extras: Mapping[str, Any] | None = None,
+    ) -> NumberGroupMembershipResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {"phone_number_id": phone_number_id}.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast(
+            "NumberGroupMembershipResponse",
+            self._http.post(
+                self._path(
+                    "number_groups", number_group_id, "number_group_memberships"
+                ),
+                body=body,
+            ),
+        )
+
+    def get_membership(self, id: str) -> NumberGroupMembershipResponse:
+        return cast(
+            "NumberGroupMembershipResponse",
+            self._http.get(self._path("number_group_memberships", id)),
+        )
+
+    def delete_membership(self, id: str) -> dict[str, Any]:
+        return cast(
+            "dict[str, Any]",
+            self._http.delete(self._path("number_group_memberships", id)),
+        )
 
 
 class PhoneNumbersResource(
@@ -187,6 +238,12 @@ class PhoneNumbersResource(
             body.update(extras)
         return cast("PhoneNumberResponse", self._http.put(self._path(id), body=body))
 
+    def search(self) -> AvailablePhoneNumbersResponse:
+        return cast(
+            "AvailablePhoneNumbersResponse",
+            self._http.get(self._path("phone_numbers", "search")),
+        )
+
 
 class QueuesResource(
     CrudResource[
@@ -230,6 +287,24 @@ class QueuesResource(
         if extras:
             body.update(extras)
         return cast("QueueResponse", self._http.put(self._path(id), body=body))
+
+    def list_members(self, queue_id: str) -> QueueMemberListResponse:
+        return cast(
+            "QueueMemberListResponse",
+            self._http.get(self._path("queues", queue_id, "members")),
+        )
+
+    def get_next_member(self, queue_id: str) -> QueueMemberResponse:
+        return cast(
+            "QueueMemberResponse",
+            self._http.get(self._path("queues", queue_id, "members", "next")),
+        )
+
+    def get_member(self, queue_id: str, id: str) -> QueueMemberResponse:
+        return cast(
+            "QueueMemberResponse",
+            self._http.get(self._path("queues", queue_id, "members", id)),
+        )
 
 
 class VerifiedCallersResource(
@@ -278,4 +353,31 @@ class VerifiedCallersResource(
             body.update(extras)
         return cast(
             "VerifiedCallerIDResponse", self._http.put(self._path(id), body=body)
+        )
+
+    def redial_verification(self, id: str) -> VerifiedCallerIDResponse:
+        return cast(
+            "VerifiedCallerIDResponse",
+            self._http.post(self._path("verified_caller_ids", id, "verification")),
+        )
+
+    def submit_verification(
+        self,
+        id: str,
+        *,
+        verification_code: str,
+        extras: Mapping[str, Any] | None = None,
+    ) -> VerifiedCallerIDResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {"verification_code": verification_code}.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast(
+            "VerifiedCallerIDResponse",
+            self._http.put(
+                self._path("verified_caller_ids", id, "verification"), body=body
+            ),
         )

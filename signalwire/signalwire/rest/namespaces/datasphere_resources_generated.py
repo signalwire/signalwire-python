@@ -13,10 +13,14 @@ from .._base import CrudResource
 
 if TYPE_CHECKING:
     from .datasphere_types_generated import (
+        ChunkListResponse,
+        ChunkResponse,
         Document,
         DocumentCreateRequest,
         DocumentListResponse,
         DocumentUpdateRequest,
+        SearchResponse,
+        docid,
     )
 
 
@@ -50,3 +54,55 @@ class DatasphereDocumentsResource(
         if extras:
             body.update(extras)
         return cast("Document", self._http.patch(self._path(id), body=body))
+
+    def search(
+        self,
+        *,
+        query_string: str,
+        tags: list[str] | None = None,
+        document_id: docid | None = None,
+        distance: float | None = None,
+        count: int | None = None,
+        language: str | None = None,
+        pos_to_expand: list[str] | None = None,
+        max_synonyms: int | None = None,
+        extras: Mapping[str, Any] | None = None,
+    ) -> SearchResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "tags": tags,
+                "document_id": document_id,
+                "query_string": query_string,
+                "distance": distance,
+                "count": count,
+                "language": language,
+                "pos_to_expand": pos_to_expand,
+                "max_synonyms": max_synonyms,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast(
+            "SearchResponse",
+            self._http.post(self._path("documents", "search"), body=body),
+        )
+
+    def list_chunks(self, document_id: str) -> ChunkListResponse:
+        return cast(
+            "ChunkListResponse",
+            self._http.get(self._path("documents", document_id, "chunks")),
+        )
+
+    def get_chunk(self, document_id: str, chunk_id: str) -> ChunkResponse:
+        return cast(
+            "ChunkResponse",
+            self._http.get(self._path("documents", document_id, "chunks", chunk_id)),
+        )
+
+    def delete_chunk(self, document_id: str, chunk_id: str) -> dict[str, Any]:
+        return cast(
+            "dict[str, Any]",
+            self._http.delete(self._path("documents", document_id, "chunks", chunk_id)),
+        )

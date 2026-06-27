@@ -17,10 +17,13 @@ if TYPE_CHECKING:
         ConferenceSize,
         CreateConferenceRequest,
         CreateRoomRequest,
+        ListConferenceTokensResponse,
         ListConferencesResponse,
         ListRoomsResponse,
+        ListStreamsResponse,
         RoomLayout,
         RoomResponse,
+        Stream,
         UpdateConferenceRequest,
         UpdateRoomRequest,
         VideoLayout,
@@ -160,6 +163,29 @@ class VideoConferencesResource(
             body.update(extras)
         return cast("Conference", self._http.put(self._path(id), body=body))
 
+    def list_conference_tokens(self, id: str) -> ListConferenceTokensResponse:
+        return cast(
+            "ListConferenceTokensResponse",
+            self._http.get(self._path("conferences", id, "conference_tokens")),
+        )
+
+    def list_streams(self, id: str) -> ListStreamsResponse:
+        return cast(
+            "ListStreamsResponse",
+            self._http.get(self._path("conferences", id, "streams")),
+        )
+
+    def create_stream(
+        self, id: str, *, url: str, extras: Mapping[str, Any] | None = None
+    ) -> Stream:
+        body: dict[str, Any] = {k: v for k, v in {"url": url}.items() if v is not None}
+        if extras:
+            body.update(extras)
+        return cast(
+            "Stream",
+            self._http.post(self._path("conferences", id, "streams"), body=body),
+        )
+
 
 class VideoRoomsResource(
     CrudResource[
@@ -255,3 +281,18 @@ class VideoRoomsResource(
         if extras:
             body.update(extras)
         return cast("RoomResponse", self._http.put(self._path(id), body=body))
+
+    def list_streams(self, id: str) -> ListStreamsResponse:
+        return cast(
+            "ListStreamsResponse", self._http.get(self._path("rooms", id, "streams"))
+        )
+
+    def create_stream(
+        self, id: str, *, url: str, extras: Mapping[str, Any] | None = None
+    ) -> Stream:
+        body: dict[str, Any] = {k: v for k, v in {"url": url}.items() if v is not None}
+        if extras:
+            body.update(extras)
+        return cast(
+            "Stream", self._http.post(self._path("rooms", id, "streams"), body=body)
+        )
