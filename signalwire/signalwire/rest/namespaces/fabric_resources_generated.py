@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, cast
 from collections.abc import Mapping
 
-from .._base import FabricResource, FabricResourcePUT
+from .._base import FabricResource
 
 if TYPE_CHECKING:
     from .fabric_types_generated import (
@@ -168,7 +168,7 @@ class AiAgentsResource(
 
 
 class CallFlowsResource(
-    FabricResourcePUT[
+    FabricResource[
         "CallFlowListResponse",
         "CallFlowResponse",
         "CallFlowCreateRequest",
@@ -176,6 +176,8 @@ class CallFlowsResource(
     ]
 ):
     """Typed CRUD resource for ``/resources/call_flows`` (generated)."""
+
+    _update_method = "PUT"
 
     def create(  # type: ignore[override]
         self, *, title: str, extras: Mapping[str, Any] | None = None
@@ -207,7 +209,7 @@ class CallFlowsResource(
 
 
 class ConferenceRoomsResource(
-    FabricResourcePUT[
+    FabricResource[
         "ConferenceRoomListResponse",
         "ConferenceRoomResponse",
         "ConferenceRoomCreateRequest",
@@ -215,6 +217,8 @@ class ConferenceRoomsResource(
     ]
 ):
     """Typed CRUD resource for ``/resources/conference_rooms`` (generated)."""
+
+    _update_method = "PUT"
 
     def create(  # type: ignore[override]
         self,
@@ -320,7 +324,7 @@ class ConferenceRoomsResource(
 
 
 class CxmlScriptsResource(
-    FabricResourcePUT[
+    FabricResource[
         "CXMLScriptListResponse",
         "CXMLScriptResponse",
         "CXMLScriptCreateRequest",
@@ -328,6 +332,8 @@ class CxmlScriptsResource(
     ]
 ):
     """Typed CRUD resource for ``/resources/cxml_scripts`` (generated)."""
+
+    _update_method = "PUT"
 
     def create(  # type: ignore[override]
         self,
@@ -454,7 +460,7 @@ class CxmlWebhooksResource(
 
 
 class FreeswitchConnectorsResource(
-    FabricResourcePUT[
+    FabricResource[
         "FreeswitchConnectorListResponse",
         "FreeswitchConnectorResponse",
         "FreeswitchConnectorCreateRequest",
@@ -462,6 +468,8 @@ class FreeswitchConnectorsResource(
     ]
 ):
     """Typed CRUD resource for ``/resources/freeswitch_connectors`` (generated)."""
+
+    _update_method = "PUT"
 
     def create(  # type: ignore[override]
         self, *, name: str, token: uuid, extras: Mapping[str, Any] | None = None
@@ -502,7 +510,7 @@ class FreeswitchConnectorsResource(
 
 
 class RelayApplicationsResource(
-    FabricResourcePUT[
+    FabricResource[
         "RelayApplicationListResponse",
         "RelayApplicationResponse",
         "RelayApplicationCreateRequest",
@@ -510,6 +518,8 @@ class RelayApplicationsResource(
     ]
 ):
     """Typed CRUD resource for ``/resources/relay_applications`` (generated)."""
+
+    _update_method = "PUT"
 
     def create(  # type: ignore[override]
         self,
@@ -561,7 +571,7 @@ class RelayApplicationsResource(
 
 
 class SipEndpointsResource(
-    FabricResourcePUT[
+    FabricResource[
         "SipEndpointListResponse",
         "SipEndpointResponse",
         "SipEndpointCreateRequest",
@@ -569,6 +579,8 @@ class SipEndpointsResource(
     ]
 ):
     """Typed CRUD resource for ``/resources/sip_endpoints`` (generated)."""
+
+    _update_method = "PUT"
 
     def create(  # type: ignore[override]
         self,
@@ -701,7 +713,7 @@ class SipGatewaysResource(
 
 
 class SubscribersResource(
-    FabricResourcePUT[
+    FabricResource[
         "SubscriberListResponse",
         "SubscriberResponse",
         "SubscriberRequest",
@@ -709,6 +721,8 @@ class SubscribersResource(
     ]
 ):
     """Typed CRUD resource for ``/resources/subscribers`` (generated)."""
+
+    _update_method = "PUT"
 
     def create(  # type: ignore[override]
         self,
@@ -784,7 +798,7 @@ class SubscribersResource(
 
 
 class SwmlScriptsResource(
-    FabricResourcePUT[
+    FabricResource[
         "SwmlScriptListResponse",
         "SwmlScriptResponse",
         "SwmlScriptCreateRequest",
@@ -792,6 +806,8 @@ class SwmlScriptsResource(
     ]
 ):
     """Typed CRUD resource for ``/resources/swml_scripts`` (generated)."""
+
+    _update_method = "PUT"
 
     def create(  # type: ignore[override]
         self,
