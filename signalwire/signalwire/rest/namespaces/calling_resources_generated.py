@@ -27,7 +27,7 @@ if TYPE_CHECKING:
     )
 
 
-class CallingResource(BaseResource):
+class Calling(BaseResource):
     """Typed resource for ``/calls`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -715,3 +715,6 @@ class CallingResource(BaseResource):
             "id": call_id,
         }
         return cast("CallResponse", self._http.post(self._base_path, body=body))
+
+
+CallingNamespace = Calling

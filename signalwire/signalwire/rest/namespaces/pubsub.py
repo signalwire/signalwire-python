@@ -6,10 +6,10 @@ This file is part of the SignalWire SDK.
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
-``PubSubResource`` is generated from the canonical spec (see ``pubsub_resources_generated``)
+``PubSub`` is generated from the canonical spec (see ``pubsub_resources_generated``)
 and re-exported here so existing imports keep working.
 """
 
-from .pubsub_resources_generated import PubSubResource
+from .pubsub_resources_generated import PubSub
 
-__all__ = ["PubSubResource"]
+__all__ = ["PubSub"]

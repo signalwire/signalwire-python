@@ -6,10 +6,10 @@ This file is part of the SignalWire SDK.
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
-``AddressesResource`` is generated from the canonical spec (see
+``Addresses`` is generated from the canonical spec (see
 ``relay_rest_resources_generated``) and re-exported here so existing imports keep working.
 """
 
-from .relay_rest_resources_generated import AddressesResource
+from .relay_rest_resources_generated import Addresses
 
-__all__ = ["AddressesResource"]
+__all__ = ["Addresses"]

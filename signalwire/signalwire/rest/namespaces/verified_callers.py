@@ -8,11 +8,11 @@ See LICENSE file in the project root for full license information.
 
 Verified Caller IDs namespace — CRUD + verification flow.
 
-``VerifiedCallersResource`` is generated from the canonical spec (see
+``VerifiedCallers`` is generated from the canonical spec (see
 ``relay_rest_resources_generated``) and re-exported here so existing imports keep
 working.
 """
 
-from .relay_rest_resources_generated import VerifiedCallersResource
+from .relay_rest_resources_generated import VerifiedCallers
 
-__all__ = ["VerifiedCallersResource"]
+__all__ = ["VerifiedCallers"]

@@ -14,28 +14,18 @@ the thin namespace that groups them under ``client.registry``.
 from typing import Any
 
 from .relay_rest_resources_generated import (
-    RegistryBrandsResource,
-    RegistryCampaignsResource,
-    RegistryNumbersResource,
-    RegistryOrdersResource,
+    RegistryBrands,
+    RegistryCampaigns,
+    RegistryNumbers,
+    RegistryOrders,
 )
-
-# Back-compat aliases for the historical class names.
-RegistryBrands = RegistryBrandsResource
-RegistryCampaigns = RegistryCampaignsResource
-RegistryOrders = RegistryOrdersResource
-RegistryNumbers = RegistryNumbersResource
 
 __all__ = [
     "RegistryBrands",
-    "RegistryBrandsResource",
     "RegistryCampaigns",
-    "RegistryCampaignsResource",
     "RegistryNamespace",
     "RegistryNumbers",
-    "RegistryNumbersResource",
     "RegistryOrders",
-    "RegistryOrdersResource",
 ]
 
 
@@ -43,7 +33,7 @@ class RegistryNamespace:
     """10DLC Campaign Registry namespace."""
 
     def __init__(self, http: Any) -> None:
-        self.brands = RegistryBrandsResource(http)
-        self.campaigns = RegistryCampaignsResource(http)
-        self.orders = RegistryOrdersResource(http)
-        self.numbers = RegistryNumbersResource(http)
+        self.brands = RegistryBrands(http)
+        self.campaigns = RegistryCampaigns(http)
+        self.orders = RegistryOrders(http)
+        self.numbers = RegistryNumbers(http)

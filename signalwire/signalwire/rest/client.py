@@ -13,24 +13,24 @@ import os
 from ._base import HttpClient
 from .namespaces.fabric import FabricNamespace
 from .namespaces.calling import CallingNamespace
-from .namespaces.phone_numbers import PhoneNumbersResource
-from .namespaces.addresses import AddressesResource
-from .namespaces.queues import QueuesResource
-from .namespaces.recordings import RecordingsResource
-from .namespaces.number_groups import NumberGroupsResource
-from .namespaces.verified_callers import VerifiedCallersResource
-from .namespaces.sip_profile import SipProfileResource
-from .namespaces.lookup import LookupResource
-from .namespaces.short_codes import ShortCodesResource
-from .namespaces.imported_numbers import ImportedNumbersResource
-from .namespaces.mfa import MfaResource
+from .namespaces.phone_numbers import PhoneNumbers
+from .namespaces.addresses import Addresses
+from .namespaces.queues import Queues
+from .namespaces.recordings import Recordings
+from .namespaces.number_groups import NumberGroups
+from .namespaces.verified_callers import VerifiedCallers
+from .namespaces.sip_profile import SipProfile
+from .namespaces.lookup import Lookup
+from .namespaces.short_codes import ShortCodes
+from .namespaces.imported_numbers import ImportedNumbers
+from .namespaces.mfa import Mfa
 from .namespaces.registry import RegistryNamespace
 from .namespaces.datasphere import DatasphereNamespace
 from .namespaces.video import VideoNamespace
 from .namespaces.logs import LogsNamespace
 from .namespaces.project import ProjectNamespace
-from .namespaces.pubsub import PubSubResource
-from .namespaces.chat import ChatResource
+from .namespaces.pubsub import PubSub
+from .namespaces.chat import Chat
 from .namespaces.compat import CompatNamespace
 
 
@@ -78,17 +78,17 @@ class RestClient:
         self.calling = CallingNamespace(self._http)
 
         # Relay REST resources
-        self.phone_numbers = PhoneNumbersResource(self._http)
-        self.addresses = AddressesResource(self._http)
-        self.queues = QueuesResource(self._http)
-        self.recordings = RecordingsResource(self._http)
-        self.number_groups = NumberGroupsResource(self._http)
-        self.verified_callers = VerifiedCallersResource(self._http)
-        self.sip_profile = SipProfileResource(self._http)
-        self.lookup = LookupResource(self._http)
-        self.short_codes = ShortCodesResource(self._http)
-        self.imported_numbers = ImportedNumbersResource(self._http)
-        self.mfa = MfaResource(self._http)
+        self.phone_numbers = PhoneNumbers(self._http)
+        self.addresses = Addresses(self._http)
+        self.queues = Queues(self._http)
+        self.recordings = Recordings(self._http)
+        self.number_groups = NumberGroups(self._http)
+        self.verified_callers = VerifiedCallers(self._http)
+        self.sip_profile = SipProfile(self._http)
+        self.lookup = Lookup(self._http)
+        self.short_codes = ShortCodes(self._http)
+        self.imported_numbers = ImportedNumbers(self._http)
+        self.mfa = Mfa(self._http)
         self.registry = RegistryNamespace(self._http)
 
         # Datasphere API
@@ -104,8 +104,8 @@ class RestClient:
         self.project = ProjectNamespace(self._http)
 
         # PubSub & Chat
-        self.pubsub = PubSubResource(self._http)
-        self.chat = ChatResource(self._http)
+        self.pubsub = PubSub(self._http)
+        self.chat = Chat(self._http)
 
         # Compatibility (Twilio-compatible) API
         self.compat = CompatNamespace(self._http, project)

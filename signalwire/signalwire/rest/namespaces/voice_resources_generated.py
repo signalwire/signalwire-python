@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     )
 
 
-class VoiceLogsResource(ReadResource["LogListResponse", "VoiceLog"]):
+class VoiceLogs(ReadResource["LogListResponse", "VoiceLog"]):
     """Typed resource for ``/logs`` (generated)."""
 
     def __init__(self, http: Any) -> None:

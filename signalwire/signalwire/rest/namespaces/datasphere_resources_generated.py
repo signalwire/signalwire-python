@@ -24,7 +24,7 @@ if TYPE_CHECKING:
     )
 
 
-class DatasphereDocumentsResource(
+class DatasphereDocuments(
     CrudResource[
         "DocumentListResponse",
         "Document",

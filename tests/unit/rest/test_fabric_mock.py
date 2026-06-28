@@ -4,7 +4,7 @@ Closes the audit gaps that the legacy ``test_fabric.py`` (which patches
 ``requests.Session``) leaves open: addresses, generic resources operations,
 SIP-endpoint sub-resources on subscribers, the call-flows / conference-rooms
 addresses sub-paths, the full ``FabricTokens`` surface, and the
-``CxmlApplicationsResource.create`` deliberate-failure path.
+``CxmlApplications.create`` deliberate-failure path.
 
 Each test:
 
@@ -54,7 +54,7 @@ class TestFabricAddresses:
 
 
 # ---------------------------------------------------------------------------
-# CxmlApplicationsResource.create — deliberate NotImplementedError
+# CxmlApplications.create — deliberate NotImplementedError
 # ---------------------------------------------------------------------------
 
 
@@ -77,7 +77,7 @@ class TestCxmlApplicationsCreate:
 
 
 # ---------------------------------------------------------------------------
-# CallFlowsResource.list_addresses — singular 'call_flow' subpath
+# CallFlows.list_addresses — singular 'call_flow' subpath
 # ---------------------------------------------------------------------------
 
 
@@ -103,7 +103,7 @@ class TestCallFlowsAddresses:
 
 
 # ---------------------------------------------------------------------------
-# ConferenceRoomsResource.list_addresses — singular 'conference_room' subpath
+# ConferenceRooms.list_addresses — singular 'conference_room' subpath
 # ---------------------------------------------------------------------------
 
 

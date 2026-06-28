@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     )
 
 
-class PubSubResource(BaseResource):
+class PubSub(BaseResource):
     """Typed resource for ``/tokens`` (generated)."""
 
     def __init__(self, http: Any) -> None:

@@ -1,5 +1,5 @@
 """Full success + error coverage for ``client.fabric.subscribers``
-(``SubscribersResource``).
+(``Subscribers``).
 
 Mirrors the ``test_fabric_ai_agents_full_mock`` micro-template: a SUCCESS test
 (call the real SDK method against the live mock, assert the parsed body shape +

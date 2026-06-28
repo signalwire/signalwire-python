@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     )
 
 
-class VideoConferenceTokensResource(BaseResource):
+class VideoConferenceTokens(BaseResource):
     """Typed resource for ``/conference_tokens`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -59,7 +59,7 @@ class VideoConferenceTokensResource(BaseResource):
         return cast("ConferenceToken", self._http.post(self._path(id, "reset")))
 
 
-class VideoConferencesResource(
+class VideoConferences(
     CrudResource[
         "ListConferencesResponse",
         "Conference",
@@ -217,7 +217,7 @@ class VideoConferencesResource(
         return cast("Stream", self._http.post(self._path(id, "streams"), body=body))
 
 
-class VideoRoomRecordingsResource(BaseResource):
+class VideoRoomRecordings(BaseResource):
     """Typed resource for ``/room_recordings`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -244,9 +244,7 @@ class VideoRoomRecordingsResource(BaseResource):
         )
 
 
-class VideoRoomSessionsResource(
-    ReadResource["ListRoomSessionsResponse", "RoomSessionSummary"]
-):
+class VideoRoomSessions(ReadResource["ListRoomSessionsResponse", "RoomSessionSummary"]):
     """Typed resource for ``/room_sessions`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -273,7 +271,7 @@ class VideoRoomSessionsResource(
         )
 
 
-class VideoRoomTokensResource(BaseResource):
+class VideoRoomTokens(BaseResource):
     """Typed resource for ``/room_tokens`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -331,7 +329,7 @@ class VideoRoomTokensResource(BaseResource):
         return cast("RoomTokenResponse", self._http.post(self._base_path, body=body))
 
 
-class VideoRoomsResource(
+class VideoRooms(
     CrudResource[
         "ListRoomsResponse", "RoomResponse", "CreateRoomRequest", "UpdateRoomRequest"
     ]
@@ -444,7 +442,7 @@ class VideoRoomsResource(
         return cast("Stream", self._http.post(self._path(id, "streams"), body=body))
 
 
-class VideoStreamsResource(BaseResource):
+class VideoStreams(BaseResource):
     """Typed resource for ``/streams`` (generated)."""
 
     def __init__(self, http: Any) -> None:

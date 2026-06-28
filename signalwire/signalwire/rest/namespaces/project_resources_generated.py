@@ -18,7 +18,7 @@ if TYPE_CHECKING:
     )
 
 
-class ProjectTokensResource(BaseResource):
+class ProjectTokens(BaseResource):
     """Typed resource for ``/tokens`` (generated)."""
 
     def __init__(self, http: Any) -> None:

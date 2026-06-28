@@ -22,22 +22,22 @@ from .._base import (
     TUpdate,
 )
 from .fabric_resources_generated import (
-    AiAgentsResource,
-    CallFlowsResource,
-    ConferenceRoomsResource,
-    CxmlApplicationsResource,
-    CxmlScriptsResource,
-    CxmlWebhooksResource,
-    FabricAddressesResource,
-    FabricTokensResource,
-    FreeswitchConnectorsResource,
-    GenericResourcesResource,
-    RelayApplicationsResource,
-    SipEndpointsResource,
-    SipGatewaysResource,
-    SubscribersResource,
-    SwmlScriptsResource,
-    SwmlWebhooksResource,
+    AiAgents,
+    CallFlows,
+    ConferenceRooms,
+    CxmlApplications,
+    CxmlScripts,
+    CxmlWebhooks,
+    FabricAddresses,
+    FabricTokens,
+    FreeswitchConnectors,
+    GenericResources,
+    RelayApplications,
+    SipEndpoints,
+    SipGateways,
+    Subscribers,
+    SwmlScripts,
+    SwmlWebhooks,
 )
 
 if TYPE_CHECKING:
@@ -118,7 +118,7 @@ if TYPE_CHECKING:
 # without an import cycle. They remain importable from this module via that import.
 
 
-# ``SwmlWebhooksResource`` / ``CxmlWebhooksResource`` are now plain generated typed
+# ``SwmlWebhooks`` / ``CxmlWebhooks`` are now plain generated typed
 # CRUD resources (see ``fabric_resources_generated``), imported above. The former
 # ``AutoMaterializedWebhook`` deprecation-warning wrapper was removed — these SDKs are
 # pre-release, so there is no back-compat to deprecate. The phone-number binding model
@@ -126,13 +126,9 @@ if TYPE_CHECKING:
 # to auto-materialize a webhook; direct create is just a normal operation.
 
 
-# Group-B resources (CallFlows/ConferenceRooms/Subscribers/CxmlApplications) and the
-# fabric-root resources (GenericResources/FabricAddresses/FabricTokens) are now generated
-# (see ``fabric_resources_generated``), imported above. Back-compat aliases keep the
-# historical class names working.
-GenericResources = GenericResourcesResource
-FabricAddresses = FabricAddressesResource
-FabricTokens = FabricTokensResource
+# All fabric resources — group-B (CallFlows/ConferenceRooms/Subscribers/
+# CxmlApplications) and the fabric-root resources (GenericResources/FabricAddresses/
+# FabricTokens) — are generated (see ``fabric_resources_generated``), imported above.
 
 
 class FabricNamespace:
@@ -142,25 +138,25 @@ class FabricNamespace:
         # Every fabric resource is generated (see ``fabric_resources_generated``) and
         # bakes its own base path into ``__init__``, so each constructs as
         # ``Resource(http)``.
-        self.swml_scripts = SwmlScriptsResource(http)
-        self.relay_applications = RelayApplicationsResource(http)
-        self.call_flows = CallFlowsResource(http)
-        self.conference_rooms = ConferenceRoomsResource(http)
-        self.freeswitch_connectors = FreeswitchConnectorsResource(http)
-        self.subscribers = SubscribersResource(http)
-        self.sip_endpoints = SipEndpointsResource(http)
-        self.cxml_scripts = CxmlScriptsResource(http)
-        self.cxml_applications = CxmlApplicationsResource(http)
+        self.swml_scripts = SwmlScripts(http)
+        self.relay_applications = RelayApplications(http)
+        self.call_flows = CallFlows(http)
+        self.conference_rooms = ConferenceRooms(http)
+        self.freeswitch_connectors = FreeswitchConnectors(http)
+        self.subscribers = Subscribers(http)
+        self.sip_endpoints = SipEndpoints(http)
+        self.cxml_scripts = CxmlScripts(http)
+        self.cxml_applications = CxmlApplications(http)
 
         # PATCH-update resources. ``swml_webhooks`` / ``cxml_webhooks`` are normally
         # auto-materialized via ``phone_numbers.set_swml_webhook`` /
         # ``set_cxml_webhook``; direct create is a normal operation.
-        self.swml_webhooks = SwmlWebhooksResource(http)
-        self.ai_agents = AiAgentsResource(http)
-        self.sip_gateways = SipGatewaysResource(http)
-        self.cxml_webhooks = CxmlWebhooksResource(http)
+        self.swml_webhooks = SwmlWebhooks(http)
+        self.ai_agents = AiAgents(http)
+        self.sip_gateways = SipGateways(http)
+        self.cxml_webhooks = CxmlWebhooks(http)
 
         # Fabric-root resources (not under /resources).
-        self.resources = GenericResourcesResource(http)
-        self.addresses = FabricAddressesResource(http)
-        self.tokens = FabricTokensResource(http)
+        self.resources = GenericResources(http)
+        self.addresses = FabricAddresses(http)
+        self.tokens = FabricTokens(http)

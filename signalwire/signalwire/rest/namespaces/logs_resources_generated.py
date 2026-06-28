@@ -16,7 +16,7 @@ if TYPE_CHECKING:
     )
 
 
-class ConferenceLogsResource(BaseResource):
+class ConferenceLogs(BaseResource):
     """Typed resource for ``/conferences`` (generated)."""
 
     def __init__(self, http: Any) -> None:

@@ -19,7 +19,7 @@ if TYPE_CHECKING:
     )
 
 
-class ChatResource(BaseResource):
+class Chat(BaseResource):
     """Typed resource for ``/tokens`` (generated)."""
 
     def __init__(self, http: Any) -> None:

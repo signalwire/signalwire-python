@@ -12,16 +12,15 @@ The document resource is generated from the canonical spec (see
 ``datasphere_resources_generated``).
 """
 
-from .datasphere_resources_generated import DatasphereDocumentsResource
+from typing import Any
 
-# Back-compat alias: the resource was historically named ``DatasphereDocuments``.
-DatasphereDocuments = DatasphereDocumentsResource
+from .datasphere_resources_generated import DatasphereDocuments
 
-__all__ = ["DatasphereDocuments", "DatasphereDocumentsResource", "DatasphereNamespace"]
+__all__ = ["DatasphereDocuments", "DatasphereNamespace"]
 
 
 class DatasphereNamespace:
     """Datasphere API namespace."""
 
-    def __init__(self, http):
-        self.documents = DatasphereDocumentsResource(http)
+    def __init__(self, http: Any) -> None:
+        self.documents = DatasphereDocuments(http)

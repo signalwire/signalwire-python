@@ -103,14 +103,14 @@ if TYPE_CHECKING:
     )
 
 
-class FabricAddressesResource(ReadResource["FabricAddressesResponse", "FabricAddress"]):
+class FabricAddresses(ReadResource["FabricAddressesResponse", "FabricAddress"]):
     """Typed resource for ``/addresses`` (generated)."""
 
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/addresses")
 
 
-class GenericResourcesResource(BaseResource):
+class GenericResources(BaseResource):
     """Typed resource for ``/resources`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -176,7 +176,7 @@ class GenericResourcesResource(BaseResource):
         )
 
 
-class AiAgentsResource(
+class AiAgents(
     FabricResource[
         "AIAgentListResponse",
         "AIAgentResponse",
@@ -266,7 +266,7 @@ class AiAgentsResource(
         return cast("AIAgentResponse", self._http.patch(self._path(id), body=body))
 
 
-class CallFlowsResource(
+class CallFlows(
     FabricResource[
         "CallFlowListResponse",
         "CallFlowResponse",
@@ -338,7 +338,7 @@ class CallFlowsResource(
         )
 
 
-class ConferenceRoomsResource(
+class ConferenceRooms(
     FabricResource[
         "ConferenceRoomListResponse",
         "ConferenceRoomResponse",
@@ -467,7 +467,7 @@ class ConferenceRoomsResource(
         )
 
 
-class CxmlApplicationsResource(BaseResource):
+class CxmlApplications(BaseResource):
     """Typed resource for ``/resources/cxml_applications`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -543,7 +543,7 @@ class CxmlApplicationsResource(BaseResource):
         )
 
 
-class CxmlScriptsResource(
+class CxmlScripts(
     FabricResource[
         "CXMLScriptListResponse",
         "CXMLScriptResponse",
@@ -607,7 +607,7 @@ class CxmlScriptsResource(
         return cast("CXMLScriptResponse", self._http.put(self._path(id), body=body))
 
 
-class CxmlWebhooksResource(
+class CxmlWebhooks(
     FabricResource[
         "CXMLWebhookListResponse",
         "CXMLWebhookResponse",
@@ -685,7 +685,7 @@ class CxmlWebhooksResource(
         return cast("CXMLWebhookResponse", self._http.patch(self._path(id), body=body))
 
 
-class FreeswitchConnectorsResource(
+class FreeswitchConnectors(
     FabricResource[
         "FreeswitchConnectorListResponse",
         "FreeswitchConnectorResponse",
@@ -738,7 +738,7 @@ class FreeswitchConnectorsResource(
         )
 
 
-class RelayApplicationsResource(
+class RelayApplications(
     FabricResource[
         "RelayApplicationListResponse",
         "RelayApplicationResponse",
@@ -802,7 +802,7 @@ class RelayApplicationsResource(
         )
 
 
-class SipEndpointsResource(
+class SipEndpoints(
     FabricResource[
         "SipEndpointListResponse",
         "SipEndpointResponse",
@@ -884,7 +884,7 @@ class SipEndpointsResource(
         return cast("SipEndpointResponse", self._http.put(self._path(id), body=body))
 
 
-class SipGatewaysResource(
+class SipGateways(
     FabricResource[
         "SipGatewayListResponse",
         "SipGatewayResponse",
@@ -950,7 +950,7 @@ class SipGatewaysResource(
         return cast("SipGatewayResponse", self._http.patch(self._path(id), body=body))
 
 
-class SubscribersResource(
+class Subscribers(
     FabricResource[
         "SubscriberListResponse",
         "SubscriberResponse",
@@ -1136,7 +1136,7 @@ class SubscribersResource(
         )
 
 
-class SwmlScriptsResource(
+class SwmlScripts(
     FabricResource[
         "SwmlScriptListResponse",
         "SwmlScriptResponse",
@@ -1196,7 +1196,7 @@ class SwmlScriptsResource(
         return cast("SwmlScriptResponse", self._http.put(self._path(id), body=body))
 
 
-class SwmlWebhooksResource(
+class SwmlWebhooks(
     FabricResource[
         "SWMLWebhookListResponse",
         "SWMLWebhookResponse",
@@ -1274,7 +1274,7 @@ class SwmlWebhooksResource(
         return cast("SWMLWebhookResponse", self._http.patch(self._path(id), body=body))
 
 
-class FabricTokensResource(BaseResource):
+class FabricTokens(BaseResource):
     """Typed resource for ```` (generated)."""
 
     def __init__(self, http: Any) -> None:

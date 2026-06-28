@@ -14,27 +14,17 @@ from its own spec (``x-sdk-resource`` with ``namespace: logs``) and composed her
 
 from typing import Any
 
-from .fax_resources_generated import FaxLogsResource
-from .logs_resources_generated import ConferenceLogsResource
-from .message_resources_generated import MessageLogsResource
-from .voice_resources_generated import VoiceLogsResource
-
-# Back-compat aliases for the historical class names.
-MessageLogs = MessageLogsResource
-VoiceLogs = VoiceLogsResource
-FaxLogs = FaxLogsResource
-ConferenceLogs = ConferenceLogsResource
+from .fax_resources_generated import FaxLogs
+from .logs_resources_generated import ConferenceLogs
+from .message_resources_generated import MessageLogs
+from .voice_resources_generated import VoiceLogs
 
 __all__ = [
     "ConferenceLogs",
-    "ConferenceLogsResource",
     "FaxLogs",
-    "FaxLogsResource",
     "LogsNamespace",
     "MessageLogs",
-    "MessageLogsResource",
     "VoiceLogs",
-    "VoiceLogsResource",
 ]
 
 
@@ -42,7 +32,7 @@ class LogsNamespace:
     """Logs API namespace — groups per-product log resources under ``client.logs``."""
 
     def __init__(self, http: Any) -> None:
-        self.messages = MessageLogsResource(http)
-        self.voice = VoiceLogsResource(http)
-        self.fax = FaxLogsResource(http)
-        self.conferences = ConferenceLogsResource(http)
+        self.messages = MessageLogs(http)
+        self.voice = VoiceLogs(http)
+        self.fax = FaxLogs(http)
+        self.conferences = ConferenceLogs(http)

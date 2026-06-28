@@ -8,11 +8,11 @@ See LICENSE file in the project root for full license information.
 
 Number Groups namespace — CRUD + membership management.
 
-``NumberGroupsResource`` is generated from the canonical spec (see
+``NumberGroups`` is generated from the canonical spec (see
 ``relay_rest_resources_generated``) and re-exported here so existing imports keep
 working.
 """
 
-from .relay_rest_resources_generated import NumberGroupsResource
+from .relay_rest_resources_generated import NumberGroups
 
-__all__ = ["NumberGroupsResource"]
+__all__ = ["NumberGroups"]

@@ -63,7 +63,7 @@ if TYPE_CHECKING:
     )
 
 
-class AddressesResource(BaseResource):
+class Addresses(BaseResource):
     """Typed resource for ``/addresses`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -121,7 +121,7 @@ class AddressesResource(BaseResource):
         return cast("dict[str, Any]", self._http.delete(self._path(id)))
 
 
-class ImportedNumbersResource(BaseResource):
+class ImportedNumbers(BaseResource):
     """Typed resource for ``/imported_phone_numbers`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -149,7 +149,7 @@ class ImportedNumbersResource(BaseResource):
         return cast("PhoneNumberResponse", self._http.post(self._base_path, body=body))
 
 
-class LookupResource(BaseResource):
+class Lookup(BaseResource):
     """Typed resource for ``/lookup`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -166,7 +166,7 @@ class LookupResource(BaseResource):
         )
 
 
-class MfaResource(BaseResource):
+class Mfa(BaseResource):
     """Typed resource for ``/mfa`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -244,7 +244,7 @@ class MfaResource(BaseResource):
         )
 
 
-class NumberGroupsResource(
+class NumberGroups(
     CrudResource[
         "NumberGroupListResponse",
         "NumberGroupResponse",
@@ -340,7 +340,7 @@ class NumberGroupsResource(
         )
 
 
-class PhoneNumbersResource(
+class PhoneNumbers(
     CrudResource[
         "PhoneNumberListResponse",
         "PhoneNumberResponse",
@@ -532,7 +532,7 @@ class PhoneNumbersResource(
         return cast("PhoneNumberResponse", self.update(resource_id, **body))
 
 
-class QueuesResource(
+class Queues(
     CrudResource[
         "QueueListResponse", "QueueResponse", "CreateQueueRequest", "UpdateQueueRequest"
     ]
@@ -599,7 +599,7 @@ class QueuesResource(
         )
 
 
-class RecordingsResource(BaseResource):
+class Recordings(BaseResource):
     """Typed resource for ``/recordings`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -620,7 +620,7 @@ class RecordingsResource(BaseResource):
         return cast("dict[str, Any]", self._http.delete(self._path(id)))
 
 
-class RegistryBrandsResource(BaseResource):
+class RegistryBrands(BaseResource):
     """Typed resource for ``/registry/beta/brands`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -655,7 +655,7 @@ class RegistryBrandsResource(BaseResource):
         )
 
 
-class RegistryCampaignsResource(BaseResource):
+class RegistryCampaigns(BaseResource):
     """Typed resource for ``/registry/beta/campaigns`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -715,7 +715,7 @@ class RegistryCampaignsResource(BaseResource):
         )
 
 
-class RegistryNumbersResource(BaseResource):
+class RegistryNumbers(BaseResource):
     """Typed resource for ``/registry/beta/numbers`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -725,7 +725,7 @@ class RegistryNumbersResource(BaseResource):
         return cast("dict[str, Any]", self._http.delete(self._path(id)))
 
 
-class RegistryOrdersResource(BaseResource):
+class RegistryOrders(BaseResource):
     """Typed resource for ``/registry/beta/orders`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -737,7 +737,7 @@ class RegistryOrdersResource(BaseResource):
         )
 
 
-class ShortCodesResource(BaseResource):
+class ShortCodes(BaseResource):
     """Typed resource for ``/short_codes`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -787,7 +787,7 @@ class ShortCodesResource(BaseResource):
         return cast("ShortCodeResponse", self._http.put(self._path(id), body=body))
 
 
-class SipProfileResource(BaseResource):
+class SipProfile(BaseResource):
     """Typed resource for ``/sip_profile`` (generated)."""
 
     def __init__(self, http: Any) -> None:
@@ -824,7 +824,7 @@ class SipProfileResource(BaseResource):
         return cast("SipProfileResponse", self._http.put(self._base_path, body=body))
 
 
-class VerifiedCallersResource(
+class VerifiedCallers(
     CrudResource[
         "VerifiedCallerIDListResponse",
         "VerifiedCallerIDResponse",

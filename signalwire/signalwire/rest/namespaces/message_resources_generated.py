@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     )
 
 
-class MessageLogsResource(ReadResource["LogListResponse", "LogRetrieveResponse"]):
+class MessageLogs(ReadResource["LogListResponse", "LogRetrieveResponse"]):
     """Typed resource for ``/logs`` (generated)."""
 
     def __init__(self, http: Any) -> None:

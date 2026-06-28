@@ -6,10 +6,10 @@ This file is part of the SignalWire SDK.
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
-``LookupResource`` is generated from the canonical spec (see
+``Lookup`` is generated from the canonical spec (see
 ``relay_rest_resources_generated``) and re-exported here so existing imports keep working.
 """
 
-from .relay_rest_resources_generated import LookupResource
+from .relay_rest_resources_generated import Lookup
 
-__all__ = ["LookupResource"]
+__all__ = ["Lookup"]

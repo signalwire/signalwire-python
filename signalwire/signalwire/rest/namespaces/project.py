@@ -13,16 +13,13 @@ exposes it as ``client.project.tokens``.
 
 from typing import Any
 
-from .project_resources_generated import ProjectTokensResource
+from .project_resources_generated import ProjectTokens
 
-# Back-compat alias for the historical class name.
-ProjectTokens = ProjectTokensResource
-
-__all__ = ["ProjectNamespace", "ProjectTokens", "ProjectTokensResource"]
+__all__ = ["ProjectNamespace", "ProjectTokens"]
 
 
 class ProjectNamespace:
     """Project API namespace."""
 
     def __init__(self, http: Any) -> None:
-        self.tokens = ProjectTokensResource(http)
+        self.tokens = ProjectTokens(http)
