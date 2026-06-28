@@ -13,7 +13,6 @@ import os
 
 from ._base import HttpClient
 from .namespaces._client_tree_generated import _GeneratedResourceTree
-from .namespaces.compat import CompatNamespace
 
 
 class RestClient(_GeneratedResourceTree):
@@ -35,11 +34,9 @@ class RestClient(_GeneratedResourceTree):
         client.calling.play(call_id, play=[...])
         client.phone_numbers.search(area_code="512")
         client.video.rooms.create(name="standup")
-        client.compat.calls.list()
 
     The resource object tree (flat resources + namespace containers) is generated from
-    the specs (``_GeneratedResourceTree._wire_resources``); this class owns only auth and
-    the still-hand-written ``compat`` namespace.
+    the specs (``_GeneratedResourceTree._wire_resources``); this class owns only auth.
     """
 
     def __init__(
@@ -64,6 +61,3 @@ class RestClient(_GeneratedResourceTree):
 
         # Generated resource tree (flat resources + namespace containers).
         self._wire_resources(self._http)
-
-        # Compatibility (Twilio-compatible) API — still hand-written (removal pending).
-        self.compat = CompatNamespace(self._http, project)

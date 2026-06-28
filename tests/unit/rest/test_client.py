@@ -10,7 +10,6 @@ from signalwire.rest.namespaces._client_tree_generated import (
     VideoNamespace,
 )
 from signalwire.rest.namespaces.calling_resources_generated import Calling
-from signalwire.rest.namespaces.compat import CompatNamespace
 
 
 class TestRestClient:
@@ -42,7 +41,6 @@ class TestRestClient:
         assert isinstance(client.fabric, FabricNamespace)
         assert isinstance(client.calling, Calling)
         assert isinstance(client.video, VideoNamespace)
-        assert isinstance(client.compat, CompatNamespace)
         assert hasattr(client, "phone_numbers")
         assert hasattr(client, "addresses")
         assert hasattr(client, "queues")

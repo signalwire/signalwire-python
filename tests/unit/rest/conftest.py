@@ -26,8 +26,8 @@ Two test backends coexist:
 
    Isolation key (REST is pure request/response, no session handshake): each
    ``signalwire_client`` authenticates with a unique random token
-   ``test_tok_<12 hex>`` (project stays the constant ``test_proj`` so the LAML
-   ``Accounts/test_proj/...`` paths the compat tests assert on stay stable), so
+   ``test_tok_<12 hex>`` (project stays the constant ``test_proj`` so any
+   project-scoped paths stay stable), so
    its ``Authorization: Basic base64(project:token)`` header is unique.  ``mock``
    filters the shared global journal by that header
    (lowercased ``authorization``); ``mock.reset()`` is a no-op for a scoped view
@@ -38,12 +38,12 @@ Two test backends coexist:
 
    Usage::
 
-       def test_compat_calls_get(signalwire_client, mock):
-           res = signalwire_client.compat.calls.get("CA_TEST_SID")
-           assert "sid" in res
+       def test_queue_get(signalwire_client, mock):
+           res = signalwire_client.queues.get("queue-1")
+           assert isinstance(res, dict)
            j = mock.last_request()
            assert j.method == "GET"
-           assert j.path.endswith("/Calls/CA_TEST_SID")
+           assert j.path.endswith("/queues/queue-1")
 
 The two backends are independent — a test may use either, but not both at once.
 """

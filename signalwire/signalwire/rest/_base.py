@@ -144,11 +144,10 @@ class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TU
         return cast(TItem, self._http.post(self._base_path, body=kwargs))
 
     def update(self, resource_id: str, /, **kwargs: Any) -> TItem:
-        # resource_id is positional-only so compat subclasses may name it
-        # `sid` (Twilio convention) without an LSP override conflict. Same
-        # contract as ``create``: honest ``**kwargs: Any`` fallback; the concrete
-        # generated override carries the closed typed shape, the binding carries
-        # TUpdate for the oracle.
+        # resource_id is positional-only so a subclass may rename it without an LSP
+        # override conflict. Same contract as ``create``: honest ``**kwargs: Any``
+        # fallback; the concrete generated override carries the closed typed shape, the
+        # binding carries TUpdate for the oracle.
         method = getattr(self._http, self._update_method.lower())
         return cast(TItem, method(self._path(resource_id), body=kwargs))
 

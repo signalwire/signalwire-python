@@ -1,4 +1,4 @@
-"""Tests for remaining namespaces — phone_numbers, video, compat, datasphere, etc."""
+"""Tests for remaining namespaces — phone_numbers, video, datasphere, etc."""
 
 from .conftest import MockResponse
 
@@ -202,64 +202,6 @@ class TestRegistry:
         client.registry.campaigns.list_orders("camp-1")
         mock_session.request.assert_called_with(
             "GET", "https://test.signalwire.com/api/relay/rest/registry/beta/campaigns/camp-1/orders",
-            json=None, params=None,
-        )
-
-
-class TestCompat:
-    def test_calls_list(self, client, mock_session):
-        mock_session.request.return_value = MockResponse(200, {"calls": []})
-        client.compat.calls.list()
-        mock_session.request.assert_called_with(
-            "GET", "https://test.signalwire.com/api/laml/2010-04-01/Accounts/test-project-id/Calls",
-            json=None, params=None,
-        )
-
-    def test_calls_update_uses_post(self, client, mock_session):
-        mock_session.request.return_value = MockResponse(200, {})
-        client.compat.calls.update("CA123", Status="completed")
-        mock_session.request.assert_called_with(
-            "POST", "https://test.signalwire.com/api/laml/2010-04-01/Accounts/test-project-id/Calls/CA123",
-            json={"Status": "completed"}, params=None,
-        )
-
-    def test_call_start_recording(self, client, mock_session):
-        mock_session.request.return_value = MockResponse(201, {})
-        client.compat.calls.start_recording("CA123", channels="dual")
-        mock_session.request.assert_called_with(
-            "POST", "https://test.signalwire.com/api/laml/2010-04-01/Accounts/test-project-id/Calls/CA123/Recordings",
-            json={"channels": "dual"}, params=None,
-        )
-
-    def test_messages_media(self, client, mock_session):
-        mock_session.request.return_value = MockResponse(200, {"media": []})
-        client.compat.messages.list_media("MM123")
-        mock_session.request.assert_called_with(
-            "GET", "https://test.signalwire.com/api/laml/2010-04-01/Accounts/test-project-id/Messages/MM123/Media",
-            json=None, params=None,
-        )
-
-    def test_conference_participants(self, client, mock_session):
-        mock_session.request.return_value = MockResponse(200, {"participants": []})
-        client.compat.conferences.list_participants("CF123")
-        mock_session.request.assert_called_with(
-            "GET", "https://test.signalwire.com/api/laml/2010-04-01/Accounts/test-project-id/Conferences/CF123/Participants",
-            json=None, params=None,
-        )
-
-    def test_phone_numbers_search_local(self, client, mock_session):
-        mock_session.request.return_value = MockResponse(200, {"available": []})
-        client.compat.phone_numbers.search_local("US", AreaCode="512")
-        mock_session.request.assert_called_with(
-            "GET", "https://test.signalwire.com/api/laml/2010-04-01/Accounts/test-project-id/AvailablePhoneNumbers/US/Local",
-            json=None, params={"AreaCode": "512"},
-        )
-
-    def test_accounts_list(self, client, mock_session):
-        mock_session.request.return_value = MockResponse(200, {"accounts": []})
-        client.compat.accounts.list()
-        mock_session.request.assert_called_with(
-            "GET", "https://test.signalwire.com/api/laml/2010-04-01/Accounts",
             json=None, params=None,
         )
 
