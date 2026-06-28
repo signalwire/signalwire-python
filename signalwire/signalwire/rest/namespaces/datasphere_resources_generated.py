@@ -32,7 +32,7 @@ class DatasphereDocumentsResource(
         "DocumentUpdateRequest",
     ]
 ):
-    """Typed CRUD resource for ``/documents`` (generated)."""
+    """Typed resource for ``/documents`` (generated)."""
 
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/datasphere/documents")

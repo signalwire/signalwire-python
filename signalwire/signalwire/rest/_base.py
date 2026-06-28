@@ -96,19 +96,32 @@ class BaseResource:
         return "/".join([self._base_path] + [str(p) for p in parts])
 
 
-class CrudResource(BaseResource, Generic[TList, TItem, TCreate, TUpdate]):
-    """Standard CRUD resource with list/create/get/update/delete.
+class ReadResource(BaseResource, Generic[TList, TItem]):
+    """Read-only resource with list + get (no create/update/delete).
 
-    Generic over the spec-generated response/request types so each concrete
-    resource publishes its real per-operation shapes (the signature oracle
-    resolves the subclass's binding). At runtime every method still returns the
-    raw server JSON dict — the type params are static only.
+    The shared base for read-only surfaces (e.g. the per-product log resources).
+    ``CrudResource`` extends this with the write operations, so list/get are
+    defined once here.
     """
-
-    _update_method = "PATCH"
 
     def list(self, **params: Any) -> TList:
         return self._http.get(self._base_path, params=params or None)
+
+    def get(self, resource_id: str) -> TItem:
+        return self._http.get(self._path(resource_id))
+
+
+class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TUpdate]):
+    """Standard CRUD resource with list/create/get/update/delete.
+
+    Extends ``ReadResource`` (list + get) with create/update/delete. Generic over
+    the spec-generated response/request types so each concrete resource publishes
+    its real per-operation shapes (the signature oracle resolves the subclass's
+    binding). At runtime every method still returns the raw server JSON dict — the
+    type params are static only.
+    """
+
+    _update_method = "PATCH"
 
     def create(self, **kwargs: Any) -> TItem:
         # Honest fallback: the body accepts arbitrary wire fields and at runtime
@@ -119,9 +132,6 @@ class CrudResource(BaseResource, Generic[TList, TItem, TCreate, TUpdate]):
         # bare ``**kwargs: TCreate`` here is wrong — it would type each kwarg
         # VALUE as a whole TCreate — and is what the generated overrides replace.)
         return self._http.post(self._base_path, body=kwargs)
-
-    def get(self, resource_id: str) -> TItem:
-        return self._http.get(self._path(resource_id))
 
     def update(self, resource_id: str, /, **kwargs: Any) -> TItem:
         # resource_id is positional-only so compat subclasses may name it

@@ -6,62 +6,43 @@ This file is part of the SignalWire SDK.
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
-Logs namespace — message, voice, fax, and conference logs (read-only).
+Logs namespace — a convenience view that groups each product's logs under one
+``client.logs`` accessor. The log resources themselves live with their product APIs
+(messaging/voice/fax) and the standalone logs API (conferences); each is generated
+from its own spec (``x-sdk-resource`` with ``namespace: logs``) and composed here.
 """
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from .._base import BaseResource
+from .fax_resources_generated import FaxLogsResource
+from .logs_resources_generated import ConferenceLogsResource
+from .message_resources_generated import MessageLogsResource
+from .voice_resources_generated import VoiceLogsResource
 
-if TYPE_CHECKING:
-    from .logs_types_generated import ConferencesResponse
+# Back-compat aliases for the historical class names.
+MessageLogs = MessageLogsResource
+VoiceLogs = VoiceLogsResource
+FaxLogs = FaxLogsResource
+ConferenceLogs = ConferenceLogsResource
 
-
-class MessageLogs(BaseResource):
-    """Message log queries."""
-
-    def list(self, **params: Any) -> dict[str, Any]:
-        return self._http.get(self._base_path, params=params or None)
-
-    def get(self, log_id: str) -> dict[str, Any]:
-        return self._http.get(self._path(log_id))
-
-
-class VoiceLogs(BaseResource):
-    """Voice log queries."""
-
-    def list(self, **params: Any) -> dict[str, Any]:
-        return self._http.get(self._base_path, params=params or None)
-
-    def get(self, log_id: str) -> dict[str, Any]:
-        return self._http.get(self._path(log_id))
-
-    def list_events(self, log_id: str, **params: Any) -> dict[str, Any]:
-        return self._http.get(self._path(log_id, "events"), params=params or None)
-
-
-class FaxLogs(BaseResource):
-    """Fax log queries."""
-
-    def list(self, **params: Any) -> dict[str, Any]:
-        return self._http.get(self._base_path, params=params or None)
-
-    def get(self, log_id: str) -> dict[str, Any]:
-        return self._http.get(self._path(log_id))
-
-
-class ConferenceLogs(BaseResource):
-    """Conference log queries."""
-
-    def list(self, **params: Any) -> "ConferencesResponse":
-        return self._http.get(self._base_path, params=params or None)
+__all__ = [
+    "ConferenceLogs",
+    "ConferenceLogsResource",
+    "FaxLogs",
+    "FaxLogsResource",
+    "LogsNamespace",
+    "MessageLogs",
+    "MessageLogsResource",
+    "VoiceLogs",
+    "VoiceLogsResource",
+]
 
 
 class LogsNamespace:
-    """Logs API namespace."""
+    """Logs API namespace — groups per-product log resources under ``client.logs``."""
 
     def __init__(self, http: Any) -> None:
-        self.messages = MessageLogs(http, "/api/messaging/logs")
-        self.voice = VoiceLogs(http, "/api/voice/logs")
-        self.fax = FaxLogs(http, "/api/fax/logs")
-        self.conferences = ConferenceLogs(http, "/api/logs/conferences")
+        self.messages = MessageLogsResource(http)
+        self.voice = VoiceLogsResource(http)
+        self.fax = FaxLogsResource(http)
+        self.conferences = ConferenceLogsResource(http)

@@ -48,7 +48,7 @@ class NumberGroupsResource(
         "UpdateNumberGroupRequest",
     ]
 ):
-    """Typed CRUD resource for ``/number_groups`` (generated)."""
+    """Typed resource for ``/number_groups`` (generated)."""
 
     _update_method = "PUT"
 
@@ -144,7 +144,7 @@ class PhoneNumbersResource(
         "UpdatePhoneNumberRequest",
     ]
 ):
-    """Typed CRUD resource for ``/phone_numbers`` (generated)."""
+    """Typed resource for ``/phone_numbers`` (generated)."""
 
     _update_method = "PUT"
 
@@ -256,7 +256,7 @@ class QueuesResource(
         "QueueListResponse", "QueueResponse", "CreateQueueRequest", "UpdateQueueRequest"
     ]
 ):
-    """Typed CRUD resource for ``/queues`` (generated)."""
+    """Typed resource for ``/queues`` (generated)."""
 
     _update_method = "PUT"
 
@@ -326,7 +326,7 @@ class VerifiedCallersResource(
         "UpdateVerifiedCallerIDRequest",
     ]
 ):
-    """Typed CRUD resource for ``/verified_caller_ids`` (generated)."""
+    """Typed resource for ``/verified_caller_ids`` (generated)."""
 
     _update_method = "PUT"
 

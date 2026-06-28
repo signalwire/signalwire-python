@@ -39,7 +39,7 @@ class VideoConferencesResource(
         "UpdateConferenceRequest",
     ]
 ):
-    """Typed CRUD resource for ``/conferences`` (generated)."""
+    """Typed resource for ``/conferences`` (generated)."""
 
     _update_method = "PUT"
 
@@ -194,7 +194,7 @@ class VideoRoomsResource(
         "ListRoomsResponse", "RoomResponse", "CreateRoomRequest", "UpdateRoomRequest"
     ]
 ):
-    """Typed CRUD resource for ``/rooms`` (generated)."""
+    """Typed resource for ``/rooms`` (generated)."""
 
     _update_method = "PUT"
 

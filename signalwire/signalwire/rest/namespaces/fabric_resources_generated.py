@@ -88,7 +88,7 @@ class AiAgentsResource(
         "AIAgentUpdateRequest",
     ]
 ):
-    """Typed CRUD resource for ``/resources/ai_agents`` (generated)."""
+    """Typed resource for ``/resources/ai_agents`` (generated)."""
 
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources/ai_agents")
@@ -178,7 +178,7 @@ class CallFlowsResource(
         "CallFlowUpdateRequest",
     ]
 ):
-    """Typed CRUD resource for ``/resources/call_flows`` (generated)."""
+    """Typed resource for ``/resources/call_flows`` (generated)."""
 
     _update_method = "PUT"
 
@@ -222,7 +222,7 @@ class ConferenceRoomsResource(
         "ConferenceRoomUpdateRequest",
     ]
 ):
-    """Typed CRUD resource for ``/resources/conference_rooms`` (generated)."""
+    """Typed resource for ``/resources/conference_rooms`` (generated)."""
 
     _update_method = "PUT"
 
@@ -340,7 +340,7 @@ class CxmlScriptsResource(
         "CXMLScriptUpdateRequest",
     ]
 ):
-    """Typed CRUD resource for ``/resources/cxml_scripts`` (generated)."""
+    """Typed resource for ``/resources/cxml_scripts`` (generated)."""
 
     _update_method = "PUT"
 
@@ -404,7 +404,7 @@ class CxmlWebhooksResource(
         "CXMLWebhookUpdateRequest",
     ]
 ):
-    """Typed CRUD resource for ``/resources/cxml_webhooks`` (generated)."""
+    """Typed resource for ``/resources/cxml_webhooks`` (generated)."""
 
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources/cxml_webhooks")
@@ -482,7 +482,7 @@ class FreeswitchConnectorsResource(
         "FreeswitchConnectorUpdateRequest",
     ]
 ):
-    """Typed CRUD resource for ``/resources/freeswitch_connectors`` (generated)."""
+    """Typed resource for ``/resources/freeswitch_connectors`` (generated)."""
 
     _update_method = "PUT"
 
@@ -535,7 +535,7 @@ class RelayApplicationsResource(
         "RelayApplicationUpdateRequest",
     ]
 ):
-    """Typed CRUD resource for ``/resources/relay_applications`` (generated)."""
+    """Typed resource for ``/resources/relay_applications`` (generated)."""
 
     _update_method = "PUT"
 
@@ -599,7 +599,7 @@ class SipEndpointsResource(
         "SipEndpointUpdateRequest",
     ]
 ):
-    """Typed CRUD resource for ``/resources/sip_endpoints`` (generated)."""
+    """Typed resource for ``/resources/sip_endpoints`` (generated)."""
 
     _update_method = "PUT"
 
@@ -681,7 +681,7 @@ class SipGatewaysResource(
         "SipGatewayRequestUpdate",
     ]
 ):
-    """Typed CRUD resource for ``/resources/sip_gateways`` (generated)."""
+    """Typed resource for ``/resources/sip_gateways`` (generated)."""
 
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources/sip_gateways")
@@ -747,7 +747,7 @@ class SubscribersResource(
         "SubscriberRequest",
     ]
 ):
-    """Typed CRUD resource for ``/resources/subscribers`` (generated)."""
+    """Typed resource for ``/resources/subscribers`` (generated)."""
 
     _update_method = "PUT"
 
@@ -835,7 +835,7 @@ class SwmlScriptsResource(
         "SwmlScriptUpdateRequest",
     ]
 ):
-    """Typed CRUD resource for ``/resources/swml_scripts`` (generated)."""
+    """Typed resource for ``/resources/swml_scripts`` (generated)."""
 
     _update_method = "PUT"
 
@@ -895,7 +895,7 @@ class SwmlWebhooksResource(
         "SWMLWebhookUpdateRequest",
     ]
 ):
-    """Typed CRUD resource for ``/resources/swml_webhooks`` (generated)."""
+    """Typed resource for ``/resources/swml_webhooks`` (generated)."""
 
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources/swml_webhooks")
