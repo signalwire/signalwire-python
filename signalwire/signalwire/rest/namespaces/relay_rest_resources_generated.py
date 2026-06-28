@@ -443,6 +443,83 @@ class PhoneNumbersResource(
             self._http.get(self._path("search"), params=params or None),
         )
 
+    def set_swml_webhook(
+        self, resource_id: str, url: str, **extra: Any
+    ) -> PhoneNumberResponse:
+        body: dict[str, Any] = {"call_handler": "relay_script"}
+        body["call_relay_script_url"] = url
+        body.update(extra)
+        return cast("PhoneNumberResponse", self.update(resource_id, **body))
+
+    def set_cxml_webhook(
+        self,
+        resource_id: str,
+        url: str,
+        fallback_url: str | None = None,
+        status_callback_url: str | None = None,
+        **extra: Any,
+    ) -> PhoneNumberResponse:
+        body: dict[str, Any] = {"call_handler": "laml_webhooks"}
+        body["call_request_url"] = url
+        if fallback_url is not None:
+            body["call_fallback_url"] = fallback_url
+        if status_callback_url is not None:
+            body["call_status_callback_url"] = status_callback_url
+        body.update(extra)
+        return cast("PhoneNumberResponse", self.update(resource_id, **body))
+
+    def set_cxml_application(
+        self, resource_id: str, application_id: str, **extra: Any
+    ) -> PhoneNumberResponse:
+        body: dict[str, Any] = {"call_handler": "laml_application"}
+        body["call_laml_application_id"] = application_id
+        body.update(extra)
+        return cast("PhoneNumberResponse", self.update(resource_id, **body))
+
+    def set_ai_agent(
+        self, resource_id: str, agent_id: uuid, **extra: Any
+    ) -> PhoneNumberResponse:
+        body: dict[str, Any] = {"call_handler": "ai_agent"}
+        body["call_ai_agent_id"] = agent_id
+        body.update(extra)
+        return cast("PhoneNumberResponse", self.update(resource_id, **body))
+
+    def set_call_flow(
+        self,
+        resource_id: str,
+        flow_id: uuid,
+        version: Literal["working_copy", "current_deployed"] | None = None,
+        **extra: Any,
+    ) -> PhoneNumberResponse:
+        body: dict[str, Any] = {"call_handler": "call_flow"}
+        body["call_flow_id"] = flow_id
+        if version is not None:
+            body["call_flow_version"] = version
+        body.update(extra)
+        return cast("PhoneNumberResponse", self.update(resource_id, **body))
+
+    def set_relay_application(
+        self, resource_id: str, name: str, **extra: Any
+    ) -> PhoneNumberResponse:
+        body: dict[str, Any] = {"call_handler": "relay_application"}
+        body["call_relay_application"] = name
+        body.update(extra)
+        return cast("PhoneNumberResponse", self.update(resource_id, **body))
+
+    def set_relay_topic(
+        self,
+        resource_id: str,
+        topic: str,
+        status_callback_url: str | None = None,
+        **extra: Any,
+    ) -> PhoneNumberResponse:
+        body: dict[str, Any] = {"call_handler": "relay_topic"}
+        body["call_relay_topic"] = topic
+        if status_callback_url is not None:
+            body["call_relay_topic_status_callback_url"] = status_callback_url
+        body.update(extra)
+        return cast("PhoneNumberResponse", self.update(resource_id, **body))
+
 
 class QueuesResource(
     CrudResource[
