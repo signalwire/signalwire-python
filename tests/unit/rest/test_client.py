@@ -5,9 +5,11 @@ import pytest
 from unittest.mock import patch
 
 from signalwire.rest.client import RestClient
-from signalwire.rest.namespaces.fabric import FabricNamespace
+from signalwire.rest.namespaces._client_tree_generated import (
+    FabricNamespace,
+    VideoNamespace,
+)
 from signalwire.rest.namespaces.calling import Calling
-from signalwire.rest.namespaces.video import VideoNamespace
 from signalwire.rest.namespaces.compat import CompatNamespace
 
 

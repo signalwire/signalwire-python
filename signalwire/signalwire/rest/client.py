@@ -10,31 +10,13 @@ RestClient — top-level REST client with namespaced sub-objects.
 """
 
 import os
+
 from ._base import HttpClient
-from .namespaces.fabric import FabricNamespace
-from .namespaces.calling import Calling
-from .namespaces.phone_numbers import PhoneNumbers
-from .namespaces.addresses import Addresses
-from .namespaces.queues import Queues
-from .namespaces.recordings import Recordings
-from .namespaces.number_groups import NumberGroups
-from .namespaces.verified_callers import VerifiedCallers
-from .namespaces.sip_profile import SipProfile
-from .namespaces.lookup import Lookup
-from .namespaces.short_codes import ShortCodes
-from .namespaces.imported_numbers import ImportedNumbers
-from .namespaces.mfa import Mfa
-from .namespaces.registry import RegistryNamespace
-from .namespaces.datasphere import DatasphereNamespace
-from .namespaces.video import VideoNamespace
-from .namespaces.logs import LogsNamespace
-from .namespaces.project import ProjectNamespace
-from .namespaces.pubsub import PubSub
-from .namespaces.chat import Chat
+from .namespaces._client_tree_generated import _GeneratedResourceTree
 from .namespaces.compat import CompatNamespace
 
 
-class RestClient:
+class RestClient(_GeneratedResourceTree):
     """REST client for the SignalWire platform APIs.
 
     Usage:
@@ -54,6 +36,10 @@ class RestClient:
         client.phone_numbers.search(area_code="512")
         client.video.rooms.create(name="standup")
         client.compat.calls.list()
+
+    The resource object tree (flat resources + namespace containers) is generated from
+    the specs (``_GeneratedResourceTree._wire_resources``); this class owns only auth and
+    the still-hand-written ``compat`` namespace.
     """
 
     def __init__(self, project=None, token=None, host=None):
@@ -71,41 +57,8 @@ class RestClient:
         self._project = project
         self._http = HttpClient(project, token, host)
 
-        # Fabric API
-        self.fabric = FabricNamespace(self._http)
+        # Generated resource tree (flat resources + namespace containers).
+        self._wire_resources(self._http)
 
-        # Calling API
-        self.calling = Calling(self._http)
-
-        # Relay REST resources
-        self.phone_numbers = PhoneNumbers(self._http)
-        self.addresses = Addresses(self._http)
-        self.queues = Queues(self._http)
-        self.recordings = Recordings(self._http)
-        self.number_groups = NumberGroups(self._http)
-        self.verified_callers = VerifiedCallers(self._http)
-        self.sip_profile = SipProfile(self._http)
-        self.lookup = Lookup(self._http)
-        self.short_codes = ShortCodes(self._http)
-        self.imported_numbers = ImportedNumbers(self._http)
-        self.mfa = Mfa(self._http)
-        self.registry = RegistryNamespace(self._http)
-
-        # Datasphere API
-        self.datasphere = DatasphereNamespace(self._http)
-
-        # Video API
-        self.video = VideoNamespace(self._http)
-
-        # Logs
-        self.logs = LogsNamespace(self._http)
-
-        # Project management
-        self.project = ProjectNamespace(self._http)
-
-        # PubSub & Chat
-        self.pubsub = PubSub(self._http)
-        self.chat = Chat(self._http)
-
-        # Compatibility (Twilio-compatible) API
+        # Compatibility (Twilio-compatible) API — still hand-written (removal pending).
         self.compat = CompatNamespace(self._http, project)
