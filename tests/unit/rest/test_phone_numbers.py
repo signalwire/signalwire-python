@@ -48,10 +48,10 @@ class TestPhoneCallHandlerEnum:
     def test_all_wire_values_present(self):
         """Every call_handler value accepted by the API is in the enum."""
         expected = {
-            "relay_script", "laml_webhooks", "laml_application",
-            "ai_agent", "call_flow", "relay_application",
-            "relay_topic", "relay_context", "relay_connector",
-            "video_room", "dialogflow",
+            "relay_context", "relay_topic", "relay_script",
+            "relay_application", "relay_connector", "relay_sip_endpoint",
+            "relay_verto_endpoint", "laml_webhooks", "laml_application",
+            "dialogflow", "video_room", "ai_agent", "call_flow",
         }
         assert {h.value for h in PhoneCallHandler} == expected
 
@@ -74,7 +74,7 @@ class TestPhoneCallHandlerEnum:
         """PhoneCallHandler is explicitly named to dodge the RELAY CallHandler type."""
         # Just assert the import path is the rest module; RELAY has its own
         # callback types elsewhere and won't reuse this symbol.
-        from signalwire.rest.call_handler import PhoneCallHandler as ReimportedHandler
+        from signalwire.rest import PhoneCallHandler as ReimportedHandler
         assert ReimportedHandler is PhoneCallHandler
 
 

@@ -5,6 +5,7 @@
 # aliases. TypedDicts are STATIC-ONLY: at runtime each is a plain dict, so a
 # differently-shaped server response is returned unchanged and never raises.
 from __future__ import annotations
+from enum import Enum
 from typing import Literal, TypeAlias, TypedDict
 
 
@@ -1761,3 +1762,19 @@ UpdateVerifiedCallerIdResponse: TypeAlias = "VerifiedCallerIDResponse"
 RedialVerificationCallResponse: TypeAlias = "VerifiedCallerIDResponse"
 ValidateVerificationCodeRequest: TypeAlias = "VerifyCallerIDRequest"
 ValidateVerificationCodeResponse: TypeAlias = "VerifiedCallerIDResponse"
+
+
+class PhoneCallHandler(str, Enum):
+    RELAY_CONTEXT = "relay_context"
+    RELAY_TOPIC = "relay_topic"
+    RELAY_SCRIPT = "relay_script"
+    RELAY_APPLICATION = "relay_application"
+    RELAY_CONNECTOR = "relay_connector"
+    RELAY_SIP_ENDPOINT = "relay_sip_endpoint"
+    RELAY_VERTO_ENDPOINT = "relay_verto_endpoint"
+    LAML_WEBHOOKS = "laml_webhooks"
+    LAML_APPLICATION = "laml_application"
+    DIALOGFLOW = "dialogflow"
+    VIDEO_ROOM = "video_room"
+    AI_AGENT = "ai_agent"
+    CALL_FLOW = "call_flow"

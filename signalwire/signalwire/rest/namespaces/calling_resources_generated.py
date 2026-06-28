@@ -715,6 +715,3 @@ class Calling(BaseResource):
             "id": call_id,
         }
         return cast("CallResponse", self._http.post(self._base_path, body=body))
-
-
-CallingNamespace = Calling

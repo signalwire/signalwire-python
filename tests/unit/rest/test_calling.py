@@ -3,7 +3,7 @@
 from .conftest import MockResponse
 
 
-class TestCallingNamespace:
+class TestCalling:
     def test_dial(self, client, mock_session):
         mock_session.request.return_value = MockResponse(200, {"id": "call-1"})
         client.calling.dial(to="+15551234567", from_="+15559876543")

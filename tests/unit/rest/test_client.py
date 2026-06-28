@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 from signalwire.rest.client import RestClient
 from signalwire.rest.namespaces.fabric import FabricNamespace
-from signalwire.rest.namespaces.calling import CallingNamespace
+from signalwire.rest.namespaces.calling import Calling
 from signalwire.rest.namespaces.video import VideoNamespace
 from signalwire.rest.namespaces.compat import CompatNamespace
 
@@ -38,7 +38,7 @@ class TestRestClient:
 
     def test_namespaces_exist(self, client):
         assert isinstance(client.fabric, FabricNamespace)
-        assert isinstance(client.calling, CallingNamespace)
+        assert isinstance(client.calling, Calling)
         assert isinstance(client.video, VideoNamespace)
         assert isinstance(client.compat, CompatNamespace)
         assert hasattr(client, "phone_numbers")

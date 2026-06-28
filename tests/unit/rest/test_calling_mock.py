@@ -1,6 +1,6 @@
 """Calling namespace command-dispatch coverage against the mock server.
 
-Every command in ``signalwire.rest.namespaces.calling.CallingNamespace`` is
+Every command in ``signalwire.rest.namespaces.calling.Calling`` is
 exercised here with the real ``signalwire-python`` ``RestClient`` wired to
 the in-process ``mock_signalwire`` server.  Each test:
 

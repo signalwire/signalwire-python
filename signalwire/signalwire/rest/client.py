@@ -12,7 +12,7 @@ RestClient — top-level REST client with namespaced sub-objects.
 import os
 from ._base import HttpClient
 from .namespaces.fabric import FabricNamespace
-from .namespaces.calling import CallingNamespace
+from .namespaces.calling import Calling
 from .namespaces.phone_numbers import PhoneNumbers
 from .namespaces.addresses import Addresses
 from .namespaces.queues import Queues
@@ -75,7 +75,7 @@ class RestClient:
         self.fabric = FabricNamespace(self._http)
 
         # Calling API
-        self.calling = CallingNamespace(self._http)
+        self.calling = Calling(self._http)
 
         # Relay REST resources
         self.phone_numbers = PhoneNumbers(self._http)
