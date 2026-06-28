@@ -290,7 +290,7 @@ def _configure_default_mode(log_level, log_format="console"):
     _configure_structlog(numeric_level, log_format, sys.stdout)
 
 
-def get_logger(name):
+def get_logger(name: str) -> Any:
     """
     Get a logger instance for the specified name with structured logging support
 

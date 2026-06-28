@@ -42,7 +42,12 @@ class RestClient(_GeneratedResourceTree):
     the still-hand-written ``compat`` namespace.
     """
 
-    def __init__(self, project=None, token=None, host=None):
+    def __init__(
+        self,
+        project: str | None = None,
+        token: str | None = None,
+        host: str | None = None,
+    ) -> None:
         project = project or os.environ.get("SIGNALWIRE_PROJECT_ID", "")
         token = token or os.environ.get("SIGNALWIRE_API_TOKEN", "")
         host = host or os.environ.get("SIGNALWIRE_SPACE", "")

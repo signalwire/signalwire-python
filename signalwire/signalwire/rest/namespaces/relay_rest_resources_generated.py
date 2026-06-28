@@ -464,7 +464,7 @@ class PhoneNumbers(
         body: dict[str, Any] = {"call_handler": "relay_script"}
         body["call_relay_script_url"] = url
         body.update(extra)
-        return cast("PhoneNumberResponse", self.update(resource_id, **body))
+        return self.update(resource_id, **body)
 
     def set_cxml_webhook(
         self,
@@ -481,7 +481,7 @@ class PhoneNumbers(
         if status_callback_url is not None:
             body["call_status_callback_url"] = status_callback_url
         body.update(extra)
-        return cast("PhoneNumberResponse", self.update(resource_id, **body))
+        return self.update(resource_id, **body)
 
     def set_cxml_application(
         self, resource_id: str, application_id: str, **extra: Any
@@ -489,7 +489,7 @@ class PhoneNumbers(
         body: dict[str, Any] = {"call_handler": "laml_application"}
         body["call_laml_application_id"] = application_id
         body.update(extra)
-        return cast("PhoneNumberResponse", self.update(resource_id, **body))
+        return self.update(resource_id, **body)
 
     def set_ai_agent(
         self, resource_id: str, agent_id: uuid, **extra: Any
@@ -497,7 +497,7 @@ class PhoneNumbers(
         body: dict[str, Any] = {"call_handler": "ai_agent"}
         body["call_ai_agent_id"] = agent_id
         body.update(extra)
-        return cast("PhoneNumberResponse", self.update(resource_id, **body))
+        return self.update(resource_id, **body)
 
     def set_call_flow(
         self,
@@ -511,7 +511,7 @@ class PhoneNumbers(
         if version is not None:
             body["call_flow_version"] = version
         body.update(extra)
-        return cast("PhoneNumberResponse", self.update(resource_id, **body))
+        return self.update(resource_id, **body)
 
     def set_relay_application(
         self, resource_id: str, name: str, **extra: Any
@@ -519,7 +519,7 @@ class PhoneNumbers(
         body: dict[str, Any] = {"call_handler": "relay_application"}
         body["call_relay_application"] = name
         body.update(extra)
-        return cast("PhoneNumberResponse", self.update(resource_id, **body))
+        return self.update(resource_id, **body)
 
     def set_relay_topic(
         self,
@@ -533,7 +533,7 @@ class PhoneNumbers(
         if status_callback_url is not None:
             body["call_relay_topic_status_callback_url"] = status_callback_url
         body.update(extra)
-        return cast("PhoneNumberResponse", self.update(resource_id, **body))
+        return self.update(resource_id, **body)
 
 
 class Queues(

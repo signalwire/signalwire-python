@@ -9,7 +9,7 @@ See LICENSE file in the project root for full license information.
 HTTP client infrastructure and base resource classes for the REST client.
 """
 
-from typing import Any, Generic, TypeVar
+from typing import Any, Generic, TypeVar, cast
 
 import requests
 from signalwire.core.logging_config import get_logger
@@ -30,7 +30,9 @@ TUpdate = TypeVar("TUpdate")
 class SignalWireRestError(Exception):
     """Raised when the SignalWire REST API returns a non-2xx response."""
 
-    def __init__(self, status_code, body, url, method="GET"):
+    def __init__(
+        self, status_code: int, body: Any, url: str, method: str = "GET"
+    ) -> None:
         self.status_code = status_code
         self.body = body
         self.url = url
@@ -42,7 +44,7 @@ class SignalWireRestError(Exception):
 class HttpClient:
     """Thin wrapper around requests.Session with Basic Auth and JSON handling."""
 
-    def __init__(self, project, token, host):
+    def __init__(self, project: str, token: str, host: str) -> None:
         self._base_url = f"https://{host}"
         self._session = requests.Session()
         self._session.auth = (project, token)
@@ -55,13 +57,19 @@ class HttpClient:
         )
         logger.debug("HttpClient initialized", host=host, project=project[:8] + "...")
 
-    def _request(self, method, path, body=None, params=None):
+    def _request(
+        self,
+        method: str,
+        path: str,
+        body: Any = None,
+        params: dict[str, Any] | None = None,
+    ) -> Any:
         url = self._base_url + path
         logger.debug("REST request", method=method, path=path)
         resp = self._session.request(method, url, json=body, params=params)
         if not resp.ok:
             try:
-                err_body = resp.json()
+                err_body: Any = resp.json()
             except Exception:
                 err_body = resp.text
             raise SignalWireRestError(resp.status_code, err_body, path, method)
@@ -69,30 +77,32 @@ class HttpClient:
             return {}
         return resp.json()
 
-    def get(self, path, params=None):
+    def get(self, path: str, params: dict[str, Any] | None = None) -> Any:
         return self._request("GET", path, params=params)
 
-    def post(self, path, body=None, params=None):
+    def post(
+        self, path: str, body: Any = None, params: dict[str, Any] | None = None
+    ) -> Any:
         return self._request("POST", path, body=body, params=params)
 
-    def put(self, path, body=None):
+    def put(self, path: str, body: Any = None) -> Any:
         return self._request("PUT", path, body=body)
 
-    def patch(self, path, body=None):
+    def patch(self, path: str, body: Any = None) -> Any:
         return self._request("PATCH", path, body=body)
 
-    def delete(self, path):
+    def delete(self, path: str) -> Any:
         return self._request("DELETE", path)
 
 
 class BaseResource:
     """Base for all namespace/resource classes."""
 
-    def __init__(self, http, base_path):
+    def __init__(self, http: HttpClient, base_path: str) -> None:
         self._http = http
         self._base_path = base_path
 
-    def _path(self, *parts):
+    def _path(self, *parts: Any) -> str:
         return "/".join([self._base_path] + [str(p) for p in parts])
 
 
@@ -105,10 +115,10 @@ class ReadResource(BaseResource, Generic[TList, TItem]):
     """
 
     def list(self, **params: Any) -> TList:
-        return self._http.get(self._base_path, params=params or None)
+        return cast(TList, self._http.get(self._base_path, params=params or None))
 
     def get(self, resource_id: str) -> TItem:
-        return self._http.get(self._path(resource_id))
+        return cast(TItem, self._http.get(self._path(resource_id)))
 
 
 class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TUpdate]):
@@ -131,7 +141,7 @@ class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TU
         # TCreate shape to the signature oracle, NOT this base method body. (A
         # bare ``**kwargs: TCreate`` here is wrong — it would type each kwarg
         # VALUE as a whole TCreate — and is what the generated overrides replace.)
-        return self._http.post(self._base_path, body=kwargs)
+        return cast(TItem, self._http.post(self._base_path, body=kwargs))
 
     def update(self, resource_id: str, /, **kwargs: Any) -> TItem:
         # resource_id is positional-only so compat subclasses may name it
@@ -140,10 +150,10 @@ class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TU
         # generated override carries the closed typed shape, the binding carries
         # TUpdate for the oracle.
         method = getattr(self._http, self._update_method.lower())
-        return method(self._path(resource_id), body=kwargs)
+        return cast(TItem, method(self._path(resource_id), body=kwargs))
 
     def delete(self, resource_id: str) -> TItem:
-        return self._http.delete(self._path(resource_id))
+        return cast(TItem, self._http.delete(self._path(resource_id)))
 
 
 class CrudWithAddresses(CrudResource[TList, TItem, TCreate, TUpdate]):
