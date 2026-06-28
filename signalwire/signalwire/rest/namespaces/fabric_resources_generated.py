@@ -9,7 +9,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, cast
 from collections.abc import Mapping
 
-from .._base import FabricResource
+from .._base import BaseResource, FabricResource, ReadResource
 
 if TYPE_CHECKING:
     from .fabric_types_generated import (
@@ -34,6 +34,9 @@ if TYPE_CHECKING:
         CallFlowListResponse,
         CallFlowResponse,
         CallFlowUpdateRequest,
+        CallFlowVersionDeployRequest,
+        CallFlowVersionDeployResponse,
+        CallFlowVersionListResponse,
         CallHandlerType,
         Ciphers,
         Codecs,
@@ -41,7 +44,14 @@ if TYPE_CHECKING:
         ConferenceRoomListResponse,
         ConferenceRoomResponse,
         ConferenceRoomUpdateRequest,
+        CxmlApplicationAddressListResponse,
+        CxmlApplicationListResponse,
+        CxmlApplicationResponse,
+        DomainApplicationResponse,
+        EmbedsTokensResponse,
         Encryption,
+        FabricAddress,
+        FabricAddressesResponse,
         FreeswitchConnectorCreateRequest,
         FreeswitchConnectorListResponse,
         FreeswitchConnectorResponse,
@@ -49,11 +59,15 @@ if TYPE_CHECKING:
         Hint,
         Languages,
         Layout,
+        PhoneRouteResponse,
         Pronounce,
         RelayApplicationCreateRequest,
         RelayApplicationListResponse,
         RelayApplicationResponse,
         RelayApplicationUpdateRequest,
+        ResourceAddressListResponse,
+        ResourceListResponse,
+        ResourceResponse,
         SWAIG,
         SWAIGUpdate,
         SWMLWebhookCreateRequest,
@@ -68,16 +82,96 @@ if TYPE_CHECKING:
         SipGatewayRequest,
         SipGatewayRequestUpdate,
         SipGatewayResponse,
+        SubscriberGuestTokenCreateResponse,
+        SubscriberInviteTokenCreateResponse,
         SubscriberListResponse,
+        SubscriberRefreshTokenResponse,
         SubscriberRequest,
         SubscriberResponse,
+        SubscriberSIPEndpoint,
+        SubscriberSipEndpointListResponse,
+        SubscriberTokenResponse,
         SwmlScriptCreateRequest,
         SwmlScriptListResponse,
         SwmlScriptResponse,
         SwmlScriptUpdateRequest,
         UsedForType,
+        jwt,
         uuid,
     )
+
+
+class FabricAddressesResource(ReadResource["FabricAddressesResponse", "FabricAddress"]):
+    """Typed resource for ``/addresses`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/addresses")
+
+
+class GenericResourcesResource(BaseResource):
+    """Typed resource for ``/resources`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/resources")
+
+    def list(self, **params: Any) -> ResourceListResponse:
+        return cast(
+            "ResourceListResponse",
+            self._http.get(self._base_path, params=params or None),
+        )
+
+    def get(self, id: str, **params: Any) -> ResourceResponse:
+        return cast(
+            "ResourceResponse", self._http.get(self._path(id), params=params or None)
+        )
+
+    def delete(self, id: str) -> dict[str, Any]:
+        return cast("dict[str, Any]", self._http.delete(self._path(id)))
+
+    def list_addresses(self, id: str, **params: Any) -> ResourceAddressListResponse:
+        return cast(
+            "ResourceAddressListResponse",
+            self._http.get(self._path(id, "addresses"), params=params or None),
+        )
+
+    def assign_phone_route(
+        self,
+        id: str,
+        *,
+        phone_route_id: uuid,
+        handler: UsedForType,
+        extras: Mapping[str, Any] | None = None,
+    ) -> PhoneRouteResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {"phone_route_id": phone_route_id, "handler": handler}.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast(
+            "PhoneRouteResponse",
+            self._http.post(self._path(id, "phone_routes"), body=body),
+        )
+
+    def assign_domain_application(
+        self,
+        id: str,
+        *,
+        domain_application_id: uuid,
+        extras: Mapping[str, Any] | None = None,
+    ) -> DomainApplicationResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {"domain_application_id": domain_application_id}.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast(
+            "DomainApplicationResponse",
+            self._http.post(self._path(id, "domain_applications"), body=body),
+        )
 
 
 class AiAgentsResource(
@@ -213,6 +307,24 @@ class CallFlowsResource(
             body.update(extras)
         return cast("CallFlowResponse", self._http.put(self._path(id), body=body))
 
+    def list_versions(self, id: str, **params: Any) -> CallFlowVersionListResponse:
+        return cast(
+            "CallFlowVersionListResponse",
+            self._http.get(
+                f"/api/fabric/resources/call_flow/{id}/versions", params=params or None
+            ),
+        )
+
+    def deploy_version(
+        self, id: str, body: CallFlowVersionDeployRequest
+    ) -> CallFlowVersionDeployResponse:
+        return cast(
+            "CallFlowVersionDeployResponse",
+            self._http.post(
+                f"/api/fabric/resources/call_flow/{id}/versions", body=body
+            ),
+        )
+
 
 class ConferenceRoomsResource(
     FabricResource[
@@ -330,6 +442,82 @@ class ConferenceRoomsResource(
         if extras:
             body.update(extras)
         return cast("ConferenceRoomResponse", self._http.put(self._path(id), body=body))
+
+
+class CxmlApplicationsResource(BaseResource):
+    """Typed resource for ``/resources/cxml_applications`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric/resources/cxml_applications")
+
+    def list(self, **params: Any) -> CxmlApplicationListResponse:
+        return cast(
+            "CxmlApplicationListResponse",
+            self._http.get(self._base_path, params=params or None),
+        )
+
+    def get(self, id: str, **params: Any) -> CxmlApplicationResponse:
+        return cast(
+            "CxmlApplicationResponse",
+            self._http.get(self._path(id), params=params or None),
+        )
+
+    def update(
+        self,
+        id: str,
+        *,
+        display_name: str | None = None,
+        account_sid: uuid | None = None,
+        voice_url: str | None = None,
+        voice_method: Literal["GET"] | Literal["POST"] | None = None,
+        voice_fallback_url: str | None = None,
+        voice_fallback_method: Literal["GET"] | Literal["POST"] | None = None,
+        status_callback: str | None = None,
+        status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
+        sms_url: str | None = None,
+        sms_method: Literal["GET"] | Literal["POST"] | None = None,
+        sms_fallback_url: str | None = None,
+        sms_fallback_method: Literal["GET"] | Literal["POST"] | None = None,
+        sms_status_callback: str | None = None,
+        sms_status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
+        extras: Mapping[str, Any] | None = None,
+    ) -> CxmlApplicationResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "display_name": display_name,
+                "account_sid": account_sid,
+                "voice_url": voice_url,
+                "voice_method": voice_method,
+                "voice_fallback_url": voice_fallback_url,
+                "voice_fallback_method": voice_fallback_method,
+                "status_callback": status_callback,
+                "status_callback_method": status_callback_method,
+                "sms_url": sms_url,
+                "sms_method": sms_method,
+                "sms_fallback_url": sms_fallback_url,
+                "sms_fallback_method": sms_fallback_method,
+                "sms_status_callback": sms_status_callback,
+                "sms_status_callback_method": sms_status_callback_method,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast(
+            "CxmlApplicationResponse", self._http.put(self._path(id), body=body)
+        )
+
+    def delete(self, id: str) -> dict[str, Any]:
+        return cast("dict[str, Any]", self._http.delete(self._path(id)))
+
+    def list_addresses(
+        self, id: str, **params: Any
+    ) -> CxmlApplicationAddressListResponse:
+        return cast(
+            "CxmlApplicationAddressListResponse",
+            self._http.get(self._path(id, "addresses"), params=params or None),
+        )
 
 
 class CxmlScriptsResource(
@@ -826,6 +1014,104 @@ class SubscribersResource(
             body.update(extras)
         return cast("SubscriberResponse", self._http.put(self._path(id), body=body))
 
+    def list_sip_endpoints(
+        self, fabric_subscriber_id: str, **params: Any
+    ) -> SubscriberSipEndpointListResponse:
+        return cast(
+            "SubscriberSipEndpointListResponse",
+            self._http.get(
+                self._path(fabric_subscriber_id, "sip_endpoints"), params=params or None
+            ),
+        )
+
+    def create_sip_endpoint(
+        self,
+        fabric_subscriber_id: str,
+        *,
+        username: str,
+        password: str,
+        caller_id: str | None = None,
+        send_as: str | None = None,
+        ciphers: list[Ciphers] | None = None,
+        codecs: list[Codecs] | None = None,
+        encryption: Encryption | None = None,
+        extras: Mapping[str, Any] | None = None,
+    ) -> SubscriberSIPEndpoint:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "username": username,
+                "password": password,
+                "caller_id": caller_id,
+                "send_as": send_as,
+                "ciphers": ciphers,
+                "codecs": codecs,
+                "encryption": encryption,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast(
+            "SubscriberSIPEndpoint",
+            self._http.post(
+                self._path(fabric_subscriber_id, "sip_endpoints"), body=body
+            ),
+        )
+
+    def get_sip_endpoint(
+        self, fabric_subscriber_id: str, id: str, **params: Any
+    ) -> SubscriberSIPEndpoint:
+        return cast(
+            "SubscriberSIPEndpoint",
+            self._http.get(
+                self._path(fabric_subscriber_id, "sip_endpoints", id),
+                params=params or None,
+            ),
+        )
+
+    def update_sip_endpoint(
+        self,
+        fabric_subscriber_id: str,
+        id: str,
+        *,
+        username: str | None = None,
+        password: str | None = None,
+        caller_id: str | None = None,
+        send_as: str | None = None,
+        ciphers: list[Ciphers] | None = None,
+        codecs: list[Codecs] | None = None,
+        encryption: Encryption | None = None,
+        extras: Mapping[str, Any] | None = None,
+    ) -> SubscriberSIPEndpoint:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "username": username,
+                "password": password,
+                "caller_id": caller_id,
+                "send_as": send_as,
+                "ciphers": ciphers,
+                "codecs": codecs,
+                "encryption": encryption,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast(
+            "SubscriberSIPEndpoint",
+            self._http.patch(
+                self._path(fabric_subscriber_id, "sip_endpoints", id), body=body
+            ),
+        )
+
+    def delete_sip_endpoint(self, fabric_subscriber_id: str, id: str) -> dict[str, Any]:
+        return cast(
+            "dict[str, Any]",
+            self._http.delete(self._path(fabric_subscriber_id, "sip_endpoints", id)),
+        )
+
 
 class SwmlScriptsResource(
     FabricResource[
@@ -963,3 +1249,119 @@ class SwmlWebhooksResource(
         if extras:
             body.update(extras)
         return cast("SWMLWebhookResponse", self._http.patch(self._path(id), body=body))
+
+
+class FabricTokensResource(BaseResource):
+    """Typed resource for ```` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/fabric")
+
+    def create_subscriber_token(
+        self,
+        *,
+        reference: str,
+        expire_at: int | None = None,
+        application_id: uuid | None = None,
+        password: str | None = None,
+        first_name: str | None = None,
+        last_name: str | None = None,
+        display_name: str | None = None,
+        job_title: str | None = None,
+        time_zone: str | None = None,
+        country: str | None = None,
+        region: str | None = None,
+        company_name: str | None = None,
+        extras: Mapping[str, Any] | None = None,
+    ) -> SubscriberTokenResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "reference": reference,
+                "expire_at": expire_at,
+                "application_id": application_id,
+                "password": password,
+                "first_name": first_name,
+                "last_name": last_name,
+                "display_name": display_name,
+                "job_title": job_title,
+                "time_zone": time_zone,
+                "country": country,
+                "region": region,
+                "company_name": company_name,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast(
+            "SubscriberTokenResponse",
+            self._http.post(self._path("subscribers", "tokens"), body=body),
+        )
+
+    def refresh_subscriber_token(
+        self, *, refresh_token: jwt, extras: Mapping[str, Any] | None = None
+    ) -> SubscriberRefreshTokenResponse:
+        body: dict[str, Any] = {
+            k: v for k, v in {"refresh_token": refresh_token}.items() if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast(
+            "SubscriberRefreshTokenResponse",
+            self._http.post(self._path("subscribers", "tokens", "refresh"), body=body),
+        )
+
+    def create_invite_token(
+        self,
+        *,
+        address_id: uuid,
+        expires_at: int | None = None,
+        extras: Mapping[str, Any] | None = None,
+    ) -> SubscriberInviteTokenCreateResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {"address_id": address_id, "expires_at": expires_at}.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast(
+            "SubscriberInviteTokenCreateResponse",
+            self._http.post(self._path("subscriber", "invites"), body=body),
+        )
+
+    def create_guest_token(
+        self,
+        *,
+        allowed_addresses: list[uuid],
+        expire_at: int | None = None,
+        extras: Mapping[str, Any] | None = None,
+    ) -> SubscriberGuestTokenCreateResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "allowed_addresses": allowed_addresses,
+                "expire_at": expire_at,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast(
+            "SubscriberGuestTokenCreateResponse",
+            self._http.post(self._path("guests", "tokens"), body=body),
+        )
+
+    def create_embed_token(
+        self, *, token: str, extras: Mapping[str, Any] | None = None
+    ) -> EmbedsTokensResponse:
+        body: dict[str, Any] = {
+            k: v for k, v in {"token": token}.items() if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast(
+            "EmbedsTokensResponse",
+            self._http.post(self._path("embeds", "tokens"), body=body),
+        )
