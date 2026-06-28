@@ -6,35 +6,23 @@ This file is part of the SignalWire SDK.
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
-Project API namespace — API token management.
+Project API namespace — API token management. The token resource is generated from the
+canonical spec (see ``project_resources_generated``); this is the thin namespace that
+exposes it as ``client.project.tokens``.
 """
 
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
-from .._base import BaseResource
+from .project_resources_generated import ProjectTokensResource
 
-if TYPE_CHECKING:
-    from .project_types_generated import TokenResponse
+# Back-compat alias for the historical class name.
+ProjectTokens = ProjectTokensResource
 
-
-class ProjectTokens(BaseResource):
-    """Project API token management."""
-
-    def __init__(self, http: Any) -> None:
-        super().__init__(http, "/api/project/tokens")
-
-    def create(self, **kwargs: Any) -> "TokenResponse":
-        return self._http.post(self._base_path, body=kwargs)
-
-    def update(self, token_id: str, **kwargs: Any) -> "TokenResponse":
-        return self._http.patch(self._path(token_id), body=kwargs)
-
-    def delete(self, token_id: str) -> dict[str, Any]:
-        return self._http.delete(self._path(token_id))
+__all__ = ["ProjectNamespace", "ProjectTokens", "ProjectTokensResource"]
 
 
 class ProjectNamespace:
     """Project API namespace."""
 
-    def __init__(self, http):
-        self.tokens = ProjectTokens(http)
+    def __init__(self, http: Any) -> None:
+        self.tokens = ProjectTokensResource(http)

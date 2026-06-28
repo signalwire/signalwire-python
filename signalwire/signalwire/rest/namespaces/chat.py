@@ -6,22 +6,10 @@ This file is part of the SignalWire SDK.
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
-Chat API namespace — token creation.
+``ChatResource`` is generated from the canonical spec (see ``chat_resources_generated``)
+and re-exported here so existing imports keep working.
 """
 
-from typing import TYPE_CHECKING, Any
+from .chat_resources_generated import ChatResource
 
-from .._base import BaseResource
-
-if TYPE_CHECKING:
-    from .chat_types_generated import ChatToken
-
-
-class ChatResource(BaseResource):
-    """Chat token generation."""
-
-    def __init__(self, http):
-        super().__init__(http, "/api/chat/tokens")
-
-    def create_token(self, **kwargs: Any) -> "ChatToken":
-        return self._http.post(self._base_path, body=kwargs)
+__all__ = ["ChatResource"]
