@@ -282,13 +282,13 @@ class TestFaxActionInit:
     async def test_fax_action_init_send_fax_prefix(self, call):
         fax_action = FaxAction(call, "fax-1", "send_fax")
         assert fax_action.control_id == "fax-1"
-        assert fax_action._method_prefix == "send_fax"
+        assert fax_action._command_prefix == "send_fax"
         assert fax_action._terminal_event == EVENT_CALL_FAX
 
     @pytest.mark.asyncio
     async def test_fax_action_init_receive_fax_prefix(self, call):
         fax_action = FaxAction(call, "fax-2", "receive_fax")
-        assert fax_action._method_prefix == "receive_fax"
+        assert fax_action._command_prefix == "receive_fax"
 
 
 # ---------------------------------------------------------------------------

@@ -122,35 +122,59 @@ class Action:
         return self._done.done()
 
 
-class PlayAction(Action):
-    """Handle for an active play operation."""
+class StoppableAction(Action):
+    """An action that can be stopped. The concrete action sets ``_command_prefix``
+    (e.g. ``"play"``) and ``stop`` posts ``calling.<prefix>.stop``. Reused by every
+    action whose control surface is a ``<prefix>.stop`` command."""
+
+    _command_prefix: str = ""
+
+    async def stop(self) -> dict[str, Any]:
+        return await self.call._execute(
+            f"{self._command_prefix}.stop", {"control_id": self.control_id}
+        )
+
+
+class PausableAction(StoppableAction):
+    """A stoppable action that can also pause/resume (record, play, collect)."""
+
+    async def pause(self, behavior: str | None = None) -> dict[str, Any]:
+        params: dict[str, Any] = {"control_id": self.control_id}
+        if behavior:
+            params["behavior"] = behavior
+        return await self.call._execute(f"{self._command_prefix}.pause", params)
+
+    async def resume(self) -> dict[str, Any]:
+        return await self.call._execute(
+            f"{self._command_prefix}.resume", {"control_id": self.control_id}
+        )
+
+
+class VolumeAction(PausableAction):
+    """A pausable action that also supports a volume adjustment (play)."""
+
+    async def volume(self, volume: float) -> dict[str, Any]:
+        return await self.call._execute(
+            f"{self._command_prefix}.volume",
+            {"control_id": self.control_id, "volume": volume},
+        )
+
+
+class PlayAction(VolumeAction):
+    """Handle for an active play operation (stop/pause/resume/volume)."""
+
+    _command_prefix = "play"
 
     def __init__(self, call: Call, control_id: str):
         super().__init__(
             call, control_id, EVENT_CALL_PLAY, (PLAY_STATE_FINISHED, PLAY_STATE_ERROR)
         )
 
-    async def stop(self) -> dict[str, Any]:
-        return await self.call._execute("play.stop", {"control_id": self.control_id})
 
-    async def pause(self) -> dict[str, Any]:
-        return await self.call._execute("play.pause", {"control_id": self.control_id})
+class RecordAction(PausableAction):
+    """Handle for an active record operation (stop/pause/resume)."""
 
-    async def resume(self) -> dict[str, Any]:
-        return await self.call._execute("play.resume", {"control_id": self.control_id})
-
-    async def volume(self, volume: float) -> dict[str, Any]:
-        return await self.call._execute(
-            "play.volume",
-            {
-                "control_id": self.control_id,
-                "volume": volume,
-            },
-        )
-
-
-class RecordAction(Action):
-    """Handle for an active record operation."""
+    _command_prefix = "record"
 
     def __init__(self, call: Call, control_id: str):
         super().__init__(
@@ -160,23 +184,11 @@ class RecordAction(Action):
             (RECORD_STATE_FINISHED, RECORD_STATE_NO_INPUT),
         )
 
-    async def stop(self) -> dict[str, Any]:
-        return await self.call._execute("record.stop", {"control_id": self.control_id})
 
-    async def pause(self, behavior: str | None = None) -> dict[str, Any]:
-        params: dict[str, Any] = {"control_id": self.control_id}
-        if behavior:
-            params["behavior"] = behavior
-        return await self.call._execute("record.pause", params)
+class DetectAction(StoppableAction):
+    """Handle for an active detect operation (stop)."""
 
-    async def resume(self) -> dict[str, Any]:
-        return await self.call._execute(
-            "record.resume", {"control_id": self.control_id}
-        )
-
-
-class DetectAction(Action):
-    """Handle for an active detect operation."""
+    _command_prefix = "detect"
 
     def __init__(self, call: Call, control_id: str):
         super().__init__(call, control_id, EVENT_CALL_DETECT, ("finished", "error"))
@@ -189,12 +201,12 @@ class DetectAction(Action):
         if (detect or state in self._terminal_states) and not self._done.done():
             self._resolve(event)
 
-    async def stop(self) -> dict[str, Any]:
-        return await self.call._execute("detect.stop", {"control_id": self.control_id})
 
+class CollectAction(VolumeAction):
+    """Handle for play_and_collect (stop/volume use the play_and_collect prefix; the
+    initial-timeout timer is a collect-specific command)."""
 
-class CollectAction(Action):
-    """Handle for play_and_collect or standalone collect."""
+    _command_prefix = "play_and_collect"
 
     def __init__(self, call: Call, control_id: str):
         super().__init__(
@@ -215,20 +227,6 @@ class CollectAction(Action):
         else:
             super()._check_event(event)
 
-    async def stop(self) -> dict[str, Any]:
-        return await self.call._execute(
-            "play_and_collect.stop", {"control_id": self.control_id}
-        )
-
-    async def volume(self, volume: float) -> dict[str, Any]:
-        return await self.call._execute(
-            "play_and_collect.volume",
-            {
-                "control_id": self.control_id,
-                "volume": volume,
-            },
-        )
-
     async def start_input_timers(self) -> dict[str, Any]:
         """Start the initial_timeout timer on an active collect."""
         return await self.call._execute(
@@ -236,8 +234,10 @@ class CollectAction(Action):
         )
 
 
-class StandaloneCollectAction(Action):
+class StandaloneCollectAction(StoppableAction):
     """Handle for standalone calling.collect (without play)."""
+
+    _command_prefix = "collect"
 
     def __init__(self, call: Call, control_id: str):
         super().__init__(
@@ -255,9 +255,6 @@ class StandaloneCollectAction(Action):
         if (result or state in self._terminal_states) and not self._done.done():
             self._resolve(event)
 
-    async def stop(self) -> dict[str, Any]:
-        return await self.call._execute("collect.stop", {"control_id": self.control_id})
-
     async def start_input_timers(self) -> dict[str, Any]:
         """Start the initial_timeout timer on an active collect."""
         return await self.call._execute(
@@ -265,72 +262,61 @@ class StandaloneCollectAction(Action):
         )
 
 
-class FaxAction(Action):
-    """Handle for an active send_fax or receive_fax operation."""
+class FaxAction(StoppableAction):
+    """Handle for an active send_fax or receive_fax operation. The stop prefix
+    (``send_fax``/``receive_fax``) is set per-instance from the constructor."""
 
     def __init__(self, call: Call, control_id: str, method_prefix: str):
         super().__init__(call, control_id, EVENT_CALL_FAX, ("finished", "error"))
-        self._method_prefix = method_prefix
-
-    async def stop(self) -> dict[str, Any]:
-        return await self.call._execute(
-            f"{self._method_prefix}.stop", {"control_id": self.control_id}
-        )
+        self._command_prefix = method_prefix
 
 
-class TapAction(Action):
+class TapAction(StoppableAction):
     """Handle for an active tap operation."""
+
+    _command_prefix = "tap"
 
     def __init__(self, call: Call, control_id: str):
         super().__init__(call, control_id, EVENT_CALL_TAP, ("finished",))
 
-    async def stop(self) -> dict[str, Any]:
-        return await self.call._execute("tap.stop", {"control_id": self.control_id})
 
-
-class StreamAction(Action):
+class StreamAction(StoppableAction):
     """Handle for an active stream operation."""
+
+    _command_prefix = "stream"
 
     def __init__(self, call: Call, control_id: str):
         super().__init__(call, control_id, EVENT_CALL_STREAM, ("finished",))
 
-    async def stop(self) -> dict[str, Any]:
-        return await self.call._execute("stream.stop", {"control_id": self.control_id})
 
-
-class PayAction(Action):
+class PayAction(StoppableAction):
     """Handle for an active pay operation."""
+
+    _command_prefix = "pay"
 
     def __init__(self, call: Call, control_id: str):
         super().__init__(call, control_id, EVENT_CALL_PAY, ("finished", "error"))
 
-    async def stop(self) -> dict[str, Any]:
-        return await self.call._execute("pay.stop", {"control_id": self.control_id})
 
-
-class TranscribeAction(Action):
+class TranscribeAction(StoppableAction):
     """Handle for an active transcribe operation."""
+
+    _command_prefix = "transcribe"
 
     def __init__(self, call: Call, control_id: str):
         super().__init__(call, control_id, EVENT_CALL_TRANSCRIBE, ("finished",))
 
-    async def stop(self) -> dict[str, Any]:
-        return await self.call._execute(
-            "transcribe.stop", {"control_id": self.control_id}
-        )
 
-
-class AIAction(Action):
+class AIAction(StoppableAction):
     """Handle for an active AI agent session."""
+
+    _command_prefix = "ai"
 
     def __init__(self, call: Call, control_id: str):
         # AI sessions don't have a standard event type with state field —
         # they end when the call ends or when stopped. We treat "finished"
         # and "error" as terminal states from calling.call.ai events if any.
         super().__init__(call, control_id, "calling.call.ai", ("finished", "error"))
-
-    async def stop(self) -> dict[str, Any]:
-        return await self.call._execute("ai.stop", {"control_id": self.control_id})
 
 
 # ======================================================================
