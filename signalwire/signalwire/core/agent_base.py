@@ -352,7 +352,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
     _AUTO_ANSWER_VERBS: ClassVar[set[str]] = {"play", "connect"}
 
     @staticmethod
-    def _load_service_config(config_file: str | None, service_name: str) -> dict:
+    def _load_service_config(config_file: str | None, service_name: str) -> dict[str, Any]:
         """Load service configuration from config file if available"""
         from signalwire.core.config_loader import ConfigLoader
 
@@ -514,7 +514,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         # Default implementation does nothing
         pass
 
-    def on_debug_event(self, handler: Callable) -> Callable:
+    def on_debug_event(self, handler: Callable[..., Any]) -> Callable[..., Any]:
         """
         Register a handler for debug webhook events.
 
@@ -855,7 +855,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         return self
 
     def _render_swml(
-        self, call_id: str | None = None, modifications: dict | None = None
+        self, call_id: str | None = None, modifications: dict[str, Any] | None = None
     ) -> str:
         """
         Render the complete SWML document using SWMLService methods

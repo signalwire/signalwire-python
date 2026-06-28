@@ -154,7 +154,7 @@ def _parse_docstring_args(docstring: str) -> tuple[str, dict[str, str]]:
     return summary, param_descriptions
 
 
-def infer_schema(func) -> tuple[dict[str, dict], list[str], str | None, bool, bool]:
+def infer_schema(func) -> tuple[dict[str, dict[str, Any]], list[str], str | None, bool, bool]:
     """
     Inspect a function's signature and type hints to infer a JSON Schema
     for SWAIG tool parameters.

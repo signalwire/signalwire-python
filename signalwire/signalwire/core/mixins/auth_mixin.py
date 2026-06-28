@@ -11,6 +11,7 @@ import os
 import hmac
 import json
 import base64
+from typing import Any
 
 from fastapi import Request
 
@@ -179,7 +180,7 @@ class AuthMixin(_HostTyped):
         except Exception:
             return False
 
-    def _send_lambda_auth_challenge(self) -> dict:
+    def _send_lambda_auth_challenge(self) -> dict[str, Any]:
         """
         Send authentication challenge in Lambda mode
 

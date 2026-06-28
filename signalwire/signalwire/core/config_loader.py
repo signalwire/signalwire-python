@@ -198,7 +198,7 @@ class ConfigLoader:
 
         return result
 
-    def _has_nested_key(self, data: dict, key_path: str) -> bool:
+    def _has_nested_key(self, data: dict[str, Any], key_path: str) -> bool:
         """Check if a nested key exists in dictionary."""
         keys = key_path.split("_")
         current = data
@@ -210,7 +210,7 @@ class ConfigLoader:
                 return False
         return True
 
-    def _set_nested_key(self, data: dict, key_path: str, value: Any) -> None:
+    def _set_nested_key(self, data: dict[str, Any], key_path: str, value: Any) -> None:
         """Set a value in dictionary using underscore-separated path."""
         keys = key_path.split("_")
         current = data

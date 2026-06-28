@@ -22,3 +22,6 @@ if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase as AgentHost  # type: ignore[attr-defined]  # intentional TYPE_CHECKING-only re-export; agent_base imports this module's consumers (the mixins), so the name resolves for them but not in self-check
 else:
     AgentHost = object
+
+# Explicit re-export so --strict (no_implicit_reexport) lets _mixin_host import AgentHost.
+__all__ = ["AgentHost"]

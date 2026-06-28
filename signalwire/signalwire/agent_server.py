@@ -511,7 +511,7 @@ class AgentServer:
         error_response = {"error": "Not Found"}
         return self._format_cgi_response(error_response, status="404 Not Found")
 
-    def _handle_lambda_request(self, event, context) -> dict:
+    def _handle_lambda_request(self, event, context) -> dict[str, Any]:
         """Handle Lambda request using same routing logic as server"""
         import json
 

@@ -519,7 +519,7 @@ class SpiderSkill(SkillBase):
             return FunctionResult("Max pages must be at least 1")
 
         # Simple breadth-first crawl
-        visited: set = set()
+        visited: set[Any] = set[Any]()
         to_visit = [(start_url, 0)]  # (url, depth)
         results = []
 

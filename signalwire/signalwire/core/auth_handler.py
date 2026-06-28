@@ -178,7 +178,7 @@ class AuthHandler:
 
         return auth_dependency
 
-    def flask_decorator(self, f: Callable) -> Callable:
+    def flask_decorator(self, f: Callable[..., Any]) -> Callable[..., Any]:
         """
         Flask decorator for authentication.
 

@@ -316,7 +316,7 @@ class PromptObjectModel:
         return PromptObjectModel._from_dict(data)
 
     @staticmethod
-    def _from_dict(data: str | dict | list) -> "PromptObjectModel":
+    def _from_dict(data: str | dict[str, Any] | list[Any]) -> "PromptObjectModel":
         """
         Internal method to create a PromptObjectModel from a dictionary.
         Used by both from_json and from_yaml.
@@ -331,7 +331,7 @@ class PromptObjectModel:
             ValueError: If the data is not properly formatted
         """
 
-        def build_section(d: dict, is_subsection: bool = False) -> Section:
+        def build_section(d: dict[str, Any], is_subsection: bool = False) -> Section:
             if not isinstance(d, dict):
                 raise ValueError("Each section must be a dictionary.")
             if "title" in d and not isinstance(d["title"], str):

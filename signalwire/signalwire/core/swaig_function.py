@@ -44,9 +44,9 @@ class SWAIGFunction:
     def __init__(
         self,
         name: str,
-        handler: Callable,
+        handler: Callable[..., Any],
         description: str,
-        parameters: dict[str, dict] | None = None,
+        parameters: dict[str, dict[str, Any]] | None = None,
         secure: bool = False,
         fillers: dict[str, list[str]] | None = None,
         wait_file: str | None = None,
@@ -104,7 +104,7 @@ class SWAIGFunction:
         # Mark as external if webhook_url is provided
         self.is_external = webhook_url is not None
 
-    def _ensure_parameter_structure(self) -> dict:
+    def _ensure_parameter_structure(self) -> dict[str, Any]:
         """
         Ensure the parameters are correctly structured for SWML
 
@@ -175,7 +175,7 @@ class SWAIGFunction:
                 "Sorry, I couldn't complete that action. Please try again or contact support if the issue persists."
             ).to_dict()
 
-    def validate_args(self, args: dict[str, Any]) -> tuple:
+    def validate_args(self, args: dict[str, Any]) -> tuple[Any, ...]:
         """
         Validate the arguments against the parameter schema.
 

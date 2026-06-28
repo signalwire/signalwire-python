@@ -51,7 +51,7 @@ class WebMixin(_HostTyped):
     # has-type ordering gap. Runtime is unaffected (no assignment here).
     _app: Any | None
     _proxy_url_base: str | None
-    _dynamic_config_callback: Callable[[dict, dict, dict, Any], None] | None
+    _dynamic_config_callback: Callable[[dict[str, Any], dict[str, Any], dict[str, Any], Any], None] | None
 
     def get_app(self):
         """
@@ -1158,8 +1158,8 @@ class WebMixin(_HostTyped):
             )
 
     def on_request(
-        self, request_data: dict | None = None, callback_path: str | None = None
-    ) -> dict | None:
+        self, request_data: dict[str, Any] | None = None, callback_path: str | None = None
+    ) -> dict[str, Any] | None:
         """
         Called when SWML is requested, with request data when available
 
@@ -1182,10 +1182,10 @@ class WebMixin(_HostTyped):
 
     def on_swml_request(
         self,
-        request_data: dict | None = None,
+        request_data: dict[str, Any] | None = None,
         callback_path: str | None = None,
         request: Request | None = None,
-    ) -> dict | None:
+    ) -> dict[str, Any] | None:
         """
         Customization point for subclasses to modify SWML based on request data
 
@@ -1257,7 +1257,7 @@ class WebMixin(_HostTyped):
         self._routing_callbacks[normalized_path] = callback_fn
 
     def set_dynamic_config_callback(
-        self, callback: Callable[[dict, dict, dict, "AgentBase"], None]
+        self, callback: Callable[[dict[str, Any], dict[str, Any], dict[str, Any], "AgentBase"], None]
     ) -> "AgentBase":
         """
         Set a callback function for dynamic agent configuration

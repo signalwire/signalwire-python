@@ -9,7 +9,7 @@
 from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any, Literal, TypeAlias, TypedDict
-from typing import Protocol, TypeVar
+from typing import TypeVar
 
 _Self = TypeVar("_Self", bound="_SwmlVerbs")
 
@@ -1862,147 +1862,147 @@ class UserEventConfig(TypedDict, total=False):
     event: dict[str, Any]
 
 
-class _SwmlVerbs(Protocol):
+class _SwmlVerbs:
     """The SWML verb methods SwmlBuilder installs at runtime (static view)."""
 
     def amazon_bedrock(self: _Self, config: AmazonBedrockObject | None = None) -> _Self:
         """Creates a new Bedrock AI Agent"""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def cond(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
         """Execute a sequence of instructions depending on the value of a JavaScript condition."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def connect(self: _Self, config: ConnectConfig | None = None) -> _Self:
         """Dial a SIP URI or phone number."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def denoise(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
         """Start noise reduction. You can stop it at any time using `stop_denoise`."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def enter_queue(self: _Self, config: EnterQueueObject | None = None) -> _Self:
         """Place the current call in a named queue where it will wait to be connected to an available agent or resource."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def execute(self: _Self, config: ExecuteConfig | None = None) -> _Self:
         """Execute a specified section or URL as a subroutine, and upon completion, return to the current document."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def goto(self: _Self, config: GotoConfig | None = None) -> _Self:
         """Jump to a label within the current section, optionally based on a condition."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def label(self: _Self, value: str) -> _Self:
         """Mark any point of the SWML section with a label so that goto can jump to it."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def live_transcribe(
         self: _Self, config: LiveTranscribeConfig | None = None
     ) -> _Self:
         """Start live transcription of the call. The transcription will be sent to the specified webhook URL."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def live_translate(self: _Self, config: LiveTranslateConfig | None = None) -> _Self:
         """Start live translation of the call. The translation will be sent to the specified webhook URL."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def join_room(self: _Self, config: JoinRoomConfig | None = None) -> _Self:
         """Join a RELAY room. If the room doesn't exist, it creates a new room."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def join_conference(
         self: _Self, config: JoinConferenceObject | None = None
     ) -> _Self:
         """Join an ad-hoc audio conference started on either the SignalWire or Compatibility API."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def prompt(self: _Self, config: PromptConfig | None = None) -> _Self:
         """Play a prompt and wait for input. The input can be received either as digits from the keypad,"""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def receive_fax(self: _Self, config: ReceiveFaxConfig | None = None) -> _Self:
         """Receive a fax being delivered to this call."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def record(self: _Self, config: RecordConfig | None = None) -> _Self:
         """Record the call audio in the foreground, pausing further SWML execution until recording ends."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def record_call(self: _Self, config: RecordCallConfig | None = None) -> _Self:
         """Record call in the background."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def request(self: _Self, config: RequestConfig | None = None) -> _Self:
         """Send a GET, POST, PUT, or DELETE request to a remote URL."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def return_(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
         """Return a value from an execute call or exit the script. The value can be any type."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def send_digits(self: _Self, config: SendDigitsConfig | None = None) -> _Self:
         """Send digit presses as DTMF tones."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def send_fax(self: _Self, config: SendFaxConfig | None = None) -> _Self:
         """Send a fax."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def send_sms(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
         """Send an outbound SMS or MMS message to a PSTN phone number."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def set(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
         """Set script variables to the specified values."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def sleep(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
         """Pause execution for a specified duration."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def sip_refer(self: _Self, config: SipReferConfig | None = None) -> _Self:
         """Send SIP REFER to a SIP call."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def stop_denoise(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
         """Stop noise reduction that was started with denoise."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def stop_record_call(
         self: _Self, config: StopRecordCallConfig | None = None
     ) -> _Self:
         """Stop an active background recording."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def stop_tap(self: _Self, config: StopTapConfig | None = None) -> _Self:
         """Stop an active tap stream."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def switch(self: _Self, config: SwitchConfig | None = None) -> _Self:
         """Execute different instructions based on a variable's value."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def tap(self: _Self, config: TapConfig | None = None) -> _Self:
         """Start background call tap. Media is streamed over Websocket or RTP to customer controlled URI."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def transfer(self: _Self, config: TransferConfig | None = None) -> _Self:
         """Transfer the execution of the script to a different SWML section, URL, or Relay application."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def unset(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
         """Unset specified variables. The variables may have been set using the set method"""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def pay(self: _Self, config: PayConfig | None = None) -> _Self:
         """Enables secure payment processing during voice calls. When implemented, it manages the entire payment flow"""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def detect_machine(self: _Self, config: DetectMachineConfig | None = None) -> _Self:
         """A detection method that combines AMD (Answering Machine Detection) and fax detection."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime
 
     def user_event(self: _Self, config: UserEventConfig | None = None) -> _Self:
         """Allows the user to set and send events to the connected client on the call."""
-        ...
+        raise NotImplementedError  # installed dynamically at runtime

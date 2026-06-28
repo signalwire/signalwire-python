@@ -207,7 +207,7 @@ class SecurityConfig:
         self.basic_auth_user = os.environ.get(self.BASIC_AUTH_USER)
         self.basic_auth_password = os.environ.get(self.BASIC_AUTH_PASSWORD)
 
-    def _parse_list(self, value: str | list) -> list:
+    def _parse_list(self, value: str | list[Any]) -> list[Any]:
         """Parse comma-separated list from environment variable or list from config"""
         if isinstance(value, list):
             return value

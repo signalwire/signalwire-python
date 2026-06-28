@@ -1021,8 +1021,8 @@ class SWMLService(ToolMixin):
         return Response(content=swml, media_type="application/json")
 
     def on_request(
-        self, request_data: dict | None = None, callback_path: str | None = None
-    ) -> dict | None:
+        self, request_data: dict[str, Any] | None = None, callback_path: str | None = None
+    ) -> dict[str, Any] | None:
         """
         Called when SWML is requested, with request data when available
 

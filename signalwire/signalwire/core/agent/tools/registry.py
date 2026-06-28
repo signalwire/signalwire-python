@@ -38,7 +38,7 @@ class ToolRegistry:
         name: str,
         description: str,
         parameters: dict[str, Any],
-        handler: Callable,
+        handler: Callable[..., Any],
         secure: bool = True,
         fillers: dict[str, list[str]] | None = None,
         wait_file: str | None = None,
