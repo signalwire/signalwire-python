@@ -14,6 +14,7 @@ It allows for chaining method calls to build up a document step by step.
 
 import types
 from typing import TYPE_CHECKING, Any, TypeVar
+from collections.abc import Callable
 
 try:
     from typing import Self  # type: ignore[attr-defined]  # 3.11+; typing_extensions fallback below
@@ -105,7 +106,7 @@ class SWMLBuilder(_VerbsBase):
         post_prompt: str | None = None,
         post_prompt_url: str | None = None,
         swaig: dict[str, Any] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Self:
         """
         Add an 'ai' verb to the main section
@@ -291,7 +292,11 @@ class SWMLBuilder(_VerbsBase):
             # Handle sleep verb specially since it takes an integer directly
             if verb_name == "sleep":
 
-                def sleep_method(self_instance, duration=None, **kwargs):
+                def sleep_method(
+                    self_instance: "SWMLBuilder",
+                    duration: int | None = None,
+                    **kwargs: Any,
+                ) -> "SWMLBuilder":
                     """
                     Add the sleep verb to the document.
 
@@ -318,8 +323,12 @@ class SWMLBuilder(_VerbsBase):
                 continue
 
             # Generate the method implementation for normal verbs
-            def make_verb_method(name):
-                def verb_method(self_instance, **kwargs):
+            def make_verb_method(
+                name: str,
+            ) -> Callable[..., "SWMLBuilder"]:
+                def verb_method(
+                    self_instance: "SWMLBuilder", **kwargs: Any
+                ) -> "SWMLBuilder":
                     """
                     Dynamically generated method for SWML verb - returns self for chaining
                     """
@@ -388,7 +397,11 @@ class SWMLBuilder(_VerbsBase):
             # Handle sleep verb specially since it takes an integer directly
             if name == "sleep":
 
-                def sleep_method(self_instance, duration=None, **kwargs):
+                def sleep_method(
+                    self_instance: "SWMLBuilder",
+                    duration: int | None = None,
+                    **kwargs: Any,
+                ) -> "SWMLBuilder":
                     """
                     Add the sleep verb to the document.
 
@@ -414,7 +427,9 @@ class SWMLBuilder(_VerbsBase):
                 return types.MethodType(sleep_method, self)
 
             # Generate the method implementation for normal verbs
-            def verb_method(self_instance, **kwargs):
+            def verb_method(
+                self_instance: "SWMLBuilder", **kwargs: Any
+            ) -> "SWMLBuilder":
                 """
                 Dynamically generated method for SWML verb - returns self for chaining
                 """

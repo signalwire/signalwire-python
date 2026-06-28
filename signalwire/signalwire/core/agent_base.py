@@ -1499,7 +1499,9 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         # which properly handles SWML_PROXY_URL_BASE environment variable
         return super()._build_webhook_url(endpoint, query_params)
 
-    def _find_summary_in_post_data(self, body, logger):
+    def _find_summary_in_post_data(
+        self, body: dict[str, Any], logger: Any
+    ) -> Any:
         """
         Attempt to find a summary in the post-prompt response data
 
@@ -1535,7 +1537,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         return None
 
-    def _create_ephemeral_copy(self):
+    def _create_ephemeral_copy(self) -> "AgentBase":
         """
         Create a lightweight copy of this agent for ephemeral configuration.
 
@@ -1684,7 +1686,9 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         return ephemeral_agent
 
-    async def _handle_request(self, request: Request, response: Response):
+    async def _handle_request(
+        self, request: Request, response: Response
+    ) -> Response:
         """
         Override SWMLService's _handle_request to use AgentBase's _render_swml
 

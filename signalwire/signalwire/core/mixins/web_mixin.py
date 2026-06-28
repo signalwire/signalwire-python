@@ -14,9 +14,10 @@ import signal
 import sys
 import contextvars
 from typing import TYPE_CHECKING, Any
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 from fastapi import Depends, FastAPI, APIRouter, Request, Response
+from fastapi.responses import JSONResponse
 
 from signalwire.core.logging_config import get_execution_mode
 from signalwire.core.security.security_utils import (
@@ -40,7 +41,22 @@ _request_proxy_url: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 MAX_REQUEST_BODY_SIZE = 10 * 1024 * 1024
 
 
-class WebMixin(_HostTyped):
+def _as_response(result: "Response | dict[str, Any]") -> "Response":
+    """Coerce a handler result into a Response for FastAPI route handlers.
+
+    The internal ``_handle_*`` methods may return a bare dict (their historical
+    contract, relied on by direct-call unit tests). FastAPI route handlers must
+    be annotated ``-> Response`` (a union return annotation breaks response-model
+    construction at startup), so the decorated wrappers funnel the result through
+    here: dicts become JSONResponse (behavior-equivalent to FastAPI's own dict
+    serialization), Responses pass through unchanged.
+    """
+    if isinstance(result, Response):
+        return result
+    return JSONResponse(content=result)
+
+
+class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at runtime; AgentBase under TYPE_CHECKING — intentional split
     """
     Mixin class containing all web server and routing-related methods for AgentBase
     """
@@ -53,7 +69,7 @@ class WebMixin(_HostTyped):
     _proxy_url_base: str | None
     _dynamic_config_callback: Callable[[dict[str, Any], dict[str, Any], dict[str, Any], Any], None] | None
 
-    def get_app(self):
+    def get_app(self) -> FastAPI:
         """
         Get the FastAPI application instance for deployment adapters like Lambda/Mangum
 
@@ -77,13 +93,13 @@ class WebMixin(_HostTyped):
             # Add health and ready endpoints directly to the main app to avoid conflicts with catch-all
             @app.get("/health")
             @app.post("/health")
-            async def health_check():
+            async def health_check() -> dict[str, str]:
                 """Health check endpoint for Kubernetes liveness probe"""
                 return {"status": "healthy", "agent": self.name}
 
             @app.get("/ready")
             @app.post("/ready")
-            async def readiness_check():
+            async def readiness_check() -> dict[str, str]:
                 """Readiness check endpoint for Kubernetes readiness probe"""
                 return {"status": "ready"}
 
@@ -98,7 +114,9 @@ class WebMixin(_HostTyped):
 
             # Add security headers middleware
             @app.middleware("http")
-            async def add_security_headers(request, call_next):
+            async def add_security_headers(
+                request: Request, call_next: Callable[[Request], Awaitable[Response]]
+            ) -> Response:
                 response = await call_next(request)
                 response.headers["X-Content-Type-Options"] = "nosniff"
                 response.headers["X-Frame-Options"] = "DENY"
@@ -129,18 +147,18 @@ class WebMixin(_HostTyped):
             # Register a catch-all route for debugging and troubleshooting
             @app.get("/{full_path:path}")
             @app.post("/{full_path:path}")
-            async def handle_all_routes(request: Request, full_path: str):
+            async def handle_all_routes(request: Request, full_path: str) -> Response:
                 self.log.debug("request_received", path=full_path)
 
                 # Check if the path is meant for this agent
                 if not full_path.startswith(self.route.lstrip("/")):
-                    return {"error": "Invalid route"}
+                    return JSONResponse(content={"error": "Invalid route"})
 
                 # Extract the path relative to this agent's route
                 relative_path = full_path[len(self.route.lstrip("/")) :]
                 relative_path = relative_path.lstrip("/")
                 self.log.debug("relative_path_extracted", path=relative_path)
-                return None
+                return Response(status_code=204)
 
             # Log all app routes for debugging
             self.log.debug("app_routes_registered")
@@ -191,13 +209,13 @@ class WebMixin(_HostTyped):
             # Add health and ready endpoints directly to the main app to avoid conflicts with catch-all
             @app.get("/health")
             @app.post("/health")
-            async def health_check():
+            async def health_check() -> dict[str, str]:
                 """Health check endpoint for Kubernetes liveness probe"""
                 return {"status": "healthy", "agent": self.name}
 
             @app.get("/ready")
             @app.post("/ready")
-            async def readiness_check():
+            async def readiness_check() -> Response:
                 """Readiness check endpoint for Kubernetes readiness probe"""
                 # Check if agent is properly initialized
                 ready = (
@@ -215,7 +233,9 @@ class WebMixin(_HostTyped):
 
             # Add security headers middleware
             @app.middleware("http")
-            async def add_security_headers(request, call_next):
+            async def add_security_headers(
+                request: Request, call_next: Callable[[Request], Awaitable[Response]]
+            ) -> Response:
                 response = await call_next(request)
                 response.headers["X-Content-Type-Options"] = "nosniff"
                 response.headers["X-Frame-Options"] = "DENY"
@@ -234,12 +254,12 @@ class WebMixin(_HostTyped):
             # Register a catch-all route for debugging and troubleshooting
             @app.get("/{full_path:path}")
             @app.post("/{full_path:path}")
-            async def handle_all_routes(request: Request, full_path: str):
+            async def handle_all_routes(request: Request, full_path: str) -> Response:
                 self.log.debug("request_received", path=full_path)
 
                 # Check if the path is meant for this agent
                 if not full_path.startswith(self.route.lstrip("/")):
-                    return {"error": "Invalid route"}
+                    return JSONResponse(content={"error": "Invalid route"})
 
                 # Extract the path relative to this agent's route
                 relative_path = full_path[len(self.route.lstrip("/")) :]
@@ -258,13 +278,21 @@ class WebMixin(_HostTyped):
                 if clean_path == "debug":
                     return await self._handle_debug_request(request)
                 if clean_path == "swaig":
-                    return await self._handle_swaig_request(request, Response())
+                    return _as_response(
+                        await self._handle_swaig_request(request, Response())
+                    )
                 if clean_path == "post_prompt":
-                    return await self._handle_post_prompt_request(request)
+                    return _as_response(
+                        await self._handle_post_prompt_request(request)
+                    )
                 if clean_path == "check_for_input":
-                    return await self._handle_check_for_input_request(request)
+                    return _as_response(
+                        await self._handle_check_for_input_request(request)
+                    )
                 if clean_path == "debug_events":
-                    return await self._handle_debug_events_request(request)
+                    return _as_response(
+                        await self._handle_debug_events_request(request)
+                    )
 
                 # Check for custom routing callbacks
                 if hasattr(self, "_routing_callbacks"):
@@ -276,7 +304,7 @@ class WebMixin(_HostTyped):
                             return await self._handle_root_request(request)
 
                 # Default: 404
-                return {"error": "Path not found"}
+                return JSONResponse(content={"error": "Path not found"})
 
             # Include router with prefix (handle root route special case)
             if self.route == "/":
@@ -340,12 +368,12 @@ class WebMixin(_HostTyped):
 
     def run(
         self,
-        event=None,
-        context=None,
-        force_mode=None,
+        event: dict[str, Any] | None = None,
+        context: Any = None,
+        force_mode: str | None = None,
         host: str | None = None,
         port: int | None = None,
-    ):
+    ) -> str | dict[str, Any] | None:
         """
         Smart run method that automatically detects environment and handles accordingly
 
@@ -363,15 +391,25 @@ class WebMixin(_HostTyped):
 
         try:
             if mode == "cgi":
-                response = self.handle_serverless_request(event, context, mode)
-                print(response)
-                return response
+                # CGI handler returns the response body as a string to print.
+                cgi_response: str = self.handle_serverless_request(
+                    event, context, mode
+                )
+                print(cgi_response)
+                return cgi_response
             if mode == "azure_function":
-                return self.handle_serverless_request(event, context, mode)
+                azure_response: dict[str, Any] = self.handle_serverless_request(
+                    event, context, mode
+                )
+                return azure_response
             if mode in ["lambda", "google_cloud_function"]:
-                return self.handle_serverless_request(event, context, mode)
+                serverless_response: dict[str, Any] = self.handle_serverless_request(
+                    event, context, mode
+                )
+                return serverless_response
             # Server mode - use existing serve method
             self.serve(host, port)
+            return None
         except Exception as e:
             import logging
 
@@ -384,7 +422,7 @@ class WebMixin(_HostTyped):
                 }
             raise
 
-    def _register_routes(self, router):
+    def _register_routes(self, router: APIRouter) -> None:
         """
         Register routes for this agent
 
@@ -409,12 +447,12 @@ class WebMixin(_HostTyped):
 
         # Root endpoint (handles both with and without trailing slash)
         @router.get("/")
-        async def handle_root_get(request: Request, response: Response):
+        async def handle_root_get(request: Request, response: Response) -> Response:
             """Handle GET requests to the root endpoint"""
             return await self._handle_root_request(request)
 
         @router.post("/", dependencies=signed_post_deps)
-        async def handle_root_post(request: Request, response: Response):
+        async def handle_root_post(request: Request, response: Response) -> Response:
             """Handle POST requests to the root endpoint (signature-validated when signing_key is set)"""
             return await self._handle_root_request(request)
 
@@ -423,60 +461,60 @@ class WebMixin(_HostTyped):
         @router.get("/debug/")
         @router.post("/debug")
         @router.post("/debug/")
-        async def handle_debug(request: Request):
+        async def handle_debug(request: Request) -> Response:
             """Handle GET/POST requests to the debug endpoint"""
             return await self._handle_debug_request(request)
 
         # SWAIG endpoint - Both versions
         @router.get("/swaig")
         @router.get("/swaig/")
-        async def handle_swaig_get(request: Request, response: Response):
+        async def handle_swaig_get(request: Request, response: Response) -> Response:
             """Handle GET requests to the SWAIG endpoint"""
-            return await self._handle_swaig_request(request, response)
+            return _as_response(await self._handle_swaig_request(request, response))
 
         @router.post("/swaig", dependencies=signed_post_deps)
         @router.post("/swaig/", dependencies=signed_post_deps)
-        async def handle_swaig_post(request: Request, response: Response):
+        async def handle_swaig_post(request: Request, response: Response) -> Response:
             """Handle POST requests to the SWAIG endpoint (signature-validated when signing_key is set)"""
-            return await self._handle_swaig_request(request, response)
+            return _as_response(await self._handle_swaig_request(request, response))
 
         # Post prompt endpoint - Both versions
         @router.get("/post_prompt")
         @router.get("/post_prompt/")
-        async def handle_post_prompt_get(request: Request):
+        async def handle_post_prompt_get(request: Request) -> Response:
             """Handle GET requests to the post_prompt endpoint"""
-            return await self._handle_post_prompt_request(request)
+            return _as_response(await self._handle_post_prompt_request(request))
 
         @router.post("/post_prompt", dependencies=signed_post_deps)
         @router.post("/post_prompt/", dependencies=signed_post_deps)
-        async def handle_post_prompt_post(request: Request):
+        async def handle_post_prompt_post(request: Request) -> Response:
             """Handle POST requests to the post_prompt endpoint (signature-validated when signing_key is set)"""
-            return await self._handle_post_prompt_request(request)
+            return _as_response(await self._handle_post_prompt_request(request))
 
         # Check for input endpoint - Both versions
         @router.get("/check_for_input")
         @router.get("/check_for_input/")
         @router.post("/check_for_input")
         @router.post("/check_for_input/")
-        async def handle_check_for_input(request: Request):
+        async def handle_check_for_input(request: Request) -> Response:
             """Handle GET/POST requests to the check_for_input endpoint"""
-            return await self._handle_check_for_input_request(request)
+            return _as_response(await self._handle_check_for_input_request(request))
 
         # Debug events endpoint - Both versions
         @router.get("/debug_events")
         @router.get("/debug_events/")
         @router.post("/debug_events")
         @router.post("/debug_events/")
-        async def handle_debug_events(request: Request):
+        async def handle_debug_events(request: Request) -> Response:
             """Handle POST requests delivering debug webhook events"""
-            return await self._handle_debug_events_request(request)
+            return _as_response(await self._handle_debug_events_request(request))
 
         # MCP server endpoint — exposes @tool functions as MCP tools
         if hasattr(self, "_mcp_server_enabled") and self._mcp_server_enabled:
 
             @router.post("/mcp")
             @router.post("/mcp/")
-            async def handle_mcp(request: Request):
+            async def handle_mcp(request: Request) -> Response:
                 """Handle MCP JSON-RPC 2.0 requests"""
                 try:
                     body = await request.json()
@@ -514,8 +552,8 @@ class WebMixin(_HostTyped):
                 @router.post(path)
                 @router.post(path_with_slash)
                 async def handle_callback(
-                    request: Request, response: Response, cb_path=callback_path
-                ):
+                    request: Request, response: Response, cb_path: str | None = callback_path
+                ) -> Response:
                     """Handle GET/POST requests to a registered callback path"""
                     # Store the callback path in request state for _handle_request to use
                     request.state.callback_path = cb_path
@@ -528,7 +566,7 @@ class WebMixin(_HostTyped):
     # WebMixin still calls self._<method>(...) — those resolve via MRO to
     # SWMLService.
 
-    async def _handle_root_request(self, request: Request):
+    async def _handle_root_request(self, request: Request) -> Response:
         """Handle GET/POST requests to the root endpoint"""
         # Debug logging to understand the state before any changes
         self.log.debug(
@@ -736,7 +774,7 @@ class WebMixin(_HostTyped):
                 media_type="application/json",
             )
 
-    async def _handle_debug_request(self, request: Request):
+    async def _handle_debug_request(self, request: Request) -> Response:
         """Handle GET/POST requests to the debug endpoint"""
         # Check if debug endpoint is disabled
         if not getattr(self, "_debug_endpoint_enabled", True):
@@ -826,7 +864,9 @@ class WebMixin(_HostTyped):
     # _handle_swaig_request was lifted into SWMLService — see SWMLService._handle_swaig_request
     # and the _swaig_render_get_response / _swaig_pre_dispatch extension points overridden in AgentBase.
 
-    async def _handle_post_prompt_request(self, request: Request):
+    async def _handle_post_prompt_request(
+        self, request: Request
+    ) -> Response | dict[str, Any]:
         """Handle GET/POST requests to the post_prompt endpoint"""
         req_log = self.log.bind(
             endpoint="post_prompt", method=request.method, path=request.url.path
@@ -959,7 +999,7 @@ class WebMixin(_HostTyped):
             summary = agent_to_use._find_summary_in_post_data(body, req_log)
 
             # Call the summary handler with the summary and the full body
-            result = None
+            result: dict[str, Any] | None = None
             try:
                 if summary:
                     result = agent_to_use.on_summary(summary, body)
@@ -989,7 +1029,9 @@ class WebMixin(_HostTyped):
                 media_type="application/json",
             )
 
-    async def _handle_check_for_input_request(self, request: Request):
+    async def _handle_check_for_input_request(
+        self, request: Request
+    ) -> Response | dict[str, Any]:
         """Handle GET/POST requests to the check_for_input endpoint"""
         req_log = self.log.bind(
             endpoint="check_for_input", method=request.method, path=request.url.path
@@ -1078,7 +1120,9 @@ class WebMixin(_HostTyped):
                 media_type="application/json",
             )
 
-    async def _handle_debug_events_request(self, request: Request):
+    async def _handle_debug_events_request(
+        self, request: Request
+    ) -> Response | dict[str, Any]:
         """Handle POST requests delivering debug webhook events from the AI module"""
         req_log = self.log.bind(
             endpoint="debug_events", method=request.method, path=request.url.path
@@ -1318,7 +1362,7 @@ class WebMixin(_HostTyped):
         Setup signal handlers for graceful shutdown (useful for Kubernetes)
         """
 
-        def signal_handler(signum, frame):
+        def signal_handler(signum: int, frame: Any) -> None:
             self.log.info("shutdown_signal_received", signal=signum)
 
             # Perform cleanup

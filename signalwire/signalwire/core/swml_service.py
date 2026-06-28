@@ -44,6 +44,7 @@ try:
         Request,
         Response,
     )
+    from fastapi.responses import JSONResponse
     from fastapi.security import HTTPBasic, HTTPBasicCredentials  # noqa: F401
     from pydantic import BaseModel  # noqa: F401
 except ImportError:
@@ -68,6 +69,21 @@ from signalwire.core.mixins.tool_mixin import ToolMixin  # noqa: E402
 
 # Maximum request body size (10MB, matches CGI limit). Mirrors WebMixin.
 MAX_REQUEST_BODY_SIZE = 10 * 1024 * 1024
+
+
+def _as_response(result: "Response | dict[str, Any]") -> "Response":
+    """Coerce a handler result into a Response for FastAPI route handlers.
+
+    The internal ``_handle_*`` methods may return a bare dict (their historical
+    contract, relied on by direct-call unit tests). FastAPI route handlers must
+    be annotated ``-> Response`` (a union return annotation breaks response-model
+    construction at startup), so the decorated wrappers funnel the result through
+    here: dicts become JSONResponse (behavior-equivalent to FastAPI's own dict
+    serialization), Responses pass through unchanged.
+    """
+    if isinstance(result, Response):
+        return result
+    return JSONResponse(content=result)
 
 
 class SWMLService(ToolMixin):
@@ -224,7 +240,11 @@ class SWMLService(ToolMixin):
             # Handle sleep verb specially since it takes an integer directly
             if verb_name == "sleep":
 
-                def sleep_method(self_instance, duration=None, **kwargs):
+                def sleep_method(
+                    self_instance: "SWMLService",
+                    duration: int | None = None,
+                    **kwargs: Any,
+                ) -> bool:
                     """
                     Add the sleep verb to the document.
 
@@ -252,8 +272,8 @@ class SWMLService(ToolMixin):
                 continue
 
             # Generate the method implementation for normal verbs
-            def make_verb_method(name):
-                def verb_method(self_instance, **kwargs):
+            def make_verb_method(name: str) -> Callable[..., bool]:
+                def verb_method(self_instance: "SWMLService", **kwargs: Any) -> bool:
                     """
                     Dynamically generated method for SWML verb
                     """
@@ -328,7 +348,11 @@ class SWMLService(ToolMixin):
             # Handle sleep verb specially since it takes an integer directly
             if name == "sleep":
 
-                def sleep_method(self_instance, duration=None, **kwargs):
+                def sleep_method(
+                    self_instance: "SWMLService",
+                    duration: int | None = None,
+                    **kwargs: Any,
+                ) -> bool:
                     """
                     Add the sleep verb to the document.
 
@@ -354,7 +378,7 @@ class SWMLService(ToolMixin):
                 return types.MethodType(sleep_method, self)
 
             # Generate the method implementation for normal verbs
-            def verb_method(self_instance, **kwargs):
+            def verb_method(self_instance: "SWMLService", **kwargs: Any) -> bool:
                 """
                 Dynamically generated method for SWML verb
                 """
@@ -630,7 +654,7 @@ class SWMLService(ToolMixin):
         # Root endpoint with and without trailing slash
         @router.get("/")
         @router.post("/")
-        async def handle_root(request: Request, response: Response):
+        async def handle_root(request: Request, response: Response) -> Response:
             """Handle requests to the root endpoint"""
             return await self._handle_request(request, response)
 
@@ -639,8 +663,8 @@ class SWMLService(ToolMixin):
         @router.get("/swaig/")
         @router.post("/swaig")
         @router.post("/swaig/")
-        async def handle_swaig(request: Request, response: Response):
-            return await self._handle_swaig_request(request, response)
+        async def handle_swaig(request: Request, response: Response) -> Response:
+            return _as_response(await self._handle_swaig_request(request, response))
 
         # Register routing callbacks as needed
         if hasattr(self, "_routing_callbacks") and self._routing_callbacks:
@@ -658,8 +682,10 @@ class SWMLService(ToolMixin):
                 @router.post(path)
                 @router.post(path_with_slash)
                 async def handle_callback(
-                    request: Request, response: Response, cb_path=callback_path
-                ):
+                    request: Request,
+                    response: Response,
+                    cb_path: str = callback_path,
+                ) -> Response:
                     """Handle requests to callback endpoints"""
                     # Store the callback path in the request state
                     request.state.callback_path = cb_path
@@ -725,7 +751,9 @@ class SWMLService(ToolMixin):
         """
         return self, None
 
-    async def _handle_swaig_request(self, request: Request, response: Response):
+    async def _handle_swaig_request(
+        self, request: Request, response: Response
+    ) -> Response | dict[str, Any]:
         """Generic SWAIG endpoint handler.
 
         GET: returns the SWML document via _swaig_render_get_response().
@@ -933,7 +961,7 @@ class SWMLService(ToolMixin):
 
         return None
 
-    async def _handle_request(self, request: Request, response: Response):
+    async def _handle_request(self, request: Request, response: Response) -> Response:
         """
         Internal handler for both GET and POST requests
 
@@ -1101,7 +1129,7 @@ class SWMLService(ToolMixin):
             @app.post("/{full_path:path}")
             async def handle_all_routes(
                 request: Request, response: Response, full_path: str
-            ):
+            ) -> Response:
                 # Get our route path without leading slash for comparison
                 route_path = normalized_route.lstrip("/")
                 route_with_slash = route_path + "/"
@@ -1140,7 +1168,7 @@ class SWMLService(ToolMixin):
 
                 # Not our route or not matching our patterns
                 self.log.debug("no_route_match", path=full_path)
-                return {"error": "Path not found"}
+                return JSONResponse(content={"error": "Path not found"})
 
             # Log all routes for debugging
             self.log.debug("registered_routes", service=self.name)

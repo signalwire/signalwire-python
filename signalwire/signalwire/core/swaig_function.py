@@ -54,8 +54,8 @@ class SWAIGFunction:
         webhook_url: str | None = None,
         required: list[str] | None = None,
         is_typed_handler: bool = False,
-        **extra_swaig_fields,
-    ):
+        **extra_swaig_fields: Any,
+    ) -> None:
         """
         Initialize a new SWAIG function.
 
@@ -127,7 +127,7 @@ class SWAIGFunction:
 
         return result
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
         """
         Call the underlying handler function
         """

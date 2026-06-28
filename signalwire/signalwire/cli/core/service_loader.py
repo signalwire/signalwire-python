@@ -196,8 +196,10 @@ async def simulate_request_to_service(
         import json
 
         # json.loads() is typed -> Any; a FastAPI Response body is the rendered
-        # SWML JSON object, matching the declared dict return.
-        return cast(dict[str, Any], json.loads(result.body.decode()))
+        # SWML JSON object, matching the declared dict return. result.body is
+        # bytes | memoryview — bytes() handles both before decode (memoryview has
+        # no .decode()), a real latent bug strict typing surfaced.
+        return cast(dict[str, Any], json.loads(bytes(result.body).decode()))
     if isinstance(result, dict):
         return result
     # Try to get content from response

@@ -7,15 +7,18 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-from typing import Any
+from typing import Any, TYPE_CHECKING
 from signalwire.core.logging_config import get_logger
 from signalwire.core.skill_base import SkillBase
+
+if TYPE_CHECKING:
+    from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports skill_manager; name resolves at type-check time
 
 
 class SkillManager:
     """Manages loading and lifecycle of agent skills"""
 
-    def __init__(self, agent):
+    def __init__(self, agent: "AgentBase"):
         self.agent = agent
         self.loaded_skills: dict[str, SkillBase] = {}
         self.logger = get_logger("skill_manager")

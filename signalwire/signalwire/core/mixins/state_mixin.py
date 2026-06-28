@@ -12,7 +12,7 @@ from typing import cast
 from signalwire.core.mixins._mixin_host import _HostTyped
 
 
-class StateMixin(_HostTyped):
+class StateMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at runtime; AgentBase under TYPE_CHECKING — intentional split
     """
     Mixin class containing all state and session management methods for AgentBase
     """

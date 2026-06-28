@@ -90,7 +90,7 @@ class MCPGateway:
         )
 
         # Configure security headers
-        @self.app.after_request
+        @self.app.after_request  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
         def set_security_headers(response: Response) -> Response:
             response.headers["X-Content-Type-Options"] = "nosniff"
             response.headers["X-Frame-Options"] = "DENY"
@@ -331,7 +331,7 @@ class MCPGateway:
     def _setup_routes(self) -> None:
         """Set up Flask routes"""
 
-        @self.app.route("/health", methods=["GET"])
+        @self.app.route("/health", methods=["GET"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
         def health() -> Any:
             """Health check endpoint"""
             return jsonify(
@@ -342,15 +342,15 @@ class MCPGateway:
                 }
             )
 
-        @self.app.route("/services", methods=["GET"])
+        @self.app.route("/services", methods=["GET"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
         @self._check_auth
         def list_services() -> Any:
             """List available MCP services"""
             services = self.mcp_manager.list_services()
             return jsonify(services)
 
-        @self.app.route("/services/<service_name>/tools", methods=["GET"])
-        @self.limiter.limit(self.rate_config.get("tools_limit", "30 per minute"))
+        @self.app.route("/services/<service_name>/tools", methods=["GET"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
+        @self.limiter.limit(self.rate_config.get("tools_limit", "30 per minute"))  # type: ignore[untyped-decorator]  # flask-limiter is an optional extra with no stubs installed -> Any decorator
         @self._check_auth
         def get_service_tools(service_name: str) -> Any:
             """Get tools for a specific service"""
@@ -366,8 +366,8 @@ class MCPGateway:
                 logger.error(f"Error getting tools for {service_name}: {e}")
                 return jsonify({"error": "Service error"}), 500
 
-        @self.app.route("/services/<service_name>/call", methods=["POST"])
-        @self.limiter.limit(self.rate_config.get("call_limit", "10 per minute"))
+        @self.app.route("/services/<service_name>/call", methods=["POST"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
+        @self.limiter.limit(self.rate_config.get("call_limit", "10 per minute"))  # type: ignore[untyped-decorator]  # flask-limiter is an optional extra with no stubs installed -> Any decorator
         @self._check_auth
         def call_service_tool(service_name: str) -> Any:
             """Call a tool on a service"""
@@ -482,15 +482,15 @@ class MCPGateway:
                 logger.error(f"Error calling tool: {e}")
                 return jsonify({"error": str(e)}), 500
 
-        @self.app.route("/sessions", methods=["GET"])
+        @self.app.route("/sessions", methods=["GET"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
         @self._check_auth
         def list_sessions() -> Any:
             """List active sessions"""
             sessions = self.session_manager.list_sessions()
             return jsonify(sessions)
 
-        @self.app.route("/sessions/<session_id>", methods=["DELETE"])
-        @self.limiter.limit(
+        @self.app.route("/sessions/<session_id>", methods=["DELETE"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
+        @self.limiter.limit(  # type: ignore[untyped-decorator]  # flask-limiter is an optional extra with no stubs installed -> Any decorator
             self.rate_config.get("session_delete_limit", "20 per minute")
         )
         @self._check_auth
@@ -510,7 +510,7 @@ class MCPGateway:
             except ValueError as e:
                 return jsonify({"error": str(e)}), 400
 
-        @self.app.errorhandler(Exception)
+        @self.app.errorhandler(Exception)  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
         def handle_error(error: Exception) -> Any:
             logger.error(f"Unhandled error: {error}")
             return jsonify({"error": "Internal server error"}), 500

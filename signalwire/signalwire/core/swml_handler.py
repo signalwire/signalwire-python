@@ -49,7 +49,7 @@ class SWMLVerbHandler(ABC):
         pass
 
     @abstractmethod
-    def build_config(self, **kwargs) -> dict[str, Any]:
+    def build_config(self, **kwargs: Any) -> dict[str, Any]:
         """
         Build a configuration for this verb from the provided arguments
 
@@ -137,7 +137,7 @@ class AIVerbHandler(SWMLVerbHandler):
         post_prompt: str | None = None,
         post_prompt_url: str | None = None,
         swaig: dict[str, Any] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> dict[str, Any]:
         """
         Build a configuration for the AI verb
@@ -219,9 +219,9 @@ class VerbHandlerRegistry:
     and provides methods for accessing and using them.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the registry with default handlers"""
-        self._handlers = {}
+        self._handlers: dict[str, SWMLVerbHandler] = {}
 
         # Register default handlers
         self.register_handler(AIVerbHandler())

@@ -216,12 +216,15 @@ files = ["signalwire/signalwire"]
 # Third-party packages without type stubs (nltk, sentence_transformers, the
 # search/relay stacks) are out of scope — we type our own code, not theirs.
 ignore_missing_imports = true
-# The bar: our own code is clean. Bodies of untyped defs are checked so real
-# type errors inside them surface (this is what found the mixin cluster).
-check_untyped_defs = true
-warn_unused_ignores = true
-# `# type: ignore` is reserved for genuinely-unfixable third-party-stub gaps and
-# must carry an error code + reason. warn_unused_ignores keeps them honest.
+# The bar: the whole source tree is mypy --strict clean (full annotations + all
+# the strict sub-flags). Achieved by typing handlers with REAL types (FastAPI
+# Response/dict, generated payload types where they exist) — never papered with
+# bare `Any`. `strict` subsumes check_untyped_defs / warn_unused_ignores / etc.
+strict = true
+# `# type: ignore` is reserved for genuinely-unfixable third-party-stub gaps (e.g.
+# flask/flask-limiter optional extras with no stubs) and the documented
+# _HostTyped/AgentBase TYPE_CHECKING-vs-runtime split; each must carry an error
+# code + reason. warn_unused_ignores (via strict) keeps them honest.
 show_error_codes = true
 
 # numpy (a search/relay-extra runtime dep we do NOT type — same class as nltk /

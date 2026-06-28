@@ -136,7 +136,7 @@ class MCPServerMixin:
         return self._mcp_error(req_id, -32601, f"Method not found: {method}")
 
     @staticmethod
-    def _mcp_error(req_id, code: int, message: str) -> dict[str, Any]:
+    def _mcp_error(req_id: str | int | None, code: int, message: str) -> dict[str, Any]:
         """Build a JSON-RPC error response"""
         return {
             "jsonrpc": "2.0",

@@ -13,7 +13,7 @@ import os
 import re
 from pathlib import Path
 from typing import Any
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 try:
     from fastapi import FastAPI, Request, Response
@@ -26,6 +26,7 @@ except ImportError:
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.swml_service import SWMLService
 from signalwire.core.logging_config import get_logger
+from signalwire.core.mixins.web_mixin import _as_response
 import contextlib
 
 
@@ -76,7 +77,9 @@ class AgentServer:
 
         # Add security headers middleware
         @self.app.middleware("http")
-        async def add_security_headers(request, call_next):
+        async def add_security_headers(
+            request: Request, call_next: Callable[[Request], Awaitable[Response]]
+        ) -> Response:
             response = await call_next(request)
             response.headers["X-Content-Type-Options"] = "nosniff"
             response.headers["X-Frame-Options"] = "DENY"
@@ -104,7 +107,7 @@ class AgentServer:
         # all other routes are registered. This ensures custom routes like /get_token
         # don't get overshadowed by the catch-all /{full_path:path} route.
         @self.app.on_event("startup")
-        async def _setup_catch_all():
+        async def _setup_catch_all() -> None:
             self._register_catch_all_handler()
 
     def register(self, agent: AgentBase, route: str | None = None) -> None:
@@ -343,8 +346,8 @@ class AgentServer:
 
     def run(
         self,
-        event=None,
-        context=None,
+        event: Any = None,
+        context: Any = None,
         host: str | None = None,
         port: int | None = None,
     ) -> Any:
@@ -511,7 +514,7 @@ class AgentServer:
         error_response = {"error": "Not Found"}
         return self._format_cgi_response(error_response, status="404 Not Found")
 
-    def _handle_lambda_request(self, event, context) -> dict[str, Any]:
+    def _handle_lambda_request(self, event: Any, context: Any) -> dict[str, Any]:
         """Handle Lambda request using same routing logic as server"""
         import json
 
@@ -600,7 +603,7 @@ class AgentServer:
         }
 
     def _format_cgi_response(
-        self, data, content_type: str = "application/json", status: str = "200 OK"
+        self, data: Any, content_type: str = "application/json", status: str = "200 OK"
     ) -> str:
         """Format response for CGI output"""
         import json
@@ -634,7 +637,7 @@ class AgentServer:
         """
 
         @self.app.get("/health")
-        def health_check():
+        def health_check() -> dict[str, Any]:
             return {
                 "status": "ok",
                 "agents": len(self.agents),
@@ -642,7 +645,7 @@ class AgentServer:
             }
 
         @self.app.get("/ready")
-        def readiness_check():
+        def readiness_check() -> dict[str, Any]:
             return {"status": "ready", "agents": len(self.agents)}
 
     def _run_server(self, host: str | None = None, port: int | None = None) -> None:
@@ -845,7 +848,7 @@ class AgentServer:
 
         @self.app.get("/{full_path:path}")
         @self.app.post("/{full_path:path}")
-        async def handle_all_routes(request: Request, full_path: str):
+        async def handle_all_routes(request: Request, full_path: str) -> Response:
             """Handle requests that don't match registered routes (e.g. /matti instead of /matti/)"""
             # Check if this path maps to one of our registered agents
             for route, agent in self.agents.items():
@@ -868,11 +871,20 @@ class AgentServer:
                     if clean_path == "swaig":
                         from fastapi import Response
 
-                        return await agent._handle_swaig_request(request, Response())
+                        # _handle_swaig_request returns Response | dict (the dict is a
+                        # SWAIG-result passthrough); funnel through _as_response so this
+                        # route handler stays -> Response (FastAPI-safe).
+                        return _as_response(
+                            await agent._handle_swaig_request(request, Response())
+                        )
                     if clean_path == "post_prompt":
-                        return await agent._handle_post_prompt_request(request)
+                        return _as_response(
+                            await agent._handle_post_prompt_request(request)
+                        )
                     if clean_path == "check_for_input":
-                        return await agent._handle_check_for_input_request(request)
+                        return _as_response(
+                            await agent._handle_check_for_input_request(request)
+                        )
 
                     # Check for custom routing callbacks
                     if hasattr(agent, "_routing_callbacks"):

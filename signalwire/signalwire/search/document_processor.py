@@ -310,8 +310,8 @@ class DocumentProcessor:
                 file_path, encoding="utf-8"
             ) as file:
                 soup = BeautifulSoup(file, "html.parser")
-                # bs4 is untyped (ignore_missing_imports); get_text() returns str.
-                return cast(str, soup.get_text(separator="\n"))
+                text: str = soup.get_text(separator="\n")
+                return text
         except Exception as e:
             return json.dumps({"error": f"Error processing HTML: {e}"})
 
@@ -325,7 +325,8 @@ class DocumentProcessor:
                 if markdown is not None and BeautifulSoup is not None:
                     html = markdown.markdown(content)
                     soup = BeautifulSoup(html, "html.parser")
-                    return cast(str, soup.get_text(separator="\n"))
+                    md_text: str = soup.get_text(separator="\n")
+                    return md_text
                 # Fallback to raw markdown
                 return content
         except Exception as e:

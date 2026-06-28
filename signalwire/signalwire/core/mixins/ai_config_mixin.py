@@ -17,7 +17,7 @@ if TYPE_CHECKING:
 from signalwire.core.mixins._mixin_host import _HostTyped
 
 
-class AIConfigMixin(_HostTyped):
+class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at runtime; AgentBase under TYPE_CHECKING — intentional split
     """
     Mixin class containing all AI configuration methods for AgentBase
     """
@@ -629,7 +629,7 @@ class AIConfigMixin(_HostTyped):
         self._mcp_server_enabled = True
         return self
 
-    def set_prompt_llm_params(self, **params) -> "AgentBase":
+    def set_prompt_llm_params(self, **params: Any) -> "AgentBase":
         """
         Set LLM parameters for the main prompt.
 
@@ -664,7 +664,7 @@ class AIConfigMixin(_HostTyped):
 
         return self
 
-    def set_post_prompt_llm_params(self, **params) -> "AgentBase":
+    def set_post_prompt_llm_params(self, **params: Any) -> "AgentBase":
         """
         Set LLM parameters for the post-prompt.
 

@@ -97,7 +97,7 @@ class ConfigLoader:
             # Pattern to match ${VAR} or ${VAR|default}
             pattern = r"\$\{([^}|]+)(?:\|([^}]*))?\}"
 
-            def replacer(match):
+            def replacer(match: "re.Match[str]") -> str:
                 var_name = match.group(1)
                 default = match.group(2) if match.group(2) is not None else ""
                 return os.environ.get(var_name, default)
