@@ -32,7 +32,9 @@ class TestVideoConferencesSuccess:
         )
 
     def test_create(self, signalwire_client, mock):
-        body = signalwire_client.video.conferences.create(name="conf-alpha")
+        body = signalwire_client.video.conferences.create(
+            name="conf-alpha", display_name="Conf Alpha"
+        )
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "POST"
@@ -53,7 +55,9 @@ class TestVideoConferencesSuccess:
         )
 
     def test_update(self, signalwire_client, mock):
-        body = signalwire_client.video.conferences.update("conf-1", name="renamed")
+        body = signalwire_client.video.conferences.update(
+            "conf-1", display_name="renamed"
+        )
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "PUT"
@@ -61,7 +65,7 @@ class TestVideoConferencesSuccess:
         assert last.matched_route == "video.update_video_conference", (
             f"expected video.update_video_conference, got {last.matched_route!r}"
         )
-        assert last.body and last.body.get("name") == "renamed"
+        assert last.body and last.body.get("display_name") == "renamed"
 
     def test_delete(self, signalwire_client, mock):
         signalwire_client.video.conferences.delete("conf-1")
@@ -123,7 +127,7 @@ class TestVideoConferencesErrors:
     def test_create_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("video.create_video_conference", 422, {"error": "name required"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.video.conferences.create()
+            signalwire_client.video.conferences.create(display_name="x")
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "video.create_video_conference"
@@ -141,7 +145,7 @@ class TestVideoConferencesErrors:
     def test_update_not_found(self, signalwire_client, mock):
         mock.push_scenario("video.update_video_conference", 404, {"error": "not found"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.video.conferences.update("missing", name="x")
+            signalwire_client.video.conferences.update("missing", display_name="x")
         assert exc.value.status_code == 404
         last = mock.last_request()
         assert last.matched_route == "video.update_video_conference"
@@ -177,7 +181,9 @@ class TestVideoConferencesErrors:
     def test_create_stream_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("video.create_conference_stream", 422, {"error": "url required"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.video.conferences.create_stream("conf-1")
+            signalwire_client.video.conferences.create_stream(
+                "conf-1", url="rtmp://example.com/live"
+            )
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "video.create_conference_stream"

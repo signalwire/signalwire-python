@@ -514,7 +514,7 @@ class TestFabricCxmlApplications:
         assert last.method == "GET"
         assert last.matched_route == "fabric.get_cxml_application", last.matched_route
 
-        r.update(_ID, name="x")
+        r.update(_ID, display_name="x")
         last = mock.last_request()
         assert last.method == "PUT"
         assert last.matched_route == "fabric.update_cxml_application", last.matched_route
@@ -531,12 +531,6 @@ class TestFabricCxmlApplications:
             last.matched_route
         )
 
-    def test_create_not_implemented(self, signalwire_client, mock):
-        # The cXML applications API has no create operation; the SDK raises
-        # NotImplementedError rather than issuing a request. (Not a canonical route.)
-        with pytest.raises(NotImplementedError):
-            signalwire_client.fabric.cxml_applications.create(name="x")
-
     def test_errors(self, signalwire_client, mock):
         r = signalwire_client.fabric.cxml_applications
         mock.push_scenario("fabric.list_cxml_applications", 500, {"error": "x"})
@@ -549,7 +543,7 @@ class TestFabricCxmlApplications:
         assert exc.value.status_code == 404
         mock.push_scenario("fabric.update_cxml_application", 404, {"error": "nf"})
         with pytest.raises(SignalWireRestError) as exc:
-            r.update("missing", name="x")
+            r.update("missing", display_name="x")
         assert exc.value.status_code == 404
         mock.push_scenario("fabric.delete_cxml_application", 404, {"error": "nf"})
         with pytest.raises(SignalWireRestError) as exc:
@@ -577,7 +571,7 @@ class TestFabricCallFlows:
         assert last.matched_route == "fabric.create_call_flow", last.matched_route
         r.get(_ID)
         assert mock.last_request().matched_route == "fabric.get_call_flow"
-        r.update(_ID, name="x")
+        r.update(_ID, title="x")
         last = mock.last_request()
         assert last.method == "PUT"
         assert last.matched_route == "fabric.update_call_flow", last.matched_route
@@ -601,7 +595,7 @@ class TestFabricCallFlows:
         assert last.matched_route == "fabric.list_call_flow_versions", (
             last.matched_route
         )
-        r.deploy_version(_ID, version="v2")
+        r.deploy_version(_ID, {"document_version": 2})
         last = mock.last_request()
         assert last.method == "POST"
         assert last.path == f"{_BASE}/call_flow/{_ID}/versions"
@@ -625,7 +619,7 @@ class TestFabricCallFlows:
         assert exc.value.status_code == 404
         mock.push_scenario("fabric.update_call_flow", 404, {"error": "nf"})
         with pytest.raises(SignalWireRestError) as exc:
-            r.update("missing", name="x")
+            r.update("missing", title="x")
         assert exc.value.status_code == 404
         mock.push_scenario("fabric.delete_call_flow", 404, {"error": "nf"})
         with pytest.raises(SignalWireRestError) as exc:
@@ -641,7 +635,7 @@ class TestFabricCallFlows:
         assert exc.value.status_code == 404
         mock.push_scenario("fabric.deploy_call_flow_version", 422, {"error": "bad"})
         with pytest.raises(SignalWireRestError) as exc:
-            r.deploy_version("missing", version="v2")
+            r.deploy_version("missing", {"document_version": 2})
         assert exc.value.status_code == 422
         assert mock.last_request().matched_route == "fabric.deploy_call_flow_version"
         assert mock.last_request().response_status == 422

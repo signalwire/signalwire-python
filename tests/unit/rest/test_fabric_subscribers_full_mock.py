@@ -102,7 +102,9 @@ class TestFabricSubscriberSipEndpointsSuccess:
 
     def test_create(self, signalwire_client, mock):
         body = signalwire_client.fabric.subscribers.create_sip_endpoint(
-            _SUB, username="alice"
+            _SUB,
+            username="alice",
+            password="hack-me-if-you-can",  # noqa: S106 - test fixture value, not a real secret
         )
         assert isinstance(body, dict)
         last = mock.last_request()
@@ -167,7 +169,7 @@ class TestFabricSubscribersErrors:
     def test_create_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("fabric.create_subscriber", 422, {"error": "email required"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.subscribers.create()
+            signalwire_client.fabric.subscribers.create(email="a@b.c")
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "fabric.create_subscriber"
@@ -231,7 +233,11 @@ class TestFabricSubscriberSipEndpointsErrors:
             "fabric.create_subscriber_sip_endpoint", 422, {"error": "username required"}
         )
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.subscribers.create_sip_endpoint(_SUB)
+            signalwire_client.fabric.subscribers.create_sip_endpoint(
+                _SUB,
+                username="alice",
+                password="hack-me-if-you-can",  # noqa: S106 - test fixture value, not a real secret
+            )
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "fabric.create_subscriber_sip_endpoint"

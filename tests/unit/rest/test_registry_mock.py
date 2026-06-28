@@ -55,10 +55,28 @@ class TestRegistryBrands:
         assert last.matched_route is not None
 
     def test_create_campaign_posts_to_brand_subpath(self, signalwire_client, mock):
+        # create_campaign takes the full CreateManagedCampaignRequest body; the
+        # managed-campaign schema requires every field below.
         body = signalwire_client.registry.brands.create_campaign(
             "brand-2",
-            usecase="LOW_VOLUME",
-            description="MFA",
+            {
+                "name": "My Campaign",
+                "brand_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "sms_use_case": "MARKETING",
+                "description": "This campaign sends appointment reminders to opted-in patients.",
+                "sample1": "Hi John, your appointment is tomorrow. Reply STOP to unsubscribe.",
+                "sample2": "Your prescription is ready for pickup. Reply STOP to unsubscribe.",
+                "message_flow": "Users opt in via a written form and receive an opt-in message.",
+                "opt_out_message": "You have successfully been opted out. Reply START to opt back in.",
+                "help_message": "For help contact support@example.com. Reply STOP to unsubscribe.",
+                "number_pooling_required": False,
+                "direct_lending": False,
+                "embedded_link": False,
+                "embedded_phone": False,
+                "age_gated_content": False,
+                "lead_generation": False,
+                "terms_and_conditions": True,
+            },
         )
         assert isinstance(body, dict)
 
@@ -66,8 +84,8 @@ class TestRegistryBrands:
         assert last.method == "POST"
         assert last.path == f"{_REG_BASE}/brands/brand-2/campaigns"
         assert isinstance(last.body, dict)
-        assert last.body.get("usecase") == "LOW_VOLUME"
-        assert last.body.get("description") == "MFA"
+        assert last.body.get("sms_use_case") == "MARKETING"
+        assert last.body.get("name") == "My Campaign"
 
 
 # ---------------------------------------------------------------------------
@@ -89,8 +107,9 @@ class TestRegistryCampaigns:
     def test_update_uses_put(self, signalwire_client, mock):
         # RegistryCampaigns.update calls self._http.put(...) — distinct from
         # the generic CrudResource which uses PATCH.
+        # UpdateCampaignRequest exposes only ``name``.
         body = signalwire_client.registry.campaigns.update(
-            "camp-2", description="Updated"
+            "camp-2", name="Updated Campaign"
         )
         assert isinstance(body, dict)
 
@@ -98,7 +117,7 @@ class TestRegistryCampaigns:
         assert last.method == "PUT"
         assert last.path == f"{_REG_BASE}/campaigns/camp-2"
         assert isinstance(last.body, dict)
-        assert last.body.get("description") == "Updated"
+        assert last.body.get("name") == "Updated Campaign"
 
     def test_list_numbers_uses_numbers_subpath(self, signalwire_client, mock):
         body = signalwire_client.registry.campaigns.list_numbers("camp-3")
@@ -111,7 +130,7 @@ class TestRegistryCampaigns:
 
     def test_create_order_posts_to_orders_subpath(self, signalwire_client, mock):
         body = signalwire_client.registry.campaigns.create_order(
-            "camp-4", numbers=["pn-1", "pn-2"]
+            "camp-4", phone_numbers=["+15558675309", "+15558675310"]
         )
         assert isinstance(body, dict)
 
@@ -119,7 +138,7 @@ class TestRegistryCampaigns:
         assert last.method == "POST"
         assert last.path == f"{_REG_BASE}/campaigns/camp-4/orders"
         assert isinstance(last.body, dict)
-        assert last.body.get("numbers") == ["pn-1", "pn-2"]
+        assert last.body.get("phone_numbers") == ["+15558675309", "+15558675310"]
 
 
 # ---------------------------------------------------------------------------

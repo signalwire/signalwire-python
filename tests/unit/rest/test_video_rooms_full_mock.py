@@ -131,7 +131,7 @@ class TestVideoRoomsErrors:
     def test_create_room_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("video.create_room", 422, {"error": "name required"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.video.rooms.create()
+            signalwire_client.video.rooms.create(name="bad-room")
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "video.create_room"
@@ -176,7 +176,7 @@ class TestVideoRoomsErrors:
     def test_create_room_stream_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("video.create_room_stream", 422, {"error": "url required"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.video.rooms.create_stream("room-1001")
+            signalwire_client.video.rooms.create_stream("room-1001", url="rtmp://example.com/live")
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "video.create_room_stream"
@@ -185,7 +185,7 @@ class TestVideoRoomsErrors:
     def test_create_room_token_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("video.create_room_token", 422, {"error": "room_name required"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.video.room_tokens.create()
+            signalwire_client.video.room_tokens.create(room_name="bad-room")
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "video.create_room_token"

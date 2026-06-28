@@ -17,8 +17,6 @@ Each test:
 
 from __future__ import annotations
 
-import pytest
-
 
 # ---------------------------------------------------------------------------
 # Fabric Addresses (read-only top-level resource)
@@ -61,15 +59,17 @@ class TestFabricAddresses:
 class TestCxmlApplicationsCreate:
     """``cxml_applications`` is read-only by design.
 
-    The SDK raises ``NotImplementedError`` rather than POSTing because the API
-    has no create endpoint for cXML applications (verify in
-    porting-sdk/rest-apis/fabric: only PUT/GET/DELETE on
-    ``/api/fabric/resources/cxml_applications/{id}``).
+    The generated resource exposes no ``create`` method because the API has
+    no create endpoint for cXML applications (the spec only defines
+    list/get/delete on ``/api/fabric/resources/cxml_applications`` and
+    ``/{id}``). The legacy hand-class raised ``NotImplementedError`` from a
+    ``create`` stub; the generated surface omits the method entirely.
     """
 
-    def test_create_raises_not_implemented(self, signalwire_client, mock):
-        with pytest.raises(NotImplementedError, match="cXML applications cannot"):
-            signalwire_client.fabric.cxml_applications.create(name="never_built")
+    def test_create_method_is_absent(self, signalwire_client, mock):
+        assert not hasattr(
+            signalwire_client.fabric.cxml_applications, "create"
+        ), "cxml_applications has no create route in the spec; create must not exist"
         # Nothing should have hit the wire.
         assert mock.journal == [], (
             f"expected no journal entries, got {mock.journal}"
@@ -187,7 +187,7 @@ class TestFabricTokens:
 
     def test_create_invite_token(self, signalwire_client, mock):
         body = signalwire_client.fabric.tokens.create_invite_token(
-            email="invitee@example.com"
+            address_id="3fa85f64-5717-4562-b3fc-2c963f66afa6"
         )
         assert isinstance(body, dict)
 
@@ -196,11 +196,13 @@ class TestFabricTokens:
         # subscriber/invites uses the singular 'subscriber' path segment.
         assert last.path == "/api/fabric/subscriber/invites"
         assert isinstance(last.body, dict)
-        assert last.body.get("email") == "invitee@example.com"
+        assert (
+            last.body.get("address_id") == "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        )
 
     def test_create_embed_token(self, signalwire_client, mock):
         body = signalwire_client.fabric.tokens.create_embed_token(
-            allowed_addresses=["addr-1", "addr-2"]
+            token="c2c_7acc0e5e968706a032983cd80cdca219"  # noqa: S106 - test fixture value, not a real secret
         )
         assert isinstance(body, dict)
 
@@ -208,11 +210,11 @@ class TestFabricTokens:
         assert last.method == "POST"
         assert last.path == "/api/fabric/embeds/tokens"
         assert isinstance(last.body, dict)
-        assert last.body.get("allowed_addresses") == ["addr-1", "addr-2"]
+        assert last.body.get("token") == "c2c_7acc0e5e968706a032983cd80cdca219"
 
     def test_refresh_subscriber_token(self, signalwire_client, mock):
         body = signalwire_client.fabric.tokens.refresh_subscriber_token(
-            refresh_token="abc-123"
+            refresh_token="abc-123"  # noqa: S106 - test fixture value, not a real secret
         )
         assert isinstance(body, dict)
 

@@ -68,10 +68,10 @@ class TestVerifiedCallers:
 
     def test_submit_verification(self, client, mock_session):
         mock_session.request.return_value = MockResponse(200, {})
-        client.verified_callers.submit_verification("vc-1", code="123456")
+        client.verified_callers.submit_verification("vc-1", verification_code="123456")
         mock_session.request.assert_called_with(
             "PUT", "https://test.signalwire.com/api/relay/rest/verified_caller_ids/vc-1/verification",
-            json={"code": "123456"}, params=None,
+            json={"verification_code": "123456"}, params=None,
         )
 
 
@@ -101,12 +101,12 @@ class TestMfa:
         client.mfa.sms(to="+15551234567", from_="+15559876543")
         mock_session.request.assert_called_with(
             "POST", "https://test.signalwire.com/api/relay/rest/mfa/sms",
-            json={"to": "+15551234567", "from_": "+15559876543"}, params=None,
+            json={"to": "+15551234567", "from": "+15559876543"}, params=None,
         )
 
     def test_verify(self, client, mock_session):
         mock_session.request.return_value = MockResponse(200, {"success": True})
-        client.mfa.verify("mfa-1", token="123456")
+        client.mfa.verify("mfa-1", token="123456")  # noqa: S106
         mock_session.request.assert_called_with(
             "POST", "https://test.signalwire.com/api/relay/rest/mfa/mfa-1/verify",
             json={"token": "123456"}, params=None,
@@ -186,10 +186,15 @@ class TestLogs:
 class TestRegistry:
     def test_create_brand(self, client, mock_session):
         mock_session.request.return_value = MockResponse(201, {"id": "brand-1"})
-        client.registry.brands.create(name="MyBrand")
+        body = {
+            "csp_self_registered": True,
+            "name": "MyBrand",
+            "csp_brand_reference": "B123456",
+        }
+        client.registry.brands.create(body)
         mock_session.request.assert_called_with(
             "POST", "https://test.signalwire.com/api/relay/rest/registry/beta/brands",
-            json={"name": "MyBrand"}, params=None,
+            json=body, params=None,
         )
 
     def test_campaign_orders(self, client, mock_session):
@@ -262,26 +267,26 @@ class TestCompat:
 class TestProjectTokens:
     def test_create_token(self, client, mock_session):
         mock_session.request.return_value = MockResponse(200, {"id": "tok-1"})
-        client.project.tokens.create(name="test-token")
+        client.project.tokens.create(name="test-token", permissions=["calling"])
         mock_session.request.assert_called_with(
             "POST", "https://test.signalwire.com/api/project/tokens",
-            json={"name": "test-token"}, params=None,
+            json={"name": "test-token", "permissions": ["calling"]}, params=None,
         )
 
 
 class TestPubSubChat:
     def test_pubsub_token(self, client, mock_session):
         mock_session.request.return_value = MockResponse(200, {"token": "abc"})
-        client.pubsub.create_token(ttl=60)
+        client.pubsub.create_token(ttl=60, channels={"room": {"read": True}})
         mock_session.request.assert_called_with(
             "POST", "https://test.signalwire.com/api/pubsub/tokens",
-            json={"ttl": 60}, params=None,
+            json={"ttl": 60, "channels": {"room": {"read": True}}}, params=None,
         )
 
     def test_chat_token(self, client, mock_session):
         mock_session.request.return_value = MockResponse(200, {"token": "abc"})
-        client.chat.create_token(ttl=60)
+        client.chat.create_token(ttl=60, channels={"room": {"read": True}})
         mock_session.request.assert_called_with(
             "POST", "https://test.signalwire.com/api/chat/tokens",
-            json={"ttl": 60}, params=None,
+            json={"ttl": 60, "channels": {"room": {"read": True}}}, params=None,
         )

@@ -24,6 +24,7 @@ if TYPE_CHECKING:
         LiveTranslateStopAction,
         LiveTranslateSummarizeAction,
         SWMLObject,
+        uuid,
     )
 
 
@@ -33,13 +34,70 @@ class Calling(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/calling/calls")
 
-    def dial(self, *, extras: Mapping[str, Any] | None = None) -> CallResponse:
-        params: dict[str, Any] = {}
+    def dial(
+        self,
+        *,
+        from_: str,
+        to: str,
+        caller_id: str | None = None,
+        fallback_url: str | None = None,
+        status_url: str | None = None,
+        status_events: list[
+            Literal["answered", "queued", "initiated", "ringing", "ending", "ended"]
+        ]
+        | None = None,
+        url_method: str | None = None,
+        url: str | None = None,
+        codecs: list[str] | str | None = None,
+        swml: SWMLObject | None = None,
+        extras: Mapping[str, Any] | None = None,
+    ) -> CallResponse:
+        params: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "from": from_,
+                "to": to,
+                "caller_id": caller_id,
+                "fallback_url": fallback_url,
+                "status_url": status_url,
+                "status_events": status_events,
+                "url_method": url_method,
+                "url": url,
+                "codecs": codecs,
+                "swml": swml,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            params.update(extras)
         body: dict[str, Any] = {"command": "dial", "params": params}
         return cast("CallResponse", self._http.post(self._base_path, body=body))
 
-    def update(self, *, extras: Mapping[str, Any] | None = None) -> CallResponse:
-        params: dict[str, Any] = {}
+    def update(
+        self,
+        *,
+        id: uuid,
+        fallback_url: str | None = None,
+        status: Literal["canceled", "completed"] | None = None,
+        status_url: str | None = None,
+        url: str | None = None,
+        swml: SWMLObject | None = None,
+        extras: Mapping[str, Any] | None = None,
+    ) -> CallResponse:
+        params: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "id": id,
+                "fallback_url": fallback_url,
+                "status": status,
+                "status_url": status_url,
+                "url": url,
+                "swml": swml,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            params.update(extras)
         body: dict[str, Any] = {"command": "update", "params": params}
         return cast("CallResponse", self._http.post(self._base_path, body=body))
 

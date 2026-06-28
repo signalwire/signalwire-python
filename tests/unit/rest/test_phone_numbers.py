@@ -8,9 +8,7 @@ pre-creating a Fabric webhook resource and does NOT call
 post-mortem.
 """
 
-import warnings
 
-import pytest
 
 from signalwire.rest import PhoneCallHandler
 

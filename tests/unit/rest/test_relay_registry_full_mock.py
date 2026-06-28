@@ -27,13 +27,19 @@ class TestRelayRegistryBrandsSuccess:
         assert last.matched_route == "relay-rest.list_brands"
 
     def test_create(self, signalwire_client, mock):
-        body = signalwire_client.registry.brands.create(entity_type="PRIVATE_PROFIT")
+        body = signalwire_client.registry.brands.create(
+            {
+                "csp_self_registered": True,
+                "name": "My Brand",
+                "csp_brand_reference": "B123456",
+            }
+        )
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "POST"
         assert last.path == f"{_BASE}/brands"
         assert last.matched_route == "relay-rest.create_brand"
-        assert last.body and last.body.get("entity_type") == "PRIVATE_PROFIT"
+        assert last.body and last.body.get("csp_brand_reference") == "B123456"
 
     def test_get(self, signalwire_client, mock):
         body = signalwire_client.registry.brands.get("brand-1")
@@ -53,14 +59,19 @@ class TestRelayRegistryBrandsSuccess:
 
     def test_create_campaign(self, signalwire_client, mock):
         body = signalwire_client.registry.brands.create_campaign(
-            "brand-1", usecase="LOW_VOLUME"
+            "brand-1",
+            {
+                "name": "My Campaign",
+                "brand_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                "csp_campaign_reference": "C123456",
+            },
         )
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "POST"
         assert last.path == f"{_BASE}/brands/brand-1/campaigns"
         assert last.matched_route == "relay-rest.create_campaign"
-        assert last.body and last.body.get("usecase") == "LOW_VOLUME"
+        assert last.body and last.body.get("csp_campaign_reference") == "C123456"
 
 
 class TestRelayRegistryBrandsErrors:
@@ -76,7 +87,13 @@ class TestRelayRegistryBrandsErrors:
     def test_create_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("relay-rest.create_brand", 422, {"error": "bad"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.registry.brands.create()
+            signalwire_client.registry.brands.create(
+                {
+                    "csp_self_registered": True,
+                    "name": "My Brand",
+                    "csp_brand_reference": "B123456",
+                }
+            )
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "relay-rest.create_brand"
@@ -103,7 +120,14 @@ class TestRelayRegistryBrandsErrors:
     def test_create_campaign_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("relay-rest.create_campaign", 422, {"error": "bad"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.registry.brands.create_campaign("brand-1")
+            signalwire_client.registry.brands.create_campaign(
+                "brand-1",
+                {
+                    "name": "My Campaign",
+                    "brand_id": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+                    "csp_campaign_reference": "C123456",
+                },
+            )
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "relay-rest.create_campaign"
@@ -120,13 +144,13 @@ class TestRelayRegistryCampaignsSuccess:
         assert last.matched_route == "relay-rest.retrieve_campaign"
 
     def test_update(self, signalwire_client, mock):
-        body = signalwire_client.registry.campaigns.update("camp-1", description="x")
+        body = signalwire_client.registry.campaigns.update("camp-1", name="My Campaign")
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "PUT"
         assert last.path == f"{_BASE}/campaigns/camp-1"
         assert last.matched_route == "relay-rest.update_campaign"
-        assert last.body and last.body.get("description") == "x"
+        assert last.body and last.body.get("name") == "My Campaign"
 
     def test_list_numbers(self, signalwire_client, mock):
         body = signalwire_client.registry.campaigns.list_numbers("camp-1")
@@ -146,14 +170,14 @@ class TestRelayRegistryCampaignsSuccess:
 
     def test_create_order(self, signalwire_client, mock):
         body = signalwire_client.registry.campaigns.create_order(
-            "camp-1", numbers=["pn-1"]
+            "camp-1", phone_numbers=["+15558675309"]
         )
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "POST"
         assert last.path == f"{_BASE}/campaigns/camp-1/orders"
         assert last.matched_route == "relay-rest.create_order"
-        assert last.body and last.body.get("numbers") == ["pn-1"]
+        assert last.body and last.body.get("phone_numbers") == ["+15558675309"]
 
 
 class TestRelayRegistryCampaignsErrors:
@@ -169,7 +193,7 @@ class TestRelayRegistryCampaignsErrors:
     def test_update_not_found(self, signalwire_client, mock):
         mock.push_scenario("relay-rest.update_campaign", 404, {"error": "nope"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.registry.campaigns.update("missing", description="x")
+            signalwire_client.registry.campaigns.update("missing", name="My Campaign")
         assert exc.value.status_code == 404
         last = mock.last_request()
         assert last.matched_route == "relay-rest.update_campaign"

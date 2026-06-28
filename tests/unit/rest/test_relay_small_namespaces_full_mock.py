@@ -28,13 +28,13 @@ class TestRelaySipProfileSuccess:
         assert last.matched_route == "relay-rest.retrieve_sip_profile"
 
     def test_update(self, signalwire_client, mock):
-        body = signalwire_client.sip_profile.update(domain="acme")
+        body = signalwire_client.sip_profile.update(domain_identifier="acme")
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "PUT"
         assert last.path == self._BASE
         assert last.matched_route == "relay-rest.update_sip_profile"
-        assert last.body and last.body.get("domain") == "acme"
+        assert last.body and last.body.get("domain_identifier") == "acme"
 
 
 class TestRelaySipProfileErrors:
@@ -50,7 +50,7 @@ class TestRelaySipProfileErrors:
     def test_update_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("relay-rest.update_sip_profile", 422, {"error": "bad"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.sip_profile.update(domain="")
+            signalwire_client.sip_profile.update(domain_identifier="")
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "relay-rest.update_sip_profile"
@@ -98,13 +98,15 @@ class TestRelayShortCodesSuccess:
         assert last.matched_route == "relay-rest.retrieve_short_code"
 
     def test_update(self, signalwire_client, mock):
-        body = signalwire_client.short_codes.update("sc-1", friendly_name="promo")
+        body = signalwire_client.short_codes.update(
+            "sc-1", name="promo", message_handler="relay_context"
+        )
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "PUT"
         assert last.path == f"{self._BASE}/sc-1"
         assert last.matched_route == "relay-rest.update_short_code"
-        assert last.body and last.body.get("friendly_name") == "promo"
+        assert last.body and last.body.get("name") == "promo"
 
 
 class TestRelayShortCodesErrors:
@@ -129,7 +131,9 @@ class TestRelayShortCodesErrors:
     def test_update_not_found(self, signalwire_client, mock):
         mock.push_scenario("relay-rest.update_short_code", 404, {"error": "nope"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.short_codes.update("missing", friendly_name="x")
+            signalwire_client.short_codes.update(
+                "missing", name="x", message_handler="relay_context"
+            )
         assert exc.value.status_code == 404
         last = mock.last_request()
         assert last.matched_route == "relay-rest.update_short_code"
@@ -140,7 +144,9 @@ class TestRelayImportedNumbersSuccess:
     _BASE = "/api/relay/rest/imported_phone_numbers"
 
     def test_create(self, signalwire_client, mock):
-        body = signalwire_client.imported_numbers.create(number="+15551230000")
+        body = signalwire_client.imported_numbers.create(
+            number="+15551230000", number_type="longcode"
+        )
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "POST"
@@ -155,7 +161,9 @@ class TestRelayImportedNumbersErrors:
             "relay-rest.create_imported_phone_number", 422, {"error": "bad"}
         )
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.imported_numbers.create()
+            signalwire_client.imported_numbers.create(
+                number="+15551230000", number_type="longcode"
+            )
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "relay-rest.create_imported_phone_number"
@@ -196,7 +204,7 @@ class TestRelayMfaErrors:
     def test_call_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("relay-rest.request_mfa_call", 422, {"error": "to required"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.mfa.call()
+            signalwire_client.mfa.call(to="+15551230000")
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "relay-rest.request_mfa_call"
@@ -205,7 +213,7 @@ class TestRelayMfaErrors:
     def test_sms_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("relay-rest.request_mfa_sms", 422, {"error": "to required"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.mfa.sms()
+            signalwire_client.mfa.sms(to="+15551230000")
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "relay-rest.request_mfa_sms"

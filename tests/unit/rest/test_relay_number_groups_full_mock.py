@@ -109,7 +109,7 @@ class TestRelayNumberGroupsErrors:
             "relay-rest.create_number_group", 422, {"error": "name required"}
         )
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.number_groups.create()
+            signalwire_client.number_groups.create(name="My Number Group")
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "relay-rest.create_number_group"
@@ -158,7 +158,9 @@ class TestRelayNumberGroupsErrors:
             "relay-rest.create_number_group_membership", 422, {"error": "bad"}
         )
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.number_groups.add_membership("ng-1")
+            signalwire_client.number_groups.add_membership(
+                "ng-1", phone_number_id="3fa85f64-5717-4562-b3fc-2c963f66afa6"
+            )
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "relay-rest.create_number_group_membership"

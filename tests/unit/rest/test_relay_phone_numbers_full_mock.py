@@ -96,7 +96,7 @@ class TestRelayPhoneNumbersErrors:
             "relay-rest.purchase_phone_number", 422, {"error": "number required"}
         )
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.phone_numbers.create()
+            signalwire_client.phone_numbers.create(number="+15558675309")
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "relay-rest.purchase_phone_number"

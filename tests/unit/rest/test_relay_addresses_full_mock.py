@@ -23,13 +23,23 @@ class TestRelayAddressesSuccess:
         assert last.matched_route == "relay-rest.list_addresses"
 
     def test_create(self, signalwire_client, mock):
-        body = signalwire_client.addresses.create(name="HQ")
+        body = signalwire_client.addresses.create(
+            label="HQ",
+            country="US",
+            first_name="Ada",
+            last_name="Lovelace",
+            street_number="123",
+            street_name="Main St",
+            city="Austin",
+            state="TX",
+            postal_code="78701",
+        )
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "POST"
         assert last.path == _BASE
         assert last.matched_route == "relay-rest.create_address"
-        assert last.body and last.body.get("name") == "HQ"
+        assert last.body and last.body.get("label") == "HQ"
 
     def test_get(self, signalwire_client, mock):
         body = signalwire_client.addresses.get("addr-1")
@@ -60,7 +70,17 @@ class TestRelayAddressesErrors:
     def test_create_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("relay-rest.create_address", 422, {"error": "name required"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.addresses.create()
+            signalwire_client.addresses.create(
+                label="HQ",
+                country="US",
+                first_name="Ada",
+                last_name="Lovelace",
+                street_number="123",
+                street_name="Main St",
+                city="Austin",
+                state="TX",
+                postal_code="78701",
+            )
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "relay-rest.create_address"

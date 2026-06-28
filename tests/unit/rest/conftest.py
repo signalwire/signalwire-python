@@ -61,7 +61,7 @@ import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 from unittest.mock import MagicMock, patch
 from urllib.parse import quote
 
@@ -87,7 +87,7 @@ from signalwire.rest.client import RestClient
 # ---------------------------------------------------------------------------
 
 
-def _discover_mock_package(name: str) -> Optional[str]:
+def _discover_mock_package(name: str) -> str | None:
     """Walk up from this file looking for ``../porting-sdk/test_harness/<name>/``.
 
     Returns the package-root directory (the value to put on ``sys.path`` so
@@ -222,13 +222,13 @@ class _SharedServer:
     """Process-wide handle to the one shared mock_signalwire server."""
 
     def __init__(self) -> None:
-        self.url: Optional[str] = None
-        self.port: Optional[int] = None
-        self._child: Optional[subprocess.Popen] = None
+        self.url: str | None = None
+        self.port: int | None = None
+        self._child: subprocess.Popen | None = None
         self._lock = threading.Lock()
-        self._error: Optional[str] = None
+        self._error: str | None = None
 
-    def ensure(self) -> "_SharedServer":
+    def ensure(self) -> _SharedServer:
         with self._lock:
             if self.url is not None:
                 return self
@@ -309,11 +309,11 @@ class _JournalEntry:
     query_params: dict[str, list[str]]
     headers: dict[str, str]
     body: Any
-    matched_route: Optional[str]
-    response_status: Optional[int]
+    matched_route: str | None
+    response_status: int | None
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "_JournalEntry":
+    def from_dict(cls, d: dict[str, Any]) -> _JournalEntry:
         return cls(
             method=str(d.get("method", "")),
             path=str(d.get("path", "")),

@@ -176,6 +176,7 @@ class Mfa(BaseResource):
         self,
         *,
         to: str,
+        from_: str | None = None,
         message: str | None = None,
         token_length: int | None = None,
         valid_for: int | None = None,
@@ -187,6 +188,7 @@ class Mfa(BaseResource):
             k: v
             for k, v in {
                 "to": to,
+                "from": from_,
                 "message": message,
                 "token_length": token_length,
                 "valid_for": valid_for,
@@ -203,6 +205,7 @@ class Mfa(BaseResource):
         self,
         *,
         to: str,
+        from_: str | None = None,
         message: str | None = None,
         token_length: int | None = None,
         valid_for: int | None = None,
@@ -214,6 +217,7 @@ class Mfa(BaseResource):
             k: v
             for k, v in {
                 "to": to,
+                "from": from_,
                 "message": message,
                 "token_length": token_length,
                 "valid_for": valid_for,

@@ -62,12 +62,12 @@ class TestFabricResourcesSuccess:
         )
 
     def test_assign_phone_route(self, signalwire_client, mock):
-        # assign_phone_route is deprecated and emits a DeprecationWarning; the
-        # call itself still hits POST /resources/{id}/phone_routes.
-        with pytest.warns(DeprecationWarning):
-            body = signalwire_client.fabric.resources.assign_phone_route(
-                "res-1", phone_number="+15551230000"
-            )
+        # assign_phone_route hits POST /resources/{id}/phone_routes.
+        body = signalwire_client.fabric.resources.assign_phone_route(
+            "res-1",
+            phone_route_id="691af061-cd86-4893-a605-173f47afc4c2",
+            handler="calling",
+        )
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "POST"
@@ -78,7 +78,7 @@ class TestFabricResourcesSuccess:
 
     def test_assign_domain_application(self, signalwire_client, mock):
         body = signalwire_client.fabric.resources.assign_domain_application(
-            "res-1", domain="example.test"
+            "res-1", domain_application_id="993ed018-9e79-4e50-b97b-984bd5534095"
         )
         assert isinstance(body, dict)
         last = mock.last_request()
@@ -156,9 +156,11 @@ class TestFabricResourcesErrors:
         mock.push_scenario(
             "fabric.assign_resource_phone_route", 422, {"error": "bad target"}
         )
-        with pytest.warns(DeprecationWarning), pytest.raises(SignalWireRestError) as exc:
+        with pytest.raises(SignalWireRestError) as exc:
             signalwire_client.fabric.resources.assign_phone_route(
-                "res-1", phone_number="+15551230000"
+                "res-1",
+                phone_route_id="691af061-cd86-4893-a605-173f47afc4c2",
+                handler="calling",
             )
         assert exc.value.status_code == 422
         last = mock.last_request()
@@ -171,7 +173,7 @@ class TestFabricResourcesErrors:
         )
         with pytest.raises(SignalWireRestError) as exc:
             signalwire_client.fabric.resources.assign_domain_application(
-                "res-1", domain="bad"
+                "res-1", domain_application_id="993ed018-9e79-4e50-b97b-984bd5534095"
             )
         assert exc.value.status_code == 422
         last = mock.last_request()

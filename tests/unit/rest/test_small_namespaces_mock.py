@@ -43,10 +43,16 @@ class TestAddresses:
 
     def test_create(self, signalwire_client, mock):
         body = signalwire_client.addresses.create(
-            address_type="commercial",
+            label="Main Office",
+            address_type="Office",
             first_name="Ada",
             last_name="Lovelace",
             country="US",
+            street_number="123",
+            street_name="Main St",
+            city="Anytown",
+            state="CA",
+            postal_code="94000",
         )
         assert isinstance(body, dict)
         # An Address resource carries an 'id' field.
@@ -55,7 +61,7 @@ class TestAddresses:
         assert last.method == "POST"
         assert last.path == "/api/relay/rest/addresses"
         sent = last.body or {}
-        assert sent.get("address_type") == "commercial"
+        assert sent.get("address_type") == "Office"
         assert sent.get("first_name") == "Ada"
         assert sent.get("country") == "US"
 
@@ -136,7 +142,9 @@ class TestShortCodes:
         assert last.path == "/api/relay/rest/short_codes/sc-1"
 
     def test_update(self, signalwire_client, mock):
-        body = signalwire_client.short_codes.update("sc-1", name="Marketing SMS")
+        body = signalwire_client.short_codes.update(
+            "sc-1", name="Marketing SMS", message_handler="relay_context",
+        )
         assert isinstance(body, dict)
         assert "id" in body
         last = mock.last_request()
@@ -156,9 +164,8 @@ class TestImportedNumbers:
     def test_create(self, signalwire_client, mock):
         body = signalwire_client.imported_numbers.create(
             number="+15551234567",
-            sip_username="alice",
-            sip_password="secret",
-            sip_proxy="sip.example.com",
+            number_type="longcode",
+            capabilities=["sms", "voice"],
         )
         assert isinstance(body, dict)
         # The imported-number response has an 'id'.
@@ -168,8 +175,8 @@ class TestImportedNumbers:
         assert last.path == "/api/relay/rest/imported_phone_numbers"
         sent = last.body or {}
         assert sent.get("number") == "+15551234567"
-        assert sent.get("sip_username") == "alice"
-        assert sent.get("sip_proxy") == "sip.example.com"
+        assert sent.get("number_type") == "longcode"
+        assert sent.get("capabilities") == ["sms", "voice"]
 
 
 # ---------------------------------------------------------------------------
@@ -181,7 +188,9 @@ class TestMfa:
     def test_call(self, signalwire_client, mock):
         body = signalwire_client.mfa.call(
             to="+15551234567",
-            from_="+15559876543",
+            # Spec field is `from`, which is not a valid Python identifier, so the
+            # generated method exposes it via `extras` rather than a typed kwarg.
+            extras={"from": "+15559876543"},
             message="Your code is {code}",
         )
         assert isinstance(body, dict)
@@ -192,7 +201,7 @@ class TestMfa:
         assert last.path == "/api/relay/rest/mfa/call"
         sent = last.body or {}
         assert sent.get("to") == "+15551234567"
-        assert sent.get("from_") == "+15559876543"
+        assert sent.get("from") == "+15559876543"
         assert sent.get("message") == "Your code is {code}"
 
 
@@ -204,17 +213,17 @@ class TestMfa:
 class TestSipProfile:
     def test_update(self, signalwire_client, mock):
         body = signalwire_client.sip_profile.update(
-            domain="myco.sip.signalwire.com",
+            domain_identifier="myco",
             default_codecs=["PCMU", "PCMA"],
         )
         assert isinstance(body, dict)
-        # The SIP profile resource has a 'domain' field.
-        assert "domain" in body or "default_codecs" in body
+        # The SIP profile resource carries a 'domain_identifier' field.
+        assert "domain_identifier" in body or "default_codecs" in body
         last = mock.last_request()
         assert last.method == "PUT"
         assert last.path == "/api/relay/rest/sip_profile"
         sent = last.body or {}
-        assert sent.get("domain") == "myco.sip.signalwire.com"
+        assert sent.get("domain_identifier") == "myco"
         assert sent.get("default_codecs") == ["PCMU", "PCMA"]
 
 

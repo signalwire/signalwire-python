@@ -36,7 +36,7 @@ class TestFabricTokensSuccess:
 
     def test_refresh_subscriber_token(self, signalwire_client, mock):
         body = signalwire_client.fabric.tokens.refresh_subscriber_token(
-            token="t-1"  # noqa: S106 - test fixture value, not a real secret
+            refresh_token="t-1"  # noqa: S106 - test fixture value, not a real secret
         )
         assert isinstance(body, dict)
         last = mock.last_request()
@@ -47,7 +47,9 @@ class TestFabricTokensSuccess:
         )
 
     def test_create_invite_token(self, signalwire_client, mock):
-        body = signalwire_client.fabric.tokens.create_invite_token(email="a@b.c")
+        body = signalwire_client.fabric.tokens.create_invite_token(
+            address_id="3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        )
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "POST"
@@ -69,7 +71,7 @@ class TestFabricTokensSuccess:
         )
 
     def test_create_embed_token(self, signalwire_client, mock):
-        body = signalwire_client.fabric.tokens.create_embed_token(embed_id="e-1")
+        body = signalwire_client.fabric.tokens.create_embed_token(token="e-1")  # noqa: S106 - test fixture value, not a real secret
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "POST"
@@ -87,7 +89,7 @@ class TestFabricTokensErrors:
             "fabric.create_subscriber_token", 422, {"error": "reference required"}
         )
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.tokens.create_subscriber_token()
+            signalwire_client.fabric.tokens.create_subscriber_token(reference="sub-1001")
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "fabric.create_subscriber_token"
@@ -99,7 +101,7 @@ class TestFabricTokensErrors:
         )
         with pytest.raises(SignalWireRestError) as exc:
             signalwire_client.fabric.tokens.refresh_subscriber_token(
-                token="missing"  # noqa: S106 - test fixture value, not a real secret
+                refresh_token="missing"  # noqa: S106 - test fixture value, not a real secret
             )
         assert exc.value.status_code == 404
         last = mock.last_request()
@@ -111,7 +113,9 @@ class TestFabricTokensErrors:
             "fabric.create_subscriber_invite_token", 422, {"error": "email required"}
         )
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.tokens.create_invite_token()
+            signalwire_client.fabric.tokens.create_invite_token(
+                address_id="3fa85f64-5717-4562-b3fc-2c963f66afa6"
+            )
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "fabric.create_subscriber_invite_token"
@@ -122,7 +126,9 @@ class TestFabricTokensErrors:
             "fabric.create_subscriber_guest_token", 422, {"error": "bad input"}
         )
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.tokens.create_guest_token()
+            signalwire_client.fabric.tokens.create_guest_token(
+                allowed_addresses=["addr-1"]
+            )
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "fabric.create_subscriber_guest_token"
@@ -131,7 +137,7 @@ class TestFabricTokensErrors:
     def test_create_embed_token_server_error(self, signalwire_client, mock):
         mock.push_scenario("fabric.create_embeds_token", 500, {"error": "internal"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.tokens.create_embed_token(embed_id="e-1")
+            signalwire_client.fabric.tokens.create_embed_token(token="e-1")  # noqa: S106 - test fixture value, not a real secret
         assert exc.value.status_code == 500
         last = mock.last_request()
         assert last.matched_route == "fabric.create_embeds_token"

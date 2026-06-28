@@ -25,13 +25,13 @@ class TestRelayVerifiedCallersSuccess:
         assert last.matched_route == "relay-rest.list_verified_caller_ids"
 
     def test_create(self, signalwire_client, mock):
-        body = signalwire_client.verified_callers.create(phone_number="+15551112222")
+        body = signalwire_client.verified_callers.create(number="+15551112222")
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "POST"
         assert last.path == _BASE
         assert last.matched_route == "relay-rest.create_verified_caller_id"
-        assert last.body and last.body.get("phone_number") == "+15551112222"
+        assert last.body and last.body.get("number") == "+15551112222"
 
     def test_get(self, signalwire_client, mock):
         body = signalwire_client.verified_callers.get("vc-1")
@@ -94,7 +94,7 @@ class TestRelayVerifiedCallersErrors:
             "relay-rest.create_verified_caller_id", 422, {"error": "bad"}
         )
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.verified_callers.create()
+            signalwire_client.verified_callers.create(number="+15551112222")
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "relay-rest.create_verified_caller_id"

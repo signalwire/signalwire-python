@@ -2,8 +2,6 @@
 
 import warnings
 
-import pytest
-
 from .conftest import MockResponse
 
 
@@ -63,7 +61,7 @@ class TestFabricCallFlows:
 
     def test_deploy_version(self, client, mock_session):
         mock_session.request.return_value = MockResponse(200, {})
-        client.fabric.call_flows.deploy_version("cf-1", document_version=2)
+        client.fabric.call_flows.deploy_version("cf-1", {"document_version": 2})
         mock_session.request.assert_called_with(
             "POST", "https://test.signalwire.com/api/fabric/resources/call_flow/cf-1/versions",
             json={"document_version": 2}, params=None,
@@ -81,27 +79,30 @@ class TestFabricSubscribers:
 
     def test_create_sip_endpoint(self, client, mock_session):
         mock_session.request.return_value = MockResponse(201, {"id": "ep-1"})
-        client.fabric.subscribers.create_sip_endpoint("sub-1", username="user1")
+        client.fabric.subscribers.create_sip_endpoint(
+            "sub-1", username="user1", password="s3cret"  # noqa: S106
+        )
         mock_session.request.assert_called_with(
             "POST", "https://test.signalwire.com/api/fabric/resources/subscribers/sub-1/sip_endpoints",
-            json={"username": "user1"}, params=None,
+            json={"username": "user1", "password": "s3cret"}, params=None,
         )
 
 
 class TestGenericResources:
-    def test_assign_phone_route_still_posts_but_warns(self, client, mock_session):
-        """assign_phone_route still posts for backcompat, but emits DeprecationWarning.
+    def test_assign_phone_route_posts(self, client, mock_session):
+        """assign_phone_route posts the phone_route_id and handler to the resource.
 
-        The endpoint exists for a narrow set of legacy resource types. For
-        swml_webhook/cxml_webhook/ai_agent bindings, users should reach for
-        phone_numbers.set_* helpers instead. See the phone-binding post-mortem.
+        The spec's PhoneRouteAssignRequest requires both phone_route_id and a
+        handler ("calling" or "messaging"). These pre-release SDKs no longer emit
+        the legacy DeprecationWarning the hand-class used to.
         """
         mock_session.request.return_value = MockResponse(200, {})
-        with pytest.warns(DeprecationWarning, match="phone_numbers.set_"):
-            client.fabric.resources.assign_phone_route("res-1", phone_route_id="pr-1")
+        client.fabric.resources.assign_phone_route(
+            "res-1", phone_route_id="pr-1", handler="calling"
+        )
         mock_session.request.assert_called_with(
             "POST", "https://test.signalwire.com/api/fabric/resources/res-1/phone_routes",
-            json={"phone_route_id": "pr-1"}, params=None,
+            json={"phone_route_id": "pr-1", "handler": "calling"}, params=None,
         )
 
 

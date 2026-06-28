@@ -1,11 +1,8 @@
 """Tests for _base.py — HttpClient, BaseResource, CrudResource, error handling."""
 
 import pytest
-from unittest.mock import MagicMock
 from signalwire.rest._base import (
-    HttpClient,
     SignalWireRestError,
-    BaseResource,
     CrudResource,
     CrudWithAddresses,
 )

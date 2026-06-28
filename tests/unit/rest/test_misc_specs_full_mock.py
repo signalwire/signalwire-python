@@ -32,7 +32,9 @@ from signalwire.rest._base import SignalWireRestError
 
 class TestProjectTokensSuccess:
     def test_create(self, signalwire_client, mock):
-        body = signalwire_client.project.tokens.create(name="ci-token")
+        body = signalwire_client.project.tokens.create(
+            name="ci-token", permissions=["calling"],
+        )
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "POST"
@@ -67,7 +69,7 @@ class TestProjectTokensErrors:
     def test_create_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("project.create_token", 422, {"error": "name required"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.project.tokens.create()
+            signalwire_client.project.tokens.create(name="x", permissions=["calling"])
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "project.create_token"
@@ -260,9 +262,7 @@ class TestMessageLogsErrors:
 
 class TestCallingCommandSuccess:
     def test_dial(self, signalwire_client, mock):
-        body = signalwire_client.calling.dial(
-            url="https://example.com/swml", to="+15551234567",
-        )
+        body = signalwire_client.calling.dial(to="+15551112222", from_="+15553334444")
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "POST"
@@ -277,7 +277,7 @@ class TestCallingCommandErrors:
     def test_dial_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("calling.call-commands", 422, {"error": "bad command"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.calling.dial(url="https://example.com/swml")
+            signalwire_client.calling.dial(to="+15551112222", from_="+15553334444")
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "calling.call-commands"
@@ -291,7 +291,7 @@ class TestCallingCommandErrors:
 
 class TestChatTokenSuccess:
     def test_create_token(self, signalwire_client, mock):
-        body = signalwire_client.chat.create_token(channels={"room": {}})
+        body = signalwire_client.chat.create_token(ttl=60, channels={"room": {}})
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "POST"
@@ -306,7 +306,7 @@ class TestChatTokenErrors:
     def test_create_token_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("chat.create_chat_token", 422, {"error": "channels required"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.chat.create_token()
+            signalwire_client.chat.create_token(ttl=60, channels={"room": {}})
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "chat.create_chat_token"
@@ -348,7 +348,7 @@ class TestConferenceLogsErrors:
 
 class TestPubSubTokenSuccess:
     def test_create_token(self, signalwire_client, mock):
-        body = signalwire_client.pubsub.create_token(channels={"news": {}})
+        body = signalwire_client.pubsub.create_token(ttl=15, channels={"news": {}})
         assert isinstance(body, dict)
         last = mock.last_request()
         assert last.method == "POST"
@@ -363,7 +363,7 @@ class TestPubSubTokenErrors:
     def test_create_token_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("pubsub.create_token", 422, {"error": "channels required"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.pubsub.create_token()
+            signalwire_client.pubsub.create_token(ttl=15, channels={"news": {}})
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "pubsub.create_token"

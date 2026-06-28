@@ -7,7 +7,6 @@ recorded request journal so neither half is allowed to drift.
 
 from __future__ import annotations
 
-import pytest
 
 
 class TestCompatAccountsCreate:

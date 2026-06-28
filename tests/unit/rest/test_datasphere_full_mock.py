@@ -36,7 +36,7 @@ class TestDatasphereSuccess:
 
     def test_create(self, signalwire_client, mock):
         body = signalwire_client.datasphere.documents.create(
-            url="https://example.com/doc.pdf",
+            {"url": "https://example.com/doc.pdf"},
         )
         assert isinstance(body, dict)
         last = mock.last_request()
@@ -133,7 +133,9 @@ class TestDatasphereErrors:
     def test_create_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("datasphere.create_document", 422, {"error": "url required"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.datasphere.documents.create()
+            signalwire_client.datasphere.documents.create(
+                {"url": "https://example.com/doc.pdf"},
+            )
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "datasphere.create_document"
@@ -142,7 +144,7 @@ class TestDatasphereErrors:
     def test_search_unprocessable(self, signalwire_client, mock):
         mock.push_scenario("datasphere.search_documents", 422, {"error": "bad query"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.datasphere.documents.search()
+            signalwire_client.datasphere.documents.search(query_string="hello")
         assert exc.value.status_code == 422
         last = mock.last_request()
         assert last.matched_route == "datasphere.search_documents"
