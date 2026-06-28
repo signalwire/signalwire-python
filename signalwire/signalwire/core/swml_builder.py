@@ -13,7 +13,7 @@ It allows for chaining method calls to build up a document step by step.
 """
 
 import types
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
 
 try:
     from typing import Self  # type: ignore[attr-defined]  # 3.11+; typing_extensions fallback below
@@ -22,11 +22,22 @@ except ImportError:
 
 from signalwire.core.swml_service import SWMLService
 
+if TYPE_CHECKING:
+    # The SWML verb methods are installed dynamically at runtime (_create_verb_methods,
+    # from schema.json). Inheriting the generated _SwmlVerbs Protocol gives the type
+    # checker the static signatures for those verbs (answer/play/ai/record/...). Generated
+    # from schema.json — see swml_verbs_generated.py. TYPE_CHECKING-only: no runtime base.
+    from signalwire.core.swml_verbs_generated import _SwmlVerbs
+
+    _VerbsBase = _SwmlVerbs
+else:
+    _VerbsBase = object
+
 
 T = TypeVar("T", bound="SWMLBuilder")
 
 
-class SWMLBuilder:
+class SWMLBuilder(_VerbsBase):
     """
     Fluent builder for SWML documents
 
