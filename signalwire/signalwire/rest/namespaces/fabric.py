@@ -23,12 +23,19 @@ from .._base import (
 )
 from .fabric_resources_generated import (
     AiAgentsResource,
+    CallFlowsResource,
+    ConferenceRoomsResource,
+    CxmlApplicationsResource,
     CxmlScriptsResource,
     CxmlWebhooksResource,
+    FabricAddressesResource,
+    FabricTokensResource,
     FreeswitchConnectorsResource,
+    GenericResourcesResource,
     RelayApplicationsResource,
     SipEndpointsResource,
     SipGatewaysResource,
+    SubscribersResource,
     SwmlScriptsResource,
     SwmlWebhooksResource,
 )
@@ -119,244 +126,31 @@ if TYPE_CHECKING:
 # to auto-materialize a webhook; direct create is just a normal operation.
 
 
-class CallFlowsResource(
-    FabricResourcePUT[
-        "CallFlowListResponse",
-        "CallFlowResponse",
-        "CallFlowCreateRequest",
-        "CallFlowUpdateRequest",
-    ]
-):
-    """Call flows with version management.
-
-    Note: call_flow (singular) is used in address/version paths per the API spec.
-    """
-
-    def list_addresses(
-        self, resource_id: str, **params: Any
-    ) -> "CallFlowAddressListResponse":
-        # API uses singular 'call_flow' for sub-resource paths
-        path = self._base_path.replace("/call_flows", "/call_flow")
-        return self._http.get(f"{path}/{resource_id}/addresses", params=params or None)
-
-    def list_versions(
-        self, resource_id: str, **params: Any
-    ) -> "CallFlowVersionListResponse":
-        path = self._base_path.replace("/call_flows", "/call_flow")
-        return self._http.get(f"{path}/{resource_id}/versions", params=params or None)
-
-    def deploy_version(
-        self, resource_id: str, **kwargs: Any
-    ) -> "CallFlowVersionDeployResponse":
-        path = self._base_path.replace("/call_flows", "/call_flow")
-        return self._http.post(f"{path}/{resource_id}/versions", body=kwargs)
-
-
-class ConferenceRoomsResource(
-    FabricResourcePUT[
-        "ConferenceRoomListResponse",
-        "ConferenceRoomResponse",
-        "ConferenceRoomCreateRequest",
-        "ConferenceRoomUpdateRequest",
-    ]
-):
-    """Conference rooms — uses singular 'conference_room' for sub-resource paths."""
-
-    def list_addresses(
-        self, resource_id: str, **params: Any
-    ) -> "ConferenceRoomAddressListResponse":
-        path = self._base_path.replace("/conference_rooms", "/conference_room")
-        return self._http.get(f"{path}/{resource_id}/addresses", params=params or None)
-
-
-class SubscribersResource(
-    FabricResourcePUT[
-        "SubscriberListResponse",
-        "SubscriberResponse",
-        "SubscriberRequest",
-        "SubscriberRequest",
-    ]
-):
-    """Subscribers with SIP endpoint management."""
-
-    def list_sip_endpoints(
-        self, subscriber_id: str, **params: Any
-    ) -> "SubscriberSipEndpointListResponse":
-        return self._http.get(
-            self._path(subscriber_id, "sip_endpoints"),
-            params=params or None,
-        )
-
-    def create_sip_endpoint(
-        self, subscriber_id: str, **kwargs: Any
-    ) -> "SubscriberSIPEndpoint":
-        return self._http.post(
-            self._path(subscriber_id, "sip_endpoints"),
-            body=kwargs,
-        )
-
-    def get_sip_endpoint(
-        self, subscriber_id: str, endpoint_id: str
-    ) -> "SubscriberSIPEndpoint":
-        return self._http.get(
-            self._path(subscriber_id, "sip_endpoints", endpoint_id),
-        )
-
-    def update_sip_endpoint(
-        self, subscriber_id: str, endpoint_id: str, **kwargs: Any
-    ) -> "SubscriberSIPEndpoint":
-        return self._http.patch(
-            self._path(subscriber_id, "sip_endpoints", endpoint_id),
-            body=kwargs,
-        )
-
-    def delete_sip_endpoint(
-        self, subscriber_id: str, endpoint_id: str
-    ) -> dict[str, Any]:
-        return self._http.delete(
-            self._path(subscriber_id, "sip_endpoints", endpoint_id),
-        )
-
-
-class CxmlApplicationsResource(
-    FabricResourcePUT[
-        "CxmlApplicationListResponse",
-        "CxmlApplicationResponse",
-        Any,
-        "CxmlApplicationUpdateRequest",
-    ]
-):
-    """cXML applications — no create method (read/update/delete only).
-
-    Mirrors the TS port's
-    ``CxmlApplicationsResource extends FabricResourcePUT<…, never, …>``.
-    The create slot has no faithful generated request type (create is
-    disallowed and raises ``NotImplementedError``), so it is bound to ``Any``
-    — Python's closest equivalent to TS ``never`` for this position.
-    """
-
-    def create(self, **kwargs: Any) -> Any:
-        raise NotImplementedError("cXML applications cannot be created via this API")
-
-
-class GenericResources(BaseResource):
-    """Generic resource operations across all fabric resource types."""
-
-    def list(self, **params: Any) -> "ResourceListResponse":
-        return self._http.get(self._base_path, params=params or None)
-
-    def get(self, resource_id: str) -> "ResourceResponse":
-        return self._http.get(self._path(resource_id))
-
-    def delete(self, resource_id: str) -> dict[str, Any]:
-        return self._http.delete(self._path(resource_id))
-
-    def list_addresses(
-        self, resource_id: str, **params: Any
-    ) -> "ResourceAddressListResponse":
-        return self._http.get(
-            self._path(resource_id, "addresses"),
-            params=params or None,
-        )
-
-    def assign_phone_route(
-        self, resource_id: str, **kwargs: Any
-    ) -> "PhoneRouteResponse":
-        """Deprecated for the common binding cases. Use ``phone_numbers.set_*`` helpers.
-
-        This endpoint (``POST /api/fabric/resources/{id}/phone_routes``) accepts
-        only a narrow set of legacy resource types as the attach target. It
-        **does not work** for ``swml_webhook`` / ``cxml_webhook`` / ``ai_agent``
-        bindings — those are configured on the phone number and the Fabric
-        resource is auto-materialized (see ``phone_numbers.set_swml_webhook``
-        etc.). The authoritative list of accepting resource types lives in the
-        OpenAPI spec; routing here for those types returns 404 or 422.
-        """
-        warnings.warn(
-            "assign_phone_route does not bind phone numbers to "
-            "swml_webhook/cxml_webhook/ai_agent resources — those are "
-            "configured via phone_numbers.set_swml_webhook / set_cxml_webhook "
-            "/ set_ai_agent. This method applies only to a narrow set of "
-            "legacy resource types. See porting-sdk's phone-binding.md.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        return self._http.post(self._path(resource_id, "phone_routes"), body=kwargs)
-
-    def assign_domain_application(
-        self, resource_id: str, **kwargs: Any
-    ) -> "DomainApplicationResponse":
-        return self._http.post(
-            self._path(resource_id, "domain_applications"), body=kwargs
-        )
-
-
-class FabricAddresses(BaseResource):
-    """Read-only fabric addresses."""
-
-    def list(self, **params: Any) -> "FabricAddressesResponse":
-        return self._http.get(self._base_path, params=params or None)
-
-    def get(self, address_id: str) -> "FabricAddress":
-        return self._http.get(self._path(address_id))
-
-
-class FabricTokens(BaseResource):
-    """Subscriber, guest, invite, and embed token creation."""
-
-    def __init__(self, http: Any) -> None:
-        super().__init__(http, "/api/fabric")
-
-    def create_subscriber_token(self, **kwargs: Any) -> "SubscriberTokenResponse":
-        return self._http.post(self._path("subscribers", "tokens"), body=kwargs)
-
-    def refresh_subscriber_token(
-        self, **kwargs: Any
-    ) -> "SubscriberRefreshTokenResponse":
-        return self._http.post(
-            self._path("subscribers", "tokens", "refresh"), body=kwargs
-        )
-
-    def create_invite_token(
-        self, **kwargs: Any
-    ) -> "SubscriberInviteTokenCreateResponse":
-        return self._http.post(self._path("subscriber", "invites"), body=kwargs)
-
-    def create_guest_token(self, **kwargs: Any) -> "SubscriberGuestTokenCreateResponse":
-        return self._http.post(self._path("guests", "tokens"), body=kwargs)
-
-    def create_embed_token(self, **kwargs: Any) -> "EmbedsTokensResponse":
-        return self._http.post(self._path("embeds", "tokens"), body=kwargs)
+# Group-B resources (CallFlows/ConferenceRooms/Subscribers/CxmlApplications) and the
+# fabric-root resources (GenericResources/FabricAddresses/FabricTokens) are now generated
+# (see ``fabric_resources_generated``), imported above. Back-compat aliases keep the
+# historical class names working.
+GenericResources = GenericResourcesResource
+FabricAddresses = FabricAddressesResource
+FabricTokens = FabricTokensResource
 
 
 class FabricNamespace:
     """Fabric API namespace grouping all resource types."""
 
     def __init__(self, http: Any) -> None:
-        base = "/api/fabric/resources"
-
-        # Generated typed CRUD resources (closed create/update + extras). Each is a
-        # subclass in ``fabric_resources_generated`` bound to its spec types, so the
-        # oracle resolves the real list/item/create/update shapes. ``call_flows``,
-        # ``conference_rooms``, ``subscribers`` keep hand-written classes for now (they
-        # add sub-resource accessors not yet generated).
-        # Generated resource classes bake their own base path into __init__, so they
-        # construct as ``Resource(http)``. The hand-written classes below
-        # (call_flows / conference_rooms / subscribers / cxml_applications — they add
-        # sub-resource accessors not yet generated) still take ``(http, base_path)``.
+        # Every fabric resource is generated (see ``fabric_resources_generated``) and
+        # bakes its own base path into ``__init__``, so each constructs as
+        # ``Resource(http)``.
         self.swml_scripts = SwmlScriptsResource(http)
         self.relay_applications = RelayApplicationsResource(http)
-        self.call_flows = CallFlowsResource(http, f"{base}/call_flows")
-        self.conference_rooms = ConferenceRoomsResource(
-            http, f"{base}/conference_rooms"
-        )
+        self.call_flows = CallFlowsResource(http)
+        self.conference_rooms = ConferenceRoomsResource(http)
         self.freeswitch_connectors = FreeswitchConnectorsResource(http)
-        self.subscribers = SubscribersResource(http, f"{base}/subscribers")
+        self.subscribers = SubscribersResource(http)
         self.sip_endpoints = SipEndpointsResource(http)
         self.cxml_scripts = CxmlScriptsResource(http)
-        self.cxml_applications = CxmlApplicationsResource(
-            http, f"{base}/cxml_applications"
-        )
+        self.cxml_applications = CxmlApplicationsResource(http)
 
         # PATCH-update resources. ``swml_webhooks`` / ``cxml_webhooks`` are normally
         # auto-materialized via ``phone_numbers.set_swml_webhook`` /
@@ -366,7 +160,7 @@ class FabricNamespace:
         self.sip_gateways = SipGatewaysResource(http)
         self.cxml_webhooks = CxmlWebhooksResource(http)
 
-        # Special resources
-        self.resources = GenericResources(http, base)
-        self.addresses = FabricAddresses(http, "/api/fabric/addresses")
-        self.tokens = FabricTokens(http)
+        # Fabric-root resources (not under /resources).
+        self.resources = GenericResourcesResource(http)
+        self.addresses = FabricAddressesResource(http)
+        self.tokens = FabricTokensResource(http)

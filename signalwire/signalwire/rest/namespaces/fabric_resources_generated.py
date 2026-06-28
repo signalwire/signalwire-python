@@ -30,6 +30,7 @@ if TYPE_CHECKING:
         CXMLWebhookListResponse,
         CXMLWebhookResponse,
         CXMLWebhookUpdateRequest,
+        CallFlowAddressListResponse,
         CallFlowCreateRequest,
         CallFlowListResponse,
         CallFlowResponse,
@@ -40,6 +41,7 @@ if TYPE_CHECKING:
         CallHandlerType,
         Ciphers,
         Codecs,
+        ConferenceRoomAddressListResponse,
         ConferenceRoomCreateRequest,
         ConferenceRoomListResponse,
         ConferenceRoomResponse,
@@ -307,6 +309,16 @@ class CallFlowsResource(
             body.update(extras)
         return cast("CallFlowResponse", self._http.put(self._path(id), body=body))
 
+    def list_addresses(  # type: ignore[override]
+        self, id: str, **params: Any
+    ) -> CallFlowAddressListResponse:
+        return cast(
+            "CallFlowAddressListResponse",
+            self._http.get(
+                f"/api/fabric/resources/call_flow/{id}/addresses", params=params or None
+            ),
+        )
+
     def list_versions(self, id: str, **params: Any) -> CallFlowVersionListResponse:
         return cast(
             "CallFlowVersionListResponse",
@@ -442,6 +454,17 @@ class ConferenceRoomsResource(
         if extras:
             body.update(extras)
         return cast("ConferenceRoomResponse", self._http.put(self._path(id), body=body))
+
+    def list_addresses(  # type: ignore[override]
+        self, id: str, **params: Any
+    ) -> ConferenceRoomAddressListResponse:
+        return cast(
+            "ConferenceRoomAddressListResponse",
+            self._http.get(
+                f"/api/fabric/resources/conference_room/{id}/addresses",
+                params=params or None,
+            ),
+        )
 
 
 class CxmlApplicationsResource(BaseResource):
