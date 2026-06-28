@@ -16,8 +16,17 @@ if TYPE_CHECKING:
         AddressListResponse,
         AddressResponse,
         AddressType,
+        AssignedNumberListResponse,
         AvailablePhoneNumbersResponse,
+        BrandListResponse,
+        BrandResponse,
+        CampaignListResponse,
+        CampaignResponse,
+        CreateCspBrandRequest,
+        CreateManagedBrandRequest,
+        CreateManagedCampaignRequest,
         CreateNumberGroupRequest,
+        CreatePartnerCampaignRequest,
         CreateQueueRequest,
         CreateVerifiedCallerIDRequest,
         HttpMethod,
@@ -27,6 +36,8 @@ if TYPE_CHECKING:
         NumberGroupMembershipListResponse,
         NumberGroupMembershipResponse,
         NumberGroupResponse,
+        OrderListResponse,
+        OrderResponse,
         PhoneNumberCallHandlerRequest,
         PhoneNumberListResponse,
         PhoneNumberLookupResponse,
@@ -607,6 +618,123 @@ class RecordingsResource(BaseResource):
 
     def delete(self, id: str) -> dict[str, Any]:
         return cast("dict[str, Any]", self._http.delete(self._path(id)))
+
+
+class RegistryBrandsResource(BaseResource):
+    """Typed resource for ``/registry/beta/brands`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/relay/rest/registry/beta/brands")
+
+    def list(self, **params: Any) -> BrandListResponse:
+        return cast(
+            "BrandListResponse", self._http.get(self._base_path, params=params or None)
+        )
+
+    def create(
+        self, body: CreateManagedBrandRequest | CreateCspBrandRequest
+    ) -> BrandResponse:
+        return cast("BrandResponse", self._http.post(self._base_path, body=body))
+
+    def get(self, id: str, **params: Any) -> BrandResponse:
+        return cast(
+            "BrandResponse", self._http.get(self._path(id), params=params or None)
+        )
+
+    def list_campaigns(self, id: str, **params: Any) -> CampaignListResponse:
+        return cast(
+            "CampaignListResponse",
+            self._http.get(self._path(id, "campaigns"), params=params or None),
+        )
+
+    def create_campaign(
+        self, id: str, body: CreateManagedCampaignRequest | CreatePartnerCampaignRequest
+    ) -> CampaignResponse:
+        return cast(
+            "CampaignResponse", self._http.post(self._path(id, "campaigns"), body=body)
+        )
+
+
+class RegistryCampaignsResource(BaseResource):
+    """Typed resource for ``/registry/beta/campaigns`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/relay/rest/registry/beta/campaigns")
+
+    def get(self, id: str, **params: Any) -> CampaignResponse:
+        return cast(
+            "CampaignResponse", self._http.get(self._path(id), params=params or None)
+        )
+
+    def update(
+        self,
+        id: str,
+        *,
+        name: str | None = None,
+        extras: Mapping[str, Any] | None = None,
+    ) -> CampaignResponse:
+        body: dict[str, Any] = {
+            k: v for k, v in {"name": name}.items() if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast("CampaignResponse", self._http.put(self._path(id), body=body))
+
+    def list_numbers(self, id: str, **params: Any) -> AssignedNumberListResponse:
+        return cast(
+            "AssignedNumberListResponse",
+            self._http.get(self._path(id, "numbers"), params=params or None),
+        )
+
+    def list_orders(self, id: str, **params: Any) -> OrderListResponse:
+        return cast(
+            "OrderListResponse",
+            self._http.get(self._path(id, "orders"), params=params or None),
+        )
+
+    def create_order(
+        self,
+        id: str,
+        *,
+        phone_numbers: list[str] | None = None,
+        status_callback_url: str | None = None,
+        extras: Mapping[str, Any] | None = None,
+    ) -> OrderResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "phone_numbers": phone_numbers,
+                "status_callback_url": status_callback_url,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast(
+            "OrderResponse", self._http.post(self._path(id, "orders"), body=body)
+        )
+
+
+class RegistryNumbersResource(BaseResource):
+    """Typed resource for ``/registry/beta/numbers`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/relay/rest/registry/beta/numbers")
+
+    def delete(self, id: str) -> dict[str, Any]:
+        return cast("dict[str, Any]", self._http.delete(self._path(id)))
+
+
+class RegistryOrdersResource(BaseResource):
+    """Typed resource for ``/registry/beta/orders`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/relay/rest/registry/beta/orders")
+
+    def get(self, id: str, **params: Any) -> OrderResponse:
+        return cast(
+            "OrderResponse", self._http.get(self._path(id), params=params or None)
+        )
 
 
 class ShortCodesResource(BaseResource):
