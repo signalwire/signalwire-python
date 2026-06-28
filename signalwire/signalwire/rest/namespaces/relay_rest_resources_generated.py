@@ -9,20 +9,27 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Literal, cast
 from collections.abc import Mapping
 
-from .._base import CrudResource
+from .._base import BaseResource, CrudResource
 
 if TYPE_CHECKING:
     from .relay_rest_types_generated import (
+        AddressListResponse,
+        AddressResponse,
+        AddressType,
         AvailablePhoneNumbersResponse,
         CreateNumberGroupRequest,
         CreateQueueRequest,
         CreateVerifiedCallerIDRequest,
+        HttpMethod,
+        MfaResponse,
+        MfaVerifyResponse,
         NumberGroupListResponse,
         NumberGroupMembershipListResponse,
         NumberGroupMembershipResponse,
         NumberGroupResponse,
         PhoneNumberCallHandlerRequest,
         PhoneNumberListResponse,
+        PhoneNumberLookupResponse,
         PhoneNumberMessageHandler,
         PhoneNumberResponse,
         PurchasePhoneNumberRequest,
@@ -30,6 +37,11 @@ if TYPE_CHECKING:
         QueueMemberListResponse,
         QueueMemberResponse,
         QueueResponse,
+        RecordingListResponse,
+        ShortCodeListResponse,
+        ShortCodeMessageHandler,
+        ShortCodeResponse,
+        SipProfileResponse,
         UpdateNumberGroupRequest,
         UpdatePhoneNumberRequest,
         UpdateQueueRequest,
@@ -38,6 +50,187 @@ if TYPE_CHECKING:
         VerifiedCallerIDResponse,
         uuid,
     )
+
+
+class AddressesResource(BaseResource):
+    """Typed resource for ``/addresses`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/relay/rest/addresses")
+
+    def list(self, **params: Any) -> AddressListResponse:
+        return cast(
+            "AddressListResponse",
+            self._http.get(self._base_path, params=params or None),
+        )
+
+    def create(
+        self,
+        *,
+        label: str,
+        country: str,
+        first_name: str,
+        last_name: str,
+        street_number: str,
+        street_name: str,
+        city: str,
+        state: str,
+        postal_code: str,
+        address_type: AddressType | None = None,
+        address_number: str | None = None,
+        extras: Mapping[str, Any] | None = None,
+    ) -> AddressResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "label": label,
+                "country": country,
+                "first_name": first_name,
+                "last_name": last_name,
+                "street_number": street_number,
+                "street_name": street_name,
+                "address_type": address_type,
+                "address_number": address_number,
+                "city": city,
+                "state": state,
+                "postal_code": postal_code,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast("AddressResponse", self._http.post(self._base_path, body=body))
+
+    def get(self, id: str, **params: Any) -> AddressResponse:
+        return cast(
+            "AddressResponse", self._http.get(self._path(id), params=params or None)
+        )
+
+    def delete(self, id: str) -> dict[str, Any]:
+        return cast("dict[str, Any]", self._http.delete(self._path(id)))
+
+
+class ImportedNumbersResource(BaseResource):
+    """Typed resource for ``/imported_phone_numbers`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/relay/rest/imported_phone_numbers")
+
+    def create(
+        self,
+        *,
+        number: str,
+        number_type: Literal["longcode", "tollfree"],
+        capabilities: list[Literal["sms", "voice", "fax", "mms"]] | None = None,
+        extras: Mapping[str, Any] | None = None,
+    ) -> PhoneNumberResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "number": number,
+                "number_type": number_type,
+                "capabilities": capabilities,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast("PhoneNumberResponse", self._http.post(self._base_path, body=body))
+
+
+class LookupResource(BaseResource):
+    """Typed resource for ``/lookup`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/relay/rest/lookup")
+
+    def phone_number(
+        self, e164_number: str, **params: Any
+    ) -> PhoneNumberLookupResponse:
+        return cast(
+            "PhoneNumberLookupResponse",
+            self._http.get(
+                self._path("phone_number", e164_number), params=params or None
+            ),
+        )
+
+
+class MfaResource(BaseResource):
+    """Typed resource for ``/mfa`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/relay/rest/mfa")
+
+    def sms(
+        self,
+        *,
+        to: str,
+        message: str | None = None,
+        token_length: int | None = None,
+        valid_for: int | None = None,
+        max_attempts: int | None = None,
+        allow_alphas: bool | None = None,
+        extras: Mapping[str, Any] | None = None,
+    ) -> MfaResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "to": to,
+                "message": message,
+                "token_length": token_length,
+                "valid_for": valid_for,
+                "max_attempts": max_attempts,
+                "allow_alphas": allow_alphas,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast("MfaResponse", self._http.post(self._path("sms"), body=body))
+
+    def call(
+        self,
+        *,
+        to: str,
+        message: str | None = None,
+        token_length: int | None = None,
+        valid_for: int | None = None,
+        max_attempts: int | None = None,
+        allow_alphas: bool | None = None,
+        extras: Mapping[str, Any] | None = None,
+    ) -> MfaResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "to": to,
+                "message": message,
+                "token_length": token_length,
+                "valid_for": valid_for,
+                "max_attempts": max_attempts,
+                "allow_alphas": allow_alphas,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast("MfaResponse", self._http.post(self._path("call"), body=body))
+
+    def verify(
+        self,
+        mfa_request_id: str,
+        *,
+        token: str,
+        extras: Mapping[str, Any] | None = None,
+    ) -> MfaVerifyResponse:
+        body: dict[str, Any] = {
+            k: v for k, v in {"token": token}.items() if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast(
+            "MfaVerifyResponse",
+            self._http.post(self._path(mfa_request_id, "verify"), body=body),
+        )
 
 
 class NumberGroupsResource(
@@ -316,6 +509,114 @@ class QueuesResource(
             "QueueMemberResponse",
             self._http.get(self._path(queue_id, "members", id), params=params or None),
         )
+
+
+class RecordingsResource(BaseResource):
+    """Typed resource for ``/recordings`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/relay/rest/recordings")
+
+    def list(self, **params: Any) -> RecordingListResponse:
+        return cast(
+            "RecordingListResponse",
+            self._http.get(self._base_path, params=params or None),
+        )
+
+    def get(self, id: str, **params: Any) -> dict[str, Any]:
+        return cast(
+            "dict[str, Any]", self._http.get(self._path(id), params=params or None)
+        )
+
+    def delete(self, id: str) -> dict[str, Any]:
+        return cast("dict[str, Any]", self._http.delete(self._path(id)))
+
+
+class ShortCodesResource(BaseResource):
+    """Typed resource for ``/short_codes`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/relay/rest/short_codes")
+
+    def list(self, **params: Any) -> ShortCodeListResponse:
+        return cast(
+            "ShortCodeListResponse",
+            self._http.get(self._base_path, params=params or None),
+        )
+
+    def get(self, id: str, **params: Any) -> ShortCodeResponse:
+        return cast(
+            "ShortCodeResponse", self._http.get(self._path(id), params=params or None)
+        )
+
+    def update(
+        self,
+        id: str,
+        *,
+        name: str,
+        message_handler: ShortCodeMessageHandler,
+        message_request_url: str | None = None,
+        message_request_method: HttpMethod | None = None,
+        message_fallback_url: str | None = None,
+        message_fallback_method: HttpMethod | None = None,
+        message_laml_application_id: uuid | None = None,
+        message_relay_context: str | None = None,
+        extras: Mapping[str, Any] | None = None,
+    ) -> ShortCodeResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "name": name,
+                "message_handler": message_handler,
+                "message_request_url": message_request_url,
+                "message_request_method": message_request_method,
+                "message_fallback_url": message_fallback_url,
+                "message_fallback_method": message_fallback_method,
+                "message_laml_application_id": message_laml_application_id,
+                "message_relay_context": message_relay_context,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast("ShortCodeResponse", self._http.put(self._path(id), body=body))
+
+
+class SipProfileResource(BaseResource):
+    """Typed resource for ``/sip_profile`` (generated)."""
+
+    def __init__(self, http: Any) -> None:
+        super().__init__(http, "/api/relay/rest/sip_profile")
+
+    def get(self, **params: Any) -> SipProfileResponse:
+        return cast(
+            "SipProfileResponse", self._http.get(self._base_path, params=params or None)
+        )
+
+    def update(
+        self,
+        *,
+        domain_identifier: str | None = None,
+        default_codecs: list[str] | None = None,
+        default_ciphers: list[str] | None = None,
+        default_encryption: Literal["required", "optional"] | None = None,
+        default_send_as: str | None = None,
+        extras: Mapping[str, Any] | None = None,
+    ) -> SipProfileResponse:
+        body: dict[str, Any] = {
+            k: v
+            for k, v in {
+                "domain_identifier": domain_identifier,
+                "default_codecs": default_codecs,
+                "default_ciphers": default_ciphers,
+                "default_encryption": default_encryption,
+                "default_send_as": default_send_as,
+            }.items()
+            if v is not None
+        }
+        if extras:
+            body.update(extras)
+        return cast("SipProfileResponse", self._http.put(self._base_path, body=body))
 
 
 class VerifiedCallersResource(
