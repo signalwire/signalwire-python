@@ -9,7 +9,7 @@ from signalwire.rest.namespaces._client_tree_generated import (
     FabricNamespace,
     VideoNamespace,
 )
-from signalwire.rest.namespaces.calling import Calling
+from signalwire.rest.namespaces.calling_resources_generated import Calling
 from signalwire.rest.namespaces.compat import CompatNamespace
 
 
