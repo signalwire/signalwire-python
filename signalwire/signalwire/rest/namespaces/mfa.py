@@ -1,14 +1,22 @@
 """Back-compat shim — DO NOT add to other ports. x-sdk-back-compat-shim
 
-This module path and the *Resource / *Namespace names below were superseded when the
-REST layer became spec-generated (classes moved to ``*_resources_generated.py`` and lost
-their suffixes). This thin re-export keeps old Python imports
-(``from signalwire.signalwire.rest.namespaces.mfa import MfaResource``) working. New code
-should import from the generated module / use ``client.mfa`` instead. PYTHON-ONLY: the
-surface oracle skips this file (the marker above), so no other port implements these.
+Deprecated import path. The REST layer is spec-generated; these symbols moved out of
+``namespaces.mfa`` (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
+re-export keeps ``from signalwire.signalwire.rest.namespaces.mfa import MfaResource`` working
+but emits a DeprecationWarning. Prefer ``client.mfa`` (no import needed). PYTHON-ONLY: the
+surface oracle skips this file, so no other port implements these.
 """
 
-from .relay_rest_resources_generated import Mfa
+import warnings
+
+warnings.warn(
+    "signalwire.signalwire.rest.namespaces.mfa is deprecated; use client.mfa. "
+    "This back-compat shim will be removed in a future release.",
+    DeprecationWarning,
+    stacklevel=2,
+)
+
+from .relay_rest_resources_generated import Mfa  # noqa: E402  (re-export after the deprecation warn — intentional)
 
 # Back-compat aliases (old name -> generated bare name):
 MfaResource = Mfa
