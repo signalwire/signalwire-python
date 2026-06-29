@@ -77,7 +77,7 @@ class TestSWMLBuilder:
         result = builder.ai(prompt_text="You are helpful")
 
         assert result is builder
-        mock_service.add_verb.assert_called_once_with("ai", {"prompt": "You are helpful"})
+        mock_service.add_verb.assert_called_once_with("ai", {"prompt": {"text": "You are helpful"}})
 
     def test_ai_verb_with_pom(self) -> None:
         """Test adding AI verb with POM"""
@@ -88,7 +88,7 @@ class TestSWMLBuilder:
         result = builder.ai(prompt_pom=pom_data)
 
         assert result is builder
-        mock_service.add_verb.assert_called_once_with("ai", {"prompt": pom_data})
+        mock_service.add_verb.assert_called_once_with("ai", {"prompt": {"pom": pom_data}})
 
     def test_ai_verb_with_swaig(self) -> None:
         """Test adding AI verb with SWAIG configuration"""
@@ -102,7 +102,7 @@ class TestSWMLBuilder:
 
         assert result is builder
         mock_service.add_verb.assert_called_once_with("ai", {
-            "prompt": "You are helpful",
+            "prompt": {"text": "You are helpful"},
             "SWAIG": swaig_config
         })
 
@@ -119,7 +119,7 @@ class TestSWMLBuilder:
 
         assert result is builder
         mock_service.add_verb.assert_called_once_with("ai", {
-            "prompt": "You are helpful",
+            "prompt": {"text": "You are helpful"},
             "temperature": 0.7,
             "max_tokens": 150
         })
@@ -305,7 +305,7 @@ class TestSWMLBuilderIntegration:
                 "main": [
                     {"answer": {}},
                     {"play": {"url": "say:Welcome!"}},
-                    {"ai": {"prompt": "You are helpful"}},
+                    {"ai": {"prompt": {"text": "You are helpful"}}},
                     {"hangup": {"reason": "completed"}}
                 ]
             }
@@ -382,8 +382,8 @@ class TestSWMLBuilderIntegration:
 
         assert result is builder
         mock_service.add_verb.assert_called_once_with("ai", {
-            "prompt": "You are a weather assistant",
-            "post_prompt": "Summarize the weather information provided",
+            "prompt": {"text": "You are a weather assistant"},
+            "post_prompt": {"text": "Summarize the weather information provided"},
             "post_prompt_url": "https://example.com/summary",
             "SWAIG": swaig_config,
             "temperature": 0.7,

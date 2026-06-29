@@ -32,7 +32,7 @@ class TestSwmlRenderer:
     def test_render_swml_basic(self) -> None:
         """Test basic SWML rendering"""
         service = _make_service()
-        result = SwmlRenderer.render_swml({"text": "You are a helpful assistant"}, service)  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
+        result = SwmlRenderer.render_swml("You are a helpful assistant", service)
 
         assert isinstance(result, str)
         parsed = json.loads(result)
@@ -50,7 +50,7 @@ class TestSwmlRenderer:
         """Test SWML rendering with post prompt"""
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            {"text": "You are helpful"},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
+            "You are helpful",
             service,
             post_prompt="Provide a summary"
         )
@@ -77,7 +77,7 @@ class TestSwmlRenderer:
 
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            {"text": "You are helpful"},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
+            "You are helpful",
             service,
             swaig_functions=functions
         )
@@ -99,7 +99,7 @@ class TestSwmlRenderer:
 
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            {"pom": pom_data},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
+            pom_data,
             service,
             prompt_is_pom=True
         )
@@ -113,7 +113,7 @@ class TestSwmlRenderer:
         """Test SWML rendering with startup and hangup hooks"""
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            {"text": "You are helpful"},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
+            "You are helpful",
             service,
             startup_hook_url="https://example.com/startup",
             hangup_hook_url="https://example.com/hangup"
@@ -129,7 +129,7 @@ class TestSwmlRenderer:
         """Test SWML rendering with default webhook URL"""
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            {"text": "You are helpful"},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
+            "You are helpful",
             service,
             default_webhook_url="https://example.com/webhook"
         )
@@ -148,7 +148,7 @@ class TestSwmlRenderer:
 
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            {"text": "You are helpful"},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
+            "You are helpful",
             service,
             format="yaml"
         )
@@ -216,7 +216,7 @@ class TestSwmlRendererErrorHandling:
     def test_render_swml_empty_prompt(self) -> None:
         """Test rendering with empty prompt"""
         service = _make_service()
-        result = SwmlRenderer.render_swml({"text": ""}, service)  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
+        result = SwmlRenderer.render_swml("", service)
 
         parsed = json.loads(result)
         ai_verb = parsed["sections"]["main"][0]
@@ -234,7 +234,7 @@ class TestSwmlRendererErrorHandling:
     def test_render_swml_invalid_format(self) -> None:
         """Test rendering with invalid format"""
         service = _make_service()
-        result = SwmlRenderer.render_swml({"text": "Hello"}, service, format="invalid")  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
+        result = SwmlRenderer.render_swml("Hello", service, format="invalid")
 
         # Should still be valid JSON (falls through to default)
         parsed = json.loads(result)
@@ -288,7 +288,7 @@ class TestSwmlRendererIntegration:
 
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            prompt={"text": "You are a banking assistant. Help users with their account needs."},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
+            prompt="You are a banking assistant. Help users with their account needs.",
             service=service,
             post_prompt="Summarize the conversation and any actions taken.",
             post_prompt_url="https://bank.example.com/conversation-summary",
@@ -319,7 +319,7 @@ class TestSwmlRendererIntegration:
 
     def test_pom_based_agent_swml(self) -> None:
         """Test rendering POM-based agent SWML"""
-        pom_sections = [
+        pom_sections: list[dict[str, Any]] = [
             {
                 "title": "Role",
                 "body": "You are a customer service representative for TechCorp."
@@ -340,7 +340,7 @@ class TestSwmlRendererIntegration:
 
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            prompt={"pom": pom_sections},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
+            prompt=pom_sections,
             service=service,
             prompt_is_pom=True,
             post_prompt="Provide a brief summary of how you helped the customer."
@@ -378,7 +378,7 @@ class TestSwmlRendererIntegration:
 
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            {"text": "You are helpful"},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
+            "You are helpful",
             service,
             swaig_functions=[{
                 "function": "test",

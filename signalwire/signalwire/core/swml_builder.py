@@ -124,15 +124,18 @@ class SWMLBuilder(_VerbsBase):
         """
         config: dict[str, Any] = {}
 
-        # Handle prompt (either text or POM, but not both)
+        # Handle prompt (either text or POM, but not both). The SWML `ai` verb requires
+        # `prompt` to be an OBJECT — {"text": ...} or {"pom": [...]}; a bare string is a
+        # fatal error in the AI engine (mod_openai app_config.c: `!cJSON_IsObject(prompt)`
+        # fires calling.error and aborts the call), so wrap accordingly.
         if prompt_text is not None:
-            config["prompt"] = prompt_text
+            config["prompt"] = {"text": prompt_text}
         elif prompt_pom is not None:
-            config["prompt"] = prompt_pom
+            config["prompt"] = {"pom": prompt_pom}
 
-        # Add optional parameters
+        # Add optional parameters. post_prompt is the same object contract as prompt.
         if post_prompt is not None:
-            config["post_prompt"] = post_prompt
+            config["post_prompt"] = {"text": post_prompt}
         if post_prompt_url is not None:
             config["post_prompt_url"] = post_prompt_url
         if swaig is not None:
