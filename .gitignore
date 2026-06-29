@@ -247,3 +247,5 @@ Anaconda3-2024.02-1-Linux-x86_64.sh
 chunks.json
 my_chunks
 *.swsearch
+reference/_docs/
+reference/_site/

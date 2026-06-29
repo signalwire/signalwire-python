@@ -1,0 +1,232 @@
+/* =============================================================================
+   Fern navbar, injected above MkDocs Material.
+   Adapted from the SDK-docs POC (assets/css/app.css). Differences:
+     - The navbar is a fixed bar that sits ABOVE Material's own header; Material
+       content is pushed down by --header-height. There is no iframe.
+     - The Fern design tokens (assets/fern/tokens.css) key off a `.light`/`.dark`
+       class. Material instead sets data-md-color-scheme on <html>
+       (default | slate). The bridge below mirrors the scheme onto that class so
+       the Fern tokens light up, and the theme toggle just drives Material.
+   ============================================================================= */
+
+/* --- Token bridge: Material color scheme -> Fern .light/.dark tokens --------- */
+[data-md-color-scheme="default"] { /* applies the Fern light token block */ }
+[data-md-color-scheme="slate"]   { /* applies the Fern dark token block  */ }
+
+/* The Fern tokens.css scopes its dark palette under `.dark`. Material's slate
+   scheme lives on <html data-md-color-scheme="slate">, so re-declare the dark
+   accent/background hooks there. (Light is the :root default, no work needed.) */
+[data-md-color-scheme="slate"] {
+  color-scheme: dark;
+  --accent: rgba(64, 224, 208, 1);
+  --background: rgba(14, 14, 24, 1);
+  --header-background: color-mix(in srgb, var(--background), transparent 30%);
+
+  --accent-9: #40e0d0;  --accent-11: #32d7c7;  --accent-12: #b9f6ed;
+  --accent-a3: #00fe9820; --accent-a5: #00fcc53e; --accent-a9: #47feeadf;
+  --accent-a2: #00fe980f; --accent-a11: #3affead5; --accent-contrast: #042824;
+
+  --grayscale-3: #212225; --grayscale-5: #2e3135; --grayscale-8: #5a6169;
+  --grayscale-9: #696e77;  --grayscale-11: #b0b4ba; --grayscale-12: #edeef0;
+  --grayscale-a3: #ddeaf814; --grayscale-a5: #d9edfe25; --grayscale-a9: #dfebfd6d;
+  --grayscale-a11: #f1f7feb5; --grayscale-a12: #f7fbffec;
+  --grayscale-contrast: #000; --grayscale-surface: rgba(0, 0, 0, 0.05);
+}
+
+/* --- Make room for the fixed Fern header ------------------------------------ */
+:root { --fern-header-height: 65px; --md-header-height: 48px; }
+
+/* MkDocs Material sets the root font-size to 20px, which inflates every
+   rem-based Fern token (--text-sm -> 17.5px, --text-xs -> 15px, etc.). And the
+   dropdown panels sit OUTSIDE #fern-header, so they inherit Material's Roboto
+   instead of the Fern font. Pin BOTH on the whole Fern surface: redeclare the
+   sized tokens in their 16px-equivalent px values, and force the Fern font. */
+#fern-header,
+.fern-dropdown,
+.fern-dropdown-panel {
+  --spacing: 4px;
+  --radius: 4px;
+  --text-xs: 12px;
+  --text-sm: 14px;
+  font-family: var(--font-body);
+}
+
+/* The Fern bar is position:fixed (out of flow) so it reserves no space on its
+   own. Reserve its height on <body> so Material's sticky header and content
+   don't ride up underneath it.
+   NOTE: Material sets data-md-color-scheme on <body> itself, so the old
+   `[data-md-color-scheme] body` selector matched nothing — plain `body` is what
+   actually applies. */
+body { padding-top: var(--fern-header-height) !important; }
+
+/* Material's own header sticks just below the Fern bar. */
+.md-header { top: var(--fern-header-height) !important; }
+
+/* Material's sidebars/TOC stick below BOTH bars (their default sticky top is
+   only the 48px Material header; add the Fern bar so they aren't covered on
+   scroll), and shrink their height to match so the bottom isn't clipped. */
+.md-sidebar {
+  top: calc(var(--fern-header-height) + var(--md-header-height)) !important;
+  height: calc(100vh - var(--fern-header-height) - var(--md-header-height)) !important;
+}
+
+/* Anchor / TOC scroll-spy lands below the full header stack. */
+html { scroll-padding-top: calc(var(--fern-header-height) + var(--md-header-height) + 1rem) !important; }
+
+/* =============================================================================
+   Header bar (markup ported from POC index.html)
+   ============================================================================= */
+#fern-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--fern-header-height);
+  z-index: 1000;            /* above Material's header (z 5) and sidebars */
+  background: color-mix(in srgb, var(--background), transparent 30%);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  border-bottom: 1px solid var(--grayscale-a3);
+  font-family: var(--font-body);
+}
+#fern-header .fern-header-content {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 4);
+  height: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 0 calc(var(--spacing) * 6);
+}
+#fern-header .fern-header-logo-container {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 3);
+}
+#fern-header [data-fern-logo] {
+  display: inline-flex;
+  align-items: center;
+  gap: calc(var(--spacing) * 2);
+  text-decoration: none;
+  color: var(--grayscale-12);
+}
+#fern-header [data-fern-logo] img { height: 28px; width: auto; display: block; }
+#fern-header .fern-logo-text { font-weight: 600; font-size: var(--text-sm); white-space: nowrap; }
+
+#fern-header .fern-header-center { flex: 1; display: flex; justify-content: center; min-width: 0; }
+#fern-header .fern-header-center .lang-trigger { max-width: 360px; }
+
+/* --- Language switcher trigger (search-bar slot) --- */
+.lang-trigger {
+  appearance: none; background: transparent; border: 0; font: inherit;
+  flex: 1; display: inline-flex; align-items: center;
+  gap: calc(var(--spacing) * 2);
+  height: calc(var(--spacing) * 9);
+  padding: calc(var(--spacing) * 2);
+  border-radius: calc(var(--radius) * 2);
+  box-shadow: inset 0 0 0 1px var(--grayscale-a5);
+  color: var(--grayscale-a11); font-size: var(--text-sm); font-weight: 500;
+  cursor: pointer; overflow: hidden;
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+.lang-trigger:hover, .lang-trigger[data-state="open"] { background-color: var(--grayscale-a3); }
+.lang-trigger:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--accent); }
+.lang-trigger svg { width: calc(var(--spacing) * 4); height: calc(var(--spacing) * 4); flex-shrink: 0; }
+.lang-trigger .lang-trigger-label { color: var(--grayscale-12); white-space: nowrap; }
+.lang-trigger .lang-trigger-meta {
+  margin-left: auto; color: var(--grayscale-a9); font-weight: 400;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* --- Right-side button group --- */
+.fern-button-group { display: inline-flex; align-items: center; gap: calc(var(--spacing) * 2); }
+.fern-button {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  font: inherit; font-size: var(--text-sm); font-weight: 500;
+  color: var(--grayscale-12); text-decoration: none;
+  display: inline-flex; align-items: center;
+  height: calc(var(--spacing) * 9); padding: 0 calc(var(--spacing) * 3);
+  border-radius: calc(var(--radius) * 2);
+  transition: background-color 0.15s, box-shadow 0.15s;
+}
+.fern-button .fern-button-content { display: inline-flex; align-items: center; gap: calc(var(--spacing) * 1.5); }
+.fern-button.minimal:hover { background: var(--grayscale-a3); }
+.fern-button.outlined { box-shadow: inset 0 0 0 1px var(--grayscale-a7); }
+.fern-button.outlined:hover { background: var(--grayscale-a3); }
+.fern-button svg { width: calc(var(--spacing) * 4); height: calc(var(--spacing) * 4); }
+
+.fern-icon-button {
+  appearance: none; border: 0; background: transparent; cursor: pointer;
+  color: var(--grayscale-12);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: calc(var(--spacing) * 9); height: calc(var(--spacing) * 9);
+  border-radius: calc(var(--radius) * 2);
+  transition: background-color 0.15s;
+}
+.fern-icon-button:hover { background: var(--grayscale-a3); }
+.fern-icon-button svg { width: calc(var(--spacing) * 5); height: calc(var(--spacing) * 5); }
+
+/* --- Product selector trigger ---
+   fern.css owns the trigger: the hover/open box lives on the inner
+   .product-dropdown-trigger, while .fern-product-selector is the transparent,
+   padding:0 button. Do NOT restyle it here — adding padding/border-radius/bg to
+   the button draws a SECOND box around fern.css's inner one (nested double-box). */
+
+/* =============================================================================
+   Dropdown panels
+   ============================================================================= */
+.fern-dropdown, .fern-dropdown-panel {
+  position: fixed;
+  background: var(--background);
+  border: 1px solid var(--grayscale-a5);
+  border-radius: calc(var(--radius) * 3);
+  box-shadow: 0 10px 38px -10px rgba(0,0,0,.35), 0 10px 20px -15px rgba(0,0,0,.2);
+  padding: calc(var(--spacing) * 1.5);
+  z-index: 1100;
+  display: none;
+}
+.fern-dropdown[data-state="open"], .fern-dropdown-panel[data-state="open"] { display: block; }
+
+.fern-dropdown-item {
+  appearance: none; border: 0; background: transparent; cursor: pointer; width: 100%;
+  font: inherit; font-size: var(--text-sm); text-align: left; text-decoration: none;
+  color: var(--grayscale-12);
+  display: flex; align-items: center; gap: calc(var(--spacing) * 2);
+  padding: calc(var(--spacing) * 2) calc(var(--spacing) * 3);
+  border-radius: calc(var(--radius) * 2);
+}
+.fern-dropdown-item:hover { background: var(--grayscale-a3); }
+.fern-dropdown-item svg { width: calc(var(--spacing) * 4); height: calc(var(--spacing) * 4); flex-shrink: 0; }
+.fern-dropdown-item-indicator { width: 16px; display: inline-flex; flex-shrink: 0; }
+.fern-dropdown-item-indicator svg { width: 14px; height: 14px; }
+
+/* --- Product mega panel ---
+   fern.css (the cloned production CSS) owns the 3-column grid, group headers,
+   item layout, hover, active ring, and footer — keyed off the flat <a href>
+   list. We only kill the generic panel padding so fern.css's own radio-group
+   padding is the single source, and let the grid size the panel. */
+#product-panel { padding: 0; width: max-content; max-width: 95vw; }
+/* fern.css's mega-menu uses literal rem (grid gaps, group-header size/offset,
+   item radius); Material's 20px root inflates them 1.25x. Re-pin to 16px-root
+   equivalents so the panel matches production density. */
+#product-panel .fern-product-selector-radio-group { column-gap: 24px; row-gap: 8px; padding: 56px 20px 6px; }
+#product-panel .fern-product-selector-radio-group > a .fern-selection-item { border-radius: 16px; }
+#product-panel .fern-product-selector-radio-group > a[href*="/docs/platform"]::before,
+#product-panel .fern-product-selector-radio-group > a[href*="server-sdks"]::before,
+#product-panel .fern-product-selector-radio-group > a[href$="/docs/apis"]::before { top: -28px; font-size: 11px; }
+
+/* --- Language dropdown items --- */
+#lang-panel { min-width: 320px; }
+#lang-panel .fern-dropdown-item { gap: calc(var(--spacing) * 2); }
+#lang-panel .item-meta { margin-left: auto; padding-left: calc(var(--spacing) * 4); font-size: var(--text-xs); color: var(--grayscale-a9); }
+.lang-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lang-color, var(--grayscale-8)); display: inline-block; flex-shrink: 0; }
+#lang-panel .fern-dropdown-item[aria-current="true"] { background: var(--accent-a3); }
+
+/* --- Responsive: collapse like the Fern header --- */
+@media (max-width: 1023px) {
+  #fern-header .fern-header-navbar-links .fern-button-text { display: none; }
+  #fern-header .fern-logo-text { display: none; }
+  .lang-trigger .lang-trigger-meta { display: none; }
+}
+@media (max-width: 600px) {
+  #product-panel { width: 96vw; }
+  .fern-product-selector-radio-group { grid-template-columns: 1fr; }
+}
