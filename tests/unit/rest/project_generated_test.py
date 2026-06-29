@@ -26,7 +26,7 @@ class TestProjectWire:
     def test_tokens_create(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.project.tokens.create(name="x", permissions="x")
+        signalwire_client.project.tokens.create(name="x", permissions=["calling"])
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "project.create_token"
@@ -36,7 +36,7 @@ class TestProjectWire:
     ) -> None:
         mock.push_scenario("project.create_token", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.project.tokens.create(name="x", permissions="x")
+            signalwire_client.project.tokens.create(name="x", permissions=["calling"])
         assert exc.value.status_code == 500
 
     def test_tokens_delete(

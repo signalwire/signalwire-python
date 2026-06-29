@@ -5,15 +5,16 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Unit tests for ConciergeAgent prefab
 """
 
 import pytest
 import json
+from typing import Any
 from unittest.mock import Mock, patch, MagicMock, call
+
+from signalwire.prefabs.concierge import ConciergeAgent
 
 
 # ---------------------------------------------------------------------------
@@ -29,7 +30,7 @@ AMENITIES = {
 }
 
 
-def _make_concierge(**overrides):
+def _make_concierge(**overrides: Any) -> tuple[ConciergeAgent, MagicMock]:
     """
     Create a ConciergeAgent with AgentBase.__init__ mocked out.
 
@@ -37,38 +38,35 @@ def _make_concierge(**overrides):
     chain (schema files, uvicorn, POM imports, etc.) while still exercising
     all of ConciergeAgent's own initialisation logic.
     """
-    with patch("signalwire.prefabs.concierge.AgentBase.__init__", return_value=None) as mock_init:
-        from signalwire.prefabs.concierge import ConciergeAgent
-
-        # Stub the methods that _setup_concierge_agent calls on `self`
-        # so that assertions can be made against them.
-        with patch.multiple(
-            ConciergeAgent,
-            prompt_add_section=Mock(),
-            set_post_prompt=Mock(),
-            add_hints=Mock(),
-            set_params=Mock(),
-            set_global_data=Mock(),
-            set_native_functions=Mock(),
-        ):
-            kwargs = dict(
-                venue_name=VENUE_NAME,
-                services=SERVICES,
-                amenities=AMENITIES,
-            )
-            kwargs.update(overrides)
-            agent = ConciergeAgent(**kwargs)
+    # Stub the methods that _setup_concierge_agent calls on `self`
+    # so that assertions can be made against them.
+    with patch(
+        "signalwire.prefabs.concierge.AgentBase.__init__", return_value=None
+    ) as mock_init, patch.multiple(
+        ConciergeAgent,
+        prompt_add_section=Mock(),
+        set_post_prompt=Mock(),
+        add_hints=Mock(),
+        set_params=Mock(),
+        set_global_data=Mock(),
+        set_native_functions=Mock(),
+    ):
+        kwargs: dict[str, Any] = dict(
+            venue_name=VENUE_NAME,
+            services=SERVICES,
+            amenities=AMENITIES,
+        )
+        kwargs.update(overrides)
+        agent = ConciergeAgent(**kwargs)
 
     return agent, mock_init
 
 
-def _make_bare_concierge():
+def _make_bare_concierge() -> ConciergeAgent:
     """
     Create a ConciergeAgent using __new__ (skipping __init__) and set
     only the attributes needed by the tool methods under test.
     """
-    from signalwire.prefabs.concierge import ConciergeAgent
-
     agent = ConciergeAgent.__new__(ConciergeAgent)
     agent.venue_name = VENUE_NAME
     agent.services = list(SERVICES)
@@ -86,7 +84,7 @@ def _make_bare_concierge():
 class TestConciergeInitialization:
     """Test ConciergeAgent.__init__ delegates properly to AgentBase."""
 
-    def test_super_init_called_with_defaults(self):
+    def test_super_init_called_with_defaults(self) -> None:
         """super().__init__ receives name, route, and use_pom."""
         agent, mock_init = _make_concierge()
 
@@ -96,7 +94,7 @@ class TestConciergeInitialization:
         assert kwargs["route"] == "/concierge"
         assert kwargs["use_pom"] is True
 
-    def test_super_init_custom_name_and_route(self):
+    def test_super_init_custom_name_and_route(self) -> None:
         """Custom name and route are forwarded to AgentBase."""
         agent, mock_init = _make_concierge(name="lobby", route="/lobby")
 
@@ -104,7 +102,7 @@ class TestConciergeInitialization:
         assert kwargs["name"] == "lobby"
         assert kwargs["route"] == "/lobby"
 
-    def test_extra_kwargs_forwarded_to_super(self):
+    def test_extra_kwargs_forwarded_to_super(self) -> None:
         """Arbitrary **kwargs are forwarded to AgentBase.__init__."""
         agent, mock_init = _make_concierge(host="0.0.0.0", port=9090)
 
@@ -112,33 +110,33 @@ class TestConciergeInitialization:
         assert kwargs["host"] == "0.0.0.0"
         assert kwargs["port"] == 9090
 
-    def test_venue_name_stored(self):
+    def test_venue_name_stored(self) -> None:
         agent, _ = _make_concierge()
         assert agent.venue_name == VENUE_NAME
 
-    def test_services_stored(self):
+    def test_services_stored(self) -> None:
         agent, _ = _make_concierge()
         assert agent.services == SERVICES
 
-    def test_amenities_stored(self):
+    def test_amenities_stored(self) -> None:
         agent, _ = _make_concierge()
         assert agent.amenities == AMENITIES
 
-    def test_default_hours_of_operation(self):
+    def test_default_hours_of_operation(self) -> None:
         """When no hours supplied, a sensible default is used."""
         agent, _ = _make_concierge()
         assert agent.hours_of_operation == {"default": "9 AM - 5 PM"}
 
-    def test_custom_hours_of_operation(self):
+    def test_custom_hours_of_operation(self) -> None:
         custom_hours = {"weekdays": "8 AM - 8 PM", "weekends": "10 AM - 6 PM"}
         agent, _ = _make_concierge(hours_of_operation=custom_hours)
         assert agent.hours_of_operation == custom_hours
 
-    def test_default_special_instructions_empty(self):
+    def test_default_special_instructions_empty(self) -> None:
         agent, _ = _make_concierge()
         assert agent.special_instructions == []
 
-    def test_custom_special_instructions(self):
+    def test_custom_special_instructions(self) -> None:
         instructions = ["Always upsell the premium package", "Mention the loyalty program"]
         agent, _ = _make_concierge(special_instructions=instructions)
         assert agent.special_instructions == instructions
@@ -152,8 +150,10 @@ class TestConciergeInitialization:
 class TestSetupConciergeAgent:
     """Verify that _setup_concierge_agent configures the agent correctly."""
 
+    agent: ConciergeAgent
+
     @pytest.fixture(autouse=True)
-    def _create_agent(self):
+    def _create_agent(self) -> None:
         """Create a bare agent and mock out the AgentBase helper methods."""
         from signalwire.prefabs.concierge import ConciergeAgent
 
@@ -165,57 +165,57 @@ class TestSetupConciergeAgent:
         self.agent.special_instructions = []
 
         # Mock every method called by _setup_concierge_agent
-        self.agent.prompt_add_section = Mock()
-        self.agent.set_post_prompt = Mock()
-        self.agent.add_hints = Mock()
-        self.agent.set_params = Mock()
-        self.agent.set_global_data = Mock()
-        self.agent.set_native_functions = Mock()
+        self.agent.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        self.agent.set_post_prompt = Mock()  # type: ignore[method-assign]  # mock
+        self.agent.add_hints = Mock()  # type: ignore[method-assign]  # mock
+        self.agent.set_params = Mock()  # type: ignore[method-assign]  # mock
+        self.agent.set_global_data = Mock()  # type: ignore[method-assign]  # mock
+        self.agent.set_native_functions = Mock()  # type: ignore[method-assign]  # mock
 
     # -- Personality section --------------------------------------------------
 
-    def test_personality_section_added(self):
+    def test_personality_section_added(self) -> None:
         self.agent._setup_concierge_agent()
 
-        calls = self.agent.prompt_add_section.call_args_list
+        calls = self.agent.prompt_add_section.call_args_list  # type: ignore[attr-defined]  # mock attr
         personality_calls = [c for c in calls if c[0][0] == "Personality"]
         assert len(personality_calls) == 1
         assert VENUE_NAME in personality_calls[0][1]["body"]
 
-    def test_goal_section_added(self):
+    def test_goal_section_added(self) -> None:
         self.agent._setup_concierge_agent()
 
-        calls = self.agent.prompt_add_section.call_args_list
+        calls = self.agent.prompt_add_section.call_args_list  # type: ignore[attr-defined]  # mock attr
         goal_calls = [c for c in calls if c[0][0] == "Goal"]
         assert len(goal_calls) == 1
         assert "exceptional service" in goal_calls[0][1]["body"].lower()
 
     # -- Instructions section -------------------------------------------------
 
-    def test_instructions_section_has_base_bullets(self):
+    def test_instructions_section_has_base_bullets(self) -> None:
         self.agent._setup_concierge_agent()
 
-        calls = self.agent.prompt_add_section.call_args_list
+        calls = self.agent.prompt_add_section.call_args_list  # type: ignore[attr-defined]  # mock attr
         instr_calls = [c for c in calls if c[0][0] == "Instructions"]
         assert len(instr_calls) == 1
         bullets = instr_calls[0][1]["bullets"]
         assert len(bullets) >= 4  # at least the 4 base instructions
 
-    def test_special_instructions_appended(self):
+    def test_special_instructions_appended(self) -> None:
         self.agent.special_instructions = ["Speak only French"]
         self.agent._setup_concierge_agent()
 
-        calls = self.agent.prompt_add_section.call_args_list
+        calls = self.agent.prompt_add_section.call_args_list  # type: ignore[attr-defined]  # mock attr
         instr_calls = [c for c in calls if c[0][0] == "Instructions"]
         bullets = instr_calls[0][1]["bullets"]
         assert "Speak only French" in bullets
 
     # -- Services section -----------------------------------------------------
 
-    def test_services_section_lists_all_services(self):
+    def test_services_section_lists_all_services(self) -> None:
         self.agent._setup_concierge_agent()
 
-        calls = self.agent.prompt_add_section.call_args_list
+        calls = self.agent.prompt_add_section.call_args_list  # type: ignore[attr-defined]  # mock attr
         svc_calls = [c for c in calls if c[0][0] == "Available Services"]
         assert len(svc_calls) == 1
         body = svc_calls[0][1]["body"]
@@ -224,10 +224,10 @@ class TestSetupConciergeAgent:
 
     # -- Amenities section ----------------------------------------------------
 
-    def test_amenities_section_has_subsections(self):
+    def test_amenities_section_has_subsections(self) -> None:
         self.agent._setup_concierge_agent()
 
-        calls = self.agent.prompt_add_section.call_args_list
+        calls = self.agent.prompt_add_section.call_args_list  # type: ignore[attr-defined]  # mock attr
         amen_calls = [c for c in calls if c[0][0] == "Amenities"]
         assert len(amen_calls) == 1
         subsections = amen_calls[0][1]["subsections"]
@@ -235,10 +235,10 @@ class TestSetupConciergeAgent:
         assert "Pool" in titles
         assert "Gym" in titles
 
-    def test_amenities_subsection_body_contains_details(self):
+    def test_amenities_subsection_body_contains_details(self) -> None:
         self.agent._setup_concierge_agent()
 
-        calls = self.agent.prompt_add_section.call_args_list
+        calls = self.agent.prompt_add_section.call_args_list  # type: ignore[attr-defined]  # mock attr
         amen_calls = [c for c in calls if c[0][0] == "Amenities"]
         subsections = amen_calls[0][1]["subsections"]
         pool_sub = [s for s in subsections if s["title"] == "Pool"][0]
@@ -247,22 +247,22 @@ class TestSetupConciergeAgent:
 
     # -- Hours section --------------------------------------------------------
 
-    def test_hours_of_operation_section(self):
+    def test_hours_of_operation_section(self) -> None:
         self.agent._setup_concierge_agent()
 
-        calls = self.agent.prompt_add_section.call_args_list
+        calls = self.agent.prompt_add_section.call_args_list  # type: ignore[attr-defined]  # mock attr
         hour_calls = [c for c in calls if c[0][0] == "Hours of Operation"]
         assert len(hour_calls) == 1
         assert "9 AM - 5 PM" in hour_calls[0][1]["body"]
 
-    def test_hours_section_with_custom_hours(self):
+    def test_hours_section_with_custom_hours(self) -> None:
         self.agent.hours_of_operation = {
             "weekdays": "8 AM - 9 PM",
             "weekends": "10 AM - 6 PM",
         }
         self.agent._setup_concierge_agent()
 
-        calls = self.agent.prompt_add_section.call_args_list
+        calls = self.agent.prompt_add_section.call_args_list  # type: ignore[attr-defined]  # mock attr
         hour_calls = [c for c in calls if c[0][0] == "Hours of Operation"]
         body = hour_calls[0][1]["body"]
         assert "8 AM - 9 PM" in body
@@ -270,19 +270,19 @@ class TestSetupConciergeAgent:
 
     # -- Post-prompt ----------------------------------------------------------
 
-    def test_post_prompt_set(self):
+    def test_post_prompt_set(self) -> None:
         self.agent._setup_concierge_agent()
-        self.agent.set_post_prompt.assert_called_once()
-        prompt_text = self.agent.set_post_prompt.call_args[0][0]
+        self.agent.set_post_prompt.assert_called_once()  # type: ignore[attr-defined]  # mock attr
+        prompt_text = self.agent.set_post_prompt.call_args[0][0]  # type: ignore[attr-defined]  # mock attr
         assert "topic" in prompt_text
         assert "follow_up_needed" in prompt_text
 
     # -- Hints ----------------------------------------------------------------
 
-    def test_hints_include_venue_and_services_and_amenities(self):
+    def test_hints_include_venue_and_services_and_amenities(self) -> None:
         self.agent._setup_concierge_agent()
-        self.agent.add_hints.assert_called_once()
-        hints = self.agent.add_hints.call_args[0][0]
+        self.agent.add_hints.assert_called_once()  # type: ignore[attr-defined]  # mock attr
+        hints = self.agent.add_hints.call_args[0][0]  # type: ignore[attr-defined]  # mock attr
         assert VENUE_NAME in hints
         for svc in SERVICES:
             assert svc in hints
@@ -291,11 +291,11 @@ class TestSetupConciergeAgent:
 
     # -- Params ---------------------------------------------------------------
 
-    def test_default_params_set(self):
+    def test_default_params_set(self) -> None:
         self.agent._setup_concierge_agent()
 
         # set_params may be called once (no welcome) or twice (with welcome).
-        first_call_params = self.agent.set_params.call_args_list[0][0][0]
+        first_call_params = self.agent.set_params.call_args_list[0][0][0]  # type: ignore[attr-defined]  # mock attr
         assert first_call_params["wait_for_user"] is False
         assert first_call_params["end_of_speech_timeout"] == 1000
         assert first_call_params["ai_volume"] == 5
@@ -303,10 +303,10 @@ class TestSetupConciergeAgent:
 
     # -- Global data ----------------------------------------------------------
 
-    def test_global_data_set(self):
+    def test_global_data_set(self) -> None:
         self.agent._setup_concierge_agent()
-        self.agent.set_global_data.assert_called_once()
-        data = self.agent.set_global_data.call_args[0][0]
+        self.agent.set_global_data.assert_called_once()  # type: ignore[attr-defined]  # mock attr
+        data = self.agent.set_global_data.call_args[0][0]  # type: ignore[attr-defined]  # mock attr
         assert data["venue_name"] == VENUE_NAME
         assert data["services"] == SERVICES
         assert data["amenities"] == AMENITIES
@@ -314,22 +314,22 @@ class TestSetupConciergeAgent:
 
     # -- Native functions -----------------------------------------------------
 
-    def test_native_functions_set(self):
+    def test_native_functions_set(self) -> None:
         self.agent._setup_concierge_agent()
-        self.agent.set_native_functions.assert_called_once_with(["check_time"])
+        self.agent.set_native_functions.assert_called_once_with(["check_time"])  # type: ignore[attr-defined]  # mock attr
 
     # -- Welcome message ------------------------------------------------------
 
-    def test_no_welcome_message_no_static_greeting(self):
+    def test_no_welcome_message_no_static_greeting(self) -> None:
         self.agent._setup_concierge_agent(welcome_message=None)
         # set_params called exactly once (the default call)
-        assert self.agent.set_params.call_count == 1
+        assert self.agent.set_params.call_count == 1  # type: ignore[attr-defined]  # mock attr
 
-    def test_welcome_message_sets_static_greeting(self):
+    def test_welcome_message_sets_static_greeting(self) -> None:
         self.agent._setup_concierge_agent(welcome_message="Welcome to the Grand Hotel!")
         # set_params should be called twice: default + greeting override
-        assert self.agent.set_params.call_count == 2
-        greeting_call = self.agent.set_params.call_args_list[1][0][0]
+        assert self.agent.set_params.call_count == 2  # type: ignore[attr-defined]  # mock attr
+        greeting_call = self.agent.set_params.call_args_list[1][0][0]  # type: ignore[attr-defined]  # mock attr
         assert greeting_call["static_greeting"] == "Welcome to the Grand Hotel!"
         assert greeting_call["static_greeting_no_barge"] is True
 
@@ -342,10 +342,12 @@ class TestSetupConciergeAgent:
 class TestCheckAvailability:
     """Test the check_availability SWAIG tool method."""
 
-    def setup_method(self):
+    agent: ConciergeAgent
+
+    def setup_method(self) -> None:
         self.agent = _make_bare_concierge()
 
-    def test_known_service_returns_available(self):
+    def test_known_service_returns_available(self) -> None:
         from signalwire.core.function_result import FunctionResult
 
         result = self.agent.check_availability(
@@ -357,7 +359,7 @@ class TestCheckAvailability:
         assert "2025-03-15" in result.response
         assert "14:00" in result.response
 
-    def test_known_service_case_insensitive(self):
+    def test_known_service_case_insensitive(self) -> None:
         from signalwire.core.function_result import FunctionResult
 
         result = self.agent.check_availability(
@@ -369,7 +371,7 @@ class TestCheckAvailability:
         assert "room service" in result.response.lower()
         assert "available" in result.response.lower() or "reservation" in result.response.lower()
 
-    def test_unknown_service_returns_error(self):
+    def test_unknown_service_returns_error(self) -> None:
         from signalwire.core.function_result import FunctionResult
 
         result = self.agent.check_availability(
@@ -383,7 +385,7 @@ class TestCheckAvailability:
         for svc in SERVICES:
             assert svc in result.response
 
-    def test_missing_service_arg_treated_as_unknown(self):
+    def test_missing_service_arg_treated_as_unknown(self) -> None:
         """Empty service defaults to empty string, which won't match."""
         result = self.agent.check_availability(
             {"date": "2025-01-01", "time": "09:00"},
@@ -392,7 +394,7 @@ class TestCheckAvailability:
         # Empty string won't be in services list, so we get the "don't offer" path
         assert VENUE_NAME in result.response
 
-    def test_missing_date_and_time_still_works(self):
+    def test_missing_date_and_time_still_works(self) -> None:
         """Even without date/time, availability for a known service works."""
         result = self.agent.check_availability(
             {"service": "room service"},
@@ -400,7 +402,7 @@ class TestCheckAvailability:
         )
         assert "room service" in result.response.lower()
 
-    def test_raw_data_passed_through(self):
+    def test_raw_data_passed_through(self) -> None:
         """raw_data is accepted but not used internally — output only depends
         on the service argument, regardless of what raw_data is."""
         sentinel = {"call_id": "abc-123"}
@@ -422,45 +424,47 @@ class TestCheckAvailability:
 class TestGetDirections:
     """Test the get_directions SWAIG tool method."""
 
-    def setup_method(self):
+    agent: ConciergeAgent
+
+    def setup_method(self) -> None:
         self.agent = _make_bare_concierge()
 
-    def test_known_amenity_with_location(self):
+    def test_known_amenity_with_location(self) -> None:
         from signalwire.core.function_result import FunctionResult
 
         result = self.agent.get_directions({"location": "pool"}, raw_data={})
         assert isinstance(result, FunctionResult)
         assert "2nd Floor" in result.response
 
-    def test_known_amenity_gym(self):
+    def test_known_amenity_gym(self) -> None:
         result = self.agent.get_directions({"location": "gym"}, raw_data={})
         assert "3rd Floor" in result.response
 
-    def test_unknown_location_returns_fallback(self):
+    def test_unknown_location_returns_fallback(self) -> None:
         result = self.agent.get_directions({"location": "helipad"}, raw_data={})
         assert "front desk" in result.response.lower() or "don't have" in result.response.lower()
 
-    def test_amenity_without_location_field(self):
+    def test_amenity_without_location_field(self) -> None:
         """If an amenity exists but has no 'location' key, fallback is used."""
         self.agent.amenities["sauna"] = {"hours": "10 AM - 8 PM"}  # no "location"
         result = self.agent.get_directions({"location": "sauna"}, raw_data={})
         # Should hit the else branch because "location" not in details
         assert "don't have" in result.response.lower() or "front desk" in result.response.lower()
 
-    def test_empty_location_arg(self):
+    def test_empty_location_arg(self) -> None:
         result = self.agent.get_directions({}, raw_data={})
         # Empty/missing location must hit the fallback branch — there is
         # no amenity called "", so we expect the same fallback wording as
         # an unknown location.
         assert "front desk" in result.response.lower() or "don't have" in result.response.lower()
 
-    def test_location_case_sensitivity(self):
+    def test_location_case_sensitivity(self) -> None:
         """Location lookup is lowercased; amenity keys in our fixture are lowercase."""
         result = self.agent.get_directions({"location": "Pool"}, raw_data={})
         # "Pool".lower() == "pool" which exists in amenities
         assert "2nd Floor" in result.response
 
-    def test_raw_data_accepted(self):
+    def test_raw_data_accepted(self) -> None:
         """raw_data is accepted but not echoed back into the response —
         only the location argument shapes the answer."""
         sentinel = {"meta": "secret-marker-xyz"}
@@ -479,45 +483,47 @@ class TestGetDirections:
 class TestOnSummary:
     """Test the on_summary callback."""
 
-    def setup_method(self):
+    agent: ConciergeAgent
+
+    def setup_method(self) -> None:
         self.agent = _make_bare_concierge()
 
-    def test_dict_summary_printed(self, capsys):
+    def test_dict_summary_printed(self, capsys: pytest.CaptureFixture[str]) -> None:
         summary = {"topic": "pool hours", "follow_up_needed": False}
-        self.agent.on_summary(summary)
+        self.agent.on_summary(summary)  # type: ignore[arg-type]  # intentional: exercises non-dict/str runtime branch
         captured = capsys.readouterr()
         assert "Concierge interaction summary" in captured.out
         assert "pool hours" in captured.out
 
-    def test_string_summary_printed(self, capsys):
-        self.agent.on_summary("Guest asked about the gym")
+    def test_string_summary_printed(self, capsys: pytest.CaptureFixture[str]) -> None:
+        self.agent.on_summary("Guest asked about the gym")  # type: ignore[arg-type]  # intentional: exercises non-dict/str runtime branch
         captured = capsys.readouterr()
         assert "Guest asked about the gym" in captured.out
 
-    def test_none_summary_no_output(self, capsys):
+    def test_none_summary_no_output(self, capsys: pytest.CaptureFixture[str]) -> None:
         self.agent.on_summary(None)
         captured = capsys.readouterr()
         assert captured.out == ""
 
-    def test_empty_string_summary_no_output(self, capsys):
+    def test_empty_string_summary_no_output(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Empty string is falsy, so no output should be produced."""
-        self.agent.on_summary("")
+        self.agent.on_summary("")  # type: ignore[arg-type]  # intentional: exercises non-dict/str runtime branch
         captured = capsys.readouterr()
         assert captured.out == ""
 
-    def test_empty_dict_summary_treated_as_falsy(self, capsys):
+    def test_empty_dict_summary_treated_as_falsy(self, capsys: pytest.CaptureFixture[str]) -> None:
         """An empty dict is falsy; no output expected."""
         self.agent.on_summary({})
         captured = capsys.readouterr()
         assert captured.out == ""
 
-    def test_raw_data_accepted(self, capsys):
+    def test_raw_data_accepted(self, capsys: pytest.CaptureFixture[str]) -> None:
         """on_summary accepts an optional raw_data kwarg."""
-        self.agent.on_summary("test", raw_data={"call_id": "xyz"})
+        self.agent.on_summary("test", raw_data={"call_id": "xyz"})  # type: ignore[arg-type]  # intentional: exercises non-dict/str runtime branch
         captured = capsys.readouterr()
         assert "test" in captured.out
 
-    def test_exception_during_summary_processing(self, capsys):
+    def test_exception_during_summary_processing(self, capsys: pytest.CaptureFixture[str]) -> None:
         """If json.dumps raises, the except branch prints the error."""
         bad_summary = Mock()
         bad_summary.__bool__ = Mock(return_value=True)
@@ -526,7 +532,7 @@ class TestOnSummary:
         # won't raise, so let's force isinstance to return True and make
         # json.dumps fail.
         with patch("signalwire.prefabs.concierge.json.dumps", side_effect=TypeError("not serializable")):
-            self.agent.on_summary({"key": "value"})
+            self.agent.on_summary({"key": "value"})  # type: ignore[arg-type]  # intentional: exercises non-dict/str runtime branch
         captured = capsys.readouterr()
         assert "Error processing summary" in captured.out
         assert "not serializable" in captured.out
@@ -540,42 +546,42 @@ class TestOnSummary:
 class TestToolDecoratorMetadata:
     """Verify that @AgentBase.tool marks methods with expected metadata."""
 
-    def test_check_availability_is_marked_as_tool(self):
+    def test_check_availability_is_marked_as_tool(self) -> None:
         from signalwire.prefabs.concierge import ConciergeAgent
 
         method = ConciergeAgent.check_availability
         assert getattr(method, "_is_tool", False) is True
 
-    def test_check_availability_tool_name(self):
+    def test_check_availability_tool_name(self) -> None:
         from signalwire.prefabs.concierge import ConciergeAgent
 
-        assert ConciergeAgent.check_availability._tool_name == "check_availability"
+        assert ConciergeAgent.check_availability._tool_name == "check_availability"  # type: ignore[attr-defined]  # decorator-set attr
 
-    def test_check_availability_tool_params_has_description(self):
+    def test_check_availability_tool_params_has_description(self) -> None:
         from signalwire.prefabs.concierge import ConciergeAgent
 
-        params = ConciergeAgent.check_availability._tool_params
+        params = ConciergeAgent.check_availability._tool_params  # type: ignore[attr-defined]  # decorator-set attr
         assert "description" in params
         assert "parameters" in params
         assert "service" in params["parameters"]
         assert "date" in params["parameters"]
         assert "time" in params["parameters"]
 
-    def test_get_directions_is_marked_as_tool(self):
+    def test_get_directions_is_marked_as_tool(self) -> None:
         from signalwire.prefabs.concierge import ConciergeAgent
 
         method = ConciergeAgent.get_directions
         assert getattr(method, "_is_tool", False) is True
 
-    def test_get_directions_tool_name(self):
+    def test_get_directions_tool_name(self) -> None:
         from signalwire.prefabs.concierge import ConciergeAgent
 
-        assert ConciergeAgent.get_directions._tool_name == "get_directions"
+        assert ConciergeAgent.get_directions._tool_name == "get_directions"  # type: ignore[attr-defined]  # decorator-set attr
 
-    def test_get_directions_tool_params_has_location_parameter(self):
+    def test_get_directions_tool_params_has_location_parameter(self) -> None:
         from signalwire.prefabs.concierge import ConciergeAgent
 
-        params = ConciergeAgent.get_directions._tool_params
+        params = ConciergeAgent.get_directions._tool_params  # type: ignore[attr-defined]  # decorator-set attr
         assert "parameters" in params
         assert "location" in params["parameters"]
 
@@ -588,17 +594,17 @@ class TestToolDecoratorMetadata:
 class TestEdgeCases:
     """Miscellaneous edge-case tests."""
 
-    def test_empty_services_list(self):
+    def test_empty_services_list(self) -> None:
         """Agent can be created with an empty services list."""
         agent, _ = _make_concierge(services=[])
         assert agent.services == []
 
-    def test_empty_amenities_dict(self):
+    def test_empty_amenities_dict(self) -> None:
         """Agent can be created with an empty amenities dict."""
         agent, _ = _make_concierge(amenities={})
         assert agent.amenities == {}
 
-    def test_amenity_with_many_fields(self):
+    def test_amenity_with_many_fields(self) -> None:
         """Amenities can have arbitrary detail keys."""
         big_amenity = {
             "conference_room": {
@@ -611,7 +617,7 @@ class TestEdgeCases:
         agent, _ = _make_concierge(amenities=big_amenity)
         assert agent.amenities == big_amenity
 
-    def test_check_availability_with_empty_services(self):
+    def test_check_availability_with_empty_services(self) -> None:
         """When services list is empty, every service is 'unknown'."""
         agent = _make_bare_concierge()
         agent.services = []
@@ -621,19 +627,19 @@ class TestEdgeCases:
         )
         assert "sorry" in result.response.lower() or "don't offer" in result.response.lower()
 
-    def test_get_directions_with_empty_amenities(self):
+    def test_get_directions_with_empty_amenities(self) -> None:
         """When amenities dict is empty, every location is unknown."""
         agent = _make_bare_concierge()
         agent.amenities = {}
         result = agent.get_directions({"location": "pool"}, raw_data={})
         assert "don't have" in result.response.lower() or "front desk" in result.response.lower()
 
-    def test_hours_of_operation_none_gets_default(self):
+    def test_hours_of_operation_none_gets_default(self) -> None:
         """Passing None for hours_of_operation uses the default."""
         agent, _ = _make_concierge(hours_of_operation=None)
         assert agent.hours_of_operation == {"default": "9 AM - 5 PM"}
 
-    def test_special_instructions_none_gets_empty_list(self):
+    def test_special_instructions_none_gets_empty_list(self) -> None:
         """Passing None for special_instructions uses an empty list."""
         agent, _ = _make_concierge(special_instructions=None)
         assert agent.special_instructions == []
@@ -647,8 +653,10 @@ class TestEdgeCases:
 class TestSetupSectionOrder:
     """Verify the order and count of prompt_add_section calls."""
 
+    agent: ConciergeAgent
+
     @pytest.fixture(autouse=True)
-    def _create_agent(self):
+    def _create_agent(self) -> None:
         from signalwire.prefabs.concierge import ConciergeAgent
 
         self.agent = ConciergeAgent.__new__(ConciergeAgent)
@@ -657,22 +665,22 @@ class TestSetupSectionOrder:
         self.agent.amenities = dict(AMENITIES)
         self.agent.hours_of_operation = {"default": "9 AM - 5 PM"}
         self.agent.special_instructions = []
-        self.agent.prompt_add_section = Mock()
-        self.agent.set_post_prompt = Mock()
-        self.agent.add_hints = Mock()
-        self.agent.set_params = Mock()
-        self.agent.set_global_data = Mock()
-        self.agent.set_native_functions = Mock()
+        self.agent.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        self.agent.set_post_prompt = Mock()  # type: ignore[method-assign]  # mock
+        self.agent.add_hints = Mock()  # type: ignore[method-assign]  # mock
+        self.agent.set_params = Mock()  # type: ignore[method-assign]  # mock
+        self.agent.set_global_data = Mock()  # type: ignore[method-assign]  # mock
+        self.agent.set_native_functions = Mock()  # type: ignore[method-assign]  # mock
 
-    def test_six_sections_created(self):
+    def test_six_sections_created(self) -> None:
         """Exactly six prompt sections should be added."""
         self.agent._setup_concierge_agent()
-        assert self.agent.prompt_add_section.call_count == 6
+        assert self.agent.prompt_add_section.call_count == 6  # type: ignore[attr-defined]  # mock attr
 
-    def test_section_order(self):
+    def test_section_order(self) -> None:
         """Sections are created in the expected deterministic order."""
         self.agent._setup_concierge_agent()
-        titles = [c[0][0] for c in self.agent.prompt_add_section.call_args_list]
+        titles = [c[0][0] for c in self.agent.prompt_add_section.call_args_list]  # type: ignore[attr-defined]  # mock attr
         expected = [
             "Personality",
             "Goal",

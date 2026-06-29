@@ -25,7 +25,7 @@ from signalwire.core.security.session_manager import SessionManager
 class TestSessionManager:
     """Test SessionManager functionality"""
     
-    def test_basic_initialization(self):
+    def test_basic_initialization(self) -> None:
         """Test basic SessionManager initialization"""
         manager = SessionManager()
         
@@ -33,7 +33,7 @@ class TestSessionManager:
         assert len(manager.secret_key) >= 32  # Should be secure length
         assert manager.token_expiry_secs == 900  # Default 15 minutes
     
-    def test_initialization_with_custom_params(self):
+    def test_initialization_with_custom_params(self) -> None:
         """Test initialization with custom parameters"""
         custom_secret = "my_custom_secret_key_that_is_long_enough"
         custom_expiry = 7200  # 2 hours
@@ -46,7 +46,7 @@ class TestSessionManager:
         assert manager.secret_key == custom_secret
         assert manager.token_expiry_secs == custom_expiry
     
-    def test_create_session(self):
+    def test_create_session(self) -> None:
         """Test session creation"""
         manager = SessionManager()
         
@@ -60,7 +60,7 @@ class TestSessionManager:
         assert len(auto_call_id) > 0
         assert isinstance(auto_call_id, str)
     
-    def test_generate_token_basic(self):
+    def test_generate_token_basic(self) -> None:
         """Test basic token generation"""
         manager = SessionManager()
         
@@ -77,7 +77,7 @@ class TestSessionManager:
         except Exception:
             pytest.fail("Token should be valid base64")
     
-    def test_create_tool_token_alias(self):
+    def test_create_tool_token_alias(self) -> None:
         """Test create_tool_token alias"""
         manager = SessionManager()
         
@@ -90,7 +90,7 @@ class TestSessionManager:
         assert len(token1) > 0
         assert len(token2) > 0
     
-    def test_validate_token_valid(self):
+    def test_validate_token_valid(self) -> None:
         """Test validating valid token"""
         manager = SessionManager()
         
@@ -99,7 +99,7 @@ class TestSessionManager:
         # Should be valid immediately
         assert manager.validate_token("call_123", "test_function", token) is True
     
-    def test_validate_token_wrong_function(self):
+    def test_validate_token_wrong_function(self) -> None:
         """Test validating token with wrong function name"""
         manager = SessionManager()
         
@@ -108,7 +108,7 @@ class TestSessionManager:
         # Should be invalid for different function
         assert manager.validate_token("call_123", "other_function", token) is False
     
-    def test_validate_token_wrong_call_id(self):
+    def test_validate_token_wrong_call_id(self) -> None:
         """Test validating token with wrong call ID"""
         manager = SessionManager()
         
@@ -117,7 +117,7 @@ class TestSessionManager:
         # Should be invalid for different call_id
         assert manager.validate_token("other_call", "test_function", token) is False
     
-    def test_validate_token_expired(self):
+    def test_validate_token_expired(self) -> None:
         """Test validating expired token"""
         manager = SessionManager(token_expiry_secs=1)  # 1 second expiry
         
@@ -129,7 +129,7 @@ class TestSessionManager:
         # Should be invalid due to expiry
         assert manager.validate_token("call_123", "test_function", token) is False
     
-    def test_validate_token_invalid_signature(self):
+    def test_validate_token_invalid_signature(self) -> None:
         """Test validating token with invalid signature"""
         manager1 = SessionManager(secret_key="secret1" + "x" * 24)
         manager2 = SessionManager(secret_key="secret2" + "x" * 24)
@@ -139,7 +139,7 @@ class TestSessionManager:
         # Should be invalid with different secret
         assert manager2.validate_token("call_123", "test_function", token) is False
     
-    def test_validate_token_malformed(self):
+    def test_validate_token_malformed(self) -> None:
         """Test validating malformed token"""
         manager = SessionManager()
         
@@ -155,7 +155,7 @@ class TestSessionManager:
         for token in malformed_tokens:
             assert manager.validate_token("call_123", "test_function", token) is False
     
-    def test_validate_token_empty_call_id(self):
+    def test_validate_token_empty_call_id(self) -> None:
         """Test validating token with empty call_id (special case)"""
         manager = SessionManager()
         
@@ -163,9 +163,9 @@ class TestSessionManager:
         
         # Should reject with empty call_id (no longer falls back to token's call_id)
         assert manager.validate_token("", "test_function", token) is False
-        assert manager.validate_token(None, "test_function", token) is False
+        assert manager.validate_token(None, "test_function", token) is False  # type: ignore[arg-type]  # intentional invalid input for validation test
     
-    def test_validate_tool_token_alias(self):
+    def test_validate_tool_token_alias(self) -> None:
         """Test validate_tool_token alias"""
         manager = SessionManager()
         
@@ -175,7 +175,7 @@ class TestSessionManager:
         assert manager.validate_tool_token("test_function", token, "call_123") is True
         assert manager.validate_tool_token("wrong_function", token, "call_123") is False
     
-    def test_debug_token(self):
+    def test_debug_token(self) -> None:
         """Test token debugging functionality"""
         manager = SessionManager()
         manager._debug_mode = True
@@ -202,7 +202,7 @@ class TestSessionManager:
         assert isinstance(status["expires_in_seconds"], int)
         assert isinstance(status["is_expired"], bool)
     
-    def test_debug_token_invalid(self):
+    def test_debug_token_invalid(self) -> None:
         """Test debugging invalid token"""
         manager = SessionManager()
         manager._debug_mode = True
@@ -214,7 +214,7 @@ class TestSessionManager:
         assert "valid_format" in debug_info
         assert debug_info["valid_format"] is False
     
-    def test_legacy_methods(self):
+    def test_legacy_methods(self) -> None:
         """Test legacy API compatibility methods"""
         manager = SessionManager()
         
@@ -232,7 +232,7 @@ class TestSessionManager:
 class TestSessionManagerErrorHandling:
     """Test error handling in SessionManager"""
     
-    def test_token_generation_edge_cases(self):
+    def test_token_generation_edge_cases(self) -> None:
         """Test token generation with edge cases"""
         manager = SessionManager()
         
@@ -246,7 +246,7 @@ class TestSessionManagerErrorHandling:
         assert isinstance(token, str)
         assert manager.validate_token("", "test_func", token) is False
     
-    def test_validation_with_corrupted_token(self):
+    def test_validation_with_corrupted_token(self) -> None:
         """Test validation with corrupted token data"""
         manager = SessionManager()
         
@@ -257,7 +257,7 @@ class TestSessionManagerErrorHandling:
         corrupted = token[:-5] + "XXXXX"
         assert manager.validate_token("call_123", "test_function", corrupted) is False
     
-    def test_time_manipulation_resistance(self):
+    def test_time_manipulation_resistance(self) -> None:
         """Test resistance to time manipulation attacks"""
         manager = SessionManager(token_expiry_secs=3600)
         
@@ -273,7 +273,7 @@ class TestSessionManagerErrorHandling:
 class TestSessionManagerIntegration:
     """Test integration scenarios"""
     
-    def test_complete_token_workflow(self):
+    def test_complete_token_workflow(self) -> None:
         """Test complete token management workflow"""
         manager = SessionManager()
         manager._debug_mode = True
@@ -299,7 +299,7 @@ class TestSessionManagerIntegration:
         assert manager.activate_session(call_id) is True
         assert manager.end_session(call_id) is True
     
-    def test_multiple_function_tokens(self):
+    def test_multiple_function_tokens(self) -> None:
         """Test managing tokens for multiple functions"""
         manager = SessionManager()
         call_id = "multi_func_call"
@@ -320,7 +320,7 @@ class TestSessionManagerIntegration:
                 if other_func != func:
                     assert manager.validate_token(call_id, other_func, token) is False
     
-    def test_concurrent_sessions(self):
+    def test_concurrent_sessions(self) -> None:
         """Test managing multiple concurrent sessions"""
         manager = SessionManager()
         
@@ -340,7 +340,7 @@ class TestSessionManagerIntegration:
                 if other_call_id != call_id:
                     assert manager.validate_token(other_call_id, "test_function", session_data["token"]) is False
     
-    def test_token_expiry_workflow(self):
+    def test_token_expiry_workflow(self) -> None:
         """Test token expiry workflow"""
         manager = SessionManager(token_expiry_secs=2)  # 2 second expiry
         
@@ -362,7 +362,7 @@ class TestSessionManagerIntegration:
         new_token = manager.generate_token("test_function", call_id)
         assert manager.validate_token(call_id, "test_function", new_token) is True
     
-    def test_security_isolation(self):
+    def test_security_isolation(self) -> None:
         """Test security isolation between managers"""
         manager1 = SessionManager(secret_key="secret1" + "x" * 24)
         manager2 = SessionManager(secret_key="secret2" + "x" * 24)
@@ -388,7 +388,7 @@ class TestSessionManagerIntegration:
         # Should be invalid with manager1
         assert manager1.validate_token(call_id, function_name, token2) is False
     
-    def test_performance_with_many_tokens(self):
+    def test_performance_with_many_tokens(self) -> None:
         """Test performance with many token operations"""
         manager = SessionManager()
         
@@ -410,7 +410,7 @@ class TestSessionManagerIntegration:
                 if i != j:
                     assert manager.validate_token(other_call_id, other_function_name, token) is False
     
-    def test_token_structure_consistency(self):
+    def test_token_structure_consistency(self) -> None:
         """Test token structure consistency"""
         manager = SessionManager()
         manager._debug_mode = True

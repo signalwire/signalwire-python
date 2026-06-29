@@ -13,7 +13,7 @@ Unit tests for SWML renderer module
 
 import pytest
 import json
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 from typing import Dict, List, Any, Optional
 
 from signalwire.core.swml_renderer import SwmlRenderer
@@ -21,7 +21,7 @@ from signalwire.core.swml_service import SWMLService
 from signalwire.utils.schema_utils import SchemaValidationError
 
 
-def _make_service():
+def _make_service() -> SWMLService:
     """Create a real SWMLService with schema validation disabled for renderer tests"""
     return SWMLService(name="test_renderer", schema_validation=False)
 
@@ -29,10 +29,10 @@ def _make_service():
 class TestSwmlRenderer:
     """Test SwmlRenderer functionality"""
 
-    def test_render_swml_basic(self):
+    def test_render_swml_basic(self) -> None:
         """Test basic SWML rendering"""
         service = _make_service()
-        result = SwmlRenderer.render_swml({"text": "You are a helpful assistant"}, service)
+        result = SwmlRenderer.render_swml({"text": "You are a helpful assistant"}, service)  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
 
         assert isinstance(result, str)
         parsed = json.loads(result)
@@ -46,11 +46,11 @@ class TestSwmlRenderer:
         ai_verb = parsed["sections"]["main"][0]
         assert "ai" in ai_verb
 
-    def test_render_swml_with_post_prompt(self):
+    def test_render_swml_with_post_prompt(self) -> None:
         """Test SWML rendering with post prompt"""
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            {"text": "You are helpful"},
+            {"text": "You are helpful"},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
             service,
             post_prompt="Provide a summary"
         )
@@ -60,7 +60,7 @@ class TestSwmlRenderer:
 
         assert "post_prompt" in ai_verb["ai"]
 
-    def test_render_swml_with_swaig_functions(self):
+    def test_render_swml_with_swaig_functions(self) -> None:
         """Test SWML rendering with SWAIG functions"""
         functions = [
             {
@@ -77,7 +77,7 @@ class TestSwmlRenderer:
 
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            {"text": "You are helpful"},
+            {"text": "You are helpful"},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
             service,
             swaig_functions=functions
         )
@@ -90,7 +90,7 @@ class TestSwmlRenderer:
         assert len(ai_verb["ai"]["SWAIG"]["functions"]) == 1
         assert ai_verb["ai"]["SWAIG"]["functions"][0]["function"] == "get_weather"
 
-    def test_render_swml_with_pom(self):
+    def test_render_swml_with_pom(self) -> None:
         """Test SWML rendering with POM format"""
         pom_data = [
             {"title": "Section 1", "body": "Content 1"},
@@ -99,7 +99,7 @@ class TestSwmlRenderer:
 
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            {"pom": pom_data},
+            {"pom": pom_data},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
             service,
             prompt_is_pom=True
         )
@@ -109,11 +109,11 @@ class TestSwmlRenderer:
 
         assert "ai" in ai_verb
 
-    def test_render_swml_with_hooks(self):
+    def test_render_swml_with_hooks(self) -> None:
         """Test SWML rendering with startup and hangup hooks"""
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            {"text": "You are helpful"},
+            {"text": "You are helpful"},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
             service,
             startup_hook_url="https://example.com/startup",
             hangup_hook_url="https://example.com/hangup"
@@ -125,11 +125,11 @@ class TestSwmlRenderer:
         assert "SWAIG" in ai_verb["ai"]
         assert "functions" in ai_verb["ai"]["SWAIG"]
 
-    def test_render_swml_with_default_webhook(self):
+    def test_render_swml_with_default_webhook(self) -> None:
         """Test SWML rendering with default webhook URL"""
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            {"text": "You are helpful"},
+            {"text": "You are helpful"},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
             service,
             default_webhook_url="https://example.com/webhook"
         )
@@ -142,13 +142,13 @@ class TestSwmlRenderer:
         assert ai_verb["ai"]["SWAIG"]["defaults"]["web_hook_url"] == "https://example.com/webhook"
 
     @patch('yaml.dump')
-    def test_render_swml_yaml_format(self, mock_yaml_dump):
+    def test_render_swml_yaml_format(self, mock_yaml_dump: MagicMock) -> None:
         """Test SWML rendering in YAML format"""
         mock_yaml_dump.return_value = "version: 1.0.0\nsections:\n  main: []"
 
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            {"text": "You are helpful"},
+            {"text": "You are helpful"},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
             service,
             format="yaml"
         )
@@ -159,7 +159,7 @@ class TestSwmlRenderer:
         assert "main:" in result
         mock_yaml_dump.assert_called_once()
 
-    def test_render_function_response_swml_basic(self):
+    def test_render_function_response_swml_basic(self) -> None:
         """Test rendering function response SWML"""
         service = _make_service()
         result = SwmlRenderer.render_function_response_swml("Hello there!", service)
@@ -172,7 +172,7 @@ class TestSwmlRenderer:
         assert "main" in parsed["sections"]
         assert len(parsed["sections"]["main"]) == 1
 
-    def test_render_function_response_swml_with_actions(self):
+    def test_render_function_response_swml_with_actions(self) -> None:
         """Test rendering function response SWML with actions"""
         actions = [
             {"play": {"url": "test.mp3"}},
@@ -193,7 +193,7 @@ class TestSwmlRenderer:
         assert len(main_section) == 3  # response + 2 actions
 
     @patch('yaml.dump')
-    def test_render_function_response_swml_yaml(self, mock_yaml_dump):
+    def test_render_function_response_swml_yaml(self, mock_yaml_dump: MagicMock) -> None:
         """Test rendering function response SWML in YAML format"""
         mock_yaml_dump.return_value = "version: 1.0.0\nsections:\n  main: []"
 
@@ -213,34 +213,34 @@ class TestSwmlRenderer:
 class TestSwmlRendererErrorHandling:
     """Test error handling in SwmlRenderer"""
 
-    def test_render_swml_empty_prompt(self):
+    def test_render_swml_empty_prompt(self) -> None:
         """Test rendering with empty prompt"""
         service = _make_service()
-        result = SwmlRenderer.render_swml({"text": ""}, service)
+        result = SwmlRenderer.render_swml({"text": ""}, service)  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
 
         parsed = json.loads(result)
         ai_verb = parsed["sections"]["main"][0]
 
         assert "ai" in ai_verb
 
-    def test_render_swml_none_prompt(self):
+    def test_render_swml_none_prompt(self) -> None:
         """Test rendering with None prompt raises validation error"""
         service = _make_service()
         # None prompt means neither prompt_text nor prompt_pom is set in builder.ai(),
         # so config has no "prompt" key, which AIVerbHandler rejects
         with pytest.raises(SchemaValidationError):
-            SwmlRenderer.render_swml(None, service)
+            SwmlRenderer.render_swml(None, service)  # type: ignore[arg-type]  # intentional invalid input for validation test
 
-    def test_render_swml_invalid_format(self):
+    def test_render_swml_invalid_format(self) -> None:
         """Test rendering with invalid format"""
         service = _make_service()
-        result = SwmlRenderer.render_swml({"text": "Hello"}, service, format="invalid")
+        result = SwmlRenderer.render_swml({"text": "Hello"}, service, format="invalid")  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
 
         # Should still be valid JSON (falls through to default)
         parsed = json.loads(result)
         assert parsed["version"] == "1.0.0"
 
-    def test_render_function_response_empty_text(self):
+    def test_render_function_response_empty_text(self) -> None:
         """Test rendering function response with empty text"""
         service = _make_service()
         result = SwmlRenderer.render_function_response_swml("", service)
@@ -257,7 +257,7 @@ class TestSwmlRendererErrorHandling:
 class TestSwmlRendererIntegration:
     """Test integration scenarios"""
 
-    def test_complete_ai_agent_swml(self):
+    def test_complete_ai_agent_swml(self) -> None:
         """Test rendering complete AI agent SWML"""
         functions = [
             {
@@ -288,7 +288,7 @@ class TestSwmlRendererIntegration:
 
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            prompt={"text": "You are a banking assistant. Help users with their account needs."},
+            prompt={"text": "You are a banking assistant. Help users with their account needs."},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
             service=service,
             post_prompt="Summarize the conversation and any actions taken.",
             post_prompt_url="https://bank.example.com/conversation-summary",
@@ -317,7 +317,7 @@ class TestSwmlRendererIntegration:
         assert "get_account_balance" in function_names
         assert "transfer_funds" in function_names
 
-    def test_pom_based_agent_swml(self):
+    def test_pom_based_agent_swml(self) -> None:
         """Test rendering POM-based agent SWML"""
         pom_sections = [
             {
@@ -340,7 +340,7 @@ class TestSwmlRendererIntegration:
 
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            prompt={"pom": pom_sections},
+            prompt={"pom": pom_sections},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
             service=service,
             prompt_is_pom=True,
             post_prompt="Provide a brief summary of how you helped the customer."
@@ -351,7 +351,7 @@ class TestSwmlRendererIntegration:
 
         assert "ai" in ai_verb
 
-    def test_function_response_workflow(self):
+    def test_function_response_workflow(self) -> None:
         """Test function response workflow"""
         response_text = "I found your account balance: $1,234.56"
         actions = [
@@ -372,13 +372,13 @@ class TestSwmlRendererIntegration:
         assert len(main_section) == 2
 
     @patch('yaml.dump')
-    def test_yaml_output_format(self, mock_yaml_dump):
+    def test_yaml_output_format(self, mock_yaml_dump: MagicMock) -> None:
         """Test YAML output format"""
         mock_yaml_dump.return_value = "version: 1.0.0\nsections:\n  main: []"
 
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            {"text": "You are helpful"},
+            {"text": "You are helpful"},  # type: ignore[arg-type]  # dict prompt form accepted at runtime; declared union is str|list
             service,
             swaig_functions=[{
                 "function": "test",

@@ -18,13 +18,14 @@ from __future__ import annotations
 
 import asyncio
 import uuid
+from typing import Any
 
 import pytest
 
 from signalwire.relay.client import RelayClient, _active_clients
 from signalwire.relay.call import Call
 
-from .conftest import _RELAY_MOCK_AVAILABLE
+from .conftest import _RELAY_MOCK_AVAILABLE, _MockRelayHarness
 
 
 pytestmark = pytest.mark.skipif(
@@ -40,7 +41,7 @@ pytestmark = pytest.mark.skipif(
 
 def _state_push_frame(
     call_id: str, call_state: str, *, tag: str = "", direction: str = "inbound"
-) -> dict:
+) -> dict[str, Any]:
     """Build a signalwire.event(calling.call.state) frame ready for /__mock__/push."""
     return {
         "jsonrpc": "2.0",
@@ -72,14 +73,14 @@ def _state_push_frame(
 
 
 async def test_on_call_handler_fires_with_call_object(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """A pushed inbound call invokes the registered on_call handler."""
     seen: list[Call] = []
     handler_done = asyncio.Event()
 
     @signalwire_relay_client.on_call
-    async def handle(call):
+    async def handle(call: Call) -> None:
         seen.append(call)
         handler_done.set()
 
@@ -97,14 +98,14 @@ async def test_on_call_handler_fires_with_call_object(
 
 
 async def test_inbound_call_object_has_correct_call_id_and_direction(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """The Call object exposes the inbound call_id and direction."""
     handler_done = asyncio.Event()
     seen: dict[str, str] = {}
 
     @signalwire_relay_client.on_call
-    async def handle(call):
+    async def handle(call: Call) -> None:
         seen["call_id"] = call.call_id
         seen["direction"] = call.direction
         handler_done.set()
@@ -117,14 +118,14 @@ async def test_inbound_call_object_has_correct_call_id_and_direction(
 
 
 async def test_inbound_call_carries_from_to_in_device(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """The Call's ``device`` reflects from_number/to_number from the wire."""
     handler_done = asyncio.Event()
-    seen: dict = {}
+    seen: dict[str, Any] = {}
 
     @signalwire_relay_client.on_call
-    async def handle(call):
+    async def handle(call: Call) -> None:
         seen["device"] = call.device
         handler_done.set()
 
@@ -142,14 +143,14 @@ async def test_inbound_call_carries_from_to_in_device(
 
 
 async def test_inbound_call_initial_state_is_created(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """The Call's initial state matches the first auto_state pushed."""
     seen: dict[str, str] = {}
     done = asyncio.Event()
 
     @signalwire_relay_client.on_call
-    async def handle(call):
+    async def handle(call: Call) -> None:
         seen["state"] = call.state
         done.set()
 
@@ -164,13 +165,13 @@ async def test_inbound_call_initial_state_is_created(
 
 
 async def test_answer_in_handler_journals_calling_answer(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """When the handler answers, calling.answer appears in the journal."""
     answered = asyncio.Event()
 
     @signalwire_relay_client.on_call
-    async def handle(call):
+    async def handle(call: Call) -> None:
         await call.answer()
         answered.set()
 
@@ -185,14 +186,14 @@ async def test_answer_in_handler_journals_calling_answer(
 
 
 async def test_answer_then_state_event_advances_call_state(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """Pushing ``answered`` after the SDK answers updates Call.state."""
     captured: dict[str, Call] = {}
     handler_returned = asyncio.Event()
 
     @signalwire_relay_client.on_call
-    async def handle(call):
+    async def handle(call: Call) -> None:
         captured["call"] = call
         await call.answer()
         handler_returned.set()
@@ -216,13 +217,13 @@ async def test_answer_then_state_event_advances_call_state(
 
 
 async def test_hangup_in_handler_journals_calling_end(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """``call.hangup()`` from the handler journals a calling.end frame."""
     hung = asyncio.Event()
 
     @signalwire_relay_client.on_call
-    async def handle(call):
+    async def handle(call: Call) -> None:
         await call.hangup(reason="busy")
         hung.set()
 
@@ -238,13 +239,13 @@ async def test_hangup_in_handler_journals_calling_end(
 
 
 async def test_pass_in_handler_journals_calling_pass(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """``call.pass_()`` from the handler journals a calling.pass frame."""
     passed = asyncio.Event()
 
     @signalwire_relay_client.on_call
-    async def handle(call):
+    async def handle(call: Call) -> None:
         await call.pass_()
         passed.set()
 
@@ -263,14 +264,14 @@ async def test_pass_in_handler_journals_calling_pass(
 
 
 async def test_multiple_inbound_calls_in_sequence_each_unique_object(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """Two inbound calls give the handler two distinct Call objects."""
     seen: list[Call] = []
     received = asyncio.Event()
 
     @signalwire_relay_client.on_call
-    async def handle(call):
+    async def handle(call: Call) -> None:
         seen.append(call)
         if len(seen) == 2:
             received.set()
@@ -286,14 +287,14 @@ async def test_multiple_inbound_calls_in_sequence_each_unique_object(
 
 
 async def test_multiple_inbound_calls_no_state_bleed(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """State on one inbound call doesn't leak to another."""
     calls_by_id: dict[str, Call] = {}
     both_received = asyncio.Event()
 
     @signalwire_relay_client.on_call
-    async def handle(call):
+    async def handle(call: Call) -> None:
         calls_by_id[call.call_id] = call
         await call.answer()
         if len(calls_by_id) == 2:
@@ -322,14 +323,14 @@ async def test_multiple_inbound_calls_no_state_bleed(
 
 
 async def test_scripted_state_sequence_advances_call(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """Pushing answered then ended advances the Call state, then it's cleaned up."""
     captured: dict[str, Call] = {}
     handler_done = asyncio.Event()
 
     @signalwire_relay_client.on_call
-    async def handle(call):
+    async def handle(call: Call) -> None:
         captured["call"] = call
         await call.answer()
         handler_done.set()
@@ -354,13 +355,15 @@ async def test_scripted_state_sequence_advances_call(
 # ---------------------------------------------------------------------------
 
 
-async def test_async_handler_completes_normally(signalwire_relay_client, mock_relay):
+async def test_async_handler_completes_normally(
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """Async handlers run to completion and observe the right call_id."""
     fired = asyncio.Event()
     seen: dict[str, str] = {}
 
     @signalwire_relay_client.on_call
-    async def handle(call):
+    async def handle(call: Call) -> None:
         await asyncio.sleep(0.01)
         seen["call_id"] = call.call_id
         fired.set()
@@ -371,13 +374,13 @@ async def test_async_handler_completes_normally(signalwire_relay_client, mock_re
 
 
 async def test_handler_exception_does_not_crash_client(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """A raising handler is caught; the client stays usable."""
     fired = asyncio.Event()
 
     @signalwire_relay_client.on_call
-    async def handle(call):
+    async def handle(call: Call) -> None:
         fired.set()
         raise RuntimeError("intentional from handler")
 
@@ -396,14 +399,14 @@ async def test_handler_exception_does_not_crash_client(
 
 
 async def test_scenario_play_full_inbound_flow(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """A scripted scenario_play timeline drives a full inbound-call flow."""
     handler_started = asyncio.Event()
     captured: dict[str, Call] = {}
 
     @signalwire_relay_client.on_call
-    async def handle(call):
+    async def handle(call: Call) -> None:
         captured["call"] = call
         await call.answer()
         handler_started.set()
@@ -413,7 +416,7 @@ async def test_scenario_play_full_inbound_flow(
     # 2. Wait for the SDK to send calling.answer
     # 3. Push calling.call.state(answered)
     # 4. Push calling.call.state(ended)
-    timeline = [
+    timeline: list[dict[str, Any]] = [
         {
             "push": {
                 "frame": {
@@ -464,13 +467,13 @@ async def test_scenario_play_full_inbound_flow(
 
 
 async def test_inbound_call_journal_send_records_calling_call_receive(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """The mock's outbound journal contains the calling.call.receive frame."""
     handler_done = asyncio.Event()
 
     @signalwire_relay_client.on_call
-    async def handle(call):
+    async def handle(call: Call) -> None:
         handler_done.set()
 
     mock_relay.inbound_call(call_id="c-wire", auto_states=["created"])
@@ -488,7 +491,9 @@ async def test_inbound_call_journal_send_records_calling_call_receive(
 # ---------------------------------------------------------------------------
 
 
-async def test_inbound_without_handler_does_not_crash(mock_relay, relay_ws_redirect):
+async def test_inbound_without_handler_does_not_crash(
+    mock_relay: _MockRelayHarness, relay_ws_redirect: Any
+) -> None:
     """An inbound call when no @on_call is registered is logged, not raised."""
     _active_clients.clear()
     with relay_ws_redirect:

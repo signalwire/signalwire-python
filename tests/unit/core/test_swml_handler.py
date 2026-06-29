@@ -37,20 +37,20 @@ class MockVerbHandler(SWMLVerbHandler):
             return False, ["Missing required_field"]
         return True, []
     
-    def build_config(self, **kwargs) -> Dict[str, Any]:
+    def build_config(self, **kwargs: Any) -> Dict[str, Any]:
         return {"mock_config": True, **kwargs}
 
 
 class TestSWMLVerbHandlerInterface:
     """Test SWMLVerbHandler abstract interface"""
     
-    def test_abstract_methods_exist(self):
+    def test_abstract_methods_exist(self) -> None:
         """Test that SWMLVerbHandler defines required abstract methods"""
         # Should not be able to instantiate abstract class directly
         with pytest.raises(TypeError):
-            SWMLVerbHandler()
+            SWMLVerbHandler()  # type: ignore[abstract]  # intentional: testing abstract base raises
     
-    def test_mock_implementation(self):
+    def test_mock_implementation(self) -> None:
         """Test mock implementation of SWMLVerbHandler"""
         handler = MockVerbHandler("test_verb")
         
@@ -78,12 +78,12 @@ class TestSWMLVerbHandlerInterface:
 class TestAIVerbHandler:
     """Test AIVerbHandler implementation"""
     
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test AIVerbHandler initialization"""
         handler = AIVerbHandler()
         assert handler.get_verb_name() == "ai"
     
-    def test_validate_config_valid_prompt_text(self):
+    def test_validate_config_valid_prompt_text(self) -> None:
         """Test validation with valid prompt text configuration"""
         handler = AIVerbHandler()
         
@@ -97,7 +97,7 @@ class TestAIVerbHandler:
         assert is_valid is True
         assert errors == []
     
-    def test_validate_config_valid_prompt_pom(self):
+    def test_validate_config_valid_prompt_pom(self) -> None:
         """Test validation with valid prompt POM configuration"""
         handler = AIVerbHandler()
         
@@ -114,7 +114,7 @@ class TestAIVerbHandler:
         assert is_valid is True
         assert errors == []
     
-    def test_validate_config_valid_contexts(self):
+    def test_validate_config_valid_contexts(self) -> None:
         """Test validation with contexts requires base prompt (text or pom)"""
         handler = AIVerbHandler()
 
@@ -135,7 +135,7 @@ class TestAIVerbHandler:
         assert is_valid is False
         assert "'prompt' must contain either 'text' or 'pom' as base prompt" in errors
 
-    def test_validate_config_text_with_contexts(self):
+    def test_validate_config_text_with_contexts(self) -> None:
         """Test validation with text and contexts combined"""
         handler = AIVerbHandler()
 
@@ -156,7 +156,7 @@ class TestAIVerbHandler:
         assert is_valid is True
         assert errors == []
     
-    def test_validate_config_missing_prompt(self):
+    def test_validate_config_missing_prompt(self) -> None:
         """Test validation fails when prompt is missing"""
         handler = AIVerbHandler()
         
@@ -168,7 +168,7 @@ class TestAIVerbHandler:
         assert is_valid is False
         assert "Missing required field 'prompt'" in errors
     
-    def test_validate_config_both_prompt_options(self):
+    def test_validate_config_both_prompt_options(self) -> None:
         """Test validation fails when multiple prompt options are specified"""
         handler = AIVerbHandler()
         
@@ -183,7 +183,7 @@ class TestAIVerbHandler:
         assert is_valid is False
         assert "'prompt' can only contain one of: 'text' or 'pom' (mutually exclusive)" in errors
     
-    def test_validate_config_invalid_prompt_structure(self):
+    def test_validate_config_invalid_prompt_structure(self) -> None:
         """Test validation fails with invalid prompt structure"""
         handler = AIVerbHandler()
         
@@ -195,7 +195,7 @@ class TestAIVerbHandler:
         assert is_valid is False
         assert "'prompt' must be an object" in errors
     
-    def test_validate_config_prompt_missing_content(self):
+    def test_validate_config_prompt_missing_content(self) -> None:
         """Test validation fails when prompt dict has no valid content"""
         handler = AIVerbHandler()
         
@@ -207,7 +207,7 @@ class TestAIVerbHandler:
         assert is_valid is False
         assert "'prompt' must contain either 'text' or 'pom' as base prompt" in errors
     
-    def test_validate_config_invalid_contexts_structure(self):
+    def test_validate_config_invalid_contexts_structure(self) -> None:
         """Test validation fails with invalid contexts structure"""
         handler = AIVerbHandler()
         
@@ -221,7 +221,7 @@ class TestAIVerbHandler:
         assert is_valid is False
         assert "'prompt.contexts' must be an object" in errors
     
-    def test_build_config_with_prompt_text(self):
+    def test_build_config_with_prompt_text(self) -> None:
         """Test building config with prompt text"""
         handler = AIVerbHandler()
         
@@ -235,7 +235,7 @@ class TestAIVerbHandler:
         assert config["post_prompt"]["text"] == "Provide a summary"
         assert config["post_prompt_url"] == "https://example.com/summary"
     
-    def test_build_config_with_prompt_pom(self):
+    def test_build_config_with_prompt_pom(self) -> None:
         """Test building config with prompt POM"""
         handler = AIVerbHandler()
         
@@ -252,7 +252,7 @@ class TestAIVerbHandler:
         assert config["prompt"]["pom"] == pom_data
         assert config["post_prompt"]["text"] == "Summary"
     
-    def test_build_config_with_contexts(self):
+    def test_build_config_with_contexts(self) -> None:
         """Test building config with contexts combined with text"""
         handler = AIVerbHandler()
 
@@ -274,7 +274,7 @@ class TestAIVerbHandler:
         assert config["prompt"]["contexts"] == contexts_data
         assert config["post_prompt"]["text"] == "Summary"
     
-    def test_build_config_with_swaig(self):
+    def test_build_config_with_swaig(self) -> None:
         """Test building config with SWAIG object"""
         handler = AIVerbHandler()
         
@@ -292,7 +292,7 @@ class TestAIVerbHandler:
         assert config["prompt"]["text"] == "You are helpful"
         assert config["SWAIG"] == swaig_data
     
-    def test_build_config_minimal(self):
+    def test_build_config_minimal(self) -> None:
         """Test building minimal config"""
         handler = AIVerbHandler()
         
@@ -303,7 +303,7 @@ class TestAIVerbHandler:
         assert "post_prompt_url" not in config
         assert "SWAIG" not in config
     
-    def test_build_config_validation_error(self):
+    def test_build_config_validation_error(self) -> None:
         """Test that build_config raises error for invalid configuration"""
         handler = AIVerbHandler()
         
@@ -311,7 +311,7 @@ class TestAIVerbHandler:
         with pytest.raises(ValueError, match="Either prompt_text or prompt_pom must be provided as base prompt"):
             handler.build_config()
     
-    def test_build_config_conflicting_prompts(self):
+    def test_build_config_conflicting_prompts(self) -> None:
         """Test that build_config raises error for conflicting prompt types"""
         handler = AIVerbHandler()
 
@@ -322,7 +322,7 @@ class TestAIVerbHandler:
                 prompt_pom=[{"title": "POM section"}]
             )
     
-    def test_build_config_prompt_and_contexts_combined(self):
+    def test_build_config_prompt_and_contexts_combined(self) -> None:
         """Test that build_config allows combining text with contexts"""
         handler = AIVerbHandler()
 
@@ -335,7 +335,7 @@ class TestAIVerbHandler:
         assert config["prompt"]["text"] == "Text prompt"
         assert config["prompt"]["contexts"] == {"context1": {"steps": []}}
     
-    def test_build_config_with_additional_params(self):
+    def test_build_config_with_additional_params(self) -> None:
         """Test building config with additional parameters"""
         handler = AIVerbHandler()
         
@@ -359,7 +359,7 @@ class TestAIVerbHandler:
 class TestVerbHandlerRegistry:
     """Test VerbHandlerRegistry functionality"""
     
-    def test_initialization(self):
+    def test_initialization(self) -> None:
         """Test registry initialization"""
         registry = VerbHandlerRegistry()
         
@@ -368,7 +368,7 @@ class TestVerbHandlerRegistry:
         ai_handler = registry.get_handler("ai")
         assert isinstance(ai_handler, AIVerbHandler)
     
-    def test_register_handler(self):
+    def test_register_handler(self) -> None:
         """Test registering a new handler"""
         registry = VerbHandlerRegistry()
         mock_handler = MockVerbHandler("custom_verb")
@@ -379,7 +379,7 @@ class TestVerbHandlerRegistry:
         retrieved_handler = registry.get_handler("custom_verb")
         assert retrieved_handler is mock_handler
     
-    def test_get_handler_existing(self):
+    def test_get_handler_existing(self) -> None:
         """Test getting an existing handler"""
         registry = VerbHandlerRegistry()
         
@@ -387,26 +387,26 @@ class TestVerbHandlerRegistry:
         assert handler is not None
         assert isinstance(handler, AIVerbHandler)
     
-    def test_get_handler_nonexistent(self):
+    def test_get_handler_nonexistent(self) -> None:
         """Test getting a non-existent handler"""
         registry = VerbHandlerRegistry()
         
         handler = registry.get_handler("nonexistent_verb")
         assert handler is None
     
-    def test_has_handler_existing(self):
+    def test_has_handler_existing(self) -> None:
         """Test checking for existing handler"""
         registry = VerbHandlerRegistry()
         
         assert registry.has_handler("ai") is True
     
-    def test_has_handler_nonexistent(self):
+    def test_has_handler_nonexistent(self) -> None:
         """Test checking for non-existent handler"""
         registry = VerbHandlerRegistry()
         
         assert registry.has_handler("nonexistent_verb") is False
     
-    def test_override_existing_handler(self):
+    def test_override_existing_handler(self) -> None:
         """Test overriding an existing handler"""
         registry = VerbHandlerRegistry()
         
@@ -419,7 +419,7 @@ class TestVerbHandlerRegistry:
         assert retrieved_handler is custom_ai_handler
         assert isinstance(retrieved_handler, MockVerbHandler)
     
-    def test_multiple_handlers(self):
+    def test_multiple_handlers(self) -> None:
         """Test registering multiple handlers"""
         registry = VerbHandlerRegistry()
         
@@ -446,7 +446,7 @@ class TestVerbHandlerRegistry:
 class TestSWMLHandlerIntegration:
     """Test integration scenarios for SWML handlers"""
     
-    def test_ai_handler_complete_workflow(self):
+    def test_ai_handler_complete_workflow(self) -> None:
         """Test complete workflow with AI handler"""
         handler = AIVerbHandler()
         
@@ -478,7 +478,7 @@ class TestSWMLHandlerIntegration:
         assert "SWAIG" in config
         assert len(config["SWAIG"]["functions"]) == 1
     
-    def test_registry_with_custom_handlers(self):
+    def test_registry_with_custom_handlers(self) -> None:
         """Test registry with custom handlers"""
         registry = VerbHandlerRegistry()
         
@@ -507,12 +507,12 @@ class TestSWMLHandlerIntegration:
                 is_valid, errors = handler.validate_config(config)
                 assert is_valid is True
     
-    def test_handler_error_scenarios(self):
+    def test_handler_error_scenarios(self) -> None:
         """Test error handling scenarios"""
         handler = AIVerbHandler()
         
         # Test various invalid configurations
-        invalid_configs = [
+        invalid_configs: List[Dict[str, Any]] = [
             {},  # Empty config - missing prompt
             {"prompt": {}},  # Empty prompt - no content
             {"prompt": {"invalid": "field"}},  # Invalid prompt field
@@ -524,7 +524,7 @@ class TestSWMLHandlerIntegration:
             assert is_valid is False
             assert len(errors) > 0
     
-    def test_handler_with_complex_swaig(self):
+    def test_handler_with_complex_swaig(self) -> None:
         """Test handler with complex SWAIG configuration"""
         handler = AIVerbHandler()
         
@@ -586,7 +586,7 @@ class TestSWMLHandlerIntegration:
 class TestSWMLHandlerEdgeCases:
     """Test edge cases and error conditions"""
     
-    def test_handler_with_none_values(self):
+    def test_handler_with_none_values(self) -> None:
         """Test handler behavior with None values"""
         handler = AIVerbHandler()
         
@@ -603,7 +603,7 @@ class TestSWMLHandlerEdgeCases:
         assert "post_prompt_url" not in config
         assert "SWAIG" not in config
     
-    def test_handler_with_empty_strings(self):
+    def test_handler_with_empty_strings(self) -> None:
         """Test handler behavior with empty strings"""
         handler = AIVerbHandler()
         
@@ -618,7 +618,7 @@ class TestSWMLHandlerEdgeCases:
         assert config["post_prompt"]["text"] == ""
         assert config["post_prompt_url"] == ""  # Empty URL is included if provided
     
-    def test_registry_with_invalid_handler(self):
+    def test_registry_with_invalid_handler(self) -> None:
         """Test registry behavior with invalid handler"""
         registry = VerbHandlerRegistry()
         
@@ -627,9 +627,9 @@ class TestSWMLHandlerEdgeCases:
         
         # Should raise AttributeError when trying to get verb name
         with pytest.raises(AttributeError):
-            registry.register_handler(invalid_handler)
+            registry.register_handler(invalid_handler)  # type: ignore[arg-type]  # intentional invalid input for validation test
     
-    def test_mock_handler_edge_cases(self):
+    def test_mock_handler_edge_cases(self) -> None:
         """Test mock handler edge cases"""
         handler = MockVerbHandler()
         
@@ -640,7 +640,7 @@ class TestSWMLHandlerEdgeCases:
         
         # Test with None config
         with pytest.raises(TypeError):
-            handler.validate_config(None)
+            handler.validate_config(None)  # type: ignore[arg-type]  # intentional: tests None input
         
         # Test build_config with no arguments
         config = handler.build_config()

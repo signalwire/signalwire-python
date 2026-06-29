@@ -16,6 +16,8 @@ Each test:
 """
 
 from __future__ import annotations
+from signalwire.rest.client import RestClient
+from .conftest import _MockHarness
 
 
 # ---------------------------------------------------------------------------
@@ -26,7 +28,7 @@ from __future__ import annotations
 class TestFabricAddresses:
     """``client.fabric.addresses.*`` — list and get only."""
 
-    def test_list_returns_data_collection(self, signalwire_client, mock):
+    def test_list_returns_data_collection(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.fabric.addresses.list()
         assert isinstance(body, dict), f"expected dict, got {type(body).__name__}"
         # Fabric addresses list returns 'data' arrays.
@@ -40,7 +42,7 @@ class TestFabricAddresses:
             f"expected fabric.list_fabric_addresses, got {last.matched_route!r}"
         )
 
-    def test_get_uses_address_id(self, signalwire_client, mock):
+    def test_get_uses_address_id(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.fabric.addresses.get("addr-9001")
         assert isinstance(body, dict)
         # The retrieve endpoint synthesises a single address resource.
@@ -66,7 +68,7 @@ class TestCxmlApplicationsCreate:
     ``create`` stub; the generated surface omits the method entirely.
     """
 
-    def test_create_method_is_absent(self, signalwire_client, mock):
+    def test_create_method_is_absent(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         assert not hasattr(
             signalwire_client.fabric.cxml_applications, "create"
         ), "cxml_applications has no create route in the spec; create must not exist"
@@ -88,7 +90,7 @@ class TestCallFlowsAddresses:
     paths because that's what the API spec uses.
     """
 
-    def test_list_addresses_uses_singular_path(self, signalwire_client, mock):
+    def test_list_addresses_uses_singular_path(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.fabric.call_flows.list_addresses("cf-1")
         assert isinstance(body, dict)
         assert "data" in body and isinstance(body["data"], list)
@@ -111,7 +113,7 @@ class TestConferenceRoomsAddresses:
     """``conference_rooms.list_addresses`` rewrites ``/conference_rooms``
     to ``/conference_room`` for sub-collections, mirroring call_flows."""
 
-    def test_list_addresses_uses_singular_path(self, signalwire_client, mock):
+    def test_list_addresses_uses_singular_path(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.fabric.conference_rooms.list_addresses("cr-1")
         assert isinstance(body, dict)
         assert "data" in body
@@ -131,7 +133,7 @@ class TestConferenceRoomsAddresses:
 class TestSubscribersSipEndpointOps:
     """``subscribers.{get,update,delete}_sip_endpoint(sub_id, ep_id)``."""
 
-    def test_get_sip_endpoint(self, signalwire_client, mock):
+    def test_get_sip_endpoint(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.fabric.subscribers.get_sip_endpoint(
             "sub-1", "ep-1"
         )
@@ -144,7 +146,7 @@ class TestSubscribersSipEndpointOps:
         )
         assert last.matched_route is not None
 
-    def test_update_sip_endpoint_uses_patch(self, signalwire_client, mock):
+    def test_update_sip_endpoint_uses_patch(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.fabric.subscribers.update_sip_endpoint(
             "sub-1", "ep-1", username="renamed"
         )
@@ -158,7 +160,7 @@ class TestSubscribersSipEndpointOps:
         assert isinstance(last.body, dict)
         assert last.body.get("username") == "renamed"
 
-    def test_delete_sip_endpoint(self, signalwire_client, mock):
+    def test_delete_sip_endpoint(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.fabric.subscribers.delete_sip_endpoint(
             "sub-1", "ep-1"
         )
@@ -185,7 +187,7 @@ class TestFabricTokens:
     - ``refresh_subscriber_token`` -> POST /api/fabric/subscribers/tokens/refresh
     """
 
-    def test_create_invite_token(self, signalwire_client, mock):
+    def test_create_invite_token(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.fabric.tokens.create_invite_token(
             address_id="3fa85f64-5717-4562-b3fc-2c963f66afa6"
         )
@@ -200,7 +202,7 @@ class TestFabricTokens:
             last.body.get("address_id") == "3fa85f64-5717-4562-b3fc-2c963f66afa6"
         )
 
-    def test_create_embed_token(self, signalwire_client, mock):
+    def test_create_embed_token(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.fabric.tokens.create_embed_token(
             token="c2c_7acc0e5e968706a032983cd80cdca219"  # noqa: S106 - test fixture value, not a real secret
         )
@@ -212,7 +214,7 @@ class TestFabricTokens:
         assert isinstance(last.body, dict)
         assert last.body.get("token") == "c2c_7acc0e5e968706a032983cd80cdca219"
 
-    def test_refresh_subscriber_token(self, signalwire_client, mock):
+    def test_refresh_subscriber_token(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.fabric.tokens.refresh_subscriber_token(
             refresh_token="abc-123"  # noqa: S106 - test fixture value, not a real secret
         )
@@ -234,7 +236,7 @@ class TestGenericResources:
     """``client.fabric.resources.*`` — list/get/delete/list_addresses across
     every resource type, plus assign_domain_application."""
 
-    def test_list_returns_data_collection(self, signalwire_client, mock):
+    def test_list_returns_data_collection(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.fabric.resources.list()
         assert isinstance(body, dict)
         # /api/fabric/resources returns data array.
@@ -245,7 +247,7 @@ class TestGenericResources:
         assert last.path == "/api/fabric/resources"
         assert last.matched_route is not None
 
-    def test_get_returns_single_resource(self, signalwire_client, mock):
+    def test_get_returns_single_resource(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.fabric.resources.get("res-1")
         assert isinstance(body, dict)
 
@@ -253,7 +255,7 @@ class TestGenericResources:
         assert last.method == "GET"
         assert last.path == "/api/fabric/resources/res-1"
 
-    def test_delete(self, signalwire_client, mock):
+    def test_delete(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.fabric.resources.delete("res-2")
         assert isinstance(body, dict)
 
@@ -262,7 +264,7 @@ class TestGenericResources:
         assert last.path == "/api/fabric/resources/res-2"
         assert last.matched_route is not None
 
-    def test_list_addresses(self, signalwire_client, mock):
+    def test_list_addresses(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.fabric.resources.list_addresses("res-3")
         assert isinstance(body, dict)
         assert "data" in body and isinstance(body["data"], list)
@@ -271,7 +273,7 @@ class TestGenericResources:
         assert last.method == "GET"
         assert last.path == "/api/fabric/resources/res-3/addresses"
 
-    def test_assign_domain_application(self, signalwire_client, mock):
+    def test_assign_domain_application(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.fabric.resources.assign_domain_application(
             "res-4", domain_application_id="da-7"
         )

@@ -8,6 +8,8 @@ contract: every port must support `has_function`, `get_function`,
 Python parity baseline for: dotnet/go/typescript/java/php/rust/ruby/perl/cpp.
 """
 
+from typing import Any
+
 import pytest
 from unittest.mock import MagicMock
 
@@ -15,54 +17,55 @@ from signalwire.core.agent.tools.registry import ToolRegistry
 
 
 @pytest.fixture
-def registry():
+def registry() -> ToolRegistry:
     agent = MagicMock()
     return ToolRegistry(agent)
 
 
 class TestToolRegistryDefineAndQuery:
-    def test_register_swaig_function_via_dict(self, registry):
+    def test_register_swaig_function_via_dict(self, registry: ToolRegistry) -> None:
         registry.register_swaig_function({"function": "lookup", "description": "Look up a value"})
         assert registry.has_function("lookup")
 
-    def test_has_function_false_when_unregistered(self, registry):
+    def test_has_function_false_when_unregistered(self, registry: ToolRegistry) -> None:
         assert registry.has_function("nope") is False
 
-    def test_get_function_returns_registered(self, registry):
+    def test_get_function_returns_registered(self, registry: ToolRegistry) -> None:
         registry.register_swaig_function({"function": "lookup", "description": "x"})
         fn = registry.get_function("lookup")
         assert fn is not None
+        assert isinstance(fn, dict)
         assert fn["function"] == "lookup"
 
-    def test_get_function_none_when_unregistered(self, registry):
+    def test_get_function_none_when_unregistered(self, registry: ToolRegistry) -> None:
         assert registry.get_function("nope") is None
 
-    def test_get_all_functions_starts_empty(self, registry):
+    def test_get_all_functions_starts_empty(self, registry: ToolRegistry) -> None:
         assert registry.get_all_functions() == {}
 
-    def test_get_all_functions_returns_registered(self, registry):
+    def test_get_all_functions_returns_registered(self, registry: ToolRegistry) -> None:
         registry.register_swaig_function({"function": "a", "description": "x"})
         registry.register_swaig_function({"function": "b", "description": "y"})
         all_fns = registry.get_all_functions()
         assert set(all_fns.keys()) == {"a", "b"}
 
-    def test_get_all_functions_returns_copy(self, registry):
+    def test_get_all_functions_returns_copy(self, registry: ToolRegistry) -> None:
         registry.register_swaig_function({"function": "a", "description": "x"})
         snapshot = registry.get_all_functions()
         registry.register_swaig_function({"function": "b", "description": "y"})
         # Original snapshot unaffected by later registration
         assert "b" not in snapshot
 
-    def test_remove_function_when_present(self, registry):
+    def test_remove_function_when_present(self, registry: ToolRegistry) -> None:
         registry.register_swaig_function({"function": "doomed", "description": "x"})
         assert registry.remove_function("doomed") is True
         assert registry.has_function("doomed") is False
 
-    def test_remove_function_when_absent_returns_false(self, registry):
+    def test_remove_function_when_absent_returns_false(self, registry: ToolRegistry) -> None:
         assert registry.remove_function("never_existed") is False
 
-    def test_define_tool_registers_with_handler(self, registry):
-        def my_handler(args, raw_data=None):
+    def test_define_tool_registers_with_handler(self, registry: ToolRegistry) -> None:
+        def my_handler(args: dict[str, Any], raw_data: dict[str, Any] | None = None) -> dict[str, str]:
             return {"result": "ok"}
         registry.define_tool(
             name="echo",

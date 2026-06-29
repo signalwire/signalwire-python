@@ -58,7 +58,7 @@ class TestFabricWire:
     def test_ai_agents_create(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.fabric.ai_agents.create(prompt="x", agent_id="x", name="x")
+        signalwire_client.fabric.ai_agents.create(prompt={}, agent_id="x", name="x")
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "fabric.create_ai_agent"
@@ -68,9 +68,7 @@ class TestFabricWire:
     ) -> None:
         mock.push_scenario("fabric.create_ai_agent", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.ai_agents.create(
-                prompt="x", agent_id="x", name="x"
-            )
+            signalwire_client.fabric.ai_agents.create(prompt={}, agent_id="x", name="x")
         assert exc.value.status_code == 500
 
     def test_ai_agents_delete(
@@ -285,7 +283,7 @@ class TestFabricWire:
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
         signalwire_client.fabric.conference_rooms.create(
-            name="x", enable_room_previews="x"
+            name="x", enable_room_previews=True
         )
         last = mock.last_request()
         assert last.method == "POST"
@@ -297,7 +295,7 @@ class TestFabricWire:
         mock.push_scenario("fabric.create_conference_room", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
             signalwire_client.fabric.conference_rooms.create(
-                name="x", enable_room_previews="x"
+                name="x", enable_room_previews=True
             )
         assert exc.value.status_code == 500
 
@@ -877,7 +875,7 @@ class TestFabricWire:
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
         signalwire_client.fabric.resources.assign_phone_route(
-            "test-id", phone_route_id="x", handler="x"
+            "test-id", phone_route_id="x", handler="calling"
         )
         last = mock.last_request()
         assert last.method == "POST"
@@ -889,7 +887,7 @@ class TestFabricWire:
         mock.push_scenario("fabric.assign_resource_phone_route", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
             signalwire_client.fabric.resources.assign_phone_route(
-                "test-id", phone_route_id="x", handler="x"
+                "test-id", phone_route_id="x", handler="calling"
             )
         assert exc.value.status_code == 500
 
@@ -965,10 +963,10 @@ class TestFabricWire:
             username="x",
             caller_id="x",
             send_as="x",
-            ciphers="x",
-            codecs="x",
-            encryption="x",
-            call_handler="x",
+            ciphers=["AEAD_AES_256_GCM_8"],
+            codecs=["PCMU"],
+            encryption="required",
+            call_handler="default",
             calling_handler_resource_id="x",
         )
         last = mock.last_request()
@@ -985,10 +983,10 @@ class TestFabricWire:
                 username="x",
                 caller_id="x",
                 send_as="x",
-                ciphers="x",
-                codecs="x",
-                encryption="x",
-                call_handler="x",
+                ciphers=["AEAD_AES_256_GCM_8"],
+                codecs=["PCMU"],
+                encryption="required",
+                call_handler="default",
                 calling_handler_resource_id="x",
             )
         assert exc.value.status_code == 500
@@ -1077,7 +1075,11 @@ class TestFabricWire:
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
         signalwire_client.fabric.sip_gateways.create(
-            name="x", uri="x", encryption="x", ciphers="x", codecs="x"
+            name="x",
+            uri="x",
+            encryption="required",
+            ciphers=["AEAD_AES_256_GCM_8"],
+            codecs=["PCMU"],
         )
         last = mock.last_request()
         assert last.method == "POST"
@@ -1089,7 +1091,11 @@ class TestFabricWire:
         mock.push_scenario("fabric.create_sip_gateway", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
             signalwire_client.fabric.sip_gateways.create(
-                name="x", uri="x", encryption="x", ciphers="x", codecs="x"
+                name="x",
+                uri="x",
+                encryption="required",
+                ciphers=["AEAD_AES_256_GCM_8"],
+                codecs=["PCMU"],
             )
         assert exc.value.status_code == 500
 
@@ -1568,7 +1574,7 @@ class TestFabricWire:
     def test_tokens_create_guest_token(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.fabric.tokens.create_guest_token(allowed_addresses="x")
+        signalwire_client.fabric.tokens.create_guest_token(allowed_addresses=["x"])
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "fabric.create_subscriber_guest_token"
@@ -1578,7 +1584,7 @@ class TestFabricWire:
     ) -> None:
         mock.push_scenario("fabric.create_subscriber_guest_token", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.tokens.create_guest_token(allowed_addresses="x")
+            signalwire_client.fabric.tokens.create_guest_token(allowed_addresses=["x"])
         assert exc.value.status_code == 500
 
     def test_tokens_create_invite_token(

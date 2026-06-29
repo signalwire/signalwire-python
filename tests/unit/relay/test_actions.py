@@ -48,14 +48,14 @@ from signalwire.relay.constants import (
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def mock_client():
+def mock_client() -> MagicMock:
     client = MagicMock()
     client.execute = AsyncMock(return_value={"code": "200", "message": "OK"})
     return client
 
 
 @pytest.fixture
-async def call(mock_client):
+async def call(mock_client: MagicMock) -> Call:
     return Call(
         client=mock_client,
         call_id="call-1",
@@ -75,7 +75,7 @@ class TestActionInit:
     """Direct construction of the base Action class — covers Action.__init__."""
 
     @pytest.mark.asyncio
-    async def test_action_init_stores_attributes(self, call):
+    async def test_action_init_stores_attributes(self, call: Call) -> None:
         base_action = Action(
             call,
             control_id="base-1",
@@ -100,7 +100,7 @@ class TestPlayActionInit:
     """PlayAction.__init__ via direct construction (not via Call.play)."""
 
     @pytest.mark.asyncio
-    async def test_play_action_init(self, call):
+    async def test_play_action_init(self, call: Call) -> None:
         play_action = PlayAction(call, "ctl-play-1")
         assert play_action.control_id == "ctl-play-1"
         assert play_action.call is call
@@ -116,7 +116,7 @@ class TestPlayActionInit:
 
 class TestRecordActionInit:
     @pytest.mark.asyncio
-    async def test_record_action_init(self, call):
+    async def test_record_action_init(self, call: Call) -> None:
         record_action = RecordAction(call, "rec-1")
         assert record_action.control_id == "rec-1"
         assert record_action._terminal_event == EVENT_CALL_RECORD
@@ -124,7 +124,7 @@ class TestRecordActionInit:
         assert RECORD_STATE_NO_INPUT in record_action._terminal_states
 
     @pytest.mark.asyncio
-    async def test_record_action_stop_sends_correct_rpc(self, call, mock_client):
+    async def test_record_action_stop_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
         record_action = RecordAction(call, "rec-2")
         await record_action.stop()
         mock_client.execute.assert_called_once_with(
@@ -133,7 +133,7 @@ class TestRecordActionInit:
         )
 
     @pytest.mark.asyncio
-    async def test_record_action_pause_sends_correct_rpc(self, call, mock_client):
+    async def test_record_action_pause_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
         record_action = RecordAction(call, "rec-3")
         await record_action.pause(behavior="silence")
         mock_client.execute.assert_called_once_with(
@@ -147,7 +147,7 @@ class TestRecordActionInit:
         )
 
     @pytest.mark.asyncio
-    async def test_record_action_pause_no_behavior(self, call, mock_client):
+    async def test_record_action_pause_no_behavior(self, call: Call, mock_client: MagicMock) -> None:
         record_action = RecordAction(call, "rec-4")
         await record_action.pause()
         mock_client.execute.assert_called_once_with(
@@ -156,7 +156,7 @@ class TestRecordActionInit:
         )
 
     @pytest.mark.asyncio
-    async def test_record_action_resume_sends_correct_rpc(self, call, mock_client):
+    async def test_record_action_resume_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
         record_action = RecordAction(call, "rec-5")
         await record_action.resume()
         mock_client.execute.assert_called_once_with(
@@ -171,7 +171,7 @@ class TestRecordActionInit:
 
 class TestDetectActionInit:
     @pytest.mark.asyncio
-    async def test_detect_action_init(self, call):
+    async def test_detect_action_init(self, call: Call) -> None:
         detect_action = DetectAction(call, "det-1")
         assert detect_action.control_id == "det-1"
         assert detect_action._terminal_event == EVENT_CALL_DETECT
@@ -179,7 +179,7 @@ class TestDetectActionInit:
         assert "error" in detect_action._terminal_states
 
     @pytest.mark.asyncio
-    async def test_detect_action_stop_sends_correct_rpc(self, call, mock_client):
+    async def test_detect_action_stop_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
         detect_action = DetectAction(call, "det-2")
         await detect_action.stop()
         mock_client.execute.assert_called_once_with(
@@ -194,7 +194,7 @@ class TestDetectActionInit:
 
 class TestCollectActionInit:
     @pytest.mark.asyncio
-    async def test_collect_action_init(self, call):
+    async def test_collect_action_init(self, call: Call) -> None:
         collect_action = CollectAction(call, "col-1")
         assert collect_action.control_id == "col-1"
         assert collect_action._terminal_event == EVENT_CALL_COLLECT
@@ -204,8 +204,8 @@ class TestCollectActionInit:
 
     @pytest.mark.asyncio
     async def test_collect_action_stop_uses_play_and_collect_method(
-        self, call, mock_client
-    ):
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         collect_action = CollectAction(call, "col-2")
         await collect_action.stop()
         mock_client.execute.assert_called_once_with(
@@ -214,7 +214,7 @@ class TestCollectActionInit:
         )
 
     @pytest.mark.asyncio
-    async def test_collect_action_volume_sends_correct_rpc(self, call, mock_client):
+    async def test_collect_action_volume_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
         collect_action = CollectAction(call, "col-3")
         await collect_action.volume(7.5)
         mock_client.execute.assert_called_once_with(
@@ -228,7 +228,7 @@ class TestCollectActionInit:
         )
 
     @pytest.mark.asyncio
-    async def test_collect_action_start_input_timers(self, call, mock_client):
+    async def test_collect_action_start_input_timers(self, call: Call, mock_client: MagicMock) -> None:
         collect_action = CollectAction(call, "col-4")
         await collect_action.start_input_timers()
         mock_client.execute.assert_called_once_with(
@@ -243,7 +243,7 @@ class TestCollectActionInit:
 
 class TestStandaloneCollectActionInit:
     @pytest.mark.asyncio
-    async def test_standalone_collect_action_init(self, call):
+    async def test_standalone_collect_action_init(self, call: Call) -> None:
         standalone_action = StandaloneCollectAction(call, "scol-1")
         assert standalone_action.control_id == "scol-1"
         assert standalone_action._terminal_event == EVENT_CALL_COLLECT
@@ -252,8 +252,8 @@ class TestStandaloneCollectActionInit:
 
     @pytest.mark.asyncio
     async def test_standalone_collect_action_stop_uses_collect_stop(
-        self, call, mock_client
-    ):
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         standalone_action = StandaloneCollectAction(call, "scol-2")
         await standalone_action.stop()
         mock_client.execute.assert_called_once_with(
@@ -263,8 +263,8 @@ class TestStandaloneCollectActionInit:
 
     @pytest.mark.asyncio
     async def test_standalone_collect_action_start_input_timers(
-        self, call, mock_client
-    ):
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         standalone_action = StandaloneCollectAction(call, "scol-3")
         await standalone_action.start_input_timers()
         mock_client.execute.assert_called_once_with(
@@ -279,14 +279,14 @@ class TestStandaloneCollectActionInit:
 
 class TestFaxActionInit:
     @pytest.mark.asyncio
-    async def test_fax_action_init_send_fax_prefix(self, call):
+    async def test_fax_action_init_send_fax_prefix(self, call: Call) -> None:
         fax_action = FaxAction(call, "fax-1", "send_fax")
         assert fax_action.control_id == "fax-1"
         assert fax_action._command_prefix == "send_fax"
         assert fax_action._terminal_event == EVENT_CALL_FAX
 
     @pytest.mark.asyncio
-    async def test_fax_action_init_receive_fax_prefix(self, call):
+    async def test_fax_action_init_receive_fax_prefix(self, call: Call) -> None:
         fax_action = FaxAction(call, "fax-2", "receive_fax")
         assert fax_action._command_prefix == "receive_fax"
 
@@ -297,14 +297,14 @@ class TestFaxActionInit:
 
 class TestTapActionInit:
     @pytest.mark.asyncio
-    async def test_tap_action_init(self, call):
+    async def test_tap_action_init(self, call: Call) -> None:
         tap_action = TapAction(call, "tap-1")
         assert tap_action.control_id == "tap-1"
         assert tap_action._terminal_event == EVENT_CALL_TAP
         assert "finished" in tap_action._terminal_states
 
     @pytest.mark.asyncio
-    async def test_tap_action_stop_sends_correct_rpc(self, call, mock_client):
+    async def test_tap_action_stop_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
         tap_action = TapAction(call, "tap-2")
         await tap_action.stop()
         mock_client.execute.assert_called_once_with(
@@ -319,14 +319,14 @@ class TestTapActionInit:
 
 class TestStreamActionInit:
     @pytest.mark.asyncio
-    async def test_stream_action_init(self, call):
+    async def test_stream_action_init(self, call: Call) -> None:
         stream_action = StreamAction(call, "stream-1")
         assert stream_action.control_id == "stream-1"
         assert stream_action._terminal_event == EVENT_CALL_STREAM
         assert "finished" in stream_action._terminal_states
 
     @pytest.mark.asyncio
-    async def test_stream_action_stop_sends_correct_rpc(self, call, mock_client):
+    async def test_stream_action_stop_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
         stream_action = StreamAction(call, "stream-2")
         await stream_action.stop()
         mock_client.execute.assert_called_once_with(
@@ -341,7 +341,7 @@ class TestStreamActionInit:
 
 class TestPayActionInit:
     @pytest.mark.asyncio
-    async def test_pay_action_init(self, call):
+    async def test_pay_action_init(self, call: Call) -> None:
         pay_action = PayAction(call, "pay-1")
         assert pay_action.control_id == "pay-1"
         assert pay_action._terminal_event == EVENT_CALL_PAY
@@ -349,7 +349,7 @@ class TestPayActionInit:
         assert "error" in pay_action._terminal_states
 
     @pytest.mark.asyncio
-    async def test_pay_action_stop_sends_correct_rpc(self, call, mock_client):
+    async def test_pay_action_stop_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
         pay_action = PayAction(call, "pay-2")
         await pay_action.stop()
         mock_client.execute.assert_called_once_with(
@@ -364,14 +364,14 @@ class TestPayActionInit:
 
 class TestTranscribeActionInit:
     @pytest.mark.asyncio
-    async def test_transcribe_action_init(self, call):
+    async def test_transcribe_action_init(self, call: Call) -> None:
         transcribe_action = TranscribeAction(call, "trn-1")
         assert transcribe_action.control_id == "trn-1"
         assert transcribe_action._terminal_event == EVENT_CALL_TRANSCRIBE
         assert "finished" in transcribe_action._terminal_states
 
     @pytest.mark.asyncio
-    async def test_transcribe_action_stop_sends_correct_rpc(self, call, mock_client):
+    async def test_transcribe_action_stop_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
         transcribe_action = TranscribeAction(call, "trn-2")
         await transcribe_action.stop()
         mock_client.execute.assert_called_once_with(
@@ -386,7 +386,7 @@ class TestTranscribeActionInit:
 
 class TestAIActionInit:
     @pytest.mark.asyncio
-    async def test_ai_action_init(self, call):
+    async def test_ai_action_init(self, call: Call) -> None:
         ai_action = AIAction(call, "ai-1")
         assert ai_action.control_id == "ai-1"
         # AI uses a custom terminal_event string
@@ -395,7 +395,7 @@ class TestAIActionInit:
         assert "error" in ai_action._terminal_states
 
     @pytest.mark.asyncio
-    async def test_ai_action_stop_sends_correct_rpc(self, call, mock_client):
+    async def test_ai_action_stop_sends_correct_rpc(self, call: Call, mock_client: MagicMock) -> None:
         ai_action = AIAction(call, "ai-2")
         await ai_action.stop()
         mock_client.execute.assert_called_once_with(
@@ -412,7 +412,7 @@ class TestCallRepr:
     """Direct __repr__ invocation so the audit picks up Call.__repr__ as covered."""
 
     @pytest.mark.asyncio
-    async def test_call_repr_contains_id_state_direction(self, call):
+    async def test_call_repr_contains_id_state_direction(self, call: Call) -> None:
         # Invoke __repr__ explicitly (the audit doesn't follow repr() builtin).
         rendered = call.__repr__()
         assert "call-1" in rendered
@@ -420,7 +420,7 @@ class TestCallRepr:
         assert "inbound" in rendered
 
     @pytest.mark.asyncio
-    async def test_call_repr_changes_with_state(self, call):
+    async def test_call_repr_changes_with_state(self, call: Call) -> None:
         call.state = "ended"
         rendered = call.__repr__()
         assert "ended" in rendered

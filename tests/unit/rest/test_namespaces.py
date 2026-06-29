@@ -1,10 +1,15 @@
 """Tests for remaining namespaces — phone_numbers, video, datasphere, etc."""
 
 from .conftest import MockResponse
+from signalwire.rest.client import RestClient
+from signalwire.rest.namespaces.relay_rest_types_generated import (
+    CreateCspBrandRequest,
+)
+from unittest.mock import MagicMock
 
 
 class TestPhoneNumbers:
-    def test_search(self, client, mock_session):
+    def test_search(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"data": []})
         client.phone_numbers.search(area_code="512")
         mock_session.request.assert_called_with(
@@ -12,7 +17,7 @@ class TestPhoneNumbers:
             json=None, params={"area_code": "512"},
         )
 
-    def test_update_uses_put(self, client, mock_session):
+    def test_update_uses_put(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.phone_numbers.update("pn-1", name="Main")
         mock_session.request.assert_called_with(
@@ -22,7 +27,7 @@ class TestPhoneNumbers:
 
 
 class TestQueues:
-    def test_list_members(self, client, mock_session):
+    def test_list_members(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"data": []})
         client.queues.list_members("q-1")
         mock_session.request.assert_called_with(
@@ -30,7 +35,7 @@ class TestQueues:
             json=None, params=None,
         )
 
-    def test_get_next_member(self, client, mock_session):
+    def test_get_next_member(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.queues.get_next_member("q-1")
         mock_session.request.assert_called_with(
@@ -40,7 +45,7 @@ class TestQueues:
 
 
 class TestNumberGroups:
-    def test_add_membership(self, client, mock_session):
+    def test_add_membership(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(201, {})
         client.number_groups.add_membership("ng-1", phone_number_id="pn-1")
         mock_session.request.assert_called_with(
@@ -48,7 +53,7 @@ class TestNumberGroups:
             json={"phone_number_id": "pn-1"}, params=None,
         )
 
-    def test_get_membership(self, client, mock_session):
+    def test_get_membership(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.number_groups.get_membership("mem-1")
         mock_session.request.assert_called_with(
@@ -58,7 +63,7 @@ class TestNumberGroups:
 
 
 class TestVerifiedCallers:
-    def test_redial_verification(self, client, mock_session):
+    def test_redial_verification(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.verified_callers.redial_verification("vc-1")
         mock_session.request.assert_called_with(
@@ -66,7 +71,7 @@ class TestVerifiedCallers:
             json=None, params=None,
         )
 
-    def test_submit_verification(self, client, mock_session):
+    def test_submit_verification(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.verified_callers.submit_verification("vc-1", verification_code="123456")
         mock_session.request.assert_called_with(
@@ -76,7 +81,7 @@ class TestVerifiedCallers:
 
 
 class TestSipProfile:
-    def test_get(self, client, mock_session):
+    def test_get(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"sip_uri": "test"})
         client.sip_profile.get()
         mock_session.request.assert_called_with(
@@ -86,7 +91,7 @@ class TestSipProfile:
 
 
 class TestLookup:
-    def test_phone_number(self, client, mock_session):
+    def test_phone_number(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.lookup.phone_number("+15551234567", include="carrier")
         mock_session.request.assert_called_with(
@@ -96,7 +101,7 @@ class TestLookup:
 
 
 class TestMfa:
-    def test_sms(self, client, mock_session):
+    def test_sms(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"id": "mfa-1"})
         client.mfa.sms(to="+15551234567", from_="+15559876543")
         mock_session.request.assert_called_with(
@@ -104,7 +109,7 @@ class TestMfa:
             json={"to": "+15551234567", "from": "+15559876543"}, params=None,
         )
 
-    def test_verify(self, client, mock_session):
+    def test_verify(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"success": True})
         client.mfa.verify("mfa-1", token="123456")  # noqa: S106
         mock_session.request.assert_called_with(
@@ -114,7 +119,7 @@ class TestMfa:
 
 
 class TestDatasphere:
-    def test_search(self, client, mock_session):
+    def test_search(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"data": []})
         client.datasphere.documents.search(query_string="billing")
         mock_session.request.assert_called_with(
@@ -122,7 +127,7 @@ class TestDatasphere:
             json={"query_string": "billing"}, params=None,
         )
 
-    def test_list_chunks(self, client, mock_session):
+    def test_list_chunks(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"data": []})
         client.datasphere.documents.list_chunks("doc-1")
         mock_session.request.assert_called_with(
@@ -130,7 +135,7 @@ class TestDatasphere:
             json=None, params=None,
         )
 
-    def test_delete_chunk(self, client, mock_session):
+    def test_delete_chunk(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(204, None, content=b"")
         client.datasphere.documents.delete_chunk("doc-1", "chunk-1")
         mock_session.request.assert_called_with(
@@ -140,7 +145,7 @@ class TestDatasphere:
 
 
 class TestVideo:
-    def test_rooms_create(self, client, mock_session):
+    def test_rooms_create(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(201, {"id": "room-1"})
         client.video.rooms.create(name="standup")
         mock_session.request.assert_called_with(
@@ -148,7 +153,7 @@ class TestVideo:
             json={"name": "standup"}, params=None,
         )
 
-    def test_room_tokens_create(self, client, mock_session):
+    def test_room_tokens_create(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"token": "abc"})
         client.video.room_tokens.create(room_name="standup", user_name="alice")
         mock_session.request.assert_called_with(
@@ -156,7 +161,7 @@ class TestVideo:
             json={"room_name": "standup", "user_name": "alice"}, params=None,
         )
 
-    def test_session_members(self, client, mock_session):
+    def test_session_members(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"data": []})
         client.video.room_sessions.list_members("sess-1")
         mock_session.request.assert_called_with(
@@ -164,7 +169,7 @@ class TestVideo:
             json=None, params=None,
         )
 
-    def test_conference_streams(self, client, mock_session):
+    def test_conference_streams(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(201, {})
         client.video.conferences.create_stream("conf-1", url="rtmp://example.com/live")
         mock_session.request.assert_called_with(
@@ -174,7 +179,7 @@ class TestVideo:
 
 
 class TestLogs:
-    def test_voice_events(self, client, mock_session):
+    def test_voice_events(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"data": []})
         client.logs.voice.list_events("log-1")
         mock_session.request.assert_called_with(
@@ -184,9 +189,9 @@ class TestLogs:
 
 
 class TestRegistry:
-    def test_create_brand(self, client, mock_session):
+    def test_create_brand(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(201, {"id": "brand-1"})
-        body = {
+        body: CreateCspBrandRequest = {
             "csp_self_registered": True,
             "name": "MyBrand",
             "csp_brand_reference": "B123456",
@@ -197,7 +202,7 @@ class TestRegistry:
             json=body, params=None,
         )
 
-    def test_campaign_orders(self, client, mock_session):
+    def test_campaign_orders(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"data": []})
         client.registry.campaigns.list_orders("camp-1")
         mock_session.request.assert_called_with(
@@ -207,7 +212,7 @@ class TestRegistry:
 
 
 class TestProjectTokens:
-    def test_create_token(self, client, mock_session):
+    def test_create_token(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"id": "tok-1"})
         client.project.tokens.create(name="test-token", permissions=["calling"])
         mock_session.request.assert_called_with(
@@ -217,7 +222,7 @@ class TestProjectTokens:
 
 
 class TestPubSubChat:
-    def test_pubsub_token(self, client, mock_session):
+    def test_pubsub_token(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"token": "abc"})
         client.pubsub.create_token(ttl=60, channels={"room": {"read": True}})
         mock_session.request.assert_called_with(
@@ -225,7 +230,7 @@ class TestPubSubChat:
             json={"ttl": 60, "channels": {"room": {"read": True}}}, params=None,
         )
 
-    def test_chat_token(self, client, mock_session):
+    def test_chat_token(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"token": "abc"})
         client.chat.create_token(ttl=60, channels={"room": {"read": True}})
         mock_session.request.assert_called_with(

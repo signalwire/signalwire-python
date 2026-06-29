@@ -14,6 +14,9 @@ following the ``links.next`` cursor. We test it end-to-end by:
 from __future__ import annotations
 
 from signalwire.rest._pagination import PaginatedIterator
+from signalwire.rest.client import RestClient
+from .conftest import _MockHarness
+from typing import Any
 
 
 # Pick an endpoint that the scenario store can override.  We use
@@ -23,7 +26,7 @@ _FABRIC_ADDRESSES_PATH = "/api/fabric/addresses"
 _FABRIC_ADDRESSES_ENDPOINT_ID = "fabric.list_fabric_addresses"
 
 
-def _push_scenario(mock, endpoint_id: str, status: int, response: dict) -> None:
+def _push_scenario(mock: _MockHarness, endpoint_id: str, status: int, response: dict[str, Any]) -> None:
     """Push one consume-once scenario, scoped to THIS client's auth header.
 
     Scoping (``mock.push_scenario`` -> ``?session_id=<auth header>``) keeps a
@@ -33,7 +36,7 @@ def _push_scenario(mock, endpoint_id: str, status: int, response: dict) -> None:
 
 
 class TestPaginatedIterator:
-    def test_init_state(self, signalwire_client, mock):
+    def test_init_state(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         """Constructor records http/path/params/data_key without fetching."""
         it = PaginatedIterator(
             signalwire_client._http,
@@ -52,7 +55,7 @@ class TestPaginatedIterator:
         # Journal must be empty — no HTTP went out.
         assert mock.journal == []
 
-    def test_iter_returns_self(self, signalwire_client, mock):
+    def test_iter_returns_self(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         """``__iter__`` returns the iterator itself; ``iter(it)`` is the same."""
         it = PaginatedIterator(
             signalwire_client._http,
@@ -67,7 +70,7 @@ class TestPaginatedIterator:
         # Still no HTTP yet.
         assert mock.journal == []
 
-    def test_next_pages_through_all_items(self, signalwire_client, mock):
+    def test_next_pages_through_all_items(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         """Walks two pages and stops on the page without ``links.next``.
 
         A fresh per-test client starts with an empty (auth-scoped) journal and
@@ -117,7 +120,7 @@ class TestPaginatedIterator:
             f"second fetch missing cursor=page2: {gets[1].query_params}"
         )
 
-    def test_next_raises_stop_iteration_when_done(self, signalwire_client, mock):
+    def test_next_raises_stop_iteration_when_done(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         """After exhausting items and seeing no next cursor, raise StopIteration."""
         # One terminal page.
         _push_scenario(

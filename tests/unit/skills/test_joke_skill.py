@@ -5,20 +5,17 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Unit tests for the Joke skill module
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from typing import Any
+from unittest.mock import Mock, patch
 
 from signalwire.skills.joke.skill import JokeSkill
-from signalwire.core.function_result import FunctionResult
 
 
-def _make_skill(params=None):
+def _make_skill(params: dict[str, Any] | None = None) -> JokeSkill:
     """
     Helper to create a JokeSkill with a mocked agent.
     Provides sensible defaults for all required parameters.
@@ -31,8 +28,7 @@ def _make_skill(params=None):
 
     mock_agent = Mock()
     mock_agent.register_swaig_function = Mock()
-    skill = JokeSkill(agent=mock_agent, params=default_params)
-    return skill
+    return JokeSkill(agent=mock_agent, params=default_params)
 
 
 # ---------------------------------------------------------------------------
@@ -42,22 +38,22 @@ def _make_skill(params=None):
 class TestJokeSkillClassAttributes:
     """Verify class-level constants and metadata."""
 
-    def test_skill_name(self):
+    def test_skill_name(self) -> None:
         assert JokeSkill.SKILL_NAME == "joke"
 
-    def test_skill_description(self):
+    def test_skill_description(self) -> None:
         assert JokeSkill.SKILL_DESCRIPTION == "Tell jokes using the API Ninjas joke API"
 
-    def test_skill_version(self):
+    def test_skill_version(self) -> None:
         assert JokeSkill.SKILL_VERSION == "1.0.0"
 
-    def test_required_packages(self):
+    def test_required_packages(self) -> None:
         assert JokeSkill.REQUIRED_PACKAGES == []
 
-    def test_required_env_vars(self):
+    def test_required_env_vars(self) -> None:
         assert JokeSkill.REQUIRED_ENV_VARS == []
 
-    def test_supports_multiple_instances(self):
+    def test_supports_multiple_instances(self) -> None:
         assert JokeSkill.SUPPORTS_MULTIPLE_INSTANCES is False
 
 
@@ -68,33 +64,33 @@ class TestJokeSkillClassAttributes:
 class TestJokeSkillInit:
     """Tests for __init__ (inherited from SkillBase)."""
 
-    def test_agent_is_stored(self):
+    def test_agent_is_stored(self) -> None:
         mock_agent = Mock()
         skill = JokeSkill(agent=mock_agent, params={"api_key": "k"})
         assert skill.agent is mock_agent
 
-    def test_params_stored(self):
+    def test_params_stored(self) -> None:
         params = {"api_key": "my-key", "tool_name": "my_joke"}
         skill = JokeSkill(agent=Mock(), params=params)
         assert skill.params["api_key"] == "my-key"
         assert skill.params["tool_name"] == "my_joke"
 
-    def test_params_default_to_empty_dict(self):
+    def test_params_default_to_empty_dict(self) -> None:
         skill = JokeSkill(agent=Mock())
         assert skill.params == {}
 
-    def test_logger_created(self):
+    def test_logger_created(self) -> None:
         skill = JokeSkill(agent=Mock())
         assert skill.logger is not None
         assert skill.logger.name == "signalwire.skills.joke"
 
-    def test_swaig_fields_extracted_from_params(self):
+    def test_swaig_fields_extracted_from_params(self) -> None:
         params = {"swaig_fields": {"meta_data": {"x": 1}}, "api_key": "k"}
         skill = JokeSkill(agent=Mock(), params=params)
         assert skill.swaig_fields == {"meta_data": {"x": 1}}
         assert "swaig_fields" not in skill.params
 
-    def test_swaig_fields_default_empty(self):
+    def test_swaig_fields_default_empty(self) -> None:
         skill = JokeSkill(agent=Mock(), params={"api_key": "k"})
         assert skill.swaig_fields == {}
 
@@ -106,29 +102,29 @@ class TestJokeSkillInit:
 class TestGetParameterSchema:
     """Tests for the class method get_parameter_schema."""
 
-    def test_contains_api_key_param(self):
+    def test_contains_api_key_param(self) -> None:
         schema = JokeSkill.get_parameter_schema()
         assert "api_key" in schema
         assert schema["api_key"]["required"] is True
 
-    def test_api_key_is_hidden(self):
+    def test_api_key_is_hidden(self) -> None:
         schema = JokeSkill.get_parameter_schema()
         assert schema["api_key"].get("hidden") is True
 
-    def test_api_key_env_var(self):
+    def test_api_key_env_var(self) -> None:
         schema = JokeSkill.get_parameter_schema()
         assert schema["api_key"].get("env_var") == "API_NINJAS_KEY"
 
-    def test_contains_tool_name_param(self):
+    def test_contains_tool_name_param(self) -> None:
         schema = JokeSkill.get_parameter_schema()
         assert "tool_name" in schema
         assert schema["tool_name"]["required"] is False
 
-    def test_tool_name_default(self):
+    def test_tool_name_default(self) -> None:
         schema = JokeSkill.get_parameter_schema()
         assert schema["tool_name"]["default"] == "get_joke"
 
-    def test_includes_base_class_swaig_fields(self):
+    def test_includes_base_class_swaig_fields(self) -> None:
         schema = JokeSkill.get_parameter_schema()
         assert "swaig_fields" in schema
 
@@ -140,43 +136,43 @@ class TestGetParameterSchema:
 class TestSetup:
     """Tests for the setup method."""
 
-    def test_setup_success_with_api_key(self):
+    def test_setup_success_with_api_key(self) -> None:
         skill = _make_skill()
         result = skill.setup()
         assert result is True
 
-    def test_setup_stores_api_key(self):
+    def test_setup_stores_api_key(self) -> None:
         skill = _make_skill()
         skill.setup()
         assert skill.api_key == "test-api-key-12345"
 
-    def test_setup_default_tool_name(self):
+    def test_setup_default_tool_name(self) -> None:
         skill = _make_skill()
         skill.setup()
         assert skill.tool_name == "get_joke"
 
-    def test_setup_custom_tool_name(self):
+    def test_setup_custom_tool_name(self) -> None:
         skill = _make_skill({"tool_name": "tell_joke"})
         skill.setup()
         assert skill.tool_name == "tell_joke"
 
-    def test_setup_missing_api_key_returns_false(self):
+    def test_setup_missing_api_key_returns_false(self) -> None:
         skill = _make_skill({"api_key": ""})
         result = skill.setup()
         assert result is False
 
-    def test_setup_none_api_key_returns_false(self):
+    def test_setup_none_api_key_returns_false(self) -> None:
         skill = _make_skill({"api_key": None})
         result = skill.setup()
         assert result is False
 
-    def test_setup_missing_api_key_no_params(self):
+    def test_setup_missing_api_key_no_params(self) -> None:
         mock_agent = Mock()
         skill = JokeSkill(agent=mock_agent, params={})
         result = skill.setup()
         assert result is False
 
-    def test_setup_logs_error_on_missing_api_key(self):
+    def test_setup_logs_error_on_missing_api_key(self) -> None:
         skill = _make_skill({"api_key": ""})
         with patch.object(skill.logger, "error") as mock_error:
             skill.setup()
@@ -191,13 +187,13 @@ class TestSetup:
 class TestRegisterTools:
     """Tests for register_tools method."""
 
-    def test_register_tools_calls_register_swaig_function(self):
+    def test_register_tools_calls_register_swaig_function(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
         skill.agent.register_swaig_function.assert_called_once()
 
-    def test_register_tools_passes_dict(self):
+    def test_register_tools_passes_dict(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -205,21 +201,21 @@ class TestRegisterTools:
         swaig_func = call_args[0][0]
         assert isinstance(swaig_func, dict)
 
-    def test_register_tools_function_name_default(self):
+    def test_register_tools_function_name_default(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
         swaig_func = skill.agent.register_swaig_function.call_args[0][0]
         assert swaig_func["function"] == "get_joke"
 
-    def test_register_tools_function_name_custom(self):
+    def test_register_tools_function_name_custom(self) -> None:
         skill = _make_skill({"tool_name": "my_jokes"})
         skill.setup()
         skill.register_tools()
         swaig_func = skill.agent.register_swaig_function.call_args[0][0]
         assert swaig_func["function"] == "my_jokes"
 
-    def test_register_tools_has_description(self):
+    def test_register_tools_has_description(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -227,7 +223,7 @@ class TestRegisterTools:
         assert "description" in swaig_func
         assert len(swaig_func["description"]) > 0
 
-    def test_register_tools_has_parameters(self):
+    def test_register_tools_has_parameters(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -237,7 +233,7 @@ class TestRegisterTools:
         assert "properties" in params
         assert "type" in params["properties"]
 
-    def test_register_tools_type_param_has_enum(self):
+    def test_register_tools_type_param_has_enum(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -247,21 +243,21 @@ class TestRegisterTools:
         assert "jokes" in type_param["enum"]
         assert "dadjokes" in type_param["enum"]
 
-    def test_register_tools_type_param_is_required(self):
+    def test_register_tools_type_param_is_required(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
         swaig_func = skill.agent.register_swaig_function.call_args[0][0]
         assert "type" in swaig_func["parameters"].get("required", [])
 
-    def test_register_tools_has_data_map(self):
+    def test_register_tools_has_data_map(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
         swaig_func = skill.agent.register_swaig_function.call_args[0][0]
         assert "data_map" in swaig_func
 
-    def test_register_tools_data_map_has_webhooks(self):
+    def test_register_tools_data_map_has_webhooks(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -270,7 +266,7 @@ class TestRegisterTools:
         assert "webhooks" in data_map
         assert len(data_map["webhooks"]) > 0
 
-    def test_register_tools_webhook_url(self):
+    def test_register_tools_webhook_url(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -279,7 +275,7 @@ class TestRegisterTools:
         assert "api-ninjas.com" in webhook["url"]
         assert "${args.type}" in webhook["url"]
 
-    def test_register_tools_webhook_method(self):
+    def test_register_tools_webhook_method(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -287,7 +283,7 @@ class TestRegisterTools:
         webhook = swaig_func["data_map"]["webhooks"][0]
         assert webhook["method"] == "GET"
 
-    def test_register_tools_webhook_has_api_key_header(self):
+    def test_register_tools_webhook_has_api_key_header(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -296,7 +292,7 @@ class TestRegisterTools:
         assert "headers" in webhook
         assert webhook["headers"]["X-Api-Key"] == "test-api-key-12345"
 
-    def test_register_tools_webhook_has_output(self):
+    def test_register_tools_webhook_has_output(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -304,7 +300,7 @@ class TestRegisterTools:
         webhook = swaig_func["data_map"]["webhooks"][0]
         assert "output" in webhook
 
-    def test_register_tools_data_map_has_error_keys(self):
+    def test_register_tools_data_map_has_error_keys(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -313,7 +309,7 @@ class TestRegisterTools:
         assert "error_keys" in webhook
         assert "error" in webhook["error_keys"]
 
-    def test_register_tools_has_fallback_output(self):
+    def test_register_tools_has_fallback_output(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -329,11 +325,11 @@ class TestRegisterTools:
 class TestGetHints:
     """Tests for the get_hints method."""
 
-    def test_returns_empty_list(self):
+    def test_returns_empty_list(self) -> None:
         skill = _make_skill()
         assert skill.get_hints() == []
 
-    def test_returns_list_type(self):
+    def test_returns_list_type(self) -> None:
         skill = _make_skill()
         assert isinstance(skill.get_hints(), list)
 
@@ -345,13 +341,13 @@ class TestGetHints:
 class TestGetGlobalData:
     """Tests for the get_global_data method."""
 
-    def test_returns_dict(self):
+    def test_returns_dict(self) -> None:
         skill = _make_skill()
         skill.setup()
         data = skill.get_global_data()
         assert isinstance(data, dict)
 
-    def test_joke_skill_enabled(self):
+    def test_joke_skill_enabled(self) -> None:
         skill = _make_skill()
         skill.setup()
         data = skill.get_global_data()
@@ -365,40 +361,40 @@ class TestGetGlobalData:
 class TestGetPromptSections:
     """Tests for the get_prompt_sections method."""
 
-    def test_returns_one_section(self):
+    def test_returns_one_section(self) -> None:
         skill = _make_skill()
         skill.setup()
         sections = skill.get_prompt_sections()
         assert len(sections) == 1
 
-    def test_section_has_title(self):
+    def test_section_has_title(self) -> None:
         skill = _make_skill()
         skill.setup()
         section = skill.get_prompt_sections()[0]
         assert "title" in section
         assert section["title"] == "Joke Telling"
 
-    def test_section_has_body(self):
+    def test_section_has_body(self) -> None:
         skill = _make_skill()
         skill.setup()
         section = skill.get_prompt_sections()[0]
         assert "body" in section
         assert len(section["body"]) > 0
 
-    def test_section_has_bullets(self):
+    def test_section_has_bullets(self) -> None:
         skill = _make_skill()
         skill.setup()
         section = skill.get_prompt_sections()[0]
         assert "bullets" in section
         assert len(section["bullets"]) > 0
 
-    def test_section_references_tool_name(self):
+    def test_section_references_tool_name(self) -> None:
         skill = _make_skill()
         skill.setup()
         section = skill.get_prompt_sections()[0]
         assert "get_joke" in section["bullets"][0]
 
-    def test_section_references_custom_tool_name(self):
+    def test_section_references_custom_tool_name(self) -> None:
         skill = _make_skill({"tool_name": "my_jokes"})
         skill.setup()
         section = skill.get_prompt_sections()[0]
@@ -412,7 +408,7 @@ class TestGetPromptSections:
 class TestGetInstanceKey:
     """Tests for get_instance_key (single instance skill)."""
 
-    def test_instance_key_is_skill_name(self):
+    def test_instance_key_is_skill_name(self) -> None:
         skill = _make_skill()
         assert skill.get_instance_key() == "joke"
 
@@ -424,14 +420,14 @@ class TestGetInstanceKey:
 class TestEdgeCases:
     """Edge case and integration-style tests."""
 
-    def test_setup_then_register_flow(self):
+    def test_setup_then_register_flow(self) -> None:
         """Full lifecycle: setup -> register_tools."""
         skill = _make_skill()
         assert skill.setup() is True
         skill.register_tools()
         skill.agent.register_swaig_function.assert_called_once()
 
-    def test_custom_api_key_in_header(self):
+    def test_custom_api_key_in_header(self) -> None:
         """Custom API key should appear in the webhook header."""
         skill = _make_skill({"api_key": "custom-secret-key"})
         skill.setup()
@@ -440,7 +436,7 @@ class TestEdgeCases:
         webhook = swaig_func["data_map"]["webhooks"][0]
         assert webhook["headers"]["X-Api-Key"] == "custom-secret-key"
 
-    def test_fallback_output_contains_sorry(self):
+    def test_fallback_output_contains_sorry(self) -> None:
         """Fallback output should contain an apology or service message."""
         skill = _make_skill()
         skill.setup()

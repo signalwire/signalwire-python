@@ -9,6 +9,7 @@ test mirrors what SignalWire's backend would send.
 import base64
 import hashlib
 import hmac
+from typing import Optional
 
 import pytest
 from fastapi import Depends, FastAPI, Request
@@ -32,7 +33,9 @@ def _scheme_a_signature(key: str, url: str, raw_body: str) -> str:
     ).hexdigest()
 
 
-def _scheme_b_signature(key: str, url: str, params=None) -> str:
+def _scheme_b_signature(
+    key: str, url: str, params: Optional[dict[str, object]] = None
+) -> str:
     """Sign url + sortedConcatParams with HMAC-SHA1, base64 encode."""
     params = params or {}
     concat = url
@@ -44,7 +47,7 @@ def _scheme_b_signature(key: str, url: str, params=None) -> str:
 
 
 @pytest.fixture
-def signed_app():
+def signed_app() -> FastAPI:
     """Build a tiny FastAPI app with the webhook validator on POST /webhook.
 
     The handler echoes ``request.state.raw_body`` so we can assert the
@@ -54,7 +57,7 @@ def signed_app():
     dep = make_webhook_validation_dependency(SIGNING_KEY)
 
     @app.post("/webhook", dependencies=[Depends(dep)])
-    async def webhook(request: Request):
+    async def webhook(request: Request) -> dict[str, object]:
         # The middleware should have stashed the raw body on request.state.
         raw = request.state.raw_body
         return {"echo_len": len(raw), "echo_decoded": raw.decode("utf-8")}
@@ -67,7 +70,7 @@ def signed_app():
 # ---------------------------------------------------------------------------
 
 class TestInvalidSignature:
-    def test_invalid_signature_returns_403(self, signed_app):
+    def test_invalid_signature_returns_403(self, signed_app: FastAPI) -> None:
         client = TestClient(signed_app)
         body = '{"event":"call.state"}'
         resp = client.post(
@@ -80,7 +83,7 @@ class TestInvalidSignature:
         )
         assert resp.status_code == 403
 
-    def test_missing_signature_header_returns_403(self, signed_app):
+    def test_missing_signature_header_returns_403(self, signed_app: FastAPI) -> None:
         client = TestClient(signed_app)
         resp = client.post(
             "/webhook",
@@ -95,7 +98,7 @@ class TestInvalidSignature:
 # ---------------------------------------------------------------------------
 
 class TestValidSignature:
-    def test_valid_scheme_a_signature_passes_through(self, signed_app):
+    def test_valid_scheme_a_signature_passes_through(self, signed_app: FastAPI) -> None:
         client = TestClient(signed_app, base_url="http://testserver")
         body = '{"event":"call.state","params":{"call_id":"abc-123"}}'
         url = "http://testserver/webhook"
@@ -114,7 +117,7 @@ class TestValidSignature:
         assert resp.json()["echo_decoded"] == body
         assert resp.json()["echo_len"] == len(body.encode("utf-8"))
 
-    def test_twilio_compat_header_alias_accepted(self, signed_app):
+    def test_twilio_compat_header_alias_accepted(self, signed_app: FastAPI) -> None:
         """X-Twilio-Signature is accepted as an alias for cXML compat."""
         client = TestClient(signed_app, base_url="http://testserver")
         body = ""
@@ -137,14 +140,14 @@ class TestValidSignature:
 # ---------------------------------------------------------------------------
 
 class TestDependencyFactory:
-    def test_empty_signing_key_raises(self):
+    def test_empty_signing_key_raises(self) -> None:
         """make_webhook_validation_dependency rejects empty signing_key at build time."""
         with pytest.raises(ValueError):
             make_webhook_validation_dependency("")
         with pytest.raises(ValueError):
-            make_webhook_validation_dependency(None)  # type: ignore[arg-type]
+            make_webhook_validation_dependency(None)  # type: ignore[arg-type]  # intentional invalid input
 
-    def test_proxy_url_base_env_used(self, signed_app, monkeypatch):
+    def test_proxy_url_base_env_used(self, signed_app: FastAPI, monkeypatch: pytest.MonkeyPatch) -> None:
         """SWML_PROXY_URL_BASE env wins over request.url for URL reconstruction.
 
         We sign against the proxy URL and POST to the test app — if the

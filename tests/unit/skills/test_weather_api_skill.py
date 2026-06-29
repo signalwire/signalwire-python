@@ -5,20 +5,19 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Unit tests for the Weather API skill module
 """
 
-import pytest
+from typing import Any
 from unittest.mock import Mock
 
+import pytest
+
 from signalwire.skills.weather_api.skill import WeatherApiSkill
-from signalwire.core.function_result import FunctionResult
 
 
-def _make_skill(params=None):
+def _make_skill(params: dict[str, Any] | None = None) -> WeatherApiSkill:
     """
     Helper to create a WeatherApiSkill with a mocked agent.
     Provides sensible defaults for all required parameters.
@@ -32,8 +31,7 @@ def _make_skill(params=None):
     mock_agent = Mock()
     mock_agent.define_tool = Mock()
     mock_agent.register_swaig_function = Mock()
-    skill = WeatherApiSkill(agent=mock_agent, params=default_params)
-    return skill
+    return WeatherApiSkill(agent=mock_agent, params=default_params)
 
 
 # ---------------------------------------------------------------------------
@@ -43,22 +41,22 @@ def _make_skill(params=None):
 class TestWeatherApiSkillClassAttributes:
     """Verify class-level constants and metadata."""
 
-    def test_skill_name(self):
+    def test_skill_name(self) -> None:
         assert WeatherApiSkill.SKILL_NAME == "weather_api"
 
-    def test_skill_description(self):
+    def test_skill_description(self) -> None:
         assert WeatherApiSkill.SKILL_DESCRIPTION == "Get current weather information from WeatherAPI.com"
 
-    def test_skill_version(self):
+    def test_skill_version(self) -> None:
         assert WeatherApiSkill.SKILL_VERSION == "1.0.0"
 
-    def test_required_packages(self):
+    def test_required_packages(self) -> None:
         assert WeatherApiSkill.REQUIRED_PACKAGES == []
 
-    def test_required_env_vars(self):
+    def test_required_env_vars(self) -> None:
         assert WeatherApiSkill.REQUIRED_ENV_VARS == []
 
-    def test_supports_multiple_instances(self):
+    def test_supports_multiple_instances(self) -> None:
         assert WeatherApiSkill.SUPPORTS_MULTIPLE_INSTANCES is False
 
 
@@ -69,43 +67,43 @@ class TestWeatherApiSkillClassAttributes:
 class TestWeatherApiSkillInit:
     """Tests for __init__."""
 
-    def test_agent_is_stored(self):
+    def test_agent_is_stored(self) -> None:
         mock_agent = Mock()
         skill = WeatherApiSkill(agent=mock_agent, params={"api_key": "key123"})
         assert skill.agent is mock_agent
 
-    def test_default_tool_name(self):
+    def test_default_tool_name(self) -> None:
         skill = _make_skill()
         assert skill.tool_name == "get_weather"
 
-    def test_custom_tool_name(self):
+    def test_custom_tool_name(self) -> None:
         skill = _make_skill({"tool_name": "check_weather"})
         assert skill.tool_name == "check_weather"
 
-    def test_default_temperature_unit(self):
+    def test_default_temperature_unit(self) -> None:
         skill = _make_skill()
         assert skill.temperature_unit == "fahrenheit"
 
-    def test_custom_temperature_unit_celsius(self):
+    def test_custom_temperature_unit_celsius(self) -> None:
         skill = _make_skill({"temperature_unit": "celsius"})
         assert skill.temperature_unit == "celsius"
 
-    def test_api_key_stored(self):
+    def test_api_key_stored(self) -> None:
         skill = _make_skill({"api_key": "my-secret-key"})
         assert skill.api_key == "my-secret-key"
 
-    def test_logger_created(self):
+    def test_logger_created(self) -> None:
         skill = _make_skill()
         assert skill.logger is not None
         assert skill.logger.name == "signalwire.skills.weather_api"
 
-    def test_swaig_fields_extracted_from_params(self):
+    def test_swaig_fields_extracted_from_params(self) -> None:
         params = {"swaig_fields": {"meta_data": {"x": 1}}, "api_key": "key"}
         skill = WeatherApiSkill(agent=Mock(), params=params)
         assert skill.swaig_fields == {"meta_data": {"x": 1}}
         assert "swaig_fields" not in skill.params
 
-    def test_swaig_fields_default_empty(self):
+    def test_swaig_fields_default_empty(self) -> None:
         skill = _make_skill()
         assert skill.swaig_fields == {}
 
@@ -117,27 +115,27 @@ class TestWeatherApiSkillInit:
 class TestValidateConfig:
     """Tests for configuration validation."""
 
-    def test_missing_api_key_raises(self):
+    def test_missing_api_key_raises(self) -> None:
         with pytest.raises(ValueError, match="api_key"):
             WeatherApiSkill(agent=Mock(), params={})
 
-    def test_none_api_key_raises(self):
+    def test_none_api_key_raises(self) -> None:
         with pytest.raises(ValueError, match="api_key"):
             WeatherApiSkill(agent=Mock(), params={"api_key": None})
 
-    def test_empty_string_api_key_raises(self):
+    def test_empty_string_api_key_raises(self) -> None:
         with pytest.raises(ValueError, match="api_key"):
             WeatherApiSkill(agent=Mock(), params={"api_key": ""})
 
-    def test_non_string_api_key_raises(self):
+    def test_non_string_api_key_raises(self) -> None:
         with pytest.raises(ValueError, match="api_key"):
             WeatherApiSkill(agent=Mock(), params={"api_key": 12345})
 
-    def test_invalid_temperature_unit_raises(self):
+    def test_invalid_temperature_unit_raises(self) -> None:
         with pytest.raises(ValueError, match="temperature_unit"):
             WeatherApiSkill(agent=Mock(), params={"api_key": "key", "temperature_unit": "kelvin"})
 
-    def test_valid_config_does_not_raise(self):
+    def test_valid_config_does_not_raise(self) -> None:
         skill = _make_skill()
         # If we get here without error, validation passed
         assert skill.api_key == "test-api-key-123"
@@ -150,11 +148,11 @@ class TestValidateConfig:
 class TestSetup:
     """Tests for the setup method."""
 
-    def test_setup_returns_true(self):
+    def test_setup_returns_true(self) -> None:
         skill = _make_skill()
         assert skill.setup() is True
 
-    def test_setup_returns_true_with_celsius(self):
+    def test_setup_returns_true_with_celsius(self) -> None:
         skill = _make_skill({"temperature_unit": "celsius"})
         assert skill.setup() is True
 
@@ -166,12 +164,12 @@ class TestSetup:
 class TestRegisterTools:
     """Tests for register_tools method."""
 
-    def test_register_tools_calls_register_swaig_function(self):
+    def test_register_tools_calls_register_swaig_function(self) -> None:
         skill = _make_skill()
         skill.register_tools()
         skill.agent.register_swaig_function.assert_called_once()
 
-    def test_register_tools_passes_tool_dict(self):
+    def test_register_tools_passes_tool_dict(self) -> None:
         skill = _make_skill()
         skill.register_tools()
         call_args = skill.agent.register_swaig_function.call_args
@@ -180,7 +178,7 @@ class TestRegisterTools:
         assert "function" in tool
         assert "data_map" in tool
 
-    def test_register_tools_merges_swaig_fields(self):
+    def test_register_tools_merges_swaig_fields(self) -> None:
         """swaig_fields from params should be merged into the tool dict."""
         params = {
             "swaig_fields": {"meta_data": {"key": "val"}},
@@ -203,29 +201,29 @@ class TestRegisterTools:
 class TestGetTools:
     """Tests for the get_tools method."""
 
-    def test_returns_list_with_one_tool(self):
+    def test_returns_list_with_one_tool(self) -> None:
         skill = _make_skill()
         tools = skill.get_tools()
         assert isinstance(tools, list)
         assert len(tools) == 1
 
-    def test_tool_function_name_default(self):
+    def test_tool_function_name_default(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         assert tool["function"] == "get_weather"
 
-    def test_tool_function_name_custom(self):
+    def test_tool_function_name_custom(self) -> None:
         skill = _make_skill({"tool_name": "weather_check"})
         tool = skill.get_tools()[0]
         assert tool["function"] == "weather_check"
 
-    def test_tool_has_description(self):
+    def test_tool_has_description(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         assert "description" in tool
         assert "weather" in tool["description"].lower()
 
-    def test_tool_has_location_parameter(self):
+    def test_tool_has_location_parameter(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         params = tool["parameters"]
@@ -234,49 +232,49 @@ class TestGetTools:
         assert params["properties"]["location"]["type"] == "string"
         assert "location" in params["required"]
 
-    def test_tool_has_data_map_with_webhooks(self):
+    def test_tool_has_data_map_with_webhooks(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         assert "data_map" in tool
         assert "webhooks" in tool["data_map"]
         assert len(tool["data_map"]["webhooks"]) == 1
 
-    def test_webhook_url_contains_api_key(self):
+    def test_webhook_url_contains_api_key(self) -> None:
         skill = _make_skill({"api_key": "my-secret-key"})
         tool = skill.get_tools()[0]
         webhook = tool["data_map"]["webhooks"][0]
         assert "my-secret-key" in webhook["url"]
 
-    def test_webhook_url_contains_location_placeholder(self):
+    def test_webhook_url_contains_location_placeholder(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         webhook = tool["data_map"]["webhooks"][0]
         assert "${lc:enc:args.location}" in webhook["url"]
 
-    def test_webhook_method_is_get(self):
+    def test_webhook_method_is_get(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         webhook = tool["data_map"]["webhooks"][0]
         assert webhook["method"] == "GET"
 
-    def test_webhook_output_is_dict(self):
+    def test_webhook_output_is_dict(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         webhook = tool["data_map"]["webhooks"][0]
         assert isinstance(webhook["output"], dict)
 
-    def test_data_map_has_error_keys(self):
+    def test_data_map_has_error_keys(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         assert tool["data_map"]["error_keys"] == ["error"]
 
-    def test_data_map_has_fallback_output(self):
+    def test_data_map_has_fallback_output(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         assert "output" in tool["data_map"]
         assert isinstance(tool["data_map"]["output"], dict)
 
-    def test_fahrenheit_uses_temp_f(self):
+    def test_fahrenheit_uses_temp_f(self) -> None:
         skill = _make_skill({"temperature_unit": "fahrenheit"})
         tool = skill.get_tools()[0]
         webhook = tool["data_map"]["webhooks"][0]
@@ -286,7 +284,7 @@ class TestGetTools:
         assert "feelslike_f" in response_text
         assert "Fahrenheit" in response_text
 
-    def test_celsius_uses_temp_c(self):
+    def test_celsius_uses_temp_c(self) -> None:
         skill = _make_skill({"temperature_unit": "celsius"})
         tool = skill.get_tools()[0]
         webhook = tool["data_map"]["webhooks"][0]
@@ -296,14 +294,14 @@ class TestGetTools:
         assert "feelslike_c" in response_text
         assert "Celsius" in response_text
 
-    def test_weather_template_contains_condition(self):
+    def test_weather_template_contains_condition(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         webhook = tool["data_map"]["webhooks"][0]
         response_text = webhook["output"].get("response", "")
         assert "current.condition.text" in response_text
 
-    def test_weather_template_contains_wind_info(self):
+    def test_weather_template_contains_wind_info(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         webhook = tool["data_map"]["webhooks"][0]
@@ -311,14 +309,14 @@ class TestGetTools:
         assert "current.wind_dir" in response_text
         assert "current.wind_mph" in response_text
 
-    def test_weather_template_contains_cloud_info(self):
+    def test_weather_template_contains_cloud_info(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         webhook = tool["data_map"]["webhooks"][0]
         response_text = webhook["output"].get("response", "")
         assert "current.cloud" in response_text
 
-    def test_fallback_output_contains_error_message(self):
+    def test_fallback_output_contains_error_message(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         fallback = tool["data_map"]["output"]
@@ -333,7 +331,7 @@ class TestGetTools:
 class TestGetHints:
     """Tests for the get_hints method."""
 
-    def test_returns_empty_list(self):
+    def test_returns_empty_list(self) -> None:
         skill = _make_skill()
         assert skill.get_hints() == []
 
@@ -345,7 +343,7 @@ class TestGetHints:
 class TestGetPromptSections:
     """Tests for the get_prompt_sections method."""
 
-    def test_returns_empty_list(self):
+    def test_returns_empty_list(self) -> None:
         skill = _make_skill()
         assert skill.get_prompt_sections() == []
 
@@ -357,40 +355,40 @@ class TestGetPromptSections:
 class TestGetParameterSchema:
     """Tests for the class method get_parameter_schema."""
 
-    def test_contains_api_key(self):
+    def test_contains_api_key(self) -> None:
         schema = WeatherApiSkill.get_parameter_schema()
         assert "api_key" in schema
         assert schema["api_key"]["required"] is True
 
-    def test_api_key_is_hidden(self):
+    def test_api_key_is_hidden(self) -> None:
         schema = WeatherApiSkill.get_parameter_schema()
         assert schema["api_key"].get("hidden") is True
 
-    def test_api_key_env_var(self):
+    def test_api_key_env_var(self) -> None:
         schema = WeatherApiSkill.get_parameter_schema()
         assert schema["api_key"].get("env_var") == "WEATHER_API_KEY"
 
-    def test_contains_tool_name(self):
+    def test_contains_tool_name(self) -> None:
         schema = WeatherApiSkill.get_parameter_schema()
         assert "tool_name" in schema
         assert schema["tool_name"]["required"] is False
         assert schema["tool_name"]["default"] == "get_weather"
 
-    def test_contains_temperature_unit(self):
+    def test_contains_temperature_unit(self) -> None:
         schema = WeatherApiSkill.get_parameter_schema()
         assert "temperature_unit" in schema
         assert schema["temperature_unit"]["required"] is False
         assert schema["temperature_unit"]["default"] == "fahrenheit"
 
-    def test_temperature_unit_enum(self):
+    def test_temperature_unit_enum(self) -> None:
         schema = WeatherApiSkill.get_parameter_schema()
         assert set(schema["temperature_unit"]["enum"]) == {"fahrenheit", "celsius"}
 
-    def test_includes_base_class_swaig_fields(self):
+    def test_includes_base_class_swaig_fields(self) -> None:
         schema = WeatherApiSkill.get_parameter_schema()
         assert "swaig_fields" in schema
 
-    def test_no_tool_name_from_base_because_single_instance(self):
+    def test_no_tool_name_from_base_because_single_instance(self) -> None:
         """Since SUPPORTS_MULTIPLE_INSTANCES is False, base class should NOT add tool_name.
         But the subclass adds its own tool_name, so it should still be there."""
         schema = WeatherApiSkill.get_parameter_schema()
@@ -407,7 +405,7 @@ class TestGetParameterSchema:
 class TestGetInstanceKey:
     """Tests for get_instance_key."""
 
-    def test_returns_skill_name_because_single_instance(self):
+    def test_returns_skill_name_because_single_instance(self) -> None:
         skill = _make_skill()
         assert skill.get_instance_key() == "weather_api"
 
@@ -419,14 +417,14 @@ class TestGetInstanceKey:
 class TestEdgeCases:
     """Edge case tests."""
 
-    def test_webhook_url_format(self):
+    def test_webhook_url_format(self) -> None:
         skill = _make_skill({"api_key": "abc123"})
         tool = skill.get_tools()[0]
         webhook = tool["data_map"]["webhooks"][0]
         expected_prefix = "https://api.weatherapi.com/v1/current.json?key=abc123&q=${lc:enc:args.location}&aqi=no"
         assert webhook["url"] == expected_prefix
 
-    def test_tts_friendly_response_mentions_natural_language(self):
+    def test_tts_friendly_response_mentions_natural_language(self) -> None:
         """Response instruction should mention natural language for TTS."""
         skill = _make_skill()
         tool = skill.get_tools()[0]

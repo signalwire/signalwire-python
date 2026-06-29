@@ -20,12 +20,13 @@ from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
 
 from signalwire.search.search_engine import SearchEngine
+from typing import Any
 
 
 class TestSearchEngineInit:
     """Test SearchEngine initialization"""
     
-    def test_init_with_valid_index(self):
+    def test_init_with_valid_index(self) -> None:
         """Test initialization with valid index file"""
         with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp:
             # Create a minimal database
@@ -47,7 +48,7 @@ class TestSearchEngineInit:
 
             os.unlink(tmp.name)
 
-    def test_init_with_missing_config(self):
+    def test_init_with_missing_config(self) -> None:
         """Test initialization with missing config table"""
         with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp:
             # Create empty database
@@ -61,14 +62,14 @@ class TestSearchEngineInit:
 
             os.unlink(tmp.name)
 
-    def test_init_with_nonexistent_file(self):
+    def test_init_with_nonexistent_file(self) -> None:
         """Test initialization with nonexistent index file"""
         engine = SearchEngine(backend='sqlite', index_path='/nonexistent/path.db')
         assert engine.index_path == '/nonexistent/path.db'
         assert engine.embedding_dim == 768  # Default value
         assert engine.config == {}
 
-    def test_init_with_custom_model(self):
+    def test_init_with_custom_model(self) -> None:
         """Test initialization with custom model"""
         mock_model = Mock()
         engine = SearchEngine(backend='sqlite', index_path='test.db', model=mock_model)
@@ -86,7 +87,7 @@ except ImportError:
 class TestSearchEngineVectorSearch:
     """Test vector search functionality"""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test database"""
         self.tmp_file = tempfile.NamedTemporaryFile(suffix='.db', delete=False)
         self.db_path = self.tmp_file.name
@@ -137,13 +138,13 @@ class TestSearchEngineVectorSearch:
         conn.commit()
         conn.close()
     
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Clean up test database"""
         os.unlink(self.db_path)
     
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_vector_search_success(self, mock_cosine_sim, mock_np):
+    def test_vector_search_success(self, mock_cosine_sim: MagicMock, mock_np: MagicMock) -> None:
         """Test successful vector search"""
         # Mock numpy and cosine similarity
         query_array = Mock()
@@ -174,7 +175,7 @@ class TestSearchEngineVectorSearch:
 
     @patch('signalwire.search.search_engine.np', None)
     @patch('signalwire.search.search_engine.cosine_similarity', None)
-    def test_vector_search_no_numpy(self):
+    def test_vector_search_no_numpy(self) -> None:
         """Test vector search when numpy is not available"""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
         results = engine._vector_search([[0.1, 0.2, 0.3]], count=2)
@@ -183,7 +184,7 @@ class TestSearchEngineVectorSearch:
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_vector_search_database_error(self, mock_cosine_sim, mock_np):
+    def test_vector_search_database_error(self, mock_cosine_sim: MagicMock, mock_np: MagicMock) -> None:
         """Test vector search with database error"""
         engine = SearchEngine(backend='sqlite', index_path='/nonexistent/path.db')
         results = engine._vector_search([[0.1, 0.2, 0.3]], count=2)
@@ -194,7 +195,7 @@ class TestSearchEngineVectorSearch:
 class TestSearchEngineKeywordSearch:
     """Test keyword search functionality"""
     
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test database with FTS"""
         self.tmp_file = tempfile.NamedTemporaryFile(suffix='.db', delete=False)
         self.db_path = self.tmp_file.name
@@ -240,11 +241,11 @@ class TestSearchEngineKeywordSearch:
         conn.commit()
         conn.close()
     
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Clean up test database"""
         os.unlink(self.db_path)
     
-    def test_keyword_search_success(self):
+    def test_keyword_search_success(self) -> None:
         """Test successful keyword search"""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
         results = engine._keyword_search('Python', count=2)
@@ -254,14 +255,14 @@ class TestSearchEngineKeywordSearch:
         assert all(result['search_type'] == 'keyword' for result in results)
         assert all(isinstance(result['score'], float) for result in results)
     
-    def test_keyword_search_no_results(self):
+    def test_keyword_search_no_results(self) -> None:
         """Test keyword search with no matching results"""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
         results = engine._keyword_search('nonexistent', count=2)
         
         assert results == []
     
-    def test_escape_fts_query(self):
+    def test_escape_fts_query(self) -> None:
         """Test FTS query escaping"""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
 
@@ -270,7 +271,7 @@ class TestSearchEngineKeywordSearch:
         assert engine._escape_fts_query('test*') == '"test*"'
         assert engine._escape_fts_query('test AND query') == '"test" "AND" "query"'
     
-    def test_keyword_search_database_error(self):
+    def test_keyword_search_database_error(self) -> None:
         """Test keyword search with database error"""
         engine = SearchEngine(backend='sqlite', index_path='/nonexistent/path.db')
         results = engine._keyword_search('Python', count=2)
@@ -281,7 +282,7 @@ class TestSearchEngineKeywordSearch:
 class TestSearchEngineHybridSearch:
     """Test hybrid search functionality"""
     
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test database"""
         self.tmp_file = tempfile.NamedTemporaryFile(suffix='.db', delete=False)
         self.db_path = self.tmp_file.name
@@ -329,27 +330,27 @@ class TestSearchEngineHybridSearch:
         conn.commit()
         conn.close()
     
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Clean up test database"""
         os.unlink(self.db_path)
     
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_search_with_numpy_available(self, mock_cosine_sim, mock_np):
+    def test_search_with_numpy_available(self, mock_cosine_sim: MagicMock, mock_np: MagicMock) -> None:
         """Test search when numpy is available"""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
 
         # Mock all search methods used in the parallel search approach
-        engine._vector_search = Mock(return_value=[
+        engine._vector_search = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 1, 'content': 'Vector result', 'score': 0.9, 'search_type': 'vector', 'metadata': {}}
         ])
-        engine._filename_search = Mock(return_value=[])
-        engine._metadata_search = Mock(return_value=[])
-        engine._keyword_search = Mock(return_value=[
+        engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._keyword_search = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 2, 'content': 'Keyword result', 'score': 0.8, 'search_type': 'keyword', 'metadata': {}}
         ])
-        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))
-        engine._apply_diversity_penalties = Mock(side_effect=lambda results, count: results)
+        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
+        engine._apply_diversity_penalties = Mock(side_effect=lambda results, count: results)  # type: ignore[method-assign]  # mock
 
         mock_np.array.return_value.reshape.return_value = [[0.1, 0.2, 0.3]]
 
@@ -361,10 +362,10 @@ class TestSearchEngineHybridSearch:
     
     @patch('signalwire.search.search_engine.np', None)
     @patch('signalwire.search.search_engine.cosine_similarity', None)
-    def test_search_without_numpy(self, mock_logger=None):
+    def test_search_without_numpy(self, mock_logger: MagicMock | None = None) -> None:
         """Test search when numpy is not available"""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
-        engine._keyword_search_only = Mock(return_value=[
+        engine._keyword_search_only = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 1, 'content': 'Keyword only result', 'score': 0.8}
         ])
 
@@ -375,12 +376,12 @@ class TestSearchEngineHybridSearch:
     
     @patch('signalwire.search.search_engine.np', None)
     @patch('signalwire.search.search_engine.cosine_similarity', None)
-    def test_search_with_tags_filter(self):
+    def test_search_with_tags_filter(self) -> None:
         """Test search with tag filtering"""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
         # When numpy is not available, search() delegates to _keyword_search_only
         # which handles tag filtering internally
-        engine._keyword_search_only = Mock(return_value=[
+        engine._keyword_search_only = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 1, 'content': 'Result 1', 'score': 0.9, 'metadata': {'tags': ['python', 'tutorial']}}
         ])
 
@@ -391,7 +392,7 @@ class TestSearchEngineHybridSearch:
     
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_search_with_similarity_threshold(self, mock_cosine_sim, mock_np):
+    def test_search_with_similarity_threshold(self, mock_cosine_sim: MagicMock, mock_np: MagicMock) -> None:
         """Test search with distance threshold filtering"""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
 
@@ -399,19 +400,19 @@ class TestSearchEngineHybridSearch:
         mock_np.array.return_value.reshape.return_value = [[0.1, 0.2, 0.3]]
 
         # Both results come via vector search so the distance threshold filter applies
-        engine._vector_search = Mock(return_value=[
+        engine._vector_search = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 1, 'content': 'High score result', 'score': 0.9, 'search_type': 'vector', 'metadata': {}},
             {'id': 2, 'content': 'Low score result', 'score': 0.3, 'search_type': 'vector', 'metadata': {}},
         ])
-        engine._filename_search = Mock(return_value=[])
-        engine._metadata_search = Mock(return_value=[])
-        engine._keyword_search = Mock(return_value=[])
+        engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
 
         # Mock scoring: score is passed through
-        def mock_combined_score(candidate, threshold):
-            return candidate.get('score', 0.0)
-        engine._calculate_combined_score = Mock(side_effect=mock_combined_score)
-        engine._apply_diversity_penalties = Mock(side_effect=lambda results, count: results)
+        def mock_combined_score(candidate: dict[str, Any], threshold: float) -> float:
+            return float(candidate.get('score', 0.0))
+        engine._calculate_combined_score = Mock(side_effect=mock_combined_score)  # type: ignore[method-assign]  # mock
+        engine._apply_diversity_penalties = Mock(side_effect=lambda results, count: results)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.1, 0.2, 0.3], 'test query', count=2, similarity_threshold=0.5)
 
@@ -425,7 +426,7 @@ class TestSearchEngineHybridSearch:
 class TestSearchEngineUtilities:
     """Test utility methods"""
     
-    def setup_method(self):
+    def setup_method(self) -> None:
         """Set up test database"""
         self.tmp_file = tempfile.NamedTemporaryFile(suffix='.db', delete=False)
         self.db_path = self.tmp_file.name
@@ -455,11 +456,11 @@ class TestSearchEngineUtilities:
         conn.commit()
         conn.close()
     
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         """Clean up test database"""
         os.unlink(self.db_path)
     
-    def test_get_stats_success(self):
+    def test_get_stats_success(self) -> None:
         """Test getting index statistics"""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
         stats = engine.get_stats()
@@ -470,7 +471,7 @@ class TestSearchEngineUtilities:
         assert 'file_types' in stats
         assert 'languages' in stats
     
-    def test_get_stats_database_error(self):
+    def test_get_stats_database_error(self) -> None:
         """Test getting stats with database error"""
         # Mock the get_stats method to avoid the actual database connection error
         engine = SearchEngine(backend='sqlite', index_path='/nonexistent/path.db')
@@ -479,7 +480,7 @@ class TestSearchEngineUtilities:
             stats = engine.get_stats()
             assert stats == {}
     
-    def test_merge_results(self):
+    def test_merge_results(self) -> None:
         """Test merging vector and keyword results"""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
         
@@ -501,7 +502,7 @@ class TestSearchEngineUtilities:
         assert merged[0]['score'] > 0.7  # Combined vector + keyword score (0.7*0.7 + 0.3*0.8 = 0.73)
         assert 'search_scores' in merged[0]['metadata']
     
-    def test_filter_by_tags(self):
+    def test_filter_by_tags(self) -> None:
         """Test filtering results by tags"""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
         
@@ -516,7 +517,7 @@ class TestSearchEngineUtilities:
         assert len(filtered) == 2
         assert all('python' in result['metadata']['tags'] for result in filtered)
     
-    def test_filter_by_tags_no_metadata(self):
+    def test_filter_by_tags_no_metadata(self) -> None:
         """Test filtering when results have no metadata"""
         engine = SearchEngine(backend='sqlite', index_path=self.db_path)
         
@@ -534,7 +535,7 @@ class TestSearchEngineUtilities:
 class TestSearchEngineEdgeCases:
     """Test edge cases and error handling"""
     
-    def test_fallback_search(self):
+    def test_fallback_search(self) -> None:
         """Test fallback search functionality"""
         with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp:
             # Create database with fallback search capability
@@ -572,21 +573,21 @@ class TestSearchEngineEdgeCases:
             
             os.unlink(tmp.name)
     
-    def test_fallback_search_database_error(self):
+    def test_fallback_search_database_error(self) -> None:
         """Test fallback search with database error"""
         engine = SearchEngine(backend='sqlite', index_path='/nonexistent/path.db')
         results = engine._fallback_search('Python', count=1)
         
         assert results == []
     
-    def test_keyword_search_only_with_tags(self):
+    def test_keyword_search_only_with_tags(self) -> None:
         """Test keyword-only search with tag filtering"""
         engine = SearchEngine(backend='sqlite', index_path='test.db')
-        engine._keyword_search = Mock(return_value=[
+        engine._keyword_search = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 1, 'metadata': {'tags': ['python']}},
             {'id': 2, 'metadata': {'tags': ['javascript']}}
         ])
-        engine._filter_by_tags = Mock(return_value=[
+        engine._filter_by_tags = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 1, 'metadata': {'tags': ['python']}}
         ])
         
@@ -601,8 +602,9 @@ class TestSearchEngineEdgeCases:
 # Shared helpers for new tests
 # ---------------------------------------------------------------------------
 
-def _create_full_test_db(db_path, with_fts=True, with_embeddings=True,
-                         with_metadata_text=False, extra_chunks=None):
+def _create_full_test_db(db_path: str, with_fts: bool = True, with_embeddings: bool = True,
+                         with_metadata_text: bool = False,
+                         extra_chunks: list[dict[str, Any]] | None = None) -> str:
     """Create a fully populated test database for search engine tests.
 
     Returns the path unchanged (for convenience).
@@ -640,7 +642,7 @@ def _create_full_test_db(db_path, with_fts=True, with_embeddings=True,
         )
 
     # Helper to build a 4-dim float32 blob
-    def _emb(values):
+    def _emb(values: list[float]) -> bytes | None:
         if not with_embeddings:
             return None
         import struct as _s
@@ -746,7 +748,7 @@ def _create_full_test_db(db_path, with_fts=True, with_embeddings=True,
 
 
 @pytest.fixture
-def full_db(tmp_path):
+def full_db(tmp_path: Path) -> str:
     """Fixture that returns a fully populated test database path."""
     db_path = str(tmp_path / "test_search.db")
     _create_full_test_db(db_path)
@@ -754,7 +756,7 @@ def full_db(tmp_path):
 
 
 @pytest.fixture
-def full_db_with_metadata_text(tmp_path):
+def full_db_with_metadata_text(tmp_path: Path) -> str:
     """Fixture with metadata_text column populated."""
     db_path = str(tmp_path / "test_meta.db")
     _create_full_test_db(db_path, with_metadata_text=True)
@@ -762,7 +764,7 @@ def full_db_with_metadata_text(tmp_path):
 
 
 @pytest.fixture
-def db_no_fts(tmp_path):
+def db_no_fts(tmp_path: Path) -> str:
     """Fixture without FTS5 tables."""
     db_path = str(tmp_path / "test_nofts.db")
     _create_full_test_db(db_path, with_fts=False)
@@ -770,7 +772,7 @@ def db_no_fts(tmp_path):
 
 
 @pytest.fixture
-def db_no_embeddings(tmp_path):
+def db_no_embeddings(tmp_path: Path) -> str:
     """Fixture without embeddings."""
     db_path = str(tmp_path / "test_noembed.db")
     _create_full_test_db(db_path, with_embeddings=False)
@@ -778,7 +780,7 @@ def db_no_embeddings(tmp_path):
 
 
 @pytest.fixture
-def empty_db(tmp_path):
+def empty_db(tmp_path: Path) -> str:
     """Fixture with empty tables."""
     db_path = str(tmp_path / "test_empty.db")
     conn = sqlite3.connect(db_path)
@@ -805,21 +807,21 @@ class TestSearch:
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_search_returns_results(self, mock_cosine, mock_np, full_db):
+    def test_search_returns_results(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
         """search() returns results when vector + keyword candidates exist."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         # Stub sub-searches to isolate orchestrator logic
-        engine._vector_search = Mock(return_value=[
+        engine._vector_search = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 1, 'content': 'Python programming tutorial for beginners',
              'score': 0.95, 'search_type': 'vector',
              'metadata': {'filename': 'docs/python_tutorial.md', 'section': 'introduction', 'tags': ['python'], 'metadata': {}}}
         ])
-        engine._filename_search = Mock(return_value=[])
-        engine._metadata_search = Mock(return_value=[])
-        engine._keyword_search = Mock(return_value=[])
-        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))
-        engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)
+        engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
+        engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.9, 0.1, 0.0, 0.0], 'python tutorial', count=3)
         assert len(results) >= 1
@@ -827,22 +829,22 @@ class TestSearch:
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_search_merges_multiple_sources(self, mock_cosine, mock_np, full_db):
+    def test_search_merges_multiple_sources(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
         """search() merges candidates from vector, keyword, filename, metadata."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
         engine = SearchEngine(backend='sqlite', index_path=full_db)
-        engine._vector_search = Mock(return_value=[
+        engine._vector_search = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 1, 'content': 'A', 'score': 0.9, 'search_type': 'vector', 'metadata': {'filename': 'a.md', 'tags': []}}
         ])
-        engine._filename_search = Mock(return_value=[
+        engine._filename_search = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 2, 'content': 'B', 'score': 0.8, 'search_type': 'filename', 'metadata': {'filename': 'b.md', 'tags': []}}
         ])
-        engine._metadata_search = Mock(return_value=[])
-        engine._keyword_search = Mock(return_value=[
+        engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._keyword_search = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 3, 'content': 'C', 'score': 0.7, 'search_type': 'keyword', 'metadata': {'filename': 'c.md', 'tags': []}}
         ])
-        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))
-        engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)
+        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
+        engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.9, 0.1, 0.0, 0.0], 'test', count=5)
         ids = {r['id'] for r in results}
@@ -850,61 +852,61 @@ class TestSearch:
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_search_respects_count(self, mock_cosine, mock_np, full_db):
+    def test_search_respects_count(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
         """search() returns at most `count` results."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         many = [{'id': i, 'content': f'C{i}', 'score': 1.0 - i * 0.01,
                  'search_type': 'vector', 'metadata': {'filename': f'f{i}.md', 'tags': []}}
                 for i in range(10)]
-        engine._vector_search = Mock(return_value=many)
-        engine._filename_search = Mock(return_value=[])
-        engine._metadata_search = Mock(return_value=[])
-        engine._keyword_search = Mock(return_value=[])
-        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))
-        engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)
+        engine._vector_search = Mock(return_value=many)  # type: ignore[method-assign]  # mock
+        engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
+        engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.9, 0.1, 0.0, 0.0], 'test', count=3)
         assert len(results) == 3
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_search_filters_by_tags(self, mock_cosine, mock_np, full_db):
+    def test_search_filters_by_tags(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
         """search() filters results by tags when specified."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
         engine = SearchEngine(backend='sqlite', index_path=full_db)
-        engine._vector_search = Mock(return_value=[
+        engine._vector_search = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 1, 'content': 'A', 'score': 0.9, 'search_type': 'vector',
              'metadata': {'filename': 'a.md', 'tags': ['python'], 'metadata': {}}},
             {'id': 2, 'content': 'B', 'score': 0.8, 'search_type': 'vector',
              'metadata': {'filename': 'b.md', 'tags': ['javascript'], 'metadata': {}}},
         ])
-        engine._filename_search = Mock(return_value=[])
-        engine._metadata_search = Mock(return_value=[])
-        engine._keyword_search = Mock(return_value=[])
-        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))
-        engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)
+        engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
+        engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.9, 0.1, 0.0, 0.0], 'test', count=5, tags=['python'])
         assert all('python' in r['metadata']['tags'] for r in results)
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_search_boosts_exact_matches(self, mock_cosine, mock_np, full_db):
+    def test_search_boosts_exact_matches(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
         """search() boosts exact query matches when original_query given."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
         engine = SearchEngine(backend='sqlite', index_path=full_db)
-        engine._vector_search = Mock(return_value=[
+        engine._vector_search = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 1, 'content': 'python tutorial content', 'score': 0.5,
              'search_type': 'vector', 'metadata': {'filename': 'a.md', 'tags': [], 'metadata': {}}},
             {'id': 2, 'content': 'unrelated stuff', 'score': 0.6,
              'search_type': 'vector', 'metadata': {'filename': 'b.md', 'tags': [], 'metadata': {}}},
         ])
-        engine._filename_search = Mock(return_value=[])
-        engine._metadata_search = Mock(return_value=[])
-        engine._keyword_search = Mock(return_value=[])
-        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))
-        engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)
+        engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
+        engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.9, 0.1, 0.0, 0.0], 'python tutorial',
                                 count=5, original_query='python tutorial')
@@ -913,10 +915,10 @@ class TestSearch:
 
     @patch('signalwire.search.search_engine.np', None)
     @patch('signalwire.search.search_engine.cosine_similarity', None)
-    def test_search_falls_back_to_keyword_only(self, full_db):
+    def test_search_falls_back_to_keyword_only(self, full_db: str) -> None:
         """search() uses keyword-only when numpy is unavailable."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
-        engine._keyword_search_only = Mock(return_value=[
+        engine._keyword_search_only = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 1, 'content': 'result', 'score': 0.5}
         ])
         results = engine.search([0.1], 'python', count=3)
@@ -925,49 +927,49 @@ class TestSearch:
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_search_handles_vector_conversion_error(self, mock_cosine, mock_np, full_db):
+    def test_search_handles_vector_conversion_error(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
         """search() falls back to keyword-only when vector conversion fails."""
         mock_np.array.side_effect = Exception("bad vector")
         engine = SearchEngine(backend='sqlite', index_path=full_db)
-        engine._keyword_search_only = Mock(return_value=[])
+        engine._keyword_search_only = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         results = engine.search([0.1], 'python', count=3)
         engine._keyword_search_only.assert_called_once()
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_search_applies_diversity_penalties(self, mock_cosine, mock_np, full_db):
+    def test_search_applies_diversity_penalties(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
         """search() calls _apply_diversity_penalties."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
         engine = SearchEngine(backend='sqlite', index_path=full_db)
-        engine._vector_search = Mock(return_value=[
+        engine._vector_search = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 1, 'content': 'A', 'score': 0.9, 'search_type': 'vector',
              'metadata': {'filename': 'a.md', 'tags': []}}
         ])
-        engine._filename_search = Mock(return_value=[])
-        engine._metadata_search = Mock(return_value=[])
-        engine._keyword_search = Mock(return_value=[])
-        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))
+        engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
         diversity_mock = Mock(side_effect=lambda r, c: r)
-        engine._apply_diversity_penalties = diversity_mock
+        engine._apply_diversity_penalties = diversity_mock  # type: ignore[method-assign]  # mock
 
         engine.search([0.9, 0.1, 0.0, 0.0], 'test', count=3)
         diversity_mock.assert_called_once()
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_search_sets_score_field(self, mock_cosine, mock_np, full_db):
+    def test_search_sets_score_field(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
         """search() ensures every result has a 'score' field."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
         engine = SearchEngine(backend='sqlite', index_path=full_db)
-        engine._vector_search = Mock(return_value=[
+        engine._vector_search = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 1, 'content': 'A', 'score': 0.9, 'search_type': 'vector',
              'metadata': {'filename': 'a.md', 'tags': []}}
         ])
-        engine._filename_search = Mock(return_value=[])
-        engine._metadata_search = Mock(return_value=[])
-        engine._keyword_search = Mock(return_value=[])
-        engine._calculate_combined_score = Mock(return_value=0.85)
-        engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)
+        engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._calculate_combined_score = Mock(return_value=0.85)  # type: ignore[method-assign]  # mock
+        engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.9, 0.1, 0.0, 0.0], 'test', count=3)
         for r in results:
@@ -975,21 +977,21 @@ class TestSearch:
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_search_similarity_threshold_filters(self, mock_cosine, mock_np, full_db):
+    def test_search_similarity_threshold_filters(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
         """search() filters by similarity_threshold when > 0."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
         engine = SearchEngine(backend='sqlite', index_path=full_db)
-        engine._vector_search = Mock(return_value=[
+        engine._vector_search = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 1, 'content': 'A', 'score': 0.95, 'search_type': 'vector',
              'metadata': {'filename': 'a.md', 'tags': []}},
             {'id': 2, 'content': 'B', 'score': 0.1, 'search_type': 'vector',
              'metadata': {'filename': 'b.md', 'tags': []}},
         ])
-        engine._filename_search = Mock(return_value=[])
-        engine._metadata_search = Mock(return_value=[])
-        engine._keyword_search = Mock(return_value=[])
-        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))
-        engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)
+        engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
+        engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.9, 0.1, 0.0, 0.0], 'test', count=5, similarity_threshold=0.5)
         # id=2 has vector_distance = 1 - 0.1 = 0.9, threshold*1.5 = 0.75 so 0.9 > 0.75 => filtered
@@ -1005,7 +1007,7 @@ class TestVectorSearch:
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_returns_sorted_by_score(self, mock_cosine, mock_np, full_db):
+    def test_returns_sorted_by_score(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
         """Results are sorted by similarity descending."""
         # Set up mock so frombuffer returns mock arrays
         mock_array = Mock()
@@ -1022,7 +1024,7 @@ class TestVectorSearch:
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_limits_count(self, mock_cosine, mock_np, full_db):
+    def test_limits_count(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
         """Returns at most `count` results."""
         mock_array = Mock()
         mock_array.reshape.return_value = [[0.0]]
@@ -1036,7 +1038,7 @@ class TestVectorSearch:
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_metadata_parsed_correctly(self, mock_cosine, mock_np, full_db):
+    def test_metadata_parsed_correctly(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
         """Metadata (tags, section, filename) is correctly parsed."""
         mock_array = Mock()
         mock_array.reshape.return_value = [[0.0]]
@@ -1054,7 +1056,7 @@ class TestVectorSearch:
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_skips_empty_embeddings(self, mock_cosine, mock_np, db_no_embeddings):
+    def test_skips_empty_embeddings(self, mock_cosine: MagicMock, mock_np: MagicMock, db_no_embeddings: str) -> None:
         """Chunks with NULL embeddings are skipped."""
         mock_np.frombuffer.return_value = Mock(reshape=Mock(return_value=[[0.0]]))
         mock_np.float32 = 'float32'
@@ -1066,10 +1068,10 @@ class TestVectorSearch:
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_handles_embedding_processing_error(self, mock_cosine, mock_np, full_db):
+    def test_handles_embedding_processing_error(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
         """Gracefully continues when one embedding fails to process."""
         call_count = [0]
-        def frombuffer_side_effect(*args, **kwargs):
+        def frombuffer_side_effect(*args: Any, **kwargs: Any) -> Mock:
             call_count[0] += 1
             if call_count[0] == 2:
                 raise ValueError("corrupt embedding")
@@ -1088,21 +1090,21 @@ class TestVectorSearch:
 
     @patch('signalwire.search.search_engine.np', None)
     @patch('signalwire.search.search_engine.cosine_similarity', None)
-    def test_no_numpy_returns_empty(self, full_db):
+    def test_no_numpy_returns_empty(self, full_db: str) -> None:
         """Returns [] when numpy is not available."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         assert engine._vector_search([[0.1]], count=5) == []
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_db_error_returns_empty(self, mock_cosine, mock_np):
+    def test_db_error_returns_empty(self, mock_cosine: MagicMock, mock_np: MagicMock) -> None:
         """Returns [] when the database cannot be opened."""
         engine = SearchEngine(backend='sqlite', index_path='/no/such/file.db')
         assert engine._vector_search([[0.1]], count=5) == []
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_search_type_is_vector(self, mock_cosine, mock_np, full_db):
+    def test_search_type_is_vector(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
         """All results have search_type == 'vector'."""
         mock_array = Mock()
         mock_array.reshape.return_value = [[0.0]]
@@ -1123,30 +1125,30 @@ class TestVectorSearch:
 class TestKeywordSearch:
     """Tests for _keyword_search() with FTS5."""
 
-    def test_finds_matching_content(self, full_db):
+    def test_finds_matching_content(self, full_db: str) -> None:
         """Finds chunks whose content matches keywords."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._keyword_search('python', count=10)
         assert len(results) >= 1
         assert all(r['search_type'] == 'keyword' for r in results)
 
-    def test_multiple_term_query(self, full_db):
+    def test_multiple_term_query(self, full_db: str) -> None:
         """Handles multi-word queries."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._keyword_search('python tutorial', count=10)
         assert len(results) >= 1
 
-    def test_no_results_triggers_fallback(self, full_db):
+    def test_no_results_triggers_fallback(self, full_db: str) -> None:
         """Falls back to LIKE search when FTS returns nothing."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
-        engine._fallback_search = Mock(return_value=[
+        engine._fallback_search = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 99, 'content': 'fallback', 'score': 0.1, 'search_type': 'fallback',
              'metadata': {}}
         ])
         results = engine._keyword_search('zzzznonexistent', count=5)
         engine._fallback_search.assert_called_once()
 
-    def test_scores_are_positive_floats(self, full_db):
+    def test_scores_are_positive_floats(self, full_db: str) -> None:
         """Scores are positive floats derived from FTS rank."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._keyword_search('python', count=5)
@@ -1154,13 +1156,13 @@ class TestKeywordSearch:
             assert isinstance(r['score'], float)
             assert r['score'] > 0
 
-    def test_respects_count_limit(self, full_db):
+    def test_respects_count_limit(self, full_db: str) -> None:
         """Returns at most `count` results."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._keyword_search('python', count=1)
         assert len(results) <= 1
 
-    def test_metadata_parsed(self, full_db):
+    def test_metadata_parsed(self, full_db: str) -> None:
         """Metadata (tags, section, filename) is parsed from JSON."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._keyword_search('python', count=1)
@@ -1168,7 +1170,7 @@ class TestKeywordSearch:
             assert 'filename' in results[0]['metadata']
             assert isinstance(results[0]['metadata']['tags'], list)
 
-    def test_fts_error_falls_back(self, db_no_fts):
+    def test_fts_error_falls_back(self, db_no_fts: str) -> None:
         """Falls back to LIKE search when FTS table doesn't exist."""
         engine = SearchEngine(backend='sqlite', index_path=db_no_fts)
         results = engine._keyword_search('python', count=5)
@@ -1176,14 +1178,14 @@ class TestKeywordSearch:
         for r in results:
             assert r['search_type'] == 'fallback'
 
-    def test_original_query_passed_to_fallback(self, full_db):
+    def test_original_query_passed_to_fallback(self, full_db: str) -> None:
         """original_query parameter is available."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         # A query that returns results shouldn't hit fallback
         results = engine._keyword_search('python', count=5, original_query='python programming')
         assert len(results) >= 1
 
-    def test_empty_query_string(self, full_db):
+    def test_empty_query_string(self, full_db: str) -> None:
         """Handles empty string query gracefully."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._keyword_search('', count=5)
@@ -1198,7 +1200,7 @@ class TestKeywordSearch:
 class TestMetadataSearch:
     """Tests for _metadata_search()."""
 
-    def test_finds_by_tag(self, full_db):
+    def test_finds_by_tag(self, full_db: str) -> None:
         """Finds chunks that have matching tags."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._metadata_search('python', count=10)
@@ -1207,56 +1209,56 @@ class TestMetadataSearch:
         found_tag = any('python' in r['metadata'].get('tags', []) for r in results)
         assert found_tag
 
-    def test_finds_by_section(self, full_db):
+    def test_finds_by_section(self, full_db: str) -> None:
         """Finds chunks with matching section names."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._metadata_search('decorators', count=10)
         assert len(results) >= 1
 
-    def test_finds_by_category_in_metadata(self, full_db):
+    def test_finds_by_category_in_metadata(self, full_db: str) -> None:
         """Finds chunks with matching category metadata."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._metadata_search('tutorial', count=10)
         assert len(results) >= 1
 
-    def test_finds_by_product_in_metadata(self, full_db):
+    def test_finds_by_product_in_metadata(self, full_db: str) -> None:
         """Finds chunks with matching product metadata."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._metadata_search('sdk', count=10)
         assert len(results) >= 1
 
-    def test_search_type_is_metadata(self, full_db):
+    def test_search_type_is_metadata(self, full_db: str) -> None:
         """All results have search_type == 'metadata'."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._metadata_search('python', count=10)
         for r in results:
             assert r['search_type'] == 'metadata'
 
-    def test_metadata_text_column_used(self, full_db_with_metadata_text):
+    def test_metadata_text_column_used(self, full_db_with_metadata_text: str) -> None:
         """Uses metadata_text column for searching when it exists."""
         engine = SearchEngine(backend='sqlite', index_path=full_db_with_metadata_text)
         results = engine._metadata_search('python', count=10)
         assert len(results) >= 1
 
-    def test_multi_term_scoring(self, full_db):
+    def test_multi_term_scoring(self, full_db: str) -> None:
         """Multi-term queries produce higher scores for multi-field matches."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._metadata_search('code examples', count=10)
         assert len(results) >= 1
 
-    def test_respects_count_limit(self, full_db):
+    def test_respects_count_limit(self, full_db: str) -> None:
         """Returns at most `count` results."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._metadata_search('python', count=1)
         assert len(results) <= 1
 
-    def test_db_error_returns_empty(self):
+    def test_db_error_returns_empty(self) -> None:
         """Returns [] on database error."""
         engine = SearchEngine(backend='sqlite', index_path='/nonexistent/path.db')
         results = engine._metadata_search('python', count=5)
         assert results == []
 
-    def test_empty_query(self, full_db):
+    def test_empty_query(self, full_db: str) -> None:
         """Handles empty query gracefully."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._metadata_search('', count=5)
@@ -1270,27 +1272,27 @@ class TestMetadataSearch:
 class TestFilenameSearch:
     """Tests for _filename_search()."""
 
-    def test_exact_filename_match(self, full_db):
+    def test_exact_filename_match(self, full_db: str) -> None:
         """Finds chunks by exact filename match."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._filename_search('python_tutorial', count=10)
         assert len(results) >= 1
         assert any('python_tutorial' in r['metadata']['filename'] for r in results)
 
-    def test_partial_filename_match(self, full_db):
+    def test_partial_filename_match(self, full_db: str) -> None:
         """Finds chunks with partial filename matches."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._filename_search('tutorial', count=10)
         assert len(results) >= 1
 
-    def test_search_type_is_filename(self, full_db):
+    def test_search_type_is_filename(self, full_db: str) -> None:
         """All results have search_type == 'filename'."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._filename_search('python', count=10)
         for r in results:
             assert r['search_type'] == 'filename'
 
-    def test_basename_match_scores_higher(self, full_db):
+    def test_basename_match_scores_higher(self, full_db: str) -> None:
         """Basename matches score higher than path-only matches."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._filename_search('python_tutorial.md', count=10)
@@ -1298,31 +1300,31 @@ class TestFilenameSearch:
             # Exact basename match should have high score
             assert results[0]['score'] >= 2.0
 
-    def test_multi_term_filename_search(self, full_db):
+    def test_multi_term_filename_search(self, full_db: str) -> None:
         """Multi-term queries match against filename."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._filename_search('rest api example', count=10)
         assert len(results) >= 1
 
-    def test_respects_count(self, full_db):
+    def test_respects_count(self, full_db: str) -> None:
         """Returns at most `count` results."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._filename_search('python', count=1)
         assert len(results) <= 1
 
-    def test_no_match_returns_empty(self, full_db):
+    def test_no_match_returns_empty(self, full_db: str) -> None:
         """Returns empty list when no filenames match."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._filename_search('zzz_nonexistent_file', count=5)
         assert results == []
 
-    def test_db_error_returns_empty(self):
+    def test_db_error_returns_empty(self) -> None:
         """Returns [] on database error."""
         engine = SearchEngine(backend='sqlite', index_path='/nonexistent/path.db')
         results = engine._filename_search('test', count=5)
         assert results == []
 
-    def test_match_coverage_present(self, full_db):
+    def test_match_coverage_present(self, full_db: str) -> None:
         """Results contain match_coverage metadata."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._filename_search('python', count=5)
@@ -1337,26 +1339,26 @@ class TestFilenameSearch:
 class TestFallbackSearch:
     """Tests for _fallback_search() LIKE-based search."""
 
-    def test_finds_by_processed_content(self, full_db):
+    def test_finds_by_processed_content(self, full_db: str) -> None:
         """Finds chunks matching processed_content via LIKE."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._fallback_search('python', count=10)
         assert len(results) >= 1
 
-    def test_finds_by_original_content(self, full_db):
+    def test_finds_by_original_content(self, full_db: str) -> None:
         """Finds chunks matching original content via LIKE."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._fallback_search('decorators', count=10)
         assert len(results) >= 1
 
-    def test_search_type_is_fallback(self, full_db):
+    def test_search_type_is_fallback(self, full_db: str) -> None:
         """All results have search_type == 'fallback'."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._fallback_search('python', count=10)
         for r in results:
             assert r['search_type'] == 'fallback'
 
-    def test_scoring_based_on_word_matches(self, full_db):
+    def test_scoring_based_on_word_matches(self, full_db: str) -> None:
         """Score reflects how many query terms appear in content."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._fallback_search('python programming tutorial', count=10)
@@ -1364,38 +1366,38 @@ class TestFallbackSearch:
             # The chunk with all 3 words should score highest
             assert results[0]['score'] > 0
 
-    def test_limits_to_five_terms(self, full_db):
+    def test_limits_to_five_terms(self, full_db: str) -> None:
         """Only uses first 5 search terms (no error for more)."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._fallback_search('a b c d e f g h', count=10)
         assert isinstance(results, list)
 
-    def test_empty_query_returns_empty(self, full_db):
+    def test_empty_query_returns_empty(self, full_db: str) -> None:
         """Returns [] for an empty query string."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._fallback_search('', count=10)
         assert results == []
 
-    def test_respects_count_limit(self, full_db):
+    def test_respects_count_limit(self, full_db: str) -> None:
         """Returns at most `count` results."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._fallback_search('python', count=1)
         assert len(results) <= 1
 
-    def test_db_error_returns_empty(self):
+    def test_db_error_returns_empty(self) -> None:
         """Returns [] on database error."""
         engine = SearchEngine(backend='sqlite', index_path='/nonexistent/path.db')
         results = engine._fallback_search('test', count=5)
         assert results == []
 
-    def test_sorted_by_score_descending(self, full_db):
+    def test_sorted_by_score_descending(self, full_db: str) -> None:
         """Results are sorted by score descending."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._fallback_search('python', count=10)
         scores = [r['score'] for r in results]
         assert scores == sorted(scores, reverse=True)
 
-    def test_no_match_returns_empty(self, full_db):
+    def test_no_match_returns_empty(self, full_db: str) -> None:
         """Returns [] when no content matches."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._fallback_search('xyznonexistent', count=10)
@@ -1411,7 +1413,7 @@ class TestFallbackSearch:
 class TestResultProcessing:
     """Tests for result ranking, merging, and diversity methods."""
 
-    def _make_engine(self, tmp_path):
+    def _make_engine(self, tmp_path: Path) -> SearchEngine:
         """Helper to create a minimal engine."""
         db_path = str(tmp_path / "proc.db")
         conn = sqlite3.connect(db_path)
@@ -1424,7 +1426,7 @@ class TestResultProcessing:
 
     # -- _merge_results --
 
-    def test_merge_no_overlap(self, tmp_path):
+    def test_merge_no_overlap(self, tmp_path: Path) -> None:
         """Merging disjoint sets yields union."""
         engine = self._make_engine(tmp_path)
         v = [{'id': 1, 'content': 'A', 'score': 0.9, 'metadata': {}}]
@@ -1432,7 +1434,7 @@ class TestResultProcessing:
         merged = engine._merge_results(v, k)
         assert len(merged) == 2
 
-    def test_merge_overlap_combines_scores(self, tmp_path):
+    def test_merge_overlap_combines_scores(self, tmp_path: Path) -> None:
         """Overlapping IDs get combined score."""
         engine = self._make_engine(tmp_path)
         v = [{'id': 1, 'content': 'A', 'score': 0.8, 'metadata': {}}]
@@ -1442,7 +1444,7 @@ class TestResultProcessing:
         # 0.8 * 0.7 + 0.6 * 0.3 = 0.74
         assert abs(merged[0]['score'] - 0.74) < 0.01
 
-    def test_merge_custom_weights(self, tmp_path):
+    def test_merge_custom_weights(self, tmp_path: Path) -> None:
         """Custom weights are applied."""
         engine = self._make_engine(tmp_path)
         v = [{'id': 1, 'content': 'A', 'score': 1.0, 'metadata': {}}]
@@ -1450,16 +1452,16 @@ class TestResultProcessing:
         merged = engine._merge_results(v, k, vector_weight=0.5, keyword_weight=0.5)
         assert abs(merged[0]['score'] - 1.0) < 0.01
 
-    def test_merge_sorted_by_score(self, tmp_path):
+    def test_merge_sorted_by_score(self, tmp_path: Path) -> None:
         """Merged results are sorted by combined score descending."""
         engine = self._make_engine(tmp_path)
         v = [{'id': 1, 'content': 'A', 'score': 0.3, 'metadata': {}},
              {'id': 2, 'content': 'B', 'score': 0.9, 'metadata': {}}]
-        k = []
+        k: list[dict[str, Any]] = []
         merged = engine._merge_results(v, k)
         assert merged[0]['id'] == 2
 
-    def test_merge_adds_search_scores(self, tmp_path):
+    def test_merge_adds_search_scores(self, tmp_path: Path) -> None:
         """Merged results contain search_scores debug info."""
         engine = self._make_engine(tmp_path)
         v = [{'id': 1, 'content': 'A', 'score': 0.8, 'metadata': {}}]
@@ -1467,7 +1469,7 @@ class TestResultProcessing:
         merged = engine._merge_results(v, k)
         assert 'search_scores' in merged[0]['metadata']
 
-    def test_merge_empty_inputs(self, tmp_path):
+    def test_merge_empty_inputs(self, tmp_path: Path) -> None:
         """Merging two empty lists returns empty."""
         engine = self._make_engine(tmp_path)
         merged = engine._merge_results([], [])
@@ -1475,7 +1477,7 @@ class TestResultProcessing:
 
     # -- _boost_exact_matches --
 
-    def test_boost_exact_phrase_match(self, tmp_path):
+    def test_boost_exact_phrase_match(self, tmp_path: Path) -> None:
         """Exact phrase match doubles score."""
         engine = self._make_engine(tmp_path)
         results = [
@@ -1485,7 +1487,7 @@ class TestResultProcessing:
         boosted = engine._boost_exact_matches(results, 'python tutorial')
         assert boosted[0]['final_score'] == 0.5 * 2.0
 
-    def test_boost_no_match_unchanged(self, tmp_path):
+    def test_boost_no_match_unchanged(self, tmp_path: Path) -> None:
         """No boost when query not found in content."""
         engine = self._make_engine(tmp_path)
         results = [
@@ -1495,7 +1497,7 @@ class TestResultProcessing:
         boosted = engine._boost_exact_matches(results, 'python tutorial')
         assert boosted[0]['final_score'] == 0.5
 
-    def test_boost_example_filename(self, tmp_path):
+    def test_boost_example_filename(self, tmp_path: Path) -> None:
         """Boosts results with 'example' in filename for code queries."""
         engine = self._make_engine(tmp_path)
         results = [
@@ -1506,7 +1508,7 @@ class TestResultProcessing:
         # 'code' in query, 'example' in filename => 1.5x boost
         assert boosted[0]['final_score'] > 0.5
 
-    def test_boost_getting_started(self, tmp_path):
+    def test_boost_getting_started(self, tmp_path: Path) -> None:
         """Boosts 'getting started' queries with 'start' in content."""
         engine = self._make_engine(tmp_path)
         results = [
@@ -1516,7 +1518,7 @@ class TestResultProcessing:
         boosted = engine._boost_exact_matches(results, 'getting started')
         assert boosted[0]['final_score'] > 0.5
 
-    def test_boost_empty_query_no_change(self, tmp_path):
+    def test_boost_empty_query_no_change(self, tmp_path: Path) -> None:
         """Empty original_query returns results unchanged."""
         engine = self._make_engine(tmp_path)
         results = [{'id': 1, 'content': 'x', 'score': 0.5, 'metadata': {'filename': 'a.md'}}]
@@ -1525,7 +1527,7 @@ class TestResultProcessing:
 
     # -- _calculate_combined_score --
 
-    def test_combined_score_vector_only(self, tmp_path):
+    def test_combined_score_vector_only(self, tmp_path: Path) -> None:
         """Candidate with vector score only uses it as base."""
         engine = self._make_engine(tmp_path)
         candidate = {
@@ -1537,7 +1539,7 @@ class TestResultProcessing:
         score = engine._calculate_combined_score(candidate, 0.0)
         assert abs(score - 0.9) < 0.01
 
-    def test_combined_score_with_keyword_boost(self, tmp_path):
+    def test_combined_score_with_keyword_boost(self, tmp_path: Path) -> None:
         """Keyword confirmation boosts vector score."""
         engine = self._make_engine(tmp_path)
         candidate = {
@@ -1549,7 +1551,7 @@ class TestResultProcessing:
         score = engine._calculate_combined_score(candidate, 0.0)
         assert score > 0.8  # Boosted
 
-    def test_combined_score_multi_source_boost(self, tmp_path):
+    def test_combined_score_multi_source_boost(self, tmp_path: Path) -> None:
         """Multiple metadata source types give extra boost."""
         engine = self._make_engine(tmp_path)
         candidate = {
@@ -1561,7 +1563,7 @@ class TestResultProcessing:
         score = engine._calculate_combined_score(candidate, 0.0)
         assert score > 0.8
 
-    def test_combined_score_no_vector(self, tmp_path):
+    def test_combined_score_no_vector(self, tmp_path: Path) -> None:
         """Keyword-only candidate returns its raw score under max-signal-wins.
 
         Prior algorithm penalized non-vector matches to 60% of their score; the
@@ -1578,7 +1580,7 @@ class TestResultProcessing:
         score = engine._calculate_combined_score(candidate, 0.0)
         assert abs(score - 1.0) < 0.01
 
-    def test_combined_score_code_tag_boost(self, tmp_path):
+    def test_combined_score_code_tag_boost(self, tmp_path: Path) -> None:
         """Code tag with metadata source gets boosted."""
         engine = self._make_engine(tmp_path)
         candidate = {
@@ -1591,7 +1593,7 @@ class TestResultProcessing:
         # Should be > 0.7 due to keyword boost + code boost
         assert score > 0.7
 
-    def test_combined_score_no_vector_code_tag(self, tmp_path):
+    def test_combined_score_no_vector_code_tag(self, tmp_path: Path) -> None:
         """Single-source metadata match returns raw score; code tag is no longer scored.
 
         Prior algorithm multiplied non-vector matches by 0.6 and added a 1.15x
@@ -1611,12 +1613,12 @@ class TestResultProcessing:
 
     # -- _apply_diversity_penalties --
 
-    def test_diversity_no_results(self, tmp_path):
+    def test_diversity_no_results(self, tmp_path: Path) -> None:
         """Empty input returns empty output."""
         engine = self._make_engine(tmp_path)
         assert engine._apply_diversity_penalties([], 3) == []
 
-    def test_diversity_first_occurrence_no_penalty(self, tmp_path):
+    def test_diversity_first_occurrence_no_penalty(self, tmp_path: Path) -> None:
         """First chunk from a file has no penalty (1.0)."""
         engine = self._make_engine(tmp_path)
         results = [
@@ -1626,7 +1628,7 @@ class TestResultProcessing:
         penalized = engine._apply_diversity_penalties(results, 3)
         assert penalized[0]['diversity_penalty'] == 1.0
 
-    def test_diversity_second_occurrence_penalized(self, tmp_path):
+    def test_diversity_second_occurrence_penalized(self, tmp_path: Path) -> None:
         """Second chunk from the same file gets 0.85 penalty."""
         engine = self._make_engine(tmp_path)
         results = [
@@ -1640,7 +1642,7 @@ class TestResultProcessing:
         penalties = sorted([r['diversity_penalty'] for r in same_file], reverse=True)
         assert penalties == [1.0, 0.85]
 
-    def test_diversity_resorts_by_penalized_score(self, tmp_path):
+    def test_diversity_resorts_by_penalized_score(self, tmp_path: Path) -> None:
         """Results are re-sorted after penalties."""
         engine = self._make_engine(tmp_path)
         results = [
@@ -1655,7 +1657,7 @@ class TestResultProcessing:
         scores = [r['final_score'] for r in penalized]
         assert scores == sorted(scores, reverse=True)
 
-    def test_diversity_heavy_penalty_for_4plus(self, tmp_path):
+    def test_diversity_heavy_penalty_for_4plus(self, tmp_path: Path) -> None:
         """4th and 5th chunks from same file get 50%/60% penalty."""
         engine = self._make_engine(tmp_path)
         results = [
@@ -1671,7 +1673,7 @@ class TestResultProcessing:
 
     # -- _apply_match_type_diversity --
 
-    def test_match_type_diversity_with_all_types(self, tmp_path):
+    def test_match_type_diversity_with_all_types(self, tmp_path: Path) -> None:
         """Diversifies among vector-only, keyword-only, and hybrid results."""
         engine = self._make_engine(tmp_path)
         results = []
@@ -1688,7 +1690,7 @@ class TestResultProcessing:
         diversified = engine._apply_match_type_diversity(results, 3)
         assert len(diversified) == 3
 
-    def test_match_type_diversity_short_list_unchanged(self, tmp_path):
+    def test_match_type_diversity_short_list_unchanged(self, tmp_path: Path) -> None:
         """Lists shorter than target_count are returned as-is."""
         engine = self._make_engine(tmp_path)
         results = [
@@ -1698,12 +1700,12 @@ class TestResultProcessing:
         diversified = engine._apply_match_type_diversity(results, 5)
         assert len(diversified) == 1
 
-    def test_match_type_diversity_empty(self, tmp_path):
+    def test_match_type_diversity_empty(self, tmp_path: Path) -> None:
         """Empty input returns empty."""
         engine = self._make_engine(tmp_path)
         assert engine._apply_match_type_diversity([], 3) == []
 
-    def test_match_type_diversity_sorted_by_final_score(self, tmp_path):
+    def test_match_type_diversity_sorted_by_final_score(self, tmp_path: Path) -> None:
         """Output is sorted by final_score descending."""
         engine = self._make_engine(tmp_path)
         results = []
@@ -1729,32 +1731,32 @@ class TestResultProcessing:
 class TestEdgeCases:
     """Edge cases: empty results, unavailable dependencies, special characters."""
 
-    def test_empty_db_search_returns_empty(self, empty_db):
+    def test_empty_db_search_returns_empty(self, empty_db: str) -> None:
         """search() on empty DB returns empty list."""
         engine = SearchEngine(backend='sqlite', index_path=empty_db)
-        engine._keyword_search_only = Mock(return_value=[])
+        engine._keyword_search_only = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         results = engine.search([0.1], 'test', count=3)
         assert results == []
 
-    def test_empty_db_keyword_search(self, empty_db):
+    def test_empty_db_keyword_search(self, empty_db: str) -> None:
         """_keyword_search on empty DB returns []."""
         engine = SearchEngine(backend='sqlite', index_path=empty_db)
         results = engine._keyword_search('test', count=5)
         assert results == []
 
-    def test_empty_db_fallback_search(self, empty_db):
+    def test_empty_db_fallback_search(self, empty_db: str) -> None:
         """_fallback_search on empty DB returns []."""
         engine = SearchEngine(backend='sqlite', index_path=empty_db)
         results = engine._fallback_search('test', count=5)
         assert results == []
 
-    def test_empty_db_filename_search(self, empty_db):
+    def test_empty_db_filename_search(self, empty_db: str) -> None:
         """_filename_search on empty DB returns []."""
         engine = SearchEngine(backend='sqlite', index_path=empty_db)
         results = engine._filename_search('test', count=5)
         assert results == []
 
-    def test_empty_db_metadata_search(self, empty_db):
+    def test_empty_db_metadata_search(self, empty_db: str) -> None:
         """_metadata_search on empty DB returns []."""
         engine = SearchEngine(backend='sqlite', index_path=empty_db)
         results = engine._metadata_search('test', count=5)
@@ -1762,38 +1764,38 @@ class TestEdgeCases:
 
     @patch('signalwire.search.search_engine.np', None)
     @patch('signalwire.search.search_engine.cosine_similarity', None)
-    def test_numpy_unavailable_keyword_search_only(self, full_db):
+    def test_numpy_unavailable_keyword_search_only(self, full_db: str) -> None:
         """When numpy is None, search() uses keyword-only path."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine.search([0.1], 'python', count=3)
         # Should get keyword results (or empty) but not crash
         assert isinstance(results, list)
 
-    def test_special_characters_in_keyword_query(self, full_db):
+    def test_special_characters_in_keyword_query(self, full_db: str) -> None:
         """Special characters in query don't crash keyword search."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._keyword_search('test* OR "hello"', count=5)
         assert isinstance(results, list)
 
-    def test_special_characters_in_fallback_query(self, full_db):
+    def test_special_characters_in_fallback_query(self, full_db: str) -> None:
         """Special characters in query don't crash fallback search."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._fallback_search("it's a test% with_underscores", count=5)
         assert isinstance(results, list)
 
-    def test_special_characters_in_filename_query(self, full_db):
+    def test_special_characters_in_filename_query(self, full_db: str) -> None:
         """Special characters in query don't crash filename search."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._filename_search("test/path with spaces", count=5)
         assert isinstance(results, list)
 
-    def test_special_characters_in_metadata_query(self, full_db):
+    def test_special_characters_in_metadata_query(self, full_db: str) -> None:
         """Special characters in query don't crash metadata search."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._metadata_search('test "with" quotes', count=5)
         assert isinstance(results, list)
 
-    def test_fts5_unavailable_falls_back(self, db_no_fts):
+    def test_fts5_unavailable_falls_back(self, db_no_fts: str) -> None:
         """When FTS5 table is missing, _keyword_search falls back to LIKE."""
         engine = SearchEngine(backend='sqlite', index_path=db_no_fts)
         results = engine._keyword_search('python', count=5)
@@ -1801,57 +1803,57 @@ class TestEdgeCases:
         if results:
             assert results[0]['search_type'] == 'fallback'
 
-    def test_init_invalid_backend_raises(self):
+    def test_init_invalid_backend_raises(self) -> None:
         """Invalid backend name raises ValueError."""
         with pytest.raises(ValueError, match="Invalid backend"):
             SearchEngine(backend='invalid', index_path='test.db')
 
-    def test_init_sqlite_no_path_raises(self):
+    def test_init_sqlite_no_path_raises(self) -> None:
         """sqlite backend without index_path raises ValueError."""
         with pytest.raises(ValueError, match="index_path is required"):
             SearchEngine(backend='sqlite')
 
-    def test_init_pgvector_no_connection_raises(self):
+    def test_init_pgvector_no_connection_raises(self) -> None:
         """pgvector backend without connection_string raises ValueError."""
         with pytest.raises(ValueError, match="connection_string and collection_name are required"):
             SearchEngine(backend='pgvector')
 
-    def test_keyword_search_only_no_tags(self, full_db):
+    def test_keyword_search_only_no_tags(self, full_db: str) -> None:
         """_keyword_search_only without tags returns keyword results."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._keyword_search_only('python', count=5)
         assert isinstance(results, list)
 
-    def test_keyword_search_only_with_tags(self, full_db):
+    def test_keyword_search_only_with_tags(self, full_db: str) -> None:
         """_keyword_search_only with tags filters results."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         results = engine._keyword_search_only('python', count=5, tags=['python'])
         for r in results:
             assert 'python' in r['metadata'].get('tags', [])
 
-    def test_escape_fts_query_empty(self, full_db):
+    def test_escape_fts_query_empty(self, full_db: str) -> None:
         """Empty string is escaped to empty string."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         assert engine._escape_fts_query('') == ''
 
-    def test_escape_fts_query_single_term(self, full_db):
+    def test_escape_fts_query_single_term(self, full_db: str) -> None:
         """Single term is quoted."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         assert engine._escape_fts_query('hello') == '"hello"'
 
-    def test_escape_fts_query_strips_quotes(self, full_db):
+    def test_escape_fts_query_strips_quotes(self, full_db: str) -> None:
         """Existing double quotes are stripped then re-quoted."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         assert engine._escape_fts_query('"hello" "world"') == '"hello" "world"'
 
-    def test_get_stats_empty_db(self, empty_db):
+    def test_get_stats_empty_db(self, empty_db: str) -> None:
         """get_stats on empty DB returns zero counts."""
         engine = SearchEngine(backend='sqlite', index_path=empty_db)
         stats = engine.get_stats()
         assert stats['total_chunks'] == 0
         assert stats['total_files'] == 0
 
-    def test_get_stats_populated_db(self, full_db):
+    def test_get_stats_populated_db(self, full_db: str) -> None:
         """get_stats returns accurate counts for populated DB."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
         stats = engine.get_stats()
@@ -1869,7 +1871,7 @@ class TestAddVectorScoresToCandidates:
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_adds_vector_scores(self, mock_cosine, mock_np, full_db):
+    def test_adds_vector_scores(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
         """Adds vector_score and vector_distance to candidates."""
         mock_array = Mock()
         mock_array.reshape.return_value = [[0.0]]
@@ -1878,41 +1880,41 @@ class TestAddVectorScoresToCandidates:
         mock_cosine.return_value = [[0.85]]
 
         engine = SearchEngine(backend='sqlite', index_path=full_db)
-        candidates = {
+        candidates: dict[int, dict[str, Any]] = {
             1: {'id': 1, 'sources': {}, 'metadata': {}},
         }
-        engine._add_vector_scores_to_candidates(candidates, [[0.1, 0.1, 0.1, 0.1]], 0.5)
+        engine._add_vector_scores_to_candidates(candidates, [[0.1, 0.1, 0.1, 0.1]], 0.5)  # type: ignore[arg-type]  # int candidate keys are valid test data (sqlite binds either)
         assert 'vector_score' in candidates[1]
         assert 'vector_distance' in candidates[1]
         assert candidates[1]['sources'].get('vector_rerank')
 
     @patch('signalwire.search.search_engine.np', None)
-    def test_no_numpy_does_nothing(self, full_db):
+    def test_no_numpy_does_nothing(self, full_db: str) -> None:
         """Does nothing when numpy is unavailable."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
-        candidates = {1: {'id': 1, 'sources': {}, 'metadata': {}}}
-        engine._add_vector_scores_to_candidates(candidates, [[0.1]], 0.5)
+        candidates: dict[int, dict[str, Any]] = {1: {'id': 1, 'sources': {}, 'metadata': {}}}
+        engine._add_vector_scores_to_candidates(candidates, [[0.1]], 0.5)  # type: ignore[arg-type]  # int candidate keys are valid test data (sqlite binds either)
         assert 'vector_score' not in candidates[1]
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_empty_candidates(self, mock_cosine, mock_np, full_db):
+    def test_empty_candidates(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
         """Does nothing with empty candidates dict."""
         engine = SearchEngine(backend='sqlite', index_path=full_db)
-        candidates = {}
-        engine._add_vector_scores_to_candidates(candidates, [[0.1]], 0.5)
+        candidates: dict[int, dict[str, Any]] = {}
+        engine._add_vector_scores_to_candidates(candidates, [[0.1]], 0.5)  # type: ignore[arg-type]  # int candidate keys are valid test data (sqlite binds either)
         assert candidates == {}
 
     @patch('signalwire.search.search_engine.np')
     @patch('signalwire.search.search_engine.cosine_similarity')
-    def test_db_error_handled(self, mock_cosine, mock_np):
+    def test_db_error_handled(self, mock_cosine: MagicMock, mock_np: MagicMock) -> None:
         """When the SQLite db cannot be opened (path doesn't exist), the
         method must catch the error and leave the candidates dict
         unchanged — specifically NO vector_score gets attached because
         no embedding row was ever read."""
         engine = SearchEngine(backend='sqlite', index_path='/nonexistent/path.db')
-        candidates = {1: {'id': 1, 'sources': {}, 'metadata': {}}}
-        engine._add_vector_scores_to_candidates(candidates, [[0.1]], 0.5)
+        candidates: dict[int, dict[str, Any]] = {1: {'id': 1, 'sources': {}, 'metadata': {}}}
+        engine._add_vector_scores_to_candidates(candidates, [[0.1]], 0.5)  # type: ignore[arg-type]  # int candidate keys are valid test data (sqlite binds either)
         # Candidate dict still exists with same key.
         assert list(candidates.keys()) == [1]
         # But no vector score was attached because the read failed.

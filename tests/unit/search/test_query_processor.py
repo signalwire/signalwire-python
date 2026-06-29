@@ -33,31 +33,31 @@ from signalwire.search.query_processor import (
 class TestLanguageDetection:
     """Test language detection functionality"""
     
-    def test_detect_english(self):
+    def test_detect_english(self) -> None:
         """Test detection of English text"""
         english_text = "The quick brown fox jumps over the lazy dog"
         assert detect_language(english_text) == 'en'
     
-    def test_detect_spanish(self):
+    def test_detect_spanish(self) -> None:
         """Test detection of Spanish text"""
         spanish_text = "El perro come la comida en el parque"
         assert detect_language(spanish_text) == 'es'
     
-    def test_detect_mixed_language_english_dominant(self):
+    def test_detect_mixed_language_english_dominant(self) -> None:
         """Test detection when English words dominate"""
         mixed_text = "The dog and el gato are friends"
         assert detect_language(mixed_text) == 'en'
     
-    def test_detect_mixed_language_spanish_dominant(self):
+    def test_detect_mixed_language_spanish_dominant(self) -> None:
         """Test detection when Spanish words dominate"""
         mixed_text = "El perro y the cat son amigos"
         assert detect_language(mixed_text) == 'es'
     
-    def test_detect_empty_text(self):
+    def test_detect_empty_text(self) -> None:
         """Test detection with empty text"""
         assert detect_language("") == 'en'  # Default to English
     
-    def test_detect_unknown_language(self):
+    def test_detect_unknown_language(self) -> None:
         """Test detection with unknown language defaults to English"""
         unknown_text = "xyz abc def ghi"
         assert detect_language(unknown_text) == 'en'
@@ -66,7 +66,7 @@ class TestLanguageDetection:
 class TestSpacyModelLoading:
     """Test spaCy model loading functionality"""
     
-    def test_load_spacy_model_success(self):
+    def test_load_spacy_model_success(self) -> None:
         """Test successful spaCy model loading"""
         with patch('builtins.__import__') as mock_import:
             mock_spacy = Mock()
@@ -79,7 +79,7 @@ class TestSpacyModelLoading:
             mock_spacy.load.assert_called_once_with('en_core_web_sm')
             assert result == mock_model
     
-    def test_load_spacy_model_not_found(self):
+    def test_load_spacy_model_not_found(self) -> None:
         """Test spaCy model loading when model not found"""
         # Inject a fake spacy module whose load() raises OSError, so the real
         # `import spacy; spacy.load(...)` path uses the mock without hijacking
@@ -96,7 +96,7 @@ class TestSpacyModelLoading:
                     assert result is None
                     mock_logger.warning.assert_called_once()
 
-    def test_load_spacy_model_import_error(self):
+    def test_load_spacy_model_import_error(self) -> None:
         """Test spaCy model loading when spaCy not available"""
         # Setting the module to None in sys.modules makes `import spacy` raise
         # ImportError — a version-robust alternative to patching __import__.
@@ -109,7 +109,7 @@ class TestSpacyModelLoading:
                     assert result is None
                     mock_logger.warning.assert_called_once()
     
-    def test_load_spacy_model_different_languages(self):
+    def test_load_spacy_model_different_languages(self) -> None:
         """Test loading models for different languages"""
         with patch('builtins.__import__') as mock_import:
             mock_spacy = Mock()
@@ -128,7 +128,7 @@ class TestSpacyModelLoading:
                 load_spacy_model(lang)
                 mock_spacy.load.assert_called_with(expected_model)
     
-    def test_load_spacy_model_unknown_language(self):
+    def test_load_spacy_model_unknown_language(self) -> None:
         """Test loading model for unknown language defaults to English"""
         with patch('builtins.__import__') as mock_import:
             mock_spacy = Mock()
@@ -143,7 +143,7 @@ class TestSpacyModelLoading:
 class TestQueryVectorization:
     """Test query vectorization functionality"""
     
-    def test_vectorize_query_success(self):
+    def test_vectorize_query_success(self) -> None:
         """Test successful query vectorization"""
         from signalwire.search import query_processor as _qp
 
@@ -164,7 +164,7 @@ class TestQueryVectorization:
         # Clean up cached mock model
         _qp._model_cache.clear()
     
-    def test_vectorize_query_import_error(self):
+    def test_vectorize_query_import_error(self) -> None:
         """Test query vectorization when sentence-transformers not available"""
         from signalwire.search import query_processor as _qp
 
@@ -187,7 +187,7 @@ class TestNLTKResources:
     """Test NLTK resource management"""
     
     @patch('signalwire.search.query_processor.nltk')
-    def test_ensure_nltk_resources_already_present(self, mock_nltk):
+    def test_ensure_nltk_resources_already_present(self, mock_nltk: MagicMock) -> None:
         """Test when NLTK resources are already present"""
         mock_nltk.data.find.return_value = True
         
@@ -197,7 +197,7 @@ class TestNLTKResources:
         mock_nltk.download.assert_not_called()
     
     @patch('signalwire.search.query_processor.nltk')
-    def test_ensure_nltk_resources_download_needed(self, mock_nltk):
+    def test_ensure_nltk_resources_download_needed(self, mock_nltk: MagicMock) -> None:
         """Test when NLTK resources need to be downloaded"""
         mock_nltk.data.find.side_effect = LookupError("Resource not found")
         
@@ -207,7 +207,7 @@ class TestNLTKResources:
         assert mock_nltk.download.call_count == 5  # punkt, punkt_tab, wordnet, averaged_perceptron_tagger, stopwords
     
     @patch('signalwire.search.query_processor.nltk')
-    def test_ensure_nltk_resources_download_error(self, mock_nltk):
+    def test_ensure_nltk_resources_download_error(self, mock_nltk: MagicMock) -> None:
         """Test when NLTK resource download fails"""
         mock_nltk.data.find.side_effect = LookupError("Resource not found")
         mock_nltk.download.side_effect = Exception("Download failed")
@@ -222,7 +222,7 @@ class TestNLTKResources:
 class TestWordNetUtilities:
     """Test WordNet utility functions"""
     
-    def test_get_wordnet_pos_known_tags(self):
+    def test_get_wordnet_pos_known_tags(self) -> None:
         """Test mapping of known POS tags"""
         from nltk.corpus import wordnet as wn
         
@@ -232,14 +232,14 @@ class TestWordNetUtilities:
         assert get_wordnet_pos('ADV') == wn.ADV
         assert get_wordnet_pos('PROPN') == wn.NOUN
     
-    def test_get_wordnet_pos_unknown_tag(self):
+    def test_get_wordnet_pos_unknown_tag(self) -> None:
         """Test mapping of unknown POS tag defaults to NOUN"""
         from nltk.corpus import wordnet as wn
         
         assert get_wordnet_pos('UNKNOWN') == wn.NOUN
     
     @patch('signalwire.search.query_processor.wn')
-    def test_get_synonyms_success(self, mock_wn):
+    def test_get_synonyms_success(self, mock_wn: MagicMock) -> None:
         """Test successful synonym retrieval"""
         # Mock WordNet synsets and lemmas
         mock_lemma1 = Mock()
@@ -259,7 +259,7 @@ class TestWordNetUtilities:
         assert 'joyful' in result
     
     @patch('signalwire.search.query_processor.wn')
-    def test_get_synonyms_no_synsets(self, mock_wn):
+    def test_get_synonyms_no_synsets(self, mock_wn: MagicMock) -> None:
         """Test synonym retrieval when no synsets found"""
         mock_wn.synsets.return_value = []
         mock_wn.NOUN = 'n'
@@ -269,7 +269,7 @@ class TestWordNetUtilities:
         assert result == []
     
     @patch('signalwire.search.query_processor.wn')
-    def test_get_synonyms_error(self, mock_wn):
+    def test_get_synonyms_error(self, mock_wn: MagicMock) -> None:
         """Test synonym retrieval with error"""
         mock_wn.synsets.side_effect = Exception("WordNet error")
         
@@ -283,7 +283,7 @@ class TestWordNetUtilities:
 class TestTextProcessing:
     """Test text processing utilities"""
     
-    def test_remove_duplicate_words_basic(self):
+    def test_remove_duplicate_words_basic(self) -> None:
         """Test basic duplicate word removal"""
         text = "the quick brown fox jumps over the lazy dog"
         result = remove_duplicate_words(text)
@@ -294,7 +294,7 @@ class TestTextProcessing:
         assert 'quick' in words
         assert 'brown' in words
     
-    def test_remove_duplicate_words_with_punctuation(self):
+    def test_remove_duplicate_words_with_punctuation(self) -> None:
         """Test duplicate removal with punctuation"""
         text = "Hello, world! Hello again."
         result = remove_duplicate_words(text)
@@ -303,7 +303,7 @@ class TestTextProcessing:
         assert result.count('Hello') == 1
         assert ',' in result or '!' in result
     
-    def test_remove_duplicate_words_case_insensitive(self):
+    def test_remove_duplicate_words_case_insensitive(self) -> None:
         """Test duplicate removal is case insensitive"""
         text = "The cat and THE dog"
         result = remove_duplicate_words(text)
@@ -312,12 +312,12 @@ class TestTextProcessing:
         words = result.lower().split()
         assert words.count('the') == 1
     
-    def test_remove_duplicate_words_empty_string(self):
+    def test_remove_duplicate_words_empty_string(self) -> None:
         """Test duplicate removal with empty string"""
         result = remove_duplicate_words("")
         assert result == ""
     
-    def test_remove_duplicate_words_no_duplicates(self):
+    def test_remove_duplicate_words_no_duplicates(self) -> None:
         """Test duplicate removal when no duplicates exist"""
         text = "unique words only here"
         result = remove_duplicate_words(text)
@@ -329,7 +329,7 @@ class TestQueryPreprocessing:
     
     @patch('signalwire.search.query_processor.detect_language')
     @patch('signalwire.search.query_processor.load_spacy_model')
-    def test_preprocess_query_basic(self, mock_load_spacy, mock_detect_lang):
+    def test_preprocess_query_basic(self, mock_load_spacy: MagicMock, mock_detect_lang: MagicMock) -> None:
         """Test basic query preprocessing"""
         mock_detect_lang.return_value = 'en'
         mock_load_spacy.return_value = None  # Use NLTK fallback
@@ -342,7 +342,7 @@ class TestQueryPreprocessing:
     
     @patch('signalwire.search.query_processor.detect_language')
     @patch('signalwire.search.query_processor.vectorize_query')
-    def test_preprocess_query_with_vector(self, mock_vectorize, mock_detect_lang):
+    def test_preprocess_query_with_vector(self, mock_vectorize: MagicMock, mock_detect_lang: MagicMock) -> None:
         """Test query preprocessing with vectorization"""
         mock_detect_lang.return_value = 'en'
         # Mock vectorize_query to return a numpy-like object with tolist method
@@ -357,7 +357,7 @@ class TestQueryPreprocessing:
         mock_vectorize.assert_called_once()
     
     @patch('signalwire.search.query_processor.vectorize_query')
-    def test_preprocess_query_vectorize_only(self, mock_vectorize):
+    def test_preprocess_query_vectorize_only(self, mock_vectorize: MagicMock) -> None:
         """Test query preprocessing with vectorize_query_param=True"""
         # Mock vectorize_query to return a numpy-like object with tolist method
         mock_vector = Mock()
@@ -370,7 +370,7 @@ class TestQueryPreprocessing:
         assert result['vector'] == [0.1, 0.2, 0.3]
         mock_vectorize.assert_called_once_with("test query")
     
-    def test_preprocess_query_auto_language_detection(self):
+    def test_preprocess_query_auto_language_detection(self) -> None:
         """Test query preprocessing with automatic language detection"""
         with patch('signalwire.search.query_processor.detect_language') as mock_detect:
             mock_detect.return_value = 'es'
@@ -381,7 +381,7 @@ class TestQueryPreprocessing:
             assert result['language'] == 'es'
     
     @patch('signalwire.search.query_processor.load_spacy_model')
-    def test_preprocess_query_with_spacy(self, mock_load_spacy):
+    def test_preprocess_query_with_spacy(self, mock_load_spacy: MagicMock) -> None:
         """Test query preprocessing with spaCy backend"""
         # Mock spaCy model and processing
         mock_doc = Mock()
@@ -408,7 +408,7 @@ class TestQueryPreprocessing:
     
     @patch('signalwire.search.query_processor.get_synonyms')
     @patch('signalwire.search.query_processor.load_spacy_model')
-    def test_preprocess_query_with_synonym_expansion(self, mock_load_spacy, mock_get_synonyms):
+    def test_preprocess_query_with_synonym_expansion(self, mock_load_spacy: MagicMock, mock_get_synonyms: MagicMock) -> None:
         """Test query preprocessing with synonym expansion"""
         mock_load_spacy.return_value = None  # Use NLTK
         mock_get_synonyms.return_value = ['happy', 'joyful']
@@ -425,7 +425,7 @@ class TestDocumentPreprocessing:
     """Test document content preprocessing"""
     
     @patch('signalwire.search.query_processor.load_spacy_model')
-    def test_preprocess_document_content_basic(self, mock_load_spacy):
+    def test_preprocess_document_content_basic(self, mock_load_spacy: MagicMock) -> None:
         """Test basic document content preprocessing"""
         mock_load_spacy.return_value = None  # Use NLTK fallback
         
@@ -438,7 +438,7 @@ class TestDocumentPreprocessing:
         assert 'keywords' in result
     
     @patch('signalwire.search.query_processor.load_spacy_model')
-    def test_preprocess_document_content_with_spacy(self, mock_load_spacy):
+    def test_preprocess_document_content_with_spacy(self, mock_load_spacy: MagicMock) -> None:
         """Test document preprocessing with spaCy backend"""
         # Mock spaCy processing
         mock_doc = Mock()
@@ -459,7 +459,7 @@ class TestDocumentPreprocessing:
         assert 'keywords' in result
         mock_load_spacy.assert_called_once()
     
-    def test_preprocess_document_content_different_language(self):
+    def test_preprocess_document_content_different_language(self) -> None:
         """Test document preprocessing with different language"""
         content = "Este es un documento de prueba."
         result = preprocess_document_content(content, language='es')
@@ -468,7 +468,7 @@ class TestDocumentPreprocessing:
         assert 'enhanced_text' in result
         assert 'keywords' in result
     
-    def test_preprocess_document_content_empty(self):
+    def test_preprocess_document_content_empty(self) -> None:
         """Test document preprocessing with empty content"""
         result = preprocess_document_content("")
         
@@ -481,7 +481,7 @@ class TestErrorHandling:
     """Test error handling in query processor"""
     
     @patch('signalwire.search.query_processor.nltk')
-    def test_preprocess_query_nltk_error(self, mock_nltk):
+    def test_preprocess_query_nltk_error(self, mock_nltk: MagicMock) -> None:
         """Test query preprocessing when NLTK operations fail gracefully"""
         # Mock NLTK to work for most operations but fail for one
         mock_nltk.word_tokenize.return_value = ['test', 'query']
@@ -496,7 +496,7 @@ class TestErrorHandling:
         # Should fallback to basic processing
     
     @patch('signalwire.search.query_processor.vectorize_query')
-    def test_preprocess_query_vectorization_error(self, mock_vectorize):
+    def test_preprocess_query_vectorization_error(self, mock_vectorize: MagicMock) -> None:
         """Test query preprocessing when vectorization fails"""
         mock_vectorize.return_value = None  # Simulate vectorization failure
         

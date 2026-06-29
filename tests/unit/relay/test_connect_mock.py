@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import asyncio
 import os
+from typing import Any
 
 import pytest
 
@@ -30,7 +31,7 @@ from signalwire.relay.constants import (
     PROTOCOL_VERSION,
 )
 
-from .conftest import _RELAY_MOCK_AVAILABLE
+from .conftest import _MockRelayHarness, _RELAY_MOCK_AVAILABLE
 
 
 pytestmark = pytest.mark.skipif(
@@ -44,7 +45,9 @@ pytestmark = pytest.mark.skipif(
 # ---------------------------------------------------------------------------
 
 
-async def test_connect_returns_protocol_string(signalwire_relay_client):
+async def test_connect_returns_protocol_string(
+    signalwire_relay_client: RelayClient,
+) -> None:
     """``client.connect()`` succeeds and ``client.relay_protocol`` is non-empty."""
     client = signalwire_relay_client
     # The fixture already called connect(); assert state is consistent.
@@ -55,16 +58,16 @@ async def test_connect_returns_protocol_string(signalwire_relay_client):
 
 
 async def test_connect_journal_records_signalwire_connect(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """The journal contains exactly one signalwire.connect frame from the SDK."""
     j = mock_relay.journal_recv(method=METHOD_SIGNALWIRE_CONNECT)
     assert len(j) == 1, f"expected 1 connect; got {len(j)}: {[e.frame for e in j]}"
 
 
 async def test_connect_journal_carries_project_and_token(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """The auth block on the wire contains the project/token we configured."""
     [entry] = mock_relay.journal_recv(method=METHOD_SIGNALWIRE_CONNECT)
     auth = entry.frame["params"]["authentication"]
@@ -72,15 +75,17 @@ async def test_connect_journal_carries_project_and_token(
     assert auth["token"] == "test_tok"
 
 
-async def test_connect_journal_carries_contexts(signalwire_relay_client, mock_relay):
+async def test_connect_journal_carries_contexts(
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """The contexts list flows into the connect frame's ``contexts`` field."""
     [entry] = mock_relay.journal_recv(method=METHOD_SIGNALWIRE_CONNECT)
     assert entry.frame["params"]["contexts"] == ["default"]
 
 
 async def test_connect_journal_carries_agent_and_version(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """The wire frame includes the SDK agent string and protocol version."""
     [entry] = mock_relay.journal_recv(method=METHOD_SIGNALWIRE_CONNECT)
     p = entry.frame["params"]
@@ -88,7 +93,9 @@ async def test_connect_journal_carries_agent_and_version(
     assert p["version"] == PROTOCOL_VERSION
 
 
-async def test_connect_journal_event_acks_true(signalwire_relay_client, mock_relay):
+async def test_connect_journal_event_acks_true(
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """``event_acks`` is sent as True so the server starts ack-mode."""
     [entry] = mock_relay.journal_recv(method=METHOD_SIGNALWIRE_CONNECT)
     assert entry.frame["params"]["event_acks"] is True
@@ -100,8 +107,8 @@ async def test_connect_journal_event_acks_true(signalwire_relay_client, mock_rel
 
 
 async def test_reconnect_with_protocol_string_includes_protocol_in_frame(
-    mock_relay, relay_ws_redirect
-):
+    mock_relay: _MockRelayHarness, relay_ws_redirect: Any
+) -> None:
     """A second connect with a stored protocol string carries it on the wire."""
     _active_clients.clear()
     issued: dict[str, str] = {}
@@ -137,8 +144,8 @@ async def test_reconnect_with_protocol_string_includes_protocol_in_frame(
 
 
 async def test_reconnect_with_protocol_preserves_protocol_value(
-    mock_relay, relay_ws_redirect
-):
+    mock_relay: _MockRelayHarness, relay_ws_redirect: Any
+) -> None:
     """The protocol the SDK reports after reconnect equals what it sent."""
     _active_clients.clear()
     issued: dict[str, str] = {}
@@ -166,7 +173,9 @@ async def test_reconnect_with_protocol_preserves_protocol_value(
 # ---------------------------------------------------------------------------
 
 
-async def test_connect_rejects_empty_creds_at_constructor(monkeypatch):
+async def test_connect_rejects_empty_creds_at_constructor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """The SDK refuses to construct a client with empty creds."""
     monkeypatch.delenv("SIGNALWIRE_PROJECT_ID", raising=False)
     monkeypatch.delenv("SIGNALWIRE_API_TOKEN", raising=False)
@@ -175,7 +184,9 @@ async def test_connect_rejects_empty_creds_at_constructor(monkeypatch):
         RelayClient(project="", token="", host="anywhere")
 
 
-async def test_unauthenticated_raw_connect_rejected_by_mock(mock_relay):
+async def test_unauthenticated_raw_connect_rejected_by_mock(
+    mock_relay: _MockRelayHarness,
+) -> None:
     """Bypassing the SDK to send a connect with empty creds — mock returns AUTH_REQUIRED.
 
     The SDK won't construct an empty-creds client, so we drive the wire
@@ -219,7 +230,9 @@ async def test_unauthenticated_raw_connect_rejected_by_mock(mock_relay):
 # ---------------------------------------------------------------------------
 
 
-async def test_connect_with_jwt_carries_jwt_on_wire(mock_relay, relay_ws_redirect):
+async def test_connect_with_jwt_carries_jwt_on_wire(
+    mock_relay: _MockRelayHarness, relay_ws_redirect: Any
+) -> None:
     """A JWT-only client sends ``authentication.jwt_token``, no project/token."""
     _active_clients.clear()
     with relay_ws_redirect:

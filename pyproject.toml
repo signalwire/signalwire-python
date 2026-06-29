@@ -212,7 +212,10 @@ extend-immutable-calls = [
 
 [tool.mypy]
 python_version = "3.10"
-files = ["signalwire/signalwire"]
+# Both the source tree AND the test suite are in scope — the generated REST tests are
+# strict-clean by construction, and the hand-written tests were fully annotated, so the
+# strict bar now covers tests too (a new untyped test fails the gate).
+files = ["signalwire/signalwire", "tests"]
 # Third-party packages without type stubs (nltk, sentence_transformers, the
 # search/relay stacks) are out of scope — we type our own code, not theirs.
 ignore_missing_imports = true

@@ -26,6 +26,7 @@ import pytest
 
 from signalwire.relay.call import (
     AIAction,
+    Call,
     CollectAction,
     DetectAction,
     FaxAction,
@@ -37,9 +38,10 @@ from signalwire.relay.call import (
     TapAction,
     TranscribeAction,
 )
+from signalwire.relay.client import RelayClient
 from signalwire.relay.event import RelayEvent
 
-from .conftest import _RELAY_MOCK_AVAILABLE
+from .conftest import _MockRelayHarness, _RELAY_MOCK_AVAILABLE
 
 
 pytestmark = pytest.mark.skipif(
@@ -53,13 +55,15 @@ pytestmark = pytest.mark.skipif(
 # ---------------------------------------------------------------------------
 
 
-async def _answered_inbound_call(client, mock_relay, call_id: str = "act-call-1"):
+async def _answered_inbound_call(
+    client: RelayClient, mock_relay: _MockRelayHarness, call_id: str = "act-call-1"
+) -> Call:
     """Push an inbound call, wait for the handler to capture it, return it."""
-    captured: dict[str, object] = {}
+    captured: dict[str, Call] = {}
     handler_returned = asyncio.Event()
 
     @client.on_call
-    async def _handle(call):
+    async def _handle(call: Call) -> None:
         captured["call"] = call
         await call.answer()
         handler_returned.set()
@@ -77,7 +81,7 @@ async def _answered_inbound_call(client, mock_relay, call_id: str = "act-call-1"
 # ---------------------------------------------------------------------------
 
 
-async def test_play_journals_calling_play(signalwire_relay_client, mock_relay):
+async def test_play_journals_calling_play(signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-play"
     )
@@ -92,7 +96,7 @@ async def test_play_journals_calling_play(signalwire_relay_client, mock_relay):
     assert p["play"][0]["type"] == "tts"
 
 
-async def test_play_resolves_on_finished_event(signalwire_relay_client, mock_relay):
+async def test_play_resolves_on_finished_event(signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-play-fin"
     )
@@ -113,7 +117,7 @@ async def test_play_resolves_on_finished_event(signalwire_relay_client, mock_rel
     assert event.params.get("state") == "finished"
 
 
-async def test_play_stop_journals_play_stop(signalwire_relay_client, mock_relay):
+async def test_play_stop_journals_play_stop(signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-play-stop"
     )
@@ -128,8 +132,8 @@ async def test_play_stop_journals_play_stop(signalwire_relay_client, mock_relay)
 
 
 async def test_play_pause_resume_volume_journal(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-play-prv"
     )
@@ -148,8 +152,8 @@ async def test_play_pause_resume_volume_journal(
 
 
 async def test_play_on_completed_callback_fires(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-play-cb"
     )
@@ -160,7 +164,7 @@ async def test_play_on_completed_callback_fires(
     callback_fired = asyncio.Event()
     seen_event: dict[str, RelayEvent] = {}
 
-    def on_done(event):
+    def on_done(event: RelayEvent) -> None:
         seen_event["e"] = event
         callback_fired.set()
 
@@ -179,7 +183,7 @@ async def test_play_on_completed_callback_fires(
 # ---------------------------------------------------------------------------
 
 
-async def test_record_journals_calling_record(signalwire_relay_client, mock_relay):
+async def test_record_journals_calling_record(signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-rec"
     )
@@ -195,8 +199,8 @@ async def test_record_journals_calling_record(signalwire_relay_client, mock_rela
 
 
 async def test_record_resolves_on_finished_event(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-rec-fin"
     )
@@ -216,8 +220,8 @@ async def test_record_resolves_on_finished_event(
 
 
 async def test_record_stop_journals_record_stop(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-rec-stop"
     )
@@ -235,8 +239,8 @@ async def test_record_stop_journals_record_stop(
 
 
 async def test_detect_resolves_on_first_detect_payload(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """Detect resolves on the first ``params.detect`` payload, not on state."""
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-det"
@@ -266,8 +270,8 @@ async def test_detect_resolves_on_first_detect_payload(
 
 
 async def test_detect_stop_journals_detect_stop(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-det-stop"
     )
@@ -285,8 +289,8 @@ async def test_detect_stop_journals_detect_stop(
 
 
 async def test_play_and_collect_journals_play_and_collect(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-pac"
     )
@@ -303,8 +307,8 @@ async def test_play_and_collect_journals_play_and_collect(
 
 
 async def test_play_and_collect_resolves_on_collect_event_only(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """Per RELAY_IMPLEMENTATION_GUIDE: ignore play(finished); resolve on collect.
 
     The mock's default event_type for ``calling.play_and_collect`` is
@@ -365,8 +369,8 @@ async def test_play_and_collect_resolves_on_collect_event_only(
 
 
 async def test_play_and_collect_stop_journals_pac_stop(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-pac-stop"
     )
@@ -386,8 +390,8 @@ async def test_play_and_collect_stop_journals_pac_stop(
 
 
 async def test_collect_journals_calling_collect(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-col"
     )
@@ -401,8 +405,8 @@ async def test_collect_journals_calling_collect(
 
 
 async def test_collect_stop_journals_collect_stop(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-col-stop"
     )
@@ -419,7 +423,7 @@ async def test_collect_stop_journals_collect_stop(
 # ---------------------------------------------------------------------------
 
 
-async def test_pay_journals_calling_pay(signalwire_relay_client, mock_relay):
+async def test_pay_journals_calling_pay(signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-pay"
     )
@@ -435,7 +439,7 @@ async def test_pay_journals_calling_pay(signalwire_relay_client, mock_relay):
     assert p["charge_amount"] == "9.99"
 
 
-async def test_pay_returns_pay_action(signalwire_relay_client, mock_relay):
+async def test_pay_returns_pay_action(signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-pay-act"
     )
@@ -447,7 +451,7 @@ async def test_pay_returns_pay_action(signalwire_relay_client, mock_relay):
     assert action.control_id == "pay-act"
 
 
-async def test_pay_stop_journals_pay_stop(signalwire_relay_client, mock_relay):
+async def test_pay_stop_journals_pay_stop(signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-pay-stop"
     )
@@ -466,8 +470,8 @@ async def test_pay_stop_journals_pay_stop(signalwire_relay_client, mock_relay):
 
 
 async def test_send_fax_journals_calling_send_fax(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-sfax"
     )
@@ -484,8 +488,8 @@ async def test_send_fax_journals_calling_send_fax(
 
 
 async def test_receive_fax_returns_fax_action(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-rfax"
     )
@@ -498,7 +502,7 @@ async def test_receive_fax_returns_fax_action(
 # ---------------------------------------------------------------------------
 
 
-async def test_tap_journals_calling_tap(signalwire_relay_client, mock_relay):
+async def test_tap_journals_calling_tap(signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-tap"
     )
@@ -514,7 +518,7 @@ async def test_tap_journals_calling_tap(signalwire_relay_client, mock_relay):
     assert p["control_id"] == "tap-ctl"
 
 
-async def test_tap_stop_journals_tap_stop(signalwire_relay_client, mock_relay):
+async def test_tap_stop_journals_tap_stop(signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-tap-stop"
     )
@@ -535,8 +539,8 @@ async def test_tap_stop_journals_tap_stop(signalwire_relay_client, mock_relay):
 
 
 async def test_stream_journals_calling_stream(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-strm"
     )
@@ -553,8 +557,8 @@ async def test_stream_journals_calling_stream(
 
 
 async def test_stream_stop_journals_stream_stop(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-strm-stop"
     )
@@ -573,8 +577,8 @@ async def test_stream_stop_journals_stream_stop(
 
 
 async def test_transcribe_journals_calling_transcribe(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-tr"
     )
@@ -585,8 +589,8 @@ async def test_transcribe_journals_calling_transcribe(
 
 
 async def test_transcribe_stop_journals_transcribe_stop(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-tr-stop"
     )
@@ -601,7 +605,7 @@ async def test_transcribe_stop_journals_transcribe_stop(
 # ---------------------------------------------------------------------------
 
 
-async def test_ai_journals_calling_ai(signalwire_relay_client, mock_relay):
+async def test_ai_journals_calling_ai(signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-ai"
     )
@@ -616,7 +620,7 @@ async def test_ai_journals_calling_ai(signalwire_relay_client, mock_relay):
     assert p["control_id"] == "ai-ctl"
 
 
-async def test_ai_stop_journals_ai_stop(signalwire_relay_client, mock_relay):
+async def test_ai_stop_journals_ai_stop(signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-ai-stop"
     )
@@ -634,8 +638,8 @@ async def test_ai_stop_journals_ai_stop(signalwire_relay_client, mock_relay):
 
 
 async def test_concurrent_play_and_record_route_independently(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """Two actions with different control_ids resolve independently."""
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-multi"

@@ -16,6 +16,7 @@ import sys
 import types
 import json
 from pathlib import Path
+from typing import Any  # noqa: E402
 from unittest.mock import Mock, patch, MagicMock, call
 from io import StringIO
 import argparse
@@ -24,7 +25,7 @@ import argparse
 # The build_search.py code does local imports from these modules, so @patch needs
 # them to exist in sys.modules for the patch target to resolve.
 # Only insert stubs for modules that truly can't be imported.
-def _ensure_mock_module(module_path, attrs=None):
+def _ensure_mock_module(module_path: str, attrs: dict[str, object] | None = None) -> None:
     """Register a fake module in sys.modules if the real one isn't importable."""
     try:
         __import__(module_path)
@@ -61,7 +62,7 @@ class TestBuildSearchMain:
     
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs'])
-    def test_basic_build_command(self, mock_builder_class):
+    def test_basic_build_command(self, mock_builder_class: MagicMock) -> None:
         """Test basic build command with minimal arguments"""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -112,7 +113,7 @@ class TestBuildSearchMain:
         '--verbose',
         '--validate'
     ])
-    def test_full_build_command(self, mock_builder_class):
+    def test_full_build_command(self, mock_builder_class: MagicMock) -> None:
         """Test build command with all arguments"""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -163,15 +164,15 @@ class TestBuildSearchMain:
     
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', 'README.md'])
-    def test_mixed_sources(self, mock_builder_class):
+    def test_mixed_sources(self, mock_builder_class: MagicMock) -> None:
         """Test build command with mixed file and directory sources"""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
         
-        def mock_exists(self):
+        def mock_exists(self: Path) -> bool:
             return str(self) in ['./docs', 'README.md']
-        
-        def mock_is_file(self):
+
+        def mock_is_file(self: Path) -> bool:
             return str(self) == 'README.md'
         
         with patch('pathlib.Path.exists', mock_exists), \
@@ -186,7 +187,7 @@ class TestBuildSearchMain:
             assert args['output_file'] == 'sources.swsearch'
     
     @patch('sys.argv', ['sw-search', './nonexistent'])
-    def test_nonexistent_source(self):
+    def test_nonexistent_source(self) -> None:
         """Test handling of nonexistent sources"""
         with patch('pathlib.Path.exists', return_value=False), \
              patch('builtins.print') as mock_print, \
@@ -199,7 +200,7 @@ class TestBuildSearchMain:
     
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', './missing'])
-    def test_partial_valid_sources(self, mock_builder_class):
+    def test_partial_valid_sources(self, mock_builder_class: MagicMock) -> None:
         """Test handling when some sources are invalid"""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -209,13 +210,13 @@ class TestBuildSearchMain:
         docs_path.exists.return_value = True
         docs_path.is_file.return_value = False
         docs_path.name = 'docs'
-        docs_path.__str__ = lambda self: './docs'
+        docs_path.__str__ = lambda self: './docs'  # type: ignore[method-assign, assignment, misc]
 
         missing_path = Mock()
         missing_path.exists.return_value = False
-        missing_path.__str__ = lambda self: './missing'
+        missing_path.__str__ = lambda self: './missing'  # type: ignore[method-assign, assignment, misc]
 
-        def mock_path_constructor(path_str):
+        def mock_path_constructor(path_str: object) -> Mock:
             if str(path_str) == './docs':
                 return docs_path
             elif str(path_str) == './missing':
@@ -224,7 +225,7 @@ class TestBuildSearchMain:
                 # Default mock for other paths
                 mock_path = Mock()
                 mock_path.exists.return_value = True
-                mock_path.__str__ = lambda self: str(path_str)
+                mock_path.__str__ = lambda self: str(path_str)  # type: ignore[method-assign, assignment, misc]
                 return mock_path
 
         # Patch Path where it was imported in build_search module
@@ -243,7 +244,7 @@ class TestBuildSearchMain:
     
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './missing1', './missing2'])
-    def test_all_invalid_sources(self, mock_builder_class):
+    def test_all_invalid_sources(self, mock_builder_class: MagicMock) -> None:
         """Test handling when all sources are invalid"""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -259,7 +260,7 @@ class TestBuildSearchMain:
     
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--output', 'test'])
-    def test_output_extension_handling(self, mock_builder_class):
+    def test_output_extension_handling(self, mock_builder_class: MagicMock) -> None:
         """Test automatic addition of .swsearch extension"""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -275,7 +276,7 @@ class TestBuildSearchMain:
     
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs'])
-    def test_keyboard_interrupt(self, mock_builder_class):
+    def test_keyboard_interrupt(self, mock_builder_class: MagicMock) -> None:
         """Test handling of keyboard interrupt"""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -293,7 +294,7 @@ class TestBuildSearchMain:
     
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs'])
-    def test_build_error(self, mock_builder_class):
+    def test_build_error(self, mock_builder_class: MagicMock) -> None:
         """Test handling of build errors"""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -311,7 +312,7 @@ class TestBuildSearchMain:
     
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--validate'])
-    def test_validation_failure(self, mock_builder_class):
+    def test_validation_failure(self, mock_builder_class: MagicMock) -> None:
         """Test handling of validation failure"""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -336,7 +337,7 @@ class TestValidateCommand:
     """Test the validate command functionality"""
     
     @patch('argparse.ArgumentParser')
-    def test_validate_nonexistent_file(self, mock_parser_class):
+    def test_validate_nonexistent_file(self, mock_parser_class: MagicMock) -> None:
         """Test validation of nonexistent file"""
         # Mock argument parser
         mock_parser = Mock()
@@ -360,7 +361,7 @@ class TestSearchCommand:
     """Test the search command functionality"""
     
     @patch('sys.argv', ['search', 'test.swsearch', 'test query'])
-    def test_basic_search(self):
+    def test_basic_search(self) -> None:
         """Test basic search command"""
         mock_engine = Mock()
         mock_engine.get_stats.return_value = {'total_chunks': 100, 'total_files': 10}
@@ -395,7 +396,7 @@ class TestSearchCommand:
         '--verbose',
         '--json'
     ])
-    def test_full_search_command(self):
+    def test_full_search_command(self) -> None:
         """Test search command with all options"""
         mock_engine = Mock()
         mock_engine.get_stats.return_value = {'total_chunks': 100, 'total_files': 10}
@@ -425,7 +426,7 @@ class TestSearchCommand:
             assert '"query": "test query"' in printed_output
     
     @patch('sys.argv', ['search', 'test.swsearch', 'test query', '--no-content'])
-    def test_search_no_content(self):
+    def test_search_no_content(self) -> None:
         """Test search command with no content output"""
         mock_engine = Mock()
         mock_engine.get_stats.return_value = {'total_chunks': 100, 'total_files': 10}
@@ -454,7 +455,7 @@ class TestSearchCommand:
             assert 'Test content that should not be shown' not in printed_output
     
     @patch('sys.argv', ['search', 'test.swsearch', 'test query'])
-    def test_search_no_results(self):
+    def test_search_no_results(self) -> None:
         """Test search command with no results"""
         mock_engine = Mock()
         mock_engine.get_stats.return_value = {'total_chunks': 100, 'total_files': 10}
@@ -477,7 +478,7 @@ class TestSearchCommand:
             mock_print.assert_any_call("No results found for 'test query'")
     
     @patch('sys.argv', ['search', 'nonexistent.swsearch', 'query'])
-    def test_search_nonexistent_file(self):
+    def test_search_nonexistent_file(self) -> None:
         """Test search with nonexistent index file"""
         with patch('pathlib.Path.exists', return_value=False), \
              patch('builtins.print') as mock_print, \
@@ -489,7 +490,7 @@ class TestSearchCommand:
             mock_print.assert_any_call("Error: Index file does not exist: nonexistent.swsearch")
     
     @patch('sys.argv', ['search', 'test.swsearch', 'query'])
-    def test_search_import_error(self):
+    def test_search_import_error(self) -> None:
         """Test search with missing dependencies"""
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
@@ -503,7 +504,7 @@ class TestSearchCommand:
             mock_print.assert_any_call("Error: Search functionality not available. Install with: pip install signalwire-sdk[search]")
     
     @patch('sys.argv', ['search', 'test.swsearch', 'query'])
-    def test_search_engine_error(self):
+    def test_search_engine_error(self) -> None:
         """Test search engine initialization error"""
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
@@ -521,14 +522,14 @@ class TestConsoleEntryPoint:
     
     @patch('signalwire.cli.build_search.main')
     @patch('sys.argv', ['sw-search', './docs'])
-    def test_console_entry_main(self, mock_main):
+    def test_console_entry_main(self, mock_main: MagicMock) -> None:
         """Test console entry point calls main for build command"""
         console_entry_point()
         mock_main.assert_called_once()
     
     @patch('signalwire.cli.build_search.validate_command')
     @patch('sys.argv', ['sw-search', 'validate', 'test.swsearch'])
-    def test_console_entry_validate(self, mock_validate):
+    def test_console_entry_validate(self, mock_validate: MagicMock) -> None:
         """Test console entry point calls validate_command"""
         console_entry_point()
         mock_validate.assert_called_once()
@@ -537,7 +538,7 @@ class TestConsoleEntryPoint:
     
     @patch('signalwire.cli.build_search.search_command')
     @patch('sys.argv', ['sw-search', 'search', 'test.swsearch', 'query'])
-    def test_console_entry_search(self, mock_search):
+    def test_console_entry_search(self, mock_search: MagicMock) -> None:
         """Test console entry point calls search_command"""
         console_entry_point()
         mock_search.assert_called_once()
@@ -550,7 +551,7 @@ class TestArgumentParsing:
     
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--chunking-strategy', 'sentence', '--split-newlines', '2'])
-    def test_sentence_chunking_with_newlines(self, mock_builder_class):
+    def test_sentence_chunking_with_newlines(self, mock_builder_class: MagicMock) -> None:
         """Test sentence chunking with split newlines parameter"""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -579,7 +580,7 @@ class TestArgumentParsing:
     
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--chunking-strategy', 'paragraph'])
-    def test_paragraph_chunking(self, mock_builder_class):
+    def test_paragraph_chunking(self, mock_builder_class: MagicMock) -> None:
         """Test paragraph chunking strategy"""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -608,7 +609,7 @@ class TestArgumentParsing:
     
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--chunking-strategy', 'page'])
-    def test_page_chunking(self, mock_builder_class):
+    def test_page_chunking(self, mock_builder_class: MagicMock) -> None:
         """Test page chunking strategy"""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -641,7 +642,7 @@ class TestVerboseOutput:
     
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose', '--chunking-strategy', 'sliding'])
-    def test_verbose_sliding_output(self, mock_builder_class):
+    def test_verbose_sliding_output(self, mock_builder_class: MagicMock) -> None:
         """Test verbose output for sliding window strategy"""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -660,7 +661,7 @@ class TestVerboseOutput:
     
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose', '--chunking-strategy', 'sentence', '--split-newlines', '3'])
-    def test_verbose_sentence_output(self, mock_builder_class):
+    def test_verbose_sentence_output(self, mock_builder_class: MagicMock) -> None:
         """Test verbose output for sentence strategy with newlines"""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -683,7 +684,7 @@ class TestErrorHandlingEdgeCases:
     
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose'])
-    def test_verbose_error_with_traceback(self, mock_builder_class):
+    def test_verbose_error_with_traceback(self, mock_builder_class: MagicMock) -> None:
         """Test verbose error output includes traceback"""
         mock_builder_class.side_effect = Exception("Detailed error")
         
@@ -699,7 +700,7 @@ class TestErrorHandlingEdgeCases:
     
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['validate', 'test.swsearch', '--verbose'])
-    def test_validate_verbose_error_with_traceback(self, mock_builder_class):
+    def test_validate_verbose_error_with_traceback(self, mock_builder_class: MagicMock) -> None:
         """Test verbose validation error includes traceback"""
         mock_builder_class.side_effect = Exception("Validation detailed error")
         
@@ -713,7 +714,7 @@ class TestErrorHandlingEdgeCases:
             mock_traceback.assert_called_once()
     
     @patch('sys.argv', ['search', 'test.swsearch', 'query', '--verbose'])
-    def test_search_verbose_error_with_traceback(self):
+    def test_search_verbose_error_with_traceback(self) -> None:
         """Test verbose search error includes traceback"""
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
@@ -740,7 +741,7 @@ class TestConsoleEntryPointExtended:
 
     @patch('builtins.print')
     @patch('sys.argv', ['sw-search', '--help'])
-    def test_console_entry_help_flag(self, mock_print):
+    def test_console_entry_help_flag(self, mock_print: MagicMock) -> None:
         """Test --help flag shows help text without importing heavy modules."""
         console_entry_point()
         printed = ''.join(str(c.args[0]) for c in mock_print.call_args_list if c.args)
@@ -748,7 +749,7 @@ class TestConsoleEntryPointExtended:
 
     @patch('builtins.print')
     @patch('sys.argv', ['sw-search', '-h'])
-    def test_console_entry_help_short_flag(self, mock_print):
+    def test_console_entry_help_short_flag(self, mock_print: MagicMock) -> None:
         """Test -h flag shows help text."""
         console_entry_point()
         printed = ''.join(str(c.args[0]) for c in mock_print.call_args_list if c.args)
@@ -756,7 +757,7 @@ class TestConsoleEntryPointExtended:
 
     @patch('signalwire.cli.build_search.remote_command')
     @patch('sys.argv', ['sw-search', 'remote', 'http://localhost:8001', 'query'])
-    def test_console_entry_remote(self, mock_remote):
+    def test_console_entry_remote(self, mock_remote: MagicMock) -> None:
         """Test console entry point routes to remote_command."""
         console_entry_point()
         mock_remote.assert_called_once()
@@ -764,7 +765,7 @@ class TestConsoleEntryPointExtended:
 
     @patch('signalwire.cli.build_search.migrate_command')
     @patch('sys.argv', ['sw-search', 'migrate', 'test.swsearch', '--info'])
-    def test_console_entry_migrate(self, mock_migrate):
+    def test_console_entry_migrate(self, mock_migrate: MagicMock) -> None:
         """Test console entry point routes to migrate_command."""
         console_entry_point()
         mock_migrate.assert_called_once()
@@ -775,7 +776,7 @@ class TestMainPgvectorBackend:
     """Tests for pgvector backend handling in main()."""
 
     @patch('sys.argv', ['sw-search', './docs', '--backend', 'pgvector'])
-    def test_pgvector_requires_connection_string(self):
+    def test_pgvector_requires_connection_string(self) -> None:
         """--backend pgvector without --connection-string should exit."""
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
@@ -792,7 +793,7 @@ class TestMainPgvectorBackend:
         '--backend', 'pgvector',
         '--connection-string', 'postgresql://user:pass@localhost/db',
     ])
-    def test_pgvector_default_output_single_source(self, mock_builder_class):
+    def test_pgvector_default_output_single_source(self, mock_builder_class: MagicMock) -> None:
         """pgvector single source should use source name as collection name."""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -813,7 +814,7 @@ class TestMainPgvectorBackend:
         '--backend', 'pgvector',
         '--connection-string', 'postgresql://u:p@localhost/db',
     ])
-    def test_pgvector_default_output_multi_source(self, mock_builder_class):
+    def test_pgvector_default_output_multi_source(self, mock_builder_class: MagicMock) -> None:
         """pgvector with multiple sources defaults to 'documents' collection."""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -832,7 +833,7 @@ class TestMainPgvectorBackend:
         '--backend', 'pgvector',
         '--connection-string', 'postgresql://u:p@localhost/db',
     ])
-    def test_pgvector_success_message(self, mock_builder_class):
+    def test_pgvector_success_message(self, mock_builder_class: MagicMock) -> None:
         """pgvector success path prints collection info."""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -850,7 +851,7 @@ class TestMainOutputConflict:
     """Tests for --output and --output-dir conflict detection."""
 
     @patch('sys.argv', ['sw-search', './docs', '--output', 'out.swsearch', '--output-dir', './dir'])
-    def test_output_and_output_dir_conflict(self):
+    def test_output_and_output_dir_conflict(self) -> None:
         """Specifying both --output and --output-dir should error."""
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
@@ -865,7 +866,7 @@ class TestMainJsonOutputFormat:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--output-format', 'json'])
-    def test_json_format_default_output_name(self, mock_builder_class):
+    def test_json_format_default_output_name(self, mock_builder_class: MagicMock) -> None:
         """JSON format without explicit output should default to chunks.json."""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -887,7 +888,7 @@ class TestMainJsonOutputFormat:
         '--backend', 'pgvector',
         '--connection-string', 'postgresql://u:p@localhost/db',
     ])
-    def test_json_format_ignores_backend_warning(self, mock_builder_class):
+    def test_json_format_ignores_backend_warning(self, mock_builder_class: MagicMock) -> None:
         """JSON format with non-sqlite backend should warn."""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -909,7 +910,7 @@ class TestMainJsonOutputFormat:
         '--output-format', 'json',
         '--output', 'my_chunks',
     ])
-    def test_json_format_output_gets_json_extension(self, mock_builder_class):
+    def test_json_format_output_gets_json_extension(self, mock_builder_class: MagicMock) -> None:
         """JSON format output without .json suffix gets one appended via Path.with_suffix."""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -935,7 +936,7 @@ class TestMainJsonOutputFormat:
         '--output-format', 'json',
         '--output-dir', '/tmp/test_chunks_out',
     ])
-    def test_json_format_output_dir_mode(self, mock_builder_class):
+    def test_json_format_output_dir_mode(self, mock_builder_class: MagicMock) -> None:
         """JSON format with --output-dir should process without error."""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -956,7 +957,7 @@ class TestMainOutputDirIndexFormat:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--output-dir', '/tmp/idx_out'])
-    def test_output_dir_single_source_sqlite(self, mock_builder_class):
+    def test_output_dir_single_source_sqlite(self, mock_builder_class: MagicMock) -> None:
         """Index format with --output-dir and single source auto-names the file."""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -974,7 +975,7 @@ class TestMainOutputDirIndexFormat:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './a', './b', '--output-dir', '/tmp/idx_out'])
-    def test_output_dir_multi_source_sqlite(self, mock_builder_class):
+    def test_output_dir_multi_source_sqlite(self, mock_builder_class: MagicMock) -> None:
         """Index format with --output-dir and multiple sources uses 'combined'."""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -995,7 +996,7 @@ class TestMainModelAlias:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--model', 'base'])
-    def test_model_alias_base(self, mock_builder_class):
+    def test_model_alias_base(self, mock_builder_class: MagicMock) -> None:
         """Model alias 'base' should resolve to the full model name."""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -1011,7 +1012,7 @@ class TestMainModelAlias:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--model', 'large'])
-    def test_model_alias_large(self, mock_builder_class):
+    def test_model_alias_large(self, mock_builder_class: MagicMock) -> None:
         """Model alias 'large' should resolve correctly."""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -1027,7 +1028,7 @@ class TestMainModelAlias:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--model', 'custom-org/my-model'])
-    def test_model_full_name_passthrough(self, mock_builder_class):
+    def test_model_full_name_passthrough(self, mock_builder_class: MagicMock) -> None:
         """Full model name that is not an alias should pass through unchanged."""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -1047,7 +1048,7 @@ class TestMainVerboseStrategies:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose', '--chunking-strategy', 'paragraph'])
-    def test_verbose_paragraph(self, mock_builder_class):
+    def test_verbose_paragraph(self, mock_builder_class: MagicMock) -> None:
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
         with patch('pathlib.Path.exists', return_value=True), \
@@ -1060,7 +1061,7 @@ class TestMainVerboseStrategies:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose', '--chunking-strategy', 'page'])
-    def test_verbose_page(self, mock_builder_class):
+    def test_verbose_page(self, mock_builder_class: MagicMock) -> None:
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
         with patch('pathlib.Path.exists', return_value=True), \
@@ -1073,7 +1074,7 @@ class TestMainVerboseStrategies:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose', '--chunking-strategy', 'semantic'])
-    def test_verbose_semantic(self, mock_builder_class):
+    def test_verbose_semantic(self, mock_builder_class: MagicMock) -> None:
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
         with patch('pathlib.Path.exists', return_value=True), \
@@ -1086,7 +1087,7 @@ class TestMainVerboseStrategies:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose', '--chunking-strategy', 'topic'])
-    def test_verbose_topic(self, mock_builder_class):
+    def test_verbose_topic(self, mock_builder_class: MagicMock) -> None:
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
         with patch('pathlib.Path.exists', return_value=True), \
@@ -1099,7 +1100,7 @@ class TestMainVerboseStrategies:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose', '--chunking-strategy', 'qa'])
-    def test_verbose_qa(self, mock_builder_class):
+    def test_verbose_qa(self, mock_builder_class: MagicMock) -> None:
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
         with patch('pathlib.Path.exists', return_value=True), \
@@ -1112,7 +1113,7 @@ class TestMainVerboseStrategies:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--verbose', '--chunking-strategy', 'sentence'])
-    def test_verbose_sentence_no_newlines(self, mock_builder_class):
+    def test_verbose_sentence_no_newlines(self, mock_builder_class: MagicMock) -> None:
         """Sentence strategy without split-newlines should not print newline line."""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -1134,15 +1135,15 @@ class TestMainSingleFileSource:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', 'README.md'])
-    def test_single_file_source_names_output(self, mock_builder_class):
+    def test_single_file_source_names_output(self, mock_builder_class: MagicMock) -> None:
         """Single file source should name output after file stem."""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
 
-        def mock_exists(self):
+        def mock_exists(self: Path) -> bool:
             return True
 
-        def mock_is_file(self):
+        def mock_is_file(self: Path) -> bool:
             return str(self) == 'README.md'
 
         with patch('pathlib.Path.exists', mock_exists), \
@@ -1161,7 +1162,7 @@ class TestMainIndexCreationCheck:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs'])
-    def test_index_file_not_created(self, mock_builder_class):
+    def test_index_file_not_created(self, mock_builder_class: MagicMock) -> None:
         """If output file is not created, should exit with error."""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
@@ -1185,7 +1186,7 @@ class TestValidateCommandExtended:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('argparse.ArgumentParser')
-    def test_validate_success(self, mock_parser_class, mock_builder_class):
+    def test_validate_success(self, mock_parser_class: MagicMock, mock_builder_class: MagicMock) -> None:
         """Successful validation prints valid message."""
         mock_parser = Mock()
         mock_parser_class.return_value = mock_parser
@@ -1213,7 +1214,7 @@ class TestValidateCommandExtended:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('argparse.ArgumentParser')
-    def test_validate_success_verbose(self, mock_parser_class, mock_builder_class):
+    def test_validate_success_verbose(self, mock_parser_class: MagicMock, mock_builder_class: MagicMock) -> None:
         """Successful verbose validation prints configuration details."""
         mock_parser = Mock()
         mock_parser_class.return_value = mock_parser
@@ -1240,7 +1241,7 @@ class TestValidateCommandExtended:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('argparse.ArgumentParser')
-    def test_validate_failure(self, mock_parser_class, mock_builder_class):
+    def test_validate_failure(self, mock_parser_class: MagicMock, mock_builder_class: MagicMock) -> None:
         """Failed validation should exit with code 1."""
         mock_parser = Mock()
         mock_parser_class.return_value = mock_parser
@@ -1268,7 +1269,7 @@ class TestValidateCommandExtended:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('argparse.ArgumentParser')
-    def test_validate_exception(self, mock_parser_class, mock_builder_class):
+    def test_validate_exception(self, mock_parser_class: MagicMock, mock_builder_class: MagicMock) -> None:
         """Exception during validation should exit with code 1."""
         mock_parser = Mock()
         mock_parser_class.return_value = mock_parser
@@ -1291,7 +1292,7 @@ class TestSearchCommandExtended:
     """Additional tests for search_command."""
 
     @patch('sys.argv', ['search', 'test.swsearch'])
-    def test_search_no_query_no_shell(self):
+    def test_search_no_query_no_shell(self) -> None:
         """Missing query without --shell should exit."""
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
@@ -1301,7 +1302,7 @@ class TestSearchCommandExtended:
         mock_print.assert_any_call("Error: Query is required unless using --shell mode")
 
     @patch('sys.argv', ['search', 'test.swsearch', 'q', '--keyword-weight', '1.5'])
-    def test_search_keyword_weight_too_high(self):
+    def test_search_keyword_weight_too_high(self) -> None:
         """keyword-weight > 1.0 should exit."""
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
@@ -1311,7 +1312,7 @@ class TestSearchCommandExtended:
         mock_print.assert_any_call("Error: --keyword-weight must be between 0.0 and 1.0")
 
     @patch('sys.argv', ['search', 'test.swsearch', 'q', '--keyword-weight', '-0.1'])
-    def test_search_keyword_weight_negative(self):
+    def test_search_keyword_weight_negative(self) -> None:
         """keyword-weight < 0.0 should exit."""
         with patch('pathlib.Path.exists', return_value=True), \
              patch('builtins.print') as mock_print, \
@@ -1324,7 +1325,7 @@ class TestSearchCommandExtended:
         'search', 'coll', 'q',
         '--backend', 'pgvector',
     ])
-    def test_search_pgvector_requires_connection_string(self):
+    def test_search_pgvector_requires_connection_string(self) -> None:
         """pgvector backend without connection string should exit."""
         with patch('builtins.print') as mock_print, \
              pytest.raises(SystemExit) as exc_info:
@@ -1335,7 +1336,7 @@ class TestSearchCommandExtended:
         )
 
     @patch('sys.argv', ['search', 'test.swsearch', 'q', '--model', 'mini'])
-    def test_search_model_alias_resolved(self):
+    def test_search_model_alias_resolved(self) -> None:
         """Model alias in search should resolve to full name."""
         mock_engine = Mock()
         mock_engine.get_stats.return_value = {
@@ -1360,7 +1361,7 @@ class TestSearchCommandExtended:
         assert call_kw['model'] == 'sentence-transformers/all-MiniLM-L6-v2'
 
     @patch('sys.argv', ['search', 'test.swsearch', 'q', '--json', '--no-content'])
-    def test_search_json_no_content(self):
+    def test_search_json_no_content(self) -> None:
         """JSON output with --no-content should omit content field."""
         mock_engine = Mock()
         mock_engine.get_stats.return_value = {'total_chunks': 10, 'total_files': 1}
@@ -1388,7 +1389,7 @@ class TestSearchCommandExtended:
         assert 'Hidden content' not in printed_text
 
     @patch('sys.argv', ['search', 'test.swsearch', 'test query', '--tags', 'docs'])
-    def test_search_no_results_with_tags(self):
+    def test_search_no_results_with_tags(self) -> None:
         """No results with tags should mention tags in output."""
         mock_engine = Mock()
         mock_engine.get_stats.return_value = {'total_chunks': 10, 'total_files': 1}
@@ -1407,7 +1408,7 @@ class TestSearchCommandExtended:
         assert any('tags' in s.lower() for s in printed)
 
     @patch('sys.argv', ['search', 'test.swsearch', 'q'])
-    def test_search_result_with_line_numbers_and_tags(self):
+    def test_search_result_with_line_numbers_and_tags(self) -> None:
         """Results with line_start and tags metadata should display them."""
         mock_engine = Mock()
         mock_engine.get_stats.return_value = {'total_chunks': 10, 'total_files': 1}
@@ -1437,7 +1438,7 @@ class TestSearchCommandExtended:
         assert any('Tags: api, docs' in s for s in printed)
 
     @patch('sys.argv', ['search', 'test.swsearch', 'q'])
-    def test_search_long_content_truncated(self):
+    def test_search_long_content_truncated(self) -> None:
         """Content longer than 500 chars should be truncated in non-verbose mode."""
         long_content = 'A' * 600
         mock_engine = Mock()
@@ -1466,7 +1467,7 @@ class TestMigrateCommand:
     """Tests for migrate_command."""
 
     @patch('sys.argv', ['migrate', '--info', 'test.swsearch'])
-    def test_migrate_info_success(self):
+    def test_migrate_info_success(self) -> None:
         """--info flag should display index information."""
         mock_migrator = Mock()
         mock_migrator.get_index_info.return_value = {
@@ -1488,7 +1489,7 @@ class TestMigrateCommand:
         mock_print.assert_any_call("  Total chunks: 100")
 
     @patch('sys.argv', ['migrate', '--info'])
-    def test_migrate_info_no_source(self):
+    def test_migrate_info_no_source(self) -> None:
         """--info without source should exit."""
         with patch('builtins.print') as mock_print, \
              pytest.raises(SystemExit) as exc_info:
@@ -1497,7 +1498,7 @@ class TestMigrateCommand:
         mock_print.assert_any_call("Error: Source index required with --info")
 
     @patch('sys.argv', ['migrate'])
-    def test_migrate_no_source(self):
+    def test_migrate_no_source(self) -> None:
         """No source should exit."""
         with patch('builtins.print') as mock_print, \
              pytest.raises(SystemExit) as exc_info:
@@ -1506,7 +1507,7 @@ class TestMigrateCommand:
         mock_print.assert_any_call("Error: Source index required for migration")
 
     @patch('sys.argv', ['migrate', 'test.swsearch'])
-    def test_migrate_no_direction(self):
+    def test_migrate_no_direction(self) -> None:
         """No migration direction should exit."""
         with patch('builtins.print') as mock_print, \
              pytest.raises(SystemExit) as exc_info:
@@ -1517,7 +1518,7 @@ class TestMigrateCommand:
         )
 
     @patch('sys.argv', ['migrate', 'test.swsearch', '--to-pgvector'])
-    def test_migrate_to_pgvector_no_connection_string(self):
+    def test_migrate_to_pgvector_no_connection_string(self) -> None:
         """to-pgvector without connection string should exit."""
         mock_migrator = Mock()
         with patch('signalwire.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
@@ -1533,7 +1534,7 @@ class TestMigrateCommand:
         'migrate', 'test.swsearch', '--to-pgvector',
         '--connection-string', 'postgresql://u:p@localhost/db',
     ])
-    def test_migrate_to_pgvector_no_collection_name(self):
+    def test_migrate_to_pgvector_no_collection_name(self) -> None:
         """to-pgvector without collection name should exit."""
         mock_migrator = Mock()
         with patch('signalwire.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
@@ -1550,7 +1551,7 @@ class TestMigrateCommand:
         '--connection-string', 'postgresql://u:p@localhost/db',
         '--collection-name', 'my_coll',
     ])
-    def test_migrate_to_pgvector_success(self):
+    def test_migrate_to_pgvector_success(self) -> None:
         """Successful pgvector migration should print success message."""
         mock_migrator = Mock()
         mock_migrator.migrate_sqlite_to_pgvector.return_value = {
@@ -1566,7 +1567,7 @@ class TestMigrateCommand:
         assert any('Migration completed successfully' in s for s in printed)
 
     @patch('sys.argv', ['migrate', 'test.swsearch', '--to-sqlite'])
-    def test_migrate_to_sqlite_not_implemented(self):
+    def test_migrate_to_sqlite_not_implemented(self) -> None:
         """to-sqlite should report not implemented and exit."""
         mock_migrator = Mock()
         with patch('signalwire.search.migration.SearchIndexMigrator', return_value=mock_migrator), \
@@ -1580,7 +1581,7 @@ class TestMigrateCommand:
         '--connection-string', 'postgresql://u:p@localhost/db',
         '--collection-name', 'coll',
     ])
-    def test_migrate_exception(self):
+    def test_migrate_exception(self) -> None:
         """Exception during migration should exit with code 1."""
         mock_migrator = Mock()
         mock_migrator.migrate_sqlite_to_pgvector.side_effect = Exception("DB error")
@@ -1592,7 +1593,7 @@ class TestMigrateCommand:
         assert exc_info.value.code == 1
 
     @patch('sys.argv', ['migrate', '--info', 'test.swsearch', '--verbose'])
-    def test_migrate_info_verbose(self):
+    def test_migrate_info_verbose(self) -> None:
         """--info --verbose should print full config."""
         mock_migrator = Mock()
         mock_migrator.get_index_info.return_value = {
@@ -1613,7 +1614,7 @@ class TestMigrateCommand:
         mock_print.assert_any_call("\n  Full configuration:")
 
     @patch('sys.argv', ['migrate', '--info', 'test.swsearch'])
-    def test_migrate_info_exception(self):
+    def test_migrate_info_exception(self) -> None:
         """Exception in info mode should exit with code 1."""
         with patch('signalwire.search.migration.SearchIndexMigrator', side_effect=Exception("fail")), \
              patch('builtins.print'), \
@@ -1622,7 +1623,7 @@ class TestMigrateCommand:
         assert exc_info.value.code == 1
 
     @patch('sys.argv', ['migrate', '--info', 'test.swsearch'])
-    def test_migrate_info_unknown_type(self):
+    def test_migrate_info_unknown_type(self) -> None:
         """Info with unknown index type should print 'Unable to determine'."""
         mock_migrator = Mock()
         mock_migrator.get_index_info.return_value = {
@@ -1636,14 +1637,16 @@ class TestMigrateCommand:
         mock_print.assert_any_call("  Unable to determine index type")
 
 
-def _make_mock_requests_module(post_return=None, post_side_effect=None):
+def _make_mock_requests_module(
+    post_return: object | None = None, post_side_effect: object | None = None
+) -> types.ModuleType:
     """Create a mock requests module with real exception classes for except clauses."""
     import requests as real_requests
     mock_mod = types.ModuleType('requests')
-    mock_mod.ConnectionError = real_requests.ConnectionError
-    mock_mod.Timeout = real_requests.Timeout
-    mock_mod.RequestException = real_requests.RequestException
-    mock_mod.post = Mock()
+    mock_mod.ConnectionError = real_requests.ConnectionError  # type: ignore[attr-defined]
+    mock_mod.Timeout = real_requests.Timeout  # type: ignore[attr-defined]
+    mock_mod.RequestException = real_requests.RequestException  # type: ignore[attr-defined]
+    mock_mod.post = Mock()  # type: ignore[attr-defined]
     if post_return is not None:
         mock_mod.post.return_value = post_return
     if post_side_effect is not None:
@@ -1655,7 +1658,7 @@ class TestRemoteCommand:
     """Tests for remote_command."""
 
     @patch('sys.argv', ['remote', 'localhost:8001', 'query', '--index-name', 'docs'])
-    def test_endpoint_http_prefix_added(self):
+    def test_endpoint_http_prefix_added(self) -> None:
         """Endpoint without http:// should get it prepended."""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -1674,7 +1677,7 @@ class TestRemoteCommand:
         assert call_args[0][0].endswith('/search')
 
     @patch('sys.argv', ['remote', 'http://localhost:8001/', 'query', '--index-name', 'docs'])
-    def test_endpoint_trailing_slash(self):
+    def test_endpoint_trailing_slash(self) -> None:
         """Endpoint with trailing slash should append 'search' correctly."""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -1693,7 +1696,7 @@ class TestRemoteCommand:
         assert url == 'http://localhost:8001/search'
 
     @patch('sys.argv', ['remote', 'http://localhost:8001/search', 'query', '--index-name', 'docs'])
-    def test_endpoint_already_has_search(self):
+    def test_endpoint_already_has_search(self) -> None:
         """Endpoint already ending with /search should not double-append."""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -1713,12 +1716,12 @@ class TestRemoteCommand:
         assert not url.endswith('/search/search')
 
     @patch('sys.argv', ['remote', 'http://localhost:8001', 'query', '--index-name', 'docs'])
-    def test_remote_requests_import_error(self):
+    def test_remote_requests_import_error(self) -> None:
         """Missing requests library should exit with helpful message."""
         import builtins
         original_import = builtins.__import__
 
-        def mock_import(name, *args, **kwargs):
+        def mock_import(name: str, *args: Any, **kwargs: Any) -> Any:
             if name == 'requests':
                 raise ImportError("No module named 'requests'")
             return original_import(name, *args, **kwargs)
@@ -1731,7 +1734,7 @@ class TestRemoteCommand:
         assert exc_info.value.code == 1
 
     @patch('sys.argv', ['remote', 'http://localhost:8001', 'query', '--index-name', 'docs'])
-    def test_remote_404_response(self):
+    def test_remote_404_response(self) -> None:
         """404 response should print error and exit."""
         mock_response = Mock()
         mock_response.status_code = 404
@@ -1748,7 +1751,7 @@ class TestRemoteCommand:
         mock_print.assert_any_call("Error: Index not found")
 
     @patch('sys.argv', ['remote', 'http://localhost:8001', 'query', '--index-name', 'docs'])
-    def test_remote_500_response(self):
+    def test_remote_500_response(self) -> None:
         """500 response should print error and exit."""
         mock_response = Mock()
         mock_response.status_code = 500
@@ -1764,7 +1767,7 @@ class TestRemoteCommand:
         assert exc_info.value.code == 1
 
     @patch('sys.argv', ['remote', 'http://localhost:8001', 'query', '--index-name', 'docs'])
-    def test_remote_connection_error(self):
+    def test_remote_connection_error(self) -> None:
         """Connection error should print helpful message and exit."""
         import requests as real_requests
         mock_requests = _make_mock_requests_module(
@@ -1781,7 +1784,7 @@ class TestRemoteCommand:
         assert any('Could not connect' in s for s in printed)
 
     @patch('sys.argv', ['remote', 'http://localhost:8001', 'query', '--index-name', 'docs', '--timeout', '5'])
-    def test_remote_timeout(self):
+    def test_remote_timeout(self) -> None:
         """Timeout should print timeout message and exit."""
         import requests as real_requests
         mock_requests = _make_mock_requests_module(
@@ -1801,7 +1804,7 @@ class TestRemoteCommand:
         'remote', 'http://localhost:8001', 'query',
         '--index-name', 'docs', '--tags', 'a,b', '--verbose',
     ])
-    def test_remote_verbose_with_tags(self):
+    def test_remote_verbose_with_tags(self) -> None:
         """Verbose mode with tags should print payload."""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -1825,7 +1828,7 @@ class TestRemoteCommand:
         'remote', 'http://localhost:8001', 'query',
         '--index-name', 'docs', '--json',
     ])
-    def test_remote_json_output(self):
+    def test_remote_json_output(self) -> None:
         """--json flag should output raw JSON response."""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -1843,7 +1846,7 @@ class TestRemoteCommand:
         assert '"results"' in printed
 
     @patch('sys.argv', ['remote', 'http://localhost:8001', 'query', '--index-name', 'docs'])
-    def test_remote_success_with_results(self):
+    def test_remote_success_with_results(self) -> None:
         """Successful response with results should print them."""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -1868,7 +1871,7 @@ class TestRemoteCommand:
         assert any('Found 1 result' in s for s in printed)
 
     @patch('sys.argv', ['remote', 'http://localhost:8001', 'query', '--index-name', 'docs'])
-    def test_remote_no_results(self):
+    def test_remote_no_results(self) -> None:
         """Empty results should print 'No results found'."""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -1884,7 +1887,7 @@ class TestRemoteCommand:
         mock_print.assert_any_call("No results found for 'query' in index 'docs'")
 
     @patch('sys.argv', ['remote', 'http://localhost:8001', 'query', '--index-name', 'docs'])
-    def test_remote_404_json_parse_error(self):
+    def test_remote_404_json_parse_error(self) -> None:
         """404 response with unparseable JSON should fallback."""
         mock_response = Mock()
         mock_response.status_code = 404
@@ -1901,7 +1904,7 @@ class TestRemoteCommand:
         mock_print.assert_any_call("Error: Index not found")
 
     @patch('sys.argv', ['remote', 'http://localhost:8001', 'query', '--index-name', 'docs'])
-    def test_remote_500_json_parse_error(self):
+    def test_remote_500_json_parse_error(self) -> None:
         """Non-404 error with unparseable JSON should fallback to status code."""
         mock_response = Mock()
         mock_response.status_code = 500

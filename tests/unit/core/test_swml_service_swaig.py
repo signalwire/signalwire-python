@@ -17,13 +17,25 @@ that previously lived only on AgentBase.
 import asyncio
 import base64
 import json
+from collections.abc import Coroutine
+from typing import Any, TypeVar
 from unittest.mock import MagicMock
+
+from fastapi import Response
 
 from signalwire.core.swml_service import SWMLService
 from signalwire.core.function_result import FunctionResult
 
+_T = TypeVar("_T")
 
-def _make_request(method="POST", headers=None, body=None, query_params=None, url_path="/swaig"):
+
+def _make_request(
+    method: str = "POST",
+    headers: dict[str, str] | None = None,
+    body: dict[str, Any] | None = None,
+    query_params: dict[str, str] | None = None,
+    url_path: str = "/swaig",
+) -> MagicMock:
     """Build a minimal request object that the SWAIG handler can consume."""
     request = MagicMock()
     request.method = method
@@ -32,10 +44,10 @@ def _make_request(method="POST", headers=None, body=None, query_params=None, url
     request.query_params = query_params or {}
     body_bytes = json.dumps(body).encode() if body is not None else b""
 
-    async def _body():
+    async def _body() -> bytes:
         return body_bytes
 
-    async def _json():
+    async def _json() -> dict[str, Any]:
         return body if body is not None else {}
 
     request.body = _body
@@ -44,7 +56,7 @@ def _make_request(method="POST", headers=None, body=None, query_params=None, url
     return request
 
 
-def _run(coro):
+def _run(coro: Coroutine[Any, Any, _T]) -> _T:
     loop = asyncio.new_event_loop()
     try:
         return loop.run_until_complete(coro)
@@ -52,7 +64,7 @@ def _run(coro):
         loop.close()
 
 
-def _service(**kwargs):
+def _service(**kwargs: Any) -> SWMLService:
     """Build a SWMLService instance with schema validation disabled for fast tests."""
     return SWMLService(name="t", schema_validation=False, **kwargs)
 
@@ -64,19 +76,19 @@ def _service(**kwargs):
 class TestSWMLServiceHasSWAIGCapability:
     """The lift gives plain SWMLService instances SWAIG-hosting capability."""
 
-    def test_define_tool_resolves_on_swml_service(self):
+    def test_define_tool_resolves_on_swml_service(self) -> None:
         svc = _service()
         assert hasattr(svc, "define_tool")
         assert hasattr(svc, "register_swaig_function")
         assert hasattr(svc, "on_function_call")
         assert hasattr(svc, "_handle_swaig_request")
 
-    def test_tool_registry_is_initialized(self):
+    def test_tool_registry_is_initialized(self) -> None:
         svc = _service()
         assert svc._tool_registry is not None
         assert svc._tool_registry._swaig_functions == {}
 
-    def test_define_tool_registers_function(self):
+    def test_define_tool_registers_function(self) -> None:
         svc = _service()
         svc.define_tool(
             name="lookup",
@@ -86,7 +98,7 @@ class TestSWMLServiceHasSWAIGCapability:
         )
         assert "lookup" in svc._tool_registry._swaig_functions
 
-    def test_as_router_mounts_swaig_endpoint(self):
+    def test_as_router_mounts_swaig_endpoint(self) -> None:
         svc = _service()
         router = svc.as_router()
         paths = [r.path for r in router.routes if hasattr(r, "path")]
@@ -97,11 +109,11 @@ class TestSWMLServiceHasSWAIGCapability:
 class TestSWMLServiceSWAIGDispatch:
     """End-to-end dispatch tests: POST /swaig hits the registered handler."""
 
-    def test_post_dispatches_to_registered_handler(self):
+    def test_post_dispatches_to_registered_handler(self) -> None:
         svc = _service()
         called_with = {}
 
-        def lookup(args, raw_data):
+        def lookup(args: dict[str, Any], raw_data: Any) -> FunctionResult:
             called_with["args"] = args
             called_with["raw"] = raw_data
             return FunctionResult("found it")
@@ -116,7 +128,7 @@ class TestSWMLServiceSWAIGDispatch:
         # Auth: SWMLService uses _check_basic_auth from its own definition. With
         # no _basic_auth credentials configured to require, the default flow
         # lets this through. We patch it to avoid environmental ambiguity.
-        svc._check_basic_auth = MagicMock(return_value=True)
+        svc._check_basic_auth = MagicMock(return_value=True)  # type: ignore[method-assign]  # mock
 
         request = _make_request(
             method="POST",
@@ -131,61 +143,65 @@ class TestSWMLServiceSWAIGDispatch:
         assert isinstance(result, dict)
         assert result.get("response") == "found it"
 
-    def test_get_returns_swml_document_via_render_document(self):
+    def test_get_returns_swml_document_via_render_document(self) -> None:
         """Default _swaig_render_get_response uses render_document() — i.e. the
         currently-built SWML doc, not a dynamically rebuilt one. This is the
         non-agent path."""
         svc = _service()
         svc.add_section("main")
         svc.add_verb_to_section("main", "answer", {})
-        svc._check_basic_auth = MagicMock(return_value=True)
+        svc._check_basic_auth = MagicMock(return_value=True)  # type: ignore[method-assign]  # mock
 
         request = _make_request(method="GET")
         response = _run(svc._handle_swaig_request(request, MagicMock()))
+        assert isinstance(response, Response)
         assert response.status_code == 200
-        body = json.loads(response.body)
+        body = json.loads(bytes(response.body))
         assert "sections" in body
         assert "main" in body["sections"]
 
-    def test_post_unknown_function_returns_error_response(self):
+    def test_post_unknown_function_returns_error_response(self) -> None:
         svc = _service()
-        svc._check_basic_auth = MagicMock(return_value=True)
+        svc._check_basic_auth = MagicMock(return_value=True)  # type: ignore[method-assign]  # mock
         request = _make_request(method="POST", body={"function": "no_such_fn"})
         result = _run(svc._handle_swaig_request(request, MagicMock()))
         assert isinstance(result, dict)
         # on_function_call returns a `response` field for unknown funcs
         assert "no_such_fn" in result.get("response", "")
 
-    def test_post_invalid_function_name_returns_400(self):
+    def test_post_invalid_function_name_returns_400(self) -> None:
         svc = _service()
-        svc._check_basic_auth = MagicMock(return_value=True)
+        svc._check_basic_auth = MagicMock(return_value=True)  # type: ignore[method-assign]  # mock
         request = _make_request(method="POST", body={"function": "../etc/passwd"})
         response = _run(svc._handle_swaig_request(request, MagicMock()))
+        assert isinstance(response, Response)
         assert response.status_code == 400
 
-    def test_post_missing_function_returns_400(self):
+    def test_post_missing_function_returns_400(self) -> None:
         svc = _service()
-        svc._check_basic_auth = MagicMock(return_value=True)
+        svc._check_basic_auth = MagicMock(return_value=True)  # type: ignore[method-assign]  # mock
         request = _make_request(method="POST", body={})
         response = _run(svc._handle_swaig_request(request, MagicMock()))
+        assert isinstance(response, Response)
         assert response.status_code == 400
 
-    def test_unauthorized_returns_401(self):
+    def test_unauthorized_returns_401(self) -> None:
         svc = _service()
-        svc._check_basic_auth = MagicMock(return_value=False)
+        svc._check_basic_auth = MagicMock(return_value=False)  # type: ignore[method-assign]  # mock
         request = _make_request(method="POST", body={"function": "x"})
         response = _run(svc._handle_swaig_request(request, MagicMock()))
+        assert isinstance(response, Response)
         assert response.status_code == 401
 
-    def test_swmlservice_has_no_token_validation_by_default(self):
+    def test_swmlservice_has_no_token_validation_by_default(self) -> None:
         """A plain SWMLService does NOT do session-token validation. That's an
         AgentBase-specific extension. A token in query params is ignored."""
         svc = _service()
-        svc._check_basic_auth = MagicMock(return_value=True)
+        svc._check_basic_auth = MagicMock(return_value=True)  # type: ignore[method-assign]  # mock
 
         called = {}
 
-        def lookup(args, raw_data):
+        def lookup(args: dict[str, Any], raw_data: Any) -> FunctionResult:
             called["yes"] = True
             return FunctionResult("ok")
 
@@ -203,6 +219,7 @@ class TestSWMLServiceSWAIGDispatch:
         )
         result = _run(svc._handle_swaig_request(request, MagicMock()))
         assert called.get("yes") is True
+        assert isinstance(result, dict)
         assert result.get("response") == "ok"
 
 
@@ -219,7 +236,7 @@ class TestSidecarPatternViaSWMLService:
     These tests verify the full pattern works without any SidecarBase class.
     """
 
-    def test_can_emit_ai_sidecar_verb(self):
+    def test_can_emit_ai_sidecar_verb(self) -> None:
         """SWMLService.add_verb accepts arbitrary verb dicts; ai_sidecar is
         just data, schema permitting."""
         svc = _service()
@@ -238,7 +255,7 @@ class TestSidecarPatternViaSWMLService:
         assert "answer" in verbs
         assert "ai_sidecar" in verbs
 
-    def test_full_sidecar_pattern_emit_swml_register_tool_register_event_sink(self):
+    def test_full_sidecar_pattern_emit_swml_register_tool_register_event_sink(self) -> None:
         svc = _service()
 
         # 1. Build the SWML doc.
@@ -246,7 +263,7 @@ class TestSidecarPatternViaSWMLService:
         svc.add_verb_to_section("main", "answer", {})
 
         # 2. Register a SWAIG tool the sidecar's LLM can call.
-        def lookup_competitor(args, raw_data):
+        def lookup_competitor(args: dict[str, Any], raw_data: Any) -> FunctionResult:
             return FunctionResult(f"{args['competitor']} is $99/seat; we're $79.")
 
         svc.define_tool(
@@ -263,7 +280,7 @@ class TestSidecarPatternViaSWMLService:
         # 3. Register an event-sink endpoint via routing callback.
         events_seen = []
 
-        def on_event(request, body):
+        def on_event(request: Any, body: dict[str, Any]) -> None:
             events_seen.append(body.get("type"))
             return None
 
@@ -276,7 +293,7 @@ class TestSidecarPatternViaSWMLService:
         assert "/events" in paths or any(p.endswith("/events") for p in paths)
 
         # Verify the SWAIG dispatch works end-to-end.
-        svc._check_basic_auth = MagicMock(return_value=True)
+        svc._check_basic_auth = MagicMock(return_value=True)  # type: ignore[method-assign]  # mock
         request = _make_request(
             method="POST",
             body={
@@ -285,5 +302,6 @@ class TestSidecarPatternViaSWMLService:
             },
         )
         result = _run(svc._handle_swaig_request(request, MagicMock()))
+        assert isinstance(result, dict)
         assert "ACME" in result.get("response", "")
         assert "$79" in result.get("response", "")

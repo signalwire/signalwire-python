@@ -58,7 +58,9 @@ class TestShortCodesWire:
     def test_short_codes_update(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.short_codes.update("test-id", name="x", message_handler="x")
+        signalwire_client.short_codes.update(
+            "test-id", name="x", message_handler="relay_context"
+        )
         last = mock.last_request()
         assert last.method == "PUT"
         assert last.matched_route == "relay-rest.update_short_code"
@@ -69,6 +71,6 @@ class TestShortCodesWire:
         mock.push_scenario("relay-rest.update_short_code", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
             signalwire_client.short_codes.update(
-                "test-id", name="x", message_handler="x"
+                "test-id", name="x", message_handler="relay_context"
             )
         assert exc.value.status_code == 500

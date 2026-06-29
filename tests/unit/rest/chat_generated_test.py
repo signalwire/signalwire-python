@@ -26,7 +26,7 @@ class TestChatWire:
     def test_chat_create_token(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.chat.create_token(ttl="x", channels="x")
+        signalwire_client.chat.create_token(ttl=1, channels={})
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "chat.create_chat_token"
@@ -36,5 +36,5 @@ class TestChatWire:
     ) -> None:
         mock.push_scenario("chat.create_chat_token", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.chat.create_token(ttl="x", channels="x")
+            signalwire_client.chat.create_token(ttl=1, channels={})
         assert exc.value.status_code == 500

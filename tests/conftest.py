@@ -5,9 +5,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Pytest configuration and shared fixtures for SignalWire AI Agents tests
 """
 
@@ -16,9 +14,10 @@ import sys
 import pytest
 import tempfile
 import shutil
+from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
-from typing import Dict, Any, Optional, List
+from typing import Any
 import json
 import uuid
 from datetime import datetime
@@ -28,7 +27,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 # Import the main classes we'll be testing
-from signalwire import AgentBase
+from signalwire.core.agent_base import AgentBase
 from signalwire.core.function_result import FunctionResult
 from signalwire.core.swaig_function import SWAIGFunction
 from signalwire.core.data_map import DataMap
@@ -37,7 +36,7 @@ from signalwire.core.swml_service import SWMLService
 
 
 @pytest.fixture(scope="session")
-def test_data_dir():
+def test_data_dir() -> Iterator[Path]:
     """Create a temporary directory for test data"""
     temp_dir = tempfile.mkdtemp(prefix="signalwire_tests_")
     yield Path(temp_dir)
@@ -45,7 +44,7 @@ def test_data_dir():
 
 
 @pytest.fixture
-def mock_env_vars():
+def mock_env_vars() -> Iterator[dict[str, str]]:
     """Mock environment variables for testing"""
     env_vars = {
         "SIGNALWIRE_PROJECT_ID": "test-project-id",
@@ -67,7 +66,7 @@ def mock_env_vars():
 
 
 @pytest.fixture
-def sample_agent_config():
+def sample_agent_config() -> dict[str, Any]:
     """Sample agent configuration for testing"""
     return {
         'name': 'test_agent',
@@ -81,7 +80,7 @@ def sample_agent_config():
 
 
 @pytest.fixture
-def mock_agent(mock_env_vars):
+def mock_agent(mock_env_vars: dict[str, str]) -> AgentBase:
     """Create a mock agent for testing (schema validation disabled)"""
     with pytest.MonkeyPatch().context() as m:
         # Mock uvicorn to prevent actual server startup
@@ -106,28 +105,29 @@ def mock_agent(mock_env_vars):
 
 
 @pytest.fixture
-def sample_swaig_function():
+def sample_swaig_function() -> Any:
     """Sample SWAIG function for testing"""
-    def test_handler(param1: str, param2: int = 42):
+    def test_handler(param1: str, param2: int = 42) -> dict[str, Any]:
         return {"result": f"Processed {param1} with {param2}"}
     
+    parameters: dict[str, Any] = {
+        "type": "object",
+        "properties": {
+            "param1": {"type": "string", "description": "First parameter"},
+            "param2": {"type": "integer", "description": "Second parameter", "default": 42}
+        },
+        "required": ["param1"]
+    }
     return SWAIGFunction(
         name="test_function",
         description="A test function",
-        parameters={
-            "type": "object",
-            "properties": {
-                "param1": {"type": "string", "description": "First parameter"},
-                "param2": {"type": "integer", "description": "Second parameter", "default": 42}
-            },
-            "required": ["param1"]
-        },
+        parameters=parameters,
         handler=test_handler
     )
 
 
 @pytest.fixture
-def sample_post_data():
+def sample_post_data() -> dict[str, Any]:
     """Sample POST data that would come from SignalWire"""
     return {
         "function": "test_function",
@@ -158,7 +158,7 @@ def sample_post_data():
 
 
 @pytest.fixture
-def mock_fastapi_request():
+def mock_fastapi_request() -> Any:
     """Create a mock FastAPI request for testing"""
     request = Mock()
     request.method = "POST"
@@ -171,7 +171,7 @@ def mock_fastapi_request():
 
 
 @pytest.fixture
-def mock_session_manager():
+def mock_session_manager() -> Any:
     """Mock session manager for testing"""
     session_manager = Mock()
     session_manager.create_tool_token.return_value = "test-token-123"
@@ -180,7 +180,7 @@ def mock_session_manager():
 
 
 @pytest.fixture
-def sample_swml_document():
+def sample_swml_document() -> dict[str, Any]:
     """Sample SWML document structure"""
     return {
         "version": "1.0.0",
@@ -203,7 +203,7 @@ def sample_swml_document():
 
 
 @pytest.fixture
-def mock_skill():
+def mock_skill() -> type:
     """Mock skill for testing skill manager"""
     from signalwire.core.skill_base import SkillBase
     
@@ -212,10 +212,10 @@ def mock_skill():
         SKILL_DESCRIPTION = "A mock skill for testing"
         SKILL_VERSION = "1.0.0"
         
-        def setup(self):
+        def setup(self) -> bool:
             return True
             
-        def register_tools(self):
+        def register_tools(self) -> None:
             self.agent.define_tool(
                 name="mock_tool",
                 description="A mock tool",
@@ -227,7 +227,7 @@ def mock_skill():
 
 
 @pytest.fixture
-def temp_state_file(test_data_dir):
+def temp_state_file(test_data_dir: Path) -> Iterator[Any]:
     """Temporary state file for testing state management"""
     state_file = test_data_dir / "test_state.json"
     yield state_file
@@ -236,7 +236,7 @@ def temp_state_file(test_data_dir):
 
 
 @pytest.fixture
-def sample_contexts():
+def sample_contexts() -> Any:
     """Sample contexts for testing context system"""
     return [
         {
@@ -254,7 +254,7 @@ def sample_contexts():
 
 
 @pytest.fixture
-def mock_swml_service():
+def mock_swml_service() -> Any:
     """Create a mock SWML service for testing (schema validation disabled)"""
     service = SWMLService(
         name="test_service",
@@ -268,7 +268,7 @@ def mock_swml_service():
 
 
 @pytest.fixture
-def mock_swaig_function():
+def mock_swaig_function() -> Any:
     """Create a mock SWAIG function for testing"""
     return {
         "function": "test_function",
@@ -285,7 +285,7 @@ def mock_swaig_function():
 
 
 @pytest.fixture
-def mock_post_data():
+def mock_post_data() -> Any:
     """Create mock POST data for webhook testing"""
     return {
         "call_id": "test-call-123",
@@ -303,7 +303,7 @@ def mock_post_data():
 
 
 @pytest.fixture
-def sample_swml_response():
+def sample_swml_response() -> Any:
     """Sample SWML response for testing"""
     return {
         "version": "1.0.0",
@@ -323,7 +323,7 @@ def sample_swml_response():
 
 
 # Pytest hooks for better test organization
-def pytest_configure(config):
+def pytest_configure(config: "pytest.Config") -> None:
     """Configure pytest with custom markers"""
     config.addinivalue_line(
         "markers", "unit: mark test as a unit test"
@@ -339,7 +339,7 @@ def pytest_configure(config):
     )
 
 
-def pytest_collection_modifyitems(config, items):
+def pytest_collection_modifyitems(config: "pytest.Config", items: "list[pytest.Item]") -> None:
     """Automatically mark tests based on their location"""
     for item in items:
         # Mark tests in unit/ directory as unit tests
@@ -351,7 +351,7 @@ def pytest_collection_modifyitems(config, items):
             item.add_marker(pytest.mark.integration)
         
         # Mark tests that use network fixtures as network tests
-        if any(fixture in item.fixturenames for fixture in ["requests_mock", "httpx_mock"]):
+        if any(fixture in getattr(item, "fixturenames", []) for fixture in ["requests_mock", "httpx_mock"]):
             item.add_marker(pytest.mark.network)
 
 
@@ -360,7 +360,7 @@ class TestUtils:
     """Utility functions for tests"""
     
     @staticmethod
-    def create_mock_response(status_code: int = 200, json_data: Optional[Dict] = None):
+    def create_mock_response(status_code: int = 200, json_data: "dict[str, Any] | None" = None) -> Any:
         """Create a mock HTTP response"""
         response = Mock()
         response.status_code = status_code
@@ -369,7 +369,7 @@ class TestUtils:
         return response
     
     @staticmethod
-    def assert_swml_structure(swml_dict: Dict[str, Any]):
+    def assert_swml_structure(swml_dict: "dict[str, Any]") -> None:
         """Assert that a dictionary has valid SWML structure"""
         assert "version" in swml_dict
         assert "sections" in swml_dict
@@ -377,7 +377,7 @@ class TestUtils:
         assert isinstance(swml_dict["sections"]["main"], list)
     
     @staticmethod
-    def assert_swaig_function_structure(func_dict: Dict[str, Any]):
+    def assert_swaig_function_structure(func_dict: "dict[str, Any]") -> None:
         """Assert that a dictionary has valid SWAIG function structure"""
         required_fields = ["function", "purpose", "argument"]
         for field in required_fields:
@@ -385,6 +385,6 @@ class TestUtils:
 
 
 @pytest.fixture
-def test_utils():
+def test_utils() -> type:
     """Provide test utilities"""
     return TestUtils 

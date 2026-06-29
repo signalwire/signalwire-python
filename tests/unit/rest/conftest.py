@@ -61,6 +61,7 @@ import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
+from collections.abc import Iterator
 from typing import Any
 from unittest.mock import MagicMock, patch
 from urllib.parse import quote
@@ -112,19 +113,19 @@ _MOCK_AVAILABLE = _MOCK_PKG_DIR is not None
 class MockResponse:
     """Simulates a requests.Response — used by the legacy ``mock_session`` fixture."""
 
-    def __init__(self, status_code=200, json_data=None, content=b"ok"):
+    def __init__(self, status_code: int = 200, json_data: object = None, content: bytes = b"ok") -> None:
         self.status_code = status_code
         self._json = json_data if json_data is not None else {}
         self.content = content
         self.ok = 200 <= status_code < 300
         self.text = str(json_data)
 
-    def json(self):
+    def json(self) -> object:
         return self._json
 
 
 @pytest.fixture
-def mock_session():
+def mock_session() -> Iterator[MagicMock]:
     """Patches requests.Session and returns the mock session instance."""
     with patch("signalwire.rest._base.requests.Session") as MockSession:
         session = MagicMock()
@@ -135,17 +136,17 @@ def mock_session():
 
 
 @pytest.fixture
-def http(mock_session):
+def http(mock_session: MagicMock) -> HttpClient:
     """An HttpClient backed by a mock session."""
     return HttpClient("test-project-id", "test-token", "test.signalwire.com")
 
 
 @pytest.fixture
-def client(mock_session):
+def client(mock_session: MagicMock) -> RestClient:
     """A RestClient backed by a mock session."""
     return RestClient(
         project="test-project-id",
-        token="test-token",
+        token="test-token",  # noqa: S106  (test credential placeholder)
         host="test.signalwire.com",
     )
 
@@ -186,7 +187,7 @@ def _pick_free_port() -> int:
         s.close()
     if not port:
         raise RuntimeError("failed to acquire a free port for mock_signalwire")
-    return port
+    return int(port)
 
 
 def _resolve_port() -> int:
@@ -224,7 +225,7 @@ class _SharedServer:
     def __init__(self) -> None:
         self.url: str | None = None
         self.port: int | None = None
-        self._child: subprocess.Popen | None = None
+        self._child: subprocess.Popen[bytes] | None = None
         self._lock = threading.Lock()
         self._error: str | None = None
 
@@ -256,7 +257,7 @@ class _SharedServer:
                 child_env["PYTHONPATH"] = (
                     f"{_MOCK_PKG_DIR}{os.pathsep}{existing}" if existing else _MOCK_PKG_DIR
                 )
-            self._child = subprocess.Popen(
+            self._child = subprocess.Popen(  # noqa: S603  (spawns the local mock server, fixed argv)
                 [
                     sys.executable, "-m", "mock_signalwire",
                     "--host", "127.0.0.1",
@@ -398,7 +399,7 @@ class _MockHarness:
 
 
 @pytest.fixture
-def mock():
+def mock() -> _MockHarness:
     """Test-facing harness around the shared mock server (unscoped view).
 
     Most tests use the scoped view via ``signalwire_client`` instead; this bare
@@ -406,11 +407,12 @@ def mock():
     its returned ``mock`` to the client's auth header).
     """
     shared = _SHARED.ensure()
+    assert shared.url is not None and shared.port is not None
     return _MockHarness(shared.url, shared.port)
 
 
 @pytest.fixture
-def signalwire_client(mock, monkeypatch):
+def signalwire_client(mock: _MockHarness, monkeypatch: pytest.MonkeyPatch) -> Iterator[RestClient]:
     """A real ``RestClient`` whose HTTP transport hits the shared mock.
 
     Each client authenticates with the constant project ``test_proj`` and a
@@ -440,7 +442,7 @@ def signalwire_client(mock, monkeypatch):
 
     original_init = HttpClient.__init__
 
-    def _patched_init(self, project, token, host):
+    def _patched_init(self: HttpClient, project: str, token: str, host: str) -> None:
         original_init(self, project, token, host)
         self._base_url = mock.url
 

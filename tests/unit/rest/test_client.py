@@ -10,14 +10,15 @@ from signalwire.rest.namespaces._client_tree_generated import (
     VideoNamespace,
 )
 from signalwire.rest.namespaces.calling_resources_generated import Calling
+from unittest.mock import MagicMock
 
 
 class TestRestClient:
-    def test_requires_credentials(self):
+    def test_requires_credentials(self) -> None:
         with pytest.raises(ValueError, match="project, token, and host"):
             RestClient()
 
-    def test_env_var_fallback(self, mock_session):
+    def test_env_var_fallback(self, mock_session: MagicMock) -> None:
         env = {
             "SIGNALWIRE_PROJECT_ID": "env-project",
             "SIGNALWIRE_API_TOKEN": "env-token",
@@ -27,7 +28,7 @@ class TestRestClient:
             c = RestClient()
             assert c._project == "env-project"
 
-    def test_explicit_overrides_env(self, mock_session):
+    def test_explicit_overrides_env(self, mock_session: MagicMock) -> None:
         env = {
             "SIGNALWIRE_PROJECT_ID": "env-project",
             "SIGNALWIRE_API_TOKEN": "env-token",
@@ -37,7 +38,7 @@ class TestRestClient:
             c = RestClient(project="explicit", token="tok", host="h.com")
             assert c._project == "explicit"
 
-    def test_namespaces_exist(self, client):
+    def test_namespaces_exist(self, client: RestClient) -> None:
         assert isinstance(client.fabric, FabricNamespace)
         assert isinstance(client.calling, Calling)
         assert isinstance(client.video, VideoNamespace)

@@ -18,6 +18,10 @@ import asyncio
 import hashlib
 import json
 from unittest.mock import Mock, patch, MagicMock, AsyncMock, PropertyMock
+from collections.abc import Coroutine, Iterator
+from typing import Any, TypeVar
+
+_T = TypeVar("_T")
 
 # ---------------------------------------------------------------------------
 # Pre-mock heavy third-party modules that may not be installed in the test
@@ -58,43 +62,43 @@ for _mod_name in _MODULES_TO_STUB:
 
 # Provide minimal attributes that the source code accesses at import time
 _nltk = sys.modules["nltk"]
-_nltk.word_tokenize = Mock(return_value=[])
-_nltk.pos_tag = Mock(return_value=[])
-_nltk.download = Mock()
-_nltk.data = sys.modules["nltk.data"]
+_nltk.word_tokenize = Mock(return_value=[])  # type: ignore[attr-defined]  # stub module attr
+_nltk.pos_tag = Mock(return_value=[])  # type: ignore[attr-defined]  # stub module attr
+_nltk.download = Mock()  # type: ignore[attr-defined]  # stub module attr
+_nltk.data = sys.modules["nltk.data"]  # type: ignore[attr-defined]  # stub module attr
 _nltk.data.find = Mock(side_effect=LookupError("stub"))
-_nltk.corpus = sys.modules["nltk.corpus"]
+_nltk.corpus = sys.modules["nltk.corpus"]  # type: ignore[attr-defined]  # stub module attr
 _nltk.corpus.stopwords = sys.modules["nltk.corpus.stopwords"]
 _nltk.corpus.stopwords.words = Mock(return_value=[])
 
 _wn = sys.modules["nltk.corpus.wordnet"]
-_wn.NOUN = "n"
-_wn.VERB = "v"
-_wn.ADJ = "a"
-_wn.ADV = "r"
-_wn.synsets = Mock(return_value=[])
-sys.modules["nltk.corpus"].wordnet = _wn
+_wn.NOUN = "n"  # type: ignore[attr-defined]  # stub module attr
+_wn.VERB = "v"  # type: ignore[attr-defined]  # stub module attr
+_wn.ADJ = "a"  # type: ignore[attr-defined]  # stub module attr
+_wn.ADV = "r"  # type: ignore[attr-defined]  # stub module attr
+_wn.synsets = Mock(return_value=[])  # type: ignore[attr-defined]  # stub module attr
+sys.modules["nltk.corpus"].wordnet = _wn  # type: ignore[attr-defined]  # stub module attr
 
 _nltk_stem = sys.modules["nltk.stem"]
 _porter = MagicMock()
 _porter.stem = Mock(side_effect=lambda w: w)
-_nltk_stem.PorterStemmer = Mock(return_value=_porter)
-_nltk.WordNetLemmatizer = Mock(return_value=MagicMock())
+_nltk_stem.PorterStemmer = Mock(return_value=_porter)  # type: ignore[attr-defined]  # stub module attr
+_nltk.WordNetLemmatizer = Mock(return_value=MagicMock())  # type: ignore[attr-defined]  # stub module attr
 
 # Stub sentence_transformers
-sys.modules["sentence_transformers"].SentenceTransformer = None
+sys.modules["sentence_transformers"].SentenceTransformer = None  # type: ignore[attr-defined]  # stub module attr
 
 # Stub FastAPI classes (on fresh stub modules, not real ones)
 _fastapi_mod = sys.modules["fastapi"]
-_fastapi_mod.FastAPI = None
-_fastapi_mod.HTTPException = None
-_fastapi_mod.Request = None
-_fastapi_mod.Response = None
-_fastapi_mod.Depends = None
-sys.modules["fastapi.middleware.cors"].CORSMiddleware = None
-sys.modules["fastapi.security"].HTTPBasic = None
-sys.modules["fastapi.security"].HTTPBasicCredentials = None
-sys.modules["pydantic"].BaseModel = None
+_fastapi_mod.FastAPI = None  # type: ignore[attr-defined]  # stub module attr
+_fastapi_mod.HTTPException = None  # type: ignore[attr-defined]  # stub module attr
+_fastapi_mod.Request = None  # type: ignore[attr-defined]  # stub module attr
+_fastapi_mod.Response = None  # type: ignore[attr-defined]  # stub module attr
+_fastapi_mod.Depends = None  # type: ignore[attr-defined]  # stub module attr
+sys.modules["fastapi.middleware.cors"].CORSMiddleware = None  # type: ignore[attr-defined]  # stub module attr
+sys.modules["fastapi.security"].HTTPBasic = None  # type: ignore[attr-defined]  # stub module attr
+sys.modules["fastapi.security"].HTTPBasicCredentials = None  # type: ignore[attr-defined]  # stub module attr
+sys.modules["pydantic"].BaseModel = None  # type: ignore[attr-defined]  # stub module attr
 
 # Now we can safely import the module under test.
 from signalwire.search.search_service import (
@@ -122,8 +126,10 @@ del _sys_modules_snapshot
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_search_request(query="test query", index_name="default", count=3,
-                         similarity_threshold=0.0, tags=None, language=None):
+def _make_search_request(query: str = "test query", index_name: str = "default", count: int = 3,
+                         similarity_threshold: float = 0.0,
+                         tags: list[str] | None = None,
+                         language: str | None = None) -> Mock:
     """Create a mock SearchRequest-like object."""
     req = Mock()
     req.query = query
@@ -135,7 +141,7 @@ def _make_search_request(query="test query", index_name="default", count=3,
     return req
 
 
-def _run_async(coro):
+def _run_async(coro: Coroutine[Any, Any, _T]) -> _T:
     """Run an async coroutine synchronously."""
     loop = asyncio.new_event_loop()
     try:
@@ -149,7 +155,7 @@ def _run_async(coro):
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(autouse=True)
-def _patch_external_deps():
+def _patch_external_deps() -> Iterator[dict[str, MagicMock]]:
     """Patch external dependencies for every test so SearchService can be constructed."""
     with patch("signalwire.search.search_service.SecurityConfig") as mock_sec, \
          patch("signalwire.search.search_service.ConfigLoader") as mock_cl, \
@@ -191,53 +197,53 @@ def _patch_external_deps():
 class TestCacheKey:
     """Tests for the module-level _cache_key function."""
 
-    def test_cache_key_basic(self):
+    def test_cache_key_basic(self) -> None:
         key = _cache_key("hello world", "default", 3, None)
         assert isinstance(key, str)
         assert len(key) == 32  # md5 hex digest length
 
-    def test_cache_key_deterministic(self):
+    def test_cache_key_deterministic(self) -> None:
         k1 = _cache_key("hello", "idx", 5, ["a", "b"])
         k2 = _cache_key("hello", "idx", 5, ["a", "b"])
         assert k1 == k2
 
-    def test_cache_key_case_insensitive_query(self):
+    def test_cache_key_case_insensitive_query(self) -> None:
         k1 = _cache_key("Hello World", "default", 3, None)
         k2 = _cache_key("hello world", "default", 3, None)
         assert k1 == k2
 
-    def test_cache_key_strips_whitespace(self):
+    def test_cache_key_strips_whitespace(self) -> None:
         k1 = _cache_key("  hello  ", "default", 3, None)
         k2 = _cache_key("hello", "default", 3, None)
         assert k1 == k2
 
-    def test_cache_key_tags_sorted(self):
+    def test_cache_key_tags_sorted(self) -> None:
         k1 = _cache_key("q", "idx", 1, ["b", "a"])
         k2 = _cache_key("q", "idx", 1, ["a", "b"])
         assert k1 == k2
 
-    def test_cache_key_different_queries_differ(self):
+    def test_cache_key_different_queries_differ(self) -> None:
         k1 = _cache_key("alpha", "default", 3, None)
         k2 = _cache_key("beta", "default", 3, None)
         assert k1 != k2
 
-    def test_cache_key_different_indexes_differ(self):
+    def test_cache_key_different_indexes_differ(self) -> None:
         k1 = _cache_key("q", "idx1", 3, None)
         k2 = _cache_key("q", "idx2", 3, None)
         assert k1 != k2
 
-    def test_cache_key_different_counts_differ(self):
+    def test_cache_key_different_counts_differ(self) -> None:
         k1 = _cache_key("q", "idx", 3, None)
         k2 = _cache_key("q", "idx", 5, None)
         assert k1 != k2
 
-    def test_cache_key_none_tags_vs_empty_tags(self):
+    def test_cache_key_none_tags_vs_empty_tags(self) -> None:
         k1 = _cache_key("q", "idx", 3, None)
         k2 = _cache_key("q", "idx", 3, [])
         # Both produce tags=[] in the key_data
         assert k1 == k2
 
-    def test_cache_key_does_not_leak_query(self):
+    def test_cache_key_does_not_leak_query(self) -> None:
         """Cache keys should be hashed, not plaintext."""
         key = _cache_key("sensitive query", "default", 3, None)
         assert "sensitive" not in key
@@ -251,7 +257,7 @@ class TestCacheKey:
 class TestSearchServiceInit:
     """Tests for SearchService.__init__ and _load_config."""
 
-    def test_default_initialization(self):
+    def test_default_initialization(self) -> None:
         """SearchService can be instantiated with all defaults."""
         svc = SearchService()
         assert svc.port == 8001
@@ -263,37 +269,37 @@ class TestSearchServiceInit:
         assert svc._query_cache == {}
         assert svc._cache_size == 100
 
-    def test_custom_port(self):
+    def test_custom_port(self) -> None:
         svc = SearchService(port=9999)
         assert svc.port == 9999
 
-    def test_custom_indexes(self):
+    def test_custom_indexes(self) -> None:
         indexes = {"docs": "/path/docs.db", "faq": "/path/faq.db"}
         svc = SearchService(indexes=indexes)
         assert svc.indexes == indexes
 
-    def test_basic_auth_from_constructor(self):
+    def test_basic_auth_from_constructor(self) -> None:
         svc = SearchService(basic_auth=("admin", "secret"))
         assert svc._basic_auth == ("admin", "secret")
 
-    def test_basic_auth_fallback_to_security_config(self):
+    def test_basic_auth_fallback_to_security_config(self) -> None:
         # When basic_auth is not passed, it should fall back to security config
         svc = SearchService()
         assert svc._basic_auth == ("user", "pass")
 
-    def test_pgvector_backend(self):
+    def test_pgvector_backend(self) -> None:
         svc = SearchService(backend="pgvector", connection_string="postgresql://localhost/db")
         assert svc.backend == "pgvector"
         assert svc.connection_string == "postgresql://localhost/db"
 
-    def test_security_config_created(self, _patch_external_deps):
+    def test_security_config_created(self, _patch_external_deps: MagicMock) -> None:
         svc = SearchService(config_file="/some/config.json")
         _patch_external_deps["SecurityConfig"].assert_called_once_with(
             config_file="/some/config.json", service_name="search"
         )
         _patch_external_deps["security_instance"].log_config.assert_called_once_with("SearchService")
 
-    def test_no_fastapi_sets_app_none(self):
+    def test_no_fastapi_sets_app_none(self) -> None:
         # Patch FastAPI to None so the constructor skips app creation
         with patch("signalwire.search.search_service.FastAPI", None):
             svc = SearchService()
@@ -307,14 +313,14 @@ class TestSearchServiceInit:
 class TestLoadConfig:
     """Tests for _load_config method."""
 
-    def test_load_config_no_file(self, _patch_external_deps):
+    def test_load_config_no_file(self, _patch_external_deps: MagicMock) -> None:
         _patch_external_deps["ConfigLoader"].find_config_file.return_value = None
         svc = SearchService()
         assert svc.indexes == {}
         assert svc.backend == "sqlite"
         assert svc.connection_string is None
 
-    def test_load_config_with_service_section(self, _patch_external_deps):
+    def test_load_config_with_service_section(self, _patch_external_deps: MagicMock) -> None:
         cl_instance = _patch_external_deps["ConfigLoader"].return_value
         cl_instance.has_config.return_value = True
         cl_instance.get_section.return_value = {
@@ -329,7 +335,7 @@ class TestLoadConfig:
         # The constructor overrides port with its own default 8001 after _load_config
         assert svc.port == 8001
 
-    def test_load_config_indexes_only_when_dict(self, _patch_external_deps):
+    def test_load_config_indexes_only_when_dict(self, _patch_external_deps: MagicMock) -> None:
         cl_instance = _patch_external_deps["ConfigLoader"].return_value
         cl_instance.has_config.return_value = True
         cl_instance.get_section.return_value = {
@@ -348,12 +354,12 @@ class TestLoadConfig:
 class TestLoadResources:
     """Tests for _load_resources method."""
 
-    def test_load_resources_sqlite_no_indexes(self):
+    def test_load_resources_sqlite_no_indexes(self) -> None:
         svc = SearchService()
         assert svc.model is None
         assert svc.search_engines == {}
 
-    def test_load_resources_sqlite_with_indexes(self, _patch_external_deps):
+    def test_load_resources_sqlite_with_indexes(self, _patch_external_deps: MagicMock) -> None:
         mock_model = MagicMock()
         with patch("signalwire.search.search_service.SentenceTransformer", return_value=mock_model):
             with patch.object(
@@ -362,7 +368,7 @@ class TestLoadResources:
                 svc = SearchService(indexes={"docs": "/path/docs.db"})
                 assert svc.model == mock_model
 
-    def test_load_resources_sqlite_model_load_failure(self, _patch_external_deps):
+    def test_load_resources_sqlite_model_load_failure(self, _patch_external_deps: MagicMock) -> None:
         with patch(
             "signalwire.search.search_service.SentenceTransformer",
             side_effect=Exception("model load failed"),
@@ -373,7 +379,7 @@ class TestLoadResources:
                 svc = SearchService(indexes={"docs": "/path/docs.db"})
                 assert svc.model is None
 
-    def test_load_resources_pgvector_creates_engines(self, _patch_external_deps):
+    def test_load_resources_pgvector_creates_engines(self, _patch_external_deps: MagicMock) -> None:
         mock_engine = MagicMock()
         mock_engine.config = {"model_name": "test-model"}
         _patch_external_deps["SearchEngine"].return_value = mock_engine
@@ -387,7 +393,7 @@ class TestLoadResources:
             )
             assert "col1" in svc.search_engines
 
-    def test_load_resources_pgvector_engine_failure(self, _patch_external_deps):
+    def test_load_resources_pgvector_engine_failure(self, _patch_external_deps: MagicMock) -> None:
         _patch_external_deps["SearchEngine"].side_effect = Exception("connection failed")
 
         svc = SearchService(
@@ -405,12 +411,12 @@ class TestLoadResources:
 class TestGetModelName:
     """Tests for _get_model_name method."""
 
-    def test_pgvector_returns_default_model(self):
+    def test_pgvector_returns_default_model(self) -> None:
         svc = SearchService(backend="pgvector", connection_string="postgresql://localhost/db")
         result = svc._get_model_name("/some/path")
         assert result == "sentence-transformers/all-mpnet-base-v2"
 
-    def test_sqlite_reads_from_database(self):
+    def test_sqlite_reads_from_database(self) -> None:
         svc = SearchService()
 
         mock_conn = MagicMock()
@@ -426,7 +432,7 @@ class TestGetModelName:
             assert result == "custom-model"
             mock_conn.close.assert_called_once()
 
-    def test_sqlite_database_error_returns_default(self):
+    def test_sqlite_database_error_returns_default(self) -> None:
         svc = SearchService()
 
         mock_sqlite3 = MagicMock()
@@ -436,7 +442,7 @@ class TestGetModelName:
             result = svc._get_model_name("/nonexistent/path.db")
             assert result == "sentence-transformers/all-mpnet-base-v2"
 
-    def test_sqlite_no_config_row_returns_default(self):
+    def test_sqlite_no_config_row_returns_default(self) -> None:
         svc = SearchService()
 
         mock_conn = MagicMock()
@@ -460,7 +466,7 @@ class TestHandleSearch:
     """Tests for the async _handle_search method."""
 
     @pytest.fixture
-    def service_with_engine(self):
+    def service_with_engine(self) -> SearchService:
         """Create a SearchService with a mocked search engine."""
         svc = SearchService()
 
@@ -476,14 +482,14 @@ class TestHandleSearch:
         svc.search_engines["default"] = mock_engine
         return svc
 
-    def test_handle_search_index_not_found(self):
+    def test_handle_search_index_not_found(self) -> None:
         svc = SearchService()
         request = _make_search_request(index_name="nonexistent")
 
         with pytest.raises(Exception):
             _run_async(svc._handle_search(request))
 
-    def test_handle_search_success(self, service_with_engine):
+    def test_handle_search_success(self, service_with_engine: SearchService) -> None:
         with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "enhanced test query",
@@ -498,10 +504,11 @@ class TestHandleSearch:
             assert len(response.results) == 1
             assert response.results[0].content == "Result content"
             assert response.results[0].score == 0.95
+            assert response.query_analysis is not None
             assert response.query_analysis["original_query"] == "test query"
             assert response.query_analysis["enhanced_query"] == "enhanced test query"
 
-    def test_handle_search_preprocessing_failure(self, service_with_engine):
+    def test_handle_search_preprocessing_failure(self, service_with_engine: SearchService) -> None:
         """When preprocess_query fails, search should still proceed with original query."""
         with patch(
             "signalwire.search.search_service.preprocess_query",
@@ -510,11 +517,12 @@ class TestHandleSearch:
             request = _make_search_request()
             response = _run_async(service_with_engine._handle_search(request))
 
+            assert response.query_analysis is not None
             assert response.query_analysis["enhanced_query"] == "test query"
 
-    def test_handle_search_engine_failure(self, service_with_engine):
+    def test_handle_search_engine_failure(self, service_with_engine: SearchService) -> None:
         """When search engine raises, should return empty results."""
-        service_with_engine.search_engines["default"].search.side_effect = Exception("search error")
+        service_with_engine.search_engines["default"].search.side_effect = Exception("search error")  # type: ignore[attr-defined]  # mock attr
 
         with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
@@ -528,7 +536,7 @@ class TestHandleSearch:
 
             assert len(response.results) == 0
 
-    def test_handle_search_caching(self, service_with_engine):
+    def test_handle_search_caching(self, service_with_engine: SearchService) -> None:
         """Second identical query should return cached result."""
         with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
@@ -546,7 +554,7 @@ class TestHandleSearch:
             assert mock_pp.call_count == 1
             assert resp1 is resp2
 
-    def test_handle_search_cache_eviction(self, service_with_engine):
+    def test_handle_search_cache_eviction(self, service_with_engine: SearchService) -> None:
         """When cache is full, oldest entry should be evicted."""
         service_with_engine._cache_size = 2
 
@@ -563,7 +571,7 @@ class TestHandleSearch:
 
             assert len(service_with_engine._query_cache) <= 2
 
-    def test_handle_search_with_tags(self, service_with_engine):
+    def test_handle_search_with_tags(self, service_with_engine: SearchService) -> None:
         with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
@@ -574,10 +582,10 @@ class TestHandleSearch:
             request = _make_search_request(tags=["python"])
             _run_async(service_with_engine._handle_search(request))
 
-            call_kwargs = service_with_engine.search_engines["default"].search.call_args
+            call_kwargs = service_with_engine.search_engines["default"].search.call_args  # type: ignore[attr-defined]  # mock attr
             assert call_kwargs[1]["tags"] == ["python"]
 
-    def test_handle_search_with_language(self, service_with_engine):
+    def test_handle_search_with_language(self, service_with_engine: SearchService) -> None:
         with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
@@ -592,7 +600,7 @@ class TestHandleSearch:
             call_kwargs = mock_pp.call_args
             assert call_kwargs[1]["language"] == "es"
 
-    def test_handle_search_auto_language(self, service_with_engine):
+    def test_handle_search_auto_language(self, service_with_engine: SearchService) -> None:
         with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
@@ -606,7 +614,7 @@ class TestHandleSearch:
             call_kwargs = mock_pp.call_args
             assert call_kwargs[1]["language"] == "auto"
 
-    def test_handle_search_similarity_threshold(self, service_with_engine):
+    def test_handle_search_similarity_threshold(self, service_with_engine: SearchService) -> None:
         with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {
                 "enhanced_text": "test",
@@ -617,7 +625,7 @@ class TestHandleSearch:
             request = _make_search_request(similarity_threshold=0.5)
             _run_async(service_with_engine._handle_search(request))
 
-            call_kwargs = service_with_engine.search_engines["default"].search.call_args
+            call_kwargs = service_with_engine.search_engines["default"].search.call_args  # type: ignore[attr-defined]  # mock attr
             assert call_kwargs[1]["similarity_threshold"] == 0.5
 
 
@@ -628,7 +636,7 @@ class TestHandleSearch:
 class TestHandleSearchPgvector:
     """Tests for _handle_search with pgvector-specific behavior."""
 
-    def test_pgvector_sets_global_model(self):
+    def test_pgvector_sets_global_model(self) -> None:
         svc = SearchService(
             backend="pgvector",
             connection_string="postgresql://localhost/db",
@@ -663,12 +671,12 @@ class TestHandleSearchPgvector:
 class TestGetCurrentUsername:
     """Tests for basic auth credential validation."""
 
-    def test_no_credentials_returns_none(self):
+    def test_no_credentials_returns_none(self) -> None:
         svc = SearchService()
         result = svc._get_current_username(credentials=None)
         assert result is None
 
-    def test_valid_credentials(self):
+    def test_valid_credentials(self) -> None:
         svc = SearchService(basic_auth=("admin", "secret"))
 
         creds = MagicMock()
@@ -678,7 +686,7 @@ class TestGetCurrentUsername:
         result = svc._get_current_username(credentials=creds)
         assert result == "admin"
 
-    def test_invalid_username(self):
+    def test_invalid_username(self) -> None:
         svc = SearchService(basic_auth=("admin", "secret"))
 
         creds = MagicMock()
@@ -690,7 +698,7 @@ class TestGetCurrentUsername:
         with pytest.raises(Exception):
             svc._get_current_username(credentials=creds)
 
-    def test_invalid_password(self):
+    def test_invalid_password(self) -> None:
         svc = SearchService(basic_auth=("admin", "secret"))
 
         creds = MagicMock()
@@ -700,7 +708,7 @@ class TestGetCurrentUsername:
         with pytest.raises(Exception):
             svc._get_current_username(credentials=creds)
 
-    def test_timing_safe_comparison_used(self):
+    def test_timing_safe_comparison_used(self) -> None:
         """Verify that secrets.compare_digest is used (timing-safe)."""
         svc = SearchService(basic_auth=("admin", "secret"))
 
@@ -720,7 +728,7 @@ class TestGetCurrentUsername:
 class TestSearchDirect:
     """Tests for the synchronous search_direct method."""
 
-    def test_search_direct_basic(self):
+    def test_search_direct_basic(self) -> None:
         svc = SearchService()
 
         mock_engine = MagicMock()
@@ -748,7 +756,7 @@ class TestSearchDirect:
             assert result["results"][0]["content"] == "Direct result"
             assert result["results"][0]["score"] == 0.88
 
-    def test_search_direct_passes_parameters(self):
+    def test_search_direct_passes_parameters(self) -> None:
         svc = SearchService()
 
         mock_engine = MagicMock()
@@ -775,7 +783,7 @@ class TestSearchDirect:
             call_kwargs = mock_pp.call_args
             assert call_kwargs[1]["language"] == "es"
 
-    def test_search_direct_index_not_found(self):
+    def test_search_direct_index_not_found(self) -> None:
         svc = SearchService()
 
         with pytest.raises(Exception):
@@ -789,14 +797,14 @@ class TestSearchDirect:
 class TestStartStop:
     """Tests for start and stop methods."""
 
-    def test_start_no_app_raises(self):
+    def test_start_no_app_raises(self) -> None:
         with patch("signalwire.search.search_service.FastAPI", None):
             svc = SearchService()
             # app is None because FastAPI is patched to None
             with pytest.raises(RuntimeError, match="FastAPI not available"):
                 svc.start()
 
-    def test_start_with_custom_port(self):
+    def test_start_with_custom_port(self) -> None:
         svc = SearchService()
         svc.app = MagicMock()  # Ensure app is not None
 
@@ -807,7 +815,7 @@ class TestStartStop:
             call_args = mock_uvicorn.run.call_args
             assert call_args[1]["port"] == 7777
 
-    def test_start_with_ssl_cert_and_key(self):
+    def test_start_with_ssl_cert_and_key(self) -> None:
         svc = SearchService()
         svc.app = MagicMock()
 
@@ -818,7 +826,7 @@ class TestStartStop:
             assert call_args[1]["ssl_certfile"] == "/path/cert.pem"
             assert call_args[1]["ssl_keyfile"] == "/path/key.pem"
 
-    def test_start_with_security_config_ssl(self, _patch_external_deps):
+    def test_start_with_security_config_ssl(self, _patch_external_deps: MagicMock) -> None:
         _patch_external_deps["security_instance"].get_ssl_context_kwargs.return_value = {
             "ssl_certfile": "/auto/cert.pem",
             "ssl_keyfile": "/auto/key.pem",
@@ -834,7 +842,7 @@ class TestStartStop:
             assert call_args[1]["ssl_certfile"] == "/auto/cert.pem"
             assert call_args[1]["ssl_keyfile"] == "/auto/key.pem"
 
-    def test_start_default_host(self):
+    def test_start_default_host(self) -> None:
         svc = SearchService()
         svc.app = MagicMock()
 
@@ -844,7 +852,7 @@ class TestStartStop:
             call_args = mock_uvicorn.run.call_args
             assert call_args[1]["host"] == "0.0.0.0"
 
-    def test_start_uses_instance_port_by_default(self):
+    def test_start_uses_instance_port_by_default(self) -> None:
         svc = SearchService(port=5555)
         svc.app = MagicMock()
 
@@ -854,13 +862,13 @@ class TestStartStop:
             call_args = mock_uvicorn.run.call_args
             assert call_args[1]["port"] == 5555
 
-    def test_stop_does_not_raise(self):
+    def test_stop_does_not_raise(self) -> None:
         """stop() is currently a placeholder no-op: it must return None
         and must NOT mutate the service's port or backend state."""
         svc = SearchService()
         port_before = svc.port
         backend_before = svc.backend
-        result = svc.stop()
+        result = svc.stop()  # type: ignore[func-returns-value]  # asserting the None return of a no-op method
         assert result is None
         assert svc.port == port_before
         assert svc.backend == backend_before
@@ -873,7 +881,7 @@ class TestStartStop:
 class TestSetupSecurity:
     """Tests for security middleware setup."""
 
-    def test_setup_security_no_app(self):
+    def test_setup_security_no_app(self) -> None:
         with patch("signalwire.search.search_service.FastAPI", None):
             svc = SearchService()
             assert svc.app is None
@@ -888,7 +896,7 @@ class TestSetupSecurity:
 class TestSetupRoutes:
     """Tests for route setup."""
 
-    def test_setup_routes_no_app(self):
+    def test_setup_routes_no_app(self) -> None:
         with patch("signalwire.search.search_service.FastAPI", None):
             svc = SearchService()
             assert svc.app is None
@@ -903,7 +911,7 @@ class TestSetupRoutes:
 class TestSearchModels:
     """Tests for the SearchRequest/SearchResult/SearchResponse fallback classes."""
 
-    def test_search_request_defaults(self):
+    def test_search_request_defaults(self) -> None:
         req = SearchRequest(query="test")
         assert req.query == "test"
         assert req.index_name == "default"
@@ -912,7 +920,7 @@ class TestSearchModels:
         assert req.tags is None
         assert req.language is None
 
-    def test_search_request_custom_values(self):
+    def test_search_request_custom_values(self) -> None:
         req = SearchRequest(
             query="hello",
             index_name="myidx",
@@ -928,7 +936,7 @@ class TestSearchModels:
         assert req.tags == ["a", "b"]
         assert req.language == "es"
 
-    def test_search_result_creation(self):
+    def test_search_result_creation(self) -> None:
         result = SearchResult(
             content="test content",
             score=0.95,
@@ -938,13 +946,13 @@ class TestSearchModels:
         assert result.score == 0.95
         assert result.metadata == {"key": "value"}
 
-    def test_search_response_creation(self):
+    def test_search_response_creation(self) -> None:
         result = SearchResult(content="test", score=0.9, metadata={})
         response = SearchResponse(results=[result], query_analysis={"lang": "en"})
         assert len(response.results) == 1
         assert response.query_analysis == {"lang": "en"}
 
-    def test_search_response_no_analysis(self):
+    def test_search_response_no_analysis(self) -> None:
         response = SearchResponse(results=[])
         assert response.query_analysis is None
 
@@ -956,7 +964,7 @@ class TestSearchModels:
 class TestEdgeCasesAndSecurity:
     """Tests for edge cases, error handling, and security considerations."""
 
-    def test_empty_query(self):
+    def test_empty_query(self) -> None:
         svc = SearchService()
 
         mock_engine = MagicMock()
@@ -975,7 +983,7 @@ class TestEdgeCasesAndSecurity:
             response = _run_async(svc._handle_search(request))
             assert len(response.results) == 0
 
-    def test_very_long_query(self):
+    def test_very_long_query(self) -> None:
         """A 10k-word query must not cause issues — the SearchService
         forwards it to the backing engine and returns the engine's
         results verbatim. Empty engine results yield an empty
@@ -1002,7 +1010,7 @@ class TestEdgeCasesAndSecurity:
             # The engine was actually called once — proves we exercised it.
             assert mock_engine.search.call_count == 1
 
-    def test_special_characters_in_query(self):
+    def test_special_characters_in_query(self) -> None:
         """A query containing HTML/script characters must be passed through
         to the engine unchanged (no sanitisation that would alter the
         query); the response shape is the engine's empty results."""
@@ -1028,7 +1036,7 @@ class TestEdgeCasesAndSecurity:
             # The empty engine result shows up as an empty results list.
             assert response.results == []
 
-    def test_health_endpoint_masks_connection_string(self):
+    def test_health_endpoint_masks_connection_string(self) -> None:
         """Connection strings should be masked in health endpoint responses."""
         svc = SearchService(
             backend="pgvector",
@@ -1037,7 +1045,7 @@ class TestEdgeCasesAndSecurity:
         assert svc.backend == "pgvector"
         assert svc.connection_string == "postgresql://user:password@host/db"
 
-    def test_concurrent_cache_access(self):
+    def test_concurrent_cache_access(self) -> None:
         """Basic test that cache operations do not fail under simple usage patterns."""
         svc = SearchService()
 
@@ -1061,7 +1069,7 @@ class TestEdgeCasesAndSecurity:
 
             assert len(svc._query_cache) == 5
 
-    def test_cache_fifo_eviction_order(self):
+    def test_cache_fifo_eviction_order(self) -> None:
         """When cache is full, the first inserted key should be evicted."""
         svc = SearchService()
         svc._cache_size = 3
@@ -1090,7 +1098,7 @@ class TestEdgeCasesAndSecurity:
             first_key = _cache_key("query_0", "default", 3, None)
             assert first_key not in svc._query_cache
 
-    def test_handle_search_model_name_from_engine_config(self):
+    def test_handle_search_model_name_from_engine_config(self) -> None:
         """Verify model_name is passed to preprocess_query from engine config."""
         svc = SearchService()
 
@@ -1112,7 +1120,7 @@ class TestEdgeCasesAndSecurity:
             call_kwargs = mock_pp.call_args
             assert call_kwargs[1]["model_name"] == "custom-model-v2"
 
-    def test_handle_search_embedding_model_fallback(self):
+    def test_handle_search_embedding_model_fallback(self) -> None:
         """Verify embedding_model key is used if model_name is absent."""
         svc = SearchService()
 
@@ -1134,7 +1142,7 @@ class TestEdgeCasesAndSecurity:
             call_kwargs = mock_pp.call_args
             assert call_kwargs[1]["model_name"] == "fallback-model"
 
-    def test_handle_search_no_model_name_in_config(self):
+    def test_handle_search_no_model_name_in_config(self) -> None:
         """When engine config has no model keys, model_name should be None."""
         svc = SearchService()
 
@@ -1156,7 +1164,7 @@ class TestEdgeCasesAndSecurity:
             call_kwargs = mock_pp.call_args
             assert call_kwargs[1]["model_name"] is None
 
-    def test_handle_search_no_engine_config_attr(self):
+    def test_handle_search_no_engine_config_attr(self) -> None:
         """When engine has no config attribute, model_name should be None."""
         svc = SearchService()
 
@@ -1185,7 +1193,7 @@ class TestEdgeCasesAndSecurity:
 class TestResponseFormat:
     """Verify the shape of responses from _handle_search."""
 
-    def test_response_has_query_analysis(self):
+    def test_response_has_query_analysis(self) -> None:
         svc = SearchService()
 
         mock_engine = MagicMock()
@@ -1210,7 +1218,7 @@ class TestResponseFormat:
             assert response.query_analysis["detected_language"] == "en"
             assert response.query_analysis["pos_analysis"] == {"test": "NN"}
 
-    def test_response_results_have_correct_shape(self):
+    def test_response_results_have_correct_shape(self) -> None:
         svc = SearchService()
 
         mock_engine = MagicMock()
@@ -1255,7 +1263,7 @@ class TestResponseFormat:
 class TestSearchDirectResultFormat:
     """Verify search_direct returns dict with correct shape."""
 
-    def test_search_direct_result_structure(self):
+    def test_search_direct_result_structure(self) -> None:
         svc = SearchService()
 
         mock_engine = MagicMock()
@@ -1289,7 +1297,7 @@ class TestSearchDirectResultFormat:
             assert "score" in item
             assert "metadata" in item
 
-    def test_search_direct_empty_results(self):
+    def test_search_direct_empty_results(self) -> None:
         svc = SearchService()
 
         mock_engine = MagicMock()

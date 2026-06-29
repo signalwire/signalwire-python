@@ -5,9 +5,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Unit tests for MCP Gateway Service (gateway_service.py)
 
 Flask and flask_limiter are optional dependencies (mcp-gateway extra).
@@ -21,10 +19,16 @@ import base64
 import logging
 import threading
 import re
+from pathlib import Path
+from typing import Any, TYPE_CHECKING
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock, call
 from datetime import datetime
+
+if TYPE_CHECKING:
+    from signalwire.mcp_gateway.gateway_service import MCPGateway
+    from werkzeug.test import TestResponse
 
 # Skip the entire module when Flask is not installed
 flask = pytest.importorskip("flask", reason="flask is required for MCP Gateway tests")
@@ -37,7 +41,7 @@ pytest.importorskip("flask_limiter", reason="flask_limiter is required for MCP G
 # filesystem, network, or real MCP processes.
 # ---------------------------------------------------------------------------
 
-def _minimal_config():
+def _minimal_config() -> dict[str, Any]:
     """Return a minimal valid configuration dictionary."""
     return {
         "server": {
@@ -66,7 +70,7 @@ def _minimal_config():
     }
 
 
-def _create_gateway(config=None):
+def _create_gateway(config: dict[str, Any] | None = None) -> tuple["MCPGateway", dict[str, MagicMock]]:
     """
     Instantiate an ``MCPGateway`` with every external dependency mocked.
 
@@ -99,8 +103,8 @@ def _create_gateway(config=None):
         ),
     }
 
-    mocks = {}
-    managers = {}
+    mocks: dict[str, MagicMock] = {}
+    managers: dict[str, MagicMock] = {}
 
     for name, p in patches.items():
         managers[name] = p.start()
@@ -132,13 +136,13 @@ def _create_gateway(config=None):
     return gateway, mocks
 
 
-def _auth_headers_basic(user="admin", password="secret"):
+def _auth_headers_basic(user: str = "admin", password: str = "secret") -> dict[str, str]:
     """Return HTTP headers for Basic authentication."""
     creds = base64.b64encode(f"{user}:{password}".encode()).decode()
     return {"Authorization": f"Basic {creds}"}
 
 
-def _auth_headers_bearer(token="test-bearer-token"):
+def _auth_headers_bearer(token: str = "test-bearer-token") -> dict[str, str]:
     """Return HTTP headers for Bearer token authentication."""
     return {"Authorization": f"Bearer {token}"}
 
@@ -150,14 +154,14 @@ def _auth_headers_bearer(token="test-bearer-token"):
 class TestMCPGatewayInit:
     """Tests for MCPGateway construction and configuration."""
 
-    def test_init_loads_config_via_config_loader(self):
+    def test_init_loads_config_via_config_loader(self) -> None:
         """When ConfigLoader has_config() returns True, config is loaded through it."""
         gateway, mocks = _create_gateway()
         assert mocks["config_loader"].has_config.called
         assert mocks["config_loader"].get_config.called
         assert mocks["config_loader"].substitute_vars.called
 
-    def test_init_falls_back_to_load_config_when_no_config_loader(self):
+    def test_init_falls_back_to_load_config_when_no_config_loader(self) -> None:
         """When ConfigLoader has_config() is False, _load_config is used."""
         from signalwire.mcp_gateway.gateway_service import MCPGateway
 
@@ -178,28 +182,28 @@ class TestMCPGatewayInit:
             MCPGateway("missing.json")
             mock_load.assert_called_once_with("missing.json")
 
-    def test_init_creates_flask_app(self):
+    def test_init_creates_flask_app(self) -> None:
         """A Flask app instance is created during init."""
         gateway, _ = _create_gateway()
         assert gateway.app is not None
         assert gateway.app.test_client() is not None
 
-    def test_init_sets_max_content_length(self):
+    def test_init_sets_max_content_length(self) -> None:
         """Request body is capped at 10 MB."""
         gateway, _ = _create_gateway()
         assert gateway.app.config["MAX_CONTENT_LENGTH"] == 10 * 1024 * 1024
 
-    def test_init_rate_limiter_configured(self):
+    def test_init_rate_limiter_configured(self) -> None:
         """Rate limiter is wired to the Flask app."""
         gateway, _ = _create_gateway()
         assert gateway.limiter is not None
 
-    def test_init_validates_services_on_startup(self):
+    def test_init_validates_services_on_startup(self) -> None:
         """validate_services() is called during __init__."""
         gateway, mocks = _create_gateway()
         mocks["mcp_manager"].validate_services.assert_called_once()
 
-    def test_init_logs_warning_for_failed_validation(self):
+    def test_init_logs_warning_for_failed_validation(self) -> None:
         """A warning is logged when a service fails validation."""
         from signalwire.mcp_gateway.gateway_service import MCPGateway
 
@@ -225,21 +229,21 @@ class TestMCPGatewayInit:
                              if "bad_svc" in str(c)]
             assert len(warning_calls) >= 1
 
-    def test_init_shutdown_flags_default(self):
+    def test_init_shutdown_flags_default(self) -> None:
         """Shutdown flags start as False / None."""
         gateway, _ = _create_gateway()
         assert gateway._shutdown_requested is False
         assert gateway._shutdown_cleanup_done is False
         assert gateway.server is None
 
-    def test_init_rate_config_uses_defaults_when_missing(self):
+    def test_init_rate_config_uses_defaults_when_missing(self) -> None:
         """When rate_limiting section is absent, sensible defaults are used."""
         config = _minimal_config()
         del config["rate_limiting"]
         gateway, _ = _create_gateway(config)
         assert gateway.rate_config == {}
 
-    def test_init_security_config_created(self):
+    def test_init_security_config_created(self) -> None:
         """SecurityConfig is instantiated with correct parameters."""
         from signalwire.mcp_gateway.gateway_service import MCPGateway
 
@@ -269,86 +273,86 @@ class TestValidationHelpers:
     """Tests for _validate_service_name, _validate_session_id, _validate_tool_name."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self):
+    def _setup(self) -> None:
         self.gateway, self.mocks = _create_gateway()
 
     # -- service name -------------------------------------------------------
 
-    def test_validate_service_name_valid(self):
+    def test_validate_service_name_valid(self) -> None:
         assert self.gateway._validate_service_name("my-service_1") == "my-service_1"
 
-    def test_validate_service_name_empty(self):
+    def test_validate_service_name_empty(self) -> None:
         with pytest.raises(ValueError, match="Invalid service name length"):
             self.gateway._validate_service_name("")
 
-    def test_validate_service_name_none(self):
+    def test_validate_service_name_none(self) -> None:
         with pytest.raises(ValueError, match="Invalid service name length"):
-            self.gateway._validate_service_name(None)
+            self.gateway._validate_service_name(None)  # type: ignore[arg-type]  # testing None input
 
-    def test_validate_service_name_too_long(self):
+    def test_validate_service_name_too_long(self) -> None:
         with pytest.raises(ValueError, match="Invalid service name length"):
             self.gateway._validate_service_name("a" * 65)
 
-    def test_validate_service_name_max_length(self):
+    def test_validate_service_name_max_length(self) -> None:
         """Exactly 64 chars should be accepted."""
         name = "a" * 64
         assert self.gateway._validate_service_name(name) == name
 
-    def test_validate_service_name_invalid_chars(self):
+    def test_validate_service_name_invalid_chars(self) -> None:
         with pytest.raises(ValueError, match="invalid characters"):
             self.gateway._validate_service_name("my service!")
 
-    def test_validate_service_name_injection_attempt(self):
+    def test_validate_service_name_injection_attempt(self) -> None:
         with pytest.raises(ValueError, match="invalid characters"):
             self.gateway._validate_service_name("service; rm -rf /")
 
-    def test_validate_service_name_path_traversal(self):
+    def test_validate_service_name_path_traversal(self) -> None:
         with pytest.raises(ValueError, match="invalid characters"):
             self.gateway._validate_service_name("../etc/passwd")
 
     # -- session id ---------------------------------------------------------
 
-    def test_validate_session_id_valid(self):
+    def test_validate_session_id_valid(self) -> None:
         assert self.gateway._validate_session_id("sess-123.abc_def") == "sess-123.abc_def"
 
-    def test_validate_session_id_empty(self):
+    def test_validate_session_id_empty(self) -> None:
         with pytest.raises(ValueError, match="Invalid session ID length"):
             self.gateway._validate_session_id("")
 
-    def test_validate_session_id_none(self):
+    def test_validate_session_id_none(self) -> None:
         with pytest.raises(ValueError, match="Invalid session ID length"):
-            self.gateway._validate_session_id(None)
+            self.gateway._validate_session_id(None)  # type: ignore[arg-type]  # testing None input
 
-    def test_validate_session_id_too_long(self):
+    def test_validate_session_id_too_long(self) -> None:
         with pytest.raises(ValueError, match="Invalid session ID length"):
             self.gateway._validate_session_id("x" * 129)
 
-    def test_validate_session_id_max_length(self):
+    def test_validate_session_id_max_length(self) -> None:
         sid = "a" * 128
         assert self.gateway._validate_session_id(sid) == sid
 
-    def test_validate_session_id_invalid_chars(self):
+    def test_validate_session_id_invalid_chars(self) -> None:
         with pytest.raises(ValueError, match="invalid characters"):
             self.gateway._validate_session_id("sess id with spaces")
 
     # -- tool name ----------------------------------------------------------
 
-    def test_validate_tool_name_valid(self):
+    def test_validate_tool_name_valid(self) -> None:
         assert self.gateway._validate_tool_name("add-todo_item") == "add-todo_item"
 
-    def test_validate_tool_name_empty(self):
+    def test_validate_tool_name_empty(self) -> None:
         with pytest.raises(ValueError, match="Invalid tool name length"):
             self.gateway._validate_tool_name("")
 
-    def test_validate_tool_name_none(self):
+    def test_validate_tool_name_none(self) -> None:
         with pytest.raises(ValueError, match="Invalid tool name length"):
-            self.gateway._validate_tool_name(None)
+            self.gateway._validate_tool_name(None)  # type: ignore[arg-type]  # testing None input
 
-    def test_validate_tool_name_too_long(self):
+    def test_validate_tool_name_too_long(self) -> None:
         with pytest.raises(ValueError, match="Invalid tool name length"):
             self.gateway._validate_tool_name("t" * 65)
 
-    def test_validate_tool_name_invalid_chars(self):
+    def test_validate_tool_name_invalid_chars(self) -> None:
         with pytest.raises(ValueError, match="invalid characters"):
             self.gateway._validate_tool_name("tool name!")
 
@@ -361,10 +365,10 @@ class TestLogSecurityEvent:
     """Tests for _log_security_event."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self):
+    def _setup(self) -> None:
         self.gateway, self.mocks = _create_gateway()
 
-    def test_log_security_event_basic(self):
+    def test_log_security_event_basic(self) -> None:
         with patch("signalwire.mcp_gateway.gateway_service.logger") as mock_logger:
             self.gateway._log_security_event("auth_failed", {"ip": "1.2.3.4"})
             mock_logger.info.assert_called_once()
@@ -373,7 +377,7 @@ class TestLogSecurityEvent:
             assert "auth_failed" in logged
             assert "1.2.3.4" in logged
 
-    def test_log_security_event_truncates_long_strings(self):
+    def test_log_security_event_truncates_long_strings(self) -> None:
         with patch("signalwire.mcp_gateway.gateway_service.logger") as mock_logger:
             long_val = "x" * 500
             self.gateway._log_security_event("test", {"data": long_val})
@@ -381,7 +385,7 @@ class TestLogSecurityEvent:
             parsed = json.loads(logged.split("SECURITY_EVENT: ")[1])
             assert len(parsed["data"]) <= 256
 
-    def test_log_security_event_strips_control_chars(self):
+    def test_log_security_event_strips_control_chars(self) -> None:
         with patch("signalwire.mcp_gateway.gateway_service.logger") as mock_logger:
             self.gateway._log_security_event("test", {"data": "hello\x00world\x1b"})
             logged = mock_logger.info.call_args[0][0]
@@ -390,14 +394,14 @@ class TestLogSecurityEvent:
             assert "\x1b" not in parsed["data"]
             assert "helloworld" in parsed["data"]
 
-    def test_log_security_event_includes_timestamp(self):
+    def test_log_security_event_includes_timestamp(self) -> None:
         with patch("signalwire.mcp_gateway.gateway_service.logger") as mock_logger:
             self.gateway._log_security_event("test", {})
             logged = mock_logger.info.call_args[0][0]
             parsed = json.loads(logged.split("SECURITY_EVENT: ")[1])
             assert "timestamp" in parsed
 
-    def test_log_security_event_preserves_non_string_values(self):
+    def test_log_security_event_preserves_non_string_values(self) -> None:
         with patch("signalwire.mcp_gateway.gateway_service.logger") as mock_logger:
             self.gateway._log_security_event("test", {"count": 42, "flag": True})
             logged = mock_logger.info.call_args[0][0]
@@ -414,17 +418,17 @@ class TestSubstituteEnvVars:
     """Tests for _substitute_env_vars."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self):
+    def _setup(self) -> None:
         self.gateway, self.mocks = _create_gateway()
 
-    def test_substitute_plain_string(self):
+    def test_substitute_plain_string(self) -> None:
         assert self.gateway._substitute_env_vars("hello") == "hello"
 
-    def test_substitute_env_var_present(self):
+    def test_substitute_env_var_present(self) -> None:
         with patch.dict(os.environ, {"MY_VAR": "my_value"}):
             assert self.gateway._substitute_env_vars("${MY_VAR}") == "my_value"
 
-    def test_substitute_env_var_missing_no_default(self):
+    def test_substitute_env_var_missing_no_default(self) -> None:
         """Missing var with no default returns the original placeholder."""
         env = os.environ.copy()
         env.pop("MISSING_VAR_XYZ", None)
@@ -432,33 +436,33 @@ class TestSubstituteEnvVars:
             result = self.gateway._substitute_env_vars("${MISSING_VAR_XYZ}")
             assert result == "${MISSING_VAR_XYZ}"
 
-    def test_substitute_env_var_missing_with_default(self):
+    def test_substitute_env_var_missing_with_default(self) -> None:
         env = os.environ.copy()
         env.pop("MISSING_VAR_XYZ", None)
         with patch.dict(os.environ, env, clear=True):
             assert self.gateway._substitute_env_vars("${MISSING_VAR_XYZ|fallback}") == "fallback"
 
-    def test_substitute_env_var_present_with_default_ignored(self):
+    def test_substitute_env_var_present_with_default_ignored(self) -> None:
         with patch.dict(os.environ, {"MY_VAR": "real"}):
             assert self.gateway._substitute_env_vars("${MY_VAR|fallback}") == "real"
 
-    def test_substitute_dict_recursion(self):
+    def test_substitute_dict_recursion(self) -> None:
         with patch.dict(os.environ, {"A": "val_a"}):
             result = self.gateway._substitute_env_vars({"key": "${A}"})
             assert result == {"key": "val_a"}
 
-    def test_substitute_list_recursion(self):
+    def test_substitute_list_recursion(self) -> None:
         with patch.dict(os.environ, {"B": "val_b"}):
             result = self.gateway._substitute_env_vars(["${B}", "plain"])
             assert result == ["val_b", "plain"]
 
-    def test_substitute_nested_structures(self):
+    def test_substitute_nested_structures(self) -> None:
         with patch.dict(os.environ, {"X": "xval"}):
             data = {"outer": [{"inner": "${X}"}]}
             result = self.gateway._substitute_env_vars(data)
             assert result == {"outer": [{"inner": "xval"}]}
 
-    def test_substitute_non_string_passthrough(self):
+    def test_substitute_non_string_passthrough(self) -> None:
         assert self.gateway._substitute_env_vars(42) == 42
         assert self.gateway._substitute_env_vars(True) is True
         assert self.gateway._substitute_env_vars(None) is None
@@ -472,10 +476,10 @@ class TestLoadConfig:
     """Tests for the fallback _load_config method."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self):
+    def _setup(self) -> None:
         self.gateway, self.mocks = _create_gateway()
 
-    def test_load_config_reads_existing_file(self, tmp_path):
+    def test_load_config_reads_existing_file(self, tmp_path: Path) -> None:
         config_data = _minimal_config()
         config_file = tmp_path / "config.json"
         config_file.write_text(json.dumps(config_data))
@@ -483,7 +487,7 @@ class TestLoadConfig:
         loaded = self.gateway._load_config(str(config_file))
         assert loaded["server"]["port"] == 8080
 
-    def test_load_config_creates_default_when_nothing_exists(self, tmp_path):
+    def test_load_config_creates_default_when_nothing_exists(self, tmp_path: Path) -> None:
         config_path = str(tmp_path / "nonexistent.json")
         # Neither config_path nor sample_config.json exist
         with patch("os.path.exists", return_value=False):
@@ -494,11 +498,11 @@ class TestLoadConfig:
         assert "server" in loaded
         assert loaded["server"]["port"] == 8080
 
-    def test_load_config_copies_sample_when_available(self, tmp_path):
+    def test_load_config_copies_sample_when_available(self, tmp_path: Path) -> None:
         config_path = str(tmp_path / "config.json")
 
         call_count = [0]
-        def exists_side_effect(path):
+        def exists_side_effect(path: str) -> bool:
             if path == config_path:
                 # First call: config doesn't exist; after copy it does
                 call_count[0] += 1
@@ -521,7 +525,7 @@ class TestLoadConfig:
 
             mock_copy.assert_called_once_with("sample_config.json", config_path)
 
-    def test_load_config_converts_string_port_to_int(self, tmp_path):
+    def test_load_config_converts_string_port_to_int(self, tmp_path: Path) -> None:
         config_data = _minimal_config()
         config_data["server"]["port"] = "9090"
         config_file = tmp_path / "config.json"
@@ -530,7 +534,7 @@ class TestLoadConfig:
         loaded = self.gateway._load_config(str(config_file))
         assert loaded["server"]["port"] == 9090
 
-    def test_load_config_handles_invalid_port_string(self, tmp_path):
+    def test_load_config_handles_invalid_port_string(self, tmp_path: Path) -> None:
         config_data = _minimal_config()
         config_data["server"]["port"] = "not_a_number"
         config_file = tmp_path / "config.json"
@@ -539,7 +543,7 @@ class TestLoadConfig:
         loaded = self.gateway._load_config(str(config_file))
         assert loaded["server"]["port"] == 8080  # falls back to default
 
-    def test_load_config_converts_session_string_values(self, tmp_path):
+    def test_load_config_converts_session_string_values(self, tmp_path: Path) -> None:
         config_data = _minimal_config()
         config_data["session"]["default_timeout"] = "600"
         config_data["session"]["max_sessions_per_service"] = "50"
@@ -552,7 +556,7 @@ class TestLoadConfig:
         assert loaded["session"]["max_sessions_per_service"] == 50
         assert loaded["session"]["cleanup_interval"] == 120
 
-    def test_load_config_handles_invalid_session_values(self, tmp_path):
+    def test_load_config_handles_invalid_session_values(self, tmp_path: Path) -> None:
         config_data = _minimal_config()
         config_data["session"]["default_timeout"] = "nope"
         config_file = tmp_path / "config.json"
@@ -570,64 +574,64 @@ class TestAuthentication:
     """Tests for _check_auth decorator and auth routes."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self):
+    def _setup(self) -> None:
         self.gateway, self.mocks = _create_gateway()
         self.client = self.gateway.app.test_client()
 
-    def test_bearer_token_auth_success(self):
+    def test_bearer_token_auth_success(self) -> None:
         resp = self.client.get(
             "/services",
             headers=_auth_headers_bearer("test-bearer-token"),
         )
         assert resp.status_code == 200
 
-    def test_bearer_token_auth_wrong_token(self):
+    def test_bearer_token_auth_wrong_token(self) -> None:
         resp = self.client.get(
             "/services",
             headers=_auth_headers_bearer("wrong-token"),
         )
         assert resp.status_code == 401
 
-    def test_basic_auth_success(self):
+    def test_basic_auth_success(self) -> None:
         resp = self.client.get(
             "/services",
             headers=_auth_headers_basic("admin", "secret"),
         )
         assert resp.status_code == 200
 
-    def test_basic_auth_wrong_password(self):
+    def test_basic_auth_wrong_password(self) -> None:
         resp = self.client.get(
             "/services",
             headers=_auth_headers_basic("admin", "wrong"),
         )
         assert resp.status_code == 401
 
-    def test_basic_auth_wrong_user(self):
+    def test_basic_auth_wrong_user(self) -> None:
         resp = self.client.get(
             "/services",
             headers=_auth_headers_basic("nobody", "secret"),
         )
         assert resp.status_code == 401
 
-    def test_no_auth_header(self):
+    def test_no_auth_header(self) -> None:
         resp = self.client.get("/services")
         assert resp.status_code == 401
         assert "WWW-Authenticate" in resp.headers
 
-    def test_auth_failure_logs_security_event(self):
+    def test_auth_failure_logs_security_event(self) -> None:
         with patch.object(self.gateway, "_log_security_event") as mock_log:
             self.client.get("/services")
             mock_log.assert_called()
             event_type = mock_log.call_args[0][0]
             assert event_type == "auth_failed"
 
-    def test_bearer_auth_preferred_over_basic(self):
+    def test_bearer_auth_preferred_over_basic(self) -> None:
         """When a valid Bearer token is sent, Basic auth is not checked."""
         headers = {"Authorization": "Bearer test-bearer-token"}
         resp = self.client.get("/services", headers=headers)
         assert resp.status_code == 200
 
-    def test_auth_without_token_config_falls_through_to_basic(self):
+    def test_auth_without_token_config_falls_through_to_basic(self) -> None:
         """If no auth_token is configured, Bearer always fails, Basic is tried."""
         config = _minimal_config()
         del config["server"]["auth_token"]
@@ -651,22 +655,22 @@ class TestHealthEndpoint:
     """Tests for GET /health (no auth required)."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self):
+    def _setup(self) -> None:
         self.gateway, self.mocks = _create_gateway()
         self.client = self.gateway.app.test_client()
 
-    def test_health_returns_200(self):
+    def test_health_returns_200(self) -> None:
         resp = self.client.get("/health")
         assert resp.status_code == 200
 
-    def test_health_returns_json(self):
+    def test_health_returns_json(self) -> None:
         resp = self.client.get("/health")
         data = resp.get_json()
         assert data["status"] == "healthy"
         assert "timestamp" in data
         assert data["version"] == "1.0.0"
 
-    def test_health_no_auth_required(self):
+    def test_health_no_auth_required(self) -> None:
         """Health endpoint must be accessible without credentials."""
         resp = self.client.get("/health")
         assert resp.status_code == 200
@@ -680,23 +684,23 @@ class TestSecurityHeaders:
     """Verify that security headers are set on every response."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self):
+    def _setup(self) -> None:
         self.gateway, self.mocks = _create_gateway()
         self.client = self.gateway.app.test_client()
 
-    def test_x_content_type_options(self):
+    def test_x_content_type_options(self) -> None:
         resp = self.client.get("/health")
         assert resp.headers.get("X-Content-Type-Options") == "nosniff"
 
-    def test_x_frame_options(self):
+    def test_x_frame_options(self) -> None:
         resp = self.client.get("/health")
         assert resp.headers.get("X-Frame-Options") == "DENY"
 
-    def test_x_xss_protection(self):
+    def test_x_xss_protection(self) -> None:
         resp = self.client.get("/health")
         assert resp.headers.get("X-XSS-Protection") == "1; mode=block"
 
-    def test_content_security_policy(self):
+    def test_content_security_policy(self) -> None:
         resp = self.client.get("/health")
         assert "default-src 'none'" in resp.headers.get("Content-Security-Policy", "")
 
@@ -709,11 +713,11 @@ class TestListServicesEndpoint:
     """Tests for GET /services."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self):
+    def _setup(self) -> None:
         self.gateway, self.mocks = _create_gateway()
         self.client = self.gateway.app.test_client()
 
-    def test_list_services_success(self):
+    def test_list_services_success(self) -> None:
         self.mocks["mcp_manager"].list_services.return_value = {
             "todo": {"description": "Todo service", "enabled": True}
         }
@@ -722,7 +726,7 @@ class TestListServicesEndpoint:
         data = resp.get_json()
         assert "todo" in data
 
-    def test_list_services_empty(self):
+    def test_list_services_empty(self) -> None:
         self.mocks["mcp_manager"].list_services.return_value = {}
         resp = self.client.get("/services", headers=_auth_headers_basic())
         assert resp.status_code == 200
@@ -737,11 +741,11 @@ class TestGetServiceToolsEndpoint:
     """Tests for GET /services/<service_name>/tools."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self):
+    def _setup(self) -> None:
         self.gateway, self.mocks = _create_gateway()
         self.client = self.gateway.app.test_client()
 
-    def test_get_tools_success(self):
+    def test_get_tools_success(self) -> None:
         self.mocks["mcp_manager"].get_service_tools.return_value = [
             {"name": "add_todo", "description": "Add a todo"}
         ]
@@ -754,14 +758,14 @@ class TestGetServiceToolsEndpoint:
         assert data["service"] == "todo"
         assert len(data["tools"]) == 1
 
-    def test_get_tools_invalid_service_name(self):
+    def test_get_tools_invalid_service_name(self) -> None:
         resp = self.client.get(
             "/services/bad%20name!/tools",
             headers=_auth_headers_basic(),
         )
         assert resp.status_code == 400
 
-    def test_get_tools_service_error(self):
+    def test_get_tools_service_error(self) -> None:
         self.mocks["mcp_manager"].get_service_tools.side_effect = RuntimeError("boom")
         resp = self.client.get(
             "/services/todo/tools",
@@ -780,11 +784,16 @@ class TestCallServiceToolEndpoint:
     """Tests for POST /services/<service_name>/call."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self):
+    def _setup(self) -> None:
         self.gateway, self.mocks = _create_gateway()
         self.client = self.gateway.app.test_client()
 
-    def _post_call(self, service_name="todo", payload=None, headers=None):
+    def _post_call(
+        self,
+        service_name: str = "todo",
+        payload: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+    ) -> "TestResponse":
         if payload is None:
             payload = {
                 "tool": "add_todo",
@@ -802,7 +811,7 @@ class TestCallServiceToolEndpoint:
             headers=headers,
         )
 
-    def test_call_tool_creates_session_when_missing(self):
+    def test_call_tool_creates_session_when_missing(self) -> None:
         """When no session exists, a new one is created."""
         self.mocks["session_manager"].get_session.return_value = None
 
@@ -819,7 +828,7 @@ class TestCallServiceToolEndpoint:
         assert resp.status_code == 200
         self.mocks["session_manager"].create_session.assert_called_once()
 
-    def test_call_tool_reuses_existing_session(self):
+    def test_call_tool_reuses_existing_session(self) -> None:
         """When session exists and matches, it is reused."""
         mock_client = MagicMock()
         mock_client.call_tool.return_value = "ok"
@@ -835,7 +844,7 @@ class TestCallServiceToolEndpoint:
         assert data["result"] == "ok"
         self.mocks["session_manager"].create_session.assert_not_called()
 
-    def test_call_tool_service_mismatch(self):
+    def test_call_tool_service_mismatch(self) -> None:
         """Error when session belongs to a different service."""
         mock_session = MagicMock()
         mock_session.service_name = "other_service"
@@ -845,7 +854,7 @@ class TestCallServiceToolEndpoint:
         assert resp.status_code == 400
         assert "other_service" in resp.get_json()["error"]
 
-    def test_call_tool_missing_tool_parameter(self):
+    def test_call_tool_missing_tool_parameter(self) -> None:
         resp = self._post_call(payload={
             "session_id": "sess-1",
             "arguments": {},
@@ -853,7 +862,7 @@ class TestCallServiceToolEndpoint:
         assert resp.status_code == 400
         assert "tool" in resp.get_json()["error"].lower()
 
-    def test_call_tool_missing_session_id(self):
+    def test_call_tool_missing_session_id(self) -> None:
         resp = self._post_call(payload={
             "tool": "add_todo",
             "arguments": {},
@@ -861,7 +870,7 @@ class TestCallServiceToolEndpoint:
         assert resp.status_code == 400
         assert "session_id" in resp.get_json()["error"].lower()
 
-    def test_call_tool_invalid_json_body(self):
+    def test_call_tool_invalid_json_body(self) -> None:
         headers = _auth_headers_basic()
         headers["Content-Type"] = "application/json"
         resp = self.client.post(
@@ -873,7 +882,7 @@ class TestCallServiceToolEndpoint:
         # outer except Exception handler, resulting in a 500 response
         assert resp.status_code == 500
 
-    def test_call_tool_invalid_arguments_type(self):
+    def test_call_tool_invalid_arguments_type(self) -> None:
         resp = self._post_call(payload={
             "tool": "add_todo",
             "session_id": "sess-1",
@@ -882,7 +891,7 @@ class TestCallServiceToolEndpoint:
         assert resp.status_code == 400
         assert "arguments" in resp.get_json()["error"].lower()
 
-    def test_call_tool_invalid_timeout_negative(self):
+    def test_call_tool_invalid_timeout_negative(self) -> None:
         resp = self._post_call(payload={
             "tool": "add_todo",
             "session_id": "sess-1",
@@ -892,7 +901,7 @@ class TestCallServiceToolEndpoint:
         assert resp.status_code == 400
         assert "timeout" in resp.get_json()["error"].lower()
 
-    def test_call_tool_invalid_timeout_too_large(self):
+    def test_call_tool_invalid_timeout_too_large(self) -> None:
         resp = self._post_call(payload={
             "tool": "add_todo",
             "session_id": "sess-1",
@@ -902,7 +911,7 @@ class TestCallServiceToolEndpoint:
         assert resp.status_code == 400
         assert "timeout" in resp.get_json()["error"].lower()
 
-    def test_call_tool_invalid_timeout_string(self):
+    def test_call_tool_invalid_timeout_string(self) -> None:
         resp = self._post_call(payload={
             "tool": "add_todo",
             "session_id": "sess-1",
@@ -911,7 +920,7 @@ class TestCallServiceToolEndpoint:
         })
         assert resp.status_code == 400
 
-    def test_call_tool_invalid_metadata_type(self):
+    def test_call_tool_invalid_metadata_type(self) -> None:
         resp = self._post_call(payload={
             "tool": "add_todo",
             "session_id": "sess-1",
@@ -921,11 +930,11 @@ class TestCallServiceToolEndpoint:
         assert resp.status_code == 400
         assert "metadata" in resp.get_json()["error"].lower()
 
-    def test_call_tool_invalid_service_name(self):
+    def test_call_tool_invalid_service_name(self) -> None:
         resp = self._post_call(service_name="bad%20name!")
         assert resp.status_code in (400, 500)
 
-    def test_call_tool_extracts_mcp_text_content(self):
+    def test_call_tool_extracts_mcp_text_content(self) -> None:
         """MCP-format result with text content is unwrapped."""
         mock_client = MagicMock()
         mock_client.call_tool.return_value = {
@@ -941,7 +950,7 @@ class TestCallServiceToolEndpoint:
         data = resp.get_json()
         assert data["result"] == "hello world"
 
-    def test_call_tool_preserves_non_text_mcp_content(self):
+    def test_call_tool_preserves_non_text_mcp_content(self) -> None:
         """MCP content that is not text type is returned as-is."""
         mock_client = MagicMock()
         mock_client.call_tool.return_value = {
@@ -959,7 +968,7 @@ class TestCallServiceToolEndpoint:
         assert isinstance(data["result"], dict)
         assert "content" in data["result"]
 
-    def test_call_tool_empty_content_list(self):
+    def test_call_tool_empty_content_list(self) -> None:
         """MCP result with empty content list is returned as-is."""
         mock_client = MagicMock()
         mock_client.call_tool.return_value = {"content": []}
@@ -973,7 +982,7 @@ class TestCallServiceToolEndpoint:
         data = resp.get_json()
         assert data["result"] == {"content": []}
 
-    def test_call_tool_session_creation_failure(self):
+    def test_call_tool_session_creation_failure(self) -> None:
         """Error when session creation fails."""
         self.mocks["session_manager"].get_session.return_value = None
         self.mocks["mcp_manager"].create_client.side_effect = RuntimeError("cannot start")
@@ -982,7 +991,7 @@ class TestCallServiceToolEndpoint:
         assert resp.status_code == 500
         assert "session" in resp.get_json()["error"].lower()
 
-    def test_call_tool_logs_security_event(self):
+    def test_call_tool_logs_security_event(self) -> None:
         """Every tool call is logged as a security event."""
         mock_client = MagicMock()
         mock_client.call_tool.return_value = "ok"
@@ -998,7 +1007,7 @@ class TestCallServiceToolEndpoint:
             tool_calls = [c for c in mock_log.call_args_list if c[0][0] == "tool_call"]
             assert len(tool_calls) >= 1
 
-    def test_call_tool_uses_default_timeout(self):
+    def test_call_tool_uses_default_timeout(self) -> None:
         """When timeout is not in payload, session_manager.default_timeout is used."""
         self.mocks["session_manager"].get_session.return_value = None
         mock_client = MagicMock()
@@ -1027,11 +1036,11 @@ class TestListSessionsEndpoint:
     """Tests for GET /sessions."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self):
+    def _setup(self) -> None:
         self.gateway, self.mocks = _create_gateway()
         self.client = self.gateway.app.test_client()
 
-    def test_list_sessions_success(self):
+    def test_list_sessions_success(self) -> None:
         self.mocks["session_manager"].list_sessions.return_value = {
             "sess-1": {"service_name": "todo"}
         }
@@ -1040,13 +1049,13 @@ class TestListSessionsEndpoint:
         data = resp.get_json()
         assert "sess-1" in data
 
-    def test_list_sessions_empty(self):
+    def test_list_sessions_empty(self) -> None:
         self.mocks["session_manager"].list_sessions.return_value = {}
         resp = self.client.get("/sessions", headers=_auth_headers_basic())
         assert resp.status_code == 200
         assert resp.get_json() == {}
 
-    def test_list_sessions_requires_auth(self):
+    def test_list_sessions_requires_auth(self) -> None:
         resp = self.client.get("/sessions")
         assert resp.status_code == 401
 
@@ -1059,11 +1068,11 @@ class TestCloseSessionEndpoint:
     """Tests for DELETE /sessions/<session_id>."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self):
+    def _setup(self) -> None:
         self.gateway, self.mocks = _create_gateway()
         self.client = self.gateway.app.test_client()
 
-    def test_close_session_success(self):
+    def test_close_session_success(self) -> None:
         self.mocks["session_manager"].close_session.return_value = True
         resp = self.client.delete(
             "/sessions/sess-123",
@@ -1072,7 +1081,7 @@ class TestCloseSessionEndpoint:
         assert resp.status_code == 200
         assert "closed" in resp.get_json()["message"].lower()
 
-    def test_close_session_not_found(self):
+    def test_close_session_not_found(self) -> None:
         self.mocks["session_manager"].close_session.return_value = False
         resp = self.client.delete(
             "/sessions/sess-999",
@@ -1080,18 +1089,18 @@ class TestCloseSessionEndpoint:
         )
         assert resp.status_code == 404
 
-    def test_close_session_invalid_id(self):
+    def test_close_session_invalid_id(self) -> None:
         resp = self.client.delete(
             "/sessions/bad%20id!",
             headers=_auth_headers_basic(),
         )
         assert resp.status_code == 400
 
-    def test_close_session_requires_auth(self):
+    def test_close_session_requires_auth(self) -> None:
         resp = self.client.delete("/sessions/sess-1")
         assert resp.status_code == 401
 
-    def test_close_session_logs_security_event(self):
+    def test_close_session_logs_security_event(self) -> None:
         self.mocks["session_manager"].close_session.return_value = True
         with patch.object(self.gateway, "_log_security_event") as mock_log:
             self.client.delete(
@@ -1110,14 +1119,14 @@ class TestSignalHandler:
     """Tests for _signal_handler."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self):
+    def _setup(self) -> None:
         self.gateway, self.mocks = _create_gateway()
 
-    def test_signal_handler_sets_shutdown_flag(self):
+    def test_signal_handler_sets_shutdown_flag(self) -> None:
         self.gateway._signal_handler(15, None)
         assert self.gateway._shutdown_requested is True
 
-    def test_signal_handler_calls_server_shutdown_when_server_exists(self):
+    def test_signal_handler_calls_server_shutdown_when_server_exists(self) -> None:
         mock_server = MagicMock()
         self.gateway.server = mock_server
 
@@ -1128,7 +1137,7 @@ class TestSignalHandler:
         time.sleep(0.2)
         mock_server.shutdown.assert_called()
 
-    def test_signal_handler_tolerates_no_server(self):
+    def test_signal_handler_tolerates_no_server(self) -> None:
         """No error when server is None."""
         self.gateway.server = None
         self.gateway._signal_handler(15, None)  # should not raise
@@ -1142,39 +1151,39 @@ class TestShutdown:
     """Tests for shutdown()."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self):
+    def _setup(self) -> None:
         self.gateway, self.mocks = _create_gateway()
 
-    def test_shutdown_calls_session_manager_shutdown(self):
+    def test_shutdown_calls_session_manager_shutdown(self) -> None:
         self.gateway.shutdown()
         self.mocks["session_manager"].shutdown.assert_called_once()
 
-    def test_shutdown_calls_mcp_manager_shutdown(self):
+    def test_shutdown_calls_mcp_manager_shutdown(self) -> None:
         self.gateway.shutdown()
         self.mocks["mcp_manager"].shutdown.assert_called_once()
 
-    def test_shutdown_calls_server_shutdown(self):
+    def test_shutdown_calls_server_shutdown(self) -> None:
         mock_server = MagicMock()
         self.gateway.server = mock_server
         self.gateway.shutdown()
         mock_server.shutdown.assert_called()
 
-    def test_shutdown_idempotent(self):
+    def test_shutdown_idempotent(self) -> None:
         """Second call is a no-op."""
         self.gateway.shutdown()
         self.gateway.shutdown()
         # session_manager.shutdown should only be called once
         assert self.mocks["session_manager"].shutdown.call_count == 1
 
-    def test_shutdown_sets_cleanup_done_flag(self):
+    def test_shutdown_sets_cleanup_done_flag(self) -> None:
         self.gateway.shutdown()
         assert self.gateway._shutdown_cleanup_done is True
 
-    def test_shutdown_tolerates_timeout_on_session_manager(self):
+    def test_shutdown_tolerates_timeout_on_session_manager(self) -> None:
         """If session_manager.shutdown hangs, we still complete."""
         import time as time_mod
 
-        def hang():
+        def hang() -> None:
             time_mod.sleep(30)
 
         self.mocks["session_manager"].shutdown.side_effect = hang
@@ -1182,7 +1191,7 @@ class TestShutdown:
         self.gateway.shutdown()
         assert self.gateway._shutdown_cleanup_done is True
 
-    def test_shutdown_tolerates_no_server(self):
+    def test_shutdown_tolerates_no_server(self) -> None:
         self.gateway.server = None
         self.gateway.shutdown()  # should not raise
 
@@ -1195,10 +1204,10 @@ class TestRunMethod:
     """Tests for run()."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self):
+    def _setup(self) -> None:
         self.gateway, self.mocks = _create_gateway()
 
-    def test_run_creates_server_and_serves(self):
+    def test_run_creates_server_and_serves(self) -> None:
         mock_server = MagicMock()
         with patch("signalwire.mcp_gateway.gateway_service.make_server", return_value=mock_server) as mock_make, \
              patch("signalwire.mcp_gateway.gateway_service.signal") as mock_signal, \
@@ -1213,7 +1222,7 @@ class TestRunMethod:
             assert call_kwargs[0][0] == "0.0.0.0"
             assert call_kwargs[0][1] == 8080
 
-    def test_run_enables_ssl_when_cert_exists(self):
+    def test_run_enables_ssl_when_cert_exists(self) -> None:
         mock_server = MagicMock()
         mock_server.serve_forever.side_effect = KeyboardInterrupt()
 
@@ -1229,7 +1238,7 @@ class TestRunMethod:
             mock_ssl.SSLContext.assert_called_once()
             mock_ctx.load_cert_chain.assert_called_once_with("certs/server.pem")
 
-    def test_run_calls_shutdown_on_exit(self):
+    def test_run_calls_shutdown_on_exit(self) -> None:
         mock_server = MagicMock()
         mock_server.serve_forever.side_effect = KeyboardInterrupt()
 
@@ -1241,7 +1250,7 @@ class TestRunMethod:
             self.gateway.run()
             mock_shutdown.assert_called()
 
-    def test_run_registers_signal_handlers(self):
+    def test_run_registers_signal_handlers(self) -> None:
         mock_server = MagicMock()
         mock_server.serve_forever.side_effect = KeyboardInterrupt()
 
@@ -1257,7 +1266,7 @@ class TestRunMethod:
             assert mock_signal_mod.SIGTERM in registered_signals
             assert mock_signal_mod.SIGINT in registered_signals
 
-    def test_run_uses_config_host_and_port(self):
+    def test_run_uses_config_host_and_port(self) -> None:
         config = _minimal_config()
         config["server"]["host"] = "127.0.0.1"
         config["server"]["port"] = 9999
@@ -1283,17 +1292,17 @@ class TestErrorHandler:
     """Tests for the generic error handler."""
 
     @pytest.fixture(autouse=True)
-    def _setup(self):
+    def _setup(self) -> None:
         self.gateway, self.mocks = _create_gateway()
         self.client = self.gateway.app.test_client()
 
-    def test_unhandled_exception_returns_500(self):
+    def test_unhandled_exception_returns_500(self) -> None:
         """Routes that raise unexpected exceptions return a 500."""
         self.mocks["mcp_manager"].list_services.side_effect = RuntimeError("unexpected")
         resp = self.client.get("/services", headers=_auth_headers_basic())
         assert resp.status_code == 500
 
-    def test_unknown_route_returns_error(self):
+    def test_unknown_route_returns_error(self) -> None:
         """Unknown routes are caught by the generic error handler."""
         resp = self.client.get("/nonexistent", headers=_auth_headers_basic())
         # The generic @app.errorhandler(Exception) catches the 404 NotFound
@@ -1310,14 +1319,14 @@ class TestErrorHandler:
 class TestEdgeCases:
     """Miscellaneous edge case tests."""
 
-    def test_multiple_gateway_instances_are_independent(self):
+    def test_multiple_gateway_instances_are_independent(self) -> None:
         """Two gateways do not share state."""
         gw1, mocks1 = _create_gateway()
         gw2, mocks2 = _create_gateway()
         assert gw1.app is not gw2.app
         assert gw1.mcp_manager is not gw2.mcp_manager
 
-    def test_config_without_server_section_uses_defaults(self):
+    def test_config_without_server_section_uses_defaults(self) -> None:
         """When the [server] section is missing, the gateway must still
         construct successfully and the stored config must reflect the
         absence (no server key) — i.e., we don't silently fabricate one."""
@@ -1329,7 +1338,7 @@ class TestEdgeCases:
         # And the Flask app was still constructed.
         assert gateway.app is not None
 
-    def test_config_without_logging_section(self):
+    def test_config_without_logging_section(self) -> None:
         """When [logging] is missing, construction succeeds and the config
         dict is preserved as-given (no logging key fabricated)."""
         config = _minimal_config()
@@ -1338,7 +1347,7 @@ class TestEdgeCases:
         assert "logging" not in gateway.config
         assert gateway.app is not None
 
-    def test_config_with_log_file(self):
+    def test_config_with_log_file(self) -> None:
         """When [logging].file is set, a FileHandler must be installed on
         the root logger pointed at that file path."""
         config = _minimal_config()
@@ -1358,7 +1367,7 @@ class TestEdgeCases:
         root = logging.getLogger()
         root.handlers = [h for h in root.handlers if h is not mock_handler]
 
-    def test_call_tool_with_special_chars_in_arguments(self):
+    def test_call_tool_with_special_chars_in_arguments(self) -> None:
         """Arguments dict with varied types should be passed through."""
         gateway, mocks = _create_gateway()
         client = gateway.app.test_client()
@@ -1392,7 +1401,7 @@ class TestEdgeCases:
         passed_args = mock_client.call_tool.call_args[0][1]
         assert "<script>" in passed_args["text"]
 
-    def test_call_tool_with_zero_timeout(self):
+    def test_call_tool_with_zero_timeout(self) -> None:
         """Timeout of 0 should be rejected."""
         gateway, mocks = _create_gateway()
         client = gateway.app.test_client()
@@ -1412,7 +1421,7 @@ class TestEdgeCases:
         )
         assert resp.status_code == 400
 
-    def test_call_tool_with_max_valid_timeout(self):
+    def test_call_tool_with_max_valid_timeout(self) -> None:
         """Timeout of exactly 3600 should be accepted."""
         gateway, mocks = _create_gateway()
         client = gateway.app.test_client()

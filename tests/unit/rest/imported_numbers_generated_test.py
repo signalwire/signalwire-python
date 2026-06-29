@@ -26,7 +26,7 @@ class TestImportedNumbersWire:
     def test_imported_numbers_create(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.imported_numbers.create(number="x", number_type="x")
+        signalwire_client.imported_numbers.create(number="x", number_type="longcode")
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "relay-rest.create_imported_phone_number"
@@ -38,5 +38,7 @@ class TestImportedNumbersWire:
             "relay-rest.create_imported_phone_number", 500, {"error": "x"}
         )
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.imported_numbers.create(number="x", number_type="x")
+            signalwire_client.imported_numbers.create(
+                number="x", number_type="longcode"
+            )
         assert exc.value.status_code == 500

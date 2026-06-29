@@ -26,7 +26,7 @@ class TestPubsubWire:
     def test_pubsub_create_token(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.pubsub.create_token(ttl="x", channels="x")
+        signalwire_client.pubsub.create_token(ttl=1, channels={})
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "pubsub.create_token"
@@ -36,5 +36,5 @@ class TestPubsubWire:
     ) -> None:
         mock.push_scenario("pubsub.create_token", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.pubsub.create_token(ttl="x", channels="x")
+            signalwire_client.pubsub.create_token(ttl=1, channels={})
         assert exc.value.status_code == 500

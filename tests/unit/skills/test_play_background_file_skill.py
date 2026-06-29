@@ -5,20 +5,19 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Unit tests for the PlayBackgroundFile skill module
 """
+
+from typing import Any
 
 import pytest
 from unittest.mock import Mock
 
 from signalwire.skills.play_background_file.skill import PlayBackgroundFileSkill
-from signalwire.core.function_result import FunctionResult
 
 
-def _make_skill(params=None):
+def _make_skill(params: dict[str, Any] | None = None) -> PlayBackgroundFileSkill:
     """
     Helper to create a PlayBackgroundFileSkill with a mocked agent.
     Provides sensible defaults for all required parameters.
@@ -44,8 +43,7 @@ def _make_skill(params=None):
 
     mock_agent = Mock()
     mock_agent.register_swaig_function = Mock()
-    skill = PlayBackgroundFileSkill(agent=mock_agent, params=default_params)
-    return skill
+    return PlayBackgroundFileSkill(agent=mock_agent, params=default_params)
 
 
 # ---------------------------------------------------------------------------
@@ -56,22 +54,22 @@ def _make_skill(params=None):
 class TestPlayBackgroundFileSkillClassAttributes:
     """Verify class-level constants and metadata."""
 
-    def test_skill_name(self):
+    def test_skill_name(self) -> None:
         assert PlayBackgroundFileSkill.SKILL_NAME == "play_background_file"
 
-    def test_skill_description(self):
+    def test_skill_description(self) -> None:
         assert PlayBackgroundFileSkill.SKILL_DESCRIPTION == "Control background file playback"
 
-    def test_skill_version(self):
+    def test_skill_version(self) -> None:
         assert PlayBackgroundFileSkill.SKILL_VERSION == "1.0.0"
 
-    def test_required_packages(self):
+    def test_required_packages(self) -> None:
         assert PlayBackgroundFileSkill.REQUIRED_PACKAGES == []
 
-    def test_required_env_vars(self):
+    def test_required_env_vars(self) -> None:
         assert PlayBackgroundFileSkill.REQUIRED_ENV_VARS == []
 
-    def test_supports_multiple_instances(self):
+    def test_supports_multiple_instances(self) -> None:
         assert PlayBackgroundFileSkill.SUPPORTS_MULTIPLE_INSTANCES is True
 
 
@@ -83,15 +81,15 @@ class TestPlayBackgroundFileSkillClassAttributes:
 class TestPlayBackgroundFileSkillInit:
     """Tests for __init__."""
 
-    def test_agent_is_stored(self):
+    def test_agent_is_stored(self) -> None:
         skill = _make_skill()
         assert skill.agent is not None
 
-    def test_tool_name_from_params(self):
+    def test_tool_name_from_params(self) -> None:
         skill = _make_skill()
         assert skill.tool_name == "play_testimonial"
 
-    def test_tool_name_default(self):
+    def test_tool_name_default(self) -> None:
         params = {
             "files": [
                 {"key": "a", "description": "desc", "url": "https://example.com/a.mp4"}
@@ -102,22 +100,22 @@ class TestPlayBackgroundFileSkillInit:
         skill = PlayBackgroundFileSkill(agent=mock_agent, params=params)
         assert skill.tool_name == "play_background_file"
 
-    def test_files_stored(self):
+    def test_files_stored(self) -> None:
         skill = _make_skill()
         assert len(skill.files) == 2
         assert skill.files[0]["key"] == "massey"
         assert skill.files[1]["key"] == "demo-video"
 
-    def test_logger_created(self):
+    def test_logger_created(self) -> None:
         skill = _make_skill()
         assert skill.logger is not None
         assert skill.logger.name == "signalwire.skills.play_background_file"
 
-    def test_swaig_fields_extracted_from_params(self):
+    def test_swaig_fields_extracted_from_params(self) -> None:
         skill = _make_skill({"swaig_fields": {"meta_data": {"x": 1}}})
         assert skill.swaig_fields == {"meta_data": {"x": 1}}
 
-    def test_swaig_fields_default_empty(self):
+    def test_swaig_fields_default_empty(self) -> None:
         skill = _make_skill()
         assert skill.swaig_fields == {}
 
@@ -130,51 +128,51 @@ class TestPlayBackgroundFileSkillInit:
 class TestPlayBackgroundFileSkillValidation:
     """Tests for _validate_config."""
 
-    def test_files_must_be_list(self):
+    def test_files_must_be_list(self) -> None:
         with pytest.raises(ValueError, match="files parameter must be a non-empty list"):
             _make_skill({"files": "not-a-list"})
 
-    def test_files_must_not_be_empty(self):
+    def test_files_must_not_be_empty(self) -> None:
         with pytest.raises(ValueError, match="files parameter must be a non-empty list"):
             _make_skill({"files": []})
 
-    def test_file_must_be_dict(self):
+    def test_file_must_be_dict(self) -> None:
         with pytest.raises(ValueError, match="File 0 must be a dictionary"):
             _make_skill({"files": ["not-a-dict"]})
 
-    def test_file_missing_key(self):
+    def test_file_missing_key(self) -> None:
         with pytest.raises(ValueError, match="File 0 missing required field: key"):
             _make_skill({"files": [{"description": "d", "url": "http://x"}]})
 
-    def test_file_missing_description(self):
+    def test_file_missing_description(self) -> None:
         with pytest.raises(ValueError, match="File 0 missing required field: description"):
             _make_skill({"files": [{"key": "k", "url": "http://x"}]})
 
-    def test_file_missing_url(self):
+    def test_file_missing_url(self) -> None:
         with pytest.raises(ValueError, match="File 0 missing required field: url"):
             _make_skill({"files": [{"key": "k", "description": "d"}]})
 
-    def test_file_key_empty_string(self):
+    def test_file_key_empty_string(self) -> None:
         with pytest.raises(ValueError, match="must be a non-empty string"):
             _make_skill({"files": [{"key": "", "description": "d", "url": "http://x"}]})
 
-    def test_file_key_whitespace_only(self):
+    def test_file_key_whitespace_only(self) -> None:
         with pytest.raises(ValueError, match="must be a non-empty string"):
             _make_skill({"files": [{"key": "  ", "description": "d", "url": "http://x"}]})
 
-    def test_file_wait_must_be_boolean(self):
+    def test_file_wait_must_be_boolean(self) -> None:
         with pytest.raises(ValueError, match="must be a boolean"):
             _make_skill(
                 {"files": [{"key": "k", "description": "d", "url": "http://x", "wait": "yes"}]}
             )
 
-    def test_file_key_invalid_characters(self):
+    def test_file_key_invalid_characters(self) -> None:
         with pytest.raises(ValueError, match="must contain only alphanumeric"):
             _make_skill(
                 {"files": [{"key": "bad key!", "description": "d", "url": "http://x"}]}
             )
 
-    def test_file_key_allows_underscores_and_hyphens(self):
+    def test_file_key_allows_underscores_and_hyphens(self) -> None:
         """Keys with underscores and hyphens should be accepted."""
         skill = _make_skill(
             {"files": [{"key": "my_key-1", "description": "d", "url": "http://x"}]}
@@ -190,7 +188,7 @@ class TestPlayBackgroundFileSkillValidation:
 class TestPlayBackgroundFileSkillSetup:
     """Tests for setup()."""
 
-    def test_setup_returns_true(self):
+    def test_setup_returns_true(self) -> None:
         skill = _make_skill()
         assert skill.setup() is True
 
@@ -203,11 +201,11 @@ class TestPlayBackgroundFileSkillSetup:
 class TestPlayBackgroundFileSkillInstanceKey:
     """Tests for get_instance_key()."""
 
-    def test_instance_key_includes_tool_name(self):
+    def test_instance_key_includes_tool_name(self) -> None:
         skill = _make_skill()
         assert skill.get_instance_key() == "play_background_file_play_testimonial"
 
-    def test_instance_key_default_tool_name(self):
+    def test_instance_key_default_tool_name(self) -> None:
         params = {
             "files": [
                 {"key": "a", "description": "desc", "url": "https://example.com/a.mp4"}
@@ -227,30 +225,30 @@ class TestPlayBackgroundFileSkillInstanceKey:
 class TestPlayBackgroundFileSkillGetTools:
     """Tests for get_tools() and _build_expressions()."""
 
-    def test_get_tools_returns_single_tool(self):
+    def test_get_tools_returns_single_tool(self) -> None:
         skill = _make_skill()
         tools = skill.get_tools()
         assert isinstance(tools, list)
         assert len(tools) == 1
 
-    def test_tool_function_name(self):
+    def test_tool_function_name(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         assert tool["function"] == "play_testimonial"
 
-    def test_tool_description_contains_tool_name(self):
+    def test_tool_description_contains_tool_name(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         assert "play testimonial" in tool["description"]
 
-    def test_tool_has_action_parameter(self):
+    def test_tool_has_action_parameter(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         props = tool["parameters"]["properties"]
         assert "action" in props
         assert props["action"]["type"] == "string"
 
-    def test_tool_action_enum_values(self):
+    def test_tool_action_enum_values(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         enum_vals = tool["parameters"]["properties"]["action"]["enum"]
@@ -258,7 +256,7 @@ class TestPlayBackgroundFileSkillGetTools:
         assert "start_demo-video" in enum_vals
         assert "stop" in enum_vals
 
-    def test_tool_action_enum_count(self):
+    def test_tool_action_enum_count(self) -> None:
         """Enum should have one start per file + one stop."""
         skill = _make_skill()
         tool = skill.get_tools()[0]
@@ -266,28 +264,28 @@ class TestPlayBackgroundFileSkillGetTools:
         # 2 files + 1 stop
         assert len(enum_vals) == 3
 
-    def test_tool_action_required(self):
+    def test_tool_action_required(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         assert "action" in tool["parameters"]["required"]
 
-    def test_tool_wait_for_fillers(self):
+    def test_tool_wait_for_fillers(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         assert tool["wait_for_fillers"] is True
 
-    def test_tool_skip_fillers(self):
+    def test_tool_skip_fillers(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         assert tool["skip_fillers"] is True
 
-    def test_tool_has_data_map_expressions(self):
+    def test_tool_has_data_map_expressions(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         assert "data_map" in tool
         assert "expressions" in tool["data_map"]
 
-    def test_expressions_count(self):
+    def test_expressions_count(self) -> None:
         """Should have one expression per file + one stop expression."""
         skill = _make_skill()
         tool = skill.get_tools()[0]
@@ -295,31 +293,31 @@ class TestPlayBackgroundFileSkillGetTools:
         # 2 files + 1 stop
         assert len(expressions) == 3
 
-    def test_expression_pattern_start(self):
+    def test_expression_pattern_start(self) -> None:
         skill = _make_skill()
         expressions = skill.get_tools()[0]["data_map"]["expressions"]
         assert expressions[0]["pattern"] == "/start_massey/i"
         assert expressions[1]["pattern"] == "/start_demo-video/i"
 
-    def test_expression_string_uses_args_action(self):
+    def test_expression_string_uses_args_action(self) -> None:
         skill = _make_skill()
         expressions = skill.get_tools()[0]["data_map"]["expressions"]
         for expr in expressions:
             assert expr["string"] == "${args.action}"
 
-    def test_expression_stop_pattern(self):
+    def test_expression_stop_pattern(self) -> None:
         skill = _make_skill()
         expressions = skill.get_tools()[0]["data_map"]["expressions"]
         stop_expr = expressions[-1]
         assert stop_expr["pattern"] == "/stop/i"
 
-    def test_expression_output_has_response(self):
+    def test_expression_output_has_response(self) -> None:
         skill = _make_skill()
         expressions = skill.get_tools()[0]["data_map"]["expressions"]
         for expr in expressions:
             assert "response" in expr["output"]
 
-    def test_start_expression_with_wait_true(self):
+    def test_start_expression_with_wait_true(self) -> None:
         """File with wait=True should produce playback_bg action with wait."""
         skill = _make_skill()
         expressions = skill.get_tools()[0]["data_map"]["expressions"]
@@ -334,7 +332,7 @@ class TestPlayBackgroundFileSkillGetTools:
         assert playback_action[0]["playback_bg"]["file"] == "https://example.com/massey.mp4"
         assert playback_action[0]["playback_bg"]["wait"] is True
 
-    def test_start_expression_with_wait_false_default(self):
+    def test_start_expression_with_wait_false_default(self) -> None:
         """File without wait should produce playback_bg with just the url string."""
         skill = _make_skill()
         expressions = skill.get_tools()[0]["data_map"]["expressions"]
@@ -346,7 +344,7 @@ class TestPlayBackgroundFileSkillGetTools:
         assert len(playback_action) == 1
         assert playback_action[0]["playback_bg"] == "https://example.com/demo.mp4"
 
-    def test_stop_expression_output(self):
+    def test_stop_expression_output(self) -> None:
         """Stop expression should contain stop_playback_bg action."""
         skill = _make_skill()
         expressions = skill.get_tools()[0]["data_map"]["expressions"]
@@ -358,14 +356,14 @@ class TestPlayBackgroundFileSkillGetTools:
         assert len(stop_action) == 1
         assert stop_action[0]["stop_playback_bg"] is True
 
-    def test_start_expression_has_post_process(self):
+    def test_start_expression_has_post_process(self) -> None:
         """Start expressions should have post_process=True."""
         skill = _make_skill()
         expressions = skill.get_tools()[0]["data_map"]["expressions"]
         massey_expr = expressions[0]
         assert massey_expr["output"].get("post_process") is True
 
-    def test_stop_expression_no_post_process(self):
+    def test_stop_expression_no_post_process(self) -> None:
         """Stop expression should not have post_process (was not created with it)."""
         skill = _make_skill()
         expressions = skill.get_tools()[0]["data_map"]["expressions"]
@@ -373,7 +371,7 @@ class TestPlayBackgroundFileSkillGetTools:
         # post_process not set when creating the stop result
         assert stop_expr["output"].get("post_process") is not True
 
-    def test_action_description_lists_all_options(self):
+    def test_action_description_lists_all_options(self) -> None:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         desc = tool["parameters"]["properties"]["action"]["description"]
@@ -391,18 +389,18 @@ class TestPlayBackgroundFileSkillGetTools:
 class TestPlayBackgroundFileSkillRegisterTools:
     """Tests for register_tools()."""
 
-    def test_register_tools_calls_register_swaig_function(self):
+    def test_register_tools_calls_register_swaig_function(self) -> None:
         skill = _make_skill()
         skill.register_tools()
         skill.agent.register_swaig_function.assert_called_once()
 
-    def test_register_tools_passes_tool_config(self):
+    def test_register_tools_passes_tool_config(self) -> None:
         skill = _make_skill()
         skill.register_tools()
         call_args = skill.agent.register_swaig_function.call_args[0][0]
         assert call_args["function"] == "play_testimonial"
 
-    def test_register_tools_merges_swaig_fields(self):
+    def test_register_tools_merges_swaig_fields(self) -> None:
         skill = _make_skill({"swaig_fields": {"meta_data": {"tag": "v1"}}})
         skill.register_tools()
         call_args = skill.agent.register_swaig_function.call_args[0][0]
@@ -417,25 +415,25 @@ class TestPlayBackgroundFileSkillRegisterTools:
 class TestPlayBackgroundFileSkillMiscMethods:
     """Tests for inherited helper methods."""
 
-    def test_get_hints_returns_empty_list(self):
+    def test_get_hints_returns_empty_list(self) -> None:
         skill = _make_skill()
         assert skill.get_hints() == []
 
-    def test_get_prompt_sections_returns_empty_list(self):
+    def test_get_prompt_sections_returns_empty_list(self) -> None:
         skill = _make_skill()
         assert skill.get_prompt_sections() == []
 
-    def test_get_global_data_returns_empty_dict(self):
+    def test_get_global_data_returns_empty_dict(self) -> None:
         skill = _make_skill()
         assert skill.get_global_data() == {}
 
-    def test_get_parameter_schema_has_files(self):
+    def test_get_parameter_schema_has_files(self) -> None:
         schema = PlayBackgroundFileSkill.get_parameter_schema()
         assert "files" in schema
         assert schema["files"]["type"] == "array"
         assert schema["files"]["required"] is True
 
-    def test_get_parameter_schema_files_items(self):
+    def test_get_parameter_schema_files_items(self) -> None:
         schema = PlayBackgroundFileSkill.get_parameter_schema()
         items = schema["files"]["items"]
         assert items["type"] == "object"
@@ -444,23 +442,23 @@ class TestPlayBackgroundFileSkillMiscMethods:
         assert "url" in items["properties"]
         assert "wait" in items["properties"]
 
-    def test_get_parameter_schema_has_tool_name(self):
+    def test_get_parameter_schema_has_tool_name(self) -> None:
         """Multi-instance skills should include tool_name in schema."""
         schema = PlayBackgroundFileSkill.get_parameter_schema()
         assert "tool_name" in schema
         assert schema["tool_name"]["type"] == "string"
 
-    def test_get_parameter_schema_has_swaig_fields(self):
+    def test_get_parameter_schema_has_swaig_fields(self) -> None:
         schema = PlayBackgroundFileSkill.get_parameter_schema()
         assert "swaig_fields" in schema
 
-    def test_cleanup_does_not_raise(self):
+    def test_cleanup_does_not_raise(self) -> None:
         """The skill inherits cleanup from SkillBase (a no-op). It must
         not raise and must not mutate the skill's tool_name/files state."""
         skill = _make_skill()
         files_before = list(skill.params.get("files", []))
         tool_name_before = skill.params.get("tool_name")
-        result = skill.cleanup()
+        result = skill.cleanup()  # type: ignore[func-returns-value]  # asserting the None return of a no-op method
         # cleanup() returns None per the base contract.
         assert result is None
         # No state mutation.
