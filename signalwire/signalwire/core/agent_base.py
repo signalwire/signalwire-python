@@ -286,6 +286,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         # Initialize new configuration containers
         self._hints: list[Any] = []
         self._languages = []
+        self._multilingual = None
         self._pronounce = []
         self._params: dict[str, Any] = {}
         self._global_data: dict[str, Any] = {}
@@ -1225,6 +1226,10 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
                 if agent_to_use._languages:
                     ai_config["languages"] = agent_to_use._languages
 
+                # Add multilingual (Mode B) if set
+                if agent_to_use._multilingual:
+                    ai_config["multilingual"] = agent_to_use._multilingual
+
                 # Add pronunciation rules if any
                 if agent_to_use._pronounce:
                     ai_config["pronounce"] = agent_to_use._pronounce
@@ -1302,6 +1307,9 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         if agent_to_use._languages and "languages" not in ai_config:
             ai_config["languages"] = agent_to_use._languages
+
+        if agent_to_use._multilingual and "multilingual" not in ai_config:
+            ai_config["multilingual"] = agent_to_use._multilingual
 
         if agent_to_use._pronounce and "pronounce" not in ai_config:
             ai_config["pronounce"] = agent_to_use._pronounce
@@ -1553,6 +1561,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         ephemeral_agent._params = copy.deepcopy(self._params)
         ephemeral_agent._hints = copy.deepcopy(self._hints)
         ephemeral_agent._languages = copy.deepcopy(self._languages)
+        ephemeral_agent._multilingual = copy.deepcopy(self._multilingual)
         ephemeral_agent._pronounce = copy.deepcopy(self._pronounce)
         ephemeral_agent._global_data = copy.deepcopy(self._global_data)
         ephemeral_agent._function_includes = copy.deepcopy(self._function_includes)

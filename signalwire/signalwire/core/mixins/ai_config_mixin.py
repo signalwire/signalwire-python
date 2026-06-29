@@ -219,6 +219,27 @@ class AIConfigMixin(_HostTyped):
             self._languages = languages
         return self
 
+    def set_multilingual(self, config: dict[str, Any]) -> "AgentBase":
+        """
+        Configure ASR-driven multilingual mode (Mode B).
+
+        Emits a top-level ``multilingual`` object on the AI verb. The recognizer
+        runs in code-switching mode and the agent answers in whatever language
+        the caller actually spoke - the model does not pick the language. This is
+        mutually exclusive with set_languages(); if both are set the server uses
+        ``multilingual`` and ignores ``languages``.
+
+        Args:
+            config: The multilingual config object (languages, allowed,
+                start_language, min_switch_words, fillers, etc.).
+
+        Returns:
+            Self for method chaining
+        """
+        if config and isinstance(config, dict):
+            self._multilingual = config
+        return self
+
     def add_pronunciation(
         self, replace: str, with_text: str, ignore_case: bool = False
     ) -> "AgentBase":
