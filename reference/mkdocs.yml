@@ -13,6 +13,7 @@ use_directory_urls: false
 theme:
   name: material
   custom_dir: overrides
+  favicon: assets/img/signalwire-favicon.png
   features:
     - navigation.sections
     - navigation.indexes
