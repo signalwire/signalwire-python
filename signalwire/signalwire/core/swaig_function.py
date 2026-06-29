@@ -9,12 +9,18 @@ See LICENSE file in the project root for full license information.
 SwaigFunction class for defining and managing SWAIG function interfaces
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from collections.abc import Callable
 import logging
 
 # Import here to avoid circular imports
 from signalwire.core.function_result import FunctionResult
+
+if TYPE_CHECKING:
+    # The inbound SWAIG function-webhook payload, typed from the spec (a plain dict at
+    # runtime; TYPE_CHECKING-only so there's no import cost / cycle). Generated from
+    # porting-sdk/swaig-specs/swaig-request.yaml (vendored from mod_openai).
+    from signalwire.core.swaig_request_generated import SwaigRequest
 
 
 class SWAIGFunction:
@@ -134,7 +140,7 @@ class SWAIGFunction:
         return self.handler(*args, **kwargs)
 
     def execute(
-        self, args: dict[str, Any], raw_data: dict[str, Any] | None = None
+        self, args: dict[str, Any], raw_data: "SwaigRequest | None" = None
     ) -> dict[str, Any]:
         """
         Execute the function with the given arguments
