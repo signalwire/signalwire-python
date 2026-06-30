@@ -1,9 +1,9 @@
 # AUTO-GENERATED from porting-sdk/rest-apis/logs/openapi.yaml — DO NOT EDIT.
 # Regenerate: python3 porting-sdk/scripts/generate_python_rest_types.py
 #
-# One typed CRUD subclass per full-CRUD resource: create/update are FULLY CLOSED
-# to the spec fields (no ``extras``/``**kwargs`` door — unknown fields aren't
-# sendable through the typed method), bound to the resource's spec types.
+# One typed CRUD subclass per full-CRUD resource: closed typed create/update params
+# (explicit spec fields) + an ``extras`` escape hatch and a ``**kwargs`` tail for
+# unknown / reserved-word wire fields, bound to the resource's spec types.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast

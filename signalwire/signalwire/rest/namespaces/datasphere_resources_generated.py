@@ -1,12 +1,13 @@
 # AUTO-GENERATED from porting-sdk/rest-apis/datasphere/openapi.yaml — DO NOT EDIT.
 # Regenerate: python3 porting-sdk/scripts/generate_python_rest_types.py
 #
-# One typed CRUD subclass per full-CRUD resource: create/update are FULLY CLOSED
-# to the spec fields (no ``extras``/``**kwargs`` door — unknown fields aren't
-# sendable through the typed method), bound to the resource's spec types.
+# One typed CRUD subclass per full-CRUD resource: closed typed create/update params
+# (explicit spec fields) + an ``extras`` escape hatch and a ``**kwargs`` tail for
+# unknown / reserved-word wire fields, bound to the resource's spec types.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
+from collections.abc import Mapping
 
 from .._base import CrudResource
 
@@ -37,17 +38,30 @@ class DatasphereDocuments(
         super().__init__(http, "/api/datasphere/documents")
 
     def create(  # type: ignore[override]
-        self, body: DocumentCreateRequest
+        self,
+        body: DocumentCreateRequest,
+        *,
+        extras: Mapping[str, Any] | None = None,
+        **kwargs: Any,
     ) -> Document:
-        merged = body
+        merged: dict[str, Any] = {**body, **(extras or {}), **kwargs}
         return cast("Document", self._http.post(self._base_path, body=merged))
 
-    def update(  # type: ignore[override]
-        self, id: str, /, *, tags: list[str] | None = None
+    def update(
+        self,
+        id: str,
+        /,
+        *,
+        tags: list[str] | None = None,
+        extras: Mapping[str, Any] | None = None,
+        **kwargs: Any,
     ) -> Document:
         body: dict[str, Any] = {
             k: v for k, v in {"tags": tags}.items() if v is not None
         }
+        if extras:
+            body.update(extras)
+        body.update(kwargs)
         return cast("Document", self._http.patch(self._path(id), body=body))
 
     def search(
@@ -61,6 +75,8 @@ class DatasphereDocuments(
         language: str | None = None,
         pos_to_expand: list[str] | None = None,
         max_synonyms: int | None = None,
+        extras: Mapping[str, Any] | None = None,
+        **kwargs: Any,
     ) -> SearchResponse:
         body: dict[str, Any] = {
             k: v
@@ -76,6 +92,9 @@ class DatasphereDocuments(
             }.items()
             if v is not None
         }
+        if extras:
+            body.update(extras)
+        body.update(kwargs)
         return cast("SearchResponse", self._http.post(self._path("search"), body=body))
 
     def list_chunks(self, document_id: str, **params: Any) -> ChunkListResponse:
