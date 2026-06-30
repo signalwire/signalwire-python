@@ -175,6 +175,7 @@ class Mfa(BaseResource):
         valid_for: int | None = None,
         max_attempts: int | None = None,
         allow_alphas: bool | None = None,
+        **_reserved_kw: Any,
     ) -> MfaResponse:
         body: dict[str, Any] = {
             k: v
@@ -189,6 +190,7 @@ class Mfa(BaseResource):
             }.items()
             if v is not None
         }
+        body.update(_reserved_kw)
         return cast("MfaResponse", self._http.post(self._path("sms"), body=body))
 
     def call(
@@ -201,6 +203,7 @@ class Mfa(BaseResource):
         valid_for: int | None = None,
         max_attempts: int | None = None,
         allow_alphas: bool | None = None,
+        **_reserved_kw: Any,
     ) -> MfaResponse:
         body: dict[str, Any] = {
             k: v
@@ -215,6 +218,7 @@ class Mfa(BaseResource):
             }.items()
             if v is not None
         }
+        body.update(_reserved_kw)
         return cast("MfaResponse", self._http.post(self._path("call"), body=body))
 
     def verify(self, mfa_request_id: str, *, token: str) -> MfaVerifyResponse:
