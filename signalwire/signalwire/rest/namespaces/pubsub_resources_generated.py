@@ -1,13 +1,12 @@
 # AUTO-GENERATED from porting-sdk/rest-apis/pubsub/openapi.yaml — DO NOT EDIT.
 # Regenerate: python3 porting-sdk/scripts/generate_python_rest_types.py
 #
-# One typed CRUD subclass per full-CRUD resource: closed create/update
-# (explicit spec fields + an ``extras`` door), bound to the resource's spec
-# types. Runtime body is a plain dict (open-tail, never validated).
+# One typed CRUD subclass per full-CRUD resource: create/update are FULLY CLOSED
+# to the spec fields (no ``extras``/``**kwargs`` door — unknown fields aren't
+# sendable through the typed method), bound to the resource's spec types.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
-from collections.abc import Mapping
 
 from .._base import BaseResource
 
@@ -32,7 +31,6 @@ class PubSub(BaseResource):
         channels: PubSubChannels,
         member_id: str | None = None,
         state: PubSubState | None = None,
-        extras: Mapping[str, Any] | None = None,
     ) -> PubSubToken:
         body: dict[str, Any] = {
             k: v
@@ -44,6 +42,4 @@ class PubSub(BaseResource):
             }.items()
             if v is not None
         }
-        if extras:
-            body.update(extras)
         return cast("PubSubToken", self._http.post(self._base_path, body=body))

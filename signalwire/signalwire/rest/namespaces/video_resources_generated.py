@@ -1,13 +1,12 @@
 # AUTO-GENERATED from porting-sdk/rest-apis/video/openapi.yaml — DO NOT EDIT.
 # Regenerate: python3 porting-sdk/scripts/generate_python_rest_types.py
 #
-# One typed CRUD subclass per full-CRUD resource: closed create/update
-# (explicit spec fields + an ``extras`` door), bound to the resource's spec
-# types. Runtime body is a plain dict (open-tail, never validated).
+# One typed CRUD subclass per full-CRUD resource: create/update are FULLY CLOSED
+# to the spec fields (no ``extras``/``**kwargs`` door — unknown fields aren't
+# sendable through the typed method), bound to the resource's spec types.
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, cast
-from collections.abc import Mapping
 
 from .._base import BaseResource, CrudResource, ReadResource
 
@@ -98,7 +97,6 @@ class VideoConferences(
         light_foreground: str | None = None,
         light_success: str | None = None,
         light_negative: str | None = None,
-        extras: Mapping[str, Any] | None = None,
     ) -> Conference:
         body: dict[str, Any] = {
             k: v
@@ -127,8 +125,6 @@ class VideoConferences(
             }.items()
             if v is not None
         }
-        if extras:
-            body.update(extras)
         return cast("Conference", self._http.post(self._base_path, body=body))
 
     def update(  # type: ignore[override]
@@ -159,7 +155,6 @@ class VideoConferences(
         light_foreground: str | None = None,
         light_success: str | None = None,
         light_negative: str | None = None,
-        extras: Mapping[str, Any] | None = None,
     ) -> Conference:
         body: dict[str, Any] = {
             k: v
@@ -190,8 +185,6 @@ class VideoConferences(
             }.items()
             if v is not None
         }
-        if extras:
-            body.update(extras)
         return cast("Conference", self._http.put(self._path(id), body=body))
 
     def list_conference_tokens(
@@ -208,12 +201,8 @@ class VideoConferences(
             self._http.get(self._path(id, "streams"), params=params or None),
         )
 
-    def create_stream(
-        self, id: str, *, url: str, extras: Mapping[str, Any] | None = None
-    ) -> Stream:
+    def create_stream(self, id: str, *, url: str) -> Stream:
         body: dict[str, Any] = {k: v for k, v in {"url": url}.items() if v is not None}
-        if extras:
-            body.update(extras)
         return cast("Stream", self._http.post(self._path(id, "streams"), body=body))
 
 
@@ -298,7 +287,6 @@ class VideoRoomTokens(BaseResource):
         room_meta: dict[str, Any] | None = None,
         meta: dict[str, Any] | None = None,
         sync_audio_video: bool | None = None,
-        extras: Mapping[str, Any] | None = None,
     ) -> RoomTokenResponse:
         body: dict[str, Any] = {
             k: v
@@ -324,8 +312,6 @@ class VideoRoomTokens(BaseResource):
             }.items()
             if v is not None
         }
-        if extras:
-            body.update(extras)
         return cast("RoomTokenResponse", self._http.post(self._base_path, body=body))
 
 
@@ -358,7 +344,6 @@ class VideoRooms(
         enable_room_previews: bool | None = None,
         meta: dict[str, Any] | None = None,
         sync_audio_video: bool | None = None,
-        extras: Mapping[str, Any] | None = None,
     ) -> RoomResponse:
         body: dict[str, Any] = {
             k: v
@@ -380,8 +365,6 @@ class VideoRooms(
             }.items()
             if v is not None
         }
-        if extras:
-            body.update(extras)
         return cast("RoomResponse", self._http.post(self._base_path, body=body))
 
     def update(  # type: ignore[override]
@@ -402,7 +385,6 @@ class VideoRooms(
         enable_room_previews: bool | None = None,
         meta: dict[str, Any] | None = None,
         sync_audio_video: bool | None = None,
-        extras: Mapping[str, Any] | None = None,
     ) -> RoomResponse:
         body: dict[str, Any] = {
             k: v
@@ -423,8 +405,6 @@ class VideoRooms(
             }.items()
             if v is not None
         }
-        if extras:
-            body.update(extras)
         return cast("RoomResponse", self._http.put(self._path(id), body=body))
 
     def list_streams(self, id: str, **params: Any) -> ListStreamsResponse:
@@ -433,12 +413,8 @@ class VideoRooms(
             self._http.get(self._path(id, "streams"), params=params or None),
         )
 
-    def create_stream(
-        self, id: str, *, url: str, extras: Mapping[str, Any] | None = None
-    ) -> Stream:
+    def create_stream(self, id: str, *, url: str) -> Stream:
         body: dict[str, Any] = {k: v for k, v in {"url": url}.items() if v is not None}
-        if extras:
-            body.update(extras)
         return cast("Stream", self._http.post(self._path(id, "streams"), body=body))
 
 
@@ -451,12 +427,8 @@ class VideoStreams(BaseResource):
     def get(self, id: str, **params: Any) -> Stream:
         return cast("Stream", self._http.get(self._path(id), params=params or None))
 
-    def update(
-        self, id: str, *, url: str, extras: Mapping[str, Any] | None = None
-    ) -> Stream:
+    def update(self, id: str, *, url: str) -> Stream:
         body: dict[str, Any] = {k: v for k, v in {"url": url}.items() if v is not None}
-        if extras:
-            body.update(extras)
         return cast("Stream", self._http.put(self._path(id), body=body))
 
     def delete(self, id: str) -> dict[str, Any]:

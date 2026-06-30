@@ -190,9 +190,9 @@ class TestMfa:
     def test_call(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.mfa.call(
             to="+15551234567",
-            # Spec field is `from`, which is not a valid Python identifier, so the
-            # generated method exposes it via `extras` rather than a typed kwarg.
-            extras={"from": "+15559876543"},
+            # Spec field is `from` (a Python keyword), exposed as the typed kwarg `from_`;
+            # the generated method maps it back to the wire key `from`.
+            from_="+15559876543",
             message="Your code is {code}",
         )
         assert isinstance(body, dict)
