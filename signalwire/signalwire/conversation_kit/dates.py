@@ -52,9 +52,13 @@ RESOLVE_DATE_PARAMS = {
         "enum": ["today", "tomorrow"],
         "description": "Use instead of weekday for 'today'/'dziś'/'heute' or 'tomorrow'/'jutro'/'morgen'.",
     },
+    "in_days": {
+        "type": "integer",
+        "description": "Relative day COUNT from today when the caller says 'in N days' ('za dwa dni'/'in two days' -> 2; 'za tydzień'/'in a week' -> 7). Use this for a spoken offset, NOT for a calendar day-of-month number.",
+    },
     "day": {
         "type": "integer",
-        "description": "Day-of-month for an explicit date ('the 15th' -> 15).",
+        "description": "Day-of-month for an explicit date ('the 15th' -> 15). A calendar day number, NOT an 'in N days' offset (that is in_days).",
     },
     "month": {
         "type": "integer",
@@ -106,6 +110,13 @@ def compute_date(args: Mapping[str, Any], today: date) -> date | None:
         return today
     if rel == "tomorrow":
         return today + timedelta(days=1)
+
+    # 2b) Relative day COUNT: "in N days" ("za dwa dni" -> today + 2). Kept distinct
+    #     from `day` (a calendar day-of-month) so a spoken offset never lands on the
+    #     wrong date.
+    in_days = args.get("in_days")
+    if isinstance(in_days, int) and in_days > 0:
+        return today + timedelta(days=in_days)
 
     # 3) Weekday (+ which).
     wd = str(args.get("weekday") or "").strip().lower()
