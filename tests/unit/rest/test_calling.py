@@ -1,10 +1,12 @@
 """Tests for calling namespace — command dispatch."""
 
 from .conftest import MockResponse
+from signalwire.rest.client import RestClient
+from unittest.mock import MagicMock
 
 
-class TestCallingNamespace:
-    def test_dial(self, client, mock_session):
+class TestCalling:
+    def test_dial(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"id": "call-1"})
         client.calling.dial(to="+15551234567", from_="+15559876543")
         call_args = mock_session.request.call_args
@@ -14,7 +16,7 @@ class TestCallingNamespace:
         assert body["params"]["to"] == "+15551234567"
         assert "id" not in body  # dial has no top-level id
 
-    def test_play_with_call_id(self, client, mock_session):
+    def test_play_with_call_id(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.calling.play("call-123", play=[{"type": "tts", "text": "hello"}])
         call_args = mock_session.request.call_args
@@ -23,7 +25,7 @@ class TestCallingNamespace:
         assert body["id"] == "call-123"
         assert body["params"]["play"] == [{"type": "tts", "text": "hello"}]
 
-    def test_end(self, client, mock_session):
+    def test_end(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.calling.end("call-123", reason="hangup")
         body = mock_session.request.call_args[1]["json"]
@@ -31,21 +33,21 @@ class TestCallingNamespace:
         assert body["id"] == "call-123"
         assert body["params"]["reason"] == "hangup"
 
-    def test_record_stop(self, client, mock_session):
+    def test_record_stop(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.calling.record_stop("call-123", control_id="ctrl-1")
         body = mock_session.request.call_args[1]["json"]
         assert body["command"] == "calling.record.stop"
         assert body["id"] == "call-123"
 
-    def test_ai_message(self, client, mock_session):
+    def test_ai_message(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.calling.ai_message("call-123", role="user", message_text="hi")
         body = mock_session.request.call_args[1]["json"]
         assert body["command"] == "calling.ai_message"
         assert body["params"]["role"] == "user"
 
-    def test_all_methods_exist(self, client):
+    def test_all_methods_exist(self, client: RestClient) -> None:
         methods = [
             "dial", "update", "end", "transfer", "disconnect",
             "play", "play_pause", "play_resume", "play_stop", "play_volume",

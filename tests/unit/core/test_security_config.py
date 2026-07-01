@@ -13,8 +13,12 @@ Unit tests for SecurityConfig module
 
 import os
 import secrets
+from typing import TYPE_CHECKING, Any
 import pytest
 from unittest.mock import Mock, patch, MagicMock
+
+if TYPE_CHECKING:
+    from signalwire.core.security_config import SecurityConfig
 
 
 # All SecurityConfig instantiation must happen with env and config loader mocked,
@@ -30,12 +34,12 @@ ENV_CLEAR_KEYS = [
 ]
 
 
-def _clean_env():
+def _clean_env() -> dict[str, str]:
     """Return a dict suitable for patch.dict that removes all SWML_ keys."""
     return {k: v for k, v in os.environ.items() if k not in ENV_CLEAR_KEYS}
 
 
-def _make_config(**env_overrides):
+def _make_config(**env_overrides: Any) -> "SecurityConfig":
     """
     Create a SecurityConfig with a clean environment and no config file.
     Any env_overrides are applied on top of the clean environment.
@@ -54,7 +58,7 @@ def _make_config(**env_overrides):
 class TestSecurityConfigClassAttributes:
     """Test that class-level constants are defined correctly."""
 
-    def test_ssl_env_var_names(self):
+    def test_ssl_env_var_names(self) -> None:
         from signalwire.core.security_config import SecurityConfig
         assert SecurityConfig.SSL_ENABLED == 'SWML_SSL_ENABLED'
         assert SecurityConfig.SSL_CERT_PATH == 'SWML_SSL_CERT_PATH'
@@ -62,7 +66,7 @@ class TestSecurityConfigClassAttributes:
         assert SecurityConfig.SSL_DOMAIN == 'SWML_DOMAIN'
         assert SecurityConfig.SSL_VERIFY_MODE == 'SWML_SSL_VERIFY_MODE'
 
-    def test_additional_env_var_names(self):
+    def test_additional_env_var_names(self) -> None:
         from signalwire.core.security_config import SecurityConfig
         assert SecurityConfig.ALLOWED_HOSTS == 'SWML_ALLOWED_HOSTS'
         assert SecurityConfig.CORS_ORIGINS == 'SWML_CORS_ORIGINS'
@@ -72,12 +76,12 @@ class TestSecurityConfigClassAttributes:
         assert SecurityConfig.USE_HSTS == 'SWML_USE_HSTS'
         assert SecurityConfig.HSTS_MAX_AGE == 'SWML_HSTS_MAX_AGE'
 
-    def test_auth_env_var_names(self):
+    def test_auth_env_var_names(self) -> None:
         from signalwire.core.security_config import SecurityConfig
         assert SecurityConfig.BASIC_AUTH_USER == 'SWML_BASIC_AUTH_USER'
         assert SecurityConfig.BASIC_AUTH_PASSWORD == 'SWML_BASIC_AUTH_PASSWORD'
 
-    def test_defaults_dict_contains_expected_keys(self):
+    def test_defaults_dict_contains_expected_keys(self) -> None:
         from signalwire.core.security_config import SecurityConfig
         defaults = SecurityConfig.DEFAULTS
         assert defaults['SWML_SSL_ENABLED'] is False
@@ -94,7 +98,7 @@ class TestSecurityConfigClassAttributes:
 class TestSecurityConfigDefaults:
     """Test SecurityConfig initialization with default values (no env vars, no config file)."""
 
-    def test_ssl_defaults(self):
+    def test_ssl_defaults(self) -> None:
         cfg = _make_config()
         assert cfg.ssl_enabled is False
         assert cfg.ssl_cert_path is None
@@ -102,23 +106,23 @@ class TestSecurityConfigDefaults:
         assert cfg.domain is None
         assert cfg.ssl_verify_mode == 'CERT_REQUIRED'
 
-    def test_host_and_cors_defaults(self):
+    def test_host_and_cors_defaults(self) -> None:
         cfg = _make_config()
         assert cfg.allowed_hosts == ['*']
         assert cfg.cors_origins == ['*']
 
-    def test_numeric_defaults(self):
+    def test_numeric_defaults(self) -> None:
         cfg = _make_config()
         assert cfg.max_request_size == 10 * 1024 * 1024
         assert cfg.rate_limit == 60
         assert cfg.request_timeout == 30
 
-    def test_hsts_defaults(self):
+    def test_hsts_defaults(self) -> None:
         cfg = _make_config()
         assert cfg.use_hsts is True
         assert cfg.hsts_max_age == 31536000
 
-    def test_auth_defaults(self):
+    def test_auth_defaults(self) -> None:
         cfg = _make_config()
         assert cfg.basic_auth_user is None
         assert cfg.basic_auth_password is None
@@ -127,41 +131,41 @@ class TestSecurityConfigDefaults:
 class TestParseList:
     """Test the _parse_list helper method."""
 
-    def _get_instance(self):
+    def _get_instance(self) -> "SecurityConfig":
         return _make_config()
 
-    def test_wildcard_string(self):
+    def test_wildcard_string(self) -> None:
         cfg = self._get_instance()
         assert cfg._parse_list('*') == ['*']
 
-    def test_single_value(self):
+    def test_single_value(self) -> None:
         cfg = self._get_instance()
         assert cfg._parse_list('example.com') == ['example.com']
 
-    def test_comma_separated(self):
+    def test_comma_separated(self) -> None:
         cfg = self._get_instance()
         result = cfg._parse_list('a.com,b.com,c.com')
         assert result == ['a.com', 'b.com', 'c.com']
 
-    def test_comma_separated_with_spaces(self):
+    def test_comma_separated_with_spaces(self) -> None:
         cfg = self._get_instance()
         result = cfg._parse_list('  a.com , b.com , c.com  ')
         assert result == ['a.com', 'b.com', 'c.com']
 
-    def test_list_input_passthrough(self):
+    def test_list_input_passthrough(self) -> None:
         cfg = self._get_instance()
         input_list = ['x.com', 'y.com']
         assert cfg._parse_list(input_list) is input_list
 
-    def test_empty_string(self):
+    def test_empty_string(self) -> None:
         cfg = self._get_instance()
         assert cfg._parse_list('') == []
 
-    def test_only_commas(self):
+    def test_only_commas(self) -> None:
         cfg = self._get_instance()
         assert cfg._parse_list(',,,') == []
 
-    def test_trailing_comma(self):
+    def test_trailing_comma(self) -> None:
         cfg = self._get_instance()
         assert cfg._parse_list('a.com,b.com,') == ['a.com', 'b.com']
 
@@ -169,35 +173,35 @@ class TestParseList:
 class TestLoadFromEnv:
     """Test loading configuration from environment variables."""
 
-    def test_ssl_enabled_true(self):
+    def test_ssl_enabled_true(self) -> None:
         cfg = _make_config(SWML_SSL_ENABLED='true')
         assert cfg.ssl_enabled is True
 
-    def test_ssl_enabled_1(self):
+    def test_ssl_enabled_1(self) -> None:
         cfg = _make_config(SWML_SSL_ENABLED='1')
         assert cfg.ssl_enabled is True
 
-    def test_ssl_enabled_yes(self):
+    def test_ssl_enabled_yes(self) -> None:
         cfg = _make_config(SWML_SSL_ENABLED='yes')
         assert cfg.ssl_enabled is True
 
-    def test_ssl_enabled_false(self):
+    def test_ssl_enabled_false(self) -> None:
         cfg = _make_config(SWML_SSL_ENABLED='false')
         assert cfg.ssl_enabled is False
 
-    def test_ssl_enabled_empty(self):
+    def test_ssl_enabled_empty(self) -> None:
         cfg = _make_config(SWML_SSL_ENABLED='')
         assert cfg.ssl_enabled is False
 
-    def test_ssl_enabled_case_insensitive(self):
+    def test_ssl_enabled_case_insensitive(self) -> None:
         cfg = _make_config(SWML_SSL_ENABLED='TRUE')
         assert cfg.ssl_enabled is True
 
-    def test_ssl_enabled_yes_uppercase(self):
+    def test_ssl_enabled_yes_uppercase(self) -> None:
         cfg = _make_config(SWML_SSL_ENABLED='YES')
         assert cfg.ssl_enabled is True
 
-    def test_ssl_cert_and_key_paths(self):
+    def test_ssl_cert_and_key_paths(self) -> None:
         cfg = _make_config(
             SWML_SSL_CERT_PATH='/path/to/cert.pem',
             SWML_SSL_KEY_PATH='/path/to/key.pem',
@@ -205,60 +209,60 @@ class TestLoadFromEnv:
         assert cfg.ssl_cert_path == '/path/to/cert.pem'
         assert cfg.ssl_key_path == '/path/to/key.pem'
 
-    def test_domain(self):
+    def test_domain(self) -> None:
         cfg = _make_config(SWML_DOMAIN='example.com')
         assert cfg.domain == 'example.com'
 
-    def test_ssl_verify_mode(self):
+    def test_ssl_verify_mode(self) -> None:
         cfg = _make_config(SWML_SSL_VERIFY_MODE='CERT_OPTIONAL')
         assert cfg.ssl_verify_mode == 'CERT_OPTIONAL'
 
-    def test_allowed_hosts(self):
+    def test_allowed_hosts(self) -> None:
         cfg = _make_config(SWML_ALLOWED_HOSTS='a.com,b.com')
         assert cfg.allowed_hosts == ['a.com', 'b.com']
 
-    def test_cors_origins(self):
+    def test_cors_origins(self) -> None:
         cfg = _make_config(SWML_CORS_ORIGINS='http://localhost:3000,http://app.com')
         assert cfg.cors_origins == ['http://localhost:3000', 'http://app.com']
 
-    def test_max_request_size(self):
+    def test_max_request_size(self) -> None:
         cfg = _make_config(SWML_MAX_REQUEST_SIZE='5242880')
         assert cfg.max_request_size == 5242880
 
-    def test_rate_limit(self):
+    def test_rate_limit(self) -> None:
         cfg = _make_config(SWML_RATE_LIMIT='120')
         assert cfg.rate_limit == 120
 
-    def test_request_timeout(self):
+    def test_request_timeout(self) -> None:
         cfg = _make_config(SWML_REQUEST_TIMEOUT='60')
         assert cfg.request_timeout == 60
 
-    def test_hsts_max_age(self):
+    def test_hsts_max_age(self) -> None:
         cfg = _make_config(SWML_HSTS_MAX_AGE='86400')
         assert cfg.hsts_max_age == 86400
 
-    def test_use_hsts_false(self):
+    def test_use_hsts_false(self) -> None:
         cfg = _make_config(SWML_USE_HSTS='false')
         assert cfg.use_hsts is False
 
-    def test_use_hsts_non_false_value(self):
+    def test_use_hsts_non_false_value(self) -> None:
         cfg = _make_config(SWML_USE_HSTS='true')
         assert cfg.use_hsts is True
 
-    def test_use_hsts_arbitrary_string(self):
+    def test_use_hsts_arbitrary_string(self) -> None:
         """Non-'false' strings should result in truthy use_hsts."""
         cfg = _make_config(SWML_USE_HSTS='anything')
         assert cfg.use_hsts is True
 
-    def test_basic_auth_user(self):
+    def test_basic_auth_user(self) -> None:
         cfg = _make_config(SWML_BASIC_AUTH_USER='admin')
         assert cfg.basic_auth_user == 'admin'
 
-    def test_basic_auth_password(self):
+    def test_basic_auth_password(self) -> None:
         cfg = _make_config(SWML_BASIC_AUTH_PASSWORD='secret123')
         assert cfg.basic_auth_password == 'secret123'
 
-    def test_basic_auth_both(self):
+    def test_basic_auth_both(self) -> None:
         cfg = _make_config(
             SWML_BASIC_AUTH_USER='myuser',
             SWML_BASIC_AUTH_PASSWORD='mypass',
@@ -270,7 +274,9 @@ class TestLoadFromEnv:
 class TestLoadConfigFile:
     """Test loading configuration from a config file."""
 
-    def _make_config_with_file(self, security_section, has_config=True):
+    def _make_config_with_file(
+        self, security_section: Any, has_config: bool = True
+    ) -> "SecurityConfig":
         """Helper: create SecurityConfig that loads from a mocked config file."""
         mock_config_loader_instance = MagicMock()
         mock_config_loader_instance.has_config.return_value = has_config
@@ -289,29 +295,29 @@ class TestLoadConfigFile:
                     from signalwire.core.security_config import SecurityConfig
                     return SecurityConfig()
 
-    def test_no_config_file_found(self):
+    def test_no_config_file_found(self) -> None:
         """When find_config_file returns None, config file loading is skipped."""
         cfg = _make_config()  # uses find_config_file returning None
         # Should still have defaults
         assert cfg.ssl_enabled is False
         assert cfg.rate_limit == 60
 
-    def test_config_file_has_no_config(self):
+    def test_config_file_has_no_config(self) -> None:
         """When ConfigLoader.has_config() returns False, no settings are applied."""
         cfg = self._make_config_with_file({}, has_config=False)
         assert cfg.ssl_enabled is False
 
-    def test_empty_security_section(self):
+    def test_empty_security_section(self) -> None:
         """Empty security section should not change defaults."""
         cfg = self._make_config_with_file({})
         assert cfg.ssl_enabled is False
         assert cfg.rate_limit == 60
 
-    def test_ssl_enabled_from_config(self):
+    def test_ssl_enabled_from_config(self) -> None:
         cfg = self._make_config_with_file({'ssl_enabled': True})
         assert cfg.ssl_enabled is True
 
-    def test_ssl_cert_key_from_config(self):
+    def test_ssl_cert_key_from_config(self) -> None:
         cfg = self._make_config_with_file({
             'ssl_cert_path': '/config/cert.pem',
             'ssl_key_path': '/config/key.pem',
@@ -319,27 +325,27 @@ class TestLoadConfigFile:
         assert cfg.ssl_cert_path == '/config/cert.pem'
         assert cfg.ssl_key_path == '/config/key.pem'
 
-    def test_domain_from_config(self):
+    def test_domain_from_config(self) -> None:
         cfg = self._make_config_with_file({'domain': 'config.example.com'})
         assert cfg.domain == 'config.example.com'
 
-    def test_ssl_verify_mode_from_config(self):
+    def test_ssl_verify_mode_from_config(self) -> None:
         cfg = self._make_config_with_file({'ssl_verify_mode': 'CERT_NONE'})
         assert cfg.ssl_verify_mode == 'CERT_NONE'
 
-    def test_allowed_hosts_from_config_string(self):
+    def test_allowed_hosts_from_config_string(self) -> None:
         cfg = self._make_config_with_file({'allowed_hosts': 'host1.com,host2.com'})
         assert cfg.allowed_hosts == ['host1.com', 'host2.com']
 
-    def test_allowed_hosts_from_config_list(self):
+    def test_allowed_hosts_from_config_list(self) -> None:
         cfg = self._make_config_with_file({'allowed_hosts': ['host1.com', 'host2.com']})
         assert cfg.allowed_hosts == ['host1.com', 'host2.com']
 
-    def test_cors_origins_from_config(self):
+    def test_cors_origins_from_config(self) -> None:
         cfg = self._make_config_with_file({'cors_origins': 'http://app.com'})
         assert cfg.cors_origins == ['http://app.com']
 
-    def test_numeric_settings_from_config(self):
+    def test_numeric_settings_from_config(self) -> None:
         cfg = self._make_config_with_file({
             'max_request_size': '2097152',
             'rate_limit': '100',
@@ -351,11 +357,11 @@ class TestLoadConfigFile:
         assert cfg.request_timeout == 45
         assert cfg.hsts_max_age == 7200
 
-    def test_use_hsts_from_config(self):
+    def test_use_hsts_from_config(self) -> None:
         cfg = self._make_config_with_file({'use_hsts': False})
         assert cfg.use_hsts is False
 
-    def test_auth_from_config(self):
+    def test_auth_from_config(self) -> None:
         cfg = self._make_config_with_file({
             'auth': {
                 'basic': {
@@ -367,7 +373,7 @@ class TestLoadConfigFile:
         assert cfg.basic_auth_user == 'config_user'
         assert cfg.basic_auth_password == 'config_pass'
 
-    def test_auth_partial_user_only(self):
+    def test_auth_partial_user_only(self) -> None:
         cfg = self._make_config_with_file({
             'auth': {
                 'basic': {
@@ -378,7 +384,7 @@ class TestLoadConfigFile:
         assert cfg.basic_auth_user == 'just_user'
         assert cfg.basic_auth_password is None
 
-    def test_auth_partial_password_only(self):
+    def test_auth_partial_password_only(self) -> None:
         cfg = self._make_config_with_file({
             'auth': {
                 'basic': {
@@ -389,19 +395,19 @@ class TestLoadConfigFile:
         assert cfg.basic_auth_user is None
         assert cfg.basic_auth_password == 'just_pass'
 
-    def test_auth_not_dict_ignored(self):
+    def test_auth_not_dict_ignored(self) -> None:
         """If auth is not a dict, it should be ignored gracefully."""
         cfg = self._make_config_with_file({'auth': 'not_a_dict'})
         assert cfg.basic_auth_user is None
         assert cfg.basic_auth_password is None
 
-    def test_auth_basic_not_dict_ignored(self):
+    def test_auth_basic_not_dict_ignored(self) -> None:
         """If auth.basic is not a dict, it should be ignored gracefully."""
         cfg = self._make_config_with_file({'auth': {'basic': 'not_a_dict'}})
         assert cfg.basic_auth_user is None
         assert cfg.basic_auth_password is None
 
-    def test_config_file_overrides_env(self):
+    def test_config_file_overrides_env(self) -> None:
         """Config file settings should override environment variable settings."""
         mock_config_loader_instance = MagicMock()
         mock_config_loader_instance.has_config.return_value = True
@@ -430,7 +436,7 @@ class TestLoadConfigFile:
         assert cfg.rate_limit == 200
         assert cfg.domain == 'config-domain.com'
 
-    def test_explicit_config_file_path(self):
+    def test_explicit_config_file_path(self) -> None:
         """When config_file is passed explicitly, find_config_file should not be called."""
         mock_config_loader_instance = MagicMock()
         mock_config_loader_instance.has_config.return_value = True
@@ -451,7 +457,7 @@ class TestLoadConfigFile:
         mock_find.assert_not_called()
         assert cfg.rate_limit == 999
 
-    def test_service_name_passed_to_find_config(self):
+    def test_service_name_passed_to_find_config(self) -> None:
         """service_name should be forwarded to find_config_file when no config_file given."""
         clean = {k: v for k, v in os.environ.items() if k not in ENV_CLEAR_KEYS}
         with patch.dict(os.environ, clean, clear=True):
@@ -468,47 +474,51 @@ class TestLoadConfigFile:
 class TestValidateSSLConfig:
     """Test SSL configuration validation."""
 
-    def test_ssl_disabled_always_valid(self):
+    def test_ssl_disabled_always_valid(self) -> None:
         cfg = _make_config()
         is_valid, error = cfg.validate_ssl_config()
         assert is_valid is True
         assert error is None
 
-    def test_ssl_enabled_missing_cert_path(self):
+    def test_ssl_enabled_missing_cert_path(self) -> None:
         cfg = _make_config(SWML_SSL_ENABLED='true')
         cfg.ssl_cert_path = None
         cfg.ssl_key_path = '/path/to/key.pem'
         is_valid, error = cfg.validate_ssl_config()
         assert is_valid is False
+        assert error is not None
         assert 'SWML_SSL_CERT_PATH' in error
 
-    def test_ssl_enabled_missing_key_path(self):
+    def test_ssl_enabled_missing_key_path(self) -> None:
         cfg = _make_config(SWML_SSL_ENABLED='true')
         cfg.ssl_cert_path = '/path/to/cert.pem'
         cfg.ssl_key_path = None
         is_valid, error = cfg.validate_ssl_config()
         assert is_valid is False
+        assert error is not None
         assert 'SWML_SSL_KEY_PATH' in error
 
-    def test_ssl_enabled_cert_file_not_found(self):
+    def test_ssl_enabled_cert_file_not_found(self) -> None:
         cfg = _make_config(SWML_SSL_ENABLED='true')
         cfg.ssl_cert_path = '/nonexistent/cert.pem'
         cfg.ssl_key_path = '/nonexistent/key.pem'
         with patch('os.path.exists', side_effect=lambda p: p != '/nonexistent/cert.pem'):
             is_valid, error = cfg.validate_ssl_config()
         assert is_valid is False
+        assert error is not None
         assert 'certificate file not found' in error
 
-    def test_ssl_enabled_key_file_not_found(self):
+    def test_ssl_enabled_key_file_not_found(self) -> None:
         cfg = _make_config(SWML_SSL_ENABLED='true')
         cfg.ssl_cert_path = '/exists/cert.pem'
         cfg.ssl_key_path = '/nonexistent/key.pem'
         with patch('os.path.exists', side_effect=lambda p: p == '/exists/cert.pem'):
             is_valid, error = cfg.validate_ssl_config()
         assert is_valid is False
+        assert error is not None
         assert 'key file not found' in error
 
-    def test_ssl_enabled_both_files_exist(self):
+    def test_ssl_enabled_both_files_exist(self) -> None:
         cfg = _make_config(SWML_SSL_ENABLED='true')
         cfg.ssl_cert_path = '/exists/cert.pem'
         cfg.ssl_key_path = '/exists/key.pem'
@@ -521,11 +531,11 @@ class TestValidateSSLConfig:
 class TestGetSSLContextKwargs:
     """Test get_ssl_context_kwargs method."""
 
-    def test_ssl_disabled_returns_empty(self):
+    def test_ssl_disabled_returns_empty(self) -> None:
         cfg = _make_config()
         assert cfg.get_ssl_context_kwargs() == {}
 
-    def test_ssl_enabled_valid_returns_kwargs(self):
+    def test_ssl_enabled_valid_returns_kwargs(self) -> None:
         cfg = _make_config(SWML_SSL_ENABLED='true')
         cfg.ssl_cert_path = '/exists/cert.pem'
         cfg.ssl_key_path = '/exists/key.pem'
@@ -536,14 +546,14 @@ class TestGetSSLContextKwargs:
             'ssl_keyfile': '/exists/key.pem',
         }
 
-    def test_ssl_enabled_invalid_returns_empty(self):
+    def test_ssl_enabled_invalid_returns_empty(self) -> None:
         cfg = _make_config(SWML_SSL_ENABLED='true')
         cfg.ssl_cert_path = None
         cfg.ssl_key_path = None
         result = cfg.get_ssl_context_kwargs()
         assert result == {}
 
-    def test_ssl_enabled_invalid_logs_error(self):
+    def test_ssl_enabled_invalid_logs_error(self) -> None:
         cfg = _make_config(SWML_SSL_ENABLED='true')
         cfg.ssl_cert_path = None
         with patch('signalwire.core.security_config.logger') as mock_logger:
@@ -554,23 +564,23 @@ class TestGetSSLContextKwargs:
 class TestGetBasicAuth:
     """Test get_basic_auth credential generation and caching."""
 
-    def test_default_username(self):
+    def test_default_username(self) -> None:
         cfg = _make_config()
         username, _ = cfg.get_basic_auth()
         assert username == 'signalwire'
 
-    def test_custom_username(self):
+    def test_custom_username(self) -> None:
         cfg = _make_config(SWML_BASIC_AUTH_USER='custom_user')
         username, _ = cfg.get_basic_auth()
         assert username == 'custom_user'
 
-    def test_generates_password_when_not_set(self):
+    def test_generates_password_when_not_set(self) -> None:
         cfg = _make_config()
         _, password = cfg.get_basic_auth()
         assert password is not None
         assert len(password) > 0
 
-    def test_password_is_url_safe_token(self):
+    def test_password_is_url_safe_token(self) -> None:
         """Verify the generated password comes from secrets.token_urlsafe."""
         cfg = _make_config()
         with patch('signalwire.core.security_config.secrets.token_urlsafe',
@@ -579,7 +589,7 @@ class TestGetBasicAuth:
         mock_token.assert_called_once_with(32)
         assert password == 'mock_token_abc'
 
-    def test_password_caching_stability_same_instance(self):
+    def test_password_caching_stability_same_instance(self) -> None:
         """Multiple calls to get_basic_auth on the same instance return the same password."""
         cfg = _make_config()
         _, password1 = cfg.get_basic_auth()
@@ -588,7 +598,7 @@ class TestGetBasicAuth:
         assert password1 == password2
         assert password2 == password3
 
-    def test_password_caching_does_not_regenerate(self):
+    def test_password_caching_does_not_regenerate(self) -> None:
         """After the first call generates a password, subsequent calls must not call secrets again."""
         cfg = _make_config()
         with patch('signalwire.core.security_config.secrets.token_urlsafe',
@@ -603,12 +613,12 @@ class TestGetBasicAuth:
         mock_token.assert_not_called()
         assert pw2 == 'first_token'
 
-    def test_preset_password_not_overwritten(self):
+    def test_preset_password_not_overwritten(self) -> None:
         cfg = _make_config(SWML_BASIC_AUTH_PASSWORD='env_password')
         _, password = cfg.get_basic_auth()
         assert password == 'env_password'
 
-    def test_preset_password_stability(self):
+    def test_preset_password_stability(self) -> None:
         """Pre-set password stays the same across calls."""
         cfg = _make_config(SWML_BASIC_AUTH_PASSWORD='stable')
         _, pw1 = cfg.get_basic_auth()
@@ -616,20 +626,20 @@ class TestGetBasicAuth:
         assert pw1 == 'stable'
         assert pw2 == 'stable'
 
-    def test_externally_set_password_preserved(self):
+    def test_externally_set_password_preserved(self) -> None:
         """Setting basic_auth_password directly is respected by get_basic_auth."""
         cfg = _make_config()
         cfg.basic_auth_password = 'manual_password'
         _, password = cfg.get_basic_auth()
         assert password == 'manual_password'
 
-    def test_returns_tuple(self):
+    def test_returns_tuple(self) -> None:
         cfg = _make_config()
         result = cfg.get_basic_auth()
         assert isinstance(result, tuple)
         assert len(result) == 2
 
-    def test_generated_passwords_differ_between_instances(self):
+    def test_generated_passwords_differ_between_instances(self) -> None:
         """Different SecurityConfig instances should generate different passwords."""
         cfg1 = _make_config()
         cfg2 = _make_config()
@@ -644,7 +654,7 @@ class TestGetBasicAuth:
 class TestGetSecurityHeaders:
     """Test get_security_headers method."""
 
-    def test_http_headers_no_hsts(self):
+    def test_http_headers_no_hsts(self) -> None:
         cfg = _make_config()
         headers = cfg.get_security_headers(is_https=False)
         assert 'X-Content-Type-Options' in headers
@@ -654,32 +664,32 @@ class TestGetSecurityHeaders:
         assert headers['Referrer-Policy'] == 'strict-origin-when-cross-origin'
         assert 'Strict-Transport-Security' not in headers
 
-    def test_https_with_hsts_enabled(self):
+    def test_https_with_hsts_enabled(self) -> None:
         cfg = _make_config()
         headers = cfg.get_security_headers(is_https=True)
         assert 'Strict-Transport-Security' in headers
         assert '31536000' in headers['Strict-Transport-Security']
         assert 'includeSubDomains' in headers['Strict-Transport-Security']
 
-    def test_https_with_hsts_disabled(self):
+    def test_https_with_hsts_disabled(self) -> None:
         cfg = _make_config()
         cfg.use_hsts = False
         headers = cfg.get_security_headers(is_https=True)
         assert 'Strict-Transport-Security' not in headers
 
-    def test_https_custom_hsts_max_age(self):
+    def test_https_custom_hsts_max_age(self) -> None:
         cfg = _make_config()
         cfg.hsts_max_age = 86400
         headers = cfg.get_security_headers(is_https=True)
         assert 'max-age=86400' in headers['Strict-Transport-Security']
 
-    def test_default_is_http(self):
+    def test_default_is_http(self) -> None:
         """Default is_https=False."""
         cfg = _make_config()
         headers = cfg.get_security_headers()
         assert 'Strict-Transport-Security' not in headers
 
-    def test_always_includes_base_headers(self):
+    def test_always_includes_base_headers(self) -> None:
         """Base security headers are always present regardless of HTTPS status."""
         cfg = _make_config()
         for is_https in (True, False):
@@ -693,26 +703,26 @@ class TestGetSecurityHeaders:
 class TestShouldAllowHost:
     """Test should_allow_host method."""
 
-    def test_wildcard_allows_all(self):
+    def test_wildcard_allows_all(self) -> None:
         cfg = _make_config()
         assert cfg.should_allow_host('anything.com') is True
         assert cfg.should_allow_host('') is True
         assert cfg.should_allow_host('localhost') is True
 
-    def test_specific_host_allowed(self):
+    def test_specific_host_allowed(self) -> None:
         cfg = _make_config(SWML_ALLOWED_HOSTS='example.com,api.example.com')
         assert cfg.should_allow_host('example.com') is True
         assert cfg.should_allow_host('api.example.com') is True
 
-    def test_host_not_in_list(self):
+    def test_host_not_in_list(self) -> None:
         cfg = _make_config(SWML_ALLOWED_HOSTS='example.com')
         assert cfg.should_allow_host('other.com') is False
 
-    def test_empty_host_not_allowed_when_specific(self):
+    def test_empty_host_not_allowed_when_specific(self) -> None:
         cfg = _make_config(SWML_ALLOWED_HOSTS='example.com')
         assert cfg.should_allow_host('') is False
 
-    def test_case_sensitive_matching(self):
+    def test_case_sensitive_matching(self) -> None:
         """Host matching is case-sensitive (as set by the environment)."""
         cfg = _make_config(SWML_ALLOWED_HOSTS='Example.com')
         assert cfg.should_allow_host('Example.com') is True
@@ -722,7 +732,7 @@ class TestShouldAllowHost:
 class TestGetCorsConfig:
     """Test get_cors_config method."""
 
-    def test_default_cors_config(self):
+    def test_default_cors_config(self) -> None:
         cfg = _make_config()
         cors = cfg.get_cors_config()
         assert cors['allow_origins'] == ['*']
@@ -730,12 +740,12 @@ class TestGetCorsConfig:
         assert cors['allow_methods'] == ['*']
         assert cors['allow_headers'] == ['*']
 
-    def test_custom_cors_origins(self):
+    def test_custom_cors_origins(self) -> None:
         cfg = _make_config(SWML_CORS_ORIGINS='http://localhost:3000,http://app.com')
         cors = cfg.get_cors_config()
         assert cors['allow_origins'] == ['http://localhost:3000', 'http://app.com']
 
-    def test_cors_config_keys(self):
+    def test_cors_config_keys(self) -> None:
         cfg = _make_config()
         cors = cfg.get_cors_config()
         assert set(cors.keys()) == {'allow_origins', 'allow_credentials', 'allow_methods', 'allow_headers'}
@@ -744,11 +754,11 @@ class TestGetCorsConfig:
 class TestGetUrlScheme:
     """Test get_url_scheme method."""
 
-    def test_http_when_ssl_disabled(self):
+    def test_http_when_ssl_disabled(self) -> None:
         cfg = _make_config()
         assert cfg.get_url_scheme() == 'http'
 
-    def test_https_when_ssl_enabled(self):
+    def test_https_when_ssl_enabled(self) -> None:
         cfg = _make_config(SWML_SSL_ENABLED='true')
         assert cfg.get_url_scheme() == 'https'
 
@@ -756,13 +766,13 @@ class TestGetUrlScheme:
 class TestLogConfig:
     """Test log_config method."""
 
-    def test_log_config_calls_logger(self):
+    def test_log_config_calls_logger(self) -> None:
         cfg = _make_config()
         with patch('signalwire.core.security_config.logger') as mock_logger:
             cfg.log_config('test_service')
             mock_logger.info.assert_called_once()
 
-    def test_log_config_includes_service_name(self):
+    def test_log_config_includes_service_name(self) -> None:
         cfg = _make_config()
         with patch('signalwire.core.security_config.logger') as mock_logger:
             cfg.log_config('my_service')
@@ -772,7 +782,7 @@ class TestLogConfig:
             # Keyword args should include service
             assert call_kwargs[1]['service'] == 'my_service'
 
-    def test_log_config_includes_key_fields(self):
+    def test_log_config_includes_key_fields(self) -> None:
         cfg = _make_config()
         with patch('signalwire.core.security_config.logger') as mock_logger:
             cfg.log_config('svc')
@@ -786,7 +796,7 @@ class TestLogConfig:
             assert 'use_hsts' in kwargs
             assert 'has_basic_auth' in kwargs
 
-    def test_log_config_has_basic_auth_true(self):
+    def test_log_config_has_basic_auth_true(self) -> None:
         cfg = _make_config(
             SWML_BASIC_AUTH_USER='user',
             SWML_BASIC_AUTH_PASSWORD='pass',
@@ -796,7 +806,7 @@ class TestLogConfig:
             kwargs = mock_logger.info.call_args[1]
             assert kwargs['has_basic_auth'] is True
 
-    def test_log_config_has_basic_auth_false(self):
+    def test_log_config_has_basic_auth_false(self) -> None:
         cfg = _make_config()
         with patch('signalwire.core.security_config.logger') as mock_logger:
             cfg.log_config('svc')
@@ -807,12 +817,12 @@ class TestLogConfig:
 class TestGlobalInstance:
     """Test the module-level global security_config instance."""
 
-    def test_global_instance_exists(self):
+    def test_global_instance_exists(self) -> None:
         from signalwire.core.security_config import security_config
         from signalwire.core.security_config import SecurityConfig
         assert isinstance(security_config, SecurityConfig)
 
-    def test_global_instance_is_same_on_reimport(self):
+    def test_global_instance_is_same_on_reimport(self) -> None:
         from signalwire.core.security_config import security_config as sc1
         from signalwire.core.security_config import security_config as sc2
         assert sc1 is sc2
@@ -821,7 +831,7 @@ class TestGlobalInstance:
 class TestInitOrder:
     """Test that __init__ applies configuration in the correct priority order."""
 
-    def test_defaults_then_env_then_config_file(self):
+    def test_defaults_then_env_then_config_file(self) -> None:
         """
         Verify: defaults are set first, then env overrides them,
         then config file overrides env.
@@ -855,29 +865,29 @@ class TestInitOrder:
 class TestEdgeCases:
     """Test edge cases and boundary conditions."""
 
-    def test_zero_rate_limit(self):
+    def test_zero_rate_limit(self) -> None:
         cfg = _make_config(SWML_RATE_LIMIT='0')
         assert cfg.rate_limit == 0
 
-    def test_zero_request_timeout(self):
+    def test_zero_request_timeout(self) -> None:
         cfg = _make_config(SWML_REQUEST_TIMEOUT='0')
         assert cfg.request_timeout == 0
 
-    def test_zero_max_request_size(self):
+    def test_zero_max_request_size(self) -> None:
         cfg = _make_config(SWML_MAX_REQUEST_SIZE='0')
         assert cfg.max_request_size == 0
 
-    def test_zero_hsts_max_age(self):
+    def test_zero_hsts_max_age(self) -> None:
         cfg = _make_config(SWML_HSTS_MAX_AGE='0')
         assert cfg.hsts_max_age == 0
         headers = cfg.get_security_headers(is_https=True)
         assert 'max-age=0' in headers['Strict-Transport-Security']
 
-    def test_very_large_max_request_size(self):
+    def test_very_large_max_request_size(self) -> None:
         cfg = _make_config(SWML_MAX_REQUEST_SIZE='1073741824')  # 1GB
         assert cfg.max_request_size == 1073741824
 
-    def test_ssl_validate_after_manual_state_change(self):
+    def test_ssl_validate_after_manual_state_change(self) -> None:
         """Validate SSL after manually changing attributes."""
         cfg = _make_config()
         cfg.ssl_enabled = True
@@ -887,25 +897,25 @@ class TestEdgeCases:
             is_valid, error = cfg.validate_ssl_config()
         assert is_valid is True
 
-    def test_allowed_hosts_single_entry(self):
+    def test_allowed_hosts_single_entry(self) -> None:
         cfg = _make_config(SWML_ALLOWED_HOSTS='only-this-host.com')
         assert cfg.allowed_hosts == ['only-this-host.com']
         assert cfg.should_allow_host('only-this-host.com') is True
         assert cfg.should_allow_host('other.com') is False
 
-    def test_parse_list_with_whitespace_only_items(self):
+    def test_parse_list_with_whitespace_only_items(self) -> None:
         cfg = _make_config()
         result = cfg._parse_list('a, , b, ,c')
         assert result == ['a', 'b', 'c']
 
-    def test_get_basic_auth_empty_string_user(self):
+    def test_get_basic_auth_empty_string_user(self) -> None:
         """Empty string user from env should be treated as falsy, defaulting to 'signalwire'."""
         cfg = _make_config()
         cfg.basic_auth_user = ''
         username, _ = cfg.get_basic_auth()
         assert username == 'signalwire'
 
-    def test_get_basic_auth_empty_string_password_generates_new(self):
+    def test_get_basic_auth_empty_string_password_generates_new(self) -> None:
         """Empty string password should be treated as falsy, generating a new one."""
         cfg = _make_config()
         cfg.basic_auth_password = ''
@@ -913,7 +923,7 @@ class TestEdgeCases:
         assert len(password) > 0
         assert password != ''
 
-    def test_multiple_env_vars_combined(self):
+    def test_multiple_env_vars_combined(self) -> None:
         """Test setting many environment variables simultaneously."""
         cfg = _make_config(
             SWML_SSL_ENABLED='true',

@@ -13,10 +13,11 @@ import inspect
 import re
 import typing
 from typing import Any, get_type_hints
+from collections.abc import Callable
 
 
 # Map Python types to JSON Schema types
-_TYPE_MAP = {
+_TYPE_MAP: dict[type, str] = {
     str: "string",
     int: "integer",
     float: "number",
@@ -26,7 +27,7 @@ _TYPE_MAP = {
 }
 
 
-def _resolve_type(annotation) -> tuple[dict[str, Any], bool]:
+def _resolve_type(annotation: Any) -> tuple[dict[str, Any], bool]:
     """
     Resolve a Python type annotation to a JSON Schema property dict.
 
@@ -100,10 +101,10 @@ def _parse_docstring_args(docstring: str) -> tuple[str, dict[str, str]]:
             break
 
     # Find the Args: block
-    param_descriptions = {}
+    param_descriptions: dict[str, str] = {}
     in_args = False
-    current_param = None
-    current_desc_lines = []
+    current_param: str | None = None
+    current_desc_lines: list[str] = []
 
     for line in lines:
         stripped = line.strip()
@@ -154,7 +155,9 @@ def _parse_docstring_args(docstring: str) -> tuple[str, dict[str, str]]:
     return summary, param_descriptions
 
 
-def infer_schema(func) -> tuple[dict[str, dict], list[str], str | None, bool, bool]:
+def infer_schema(
+    func: Callable[..., Any],
+) -> tuple[dict[str, dict[str, Any]], list[str], str | None, bool, bool]:
     """
     Inspect a function's signature and type hints to infer a JSON Schema
     for SWAIG tool parameters.
@@ -240,15 +243,15 @@ def infer_schema(func) -> tuple[dict[str, dict], list[str], str | None, bool, bo
     summary, param_docs = _parse_docstring_args(docstring) if docstring else ("", {})
 
     # Build the schema
-    parameters = {}
-    required = []
+    parameters: dict[str, dict[str, Any]] = {}
+    required: list[str] = []
 
     for p in schema_params:
         annotation = hints.get(p.name, inspect.Parameter.empty)
 
         if annotation is inspect.Parameter.empty:
             # No type hint for this param — default to string
-            prop = {"type": "string"}
+            prop: dict[str, Any] = {"type": "string"}
             is_optional = False
         else:
             prop, is_optional = _resolve_type(annotation)
@@ -266,7 +269,9 @@ def infer_schema(func) -> tuple[dict[str, dict], list[str], str | None, bool, bo
     return parameters, required, summary or None, True, has_raw_data
 
 
-def create_typed_handler_wrapper(func, has_raw_data: bool):
+def create_typed_handler_wrapper(
+    func: Callable[..., Any], has_raw_data: bool
+) -> Callable[..., Any]:
     """
     Wrap a typed handler function so it can be called with the standard
     SWAIG calling convention (args_dict, raw_data).
@@ -282,7 +287,7 @@ def create_typed_handler_wrapper(func, has_raw_data: bool):
         A wrapper function with signature (args, raw_data).
     """
 
-    def wrapper(args, raw_data):
+    def wrapper(args: dict[str, Any], raw_data: dict[str, Any] | None) -> Any:
         if has_raw_data:
             return func(raw_data=raw_data, **args)
         return func(**args)

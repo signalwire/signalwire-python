@@ -1,25 +1,24 @@
-"""
-Copyright (c) 2025 SignalWire
+"""Back-compat shim — DO NOT add to other ports. x-sdk-back-compat-shim
 
-This file is part of the SignalWire SDK.
-
-Licensed under the MIT License.
-See LICENSE file in the project root for full license information.
-
-SIP Profile namespace — get and update project SIP profile.
+Deprecated import path. The REST layer is spec-generated; these symbols moved out of
+``namespaces.sip_profile`` (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
+re-export keeps ``from signalwire.signalwire.rest.namespaces.sip_profile import SipProfileResource`` working
+but emits a DeprecationWarning. Prefer ``client.sip_profile`` (no import needed). PYTHON-ONLY: the
+surface oracle skips this file, so no other port implements these.
 """
 
-from .._base import BaseResource
+import warnings
 
+warnings.warn(
+    "signalwire.signalwire.rest.namespaces.sip_profile is deprecated; use client.sip_profile. "
+    "This back-compat shim will be removed in a future release.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class SipProfileResource(BaseResource):
-    """Project SIP profile (singleton resource)."""
+from .relay_rest_resources_generated import SipProfile  # noqa: E402  (re-export after the deprecation warn — intentional)
 
-    def __init__(self, http):
-        super().__init__(http, "/api/relay/rest/sip_profile")
+# Back-compat aliases (old name -> generated bare name):
+SipProfileResource = SipProfile
 
-    def get(self):
-        return self._http.get(self._base_path)
-
-    def update(self, **kwargs):
-        return self._http.put(self._base_path, body=kwargs)
+__all__ = ["SipProfileResource"]

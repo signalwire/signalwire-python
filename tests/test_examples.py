@@ -1,3 +1,4 @@
+from typing import Any, cast
 #!/usr/bin/env python3
 """
 Test suite for all examples in the examples/ directory.
@@ -25,7 +26,7 @@ REPO_ROOT = Path(__file__).parent.parent
 EXAMPLES_DIR = REPO_ROOT / "examples"
 
 
-def run_swaig_test(agent_path: Path, *args, timeout: int = 30) -> tuple:
+def run_swaig_test(agent_path: Path, *args: str, timeout: int = 30) -> tuple[int, str, str]:
     """
     Run swaig-test on an agent file and return (returncode, stdout, stderr).
     """
@@ -37,7 +38,7 @@ def run_swaig_test(agent_path: Path, *args, timeout: int = 30) -> tuple:
         return -1, "", "Timeout expired"
 
 
-def get_swml_json(agent_path: Path) -> dict:
+def get_swml_json(agent_path: Path) -> dict[str, Any]:
     """
     Get SWML JSON output from an agent file.
     """
@@ -45,12 +46,12 @@ def get_swml_json(agent_path: Path) -> dict:
     if returncode != 0:
         pytest.fail(f"swaig-test failed for {agent_path}:\nstderr: {stderr}\nstdout: {stdout}")
     try:
-        return json.loads(stdout)
+        return cast("dict[str, Any]", json.loads(stdout))
     except json.JSONDecodeError as e:
         pytest.fail(f"Invalid JSON from {agent_path}: {e}\nOutput: {stdout}")
 
 
-def list_tools(agent_path: Path) -> list:
+def list_tools(agent_path: Path) -> list[str]:
     """
     List tools available in an agent.
     """
@@ -110,7 +111,7 @@ class TestBasicAgentExamples:
         "declarative_agent.py",
         "faq_bot_agent.py",
     ])
-    def test_basic_agents_load(self, agent_file):
+    def test_basic_agents_load(self, agent_file: str) -> None:
         """Test basic agent examples can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
@@ -123,7 +124,7 @@ class TestBasicAgentExamples:
         "simple_static_agent.py",
         "declarative_agent.py",
     ])
-    def test_basic_agents_generate_valid_swml(self, agent_file):
+    def test_basic_agents_generate_valid_swml(self, agent_file: str) -> None:
         """Test basic agents generate valid SWML."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
@@ -143,7 +144,7 @@ class TestContextsExamples:
         "info_gatherer_example.py",
         "dynamic_info_gatherer_example.py",
     ])
-    def test_contexts_agents_load(self, agent_file):
+    def test_contexts_agents_load(self, agent_file: str) -> None:
         """Test context-based agents can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
@@ -151,7 +152,7 @@ class TestContextsExamples:
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
         assert returncode == 0, f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
 
-    def test_survey_agent_multi_class(self):
+    def test_survey_agent_multi_class(self) -> None:
         """Test survey_agent_example.py with explicit agent class."""
         agent_path = EXAMPLES_DIR / "survey_agent_example.py"
         if not agent_path.exists():
@@ -167,7 +168,7 @@ class TestDataMapExamples:
     @pytest.mark.parametrize("agent_file", [
         "data_map_demo.py",
     ])
-    def test_datamap_agents_load(self, agent_file):
+    def test_datamap_agents_load(self, agent_file: str) -> None:
         """Test DataMap agents can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
@@ -185,7 +186,7 @@ class TestSkillsExamples:
         "skills_demo.py",
         "wikipedia_demo.py",
     ])
-    def test_skills_agents_load(self, agent_file):
+    def test_skills_agents_load(self, agent_file: str) -> None:
         """Test skills agents can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
@@ -207,7 +208,7 @@ class TestWebSearchExamples:
     @pytest.mark.parametrize("agent_file", [
         "web_search_multi_instance_demo.py",
     ])
-    def test_web_search_agents_load(self, agent_file):
+    def test_web_search_agents_load(self, agent_file: str) -> None:
         """Test web search agents can be loaded (may skip if no API keys)."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
@@ -226,7 +227,7 @@ class TestDatasphereExamples:
         "datasphere_serverless_demo.py",
         "datasphere_multi_instance_demo.py",
     ])
-    def test_datasphere_agents_load(self, agent_file):
+    def test_datasphere_agents_load(self, agent_file: str) -> None:
         """Test Datasphere agents can be loaded (may skip if no credentials)."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
@@ -244,7 +245,7 @@ class TestSWAIGFeaturesExamples:
     @pytest.mark.parametrize("agent_file", [
         "swaig_features_agent.py",
     ])
-    def test_swaig_features_agents_load(self, agent_file):
+    def test_swaig_features_agents_load(self, agent_file: str) -> None:
         """Test SWAIG feature agents can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
@@ -261,7 +262,7 @@ class TestSWMLServiceExamples:
     @pytest.mark.parametrize("agent_file", [
         "swml_service_routing_example.py",
     ])
-    def test_swml_service_agents_load(self, agent_file):
+    def test_swml_service_agents_load(self, agent_file: str) -> None:
         """Test SWML service examples can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
@@ -279,7 +280,7 @@ class TestDeploymentExamples:
         "kubernetes_ready_agent.py",
         "custom_path_agent.py",
     ])
-    def test_deployment_agents_load(self, agent_file):
+    def test_deployment_agents_load(self, agent_file: str) -> None:
         """Test deployment examples can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
@@ -293,7 +294,7 @@ class TestDeploymentExamples:
 class TestMultiAgentExamples:
     """Test multi-agent examples."""
 
-    def test_multi_agent_server_load(self):
+    def test_multi_agent_server_load(self) -> None:
         """Test multi-agent server can be loaded."""
         agent_path = EXAMPLES_DIR / "multi_agent_server.py"
         if not agent_path.exists():
@@ -304,7 +305,7 @@ class TestMultiAgentExamples:
         assert returncode == 0 or "multiple" in stdout.lower() or "agent" in stdout.lower(), \
             f"Failed to list agents:\nstderr: {stderr}\nstdout: {stdout}"
 
-    def test_multi_endpoint_agent_load(self):
+    def test_multi_endpoint_agent_load(self) -> None:
         """Test multi-endpoint agent can be loaded."""
         agent_path = EXAMPLES_DIR / "multi_endpoint_agent.py"
         if not agent_path.exists():
@@ -320,7 +321,7 @@ class TestPrefabExamples:
         "concierge_agent_example.py",
         "receptionist_agent_example.py",
     ])
-    def test_prefab_agents_load(self, agent_file):
+    def test_prefab_agents_load(self, agent_file: str) -> None:
         """Test prefab examples can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
@@ -335,7 +336,7 @@ class TestDynamicConfigExamples:
     @pytest.mark.parametrize("agent_file", [
         "comprehensive_dynamic_agent.py",
     ])
-    def test_dynamic_config_agents_load(self, agent_file):
+    def test_dynamic_config_agents_load(self, agent_file: str) -> None:
         """Test dynamic config examples can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
@@ -352,7 +353,7 @@ class TestAuthExamples:
     @pytest.mark.parametrize("agent_file", [
         "env_auth_test.py",
     ])
-    def test_auth_agents_load(self, agent_file):
+    def test_auth_agents_load(self, agent_file: str) -> None:
         """Test auth examples can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
@@ -371,7 +372,7 @@ class TestSearchExamples:
         "sigmond_native_search.py",
         "sigmond_remote_search.py",
     ])
-    def test_search_agents_load(self, agent_file):
+    def test_search_agents_load(self, agent_file: str) -> None:
         """Test search agents can be loaded (may skip if no index)."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
@@ -391,7 +392,7 @@ class TestBedrockExamples:
         "bedrock_agent_test.py",
         "bedrock_server_test.py",
     ])
-    def test_bedrock_agents_load(self, agent_file):
+    def test_bedrock_agents_load(self, agent_file: str) -> None:
         """Test Bedrock agents can be loaded (skip if no AWS credentials)."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
@@ -409,7 +410,7 @@ class TestBedrockExamples:
 class TestSpecialExamples:
     """Test special/edge case examples."""
 
-    def test_search_server_standalone(self):
+    def test_search_server_standalone(self) -> None:
         """Test search server standalone (not an agent, may fail gracefully)."""
         agent_path = EXAMPLES_DIR / "search_server_standalone.py"
         if not agent_path.exists():
@@ -421,7 +422,7 @@ class TestSpecialExamples:
             if "not an agent" in stderr.lower() or "no agent" in stderr.lower():
                 pytest.skip("search_server_standalone.py is not an agent file")
 
-    def test_lambda_handler(self):
+    def test_lambda_handler(self) -> None:
         """Test lambda handler example."""
         agent_path = EXAMPLES_DIR / "test_lambda_handler.py"
         if not agent_path.exists():
@@ -449,7 +450,7 @@ class TestSWMLGeneration:
         "swaig_features_agent.py",
         "declarative_agent.py",
     ])
-    def test_swml_has_ai_section(self, agent_file):
+    def test_swml_has_ai_section(self, agent_file: str) -> None:
         """Test SWML has AI configuration."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
@@ -471,7 +472,7 @@ class TestSWMLGeneration:
 class TestToolsPresence:
     """Test that specific agents have expected tools."""
 
-    def test_simple_agent_has_tools(self):
+    def test_simple_agent_has_tools(self) -> None:
         """Test simple_agent has expected tools."""
         agent_path = EXAMPLES_DIR / "simple_agent.py"
         if not agent_path.exists():
@@ -482,7 +483,7 @@ class TestToolsPresence:
         assert "get_time" in tools, f"Missing get_time tool. Found: {tools}"
         assert "get_weather" in tools, f"Missing get_weather tool. Found: {tools}"
 
-    def test_swaig_features_agent_has_tools(self):
+    def test_swaig_features_agent_has_tools(self) -> None:
         """Test swaig_features_agent has expected tools."""
         agent_path = EXAMPLES_DIR / "swaig_features_agent.py"
         if not agent_path.exists():
@@ -497,7 +498,7 @@ class TestServerlessSimulation:
     """Test serverless environment simulation."""
 
     @pytest.mark.parametrize("platform", ["lambda", "cloud_function"])
-    def test_serverless_swml_generation(self, platform):
+    def test_serverless_swml_generation(self, platform: str) -> None:
         """Test SWML generation in serverless simulation."""
         agent_path = EXAMPLES_DIR / "simple_agent.py"
         if not agent_path.exists():

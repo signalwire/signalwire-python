@@ -13,6 +13,7 @@ Unit tests for FunctionResult class
 
 import pytest
 import json
+from typing import Any, Dict, List
 from unittest.mock import Mock, patch
 
 from signalwire.core.function_result import FunctionResult
@@ -21,7 +22,7 @@ from signalwire.core.function_result import FunctionResult
 class TestFunctionResultBasic:
     """Test basic FunctionResult functionality"""
     
-    def test_basic_response_creation(self):
+    def test_basic_response_creation(self) -> None:
         """Test creating a basic response"""
         result = FunctionResult(response="Hello, world!")
         
@@ -33,7 +34,7 @@ class TestFunctionResultBasic:
         result_dict = result.to_dict()
         assert result_dict["response"] == "Hello, world!"
     
-    def test_response_with_action(self):
+    def test_response_with_action(self) -> None:
         """Test creating response with action"""
         result = FunctionResult(response="Processing request")
         result.add_action("transfer", "+15551234567")
@@ -46,7 +47,7 @@ class TestFunctionResultBasic:
         assert result_dict["response"] == "Processing request"
         assert result_dict["action"] == [{"transfer": "+15551234567"}]
     
-    def test_empty_response(self):
+    def test_empty_response(self) -> None:
         """Test creating empty response"""
         result = FunctionResult()
         
@@ -55,7 +56,7 @@ class TestFunctionResultBasic:
         # Empty response gets default message
         assert result_dict["response"] == "Action completed."
     
-    def test_post_process_setting(self):
+    def test_post_process_setting(self) -> None:
         """Test setting post_process flag"""
         result = FunctionResult(post_process=True)
         result.add_action("test", "value")  # Need action for post_process to appear
@@ -69,7 +70,7 @@ class TestFunctionResultBasic:
 class TestFunctionResultActions:
     """Test action-related methods"""
     
-    def test_add_action(self):
+    def test_add_action(self) -> None:
         """Test adding a single action"""
         result = FunctionResult()
         result.add_action("play", {"url": "https://example.com/audio.mp3"})
@@ -77,10 +78,10 @@ class TestFunctionResultActions:
         assert len(result.action) == 1
         assert result.action[0] == {"play": {"url": "https://example.com/audio.mp3"}}
     
-    def test_add_multiple_actions(self):
+    def test_add_multiple_actions(self) -> None:
         """Test adding multiple actions"""
         result = FunctionResult()
-        actions = [
+        actions: List[Dict[str, Any]] = [
             {"play": {"url": "https://example.com/audio.mp3"}},
             {"transfer": "+15551234567"}
         ]
@@ -89,7 +90,7 @@ class TestFunctionResultActions:
         assert len(result.action) == 2
         assert result.action == actions
     
-    def test_connect_action(self):
+    def test_connect_action(self) -> None:
         """Test the connect action helper"""
         result = FunctionResult()
         result.connect("+15551234567", final=True)
@@ -102,7 +103,7 @@ class TestFunctionResultActions:
         swml = action["SWML"]
         assert swml["sections"]["main"][0]["connect"]["to"] == "+15551234567"
     
-    def test_connect_with_from_addr(self):
+    def test_connect_with_from_addr(self) -> None:
         """Test connect action with from address"""
         result = FunctionResult()
         result.connect("+15551234567", final=False, from_addr="+15559876543")
@@ -118,7 +119,7 @@ class TestFunctionResultActions:
 class TestFunctionResultSWMLMethods:
     """Test SWML-specific methods"""
     
-    def test_say_method(self):
+    def test_say_method(self) -> None:
         """Test the say method"""
         result = FunctionResult()
         result.say("Hello there")
@@ -126,7 +127,7 @@ class TestFunctionResultSWMLMethods:
         assert len(result.action) == 1
         assert result.action[0] == {"say": "Hello there"}
     
-    def test_hangup_method(self):
+    def test_hangup_method(self) -> None:
         """Test the hangup method"""
         result = FunctionResult()
         result.hangup()
@@ -134,7 +135,7 @@ class TestFunctionResultSWMLMethods:
         assert len(result.action) == 1
         assert result.action[0] == {"hangup": True}
     
-    def test_hold_method(self):
+    def test_hold_method(self) -> None:
         """Test the hold method"""
         result = FunctionResult()
         result.hold(timeout=60)
@@ -142,7 +143,7 @@ class TestFunctionResultSWMLMethods:
         assert len(result.action) == 1
         assert result.action[0] == {"hold": 60}
     
-    def test_stop_method(self):
+    def test_stop_method(self) -> None:
         """Test the stop method"""
         result = FunctionResult()
         result.stop()
@@ -150,7 +151,7 @@ class TestFunctionResultSWMLMethods:
         assert len(result.action) == 1
         assert result.action[0] == {"stop": True}
     
-    def test_wait_for_user_method(self):
+    def test_wait_for_user_method(self) -> None:
         """Test the wait_for_user method"""
         result = FunctionResult()
         result.wait_for_user(enabled=True, timeout=30)
@@ -165,7 +166,7 @@ class TestFunctionResultSWMLMethods:
 class TestFunctionResultChaining:
     """Test method chaining functionality"""
     
-    def test_method_chaining(self):
+    def test_method_chaining(self) -> None:
         """Test that methods return self for chaining"""
         result = FunctionResult("Initial response")
         
@@ -180,7 +181,7 @@ class TestFunctionResultChaining:
         assert result.post_process is True
         assert len(result.action) == 1
     
-    def test_complex_chaining(self):
+    def test_complex_chaining(self) -> None:
         """Test complex method chaining"""
         result = (FunctionResult("Welcome")
                  .say("Please hold")
@@ -195,7 +196,7 @@ class TestFunctionResultChaining:
 class TestFunctionResultAdvanced:
     """Test advanced functionality"""
     
-    def test_update_global_data(self):
+    def test_update_global_data(self) -> None:
         """Test updating global data"""
         result = FunctionResult()
         result.update_global_data({"user_id": "123", "session": "abc"})
@@ -207,7 +208,7 @@ class TestFunctionResultAdvanced:
         assert action["set_global_data"]["user_id"] == "123"
         assert action["set_global_data"]["session"] == "abc"
     
-    def test_execute_swml(self):
+    def test_execute_swml(self) -> None:
         """Test executing custom SWML"""
         swml_content = {
             "sections": {
@@ -223,7 +224,7 @@ class TestFunctionResultAdvanced:
         assert "SWML" in action
         assert action["SWML"] == swml_content
     
-    def test_switch_context(self):
+    def test_switch_context(self) -> None:
         """Test switching context"""
         result = FunctionResult()
         result.switch_context(
@@ -245,7 +246,7 @@ class TestFunctionResultAdvanced:
 class TestFunctionResultSerialization:
     """Test serialization and deserialization"""
     
-    def test_to_dict_basic(self):
+    def test_to_dict_basic(self) -> None:
         """Test basic to_dict conversion"""
         result = FunctionResult(response="Test response")
         result_dict = result.to_dict()
@@ -254,7 +255,7 @@ class TestFunctionResultSerialization:
         assert "response" in result_dict
         assert result_dict["response"] == "Test response"
     
-    def test_to_dict_with_actions(self):
+    def test_to_dict_with_actions(self) -> None:
         """Test to_dict with actions"""
         result = FunctionResult("Test")
         result.add_action("play", {"url": "test.mp3"})
@@ -265,7 +266,7 @@ class TestFunctionResultSerialization:
         assert isinstance(result_dict["action"], list)
         assert len(result_dict["action"]) == 1
     
-    def test_to_dict_with_all_fields(self):
+    def test_to_dict_with_all_fields(self) -> None:
         """Test to_dict with all possible fields"""
         result = FunctionResult(
             response="Complete response",
@@ -280,7 +281,7 @@ class TestFunctionResultSerialization:
         assert "action" in result_dict
         assert len(result_dict["action"]) == 1
     
-    def test_json_serialization(self):
+    def test_json_serialization(self) -> None:
         """Test JSON serialization"""
         result = FunctionResult("Hello JSON")
         result.say("Additional message")
@@ -299,13 +300,13 @@ class TestFunctionResultSerialization:
 class TestFunctionResultErrorHandling:
     """Test error handling and edge cases"""
     
-    def test_none_response(self):
+    def test_none_response(self) -> None:
         """Test handling of None response"""
         result = FunctionResult(response=None)
         # Should convert to empty string
         assert result.response == ""
     
-    def test_empty_actions(self):
+    def test_empty_actions(self) -> None:
         """Test handling when no actions are present"""
         result = FunctionResult(response="No actions")
         result_dict = result.to_dict()
@@ -314,7 +315,7 @@ class TestFunctionResultErrorHandling:
         assert "response" in result_dict
         assert "action" not in result_dict or result_dict.get("action") == []
     
-    def test_invalid_action_data(self):
+    def test_invalid_action_data(self) -> None:
         """Test adding action with various data types"""
         result = FunctionResult()
         
@@ -336,7 +337,7 @@ class TestFunctionResultErrorHandling:
 class TestFunctionResultFactoryMethods:
     """Test factory-like usage patterns"""
     
-    def test_success_response(self):
+    def test_success_response(self) -> None:
         """Test creating success response"""
         result = FunctionResult("Operation successful")
         
@@ -344,13 +345,13 @@ class TestFunctionResultFactoryMethods:
         result_dict = result.to_dict()
         assert result_dict["response"] == "Operation successful"
     
-    def test_error_response(self):
+    def test_error_response(self) -> None:
         """Test creating error response"""
         result = FunctionResult("Error occurred")
         
         assert result.response == "Error occurred"
     
-    def test_transfer_response(self):
+    def test_transfer_response(self) -> None:
         """Test creating transfer response"""
         result = FunctionResult("Transferring you now")
         result.connect("+15551234567")
@@ -359,7 +360,7 @@ class TestFunctionResultFactoryMethods:
         assert "action" in result_dict
         assert len(result_dict["action"]) == 1
     
-    def test_information_response(self):
+    def test_information_response(self) -> None:
         """Test creating informational response"""
         result = FunctionResult("Here is the information you requested")
         
@@ -369,19 +370,19 @@ class TestFunctionResultFactoryMethods:
 class TestFunctionResultIntegration:
     """Test integration with other components"""
     
-    def test_agent_integration(self):
+    def test_agent_integration(self) -> None:
         """Test integration with agent tools"""
         # This would typically be tested in integration tests
         # but we can test the interface here
         
-        def mock_tool_handler():
+        def mock_tool_handler() -> FunctionResult:
             return FunctionResult("Tool executed successfully")
         
         result = mock_tool_handler()
         assert isinstance(result, FunctionResult)
         assert result.response == "Tool executed successfully"
     
-    def test_datamap_integration(self):
+    def test_datamap_integration(self) -> None:
         """Test integration with DataMap responses"""
         result = FunctionResult("DataMap response")
         result_dict = result.to_dict()
@@ -390,7 +391,7 @@ class TestFunctionResultIntegration:
         assert "response" in result_dict
         assert isinstance(result_dict, dict)
     
-    def test_webhook_response_format(self):
+    def test_webhook_response_format(self) -> None:
         """Test webhook response format compatibility"""
         result = FunctionResult(
             response="Webhook processed",
@@ -413,7 +414,7 @@ class TestFunctionResultIntegration:
 class TestSwmlTransfer:
     """Test swml_transfer() method"""
 
-    def test_swml_transfer_final(self):
+    def test_swml_transfer_final(self) -> None:
         """Test swml_transfer with final=True (permanent transfer)"""
         result = FunctionResult("Transferring")
         result.swml_transfer("https://example.com/swml", "Goodbye!", final=True)
@@ -427,7 +428,7 @@ class TestSwmlTransfer:
         assert main_section[0] == {"set": {"ai_response": "Goodbye!"}}
         assert main_section[1] == {"transfer": {"dest": "https://example.com/swml"}}
 
-    def test_swml_transfer_temporary(self):
+    def test_swml_transfer_temporary(self) -> None:
         """Test swml_transfer with final=False (temporary transfer)"""
         result = FunctionResult("Hold on")
         result.swml_transfer("sip:support@company.com", "Welcome back!", final=False)
@@ -437,12 +438,12 @@ class TestSwmlTransfer:
         main_section = action["SWML"]["sections"]["main"]
         assert main_section[1]["transfer"]["dest"] == "sip:support@company.com"
 
-    def test_swml_transfer_default_final(self):
+    def test_swml_transfer_default_final(self) -> None:
         """Test swml_transfer default final=True"""
         result = FunctionResult().swml_transfer("https://dest.com", "bye")
         assert result.action[0]["transfer"] == "true"
 
-    def test_swml_transfer_chaining(self):
+    def test_swml_transfer_chaining(self) -> None:
         """Test swml_transfer returns self for chaining"""
         result = FunctionResult("msg")
         ret = result.swml_transfer("dest", "resp")
@@ -452,7 +453,7 @@ class TestSwmlTransfer:
 class TestSwmlUserEvent:
     """Test swml_user_event() method"""
 
-    def test_swml_user_event_basic(self):
+    def test_swml_user_event_basic(self) -> None:
         """Test sending a user event with event data dict"""
         event_data = {"type": "cards_dealt", "player_hand": ["Ace", "King"], "score": 21}
         result = FunctionResult("Blackjack!").swml_user_event(event_data)
@@ -465,7 +466,7 @@ class TestSwmlUserEvent:
         user_event = swml["sections"]["main"][0]["user_event"]
         assert user_event["event"] == event_data
 
-    def test_swml_user_event_chaining(self):
+    def test_swml_user_event_chaining(self) -> None:
         """Test swml_user_event returns self for chaining"""
         result = FunctionResult()
         ret = result.swml_user_event({"type": "test"})
@@ -475,14 +476,14 @@ class TestSwmlUserEvent:
 class TestSwmlChangeStep:
     """Test swml_change_step() method"""
 
-    def test_swml_change_step(self):
+    def test_swml_change_step(self) -> None:
         """Test changing the conversation step"""
         result = FunctionResult("New hand").swml_change_step("betting")
 
         assert len(result.action) == 1
         assert result.action[0] == {"change_step": "betting"}
 
-    def test_swml_change_step_chaining(self):
+    def test_swml_change_step_chaining(self) -> None:
         """Test swml_change_step returns self for chaining"""
         result = FunctionResult()
         ret = result.swml_change_step("step1")
@@ -492,14 +493,14 @@ class TestSwmlChangeStep:
 class TestSwmlChangeContext:
     """Test swml_change_context() method"""
 
-    def test_swml_change_context(self):
+    def test_swml_change_context(self) -> None:
         """Test changing the conversation context"""
         result = FunctionResult("Switching").swml_change_context("technical_support")
 
         assert len(result.action) == 1
         assert result.action[0] == {"change_context": "technical_support"}
 
-    def test_swml_change_context_chaining(self):
+    def test_swml_change_context_chaining(self) -> None:
         """Test swml_change_context returns self for chaining"""
         result = FunctionResult()
         ret = result.swml_change_context("ctx")
@@ -509,7 +510,7 @@ class TestSwmlChangeContext:
 class TestExecuteSwml:
     """Test execute_swml() method"""
 
-    def test_execute_swml_string_valid_json(self):
+    def test_execute_swml_string_valid_json(self) -> None:
         """Test execute_swml with a valid JSON string input"""
         swml_json = json.dumps({"version": "1.0.0", "sections": {"main": []}})
         result = FunctionResult().execute_swml(swml_json)
@@ -518,7 +519,7 @@ class TestExecuteSwml:
         assert "SWML" in action
         assert action["SWML"]["version"] == "1.0.0"
 
-    def test_execute_swml_string_invalid_json(self):
+    def test_execute_swml_string_invalid_json(self) -> None:
         """Test execute_swml with an invalid JSON string (falls back to raw_swml)"""
         result = FunctionResult().execute_swml("not valid json {{{")
 
@@ -526,7 +527,7 @@ class TestExecuteSwml:
         assert "SWML" in action
         assert action["SWML"]["raw_swml"] == "not valid json {{{"
 
-    def test_execute_swml_dict_input(self):
+    def test_execute_swml_dict_input(self) -> None:
         """Test execute_swml with a dict input"""
         swml_dict = {"version": "1.0.0", "sections": {"main": [{"play": "test.mp3"}]}}
         result = FunctionResult().execute_swml(swml_dict)
@@ -534,7 +535,7 @@ class TestExecuteSwml:
         action = result.action[0]
         assert action["SWML"] == swml_dict
 
-    def test_execute_swml_dict_does_not_mutate_original(self):
+    def test_execute_swml_dict_does_not_mutate_original(self) -> None:
         """Test execute_swml makes a copy of the dict to avoid mutating caller data"""
         original = {"version": "1.0.0", "sections": {"main": []}}
         result = FunctionResult().execute_swml(original, transfer=True)
@@ -544,11 +545,11 @@ class TestExecuteSwml:
         # But the action's SWML should have it
         assert result.action[0]["SWML"]["transfer"] == "true"
 
-    def test_execute_swml_sdk_object_with_to_dict(self):
+    def test_execute_swml_sdk_object_with_to_dict(self) -> None:
         """Test execute_swml with an SDK object that has to_dict()"""
 
         class MockSwmlObject:
-            def to_dict(self):
+            def to_dict(self) -> dict[str, Any]:
                 return {"version": "1.0.0", "sections": {"main": [{"ai": {}}]}}
 
         result = FunctionResult().execute_swml(MockSwmlObject())
@@ -556,17 +557,17 @@ class TestExecuteSwml:
         assert action["SWML"]["version"] == "1.0.0"
         assert action["SWML"]["sections"]["main"][0] == {"ai": {}}
 
-    def test_execute_swml_invalid_type_raises_type_error(self):
+    def test_execute_swml_invalid_type_raises_type_error(self) -> None:
         """Test execute_swml with invalid type raises TypeError"""
         with pytest.raises(TypeError, match="swml_content must be string, dict, or SWML object"):
             FunctionResult().execute_swml(12345)
 
-    def test_execute_swml_invalid_type_list(self):
+    def test_execute_swml_invalid_type_list(self) -> None:
         """Test execute_swml with list raises TypeError"""
         with pytest.raises(TypeError):
             FunctionResult().execute_swml([1, 2, 3])
 
-    def test_execute_swml_with_transfer_true(self):
+    def test_execute_swml_with_transfer_true(self) -> None:
         """Test execute_swml with transfer=True adds transfer key"""
         swml_dict = {"version": "1.0.0", "sections": {"main": []}}
         result = FunctionResult().execute_swml(swml_dict, transfer=True)
@@ -574,7 +575,7 @@ class TestExecuteSwml:
         action = result.action[0]
         assert action["SWML"]["transfer"] == "true"
 
-    def test_execute_swml_with_transfer_false(self):
+    def test_execute_swml_with_transfer_false(self) -> None:
         """Test execute_swml with transfer=False does not add transfer key"""
         swml_dict = {"version": "1.0.0", "sections": {"main": []}}
         result = FunctionResult().execute_swml(swml_dict, transfer=False)
@@ -582,7 +583,7 @@ class TestExecuteSwml:
         action = result.action[0]
         assert "transfer" not in action["SWML"]
 
-    def test_execute_swml_chaining(self):
+    def test_execute_swml_chaining(self) -> None:
         """Test execute_swml returns self for chaining"""
         result = FunctionResult()
         ret = result.execute_swml({"version": "1.0.0"})
@@ -592,37 +593,37 @@ class TestExecuteSwml:
 class TestHold:
     """Test hold() method with timeout clamping"""
 
-    def test_hold_default_timeout(self):
+    def test_hold_default_timeout(self) -> None:
         """Test hold with default timeout of 300"""
         result = FunctionResult().hold()
         assert result.action[0] == {"hold": 300}
 
-    def test_hold_custom_timeout(self):
+    def test_hold_custom_timeout(self) -> None:
         """Test hold with custom timeout"""
         result = FunctionResult().hold(timeout=120)
         assert result.action[0] == {"hold": 120}
 
-    def test_hold_negative_timeout_clamped_to_zero(self):
+    def test_hold_negative_timeout_clamped_to_zero(self) -> None:
         """Test hold with negative timeout is clamped to 0"""
         result = FunctionResult().hold(timeout=-50)
         assert result.action[0] == {"hold": 0}
 
-    def test_hold_timeout_above_900_clamped(self):
+    def test_hold_timeout_above_900_clamped(self) -> None:
         """Test hold with timeout above 900 is clamped to 900"""
         result = FunctionResult().hold(timeout=1500)
         assert result.action[0] == {"hold": 900}
 
-    def test_hold_timeout_exactly_900(self):
+    def test_hold_timeout_exactly_900(self) -> None:
         """Test hold with timeout exactly 900"""
         result = FunctionResult().hold(timeout=900)
         assert result.action[0] == {"hold": 900}
 
-    def test_hold_timeout_exactly_zero(self):
+    def test_hold_timeout_exactly_zero(self) -> None:
         """Test hold with timeout exactly 0"""
         result = FunctionResult().hold(timeout=0)
         assert result.action[0] == {"hold": 0}
 
-    def test_hold_chaining(self):
+    def test_hold_chaining(self) -> None:
         """Test hold returns self for chaining"""
         result = FunctionResult()
         ret = result.hold()
@@ -632,42 +633,42 @@ class TestHold:
 class TestWaitForUser:
     """Test wait_for_user() method"""
 
-    def test_wait_for_user_answer_first(self):
+    def test_wait_for_user_answer_first(self) -> None:
         """Test wait_for_user with answer_first mode"""
         result = FunctionResult().wait_for_user(answer_first=True)
         assert result.action[0] == {"wait_for_user": "answer_first"}
 
-    def test_wait_for_user_enabled_only(self):
+    def test_wait_for_user_enabled_only(self) -> None:
         """Test wait_for_user with enabled=True only"""
         result = FunctionResult().wait_for_user(enabled=True)
         assert result.action[0] == {"wait_for_user": True}
 
-    def test_wait_for_user_enabled_false(self):
+    def test_wait_for_user_enabled_false(self) -> None:
         """Test wait_for_user with enabled=False"""
         result = FunctionResult().wait_for_user(enabled=False)
         assert result.action[0] == {"wait_for_user": False}
 
-    def test_wait_for_user_timeout_only(self):
+    def test_wait_for_user_timeout_only(self) -> None:
         """Test wait_for_user with timeout only"""
         result = FunctionResult().wait_for_user(timeout=60)
         assert result.action[0] == {"wait_for_user": 60}
 
-    def test_wait_for_user_no_args(self):
+    def test_wait_for_user_no_args(self) -> None:
         """Test wait_for_user with no arguments defaults to True"""
         result = FunctionResult().wait_for_user()
         assert result.action[0] == {"wait_for_user": True}
 
-    def test_wait_for_user_answer_first_takes_priority(self):
+    def test_wait_for_user_answer_first_takes_priority(self) -> None:
         """Test that answer_first takes priority over other args"""
         result = FunctionResult().wait_for_user(enabled=True, timeout=30, answer_first=True)
         assert result.action[0] == {"wait_for_user": "answer_first"}
 
-    def test_wait_for_user_timeout_takes_priority_over_enabled(self):
+    def test_wait_for_user_timeout_takes_priority_over_enabled(self) -> None:
         """Test that timeout takes priority over enabled when both set"""
         result = FunctionResult().wait_for_user(enabled=True, timeout=45)
         assert result.action[0] == {"wait_for_user": 45}
 
-    def test_wait_for_user_chaining(self):
+    def test_wait_for_user_chaining(self) -> None:
         """Test wait_for_user returns self for chaining"""
         result = FunctionResult()
         ret = result.wait_for_user()
@@ -677,22 +678,22 @@ class TestWaitForUser:
 class TestPlayBackgroundFile:
     """Test play_background_file() method"""
 
-    def test_play_background_file_without_wait(self):
+    def test_play_background_file_without_wait(self) -> None:
         """Test play_background_file with wait=False (default)"""
         result = FunctionResult().play_background_file("music.mp3")
         assert result.action[0] == {"playback_bg": "music.mp3"}
 
-    def test_play_background_file_with_wait_true(self):
+    def test_play_background_file_with_wait_true(self) -> None:
         """Test play_background_file with wait=True returns dict form"""
         result = FunctionResult().play_background_file("music.mp3", wait=True)
         assert result.action[0] == {"playback_bg": {"file": "music.mp3", "wait": True}}
 
-    def test_play_background_file_with_wait_false_explicit(self):
+    def test_play_background_file_with_wait_false_explicit(self) -> None:
         """Test play_background_file with explicit wait=False"""
         result = FunctionResult().play_background_file("video.mp4", wait=False)
         assert result.action[0] == {"playback_bg": "video.mp4"}
 
-    def test_play_background_file_chaining(self):
+    def test_play_background_file_chaining(self) -> None:
         """Test play_background_file returns self for chaining"""
         result = FunctionResult()
         ret = result.play_background_file("test.mp3")
@@ -702,12 +703,12 @@ class TestPlayBackgroundFile:
 class TestStopBackgroundFile:
     """Test stop_background_file() method"""
 
-    def test_stop_background_file(self):
+    def test_stop_background_file(self) -> None:
         """Test stop_background_file adds correct action"""
         result = FunctionResult().stop_background_file()
         assert result.action[0] == {"stop_playback_bg": True}
 
-    def test_stop_background_file_chaining(self):
+    def test_stop_background_file_chaining(self) -> None:
         """Test stop_background_file returns self for chaining"""
         result = FunctionResult()
         ret = result.stop_background_file()
@@ -717,17 +718,17 @@ class TestStopBackgroundFile:
 class TestRemoveGlobalData:
     """Test remove_global_data() method"""
 
-    def test_remove_global_data_single_string(self):
+    def test_remove_global_data_single_string(self) -> None:
         """Test remove_global_data with a single string key"""
         result = FunctionResult().remove_global_data("user_id")
         assert result.action[0] == {"unset_global_data": "user_id"}
 
-    def test_remove_global_data_list_of_keys(self):
+    def test_remove_global_data_list_of_keys(self) -> None:
         """Test remove_global_data with a list of keys"""
         result = FunctionResult().remove_global_data(["user_id", "session", "token"])
         assert result.action[0] == {"unset_global_data": ["user_id", "session", "token"]}
 
-    def test_remove_global_data_chaining(self):
+    def test_remove_global_data_chaining(self) -> None:
         """Test remove_global_data returns self for chaining"""
         result = FunctionResult()
         ret = result.remove_global_data("key")
@@ -737,13 +738,13 @@ class TestRemoveGlobalData:
 class TestSetMetadata:
     """Test set_metadata() method"""
 
-    def test_set_metadata_dict(self):
+    def test_set_metadata_dict(self) -> None:
         """Test set_metadata with a dict"""
         data = {"key1": "value1", "key2": 42}
         result = FunctionResult().set_metadata(data)
         assert result.action[0] == {"set_meta_data": data}
 
-    def test_set_metadata_chaining(self):
+    def test_set_metadata_chaining(self) -> None:
         """Test set_metadata returns self for chaining"""
         result = FunctionResult()
         ret = result.set_metadata({"k": "v"})
@@ -753,17 +754,17 @@ class TestSetMetadata:
 class TestRemoveMetadata:
     """Test remove_metadata() method"""
 
-    def test_remove_metadata_single_string(self):
+    def test_remove_metadata_single_string(self) -> None:
         """Test remove_metadata with a single string key"""
         result = FunctionResult().remove_metadata("key1")
         assert result.action[0] == {"unset_meta_data": "key1"}
 
-    def test_remove_metadata_list_of_keys(self):
+    def test_remove_metadata_list_of_keys(self) -> None:
         """Test remove_metadata with a list of keys"""
         result = FunctionResult().remove_metadata(["key1", "key2"])
         assert result.action[0] == {"unset_meta_data": ["key1", "key2"]}
 
-    def test_remove_metadata_chaining(self):
+    def test_remove_metadata_chaining(self) -> None:
         """Test remove_metadata returns self for chaining"""
         result = FunctionResult()
         ret = result.remove_metadata("k")
@@ -773,7 +774,7 @@ class TestRemoveMetadata:
 class TestPay:
     """Test pay() method"""
 
-    def test_pay_default_params(self):
+    def test_pay_default_params(self) -> None:
         """Test pay with only the required payment_connector_url"""
         result = FunctionResult().pay("https://pay.example.com/connector")
 
@@ -799,7 +800,7 @@ class TestPay:
         assert pay_params["voice"] == "woman"
         assert pay_params["valid_card_types"] == "visa mastercard amex"
 
-    def test_pay_all_custom_params(self):
+    def test_pay_all_custom_params(self) -> None:
         """Test pay with all custom parameters"""
         result = FunctionResult().pay(
             payment_connector_url="https://pay.example.com",
@@ -840,7 +841,7 @@ class TestPay:
         ai_response = result.action[0]["SWML"]["sections"]["main"][0]["set"]["ai_response"]
         assert ai_response == "Payment processed."
 
-    def test_pay_with_prompts_and_parameters(self):
+    def test_pay_with_prompts_and_parameters(self) -> None:
         """Test pay with custom prompts and parameters"""
         prompts = [{"for": "payment-card-number", "actions": [{"type": "Say", "phrase": "Enter card"}]}]
         parameters = [{"name": "store_id", "value": "123"}]
@@ -854,7 +855,7 @@ class TestPay:
         assert pay_params["prompts"] == prompts
         assert pay_params["parameters"] == parameters
 
-    def test_pay_postal_code_boolean_false(self):
+    def test_pay_postal_code_boolean_false(self) -> None:
         """Test pay with postal_code as boolean False"""
         result = FunctionResult().pay(
             payment_connector_url="https://pay.example.com",
@@ -863,7 +864,7 @@ class TestPay:
         pay_params = result.action[0]["SWML"]["sections"]["main"][1]["pay"]
         assert pay_params["postal_code"] == "false"
 
-    def test_pay_chaining(self):
+    def test_pay_chaining(self) -> None:
         """Test pay returns self for chaining"""
         result = FunctionResult()
         ret = result.pay("https://pay.example.com")
@@ -873,7 +874,7 @@ class TestPay:
 class TestJoinConference:
     """Test join_conference() method"""
 
-    def test_join_conference_simple_name_all_defaults(self):
+    def test_join_conference_simple_name_all_defaults(self) -> None:
         """Test join_conference with just a name (all defaults) uses simple form"""
         result = FunctionResult().join_conference("my-conference")
 
@@ -882,7 +883,7 @@ class TestJoinConference:
         # Simple form: just the conference name string
         assert join_params == "my-conference"
 
-    def test_join_conference_complex_params(self):
+    def test_join_conference_complex_params(self) -> None:
         """Test join_conference with non-default params uses object form"""
         result = FunctionResult().join_conference(
             name="team-meeting",
@@ -927,57 +928,57 @@ class TestJoinConference:
         assert join_params["recording_status_callback_event"] == "in-progress"
         assert join_params["result"] == {"key": "value"}
 
-    def test_join_conference_invalid_beep(self):
+    def test_join_conference_invalid_beep(self) -> None:
         """Test join_conference with invalid beep raises ValueError"""
         with pytest.raises(ValueError, match="beep must be one of"):
             FunctionResult().join_conference("conf", beep="invalid")
 
-    def test_join_conference_max_participants_too_high(self):
+    def test_join_conference_max_participants_too_high(self) -> None:
         """Test join_conference with max_participants > 250 raises ValueError"""
         with pytest.raises(ValueError, match="max_participants must be a positive integer <= 250"):
             FunctionResult().join_conference("conf", max_participants=300)
 
-    def test_join_conference_max_participants_zero(self):
+    def test_join_conference_max_participants_zero(self) -> None:
         """Test join_conference with max_participants=0 raises ValueError"""
         with pytest.raises(ValueError, match="max_participants must be a positive integer <= 250"):
             FunctionResult().join_conference("conf", max_participants=0)
 
-    def test_join_conference_max_participants_negative(self):
+    def test_join_conference_max_participants_negative(self) -> None:
         """Test join_conference with negative max_participants raises ValueError"""
         with pytest.raises(ValueError, match="max_participants must be a positive integer <= 250"):
             FunctionResult().join_conference("conf", max_participants=-5)
 
-    def test_join_conference_invalid_record(self):
+    def test_join_conference_invalid_record(self) -> None:
         """Test join_conference with invalid record raises ValueError"""
         with pytest.raises(ValueError, match="record must be one of"):
             FunctionResult().join_conference("conf", record="always")
 
-    def test_join_conference_invalid_trim(self):
+    def test_join_conference_invalid_trim(self) -> None:
         """Test join_conference with invalid trim raises ValueError"""
         with pytest.raises(ValueError, match="trim must be one of"):
             FunctionResult().join_conference("conf", trim="bad-value")
 
-    def test_join_conference_empty_name(self):
+    def test_join_conference_empty_name(self) -> None:
         """Test join_conference with empty name raises ValueError"""
         with pytest.raises(ValueError, match="name cannot be empty"):
             FunctionResult().join_conference("", muted=True)
 
-    def test_join_conference_whitespace_name(self):
+    def test_join_conference_whitespace_name(self) -> None:
         """Test join_conference with whitespace-only name raises ValueError"""
         with pytest.raises(ValueError, match="name cannot be empty"):
             FunctionResult().join_conference("   ", muted=True)
 
-    def test_join_conference_invalid_status_callback_method(self):
+    def test_join_conference_invalid_status_callback_method(self) -> None:
         """Test join_conference with invalid status_callback_method raises ValueError"""
         with pytest.raises(ValueError, match="status_callback_method must be one of"):
             FunctionResult().join_conference("conf", status_callback_method="PUT")
 
-    def test_join_conference_invalid_recording_status_callback_method(self):
+    def test_join_conference_invalid_recording_status_callback_method(self) -> None:
         """Test join_conference with invalid recording_status_callback_method raises ValueError"""
         with pytest.raises(ValueError, match="recording_status_callback_method must be one of"):
             FunctionResult().join_conference("conf", recording_status_callback_method="DELETE")
 
-    def test_join_conference_chaining(self):
+    def test_join_conference_chaining(self) -> None:
         """Test join_conference returns self for chaining"""
         result = FunctionResult()
         ret = result.join_conference("conf")
@@ -987,7 +988,7 @@ class TestJoinConference:
 class TestTap:
     """Test tap() method"""
 
-    def test_tap_default_params(self):
+    def test_tap_default_params(self) -> None:
         """Test tap with only required URI (all defaults)"""
         result = FunctionResult().tap("rtp://192.168.1.1:5000")
 
@@ -999,7 +1000,7 @@ class TestTap:
         assert "codec" not in tap_params
         assert "rtp_ptime" not in tap_params
 
-    def test_tap_custom_params(self):
+    def test_tap_custom_params(self) -> None:
         """Test tap with all custom parameters"""
         result = FunctionResult().tap(
             uri="ws://example.com/tap",
@@ -1018,33 +1019,33 @@ class TestTap:
         assert tap_params["rtp_ptime"] == 30
         assert tap_params["status_url"] == "https://example.com/status"
 
-    def test_tap_invalid_direction(self):
+    def test_tap_invalid_direction(self) -> None:
         """Test tap with invalid direction raises ValueError"""
         with pytest.raises(ValueError, match="direction must be one of"):
-            FunctionResult().tap("rtp://1.2.3.4:5000", direction="invalid")
+            FunctionResult().tap("rtp://1.2.3.4:5000", direction="invalid")  # type: ignore[arg-type]  # intentional invalid input for validation test
 
-    def test_tap_invalid_codec(self):
+    def test_tap_invalid_codec(self) -> None:
         """Test tap with invalid codec raises ValueError"""
         with pytest.raises(ValueError, match="codec must be one of"):
-            FunctionResult().tap("rtp://1.2.3.4:5000", codec="G729")
+            FunctionResult().tap("rtp://1.2.3.4:5000", codec="G729")  # type: ignore[arg-type]  # intentional invalid input for validation test
 
-    def test_tap_invalid_rtp_ptime(self):
+    def test_tap_invalid_rtp_ptime(self) -> None:
         """Test tap with invalid rtp_ptime raises ValueError"""
         with pytest.raises(ValueError, match="rtp_ptime must be a positive integer"):
             FunctionResult().tap("rtp://1.2.3.4:5000", rtp_ptime=0)
 
-    def test_tap_negative_rtp_ptime(self):
+    def test_tap_negative_rtp_ptime(self) -> None:
         """Test tap with negative rtp_ptime raises ValueError"""
         with pytest.raises(ValueError, match="rtp_ptime must be a positive integer"):
             FunctionResult().tap("rtp://1.2.3.4:5000", rtp_ptime=-10)
 
-    def test_tap_direction_hear(self):
+    def test_tap_direction_hear(self) -> None:
         """Test tap with direction=hear"""
         result = FunctionResult().tap("rtp://1.2.3.4:5000", direction="hear")
         tap_params = result.action[0]["SWML"]["sections"]["main"][0]["tap"]
         assert tap_params["direction"] == "hear"
 
-    def test_tap_chaining(self):
+    def test_tap_chaining(self) -> None:
         """Test tap returns self for chaining"""
         result = FunctionResult()
         ret = result.tap("rtp://1.2.3.4:5000")
@@ -1054,7 +1055,7 @@ class TestTap:
 class TestStopTap:
     """Test stop_tap() method"""
 
-    def test_stop_tap_with_control_id(self):
+    def test_stop_tap_with_control_id(self) -> None:
         """Test stop_tap with a control_id"""
         result = FunctionResult().stop_tap(control_id="my-tap-1")
 
@@ -1062,7 +1063,7 @@ class TestStopTap:
         stop_params = swml["sections"]["main"][0]["stop_tap"]
         assert stop_params["control_id"] == "my-tap-1"
 
-    def test_stop_tap_without_control_id(self):
+    def test_stop_tap_without_control_id(self) -> None:
         """Test stop_tap without control_id (stops last tap)"""
         result = FunctionResult().stop_tap()
 
@@ -1070,7 +1071,7 @@ class TestStopTap:
         stop_params = swml["sections"]["main"][0]["stop_tap"]
         assert stop_params == {}
 
-    def test_stop_tap_chaining(self):
+    def test_stop_tap_chaining(self) -> None:
         """Test stop_tap returns self for chaining"""
         result = FunctionResult()
         ret = result.stop_tap()
@@ -1080,7 +1081,7 @@ class TestStopTap:
 class TestRecordCall:
     """Test record_call() method"""
 
-    def test_record_call_default_params(self):
+    def test_record_call_default_params(self) -> None:
         """Test record_call with all default parameters"""
         result = FunctionResult().record_call()
 
@@ -1093,7 +1094,7 @@ class TestRecordCall:
         assert rec_params["input_sensitivity"] == 44.0
         assert "control_id" not in rec_params
 
-    def test_record_call_custom_params(self):
+    def test_record_call_custom_params(self) -> None:
         """Test record_call with all custom parameters"""
         result = FunctionResult().record_call(
             control_id="rec-1",
@@ -1122,36 +1123,36 @@ class TestRecordCall:
         assert rec_params["max_length"] == 600.0
         assert rec_params["status_url"] == "https://example.com/rec-status"
 
-    def test_record_call_invalid_format(self):
+    def test_record_call_invalid_format(self) -> None:
         """Test record_call with invalid format raises ValueError"""
         with pytest.raises(ValueError, match="format must be 'wav', 'mp3', or 'mp4'"):
-            FunctionResult().record_call(format="ogg")
+            FunctionResult().record_call(format="ogg")  # type: ignore[arg-type]  # intentional invalid input for validation test
 
-    def test_record_call_format_mp4(self):
+    def test_record_call_format_mp4(self) -> None:
         """Test record_call accepts mp4 (SWML record_call verb schema allows wav/mp3/mp4;
         the validator used to wrongly reject mp4)."""
         result = FunctionResult().record_call(format="mp4")
         rec_params = result.action[0]["SWML"]["sections"]["main"][0]["record_call"]
         assert rec_params["format"] == "mp4"
 
-    def test_record_call_invalid_direction(self):
+    def test_record_call_invalid_direction(self) -> None:
         """Test record_call with invalid direction raises ValueError"""
         with pytest.raises(ValueError, match="direction must be 'speak', 'listen', or 'both'"):
-            FunctionResult().record_call(direction="left")
+            FunctionResult().record_call(direction="left")  # type: ignore[arg-type]  # intentional invalid input for validation test
 
-    def test_record_call_direction_listen(self):
+    def test_record_call_direction_listen(self) -> None:
         """Test record_call with direction=listen"""
         result = FunctionResult().record_call(direction="listen")
         rec_params = result.action[0]["SWML"]["sections"]["main"][0]["record_call"]
         assert rec_params["direction"] == "listen"
 
-    def test_record_call_chaining(self):
+    def test_record_call_chaining(self) -> None:
         """Test record_call returns self for chaining"""
         result = FunctionResult()
         ret = result.record_call()
         assert ret is result
 
-    def test_validated_closed_sets_declared_as_literal(self):
+    def test_validated_closed_sets_declared_as_literal(self) -> None:
         """Wave-1 (record/tap): the 4 ENFORCED closed sets are declared as
         typing.Literal — explicit set + mypy/IDE checking, AND the audit oracle
         emits ``enum<...>`` for them so every port must type them (not a bare
@@ -1168,7 +1169,7 @@ class TestRecordCall:
             (FunctionResult.tap, "codec", ("PCMU", "PCMA")),
         ]
         for fn, param, expected in literal_cases:
-            ann = inspect.signature(fn).parameters[param].annotation
+            ann = inspect.signature(fn).parameters[param].annotation  # type: ignore[arg-type]  # method object from heterogeneous tuple introspection
             assert typing.get_origin(ann) is typing.Literal, \
                 f"{fn.__name__}.{param} should be Literal, got {ann!r}"
             assert typing.get_args(ann) == expected, \
@@ -1187,7 +1188,7 @@ class TestRecordCall:
 class TestStopRecordCall:
     """Test stop_record_call() method"""
 
-    def test_stop_record_call_with_control_id(self):
+    def test_stop_record_call_with_control_id(self) -> None:
         """Test stop_record_call with a control_id"""
         result = FunctionResult().stop_record_call(control_id="rec-1")
 
@@ -1195,7 +1196,7 @@ class TestStopRecordCall:
         stop_params = swml["sections"]["main"][0]["stop_record_call"]
         assert stop_params["control_id"] == "rec-1"
 
-    def test_stop_record_call_without_control_id(self):
+    def test_stop_record_call_without_control_id(self) -> None:
         """Test stop_record_call without control_id"""
         result = FunctionResult().stop_record_call()
 
@@ -1203,7 +1204,7 @@ class TestStopRecordCall:
         stop_params = swml["sections"]["main"][0]["stop_record_call"]
         assert stop_params == {}
 
-    def test_stop_record_call_chaining(self):
+    def test_stop_record_call_chaining(self) -> None:
         """Test stop_record_call returns self for chaining"""
         result = FunctionResult()
         ret = result.stop_record_call()
@@ -1213,7 +1214,7 @@ class TestStopRecordCall:
 class TestSendSms:
     """Test send_sms() method"""
 
-    def test_send_sms_with_body(self):
+    def test_send_sms_with_body(self) -> None:
         """Test send_sms with body text"""
         result = FunctionResult().send_sms(
             to_number="+15551234567",
@@ -1228,7 +1229,7 @@ class TestSendSms:
         assert sms_params["body"] == "Hello from AI"
         assert "media" not in sms_params
 
-    def test_send_sms_with_media(self):
+    def test_send_sms_with_media(self) -> None:
         """Test send_sms with media URLs"""
         result = FunctionResult().send_sms(
             to_number="+15551234567",
@@ -1240,7 +1241,7 @@ class TestSendSms:
         assert "body" not in sms_params
         assert sms_params["media"] == ["https://example.com/image.png"]
 
-    def test_send_sms_with_body_and_media(self):
+    def test_send_sms_with_body_and_media(self) -> None:
         """Test send_sms with both body and media"""
         result = FunctionResult().send_sms(
             to_number="+15551234567",
@@ -1253,7 +1254,7 @@ class TestSendSms:
         assert sms_params["body"] == "Check this out"
         assert sms_params["media"] == ["https://example.com/image.png"]
 
-    def test_send_sms_missing_both_raises_value_error(self):
+    def test_send_sms_missing_both_raises_value_error(self) -> None:
         """Test send_sms with neither body nor media raises ValueError"""
         with pytest.raises(ValueError, match="Either body or media must be provided"):
             FunctionResult().send_sms(
@@ -1261,7 +1262,7 @@ class TestSendSms:
                 from_number="+15559876543"
             )
 
-    def test_send_sms_with_tags_and_region(self):
+    def test_send_sms_with_tags_and_region(self) -> None:
         """Test send_sms with tags and region"""
         result = FunctionResult().send_sms(
             to_number="+15551234567",
@@ -1275,7 +1276,7 @@ class TestSendSms:
         assert sms_params["tags"] == ["support", "urgent"]
         assert sms_params["region"] == "us-east"
 
-    def test_send_sms_chaining(self):
+    def test_send_sms_chaining(self) -> None:
         """Test send_sms returns self for chaining"""
         result = FunctionResult()
         ret = result.send_sms("+1555", "+1556", body="hi")
@@ -1285,7 +1286,7 @@ class TestSendSms:
 class TestSipRefer:
     """Test sip_refer() method"""
 
-    def test_sip_refer_basic(self):
+    def test_sip_refer_basic(self) -> None:
         """Test sip_refer basic usage"""
         result = FunctionResult().sip_refer("sip:alice@example.com")
 
@@ -1293,7 +1294,7 @@ class TestSipRefer:
         refer_params = swml["sections"]["main"][0]["sip_refer"]
         assert refer_params["to_uri"] == "sip:alice@example.com"
 
-    def test_sip_refer_chaining(self):
+    def test_sip_refer_chaining(self) -> None:
         """Test sip_refer returns self for chaining"""
         result = FunctionResult()
         ret = result.sip_refer("sip:bob@example.com")
@@ -1303,7 +1304,7 @@ class TestSipRefer:
 class TestJoinRoom:
     """Test join_room() method"""
 
-    def test_join_room_basic(self):
+    def test_join_room_basic(self) -> None:
         """Test join_room basic usage"""
         result = FunctionResult().join_room("my-room")
 
@@ -1311,7 +1312,7 @@ class TestJoinRoom:
         join_params = swml["sections"]["main"][0]["join_room"]
         assert join_params["name"] == "my-room"
 
-    def test_join_room_chaining(self):
+    def test_join_room_chaining(self) -> None:
         """Test join_room returns self for chaining"""
         result = FunctionResult()
         ret = result.join_room("room1")
@@ -1321,7 +1322,7 @@ class TestJoinRoom:
 class TestExecuteRpc:
     """Test execute_rpc() method"""
 
-    def test_execute_rpc_method_only(self):
+    def test_execute_rpc_method_only(self) -> None:
         """Test execute_rpc with just the method"""
         result = FunctionResult().execute_rpc(method="ping")
 
@@ -1332,7 +1333,7 @@ class TestExecuteRpc:
         assert "node_id" not in rpc_params
         assert "params" not in rpc_params
 
-    def test_execute_rpc_with_all_params(self):
+    def test_execute_rpc_with_all_params(self) -> None:
         """Test execute_rpc with all parameters"""
         result = FunctionResult().execute_rpc(
             method="ai_message",
@@ -1347,7 +1348,7 @@ class TestExecuteRpc:
         assert rpc_params["node_id"] == "node-456"
         assert rpc_params["params"] == {"role": "system", "message_text": "Hello"}
 
-    def test_execute_rpc_with_call_id_only(self):
+    def test_execute_rpc_with_call_id_only(self) -> None:
         """Test execute_rpc with call_id but no params"""
         result = FunctionResult().execute_rpc(method="status", call_id="call-789")
 
@@ -1355,7 +1356,7 @@ class TestExecuteRpc:
         assert rpc_params["call_id"] == "call-789"
         assert "params" not in rpc_params
 
-    def test_execute_rpc_chaining(self):
+    def test_execute_rpc_chaining(self) -> None:
         """Test execute_rpc returns self for chaining"""
         result = FunctionResult()
         ret = result.execute_rpc("test")
@@ -1365,7 +1366,7 @@ class TestExecuteRpc:
 class TestRpcDial:
     """Test rpc_dial() method"""
 
-    def test_rpc_dial_basic(self):
+    def test_rpc_dial_basic(self) -> None:
         """Test rpc_dial basic usage"""
         result = FunctionResult().rpc_dial(
             to_number="+15551234567",
@@ -1381,7 +1382,7 @@ class TestRpcDial:
         assert params["devices"]["params"]["to_number"] == "+15551234567"
         assert params["devices"]["params"]["from_number"] == "+15559876543"
 
-    def test_rpc_dial_custom_device_type(self):
+    def test_rpc_dial_custom_device_type(self) -> None:
         """Test rpc_dial with custom device_type"""
         result = FunctionResult().rpc_dial(
             to_number="+15551234567",
@@ -1393,7 +1394,7 @@ class TestRpcDial:
         params = result.action[0]["SWML"]["sections"]["main"][0]["execute_rpc"]["params"]
         assert params["devices"]["type"] == "sip"
 
-    def test_rpc_dial_chaining(self):
+    def test_rpc_dial_chaining(self) -> None:
         """Test rpc_dial returns self for chaining"""
         result = FunctionResult()
         ret = result.rpc_dial("+1555", "+1556", "https://dest.com")
@@ -1403,7 +1404,7 @@ class TestRpcDial:
 class TestRpcAiMessage:
     """Test rpc_ai_message() method"""
 
-    def test_rpc_ai_message_basic(self):
+    def test_rpc_ai_message_basic(self) -> None:
         """Test rpc_ai_message basic usage"""
         result = FunctionResult().rpc_ai_message(
             call_id="call-abc",
@@ -1416,7 +1417,7 @@ class TestRpcAiMessage:
         assert rpc_params["params"]["role"] == "system"
         assert rpc_params["params"]["message_text"] == "Please take a message."
 
-    def test_rpc_ai_message_custom_role(self):
+    def test_rpc_ai_message_custom_role(self) -> None:
         """Test rpc_ai_message with custom role"""
         result = FunctionResult().rpc_ai_message(
             call_id="call-xyz",
@@ -1427,7 +1428,7 @@ class TestRpcAiMessage:
         params = result.action[0]["SWML"]["sections"]["main"][0]["execute_rpc"]["params"]
         assert params["role"] == "user"
 
-    def test_rpc_ai_message_chaining(self):
+    def test_rpc_ai_message_chaining(self) -> None:
         """Test rpc_ai_message returns self for chaining"""
         result = FunctionResult()
         ret = result.rpc_ai_message("call-1", "msg")
@@ -1437,7 +1438,7 @@ class TestRpcAiMessage:
 class TestRpcAiUnhold:
     """Test rpc_ai_unhold() method"""
 
-    def test_rpc_ai_unhold_basic(self):
+    def test_rpc_ai_unhold_basic(self) -> None:
         """Test rpc_ai_unhold basic usage"""
         result = FunctionResult().rpc_ai_unhold(call_id="call-abc")
 
@@ -1447,7 +1448,7 @@ class TestRpcAiUnhold:
         # empty dict params={} is falsy, so execute_rpc does not include "params" key
         assert "params" not in rpc_params
 
-    def test_rpc_ai_unhold_chaining(self):
+    def test_rpc_ai_unhold_chaining(self) -> None:
         """Test rpc_ai_unhold returns self for chaining"""
         result = FunctionResult()
         ret = result.rpc_ai_unhold("call-1")
@@ -1457,7 +1458,7 @@ class TestRpcAiUnhold:
 class TestCreatePaymentPrompt:
     """Test create_payment_prompt() static method"""
 
-    def test_create_payment_prompt_basic(self):
+    def test_create_payment_prompt_basic(self) -> None:
         """Test create_payment_prompt without card_type or error_type"""
         actions = [{"type": "Say", "phrase": "Enter your card number"}]
         prompt = FunctionResult.create_payment_prompt("payment-card-number", actions)
@@ -1467,7 +1468,7 @@ class TestCreatePaymentPrompt:
         assert "card_type" not in prompt
         assert "error_type" not in prompt
 
-    def test_create_payment_prompt_with_card_type(self):
+    def test_create_payment_prompt_with_card_type(self) -> None:
         """Test create_payment_prompt with card_type"""
         actions = [{"type": "Say", "phrase": "Enter card"}]
         prompt = FunctionResult.create_payment_prompt(
@@ -1476,7 +1477,7 @@ class TestCreatePaymentPrompt:
 
         assert prompt["card_type"] == "visa mastercard"
 
-    def test_create_payment_prompt_with_error_type(self):
+    def test_create_payment_prompt_with_error_type(self) -> None:
         """Test create_payment_prompt with error_type"""
         actions = [{"type": "Say", "phrase": "Invalid card"}]
         prompt = FunctionResult.create_payment_prompt(
@@ -1485,7 +1486,7 @@ class TestCreatePaymentPrompt:
 
         assert prompt["error_type"] == "invalid-card-number"
 
-    def test_create_payment_prompt_with_both(self):
+    def test_create_payment_prompt_with_both(self) -> None:
         """Test create_payment_prompt with both card_type and error_type"""
         actions = [{"type": "Say", "phrase": "Try again"}]
         prompt = FunctionResult.create_payment_prompt(
@@ -1500,12 +1501,12 @@ class TestCreatePaymentPrompt:
 class TestCreatePaymentAction:
     """Test create_payment_action() static method"""
 
-    def test_create_payment_action_say(self):
+    def test_create_payment_action_say(self) -> None:
         """Test create_payment_action with Say type"""
         action = FunctionResult.create_payment_action("Say", "Enter card number")
         assert action == {"type": "Say", "phrase": "Enter card number"}
 
-    def test_create_payment_action_play(self):
+    def test_create_payment_action_play(self) -> None:
         """Test create_payment_action with Play type"""
         action = FunctionResult.create_payment_action("Play", "https://example.com/prompt.mp3")
         assert action == {"type": "Play", "phrase": "https://example.com/prompt.mp3"}
@@ -1514,12 +1515,12 @@ class TestCreatePaymentAction:
 class TestCreatePaymentParameter:
     """Test create_payment_parameter() static method"""
 
-    def test_create_payment_parameter_basic(self):
+    def test_create_payment_parameter_basic(self) -> None:
         """Test create_payment_parameter basic usage"""
         param = FunctionResult.create_payment_parameter("store_id", "abc-123")
         assert param == {"name": "store_id", "value": "abc-123"}
 
-    def test_create_payment_parameter_empty_value(self):
+    def test_create_payment_parameter_empty_value(self) -> None:
         """Test create_payment_parameter with empty value"""
         param = FunctionResult.create_payment_parameter("key", "")
         assert param == {"name": "key", "value": ""}
@@ -1528,13 +1529,13 @@ class TestCreatePaymentParameter:
 class TestToDictEdgeCases:
     """Test to_dict() edge cases"""
 
-    def test_to_dict_empty_result(self):
+    def test_to_dict_empty_result(self) -> None:
         """Test to_dict with no response and no actions returns default"""
         result = FunctionResult()
         d = result.to_dict()
         assert d == {"response": "Action completed."}
 
-    def test_to_dict_response_only(self):
+    def test_to_dict_response_only(self) -> None:
         """Test to_dict with response only"""
         result = FunctionResult("Hello")
         d = result.to_dict()
@@ -1542,7 +1543,7 @@ class TestToDictEdgeCases:
         assert "action" not in d
         assert "post_process" not in d
 
-    def test_to_dict_actions_only(self):
+    def test_to_dict_actions_only(self) -> None:
         """Test to_dict with actions but empty response"""
         result = FunctionResult()
         result.add_action("hangup", True)
@@ -1552,21 +1553,21 @@ class TestToDictEdgeCases:
         # Empty string response should not appear
         assert "response" not in d
 
-    def test_to_dict_post_process_without_actions_not_included(self):
+    def test_to_dict_post_process_without_actions_not_included(self) -> None:
         """Test to_dict: post_process=True but no actions means post_process should not appear"""
         result = FunctionResult("Response", post_process=True)
         d = result.to_dict()
         assert "post_process" not in d
         assert d["response"] == "Response"
 
-    def test_to_dict_post_process_with_actions(self):
+    def test_to_dict_post_process_with_actions(self) -> None:
         """Test to_dict: post_process=True with actions includes post_process"""
         result = FunctionResult("Response", post_process=True)
         result.add_action("stop", True)
         d = result.to_dict()
         assert d["post_process"] is True
 
-    def test_to_dict_post_process_false_with_actions(self):
+    def test_to_dict_post_process_false_with_actions(self) -> None:
         """Test to_dict: post_process=False with actions does not include post_process"""
         result = FunctionResult("Response", post_process=False)
         result.add_action("stop", True)
@@ -1577,12 +1578,12 @@ class TestToDictEdgeCases:
 class TestSetEndOfSpeechTimeout:
     """Test set_end_of_speech_timeout() method"""
 
-    def test_set_end_of_speech_timeout(self):
+    def test_set_end_of_speech_timeout(self) -> None:
         """Test setting end of speech timeout"""
         result = FunctionResult().set_end_of_speech_timeout(500)
         assert result.action[0] == {"end_of_speech_timeout": 500}
 
-    def test_set_end_of_speech_timeout_chaining(self):
+    def test_set_end_of_speech_timeout_chaining(self) -> None:
         """Test set_end_of_speech_timeout returns self"""
         result = FunctionResult()
         ret = result.set_end_of_speech_timeout(300)
@@ -1592,12 +1593,12 @@ class TestSetEndOfSpeechTimeout:
 class TestSetSpeechEventTimeout:
     """Test set_speech_event_timeout() method"""
 
-    def test_set_speech_event_timeout(self):
+    def test_set_speech_event_timeout(self) -> None:
         """Test setting speech event timeout"""
         result = FunctionResult().set_speech_event_timeout(1000)
         assert result.action[0] == {"speech_event_timeout": 1000}
 
-    def test_set_speech_event_timeout_chaining(self):
+    def test_set_speech_event_timeout_chaining(self) -> None:
         """Test set_speech_event_timeout returns self"""
         result = FunctionResult()
         ret = result.set_speech_event_timeout(200)
@@ -1607,7 +1608,7 @@ class TestSetSpeechEventTimeout:
 class TestToggleFunctions:
     """Test toggle_functions() method"""
 
-    def test_toggle_functions(self):
+    def test_toggle_functions(self) -> None:
         """Test toggling functions"""
         toggles = [
             {"function": "get_weather", "active": True},
@@ -1616,7 +1617,7 @@ class TestToggleFunctions:
         result = FunctionResult().toggle_functions(toggles)
         assert result.action[0] == {"toggle_functions": toggles}
 
-    def test_toggle_functions_chaining(self):
+    def test_toggle_functions_chaining(self) -> None:
         """Test toggle_functions returns self"""
         result = FunctionResult()
         ret = result.toggle_functions([])
@@ -1626,17 +1627,17 @@ class TestToggleFunctions:
 class TestEnableFunctionsOnTimeout:
     """Test enable_functions_on_timeout() method"""
 
-    def test_enable_functions_on_timeout_default(self):
+    def test_enable_functions_on_timeout_default(self) -> None:
         """Test enable_functions_on_timeout with default True"""
         result = FunctionResult().enable_functions_on_timeout()
         assert result.action[0] == {"functions_on_speaker_timeout": True}
 
-    def test_enable_functions_on_timeout_false(self):
+    def test_enable_functions_on_timeout_false(self) -> None:
         """Test enable_functions_on_timeout with False"""
         result = FunctionResult().enable_functions_on_timeout(False)
         assert result.action[0] == {"functions_on_speaker_timeout": False}
 
-    def test_enable_functions_on_timeout_chaining(self):
+    def test_enable_functions_on_timeout_chaining(self) -> None:
         """Test enable_functions_on_timeout returns self"""
         result = FunctionResult()
         ret = result.enable_functions_on_timeout()
@@ -1646,17 +1647,17 @@ class TestEnableFunctionsOnTimeout:
 class TestEnableExtensiveData:
     """Test enable_extensive_data() method"""
 
-    def test_enable_extensive_data_default(self):
+    def test_enable_extensive_data_default(self) -> None:
         """Test enable_extensive_data with default True"""
         result = FunctionResult().enable_extensive_data()
         assert result.action[0] == {"extensive_data": True}
 
-    def test_enable_extensive_data_false(self):
+    def test_enable_extensive_data_false(self) -> None:
         """Test enable_extensive_data with False"""
         result = FunctionResult().enable_extensive_data(False)
         assert result.action[0] == {"extensive_data": False}
 
-    def test_enable_extensive_data_chaining(self):
+    def test_enable_extensive_data_chaining(self) -> None:
         """Test enable_extensive_data returns self"""
         result = FunctionResult()
         ret = result.enable_extensive_data()
@@ -1666,7 +1667,7 @@ class TestEnableExtensiveData:
 class TestUpdateSettings:
     """Test update_settings() method"""
 
-    def test_update_settings(self):
+    def test_update_settings(self) -> None:
         """Test updating agent runtime settings"""
         settings = {
             "temperature": 0.7,
@@ -1676,7 +1677,7 @@ class TestUpdateSettings:
         result = FunctionResult().update_settings(settings)
         assert result.action[0] == {"settings": settings}
 
-    def test_update_settings_chaining(self):
+    def test_update_settings_chaining(self) -> None:
         """Test update_settings returns self"""
         result = FunctionResult()
         ret = result.update_settings({"temperature": 0.5})
@@ -1686,12 +1687,12 @@ class TestUpdateSettings:
 class TestSimulateUserInput:
     """Test simulate_user_input() method"""
 
-    def test_simulate_user_input(self):
+    def test_simulate_user_input(self) -> None:
         """Test simulating user input"""
         result = FunctionResult().simulate_user_input("I want to book a flight")
         assert result.action[0] == {"user_input": "I want to book a flight"}
 
-    def test_simulate_user_input_chaining(self):
+    def test_simulate_user_input_chaining(self) -> None:
         """Test simulate_user_input returns self"""
         result = FunctionResult()
         ret = result.simulate_user_input("text")
@@ -1701,12 +1702,12 @@ class TestSimulateUserInput:
 class TestSwitchContextEdgeCases:
     """Test switch_context() edge cases"""
 
-    def test_switch_context_simple_string_only(self):
+    def test_switch_context_simple_string_only(self) -> None:
         """Test switch_context with only system_prompt uses simple string form"""
         result = FunctionResult().switch_context(system_prompt="You are a helpful bot")
         assert result.action[0] == {"context_switch": "You are a helpful bot"}
 
-    def test_switch_context_full_object_with_all_params(self):
+    def test_switch_context_full_object_with_all_params(self) -> None:
         """Test switch_context with all parameters uses object form"""
         result = FunctionResult().switch_context(
             system_prompt="New prompt",
@@ -1722,7 +1723,7 @@ class TestSwitchContextEdgeCases:
         assert ctx["consolidate"] is True
         assert ctx["full_reset"] is True
 
-    def test_switch_context_with_full_reset_only(self):
+    def test_switch_context_with_full_reset_only(self) -> None:
         """Test switch_context with full_reset triggers object form"""
         result = FunctionResult().switch_context(full_reset=True)
 
@@ -1731,7 +1732,7 @@ class TestSwitchContextEdgeCases:
         assert ctx["full_reset"] is True
         assert "system_prompt" not in ctx
 
-    def test_switch_context_system_and_user_prompt(self):
+    def test_switch_context_system_and_user_prompt(self) -> None:
         """Test switch_context with system_prompt and user_prompt uses object form"""
         result = FunctionResult().switch_context(
             system_prompt="Sys",
@@ -1743,7 +1744,7 @@ class TestSwitchContextEdgeCases:
         assert ctx["system_prompt"] == "Sys"
         assert ctx["user_prompt"] == "User"
 
-    def test_switch_context_system_prompt_with_consolidate(self):
+    def test_switch_context_system_prompt_with_consolidate(self) -> None:
         """Test switch_context with system_prompt and consolidate uses object form"""
         result = FunctionResult().switch_context(
             system_prompt="New prompt",
@@ -1755,14 +1756,14 @@ class TestSwitchContextEdgeCases:
         assert ctx["system_prompt"] == "New prompt"
         assert ctx["consolidate"] is True
 
-    def test_switch_context_no_args(self):
+    def test_switch_context_no_args(self) -> None:
         """Test switch_context with no args produces empty dict form"""
         result = FunctionResult().switch_context()
         ctx = result.action[0]["context_switch"]
         assert isinstance(ctx, dict)
         assert ctx == {}
 
-    def test_switch_context_chaining(self):
+    def test_switch_context_chaining(self) -> None:
         """Test switch_context returns self for chaining"""
         result = FunctionResult()
         ret = result.switch_context(system_prompt="test")
@@ -1779,26 +1780,26 @@ class TestFunctionResultReplaceInHistory:
     cross-language audit can detect any port that doesn't support both
     calling shapes."""
 
-    def test_replace_in_history_default_true(self):
+    def test_replace_in_history_default_true(self) -> None:
         """Default arg ``True`` emits replace_in_history action with True."""
         result = FunctionResult().replace_in_history()
         action = result.action[0]
         assert "replace_in_history" in action
         assert action["replace_in_history"] is True
 
-    def test_replace_in_history_with_string(self):
+    def test_replace_in_history_with_string(self) -> None:
         """Passing a string emits that text into the history slot."""
         result = FunctionResult().replace_in_history("I've saved your data.")
         action = result.action[0]
         assert action["replace_in_history"] == "I've saved your data."
 
-    def test_replace_in_history_with_false(self):
+    def test_replace_in_history_with_false(self) -> None:
         """Passing ``False`` is a valid form (suppresses the placeholder)."""
         result = FunctionResult().replace_in_history(False)
         action = result.action[0]
         assert action["replace_in_history"] is False
 
-    def test_replace_in_history_chaining(self):
+    def test_replace_in_history_chaining(self) -> None:
         """Returns self for fluent chaining."""
         result = FunctionResult()
         ret = result.replace_in_history()

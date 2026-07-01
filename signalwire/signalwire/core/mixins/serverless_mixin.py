@@ -21,12 +21,17 @@ from signalwire.core.mixins._mixin_host import _HostTyped
 MAX_CGI_BODY_SIZE = 10 * 1024 * 1024
 
 
-class ServerlessMixin(_HostTyped):
+class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at runtime; AgentBase under TYPE_CHECKING — intentional split
     """
     Mixin class containing all serverless/cloud platform methods for AgentBase
     """
 
-    def handle_serverless_request(self, event=None, context=None, mode=None):
+    def handle_serverless_request(
+        self,
+        event: Any = None,
+        context: Any = None,
+        mode: str | None = None,
+    ) -> Any:
         """
         Handle serverless environment requests (CGI, Lambda, Cloud Functions)
 
@@ -222,7 +227,7 @@ class ServerlessMixin(_HostTyped):
         args: dict[str, Any] | None = None,
         call_id: str | None = None,
         raw_data: dict[str, Any] | None = None,
-    ):
+    ) -> dict[str, Any]:
         """
         Execute a SWAIG function in serverless context
 
@@ -307,7 +312,7 @@ class ServerlessMixin(_HostTyped):
             req_log.error("serverless_function_execution_error", error=str(e))
             return {"error": str(e), "function": function_name}
 
-    def _handle_google_cloud_function_request(self, request):
+    def _handle_google_cloud_function_request(self, request: Any) -> Any:
         """
         Handle Google Cloud Functions specific requests
 
@@ -417,7 +422,7 @@ class ServerlessMixin(_HostTyped):
                 headers={"Content-Type": "application/json"},
             )
 
-    def _handle_azure_function_request(self, req):
+    def _handle_azure_function_request(self, req: Any) -> Any:
         """
         Handle Azure Functions specific requests
 

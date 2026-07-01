@@ -5,9 +5,7 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Unit tests for skills registry module
 """
 
@@ -15,7 +13,7 @@ import pytest
 import sys
 from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
-from typing import Dict, List, Any, Optional
+from typing import Any, ClassVar
 
 from signalwire.skills.registry import SkillRegistry, skill_registry
 from signalwire.core.skill_base import SkillBase
@@ -26,20 +24,20 @@ class MockSkill(SkillBase):
     SKILL_NAME = "mock_skill"
     SKILL_DESCRIPTION = "A mock skill for testing"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES = ["requests"]
-    REQUIRED_ENV_VARS = ["API_KEY"]
+    REQUIRED_PACKAGES: ClassVar[list[str]] = ["requests"]
+    REQUIRED_ENV_VARS: ClassVar[list[str]] = ["API_KEY"]
     SUPPORTS_MULTIPLE_INSTANCES = True
 
     @classmethod
-    def get_parameter_schema(cls):
-        schema = super().get_parameter_schema()
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
+        schema: dict[str, dict[str, Any]] = super().get_parameter_schema()
         schema["test_param"] = {"type": "string", "description": "test", "required": False}
         return schema
 
-    def setup(self):
-        pass
+    def setup(self) -> bool:
+        return True
 
-    def register_tools(self):
+    def register_tools(self) -> None:
         pass
 
 
@@ -48,20 +46,20 @@ class AnotherMockSkill(SkillBase):
     SKILL_NAME = "another_mock_skill"
     SKILL_DESCRIPTION = "Another mock skill"
     SKILL_VERSION = "2.0.0"
-    REQUIRED_PACKAGES = []
-    REQUIRED_ENV_VARS = []
+    REQUIRED_PACKAGES: ClassVar[list[str]] = []
+    REQUIRED_ENV_VARS: ClassVar[list[str]] = []
     SUPPORTS_MULTIPLE_INSTANCES = False
 
     @classmethod
-    def get_parameter_schema(cls):
-        schema = super().get_parameter_schema()
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
+        schema: dict[str, dict[str, Any]] = super().get_parameter_schema()
         schema["test_param"] = {"type": "string", "description": "test", "required": False}
         return schema
 
-    def setup(self):
-        pass
+    def setup(self) -> bool:
+        return True
 
-    def register_tools(self):
+    def register_tools(self) -> None:
         pass
 
 
@@ -69,17 +67,17 @@ class InvalidSkill(SkillBase):
     """Invalid skill without SKILL_NAME"""
     SKILL_NAME = None
     
-    def setup(self):
-        pass
+    def setup(self) -> bool:
+        return True
     
-    def register_tools(self):
+    def register_tools(self) -> None:
         pass
 
 
 class TestSkillRegistry:
     """Test SkillRegistry functionality"""
     
-    def test_basic_initialization(self):
+    def test_basic_initialization(self) -> None:
         """Test basic SkillRegistry initialization"""
         registry = SkillRegistry()
 
@@ -87,7 +85,7 @@ class TestSkillRegistry:
         assert registry._entry_points_loaded is False
         assert registry.logger is not None
     
-    def test_register_skill_basic(self):
+    def test_register_skill_basic(self) -> None:
         """Test basic skill registration"""
         registry = SkillRegistry()
         
@@ -96,7 +94,7 @@ class TestSkillRegistry:
         assert "mock_skill" in registry._skills
         assert registry._skills["mock_skill"] == MockSkill
     
-    def test_register_skill_duplicate(self):
+    def test_register_skill_duplicate(self) -> None:
         """Test registering duplicate skill"""
         registry = SkillRegistry()
         
@@ -110,7 +108,7 @@ class TestSkillRegistry:
         # Should still only have one instance
         assert len(registry._skills) == 1
     
-    def test_register_multiple_skills(self):
+    def test_register_multiple_skills(self) -> None:
         """Test registering multiple skills"""
         registry = SkillRegistry()
         
@@ -121,7 +119,7 @@ class TestSkillRegistry:
         assert "mock_skill" in registry._skills
         assert "another_mock_skill" in registry._skills
     
-    def test_get_skill_class_existing(self):
+    def test_get_skill_class_existing(self) -> None:
         """Test getting existing skill class"""
         registry = SkillRegistry()
         registry.register_skill(MockSkill)
@@ -130,7 +128,7 @@ class TestSkillRegistry:
 
         assert skill_class == MockSkill
     
-    def test_get_skill_class_nonexistent(self):
+    def test_get_skill_class_nonexistent(self) -> None:
         """Test getting nonexistent skill class"""
         registry = SkillRegistry()
 
@@ -141,7 +139,7 @@ class TestSkillRegistry:
         assert skill_class is None
     
     @patch.object(SkillRegistry, '_load_skill_on_demand', return_value=None)
-    def test_get_skill_class_triggers_on_demand_loading(self, mock_load):
+    def test_get_skill_class_triggers_on_demand_loading(self, mock_load: MagicMock) -> None:
         """Test that get_skill_class triggers on-demand loading for unknown skills"""
         registry = SkillRegistry()
 
@@ -149,7 +147,7 @@ class TestSkillRegistry:
 
         mock_load.assert_called_once_with("some_skill")
     
-    def test_list_skills_empty(self):
+    def test_list_skills_empty(self) -> None:
         """Test listing skills when no skill directories exist"""
         registry = SkillRegistry()
 
@@ -162,7 +160,7 @@ class TestSkillRegistry:
 
         assert skills == []
     
-    def test_list_skills_with_skills(self):
+    def test_list_skills_with_skills(self) -> None:
         """Test listing skills with registered skills"""
         registry = SkillRegistry()
         registry.register_skill(MockSkill)
@@ -208,7 +206,7 @@ class TestSkillRegistry:
         assert another_skill_info["required_env_vars"] == []
         assert another_skill_info["supports_multiple_instances"] is False
     
-    def test_list_skills_triggers_on_demand_loading(self):
+    def test_list_skills_triggers_on_demand_loading(self) -> None:
         """Test that list_skills triggers on-demand loading for found skill directories"""
         registry = SkillRegistry()
 
@@ -233,7 +231,7 @@ class TestSkillRegistry:
 class TestSkillDiscovery:
     """Test skill discovery functionality (on-demand loading)"""
 
-    def test_discover_skills_returns_and_registers_inventory(self):
+    def test_discover_skills_returns_and_registers_inventory(self) -> None:
         """discover_skills() scans the skills package and registers what it finds.
 
         It used to be a deprecated no-op returning None; commit 8f0100f wired it
@@ -250,7 +248,7 @@ class TestSkillDiscovery:
         assert len(discovered) == len(registry._skills)
         assert registry._skills, "discover_skills() should have registered the scanned skills"
 
-    def test_entry_points_loaded_idempotent(self):
+    def test_entry_points_loaded_idempotent(self) -> None:
         """Test that _load_entry_points is idempotent"""
         registry = SkillRegistry()
 
@@ -263,7 +261,7 @@ class TestSkillDiscovery:
             # Should only call entry_points once due to _entry_points_loaded flag
             assert mock_eps.call_count == 1
 
-    def test_list_skills_scans_directory(self):
+    def test_list_skills_scans_directory(self) -> None:
         """Test that list_skills scans the skills directory"""
         registry = SkillRegistry()
 
@@ -296,7 +294,7 @@ class TestSkillDiscovery:
                 # Should only load from test_skill directory (not __pycache__ or files)
                 mock_load.assert_called_once_with("test_skill")
 
-    def test_load_skill_on_demand_searches_paths(self):
+    def test_load_skill_on_demand_searches_paths(self) -> None:
         """Test that _load_skill_on_demand searches built-in and external paths"""
         registry = SkillRegistry()
 
@@ -312,7 +310,7 @@ class TestSkillDiscovery:
 class TestSkillLoading:
     """Test skill loading functionality via _load_skill_from_path"""
 
-    def test_load_skill_from_path_no_skill_file(self):
+    def test_load_skill_from_path_no_skill_file(self) -> None:
         """Test loading from path where skill.py does not exist"""
         registry = SkillRegistry()
 
@@ -331,7 +329,7 @@ class TestSkillLoading:
     @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
     @patch('signalwire.skills.registry.importlib.util.module_from_spec')
     @patch('signalwire.skills.registry.inspect.getmembers')
-    def test_load_skill_from_path_success(self, mock_getmembers, mock_module_from_spec, mock_spec_from_file):
+    def test_load_skill_from_path_success(self, mock_getmembers: MagicMock, mock_module_from_spec: MagicMock, mock_spec_from_file: MagicMock) -> None:
         """Test successful skill loading from path"""
         registry = SkillRegistry()
 
@@ -361,13 +359,13 @@ class TestSkillLoading:
         ]
 
         with patch.object(registry, 'register_skill') as mock_register:
-            result = registry._load_skill_from_path("mock_skill", mock_base_path)
+            result = registry._load_skill_from_path("mock_skill", mock_base_path)  # noqa: F841
 
             # Should register the matching skill
             mock_register.assert_called_once_with(MockSkill)
 
     @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
-    def test_load_skill_from_path_import_error(self, mock_spec_from_file):
+    def test_load_skill_from_path_import_error(self, mock_spec_from_file: MagicMock) -> None:
         """Test skill loading with import error"""
         registry = SkillRegistry()
 
@@ -392,7 +390,7 @@ class TestSkillLoading:
 
     @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
     @patch('signalwire.skills.registry.importlib.util.module_from_spec')
-    def test_load_skill_from_path_execution_error(self, mock_module_from_spec, mock_spec_from_file):
+    def test_load_skill_from_path_execution_error(self, mock_module_from_spec: MagicMock, mock_spec_from_file: MagicMock) -> None:
         """Test skill loading with module execution error"""
         registry = SkillRegistry()
 
@@ -426,12 +424,12 @@ class TestSkillLoading:
 class TestGlobalRegistry:
     """Test global registry instance"""
     
-    def test_global_registry_exists(self):
+    def test_global_registry_exists(self) -> None:
         """Test that global registry instance exists"""
         assert skill_registry is not None
         assert isinstance(skill_registry, SkillRegistry)
     
-    def test_global_registry_singleton_behavior(self):
+    def test_global_registry_singleton_behavior(self) -> None:
         """Test that global registry behaves like a singleton"""
         # Import again to get the same instance
         from signalwire.skills.registry import skill_registry as registry2
@@ -442,7 +440,7 @@ class TestGlobalRegistry:
 class TestSkillRegistryIntegration:
     """Test integration scenarios"""
     
-    def test_complete_skill_workflow(self):
+    def test_complete_skill_workflow(self) -> None:
         """Test complete skill registration and retrieval workflow"""
         registry = SkillRegistry()
 
@@ -487,7 +485,7 @@ class TestSkillRegistryIntegration:
             nonexistent = registry.get_skill_class("nonexistent")
             assert nonexistent is None
     
-    def test_skill_metadata_completeness(self):
+    def test_skill_metadata_completeness(self) -> None:
         """Test that skill metadata is complete and correct"""
         registry = SkillRegistry()
         registry.register_skill(MockSkill)
@@ -526,7 +524,7 @@ class TestSkillRegistryIntegration:
             assert skill_info["required_env_vars"] == ["API_KEY"]
             assert skill_info["supports_multiple_instances"] is True
     
-    def test_registry_state_isolation(self):
+    def test_registry_state_isolation(self) -> None:
         """Test that different registry instances are isolated"""
         registry1 = SkillRegistry()
         registry2 = SkillRegistry()
@@ -545,7 +543,7 @@ class TestSkillRegistryIntegration:
         assert "another_mock_skill" not in registry1._skills
         assert "another_mock_skill" in registry2._skills
     
-    def test_error_recovery(self):
+    def test_error_recovery(self) -> None:
         """Test that registry can recover from errors"""
         registry = SkillRegistry()
 
@@ -585,20 +583,20 @@ class _SecondMockSkill(SkillBase):
     SKILL_NAME = "second_mock"
     SKILL_DESCRIPTION = "Second mock"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES = []
-    REQUIRED_ENV_VARS = []
+    REQUIRED_PACKAGES: ClassVar[list[str]] = []
+    REQUIRED_ENV_VARS: ClassVar[list[str]] = []
     SUPPORTS_MULTIPLE_INSTANCES = False
 
     @classmethod
-    def get_parameter_schema(cls):
-        schema = super().get_parameter_schema()
+    def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
+        schema: dict[str, dict[str, Any]] = super().get_parameter_schema()
         schema["extra"] = {"type": "string", "description": "extra", "required": False}
         return schema
 
-    def setup(self):
-        pass
+    def setup(self) -> bool:
+        return True
 
-    def register_tools(self):
+    def register_tools(self) -> None:
         pass
 
 
@@ -608,10 +606,10 @@ class _NoParamSchemaSkill(SkillBase):
     SKILL_DESCRIPTION = "No param schema"
     SUPPORTS_MULTIPLE_INSTANCES = False
 
-    def setup(self):
-        pass
+    def setup(self) -> bool:
+        return True
 
-    def register_tools(self):
+    def register_tools(self) -> None:
         pass
 
 
@@ -622,7 +620,7 @@ class _NoParamSchemaSkill(SkillBase):
 class TestListAllSkillSources:
     """Test listing built-in + external skill directories via list_all_skill_sources."""
 
-    def _make_dir_entry(self, name, has_skill_py=True, is_dir=True):
+    def _make_dir_entry(self, name: str, has_skill_py: bool = True, is_dir: bool = True) -> Mock:
         """Helper to create a mock directory entry."""
         entry = Mock()
         entry.is_dir.return_value = is_dir
@@ -632,7 +630,7 @@ class TestListAllSkillSources:
         entry.__truediv__ = Mock(return_value=skill_file)
         return entry
 
-    def test_empty_registry_returns_all_categories(self):
+    def test_empty_registry_returns_all_categories(self) -> None:
         """list_all_skill_sources returns dict with expected keys even when empty."""
         registry = SkillRegistry()
         mock_skills_dir = Mock()
@@ -648,7 +646,7 @@ class TestListAllSkillSources:
         assert sources['external_paths'] == []
         assert sources['registered'] == []
 
-    def test_builtin_skills_listed(self):
+    def test_builtin_skills_listed(self) -> None:
         """Built-in skill directories with skill.py are listed."""
         registry = SkillRegistry()
         entries = [
@@ -664,7 +662,7 @@ class TestListAllSkillSources:
 
         assert sorted(sources['built-in']) == ['math', 'weather']
 
-    def test_builtin_skips_dunder_dirs(self):
+    def test_builtin_skips_dunder_dirs(self) -> None:
         """Directories starting with __ are excluded from built-in list."""
         registry = SkillRegistry()
         entries = [
@@ -681,7 +679,7 @@ class TestListAllSkillSources:
 
         assert sources['built-in'] == ['real_skill']
 
-    def test_builtin_skips_non_dir_items(self):
+    def test_builtin_skips_non_dir_items(self) -> None:
         """Non-directory items in the skills folder are ignored."""
         registry = SkillRegistry()
         entries = [
@@ -697,7 +695,7 @@ class TestListAllSkillSources:
 
         assert sources['built-in'] == ['a_skill']
 
-    def test_builtin_skips_dirs_without_skill_py(self):
+    def test_builtin_skips_dirs_without_skill_py(self) -> None:
         """Directories that lack skill.py are excluded."""
         registry = SkillRegistry()
         entries = [
@@ -713,7 +711,7 @@ class TestListAllSkillSources:
 
         assert sources['built-in'] == ['valid_skill']
 
-    def test_external_paths_listed(self):
+    def test_external_paths_listed(self) -> None:
         """Skills from external directories appear under external_paths."""
         registry = SkillRegistry()
 
@@ -732,7 +730,7 @@ class TestListAllSkillSources:
 
         assert sources['external_paths'] == ['custom_skill']
 
-    def test_external_path_not_exists_skipped(self):
+    def test_external_path_not_exists_skipped(self) -> None:
         """External paths that don't exist are silently skipped."""
         registry = SkillRegistry()
 
@@ -749,7 +747,7 @@ class TestListAllSkillSources:
 
         assert sources['external_paths'] == []
 
-    def test_registered_skills_not_in_builtin(self):
+    def test_registered_skills_not_in_builtin(self) -> None:
         """Registered skills that are NOT in the built-in list go under 'registered'."""
         registry = SkillRegistry()
         registry.register_skill(MockSkill)
@@ -763,7 +761,7 @@ class TestListAllSkillSources:
 
         assert 'mock_skill' in sources['registered']
 
-    def test_registered_skill_also_builtin_not_duplicated(self):
+    def test_registered_skill_also_builtin_not_duplicated(self) -> None:
         """A registered skill whose name matches a built-in should NOT appear in 'registered'."""
         registry = SkillRegistry()
         registry.register_skill(MockSkill)
@@ -788,7 +786,7 @@ class TestListAllSkillSources:
 class TestLoadSkillFromPathVariants:
     """Test loading skills from paths - edge cases and variants."""
 
-    def _make_base_path(self, name="skills", skill_file_exists=True):
+    def _make_base_path(self, name: str = "skills", skill_file_exists: bool = True) -> Mock:
         """Helper: create mock base_path where base_path/skill_name/skill.py exists."""
         mock_base_path = Mock()
         mock_base_path.name = name
@@ -799,14 +797,14 @@ class TestLoadSkillFromPathVariants:
         mock_base_path.__truediv__ = Mock(return_value=mock_skill_dir)
         return mock_base_path
 
-    def test_skill_file_not_exists_returns_none(self):
+    def test_skill_file_not_exists_returns_none(self) -> None:
         """If skill.py does not exist at the expected path, return None."""
         registry = SkillRegistry()
         base = self._make_base_path(skill_file_exists=False)
         assert registry._load_skill_from_path("anything", base) is None
 
     @patch('signalwire.skills.registry.importlib.util.spec_from_file_location', return_value=None)
-    def test_spec_is_none_returns_none(self, _mock_spec):
+    def test_spec_is_none_returns_none(self, _mock_spec: MagicMock) -> None:
         """When spec_from_file_location returns None, exception is caught and None returned."""
         registry = SkillRegistry()
         base = self._make_base_path()
@@ -816,7 +814,7 @@ class TestLoadSkillFromPathVariants:
     @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
     @patch('signalwire.skills.registry.importlib.util.module_from_spec')
     @patch('signalwire.skills.registry.inspect.getmembers')
-    def test_no_matching_skillbase_subclass(self, mock_members, mock_mod, mock_spec):
+    def test_no_matching_skillbase_subclass(self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock) -> None:
         """When module has no SkillBase subclass with matching name, logs warning and returns None."""
         registry = SkillRegistry()
         base = self._make_base_path()
@@ -837,7 +835,7 @@ class TestLoadSkillFromPathVariants:
     @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
     @patch('signalwire.skills.registry.importlib.util.module_from_spec')
     @patch('signalwire.skills.registry.inspect.getmembers')
-    def test_class_with_wrong_skill_name_skipped(self, mock_members, mock_mod, mock_spec):
+    def test_class_with_wrong_skill_name_skipped(self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock) -> None:
         """A SkillBase subclass with a different SKILL_NAME is not loaded."""
         registry = SkillRegistry()
         base = self._make_base_path()
@@ -855,7 +853,7 @@ class TestLoadSkillFromPathVariants:
     @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
     @patch('signalwire.skills.registry.importlib.util.module_from_spec')
     @patch('signalwire.skills.registry.inspect.getmembers')
-    def test_first_matching_class_wins(self, mock_members, mock_mod, mock_spec):
+    def test_first_matching_class_wins(self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock) -> None:
         """When multiple SkillBase subclasses match, the first one found is returned."""
         registry = SkillRegistry()
         base = self._make_base_path()
@@ -871,12 +869,12 @@ class TestLoadSkillFromPathVariants:
             SKILL_DESCRIPTION = "Dup"
             SUPPORTS_MULTIPLE_INSTANCES = False
             @classmethod
-            def get_parameter_schema(cls):
-                schema = super().get_parameter_schema()
+            def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
+                schema: dict[str, dict[str, Any]] = super().get_parameter_schema()
                 schema["x"] = {"type": "string", "description": "x"}
                 return schema
-            def setup(self): pass
-            def register_tools(self): pass
+            def setup(self) -> bool: return True
+            def register_tools(self) -> None: pass
 
         mock_members.return_value = [
             ("MockSkill", MockSkill),
@@ -890,7 +888,7 @@ class TestLoadSkillFromPathVariants:
     @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
     @patch('signalwire.skills.registry.importlib.util.module_from_spec')
     @patch('signalwire.skills.registry.inspect.getmembers')
-    def test_module_added_to_sys_modules(self, mock_members, mock_mod, mock_spec):
+    def test_module_added_to_sys_modules(self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock) -> None:
         """The loaded module is inserted into sys.modules."""
         registry = SkillRegistry()
         base = self._make_base_path()
@@ -902,7 +900,7 @@ class TestLoadSkillFromPathVariants:
         mock_mod.return_value = fake_module
         mock_members.return_value = [("MockSkill", MockSkill)]
 
-        module_name = f"signalwire_agents_external.skills.mock_skill.skill"
+        module_name = f"signalwire_agents_external.skills.mock_skill.skill"  # noqa: F541
         try:
             with patch.object(registry, 'register_skill'):
                 registry._load_skill_from_path("mock_skill", base)
@@ -913,7 +911,7 @@ class TestLoadSkillFromPathVariants:
 
     @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
     @patch('signalwire.skills.registry.importlib.util.module_from_spec')
-    def test_exec_module_exception_returns_none(self, mock_mod, mock_spec):
+    def test_exec_module_exception_returns_none(self, mock_mod: MagicMock, mock_spec: MagicMock) -> None:
         """If exec_module raises, the error is caught and None is returned."""
         registry = SkillRegistry()
         base = self._make_base_path()
@@ -929,7 +927,7 @@ class TestLoadSkillFromPathVariants:
     @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
     @patch('signalwire.skills.registry.importlib.util.module_from_spec')
     @patch('signalwire.skills.registry.inspect.getmembers')
-    def test_skillbase_itself_is_skipped(self, mock_members, mock_mod, mock_spec):
+    def test_skillbase_itself_is_skipped(self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock) -> None:
         """SkillBase class itself (obj == SkillBase) is skipped during scanning."""
         registry = SkillRegistry()
         base = self._make_base_path()
@@ -946,7 +944,7 @@ class TestLoadSkillFromPathVariants:
     @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
     @patch('signalwire.skills.registry.importlib.util.module_from_spec')
     @patch('signalwire.skills.registry.inspect.getmembers')
-    def test_class_without_skill_name_attr_skipped(self, mock_members, mock_mod, mock_spec):
+    def test_class_without_skill_name_attr_skipped(self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock) -> None:
         """A class that inherits SkillBase but has no SKILL_NAME attribute is skipped."""
         registry = SkillRegistry()
         base = self._make_base_path()
@@ -976,7 +974,7 @@ class TestLoadSkillFromPathVariants:
 class TestDirectoryScanning:
     """Test scanning directories for skills - various scenarios."""
 
-    def _make_dir_entry(self, name, has_skill_py=True, is_dir=True):
+    def _make_dir_entry(self, name: str, has_skill_py: bool = True, is_dir: bool = True) -> Mock:
         entry = Mock()
         entry.is_dir.return_value = is_dir
         entry.name = name
@@ -987,19 +985,19 @@ class TestDirectoryScanning:
 
     # -- add_skill_directory tests --
 
-    def test_add_skill_directory_valid(self, tmp_path):
+    def test_add_skill_directory_valid(self, tmp_path: Path) -> None:
         """A valid directory is added to external paths."""
         registry = SkillRegistry()
         registry.add_skill_directory(str(tmp_path))
         assert Path(tmp_path) in registry._external_paths
 
-    def test_add_skill_directory_not_exists(self):
+    def test_add_skill_directory_not_exists(self) -> None:
         """Non-existent path raises ValueError."""
         registry = SkillRegistry()
         with pytest.raises(ValueError, match="does not exist"):
             registry.add_skill_directory("/no/such/path/abc123")
 
-    def test_add_skill_directory_not_a_dir(self, tmp_path):
+    def test_add_skill_directory_not_a_dir(self, tmp_path: Path) -> None:
         """A file (not directory) raises ValueError."""
         f = tmp_path / "afile.txt"
         f.write_text("hello")
@@ -1007,7 +1005,7 @@ class TestDirectoryScanning:
         with pytest.raises(ValueError, match="not a directory"):
             registry.add_skill_directory(str(f))
 
-    def test_add_skill_directory_duplicate_ignored(self, tmp_path):
+    def test_add_skill_directory_duplicate_ignored(self, tmp_path: Path) -> None:
         """Adding the same directory twice only stores it once."""
         registry = SkillRegistry()
         registry.add_skill_directory(str(tmp_path))
@@ -1016,7 +1014,7 @@ class TestDirectoryScanning:
 
     # -- get_all_skills_schema tests --
 
-    def test_get_all_skills_schema_includes_registered(self):
+    def test_get_all_skills_schema_includes_registered(self) -> None:
         """Already registered skills appear in schema under 'registered'."""
         registry = SkillRegistry()
         registry.register_skill(MockSkill)
@@ -1034,7 +1032,7 @@ class TestDirectoryScanning:
         assert schema['mock_skill']['name'] == 'mock_skill'
         assert schema['mock_skill']['description'] == 'A mock skill for testing'
 
-    def test_get_all_skills_schema_builtin_scan(self):
+    def test_get_all_skills_schema_builtin_scan(self) -> None:
         """Built-in skills are scanned and added with source='built-in'."""
         registry = SkillRegistry()
 
@@ -1051,7 +1049,7 @@ class TestDirectoryScanning:
         assert 'mock_skill' in schema
         assert schema['mock_skill']['source'] == 'built-in'
 
-    def test_get_all_skills_schema_external_scan(self, tmp_path):
+    def test_get_all_skills_schema_external_scan(self, tmp_path: Path) -> None:
         """External path skills appear with source='external'."""
         registry = SkillRegistry()
 
@@ -1073,7 +1071,7 @@ class TestDirectoryScanning:
         assert 'mock_skill' in schema
         assert schema['mock_skill']['source'] == 'external'
 
-    def test_get_all_skills_schema_env_paths(self):
+    def test_get_all_skills_schema_env_paths(self) -> None:
         """Skills from SIGNALWIRE_SKILL_PATHS env var are scanned."""
         registry = SkillRegistry()
 
@@ -1090,7 +1088,7 @@ class TestDirectoryScanning:
         mock_file_path = Mock()
         mock_file_path.parent = mock_skills_dir
 
-        def path_factory(x):
+        def path_factory(x: str) -> Mock:
             if x == '/fake/env/path':
                 return mock_env_path
             # For __file__ and anything else, return something with .parent
@@ -1106,7 +1104,7 @@ class TestDirectoryScanning:
 
         assert 'mock_skill' in schema
 
-    def test_get_all_skills_schema_skips_already_in_schema(self):
+    def test_get_all_skills_schema_skips_already_in_schema(self) -> None:
         """Skills already present in schema from an earlier source are not overwritten."""
         registry = SkillRegistry()
         registry.register_skill(MockSkill)
@@ -1124,7 +1122,7 @@ class TestDirectoryScanning:
         # Should be 'registered', not overwritten to 'built-in'
         assert schema['mock_skill']['source'] == 'registered'
 
-    def test_get_all_skills_schema_handles_load_failure(self):
+    def test_get_all_skills_schema_handles_load_failure(self) -> None:
         """When _load_skill_on_demand raises, error is logged and skill skipped."""
         registry = SkillRegistry()
 
@@ -1141,7 +1139,7 @@ class TestDirectoryScanning:
 
         assert 'bad_skill' not in schema
 
-    def test_get_all_skills_schema_handles_none_from_load(self):
+    def test_get_all_skills_schema_handles_none_from_load(self) -> None:
         """When _load_skill_on_demand returns None, the skill is simply skipped."""
         registry = SkillRegistry()
 
@@ -1157,7 +1155,7 @@ class TestDirectoryScanning:
 
         assert 'missing_skill' not in schema
 
-    def test_get_all_skills_schema_skill_without_get_parameter_schema(self):
+    def test_get_all_skills_schema_skill_without_get_parameter_schema(self) -> None:
         """If skill_class lacks get_parameter_schema, empty dict is used for parameters."""
         registry = SkillRegistry()
 
@@ -1184,7 +1182,7 @@ class TestDirectoryScanning:
         assert 'attr_err_skill' in schema
         assert schema['attr_err_skill']['parameters'] == {}
 
-    def test_get_all_skills_schema_external_path_not_exists(self):
+    def test_get_all_skills_schema_external_path_not_exists(self) -> None:
         """External paths that don't exist are silently skipped in schema scan."""
         registry = SkillRegistry()
 
@@ -1202,7 +1200,7 @@ class TestDirectoryScanning:
 
         assert schema == {}
 
-    def test_list_skills_skips_dirs_without_skill_py(self):
+    def test_list_skills_skips_dirs_without_skill_py(self) -> None:
         """list_skills ignores directories that do not contain skill.py."""
         registry = SkillRegistry()
 
@@ -1216,7 +1214,7 @@ class TestDirectoryScanning:
 
         assert skills == []
 
-    def test_deprecated_load_skill_from_directory_noop(self):
+    def test_deprecated_load_skill_from_directory_noop(self) -> None:
         """_load_skill_from_directory is a no-op for backwards compat."""
         registry = SkillRegistry()
         registry._load_skill_from_directory(Path("/some/path"))
@@ -1230,7 +1228,7 @@ class TestDirectoryScanning:
 class TestEntryPointLoading:
     """Test loading skills from entry points."""
 
-    def test_valid_entry_point_with_select(self):
+    def test_valid_entry_point_with_select(self) -> None:
         """Entry points loaded via .select() for Python 3.12+ API."""
         registry = SkillRegistry()
 
@@ -1249,7 +1247,7 @@ class TestEntryPointLoading:
 
         assert registry._entry_points_loaded is True
 
-    def test_valid_entry_point_dict_api(self):
+    def test_valid_entry_point_dict_api(self) -> None:
         """Entry points loaded via dict .get() for older Python API."""
         registry = SkillRegistry()
 
@@ -1265,7 +1263,7 @@ class TestEntryPointLoading:
                 registry._load_entry_points()
                 mock_reg.assert_called_once_with(MockSkill)
 
-    def test_broken_entry_point_load_fails(self):
+    def test_broken_entry_point_load_fails(self) -> None:
         """If entry_point.load() raises, error is logged and loading continues."""
         registry = SkillRegistry()
 
@@ -1282,7 +1280,7 @@ class TestEntryPointLoading:
                 mock_err.assert_called_once()
                 assert "Failed to load skill from entry point" in mock_err.call_args[0][0]
 
-    def test_non_skillbase_entry_point(self):
+    def test_non_skillbase_entry_point(self) -> None:
         """Entry points that load a non-SkillBase class are warned about."""
         registry = SkillRegistry()
 
@@ -1299,7 +1297,7 @@ class TestEntryPointLoading:
                 mock_warn.assert_called_once()
                 assert "does not provide a SkillBase subclass" in mock_warn.call_args[0][0]
 
-    def test_entry_points_loaded_flag_prevents_reload(self):
+    def test_entry_points_loaded_flag_prevents_reload(self) -> None:
         """Once _entry_points_loaded is True, the method returns immediately."""
         registry = SkillRegistry()
         registry._entry_points_loaded = True
@@ -1308,7 +1306,7 @@ class TestEntryPointLoading:
             registry._load_entry_points()
             mock_ep.assert_not_called()
 
-    def test_entry_points_overall_exception(self):
+    def test_entry_points_overall_exception(self) -> None:
         """If entry_points() itself raises, the error is caught gracefully."""
         registry = SkillRegistry()
 
@@ -1321,7 +1319,7 @@ class TestEntryPointLoading:
         # Flag should still be set to prevent retries
         assert registry._entry_points_loaded is True
 
-    def test_multiple_entry_points_loaded(self):
+    def test_multiple_entry_points_loaded(self) -> None:
         """Multiple valid entry points are all loaded."""
         registry = SkillRegistry()
 
@@ -1341,7 +1339,7 @@ class TestEntryPointLoading:
                 registry._load_entry_points()
                 assert mock_reg.call_count == 2
 
-    def test_entry_point_register_skill_failure(self):
+    def test_entry_point_register_skill_failure(self) -> None:
         """If register_skill raises for an entry point, error is logged."""
         registry = SkillRegistry()
 
@@ -1360,7 +1358,7 @@ class TestEntryPointLoading:
 
     # -- _load_skill_on_demand integration with entry points --
 
-    def test_load_on_demand_returns_cached_skill(self):
+    def test_load_on_demand_returns_cached_skill(self) -> None:
         """If skill is already in _skills, it is returned immediately without loading."""
         registry = SkillRegistry()
         registry._skills["mock_skill"] = MockSkill
@@ -1368,11 +1366,11 @@ class TestEntryPointLoading:
         result = registry._load_skill_on_demand("mock_skill")
         assert result is MockSkill
 
-    def test_load_on_demand_finds_skill_after_entry_points(self):
+    def test_load_on_demand_finds_skill_after_entry_points(self) -> None:
         """If entry points load the skill, it is returned without path scanning."""
         registry = SkillRegistry()
 
-        def fake_load_eps():
+        def fake_load_eps() -> None:
             registry._entry_points_loaded = True
             registry._skills["dynamic"] = MockSkill
 
@@ -1381,7 +1379,7 @@ class TestEntryPointLoading:
 
         assert result is MockSkill
 
-    def test_load_on_demand_searches_external_paths(self):
+    def test_load_on_demand_searches_external_paths(self) -> None:
         """_load_skill_on_demand searches registered external paths."""
         registry = SkillRegistry()
         ext_path = Path("/fake/external")
@@ -1389,7 +1387,7 @@ class TestEntryPointLoading:
 
         call_log = []
 
-        def fake_load_from_path(name, path):
+        def fake_load_from_path(name: str, path: Path) -> type[SkillBase] | None:
             call_log.append((name, path))
             if path == ext_path:
                 return MockSkill
@@ -1404,13 +1402,13 @@ class TestEntryPointLoading:
         paths_tried = [c[1] for c in call_log]
         assert ext_path in paths_tried
 
-    def test_load_on_demand_searches_env_paths(self):
+    def test_load_on_demand_searches_env_paths(self) -> None:
         """_load_skill_on_demand searches SIGNALWIRE_SKILL_PATHS env var."""
         registry = SkillRegistry()
 
         call_log = []
 
-        def fake_load_from_path(name, path):
+        def fake_load_from_path(name: str, path: Path) -> type[SkillBase] | None:
             call_log.append((name, path))
             if str(path) == "/env/skills":
                 return MockSkill
@@ -1423,7 +1421,7 @@ class TestEntryPointLoading:
 
         assert result is MockSkill
 
-    def test_load_on_demand_env_path_empty_string_skipped(self):
+    def test_load_on_demand_env_path_empty_string_skipped(self) -> None:
         """Empty strings in SIGNALWIRE_SKILL_PATHS are skipped."""
         registry = SkillRegistry()
 
@@ -1439,7 +1437,7 @@ class TestEntryPointLoading:
             # Second arg should not be Path('')
             assert str(call[0][1]) != ''
 
-    def test_load_on_demand_not_found_returns_none(self):
+    def test_load_on_demand_not_found_returns_none(self) -> None:
         """When skill is not found anywhere, None is returned with debug log."""
         registry = SkillRegistry()
 
@@ -1461,27 +1459,27 @@ class TestEntryPointLoading:
 class TestRegisterSkillValidation:
     """Test register_skill validation edge cases."""
 
-    def test_register_non_subclass_raises(self):
+    def test_register_non_subclass_raises(self) -> None:
         """Registering a class that doesn't inherit SkillBase raises ValueError."""
         registry = SkillRegistry()
         with pytest.raises(ValueError, match="must inherit from SkillBase"):
-            registry.register_skill(str)
+            registry.register_skill(str)  # type: ignore[arg-type]  # deliberately non-SkillBase type for validation test
 
-    def test_register_no_skill_name_raises(self):
+    def test_register_no_skill_name_raises(self) -> None:
         """Registering a skill with SKILL_NAME=None raises ValueError."""
         registry = SkillRegistry()
         with pytest.raises(ValueError, match="must define SKILL_NAME"):
             registry.register_skill(InvalidSkill)
 
-    def test_register_skill_no_get_parameter_schema_raises(self):
+    def test_register_skill_no_get_parameter_schema_raises(self) -> None:
         """Skill without get_parameter_schema method raises ValueError."""
         registry = SkillRegistry()
 
         class BadSkill(SkillBase):
             SKILL_NAME = "bad"
             SKILL_DESCRIPTION = "bad"
-            def setup(self): pass
-            def register_tools(self): pass
+            def setup(self) -> bool: return True
+            def register_tools(self) -> None: pass
 
         # Delete get_parameter_schema to simulate missing method
         # Since SkillBase has it, we need to make it not callable
@@ -1490,49 +1488,49 @@ class TestRegisterSkillValidation:
             with pytest.raises(ValueError):
                 registry.register_skill(BadSkill)
 
-    def test_register_skill_schema_returns_non_dict(self):
+    def test_register_skill_schema_returns_non_dict(self) -> None:
         """Skill whose get_parameter_schema returns non-dict raises ValueError."""
         registry = SkillRegistry()
 
         class BadSchemaSkill(SkillBase):
             SKILL_NAME = "bad_schema"
             SKILL_DESCRIPTION = "bad schema"
-            def setup(self): pass
-            def register_tools(self): pass
+            def setup(self) -> bool: return True
+            def register_tools(self) -> None: pass
             @classmethod
-            def get_parameter_schema(cls):
+            def get_parameter_schema(cls) -> Any:  # deliberately returns non-dict to test validation
                 return "not a dict"
 
         with pytest.raises(ValueError, match="must return a dictionary"):
             registry.register_skill(BadSchemaSkill)
 
-    def test_register_skill_schema_returns_empty_dict(self):
+    def test_register_skill_schema_returns_empty_dict(self) -> None:
         """Skill whose get_parameter_schema returns empty dict raises ValueError."""
         registry = SkillRegistry()
 
         class EmptySchemaSkill(SkillBase):
             SKILL_NAME = "empty_schema"
             SKILL_DESCRIPTION = "empty schema"
-            def setup(self): pass
-            def register_tools(self): pass
+            def setup(self) -> bool: return True
+            def register_tools(self) -> None: pass
             @classmethod
-            def get_parameter_schema(cls):
+            def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
                 return {}
 
         with pytest.raises(ValueError, match="returned an empty dictionary"):
             registry.register_skill(EmptySchemaSkill)
 
-    def test_register_skill_schema_exception(self):
+    def test_register_skill_schema_exception(self) -> None:
         """Skill whose get_parameter_schema raises non-ValueError is wrapped."""
         registry = SkillRegistry()
 
         class ExcSchemaSkill(SkillBase):
             SKILL_NAME = "exc_schema"
             SKILL_DESCRIPTION = "exc schema"
-            def setup(self): pass
-            def register_tools(self): pass
+            def setup(self) -> bool: return True
+            def register_tools(self) -> None: pass
             @classmethod
-            def get_parameter_schema(cls):
+            def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
                 raise RuntimeError("boom")
 
         with pytest.raises(ValueError, match="failed"):

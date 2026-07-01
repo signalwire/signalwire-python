@@ -13,6 +13,7 @@ Unit tests for SWMLService class
 
 import pytest
 import json
+from typing import Any
 from unittest.mock import Mock, patch, MagicMock
 
 from signalwire.core.swml_service import SWMLService
@@ -21,7 +22,7 @@ from signalwire.core.swml_service import SWMLService
 class TestSWMLServiceInitialization:
     """Test SWMLService initialization"""
     
-    def test_basic_initialization(self):
+    def test_basic_initialization(self) -> None:
         """Test basic service initialization"""
         service = SWMLService(
             name="test_service",
@@ -35,7 +36,7 @@ class TestSWMLServiceInitialization:
         assert service.host == "127.0.0.1"
         assert service.port == 3001
     
-    def test_initialization_with_defaults(self):
+    def test_initialization_with_defaults(self) -> None:
         """Test initialization with default values"""
         service = SWMLService(name="test_service")
         
@@ -44,7 +45,7 @@ class TestSWMLServiceInitialization:
         assert service.host == "0.0.0.0"
         assert service.port == 3000
     
-    def test_initialization_with_schema_path(self):
+    def test_initialization_with_schema_path(self) -> None:
         """Test initialization with schema path"""
         service = SWMLService(
             name="test_service",
@@ -54,7 +55,7 @@ class TestSWMLServiceInitialization:
         assert service.name == "test_service"
         assert hasattr(service, 'schema_utils')
     
-    def test_initialization_with_basic_auth(self):
+    def test_initialization_with_basic_auth(self) -> None:
         """Test initialization with basic auth"""
         service = SWMLService(
             name="test_service",
@@ -67,14 +68,14 @@ class TestSWMLServiceInitialization:
 class TestSWMLServiceVerbMethods:
     """Test SWML verb method functionality"""
     
-    def test_add_verb_basic(self, mock_swml_service):
+    def test_add_verb_basic(self, mock_swml_service: SWMLService) -> None:
         """Test adding a basic verb"""
         result = mock_swml_service.add_verb("play", {"url": "test.mp3"})
         
         # Should return boolean indicating success
         assert isinstance(result, bool)
     
-    def test_add_verb_with_config(self, mock_swml_service):
+    def test_add_verb_with_config(self, mock_swml_service: SWMLService) -> None:
         """Test adding verb with configuration"""
         config = {
             "url": "https://example.com/audio.mp3",
@@ -87,14 +88,14 @@ class TestSWMLServiceVerbMethods:
         # Should return boolean
         assert isinstance(result, bool)
     
-    def test_add_verb_with_integer_config(self, mock_swml_service):
+    def test_add_verb_with_integer_config(self, mock_swml_service: SWMLService) -> None:
         """Test adding verb with integer configuration (like sleep)"""
         result = mock_swml_service.add_verb("sleep", 5000)
         
         # Should return boolean
         assert isinstance(result, bool)
     
-    def test_add_verb_to_section(self, mock_swml_service):
+    def test_add_verb_to_section(self, mock_swml_service: SWMLService) -> None:
         """Test adding verb to specific section"""
         # First add a section
         mock_swml_service.add_section("custom_section")
@@ -109,7 +110,7 @@ class TestSWMLServiceVerbMethods:
 class TestSWMLServiceDocumentManagement:
     """Test SWML document management"""
     
-    def test_reset_document(self, mock_swml_service):
+    def test_reset_document(self, mock_swml_service: SWMLService) -> None:
         """Test resetting the document"""
         # Add some verbs first
         mock_swml_service.add_verb("say", {"text": "Hello"})
@@ -121,7 +122,7 @@ class TestSWMLServiceDocumentManagement:
         # Document should be reset (we can't directly check content, but method should not raise)
         assert True  # If we get here, reset worked
     
-    def test_get_document(self, mock_swml_service):
+    def test_get_document(self, mock_swml_service: SWMLService) -> None:
         """Test getting the document"""
         mock_swml_service.add_verb("say", {"text": "Hello World"})
         
@@ -131,7 +132,7 @@ class TestSWMLServiceDocumentManagement:
         assert "version" in document
         assert "sections" in document
     
-    def test_render_document(self, mock_swml_service):
+    def test_render_document(self, mock_swml_service: SWMLService) -> None:
         """Test rendering document to JSON string"""
         mock_swml_service.add_verb("say", {"text": "Hello"})
         mock_swml_service.add_verb("play", {"url": "test.mp3"})
@@ -144,7 +145,7 @@ class TestSWMLServiceDocumentManagement:
         assert "version" in swml_dict
         assert "sections" in swml_dict
     
-    def test_add_section(self, mock_swml_service):
+    def test_add_section(self, mock_swml_service: SWMLService) -> None:
         """Test adding a new section"""
         result = mock_swml_service.add_section("custom_section")
         
@@ -155,14 +156,14 @@ class TestSWMLServiceDocumentManagement:
 class TestSWMLServiceUtilityMethods:
     """Test utility methods"""
     
-    def test_basic_properties(self, mock_swml_service):
+    def test_basic_properties(self, mock_swml_service: SWMLService) -> None:
         """Test basic property access"""
         assert mock_swml_service.name == "test_service"
         assert mock_swml_service.route == "/test"
         assert mock_swml_service.host == "127.0.0.1"
         assert mock_swml_service.port == 3001
     
-    def test_basic_auth_credentials(self, mock_swml_service):
+    def test_basic_auth_credentials(self, mock_swml_service: SWMLService) -> None:
         """Test getting basic auth credentials"""
         credentials = mock_swml_service.get_basic_auth_credentials()
         
@@ -171,7 +172,7 @@ class TestSWMLServiceUtilityMethods:
         assert isinstance(credentials[0], str)  # username
         assert isinstance(credentials[1], str)  # password
     
-    def test_basic_auth_credentials_with_source(self, mock_swml_service):
+    def test_basic_auth_credentials_with_source(self, mock_swml_service: SWMLService) -> None:
         """Test getting basic auth credentials with source"""
         credentials = mock_swml_service.get_basic_auth_credentials(include_source=True)
         
@@ -185,19 +186,19 @@ class TestSWMLServiceUtilityMethods:
 class TestSWMLServiceSpecialVerbs:
     """Test special SWML verb methods via add_verb"""
 
-    def test_add_answer_verb(self, mock_swml_service):
+    def test_add_answer_verb(self, mock_swml_service: SWMLService) -> None:
         """Test adding answer verb via add_verb"""
         result = mock_swml_service.add_verb("answer", {"max_duration": 30})
 
         assert isinstance(result, bool)
 
-    def test_add_hangup_verb(self, mock_swml_service):
+    def test_add_hangup_verb(self, mock_swml_service: SWMLService) -> None:
         """Test adding hangup verb via add_verb"""
         result = mock_swml_service.add_verb("hangup", {"reason": "completed"})
 
         assert isinstance(result, bool)
 
-    def test_add_ai_verb(self, mock_swml_service):
+    def test_add_ai_verb(self, mock_swml_service: SWMLService) -> None:
         """Test adding AI verb via add_verb"""
         result = mock_swml_service.add_verb("ai", {
             "prompt": {
@@ -214,28 +215,28 @@ class TestSWMLServiceSpecialVerbs:
 class TestSWMLServiceErrorHandling:
     """Test error handling and edge cases"""
     
-    def test_add_verb_with_none_config(self, mock_swml_service):
+    def test_add_verb_with_none_config(self, mock_swml_service: SWMLService) -> None:
         """Test adding verb with None configuration"""
-        result = mock_swml_service.add_verb("hangup", None)
-        
+        result = mock_swml_service.add_verb("hangup", None)  # type: ignore[arg-type]  # intentional invalid input
+
         # Should return boolean (likely False due to invalid config)
         assert isinstance(result, bool)
     
-    def test_add_verb_with_empty_config(self, mock_swml_service):
+    def test_add_verb_with_empty_config(self, mock_swml_service: SWMLService) -> None:
         """Test adding verb with empty configuration"""
         result = mock_swml_service.add_verb("hangup", {})
         
         # Should return boolean
         assert isinstance(result, bool)
     
-    def test_invalid_verb_name(self, mock_swml_service):
+    def test_invalid_verb_name(self, mock_swml_service: SWMLService) -> None:
         """Test handling of invalid verb names"""
         result = mock_swml_service.add_verb("", {"test": "value"})
         
         # Should return boolean (likely False due to invalid verb)
         assert isinstance(result, bool)
     
-    def test_add_verb_to_nonexistent_section(self, mock_swml_service):
+    def test_add_verb_to_nonexistent_section(self, mock_swml_service: SWMLService) -> None:
         """Test adding verb to non-existent section"""
         result = mock_swml_service.add_verb_to_section("nonexistent", "play", {"url": "test.mp3"})
         
@@ -246,9 +247,9 @@ class TestSWMLServiceErrorHandling:
 class TestSWMLServiceRouting:
     """Test routing and callback functionality"""
     
-    def test_register_routing_callback(self, mock_swml_service):
+    def test_register_routing_callback(self, mock_swml_service: SWMLService) -> None:
         """Test registering routing callback"""
-        def test_callback(request, data):
+        def test_callback(request: Any, data: dict[str, Any]) -> str | None:
             return "test_response"
         
         # Should not raise error
@@ -257,7 +258,7 @@ class TestSWMLServiceRouting:
         # Callback should be registered
         assert "/test" in mock_swml_service._routing_callbacks
     
-    def test_extract_sip_username(self):
+    def test_extract_sip_username(self) -> None:
         """Test SIP username extraction"""
         request_body = {
             "from": "sip:testuser@example.com",
@@ -273,7 +274,7 @@ class TestSWMLServiceRouting:
 class TestSWMLServiceIntegration:
     """Test integration functionality"""
     
-    def test_as_router(self, mock_swml_service):
+    def test_as_router(self, mock_swml_service: SWMLService) -> None:
         """Test getting as FastAPI router"""
         router = mock_swml_service.as_router()
         
@@ -281,7 +282,7 @@ class TestSWMLServiceIntegration:
         assert router is not None
         assert hasattr(router, 'routes')
     
-    def test_on_request_handling(self, mock_swml_service):
+    def test_on_request_handling(self, mock_swml_service: SWMLService) -> None:
         """Test request handling"""
         test_data = {"call_id": "test-123", "from": "+1234567890"}
         
@@ -291,7 +292,7 @@ class TestSWMLServiceIntegration:
         # Result can be None or dict
         assert result is None or isinstance(result, dict)
     
-    def test_manual_proxy_url_setting(self, mock_swml_service):
+    def test_manual_proxy_url_setting(self, mock_swml_service: SWMLService) -> None:
         """Test manual proxy URL setting"""
         proxy_url = "https://example.ngrok.io"
         
@@ -302,13 +303,13 @@ class TestSWMLServiceIntegration:
         assert mock_swml_service._proxy_url_base == proxy_url
         assert mock_swml_service._proxy_detection_done is True
     
-    def test_verb_handler_registry(self, mock_swml_service):
+    def test_verb_handler_registry(self, mock_swml_service: SWMLService) -> None:
         """Test verb handler registry"""
         # Should have verb registry
         assert hasattr(mock_swml_service, 'verb_registry')
         assert mock_swml_service.verb_registry is not None
     
-    def test_schema_utils_integration(self, mock_swml_service):
+    def test_schema_utils_integration(self, mock_swml_service: SWMLService) -> None:
         """Test schema utilities integration"""
         # Should have schema utils
         assert hasattr(mock_swml_service, 'schema_utils')
@@ -318,7 +319,7 @@ class TestSWMLServiceIntegration:
             verb_names = mock_swml_service.schema_utils.get_all_verb_names()
             assert isinstance(verb_names, list)
     
-    def test_json_serialization_of_document(self, mock_swml_service):
+    def test_json_serialization_of_document(self, mock_swml_service: SWMLService) -> None:
         """Test JSON serialization of SWML document"""
         mock_swml_service.add_verb("say", {"text": "Test message"})
         
@@ -343,7 +344,7 @@ class TestSWMLServiceIntegration:
 class TestCreateVerbMethods:
     """Test dynamic method creation for SWML verbs."""
 
-    def test_verb_methods_cache_populated(self, mock_swml_service):
+    def test_verb_methods_cache_populated(self, mock_swml_service: SWMLService) -> None:
         """The verb method cache should be populated during __init__."""
         assert isinstance(mock_swml_service._verb_methods_cache, dict)
         # Even with schema_validation=False, the schema is still loaded and
@@ -352,7 +353,7 @@ class TestCreateVerbMethods:
         if mock_swml_service.schema_utils and mock_swml_service.schema_utils.get_all_verb_names():
             assert len(mock_swml_service._verb_methods_cache) > 0
 
-    def test_known_verbs_exist_as_attributes(self, mock_swml_service):
+    def test_known_verbs_exist_as_attributes(self, mock_swml_service: SWMLService) -> None:
         """Common SWML verbs should be accessible as attributes after init."""
         verb_names = mock_swml_service.schema_utils.get_all_verb_names()
         if not verb_names:
@@ -360,7 +361,7 @@ class TestCreateVerbMethods:
         for vn in verb_names[:5]:
             assert hasattr(mock_swml_service, vn), f"Verb '{vn}' should be an attribute"
 
-    def test_verb_method_is_callable(self, mock_swml_service):
+    def test_verb_method_is_callable(self, mock_swml_service: SWMLService) -> None:
         """Dynamically created verb methods should be callable."""
         verb_names = mock_swml_service.schema_utils.get_all_verb_names()
         if not verb_names:
@@ -369,7 +370,7 @@ class TestCreateVerbMethods:
             method = getattr(mock_swml_service, vn)
             assert callable(method), f"Verb '{vn}' attribute should be callable"
 
-    def test_verb_method_adds_verb_to_document(self, mock_swml_service):
+    def test_verb_method_adds_verb_to_document(self, mock_swml_service: SWMLService) -> None:
         """Calling a dynamically created verb method should add the verb to the document."""
         verb_names = mock_swml_service.schema_utils.get_all_verb_names()
         # Pick a verb that isn't 'sleep' (which has special handling)
@@ -386,7 +387,7 @@ class TestCreateVerbMethods:
         assert len(doc["sections"]["main"]) == 1
         assert vn in doc["sections"]["main"][0]
 
-    def test_verb_method_passes_kwargs(self, mock_swml_service):
+    def test_verb_method_passes_kwargs(self, mock_swml_service: SWMLService) -> None:
         """Keyword arguments should end up in the verb config dict."""
         verb_names = mock_swml_service.schema_utils.get_all_verb_names()
         non_sleep = [v for v in verb_names if v != "sleep"]
@@ -400,7 +401,7 @@ class TestCreateVerbMethods:
         config = doc["sections"]["main"][0][vn]
         assert config.get("some_key") == "some_value"
 
-    def test_verb_method_strips_none_kwargs(self, mock_swml_service):
+    def test_verb_method_strips_none_kwargs(self, mock_swml_service: SWMLService) -> None:
         """None-valued kwargs should be stripped from the config."""
         verb_names = mock_swml_service.schema_utils.get_all_verb_names()
         non_sleep = [v for v in verb_names if v != "sleep"]
@@ -415,7 +416,7 @@ class TestCreateVerbMethods:
         assert "present" in config
         assert "absent" not in config
 
-    def test_sleep_verb_method_exists(self, mock_swml_service):
+    def test_sleep_verb_method_exists(self, mock_swml_service: SWMLService) -> None:
         """Sleep verb should be created with special handling."""
         verb_names = mock_swml_service.schema_utils.get_all_verb_names()
         if "sleep" not in verb_names:
@@ -423,7 +424,7 @@ class TestCreateVerbMethods:
         assert hasattr(mock_swml_service, "sleep")
         assert callable(mock_swml_service.sleep)
 
-    def test_sleep_verb_takes_duration(self, mock_swml_service):
+    def test_sleep_verb_takes_duration(self, mock_swml_service: SWMLService) -> None:
         """Sleep verb method should accept a duration argument."""
         verb_names = mock_swml_service.schema_utils.get_all_verb_names()
         if "sleep" not in verb_names:
@@ -433,7 +434,7 @@ class TestCreateVerbMethods:
         doc = mock_swml_service.get_document()
         assert {"sleep": 5000} in doc["sections"]["main"]
 
-    def test_sleep_verb_raises_without_duration(self, mock_swml_service):
+    def test_sleep_verb_raises_without_duration(self, mock_swml_service: SWMLService) -> None:
         """Sleep verb method should raise TypeError when no duration given."""
         verb_names = mock_swml_service.schema_utils.get_all_verb_names()
         if "sleep" not in verb_names:
@@ -441,7 +442,7 @@ class TestCreateVerbMethods:
         with pytest.raises(TypeError, match="missing required argument"):
             mock_swml_service.sleep()
 
-    def test_sleep_verb_accepts_kwargs_fallback(self, mock_swml_service):
+    def test_sleep_verb_accepts_kwargs_fallback(self, mock_swml_service: SWMLService) -> None:
         """Sleep verb should accept value via kwargs when duration is None."""
         verb_names = mock_swml_service.schema_utils.get_all_verb_names()
         if "sleep" not in verb_names:
@@ -451,7 +452,7 @@ class TestCreateVerbMethods:
         doc = mock_swml_service.get_document()
         assert {"sleep": 3000} in doc["sections"]["main"]
 
-    def test_verb_method_has_docstring(self, mock_swml_service):
+    def test_verb_method_has_docstring(self, mock_swml_service: SWMLService) -> None:
         """Dynamically created verb methods should have a docstring."""
         verb_names = mock_swml_service.schema_utils.get_all_verb_names()
         non_sleep = [v for v in verb_names if v != "sleep"]
@@ -463,7 +464,7 @@ class TestCreateVerbMethods:
         assert method.__doc__ is not None
         assert vn in method.__doc__
 
-    def test_existing_method_not_overwritten(self):
+    def test_existing_method_not_overwritten(self) -> None:
         """If a method already exists on the class, _create_verb_methods should skip it."""
         service = SWMLService(
             name="test_no_overwrite",
@@ -483,12 +484,12 @@ class TestCreateVerbMethods:
 class TestGetAttr:
     """Test fallback verb method resolution via __getattr__."""
 
-    def test_invalid_attribute_raises(self, mock_swml_service):
+    def test_invalid_attribute_raises(self, mock_swml_service: SWMLService) -> None:
         """Accessing a truly invalid attribute should raise AttributeError."""
         with pytest.raises(AttributeError):
             _ = mock_swml_service.totally_bogus_attribute_xyz
 
-    def test_getattr_returns_callable_for_valid_verb(self):
+    def test_getattr_returns_callable_for_valid_verb(self) -> None:
         """__getattr__ should create a callable for a valid verb name."""
         service = SWMLService(
             name="getattr_test",
@@ -508,7 +509,7 @@ class TestGetAttr:
         method = getattr(service, vn)
         assert callable(method)
 
-    def test_getattr_caches_method(self):
+    def test_getattr_caches_method(self) -> None:
         """__getattr__ should cache the method in _verb_methods_cache."""
         service = SWMLService(
             name="getattr_cache",
@@ -527,7 +528,7 @@ class TestGetAttr:
         _ = getattr(service, vn)
         assert vn in service._verb_methods_cache
 
-    def test_getattr_uses_cache_on_second_access(self):
+    def test_getattr_uses_cache_on_second_access(self) -> None:
         """Second access via __getattr__ should return the cached method."""
         service = SWMLService(
             name="getattr_second",
@@ -549,7 +550,7 @@ class TestGetAttr:
         assert callable(first)
         assert callable(second)
 
-    def test_getattr_sleep_verb(self):
+    def test_getattr_sleep_verb(self) -> None:
         """__getattr__ should handle sleep verb specially."""
         service = SWMLService(
             name="getattr_sleep",
@@ -570,7 +571,7 @@ class TestGetAttr:
         doc = service.get_document()
         assert {"sleep": 2000} in doc["sections"]["main"]
 
-    def test_getattr_no_schema_raises(self):
+    def test_getattr_no_schema_raises(self) -> None:
         """If schema_utils is None, __getattr__ should raise AttributeError."""
         service = SWMLService(
             name="no_schema",
@@ -579,11 +580,11 @@ class TestGetAttr:
             port=3001,
             schema_validation=False,
         )
-        service.schema_utils = None
+        service.schema_utils = None  # type: ignore[assignment]  # intentional: exercise missing-schema path
         with pytest.raises(AttributeError, match="no schema available"):
             _ = service.some_verb
 
-    def test_getattr_error_message_includes_class_name(self, mock_swml_service):
+    def test_getattr_error_message_includes_class_name(self, mock_swml_service: SWMLService) -> None:
         """The AttributeError message should include the class name."""
         with pytest.raises(AttributeError, match="SWMLService"):
             _ = mock_swml_service.nonexistent_xyz_123
@@ -592,7 +593,7 @@ class TestGetAttr:
 class TestProxyDetection:
     """Test _detect_proxy_from_request() with various header combinations."""
 
-    def _make_request(self, headers=None, url="http://127.0.0.1:3001/test"):
+    def _make_request(self, headers: dict[str, str] | None = None, url: str = "http://127.0.0.1:3001/test") -> Mock:
         """Helper to create a mock FastAPI request."""
         request = Mock()
         _headers = headers or {}
@@ -602,7 +603,7 @@ class TestProxyDetection:
         request.url.__str__ = Mock(return_value=url)
         return request
 
-    def test_x_forwarded_host_and_proto(self, mock_swml_service):
+    def test_x_forwarded_host_and_proto(self, mock_swml_service: SWMLService) -> None:
         """X-Forwarded-Host + X-Forwarded-Proto should set proxy_url_base."""
         mock_swml_service._proxy_url_base = None
         request = self._make_request(headers={
@@ -612,7 +613,7 @@ class TestProxyDetection:
         mock_swml_service._detect_proxy_from_request(request)
         assert mock_swml_service._proxy_url_base == "https://example.ngrok.io"
 
-    def test_x_forwarded_host_default_proto(self, mock_swml_service):
+    def test_x_forwarded_host_default_proto(self, mock_swml_service: SWMLService) -> None:
         """When X-Forwarded-Proto is missing, default to http."""
         mock_swml_service._proxy_url_base = None
         request = self._make_request(headers={
@@ -621,7 +622,7 @@ class TestProxyDetection:
         mock_swml_service._detect_proxy_from_request(request)
         assert mock_swml_service._proxy_url_base == "http://proxy.example.com"
 
-    def test_rfc7239_forwarded_header(self, mock_swml_service):
+    def test_rfc7239_forwarded_header(self, mock_swml_service: SWMLService) -> None:
         """RFC 7239 Forwarded header should be parsed correctly."""
         mock_swml_service._proxy_url_base = None
         request = self._make_request(headers={
@@ -630,7 +631,7 @@ class TestProxyDetection:
         mock_swml_service._detect_proxy_from_request(request)
         assert mock_swml_service._proxy_url_base == "https://example.com"
 
-    def test_rfc7239_forwarded_header_http_default(self, mock_swml_service):
+    def test_rfc7239_forwarded_header_http_default(self, mock_swml_service: SWMLService) -> None:
         """RFC 7239 Forwarded header without proto should default to http."""
         mock_swml_service._proxy_url_base = None
         request = self._make_request(headers={
@@ -639,7 +640,7 @@ class TestProxyDetection:
         mock_swml_service._detect_proxy_from_request(request)
         assert mock_swml_service._proxy_url_base == "http://myproxy.example.com"
 
-    def test_rfc7239_forwarded_no_host_ignored(self, mock_swml_service):
+    def test_rfc7239_forwarded_no_host_ignored(self, mock_swml_service: SWMLService) -> None:
         """Forwarded header without host= should not set proxy_url_base from that header."""
         mock_swml_service._proxy_url_base = None
         request = self._make_request(headers={
@@ -650,7 +651,7 @@ class TestProxyDetection:
         # it falls through to other detection methods.
         # Result depends on other headers/URL; just verify no crash.
 
-    def test_x_original_host(self, mock_swml_service):
+    def test_x_original_host(self, mock_swml_service: SWMLService) -> None:
         """X-Original-Host should be used when other headers are absent."""
         mock_swml_service._proxy_url_base = None
         request = self._make_request(headers={
@@ -659,7 +660,7 @@ class TestProxyDetection:
         mock_swml_service._detect_proxy_from_request(request)
         assert mock_swml_service._proxy_url_base == "http://original.example.com"
 
-    def test_host_header_with_external_host(self, mock_swml_service):
+    def test_host_header_with_external_host(self, mock_swml_service: SWMLService) -> None:
         """Host header pointing to an external host should trigger proxy detection."""
         mock_swml_service._proxy_url_base = None
         request = self._make_request(headers={
@@ -668,7 +669,7 @@ class TestProxyDetection:
         mock_swml_service._detect_proxy_from_request(request)
         assert mock_swml_service._proxy_url_base == "http://external.example.com"
 
-    def test_host_header_with_local_host_ignored(self, mock_swml_service):
+    def test_host_header_with_local_host_ignored(self, mock_swml_service: SWMLService) -> None:
         """Host header pointing to local host should not set proxy_url_base."""
         mock_swml_service._proxy_url_base = None
         request = self._make_request(headers={
@@ -677,14 +678,14 @@ class TestProxyDetection:
         mock_swml_service._detect_proxy_from_request(request)
         assert mock_swml_service._proxy_url_base is None
 
-    def test_no_proxy_headers_returns_none(self, mock_swml_service):
+    def test_no_proxy_headers_returns_none(self, mock_swml_service: SWMLService) -> None:
         """With no proxy headers and a local URL, proxy_url_base should remain None."""
         mock_swml_service._proxy_url_base = None
         request = self._make_request(headers={})
         mock_swml_service._detect_proxy_from_request(request)
         assert mock_swml_service._proxy_url_base is None
 
-    def test_already_set_proxy_not_overridden(self, mock_swml_service):
+    def test_already_set_proxy_not_overridden(self, mock_swml_service: SWMLService) -> None:
         """If proxy_url_base is already set, it should not be overridden."""
         mock_swml_service._proxy_url_base = "https://already.set.com"
         request = self._make_request(headers={
@@ -694,7 +695,7 @@ class TestProxyDetection:
         mock_swml_service._detect_proxy_from_request(request)
         assert mock_swml_service._proxy_url_base == "https://already.set.com"
 
-    def test_transparent_proxy_detection(self, mock_swml_service):
+    def test_transparent_proxy_detection(self, mock_swml_service: SWMLService) -> None:
         """When request URL itself is external, treat it as transparent proxy."""
         mock_swml_service._proxy_url_base = None
         request = self._make_request(
@@ -706,7 +707,7 @@ class TestProxyDetection:
         mock_swml_service._detect_proxy_from_request(request)
         assert mock_swml_service._proxy_url_base == "https://external.proxy.com:8443"
 
-    def test_x_forwarded_for_without_host_does_not_set_proxy(self, mock_swml_service):
+    def test_x_forwarded_for_without_host_does_not_set_proxy(self, mock_swml_service: SWMLService) -> None:
         """X-Forwarded-For without host info should not set proxy_url_base.
 
         Note: The production code has a structlog parameter conflict ('message'
@@ -725,7 +726,7 @@ class TestProxyDetection:
         # Cannot determine public URL from X-Forwarded-For alone
         assert mock_swml_service._proxy_url_base is None
 
-    def test_forwarded_header_parse_error_handled(self, mock_swml_service):
+    def test_forwarded_header_parse_error_handled(self, mock_swml_service: SWMLService) -> None:
         """Malformed Forwarded header should not raise — just log a warning."""
         mock_swml_service._proxy_url_base = None
         # Provide a Forwarded value that will trigger the parsing path but has
@@ -736,7 +737,7 @@ class TestProxyDetection:
         # Should not raise
         mock_swml_service._detect_proxy_from_request(request)
 
-    def test_multiple_proxy_hops_x_forwarded(self, mock_swml_service):
+    def test_multiple_proxy_hops_x_forwarded(self, mock_swml_service: SWMLService) -> None:
         """With multiple hops, the first X-Forwarded-Host value should win."""
         mock_swml_service._proxy_url_base = None
         request = self._make_request(headers={
@@ -752,7 +753,7 @@ class TestServe:
     """Test that serve() calls uvicorn.run with correct arguments."""
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_serve_basic_defaults(self, mock_uvicorn_module):
+    def test_serve_basic_defaults(self, mock_uvicorn_module: MagicMock) -> None:
         """serve() should call uvicorn.run with default host and port."""
         service = SWMLService(
             name="serve_test",
@@ -770,7 +771,7 @@ class TestServe:
         assert call_kwargs[1].get("port", call_kwargs[1].get("port")) == 4000
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_serve_custom_host_port(self, mock_uvicorn_module):
+    def test_serve_custom_host_port(self, mock_uvicorn_module: MagicMock) -> None:
         """serve() should honor explicit host/port arguments."""
         service = SWMLService(
             name="serve_custom",
@@ -786,7 +787,7 @@ class TestServe:
         assert call_kwargs[1]["port"] == 9999
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_serve_with_ssl(self, mock_uvicorn_module):
+    def test_serve_with_ssl(self, mock_uvicorn_module: MagicMock) -> None:
         """serve() with SSL should pass cert/key to uvicorn.run."""
         service = SWMLService(
             name="serve_ssl",
@@ -796,7 +797,7 @@ class TestServe:
             schema_validation=False,
         )
         # We need to make validate_ssl_config return success
-        service.security.validate_ssl_config = Mock(return_value=(True, None))
+        service.security.validate_ssl_config = Mock(return_value=(True, None))  # type: ignore[method-assign]  # mock
         service.domain = "example.com"
         with patch.dict("sys.modules", {"uvicorn": mock_uvicorn_module}):
             service.serve(ssl_enabled=True, ssl_cert="/path/cert.pem", ssl_key="/path/key.pem")
@@ -805,7 +806,7 @@ class TestServe:
         assert call_kwargs[1].get("ssl_keyfile") == "/path/key.pem"
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_serve_ssl_invalid_config_disables_ssl(self, mock_uvicorn_module):
+    def test_serve_ssl_invalid_config_disables_ssl(self, mock_uvicorn_module: MagicMock) -> None:
         """serve() should disable SSL when validation fails."""
         service = SWMLService(
             name="serve_ssl_invalid",
@@ -814,7 +815,7 @@ class TestServe:
             port=443,
             schema_validation=False,
         )
-        service.security.validate_ssl_config = Mock(return_value=(False, "cert not found"))
+        service.security.validate_ssl_config = Mock(return_value=(False, "cert not found"))  # type: ignore[method-assign]  # mock
         with patch.dict("sys.modules", {"uvicorn": mock_uvicorn_module}):
             service.serve(ssl_enabled=True)
         # SSL should have been disabled due to invalid config
@@ -823,7 +824,7 @@ class TestServe:
         assert "ssl_certfile" not in call_kwargs[1]
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_serve_creates_fastapi_app(self, mock_uvicorn_module):
+    def test_serve_creates_fastapi_app(self, mock_uvicorn_module: MagicMock) -> None:
         """serve() should create a FastAPI app if none exists."""
         service = SWMLService(
             name="serve_app",
@@ -838,7 +839,7 @@ class TestServe:
         assert service._app is not None
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_serve_reuses_existing_app(self, mock_uvicorn_module):
+    def test_serve_reuses_existing_app(self, mock_uvicorn_module: MagicMock) -> None:
         """serve() should reuse an existing _app if already created."""
         service = SWMLService(
             name="serve_reuse",
@@ -857,7 +858,7 @@ class TestServe:
         assert service._app is app_first
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_serve_prints_startup_info(self, mock_uvicorn_module, capsys):
+    def test_serve_prints_startup_info(self, mock_uvicorn_module: MagicMock, capsys: pytest.CaptureFixture[str]) -> None:
         """serve() should print user-friendly startup info."""
         service = SWMLService(
             name="serve_print",
@@ -873,7 +874,7 @@ class TestServe:
         assert "Basic Auth" in captured.out
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_serve_ssl_without_domain_warns(self, mock_uvicorn_module):
+    def test_serve_ssl_without_domain_warns(self, mock_uvicorn_module: MagicMock) -> None:
         """serve() with SSL but no domain should still proceed (with warning)."""
         service = SWMLService(
             name="serve_no_domain",
@@ -882,7 +883,7 @@ class TestServe:
             port=443,
             schema_validation=False,
         )
-        service.security.validate_ssl_config = Mock(return_value=(True, None))
+        service.security.validate_ssl_config = Mock(return_value=(True, None))  # type: ignore[method-assign]  # mock
         service.domain = None
         with patch.dict("sys.modules", {"uvicorn": mock_uvicorn_module}):
             service.serve(ssl_enabled=True, ssl_cert="/cert.pem", ssl_key="/key.pem")
@@ -891,7 +892,7 @@ class TestServe:
         assert call_kwargs[1].get("ssl_certfile") == "/cert.pem"
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_serve_with_routing_callbacks(self, mock_uvicorn_module, capsys):
+    def test_serve_with_routing_callbacks(self, mock_uvicorn_module: MagicMock, capsys: pytest.CaptureFixture[str]) -> None:
         """serve() should print callback endpoint info when callbacks registered."""
         service = SWMLService(
             name="serve_callbacks",
@@ -907,7 +908,7 @@ class TestServe:
         assert "Callback endpoints" in captured.out
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_serve_root_route(self, mock_uvicorn_module):
+    def test_serve_root_route(self, mock_uvicorn_module: MagicMock) -> None:
         """serve() with root route should include router without prefix."""
         service = SWMLService(
             name="serve_root",
@@ -924,39 +925,39 @@ class TestServe:
 class TestSectionManagement:
     """Test add_section(), add_verb_to_section(), and section ordering."""
 
-    def test_add_section_returns_true(self, mock_swml_service):
+    def test_add_section_returns_true(self, mock_swml_service: SWMLService) -> None:
         """Adding a new section should return True."""
         mock_swml_service.reset_document()
         result = mock_swml_service.add_section("my_section")
         assert result is True
 
-    def test_add_duplicate_section_returns_false(self, mock_swml_service):
+    def test_add_duplicate_section_returns_false(self, mock_swml_service: SWMLService) -> None:
         """Adding a section that already exists should return False."""
         mock_swml_service.reset_document()
         mock_swml_service.add_section("dup_section")
         result = mock_swml_service.add_section("dup_section")
         assert result is False
 
-    def test_main_section_exists_by_default(self, mock_swml_service):
+    def test_main_section_exists_by_default(self, mock_swml_service: SWMLService) -> None:
         """The 'main' section should exist by default in a new document."""
         mock_swml_service.reset_document()
         doc = mock_swml_service.get_document()
         assert "main" in doc["sections"]
 
-    def test_add_section_creates_empty_list(self, mock_swml_service):
+    def test_add_section_creates_empty_list(self, mock_swml_service: SWMLService) -> None:
         """A newly added section should be an empty list."""
         mock_swml_service.reset_document()
         mock_swml_service.add_section("empty_section")
         doc = mock_swml_service.get_document()
         assert doc["sections"]["empty_section"] == []
 
-    def test_add_duplicate_main_returns_false(self, mock_swml_service):
+    def test_add_duplicate_main_returns_false(self, mock_swml_service: SWMLService) -> None:
         """Trying to add 'main' again should return False."""
         mock_swml_service.reset_document()
         result = mock_swml_service.add_section("main")
         assert result is False
 
-    def test_add_verb_to_named_section(self, mock_swml_service):
+    def test_add_verb_to_named_section(self, mock_swml_service: SWMLService) -> None:
         """add_verb_to_section should add verb to the specified section."""
         mock_swml_service.reset_document()
         mock_swml_service.add_section("secondary")
@@ -965,7 +966,7 @@ class TestSectionManagement:
         doc = mock_swml_service.get_document()
         assert {"sleep": 1000} in doc["sections"]["secondary"]
 
-    def test_add_verb_to_section_auto_creates_section(self, mock_swml_service):
+    def test_add_verb_to_section_auto_creates_section(self, mock_swml_service: SWMLService) -> None:
         """add_verb_to_section should auto-create the section if it does not exist."""
         mock_swml_service.reset_document()
         result = mock_swml_service.add_verb_to_section("auto_created", "sleep", 500)
@@ -974,14 +975,14 @@ class TestSectionManagement:
         assert "auto_created" in doc["sections"]
         assert {"sleep": 500} in doc["sections"]["auto_created"]
 
-    def test_add_verb_to_section_invalid_config_type(self, mock_swml_service):
+    def test_add_verb_to_section_invalid_config_type(self, mock_swml_service: SWMLService) -> None:
         """add_verb_to_section with non-dict non-sleep config should return False."""
         mock_swml_service.reset_document()
         mock_swml_service.add_section("bad_section")
-        result = mock_swml_service.add_verb_to_section("bad_section", "play", "not_a_dict")
+        result = mock_swml_service.add_verb_to_section("bad_section", "play", "not_a_dict")  # type: ignore[arg-type]  # intentional invalid input
         assert result is False
 
-    def test_multiple_sections_in_document(self, mock_swml_service):
+    def test_multiple_sections_in_document(self, mock_swml_service: SWMLService) -> None:
         """Multiple sections should all appear in the document."""
         mock_swml_service.reset_document()
         mock_swml_service.add_section("alpha")
@@ -991,7 +992,7 @@ class TestSectionManagement:
         for name in ("main", "alpha", "beta", "gamma"):
             assert name in doc["sections"]
 
-    def test_verbs_in_different_sections_independent(self, mock_swml_service):
+    def test_verbs_in_different_sections_independent(self, mock_swml_service: SWMLService) -> None:
         """Verbs added to different sections should remain independent."""
         mock_swml_service.reset_document()
         mock_swml_service.add_section("section_a")
@@ -1003,7 +1004,7 @@ class TestSectionManagement:
         assert {"sleep": 200} in doc["sections"]["section_b"]
         assert {"sleep": 100} not in doc["sections"]["section_b"]
 
-    def test_section_ordering_preserved(self, mock_swml_service):
+    def test_section_ordering_preserved(self, mock_swml_service: SWMLService) -> None:
         """Sections should maintain insertion order (Python 3.7+ dict ordering)."""
         mock_swml_service.reset_document()
         names = ["first", "second", "third"]
@@ -1015,14 +1016,14 @@ class TestSectionManagement:
         assert section_keys[0] == "main"
         assert section_keys[1:] == names
 
-    def test_add_verb_main_section_by_default(self, mock_swml_service):
+    def test_add_verb_main_section_by_default(self, mock_swml_service: SWMLService) -> None:
         """add_verb should add to main section."""
         mock_swml_service.reset_document()
         mock_swml_service.add_verb("sleep", 1234)
         doc = mock_swml_service.get_document()
         assert {"sleep": 1234} in doc["sections"]["main"]
 
-    def test_reset_clears_all_sections(self, mock_swml_service):
+    def test_reset_clears_all_sections(self, mock_swml_service: SWMLService) -> None:
         """reset_document should remove custom sections."""
         mock_swml_service.add_section("custom")
         mock_swml_service.add_verb_to_section("custom", "sleep", 100)
@@ -1031,7 +1032,7 @@ class TestSectionManagement:
         assert "custom" not in doc["sections"]
         assert doc["sections"]["main"] == []
 
-    def test_render_document_includes_all_sections(self, mock_swml_service):
+    def test_render_document_includes_all_sections(self, mock_swml_service: SWMLService) -> None:
         """render_document should serialize all sections."""
         mock_swml_service.reset_document()
         mock_swml_service.add_section("extra")
@@ -1041,13 +1042,13 @@ class TestSectionManagement:
         assert "extra" in parsed["sections"]
         assert {"sleep": 42} in parsed["sections"]["extra"]
 
-    def test_add_verb_non_dict_config_returns_false(self, mock_swml_service):
+    def test_add_verb_non_dict_config_returns_false(self, mock_swml_service: SWMLService) -> None:
         """add_verb with a non-dict, non-sleep-int config returns False."""
         mock_swml_service.reset_document()
         result = mock_swml_service.add_verb("play", 42)
         assert result is False
 
-    def test_add_verb_sleep_int_config(self, mock_swml_service):
+    def test_add_verb_sleep_int_config(self, mock_swml_service: SWMLService) -> None:
         """add_verb with verb_name='sleep' and int config should succeed."""
         mock_swml_service.reset_document()
         result = mock_swml_service.add_verb("sleep", 3000)
@@ -1055,7 +1056,7 @@ class TestSectionManagement:
         doc = mock_swml_service.get_document()
         assert {"sleep": 3000} in doc["sections"]["main"]
 
-    def test_add_verb_to_section_sleep_int_config(self, mock_swml_service):
+    def test_add_verb_to_section_sleep_int_config(self, mock_swml_service: SWMLService) -> None:
         """add_verb_to_section with sleep and int config should succeed."""
         mock_swml_service.reset_document()
         mock_swml_service.add_section("timers")
@@ -1068,7 +1069,7 @@ class TestSectionManagement:
 class TestCheckBasicAuth:
     """Test _check_basic_auth with various request headers."""
 
-    def _make_request_with_auth(self, auth_header=None):
+    def _make_request_with_auth(self, auth_header: str | None = None) -> Mock:
         """Helper to build a mock request with an Authorization header."""
         request = Mock()
         headers = {}
@@ -1077,12 +1078,12 @@ class TestCheckBasicAuth:
         request.headers = headers
         return request
 
-    def test_no_auth_header_returns_false(self, mock_swml_service):
+    def test_no_auth_header_returns_false(self, mock_swml_service: SWMLService) -> None:
         """Missing Authorization header should fail auth."""
         request = self._make_request_with_auth(None)
         assert mock_swml_service._check_basic_auth(request) is False
 
-    def test_valid_basic_auth(self):
+    def test_valid_basic_auth(self) -> None:
         """Correct credentials should return True."""
         service = SWMLService(
             name="auth_test",
@@ -1097,7 +1098,7 @@ class TestCheckBasicAuth:
         request = self._make_request_with_auth(f"Basic {creds}")
         assert service._check_basic_auth(request) is True
 
-    def test_wrong_password_returns_false(self):
+    def test_wrong_password_returns_false(self) -> None:
         """Wrong password should return False."""
         service = SWMLService(
             name="auth_wrong",
@@ -1112,7 +1113,7 @@ class TestCheckBasicAuth:
         request = self._make_request_with_auth(f"Basic {creds}")
         assert service._check_basic_auth(request) is False
 
-    def test_wrong_username_returns_false(self):
+    def test_wrong_username_returns_false(self) -> None:
         """Wrong username should return False."""
         service = SWMLService(
             name="auth_wrong_user",
@@ -1127,7 +1128,7 @@ class TestCheckBasicAuth:
         request = self._make_request_with_auth(f"Basic {creds}")
         assert service._check_basic_auth(request) is False
 
-    def test_non_basic_scheme_returns_false(self):
+    def test_non_basic_scheme_returns_false(self) -> None:
         """Non-Basic scheme (e.g., Bearer) should return False."""
         service = SWMLService(
             name="auth_bearer",
@@ -1140,7 +1141,7 @@ class TestCheckBasicAuth:
         request = self._make_request_with_auth("Bearer some-token")
         assert service._check_basic_auth(request) is False
 
-    def test_malformed_auth_header_returns_false(self):
+    def test_malformed_auth_header_returns_false(self) -> None:
         """Malformed auth header should return False (not crash)."""
         service = SWMLService(
             name="auth_bad",
@@ -1153,7 +1154,7 @@ class TestCheckBasicAuth:
         request = self._make_request_with_auth("completelyinvalid")
         assert service._check_basic_auth(request) is False
 
-    def test_invalid_base64_returns_false(self):
+    def test_invalid_base64_returns_false(self) -> None:
         """Invalid base64 in auth header should return False."""
         service = SWMLService(
             name="auth_badbase64",
@@ -1170,7 +1171,7 @@ class TestCheckBasicAuth:
 class TestStopMethod:
     """Test the stop() method."""
 
-    def test_stop_sets_running_false(self, mock_swml_service):
+    def test_stop_sets_running_false(self, mock_swml_service: SWMLService) -> None:
         """stop() should set _running to False."""
         mock_swml_service._running = True
         mock_swml_service.stop()
@@ -1180,7 +1181,7 @@ class TestStopMethod:
 class TestGetBaseUrl:
     """Test _get_base_url with various configurations."""
 
-    def test_base_url_no_proxy_no_ssl(self):
+    def test_base_url_no_proxy_no_ssl(self) -> None:
         """Without proxy or SSL, should return http://localhost:port."""
         service = SWMLService(
             name="url_test",
@@ -1193,7 +1194,7 @@ class TestGetBaseUrl:
         url = service._get_base_url(include_auth=False)
         assert url == "http://localhost:5000"
 
-    def test_base_url_no_proxy_no_ssl_with_auth(self):
+    def test_base_url_no_proxy_no_ssl_with_auth(self) -> None:
         """Without proxy or SSL, with auth should embed credentials."""
         service = SWMLService(
             name="url_auth",
@@ -1208,7 +1209,7 @@ class TestGetBaseUrl:
         assert "user:pass@" in url
         assert url.startswith("http://")
 
-    def test_base_url_with_proxy(self):
+    def test_base_url_with_proxy(self) -> None:
         """With proxy set, should use proxy URL base."""
         service = SWMLService(
             name="url_proxy",
@@ -1222,7 +1223,7 @@ class TestGetBaseUrl:
         url = service._get_base_url(include_auth=False)
         assert url == "https://myproxy.ngrok.io"
 
-    def test_base_url_with_proxy_and_auth(self):
+    def test_base_url_with_proxy_and_auth(self) -> None:
         """Proxy URL with auth should embed credentials in the proxy URL."""
         service = SWMLService(
             name="url_proxy_auth",
@@ -1237,7 +1238,7 @@ class TestGetBaseUrl:
         assert "admin:secret@" in url
         assert "myproxy.ngrok.io" in url
 
-    def test_base_url_ssl_with_domain(self):
+    def test_base_url_ssl_with_domain(self) -> None:
         """SSL enabled with domain should produce https://domain."""
         service = SWMLService(
             name="url_ssl",
@@ -1252,7 +1253,7 @@ class TestGetBaseUrl:
         url = service._get_base_url(include_auth=False)
         assert url == "https://secure.example.com"
 
-    def test_base_url_ssl_with_domain_non_standard_port(self):
+    def test_base_url_ssl_with_domain_non_standard_port(self) -> None:
         """SSL with domain and non-standard port should include port."""
         service = SWMLService(
             name="url_ssl_port",
@@ -1267,7 +1268,7 @@ class TestGetBaseUrl:
         url = service._get_base_url(include_auth=False)
         assert url == "https://secure.example.com:8443"
 
-    def test_base_url_custom_host(self):
+    def test_base_url_custom_host(self) -> None:
         """Custom host (not 0.0.0.0/localhost) should be used directly."""
         service = SWMLService(
             name="url_custom_host",
@@ -1280,7 +1281,7 @@ class TestGetBaseUrl:
         url = service._get_base_url(include_auth=False)
         assert "192.168.1.100:3000" in url
 
-    def test_base_url_http_port_80(self):
+    def test_base_url_http_port_80(self) -> None:
         """HTTP on port 80 should not include port number."""
         service = SWMLService(
             name="url_port80",
@@ -1299,7 +1300,7 @@ class TestGetBaseUrl:
 class TestBuildFullUrl:
     """Test _build_full_url and _build_webhook_url."""
 
-    def test_build_full_url_no_endpoint(self):
+    def test_build_full_url_no_endpoint(self) -> None:
         """No endpoint should return base + route."""
         service = SWMLService(
             name="build_url",
@@ -1313,7 +1314,7 @@ class TestBuildFullUrl:
         url = service._build_full_url(include_auth=False)
         assert url.endswith("/agent")
 
-    def test_build_full_url_with_endpoint(self):
+    def test_build_full_url_with_endpoint(self) -> None:
         """Endpoint should be appended with trailing slash."""
         service = SWMLService(
             name="build_ep",
@@ -1327,7 +1328,7 @@ class TestBuildFullUrl:
         url = service._build_full_url(endpoint="swaig", include_auth=False)
         assert "/agent/swaig/" in url
 
-    def test_build_full_url_with_query_params(self):
+    def test_build_full_url_with_query_params(self) -> None:
         """Query params should be appended to the URL."""
         service = SWMLService(
             name="build_qp",
@@ -1346,7 +1347,7 @@ class TestBuildFullUrl:
         assert "token=abc123" in url
         assert "mode=test" in url
 
-    def test_build_full_url_query_params_filters_empty(self):
+    def test_build_full_url_query_params_filters_empty(self) -> None:
         """Empty query param values should be filtered out."""
         service = SWMLService(
             name="build_qp_filter",
@@ -1360,12 +1361,12 @@ class TestBuildFullUrl:
         url = service._build_full_url(
             endpoint="callback",
             include_auth=False,
-            query_params={"present": "yes", "empty": "", "also_empty": None},
+            query_params={"present": "yes", "empty": "", "also_empty": None},  # type: ignore[dict-item]  # intentional: None value dropped
         )
         assert "present=yes" in url
         assert "empty" not in url.split("?")[1] if "?" in url else True
 
-    def test_build_full_url_root_route(self):
+    def test_build_full_url_root_route(self) -> None:
         """Root route should not double-slash."""
         service = SWMLService(
             name="build_root",
@@ -1378,7 +1379,7 @@ class TestBuildFullUrl:
         url = service._build_full_url(include_auth=False)
         assert not url.endswith("//")
 
-    def test_build_webhook_url(self):
+    def test_build_webhook_url(self) -> None:
         """_build_webhook_url should build authenticated URL."""
         service = SWMLService(
             name="webhook",
@@ -1397,12 +1398,12 @@ class TestBuildFullUrl:
 class TestFullValidationEnabled:
     """Test full_validation_enabled property."""
 
-    def test_full_validation_with_schema_utils(self, mock_swml_service):
+    def test_full_validation_with_schema_utils(self, mock_swml_service: SWMLService) -> None:
         """Property should delegate to schema_utils."""
         result = mock_swml_service.full_validation_enabled
         assert isinstance(result, bool)
 
-    def test_full_validation_without_schema_utils(self):
+    def test_full_validation_without_schema_utils(self) -> None:
         """Property should return False when schema_utils is None."""
         service = SWMLService(
             name="no_schema_val",
@@ -1411,43 +1412,43 @@ class TestFullValidationEnabled:
             port=3000,
             schema_validation=False,
         )
-        service.schema_utils = None
+        service.schema_utils = None  # type: ignore[assignment]  # intentional: exercise missing-schema path
         assert service.full_validation_enabled is False
 
 
 class TestExtractSipUsername:
     """Test extract_sip_username static method."""
 
-    def test_sip_uri_extraction(self):
+    def test_sip_uri_extraction(self) -> None:
         """Should extract username from sip: URI."""
         body = {"call": {"to": "sip:alice@example.com"}}
         assert SWMLService.extract_sip_username(body) == "alice"
 
-    def test_tel_uri_extraction(self):
+    def test_tel_uri_extraction(self) -> None:
         """Should extract phone number from tel: URI."""
         body = {"call": {"to": "tel:+15551234567"}}
         assert SWMLService.extract_sip_username(body) == "+15551234567"
 
-    def test_plain_to_field(self):
+    def test_plain_to_field(self) -> None:
         """Should return the whole 'to' field if not SIP/TEL."""
         body = {"call": {"to": "some-destination"}}
         assert SWMLService.extract_sip_username(body) == "some-destination"
 
-    def test_no_call_key_returns_none(self):
+    def test_no_call_key_returns_none(self) -> None:
         """Should return None when 'call' key is missing."""
         body = {"other": "data"}
         assert SWMLService.extract_sip_username(body) is None
 
-    def test_no_to_field_returns_none(self):
+    def test_no_to_field_returns_none(self) -> None:
         """Should return None when 'to' field is missing from call."""
         body = {"call": {"from": "sip:bob@example.com"}}
         assert SWMLService.extract_sip_username(body) is None
 
-    def test_empty_body_returns_none(self):
+    def test_empty_body_returns_none(self) -> None:
         """Should return None for empty body."""
         assert SWMLService.extract_sip_username({}) is None
 
-    def test_sip_uri_with_port(self):
+    def test_sip_uri_with_port(self) -> None:
         """Should extract username from SIP URI with port."""
         body = {"call": {"to": "sip:bob@example.com:5060"}}
         assert SWMLService.extract_sip_username(body) == "bob"
@@ -1456,11 +1457,11 @@ class TestExtractSipUsername:
 class TestRegisterVerbHandler:
     """Test register_verb_handler method."""
 
-    def test_register_verb_handler(self, mock_swml_service):
+    def test_register_verb_handler(self, mock_swml_service: SWMLService) -> None:
         """Should delegate to verb_registry.register_handler."""
         mock_handler = Mock()
         mock_handler.verb_name = "custom_verb"
-        mock_swml_service.verb_registry.register_handler = Mock()
+        mock_swml_service.verb_registry.register_handler = Mock()  # type: ignore[method-assign]  # mock
         mock_swml_service.register_verb_handler(mock_handler)
         mock_swml_service.verb_registry.register_handler.assert_called_once_with(mock_handler)
 
@@ -1468,7 +1469,7 @@ class TestRegisterVerbHandler:
 class TestCreateEmptyDocument:
     """Test _create_empty_document method."""
 
-    def test_structure(self, mock_swml_service):
+    def test_structure(self, mock_swml_service: SWMLService) -> None:
         """Empty document should have version and sections.main."""
         doc = mock_swml_service._create_empty_document()
         assert doc["version"] == "1.0.0"
@@ -1480,7 +1481,7 @@ class TestCreateEmptyDocument:
 class TestPortFromEnvironment:
     """Test port resolution from environment variable."""
 
-    def test_port_from_env(self):
+    def test_port_from_env(self) -> None:
         """Should use PORT env var when port is not provided."""
         with patch.dict("os.environ", {"PORT": "9876"}):
             service = SWMLService(
@@ -1491,7 +1492,7 @@ class TestPortFromEnvironment:
             )
             assert service.port == 9876
 
-    def test_explicit_port_overrides_env(self):
+    def test_explicit_port_overrides_env(self) -> None:
         """Explicit port should override PORT env var."""
         with patch.dict("os.environ", {"PORT": "9876"}):
             service = SWMLService(
@@ -1507,7 +1508,7 @@ class TestPortFromEnvironment:
 class TestRouteNormalization:
     """Test route normalization during init."""
 
-    def test_trailing_slash_stripped(self):
+    def test_trailing_slash_stripped(self) -> None:
         """Trailing slash should be stripped from route."""
         service = SWMLService(
             name="route_test",
@@ -1518,7 +1519,7 @@ class TestRouteNormalization:
         )
         assert service.route == "/myroute"
 
-    def test_no_trailing_slash_unchanged(self):
+    def test_no_trailing_slash_unchanged(self) -> None:
         """Route without trailing slash should remain unchanged."""
         service = SWMLService(
             name="route_test2",
@@ -1529,7 +1530,7 @@ class TestRouteNormalization:
         )
         assert service.route == "/myroute"
 
-    def test_root_route(self):
+    def test_root_route(self) -> None:
         """Root '/' route should become empty string after rstrip."""
         service = SWMLService(
             name="route_root",
@@ -1544,18 +1545,18 @@ class TestRouteNormalization:
 class TestManualSetProxyUrl:
     """Test manual_set_proxy_url method."""
 
-    def test_sets_proxy_url(self, mock_swml_service):
+    def test_sets_proxy_url(self, mock_swml_service: SWMLService) -> None:
         """Should set _proxy_url_base and _proxy_detection_done."""
         mock_swml_service.manual_set_proxy_url("https://myproxy.com/")
         assert mock_swml_service._proxy_url_base == "https://myproxy.com"
         assert mock_swml_service._proxy_detection_done is True
 
-    def test_trailing_slash_stripped(self, mock_swml_service):
+    def test_trailing_slash_stripped(self, mock_swml_service: SWMLService) -> None:
         """Trailing slashes should be stripped."""
         mock_swml_service.manual_set_proxy_url("https://myproxy.com///")
         assert mock_swml_service._proxy_url_base == "https://myproxy.com"
 
-    def test_empty_string_does_nothing(self, mock_swml_service):
+    def test_empty_string_does_nothing(self, mock_swml_service: SWMLService) -> None:
         """Empty string should not set proxy URL."""
         mock_swml_service._proxy_url_base = None
         mock_swml_service._proxy_detection_done = False
@@ -1579,7 +1580,7 @@ from starlette.testclient import TestClient
 from signalwire.utils.schema_utils import SchemaValidationError
 
 
-def _build_test_client(service, prefix=None):
+def _build_test_client(service: SWMLService, prefix: str | None = None) -> TestClient:
     """Helper: wrap a SWMLService in a FastAPI TestClient."""
     app = FastAPI(redirect_slashes=False)
     router = service.as_router()
@@ -1590,7 +1591,7 @@ def _build_test_client(service, prefix=None):
     return TestClient(app, raise_server_exceptions=False)
 
 
-def _auth_header(username, password):
+def _auth_header(username: str, password: str) -> dict[str, str]:
     """Helper: produce an Authorization header dict."""
     creds = base64.b64encode(f"{username}:{password}".encode()).decode()
     return {"Authorization": f"Basic {creds}"}
@@ -1599,7 +1600,7 @@ def _auth_header(username, password):
 class TestHandleRequestGET:
     """Test _handle_request via GET requests through TestClient."""
 
-    def test_get_returns_swml_document(self):
+    def test_get_returns_swml_document(self) -> None:
         """GET with valid auth should return the SWML document."""
         svc = SWMLService(
             name="hr_get", route="/", host="127.0.0.1", port=3001,
@@ -1612,7 +1613,7 @@ class TestHandleRequestGET:
         assert body["version"] == "1.0.0"
         assert "main" in body["sections"]
 
-    def test_get_without_auth_returns_401(self):
+    def test_get_without_auth_returns_401(self) -> None:
         """GET without auth should return 401."""
         svc = SWMLService(
             name="hr_noauth", route="/", host="127.0.0.1", port=3001,
@@ -1622,7 +1623,7 @@ class TestHandleRequestGET:
         resp = client.get("/")
         assert resp.status_code == 401
 
-    def test_get_with_wrong_auth_returns_401(self):
+    def test_get_with_wrong_auth_returns_401(self) -> None:
         """GET with wrong credentials should return 401."""
         svc = SWMLService(
             name="hr_wrongauth", route="/", host="127.0.0.1", port=3001,
@@ -1636,7 +1637,7 @@ class TestHandleRequestGET:
 class TestHandleRequestPOST:
     """Test _handle_request via POST requests."""
 
-    def test_post_with_empty_body(self):
+    def test_post_with_empty_body(self) -> None:
         """POST with empty body should return SWML document."""
         svc = SWMLService(
             name="hr_post_empty", route="/", host="127.0.0.1", port=3001,
@@ -1647,7 +1648,7 @@ class TestHandleRequestPOST:
         assert resp.status_code == 200
         assert resp.json()["version"] == "1.0.0"
 
-    def test_post_with_json_body(self):
+    def test_post_with_json_body(self) -> None:
         """POST with JSON body should still return SWML document."""
         svc = SWMLService(
             name="hr_post_json", route="/", host="127.0.0.1", port=3001,
@@ -1660,7 +1661,7 @@ class TestHandleRequestPOST:
         )
         assert resp.status_code == 200
 
-    def test_post_with_invalid_json_body(self):
+    def test_post_with_invalid_json_body(self) -> None:
         """POST with invalid JSON should still return SWML (body parse error handled)."""
         svc = SWMLService(
             name="hr_post_bad", route="/", host="127.0.0.1", port=3001,
@@ -1677,27 +1678,27 @@ class TestHandleRequestPOST:
 class TestHandleRequestOnRequestModifications:
     """Test _handle_request when on_request returns modifications."""
 
-    def test_on_request_returns_modifications(self):
+    def test_on_request_returns_modifications(self) -> None:
         """When on_request returns a dict, those modifications should be applied."""
         svc = SWMLService(
             name="hr_mod", route="/", host="127.0.0.1", port=3001,
             basic_auth=("u", "p"), schema_validation=False,
         )
         # Override on_request to return modifications
-        svc.on_request = lambda data, cb_path: {"version": "2.0.0"}
+        svc.on_request = lambda data, cb_path: {"version": "2.0.0"}  # type: ignore[method-assign,misc,assignment]  # mock override
         client = _build_test_client(svc)
         resp = client.get("/", headers=_auth_header("u", "p"))
         assert resp.status_code == 200
         body = resp.json()
         assert body["version"] == "2.0.0"
 
-    def test_on_request_returns_none_no_modification(self):
+    def test_on_request_returns_none_no_modification(self) -> None:
         """When on_request returns None, the original document should be returned."""
         svc = SWMLService(
             name="hr_nomod", route="/", host="127.0.0.1", port=3001,
             basic_auth=("u", "p"), schema_validation=False,
         )
-        svc.on_request = lambda data, cb_path: None
+        svc.on_request = lambda data, cb_path: None  # type: ignore[method-assign,misc,assignment]  # mock override
         client = _build_test_client(svc)
         resp = client.get("/", headers=_auth_header("u", "p"))
         assert resp.status_code == 200
@@ -1708,14 +1709,14 @@ class TestHandleRequestOnRequestModifications:
 class TestHandleRequestRoutingCallback:
     """Test _handle_request with routing callbacks."""
 
-    def test_routing_callback_redirect(self):
+    def test_routing_callback_redirect(self) -> None:
         """Routing callback returning a route should produce a 307 redirect."""
         svc = SWMLService(
             name="hr_cb_redir", route="/", host="127.0.0.1", port=3001,
             basic_auth=("u", "p"), schema_validation=False,
         )
 
-        def my_callback(request, body):
+        def my_callback(request: Any, body: dict[str, Any]) -> str | None:
             return "/other-agent"
 
         svc.register_routing_callback(my_callback, "/sip")
@@ -1728,14 +1729,14 @@ class TestHandleRequestRoutingCallback:
         assert resp.status_code == 307
         assert resp.headers.get("location") == "/other-agent"
 
-    def test_routing_callback_returns_none_continues(self):
+    def test_routing_callback_returns_none_continues(self) -> None:
         """Routing callback returning None should produce normal SWML response."""
         svc = SWMLService(
             name="hr_cb_none", route="/", host="127.0.0.1", port=3001,
             basic_auth=("u", "p"), schema_validation=False,
         )
 
-        def my_callback(request, body):
+        def my_callback(request: Any, body: dict[str, Any]) -> str | None:
             return None
 
         svc.register_routing_callback(my_callback, "/sip")
@@ -1747,14 +1748,14 @@ class TestHandleRequestRoutingCallback:
         assert resp.status_code == 200
         assert resp.json()["version"] == "1.0.0"
 
-    def test_routing_callback_exception_handled(self):
+    def test_routing_callback_exception_handled(self) -> None:
         """Routing callback that raises should be caught; normal SWML returned."""
         svc = SWMLService(
             name="hr_cb_err", route="/", host="127.0.0.1", port=3001,
             basic_auth=("u", "p"), schema_validation=False,
         )
 
-        def bad_callback(request, body):
+        def bad_callback(request: Any, body: dict[str, Any]) -> str | None:
             raise RuntimeError("callback exploded")
 
         svc.register_routing_callback(bad_callback, "/sip")
@@ -1769,7 +1770,7 @@ class TestHandleRequestRoutingCallback:
 class TestAsRouterWithCallbacks:
     """Test as_router when routing callbacks are registered (lines 559-580)."""
 
-    def test_as_router_registers_callback_endpoints(self):
+    def test_as_router_registers_callback_endpoints(self) -> None:
         """as_router should register endpoints for each routing callback."""
         svc = SWMLService(
             name="ar_cb", route="/", host="127.0.0.1", port=3001,
@@ -1780,7 +1781,7 @@ class TestAsRouterWithCallbacks:
         paths = [r.path for r in router.routes if hasattr(r, "path")]
         assert "/sip" in paths or "/sip/" in paths
 
-    def test_as_router_skips_root_callback(self):
+    def test_as_router_skips_root_callback(self) -> None:
         """as_router should skip root '/' callback since root is always registered."""
         svc = SWMLService(
             name="ar_root_cb", route="/", host="127.0.0.1", port=3001,
@@ -1792,7 +1793,7 @@ class TestAsRouterWithCallbacks:
         paths = [r.path for r in router.routes if hasattr(r, "path")]
         assert "/" in paths
 
-    def test_callback_endpoint_sets_state(self):
+    def test_callback_endpoint_sets_state(self) -> None:
         """Callback endpoint should store callback_path in request.state."""
         svc = SWMLService(
             name="ar_state", route="/", host="127.0.0.1", port=3001,
@@ -1800,18 +1801,18 @@ class TestAsRouterWithCallbacks:
         )
         captured_paths = []
 
-        def capture_callback(request, body):
+        def capture_callback(request: Any, body: dict[str, Any]) -> str | None:
             return None
 
         svc.register_routing_callback(capture_callback, "/sip")
         # Override on_request to capture the callback_path
         original_on_request = svc.on_request
 
-        def capturing_on_request(data, cb_path):
+        def capturing_on_request(data: dict[str, Any] | None = None, cb_path: str | None = None) -> dict[str, Any] | None:
             captured_paths.append(cb_path)
             return None
 
-        svc.on_request = capturing_on_request
+        svc.on_request = capturing_on_request  # type: ignore[method-assign,assignment]  # mock override
         client = _build_test_client(svc)
         resp = client.post(
             "/sip", json={"key": "value"},
@@ -1824,7 +1825,7 @@ class TestAsRouterWithCallbacks:
 class TestRegisterRoutingCallbackNormalization:
     """Test register_routing_callback path normalization (line 605)."""
 
-    def test_path_without_leading_slash_normalized(self):
+    def test_path_without_leading_slash_normalized(self) -> None:
         """Path without leading slash should get one added."""
         svc = SWMLService(
             name="rc_norm", route="/", host="127.0.0.1", port=3001,
@@ -1833,7 +1834,7 @@ class TestRegisterRoutingCallbackNormalization:
         svc.register_routing_callback(lambda r, b: None, "sip")
         assert "/sip" in svc._routing_callbacks
 
-    def test_path_with_trailing_slash_stripped(self):
+    def test_path_with_trailing_slash_stripped(self) -> None:
         """Trailing slash should be stripped from callback path."""
         svc = SWMLService(
             name="rc_trail", route="/", host="127.0.0.1", port=3001,
@@ -1842,7 +1843,7 @@ class TestRegisterRoutingCallbackNormalization:
         svc.register_routing_callback(lambda r, b: None, "/sip/")
         assert "/sip" in svc._routing_callbacks
 
-    def test_path_both_normalizations(self):
+    def test_path_both_normalizations(self) -> None:
         """Path with no leading slash and trailing slash should be fully normalized."""
         svc = SWMLService(
             name="rc_both", route="/", host="127.0.0.1", port=3001,
@@ -1855,7 +1856,7 @@ class TestRegisterRoutingCallbackNormalization:
 class TestAddVerbToSectionWithHandler:
     """Test add_verb_to_section with registered verb handlers (lines 504-505, 511)."""
 
-    def test_add_verb_to_section_with_valid_handler(self):
+    def test_add_verb_to_section_with_valid_handler(self) -> None:
         """When a registered handler validates, verb should be added."""
         svc = SWMLService(
             name="vts_handler", route="/", host="127.0.0.1", port=3001,
@@ -1872,7 +1873,7 @@ class TestAddVerbToSectionWithHandler:
         assert {"custom_verb": {"key": "val"}} in doc["sections"]["sec"]
         mock_handler.validate_config.assert_called_once_with({"key": "val"})
 
-    def test_add_verb_to_section_with_invalid_handler_raises(self):
+    def test_add_verb_to_section_with_invalid_handler_raises(self) -> None:
         """When a registered handler rejects, SchemaValidationError should be raised."""
         svc = SWMLService(
             name="vts_invalid", route="/", host="127.0.0.1", port=3001,
@@ -1885,14 +1886,14 @@ class TestAddVerbToSectionWithHandler:
         with pytest.raises(SchemaValidationError):
             svc.add_verb_to_section("sec", "custom_verb", {"bad": "config"})
 
-    def test_add_verb_to_section_schema_validation_error(self):
+    def test_add_verb_to_section_schema_validation_error(self) -> None:
         """Schema-based validation failure should raise SchemaValidationError."""
         svc = SWMLService(
             name="vts_schema", route="/", host="127.0.0.1", port=3001,
             schema_validation=False,
         )
         # Mock schema_utils to return invalid
-        svc.schema_utils.validate_verb = Mock(return_value=(False, ["invalid config"]))
+        svc.schema_utils.validate_verb = Mock(return_value=(False, ["invalid config"]))  # type: ignore[method-assign]  # mock
         with pytest.raises(SchemaValidationError):
             svc.add_verb_to_section("new_sec", "play", {"bad": "thing"})
 
@@ -1900,19 +1901,19 @@ class TestAddVerbToSectionWithHandler:
 class TestExtractSipUsernameEdgeCases:
     """Test extract_sip_username exception paths (lines 644-646)."""
 
-    def test_non_string_to_field(self):
+    def test_non_string_to_field(self) -> None:
         """Non-string 'to' field should return None via AttributeError path."""
         body = {"call": {"to": 12345}}
         result = SWMLService.extract_sip_username(body)
         assert result is None
 
-    def test_none_to_field(self):
+    def test_none_to_field(self) -> None:
         """None 'to' field should return None via AttributeError path."""
         body = {"call": {"to": None}}
         result = SWMLService.extract_sip_username(body)
         assert result is None
 
-    def test_list_to_field(self):
+    def test_list_to_field(self) -> None:
         """List 'to' field should return None via AttributeError path."""
         body = {"call": {"to": ["sip:alice@example.com"]}}
         result = SWMLService.extract_sip_username(body)
@@ -1922,13 +1923,13 @@ class TestExtractSipUsernameEdgeCases:
 class TestCreateVerbMethodsNoSchema:
     """Test _create_verb_methods when schema_utils is falsy (lines 166-167)."""
 
-    def test_create_verb_methods_no_schema_utils(self):
+    def test_create_verb_methods_no_schema_utils(self) -> None:
         """_create_verb_methods should return early when schema_utils is None."""
         svc = SWMLService(
             name="no_schema_verbs", route="/", host="127.0.0.1", port=3001,
             schema_validation=False,
         )
-        svc.schema_utils = None
+        svc.schema_utils = None  # type: ignore[assignment]  # intentional: exercise missing-schema path
         # Clear cache to ensure clean state
         svc._verb_methods_cache = {}
         # Should not raise
@@ -1940,7 +1941,7 @@ class TestCreateVerbMethodsNoSchema:
 class TestGetAttrCacheInit:
     """Test __getattr__ initializing _verb_methods_cache (line 274)."""
 
-    def test_getattr_creates_cache_if_missing(self):
+    def test_getattr_creates_cache_if_missing(self) -> None:
         """__getattr__ should create _verb_methods_cache if it doesn't exist."""
         svc = SWMLService(
             name="getattr_cache_init", route="/", host="127.0.0.1", port=3001,
@@ -1964,7 +1965,7 @@ class TestGetAttrCacheInit:
 class TestGetBasicAuthEnvironmentSource:
     """Test get_basic_auth_credentials environment source detection (line 940)."""
 
-    def test_env_source_detected(self):
+    def test_env_source_detected(self) -> None:
         """When credentials match env vars, source should be 'environment'."""
         with patch.dict("os.environ", {
             "SWML_BASIC_AUTH_USER": "envuser",
@@ -1975,26 +1976,26 @@ class TestGetBasicAuthEnvironmentSource:
                 basic_auth=("envuser", "envpass"),
                 schema_validation=False,
             )
-            u, p, source = svc.get_basic_auth_credentials(include_source=True)
+            u, p, source = svc.get_basic_auth_credentials(include_source=True)  # type: ignore[misc]  # include_source=True returns 3-tuple
             assert u == "envuser"
             assert p == "envpass"
             assert source == "environment"
 
-    def test_auto_generated_source(self):
+    def test_auto_generated_source(self) -> None:
         """When credentials don't match env vars, source should be 'auto-generated'."""
         svc = SWMLService(
             name="auth_auto_src", route="/", host="127.0.0.1", port=3001,
             basic_auth=("myuser", "mypass"),
             schema_validation=False,
         )
-        u, p, source = svc.get_basic_auth_credentials(include_source=True)
+        u, p, source = svc.get_basic_auth_credentials(include_source=True)  # type: ignore[misc]  # include_source=True returns 3-tuple
         assert source == "auto-generated"
 
 
 class TestGetBaseUrlDomainHttp80:
     """Test _get_base_url with HTTP port 80 and SSL domain (line 1001)."""
 
-    def test_ssl_domain_http_port_80(self):
+    def test_ssl_domain_http_port_80(self) -> None:
         """SSL with domain and port 80 should not include :80."""
         svc = SWMLService(
             name="url_domain_80", route="/", host="0.0.0.0", port=80,
@@ -2007,7 +2008,7 @@ class TestGetBaseUrlDomainHttp80:
         # Port 80 on HTTPS is non-standard, should be included
         assert "example.com" in url
 
-    def test_no_ssl_domain_port_80(self):
+    def test_no_ssl_domain_port_80(self) -> None:
         """No SSL, with domain, port 80 should produce http://domain (no port)."""
         svc = SWMLService(
             name="url_nossldom80", route="/", host="0.0.0.0", port=80,
@@ -2019,7 +2020,7 @@ class TestGetBaseUrlDomainHttp80:
         url = svc._get_base_url(include_auth=False)
         assert ":80" not in url
 
-    def test_ssl_domain_https_443(self):
+    def test_ssl_domain_https_443(self) -> None:
         """SSL with domain and port 443 should not include :443."""
         svc = SWMLService(
             name="url_ssl443", route="/", host="0.0.0.0", port=443,
@@ -2036,7 +2037,7 @@ class TestGetBaseUrlDomainHttp80:
 class TestProxyDetectionDebug:
     """Test proxy debug logging (line 1170)."""
 
-    def _make_request(self, headers=None, url="http://127.0.0.1:3001/test"):
+    def _make_request(self, headers: dict[str, str] | None = None, url: str = "http://127.0.0.1:3001/test") -> Mock:
         request = Mock()
         _headers = headers or {}
         request.headers = _headers
@@ -2045,7 +2046,7 @@ class TestProxyDetectionDebug:
         request.url.__str__ = Mock(return_value=url)
         return request
 
-    def test_proxy_debug_mode_logs(self):
+    def test_proxy_debug_mode_logs(self) -> None:
         """With _proxy_debug=True and no proxy detected, should not crash."""
         svc = SWMLService(
             name="proxy_debug", route="/test", host="127.0.0.1", port=3001,
@@ -2063,7 +2064,7 @@ class TestProxyDetectionDebug:
             pass
         assert svc._proxy_url_base is None
 
-    def test_proxy_debug_mode_false(self):
+    def test_proxy_debug_mode_false(self) -> None:
         """With _proxy_debug=False, detection still works normally."""
         svc = SWMLService(
             name="proxy_nodebug", route="/test", host="127.0.0.1", port=3001,
@@ -2079,7 +2080,7 @@ class TestProxyDetectionDebug:
 class TestForwardedHeaderParseError:
     """Test forwarded header parse error (lines 1131-1132)."""
 
-    def _make_request(self, headers=None, url="http://127.0.0.1:3001/test"):
+    def _make_request(self, headers: dict[str, str] | None = None, url: str = "http://127.0.0.1:3001/test") -> Mock:
         request = Mock()
         _headers = headers or {}
         request.headers = _headers
@@ -2088,7 +2089,7 @@ class TestForwardedHeaderParseError:
         request.url.__str__ = Mock(return_value=url)
         return request
 
-    def test_forwarded_header_causes_exception(self):
+    def test_forwarded_header_causes_exception(self) -> None:
         """A Forwarded header that triggers a parse exception should be handled."""
         svc = SWMLService(
             name="fwd_err", route="/test", host="127.0.0.1", port=3001,
@@ -2107,7 +2108,7 @@ class TestForwardedHeaderParseError:
 class TestProxyUrlBaseFromEnv:
     """Test initialization with SWML_PROXY_URL_BASE env var (line 111)."""
 
-    def test_proxy_url_base_env_sets_attribute(self):
+    def test_proxy_url_base_env_sets_attribute(self) -> None:
         """SWML_PROXY_URL_BASE env var should set _proxy_url_base."""
         with patch.dict("os.environ", {"SWML_PROXY_URL_BASE": "https://my-proxy.com"}):
             svc = SWMLService(
@@ -2117,7 +2118,7 @@ class TestProxyUrlBaseFromEnv:
             assert svc._proxy_url_base == "https://my-proxy.com"
             assert svc._proxy_url_base_from_env is True
 
-    def test_no_proxy_url_base_env(self):
+    def test_no_proxy_url_base_env(self) -> None:
         """Without SWML_PROXY_URL_BASE env var, _proxy_url_base should be None."""
         with patch.dict("os.environ", {}, clear=False):
             # Remove the env var if it exists
@@ -2133,7 +2134,7 @@ class TestProxyUrlBaseFromEnv:
 class TestFindSchemaPath:
     """Test _find_schema_path fallback paths (lines 363-395)."""
 
-    def test_find_schema_path_returns_string(self):
+    def test_find_schema_path_returns_string(self) -> None:
         """_find_schema_path should return a string path when schema is found."""
         svc = SWMLService(
             name="schema_find", route="/", host="127.0.0.1", port=3001,
@@ -2145,7 +2146,7 @@ class TestFindSchemaPath:
         assert isinstance(result, str)
         assert "schema.json" in result
 
-    def test_find_schema_path_importlib_fails_fallback(self):
+    def test_find_schema_path_importlib_fails_fallback(self) -> None:
         """When importlib.resources fails, should fall back to file search."""
         svc = SWMLService(
             name="schema_fallback", route="/", host="127.0.0.1", port=3001,
@@ -2164,7 +2165,7 @@ class TestFindSchemaPath:
         finally:
             ir.files = original_files
 
-    def test_find_schema_path_nothing_found(self):
+    def test_find_schema_path_nothing_found(self) -> None:
         """When no schema file exists anywhere, should return None."""
         svc = SWMLService(
             name="schema_none", route="/", host="127.0.0.1", port=3001,
@@ -2180,7 +2181,7 @@ class TestFindSchemaPath:
         finally:
             ir.files = original_files
 
-    def test_find_schema_path_manual_search_finds_file(self):
+    def test_find_schema_path_manual_search_finds_file(self) -> None:
         """When importlib fails but a file exists in manual paths, it should be found."""
         svc = SWMLService(
             name="schema_manual", route="/", host="127.0.0.1", port=3001,
@@ -2192,7 +2193,7 @@ class TestFindSchemaPath:
         try:
             ir.files = Mock(side_effect=ImportError("mocked"))
 
-            def mock_exists(path):
+            def mock_exists(path: Any) -> bool:
                 if isinstance(path, str) and path.endswith("schema.json"):
                     return True
                 return original_exists(path)
@@ -2209,7 +2210,7 @@ class TestServeCatchAllRoute:
     """Test the catch-all route handler created inside serve() (lines 803-836)."""
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_catch_all_exact_route_match(self, mock_uvicorn):
+    def test_catch_all_exact_route_match(self, mock_uvicorn: MagicMock) -> None:
         """Catch-all route should handle exact route match."""
         svc = SWMLService(
             name="catch_exact", route="/agent", host="0.0.0.0", port=3000,
@@ -2219,12 +2220,13 @@ class TestServeCatchAllRoute:
         with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}):
             svc.serve()
         # Now test using the created app
+        assert svc._app is not None
         client = TestClient(svc._app, raise_server_exceptions=False)
         resp = client.get("/agent", headers=_auth_header("u", "p"))
         assert resp.status_code == 200
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_catch_all_route_with_trailing_slash(self, mock_uvicorn):
+    def test_catch_all_route_with_trailing_slash(self, mock_uvicorn: MagicMock) -> None:
         """Catch-all route should handle route with trailing slash."""
         svc = SWMLService(
             name="catch_trail", route="/agent", host="0.0.0.0", port=3000,
@@ -2233,12 +2235,13 @@ class TestServeCatchAllRoute:
         mock_uvicorn.run = Mock()
         with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}):
             svc.serve()
+        assert svc._app is not None
         client = TestClient(svc._app, raise_server_exceptions=False)
         resp = client.get("/agent/", headers=_auth_header("u", "p"))
         assert resp.status_code == 200
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_catch_all_no_match(self, mock_uvicorn):
+    def test_catch_all_no_match(self, mock_uvicorn: MagicMock) -> None:
         """Catch-all route should return error for unmatched paths."""
         svc = SWMLService(
             name="catch_nomatch", route="/agent", host="0.0.0.0", port=3000,
@@ -2247,6 +2250,7 @@ class TestServeCatchAllRoute:
         mock_uvicorn.run = Mock()
         with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}):
             svc.serve()
+        assert svc._app is not None
         client = TestClient(svc._app, raise_server_exceptions=False)
         resp = client.get("/other", headers=_auth_header("u", "p"))
         assert resp.status_code == 200
@@ -2254,7 +2258,7 @@ class TestServeCatchAllRoute:
         assert "error" in body
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_catch_all_with_routing_callback_subpath(self, mock_uvicorn):
+    def test_catch_all_with_routing_callback_subpath(self, mock_uvicorn: MagicMock) -> None:
         """Catch-all route should forward to routing callback subpath."""
         svc = SWMLService(
             name="catch_cb", route="/agent", host="0.0.0.0", port=3000,
@@ -2264,6 +2268,7 @@ class TestServeCatchAllRoute:
         mock_uvicorn.run = Mock()
         with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}):
             svc.serve()
+        assert svc._app is not None
         client = TestClient(svc._app, raise_server_exceptions=False)
         resp = client.post(
             "/agent/sip", json={"key": "value"},
@@ -2272,7 +2277,7 @@ class TestServeCatchAllRoute:
         assert resp.status_code == 200
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_catch_all_root_route_match(self, mock_uvicorn):
+    def test_catch_all_root_route_match(self, mock_uvicorn: MagicMock) -> None:
         """When route is '/', catch-all should handle sub-paths."""
         svc = SWMLService(
             name="catch_root", route="/", host="0.0.0.0", port=3000,
@@ -2281,6 +2286,7 @@ class TestServeCatchAllRoute:
         mock_uvicorn.run = Mock()
         with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}):
             svc.serve()
+        assert svc._app is not None
         client = TestClient(svc._app, raise_server_exceptions=False)
         # Root should work
         resp = client.get("/", headers=_auth_header("u", "p"))
@@ -2291,14 +2297,14 @@ class TestServeDomainOverride:
     """Test serve() domain override (line 766)."""
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_serve_overrides_domain(self, mock_uvicorn):
+    def test_serve_overrides_domain(self, mock_uvicorn: MagicMock) -> None:
         """serve(domain=...) should override the service domain."""
         svc = SWMLService(
             name="srv_domain", route="/", host="0.0.0.0", port=443,
             schema_validation=False,
         )
         assert svc.domain is None or svc.domain != "new.example.com"
-        svc.security.validate_ssl_config = Mock(return_value=(True, None))
+        svc.security.validate_ssl_config = Mock(return_value=(True, None))  # type: ignore[method-assign]  # mock
         mock_uvicorn.run = Mock()
         with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}):
             svc.serve(ssl_enabled=True, domain="new.example.com",
@@ -2309,7 +2315,7 @@ class TestServeDomainOverride:
 class TestVerbMethodDocstrings:
     """Test verb method docstring generation (line 323 fallback)."""
 
-    def test_verb_with_no_description_in_schema(self):
+    def test_verb_with_no_description_in_schema(self) -> None:
         """Verb with no 'description' in properties should still have a docstring."""
         svc = SWMLService(
             name="doc_test", route="/", host="127.0.0.1", port=3001,
@@ -2320,7 +2326,7 @@ class TestVerbMethodDocstrings:
             pytest.skip("No verbs in schema")
         # Mock get_verb_properties to return no description
         original_get_props = svc.schema_utils.get_verb_properties
-        svc.schema_utils.get_verb_properties = Mock(return_value={})
+        svc.schema_utils.get_verb_properties = Mock(return_value={})  # type: ignore[method-assign]  # mock
         # Force __getattr__ to recreate the verb method
         vn = verb_names[0]
         svc._verb_methods_cache.pop(vn, None)
@@ -2329,9 +2335,9 @@ class TestVerbMethodDocstrings:
         assert method.__doc__ is not None
         assert f"Add the {vn} verb" in method.__doc__
         # Restore
-        svc.schema_utils.get_verb_properties = original_get_props
+        svc.schema_utils.get_verb_properties = original_get_props  # type: ignore[method-assign]  # restore mock
 
-    def test_verb_with_description_in_schema(self):
+    def test_verb_with_description_in_schema(self) -> None:
         """Verb with 'description' in properties should include it in docstring."""
         svc = SWMLService(
             name="doc_desc_test", route="/", host="127.0.0.1", port=3001,
@@ -2340,7 +2346,7 @@ class TestVerbMethodDocstrings:
         verb_names = svc.schema_utils.get_all_verb_names()
         if not verb_names:
             pytest.skip("No verbs in schema")
-        svc.schema_utils.get_verb_properties = Mock(
+        svc.schema_utils.get_verb_properties = Mock(  # type: ignore[method-assign]  # mock
             return_value={"description": "This verb does something cool"}
         )
         vn = verb_names[0]
@@ -2353,7 +2359,7 @@ class TestVerbMethodDocstrings:
 class TestSchemaNotFoundWarning:
     """Test schema_not_found path (line 131)."""
 
-    def test_schema_not_found_still_initializes(self):
+    def test_schema_not_found_still_initializes(self) -> None:
         """Service should still initialize when schema is not found."""
         svc = SWMLService(
             name="no_schema_warn", route="/", host="127.0.0.1", port=3001,

@@ -5,15 +5,13 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Unit tests for the DataSphere skill module
 """
 
-import json
-import pytest
-from unittest.mock import Mock, patch, MagicMock, PropertyMock
+from typing import Any
+
+from unittest.mock import Mock, patch, MagicMock
 
 import requests
 
@@ -21,7 +19,7 @@ from signalwire.skills.datasphere.skill import DataSphereSkill
 from signalwire.core.function_result import FunctionResult
 
 
-def _make_skill(params=None):
+def _make_skill(params: dict[str, Any] | None = None) -> DataSphereSkill:
     """
     Helper to create a DataSphereSkill with a mocked agent.
     Provides sensible defaults for all required parameters.
@@ -37,8 +35,7 @@ def _make_skill(params=None):
 
     mock_agent = Mock()
     mock_agent.define_tool = Mock()
-    skill = DataSphereSkill(agent=mock_agent, params=default_params)
-    return skill
+    return DataSphereSkill(agent=mock_agent, params=default_params)
 
 
 # ---------------------------------------------------------------------------
@@ -48,22 +45,22 @@ def _make_skill(params=None):
 class TestDataSphereSkillClassAttributes:
     """Verify class-level constants and metadata."""
 
-    def test_skill_name(self):
+    def test_skill_name(self) -> None:
         assert DataSphereSkill.SKILL_NAME == "datasphere"
 
-    def test_skill_description(self):
+    def test_skill_description(self) -> None:
         assert DataSphereSkill.SKILL_DESCRIPTION == "Search knowledge using SignalWire DataSphere RAG stack"
 
-    def test_skill_version(self):
+    def test_skill_version(self) -> None:
         assert DataSphereSkill.SKILL_VERSION == "1.0.0"
 
-    def test_required_packages(self):
+    def test_required_packages(self) -> None:
         assert DataSphereSkill.REQUIRED_PACKAGES == ["requests"]
 
-    def test_required_env_vars(self):
+    def test_required_env_vars(self) -> None:
         assert DataSphereSkill.REQUIRED_ENV_VARS == []
 
-    def test_supports_multiple_instances(self):
+    def test_supports_multiple_instances(self) -> None:
         assert DataSphereSkill.SUPPORTS_MULTIPLE_INSTANCES is True
 
 
@@ -74,33 +71,33 @@ class TestDataSphereSkillClassAttributes:
 class TestDataSphereSkillInit:
     """Tests for __init__ (inherited from SkillBase)."""
 
-    def test_agent_is_stored(self):
+    def test_agent_is_stored(self) -> None:
         mock_agent = Mock()
         skill = DataSphereSkill(agent=mock_agent, params={"space_name": "x"})
         assert skill.agent is mock_agent
 
-    def test_params_stored(self):
+    def test_params_stored(self) -> None:
         params = {"space_name": "myspace", "project_id": "pid"}
         skill = DataSphereSkill(agent=Mock(), params=params)
         assert skill.params["space_name"] == "myspace"
         assert skill.params["project_id"] == "pid"
 
-    def test_params_default_to_empty_dict(self):
+    def test_params_default_to_empty_dict(self) -> None:
         skill = DataSphereSkill(agent=Mock())
         assert skill.params == {}
 
-    def test_logger_created(self):
+    def test_logger_created(self) -> None:
         skill = DataSphereSkill(agent=Mock())
         assert skill.logger is not None
         assert skill.logger.name == "signalwire.skills.datasphere"
 
-    def test_swaig_fields_extracted_from_params(self):
+    def test_swaig_fields_extracted_from_params(self) -> None:
         params = {"swaig_fields": {"meta_data": {"x": 1}}, "space_name": "s"}
         skill = DataSphereSkill(agent=Mock(), params=params)
         assert skill.swaig_fields == {"meta_data": {"x": 1}}
         assert "swaig_fields" not in skill.params
 
-    def test_swaig_fields_default_empty(self):
+    def test_swaig_fields_default_empty(self) -> None:
         skill = DataSphereSkill(agent=Mock(), params={"space_name": "s"})
         assert skill.swaig_fields == {}
 
@@ -112,52 +109,52 @@ class TestDataSphereSkillInit:
 class TestGetParameterSchema:
     """Tests for the class method get_parameter_schema."""
 
-    def test_contains_required_params(self):
+    def test_contains_required_params(self) -> None:
         schema = DataSphereSkill.get_parameter_schema()
         for key in ("space_name", "project_id", "token", "document_id"):
             assert key in schema, f"Missing required param: {key}"
             assert schema[key]["required"] is True
 
-    def test_contains_optional_params(self):
+    def test_contains_optional_params(self) -> None:
         schema = DataSphereSkill.get_parameter_schema()
         for key in ("count", "distance", "tags", "language", "pos_to_expand",
                      "max_synonyms", "no_results_message"):
             assert key in schema, f"Missing optional param: {key}"
             assert schema[key]["required"] is False
 
-    def test_token_is_hidden(self):
+    def test_token_is_hidden(self) -> None:
         schema = DataSphereSkill.get_parameter_schema()
         assert schema["token"].get("hidden") is True
 
-    def test_project_id_env_var(self):
+    def test_project_id_env_var(self) -> None:
         schema = DataSphereSkill.get_parameter_schema()
         assert schema["project_id"].get("env_var") == "SIGNALWIRE_PROJECT_ID"
 
-    def test_token_env_var(self):
+    def test_token_env_var(self) -> None:
         schema = DataSphereSkill.get_parameter_schema()
         assert schema["token"].get("env_var") == "SIGNALWIRE_TOKEN"
 
-    def test_count_defaults(self):
+    def test_count_defaults(self) -> None:
         schema = DataSphereSkill.get_parameter_schema()
         assert schema["count"]["default"] == 1
         assert schema["count"]["minimum"] == 1
         assert schema["count"]["maximum"] == 10
 
-    def test_distance_defaults(self):
+    def test_distance_defaults(self) -> None:
         schema = DataSphereSkill.get_parameter_schema()
         assert schema["distance"]["default"] == 3.0
         assert schema["distance"]["minimum"] == 0.0
         assert schema["distance"]["maximum"] == 10.0
 
-    def test_includes_base_class_swaig_fields(self):
+    def test_includes_base_class_swaig_fields(self) -> None:
         schema = DataSphereSkill.get_parameter_schema()
         assert "swaig_fields" in schema
 
-    def test_includes_tool_name_because_multi_instance(self):
+    def test_includes_tool_name_because_multi_instance(self) -> None:
         schema = DataSphereSkill.get_parameter_schema()
         assert "tool_name" in schema
 
-    def test_pos_to_expand_items_enum(self):
+    def test_pos_to_expand_items_enum(self) -> None:
         schema = DataSphereSkill.get_parameter_schema()
         items = schema["pos_to_expand"]["items"]
         assert set(items["enum"]) == {"NOUN", "VERB", "ADJ", "ADV"}
@@ -170,11 +167,11 @@ class TestGetParameterSchema:
 class TestGetInstanceKey:
     """Tests for get_instance_key."""
 
-    def test_default_instance_key(self):
+    def test_default_instance_key(self) -> None:
         skill = _make_skill()
         assert skill.get_instance_key() == "datasphere_search_knowledge"
 
-    def test_custom_tool_name_instance_key(self):
+    def test_custom_tool_name_instance_key(self) -> None:
         skill = _make_skill({"tool_name": "my_search"})
         assert skill.get_instance_key() == "datasphere_my_search"
 
@@ -187,31 +184,31 @@ class TestSetup:
     """Tests for the setup method."""
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_setup_success_all_required(self, mock_session_cls):
+    def test_setup_success_all_required(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill()
         result = skill.setup()
 
         assert result is True
         assert skill.space_name == "testspace"
         assert skill.project_id == "test-project-id"
-        assert skill.token == "test-token"
+        assert skill.token == "test-token"  # noqa: S105
         assert skill.document_id == "test-doc-id"
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_setup_creates_api_url(self, mock_session_cls):
+    def test_setup_creates_api_url(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill()
         skill.setup()
         assert skill.api_url == "https://testspace.signalwire.com/api/datasphere/documents/search"
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_setup_creates_session(self, mock_session_cls):
+    def test_setup_creates_session(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill()
         skill.setup()
         mock_session_cls.assert_called_once()
         assert skill.session is mock_session_cls.return_value
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_setup_optional_defaults(self, mock_session_cls):
+    def test_setup_optional_defaults(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill()
         skill.setup()
 
@@ -225,7 +222,7 @@ class TestSetup:
         assert "{query}" in skill.no_results_message
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_setup_custom_optional_values(self, mock_session_cls):
+    def test_setup_custom_optional_values(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill({
             "count": 5,
             "distance": 1.5,
@@ -247,38 +244,38 @@ class TestSetup:
         assert skill.tool_name == "kb_search"
         assert skill.no_results_message == "Nothing found."
 
-    def test_setup_missing_space_name(self):
+    def test_setup_missing_space_name(self) -> None:
         skill = _make_skill({"space_name": ""})
         result = skill.setup()
         assert result is False
 
-    def test_setup_missing_project_id(self):
+    def test_setup_missing_project_id(self) -> None:
         skill = _make_skill({"project_id": ""})
         result = skill.setup()
         assert result is False
 
-    def test_setup_missing_token(self):
+    def test_setup_missing_token(self) -> None:
         skill = _make_skill({"token": ""})
         result = skill.setup()
         assert result is False
 
-    def test_setup_missing_document_id(self):
+    def test_setup_missing_document_id(self) -> None:
         skill = _make_skill({"document_id": ""})
         result = skill.setup()
         assert result is False
 
-    def test_setup_missing_multiple_params(self):
+    def test_setup_missing_multiple_params(self) -> None:
         mock_agent = Mock()
         skill = DataSphereSkill(agent=mock_agent, params={})
         result = skill.setup()
         assert result is False
 
-    def test_setup_missing_param_none_value(self):
+    def test_setup_missing_param_none_value(self) -> None:
         skill = _make_skill({"space_name": None})
         result = skill.setup()
         assert result is False
 
-    def test_setup_logs_error_on_missing_params(self):
+    def test_setup_logs_error_on_missing_params(self) -> None:
         skill = _make_skill({"space_name": ""})
         with patch.object(skill.logger, "error") as mock_error:
             skill.setup()
@@ -294,7 +291,7 @@ class TestRegisterTools:
     """Tests for register_tools method."""
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_register_tools_calls_define_tool(self, mock_session_cls):
+    def test_register_tools_calls_define_tool(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -302,7 +299,7 @@ class TestRegisterTools:
         skill.agent.define_tool.assert_called_once()
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_register_tools_default_name(self, mock_session_cls):
+    def test_register_tools_default_name(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -311,7 +308,7 @@ class TestRegisterTools:
         assert call_kwargs[1]["name"] == "search_knowledge" or call_kwargs.kwargs.get("name") == "search_knowledge"
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_register_tools_custom_name(self, mock_session_cls):
+    def test_register_tools_custom_name(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill({"tool_name": "kb_lookup"})
         skill.setup()
         skill.register_tools()
@@ -322,7 +319,7 @@ class TestRegisterTools:
         assert kw["name"] == "kb_lookup"
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_register_tools_has_query_parameter(self, mock_session_cls):
+    def test_register_tools_has_query_parameter(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -332,7 +329,7 @@ class TestRegisterTools:
         assert kw["parameters"]["query"]["type"] == "string"
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_register_tools_handler_is_callable(self, mock_session_cls):
+    def test_register_tools_handler_is_callable(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -341,7 +338,7 @@ class TestRegisterTools:
         assert callable(kw["handler"])
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_register_tools_merges_swaig_fields(self, mock_session_cls):
+    def test_register_tools_merges_swaig_fields(self, mock_session_cls: MagicMock) -> None:
         """swaig_fields from params should be merged into define_tool call."""
         params = {
             "swaig_fields": {"meta_data": {"key": "val"}},
@@ -368,31 +365,33 @@ class TestSearchKnowledgeHandler:
     """Tests for the _search_knowledge_handler method."""
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def _setup_skill(self, mock_session_cls, params=None):
+    def _setup_skill(
+        self, mock_session_cls: MagicMock, params: dict[str, Any] | None = None
+    ) -> tuple[DataSphereSkill, Any]:
         """Helper that returns (skill, mock_session_instance)."""
         skill = _make_skill(params)
         skill.setup()
         return skill, skill.session
 
-    def test_empty_query_returns_error(self):
+    def test_empty_query_returns_error(self) -> None:
         skill, _ = self._setup_skill()
         result = skill._search_knowledge_handler({"query": ""}, {})
         assert isinstance(result, FunctionResult)
         assert "provide a search query" in result.response.lower()
 
-    def test_whitespace_query_returns_error(self):
+    def test_whitespace_query_returns_error(self) -> None:
         skill, _ = self._setup_skill()
         result = skill._search_knowledge_handler({"query": "   "}, {})
         assert isinstance(result, FunctionResult)
         assert "provide a search query" in result.response.lower()
 
-    def test_missing_query_key_returns_error(self):
+    def test_missing_query_key_returns_error(self) -> None:
         skill, _ = self._setup_skill()
         result = skill._search_knowledge_handler({}, {})
         assert isinstance(result, FunctionResult)
         assert "provide a search query" in result.response.lower()
 
-    def test_successful_search_single_chunk(self):
+    def test_successful_search_single_chunk(self) -> None:
         skill, mock_session = self._setup_skill()
         mock_response = Mock()
         mock_response.json.return_value = {
@@ -406,7 +405,7 @@ class TestSearchKnowledgeHandler:
         assert "1 result" in result.response
         assert "Answer to your question" in result.response
 
-    def test_successful_search_multiple_chunks(self):
+    def test_successful_search_multiple_chunks(self) -> None:
         skill, mock_session = self._setup_skill(params={"count": 3})
         mock_response = Mock()
         mock_response.json.return_value = {
@@ -423,7 +422,7 @@ class TestSearchKnowledgeHandler:
         assert "First result" in result.response
         assert "Second result" in result.response
 
-    def test_no_results_returns_default_message(self):
+    def test_no_results_returns_default_message(self) -> None:
         skill, mock_session = self._setup_skill()
         mock_response = Mock()
         mock_response.json.return_value = {"chunks": []}
@@ -434,7 +433,7 @@ class TestSearchKnowledgeHandler:
         assert isinstance(result, FunctionResult)
         assert "unknown topic" in result.response
 
-    def test_no_results_custom_message_with_placeholder(self):
+    def test_no_results_custom_message_with_placeholder(self) -> None:
         skill, mock_session = self._setup_skill(
             params={"no_results_message": "Nothing for '{query}'."}
         )
@@ -446,7 +445,7 @@ class TestSearchKnowledgeHandler:
         result = skill._search_knowledge_handler({"query": "widgets"}, {})
         assert result.response == "Nothing for 'widgets'."
 
-    def test_no_results_custom_message_without_placeholder(self):
+    def test_no_results_custom_message_without_placeholder(self) -> None:
         skill, mock_session = self._setup_skill(
             params={"no_results_message": "No data available."}
         )
@@ -458,7 +457,7 @@ class TestSearchKnowledgeHandler:
         result = skill._search_knowledge_handler({"query": "anything"}, {})
         assert result.response == "No data available."
 
-    def test_invalid_response_data_none(self):
+    def test_invalid_response_data_none(self) -> None:
         skill, mock_session = self._setup_skill()
         mock_response = Mock()
         mock_response.json.return_value = None
@@ -469,7 +468,7 @@ class TestSearchKnowledgeHandler:
         assert isinstance(result, FunctionResult)
         # Should return no-results message
 
-    def test_invalid_response_data_not_dict(self):
+    def test_invalid_response_data_not_dict(self) -> None:
         skill, mock_session = self._setup_skill()
         mock_response = Mock()
         mock_response.json.return_value = "invalid"
@@ -479,7 +478,7 @@ class TestSearchKnowledgeHandler:
         result = skill._search_knowledge_handler({"query": "test"}, {})
         assert isinstance(result, FunctionResult)
 
-    def test_timeout_error(self):
+    def test_timeout_error(self) -> None:
         skill, mock_session = self._setup_skill()
         mock_session.post.side_effect = requests.exceptions.Timeout("timed out")
 
@@ -487,7 +486,7 @@ class TestSearchKnowledgeHandler:
         assert isinstance(result, FunctionResult)
         assert "timed out" in result.response.lower()
 
-    def test_http_error(self):
+    def test_http_error(self) -> None:
         skill, mock_session = self._setup_skill()
         mock_response = Mock()
         mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("403 Forbidden")
@@ -497,7 +496,7 @@ class TestSearchKnowledgeHandler:
         assert isinstance(result, FunctionResult)
         assert "error" in result.response.lower()
 
-    def test_generic_exception(self):
+    def test_generic_exception(self) -> None:
         skill, mock_session = self._setup_skill()
         mock_session.post.side_effect = RuntimeError("unexpected")
 
@@ -505,7 +504,7 @@ class TestSearchKnowledgeHandler:
         assert isinstance(result, FunctionResult)
         assert "error" in result.response.lower()
 
-    def test_request_payload_required_fields(self):
+    def test_request_payload_required_fields(self) -> None:
         skill, mock_session = self._setup_skill()
         mock_response = Mock()
         mock_response.json.return_value = {"chunks": []}
@@ -521,7 +520,7 @@ class TestSearchKnowledgeHandler:
         assert payload["distance"] == 3.0
         assert payload["count"] == 1
 
-    def test_request_payload_excludes_none_optionals(self):
+    def test_request_payload_excludes_none_optionals(self) -> None:
         skill, mock_session = self._setup_skill()
         mock_response = Mock()
         mock_response.json.return_value = {"chunks": []}
@@ -537,7 +536,7 @@ class TestSearchKnowledgeHandler:
         assert "pos_to_expand" not in payload
         assert "max_synonyms" not in payload
 
-    def test_request_payload_includes_optional_when_set(self):
+    def test_request_payload_includes_optional_when_set(self) -> None:
         skill, mock_session = self._setup_skill(params={
             "tags": ["faq"],
             "language": "en",
@@ -558,7 +557,7 @@ class TestSearchKnowledgeHandler:
         assert payload["pos_to_expand"] == ["NOUN"]
         assert payload["max_synonyms"] == 5
 
-    def test_request_uses_basic_auth(self):
+    def test_request_uses_basic_auth(self) -> None:
         skill, mock_session = self._setup_skill()
         mock_response = Mock()
         mock_response.json.return_value = {"chunks": []}
@@ -570,7 +569,7 @@ class TestSearchKnowledgeHandler:
         _, call_kwargs = mock_session.post.call_args
         assert call_kwargs["auth"] == ("test-project-id", "test-token")
 
-    def test_request_url(self):
+    def test_request_url(self) -> None:
         skill, mock_session = self._setup_skill()
         mock_response = Mock()
         mock_response.json.return_value = {"chunks": []}
@@ -582,7 +581,7 @@ class TestSearchKnowledgeHandler:
         call_args = mock_session.post.call_args
         assert call_args[0][0] == "https://testspace.signalwire.com/api/datasphere/documents/search"
 
-    def test_request_headers(self):
+    def test_request_headers(self) -> None:
         skill, mock_session = self._setup_skill()
         mock_response = Mock()
         mock_response.json.return_value = {"chunks": []}
@@ -595,7 +594,7 @@ class TestSearchKnowledgeHandler:
         assert call_kwargs["headers"]["Content-Type"] == "application/json"
         assert call_kwargs["headers"]["Accept"] == "application/json"
 
-    def test_request_timeout_is_30(self):
+    def test_request_timeout_is_30(self) -> None:
         skill, mock_session = self._setup_skill()
         mock_response = Mock()
         mock_response.json.return_value = {"chunks": []}
@@ -607,7 +606,7 @@ class TestSearchKnowledgeHandler:
         _, call_kwargs = mock_session.post.call_args
         assert call_kwargs["timeout"] == 30
 
-    def test_logs_search_request(self):
+    def test_logs_search_request(self) -> None:
         skill, mock_session = self._setup_skill()
         mock_response = Mock()
         mock_response.json.return_value = {"chunks": []}
@@ -619,7 +618,7 @@ class TestSearchKnowledgeHandler:
             mock_info.assert_called_once()
             assert "my search" in mock_info.call_args[0][0]
 
-    def test_logs_timeout_error(self):
+    def test_logs_timeout_error(self) -> None:
         skill, mock_session = self._setup_skill()
         mock_session.post.side_effect = requests.exceptions.Timeout()
 
@@ -628,7 +627,7 @@ class TestSearchKnowledgeHandler:
             mock_error.assert_called_once()
             assert "timed out" in mock_error.call_args[0][0].lower()
 
-    def test_logs_http_error(self):
+    def test_logs_http_error(self) -> None:
         skill, mock_session = self._setup_skill()
         mock_response = Mock()
         http_err = requests.exceptions.HTTPError("500 Server Error")
@@ -640,7 +639,7 @@ class TestSearchKnowledgeHandler:
             mock_error.assert_called_once()
             assert "HTTP error" in mock_error.call_args[0][0]
 
-    def test_logs_generic_error(self):
+    def test_logs_generic_error(self) -> None:
         skill, mock_session = self._setup_skill()
         mock_session.post.side_effect = ValueError("bad value")
 
@@ -648,7 +647,7 @@ class TestSearchKnowledgeHandler:
             skill._search_knowledge_handler({"query": "test"}, {})
             mock_error.assert_called_once()
 
-    def test_invalid_response_empty_dict(self):
+    def test_invalid_response_empty_dict(self) -> None:
         """An empty dict {} should be treated as no results since chunks is missing."""
         skill, mock_session = self._setup_skill()
         mock_response = Mock()
@@ -669,59 +668,59 @@ class TestFormatSearchResults:
     """Tests for the _format_search_results helper."""
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def _setup_skill(self, mock_session_cls):
+    def _setup_skill(self, mock_session_cls: MagicMock) -> DataSphereSkill:
         skill = _make_skill()
         skill.setup()
         return skill
 
-    def test_single_result_heading(self):
+    def test_single_result_heading(self) -> None:
         skill = self._setup_skill()
         output = skill._format_search_results("test", [{"text": "hello"}])
         assert "1 result" in output
 
-    def test_multiple_results_heading(self):
+    def test_multiple_results_heading(self) -> None:
         skill = self._setup_skill()
         chunks = [{"text": "a"}, {"text": "b"}, {"text": "c"}]
         output = skill._format_search_results("test", chunks)
         assert "3 results" in output
 
-    def test_chunk_with_text_field(self):
+    def test_chunk_with_text_field(self) -> None:
         skill = self._setup_skill()
         output = skill._format_search_results("q", [{"text": "text_content"}])
         assert "text_content" in output
 
-    def test_chunk_with_content_field(self):
+    def test_chunk_with_content_field(self) -> None:
         skill = self._setup_skill()
         output = skill._format_search_results("q", [{"content": "content_value"}])
         assert "content_value" in output
 
-    def test_chunk_with_chunk_field(self):
+    def test_chunk_with_chunk_field(self) -> None:
         skill = self._setup_skill()
         output = skill._format_search_results("q", [{"chunk": "chunk_data"}])
         assert "chunk_data" in output
 
-    def test_chunk_unknown_format_falls_back_to_json(self):
+    def test_chunk_unknown_format_falls_back_to_json(self) -> None:
         skill = self._setup_skill()
         chunk = {"custom_field": "value123"}
         output = skill._format_search_results("q", [chunk])
         assert "custom_field" in output
         assert "value123" in output
 
-    def test_text_field_takes_priority_over_content(self):
+    def test_text_field_takes_priority_over_content(self) -> None:
         """If both text and content exist, text should be used (checked first)."""
         skill = self._setup_skill()
         chunk = {"text": "primary", "content": "secondary"}
         output = skill._format_search_results("q", [chunk])
         assert "primary" in output
 
-    def test_result_numbering(self):
+    def test_result_numbering(self) -> None:
         skill = self._setup_skill()
         chunks = [{"text": "first"}, {"text": "second"}]
         output = skill._format_search_results("q", chunks)
         assert "RESULT 1" in output
         assert "RESULT 2" in output
 
-    def test_query_appears_in_output(self):
+    def test_query_appears_in_output(self) -> None:
         skill = self._setup_skill()
         output = skill._format_search_results("my search term", [{"text": "r"}])
         assert "my search term" in output
@@ -735,14 +734,14 @@ class TestCleanup:
     """Tests for the cleanup method."""
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_cleanup_closes_session(self, mock_session_cls):
+    def test_cleanup_closes_session(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill()
         skill.setup()
         mock_session = skill.session
         skill.cleanup()
-        mock_session.close.assert_called_once()
+        mock_session.close.assert_called_once()  # type: ignore[attr-defined]  # mock attr
 
-    def test_cleanup_no_session_does_not_raise(self):
+    def test_cleanup_no_session_does_not_raise(self) -> None:
         """If setup was never called, cleanup should not raise."""
         skill = _make_skill()
         # No setup() called, so no session attribute
@@ -756,7 +755,7 @@ class TestCleanup:
 class TestGetHints:
     """Tests for the get_hints method."""
 
-    def test_returns_empty_list(self):
+    def test_returns_empty_list(self) -> None:
         skill = _make_skill()
         assert skill.get_hints() == []
 
@@ -769,7 +768,7 @@ class TestGetGlobalData:
     """Tests for the get_global_data method."""
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_returns_correct_keys(self, mock_session_cls):
+    def test_returns_correct_keys(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill()
         skill.setup()
         data = skill.get_global_data()
@@ -779,7 +778,7 @@ class TestGetGlobalData:
         assert data["knowledge_provider"] == "SignalWire DataSphere"
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_reflects_configured_document_id(self, mock_session_cls):
+    def test_reflects_configured_document_id(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill({"document_id": "custom-doc-123"})
         skill.setup()
         assert skill.get_global_data()["document_id"] == "custom-doc-123"
@@ -793,28 +792,28 @@ class TestGetPromptSections:
     """Tests for the get_prompt_sections method."""
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_returns_one_section(self, mock_session_cls):
+    def test_returns_one_section(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill()
         skill.setup()
         sections = skill.get_prompt_sections()
         assert len(sections) == 1
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_section_title(self, mock_session_cls):
+    def test_section_title(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill()
         skill.setup()
         section = skill.get_prompt_sections()[0]
         assert section["title"] == "Knowledge Search Capability"
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_section_references_tool_name(self, mock_session_cls):
+    def test_section_references_tool_name(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill()
         skill.setup()
         section = skill.get_prompt_sections()[0]
         assert "search_knowledge" in section["body"]
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_section_references_custom_tool_name(self, mock_session_cls):
+    def test_section_references_custom_tool_name(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill({"tool_name": "my_kb"})
         skill.setup()
         section = skill.get_prompt_sections()[0]
@@ -822,7 +821,7 @@ class TestGetPromptSections:
         assert any("my_kb" in bullet for bullet in section["bullets"])
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_section_has_bullets(self, mock_session_cls):
+    def test_section_has_bullets(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill()
         skill.setup()
         section = skill.get_prompt_sections()[0]
@@ -838,7 +837,7 @@ class TestEdgeCases:
     """Edge case and integration-style tests."""
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_setup_then_register_then_handler_flow(self, mock_session_cls):
+    def test_setup_then_register_then_handler_flow(self, mock_session_cls: MagicMock) -> None:
         """Full lifecycle: setup -> register -> handle search."""
         skill = _make_skill()
         assert skill.setup() is True
@@ -854,35 +853,35 @@ class TestEdgeCases:
             "chunks": [{"text": "Lifecycle answer"}]
         }
         mock_response.raise_for_status = Mock()
-        skill.session.post.return_value = mock_response
+        skill.session.post.return_value = mock_response  # type: ignore[attr-defined]  # mock attr
 
         result = handler({"query": "lifecycle test"}, {})
         assert isinstance(result, FunctionResult)
         assert "Lifecycle answer" in result.response
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_api_url_with_special_space_name(self, mock_session_cls):
+    def test_api_url_with_special_space_name(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill({"space_name": "my-company-space"})
         skill.setup()
         assert skill.api_url == "https://my-company-space.signalwire.com/api/datasphere/documents/search"
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_handler_strips_query_whitespace(self, mock_session_cls):
+    def test_handler_strips_query_whitespace(self, mock_session_cls: MagicMock) -> None:
         skill = _make_skill()
         skill.setup()
 
         mock_response = Mock()
         mock_response.json.return_value = {"chunks": []}
         mock_response.raise_for_status = Mock()
-        skill.session.post.return_value = mock_response
+        skill.session.post.return_value = mock_response  # type: ignore[attr-defined]  # mock attr
 
         skill._search_knowledge_handler({"query": "  padded query  "}, {})
 
-        _, call_kwargs = skill.session.post.call_args
+        _, call_kwargs = skill.session.post.call_args  # type: ignore[attr-defined]  # mock attr
         assert call_kwargs["json"]["query_string"] == "padded query"
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_no_results_message_format_with_query_placeholder_in_invalid_data_path(self, mock_session_cls):
+    def test_no_results_message_format_with_query_placeholder_in_invalid_data_path(self, mock_session_cls: MagicMock) -> None:
         """When API returns non-dict data and no_results_message has {query} placeholder."""
         skill = _make_skill({"no_results_message": "Sorry, '{query}' not found."})
         skill.setup()
@@ -890,13 +889,13 @@ class TestEdgeCases:
         mock_response = Mock()
         mock_response.json.return_value = None
         mock_response.raise_for_status = Mock()
-        skill.session.post.return_value = mock_response
+        skill.session.post.return_value = mock_response  # type: ignore[attr-defined]  # mock attr
 
         result = skill._search_knowledge_handler({"query": "test topic"}, {})
         assert result.response == "Sorry, 'test topic' not found."
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_setup_returns_true_only_with_all_required(self, mock_session_cls):
+    def test_setup_returns_true_only_with_all_required(self, mock_session_cls: MagicMock) -> None:
         """Verify setup returns True only when all four required params are present."""
         required = ["space_name", "project_id", "token", "document_id"]
         for missing in required:
@@ -907,7 +906,7 @@ class TestEdgeCases:
             assert skill.setup() is False, f"Should fail when {missing} is empty"
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_multiple_instances_different_tool_names(self, mock_session_cls):
+    def test_multiple_instances_different_tool_names(self, mock_session_cls: MagicMock) -> None:
         """Two instances with different tool_names should have different keys."""
         skill_a = _make_skill({"tool_name": "search_faq"})
         skill_b = _make_skill({"tool_name": "search_docs"})
@@ -917,7 +916,7 @@ class TestEdgeCases:
         assert "search_docs" in skill_b.get_instance_key()
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_response_with_dict_no_chunks_key(self, mock_session_cls):
+    def test_response_with_dict_no_chunks_key(self, mock_session_cls: MagicMock) -> None:
         """API returns a valid dict but without the 'chunks' key."""
         skill = _make_skill()
         skill.setup()
@@ -925,27 +924,27 @@ class TestEdgeCases:
         mock_response = Mock()
         mock_response.json.return_value = {"status": "ok", "data": []}
         mock_response.raise_for_status = Mock()
-        skill.session.post.return_value = mock_response
+        skill.session.post.return_value = mock_response  # type: ignore[attr-defined]  # mock attr
 
         result = skill._search_knowledge_handler({"query": "test"}, {})
         assert isinstance(result, FunctionResult)
         # Should hit the "not chunks" path and return no_results_message
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_cleanup_after_setup(self, mock_session_cls):
+    def test_cleanup_after_setup(self, mock_session_cls: MagicMock) -> None:
         """cleanup should close the session created during setup."""
         skill = _make_skill()
         skill.setup()
         session_mock = skill.session
         skill.cleanup()
-        session_mock.close.assert_called_once()
+        session_mock.close.assert_called_once()  # type: ignore[attr-defined]  # mock attr
 
     @patch("signalwire.skills.datasphere.skill.requests.Session")
-    def test_connection_error(self, mock_session_cls):
+    def test_connection_error(self, mock_session_cls: MagicMock) -> None:
         """ConnectionError should be caught by the generic Exception handler."""
         skill = _make_skill()
         skill.setup()
-        skill.session.post.side_effect = requests.exceptions.ConnectionError("refused")
+        skill.session.post.side_effect = requests.exceptions.ConnectionError("refused")  # type: ignore[attr-defined]  # mock attr
 
         result = skill._search_knowledge_handler({"query": "test"}, {})
         assert isinstance(result, FunctionResult)

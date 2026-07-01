@@ -21,7 +21,7 @@ from docopt import docopt
 from signalwire.pom import PromptObjectModel
 
 
-def detect_file_format(file_path):
+def detect_file_format(file_path: str) -> str:
     """Detect if the file is JSON or YAML based on extension and content."""
     ext = Path(file_path).suffix.lower()
 
@@ -54,7 +54,7 @@ def detect_file_format(file_path):
     return "json"
 
 
-def load_pom(file_path):
+def load_pom(file_path: str) -> "PromptObjectModel":
     """Load a POM from a file, auto-detecting the format."""
     format_type = detect_file_format(file_path)
 
@@ -67,7 +67,7 @@ def load_pom(file_path):
     return PromptObjectModel.from_yaml(content)
 
 
-def render_pom(pom, output_format):
+def render_pom(pom: "PromptObjectModel", output_format: str) -> str:
     """Render the POM in the specified format."""
     if output_format == "md":
         return pom.render_markdown()
@@ -80,7 +80,7 @@ def render_pom(pom, output_format):
     raise ValueError(f"Unsupported output format: {output_format}")
 
 
-def main():
+def main() -> None:
     """Main entry point for the POM tool."""
     args = docopt(__doc__)
 

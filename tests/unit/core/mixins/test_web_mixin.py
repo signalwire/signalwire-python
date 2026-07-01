@@ -17,7 +17,10 @@ import json
 import base64
 import asyncio
 import types
+from typing import Any, Awaitable, TypeVar
 from unittest.mock import Mock, patch, MagicMock, AsyncMock
+
+from fastapi import FastAPI
 
 from signalwire.core.mixins.web_mixin import WebMixin
 from signalwire.core.function_result import FunctionResult
@@ -33,13 +36,13 @@ from signalwire.core.agent_base import AgentBase as _AgentBase
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_auth_header(username, password):
+def _make_auth_header(username: str, password: str) -> str:
     """Create a Basic Auth header value."""
     encoded = base64.b64encode(f"{username}:{password}".encode()).decode()
     return f"Basic {encoded}"
 
 
-def _router_mounted_under(app, prefix):
+def _router_mounted_under(app: FastAPI, prefix: str) -> bool:
     """Whether the agent's router is mounted under ``prefix`` on ``app``.
 
     Robust across Starlette versions. Starlette 0.x flattened
@@ -59,7 +62,13 @@ def _router_mounted_under(app, prefix):
     )
 
 
-def _make_request(method="GET", headers=None, body=None, query_params=None, url_path="/"):
+def _make_request(
+    method: str = "GET",
+    headers: dict[str, str] | None = None,
+    body: dict[str, Any] | bytes | None = None,
+    query_params: dict[str, str] | None = None,
+    url_path: str = "/",
+) -> AsyncMock:
     """Create a mock FastAPI Request object."""
     request = AsyncMock()
     request.method = method
@@ -79,7 +88,7 @@ def _make_request(method="GET", headers=None, body=None, query_params=None, url_
     return request
 
 
-def _build_mixin(**overrides):
+def _build_mixin(**overrides: Any) -> Any:
     """
     Build a minimal object that inherits from WebMixin and provides
     all the attributes / methods that WebMixin expects from the host class
@@ -91,7 +100,7 @@ def _build_mixin(**overrides):
     tool_registry = MagicMock()
     tool_registry._swaig_functions = {}
 
-    defaults = dict(
+    defaults: dict[str, Any] = dict(
         _app=None,
         _basic_auth=("user", "pass"),
         _proxy_url_base=None,
@@ -114,6 +123,8 @@ def _build_mixin(**overrides):
     )
     defaults.update(overrides)
 
+    # WebMixin is typed as Any to mypy (its module isn't fully resolvable under
+    # --strict), so subclassing it trips [misc]; the subclass is intentional.
     class FakeAgent(WebMixin):
         pass
 
@@ -166,7 +177,10 @@ def _build_mixin(**overrides):
     return agent
 
 
-def _run(coro):
+_T = TypeVar("_T")
+
+
+def _run(coro: Awaitable[_T]) -> _T:
     """Run a coroutine synchronously for testing."""
     loop = asyncio.new_event_loop()
     try:
@@ -182,20 +196,20 @@ def _run(coro):
 class TestGetApp:
     """Tests for WebMixin.get_app()"""
 
-    def test_get_app_creates_fastapi_app(self):
+    def test_get_app_creates_fastapi_app(self) -> None:
         agent = _build_mixin()
         app = agent.get_app()
         assert app is not None
         # Should be cached
         assert agent.get_app() is app
 
-    def test_get_app_returns_cached_app(self):
+    def test_get_app_returns_cached_app(self) -> None:
         agent = _build_mixin()
         fake_app = MagicMock()
         agent._app = fake_app
         assert agent.get_app() is fake_app
 
-    def test_get_app_root_route_no_prefix(self):
+    def test_get_app_root_route_no_prefix(self) -> None:
         """When the agent's route is "/", the FastAPI app must include
         the agent router WITHOUT a prefix. Health/ready must be
         reachable at the bare paths "/health" and "/ready"."""
@@ -212,7 +226,7 @@ class TestGetApp:
             if p:
                 assert not p.startswith("//")
 
-    def test_get_app_non_root_route_uses_prefix(self):
+    def test_get_app_non_root_route_uses_prefix(self) -> None:
         """When the agent's route is "/myagent", the agent router's paths
         must be MOUNTED under that prefix. Health/ready remain at the
         bare paths because they're attached to the root app."""
@@ -237,13 +251,13 @@ class TestGetApp:
 class TestAsRouter:
     """Tests for WebMixin.as_router()"""
 
-    def test_as_router_returns_api_router(self):
+    def test_as_router_returns_api_router(self) -> None:
         from fastapi import APIRouter
         agent = _build_mixin()
         router = agent.as_router()
         assert isinstance(router, APIRouter)
 
-    def test_as_router_registers_routes(self):
+    def test_as_router_registers_routes(self) -> None:
         agent = _build_mixin()
         router = agent.as_router()
         paths = [r.path for r in router.routes if hasattr(r, "path")]
@@ -254,7 +268,7 @@ class TestAsRouter:
         assert "/post_prompt" in paths
         assert "/check_for_input" in paths
 
-    def test_as_router_registers_callback_routes(self):
+    def test_as_router_registers_callback_routes(self) -> None:
         cb = MagicMock()
         agent = _build_mixin(_routing_callbacks={"/sip": cb})
         router = agent.as_router()
@@ -269,7 +283,7 @@ class TestAsRouter:
 class TestRegisterRoutes:
     """Tests for WebMixin._register_routes()"""
 
-    def test_register_routes_creates_slash_variants(self):
+    def test_register_routes_creates_slash_variants(self) -> None:
         agent = _build_mixin()
         from fastapi import APIRouter
         router = APIRouter()
@@ -281,7 +295,7 @@ class TestRegisterRoutes:
         assert "/post_prompt/" in paths
         assert "/check_for_input/" in paths
 
-    def test_register_routes_skips_root_callback(self):
+    def test_register_routes_skips_root_callback(self) -> None:
         """Routing callbacks for '/' should be skipped (handled by root handler)."""
         cb = MagicMock()
         agent = _build_mixin(_routing_callbacks={"/": cb, "/custom": MagicMock()})
@@ -300,14 +314,14 @@ class TestRegisterRoutes:
 class TestTokenEnforcement:
     """Tests for basic auth enforcement across endpoints."""
 
-    def test_root_request_rejects_unauthorized(self):
+    def test_root_request_rejects_unauthorized(self) -> None:
         agent = _build_mixin()
         agent._check_basic_auth = MagicMock(return_value=False)
         request = _make_request("POST", body={})
         response = _run(agent._handle_root_request(request))
         assert response.status_code == 401
 
-    def test_root_request_allows_authorized(self):
+    def test_root_request_allows_authorized(self) -> None:
         agent = _build_mixin()
         agent._check_basic_auth = MagicMock(return_value=True)
         request = _make_request("POST", body={})
@@ -315,14 +329,14 @@ class TestTokenEnforcement:
         # Should get a 200 JSON response (SWML)
         assert response.status_code == 200
 
-    def test_debug_request_rejects_unauthorized(self):
+    def test_debug_request_rejects_unauthorized(self) -> None:
         agent = _build_mixin()
         agent._check_basic_auth = MagicMock(return_value=False)
         request = _make_request("GET", url_path="/agent/debug")
         response = _run(agent._handle_debug_request(request))
         assert response.status_code == 401
 
-    def test_debug_request_allows_authorized(self):
+    def test_debug_request_allows_authorized(self) -> None:
         agent = _build_mixin()
         agent._check_basic_auth = MagicMock(return_value=True)
         request = _make_request("GET", url_path="/agent/debug")
@@ -330,7 +344,7 @@ class TestTokenEnforcement:
         assert response.status_code == 200
         # Debug endpoint returns SWML successfully
 
-    def test_swaig_request_rejects_unauthorized(self):
+    def test_swaig_request_rejects_unauthorized(self) -> None:
         agent = _build_mixin()
         agent._check_basic_auth = MagicMock(return_value=False)
         response_obj = MagicMock()
@@ -339,14 +353,14 @@ class TestTokenEnforcement:
         response = _run(agent._handle_swaig_request(request, response_obj))
         assert response.status_code == 401
 
-    def test_post_prompt_request_rejects_unauthorized(self):
+    def test_post_prompt_request_rejects_unauthorized(self) -> None:
         agent = _build_mixin()
         agent._check_basic_auth = MagicMock(return_value=False)
         request = _make_request("POST", body={"summary": "done"})
         response = _run(agent._handle_post_prompt_request(request))
         assert response.status_code == 401
 
-    def test_check_for_input_rejects_unauthorized(self):
+    def test_check_for_input_rejects_unauthorized(self) -> None:
         agent = _build_mixin()
         agent._check_basic_auth = MagicMock(return_value=False)
         request = _make_request("POST", body={"conversation_id": "abc"})
@@ -361,28 +375,28 @@ class TestTokenEnforcement:
 class TestHandleRootRequest:
     """Tests for _handle_root_request."""
 
-    def test_get_request_returns_swml(self):
+    def test_get_request_returns_swml(self) -> None:
         agent = _build_mixin()
         request = _make_request("GET")
         response = _run(agent._handle_root_request(request))
         assert response.status_code == 200
         assert response.media_type == "application/json"
 
-    def test_post_request_with_body(self):
+    def test_post_request_with_body(self) -> None:
         agent = _build_mixin()
         request = _make_request("POST", body={"call_id": "call-123"})
         response = _run(agent._handle_root_request(request))
         assert response.status_code == 200
         agent._render_swml.assert_called()
 
-    def test_post_request_with_empty_body(self):
+    def test_post_request_with_empty_body(self) -> None:
         agent = _build_mixin()
         request = _make_request("POST")
         request.body = AsyncMock(return_value=b"")
         response = _run(agent._handle_root_request(request))
         assert response.status_code == 200
 
-    def test_post_request_with_malformed_json(self):
+    def test_post_request_with_malformed_json(self) -> None:
         agent = _build_mixin()
         request = _make_request("POST")
         request.body = AsyncMock(return_value=b"not-json")
@@ -391,7 +405,7 @@ class TestHandleRootRequest:
         # Should still succeed, just with empty body
         assert response.status_code == 200
 
-    def test_call_id_extracted_from_post_body(self):
+    def test_call_id_extracted_from_post_body(self) -> None:
         agent = _build_mixin()
         request = _make_request("POST", body={"call_id": "cid-xyz"})
         _run(agent._handle_root_request(request))
@@ -399,7 +413,7 @@ class TestHandleRootRequest:
         args, kwargs = agent._render_swml.call_args
         assert args[0] == "cid-xyz"
 
-    def test_call_id_extracted_from_nested_call(self):
+    def test_call_id_extracted_from_nested_call(self) -> None:
         agent = _build_mixin()
         body = {"call": {"call_id": "nested-id"}}
         request = _make_request("POST", body=body)
@@ -407,14 +421,14 @@ class TestHandleRootRequest:
         args, kwargs = agent._render_swml.call_args
         assert args[0] == "nested-id"
 
-    def test_call_id_from_query_params_on_get(self):
+    def test_call_id_from_query_params_on_get(self) -> None:
         agent = _build_mixin()
         request = _make_request("GET", query_params={"call_id": "q-id"})
         _run(agent._handle_root_request(request))
         args, kwargs = agent._render_swml.call_args
         assert args[0] == "q-id"
 
-    def test_proxy_detection_from_forwarded_headers(self):
+    def test_proxy_detection_from_forwarded_headers(self) -> None:
         agent = _build_mixin()
         headers = {
             "X-Forwarded-Host": "proxy.example.com",
@@ -425,7 +439,7 @@ class TestHandleRootRequest:
             _run(agent._handle_root_request(request))
         assert agent._proxy_url_base == "https://proxy.example.com"
 
-    def test_proxy_from_env_not_overridden_by_headers(self):
+    def test_proxy_from_env_not_overridden_by_headers(self) -> None:
         agent = _build_mixin(
             _proxy_url_base="https://env-proxy.example.com",
             _proxy_url_base_from_env=True,
@@ -439,13 +453,13 @@ class TestHandleRootRequest:
         # Should keep the env proxy URL, not the header one
         assert agent._proxy_url_base == "https://env-proxy.example.com"
 
-    def test_no_proxy_headers_clears_proxy(self):
+    def test_no_proxy_headers_clears_proxy(self) -> None:
         agent = _build_mixin(_proxy_url_base="https://old-proxy.example.com")
         request = _make_request("GET")
         _run(agent._handle_root_request(request))
         assert agent._proxy_url_base is None
 
-    def test_no_proxy_headers_keeps_env_proxy(self):
+    def test_no_proxy_headers_keeps_env_proxy(self) -> None:
         agent = _build_mixin(
             _proxy_url_base="https://env-proxy.example.com",
             _proxy_url_base_from_env=True,
@@ -454,7 +468,7 @@ class TestHandleRootRequest:
         _run(agent._handle_root_request(request))
         assert agent._proxy_url_base == "https://env-proxy.example.com"
 
-    def test_callback_path_routing(self):
+    def test_callback_path_routing(self) -> None:
         cb_fn = MagicMock(return_value="/redirect-here")
         agent = _build_mixin(_routing_callbacks={"/sip": cb_fn})
         request = _make_request("POST", body={"some": "data"}, url_path="/agent/sip")
@@ -463,7 +477,7 @@ class TestHandleRootRequest:
         # A redirect should be returned
         assert response.status_code == 307
 
-    def test_callback_returns_none_continues_normally(self):
+    def test_callback_returns_none_continues_normally(self) -> None:
         cb_fn = MagicMock(return_value=None)
         agent = _build_mixin(_routing_callbacks={"/sip": cb_fn})
         request = _make_request("POST", body={"some": "data"}, url_path="/agent/sip")
@@ -472,7 +486,7 @@ class TestHandleRootRequest:
         # No redirect; falls through to normal SWML rendering
         assert response.status_code == 200
 
-    def test_callback_exception_handled_gracefully(self):
+    def test_callback_exception_handled_gracefully(self) -> None:
         cb_fn = MagicMock(side_effect=RuntimeError("callback boom"))
         agent = _build_mixin(_routing_callbacks={"/sip": cb_fn})
         request = _make_request("POST", body={"some": "data"}, url_path="/agent/sip")
@@ -481,14 +495,14 @@ class TestHandleRootRequest:
         # Should still succeed with SWML
         assert response.status_code == 200
 
-    def test_on_swml_request_called(self):
+    def test_on_swml_request_called(self) -> None:
         agent = _build_mixin()
         agent.on_swml_request = MagicMock(return_value=None)
         request = _make_request("POST", body={})
         _run(agent._handle_root_request(request))
         agent.on_swml_request.assert_called_once()
 
-    def test_render_swml_exception_returns_500(self):
+    def test_render_swml_exception_returns_500(self) -> None:
         agent = _build_mixin()
         agent._render_swml = MagicMock(side_effect=RuntimeError("render fail"))
         request = _make_request("GET")
@@ -505,42 +519,42 @@ class TestHandleRootRequest:
 class TestHandleDebugRequest:
     """Tests for _handle_debug_request."""
 
-    def test_get_returns_swml_with_debug_header(self):
+    def test_get_returns_swml_with_debug_header(self) -> None:
         agent = _build_mixin()
         request = _make_request("GET", url_path="/agent/debug")
         response = _run(agent._handle_debug_request(request))
         assert response.status_code == 200
         # Debug endpoint returns SWML successfully
 
-    def test_post_extracts_call_id_from_body(self):
+    def test_post_extracts_call_id_from_body(self) -> None:
         agent = _build_mixin()
         request = _make_request("POST", body={"call_id": "debug-call-1"}, url_path="/agent/debug")
         _run(agent._handle_debug_request(request))
         args, kwargs = agent._render_swml.call_args
         assert args[0] == "debug-call-1"
 
-    def test_get_extracts_call_id_from_query(self):
+    def test_get_extracts_call_id_from_query(self) -> None:
         agent = _build_mixin()
         request = _make_request("GET", query_params={"call_id": "q-debug"}, url_path="/agent/debug")
         _run(agent._handle_debug_request(request))
         args, kwargs = agent._render_swml.call_args
         assert args[0] == "q-debug"
 
-    def test_post_malformed_body_still_renders(self):
+    def test_post_malformed_body_still_renders(self) -> None:
         agent = _build_mixin()
         request = _make_request("POST", url_path="/agent/debug")
         request.json = AsyncMock(side_effect=json.JSONDecodeError("err", "doc", 0))
         _run(agent._handle_debug_request(request))
         agent._render_swml.assert_called()
 
-    def test_render_exception_returns_500(self):
+    def test_render_exception_returns_500(self) -> None:
         agent = _build_mixin()
         agent._render_swml = MagicMock(side_effect=ValueError("bad"))
         request = _make_request("GET", url_path="/agent/debug")
         response = _run(agent._handle_debug_request(request))
         assert response.status_code == 500
 
-    def test_on_swml_request_called_with_none_callback(self):
+    def test_on_swml_request_called_with_none_callback(self) -> None:
         agent = _build_mixin()
         agent.on_swml_request = MagicMock(return_value=None)
         request = _make_request("POST", body={"call_id": "x"}, url_path="/agent/debug")
@@ -555,7 +569,7 @@ class TestHandleDebugRequest:
 class TestHandleSwaigRequest:
     """Tests for _handle_swaig_request."""
 
-    def test_get_returns_swml(self):
+    def test_get_returns_swml(self) -> None:
         agent = _build_mixin()
         resp = MagicMock()
         resp.headers = {}
@@ -563,7 +577,7 @@ class TestHandleSwaigRequest:
         response = _run(agent._handle_swaig_request(request, resp))
         assert response.status_code == 200
 
-    def test_post_missing_function_name_returns_400(self):
+    def test_post_missing_function_name_returns_400(self) -> None:
         agent = _build_mixin()
         resp = MagicMock()
         resp.headers = {}
@@ -571,7 +585,7 @@ class TestHandleSwaigRequest:
         response = _run(agent._handle_swaig_request(request, resp))
         assert response.status_code == 400
 
-    def test_post_calls_function(self):
+    def test_post_calls_function(self) -> None:
         agent = _build_mixin()
         agent.on_function_call = MagicMock(return_value=FunctionResult("done"))
         resp = MagicMock()
@@ -587,7 +601,7 @@ class TestHandleSwaigRequest:
         assert "response" in result
         assert result["response"] == "done"
 
-    def test_post_parses_raw_arguments(self):
+    def test_post_parses_raw_arguments(self) -> None:
         agent = _build_mixin()
         agent.on_function_call = MagicMock(return_value={"response": "ok"})
         resp = MagicMock()
@@ -600,7 +614,7 @@ class TestHandleSwaigRequest:
         _run(agent._handle_swaig_request(request, resp))
         agent.on_function_call.assert_called_once_with("raw_func", {"a": 1}, body)
 
-    def test_post_invalid_raw_arguments_uses_empty(self):
+    def test_post_invalid_raw_arguments_uses_empty(self) -> None:
         agent = _build_mixin()
         agent.on_function_call = MagicMock(return_value={"response": "ok"})
         resp = MagicMock()
@@ -613,7 +627,7 @@ class TestHandleSwaigRequest:
         _run(agent._handle_swaig_request(request, resp))
         agent.on_function_call.assert_called_once_with("bad_raw", {}, body)
 
-    def test_token_validation_valid(self):
+    def test_token_validation_valid(self) -> None:
         agent = _build_mixin()
         agent._session_manager.validate_tool_token = MagicMock(return_value=True)
         agent._tool_registry._swaig_functions = {"my_func": {"secure": True}}
@@ -631,7 +645,7 @@ class TestHandleSwaigRequest:
         # Function should still be called
         agent.on_function_call.assert_called()
 
-    def test_token_validation_invalid_secure_function_returns_swaig_error(self):
+    def test_token_validation_invalid_secure_function_returns_swaig_error(self) -> None:
         """When a secure function has an invalid token, the handler returns a
         SWAIG-format dict with a 'response' key describing the error, so the
         AI can relay the message to the user."""
@@ -655,7 +669,7 @@ class TestHandleSwaigRequest:
         # Function should NOT have been called
         agent.on_function_call.assert_not_called()
 
-    def test_token_validation_invalid_nonsecure_function_continues(self):
+    def test_token_validation_invalid_nonsecure_function_continues(self) -> None:
         agent = _build_mixin()
         agent._session_manager.validate_tool_token = MagicMock(return_value=False)
         agent._session_manager.debug_token = MagicMock(return_value={})
@@ -673,7 +687,7 @@ class TestHandleSwaigRequest:
         # Should proceed since function is not secure
         agent.on_function_call.assert_called()
 
-    def test_dynamic_config_callback_creates_ephemeral(self):
+    def test_dynamic_config_callback_creates_ephemeral(self) -> None:
         ephemeral = MagicMock()
         ephemeral.on_function_call = MagicMock(return_value={"response": "ephemeral"})
         config_cb = MagicMock()
@@ -688,7 +702,7 @@ class TestHandleSwaigRequest:
         config_cb.assert_called_once()
         ephemeral.on_function_call.assert_called_once()
 
-    def test_function_execution_error_returns_error_dict(self):
+    def test_function_execution_error_returns_error_dict(self) -> None:
         agent = _build_mixin()
         agent.on_function_call = MagicMock(side_effect=RuntimeError("boom"))
         resp = MagicMock()
@@ -699,7 +713,7 @@ class TestHandleSwaigRequest:
         assert "error" in result
         assert "boom" in result["error"]
 
-    def test_swaig_function_result_dict_passthrough(self):
+    def test_swaig_function_result_dict_passthrough(self) -> None:
         agent = _build_mixin()
         agent.on_function_call = MagicMock(return_value={"response": "direct dict"})
         resp = MagicMock()
@@ -709,7 +723,7 @@ class TestHandleSwaigRequest:
         result = _run(agent._handle_swaig_request(request, resp))
         assert result == {"response": "direct dict"}
 
-    def test_swaig_function_result_string_wrapped(self):
+    def test_swaig_function_result_string_wrapped(self) -> None:
         agent = _build_mixin()
         agent.on_function_call = MagicMock(return_value="plain string")
         resp = MagicMock()
@@ -727,14 +741,14 @@ class TestHandleSwaigRequest:
 class TestHandlePostPromptRequest:
     """Tests for _handle_post_prompt_request."""
 
-    def test_get_returns_swml(self):
+    def test_get_returns_swml(self) -> None:
         agent = _build_mixin()
         agent.on_swml_request = MagicMock(return_value=None)
         request = _make_request("GET", url_path="/agent/post_prompt")
         response = _run(agent._handle_post_prompt_request(request))
         assert response.status_code == 200
 
-    def test_post_calls_on_summary(self):
+    def test_post_calls_on_summary(self) -> None:
         agent = _build_mixin()
         agent._find_summary_in_post_data = MagicMock(return_value={"summary": "the call ended"})
         agent.on_summary = MagicMock(return_value=None)
@@ -744,7 +758,7 @@ class TestHandlePostPromptRequest:
         agent.on_summary.assert_called_once_with({"summary": "the call ended"}, body)
         assert result == {"success": True}
 
-    def test_post_with_no_summary(self):
+    def test_post_with_no_summary(self) -> None:
         agent = _build_mixin()
         agent._find_summary_in_post_data = MagicMock(return_value=None)
         agent.on_summary = MagicMock(return_value=None)
@@ -754,7 +768,7 @@ class TestHandlePostPromptRequest:
         agent.on_summary.assert_called_once_with(None, body)
         assert result == {"success": True}
 
-    def test_post_fetch_conversation_returns_result(self):
+    def test_post_fetch_conversation_returns_result(self) -> None:
         agent = _build_mixin()
         agent._find_summary_in_post_data = MagicMock(return_value="some summary")
         fetch_result = {"conversation": [{"role": "user", "content": "hi"}]}
@@ -764,7 +778,7 @@ class TestHandlePostPromptRequest:
         result = _run(agent._handle_post_prompt_request(request))
         assert result == fetch_result
 
-    def test_post_token_validation(self):
+    def test_post_token_validation(self) -> None:
         agent = _build_mixin()
         agent._session_manager.validate_tool_token = MagicMock(return_value=True)
         body = {"call_id": "c1"}
@@ -776,7 +790,7 @@ class TestHandlePostPromptRequest:
         _run(agent._handle_post_prompt_request(request))
         agent._session_manager.validate_tool_token.assert_called_once_with("post_prompt", "good", "c1")
 
-    def test_post_token_fallback_to_token_param(self):
+    def test_post_token_fallback_to_token_param(self) -> None:
         agent = _build_mixin()
         agent._session_manager.validate_tool_token = MagicMock(return_value=True)
         body = {"call_id": "c1"}
@@ -788,7 +802,7 @@ class TestHandlePostPromptRequest:
         _run(agent._handle_post_prompt_request(request))
         agent._session_manager.validate_tool_token.assert_called_once_with("post_prompt", "fallback-tok", "c1")
 
-    def test_post_dynamic_config_creates_ephemeral(self):
+    def test_post_dynamic_config_creates_ephemeral(self) -> None:
         ephemeral = MagicMock()
         ephemeral._find_summary_in_post_data = MagicMock(return_value=None)
         ephemeral.on_summary = MagicMock(return_value=None)
@@ -802,7 +816,7 @@ class TestHandlePostPromptRequest:
         config_cb.assert_called_once()
         ephemeral.on_summary.assert_called_once()
 
-    def test_post_exception_returns_500(self):
+    def test_post_exception_returns_500(self) -> None:
         agent = _build_mixin()
         agent._find_summary_in_post_data = MagicMock(side_effect=RuntimeError("oops"))
         body = {"call_id": "c1"}
@@ -810,7 +824,7 @@ class TestHandlePostPromptRequest:
         response = _run(agent._handle_post_prompt_request(request))
         assert response.status_code == 500
 
-    def test_suppress_logs_flag(self):
+    def test_suppress_logs_flag(self) -> None:
         """When _suppress_logs=True the handler must STILL produce a
         valid response — log suppression must not break the response
         path. We assert the flag was honoured by the agent and that the
@@ -836,7 +850,7 @@ class TestHandlePostPromptRequest:
 class TestHandleCheckForInputRequest:
     """Tests for _handle_check_for_input_request."""
 
-    def test_post_with_conversation_id(self):
+    def test_post_with_conversation_id(self) -> None:
         agent = _build_mixin()
         body = {"conversation_id": "conv-123"}
         request = _make_request("POST", body=body, url_path="/agent/check_for_input")
@@ -845,16 +859,16 @@ class TestHandleCheckForInputRequest:
         assert result["conversation_id"] == "conv-123"
         assert result["new_input"] is False
 
-    def test_get_with_conversation_id(self):
+    def test_get_with_conversation_id(self) -> None:
         agent = _build_mixin()
         request = _make_request("GET", query_params={"conversation_id": "conv-456"}, url_path="/agent/check_for_input")
         result = _run(agent._handle_check_for_input_request(request))
         assert result["status"] == "success"
         assert result["conversation_id"] == "conv-456"
 
-    def test_missing_conversation_id_returns_400(self):
+    def test_missing_conversation_id_returns_400(self) -> None:
         agent = _build_mixin()
-        body = {}
+        body: dict[str, Any] = {}
         request = _make_request("POST", body=body, url_path="/agent/check_for_input")
         response = _run(agent._handle_check_for_input_request(request))
         assert response.status_code == 400
@@ -867,39 +881,39 @@ class TestHandleCheckForInputRequest:
 class TestOnRequestAndOnSwmlRequest:
     """Tests for on_request and on_swml_request methods."""
 
-    def test_on_request_delegates_to_on_swml_request(self):
+    def test_on_request_delegates_to_on_swml_request(self) -> None:
         agent = _build_mixin()
         agent.on_swml_request = MagicMock(return_value={"custom": True})
         result = agent.on_request({"data": "val"}, "/cb")
         agent.on_swml_request.assert_called_once_with({"data": "val"}, "/cb", None)
         assert result == {"custom": True}
 
-    def test_on_request_returns_none_when_on_swml_request_not_callable(self):
+    def test_on_request_returns_none_when_on_swml_request_not_callable(self) -> None:
         agent = _build_mixin()
         # Override on_swml_request with a non-callable so the callable() check fails
         agent.on_swml_request = "not_callable"
         result = agent.on_request(None, None)
         assert result is None
 
-    def test_on_swml_request_returns_ephemeral_marker_with_dynamic_callback(self):
+    def test_on_swml_request_returns_ephemeral_marker_with_dynamic_callback(self) -> None:
         cb = MagicMock()
         agent = _build_mixin(_dynamic_config_callback=cb)
         result = agent.on_swml_request({"data": True}, None, None)
         assert result is not None
         assert result["__use_ephemeral_agent"] is True
 
-    def test_on_swml_request_returns_none_without_dynamic_callback(self):
+    def test_on_swml_request_returns_none_without_dynamic_callback(self) -> None:
         agent = _build_mixin()
         result = agent.on_swml_request(None, None, None)
         assert result is None
 
-    def test_on_swml_request_skips_ephemeral_agents(self):
+    def test_on_swml_request_skips_ephemeral_agents(self) -> None:
         cb = MagicMock()
         agent = _build_mixin(_dynamic_config_callback=cb, _is_ephemeral=True)
         result = agent.on_swml_request(None, None, None)
         assert result is None
 
-    def test_on_swml_request_includes_request_in_marker(self):
+    def test_on_swml_request_includes_request_in_marker(self) -> None:
         cb = MagicMock()
         agent = _build_mixin(_dynamic_config_callback=cb)
         mock_req = MagicMock()
@@ -915,26 +929,26 @@ class TestOnRequestAndOnSwmlRequest:
 class TestRegisterRoutingCallback:
     """Tests for register_routing_callback."""
 
-    def test_registers_callback_with_normalized_path(self):
+    def test_registers_callback_with_normalized_path(self) -> None:
         agent = _build_mixin()
         fn = MagicMock()
         agent.register_routing_callback(fn, "/sip/")
         assert "/sip" in agent._routing_callbacks
         assert agent._routing_callbacks["/sip"] is fn
 
-    def test_adds_leading_slash(self):
+    def test_adds_leading_slash(self) -> None:
         agent = _build_mixin()
         fn = MagicMock()
         agent.register_routing_callback(fn, "custom")
         assert "/custom" in agent._routing_callbacks
 
-    def test_default_path_is_sip(self):
+    def test_default_path_is_sip(self) -> None:
         agent = _build_mixin()
         fn = MagicMock()
         agent.register_routing_callback(fn)
         assert "/sip" in agent._routing_callbacks
 
-    def test_initializes_routing_callbacks_dict(self):
+    def test_initializes_routing_callbacks_dict(self) -> None:
         agent = _build_mixin()
         # Remove the dict to test initialization
         if hasattr(agent, "_routing_callbacks"):
@@ -952,7 +966,7 @@ class TestRegisterRoutingCallback:
 class TestSetDynamicConfigCallback:
     """Tests for set_dynamic_config_callback."""
 
-    def test_sets_callback(self):
+    def test_sets_callback(self) -> None:
         agent = _build_mixin()
         fn = MagicMock()
         result = agent.set_dynamic_config_callback(fn)
@@ -967,25 +981,25 @@ class TestSetDynamicConfigCallback:
 class TestManualSetProxyUrl:
     """Tests for manual_set_proxy_url."""
 
-    def test_sets_proxy_url(self):
+    def test_sets_proxy_url(self) -> None:
         agent = _build_mixin()
         result = agent.manual_set_proxy_url("https://example.ngrok.io/")
         assert agent._proxy_url_base == "https://example.ngrok.io"
         assert agent._proxy_detection_done is True
         assert result is agent
 
-    def test_strips_trailing_slash(self):
+    def test_strips_trailing_slash(self) -> None:
         agent = _build_mixin()
         agent.manual_set_proxy_url("https://proxy.com///")
         assert agent._proxy_url_base == "https://proxy.com"
 
-    def test_empty_string_does_not_set(self):
+    def test_empty_string_does_not_set(self) -> None:
         agent = _build_mixin(_proxy_url_base="old")
         agent.manual_set_proxy_url("")
         # Should not have changed
         assert agent._proxy_url_base == "old"
 
-    def test_none_does_not_set(self):
+    def test_none_does_not_set(self) -> None:
         agent = _build_mixin(_proxy_url_base="old")
         agent.manual_set_proxy_url(None)
         assert agent._proxy_url_base == "old"
@@ -998,7 +1012,7 @@ class TestManualSetProxyUrl:
 class TestSetupGracefulShutdown:
     """Tests for setup_graceful_shutdown."""
 
-    def test_registers_signal_handlers(self):
+    def test_registers_signal_handlers(self) -> None:
         agent = _build_mixin()
         import signal as sig_module
         with patch.object(sig_module, "signal") as mock_signal:
@@ -1016,7 +1030,7 @@ class TestSetupGracefulShutdown:
 class TestEnableDebugRoutes:
     """Tests for enable_debug_routes."""
 
-    def test_returns_self_for_chaining(self):
+    def test_returns_self_for_chaining(self) -> None:
         agent = _build_mixin()
         result = agent.enable_debug_routes()
         assert result is agent
@@ -1029,13 +1043,13 @@ class TestEnableDebugRoutes:
 class TestRoutePrefixHandling:
     """Tests verifying route prefix behaviour with different route configurations."""
 
-    def test_root_route_no_prefix(self):
+    def test_root_route_no_prefix(self) -> None:
         agent = _build_mixin(route="/")
         app = agent.get_app()
         # Router should be included without prefix
         assert app is not None
 
-    def test_custom_route_uses_prefix(self):
+    def test_custom_route_uses_prefix(self) -> None:
         """A multi-segment route like "/v1/mybot" must mount the agent
         router under that exact prefix — at least one route on the app
         must begin with "/v1/mybot"."""
@@ -1046,7 +1060,7 @@ class TestRoutePrefixHandling:
             f"{[(type(r).__name__, getattr(r, 'path', None)) for r in app.routes]}"
         )
 
-    def test_serve_root_route(self):
+    def test_serve_root_route(self) -> None:
         """When the agent is mounted at the root ("/"), the agent's own
         routes must NOT carry an unintended prefix. Bare /health must be
         a registered route on the assembled app."""
@@ -1057,7 +1071,7 @@ class TestRoutePrefixHandling:
         assert "/health" in paths
         assert "/ready" in paths
 
-    def test_serve_with_prefix(self):
+    def test_serve_with_prefix(self) -> None:
         agent = _build_mixin(route="/bot")
         app = agent.get_app()
         # Verify the router was created
@@ -1071,7 +1085,7 @@ class TestRoutePrefixHandling:
 class TestAzureModeBehavior:
     """Tests for Azure Function mode in the run() method."""
 
-    def test_run_azure_function_mode(self):
+    def test_run_azure_function_mode(self) -> None:
         agent = _build_mixin()
         mock_event = MagicMock()
         agent.handle_serverless_request = MagicMock(return_value="azure-response")
@@ -1079,7 +1093,7 @@ class TestAzureModeBehavior:
         agent.handle_serverless_request.assert_called_once_with(mock_event, None, "azure_function")
         assert result == "azure-response"
 
-    def test_run_lambda_mode(self):
+    def test_run_lambda_mode(self) -> None:
         agent = _build_mixin()
         mock_event = {"headers": {}, "body": "{}"}
         agent.handle_serverless_request = MagicMock(return_value={"statusCode": 200})
@@ -1087,7 +1101,7 @@ class TestAzureModeBehavior:
         agent.handle_serverless_request.assert_called_once_with(mock_event, None, "lambda")
         assert result == {"statusCode": 200}
 
-    def test_run_cgi_mode(self):
+    def test_run_cgi_mode(self) -> None:
         agent = _build_mixin()
         agent.handle_serverless_request = MagicMock(return_value="CGI output")
         with patch("builtins.print") as mock_print:
@@ -1096,20 +1110,20 @@ class TestAzureModeBehavior:
         mock_print.assert_called_once_with("CGI output")
         assert result == "CGI output"
 
-    def test_run_google_cloud_function_mode(self):
+    def test_run_google_cloud_function_mode(self) -> None:
         agent = _build_mixin()
         mock_event = MagicMock()
         agent.handle_serverless_request = MagicMock(return_value="gcf-response")
         result = agent.run(event=mock_event, force_mode="google_cloud_function")
         assert result == "gcf-response"
 
-    def test_run_server_mode_calls_serve(self):
+    def test_run_server_mode_calls_serve(self) -> None:
         agent = _build_mixin()
         agent.serve = MagicMock()
         agent.run(force_mode="server", host="127.0.0.1", port=9000)
         agent.serve.assert_called_once_with("127.0.0.1", 9000)
 
-    def test_run_lambda_error_returns_500(self):
+    def test_run_lambda_error_returns_500(self) -> None:
         agent = _build_mixin()
         agent.handle_serverless_request = MagicMock(side_effect=RuntimeError("lambda fail"))
         result = agent.run(force_mode="lambda")
@@ -1117,14 +1131,14 @@ class TestAzureModeBehavior:
         body = json.loads(result["body"])
         assert "lambda fail" in body["error"]
 
-    def test_run_non_lambda_error_raises(self):
+    def test_run_non_lambda_error_raises(self) -> None:
         agent = _build_mixin()
         agent.handle_serverless_request = MagicMock(side_effect=RuntimeError("cgi fail"))
         with pytest.raises(RuntimeError, match="cgi fail"):
             with patch("builtins.print"):
                 agent.run(force_mode="cgi")
 
-    def test_run_auto_detection_defaults_to_server(self):
+    def test_run_auto_detection_defaults_to_server(self) -> None:
         agent = _build_mixin()
         agent.serve = MagicMock()
         with patch("signalwire.core.mixins.web_mixin.get_execution_mode", return_value="server"):
@@ -1139,11 +1153,11 @@ class TestAzureModeBehavior:
 class TestServe:
     """Tests for serve() method."""
 
-    def _patch_uvicorn(self):
+    def _patch_uvicorn(self) -> Any:
         """Patch uvicorn inside serve() since it uses a local import."""
         return patch.dict("sys.modules", {"uvicorn": MagicMock()})
 
-    def test_serve_uses_default_host_and_port(self):
+    def test_serve_uses_default_host_and_port(self) -> None:
         import sys
         mock_uvicorn = MagicMock()
         with patch.dict(sys.modules, {"uvicorn": mock_uvicorn}):
@@ -1154,7 +1168,7 @@ class TestServe:
         assert kwargs["host"] == "0.0.0.0"
         assert kwargs["port"] == 3000
 
-    def test_serve_uses_override_host_and_port(self):
+    def test_serve_uses_override_host_and_port(self) -> None:
         import sys
         mock_uvicorn = MagicMock()
         with patch.dict(sys.modules, {"uvicorn": mock_uvicorn}):
@@ -1164,7 +1178,7 @@ class TestServe:
         assert kwargs["host"] == "127.0.0.1"
         assert kwargs["port"] == 9999
 
-    def test_serve_with_ssl(self):
+    def test_serve_with_ssl(self) -> None:
         import sys
         mock_uvicorn = MagicMock()
         with patch.dict(sys.modules, {"uvicorn": mock_uvicorn}):
@@ -1178,7 +1192,7 @@ class TestServe:
         assert kwargs["ssl_certfile"] == "/path/to/cert.pem"
         assert kwargs["ssl_keyfile"] == "/path/to/key.pem"
 
-    def test_serve_without_ssl(self):
+    def test_serve_without_ssl(self) -> None:
         import sys
         mock_uvicorn = MagicMock()
         with patch.dict(sys.modules, {"uvicorn": mock_uvicorn}):
@@ -1188,7 +1202,7 @@ class TestServe:
         assert "ssl_certfile" not in kwargs
         assert "ssl_keyfile" not in kwargs
 
-    def test_serve_caches_app(self):
+    def test_serve_caches_app(self) -> None:
         import sys
         mock_uvicorn = MagicMock()
         with patch.dict(sys.modules, {"uvicorn": mock_uvicorn}):
@@ -1196,7 +1210,7 @@ class TestServe:
             agent.serve()
         assert agent._app is not None
 
-    def test_serve_reuses_cached_app(self):
+    def test_serve_reuses_cached_app(self) -> None:
         import sys
         mock_uvicorn = MagicMock()
         fake_app = MagicMock()
@@ -1209,7 +1223,7 @@ class TestServe:
         call_args = mock_uvicorn.run.call_args
         assert call_args[0][0] is fake_app
 
-    def test_serve_root_route_includes_router_without_prefix(self):
+    def test_serve_root_route_includes_router_without_prefix(self) -> None:
         import sys
         mock_uvicorn = MagicMock()
         with patch.dict(sys.modules, {"uvicorn": mock_uvicorn}):
@@ -1225,7 +1239,7 @@ class TestServe:
 class TestHandleRootRequestModifications:
     """Tests for on_swml_request modification paths in _handle_root_request."""
 
-    def test_on_swml_request_returns_truthy_modifications(self):
+    def test_on_swml_request_returns_truthy_modifications(self) -> None:
         """Line 540: when on_swml_request returns truthy, modifications are passed to _render_swml."""
         agent = _build_mixin()
         mods = {"some_mod": True}
@@ -1235,7 +1249,7 @@ class TestHandleRootRequestModifications:
         args, kwargs = agent._render_swml.call_args
         assert args[1] == mods
 
-    def test_on_swml_request_exception_handled(self):
+    def test_on_swml_request_exception_handled(self) -> None:
         """Line 541-542: when on_swml_request raises, error is logged and rendering continues."""
         agent = _build_mixin()
         agent.on_swml_request = MagicMock(side_effect=RuntimeError("swml request boom"))
@@ -1250,7 +1264,7 @@ class TestHandleRootRequestModifications:
 class TestHandleDebugRequestModifications:
     """Tests for on_swml_request modification paths in _handle_debug_request."""
 
-    def test_on_swml_request_returns_truthy_modifications(self):
+    def test_on_swml_request_returns_truthy_modifications(self) -> None:
         """Line 607: when on_swml_request returns truthy, modifications are passed to _render_swml."""
         agent = _build_mixin()
         mods = {"debug_mod": True}
@@ -1260,7 +1274,7 @@ class TestHandleDebugRequestModifications:
         args, _ = agent._render_swml.call_args
         assert args[1] == mods
 
-    def test_on_swml_request_exception_handled(self):
+    def test_on_swml_request_exception_handled(self) -> None:
         """Lines 608-609: when on_swml_request raises, error is logged and rendering continues."""
         agent = _build_mixin()
         agent.on_swml_request = MagicMock(side_effect=ValueError("debug swml err"))
@@ -1273,7 +1287,7 @@ class TestHandleDebugRequestModifications:
 class TestHandleSwaigRequestMalformedBody:
     """Tests for malformed body and dynamic config errors in _handle_swaig_request."""
 
-    def test_malformed_json_body_returns_400_missing_function(self):
+    def test_malformed_json_body_returns_400_missing_function(self) -> None:
         """Lines 669-671: when request.json() fails, body={} and function is missing -> 400."""
         agent = _build_mixin()
         resp = MagicMock()
@@ -1283,7 +1297,7 @@ class TestHandleSwaigRequestMalformedBody:
         response = _run(agent._handle_swaig_request(request, resp))
         assert response.status_code == 400
 
-    def test_dynamic_config_callback_error_still_calls_function(self):
+    def test_dynamic_config_callback_error_still_calls_function(self) -> None:
         """Lines 746-747: when dynamic config callback raises, error is logged but function still called."""
         config_cb = MagicMock(side_effect=RuntimeError("config boom"))
         ephemeral = MagicMock()
@@ -1302,7 +1316,7 @@ class TestHandleSwaigRequestMalformedBody:
 class TestHandlePostPromptRequestExtraPaths:
     """Tests for additional branches in _handle_post_prompt_request."""
 
-    def test_body_parsing_error_extracting_call_id(self):
+    def test_body_parsing_error_extracting_call_id(self) -> None:
         """Lines 812-813: error when extracting call_id from body."""
         agent = _build_mixin()
         agent._find_summary_in_post_data = MagicMock(return_value=None)
@@ -1323,7 +1337,7 @@ class TestHandlePostPromptRequestExtraPaths:
         # Should still succeed with empty body parsed later
         assert result == {"success": True}
 
-    def test_invalid_token_with_debug_token(self):
+    def test_invalid_token_with_debug_token(self) -> None:
         """Lines 834-840: invalid token triggers debug_token call."""
         agent = _build_mixin()
         agent._session_manager.validate_tool_token = MagicMock(return_value=False)
@@ -1340,7 +1354,7 @@ class TestHandlePostPromptRequestExtraPaths:
         agent._session_manager.debug_token.assert_called_once_with("bad-tok")
         assert result == {"success": True}
 
-    def test_token_validation_error(self):
+    def test_token_validation_error(self) -> None:
         """Line 839-840: exception during token validation is caught."""
         agent = _build_mixin()
         agent._session_manager.validate_tool_token = MagicMock(side_effect=RuntimeError("token err"))
@@ -1355,7 +1369,7 @@ class TestHandlePostPromptRequestExtraPaths:
         result = _run(agent._handle_post_prompt_request(request))
         assert result == {"success": True}
 
-    def test_body_not_pre_parsed_falls_through_to_request_json(self):
+    def test_body_not_pre_parsed_falls_through_to_request_json(self) -> None:
         """Line 859: when _post_prompt_body is not set, falls through to request.json()."""
         agent = _build_mixin()
         agent._find_summary_in_post_data = MagicMock(return_value=None)
@@ -1377,7 +1391,7 @@ class TestHandlePostPromptRequestExtraPaths:
         result = _run(agent._handle_post_prompt_request(request))
         assert result == {"success": True}
 
-    def test_post_body_parsing_error_results_in_empty_body(self):
+    def test_post_body_parsing_error_results_in_empty_body(self) -> None:
         """Lines 866-868: when body parsing fails completely, body defaults to {}."""
         agent = _build_mixin()
         agent._find_summary_in_post_data = MagicMock(return_value=None)
@@ -1401,7 +1415,7 @@ class TestHandlePostPromptRequestExtraPaths:
         agent.on_summary.assert_called_once_with(None, {})
         assert result == {"success": True}
 
-    def test_dynamic_config_callback_error_in_post_prompt(self):
+    def test_dynamic_config_callback_error_in_post_prompt(self) -> None:
         """Lines 884-885: dynamic config callback error is caught."""
         config_cb = MagicMock(side_effect=RuntimeError("dyn cfg err"))
         ephemeral = MagicMock()
@@ -1416,7 +1430,7 @@ class TestHandlePostPromptRequestExtraPaths:
         ephemeral.on_summary.assert_called_once()
         assert result == {"success": True}
 
-    def test_on_summary_exception_handled(self):
+    def test_on_summary_exception_handled(self) -> None:
         """Lines 900-901: exception from on_summary is caught."""
         agent = _build_mixin()
         agent._find_summary_in_post_data = MagicMock(return_value="some summary")
@@ -1431,7 +1445,7 @@ class TestHandlePostPromptRequestExtraPaths:
 class TestHandleCheckForInputExtraPaths:
     """Tests for additional branches in _handle_check_for_input_request."""
 
-    def test_malformed_post_body_returns_400(self):
+    def test_malformed_post_body_returns_400(self) -> None:
         """Lines 950-951: when request.json() fails, conversation_id is None -> 400."""
         agent = _build_mixin()
         request = _make_request("POST", url_path="/agent/check_for_input")
@@ -1439,7 +1453,7 @@ class TestHandleCheckForInputExtraPaths:
         response = _run(agent._handle_check_for_input_request(request))
         assert response.status_code == 400
 
-    def test_general_exception_returns_500(self):
+    def test_general_exception_returns_500(self) -> None:
         """Lines 971-973: unexpected exception returns 500."""
         agent = _build_mixin()
         # Make _check_basic_auth raise to trigger the outer exception handler
@@ -1454,14 +1468,14 @@ class TestHandleCheckForInputExtraPaths:
 class TestGracefulShutdownHandler:
     """Tests for the signal handler function registered by setup_graceful_shutdown."""
 
-    def test_signal_handler_calls_sys_exit(self):
+    def test_signal_handler_calls_sys_exit(self) -> None:
         """Lines 1123-1136: signal handler performs cleanup and calls sys.exit(0)."""
         agent = _build_mixin()
         # Capture the registered handler
         handlers = {}
         import signal as sig_module
 
-        def fake_signal(signum, handler):
+        def fake_signal(signum: int, handler: Any) -> None:
             handlers[signum] = handler
 
         with patch.object(sig_module, "signal", side_effect=fake_signal):
@@ -1472,13 +1486,13 @@ class TestGracefulShutdownHandler:
             handlers[sig_module.SIGTERM](sig_module.SIGTERM, None)
         assert exc_info.value.code == 0
 
-    def test_signal_handler_cleanup_error(self):
+    def test_signal_handler_cleanup_error(self) -> None:
         """Lines 1133-1134: when cleanup raises, error is logged but sys.exit still called."""
         agent = _build_mixin()
         # Make the log.info raise during "cleanup_completed" to trigger the except branch
         call_count = [0]
         original_info = agent.log.info
-        def info_side_effect(*args, **kwargs):
+        def info_side_effect(*args: Any, **kwargs: Any) -> Any:
             call_count[0] += 1
             if call_count[0] == 2:  # second log.info call is "cleanup_completed"
                 raise RuntimeError("cleanup log error")
@@ -1489,7 +1503,7 @@ class TestGracefulShutdownHandler:
         handlers = {}
         import signal as sig_module
 
-        def fake_signal(signum, handler):
+        def fake_signal(signum: int, handler: Any) -> None:
             handlers[signum] = handler
 
         with patch.object(sig_module, "signal", side_effect=fake_signal):
@@ -1503,7 +1517,7 @@ class TestGracefulShutdownHandler:
 class TestGetAppEndpointsViaTestClient:
     """Tests for the inline health/ready endpoints in get_app() using TestClient."""
 
-    def test_health_endpoint(self):
+    def test_health_endpoint(self) -> None:
         """Lines 54: health endpoint returns healthy status."""
         from starlette.testclient import TestClient
         agent = _build_mixin()
@@ -1515,7 +1529,7 @@ class TestGetAppEndpointsViaTestClient:
         assert data["status"] == "healthy"
         assert data["agent"] == "test_agent"
 
-    def test_ready_endpoint(self):
+    def test_ready_endpoint(self) -> None:
         """Line 65: ready endpoint returns ready status."""
         from starlette.testclient import TestClient
         agent = _build_mixin()
@@ -1530,18 +1544,19 @@ class TestGetAppEndpointsViaTestClient:
 class TestRootRequestProxyParentDetection:
     """Tests for proxy detection fallback to parent class."""
 
-    def test_no_proxy_headers_calls_parent_detect_proxy(self):
+    def test_no_proxy_headers_calls_parent_detect_proxy(self) -> None:
         """Lines 452-457: when parent has _detect_proxy_from_request, it is called."""
         class FakeParent:
-            def __init__(self):
-                self._proxy_url_base = None
+            def __init__(self) -> None:
+                self._proxy_url_base: str | None = None
 
-            def _detect_proxy_from_request(self, request):
+            def _detect_proxy_from_request(self, request: Any) -> None:
                 # Simulates parent detecting proxy and setting its own attribute
                 self._proxy_url_base = "https://parent-detected.example.com"
 
+        # WebMixin is Any to mypy; intentional subclass (see _build_mixin).
         class FakeAgentWithParent(WebMixin, FakeParent):
-            def __init__(self):
+            def __init__(self) -> None:
                 FakeParent.__init__(self)
 
         log = MagicMock()
@@ -1575,7 +1590,7 @@ class TestRootRequestProxyParentDetection:
         agent.on_function_call = MagicMock(return_value=FunctionResult("ok"))
         agent.on_summary = MagicMock(return_value=None)
         agent._find_summary_in_post_data = MagicMock(return_value=None)
-        agent.on_swml_request = MagicMock(return_value=None)
+        agent.on_swml_request = MagicMock(return_value=None)  # type: ignore[method-assign]  # mock
 
         request = _make_request("GET")
         _run(agent._handle_root_request(request))
@@ -1590,7 +1605,7 @@ class TestRootRequestProxyParentDetection:
 class TestSecurityBodySizeLimit:
     """Test request body size limit enforcement (413)."""
 
-    def test_oversized_body_returns_413_root(self):
+    def test_oversized_body_returns_413_root(self) -> None:
         agent = _build_mixin()
         # Simulate a request with Content-Length > 10MB
         headers = {"content-length": str(11 * 1024 * 1024), "content-type": "application/json"}
@@ -1598,7 +1613,7 @@ class TestSecurityBodySizeLimit:
         response = _run(agent._handle_root_request(request))
         assert response.status_code == 413
 
-    def test_oversized_body_returns_413_swaig(self):
+    def test_oversized_body_returns_413_swaig(self) -> None:
         agent = _build_mixin()
         headers = {"content-length": str(11 * 1024 * 1024), "content-type": "application/json"}
         request = _make_request("POST", headers=headers, body={"function": "test"})
@@ -1607,28 +1622,28 @@ class TestSecurityBodySizeLimit:
         response = _run(agent._handle_swaig_request(request, response_obj))
         assert response.status_code == 413
 
-    def test_oversized_body_returns_413_debug(self):
+    def test_oversized_body_returns_413_debug(self) -> None:
         agent = _build_mixin()
         headers = {"content-length": str(11 * 1024 * 1024), "content-type": "application/json"}
         request = _make_request("POST", headers=headers, body={})
         response = _run(agent._handle_debug_request(request))
         assert response.status_code == 413
 
-    def test_oversized_body_returns_413_post_prompt(self):
+    def test_oversized_body_returns_413_post_prompt(self) -> None:
         agent = _build_mixin()
         headers = {"content-length": str(11 * 1024 * 1024), "content-type": "application/json"}
         request = _make_request("POST", headers=headers, body={"summary": "x"})
         response = _run(agent._handle_post_prompt_request(request))
         assert response.status_code == 413
 
-    def test_oversized_body_returns_413_check_for_input(self):
+    def test_oversized_body_returns_413_check_for_input(self) -> None:
         agent = _build_mixin()
         headers = {"content-length": str(11 * 1024 * 1024), "content-type": "application/json"}
         request = _make_request("POST", headers=headers, body={"conversation_id": "abc"})
         response = _run(agent._handle_check_for_input_request(request))
         assert response.status_code == 413
 
-    def test_oversized_body_returns_413_debug_events(self):
+    def test_oversized_body_returns_413_debug_events(self) -> None:
         agent = _build_mixin()
         headers = {"content-length": str(11 * 1024 * 1024), "content-type": "application/json"}
         request = _make_request("POST", headers=headers, body={"label": "test"})
@@ -1639,14 +1654,14 @@ class TestSecurityBodySizeLimit:
 class TestSecurityContentType:
     """Test content-type validation (415)."""
 
-    def test_wrong_content_type_returns_415_root(self):
+    def test_wrong_content_type_returns_415_root(self) -> None:
         agent = _build_mixin()
         headers = {"content-type": "text/plain"}
         request = _make_request("POST", headers=headers, body={"key": "value"})
         response = _run(agent._handle_root_request(request))
         assert response.status_code == 415
 
-    def test_wrong_content_type_returns_415_swaig(self):
+    def test_wrong_content_type_returns_415_swaig(self) -> None:
         agent = _build_mixin()
         headers = {"content-type": "text/xml"}
         request = _make_request("POST", headers=headers, body={"function": "test"})
@@ -1655,21 +1670,21 @@ class TestSecurityContentType:
         response = _run(agent._handle_swaig_request(request, response_obj))
         assert response.status_code == 415
 
-    def test_wrong_content_type_returns_415_debug(self):
+    def test_wrong_content_type_returns_415_debug(self) -> None:
         agent = _build_mixin()
         headers = {"content-type": "text/html"}
         request = _make_request("POST", headers=headers, body={})
         response = _run(agent._handle_debug_request(request))
         assert response.status_code == 415
 
-    def test_wrong_content_type_returns_415_post_prompt(self):
+    def test_wrong_content_type_returns_415_post_prompt(self) -> None:
         agent = _build_mixin()
         headers = {"content-type": "multipart/form-data"}
         request = _make_request("POST", headers=headers, body={"summary": "x"})
         response = _run(agent._handle_post_prompt_request(request))
         assert response.status_code == 415
 
-    def test_correct_content_type_passes(self):
+    def test_correct_content_type_passes(self) -> None:
         agent = _build_mixin()
         headers = {"content-type": "application/json; charset=utf-8"}
         request = _make_request("POST", headers=headers, body={})
@@ -1680,7 +1695,7 @@ class TestSecurityContentType:
 class TestSecurityFunctionNameValidation:
     """Test function name format validation (400)."""
 
-    def test_invalid_function_name_returns_400(self):
+    def test_invalid_function_name_returns_400(self) -> None:
         agent = _build_mixin()
         headers = {"content-type": "application/json"}
         request = _make_request("POST", headers=headers,
@@ -1690,7 +1705,7 @@ class TestSecurityFunctionNameValidation:
         response = _run(agent._handle_swaig_request(request, response_obj))
         assert response.status_code == 400
 
-    def test_function_name_with_spaces_returns_400(self):
+    def test_function_name_with_spaces_returns_400(self) -> None:
         agent = _build_mixin()
         headers = {"content-type": "application/json"}
         request = _make_request("POST", headers=headers,
@@ -1700,7 +1715,7 @@ class TestSecurityFunctionNameValidation:
         response = _run(agent._handle_swaig_request(request, response_obj))
         assert response.status_code == 400
 
-    def test_valid_function_name_passes(self):
+    def test_valid_function_name_passes(self) -> None:
         agent = _build_mixin()
         agent._tool_registry._swaig_functions = {"get_balance": {"handler": MagicMock()}}
         headers = {"content-type": "application/json"}
@@ -1717,7 +1732,7 @@ class TestSecurityFunctionNameValidation:
 class TestSecurityCORS:
     """Test CORS configuration."""
 
-    def test_cors_credentials_false(self):
+    def test_cors_credentials_false(self) -> None:
         agent = _build_mixin()
         app = agent.get_app()
         # Check that CORS middleware was added with allow_credentials=False
@@ -1734,7 +1749,7 @@ class TestSecurityCORS:
 class TestSecurityHeaders:
     """Test security headers in responses."""
 
-    def test_security_headers_present_via_get_app(self):
+    def test_security_headers_present_via_get_app(self) -> None:
         from starlette.testclient import TestClient
         agent = _build_mixin(route="/")
         app = agent.get_app()
@@ -1748,14 +1763,14 @@ class TestSecurityHeaders:
 class TestSecurityDebugGuard:
     """Test debug endpoint guard."""
 
-    def test_debug_endpoint_disabled_returns_404(self):
+    def test_debug_endpoint_disabled_returns_404(self) -> None:
         agent = _build_mixin()
         agent._debug_endpoint_enabled = False
         request = _make_request("GET", url_path="/agent/debug")
         response = _run(agent._handle_debug_request(request))
         assert response.status_code == 404
 
-    def test_debug_endpoint_enabled_by_default(self):
+    def test_debug_endpoint_enabled_by_default(self) -> None:
         agent = _build_mixin()
         request = _make_request("GET", url_path="/agent/debug")
         response = _run(agent._handle_debug_request(request))
@@ -1766,7 +1781,7 @@ class TestSecurityDebugGuard:
 class TestSecurityProxyValidation:
     """Test proxy header validation."""
 
-    def test_malformed_host_rejected(self):
+    def test_malformed_host_rejected(self) -> None:
         agent = _build_mixin()
         agent._proxy_url_base_from_env = False
         headers = {
@@ -1780,7 +1795,7 @@ class TestSecurityProxyValidation:
         # proxy should NOT have been set
         assert agent._proxy_url_base is None or "DROP TABLE" not in str(agent._proxy_url_base)
 
-    def test_invalid_proto_rejected(self):
+    def test_invalid_proto_rejected(self) -> None:
         agent = _build_mixin()
         agent._proxy_url_base_from_env = False
         headers = {
@@ -1792,7 +1807,7 @@ class TestSecurityProxyValidation:
             _run(agent._handle_root_request(request))
         assert agent._proxy_url_base is None or "ftp" not in str(agent._proxy_url_base)
 
-    def test_valid_proxy_accepted(self):
+    def test_valid_proxy_accepted(self) -> None:
         agent = _build_mixin()
         agent._proxy_url_base_from_env = False
         headers = {
@@ -1808,14 +1823,14 @@ class TestSecurityProxyValidation:
 class TestSessionManagerDebugGuard:
     """Test that debug_token requires _debug_mode."""
 
-    def test_debug_token_disabled_by_default(self):
+    def test_debug_token_disabled_by_default(self) -> None:
         from signalwire.core.security.session_manager import SessionManager
         manager = SessionManager()
         token = manager.generate_token("func", "call_123")
         result = manager.debug_token(token)
         assert result == {"error": "debug mode not enabled"}
 
-    def test_debug_token_enabled(self):
+    def test_debug_token_enabled(self) -> None:
         from signalwire.core.security.session_manager import SessionManager
         manager = SessionManager()
         manager._debug_mode = True

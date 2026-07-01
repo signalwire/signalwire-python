@@ -16,6 +16,7 @@ import json
 import base64
 import os
 import sys
+from typing import Any
 from unittest.mock import Mock, MagicMock, patch, PropertyMock
 
 from signalwire.core.mixins.serverless_mixin import ServerlessMixin
@@ -29,75 +30,76 @@ from signalwire.core.function_result import FunctionResult
 class _MockLogger:
     """Minimal structured logger mock that supports .bind() chaining."""
 
-    def bind(self, **kwargs):
+    def bind(self, **kwargs: Any) -> "_MockLogger":
         return self
 
-    def debug(self, *args, **kwargs):
+    def debug(self, *args: Any, **kwargs: Any) -> None:
         pass
 
-    def info(self, *args, **kwargs):
+    def info(self, *args: Any, **kwargs: Any) -> None:
         pass
 
-    def warning(self, *args, **kwargs):
+    def warning(self, *args: Any, **kwargs: Any) -> None:
         pass
 
-    def error(self, *args, **kwargs):
+    def error(self, *args: Any, **kwargs: Any) -> None:
         pass
 
 
 class _MockToolRegistry:
     """Minimal tool registry mock."""
 
-    def __init__(self, functions=None):
+    def __init__(self, functions: dict[str, Any] | None = None) -> None:
         self._swaig_functions = functions or {}
 
 
 class ConcreteServerlessMixin(ServerlessMixin):
     """Concrete implementation of ServerlessMixin for testing."""
 
-    def __init__(self, swaig_functions=None):
+    def __init__(self, swaig_functions: dict[str, Any] | None = None) -> None:
         self.log = _MockLogger()
         self._tool_registry = _MockToolRegistry(swaig_functions or {})
-        self._proxy_url_base = None
+        self._proxy_url_base: str | None = None  # type: ignore[assignment]  # base infers str from guarded assignment; runtime value is optional
         self._proxy_url_base_from_env = False
         self._swml_response = '{"sections": {}}'
 
     # Stubs for methods the mixin calls but that live in other mixins / base class
-    def _check_cgi_auth(self):
+    def _check_cgi_auth(self) -> bool:
         return True
 
-    def _send_cgi_auth_challenge(self):
+    def _send_cgi_auth_challenge(self) -> str:
         return "Status: 401\r\n\r\n"
 
-    def _check_lambda_auth(self, event):
+    def _check_lambda_auth(self, event: Any) -> bool:
         return True
 
-    def _send_lambda_auth_challenge(self):
+    def _send_lambda_auth_challenge(self) -> dict[str, Any]:
         return {"statusCode": 401, "body": "Unauthorized"}
 
-    def _check_google_cloud_function_auth(self, request):
+    def _check_google_cloud_function_auth(self, request: Any) -> bool:
         return True
 
-    def _send_google_cloud_function_auth_challenge(self):
+    def _send_google_cloud_function_auth_challenge(self) -> Any:
         return Mock(status_code=401)
 
-    def _check_azure_function_auth(self, req):
+    def _check_azure_function_auth(self, req: Any) -> bool:
         return True
 
-    def _send_azure_function_auth_challenge(self):
+    def _send_azure_function_auth_challenge(self) -> Any:
         return Mock(status_code=401)
 
-    def _render_swml(self, **kwargs):
+    def _render_swml(self, **kwargs: Any) -> str:
         return self._swml_response
 
-    def on_function_call(self, function_name, args, raw_data):
+    def on_function_call(self, function_name: str, args: Any, raw_data: Any) -> dict[str, Any]:
         fn = self._tool_registry._swaig_functions.get(function_name)
         if fn:
-            return fn(args, raw_data)
+            result: dict[str, Any] = fn(args, raw_data)
+            return result
         return {"error": f"Function '{function_name}' not found"}
 
 
-def _make_flask_request(path="/", method="GET", json_data=None, url=None):
+def _make_flask_request(path: str = "/", method: str = "GET", json_data: Any = None, url: str | None = None) -> Mock:
     """Create a mock Flask request for GCF tests."""
     request = Mock()
     request.path = path
@@ -116,7 +118,7 @@ def _make_flask_request(path="/", method="GET", json_data=None, url=None):
     return request
 
 
-def _make_azure_request(url=None, method="GET", body=None):
+def _make_azure_request(url: str | None = None, method: str = "GET", body: Any = None) -> Mock:
     """Create a mock Azure Functions HttpRequest for Azure tests."""
     req = Mock()
     req.url = url or "https://myapp.azurewebsites.net/api/myagent"
@@ -128,7 +130,7 @@ def _make_azure_request(url=None, method="GET", body=None):
     return req
 
 
-def _swaig_body(function_name, args=None, call_id=None):
+def _swaig_body(function_name: str, args: Any = None, call_id: str | None = None) -> dict[str, Any]:
     """Build a typical SWAIG request body dict."""
     body = {
         "function": function_name,
@@ -149,7 +151,7 @@ def _swaig_body(function_name, args=None, call_id=None):
 class TestLambdaHandlerRootPath:
     """Lambda handler returns SWML for root path requests."""
 
-    def test_root_path_returns_swml(self):
+    def test_root_path_returns_swml(self) -> None:
         """Root path returns SWML document with 200."""
         mixin = ConcreteServerlessMixin()
         event = {"rawPath": "/", "headers": {}}
@@ -158,7 +160,7 @@ class TestLambdaHandlerRootPath:
         assert result["headers"]["Content-Type"] == "application/json"
         assert result["body"] == mixin._swml_response
 
-    def test_empty_raw_path_returns_swml(self):
+    def test_empty_raw_path_returns_swml(self) -> None:
         """Empty rawPath returns SWML."""
         mixin = ConcreteServerlessMixin()
         event = {"rawPath": "", "headers": {}}
@@ -166,7 +168,7 @@ class TestLambdaHandlerRootPath:
         assert result["statusCode"] == 200
         assert result["body"] == mixin._swml_response
 
-    def test_none_event_returns_swml(self):
+    def test_none_event_returns_swml(self) -> None:
         """None event returns SWML."""
         mixin = ConcreteServerlessMixin()
         result = mixin.handle_serverless_request(event=None, mode="lambda")
@@ -177,7 +179,7 @@ class TestLambdaHandlerRootPath:
 class TestLambdaHandlerPathRouting:
     """Lambda handler routes path-based function calls."""
 
-    def test_path_based_function_call(self):
+    def test_path_based_function_call(self) -> None:
         """Path like /say_hello invokes the named function."""
         mixin = ConcreteServerlessMixin(
             swaig_functions={"say_hello": lambda args, raw: {"response": "hi"}}
@@ -193,7 +195,7 @@ class TestLambdaHandlerPathRouting:
         result_body = json.loads(result["body"])
         assert result_body["response"] == "hi"
 
-    def test_swaig_endpoint_with_function_in_body(self):
+    def test_swaig_endpoint_with_function_in_body(self) -> None:
         """/swaig endpoint dispatches using function name from body."""
         mixin = ConcreteServerlessMixin(
             swaig_functions={"greet": lambda args, raw: {"response": "hello"}}
@@ -213,7 +215,7 @@ class TestLambdaHandlerPathRouting:
 class TestLambdaHandlerV1Payload:
     """Lambda handler supports API Gateway v1 (REST API) payload format."""
 
-    def test_v1_path_parameters_proxy(self):
+    def test_v1_path_parameters_proxy(self) -> None:
         """REST API v1 uses pathParameters.proxy for routing."""
         mixin = ConcreteServerlessMixin(
             swaig_functions={"lookup": lambda args, raw: {"status": "found"}}
@@ -234,7 +236,7 @@ class TestLambdaHandlerV1Payload:
 class TestLambdaHandlerBase64Body:
     """Lambda handler decodes base64-encoded request bodies."""
 
-    def test_base64_encoded_body(self):
+    def test_base64_encoded_body(self) -> None:
         """isBase64Encoded flag triggers base64 decoding."""
         mixin = ConcreteServerlessMixin(
             swaig_functions={"echo": lambda args, raw: {"args": args}}
@@ -256,7 +258,7 @@ class TestLambdaHandlerBase64Body:
 class TestLambdaHandlerArgumentExtraction:
     """Lambda handler extracts arguments from parsed and raw formats."""
 
-    def test_parsed_arguments(self):
+    def test_parsed_arguments(self) -> None:
         """Arguments from argument.parsed[0] are used."""
         mixin = ConcreteServerlessMixin(
             swaig_functions={"fn": lambda args, raw: {"got": args}}
@@ -270,7 +272,7 @@ class TestLambdaHandlerArgumentExtraction:
         result_body = json.loads(result["body"])
         assert result_body["got"] == {"key": "value"}
 
-    def test_raw_arguments_fallback(self):
+    def test_raw_arguments_fallback(self) -> None:
         """When parsed is empty, argument.raw is used as fallback."""
         mixin = ConcreteServerlessMixin(
             swaig_functions={"fn": lambda args, raw: {"got": args}}
@@ -284,7 +286,7 @@ class TestLambdaHandlerArgumentExtraction:
         result_body = json.loads(result["body"])
         assert result_body["got"] == {"from_raw": True}
 
-    def test_invalid_body_json_continues_with_empty_args(self):
+    def test_invalid_body_json_continues_with_empty_args(self) -> None:
         """If body is not valid JSON, parsing continues with empty args."""
         mixin = ConcreteServerlessMixin(
             swaig_functions={"fn": lambda args, raw: {"got": args}}
@@ -295,7 +297,7 @@ class TestLambdaHandlerArgumentExtraction:
         result_body = json.loads(result["body"])
         assert result_body["got"] == {}
 
-    def test_body_as_dict(self):
+    def test_body_as_dict(self) -> None:
         """Body that is already a dict (not a string) is handled."""
         mixin = ConcreteServerlessMixin(
             swaig_functions={"fn": lambda args, raw: {"got": args}}
@@ -309,12 +311,12 @@ class TestLambdaHandlerArgumentExtraction:
 class TestLambdaHandlerAuth:
     """Lambda handler authentication checks."""
 
-    def test_auth_failure_returns_challenge(self):
+    def test_auth_failure_returns_challenge(self) -> None:
         """When auth fails, the challenge response is returned."""
         mixin = ConcreteServerlessMixin()
-        mixin._check_lambda_auth = Mock(return_value=False)
+        mixin._check_lambda_auth = Mock(return_value=False)  # type: ignore[method-assign]  # test monkeypatch
         challenge = {"statusCode": 401, "body": "Unauthorized"}
-        mixin._send_lambda_auth_challenge = Mock(return_value=challenge)
+        mixin._send_lambda_auth_challenge = Mock(return_value=challenge)  # type: ignore[method-assign]  # test monkeypatch
         event = {"rawPath": "/", "headers": {}}
         result = mixin.handle_serverless_request(event=event, mode="lambda")
         assert result["statusCode"] == 401
@@ -324,20 +326,20 @@ class TestLambdaHandlerAuth:
 class TestLambdaHandlerErrors:
     """Lambda handler error handling."""
 
-    def test_exception_returns_500(self):
+    def test_exception_returns_500(self) -> None:
         """Exceptions in lambda mode return 500 with error body."""
         mixin = ConcreteServerlessMixin()
-        mixin._check_lambda_auth = Mock(side_effect=RuntimeError("boom"))
+        mixin._check_lambda_auth = Mock(side_effect=RuntimeError("boom"))  # type: ignore[method-assign]  # test monkeypatch
         event = {"rawPath": "/", "headers": {}}
         result = mixin.handle_serverless_request(event=event, mode="lambda")
         assert result["statusCode"] == 500
         body = json.loads(result["body"])
         assert "boom" in body["error"]
 
-    def test_render_swml_error_returns_500(self):
+    def test_render_swml_error_returns_500(self) -> None:
         """Exception in _render_swml returns 500."""
         mixin = ConcreteServerlessMixin()
-        mixin._render_swml = Mock(side_effect=ValueError("swml error"))
+        mixin._render_swml = Mock(side_effect=ValueError("swml error"))  # type: ignore[method-assign]  # test monkeypatch
         event = {"rawPath": "/", "headers": {}}
         result = mixin.handle_serverless_request(event=event, mode="lambda")
         assert result["statusCode"] == 500
@@ -350,7 +352,7 @@ class TestLambdaHandlerErrors:
 class TestGCFHandlerRootPath:
     """GCF handler returns SWML for root path requests."""
 
-    def test_root_path_get_returns_swml(self):
+    def test_root_path_get_returns_swml(self) -> None:
         """GET to root path returns SWML."""
         mock_response_cls = Mock()
         mock_response_instance = Mock()
@@ -367,7 +369,7 @@ class TestGCFHandlerRootPath:
         assert call_kwargs["status"] == 200
         assert call_kwargs["response"] == mixin._swml_response
 
-    def test_root_path_post_no_body_returns_swml(self):
+    def test_root_path_post_no_body_returns_swml(self) -> None:
         """POST to root path with no useful body returns SWML."""
         mock_response_cls = Mock()
         mock_response_cls.return_value = Mock()
@@ -385,7 +387,7 @@ class TestGCFHandlerRootPath:
 class TestGCFHandlerFunctionRouting:
     """GCF handler function routing."""
 
-    def test_path_based_function_call(self):
+    def test_path_based_function_call(self) -> None:
         """POST to /say_hello routes to the named function."""
         mock_response_cls = Mock()
         mock_response_cls.return_value = Mock()
@@ -404,7 +406,7 @@ class TestGCFHandlerFunctionRouting:
         response_body = json.loads(call_kwargs["response"])
         assert response_body["response"] == "hi"
 
-    def test_swaig_endpoint_with_function_in_body(self):
+    def test_swaig_endpoint_with_function_in_body(self) -> None:
         """POST to /swaig with function in body dispatches correctly."""
         mock_response_cls = Mock()
         mock_response_cls.return_value = Mock()
@@ -426,7 +428,7 @@ class TestGCFHandlerFunctionRouting:
 class TestGCFHandlerBodyParsing:
     """GCF handler request body parsing."""
 
-    def test_non_json_body_fallback(self):
+    def test_non_json_body_fallback(self) -> None:
         """When is_json is False, get_data(as_text=True) is used."""
         mock_response_cls = Mock()
         mock_response_cls.return_value = Mock()
@@ -448,7 +450,7 @@ class TestGCFHandlerBodyParsing:
         call_kwargs = mock_response_cls.call_args[1]
         assert call_kwargs["status"] == 200
 
-    def test_malformed_body_continues(self):
+    def test_malformed_body_continues(self) -> None:
         """Malformed POST body does not crash; continues with empty args."""
         mock_response_cls = Mock()
         mock_response_cls.return_value = Mock()
@@ -472,7 +474,7 @@ class TestGCFHandlerBodyParsing:
 class TestGCFHandlerURLBaseDetection:
     """GCF handler detects base URL from request."""
 
-    def test_base_url_set_from_request(self):
+    def test_base_url_set_from_request(self) -> None:
         """Proxy URL base is derived from the request URL."""
         mock_response_cls = Mock()
         mock_response_cls.return_value = Mock()
@@ -489,7 +491,7 @@ class TestGCFHandlerURLBaseDetection:
 
         assert mixin._proxy_url_base == "https://us-central1-myproject.cloudfunctions.net"
 
-    def test_base_url_not_overridden_when_env_set(self):
+    def test_base_url_not_overridden_when_env_set(self) -> None:
         """When _proxy_url_base_from_env is True, URL is not overridden."""
         mock_response_cls = Mock()
         mock_response_cls.return_value = Mock()
@@ -511,12 +513,12 @@ class TestGCFHandlerURLBaseDetection:
 class TestGCFHandlerAuth:
     """GCF handler authentication via handle_serverless_request dispatch."""
 
-    def test_auth_failure_returns_challenge(self):
+    def test_auth_failure_returns_challenge(self) -> None:
         """When auth fails, the challenge response is returned."""
         mixin = ConcreteServerlessMixin()
-        mixin._check_google_cloud_function_auth = Mock(return_value=False)
+        mixin._check_google_cloud_function_auth = Mock(return_value=False)  # type: ignore[method-assign]  # test monkeypatch
         challenge = Mock(status_code=401)
-        mixin._send_google_cloud_function_auth_challenge = Mock(return_value=challenge)
+        mixin._send_google_cloud_function_auth_challenge = Mock(return_value=challenge)  # type: ignore[method-assign]  # test monkeypatch
         request = _make_flask_request(path="/")
         result = mixin.handle_serverless_request(event=request, mode="google_cloud_function")
         assert result.status_code == 401
@@ -525,13 +527,13 @@ class TestGCFHandlerAuth:
 class TestGCFHandlerErrors:
     """GCF handler error handling."""
 
-    def test_exception_returns_500(self):
+    def test_exception_returns_500(self) -> None:
         """Exceptions in GCF handler return 500 Flask response."""
         mock_response_cls = Mock()
         mock_response_cls.return_value = Mock()
 
         mixin = ConcreteServerlessMixin()
-        mixin._render_swml = Mock(side_effect=RuntimeError("boom"))
+        mixin._render_swml = Mock(side_effect=RuntimeError("boom"))  # type: ignore[method-assign]  # test monkeypatch
         request = _make_flask_request(path="/")
 
         with patch.dict("sys.modules", {"flask": Mock(Response=mock_response_cls)}):
@@ -551,7 +553,7 @@ class TestGCFHandlerErrors:
 class TestAzureHandlerRootPath:
     """Azure handler returns SWML for root path."""
 
-    def test_root_path_returns_swml(self):
+    def test_root_path_returns_swml(self) -> None:
         """GET to root azure path returns SWML."""
         mock_http_response = Mock()
         mock_func = Mock()
@@ -588,7 +590,7 @@ class TestAzureHandlerRootPath:
 class TestAzureHandlerFunctionRouting:
     """Azure handler function routing."""
 
-    def test_swaig_endpoint_with_function(self):
+    def test_swaig_endpoint_with_function(self) -> None:
         """POST to /api/myagent/swaig with function name dispatches correctly."""
         mock_http_response = Mock()
         mock_func = Mock()
@@ -625,7 +627,7 @@ class TestAzureHandlerFunctionRouting:
         response_body = json.loads(call_kwargs["body"])
         assert response_body["response"] == "hi"
 
-    def test_path_based_function_routing(self):
+    def test_path_based_function_routing(self) -> None:
         """POST to /api/myagent/say_hello routes by path."""
         mock_http_response = Mock()
         mock_func = Mock()
@@ -665,7 +667,7 @@ class TestAzureHandlerFunctionRouting:
 class TestAzureHandlerURLParsing:
     """Azure handler URL parsing and base URL detection."""
 
-    def test_base_url_set_from_request(self):
+    def test_base_url_set_from_request(self) -> None:
         """Proxy URL base includes /api/function_app_name."""
         mock_http_response = Mock()
         mock_func = Mock()
@@ -695,7 +697,7 @@ class TestAzureHandlerURLParsing:
 
         assert mixin._proxy_url_base == "https://myapp.azurewebsites.net/api/myagent"
 
-    def test_url_without_api_prefix(self):
+    def test_url_without_api_prefix(self) -> None:
         """URL without /api/ sets base URL to scheme://netloc/api."""
         mock_http_response = Mock()
         mock_func = Mock()
@@ -725,7 +727,7 @@ class TestAzureHandlerURLParsing:
 
         assert mixin._proxy_url_base == "https://myapp.azurewebsites.net/api"
 
-    def test_base_url_not_overridden_when_env_set(self):
+    def test_base_url_not_overridden_when_env_set(self) -> None:
         """When _proxy_url_base_from_env is True, URL is not overridden."""
         mock_http_response = Mock()
         mock_func = Mock()
@@ -761,12 +763,12 @@ class TestAzureHandlerURLParsing:
 class TestAzureHandlerAuth:
     """Azure handler authentication via handle_serverless_request dispatch."""
 
-    def test_auth_failure_returns_challenge(self):
+    def test_auth_failure_returns_challenge(self) -> None:
         """When auth fails, the challenge response is returned."""
         mixin = ConcreteServerlessMixin()
-        mixin._check_azure_function_auth = Mock(return_value=False)
+        mixin._check_azure_function_auth = Mock(return_value=False)  # type: ignore[method-assign]  # test monkeypatch
         challenge = Mock(status_code=401)
-        mixin._send_azure_function_auth_challenge = Mock(return_value=challenge)
+        mixin._send_azure_function_auth_challenge = Mock(return_value=challenge)  # type: ignore[method-assign]  # test monkeypatch
         req = _make_azure_request()
         result = mixin.handle_serverless_request(event=req, mode="azure_function")
         assert result.status_code == 401
@@ -775,14 +777,14 @@ class TestAzureHandlerAuth:
 class TestAzureHandlerErrors:
     """Azure handler error handling."""
 
-    def test_exception_returns_500(self):
+    def test_exception_returns_500(self) -> None:
         """Exceptions in Azure handler return 500 HttpResponse."""
         mock_http_response = Mock()
         mock_func = Mock()
         mock_func.HttpResponse = mock_http_response
 
         mixin = ConcreteServerlessMixin()
-        mixin._render_swml = Mock(side_effect=RuntimeError("azure boom"))
+        mixin._render_swml = Mock(side_effect=RuntimeError("azure boom"))  # type: ignore[method-assign]  # test monkeypatch
         req = _make_azure_request(
             url="https://myapp.azurewebsites.net/api/myagent",
             method="GET",
@@ -809,7 +811,7 @@ class TestAzureHandlerErrors:
         error_body = json.loads(call_kwargs["body"])
         assert "azure boom" in error_body["error"]
 
-    def test_malformed_body_continues(self):
+    def test_malformed_body_continues(self) -> None:
         """Malformed POST body does not crash; continues with empty args."""
         mock_http_response = Mock()
         mock_func = Mock()
@@ -849,14 +851,14 @@ class TestAzureHandlerErrors:
 class TestExecuteSwaigFunction:
     """Tests for _execute_swaig_function."""
 
-    def test_function_not_found(self):
+    def test_function_not_found(self) -> None:
         """Unknown function name returns error dict."""
         mixin = ConcreteServerlessMixin()
         result = mixin._execute_swaig_function("nonexistent")
         assert "error" in result
         assert "nonexistent" in result["error"]
 
-    def test_successful_dict_result(self):
+    def test_successful_dict_result(self) -> None:
         """Function returning a dict passes it through."""
         mixin = ConcreteServerlessMixin(
             swaig_functions={"fn": lambda args, raw: {"key": "val"}}
@@ -864,9 +866,9 @@ class TestExecuteSwaigFunction:
         result = mixin._execute_swaig_function("fn", {"x": 1})
         assert result == {"key": "val"}
 
-    def test_successful_swaig_function_result(self):
+    def test_successful_swaig_function_result(self) -> None:
         """Function returning FunctionResult is converted to dict."""
-        def handler(args, raw):
+        def handler(args: Any, raw: Any) -> FunctionResult:
             return FunctionResult("Done")
 
         mixin = ConcreteServerlessMixin(swaig_functions={"fn": handler})
@@ -874,7 +876,7 @@ class TestExecuteSwaigFunction:
         assert "response" in result
         assert result["response"] == "Done"
 
-    def test_successful_string_result(self):
+    def test_successful_string_result(self) -> None:
         """Function returning a string is wrapped in response dict."""
         mixin = ConcreteServerlessMixin(
             swaig_functions={"fn": lambda args, raw: "just a string"}
@@ -882,11 +884,11 @@ class TestExecuteSwaigFunction:
         result = mixin._execute_swaig_function("fn")
         assert result == {"response": "just a string"}
 
-    def test_none_args_default_to_empty_dict(self):
+    def test_none_args_default_to_empty_dict(self) -> None:
         """None args are replaced with empty dict."""
-        received = {}
+        received: dict[str, Any] = {}
 
-        def handler(args, raw):
+        def handler(args: Any, raw: Any) -> dict[str, Any]:
             received["args"] = args
             return {"ok": True}
 
@@ -894,11 +896,11 @@ class TestExecuteSwaigFunction:
         mixin._execute_swaig_function("fn", None)
         assert received["args"] == {}
 
-    def test_none_raw_data_builds_default(self):
+    def test_none_raw_data_builds_default(self) -> None:
         """None raw_data is replaced with structured default."""
-        received = {}
+        received: dict[str, Any] = {}
 
-        def handler(args, raw):
+        def handler(args: Any, raw: Any) -> dict[str, Any]:
             received["raw"] = raw
             return {"ok": True}
 
@@ -909,9 +911,9 @@ class TestExecuteSwaigFunction:
         assert raw["call_id"] == "c123"
         assert raw["argument"]["parsed"] == [{"key": "val"}]
 
-    def test_exception_during_execution(self):
+    def test_exception_during_execution(self) -> None:
         """Exception in function returns error dict."""
-        def handler(args, raw):
+        def handler(args: Any, raw: Any) -> dict[str, Any]:
             raise ValueError("function error")
 
         mixin = ConcreteServerlessMixin(swaig_functions={"fn": handler})
@@ -928,13 +930,13 @@ class TestExecuteSwaigFunction:
 class TestModeDetection:
     """handle_serverless_request dispatches based on mode."""
 
-    def test_lambda_mode_dispatch(self):
+    def test_lambda_mode_dispatch(self) -> None:
         """mode='lambda' dispatches to lambda handler."""
         mixin = ConcreteServerlessMixin()
         result = mixin.handle_serverless_request(event=None, mode="lambda")
         assert result["statusCode"] == 200
 
-    def test_gcf_mode_dispatch(self):
+    def test_gcf_mode_dispatch(self) -> None:
         """mode='google_cloud_function' dispatches to GCF handler."""
         mock_response_cls = Mock()
         mock_response_cls.return_value = Mock()
@@ -947,7 +949,7 @@ class TestModeDetection:
 
         mock_response_cls.assert_called_once()
 
-    def test_azure_mode_dispatch(self):
+    def test_azure_mode_dispatch(self) -> None:
         """mode='azure_function' dispatches to Azure handler."""
         mock_http_response = Mock()
         mock_func = Mock()
@@ -974,32 +976,32 @@ class TestModeDetection:
 
         mock_http_response.assert_called_once()
 
-    def test_cgi_mode_dispatch_root(self):
+    def test_cgi_mode_dispatch_root(self) -> None:
         """mode='cgi' with empty PATH_INFO renders SWML."""
         mixin = ConcreteServerlessMixin()
         with patch.dict(os.environ, {"PATH_INFO": ""}, clear=False):
             result = mixin.handle_serverless_request(mode="cgi")
         assert result == mixin._swml_response
 
-    def test_cgi_mode_auth_failure(self):
+    def test_cgi_mode_auth_failure(self) -> None:
         """mode='cgi' with auth failure returns challenge."""
         mixin = ConcreteServerlessMixin()
-        mixin._check_cgi_auth = Mock(return_value=False)
-        mixin._send_cgi_auth_challenge = Mock(return_value="Status: 401\r\n\r\n")
+        mixin._check_cgi_auth = Mock(return_value=False)  # type: ignore[method-assign]  # test monkeypatch
+        mixin._send_cgi_auth_challenge = Mock(return_value="Status: 401\r\n\r\n")  # type: ignore[method-assign]  # test monkeypatch
         result = mixin.handle_serverless_request(mode="cgi")
         assert result == "Status: 401\r\n\r\n"
 
-    def test_mode_auto_detection_lambda(self):
+    def test_mode_auto_detection_lambda(self) -> None:
         """When mode is None, get_execution_mode() is called."""
         mixin = ConcreteServerlessMixin()
         with patch("signalwire.core.mixins.serverless_mixin.get_execution_mode", return_value="lambda"):
             result = mixin.handle_serverless_request(event=None)
         assert result["statusCode"] == 200
 
-    def test_non_lambda_exception_reraises(self):
+    def test_non_lambda_exception_reraises(self) -> None:
         """Exceptions in non-lambda modes are re-raised (not wrapped in 500)."""
         mixin = ConcreteServerlessMixin()
-        mixin._check_cgi_auth = Mock(side_effect=RuntimeError("cgi boom"))
+        mixin._check_cgi_auth = Mock(side_effect=RuntimeError("cgi boom"))  # type: ignore[method-assign]  # test monkeypatch
         with pytest.raises(RuntimeError, match="cgi boom"):
             mixin.handle_serverless_request(mode="cgi")
 
@@ -1011,7 +1013,7 @@ class TestModeDetection:
 class TestCGIModeBodyParsing:
     """CGI mode parses POST data from stdin."""
 
-    def test_cgi_function_call_with_post_body(self):
+    def test_cgi_function_call_with_post_body(self) -> None:
         """CGI mode parses function call from stdin POST data."""
         mixin = ConcreteServerlessMixin(
             swaig_functions={"hello": lambda args, raw: {"response": "world"}}
@@ -1032,7 +1034,7 @@ class TestCGIModeBodyParsing:
 
         assert result["response"] == "world"
 
-    def test_cgi_function_call_with_raw_args(self):
+    def test_cgi_function_call_with_raw_args(self) -> None:
         """CGI mode falls back to argument.raw when parsed is empty."""
         mixin = ConcreteServerlessMixin(
             swaig_functions={"hello": lambda args, raw: {"got": args}}
@@ -1056,7 +1058,7 @@ class TestCGIModeBodyParsing:
 
         assert result["got"] == {"from_raw": True}
 
-    def test_cgi_missing_content_length(self):
+    def test_cgi_missing_content_length(self) -> None:
         """CGI mode with no CONTENT_LENGTH still works (no body parsed)."""
         mixin = ConcreteServerlessMixin(
             swaig_functions={"hello": lambda args, raw: {"response": "ok"}}

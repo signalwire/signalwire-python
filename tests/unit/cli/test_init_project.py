@@ -13,12 +13,11 @@ Tests cover:
 """
 
 import pytest
-import sys
 import os
 import argparse
+from typing import Any
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock, call
-from io import StringIO
+from unittest.mock import Mock, patch, MagicMock
 
 from signalwire.cli.init_project import (
     Colors,
@@ -43,8 +42,6 @@ from signalwire.cli.init_project import (
     main,
     CLOUD_PLATFORMS,
     DEFAULT_REGIONS,
-    TEMPLATE_GITIGNORE,
-    TEMPLATE_REQUIREMENTS,
 )
 
 
@@ -55,7 +52,7 @@ from signalwire.cli.init_project import (
 class TestColors:
     """Tests for the ANSI color constants."""
 
-    def test_colors_has_expected_attributes(self):
+    def test_colors_has_expected_attributes(self) -> None:
         assert Colors.RED == '\033[0;31m'
         assert Colors.GREEN == '\033[0;32m'
         assert Colors.YELLOW == '\033[1;33m'
@@ -73,25 +70,25 @@ class TestColors:
 class TestPrintUtilities:
     """Tests for print_step, print_success, print_warning, print_error."""
 
-    def test_print_step(self, capsys):
+    def test_print_step(self, capsys: pytest.CaptureFixture[str]) -> None:
         print_step("test message")
         captured = capsys.readouterr()
         assert "test message" in captured.out
         assert Colors.BLUE in captured.out
 
-    def test_print_success(self, capsys):
+    def test_print_success(self, capsys: pytest.CaptureFixture[str]) -> None:
         print_success("done")
         captured = capsys.readouterr()
         assert "done" in captured.out
         assert Colors.GREEN in captured.out
 
-    def test_print_warning(self, capsys):
+    def test_print_warning(self, capsys: pytest.CaptureFixture[str]) -> None:
         print_warning("careful")
         captured = capsys.readouterr()
         assert "careful" in captured.out
         assert Colors.YELLOW in captured.out
 
-    def test_print_error(self, capsys):
+    def test_print_error(self, capsys: pytest.CaptureFixture[str]) -> None:
         print_error("oops")
         captured = capsys.readouterr()
         assert "oops" in captured.out
@@ -106,76 +103,76 @@ class TestPromptFunctions:
     """Tests for interactive prompt functions."""
 
     @patch('builtins.input', return_value='')
-    def test_prompt_returns_default_when_empty(self, mock_input):
+    def test_prompt_returns_default_when_empty(self, mock_input: MagicMock) -> None:
         result = prompt("Name", "default_val")
         assert result == "default_val"
         mock_input.assert_called_once()
 
     @patch('builtins.input', return_value='custom')
-    def test_prompt_returns_user_input(self, mock_input):
+    def test_prompt_returns_user_input(self, mock_input: MagicMock) -> None:
         result = prompt("Name", "default_val")
         assert result == "custom"
 
     @patch('builtins.input', return_value='  spaced  ')
-    def test_prompt_strips_whitespace(self, mock_input):
+    def test_prompt_strips_whitespace(self, mock_input: MagicMock) -> None:
         result = prompt("Name", "default_val")
         assert result == "spaced"
 
     @patch('builtins.input', return_value='hello')
-    def test_prompt_without_default(self, mock_input):
+    def test_prompt_without_default(self, mock_input: MagicMock) -> None:
         result = prompt("Name")
         assert result == "hello"
         # Should not include bracket notation
         mock_input.assert_called_once_with("Name: ")
 
     @patch('builtins.input', return_value='')
-    def test_prompt_yes_no_default_true(self, mock_input):
+    def test_prompt_yes_no_default_true(self, mock_input: MagicMock) -> None:
         result = prompt_yes_no("Continue?", default=True)
         assert result is True
 
     @patch('builtins.input', return_value='')
-    def test_prompt_yes_no_default_false(self, mock_input):
+    def test_prompt_yes_no_default_false(self, mock_input: MagicMock) -> None:
         result = prompt_yes_no("Continue?", default=False)
         assert result is False
 
     @patch('builtins.input', return_value='y')
-    def test_prompt_yes_no_explicit_yes(self, mock_input):
+    def test_prompt_yes_no_explicit_yes(self, mock_input: MagicMock) -> None:
         result = prompt_yes_no("Continue?", default=False)
         assert result is True
 
     @patch('builtins.input', return_value='yes')
-    def test_prompt_yes_no_explicit_yes_full(self, mock_input):
+    def test_prompt_yes_no_explicit_yes_full(self, mock_input: MagicMock) -> None:
         result = prompt_yes_no("Continue?", default=False)
         assert result is True
 
     @patch('builtins.input', return_value='n')
-    def test_prompt_yes_no_explicit_no(self, mock_input):
+    def test_prompt_yes_no_explicit_no(self, mock_input: MagicMock) -> None:
         result = prompt_yes_no("Continue?", default=True)
         assert result is False
 
     @patch('builtins.input', return_value='')
-    def test_prompt_select_returns_default(self, mock_input):
+    def test_prompt_select_returns_default(self, mock_input: MagicMock) -> None:
         result = prompt_select("Pick:", ["A", "B", "C"], default=2)
         assert result == 2
 
     @patch('builtins.input', return_value='3')
-    def test_prompt_select_returns_chosen(self, mock_input):
+    def test_prompt_select_returns_chosen(self, mock_input: MagicMock) -> None:
         result = prompt_select("Pick:", ["A", "B", "C"], default=1)
         assert result == 3
 
     @patch('builtins.input', side_effect=['bad', '0', '4', '2'])
-    def test_prompt_select_rejects_invalid_then_accepts(self, mock_input):
+    def test_prompt_select_rejects_invalid_then_accepts(self, mock_input: MagicMock) -> None:
         result = prompt_select("Pick:", ["A", "B", "C"], default=1)
         assert result == 2
         assert mock_input.call_count == 4
 
     @patch('builtins.input', side_effect=['1', ''])
-    def test_prompt_multiselect_toggle_and_accept(self, mock_input):
+    def test_prompt_multiselect_toggle_and_accept(self, mock_input: MagicMock) -> None:
         result = prompt_multiselect("Features:", ["A", "B"], [False, True])
         assert result == [True, True]
 
     @patch('builtins.input', side_effect=[''])
-    def test_prompt_multiselect_accept_defaults(self, mock_input):
+    def test_prompt_multiselect_accept_defaults(self, mock_input: MagicMock) -> None:
         result = prompt_multiselect("Features:", ["A", "B"], [True, False])
         assert result == [True, False]
 
@@ -187,15 +184,15 @@ class TestPromptFunctions:
 class TestMaskToken:
     """Tests for the mask_token helper."""
 
-    def test_mask_short_token(self):
+    def test_mask_short_token(self) -> None:
         result = mask_token("abc")
         assert result == "***"
 
-    def test_mask_exactly_10_chars(self):
+    def test_mask_exactly_10_chars(self) -> None:
         result = mask_token("abcdefghij")
         assert result == "**********"
 
-    def test_mask_long_token(self):
+    def test_mask_long_token(self) -> None:
         result = mask_token("abcdefghijklmnop")
         assert result == "abcd...nop"
 
@@ -212,14 +209,14 @@ class TestGetEnvCredentials:
         'SIGNALWIRE_PROJECT_ID': 'proj123',
         'SIGNALWIRE_TOKEN': 'tok456',
     })
-    def test_returns_env_values(self):
+    def test_returns_env_values(self) -> None:
         creds = get_env_credentials()
         assert creds['space'] == 'myspace'
         assert creds['project'] == 'proj123'
-        assert creds['token'] == 'tok456'
+        assert creds['token'] == 'tok456'  # noqa: S105
 
     @patch.dict(os.environ, {}, clear=True)
-    def test_returns_empty_when_unset(self):
+    def test_returns_empty_when_unset(self) -> None:
         # Remove any env vars that might be set
         for key in ['SIGNALWIRE_SPACE_NAME', 'SIGNALWIRE_PROJECT_ID', 'SIGNALWIRE_TOKEN']:
             os.environ.pop(key, None)
@@ -236,15 +233,15 @@ class TestGetEnvCredentials:
 class TestGeneratePassword:
     """Tests for generate_password."""
 
-    def test_default_length(self):
+    def test_default_length(self) -> None:
         pw = generate_password()
         assert len(pw) == 32
 
-    def test_custom_length(self):
+    def test_custom_length(self) -> None:
         pw = generate_password(16)
         assert len(pw) == 16
 
-    def test_passwords_are_unique(self):
+    def test_passwords_are_unique(self) -> None:
         pw1 = generate_password()
         pw2 = generate_password()
         assert pw1 != pw2
@@ -257,7 +254,7 @@ class TestGeneratePassword:
 class TestGetAgentTemplate:
     """Tests for get_agent_template."""
 
-    def test_basic_agent_template(self):
+    def test_basic_agent_template(self) -> None:
         features = {'example_tool': True, 'debug_webhooks': False, 'basic_auth': False}
         result = get_agent_template('basic', features)
         assert 'class MainAgent(AgentBase):' in result
@@ -265,14 +262,14 @@ class TestGetAgentTemplate:
         assert 'FunctionResult' in result
         assert 'get_info' in result
 
-    def test_agent_template_without_tool(self):
+    def test_agent_template_without_tool(self) -> None:
         features = {'example_tool': False, 'debug_webhooks': False, 'basic_auth': False}
         result = get_agent_template('basic', features)
         assert 'class MainAgent(AgentBase):' in result
         assert 'get_info' not in result
         assert 'FunctionResult' not in result
 
-    def test_agent_template_with_all_features(self):
+    def test_agent_template_with_all_features(self) -> None:
         features = {'example_tool': True, 'debug_webhooks': True, 'basic_auth': True}
         result = get_agent_template('full', features)
         assert 'import os' in result
@@ -280,7 +277,7 @@ class TestGetAgentTemplate:
         assert 'SWML_BASIC_AUTH_USER' in result
         assert 'get_info' in result
 
-    def test_agent_template_with_debug_only(self):
+    def test_agent_template_with_debug_only(self) -> None:
         features = {'example_tool': False, 'debug_webhooks': True, 'basic_auth': False}
         result = get_agent_template('basic', features)
         assert 'import os' in result
@@ -291,14 +288,14 @@ class TestGetAgentTemplate:
 class TestGetAppTemplate:
     """Tests for get_app_template."""
 
-    def test_basic_app_template(self):
+    def test_basic_app_template(self) -> None:
         features = {'debug_webhooks': False, 'web_ui': False}
         result = get_app_template(features)
         assert 'from signalwire import AgentServer' in result
         assert 'def main():' in result
         assert 'server.run()' in result
 
-    def test_app_template_with_debug(self):
+    def test_app_template_with_debug(self) -> None:
         features = {'debug_webhooks': True, 'web_ui': False}
         result = get_app_template(features)
         assert 'print_debug_data' in result
@@ -306,7 +303,7 @@ class TestGetAppTemplate:
         assert '/debug' in result
         assert '/post_prompt' in result
 
-    def test_app_template_with_web_ui(self):
+    def test_app_template_with_web_ui(self) -> None:
         features = {'debug_webhooks': False, 'web_ui': True}
         result = get_app_template(features)
         assert 'serve_static_files' in result
@@ -315,13 +312,13 @@ class TestGetAppTemplate:
 class TestGetTestTemplate:
     """Tests for get_test_template."""
 
-    def test_test_template_with_tool(self):
+    def test_test_template_with_tool(self) -> None:
         result = get_test_template(has_tool=True)
         assert 'test_get_info_function' in result
         assert 'TestDirectImport' in result
         assert 'test_agent_has_tools' in result
 
-    def test_test_template_without_tool(self):
+    def test_test_template_without_tool(self) -> None:
         result = get_test_template(has_tool=False)
         assert 'TestDirectImport' not in result
         assert 'test_agent_has_tools' not in result
@@ -330,13 +327,13 @@ class TestGetTestTemplate:
 class TestGetReadmeTemplate:
     """Tests for get_readme_template."""
 
-    def test_basic_readme(self):
+    def test_basic_readme(self) -> None:
         features = {'debug_webhooks': False, 'web_ui': False}
         result = get_readme_template("test-project", features)
         assert '# test-project' in result
         assert '/swml' in result
 
-    def test_readme_with_debug(self):
+    def test_readme_with_debug(self) -> None:
         features = {'debug_webhooks': True, 'web_ui': False}
         result = get_readme_template("test-project", features)
         assert '/debug' in result
@@ -346,7 +343,7 @@ class TestGetReadmeTemplate:
 class TestGetWebIndexTemplate:
     """Tests for get_web_index_template."""
 
-    def test_web_template_has_html(self):
+    def test_web_template_has_html(self) -> None:
         result = get_web_index_template()
         assert '<!DOCTYPE html>' in result
         assert 'SignalWire Agent' in result
@@ -359,10 +356,10 @@ class TestGetWebIndexTemplate:
 class TestProjectGenerator:
     """Tests for the ProjectGenerator class."""
 
-    def _make_config(self, platform='local', **overrides):
-        config = {
+    def _make_config(self, platform: str = 'local', **overrides: Any) -> dict[str, Any]:
+        config: dict[str, Any] = {
             'project_name': 'test-agent',
-            'project_dir': '/tmp/test-agent',
+            'project_dir': '/tmp/test-agent',  # noqa: S108
             'platform': platform,
             'agent_type': 'basic',
             'features': {
@@ -380,15 +377,15 @@ class TestProjectGenerator:
         config.update(overrides)
         return config
 
-    def test_constructor(self):
+    def test_constructor(self) -> None:
         config = self._make_config()
         gen = ProjectGenerator(config)
         assert gen.project_name == 'test-agent'
         assert gen.platform == 'local'
-        assert gen.project_dir == Path('/tmp/test-agent')
+        assert gen.project_dir == Path('/tmp/test-agent')  # noqa: S108
 
     @patch.object(ProjectGenerator, '_generate_local', return_value=True)
-    def test_generate_dispatches_to_local(self, mock_gen):
+    def test_generate_dispatches_to_local(self, mock_gen: MagicMock) -> None:
         config = self._make_config(platform='local')
         gen = ProjectGenerator(config)
         result = gen.generate()
@@ -396,7 +393,7 @@ class TestProjectGenerator:
         mock_gen.assert_called_once()
 
     @patch.object(ProjectGenerator, '_generate_aws', return_value=True)
-    def test_generate_dispatches_to_aws(self, mock_gen):
+    def test_generate_dispatches_to_aws(self, mock_gen: MagicMock) -> None:
         config = self._make_config(platform='aws')
         gen = ProjectGenerator(config)
         result = gen.generate()
@@ -404,7 +401,7 @@ class TestProjectGenerator:
         mock_gen.assert_called_once()
 
     @patch.object(ProjectGenerator, '_generate_gcp', return_value=True)
-    def test_generate_dispatches_to_gcp(self, mock_gen):
+    def test_generate_dispatches_to_gcp(self, mock_gen: MagicMock) -> None:
         config = self._make_config(platform='gcp')
         gen = ProjectGenerator(config)
         result = gen.generate()
@@ -412,27 +409,27 @@ class TestProjectGenerator:
         mock_gen.assert_called_once()
 
     @patch.object(ProjectGenerator, '_generate_azure', return_value=True)
-    def test_generate_dispatches_to_azure(self, mock_gen):
+    def test_generate_dispatches_to_azure(self, mock_gen: MagicMock) -> None:
         config = self._make_config(platform='azure')
         gen = ProjectGenerator(config)
         result = gen.generate()
         assert result is True
         mock_gen.assert_called_once()
 
-    def test_generate_unknown_platform(self):
+    def test_generate_unknown_platform(self) -> None:
         config = self._make_config(platform='unknown_cloud')
         gen = ProjectGenerator(config)
         result = gen.generate()
         assert result is False
 
-    def test_generate_catches_exception(self):
+    def test_generate_catches_exception(self) -> None:
         config = self._make_config(platform='local')
         gen = ProjectGenerator(config)
         with patch.object(gen, '_generate_local', side_effect=PermissionError("denied")):
             result = gen.generate()
             assert result is False
 
-    def test_get_template_vars(self):
+    def test_get_template_vars(self) -> None:
         config = self._make_config(
             platform='aws',
             cloud_config={'region': 'us-west-2'},
@@ -447,7 +444,7 @@ class TestProjectGenerator:
         assert tvars['auth_user'] == 'admin'
         assert len(tvars['auth_password']) == 16
 
-    def test_get_template_vars_default_region(self):
+    def test_get_template_vars_default_region(self) -> None:
         config = self._make_config(platform='aws', cloud_config={})
         gen = ProjectGenerator(config)
         tvars = gen._get_template_vars()
@@ -455,7 +452,7 @@ class TestProjectGenerator:
 
     @patch('pathlib.Path.mkdir')
     @patch('pathlib.Path.write_text')
-    def test_generate_local_creates_structure(self, mock_write, mock_mkdir):
+    def test_generate_local_creates_structure(self, mock_write: MagicMock, mock_mkdir: MagicMock) -> None:
         config = self._make_config()
         gen = ProjectGenerator(config)
         result = gen._generate_local()
@@ -473,7 +470,7 @@ class TestProjectGenerator:
 class TestRunQuick:
     """Tests for run_quick configuration builder."""
 
-    def test_basic_quick_mode(self):
+    def test_basic_quick_mode(self) -> None:
         args = argparse.Namespace(
             platform='local', region=None, type='basic', no_venv=False
         )
@@ -485,7 +482,7 @@ class TestRunQuick:
         assert config['features']['debug_webhooks'] is False
         assert config['create_venv'] is True
 
-    def test_full_type_quick_mode(self):
+    def test_full_type_quick_mode(self) -> None:
         args = argparse.Namespace(
             platform='local', region=None, type='full', no_venv=True
         )
@@ -496,7 +493,7 @@ class TestRunQuick:
         assert config['features']['basic_auth'] is True
         assert config['create_venv'] is False
 
-    def test_aws_platform_quick_mode(self):
+    def test_aws_platform_quick_mode(self) -> None:
         args = argparse.Namespace(
             platform='aws', region='us-west-2', type='basic', no_venv=False
         )
@@ -509,26 +506,26 @@ class TestRunQuick:
         assert config['features']['tests'] is False
         assert config['features']['basic_auth'] is True
 
-    def test_aws_default_region(self):
+    def test_aws_default_region(self) -> None:
         args = argparse.Namespace(
             platform='aws', region=None, type='basic', no_venv=False
         )
         config = run_quick('myagent', args)
         assert config['cloud_config']['region'] == 'us-east-1'
 
-    def test_azure_includes_resource_group(self):
+    def test_azure_includes_resource_group(self) -> None:
         args = argparse.Namespace(
             platform='azure', region='eastus', type='basic', no_venv=False
         )
         config = run_quick('myagent', args)
         assert config['cloud_config']['resource_group'] == 'myagent-rg'
 
-    def test_project_dir_is_absolute(self):
+    def test_project_dir_is_absolute(self) -> None:
         args = argparse.Namespace(
             platform='local', region=None, type='basic', no_venv=False
         )
         config = run_quick('myagent', args)
-        assert os.path.isabs(config['project_dir'])
+        assert Path(config['project_dir']).is_absolute()
 
 
 # =============================================================================
@@ -540,7 +537,7 @@ class TestMain:
 
     @patch('signalwire.cli.init_project.ProjectGenerator')
     @patch('sys.argv', ['sw-agent-init', 'testproject', '--type', 'basic', '--no-venv'])
-    def test_main_quick_mode(self, mock_gen_class):
+    def test_main_quick_mode(self, mock_gen_class: MagicMock) -> None:
         mock_gen = Mock()
         mock_gen.generate.return_value = True
         mock_gen_class.return_value = mock_gen
@@ -555,7 +552,7 @@ class TestMain:
 
     @patch('signalwire.cli.init_project.ProjectGenerator')
     @patch('sys.argv', ['sw-agent-init', 'testproject', '--type', 'full', '--no-venv'])
-    def test_main_quick_mode_full(self, mock_gen_class):
+    def test_main_quick_mode_full(self, mock_gen_class: MagicMock) -> None:
         mock_gen = Mock()
         mock_gen.generate.return_value = True
         mock_gen_class.return_value = mock_gen
@@ -568,7 +565,7 @@ class TestMain:
 
     @patch('signalwire.cli.init_project.ProjectGenerator')
     @patch('sys.argv', ['sw-agent-init', 'testproject', '-p', 'aws', '--no-venv'])
-    def test_main_aws_platform(self, mock_gen_class):
+    def test_main_aws_platform(self, mock_gen_class: MagicMock) -> None:
         mock_gen = Mock()
         mock_gen.generate.return_value = True
         mock_gen_class.return_value = mock_gen
@@ -579,8 +576,8 @@ class TestMain:
         assert config['platform'] == 'aws'
 
     @patch('signalwire.cli.init_project.ProjectGenerator')
-    @patch('sys.argv', ['sw-agent-init', 'testproject', '--no-venv', '--dir', '/tmp/custom'])
-    def test_main_custom_dir(self, mock_gen_class):
+    @patch('sys.argv', ['sw-agent-init', 'testproject', '--no-venv', '--dir', '/tmp/custom'])  # noqa: S108
+    def test_main_custom_dir(self, mock_gen_class: MagicMock) -> None:
         mock_gen = Mock()
         mock_gen.generate.return_value = True
         mock_gen_class.return_value = mock_gen
@@ -588,11 +585,11 @@ class TestMain:
         main()
 
         config = mock_gen_class.call_args[0][0]
-        assert '/tmp/custom' in config['project_dir']
+        assert '/tmp/custom' in config['project_dir']  # noqa: S108
 
     @patch('signalwire.cli.init_project.ProjectGenerator')
     @patch('sys.argv', ['sw-agent-init', 'testproject', '--no-venv'])
-    def test_main_generate_failure_exits(self, mock_gen_class):
+    def test_main_generate_failure_exits(self, mock_gen_class: MagicMock) -> None:
         mock_gen = Mock()
         mock_gen.generate.return_value = False
         mock_gen_class.return_value = mock_gen
@@ -609,13 +606,13 @@ class TestMain:
 class TestConstants:
     """Tests for module-level constants."""
 
-    def test_cloud_platforms_has_expected_keys(self):
+    def test_cloud_platforms_has_expected_keys(self) -> None:
         assert 'local' in CLOUD_PLATFORMS
         assert 'aws' in CLOUD_PLATFORMS
         assert 'gcp' in CLOUD_PLATFORMS
         assert 'azure' in CLOUD_PLATFORMS
 
-    def test_default_regions(self):
+    def test_default_regions(self) -> None:
         assert DEFAULT_REGIONS['aws'] == 'us-east-1'
         assert DEFAULT_REGIONS['gcp'] == 'us-central1'
         assert DEFAULT_REGIONS['azure'] == 'eastus'

@@ -1,38 +1,22 @@
-"""
-Copyright (c) 2025 SignalWire
+"""Back-compat shim — DO NOT add to other ports. x-sdk-back-compat-shim
 
-This file is part of the SignalWire SDK.
-
-Licensed under the MIT License.
-See LICENSE file in the project root for full license information.
-
-Datasphere API namespace — document management and semantic search.
+Deprecated import path. The REST layer is spec-generated; these symbols moved out of
+``namespaces.datasphere`` (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
+re-export keeps ``from signalwire.signalwire.rest.namespaces.datasphere import DatasphereDocuments`` working
+but emits a DeprecationWarning. Prefer ``client.datasphere`` (no import needed). PYTHON-ONLY: the
+surface oracle skips this file, so no other port implements these.
 """
 
-from .._base import CrudResource
+import warnings
 
+warnings.warn(
+    "signalwire.signalwire.rest.namespaces.datasphere is deprecated; use client.datasphere. "
+    "This back-compat shim will be removed in a future release.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class DatasphereDocuments(CrudResource):
-    """Document management with search and chunk operations."""
+from .datasphere_resources_generated import DatasphereDocuments  # noqa: E402  (re-export after the deprecation warn — intentional)
+from ._client_tree_generated import DatasphereNamespace  # noqa: E402  (re-export after the deprecation warn — intentional)
 
-    def __init__(self, http):
-        super().__init__(http, "/api/datasphere/documents")
-
-    def search(self, **kwargs):
-        return self._http.post(self._path("search"), body=kwargs)
-
-    def list_chunks(self, document_id, **params):
-        return self._http.get(self._path(document_id, "chunks"), params=params or None)
-
-    def get_chunk(self, document_id, chunk_id):
-        return self._http.get(self._path(document_id, "chunks", chunk_id))
-
-    def delete_chunk(self, document_id, chunk_id):
-        return self._http.delete(self._path(document_id, "chunks", chunk_id))
-
-
-class DatasphereNamespace:
-    """Datasphere API namespace."""
-
-    def __init__(self, http):
-        self.documents = DatasphereDocuments(http)
+__all__ = ["DatasphereDocuments", "DatasphereNamespace"]

@@ -1,35 +1,22 @@
-"""
-Copyright (c) 2025 SignalWire
+"""Back-compat shim — DO NOT add to other ports. x-sdk-back-compat-shim
 
-This file is part of the SignalWire SDK.
-
-Licensed under the MIT License.
-See LICENSE file in the project root for full license information.
-
-Project API namespace — API token management.
+Deprecated import path. The REST layer is spec-generated; these symbols moved out of
+``namespaces.project`` (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
+re-export keeps ``from signalwire.signalwire.rest.namespaces.project import ProjectTokens`` working
+but emits a DeprecationWarning. Prefer ``client.project`` (no import needed). PYTHON-ONLY: the
+surface oracle skips this file, so no other port implements these.
 """
 
-from .._base import BaseResource
+import warnings
 
+warnings.warn(
+    "signalwire.signalwire.rest.namespaces.project is deprecated; use client.project. "
+    "This back-compat shim will be removed in a future release.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class ProjectTokens(BaseResource):
-    """Project API token management."""
+from .project_resources_generated import ProjectTokens  # noqa: E402  (re-export after the deprecation warn — intentional)
+from ._client_tree_generated import ProjectNamespace  # noqa: E402  (re-export after the deprecation warn — intentional)
 
-    def __init__(self, http):
-        super().__init__(http, "/api/project/tokens")
-
-    def create(self, **kwargs):
-        return self._http.post(self._base_path, body=kwargs)
-
-    def update(self, token_id, **kwargs):
-        return self._http.patch(self._path(token_id), body=kwargs)
-
-    def delete(self, token_id):
-        return self._http.delete(self._path(token_id))
-
-
-class ProjectNamespace:
-    """Project API namespace."""
-
-    def __init__(self, http):
-        self.tokens = ProjectTokens(http)
+__all__ = ["ProjectNamespace", "ProjectTokens"]

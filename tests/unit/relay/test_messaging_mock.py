@@ -14,9 +14,10 @@ import uuid
 
 import pytest
 
+from signalwire.relay.client import RelayClient
 from signalwire.relay.message import Message
 
-from .conftest import _RELAY_MOCK_AVAILABLE
+from .conftest import _MockRelayHarness, _RELAY_MOCK_AVAILABLE
 
 
 pytestmark = pytest.mark.skipif(
@@ -31,8 +32,8 @@ pytestmark = pytest.mark.skipif(
 
 
 async def test_send_message_journals_messaging_send(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     msg = await signalwire_relay_client.send_message(
         to_number="+15551112222",
         from_number="+15553334444",
@@ -50,7 +51,9 @@ async def test_send_message_journals_messaging_send(
     assert p["tags"] == ["t1", "t2"]
 
 
-async def test_send_message_with_media_only(signalwire_relay_client, mock_relay):
+async def test_send_message_with_media_only(
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """A media-only MMS message produces a messaging.send with media but no body."""
     msg = await signalwire_relay_client.send_message(
         to_number="+15551112222",
@@ -64,7 +67,9 @@ async def test_send_message_with_media_only(signalwire_relay_client, mock_relay)
     assert "body" not in p or not p.get("body")
 
 
-async def test_send_message_includes_context(signalwire_relay_client, mock_relay):
+async def test_send_message_includes_context(
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """The context defaults to the protocol string and flows on the wire."""
     msg = await signalwire_relay_client.send_message(
         to_number="+15551112222",
@@ -77,8 +82,8 @@ async def test_send_message_includes_context(signalwire_relay_client, mock_relay
 
 
 async def test_send_message_returns_initial_state_queued(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """Right after send, the SDK Message is in 'queued' state."""
     msg = await signalwire_relay_client.send_message(
         to_number="+15551112222",
@@ -90,8 +95,8 @@ async def test_send_message_returns_initial_state_queued(
 
 
 async def test_send_message_resolves_on_delivered(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """A pushed messaging.state(delivered) resolves ``await message.wait()``."""
     msg = await signalwire_relay_client.send_message(
         to_number="+15551112222",
@@ -123,8 +128,8 @@ async def test_send_message_resolves_on_delivered(
 
 
 async def test_send_message_resolves_on_undelivered(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """An undelivered terminal state resolves the Message with that state."""
     msg = await signalwire_relay_client.send_message(
         to_number="+15551112222",
@@ -152,8 +157,8 @@ async def test_send_message_resolves_on_undelivered(
 
 
 async def test_send_message_resolves_on_failed(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """A failed terminal state resolves the Message."""
     msg = await signalwire_relay_client.send_message(
         to_number="+15551112222",
@@ -180,8 +185,8 @@ async def test_send_message_resolves_on_failed(
 
 
 async def test_send_message_intermediate_state_does_not_resolve(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """Intermediate states (sent) update Message.state but don't resolve."""
     msg = await signalwire_relay_client.send_message(
         to_number="+15551112222",
@@ -217,14 +222,14 @@ async def test_send_message_intermediate_state_does_not_resolve(
 
 
 async def test_inbound_message_fires_on_message_handler(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """Pushed messaging.receive event invokes the on_message handler."""
     received = asyncio.Event()
     seen: dict[str, Message] = {}
 
     @signalwire_relay_client.on_message
-    async def handle(msg):
+    async def handle(msg: Message) -> None:
         seen["msg"] = msg
         received.set()
 
@@ -266,8 +271,8 @@ async def test_inbound_message_fires_on_message_handler(
 
 
 async def test_full_message_state_progression(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """sent → delivered progression updates state and resolves."""
     msg = await signalwire_relay_client.send_message(
         to_number="+15551112222",

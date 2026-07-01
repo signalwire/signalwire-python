@@ -1,27 +1,24 @@
-"""
-Copyright (c) 2025 SignalWire
+"""Back-compat shim — DO NOT add to other ports. x-sdk-back-compat-shim
 
-This file is part of the SignalWire SDK.
-
-Licensed under the MIT License.
-See LICENSE file in the project root for full license information.
-
-Verified Caller IDs namespace — CRUD + verification flow.
+Deprecated import path. The REST layer is spec-generated; these symbols moved out of
+``namespaces.verified_callers`` (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
+re-export keeps ``from signalwire.signalwire.rest.namespaces.verified_callers import VerifiedCallersResource`` working
+but emits a DeprecationWarning. Prefer ``client.verified_callers`` (no import needed). PYTHON-ONLY: the
+surface oracle skips this file, so no other port implements these.
 """
 
-from .._base import CrudResource
+import warnings
 
+warnings.warn(
+    "signalwire.signalwire.rest.namespaces.verified_callers is deprecated; use client.verified_callers. "
+    "This back-compat shim will be removed in a future release.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class VerifiedCallersResource(CrudResource):
-    """Verified caller ID management with verification flow."""
+from .relay_rest_resources_generated import VerifiedCallers  # noqa: E402  (re-export after the deprecation warn — intentional)
 
-    _update_method = "PUT"
+# Back-compat aliases (old name -> generated bare name):
+VerifiedCallersResource = VerifiedCallers
 
-    def __init__(self, http):
-        super().__init__(http, "/api/relay/rest/verified_caller_ids")
-
-    def redial_verification(self, caller_id):
-        return self._http.post(self._path(caller_id, "verification"))
-
-    def submit_verification(self, caller_id, **kwargs):
-        return self._http.put(self._path(caller_id, "verification"), body=kwargs)
+__all__ = ["VerifiedCallersResource"]

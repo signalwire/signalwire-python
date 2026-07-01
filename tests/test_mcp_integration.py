@@ -1,9 +1,10 @@
+from typing import Any
 #!/usr/bin/env python3
 """Tests for MCP server endpoint and add_mcp_server configuration."""
 
 import json
 import pytest
-from signalwire import AgentBase
+from signalwire.core.agent_base import AgentBase
 from signalwire.core.function_result import FunctionResult
 from signalwire.core.mixins.mcp_server_mixin import MCPServerMixin
 
@@ -11,7 +12,7 @@ from signalwire.core.mixins.mcp_server_mixin import MCPServerMixin
 class TestMCPServerMixin:
     """Test the MCP server mixin directly"""
 
-    def _make_agent(self):
+    def _make_agent(self) -> "AgentBase":
         """Create an agent with MCP server enabled and a tool"""
         agent = AgentBase(name="test-mcp", route="/test")
         agent._mcp_server_enabled = True
@@ -19,7 +20,7 @@ class TestMCPServerMixin:
         # Register a tool manually for testing
         from signalwire.core.swaig_function import SWAIGFunction
 
-        def weather_handler(agent_self, args, raw):
+        def weather_handler(agent_self: Any, args: dict[str, Any], raw: dict[str, Any]) -> Any:
             return FunctionResult(f"72F sunny in {args.get('location', 'unknown')}")
 
         func = SWAIGFunction(
@@ -35,7 +36,7 @@ class TestMCPServerMixin:
 
         return agent
 
-    def test_build_tool_list(self):
+    def test_build_tool_list(self) -> None:
         """Tools are converted to MCP format correctly"""
         agent = self._make_agent()
         tools = agent._build_mcp_tool_list()
@@ -47,7 +48,7 @@ class TestMCPServerMixin:
         assert tools[0]["inputSchema"]["type"] == "object"
         assert "location" in tools[0]["inputSchema"].get("properties", {})
 
-    def test_initialize_handshake(self):
+    def test_initialize_handshake(self) -> None:
         """Initialize returns protocol version and capabilities"""
         agent = self._make_agent()
         resp = agent._handle_mcp_request({
@@ -67,7 +68,7 @@ class TestMCPServerMixin:
         assert resp["result"]["protocolVersion"] == "2025-06-18"
         assert "tools" in resp["result"]["capabilities"]
 
-    def test_initialized_notification(self):
+    def test_initialized_notification(self) -> None:
         """notifications/initialized returns empty result"""
         agent = self._make_agent()
         resp = agent._handle_mcp_request({
@@ -77,7 +78,7 @@ class TestMCPServerMixin:
 
         assert "result" in resp
 
-    def test_tools_list(self):
+    def test_tools_list(self) -> None:
         """tools/list returns registered tools in MCP format"""
         agent = self._make_agent()
         resp = agent._handle_mcp_request({
@@ -92,7 +93,7 @@ class TestMCPServerMixin:
         assert len(tools) == 1
         assert tools[0]["name"] == "get_weather"
 
-    def test_tools_call(self):
+    def test_tools_call(self) -> None:
         """tools/call invokes the handler and returns content"""
         agent = self._make_agent()
         resp = agent._handle_mcp_request({
@@ -112,7 +113,7 @@ class TestMCPServerMixin:
         assert content[0]["type"] == "text"
         assert "Orlando" in content[0]["text"]
 
-    def test_tools_call_unknown(self):
+    def test_tools_call_unknown(self) -> None:
         """tools/call with unknown tool returns error"""
         agent = self._make_agent()
         resp = agent._handle_mcp_request({
@@ -126,7 +127,7 @@ class TestMCPServerMixin:
         assert resp["error"]["code"] == -32602
         assert "nonexistent" in resp["error"]["message"]
 
-    def test_unknown_method(self):
+    def test_unknown_method(self) -> None:
         """Unknown method returns method not found error"""
         agent = self._make_agent()
         resp = agent._handle_mcp_request({
@@ -139,7 +140,7 @@ class TestMCPServerMixin:
         assert "error" in resp
         assert resp["error"]["code"] == -32601
 
-    def test_ping(self):
+    def test_ping(self) -> None:
         """ping returns empty result"""
         agent = self._make_agent()
         resp = agent._handle_mcp_request({
@@ -150,7 +151,7 @@ class TestMCPServerMixin:
 
         assert "result" in resp
 
-    def test_invalid_jsonrpc_version(self):
+    def test_invalid_jsonrpc_version(self) -> None:
         """Non-2.0 version returns error"""
         agent = self._make_agent()
         resp = agent._handle_mcp_request({
@@ -166,7 +167,7 @@ class TestMCPServerMixin:
 class TestAddMCPServer:
     """Test the add_mcp_server config method"""
 
-    def test_add_mcp_server_basic(self):
+    def test_add_mcp_server_basic(self) -> None:
         """Basic MCP server config"""
         agent = AgentBase(name="test", route="/test")
         agent.add_mcp_server("https://mcp.example.com/tools")
@@ -174,7 +175,7 @@ class TestAddMCPServer:
         assert len(agent._mcp_servers) == 1
         assert agent._mcp_servers[0]["url"] == "https://mcp.example.com/tools"
 
-    def test_add_mcp_server_with_headers(self):
+    def test_add_mcp_server_with_headers(self) -> None:
         """MCP server with auth headers"""
         agent = AgentBase(name="test", route="/test")
         agent.add_mcp_server(
@@ -184,7 +185,7 @@ class TestAddMCPServer:
 
         assert agent._mcp_servers[0]["headers"]["Authorization"] == "Bearer sk-xxx"
 
-    def test_add_mcp_server_with_resources(self):
+    def test_add_mcp_server_with_resources(self) -> None:
         """MCP server with resources enabled"""
         agent = AgentBase(name="test", route="/test")
         agent.add_mcp_server(
@@ -196,7 +197,7 @@ class TestAddMCPServer:
         assert agent._mcp_servers[0]["resources"] == True
         assert agent._mcp_servers[0]["resource_vars"]["caller_id"] == "${caller_id_number}"
 
-    def test_add_multiple_servers(self):
+    def test_add_multiple_servers(self) -> None:
         """Multiple MCP servers"""
         agent = AgentBase(name="test", route="/test")
         agent.add_mcp_server("https://mcp1.example.com")
@@ -204,14 +205,14 @@ class TestAddMCPServer:
 
         assert len(agent._mcp_servers) == 2
 
-    def test_method_chaining(self):
+    def test_method_chaining(self) -> None:
         """add_mcp_server returns self for chaining"""
         agent = AgentBase(name="test", route="/test")
         result = agent.add_mcp_server("https://mcp.example.com")
 
         assert result is agent
 
-    def test_enable_mcp_server(self):
+    def test_enable_mcp_server(self) -> None:
         """enable_mcp_server sets the flag"""
         agent = AgentBase(name="test", route="/test")
         assert agent._mcp_server_enabled == False

@@ -14,6 +14,10 @@ import json
 
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.function_result import FunctionResult
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from signalwire.core.post_prompt_generated import PostPrompt, PostPromptData
 
 
 class FAQBotAgent(AgentBase):
@@ -273,8 +277,8 @@ class FAQBotAgent(AgentBase):
 
     def on_summary(
         self,
-        summary: dict[str, Any] | None,
-        raw_data: dict[str, Any] | None = None,
+        summary: "PostPromptData | None",
+        raw_data: "PostPrompt | None" = None,
     ) -> None:
         """
         Process the interaction summary

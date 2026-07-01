@@ -69,7 +69,7 @@ class AuthHandler:
         # Get auth methods from config
         self._setup_auth_methods()
 
-    def _setup_auth_methods(self):
+    def _setup_auth_methods(self) -> None:
         """Setup enabled authentication methods from config"""
         self.auth_methods: dict[str, dict[str, Any]] = {}
 
@@ -126,7 +126,9 @@ class AuthHandler:
         api_config = self.auth_methods["api_key"]
         return secrets.compare_digest(api_key, api_config["key"])
 
-    def get_fastapi_dependency(self, optional: bool = False):
+    def get_fastapi_dependency(
+        self, optional: bool = False
+    ) -> Callable[..., Any] | None:
         """
         Get FastAPI dependency for authentication.
 
@@ -149,7 +151,7 @@ class AuthHandler:
             if self.bearer_auth
             else None,
             api_key: str | None = None,  # Get from header in request
-        ):
+        ) -> dict[str, Any]:
             # Try each auth method
             authenticated = False
             auth_method = None
@@ -178,7 +180,7 @@ class AuthHandler:
 
         return auth_dependency
 
-    def flask_decorator(self, f: Callable) -> Callable:
+    def flask_decorator(self, f: Callable[..., Any]) -> Callable[..., Any]:
         """
         Flask decorator for authentication.
 
@@ -186,7 +188,7 @@ class AuthHandler:
         """
 
         @wraps(f)
-        def decorated(*args, **kwargs):
+        def decorated(*args: Any, **kwargs: Any) -> Any:
             from flask import request, Response
 
             # Try Bearer token first

@@ -8,34 +8,34 @@ pre-creating a Fabric webhook resource and does NOT call
 post-mortem.
 """
 
-import warnings
 
-import pytest
 
 from signalwire.rest import PhoneCallHandler
 
 from .conftest import MockResponse
+from signalwire.rest.client import RestClient
+from unittest.mock import MagicMock
 
 
 BASE = "https://test.signalwire.com/api/relay/rest/phone_numbers"
 
 
 class TestPhoneNumbersCrud:
-    def test_list(self, client, mock_session):
+    def test_list(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"data": []})
         client.phone_numbers.list()
         mock_session.request.assert_called_with(
             "GET", BASE, json=None, params=None,
         )
 
-    def test_search(self, client, mock_session):
+    def test_search(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"data": []})
         client.phone_numbers.search(area_code="512")
         mock_session.request.assert_called_with(
             "GET", f"{BASE}/search", json=None, params={"area_code": "512"},
         )
 
-    def test_update_uses_put(self, client, mock_session):
+    def test_update_uses_put(self, client: RestClient, mock_session: MagicMock) -> None:
         """phone_numbers uses PUT for update (not PATCH)."""
         mock_session.request.return_value = MockResponse(200, {})
         client.phone_numbers.update("pn-1", name="Main")
@@ -45,23 +45,23 @@ class TestPhoneNumbersCrud:
 
 
 class TestPhoneCallHandlerEnum:
-    def test_all_wire_values_present(self):
+    def test_all_wire_values_present(self) -> None:
         """Every call_handler value accepted by the API is in the enum."""
         expected = {
-            "relay_script", "laml_webhooks", "laml_application",
-            "ai_agent", "call_flow", "relay_application",
-            "relay_topic", "relay_context", "relay_connector",
-            "video_room", "dialogflow",
+            "relay_context", "relay_topic", "relay_script",
+            "relay_application", "relay_connector", "relay_sip_endpoint",
+            "relay_verto_endpoint", "laml_webhooks", "laml_application",
+            "dialogflow", "video_room", "ai_agent", "call_flow",
         }
         assert {h.value for h in PhoneCallHandler} == expected
 
-    def test_enum_members_are_strings(self):
+    def test_enum_members_are_strings(self) -> None:
         """Members serialize to their wire value on all supported Python versions."""
         import json
 
         # str-equality — the wire guarantee
-        assert PhoneCallHandler.RELAY_SCRIPT == "relay_script"
-        assert PhoneCallHandler.AI_AGENT == "ai_agent"
+        assert PhoneCallHandler.RELAY_SCRIPT == "relay_script"  # type: ignore[comparison-overlap]  # str-Enum is str-equal at runtime
+        assert PhoneCallHandler.AI_AGENT == "ai_agent"  # type: ignore[comparison-overlap]  # str-Enum is str-equal at runtime
         # .value exposes the same wire string
         assert PhoneCallHandler.AI_AGENT.value == "ai_agent"
         # JSON serialization produces the wire value (not the enum repr)
@@ -70,16 +70,16 @@ class TestPhoneCallHandlerEnum:
             == '{"call_handler": "ai_agent"}'
         )
 
-    def test_no_collision_with_relay_callhandler(self):
+    def test_no_collision_with_relay_callhandler(self) -> None:
         """PhoneCallHandler is explicitly named to dodge the RELAY CallHandler type."""
         # Just assert the import path is the rest module; RELAY has its own
         # callback types elsewhere and won't reuse this symbol.
-        from signalwire.rest.call_handler import PhoneCallHandler as ReimportedHandler
+        from signalwire.rest import PhoneCallHandler as ReimportedHandler
         assert ReimportedHandler is PhoneCallHandler
 
 
 class TestSetSwmlWebhook:
-    def test_happy_path(self, client, mock_session):
+    def test_happy_path(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.phone_numbers.set_swml_webhook(
             "pn-1", url="https://example.com/swml",
@@ -93,7 +93,7 @@ class TestSetSwmlWebhook:
             params=None,
         )
 
-    def test_extra_kwargs_pass_through(self, client, mock_session):
+    def test_extra_kwargs_pass_through(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.phone_numbers.set_swml_webhook(
             "pn-1", url="https://example.com/swml", name="Support Line",
@@ -105,7 +105,7 @@ class TestSetSwmlWebhook:
 
 
 class TestSetCxmlWebhook:
-    def test_minimal(self, client, mock_session):
+    def test_minimal(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.phone_numbers.set_cxml_webhook(
             "pn-1", url="https://example.com/voice.xml",
@@ -119,7 +119,7 @@ class TestSetCxmlWebhook:
             params=None,
         )
 
-    def test_with_fallback_and_status(self, client, mock_session):
+    def test_with_fallback_and_status(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.phone_numbers.set_cxml_webhook(
             "pn-1",
@@ -137,7 +137,7 @@ class TestSetCxmlWebhook:
 
 
 class TestSetCxmlApplication:
-    def test_happy_path(self, client, mock_session):
+    def test_happy_path(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.phone_numbers.set_cxml_application("pn-1", application_id="app-1")
         body = mock_session.request.call_args.kwargs["json"]
@@ -148,7 +148,7 @@ class TestSetCxmlApplication:
 
 
 class TestSetAiAgent:
-    def test_happy_path(self, client, mock_session):
+    def test_happy_path(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.phone_numbers.set_ai_agent("pn-1", agent_id="agent-1")
         body = mock_session.request.call_args.kwargs["json"]
@@ -159,7 +159,7 @@ class TestSetAiAgent:
 
 
 class TestSetCallFlow:
-    def test_minimal(self, client, mock_session):
+    def test_minimal(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.phone_numbers.set_call_flow("pn-1", flow_id="cf-1")
         body = mock_session.request.call_args.kwargs["json"]
@@ -168,7 +168,7 @@ class TestSetCallFlow:
             "call_flow_id": "cf-1",
         }
 
-    def test_with_version(self, client, mock_session):
+    def test_with_version(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.phone_numbers.set_call_flow(
             "pn-1", flow_id="cf-1", version="current_deployed",
@@ -182,7 +182,7 @@ class TestSetCallFlow:
 
 
 class TestSetRelayApplication:
-    def test_happy_path(self, client, mock_session):
+    def test_happy_path(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.phone_numbers.set_relay_application("pn-1", name="my-app")
         body = mock_session.request.call_args.kwargs["json"]
@@ -193,7 +193,7 @@ class TestSetRelayApplication:
 
 
 class TestSetRelayTopic:
-    def test_minimal(self, client, mock_session):
+    def test_minimal(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.phone_numbers.set_relay_topic("pn-1", topic="office")
         body = mock_session.request.call_args.kwargs["json"]
@@ -202,7 +202,7 @@ class TestSetRelayTopic:
             "call_relay_topic": "office",
         }
 
-    def test_with_status_callback(self, client, mock_session):
+    def test_with_status_callback(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
         client.phone_numbers.set_relay_topic(
             "pn-1", topic="office",
@@ -227,7 +227,7 @@ class TestBindingRegressionPostMortem:
     (directly or via the typed helpers). This test pins that contract.
     """
 
-    def test_swml_binding_uses_only_phone_numbers_update(self, client, mock_session):
+    def test_swml_binding_uses_only_phone_numbers_update(self, client: RestClient, mock_session: MagicMock) -> None:
         """The full happy path is a single PUT to /api/relay/rest/phone_numbers/{sid}."""
         mock_session.request.return_value = MockResponse(200, {})
         client.phone_numbers.set_swml_webhook(
@@ -248,7 +248,7 @@ class TestBindingRegressionPostMortem:
         # /api/fabric/resources/.../phone_routes)
         assert "/phone_routes" not in url
 
-    def test_wire_level_form_works_without_enum(self, client, mock_session):
+    def test_wire_level_form_works_without_enum(self, client: RestClient, mock_session: MagicMock) -> None:
         """Passing the raw string value also works — for users who don't import the enum."""
         mock_session.request.return_value = MockResponse(200, {})
         client.phone_numbers.update(
@@ -260,7 +260,7 @@ class TestBindingRegressionPostMortem:
         assert body["call_handler"] == "relay_script"
         assert body["call_relay_script_url"] == "https://example.com/swml"
 
-    def test_enum_value_is_accepted_by_update(self, client, mock_session):
+    def test_enum_value_is_accepted_by_update(self, client: RestClient, mock_session: MagicMock) -> None:
         """Passing PhoneCallHandler.RELAY_SCRIPT.value serializes identically."""
         mock_session.request.return_value = MockResponse(200, {})
         client.phone_numbers.update(
@@ -275,7 +275,7 @@ class TestBindingRegressionPostMortem:
 class TestHelperCoverage:
     """Every PhoneCallHandler member that maps to a helper has one."""
 
-    def test_all_helpers_present(self, client):
+    def test_all_helpers_present(self, client: RestClient) -> None:
         expected = {
             "set_swml_webhook",
             "set_cxml_webhook",

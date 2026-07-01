@@ -1,28 +1,24 @@
-"""
-Copyright (c) 2025 SignalWire
+"""Back-compat shim — DO NOT add to other ports. x-sdk-back-compat-shim
 
-This file is part of the SignalWire SDK.
-
-Licensed under the MIT License.
-See LICENSE file in the project root for full license information.
-
-Recordings namespace — list, get, delete (no create/update).
+Deprecated import path. The REST layer is spec-generated; these symbols moved out of
+``namespaces.recordings`` (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
+re-export keeps ``from signalwire.signalwire.rest.namespaces.recordings import RecordingsResource`` working
+but emits a DeprecationWarning. Prefer ``client.recordings`` (no import needed). PYTHON-ONLY: the
+surface oracle skips this file, so no other port implements these.
 """
 
-from .._base import BaseResource
+import warnings
 
+warnings.warn(
+    "signalwire.signalwire.rest.namespaces.recordings is deprecated; use client.recordings. "
+    "This back-compat shim will be removed in a future release.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class RecordingsResource(BaseResource):
-    """Recording management (read-only + delete)."""
+from .relay_rest_resources_generated import Recordings  # noqa: E402  (re-export after the deprecation warn — intentional)
 
-    def __init__(self, http):
-        super().__init__(http, "/api/relay/rest/recordings")
+# Back-compat aliases (old name -> generated bare name):
+RecordingsResource = Recordings
 
-    def list(self, **params):
-        return self._http.get(self._base_path, params=params or None)
-
-    def get(self, recording_id):
-        return self._http.get(self._path(recording_id))
-
-    def delete(self, recording_id):
-        return self._http.delete(self._path(recording_id))
+__all__ = ["RecordingsResource"]

@@ -135,7 +135,7 @@ def _debug_json(label: str, data: Any) -> None:
 
 
 class GoogleMapsClient:
-    def __init__(self, api_key):
+    def __init__(self, api_key: str):
         self.api_key = api_key
 
     def validate_address(
@@ -289,7 +289,7 @@ class GoogleMapsClient:
         autocomplete_url = (
             "https://maps.googleapis.com/maps/api/place/autocomplete/json"
         )
-        params = {"input": input_text, "key": self.api_key}
+        params: dict[str, Any] = {"input": input_text, "key": self.api_key}
         # Soft bias toward pickup area (no strictbounds — far destinations still work)
         if bias_lat is not None and bias_lng is not None:
             params["location"] = f"{bias_lat},{bias_lng}"
@@ -386,7 +386,13 @@ class GoogleMapsClient:
             "business_name": name if is_business else "",
         }
 
-    def compute_route(self, origin_lat, origin_lng, dest_lat, dest_lng):
+    def compute_route(
+        self,
+        origin_lat: float,
+        origin_lng: float,
+        dest_lat: float,
+        dest_lng: float,
+    ) -> dict[str, Any] | None:
         """Compute route using Google Routes API.
 
         Returns: {"distance_meters": int, "duration_seconds": int} or None
@@ -586,12 +592,22 @@ class GoogleMapsSkill(SkillBase):
         dest_lat = args.get("dest_lat")
         dest_lng = args.get("dest_lng")
 
-        if None in (origin_lat, origin_lng, dest_lat, dest_lng):
+        if (
+            origin_lat is None
+            or origin_lng is None
+            or dest_lat is None
+            or dest_lng is None
+        ):
             return FunctionResult(
                 "All four coordinates are required: origin_lat, origin_lng, dest_lat, dest_lng."
             )
 
-        result = self.client.compute_route(origin_lat, origin_lng, dest_lat, dest_lng)
+        result = self.client.compute_route(
+            float(origin_lat),
+            float(origin_lng),
+            float(dest_lat),
+            float(dest_lng),
+        )
         if not result:
             return FunctionResult(
                 "I couldn't compute a route between those locations. Please verify the coordinates."

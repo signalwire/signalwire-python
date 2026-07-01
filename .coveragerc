@@ -9,6 +9,13 @@ omit =
     setup.py
     */examples/*
     */docs/*
+    # Spec-generated static type stubs (TypedDicts emitted from the canonical
+    # specs). Type-only — imported solely under TYPE_CHECKING, never executed at
+    # runtime, so they carry no testable statements; counting them would dilute
+    # coverage with ~1500 unreachable lines. Regenerated + freshness-gated by the
+    # GEN-FRESH gate, not by tests.
+    */rest/namespaces/*_types_generated.py
+    */relay/protocol_types_generated.py
 
 [report]
 # Regexes for lines to exclude from consideration

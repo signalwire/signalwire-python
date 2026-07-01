@@ -59,7 +59,7 @@ import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Optional
+from typing import Any, AsyncIterator, Callable, Iterable, Iterator, Optional, cast
 from unittest.mock import AsyncMock, patch
 from urllib.parse import quote
 
@@ -133,7 +133,7 @@ class MockWebSocket:
             raise item
         return item
 
-    def __aiter__(self):
+    def __aiter__(self) -> MockWebSocket:
         return self
 
     async def __anext__(self) -> str:
@@ -242,7 +242,7 @@ def make_calling_response(
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def relay_client():
+def relay_client() -> Iterator[RelayClient]:
     """Fresh RelayClient with test credentials.  Clears _active_clients."""
     _active_clients.clear()
     client = RelayClient(project="test-project", token="test-token")
@@ -251,7 +251,7 @@ def relay_client():
 
 
 @pytest_asyncio.fixture
-async def connected_client():
+async def connected_client() -> AsyncIterator[tuple[RelayClient, AutoAuthMockWebSocket]]:
     """A RelayClient that is connected via a mocked WebSocket.
 
     Yields ``(client, mock_ws)``.  Disconnects on teardown.
@@ -271,7 +271,7 @@ async def connected_client():
 
 
 @pytest.fixture
-def make_call():
+def make_call() -> Callable[..., Call]:
     """Factory that creates a Call object on a connected client."""
 
     def _factory(
@@ -355,7 +355,7 @@ class _SharedRelayServer:
         self.http_url: Optional[str] = None
         self.ws_url: Optional[str] = None
         self.relay_host: Optional[str] = None
-        self._child: Optional[subprocess.Popen] = None
+        self._child: Optional[subprocess.Popen[bytes]] = None
         self._lock = threading.Lock()
         self._error: Optional[str] = None
 
@@ -583,7 +583,7 @@ class _MockRelayHarness:
             url = f"{url}?session_id={quote(target, safe='')}"
         resp = self._requests.post(url, json={"frame": frame}, timeout=5)
         resp.raise_for_status()
-        return resp.json()
+        return cast("dict[str, Any]", resp.json())
 
     def inbound_call(
         self,
@@ -618,7 +618,7 @@ class _MockRelayHarness:
             f"{self.http_url}/__mock__/inbound_call", json=body, timeout=5
         )
         resp.raise_for_status()
-        return resp.json()
+        return cast("dict[str, Any]", resp.json())
 
     def scenario_play(self, ops: list[dict[str, Any]]) -> dict[str, Any]:
         """Run a scripted timeline of pushes/sleeps/expect_recv on the server.
@@ -633,7 +633,7 @@ class _MockRelayHarness:
             f"{self.http_url}/__mock__/scenario_play", json=ops, timeout=15
         )
         resp.raise_for_status()
-        return resp.json()
+        return cast("dict[str, Any]", resp.json())
 
     def _scope_op(self, op: dict[str, Any]) -> dict[str, Any]:
         """Inject this.session_id into a timeline op's push/expect_recv spec when
@@ -649,11 +649,11 @@ class _MockRelayHarness:
         """List active WebSocket session metadata."""
         resp = self._requests.get(f"{self.http_url}/__mock__/sessions", timeout=5)
         resp.raise_for_status()
-        return resp.json().get("sessions", [])
+        return cast("list[dict[str, Any]]", resp.json().get("sessions", []))
 
 
 @pytest.fixture
-def mock_relay():
+def mock_relay() -> _MockRelayHarness:
     """Test-facing harness around the shared mock-relay server (unscoped view).
 
     Used directly by tests that build their own client(s).  When a test also
@@ -661,7 +661,12 @@ def mock_relay():
     object to the connected client's session id.
     """
     shared = _SHARED_RELAY.ensure()
-    return _MockRelayHarness(shared.http_url, shared.ws_url, shared.relay_host)
+    # ``ensure()`` guarantees these are populated (or skips), so they are non-None.
+    return _MockRelayHarness(
+        cast(str, shared.http_url),
+        cast(str, shared.ws_url),
+        cast(str, shared.relay_host),
+    )
 
 
 def _ws_redirect_to_mock(shared: "_SharedRelayServer") -> Any:
@@ -678,14 +683,16 @@ def _ws_redirect_to_mock(shared: "_SharedRelayServer") -> Any:
     target_url = shared.ws_url
     real_connect = __import__("websockets").connect
 
-    def proxy(uri, *args, **kwargs):
+    def proxy(uri: str, *args: Any, **kwargs: Any) -> Any:
         return real_connect(target_url, *args, **kwargs)
 
     return patch("signalwire.relay.client.websockets.connect", side_effect=proxy)
 
 
 @pytest_asyncio.fixture
-async def signalwire_relay_client(mock_relay):
+async def signalwire_relay_client(
+    mock_relay: _MockRelayHarness,
+) -> AsyncIterator[RelayClient]:
     """A real ``RelayClient`` connected to the shared mock relay server.
 
     Connects inside the ``websockets.connect`` URL redirect, then scopes the
@@ -724,7 +731,7 @@ async def signalwire_relay_client(mock_relay):
 
 
 @pytest.fixture
-def relay_ws_redirect(mock_relay):
+def relay_ws_redirect(mock_relay: _MockRelayHarness) -> Any:
     """Return a context-manager that redirects websockets.connect to the mock.
 
     Use this when a test needs to construct its own RelayClient (e.g. with

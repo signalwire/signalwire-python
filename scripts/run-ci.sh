@@ -226,13 +226,26 @@ run_gate "LINT" "ruff check zero findings" \
     python3 -m ruff check "$PORT_ROOT/signalwire"
 
 # Gate 7: TYPECHECK — mypy, zero findings. Config in pyproject.toml [tool.mypy]
-# (files=signalwire/signalwire, ignore_missing_imports, check_untyped_defs). Burned
-# to zero across all 176 source files. `# type: ignore` is reserved for genuine
-# third-party-stub gaps / optional-dependency import shims, each with an error code
-# and rationale (warn_unused_ignores keeps them honest). Source-type only — mypy is
-# dev-time and adds no runtime validation, so wire payloads stay forward-compatible.
+# (files=["signalwire/signalwire","tests"], ignore_missing_imports, strict). Burned
+# to zero across BOTH the source tree AND the whole test suite (338 files): the
+# generated REST tests are strict-clean by construction, and the hand tests were fully
+# annotated — so a new untyped test now fails this gate too. `# type: ignore` is
+# reserved for genuine third-party-stub gaps, optional-dependency import shims, and
+# mock-monkeypatch sites (mock.method = ...), each with an error code and rationale
+# (warn_unused_ignores keeps them honest). Dev-time only — mypy adds no runtime
+# validation, so wire payloads stay forward-compatible.
 run_gate "TYPECHECK" "mypy zero findings" \
     python3 -m mypy --config-file "$PORT_ROOT/pyproject.toml"
+
+# Gate 8: GEN-FRESH — the committed *_types_generated.py modules (REST namespaces +
+# RELAY protocol) must still reproduce EXACTLY from their canonical specs
+# (porting-sdk/rest-apis/*/openapi.yaml + relay-protocol/*.json). Mirror of the TS
+# port's `generate-rest-types.ts --check`. DRIFT can't police these (≈40% of the
+# reference is Any, which matches any generated type), so the only thing proving
+# the committed types still match their source is that they regenerate identically.
+run_gate "GEN-FRESH" "generated REST/RELAY types reproduce from specs" \
+    python3 "$PORTING_SDK_DIR/scripts/generate_python_rest_types.py" \
+        --signalwire-python "$PORT_ROOT/signalwire" --check
 
 if [ -z "$FAILED_GATES" ]; then
     echo "==> CI PASS"

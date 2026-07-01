@@ -11,6 +11,8 @@ See LICENSE file in the project root for full license information.
 Unit tests for AIConfigMixin
 """
 
+from typing import Any
+
 import pytest
 from unittest.mock import Mock
 
@@ -23,22 +25,22 @@ class MockAIConfigHost(AIConfigMixin):
     all the attributes the mixin expects to find on self.
     """
 
-    def __init__(self):
-        self._hints = []
-        self._languages = []
-        self._pronounce = []
-        self._params = {}
-        self._global_data = {}
-        self.native_functions = []
-        self._internal_fillers = {}
-        self._function_includes = []
-        self._prompt_llm_params = {}
-        self._post_prompt_llm_params = {}
+    def __init__(self) -> None:
+        self._hints: list[Any] = []
+        self._languages: list[dict[str, Any]] = []
+        self._pronounce: list[dict[str, Any]] = []
+        self._params: dict[str, Any] = {}
+        self._global_data: dict[str, Any] = {}
+        self.native_functions: list[Any] = []
+        self._internal_fillers: dict[str, Any] = {}
+        self._function_includes: list[dict[str, Any]] = []
+        self._prompt_llm_params: dict[str, Any] = {}
+        self._post_prompt_llm_params: dict[str, Any] = {}
         self.log = Mock()
 
 
 @pytest.fixture
-def host():
+def host() -> MockAIConfigHost:
     """Return a fresh MockAIConfigHost."""
     return MockAIConfigHost()
 
@@ -50,7 +52,7 @@ def host():
 class TestAddPatternHint:
     """Tests for AIConfigMixin.add_pattern_hint"""
 
-    def test_adds_pattern_hint_with_all_fields(self, host):
+    def test_adds_pattern_hint_with_all_fields(self, host: MockAIConfigHost) -> None:
         result = host.add_pattern_hint("SignalWire", r"signal\s*wire", "SignalWire")
         assert len(host._hints) == 1
         assert host._hints[0] == {
@@ -60,31 +62,31 @@ class TestAddPatternHint:
             "ignore_case": False,
         }
 
-    def test_adds_pattern_hint_with_ignore_case(self, host):
+    def test_adds_pattern_hint_with_ignore_case(self, host: MockAIConfigHost) -> None:
         host.add_pattern_hint("Test", r"t.st", "Test!", ignore_case=True)
         assert host._hints[0]["ignore_case"] is True
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
         result = host.add_pattern_hint("h", "p", "r")
         assert result is host
 
-    def test_empty_hint_does_not_add(self, host):
+    def test_empty_hint_does_not_add(self, host: MockAIConfigHost) -> None:
         host.add_pattern_hint("", "pattern", "replace")
         assert len(host._hints) == 0
 
-    def test_empty_pattern_does_not_add(self, host):
+    def test_empty_pattern_does_not_add(self, host: MockAIConfigHost) -> None:
         host.add_pattern_hint("hint", "", "replace")
         assert len(host._hints) == 0
 
-    def test_empty_replace_does_not_add(self, host):
+    def test_empty_replace_does_not_add(self, host: MockAIConfigHost) -> None:
         host.add_pattern_hint("hint", "pattern", "")
         assert len(host._hints) == 0
 
-    def test_none_hint_does_not_add(self, host):
-        host.add_pattern_hint(None, "pattern", "replace")
+    def test_none_hint_does_not_add(self, host: MockAIConfigHost) -> None:
+        host.add_pattern_hint(None, "pattern", "replace")  # type: ignore[arg-type]  # intentional invalid input
         assert len(host._hints) == 0
 
-    def test_multiple_pattern_hints(self, host):
+    def test_multiple_pattern_hints(self, host: MockAIConfigHost) -> None:
         host.add_pattern_hint("A", "a", "A!")
         host.add_pattern_hint("B", "b", "B!")
         assert len(host._hints) == 2
@@ -97,7 +99,7 @@ class TestAddPatternHint:
 class TestAddLanguage:
     """Tests for AIConfigMixin.add_language"""
 
-    def test_simple_voice_string(self, host):
+    def test_simple_voice_string(self, host: MockAIConfigHost) -> None:
         host.add_language("English", "en-US", "en-US-Neural2-F")
         assert len(host._languages) == 1
         lang = host._languages[0]
@@ -107,49 +109,49 @@ class TestAddLanguage:
         assert "engine" not in lang
         assert "model" not in lang
 
-    def test_explicit_engine_param(self, host):
+    def test_explicit_engine_param(self, host: MockAIConfigHost) -> None:
         host.add_language("English", "en-US", "josh", engine="elevenlabs")
         lang = host._languages[0]
         assert lang["voice"] == "josh"
         assert lang["engine"] == "elevenlabs"
         assert "model" not in lang
 
-    def test_explicit_model_param(self, host):
+    def test_explicit_model_param(self, host: MockAIConfigHost) -> None:
         host.add_language("English", "en-US", "josh", model="eleven_turbo_v2_5")
         lang = host._languages[0]
         assert lang["voice"] == "josh"
         assert lang["model"] == "eleven_turbo_v2_5"
         assert "engine" not in lang
 
-    def test_explicit_engine_and_model_params(self, host):
+    def test_explicit_engine_and_model_params(self, host: MockAIConfigHost) -> None:
         host.add_language("English", "en-US", "josh", engine="elevenlabs", model="eleven_turbo_v2_5")
         lang = host._languages[0]
         assert lang["voice"] == "josh"
         assert lang["engine"] == "elevenlabs"
         assert lang["model"] == "eleven_turbo_v2_5"
 
-    def test_combined_format_engine_voice_model(self, host):
+    def test_combined_format_engine_voice_model(self, host: MockAIConfigHost) -> None:
         host.add_language("English", "en-US", "elevenlabs.josh:eleven_turbo_v2_5")
         lang = host._languages[0]
         assert lang["voice"] == "josh"
         assert lang["engine"] == "elevenlabs"
         assert lang["model"] == "eleven_turbo_v2_5"
 
-    def test_combined_format_parse_failure_fallback(self, host):
+    def test_combined_format_parse_failure_fallback(self, host: MockAIConfigHost) -> None:
         """Malformed combined format (dot but no colon) uses voice as-is."""
         host.add_language("English", "en-US", "some-voice-no-colon")
         lang = host._languages[0]
         assert lang["voice"] == "some-voice-no-colon"
         assert "engine" not in lang
 
-    def test_combined_format_with_dot_but_missing_colon(self, host):
+    def test_combined_format_with_dot_but_missing_colon(self, host: MockAIConfigHost) -> None:
         """Voice with a dot but no colon is treated as a simple voice string."""
         host.add_language("English", "en-US", "engine.voice")
         lang = host._languages[0]
         # No colon means no combined format, simple voice
         assert lang["voice"] == "engine.voice"
 
-    def test_combined_format_value_error_fallback(self, host):
+    def test_combined_format_value_error_fallback(self, host: MockAIConfigHost) -> None:
         """When split produces wrong number of parts, fall back to voice as-is."""
         # This has colon and dot but the split on ":" gives engine_voice with no "."
         # Actually "a:b.c" -> split(":", 1) -> ("a", "b.c"), then "a".split(".", 1) -> ValueError
@@ -160,7 +162,7 @@ class TestAddLanguage:
         # "nodot:model" -> split(":", 1) -> ("nodot", "model"), then "nodot".split(".", 1) -> ValueError
         assert lang["voice"] == "nodot:model"
 
-    def test_both_speech_fillers_and_function_fillers(self, host):
+    def test_both_speech_fillers_and_function_fillers(self, host: MockAIConfigHost) -> None:
         speech = ["um", "uh"]
         func = ["let me check", "one moment"]
         host.add_language("English", "en-US", "voice1",
@@ -170,7 +172,7 @@ class TestAddLanguage:
         assert lang["function_fillers"] == func
         assert "fillers" not in lang
 
-    def test_only_speech_fillers_uses_deprecated_field(self, host):
+    def test_only_speech_fillers_uses_deprecated_field(self, host: MockAIConfigHost) -> None:
         speech = ["um", "uh"]
         host.add_language("English", "en-US", "voice1", speech_fillers=speech)
         lang = host._languages[0]
@@ -178,7 +180,7 @@ class TestAddLanguage:
         assert "speech_fillers" not in lang
         assert "function_fillers" not in lang
 
-    def test_only_function_fillers_uses_deprecated_field(self, host):
+    def test_only_function_fillers_uses_deprecated_field(self, host: MockAIConfigHost) -> None:
         func = ["let me check"]
         host.add_language("English", "en-US", "voice1", function_fillers=func)
         lang = host._languages[0]
@@ -186,18 +188,18 @@ class TestAddLanguage:
         assert "speech_fillers" not in lang
         assert "function_fillers" not in lang
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
         result = host.add_language("English", "en-US", "voice1")
         assert result is host
 
-    def test_no_fillers_produces_no_filler_keys(self, host):
+    def test_no_fillers_produces_no_filler_keys(self, host: MockAIConfigHost) -> None:
         host.add_language("English", "en-US", "voice1")
         lang = host._languages[0]
         assert "fillers" not in lang
         assert "speech_fillers" not in lang
         assert "function_fillers" not in lang
 
-    def test_combined_format_colon_and_dot_both_present_but_no_dot_in_engine_part(self, host):
+    def test_combined_format_colon_and_dot_both_present_but_no_dot_in_engine_part(self, host: MockAIConfigHost) -> None:
         """Voice like '.name:model' where engine part is empty string after split."""
         host.add_language("English", "en-US", ".voice:model")
         lang = host._languages[0]
@@ -216,53 +218,53 @@ class TestAddLanguage:
 class TestPerLanguageParams:
     """Tests for the per-language ``params`` dict support."""
 
-    def test_add_language_with_params_attaches_params(self, host):
+    def test_add_language_with_params_attaches_params(self, host: MockAIConfigHost) -> None:
         host.add_language("English", "en-US", "josh", engine="elevenlabs",
                           params={"stability": 0.5, "similarity_boost": 0.75})
         assert host._languages[0]["params"] == {"stability": 0.5, "similarity_boost": 0.75}
 
-    def test_add_language_without_params_omits_key(self, host):
+    def test_add_language_without_params_omits_key(self, host: MockAIConfigHost) -> None:
         host.add_language("French", "fr-FR", "fr-FR-Neural2-A")
         assert "params" not in host._languages[0]
 
-    def test_add_language_with_empty_params_omits_key(self, host):
+    def test_add_language_with_empty_params_omits_key(self, host: MockAIConfigHost) -> None:
         host.add_language("French", "fr-FR", "v", params={})
         assert "params" not in host._languages[0]
 
-    def test_get_language_params_returns_set_dict(self, host):
+    def test_get_language_params_returns_set_dict(self, host: MockAIConfigHost) -> None:
         host.add_language("English", "en-US", "v", params={"a": 1})
         assert host.get_language_params("en-US") == {"a": 1}
 
-    def test_get_language_params_returns_none_when_unset(self, host):
+    def test_get_language_params_returns_none_when_unset(self, host: MockAIConfigHost) -> None:
         host.add_language("English", "en-US", "v")
         assert host.get_language_params("en-US") is None
 
-    def test_get_language_params_returns_none_for_unknown_code(self, host):
+    def test_get_language_params_returns_none_for_unknown_code(self, host: MockAIConfigHost) -> None:
         assert host.get_language_params("zh-CN") is None
 
-    def test_set_language_params_replaces_existing(self, host):
+    def test_set_language_params_replaces_existing(self, host: MockAIConfigHost) -> None:
         host.add_language("English", "en-US", "v", params={"a": 1})
         host.set_language_params("en-US", {"b": 2})
         assert host.get_language_params("en-US") == {"b": 2}
 
-    def test_set_language_params_adds_when_unset(self, host):
+    def test_set_language_params_adds_when_unset(self, host: MockAIConfigHost) -> None:
         host.add_language("English", "en-US", "v")
         host.set_language_params("en-US", {"c": 3})
         assert host.get_language_params("en-US") == {"c": 3}
 
-    def test_set_language_params_empty_dict_removes_key(self, host):
+    def test_set_language_params_empty_dict_removes_key(self, host: MockAIConfigHost) -> None:
         host.add_language("English", "en-US", "v", params={"a": 1})
         host.set_language_params("en-US", {})
         assert host.get_language_params("en-US") is None
         assert "params" not in host._languages[0]
 
-    def test_set_language_params_unknown_code_is_noop(self, host):
+    def test_set_language_params_unknown_code_is_noop(self, host: MockAIConfigHost) -> None:
         host.add_language("English", "en-US", "v")
         host.set_language_params("zh-CN", {"a": 1})
         # The known language remains untouched.
         assert host._languages[0].get("params") is None
 
-    def test_set_language_params_returns_self_for_chaining(self, host):
+    def test_set_language_params_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
         host.add_language("English", "en-US", "v")
         assert host.set_language_params("en-US", {"a": 1}) is host
 
@@ -274,28 +276,28 @@ class TestPerLanguageParams:
 class TestSetLanguages:
     """Tests for AIConfigMixin.set_languages"""
 
-    def test_sets_languages_with_valid_list(self, host):
+    def test_sets_languages_with_valid_list(self, host: MockAIConfigHost) -> None:
         langs = [{"name": "English", "code": "en-US", "voice": "voice1"}]
         result = host.set_languages(langs)
         assert host._languages is langs
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
         result = host.set_languages([{"name": "French", "code": "fr-FR", "voice": "v"}])
         assert result is host
 
-    def test_empty_list_does_not_set(self, host):
+    def test_empty_list_does_not_set(self, host: MockAIConfigHost) -> None:
         host._languages = [{"name": "existing"}]
         host.set_languages([])
         assert host._languages == [{"name": "existing"}]
 
-    def test_none_does_not_set(self, host):
+    def test_none_does_not_set(self, host: MockAIConfigHost) -> None:
         host._languages = [{"name": "existing"}]
-        host.set_languages(None)
+        host.set_languages(None)  # type: ignore[arg-type]  # intentional invalid input
         assert host._languages == [{"name": "existing"}]
 
-    def test_non_list_does_not_set(self, host):
+    def test_non_list_does_not_set(self, host: MockAIConfigHost) -> None:
         host._languages = [{"name": "existing"}]
-        host.set_languages("not a list")
+        host.set_languages("not a list")  # type: ignore[arg-type]  # intentional invalid input
         assert host._languages == [{"name": "existing"}]
 
 
@@ -306,7 +308,7 @@ class TestSetLanguages:
 class TestAddPronunciation:
     """Tests for AIConfigMixin.add_pronunciation"""
 
-    def test_ignore_case_true_adds_key(self, host):
+    def test_ignore_case_true_adds_key(self, host: MockAIConfigHost) -> None:
         host.add_pronunciation("SQL", "sequel", ignore_case=True)
         assert len(host._pronounce) == 1
         rule = host._pronounce[0]
@@ -314,12 +316,12 @@ class TestAddPronunciation:
         assert rule["with"] == "sequel"
         assert rule["ignore_case"] is True
 
-    def test_ignore_case_false_omits_key(self, host):
+    def test_ignore_case_false_omits_key(self, host: MockAIConfigHost) -> None:
         host.add_pronunciation("API", "A.P.I.")
         rule = host._pronounce[0]
         assert "ignore_case" not in rule
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
         result = host.add_pronunciation("A", "B")
         assert result is host
 
@@ -331,28 +333,28 @@ class TestAddPronunciation:
 class TestSetPronunciations:
     """Tests for AIConfigMixin.set_pronunciations"""
 
-    def test_sets_pronunciations_with_valid_list(self, host):
+    def test_sets_pronunciations_with_valid_list(self, host: MockAIConfigHost) -> None:
         rules = [{"replace": "SQL", "with": "sequel"}]
         result = host.set_pronunciations(rules)
         assert host._pronounce is rules
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
         result = host.set_pronunciations([{"replace": "A", "with": "B"}])
         assert result is host
 
-    def test_empty_list_does_not_set(self, host):
+    def test_empty_list_does_not_set(self, host: MockAIConfigHost) -> None:
         host._pronounce = [{"replace": "old"}]
         host.set_pronunciations([])
         assert host._pronounce == [{"replace": "old"}]
 
-    def test_none_does_not_set(self, host):
+    def test_none_does_not_set(self, host: MockAIConfigHost) -> None:
         host._pronounce = [{"replace": "old"}]
-        host.set_pronunciations(None)
+        host.set_pronunciations(None)  # type: ignore[arg-type]  # intentional invalid input
         assert host._pronounce == [{"replace": "old"}]
 
-    def test_non_list_does_not_set(self, host):
+    def test_non_list_does_not_set(self, host: MockAIConfigHost) -> None:
         host._pronounce = [{"replace": "old"}]
-        host.set_pronunciations({"not": "a list"})
+        host.set_pronunciations({"not": "a list"})  # type: ignore[arg-type]  # intentional invalid input
         assert host._pronounce == [{"replace": "old"}]
 
 
@@ -363,23 +365,23 @@ class TestSetPronunciations:
 class TestSetGlobalData:
     """Tests for AIConfigMixin.set_global_data"""
 
-    def test_sets_global_data_with_valid_dict(self, host):
+    def test_sets_global_data_with_valid_dict(self, host: MockAIConfigHost) -> None:
         data = {"key": "value", "num": 42}
         result = host.set_global_data(data)
         assert host._global_data == data
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
         result = host.set_global_data({"k": "v"})
         assert result is host
 
-    def test_empty_dict_does_not_set(self, host):
+    def test_empty_dict_does_not_set(self, host: MockAIConfigHost) -> None:
         host._global_data = {"old": "data"}
         host.set_global_data({})
         assert host._global_data == {"old": "data"}
 
-    def test_none_does_not_set(self, host):
+    def test_none_does_not_set(self, host: MockAIConfigHost) -> None:
         host._global_data = {"old": "data"}
-        host.set_global_data(None)
+        host.set_global_data(None)  # type: ignore[arg-type]  # intentional invalid input
         assert host._global_data == {"old": "data"}
 
 
@@ -390,23 +392,23 @@ class TestSetGlobalData:
 class TestUpdateGlobalData:
     """Tests for AIConfigMixin.update_global_data"""
 
-    def test_updates_global_data(self, host):
+    def test_updates_global_data(self, host: MockAIConfigHost) -> None:
         host._global_data = {"existing": "value"}
         result = host.update_global_data({"new": "data"})
         assert host._global_data == {"existing": "value", "new": "data"}
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
         result = host.update_global_data({"k": "v"})
         assert result is host
 
-    def test_empty_dict_does_not_update(self, host):
+    def test_empty_dict_does_not_update(self, host: MockAIConfigHost) -> None:
         host._global_data = {"old": "data"}
         host.update_global_data({})
         assert host._global_data == {"old": "data"}
 
-    def test_none_does_not_update(self, host):
+    def test_none_does_not_update(self, host: MockAIConfigHost) -> None:
         host._global_data = {"old": "data"}
-        host.update_global_data(None)
+        host.update_global_data(None)  # type: ignore[arg-type]  # intentional invalid input
         assert host._global_data == {"old": "data"}
 
 
@@ -417,26 +419,26 @@ class TestUpdateGlobalData:
 class TestSetNativeFunctions:
     """Tests for AIConfigMixin.set_native_functions"""
 
-    def test_sets_native_functions(self, host):
+    def test_sets_native_functions(self, host: MockAIConfigHost) -> None:
         result = host.set_native_functions(["check_time", "wait_for_user"])
         assert host.native_functions == ["check_time", "wait_for_user"]
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
         result = host.set_native_functions(["fn"])
         assert result is host
 
-    def test_filters_non_string_entries(self, host):
-        host.set_native_functions(["valid", 123, None, "also_valid"])
+    def test_filters_non_string_entries(self, host: MockAIConfigHost) -> None:
+        host.set_native_functions(["valid", 123, None, "also_valid"])  # type: ignore[list-item]  # intentional invalid input
         assert host.native_functions == ["valid", "also_valid"]
 
-    def test_empty_list_does_not_set(self, host):
+    def test_empty_list_does_not_set(self, host: MockAIConfigHost) -> None:
         host.native_functions = ["old"]
         host.set_native_functions([])
         assert host.native_functions == ["old"]
 
-    def test_none_does_not_set(self, host):
+    def test_none_does_not_set(self, host: MockAIConfigHost) -> None:
         host.native_functions = ["old"]
-        host.set_native_functions(None)
+        host.set_native_functions(None)  # type: ignore[arg-type]  # intentional invalid input
         assert host.native_functions == ["old"]
 
 
@@ -447,41 +449,41 @@ class TestSetNativeFunctions:
 class TestSetInternalFillers:
     """Tests for AIConfigMixin.set_internal_fillers"""
 
-    def test_sets_internal_fillers_with_valid_dict(self, host):
+    def test_sets_internal_fillers_with_valid_dict(self, host: MockAIConfigHost) -> None:
         fillers = {
             "next_step": {"en-US": ["Moving on...", "Let's continue..."]}
         }
         result = host.set_internal_fillers(fillers)
         assert host._internal_fillers == fillers
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
         result = host.set_internal_fillers({"fn": {"en": ["filler"]}})
         assert result is host
 
-    def test_creates_internal_fillers_attr_if_missing(self, host):
+    def test_creates_internal_fillers_attr_if_missing(self, host: MockAIConfigHost) -> None:
         del host._internal_fillers
         host.set_internal_fillers({"fn": {"en": ["filler"]}})
         assert host._internal_fillers == {"fn": {"en": ["filler"]}}
 
-    def test_updates_existing_fillers(self, host):
+    def test_updates_existing_fillers(self, host: MockAIConfigHost) -> None:
         host._internal_fillers = {"fn1": {"en": ["old"]}}
         host.set_internal_fillers({"fn2": {"en": ["new"]}})
         assert "fn1" in host._internal_fillers
         assert "fn2" in host._internal_fillers
 
-    def test_empty_dict_does_not_set(self, host):
+    def test_empty_dict_does_not_set(self, host: MockAIConfigHost) -> None:
         host._internal_fillers = {"existing": {"en": ["x"]}}
         host.set_internal_fillers({})
         assert host._internal_fillers == {"existing": {"en": ["x"]}}
 
-    def test_none_does_not_set(self, host):
+    def test_none_does_not_set(self, host: MockAIConfigHost) -> None:
         host._internal_fillers = {"existing": {"en": ["x"]}}
-        host.set_internal_fillers(None)
+        host.set_internal_fillers(None)  # type: ignore[arg-type]  # intentional invalid input
         assert host._internal_fillers == {"existing": {"en": ["x"]}}
 
-    def test_non_dict_does_not_set(self, host):
+    def test_non_dict_does_not_set(self, host: MockAIConfigHost) -> None:
         host._internal_fillers = {"existing": {"en": ["x"]}}
-        host.set_internal_fillers(["not", "a", "dict"])
+        host.set_internal_fillers(["not", "a", "dict"])  # type: ignore[arg-type]  # intentional invalid input
         assert host._internal_fillers == {"existing": {"en": ["x"]}}
 
 
@@ -492,39 +494,39 @@ class TestSetInternalFillers:
 class TestAddInternalFiller:
     """Tests for AIConfigMixin.add_internal_filler"""
 
-    def test_adds_filler_for_new_function(self, host):
+    def test_adds_filler_for_new_function(self, host: MockAIConfigHost) -> None:
         result = host.add_internal_filler("next_step", "en-US", ["Moving on..."])
         assert host._internal_fillers["next_step"]["en-US"] == ["Moving on..."]
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
         result = host.add_internal_filler("fn", "en", ["filler"])
         assert result is host
 
-    def test_creates_internal_fillers_attr_if_missing(self, host):
+    def test_creates_internal_fillers_attr_if_missing(self, host: MockAIConfigHost) -> None:
         del host._internal_fillers
         host.add_internal_filler("fn", "en", ["filler"])
         assert host._internal_fillers == {"fn": {"en": ["filler"]}}
 
-    def test_adds_language_to_existing_function(self, host):
+    def test_adds_language_to_existing_function(self, host: MockAIConfigHost) -> None:
         host._internal_fillers = {"fn": {"en": ["english filler"]}}
         host.add_internal_filler("fn", "es", ["filler espanol"])
         assert host._internal_fillers["fn"]["en"] == ["english filler"]
         assert host._internal_fillers["fn"]["es"] == ["filler espanol"]
 
-    def test_empty_function_name_does_not_add(self, host):
+    def test_empty_function_name_does_not_add(self, host: MockAIConfigHost) -> None:
         host.add_internal_filler("", "en", ["filler"])
         assert host._internal_fillers == {}
 
-    def test_empty_language_code_does_not_add(self, host):
+    def test_empty_language_code_does_not_add(self, host: MockAIConfigHost) -> None:
         host.add_internal_filler("fn", "", ["filler"])
         assert host._internal_fillers == {}
 
-    def test_empty_fillers_list_does_not_add(self, host):
+    def test_empty_fillers_list_does_not_add(self, host: MockAIConfigHost) -> None:
         host.add_internal_filler("fn", "en", [])
         assert host._internal_fillers == {}
 
-    def test_none_fillers_does_not_add(self, host):
-        host.add_internal_filler("fn", "en", None)
+    def test_none_fillers_does_not_add(self, host: MockAIConfigHost) -> None:
+        host.add_internal_filler("fn", "en", None)  # type: ignore[arg-type]  # intentional invalid input
         assert host._internal_fillers == {}
 
 
@@ -535,7 +537,7 @@ class TestAddInternalFiller:
 class TestAddFunctionInclude:
     """Tests for AIConfigMixin.add_function_include"""
 
-    def test_adds_include_with_meta_data(self, host):
+    def test_adds_include_with_meta_data(self, host: MockAIConfigHost) -> None:
         host.add_function_include(
             "https://example.com/swaig",
             ["func1", "func2"],
@@ -547,17 +549,17 @@ class TestAddFunctionInclude:
         assert inc["functions"] == ["func1", "func2"]
         assert inc["meta_data"] == {"auth_token": "abc123"}
 
-    def test_adds_include_without_meta_data(self, host):
+    def test_adds_include_without_meta_data(self, host: MockAIConfigHost) -> None:
         host.add_function_include("https://example.com", ["fn1"])
         inc = host._function_includes[0]
         assert "meta_data" not in inc
 
-    def test_meta_data_non_dict_not_added(self, host):
-        host.add_function_include("https://example.com", ["fn1"], meta_data="not_dict")
+    def test_meta_data_non_dict_not_added(self, host: MockAIConfigHost) -> None:
+        host.add_function_include("https://example.com", ["fn1"], meta_data="not_dict")  # type: ignore[arg-type]  # intentional invalid input
         inc = host._function_includes[0]
         assert "meta_data" not in inc
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
         result = host.add_function_include("https://example.com", ["fn"])
         assert result is host
 
@@ -569,7 +571,7 @@ class TestAddFunctionInclude:
 class TestSetFunctionIncludes:
     """Tests for AIConfigMixin.set_function_includes"""
 
-    def test_sets_valid_includes(self, host):
+    def test_sets_valid_includes(self, host: MockAIConfigHost) -> None:
         includes = [
             {"url": "https://example.com", "functions": ["fn1", "fn2"]},
             {"url": "https://other.com", "functions": ["fn3"]},
@@ -578,49 +580,49 @@ class TestSetFunctionIncludes:
         assert len(host._function_includes) == 2
         assert host._function_includes[0]["url"] == "https://example.com"
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
         result = host.set_function_includes([{"url": "u", "functions": ["f"]}])
         assert result is host
 
-    def test_filters_out_invalid_includes_missing_url(self, host):
+    def test_filters_out_invalid_includes_missing_url(self, host: MockAIConfigHost) -> None:
         includes = [
             {"functions": ["fn1"]},  # missing url
             {"url": "https://valid.com", "functions": ["fn2"]},
         ]
-        host.set_function_includes(includes)
+        host.set_function_includes(includes)  # type: ignore[arg-type]  # intentional invalid input
         assert len(host._function_includes) == 1
         assert host._function_includes[0]["url"] == "https://valid.com"
 
-    def test_filters_out_invalid_includes_missing_functions(self, host):
+    def test_filters_out_invalid_includes_missing_functions(self, host: MockAIConfigHost) -> None:
         includes = [
             {"url": "https://example.com"},  # missing functions
         ]
         host.set_function_includes(includes)
         assert len(host._function_includes) == 0
 
-    def test_filters_out_non_dict_includes(self, host):
+    def test_filters_out_non_dict_includes(self, host: MockAIConfigHost) -> None:
         includes = [
             "not a dict",
             {"url": "https://valid.com", "functions": ["fn"]},
         ]
-        host.set_function_includes(includes)
+        host.set_function_includes(includes)  # type: ignore[arg-type]  # intentional invalid input
         assert len(host._function_includes) == 1
 
-    def test_filters_out_includes_with_non_list_functions(self, host):
+    def test_filters_out_includes_with_non_list_functions(self, host: MockAIConfigHost) -> None:
         includes = [
             {"url": "https://example.com", "functions": "not_a_list"},
         ]
         host.set_function_includes(includes)
         assert len(host._function_includes) == 0
 
-    def test_empty_list_does_not_set(self, host):
+    def test_empty_list_does_not_set(self, host: MockAIConfigHost) -> None:
         host._function_includes = [{"url": "old", "functions": ["f"]}]
         host.set_function_includes([])
         assert host._function_includes == [{"url": "old", "functions": ["f"]}]
 
-    def test_none_does_not_set(self, host):
+    def test_none_does_not_set(self, host: MockAIConfigHost) -> None:
         host._function_includes = [{"url": "old", "functions": ["f"]}]
-        host.set_function_includes(None)
+        host.set_function_includes(None)  # type: ignore[arg-type]  # intentional invalid input
         assert host._function_includes == [{"url": "old", "functions": ["f"]}]
 
 
@@ -631,27 +633,27 @@ class TestSetFunctionIncludes:
 class TestSetPromptLlmParams:
     """Tests for AIConfigMixin.set_prompt_llm_params"""
 
-    def test_sets_params(self, host):
+    def test_sets_params(self, host: MockAIConfigHost) -> None:
         result = host.set_prompt_llm_params(model="gpt-4o-mini", temperature=0.7)
         assert host._prompt_llm_params["model"] == "gpt-4o-mini"
         assert host._prompt_llm_params["temperature"] == 0.7
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
         result = host.set_prompt_llm_params(model="gpt-4o")
         assert result is host
 
-    def test_no_params_does_not_modify(self, host):
+    def test_no_params_does_not_modify(self, host: MockAIConfigHost) -> None:
         host._prompt_llm_params = {"existing": "value"}
         host.set_prompt_llm_params()
         assert host._prompt_llm_params == {"existing": "value"}
 
-    def test_updates_existing_params(self, host):
+    def test_updates_existing_params(self, host: MockAIConfigHost) -> None:
         host.set_prompt_llm_params(model="old")
         host.set_prompt_llm_params(model="new", temperature=0.5)
         assert host._prompt_llm_params["model"] == "new"
         assert host._prompt_llm_params["temperature"] == 0.5
 
-    def test_arbitrary_params_accepted(self, host):
+    def test_arbitrary_params_accepted(self, host: MockAIConfigHost) -> None:
         host.set_prompt_llm_params(
             barge_confidence=0.6,
             presence_penalty=0.3,
@@ -669,27 +671,27 @@ class TestSetPromptLlmParams:
 class TestSetPostPromptLlmParams:
     """Tests for AIConfigMixin.set_post_prompt_llm_params"""
 
-    def test_sets_params(self, host):
+    def test_sets_params(self, host: MockAIConfigHost) -> None:
         result = host.set_post_prompt_llm_params(model="gpt-4o-mini", temperature=0.5)
         assert host._post_prompt_llm_params["model"] == "gpt-4o-mini"
         assert host._post_prompt_llm_params["temperature"] == 0.5
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
         result = host.set_post_prompt_llm_params(model="gpt-4o")
         assert result is host
 
-    def test_no_params_does_not_modify(self, host):
+    def test_no_params_does_not_modify(self, host: MockAIConfigHost) -> None:
         host._post_prompt_llm_params = {"existing": "value"}
         host.set_post_prompt_llm_params()
         assert host._post_prompt_llm_params == {"existing": "value"}
 
-    def test_updates_existing_params(self, host):
+    def test_updates_existing_params(self, host: MockAIConfigHost) -> None:
         host.set_post_prompt_llm_params(model="old")
         host.set_post_prompt_llm_params(model="new", top_p=0.8)
         assert host._post_prompt_llm_params["model"] == "new"
         assert host._post_prompt_llm_params["top_p"] == 0.8
 
-    def test_arbitrary_params_accepted(self, host):
+    def test_arbitrary_params_accepted(self, host: MockAIConfigHost) -> None:
         host.set_post_prompt_llm_params(
             presence_penalty=0.3,
             frequency_penalty=0.1,
@@ -705,7 +707,7 @@ class TestSetPostPromptLlmParams:
 class TestMethodChaining:
     """Verify that mixin methods support fluent chaining."""
 
-    def test_chain_multiple_ai_config_methods(self, host):
+    def test_chain_multiple_ai_config_methods(self, host: MockAIConfigHost) -> None:
         result = (
             host
             .add_hint("test")

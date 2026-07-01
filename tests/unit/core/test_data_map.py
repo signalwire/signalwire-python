@@ -24,7 +24,7 @@ from signalwire.core.function_result import FunctionResult
 class TestDataMapBasic:
     """Test basic DataMap functionality"""
     
-    def test_basic_creation(self):
+    def test_basic_creation(self) -> None:
         """Test creating a basic DataMap"""
         data_map = DataMap("test_function")
         
@@ -34,7 +34,7 @@ class TestDataMapBasic:
         assert data_map._expressions == []
         assert data_map._webhooks == []
     
-    def test_creation_with_purpose(self):
+    def test_creation_with_purpose(self) -> None:
         """Test creating DataMap with purpose"""
         data_map = DataMap("test_function")
         data_map.purpose("Test function description")
@@ -42,14 +42,14 @@ class TestDataMapBasic:
         assert data_map.function_name == "test_function"
         assert data_map._purpose == "Test function description"
     
-    def test_creation_with_description_alias(self):
+    def test_creation_with_description_alias(self) -> None:
         """Test using description as alias for purpose"""
         data_map = DataMap("test_function")
         data_map.description("Test function description")
         
         assert data_map._purpose == "Test function description"
     
-    def test_parameter_addition(self):
+    def test_parameter_addition(self) -> None:
         """Test adding parameters"""
         data_map = DataMap("test_function")
         data_map.parameter("location", "string", "City name", required=True)
@@ -65,7 +65,7 @@ class TestDataMapBasic:
 class TestDataMapExpressions:
     """Test expression functionality"""
     
-    def test_add_expression_with_string_pattern(self):
+    def test_add_expression_with_string_pattern(self) -> None:
         """Test adding expression with string pattern"""
         data_map = DataMap("test_function")
         output = FunctionResult("Pattern matched")
@@ -78,7 +78,7 @@ class TestDataMapExpressions:
         assert expr["pattern"] == r"start.*"
         assert expr["output"] == output.to_dict()
     
-    def test_add_expression_with_compiled_pattern(self):
+    def test_add_expression_with_compiled_pattern(self) -> None:
         """Test adding expression with compiled regex pattern"""
         data_map = DataMap("test_function")
         output = FunctionResult("Pattern matched")
@@ -89,7 +89,7 @@ class TestDataMapExpressions:
         expr = data_map._expressions[0]
         assert expr["pattern"] == r"stop.*"
     
-    def test_add_expression_with_nomatch_output(self):
+    def test_add_expression_with_nomatch_output(self) -> None:
         """Test adding expression with nomatch output"""
         data_map = DataMap("test_function")
         match_output = FunctionResult("Matched")
@@ -105,7 +105,7 @@ class TestDataMapExpressions:
 class TestDataMapWebhooks:
     """Test webhook functionality"""
     
-    def test_add_basic_webhook(self):
+    def test_add_basic_webhook(self) -> None:
         """Test adding basic webhook"""
         data_map = DataMap("test_function")
         
@@ -116,7 +116,7 @@ class TestDataMapWebhooks:
         assert webhook["method"] == "GET"
         assert webhook["url"] == "https://api.example.com/data"
     
-    def test_add_webhook_with_headers(self):
+    def test_add_webhook_with_headers(self) -> None:
         """Test adding webhook with headers"""
         data_map = DataMap("test_function")
         headers = {"Authorization": "Bearer token", "Content-Type": "application/json"}
@@ -126,7 +126,7 @@ class TestDataMapWebhooks:
         webhook = data_map._webhooks[0]
         assert webhook["headers"] == headers
     
-    def test_add_webhook_with_options(self):
+    def test_add_webhook_with_options(self) -> None:
         """Test adding webhook with various options"""
         data_map = DataMap("test_function")
         
@@ -143,7 +143,7 @@ class TestDataMapWebhooks:
         assert webhook["input_args_as_params"] is True
         assert webhook["require_args"] == ["location"]
     
-    def test_webhook_body_and_params(self):
+    def test_webhook_body_and_params(self) -> None:
         """Test adding body and params to webhook"""
         data_map = DataMap("test_function")
         
@@ -159,7 +159,7 @@ class TestDataMapWebhooks:
 class TestDataMapOutput:
     """Test output functionality"""
     
-    def test_set_output(self):
+    def test_set_output(self) -> None:
         """Test setting output"""
         data_map = DataMap("test_function")
         output = FunctionResult("API call successful: ${response.data}")
@@ -171,7 +171,7 @@ class TestDataMapOutput:
         # Output should be stored in the webhook
         assert data_map._webhooks[0]["output"] == output.to_dict()
     
-    def test_set_fallback_output(self):
+    def test_set_fallback_output(self) -> None:
         """Test setting fallback output"""
         data_map = DataMap("test_function")
         fallback = FunctionResult("API unavailable")
@@ -185,7 +185,7 @@ class TestDataMapOutput:
 class TestDataMapSerialization:
     """Test serialization functionality"""
     
-    def test_to_swaig_function_basic(self):
+    def test_to_swaig_function_basic(self) -> None:
         """Test basic to_swaig_function conversion"""
         data_map = DataMap("test_function")
         data_map.purpose("Test function")
@@ -199,7 +199,7 @@ class TestDataMapSerialization:
         assert "properties" in swaig_func["parameters"]
         assert "location" in swaig_func["parameters"]["properties"]
     
-    def test_to_swaig_function_with_expressions(self):
+    def test_to_swaig_function_with_expressions(self) -> None:
         """Test to_swaig_function with expressions"""
         data_map = DataMap("test_function")
         data_map.purpose("Test function")
@@ -212,7 +212,7 @@ class TestDataMapSerialization:
         assert "expressions" in swaig_func["data_map"]
         assert len(swaig_func["data_map"]["expressions"]) == 1
     
-    def test_to_swaig_function_with_webhooks(self):
+    def test_to_swaig_function_with_webhooks(self) -> None:
         """Test to_swaig_function with webhooks"""
         data_map = DataMap("test_function")
         data_map.purpose("Test function")
@@ -230,7 +230,7 @@ class TestDataMapSerialization:
 class TestDataMapChaining:
     """Test method chaining functionality"""
     
-    def test_method_chaining(self):
+    def test_method_chaining(self) -> None:
         """Test that methods return self for chaining"""
         output = FunctionResult("Chained result")
         
@@ -245,7 +245,7 @@ class TestDataMapChaining:
         assert "param1" in data_map._parameters
         assert len(data_map._webhooks) == 1
     
-    def test_complex_chaining(self):
+    def test_complex_chaining(self) -> None:
         """Test complex method chaining"""
         result = FunctionResult()
         result.say("Complex result")
@@ -264,7 +264,7 @@ class TestDataMapChaining:
 class TestDataMapFactoryFunctions:
     """Test factory functions"""
     
-    def test_create_simple_api_tool(self):
+    def test_create_simple_api_tool(self) -> None:
         """Test create_simple_api_tool factory"""
         data_map = create_simple_api_tool(
             name="weather_tool",
@@ -275,7 +275,7 @@ class TestDataMapFactoryFunctions:
         assert isinstance(data_map, DataMap)
         assert data_map.function_name == "weather_tool"
     
-    def test_create_simple_api_tool_with_parameters(self):
+    def test_create_simple_api_tool_with_parameters(self) -> None:
         """Test create_simple_api_tool with parameters"""
         parameters = {
             "location": {"type": "string", "description": "City name"}
@@ -290,7 +290,7 @@ class TestDataMapFactoryFunctions:
         
         assert isinstance(data_map, DataMap)
     
-    def test_create_expression_tool(self):
+    def test_create_expression_tool(self) -> None:
         """Test create_expression_tool factory"""
         patterns = {
             "${args.command}": ("start", FunctionResult().add_action("start", True)),
@@ -302,7 +302,7 @@ class TestDataMapFactoryFunctions:
         assert isinstance(data_map, DataMap)
         assert data_map.function_name == "control_tool"
     
-    def test_create_expression_tool_with_parameters(self):
+    def test_create_expression_tool_with_parameters(self) -> None:
         """Test create_expression_tool with parameters"""
         patterns = {
             "${args.input}": ("test", FunctionResult("Test result"))
@@ -319,19 +319,19 @@ class TestDataMapFactoryFunctions:
 class TestDataMapErrorHandling:
     """Test error handling and edge cases"""
     
-    def test_empty_function_name(self):
+    def test_empty_function_name(self) -> None:
         """Test creating DataMap with empty function name"""
         # Should not raise error, just store empty string
         data_map = DataMap("")
         assert data_map.function_name == ""
     
-    def test_none_function_name(self):
+    def test_none_function_name(self) -> None:
         """Test creating DataMap with None function name"""
         # Should not raise error, just store None
-        data_map = DataMap(None)
+        data_map = DataMap(None)  # type: ignore[arg-type]  # intentional invalid input for validation test
         assert data_map.function_name is None
     
-    def test_invalid_parameter_type(self):
+    def test_invalid_parameter_type(self) -> None:
         """Test adding parameter with invalid type"""
         data_map = DataMap("test_function")
         
@@ -341,7 +341,7 @@ class TestDataMapErrorHandling:
         param = data_map._parameters["test_param"]
         assert param["type"] == "invalid_type"
     
-    def test_duplicate_parameter_names(self):
+    def test_duplicate_parameter_names(self) -> None:
         """Test adding parameters with duplicate names"""
         data_map = DataMap("test_function")
         
@@ -353,7 +353,7 @@ class TestDataMapErrorHandling:
         assert param["type"] == "number"
         assert param["description"] == "Second description"
     
-    def test_output_without_webhook(self):
+    def test_output_without_webhook(self) -> None:
         """Test setting output without webhook raises error"""
         data_map = DataMap("test_function")
         output = FunctionResult("Test output")
@@ -365,7 +365,7 @@ class TestDataMapErrorHandling:
 class TestDataMapTemplateVariables:
     """Test template variable handling"""
     
-    def test_env_variables_in_webhooks(self):
+    def test_env_variables_in_webhooks(self) -> None:
         """Test environment variables in webhook URLs"""
         data_map = DataMap("test_function")
         
@@ -374,7 +374,7 @@ class TestDataMapTemplateVariables:
         webhook = data_map._webhooks[0]
         assert "${ENV.API_KEY}" in webhook["url"]
     
-    def test_args_variables_in_body(self):
+    def test_args_variables_in_body(self) -> None:
         """Test argument variables in request body"""
         data_map = DataMap("test_function")
         
@@ -384,7 +384,7 @@ class TestDataMapTemplateVariables:
         # Body should be stored for processing
         assert len(data_map._webhooks) == 1
     
-    def test_response_variables_in_output(self):
+    def test_response_variables_in_output(self) -> None:
         """Test response variables in output templates"""
         data_map = DataMap("test_function")
         output = FunctionResult("Result: ${response.data.title}")
@@ -398,7 +398,7 @@ class TestDataMapTemplateVariables:
 class TestDataMapIntegration:
     """Test integration with other components"""
     
-    def test_agent_integration(self):
+    def test_agent_integration(self) -> None:
         """Test DataMap integration with agent"""
         data_map = DataMap("test_tool")
         data_map.purpose("Test integration")
@@ -411,7 +411,7 @@ class TestDataMapIntegration:
         assert "description" in swaig_func
         assert "parameters" in swaig_func
     
-    def test_swaig_function_compatibility(self):
+    def test_swaig_function_compatibility(self) -> None:
         """Test compatibility with FunctionResult"""
         data_map = DataMap("test_function")
         result = FunctionResult("Test response")
@@ -423,7 +423,7 @@ class TestDataMapIntegration:
         # Should store the result properly
         assert data_map._webhooks[0]["output"] == result.to_dict()
     
-    def test_json_serialization(self):
+    def test_json_serialization(self) -> None:
         """Test JSON serialization of complete DataMap"""
         import json
         

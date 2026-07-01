@@ -16,7 +16,7 @@ if TYPE_CHECKING:
 from signalwire.core.mixins._mixin_host import _HostTyped
 
 
-class SkillMixin(_HostTyped):
+class SkillMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at runtime; AgentBase under TYPE_CHECKING — intentional split
     """
     Mixin class containing all skill management methods for AgentBase
     """

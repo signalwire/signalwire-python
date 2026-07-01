@@ -23,7 +23,7 @@ if TYPE_CHECKING:
 _tool_mixin_logger = logging.getLogger(__name__)
 
 
-class ToolMixin(_HostTyped):
+class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at runtime; AgentBase under TYPE_CHECKING — intentional split
     """
     Mixin class containing all tool/function-related methods for AgentBase
     """
@@ -33,13 +33,13 @@ class ToolMixin(_HostTyped):
         name: str,
         description: str,
         parameters: dict[str, Any],
-        handler: Callable,
+        handler: Callable[..., Any],
         secure: bool = True,
         fillers: dict[str, list[str]] | None = None,
         webhook_url: str | None = None,
         required: list[str] | None = None,
         is_typed_handler: bool = False,
-        **swaig_fields,
+        **swaig_fields: Any,
     ) -> "AgentBase":
         """
         Define a SWAIG function the AI can call.
@@ -177,7 +177,9 @@ class ToolMixin(_HostTyped):
         self._tool_registry.register_swaig_function(function_dict)
         return self
 
-    def _tool_decorator(self, name=None, **kwargs):
+    def _tool_decorator(
+        self, name: str | None = None, **kwargs: Any
+    ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         """
         Decorator for defining SWAIG tools in a class
 
@@ -187,12 +189,16 @@ class ToolMixin(_HostTyped):
         def example_function(self, param1):
             # ...
         """
+        # ToolDecorator.create_instance_decorator is untyped (cross-file:
+        # core/agent/tools/decorator.py); the call returns Any.
         return ToolDecorator.create_instance_decorator(self._tool_registry)(
             name, **kwargs
         )
 
     @classmethod
-    def tool(cls, name=None, **kwargs):
+    def tool(
+        cls, name: str | None = None, **kwargs: Any
+    ) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
         """
         Class method decorator for defining SWAIG tools
 
@@ -202,6 +208,8 @@ class ToolMixin(_HostTyped):
         def example_function(self, param1):
             # ...
         """
+        # ToolDecorator.create_class_decorator is untyped (cross-file:
+        # core/agent/tools/decorator.py); the call returns Any.
         return ToolDecorator.create_class_decorator()(name, **kwargs)
 
     def define_tools(self) -> list[SWAIGFunction | dict[str, Any]]:
@@ -290,7 +298,7 @@ class ToolMixin(_HostTyped):
         args: dict[str, Any] | None = None,
         call_id: str | None = None,
         raw_data: dict[str, Any] | None = None,
-    ):
+    ) -> dict[str, Any]:
         """
         Execute a SWAIG function in serverless context
 

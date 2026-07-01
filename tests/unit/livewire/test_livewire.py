@@ -11,10 +11,9 @@ See LICENSE file in the project root for full license information.
 Unit tests for the LiveWire compatibility module.
 """
 
-import asyncio
 import io
-import logging
 import sys
+from collections.abc import Iterator
 import pytest
 from unittest.mock import patch, Mock
 
@@ -58,7 +57,7 @@ from signalwire.livewire.plugins import (
 # ---------------------------------------------------------------------------
 
 @pytest.fixture(autouse=True)
-def _reset_noop_trackers():
+def _reset_noop_trackers() -> Iterator[None]:
     """Reset all noop trackers between tests so 'log once' does not leak."""
     _global_noop.reset()
     _reset_logged()
@@ -74,13 +73,13 @@ def _reset_noop_trackers():
 class TestAgentCreation:
     """Test Agent class construction and properties."""
 
-    def test_basic_creation(self):
+    def test_basic_creation(self) -> None:
         agent = Agent(instructions="You are a helpful assistant.")
         assert agent.instructions == "You are a helpful assistant."
         assert agent._tools == []
         assert agent.session is None
 
-    def test_creation_with_tools(self):
+    def test_creation_with_tools(self) -> None:
         @function_tool
         def greet(name: str) -> str:
             """Say hello."""
@@ -90,7 +89,7 @@ class TestAgentCreation:
         assert len(agent._tools) == 1
         assert agent._tools[0]._tool_name == "greet"
 
-    def test_creation_with_noop_params(self):
+    def test_creation_with_noop_params(self) -> None:
         """STT, TTS, VAD, turn_detection trigger noop logs."""
         agent = Agent(
             instructions="test",
@@ -104,13 +103,13 @@ class TestAgentCreation:
         assert _global_noop.was_logged("agent_vad")
         assert _global_noop.was_logged("agent_turn_detection")
 
-    def test_creation_without_noop_params(self):
+    def test_creation_without_noop_params(self) -> None:
         """NOT_GIVEN params should NOT trigger noop logs."""
         Agent(instructions="test")
         assert not _global_noop.was_logged("agent_stt")
         assert not _global_noop.was_logged("agent_tts")
 
-    def test_session_property(self):
+    def test_session_property(self) -> None:
         agent = Agent(instructions="test")
         session = AgentSession()
         agent.session = session
@@ -121,29 +120,29 @@ class TestAgentLifecycleHooks:
     """Test Agent lifecycle hooks (async)."""
 
     @pytest.mark.asyncio
-    async def test_on_enter(self):
+    async def test_on_enter(self) -> None:
         """Default on_enter is a no-op — must return None and must not
         mutate the agent's instructions."""
         agent = Agent(instructions="test")
-        result = await agent.on_enter()
+        result = await agent.on_enter()  # type: ignore[func-returns-value]  # asserting no-op returns None
         assert result is None
         # No-op contract: state unchanged.
         assert agent.instructions == "test"
 
     @pytest.mark.asyncio
-    async def test_on_exit(self):
+    async def test_on_exit(self) -> None:
         """Default on_exit returns None and leaves instructions intact."""
         agent = Agent(instructions="test")
-        result = await agent.on_exit()
+        result = await agent.on_exit()  # type: ignore[func-returns-value]  # asserting no-op returns None
         assert result is None
         assert agent.instructions == "test"
 
     @pytest.mark.asyncio
-    async def test_on_user_turn_completed(self):
+    async def test_on_user_turn_completed(self) -> None:
         """Default on_user_turn_completed returns None and accepts the
         optional turn_ctx/new_message kwargs without modifying state."""
         agent = Agent(instructions="test")
-        result = await agent.on_user_turn_completed(
+        result = await agent.on_user_turn_completed(  # type: ignore[func-returns-value]  # asserting no-op returns None
             turn_ctx={"role": "user"},
             new_message={"text": "hi"},
         )
@@ -151,13 +150,13 @@ class TestAgentLifecycleHooks:
         assert agent.instructions == "test"
 
     @pytest.mark.asyncio
-    async def test_update_instructions(self):
+    async def test_update_instructions(self) -> None:
         agent = Agent(instructions="old")
         await agent.update_instructions("new")
         assert agent.instructions == "new"
 
     @pytest.mark.asyncio
-    async def test_update_tools(self):
+    async def test_update_tools(self) -> None:
         agent = Agent(instructions="test")
         assert agent._tools == []
         await agent.update_tools(["tool1", "tool2"])
@@ -168,19 +167,19 @@ class TestAgentPipelineNodes:
     """Test pipeline node no-ops."""
 
     @pytest.mark.asyncio
-    async def test_stt_node_noop(self):
+    async def test_stt_node_noop(self) -> None:
         agent = Agent(instructions="test")
         await agent.stt_node()
         assert _global_noop.was_logged("stt_node")
 
     @pytest.mark.asyncio
-    async def test_llm_node_noop(self):
+    async def test_llm_node_noop(self) -> None:
         agent = Agent(instructions="test")
         await agent.llm_node()
         assert _global_noop.was_logged("llm_node")
 
     @pytest.mark.asyncio
-    async def test_tts_node_noop(self):
+    async def test_tts_node_noop(self) -> None:
         agent = Agent(instructions="test")
         await agent.tts_node()
         assert _global_noop.was_logged("tts_node")
@@ -193,21 +192,21 @@ class TestAgentPipelineNodes:
 class TestFunctionTool:
     """Test the @function_tool decorator."""
 
-    def test_basic_decorator_no_args(self):
+    def test_basic_decorator_no_args(self) -> None:
         @function_tool
         def get_weather(location: str) -> str:
             """Get the weather for a location."""
             return f"Sunny in {location}"
 
-        assert get_weather._livewire_tool is True
-        assert get_weather._tool_name == "get_weather"
-        assert get_weather._tool_description == "Get the weather for a location."
-        props = get_weather._tool_parameters["properties"]
+        assert get_weather._livewire_tool is True  # type: ignore[attr-defined]  # dynamic tool attr
+        assert get_weather._tool_name == "get_weather"  # type: ignore[attr-defined]  # dynamic tool attr
+        assert get_weather._tool_description == "Get the weather for a location."  # type: ignore[attr-defined]  # dynamic tool attr
+        props = get_weather._tool_parameters["properties"]  # type: ignore[attr-defined]  # dynamic tool attr
         assert "location" in props
         assert props["location"]["type"] == "string"
-        assert get_weather._tool_parameters.get("required") == ["location"]
+        assert get_weather._tool_parameters.get("required") == ["location"]  # type: ignore[attr-defined]  # dynamic tool attr
 
-    def test_decorator_with_custom_name(self):
+    def test_decorator_with_custom_name(self) -> None:
         @function_tool(name="my_tool", description="custom desc")
         def something(x: int) -> str:
             return str(x)
@@ -215,42 +214,42 @@ class TestFunctionTool:
         assert something._tool_name == "my_tool"
         assert something._tool_description == "custom desc"
 
-    def test_decorator_with_multiple_params(self):
+    def test_decorator_with_multiple_params(self) -> None:
         @function_tool
         def search(query: str, limit: int = 10) -> str:
             """Search for something."""
             return query
 
-        params = search._tool_parameters
+        params = search._tool_parameters  # type: ignore[attr-defined]  # dynamic tool attr
         assert "query" in params["properties"]
         assert "limit" in params["properties"]
         assert params["properties"]["limit"]["type"] == "integer"
         # 'limit' has a default, so only 'query' is required
         assert params.get("required") == ["query"]
 
-    def test_decorator_preserves_callable(self):
+    def test_decorator_preserves_callable(self) -> None:
         @function_tool
         def echo(text: str) -> str:
             return text
 
         assert echo("hello") == "hello"
 
-    def test_decorator_skips_run_context_param(self):
+    def test_decorator_skips_run_context_param(self) -> None:
         @function_tool
         def my_tool(ctx: RunContext, city: str) -> str:
             """Look up city info."""
             return city
 
-        params = my_tool._tool_parameters
+        params = my_tool._tool_parameters  # type: ignore[attr-defined]  # dynamic tool attr
         assert "ctx" not in params["properties"]
         assert "city" in params["properties"]
 
-    def test_type_mapping(self):
+    def test_type_mapping(self) -> None:
         @function_tool
         def typed(a: str, b: int, c: float, d: bool) -> str:
             return "ok"
 
-        props = typed._tool_parameters["properties"]
+        props = typed._tool_parameters["properties"]  # type: ignore[attr-defined]  # dynamic tool attr
         assert props["a"]["type"] == "string"
         assert props["b"]["type"] == "integer"
         assert props["c"]["type"] == "number"
@@ -264,23 +263,23 @@ class TestFunctionTool:
 class TestAgentSession:
     """Test AgentSession construction and methods."""
 
-    def test_basic_creation(self):
+    def test_basic_creation(self) -> None:
         session = AgentSession()
         assert session.userdata == {}
         assert session.history == []
         assert session._allow_interruptions is True
 
-    def test_creation_with_userdata(self):
+    def test_creation_with_userdata(self) -> None:
         session = AgentSession(userdata={"key": "value"})
         assert session.userdata == {"key": "value"}
 
-    def test_userdata_setter(self):
+    def test_userdata_setter(self) -> None:
         session = AgentSession()
         session.userdata = {"new": "data"}
         assert session.userdata == {"new": "data"}
 
     @pytest.mark.asyncio
-    async def test_start(self):
+    async def test_start(self) -> None:
         session = AgentSession()
         agent = Agent(instructions="test")
         await session.start(agent)
@@ -288,23 +287,23 @@ class TestAgentSession:
         assert agent.session is session
         assert session._started is True
 
-    def test_say(self):
+    def test_say(self) -> None:
         session = AgentSession()
         session.say("Hello!")
         session.say("How can I help?")
         assert session._say_queue == ["Hello!", "How can I help?"]
 
-    def test_generate_reply(self):
+    def test_generate_reply(self) -> None:
         session = AgentSession()
         session.generate_reply(instructions="Greet the user")
         assert "Greet the user" in session._say_queue
 
-    def test_interrupt_noop(self):
+    def test_interrupt_noop(self) -> None:
         session = AgentSession()
         session.interrupt()  # Should not raise
         assert session._noop.was_logged("interrupt")
 
-    def test_update_agent(self):
+    def test_update_agent(self) -> None:
         session = AgentSession()
         agent1 = Agent(instructions="first")
         agent2 = Agent(instructions="second")
@@ -314,23 +313,23 @@ class TestAgentSession:
         assert session._agent is agent2
         assert agent2.session is session
 
-    def test_noop_stt(self):
+    def test_noop_stt(self) -> None:
         AgentSession(stt=DeepgramSTT())
         assert _global_noop.was_logged("stt")
 
-    def test_noop_tts(self):
+    def test_noop_tts(self) -> None:
         AgentSession(tts=CartesiaTTS())
         assert _global_noop.was_logged("tts")
 
-    def test_noop_vad(self):
+    def test_noop_vad(self) -> None:
         AgentSession(vad=SileroVAD.load())
         assert _global_noop.was_logged("vad")
 
-    def test_noop_turn_detection(self):
+    def test_noop_turn_detection(self) -> None:
         AgentSession(turn_detection="server")
         assert _global_noop.was_logged("turn_detection")
 
-    def test_noop_max_tool_steps(self):
+    def test_noop_max_tool_steps(self) -> None:
         AgentSession(max_tool_steps=10)
         assert _global_noop.was_logged("max_tool_steps")
 
@@ -342,17 +341,17 @@ class TestAgentSession:
 class TestRunContext:
     """Test RunContext mirrors livekit RunContext."""
 
-    def test_basic_creation(self):
+    def test_basic_creation(self) -> None:
         session = AgentSession(userdata={"foo": "bar"})
         ctx = RunContext(session)
         assert ctx.session is session
         assert ctx.userdata == {"foo": "bar"}
 
-    def test_userdata_without_session(self):
+    def test_userdata_without_session(self) -> None:
         ctx = RunContext()
         assert ctx.userdata == {}
 
-    def test_creation_with_extras(self):
+    def test_creation_with_extras(self) -> None:
         ctx = RunContext(None, speech_handle="sh", function_call="fc")
         assert ctx.speech_handle == "sh"
         assert ctx.function_call == "fc"
@@ -366,22 +365,22 @@ class TestJobContext:
     """Test JobContext noop methods."""
 
     @pytest.mark.asyncio
-    async def test_connect_noop(self):
+    async def test_connect_noop(self) -> None:
         ctx = JobContext()
         await ctx.connect()
         assert _global_noop.was_logged("connect")
 
     @pytest.mark.asyncio
-    async def test_wait_for_participant_noop(self):
+    async def test_wait_for_participant_noop(self) -> None:
         ctx = JobContext()
         await ctx.wait_for_participant(identity="test-user")
         assert _global_noop.was_logged("wait_for_participant")
 
-    def test_room_name(self):
+    def test_room_name(self) -> None:
         ctx = JobContext()
         assert ctx.room.name == "livewire-room"
 
-    def test_proc(self):
+    def test_proc(self) -> None:
         ctx = JobContext()
         assert isinstance(ctx.proc, JobProcess)
         assert ctx.proc.userdata == {}
@@ -392,12 +391,12 @@ class TestJobContext:
 # ---------------------------------------------------------------------------
 
 class TestRoom:
-    def test_name(self):
+    def test_name(self) -> None:
         assert Room.name == "livewire-room"
 
 
 class TestJobProcess:
-    def test_userdata(self):
+    def test_userdata(self) -> None:
         proc = JobProcess()
         proc.userdata["key"] = "val"
         assert proc.userdata == {"key": "val"}
@@ -410,27 +409,27 @@ class TestJobProcess:
 class TestPluginStubs:
     """Test that plugin stubs construct without error."""
 
-    def test_deepgram_stt(self):
+    def test_deepgram_stt(self) -> None:
         stt = DeepgramSTT(model="nova-2")
         assert stt._kwargs == {"model": "nova-2"}
 
-    def test_openai_llm(self):
+    def test_openai_llm(self) -> None:
         llm = OpenAILLM(model="gpt-4o")
         assert llm.model == "gpt-4o"
 
-    def test_cartesia_tts(self):
+    def test_cartesia_tts(self) -> None:
         tts = CartesiaTTS(voice="default")
         assert tts._kwargs == {"voice": "default"}
 
-    def test_elevenlabs_tts(self):
+    def test_elevenlabs_tts(self) -> None:
         tts = ElevenLabsTTS(voice_id="abc")
         assert tts._kwargs == {"voice_id": "abc"}
 
-    def test_silero_vad(self):
+    def test_silero_vad(self) -> None:
         vad = SileroVAD()
         assert isinstance(vad, SileroVAD)
 
-    def test_silero_vad_load(self):
+    def test_silero_vad_load(self) -> None:
         vad = SileroVAD.load()
         assert isinstance(vad, SileroVAD)
 
@@ -440,17 +439,17 @@ class TestPluginStubs:
 # ---------------------------------------------------------------------------
 
 class TestInferenceStubs:
-    def test_inference_stt(self):
+    def test_inference_stt(self) -> None:
         from signalwire.livewire import InferenceSTT
         stt = InferenceSTT("whisper-large-v3")
         assert stt.model == "whisper-large-v3"
 
-    def test_inference_llm(self):
+    def test_inference_llm(self) -> None:
         from signalwire.livewire import InferenceLLM
         llm = InferenceLLM("gpt-4o")
         assert llm.model == "gpt-4o"
 
-    def test_inference_tts(self):
+    def test_inference_tts(self) -> None:
         from signalwire.livewire import InferenceTTS
         tts = InferenceTTS("tts-1")
         assert tts.model == "tts-1"
@@ -463,24 +462,24 @@ class TestInferenceStubs:
 class TestNoopLogging:
     """Verify that noop messages are logged at most once."""
 
-    def test_log_once(self):
+    def test_log_once(self) -> None:
         first = _global_noop.once("test_key", "message")
         assert first is True
         second = _global_noop.once("test_key", "message again")
         assert second is False
 
-    def test_was_logged(self):
+    def test_was_logged(self) -> None:
         assert not _global_noop.was_logged("unique_key")
         _global_noop.once("unique_key", "msg")
         assert _global_noop.was_logged("unique_key")
 
-    def test_reset(self):
+    def test_reset(self) -> None:
         _global_noop.once("reset_key", "msg")
         assert _global_noop.was_logged("reset_key")
         _global_noop.reset()
         assert not _global_noop.was_logged("reset_key")
 
-    def test_agent_stt_logs_once(self):
+    def test_agent_stt_logs_once(self) -> None:
         Agent(instructions="a", stt="deepgram")
         assert _global_noop.was_logged("agent_stt")
         # Second construction should NOT log again (already logged)
@@ -495,21 +494,21 @@ class TestNoopLogging:
 class TestBannerAndTips:
     """Test banner printing and tip selection."""
 
-    def test_banner_contains_livewire(self):
+    def test_banner_contains_livewire(self) -> None:
         assert "LiveKit-compatible agents powered by SignalWire" in BANNER
 
-    def test_banner_contains_ascii_art(self):
+    def test_banner_contains_ascii_art(self) -> None:
         assert "LiveWire" in BANNER or "/ /___/ /" in BANNER
 
-    def test_tips_count(self):
+    def test_tips_count(self) -> None:
         assert len(TIPS) == 10
 
-    def test_tips_are_strings(self):
+    def test_tips_are_strings(self) -> None:
         for tip in TIPS:
             assert isinstance(tip, str)
             assert len(tip) > 20
 
-    def test_print_banner_tty(self):
+    def test_print_banner_tty(self) -> None:
         buf = io.StringIO()
         with patch.object(sys, "stderr", buf):
             with patch.object(buf, "isatty", return_value=True):
@@ -518,7 +517,7 @@ class TestBannerAndTips:
         assert "\033[36m" in output  # cyan
         assert "LiveKit-compatible" in output
 
-    def test_print_banner_no_tty(self):
+    def test_print_banner_no_tty(self) -> None:
         buf = io.StringIO()
         with patch.object(sys, "stderr", buf):
             with patch.object(buf, "isatty", return_value=False):
@@ -527,7 +526,7 @@ class TestBannerAndTips:
         assert "\033[36m" not in output
         assert "LiveKit-compatible" in output
 
-    def test_print_tip(self):
+    def test_print_tip(self) -> None:
         buf = io.StringIO()
         with patch.object(sys, "stderr", buf):
             _print_tip()
@@ -540,13 +539,13 @@ class TestBannerAndTips:
 # ---------------------------------------------------------------------------
 
 class TestExceptionsAndSignals:
-    def test_stop_response_is_exception(self):
+    def test_stop_response_is_exception(self) -> None:
         assert issubclass(StopResponse, Exception)
 
-    def test_tool_error_is_exception(self):
+    def test_tool_error_is_exception(self) -> None:
         assert issubclass(ToolError, Exception)
 
-    def test_agent_handoff(self):
+    def test_agent_handoff(self) -> None:
         agent = Agent(instructions="test")
         handoff = AgentHandoff(agent, returns="result")
         assert handoff.agent is agent
@@ -558,11 +557,11 @@ class TestExceptionsAndSignals:
 # ---------------------------------------------------------------------------
 
 class TestChatContext:
-    def test_basic(self):
+    def test_basic(self) -> None:
         ctx = ChatContext()
         assert ctx.messages == []
 
-    def test_append(self):
+    def test_append(self) -> None:
         ctx = ChatContext()
         result = ctx.append(role="user", text="Hello")
         assert len(ctx.messages) == 1
@@ -575,19 +574,19 @@ class TestChatContext:
 # ---------------------------------------------------------------------------
 
 class TestNamespaces:
-    def test_voice_namespace(self):
+    def test_voice_namespace(self) -> None:
         assert voice.Agent is Agent
         assert voice.AgentSession is AgentSession
 
-    def test_llm_namespace(self):
+    def test_llm_namespace(self) -> None:
         assert llm_ns.tool is function_tool
         assert llm_ns.ToolError is ToolError
         assert llm_ns.ChatContext is ChatContext
 
-    def test_cli_namespace(self):
+    def test_cli_namespace(self) -> None:
         assert cli_ns.run_app is run_app
 
-    def test_inference_namespace(self):
+    def test_inference_namespace(self) -> None:
         from signalwire.livewire import InferenceSTT, InferenceLLM, InferenceTTS
         assert inference.STT is InferenceSTT
         assert inference.LLM is InferenceLLM
@@ -599,27 +598,27 @@ class TestNamespaces:
 # ---------------------------------------------------------------------------
 
 class TestAgentServer:
-    def test_basic_creation(self):
+    def test_basic_creation(self) -> None:
         server = AgentServer()
         assert server._entrypoint is None
         assert server.setup_fnc is None
 
-    def test_rtc_session_decorator(self):
+    def test_rtc_session_decorator(self) -> None:
         server = AgentServer()
 
         @server.rtc_session(agent_name="test-agent")
-        async def entrypoint(ctx: JobContext):
+        async def entrypoint(ctx: JobContext) -> None:
             pass
 
         assert server._entrypoint is entrypoint
         assert server._agent_name == "test-agent"
 
-    def test_rtc_session_no_parens(self):
+    def test_rtc_session_no_parens(self) -> None:
         """rtc_session can also be used as a decorator with func as first arg."""
         server = AgentServer()
 
         @server.rtc_session
-        async def entrypoint(ctx: JobContext):
+        async def entrypoint(ctx: JobContext) -> None:
             pass
 
         assert server._entrypoint is entrypoint
@@ -630,7 +629,7 @@ class TestAgentServer:
 # ---------------------------------------------------------------------------
 
 class TestNotGiven:
-    def test_sentinel_identity(self):
+    def test_sentinel_identity(self) -> None:
         assert NOT_GIVEN is NOT_GIVEN
         assert NOT_GIVEN is not None
         assert NOT_GIVEN is not False
@@ -645,7 +644,7 @@ class TestBuildSwAgent:
     """Test that _build_sw_agent creates a valid SignalWire AgentBase."""
 
     @pytest.mark.asyncio
-    async def test_build_basic(self):
+    async def test_build_basic(self) -> None:
         session = AgentSession()
         agent = Agent(instructions="You are a test agent.")
         await session.start(agent)
@@ -657,7 +656,7 @@ class TestBuildSwAgent:
         assert session._sw_agent is sw
 
     @pytest.mark.asyncio
-    async def test_build_with_tools(self):
+    async def test_build_with_tools(self) -> None:
         @function_tool
         def ping(msg: str) -> str:
             """Ping back."""
@@ -676,7 +675,7 @@ class TestBuildSwAgent:
         assert "ping" in tool_names
 
     @pytest.mark.asyncio
-    async def test_build_raises_without_start(self):
+    async def test_build_raises_without_start(self) -> None:
         session = AgentSession()
         with pytest.raises(RuntimeError, match="No Agent bound"):
             session._build_sw_agent()

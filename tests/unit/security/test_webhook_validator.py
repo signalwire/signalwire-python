@@ -15,6 +15,7 @@ import base64
 import hashlib
 import hmac
 import inspect
+from typing import Any
 
 import pytest
 
@@ -45,7 +46,7 @@ VECTOR_B_PARAMS = {
     "From": "+14158675309",
     "To": "+18005551212",
 }
-VECTOR_B = {
+VECTOR_B: dict[str, Any] = {
     "signing_key": "12345",
     "url": "https://mycompany.com/myapp.php?foo=1&bar=2",
     "params": VECTOR_B_PARAMS,
@@ -63,7 +64,7 @@ VECTOR_C = {
 }
 
 
-def _form_encoded(params):
+def _form_encoded(params: dict[str, Any]) -> str:
     """Build an x-www-form-urlencoded body that round-trips through parse_qsl
     back to the same key/value pairs Scheme B will sort and concat.
 
@@ -80,7 +81,7 @@ def _form_encoded(params):
 # ---------------------------------------------------------------------------
 
 class TestSchemeA:
-    def test_positive_canonical_vector(self):
+    def test_positive_canonical_vector(self) -> None:
         """Vector A: known JSON body + URL + key produces the known hex digest."""
         assert (
             validate_webhook_signature(
@@ -92,7 +93,7 @@ class TestSchemeA:
             is True
         )
 
-    def test_negative_tampered_body(self):
+    def test_negative_tampered_body(self) -> None:
         """Vector A: same key/url, body changed → returns False."""
         tampered = VECTOR_A["raw_body"].replace("answered", "ringing")
         assert (
@@ -105,7 +106,7 @@ class TestSchemeA:
             is False
         )
 
-    def test_negative_wrong_key(self):
+    def test_negative_wrong_key(self) -> None:
         """Different signing key against the same vector → False."""
         assert (
             validate_webhook_signature(
@@ -117,7 +118,7 @@ class TestSchemeA:
             is False
         )
 
-    def test_negative_wrong_url(self):
+    def test_negative_wrong_url(self) -> None:
         """Same body/key, different URL path → False (URL is part of the digest)."""
         assert (
             validate_webhook_signature(
@@ -135,7 +136,7 @@ class TestSchemeA:
 # ---------------------------------------------------------------------------
 
 class TestSchemeB:
-    def test_positive_canonical_form_vector(self):
+    def test_positive_canonical_form_vector(self) -> None:
         """Vector B: form params via raw body → matches the canonical Twilio digest."""
         body = _form_encoded(VECTOR_B["params"])
         assert (
@@ -148,7 +149,7 @@ class TestSchemeB:
             is True
         )
 
-    def test_positive_via_validate_request_dict(self):
+    def test_positive_via_validate_request_dict(self) -> None:
         """validate_request(..., dict) goes straight to Scheme B with parsed params."""
         assert (
             validate_request(
@@ -160,7 +161,7 @@ class TestSchemeB:
             is True
         )
 
-    def test_positive_via_validate_request_list_of_tuples(self):
+    def test_positive_via_validate_request_list_of_tuples(self) -> None:
         """validate_request also accepts pre-parsed (key, value) tuples."""
         params_list = list(VECTOR_B["params"].items())
         assert (
@@ -173,7 +174,7 @@ class TestSchemeB:
             is True
         )
 
-    def test_body_sha256_canonical_vector(self):
+    def test_body_sha256_canonical_vector(self) -> None:
         """Vector C: JSON body on compat surface, signature over URL with bodySHA256."""
         assert (
             validate_webhook_signature(
@@ -185,7 +186,7 @@ class TestSchemeB:
             is True
         )
 
-    def test_body_sha256_mismatch_rejected(self):
+    def test_body_sha256_mismatch_rejected(self) -> None:
         """If the URL's bodySHA256 doesn't match sha256(raw_body), reject even if HMAC matches."""
         # Recompute a fresh signature over Vector C's URL but pair it with a
         # different body — the HMAC would match URL+'' but the bodySHA256
@@ -207,7 +208,7 @@ class TestSchemeB:
 # ---------------------------------------------------------------------------
 
 class TestUrlPortNormalization:
-    def _b64_sig(self, key, url, params=None):
+    def _b64_sig(self, key: str, url: str, params: dict[str, Any] | None = None) -> str:
         params = params or {}
         concat = url
         for k in sorted(params.keys()):
@@ -216,7 +217,7 @@ class TestUrlPortNormalization:
             hmac.new(key.encode(), concat.encode(), hashlib.sha1).digest()
         ).decode()
 
-    def test_signature_with_port_accepted_when_request_has_no_port(self):
+    def test_signature_with_port_accepted_when_request_has_no_port(self) -> None:
         """Backend signed with :443 — request URL has no port → accept."""
         key = "test-key"
         url_with_port = "https://example.com:443/webhook"
@@ -228,7 +229,7 @@ class TestUrlPortNormalization:
             is True
         )
 
-    def test_signature_without_port_accepted_when_request_has_standard_port(self):
+    def test_signature_without_port_accepted_when_request_has_standard_port(self) -> None:
         """Backend signed without port — request URL has :443 → accept."""
         key = "test-key"
         url_with_port = "https://example.com:443/webhook"
@@ -239,7 +240,7 @@ class TestUrlPortNormalization:
             is True
         )
 
-    def test_http_port_80_normalization(self):
+    def test_http_port_80_normalization(self) -> None:
         """http + :80 mirrors https + :443."""
         key = "test-key"
         url_with_port = "http://example.com:80/path"
@@ -256,7 +257,7 @@ class TestUrlPortNormalization:
 # ---------------------------------------------------------------------------
 
 class TestRepeatedFormKeys:
-    def test_repeated_keys_concat_in_submission_order(self):
+    def test_repeated_keys_concat_in_submission_order(self) -> None:
         """``To=a&To=b`` → signing string ``URL + ToaTob``, deterministic."""
         key = "test-key"
         url = "https://example.com/hook"
@@ -271,7 +272,7 @@ class TestRepeatedFormKeys:
             is True
         )
 
-    def test_repeated_keys_swapped_order_is_a_different_signature(self):
+    def test_repeated_keys_swapped_order_is_a_different_signature(self) -> None:
         """``To=b&To=a`` is a different submission and yields a different digest."""
         key = "test-key"
         url = "https://example.com/hook"
@@ -292,7 +293,7 @@ class TestRepeatedFormKeys:
 # ---------------------------------------------------------------------------
 
 class TestErrorModes:
-    def test_missing_signature_returns_false(self):
+    def test_missing_signature_returns_false(self) -> None:
         """Empty / None signature header → False, no exception."""
         assert (
             validate_webhook_signature(
@@ -306,36 +307,36 @@ class TestErrorModes:
         assert (
             validate_webhook_signature(
                 VECTOR_A["signing_key"],
-                None,  # type: ignore[arg-type]
+                None,  # type: ignore[arg-type]  # intentional invalid input
                 VECTOR_A["url"],
                 VECTOR_A["raw_body"],
             )
             is False
         )
 
-    def test_missing_signing_key_raises_value_error(self):
+    def test_missing_signing_key_raises_value_error(self) -> None:
         """Empty / None signing key → ValueError (programming error)."""
         with pytest.raises(ValueError):
             validate_webhook_signature("", "sig", VECTOR_A["url"], VECTOR_A["raw_body"])
         with pytest.raises(ValueError):
             validate_webhook_signature(
-                None,  # type: ignore[arg-type]
+                None,  # type: ignore[arg-type]  # intentional invalid input
                 "sig",
                 VECTOR_A["url"],
                 VECTOR_A["raw_body"],
             )
 
-    def test_non_string_raw_body_raises_type_error(self):
+    def test_non_string_raw_body_raises_type_error(self) -> None:
         """A parsed dict mistakenly passed as raw_body → TypeError."""
         with pytest.raises(TypeError):
             validate_webhook_signature(
                 VECTOR_A["signing_key"],
                 "sig",
                 VECTOR_A["url"],
-                {"event": "call.state"},  # type: ignore[arg-type]
+                {"event": "call.state"},  # type: ignore[arg-type]  # intentional invalid input
             )
 
-    def test_malformed_signature_returns_false_without_throwing(self):
+    def test_malformed_signature_returns_false_without_throwing(self) -> None:
         """Garbage signature string → False, no exception."""
         # Wrong length, weird chars, base64 noise — none should throw.
         for garbage in ("xyz", "!!!!", "a" * 100, "%%notbase64%%"):
@@ -355,7 +356,7 @@ class TestErrorModes:
 # ---------------------------------------------------------------------------
 
 class TestValidateRequestDispatch:
-    def test_string_arg_delegates_to_combined_validator(self):
+    def test_string_arg_delegates_to_combined_validator(self) -> None:
         """A string 4th arg behaves identically to validate_webhook_signature."""
         assert (
             validate_request(
@@ -367,7 +368,7 @@ class TestValidateRequestDispatch:
             is True
         )
 
-    def test_dict_arg_runs_scheme_b_directly(self):
+    def test_dict_arg_runs_scheme_b_directly(self) -> None:
         """A dict 4th arg goes straight to Scheme B with parsed params."""
         assert (
             validate_request(
@@ -379,14 +380,14 @@ class TestValidateRequestDispatch:
             is True
         )
 
-    def test_invalid_arg_type_raises_type_error(self):
+    def test_invalid_arg_type_raises_type_error(self) -> None:
         """Anything other than str/mapping/list raises TypeError."""
         with pytest.raises(TypeError):
             validate_request(
                 VECTOR_A["signing_key"],
                 "sig",
                 VECTOR_A["url"],
-                42,  # type: ignore[arg-type]
+                42,  # type: ignore[arg-type]  # intentional invalid input
             )
 
 
@@ -395,7 +396,7 @@ class TestValidateRequestDispatch:
 # ---------------------------------------------------------------------------
 
 class TestConstantTimeCompare:
-    def test_validator_source_uses_hmac_compare_digest(self):
+    def test_validator_source_uses_hmac_compare_digest(self) -> None:
         """The implementation must call ``hmac.compare_digest`` for all sig comparisons.
 
         We read the source rather than time-measuring because timing tests are

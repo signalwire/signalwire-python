@@ -56,7 +56,7 @@ class SkillBase(ABC):
         """Register SWAIG tools with the agent"""
         pass
 
-    def define_tool(self, **kwargs) -> None:
+    def define_tool(self, **kwargs: Any) -> None:
         """
         Wrapper method that automatically includes swaig_fields when defining tools.
 

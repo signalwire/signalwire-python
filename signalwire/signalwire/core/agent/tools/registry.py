@@ -22,7 +22,7 @@ logger = get_logger(__name__)
 class ToolRegistry:
     """Manages SWAIG function registration."""
 
-    def __init__(self, agent):
+    def __init__(self, agent: Any) -> None:
         """
         Initialize ToolRegistry with reference to parent agent.
 
@@ -30,15 +30,15 @@ class ToolRegistry:
             agent: Parent AgentBase instance
         """
         self.agent = agent
-        self._swaig_functions = {}
-        self._class_decorated_tools = []
+        self._swaig_functions: dict[str, SWAIGFunction | dict[str, Any]] = {}
+        self._class_decorated_tools: list[Any] = []
 
     def define_tool(
         self,
         name: str,
         description: str,
         parameters: dict[str, Any],
-        handler: Callable,
+        handler: Callable[..., Any],
         secure: bool = True,
         fillers: dict[str, list[str]] | None = None,
         wait_file: str | None = None,
@@ -46,7 +46,7 @@ class ToolRegistry:
         webhook_url: str | None = None,
         required: list[str] | None = None,
         is_typed_handler: bool = False,
-        **swaig_fields,
+        **swaig_fields: Any,
     ) -> None:
         """
         Define a SWAIG function that the AI can call.

@@ -1,31 +1,24 @@
-"""
-Copyright (c) 2025 SignalWire
+"""Back-compat shim — DO NOT add to other ports. x-sdk-back-compat-shim
 
-This file is part of the SignalWire SDK.
-
-Licensed under the MIT License.
-See LICENSE file in the project root for full license information.
-
-Addresses namespace — list, create, get, delete (no update).
+Deprecated import path. The REST layer is spec-generated; these symbols moved out of
+``namespaces.addresses`` (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
+re-export keeps ``from signalwire.signalwire.rest.namespaces.addresses import AddressesResource`` working
+but emits a DeprecationWarning. Prefer ``client.addresses`` (no import needed). PYTHON-ONLY: the
+surface oracle skips this file, so no other port implements these.
 """
 
-from .._base import BaseResource
+import warnings
 
+warnings.warn(
+    "signalwire.signalwire.rest.namespaces.addresses is deprecated; use client.addresses. "
+    "This back-compat shim will be removed in a future release.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class AddressesResource(BaseResource):
-    """Address management (no update endpoint)."""
+from .relay_rest_resources_generated import Addresses  # noqa: E402  (re-export after the deprecation warn — intentional)
 
-    def __init__(self, http):
-        super().__init__(http, "/api/relay/rest/addresses")
+# Back-compat aliases (old name -> generated bare name):
+AddressesResource = Addresses
 
-    def list(self, **params):
-        return self._http.get(self._base_path, params=params or None)
-
-    def create(self, **kwargs):
-        return self._http.post(self._base_path, body=kwargs)
-
-    def get(self, address_id):
-        return self._http.get(self._path(address_id))
-
-    def delete(self, address_id):
-        return self._http.delete(self._path(address_id))
+__all__ = ["AddressesResource"]

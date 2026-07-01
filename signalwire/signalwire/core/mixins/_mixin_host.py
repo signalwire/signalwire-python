@@ -40,3 +40,7 @@ if TYPE_CHECKING:
     from signalwire.core._agent_host import AgentHost as _HostTyped
 else:
     _HostTyped = object
+
+# Explicit re-export: the mixins import _HostTyped from here. Under --strict
+# (no_implicit_reexport) an aliased import isn't re-exported unless named in __all__.
+__all__ = ["_HostTyped"]

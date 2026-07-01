@@ -19,11 +19,16 @@ from typing import (
     Any,
     ClassVar,
     TYPE_CHECKING,
+    cast,
 )
 from collections.abc import Callable
 
 if TYPE_CHECKING:
     from signalwire.core.contexts import ContextBuilder
+
+    # The post-prompt callback payload, typed from the spec (a plain dict at runtime;
+    # TYPE_CHECKING-only). Generated from porting-sdk/swaig-specs/post-prompt.yaml.
+    from signalwire.core.post_prompt_generated import PostPrompt, PostPromptData
 
 # These imports double as a required-dependency check: a missing package
 # re-raises a helpful ImportError. Several names are not referenced directly
@@ -352,7 +357,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
     _AUTO_ANSWER_VERBS: ClassVar[set[str]] = {"play", "connect"}
 
     @staticmethod
-    def _load_service_config(config_file: str | None, service_name: str) -> dict:
+    def _load_service_config(config_file: str | None, service_name: str) -> dict[str, Any]:
         """Load service configuration from config file if available"""
         from signalwire.core.config_loader import ConfigLoader
 
@@ -501,8 +506,8 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
     def on_summary(
         self,
-        summary: dict[str, Any] | None,
-        raw_data: dict[str, Any] | None = None,
+        summary: "PostPromptData | None",
+        raw_data: "PostPrompt | None" = None,
     ) -> None:
         """
         Called when a post-prompt summary is received
@@ -514,7 +519,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         # Default implementation does nothing
         pass
 
-    def on_debug_event(self, handler: Callable) -> Callable:
+    def on_debug_event(self, handler: Callable[..., Any]) -> Callable[..., Any]:
         """
         Register a handler for debug webhook events.
 
@@ -855,7 +860,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         return self
 
     def _render_swml(
-        self, call_id: str | None = None, modifications: dict | None = None
+        self, call_id: str | None = None, modifications: dict[str, Any] | None = None
     ) -> str:
         """
         Render the complete SWML document using SWMLService methods
@@ -1499,7 +1504,9 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         # which properly handles SWML_PROXY_URL_BASE environment variable
         return super()._build_webhook_url(endpoint, query_params)
 
-    def _find_summary_in_post_data(self, body, logger):
+    def _find_summary_in_post_data(
+        self, body: "PostPrompt", logger: Any
+    ) -> Any:
         """
         Attempt to find a summary in the post-prompt response data
 
@@ -1513,9 +1520,12 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         if not body:
             return None
 
-        # Various ways to get summary data
-        if "summary" in body:
-            return body["summary"]
+        # Various ways to get summary data. A bare top-level `summary` is not a field the
+        # current engine sends (the summary lives in `post_prompt_data` — see below); probe
+        # for it through an untyped view as a tolerant fallback for legacy/alternate payloads.
+        legacy = cast("dict[str, Any]", body)
+        if "summary" in legacy:
+            return legacy["summary"]
 
         if "post_prompt_data" in body:
             pdata = body["post_prompt_data"]
@@ -1535,7 +1545,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         return None
 
-    def _create_ephemeral_copy(self):
+    def _create_ephemeral_copy(self) -> "AgentBase":
         """
         Create a lightweight copy of this agent for ephemeral configuration.
 
@@ -1684,7 +1694,9 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         return ephemeral_agent
 
-    async def _handle_request(self, request: Request, response: Response):
+    async def _handle_request(
+        self, request: Request, response: Response
+    ) -> Response:
         """
         Override SWMLService's _handle_request to use AgentBase's _render_swml
 

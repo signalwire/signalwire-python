@@ -29,7 +29,9 @@ from typing import Any
 _CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]")
 
 
-def strip_control_chars(logger, method_name, event_dict):
+def strip_control_chars(
+    logger: Any, method_name: str, event_dict: dict[str, Any]
+) -> dict[str, Any]:
     """Strip control characters from log event values to prevent log injection."""
     for key, value in event_dict.items():
         if isinstance(value, str):
@@ -41,7 +43,7 @@ def strip_control_chars(logger, method_name, event_dict):
 _logging_configured = False
 
 
-def get_execution_mode():
+def get_execution_mode() -> str:
     """
     Determine the execution mode based on environment variables
 
@@ -76,7 +78,7 @@ def get_execution_mode():
     return "server"
 
 
-def reset_logging_configuration():
+def reset_logging_configuration() -> None:
     """
     Reset the logging configuration flag to allow reconfiguration
 
@@ -87,7 +89,7 @@ def reset_logging_configuration():
     structlog.reset_defaults()
 
 
-def _detect_colors():
+def _detect_colors() -> bool:
     """Auto-detect whether the output stream supports colors."""
     stream = (
         sys.stderr
@@ -101,7 +103,7 @@ def _detect_colors():
     return not ("--raw" in sys.argv or "--dump-swml" in sys.argv)
 
 
-def configure_logging():
+def configure_logging() -> None:
     """
     Configure logging system once, globally, based on environment variables
 
@@ -136,7 +138,7 @@ def configure_logging():
     _logging_configured = True
 
 
-def _get_structlog_processors():
+def _get_structlog_processors() -> list[Any]:
     """Processor chain for structlog.get_logger() callers."""
     return [
         structlog.contextvars.merge_contextvars,
@@ -151,14 +153,16 @@ def _get_structlog_processors():
     ]
 
 
-def _drop_internal_keys(logger, method_name, event_dict):
+def _drop_internal_keys(
+    logger: Any, method_name: str, event_dict: dict[str, Any]
+) -> dict[str, Any]:
     """Remove structlog/ProcessorFormatter internal keys from the event dict."""
     event_dict.pop("_record", None)
     event_dict.pop("_from_structlog", None)
     return event_dict
 
 
-def _get_formatter_processors():
+def _get_formatter_processors() -> list[Any]:
     """Processor chain for ProcessorFormatter (stdlib LogRecords).
 
     Does NOT include filter_by_level because:
@@ -178,7 +182,7 @@ def _get_formatter_processors():
     ]
 
 
-def _configure_structlog(level_num, log_format, stream):
+def _configure_structlog(level_num: int, log_format: str, stream: Any) -> None:
     """Configure structlog and attach a handler to the signalwire logger.
 
     Args:
@@ -227,7 +231,7 @@ def _configure_structlog(level_num, log_format, stream):
         lgr.addHandler(handler)
 
 
-def _get_sdk_logger_names():
+def _get_sdk_logger_names() -> list[str]:
     """Known SDK logger names that don't use the signalwire. prefix.
 
     These are used by the 11 files that call get_logger() with short names.
@@ -250,7 +254,7 @@ def _get_sdk_logger_names():
     ]
 
 
-def _configure_off_mode():
+def _configure_off_mode() -> None:
     """Suppress all logging output without leaking file descriptors."""
     off_level = logging.CRITICAL + 10
 
@@ -278,19 +282,19 @@ def _configure_off_mode():
     )
 
 
-def _configure_stderr_mode(log_level, log_format="console"):
+def _configure_stderr_mode(log_level: str, log_format: str = "console") -> None:
     """Configure logging to stderr."""
     numeric_level = getattr(logging, log_level.upper(), logging.INFO)
     _configure_structlog(numeric_level, log_format, sys.stderr)
 
 
-def _configure_default_mode(log_level, log_format="console"):
+def _configure_default_mode(log_level: str, log_format: str = "console") -> None:
     """Configure standard logging to stdout."""
     numeric_level = getattr(logging, log_level.upper(), logging.INFO)
     _configure_structlog(numeric_level, log_format, sys.stdout)
 
 
-def get_logger(name):
+def get_logger(name: str) -> Any:
     """
     Get a logger instance for the specified name with structured logging support
 

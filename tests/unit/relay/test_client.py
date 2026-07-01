@@ -5,6 +5,8 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from collections.abc import Callable, Coroutine
+from typing import Any
 from unittest.mock import AsyncMock, patch, MagicMock
 
 import pytest
@@ -19,6 +21,7 @@ from signalwire.relay.client import (
     _SUCCESS_CODE_RE,
 )
 from signalwire.relay.call import Call, PlayAction
+from signalwire.relay.message import Message
 from signalwire.relay.constants import (
     AGENT_STRING,
     CALL_STATE_ENDED,
@@ -50,19 +53,19 @@ from .conftest import (
 # ===================================================================
 
 class TestClientInit:
-    def setup_method(self):
+    def setup_method(self) -> None:
         _active_clients.clear()
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         _active_clients.clear()
 
-    def test_explicit_creds(self):
+    def test_explicit_creds(self) -> None:
         c = RelayClient(project="p", token="t")
         assert c.project == "p"
         assert c.token == "t"
         assert c.host == DEFAULT_RELAY_HOST
 
-    def test_env_var_creds(self, monkeypatch):
+    def test_env_var_creds(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("SIGNALWIRE_PROJECT_ID", "env-proj")
         monkeypatch.setenv("SIGNALWIRE_API_TOKEN", "env-tok")
         c = RelayClient()
@@ -70,17 +73,17 @@ class TestClientInit:
         assert c.token == "env-tok"
 
     @patch.dict(os.environ, {}, clear=True)
-    def test_missing_creds_raises(self):
+    def test_missing_creds_raises(self) -> None:
         with pytest.raises(ValueError, match="project and token are required"):
             RelayClient(project="", token="")
 
     @patch.dict(os.environ, {}, clear=True)
-    def test_missing_project_raises(self):
+    def test_missing_project_raises(self) -> None:
         with pytest.raises(ValueError):
             RelayClient(project="", token="t")
 
     @patch.dict(os.environ, {}, clear=True)
-    def test_missing_token_raises(self):
+    def test_missing_token_raises(self) -> None:
         with pytest.raises(ValueError):
             RelayClient(project="p", token="")
 
@@ -91,23 +94,23 @@ class TestClientInit:
         "host\r\n.com",
         "host .com",
     ])
-    def test_ssrf_host_rejection(self, bad_host):
+    def test_ssrf_host_rejection(self, bad_host: str) -> None:
         with pytest.raises(ValueError, match="Invalid host"):
             RelayClient(project="p", token="t", host=bad_host)
 
-    def test_custom_host(self):
+    def test_custom_host(self) -> None:
         c = RelayClient(project="p", token="t", host="custom.relay.com")
         assert c.host == "custom.relay.com"
 
-    def test_contexts(self):
+    def test_contexts(self) -> None:
         c = RelayClient(project="p", token="t", contexts=["a", "b"])
         assert c.contexts == ["a", "b"]
 
-    def test_on_call_decorator(self):
+    def test_on_call_decorator(self) -> None:
         c = RelayClient(project="p", token="t")
 
         @c.on_call
-        async def handler(call):
+        async def handler(call: Call) -> None:
             pass
 
         assert c._on_call_handler is handler
@@ -118,14 +121,14 @@ class TestClientInit:
 # ===================================================================
 
 class TestConnectAuth:
-    def setup_method(self):
+    def setup_method(self) -> None:
         _active_clients.clear()
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_sends_signalwire_connect(self, connected_client):
+    async def test_sends_signalwire_connect(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         # Find the connect message
         connect_msg = None
@@ -142,29 +145,29 @@ class TestConnectAuth:
         assert params["authentication"]["token"] == "test-token"
 
     @pytest.mark.asyncio
-    async def test_stores_protocol_and_identity(self, connected_client):
+    async def test_stores_protocol_and_identity(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         assert client._relay_protocol == "test-protocol-abc123"
         assert client._identity == "test-identity"
 
     @pytest.mark.asyncio
-    async def test_connected_flag_set(self, connected_client):
+    async def test_connected_flag_set(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         assert client._connected is True
 
     @pytest.mark.asyncio
-    async def test_recv_task_started(self, connected_client):
+    async def test_recv_task_started(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         assert client._recv_task is not None
         assert not client._recv_task.done()
 
     @pytest.mark.asyncio
-    async def test_ping_task_started(self, connected_client):
+    async def test_ping_task_started(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         assert client._ping_task is not None
 
     @pytest.mark.asyncio
-    async def test_reconnect_sends_protocol(self):
+    async def test_reconnect_sends_protocol(self) -> None:
         """On reconnect, the protocol string should be sent back."""
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
@@ -194,7 +197,7 @@ class TestConnectAuth:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_contexts_sent_in_connect(self):
+    async def test_contexts_sent_in_connect(self) -> None:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
         with patch("signalwire.relay.client.websockets.connect",
@@ -213,14 +216,14 @@ class TestConnectAuth:
 # ===================================================================
 
 class TestConnectionLimits:
-    def setup_method(self):
+    def setup_method(self) -> None:
         _active_clients.clear()
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_limit_of_one_is_enforced(self):
+    async def test_limit_of_one_is_enforced(self) -> None:
         # Pin the limit to 1 for this test rather than relying on the module
         # default: the real-mock relay conftest raises RELAY_MAX_CONNECTIONS to
         # 16 (so a single test can hold several live clients), and that env var
@@ -244,7 +247,7 @@ class TestConnectionLimits:
             await c1.disconnect()
 
     @pytest.mark.asyncio
-    async def test_disconnect_frees_slot(self):
+    async def test_disconnect_frees_slot(self) -> None:
         ws = AutoAuthMockWebSocket()
         with patch("signalwire.relay.client.websockets.connect",
                    new_callable=AsyncMock, return_value=ws):
@@ -267,7 +270,7 @@ class TestConnectionLimits:
 
 class TestDisconnect:
     @pytest.mark.asyncio
-    async def test_disconnect_sets_flags(self, connected_client):
+    async def test_disconnect_sets_flags(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         await client.disconnect()
         assert client._closing is True
@@ -275,7 +278,7 @@ class TestDisconnect:
         assert client._ws is None
 
     @pytest.mark.asyncio
-    async def test_disconnect_cancels_tasks(self, connected_client):
+    async def test_disconnect_cancels_tasks(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         recv = client._recv_task
         ping = client._ping_task
@@ -284,7 +287,7 @@ class TestDisconnect:
         assert client._ping_task is None
 
     @pytest.mark.asyncio
-    async def test_disconnect_cancels_pending_futures(self, connected_client):
+    async def test_disconnect_cancels_pending_futures(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         loop = asyncio.get_running_loop()
         fut = loop.create_future()
@@ -294,7 +297,7 @@ class TestDisconnect:
         assert len(client._pending) == 0
 
     @pytest.mark.asyncio
-    async def test_disconnect_cancels_queued_requests(self, connected_client):
+    async def test_disconnect_cancels_queued_requests(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         loop = asyncio.get_running_loop()
         fut = loop.create_future()
@@ -304,7 +307,7 @@ class TestDisconnect:
         assert len(client._execute_queue) == 0
 
     @pytest.mark.asyncio
-    async def test_disconnect_removes_from_active_clients(self, connected_client):
+    async def test_disconnect_removes_from_active_clients(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         assert id(client) in _active_clients
         await client.disconnect()
@@ -317,7 +320,7 @@ class TestDisconnect:
 
 class TestMessageHandling:
     @pytest.mark.asyncio
-    async def test_response_matches_pending(self, connected_client):
+    async def test_response_matches_pending(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
 
         # Start a request
@@ -337,7 +340,7 @@ class TestMessageHandling:
         assert result["code"] == "200"
 
     @pytest.mark.asyncio
-    async def test_2xx_codes_are_success(self, connected_client):
+    async def test_2xx_codes_are_success(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """Any 2xx code should be treated as success."""
         client, ws = connected_client
 
@@ -352,7 +355,7 @@ class TestMessageHandling:
         assert result["code"] == "201"
 
     @pytest.mark.asyncio
-    async def test_non_2xx_raises_relay_error(self, connected_client):
+    async def test_non_2xx_raises_relay_error(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
 
         task = asyncio.ensure_future(client.execute("calling.answer", {
@@ -368,14 +371,14 @@ class TestMessageHandling:
         assert exc_info.value.code == 400
 
     @pytest.mark.asyncio
-    async def test_signalwire_connect_skips_code_check(self, connected_client):
+    async def test_signalwire_connect_skips_code_check(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """signalwire.connect responses should not be checked for code field."""
         client, ws = connected_client
         # The auth already succeeded — just verify protocol was stored
         assert client._relay_protocol == "test-protocol-abc123"
 
     @pytest.mark.asyncio
-    async def test_jsonrpc_error(self, connected_client):
+    async def test_jsonrpc_error(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
 
         task = asyncio.ensure_future(client.execute("calling.answer", {
@@ -392,7 +395,7 @@ class TestMessageHandling:
         assert "Invalid request" in exc_info.value.message
 
     @pytest.mark.asyncio
-    async def test_non_dict_message_ignored(self, connected_client):
+    async def test_non_dict_message_ignored(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """Non-dict messages should be silently ignored."""
         client, ws = connected_client
         # Feed a raw string that parses as a list
@@ -402,7 +405,7 @@ class TestMessageHandling:
         assert client._connected
 
     @pytest.mark.asyncio
-    async def test_invalid_json_ignored(self, connected_client):
+    async def test_invalid_json_ignored(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """Invalid JSON should be silently ignored."""
         client, ws = connected_client
         ws._recv_queue.put_nowait("not valid json {{{")
@@ -410,7 +413,7 @@ class TestMessageHandling:
         assert client._connected
 
     @pytest.mark.asyncio
-    async def test_non_dict_result_wrapped(self, connected_client):
+    async def test_non_dict_result_wrapped(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """Non-dict results should be wrapped in {raw: ...}."""
         client, ws = connected_client
 
@@ -425,7 +428,7 @@ class TestMessageHandling:
         assert result == {"raw": "just a string"}
 
     @pytest.mark.asyncio
-    async def test_non_dict_error_handled(self, connected_client):
+    async def test_non_dict_error_handled(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """Non-dict error values should be handled gracefully."""
         client, ws = connected_client
 
@@ -448,7 +451,7 @@ class TestMessageHandling:
 
 class TestClientEventDispatch:
     @pytest.mark.asyncio
-    async def test_event_ack_sent(self, connected_client):
+    async def test_event_ack_sent(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """Events should be ACKed back to the server."""
         client, ws = connected_client
         ws.sent_messages.clear()
@@ -461,7 +464,7 @@ class TestClientEventDispatch:
         assert len(acks) == 1
 
     @pytest.mark.asyncio
-    async def test_event_routed_to_call(self, connected_client, make_call):
+    async def test_event_routed_to_call(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket], make_call: Callable[..., Call]) -> None:
         client, ws = connected_client
         call = make_call(client, call_id="c-route")
 
@@ -472,12 +475,12 @@ class TestClientEventDispatch:
         assert call.state == "answered"
 
     @pytest.mark.asyncio
-    async def test_inbound_call_creation(self, connected_client):
+    async def test_inbound_call_creation(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         handler_calls = []
 
         @client.on_call
-        async def handle(call):
+        async def handle(call: Call) -> None:
             handler_calls.append(call)
 
         event = make_event(EVENT_CALL_RECEIVE, {
@@ -498,7 +501,7 @@ class TestClientEventDispatch:
         assert len(handler_calls) == 1
 
     @pytest.mark.asyncio
-    async def test_no_handler_logs_warning(self, connected_client):
+    async def test_no_handler_logs_warning(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """Inbound call without handler should not crash."""
         client, ws = connected_client
         event = make_event(EVENT_CALL_RECEIVE, {
@@ -510,11 +513,11 @@ class TestClientEventDispatch:
         assert "no-handler-call" in client._calls
 
     @pytest.mark.asyncio
-    async def test_max_calls_limit(self, connected_client):
+    async def test_max_calls_limit(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
 
         @client.on_call
-        async def handle(call):
+        async def handle(call: Call) -> None:
             pass
 
         # Fill up to max
@@ -532,7 +535,7 @@ class TestClientEventDispatch:
         assert "overflow-call" not in client._calls
 
     @pytest.mark.asyncio
-    async def test_ended_call_removed(self, connected_client, make_call):
+    async def test_ended_call_removed(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket], make_call: Callable[..., Call]) -> None:
         client, ws = connected_client
         call = make_call(client, call_id="c-end")
         assert "c-end" in client._calls
@@ -544,7 +547,7 @@ class TestClientEventDispatch:
         assert "c-end" not in client._calls
 
     @pytest.mark.asyncio
-    async def test_signalwire_disconnect_acked(self, connected_client):
+    async def test_signalwire_disconnect_acked(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """Server disconnect should be ACKed."""
         client, ws = connected_client
         ws.sent_messages.clear()
@@ -568,7 +571,7 @@ class TestClientEventDispatch:
 
 class TestPing:
     @pytest.mark.asyncio
-    async def test_server_ping_gets_pong(self, connected_client):
+    async def test_server_ping_gets_pong(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         ws.sent_messages.clear()
 
@@ -580,7 +583,7 @@ class TestPing:
         assert len(pongs) == 1
 
     @pytest.mark.asyncio
-    async def test_server_ping_resets_failure_counter(self, connected_client):
+    async def test_server_ping_resets_failure_counter(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         client._ping_failures = 2
 
@@ -591,7 +594,7 @@ class TestPing:
         assert client._ping_failures == 0
 
     @pytest.mark.asyncio
-    async def test_client_ping_loop_sends_pings(self):
+    async def test_client_ping_loop_sends_pings(self) -> None:
         """Client ping loop sends signalwire.ping at configured intervals."""
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
@@ -617,7 +620,7 @@ class TestPing:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_ping_failure_backoff(self):
+    async def test_ping_failure_backoff(self) -> None:
         """Ping failures should trigger exponential backoff."""
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
@@ -640,7 +643,7 @@ class TestPing:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_force_close(self, connected_client):
+    async def test_force_close(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         client._force_close()
         assert client._connected is False
@@ -652,7 +655,7 @@ class TestPing:
 
 class TestRequestQueuing:
     @pytest.mark.asyncio
-    async def test_queue_while_disconnected(self):
+    async def test_queue_while_disconnected(self) -> None:
         _active_clients.clear()
         client = RelayClient(project="p", token="t")
 
@@ -670,7 +673,7 @@ class TestRequestQueuing:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_flush_after_reconnect(self):
+    async def test_flush_after_reconnect(self) -> None:
         """Queued requests should be flushed after reconnect (auth)."""
         _active_clients.clear()
         client = RelayClient(project="p", token="t")
@@ -702,7 +705,7 @@ class TestRequestQueuing:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_queue_overflow(self):
+    async def test_queue_overflow(self) -> None:
         _active_clients.clear()
         client = RelayClient(project="p", token="t")
 
@@ -733,7 +736,7 @@ class TestRequestQueuing:
 
 class TestTimeouts:
     @pytest.mark.asyncio
-    async def test_execute_timeout_raises(self, connected_client):
+    async def test_execute_timeout_raises(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
 
         with patch("signalwire.relay.client._EXECUTE_TIMEOUT", 0.05):
@@ -742,7 +745,7 @@ class TestTimeouts:
                 await client.execute("calling.answer", {"node_id": "n1", "call_id": "c1"})
 
     @pytest.mark.asyncio
-    async def test_execute_timeout_force_closes(self, connected_client):
+    async def test_execute_timeout_force_closes(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
 
         with patch("signalwire.relay.client._EXECUTE_TIMEOUT", 0.05):
@@ -761,11 +764,11 @@ class TestTimeouts:
 
 class TestSuccessCodeRegex:
     @pytest.mark.parametrize("code", ["200", "201", "204", "299"])
-    def test_2xx_matches(self, code):
+    def test_2xx_matches(self, code: str) -> None:
         assert _SUCCESS_CODE_RE.match(code)
 
     @pytest.mark.parametrize("code", ["100", "300", "400", "500", "199", "2000"])
-    def test_non_2xx_does_not_match(self, code):
+    def test_non_2xx_does_not_match(self, code: str) -> None:
         assert not _SUCCESS_CODE_RE.match(code)
 
 
@@ -773,9 +776,9 @@ class TestSuccessCodeRegex:
 # Async context manager
 # ===================================================================
 
-class TestAsyncContextManager:
+class TestAsyncContextManagerBasic:
     @pytest.mark.asyncio
-    async def test_aenter_aexit(self):
+    async def test_aenter_aexit(self) -> None:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
         with patch("signalwire.relay.client.websockets.connect",
@@ -791,13 +794,13 @@ class TestAsyncContextManager:
 # ===================================================================
 
 class TestReconnectBackoff:
-    def test_initial_delay(self):
+    def test_initial_delay(self) -> None:
         _active_clients.clear()
         c = RelayClient(project="p", token="t")
         assert c._reconnect_delay == RECONNECT_MIN_DELAY
         _active_clients.clear()
 
-    def test_backoff_calculation(self):
+    def test_backoff_calculation(self) -> None:
         _active_clients.clear()
         c = RelayClient(project="p", token="t")
         # Simulate the backoff math from _run_forever
@@ -815,7 +818,7 @@ class TestReconnectBackoff:
 
 class TestDial:
     @pytest.mark.asyncio
-    async def test_dial_returns_call(self, connected_client):
+    async def test_dial_returns_call(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         ws.sent_messages.clear()
 
@@ -866,7 +869,7 @@ class TestDial:
 # ===================================================================
 
 class TestDelCleanup:
-    def test_del_removes_from_active(self):
+    def test_del_removes_from_active(self) -> None:
         _active_clients.clear()
         c = RelayClient(project="p", token="t")
         cid = id(c)
@@ -882,7 +885,7 @@ class TestDelCleanup:
 
 class TestNonDictParams:
     @pytest.mark.asyncio
-    async def test_non_dict_params_ignored(self, connected_client):
+    async def test_non_dict_params_ignored(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """Messages with non-dict params should be ignored."""
         client, ws = connected_client
         msg = {
@@ -902,7 +905,7 @@ class TestNonDictParams:
 
 class TestEmptyEventType:
     @pytest.mark.asyncio
-    async def test_empty_event_type_logged(self, connected_client):
+    async def test_empty_event_type_logged(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """Events with empty event_type should be ignored."""
         client, ws = connected_client
         event = make_event("", {"call_id": "c1"})
@@ -917,7 +920,7 @@ class TestEmptyEventType:
 
 class TestRelayProtocolProperty:
     @pytest.mark.asyncio
-    async def test_relay_protocol_property(self, connected_client):
+    async def test_relay_protocol_property(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         assert client.relay_protocol == "test-protocol-abc123"
 
@@ -927,7 +930,7 @@ class TestRelayProtocolProperty:
 # ===================================================================
 
 class TestMaxConnectionsEnvVar:
-    def test_invalid_env_var_fallback(self, monkeypatch):
+    def test_invalid_env_var_fallback(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Invalid RELAY_MAX_CONNECTIONS should fall back to 1."""
         _active_clients.clear()
         # We can't easily re-execute module-level code, but we can test
@@ -944,7 +947,7 @@ class TestMaxConnectionsEnvVar:
 
 class TestDialMaxDuration:
     @pytest.mark.asyncio
-    async def test_dial_with_max_duration(self, connected_client):
+    async def test_dial_with_max_duration(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         ws.sent_messages.clear()
 
@@ -992,16 +995,16 @@ class TestDialMaxDuration:
 
 class TestRunForever:
     @pytest.mark.asyncio
-    async def test_run_forever_connects_and_reconnects(self):
+    async def test_run_forever_connects_and_reconnects(self) -> None:
         """Test _run_forever connect + reconnect loop — lines 332-354."""
         _active_clients.clear()
         connect_count = 0
 
         class CountingMockWS(AutoAuthMockWebSocket):
-            async def close(self):
+            async def close(self) -> None:
                 await super().close()
 
-        async def mock_connect(*args, **kwargs):
+        async def mock_connect(*args: Any, **kwargs: Any) -> CountingMockWS:
             nonlocal connect_count
             connect_count += 1
             ws = CountingMockWS()
@@ -1012,7 +1015,7 @@ class TestRunForever:
              patch("signalwire.relay.client._CLIENT_PING_INTERVAL", 999):
             client = RelayClient(project="p", token="t")
 
-            async def stop_after_connect():
+            async def stop_after_connect() -> None:
                 # Wait for first connect, then signal close
                 while connect_count < 1:
                     await asyncio.sleep(0.01)
@@ -1030,12 +1033,12 @@ class TestRunForever:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_run_forever_handles_connect_exception(self):
+    async def test_run_forever_handles_connect_exception(self) -> None:
         """_run_forever catches exceptions and attempts reconnect — lines 340-341."""
         _active_clients.clear()
         call_count = 0
 
-        async def fail_then_succeed(*args, **kwargs):
+        async def fail_then_succeed(*args: Any, **kwargs: Any) -> AutoAuthMockWebSocket:
             nonlocal call_count
             call_count += 1
             if call_count == 1:
@@ -1048,7 +1051,7 @@ class TestRunForever:
              patch("signalwire.relay.client.RECONNECT_MIN_DELAY", 0.01):
             client = RelayClient(project="p", token="t")
 
-            async def stop_after():
+            async def stop_after() -> None:
                 while call_count < 2:
                     await asyncio.sleep(0.01)
                 await asyncio.sleep(0.05)
@@ -1063,12 +1066,12 @@ class TestRunForever:
             assert call_count >= 2
         _active_clients.clear()
 
-    def test_run_calls_asyncio_run(self):
+    def test_run_calls_asyncio_run(self) -> None:
         """run() calls asyncio.run — line 328."""
         _active_clients.clear()
         client = RelayClient(project="p", token="t")
 
-        def close_coro_and_record(coro):
+        def close_coro_and_record(coro: Coroutine[Any, Any, Any]) -> None:
             """Close the coroutine to avoid 'was never awaited' warning."""
             coro.close()
 
@@ -1079,12 +1082,12 @@ class TestRunForever:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_run_forever_cancelled(self):
+    async def test_run_forever_cancelled(self) -> None:
         """_run_forever must break on CancelledError from the connect path
         AND ensure disconnect() runs (which clears _connected)."""
         _active_clients.clear()
 
-        async def cancel_connect(*args, **kwargs):
+        async def cancel_connect(*args: Any, **kwargs: Any) -> AutoAuthMockWebSocket:
             raise asyncio.CancelledError()
 
         with patch("signalwire.relay.client.websockets.connect",
@@ -1104,7 +1107,7 @@ class TestRunForever:
 
 class TestFlushQueueDoneFutures:
     @pytest.mark.asyncio
-    async def test_flush_skips_done_futures(self, connected_client):
+    async def test_flush_skips_done_futures(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """Already-done futures in queue should be skipped — line 414."""
         client, ws = connected_client
         loop = asyncio.get_running_loop()
@@ -1122,7 +1125,7 @@ class TestFlushQueueDoneFutures:
 
 class TestSafeSend:
     @pytest.mark.asyncio
-    async def test_safe_send_failure_rejects_future(self, connected_client):
+    async def test_safe_send_failure_rejects_future(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """_safe_send should reject the future if send fails — lines 424-426."""
         client, ws = connected_client
         loop = asyncio.get_running_loop()
@@ -1130,16 +1133,16 @@ class TestSafeSend:
 
         # Make ws.send raise
         original_send = ws.send
-        async def failing_send(raw):
+        async def failing_send(raw: str) -> None:
             raise ConnectionError("test failure")
-        ws.send = failing_send
+        ws.send = failing_send  # type: ignore[method-assign]  # monkeypatch send to exercise failure path
 
         await client._safe_send('{"test": true}', future)
         assert future.done()
         with pytest.raises(RelayError):
             future.result()
 
-        ws.send = original_send
+        ws.send = original_send  # type: ignore[method-assign]  # restore original
 
 
 # ===================================================================
@@ -1148,7 +1151,7 @@ class TestSafeSend:
 
 class TestClearPendingRequests:
     @pytest.mark.asyncio
-    async def test_clear_pending_requests(self, connected_client):
+    async def test_clear_pending_requests(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """_clear_pending_requests rejects all pending — lines 432-438."""
         client, ws = connected_client
         loop = asyncio.get_running_loop()
@@ -1176,7 +1179,7 @@ class TestClearPendingRequests:
 
 class TestRecvLoopExceptions:
     @pytest.mark.asyncio
-    async def test_recv_loop_connection_closed(self):
+    async def test_recv_loop_connection_closed(self) -> None:
         """recv_loop handles ConnectionClosed at async-for level — line 453."""
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
@@ -1197,14 +1200,14 @@ class TestRecvLoopExceptions:
 
             # Replace _ws with one that immediately raises ConnectionClosed
             class ImmediateCloseWS:
-                def __aiter__(self):
+                def __aiter__(self) -> ImmediateCloseWS:
                     return self
-                async def __anext__(self):
+                async def __anext__(self) -> str:
                     raise websockets.exceptions.ConnectionClosed(None, None)
-                async def close(self):
+                async def close(self) -> None:
                     pass
 
-            client._ws = ImmediateCloseWS()
+            client._ws = ImmediateCloseWS()  # type: ignore[assignment]  # test mock WS substitute
             client._connected = True
 
             # Start a new recv loop — it will immediately hit ConnectionClosed
@@ -1216,7 +1219,7 @@ class TestRecvLoopExceptions:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_recv_loop_generic_exception(self):
+    async def test_recv_loop_generic_exception(self) -> None:
         """recv_loop handles generic exceptions — lines 456-457."""
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
@@ -1236,7 +1239,7 @@ class TestRecvLoopExceptions:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_recv_loop_cleans_up_ping_task(self):
+    async def test_recv_loop_cleans_up_ping_task(self) -> None:
         """recv_loop finally block cancels ping task — lines 462-463."""
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
@@ -1266,7 +1269,7 @@ class TestRecvLoopExceptions:
 
 class TestUnknownRequestError:
     @pytest.mark.asyncio
-    async def test_error_for_unknown_request(self, connected_client):
+    async def test_error_for_unknown_request(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """Error response for unknown request ID — line 483."""
         client, ws = connected_client
         # Feed error for a request ID that doesn't exist
@@ -1281,7 +1284,7 @@ class TestUnknownRequestError:
 
 class TestNonNumericErrorCode:
     @pytest.mark.asyncio
-    async def test_non_numeric_error_code(self, connected_client):
+    async def test_non_numeric_error_code(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """Error code that can't be parsed as int — lines 507-508."""
         client, ws = connected_client
 
@@ -1305,7 +1308,7 @@ class TestNonNumericErrorCode:
 
 class TestUnknownRequestResponse:
     @pytest.mark.asyncio
-    async def test_response_for_unknown_request(self, connected_client):
+    async def test_response_for_unknown_request(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """Response for unknown request ID — line 515."""
         client, ws = connected_client
         # Feed response for a request ID that doesn't exist
@@ -1320,12 +1323,12 @@ class TestUnknownRequestResponse:
 
 class TestOnCallHandlerException:
     @pytest.mark.asyncio
-    async def test_handler_exception_caught(self, connected_client):
+    async def test_handler_exception_caught(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """Exception in on_call handler should be caught — lines 607-608."""
         client, ws = connected_client
 
         @client.on_call
-        async def bad_handler(call):
+        async def bad_handler(call: Call) -> None:
             raise RuntimeError("handler crash")
 
         event = make_event(EVENT_CALL_RECEIVE, {
@@ -1345,14 +1348,14 @@ class TestOnCallHandlerException:
 
 class TestSendWithNoWs:
     @pytest.mark.asyncio
-    async def test_send_pong_no_ws(self, connected_client):
+    async def test_send_pong_no_ws(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """_send_pong with _ws=None should return early — line 613."""
         client, ws = connected_client
         client._ws = None
         await client._send_pong("test-id")  # Should not raise
 
     @pytest.mark.asyncio
-    async def test_send_event_ack_no_ws(self, connected_client):
+    async def test_send_event_ack_no_ws(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """_send_event_ack with _ws=None should return early — line 624."""
         client, ws = connected_client
         client._ws = None
@@ -1365,7 +1368,7 @@ class TestSendWithNoWs:
 
 class TestPingLoopInternals:
     @pytest.mark.asyncio
-    async def test_ping_loop_exits_when_disconnected(self):
+    async def test_ping_loop_exits_when_disconnected(self) -> None:
         """Ping loop should break when disconnected mid-sleep — line 648."""
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
@@ -1391,7 +1394,7 @@ class TestPingLoopInternals:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_ping_loop_max_failures_force_close(self):
+    async def test_ping_loop_max_failures_force_close(self) -> None:
         """Ping loop force-closes after max failures — lines 663-665."""
         _active_clients.clear()
         ws = AutoAuthMockWebSocket()
@@ -1414,7 +1417,7 @@ class TestPingLoopInternals:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_check_ping_timeout_fires(self, connected_client):
+    async def test_check_ping_timeout_fires(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """_on_check_ping_timeout is a logging-only handler. It must NOT
         flip _connected, must NOT close the websocket, and must NOT mutate
         the ping-failure counter — the actual probing is the client ping
@@ -1439,7 +1442,7 @@ class TestPingLoopInternals:
 
 class TestSafeSendNoWs:
     @pytest.mark.asyncio
-    async def test_safe_send_no_ws(self, connected_client):
+    async def test_safe_send_no_ws(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         """_safe_send with _ws=None should do nothing."""
         client, ws = connected_client
         loop = asyncio.get_running_loop()
@@ -1455,25 +1458,25 @@ class TestSafeSendNoWs:
 # ===================================================================
 
 class TestJwtAuth:
-    def setup_method(self):
+    def setup_method(self) -> None:
         _active_clients.clear()
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         _active_clients.clear()
 
     @patch.dict(os.environ, {}, clear=True)
-    def test_jwt_token_skips_project_token(self):
+    def test_jwt_token_skips_project_token(self) -> None:
         c = RelayClient(jwt_token="eyJ...")
         assert c.jwt_token == "eyJ..."
         assert c.project == ""
 
     @patch.dict(os.environ, {}, clear=True)
-    def test_jwt_token_with_project(self):
+    def test_jwt_token_with_project(self) -> None:
         c = RelayClient(jwt_token="eyJ...", project="proj-1")
         assert c.jwt_token == "eyJ..."
         assert c.project == "proj-1"
 
-    def test_jwt_env_var(self, monkeypatch):
+    def test_jwt_env_var(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("SIGNALWIRE_JWT_TOKEN", "env-jwt")
         monkeypatch.delenv("SIGNALWIRE_PROJECT_ID", raising=False)
         monkeypatch.delenv("SIGNALWIRE_API_TOKEN", raising=False)
@@ -1481,7 +1484,7 @@ class TestJwtAuth:
         assert c.jwt_token == "env-jwt"
 
     @pytest.mark.asyncio
-    async def test_jwt_auth_sends_jwt_token(self):
+    async def test_jwt_auth_sends_jwt_token(self) -> None:
         ws = AutoAuthMockWebSocket()
         client = RelayClient(jwt_token="eyJ...", project="p")
         with patch("signalwire.relay.client.websockets.connect",
@@ -1497,7 +1500,7 @@ class TestJwtAuth:
         await client.disconnect()
 
     @pytest.mark.asyncio
-    async def test_legacy_auth_sends_project_token(self, connected_client):
+    async def test_legacy_auth_sends_project_token(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         connect_msg = None
         for msg in ws.sent_messages:
@@ -1516,32 +1519,32 @@ class TestJwtAuth:
 # ===================================================================
 
 class TestMaxActiveCallsConfig:
-    def setup_method(self):
+    def setup_method(self) -> None:
         _active_clients.clear()
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         _active_clients.clear()
 
-    def test_constructor_param(self):
+    def test_constructor_param(self) -> None:
         c = RelayClient(project="p", token="t", max_active_calls=50)
         assert c._max_active_calls == 50
 
-    def test_constructor_param_min_1(self):
+    def test_constructor_param_min_1(self) -> None:
         c = RelayClient(project="p", token="t", max_active_calls=0)
         assert c._max_active_calls == 1
 
-    def test_env_var(self, monkeypatch):
+    def test_env_var(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("RELAY_MAX_ACTIVE_CALLS", "200")
         c = RelayClient(project="p", token="t")
         assert c._max_active_calls == 200
 
-    def test_env_var_invalid(self, monkeypatch):
+    def test_env_var_invalid(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("RELAY_MAX_ACTIVE_CALLS", "not_a_number")
         c = RelayClient(project="p", token="t")
         from signalwire.relay.client import _DEFAULT_MAX_ACTIVE_CALLS
         assert c._max_active_calls == _DEFAULT_MAX_ACTIVE_CALLS
 
-    def test_default(self):
+    def test_default(self) -> None:
         c = RelayClient(project="p", token="t")
         from signalwire.relay.client import _DEFAULT_MAX_ACTIVE_CALLS
         assert c._max_active_calls == _DEFAULT_MAX_ACTIVE_CALLS
@@ -1552,14 +1555,14 @@ class TestMaxActiveCallsConfig:
 # ===================================================================
 
 class TestReceiveUnreceive:
-    def setup_method(self):
+    def setup_method(self) -> None:
         _active_clients.clear()
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_receive_sends_request(self):
+    async def test_receive_sends_request(self) -> None:
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
         client = RelayClient(project="p", token="t")
         with patch("signalwire.relay.client.websockets.connect",
@@ -1573,7 +1576,7 @@ class TestReceiveUnreceive:
         await client.disconnect()
 
     @pytest.mark.asyncio
-    async def test_receive_empty_is_noop(self, connected_client):
+    async def test_receive_empty_is_noop(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         ws.sent_messages.clear()
         await client.receive([])
@@ -1581,7 +1584,7 @@ class TestReceiveUnreceive:
         assert len(recv_msgs) == 0
 
     @pytest.mark.asyncio
-    async def test_unreceive_sends_request(self):
+    async def test_unreceive_sends_request(self) -> None:
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
         client = RelayClient(project="p", token="t")
         with patch("signalwire.relay.client.websockets.connect",
@@ -1595,7 +1598,7 @@ class TestReceiveUnreceive:
         await client.disconnect()
 
     @pytest.mark.asyncio
-    async def test_unreceive_empty_is_noop(self, connected_client):
+    async def test_unreceive_empty_is_noop(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         ws.sent_messages.clear()
         await client.unreceive([])
@@ -1609,7 +1612,7 @@ class TestReceiveUnreceive:
 
 class TestAuthorizationState:
     @pytest.mark.asyncio
-    async def test_authorization_state_stored(self, connected_client):
+    async def test_authorization_state_stored(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         from signalwire.relay.constants import EVENT_AUTHORIZATION_STATE
         event = make_event(EVENT_AUTHORIZATION_STATE, {
@@ -1620,7 +1623,7 @@ class TestAuthorizationState:
         assert client._authorization_state == "encrypted-state-abc"
 
     @pytest.mark.asyncio
-    async def test_authorization_state_empty_ignored(self, connected_client):
+    async def test_authorization_state_empty_ignored(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         client._authorization_state = "existing"
         from signalwire.relay.constants import EVENT_AUTHORIZATION_STATE
@@ -1638,7 +1641,7 @@ class TestAuthorizationState:
 
 class TestDisconnectRestart:
     @pytest.mark.asyncio
-    async def test_disconnect_restart_clears_state(self, connected_client):
+    async def test_disconnect_restart_clears_state(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         client._relay_protocol = "proto-123"
         client._authorization_state = "auth-state-abc"
@@ -1656,7 +1659,7 @@ class TestDisconnectRestart:
         assert client._authorization_state == ""
 
     @pytest.mark.asyncio
-    async def test_disconnect_no_restart_keeps_state(self, connected_client):
+    async def test_disconnect_no_restart_keeps_state(self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]) -> None:
         client, ws = connected_client
         client._relay_protocol = "proto-123"
         client._authorization_state = "auth-state-abc"
@@ -1681,18 +1684,18 @@ class TestDisconnectRestart:
 class TestOnCallMethod:
     """Direct invocation of client.on_call(handler) so the audit binds it."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         _active_clients.clear()
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         _active_clients.clear()
 
-    def test_on_call_returns_handler(self):
+    def test_on_call_returns_handler(self) -> None:
         """on_call returns the registered handler so it can be used as a
         decorator. Verify both the side effect and the return value."""
         client = RelayClient(project="p", token="t")
 
-        async def handler(call):
+        async def handler(call: Call) -> None:
             pass
 
         # Direct invocation (not as decorator).
@@ -1700,13 +1703,13 @@ class TestOnCallMethod:
         assert returned is handler
         assert client._on_call_handler is handler
 
-    def test_on_call_overwrites_previous(self):
+    def test_on_call_overwrites_previous(self) -> None:
         client = RelayClient(project="p", token="t")
 
-        async def handler_first(call):
+        async def handler_first(call: Call) -> None:
             pass
 
-        async def handler_second(call):
+        async def handler_second(call: Call) -> None:
             pass
 
         client.on_call(handler_first)
@@ -1717,29 +1720,29 @@ class TestOnCallMethod:
 class TestOnMessageMethod:
     """Direct invocation of client.on_message(handler) so the audit binds it."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         _active_clients.clear()
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         _active_clients.clear()
 
-    def test_on_message_returns_handler(self):
+    def test_on_message_returns_handler(self) -> None:
         client = RelayClient(project="p", token="t")
 
-        async def handler(message):
+        async def handler(message: Message) -> None:
             pass
 
         returned = client.on_message(handler)
         assert returned is handler
         assert client._on_message_handler is handler
 
-    def test_on_message_overwrites_previous(self):
+    def test_on_message_overwrites_previous(self) -> None:
         client = RelayClient(project="p", token="t")
 
-        async def handler_first(message):
+        async def handler_first(message: Message) -> None:
             pass
 
-        async def handler_second(message):
+        async def handler_second(message: Message) -> None:
             pass
 
         client.on_message(handler_first)
@@ -1754,14 +1757,14 @@ class TestOnMessageMethod:
 class TestAsyncContextManager:
     """Tests for `async with RelayClient(...)` — covers __aenter__/__aexit__."""
 
-    def setup_method(self):
+    def setup_method(self) -> None:
         _active_clients.clear()
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_aenter_connects_and_returns_self(self):
+    async def test_aenter_connects_and_returns_self(self) -> None:
         ws = AutoAuthMockWebSocket()
         with patch(
             "signalwire.relay.client.websockets.connect",
@@ -1783,7 +1786,7 @@ class TestAsyncContextManager:
                 await ctx_client.__aexit__(None, None, None)
 
     @pytest.mark.asyncio
-    async def test_aexit_disconnects(self):
+    async def test_aexit_disconnects(self) -> None:
         ws = AutoAuthMockWebSocket()
         with patch(
             "signalwire.relay.client.websockets.connect",
@@ -1798,7 +1801,7 @@ class TestAsyncContextManager:
             assert ctx_client._connected is False
 
     @pytest.mark.asyncio
-    async def test_async_with_full_lifecycle(self):
+    async def test_async_with_full_lifecycle(self) -> None:
         """End-to-end ``async with`` block exercises both __aenter__/__aexit__
         through the natural with-statement protocol."""
         ws = AutoAuthMockWebSocket()
@@ -1821,7 +1824,7 @@ class TestAsyncContextManager:
 class TestRelayErrorInit:
     """Direct construction of RelayError (covers RelayError.__init__)."""
 
-    def test_relay_error_stores_code_and_message(self):
+    def test_relay_error_stores_code_and_message(self) -> None:
         relay_err = RelayError(404, "Call not found")
         assert relay_err.code == 404
         assert relay_err.message == "Call not found"
@@ -1829,7 +1832,7 @@ class TestRelayErrorInit:
         assert "RELAY error 404" in str(relay_err)
         assert "Call not found" in str(relay_err)
 
-    def test_relay_error_is_exception_subclass(self):
+    def test_relay_error_is_exception_subclass(self) -> None:
         relay_err = RelayError(500, "Server error")
         assert isinstance(relay_err, Exception)
         # Can be raised and caught as Exception.
@@ -1837,7 +1840,7 @@ class TestRelayErrorInit:
             raise relay_err
         assert exc_info.value.code == 500
 
-    def test_relay_error_string_format(self):
+    def test_relay_error_string_format(self) -> None:
         relay_err = RelayError(-1, "Dial timeout")
         rendered = str(relay_err)
         assert "RELAY error -1" in rendered

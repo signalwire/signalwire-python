@@ -20,7 +20,7 @@ logger = get_logger(__name__)
 class PromptManager:
     """Manages prompt building and configuration."""
 
-    def __init__(self, agent):
+    def __init__(self, agent: Any) -> None:
         """
         Initialize PromptManager with reference to parent agent.
 
@@ -29,10 +29,10 @@ class PromptManager:
         """
         self.agent = agent
         self._prompt_text: str | None = None
-        self._post_prompt_text = None
-        self._contexts = None
+        self._post_prompt_text: str | None = None
+        self._contexts: dict[str, Any] | None = None
 
-    def _validate_prompt_mode_exclusivity(self):
+    def _validate_prompt_mode_exclusivity(self) -> None:
         """
         Check that only one prompt mode is in use.
 

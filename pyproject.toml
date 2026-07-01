@@ -182,6 +182,16 @@ select = ["E4", "E7", "E9", "F", "B", "S", "C4", "PERF", "SIM", "PTH", "RET", "R
 # call) and S607 (partial executable path: git/ssh resolved via PATH, the normal
 # idiom) are expected and safe across this file.
 "signalwire/signalwire/cli/dokku.py" = ["S603", "S607"]
+# REST namespace files import spec-generated types under TYPE_CHECKING and use
+# them ONLY inside quoted forward-refs — method return annotations
+# (`-> "RoomResponse"`) and the generic CRUD-base subscript bindings
+# (`class VideoRooms(CrudResource["ListRoomsResponse", "RoomResponse", ...])`).
+# Ruff's F401 cannot see usages inside a class-base subscript's string literals,
+# so it false-positives "unused import" and `--fix` would strip imports that ARE
+# used (breaking mypy). The bindings must stay quoted (a bare name in the base
+# subscript is a runtime NameError under TYPE_CHECKING). Exempt F401 here; mypy +
+# the SIGNATURES/DRIFT gate prove these imports are real and correct.
+"signalwire/signalwire/rest/namespaces/*.py" = ["F401"]
 
 [tool.ruff.lint.flake8-bugbear]
 # FastAPI's dependency-injection idiom puts Depends()/Query()/etc. in argument
@@ -202,16 +212,22 @@ extend-immutable-calls = [
 
 [tool.mypy]
 python_version = "3.10"
-files = ["signalwire/signalwire"]
+# Both the source tree AND the test suite are in scope — the generated REST tests are
+# strict-clean by construction, and the hand-written tests were fully annotated, so the
+# strict bar now covers tests too (a new untyped test fails the gate).
+files = ["signalwire/signalwire", "tests"]
 # Third-party packages without type stubs (nltk, sentence_transformers, the
 # search/relay stacks) are out of scope — we type our own code, not theirs.
 ignore_missing_imports = true
-# The bar: our own code is clean. Bodies of untyped defs are checked so real
-# type errors inside them surface (this is what found the mixin cluster).
-check_untyped_defs = true
-warn_unused_ignores = true
-# `# type: ignore` is reserved for genuinely-unfixable third-party-stub gaps and
-# must carry an error code + reason. warn_unused_ignores keeps them honest.
+# The bar: the whole source tree is mypy --strict clean (full annotations + all
+# the strict sub-flags). Achieved by typing handlers with REAL types (FastAPI
+# Response/dict, generated payload types where they exist) — never papered with
+# bare `Any`. `strict` subsumes check_untyped_defs / warn_unused_ignores / etc.
+strict = true
+# `# type: ignore` is reserved for genuinely-unfixable third-party-stub gaps (e.g.
+# flask/flask-limiter optional extras with no stubs) and the documented
+# _HostTyped/AgentBase TYPE_CHECKING-vs-runtime split; each must carry an error
+# code + reason. warn_unused_ignores (via strict) keeps them honest.
 show_error_codes = true
 
 # numpy (a search/relay-extra runtime dep we do NOT type — same class as nltk /
