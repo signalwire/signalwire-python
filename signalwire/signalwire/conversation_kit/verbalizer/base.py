@@ -61,6 +61,10 @@ class Verbalizer:
     #: so an all-caps name (a customer code, a device id) is left spoken as-is.
     ACRONYMS: ClassVar[frozenset[str]] = frozenset({"DIN", "ISO", "PPV", "RMS", "UTC"})
 
+    #: Whether this language verbalizes dates/times in ``datetime_text``. The base and
+    #: English read ISO dates/times acceptably as-is, so it stays a no-op there.
+    VERBALIZES_DATETIME: ClassVar[bool] = False
+
     def guidance(self, glossary: dict[str, str] | None = None) -> str:
         """LLM speaking instructions for everything done via instruction (not
         deterministic transforms). These rules are GENERIC and LANGUAGE-AGNOSTIC —
@@ -111,9 +115,13 @@ class Verbalizer:
 
     # --- temporal ------------------------------------------------------- #
 
-    def date(self, iso: str) -> str:
+    def date(self, iso: str, with_weekday: bool = True, with_year: bool = True) -> str:
         """An ISO date (YYYY-MM-DD) spoken naturally. Base: passthrough."""
         return iso
+
+    def time(self, hour: int, minute: int) -> str:
+        """A 24-hour clock time spoken naturally. Base: passthrough 'HH:MM'."""
+        return f"{hour:02d}:{minute:02d}"
 
     # --- identifiers (structure is universal; only the words differ) ---- #
 
@@ -185,3 +193,25 @@ class Verbalizer:
             re.escape(a) for a in sorted(self.ACRONYMS, key=len, reverse=True)
         )
         return re.sub(rf"\b({alternation})\b", lambda m: self.spell(m.group(1)), text)
+
+    def datetime_text(self, text: str) -> str:
+        """Verbalize ISO dates and date-times in free text, so a TTS engine reads them
+        naturally instead of the model guessing at the digits (on a combined timestamp it
+        mixes the day into the minutes). No-op unless the language sets VERBALIZES_DATETIME.
+        Date-times are matched before bare dates; a trailing "UTC"/"Z" is left in place for
+        the acronym pass to spell.
+        """
+        if not text or not self.VERBALIZES_DATETIME:
+            return text
+
+        def _datetime(m: re.Match[str]) -> str:
+            iso, hour, minute = m.group(1), int(m.group(2)), int(m.group(3))
+            suffix = m.group(4) or ""
+            return f"{self.date(iso, with_weekday=False)}, {self.time(hour, minute)}{suffix}"
+
+        text = re.sub(
+            r"\b(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})(?::\d{2})?( ?UTC| ?Z)?\b",
+            _datetime,
+            text,
+        )
+        return re.sub(r"\b(\d{4}-\d{2}-\d{2})\b", lambda m: self.date(m.group(1)), text)
