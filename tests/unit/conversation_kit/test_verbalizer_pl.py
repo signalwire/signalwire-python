@@ -152,6 +152,34 @@ def test_guidance():
     assert "EXACTLY as written" not in Verbalizer().guidance()
 
 
+def test_spell_acronyms():
+    # known acronyms -> spelled letter-by-letter in Polish; numbers untouched
+    _check(
+        [
+            ("RMS", "er em es"),
+            ("PPV", "pe pe fau"),
+            ("UTC", "u te ce"),
+            ("ISO 10816", "i es o 10816"),
+            ("DIN 4150-3", "de i en 4150-3"),
+            ("Czas 08:13 UTC", "Czas 08:13 u te ce"),
+            ("poziom RMS na ISO", "poziom er em es na i es o"),
+            # NEVER spelled: lowercase word (case-sensitive), substring in a longer word,
+            # a boundary near-miss, or an unknown all-caps name (a customer code):
+            ("din w hali", "din w hali"),
+            ("izolacja", "izolacja"),
+            ("DINO", "DINO"),
+            ("klient ITH", "klient ITH"),
+        ],
+        PL.spell_acronyms,
+    )
+
+
+def test_spell_acronyms_english():
+    en = get("en")
+    assert en.spell_acronyms("RMS at ISO 10816") == "R M S at I S O 10816"
+    assert en.spell_acronyms("the din of the machine") == "the din of the machine"
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):
