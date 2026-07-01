@@ -180,6 +180,32 @@ def test_spell_acronyms_english():
     assert en.spell_acronyms("the din of the machine") == "the din of the machine"
 
 
+def test_time():
+    assert PL.time(11, 31) == "jedenasta trzydzieści jeden"
+    assert (
+        PL.time(8, 5) == "ósma zero pięć"
+    )  # single-digit minute reads the leading zero
+    assert PL.time(11, 0) == "jedenasta"  # on the hour: hour only
+    assert PL.time(0, 31) == "zero trzydzieści jeden"
+    assert PL.time(23, 59) == "dwudziesta trzecia pięćdziesiąt dziewięć"
+
+
+def test_datetime_text():
+    # combined timestamp -> spoken date (no weekday) + time; UTC left for the acronym pass
+    assert PL.datetime_text("Czas: 2026-07-01 11:31 UTC") == (
+        "Czas: pierwszego lipca dwa tysiące dwudziestego szóstego roku, "
+        "jedenasta trzydzieści jeden UTC"
+    )
+    # a bare date -> full spoken date (weekday + day + month + year)
+    out = PL.datetime_text("spike on 2026-06-28")
+    assert "2026-06-28" not in out and "czerwca" in out
+    # English / base read ISO dates natively -> no-op
+    assert (
+        get("en").datetime_text("Time: 2026-07-01 11:31 UTC")
+        == "Time: 2026-07-01 11:31 UTC"
+    )
+
+
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):
         if name.startswith("test_") and callable(fn):

@@ -298,6 +298,35 @@ _PL_LETTERS = {
     "ż": "żet",
 }
 
+# 24-hour clock: feminine nominative hour names ("godzina jedenasta"). Hour 0 reads as
+# the cardinal "zero" (the standard 24h form); minutes are plain cardinals.
+_PL_HOURS = {
+    0: "zero",
+    1: "pierwsza",
+    2: "druga",
+    3: "trzecia",
+    4: "czwarta",
+    5: "piąta",
+    6: "szósta",
+    7: "siódma",
+    8: "ósma",
+    9: "dziewiąta",
+    10: "dziesiąta",
+    11: "jedenasta",
+    12: "dwunasta",
+    13: "trzynasta",
+    14: "czternasta",
+    15: "piętnasta",
+    16: "szesnasta",
+    17: "siedemnasta",
+    18: "osiemnasta",
+    19: "dziewiętnasta",
+    20: "dwudziesta",
+    21: "dwudziesta pierwsza",
+    22: "dwudziesta druga",
+    23: "dwudziesta trzecia",
+}
+
 
 def _decimal(value: Numeric) -> Decimal:
     return Decimal(str(value).strip().replace(",", "."))
@@ -316,6 +345,7 @@ class PolishVerbalizer(Verbalizer):
     LETTERS: ClassVar[dict[str, str]] = _PL_LETTERS
     MEASURE_UNITS: ClassVar[tuple[str, ...]] = tuple(_UNITS)
     INSTRUCTION: ClassVar[str] = "Mów po polsku. Odpowiadaj w języku polskim."
+    VERBALIZES_DATETIME: ClassVar[bool] = True
     # guidance() is inherited from the base — the speaking rules are language-agnostic.
     # Polish-ness comes from INSTRUCTION + the glossary terms + the transforms above.
 
@@ -365,3 +395,10 @@ class PolishVerbalizer(Verbalizer):
         if with_year:
             parts.append(_year(y))
         return " ".join(parts)
+
+    def time(self, hour: int, minute: int) -> str:
+        h = _PL_HOURS.get(hour, str(hour))
+        if minute == 0:
+            return h
+        mins = f"zero {cardinal(minute)}" if 1 <= minute <= 9 else cardinal(minute)
+        return f"{h} {mins}"
