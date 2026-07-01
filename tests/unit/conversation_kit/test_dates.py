@@ -49,6 +49,17 @@ def test_explicit_month_in_past_rolls_to_next_year():
     assert compute_date({"day": 10, "month": 1}, date(2026, 6, 28)) == date(2027, 1, 10)
 
 
+def test_in_days_offset():
+    # 'in N days' ('za dwa dni') = today + N, distinct from a day-of-month number.
+    today = date(2026, 7, 1)
+    assert compute_date({"in_days": 1}, today) == date(2026, 7, 2)
+    assert compute_date({"in_days": 2}, today) == date(2026, 7, 3)  # NOT day-of-month 2
+    assert compute_date({"in_days": 7}, today) == date(2026, 7, 8)
+    assert compute_date({"in_days": 0}, today) is None  # a zero offset is not a date
+    # an explicit day-of-month still wins when the caller names a calendar number
+    assert compute_date({"day": 2}, today) == date(2026, 7, 2)
+
+
 def test_unresolvable_returns_none():
     today = date(2026, 6, 28)
     assert compute_date({}, today) is None
