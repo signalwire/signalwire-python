@@ -4,10 +4,8 @@
 # and publishes it to this repo's OWN GitHub Pages via mike (versioned):
 #   https://signalwire.github.io/signalwire-python/
 #
-# PILOT triggers: workflow_dispatch + push to the pilot branch. This is NOT
-# gated on releases yet.
-#   PRODUCTION (later): switch the trigger to `v*` tags so each release version
-#   is deployed and `latest` is re-aliased. See the commented block below.
+# Triggers on `v*` release tags — each release deploys its versioned doc set via
+# mike and re-aliases `latest` — plus workflow_dispatch for manual/fork-preview runs.
 #
 # MANUAL REPO SETTING REQUIRED to go live (one-time, in the GitHub UI):
 #   Settings -> Pages -> Build and deployment -> Source = "Deploy from a branch"
@@ -15,15 +13,10 @@
 name: reference-docs
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:        # manual runs (and fork-preview builds)
   push:
-    branches:
-      - docs/api-reference-pilot
-
-  # --- PRODUCTION trigger (enable when promoting out of the pilot) ------------
-  # push:
-  #   tags:
-  #     - "v*"
+    tags:
+      - "v*"                # each release deploys its versioned doc set via mike, alongside publish-release.yml
 
 permissions:
   contents: write   # mike pushes the built site to the gh-pages branch
