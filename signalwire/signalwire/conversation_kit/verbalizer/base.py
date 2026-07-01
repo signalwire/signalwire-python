@@ -54,6 +54,13 @@ class Verbalizer:
     #: Base LLM directive for this language (e.g. "Mów po polsku."). Optional.
     INSTRUCTION: ClassVar[str] = ""
 
+    #: Generic technical acronyms ``spell_acronyms`` reads letter-by-letter so a TTS
+    #: engine says "er em es", not "rms". Language-agnostic membership (only the
+    #: spelling differs per language); extend by overriding in a subclass. Kept to
+    #: well-known acronyms on purpose — capitalization alone never triggers spelling,
+    #: so an all-caps name (a customer code, a device id) is left spoken as-is.
+    ACRONYMS: ClassVar[frozenset[str]] = frozenset({"DIN", "ISO", "PPV", "RMS", "UTC"})
+
     def guidance(self, glossary: dict[str, str] | None = None) -> str:
         """LLM speaking instructions for everything done via instruction (not
         deterministic transforms). These rules are GENERIC and LANGUAGE-AGNOSTIC —
@@ -163,3 +170,18 @@ class Verbalizer:
             else:
                 out.append(ch)
         return " ".join(out)
+
+    def spell_acronyms(self, text: str) -> str:
+        """Read every known acronym (``ACRONYMS``) in free text letter-by-letter, so a
+        TTS engine says "er em es" instead of mangling "RMS" into a word. Matched as a
+        whole token and CASE-SENSITIVELY, so it never touches a lowercase word (English
+        "din"), a longer word ("isolation" contains "iso"), or an unknown all-caps name
+        (a customer code) — only the exact, known acronyms. Longest matched first so a
+        shorter acronym can't partially consume a longer one.
+        """
+        if not text or not self.ACRONYMS:
+            return text
+        alternation = "|".join(
+            re.escape(a) for a in sorted(self.ACRONYMS, key=len, reverse=True)
+        )
+        return re.sub(rf"\b({alternation})\b", lambda m: self.spell(m.group(1)), text)
