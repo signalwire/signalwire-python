@@ -102,7 +102,6 @@
   /* --- Init ----------------------------------------------------------------- */
   function init() {
     registerDropdown("product-trigger", "product-panel", { align: "start" });
-    registerDropdown("lang-trigger", "lang-panel", { align: "center" });
     registerDropdown("support-trigger", "support-panel", { align: "end" });
     registerDropdown("theme-trigger", "theme-panel", { align: "end" });
 
@@ -119,8 +118,6 @@
         setTimeout(syncThemeUI, 0);
       });
     }
-    // Header sun/moon button = quick toggle.
-    var themeTrigger = document.getElementById("theme-trigger");
     syncThemeUI();
     // Material re-applies the scheme asynchronously; observe to keep icons in sync.
     var obs = new MutationObserver(syncThemeUI);

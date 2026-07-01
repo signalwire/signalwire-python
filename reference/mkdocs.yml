@@ -3,7 +3,7 @@ site_description: API reference for the SignalWire Python SDK, generated from do
 site_url: https://signalwire.github.io/signalwire-python/
 
 # Generated per-run by gen.sh (one API page per importable subpackage of
-# `signalwire`, plus the SDK README as the landing page). This is NOT the repo's
+# `signalwire`, plus a generated landing page). This is NOT the repo's
 # existing top-level docs/ dir (owned by doc-audit.yml) — keep them separate.
 docs_dir: _docs
 site_dir: _site
