@@ -16,11 +16,6 @@ from signalwire.conversation_kit.verbalizer import get
 PL = get("pl")
 
 
-def _check(cases, fn):
-    bad = [(inp, exp, got) for inp, exp in cases if (got := fn(inp)) != exp]
-    assert not bad, "\n".join(f"  {i!r}: expected {e!r}, got {g!r}" for i, e, g in bad)
-
-
 def test_lang_dispatch():
     assert get("pl").lang == "pl"
     assert get("pl-PL").lang == "pl"
@@ -36,35 +31,31 @@ def test_lang_dispatch():
 
 
 def test_cardinals():
-    _check(
-        [
-            ("0", "zero"),
-            ("2", "dwa"),
-            ("5", "pięć"),
-            ("11", "jedenaście"),
-            ("21", "dwadzieścia jeden"),
-            ("156", "sto pięćdziesiąt sześć"),
-            ("1000", "tysiąc"),
-            ("2026", "dwa tysiące dwadzieścia sześć"),
-            ("1019", "tysiąc dziewiętnaście"),
-            ("5000", "pięć tysięcy"),
-        ],
-        PL.number,
-    )
+    for value, expected in [
+        ("0", "zero"),
+        ("2", "dwa"),
+        ("5", "pięć"),
+        ("11", "jedenaście"),
+        ("21", "dwadzieścia jeden"),
+        ("156", "sto pięćdziesiąt sześć"),
+        ("1000", "tysiąc"),
+        ("2026", "dwa tysiące dwadzieścia sześć"),
+        ("1019", "tysiąc dziewiętnaście"),
+        ("5000", "pięć tysięcy"),
+    ]:
+        assert PL.number(value) == expected
 
 
 def test_decimals_place_value():
-    _check(
-        [
-            ("2.6", "dwa przecinek sześć"),
-            ("2,6", "dwa przecinek sześć"),  # comma input
-            ("0.156", "zero przecinek sto pięćdziesiąt sześć"),
-            ("30.3", "trzydzieści przecinek trzy"),
-            ("0.05", "zero przecinek zero pięć"),  # leading fractional zero
-            ("-1.5", "minus jeden przecinek pięć"),
-        ],
-        PL.number,
-    )
+    for value, expected in [
+        ("2.6", "dwa przecinek sześć"),
+        ("2,6", "dwa przecinek sześć"),  # comma input
+        ("0.156", "zero przecinek sto pięćdziesiąt sześć"),
+        ("30.3", "trzydzieści przecinek trzy"),
+        ("0.05", "zero przecinek zero pięć"),  # leading fractional zero
+        ("-1.5", "minus jeden przecinek pięć"),
+    ]:
+        assert PL.number(value) == expected
 
 
 def test_unit_agreement():
@@ -83,72 +74,66 @@ def test_unit_agreement():
 
 
 def test_dates():
-    _check(
-        [
-            (
-                "2026-07-04",
-                "sobota, czwartego lipca dwa tysiące dwudziestego szóstego roku",
-            ),
-            (
-                "2026-06-30",
-                "wtorek, trzydziestego czerwca dwa tysiące dwudziestego szóstego roku",
-            ),
-            (
-                "2026-01-01",
-                "czwartek, pierwszego stycznia dwa tysiące dwudziestego szóstego roku",
-            ),
-        ],
-        PL.date,
-    )
+    for value, expected in [
+        (
+            "2026-07-04",
+            "sobota, czwartego lipca dwa tysiące dwudziestego szóstego roku",
+        ),
+        (
+            "2026-06-30",
+            "wtorek, trzydziestego czerwca dwa tysiące dwudziestego szóstego roku",
+        ),
+        (
+            "2026-01-01",
+            "czwartek, pierwszego stycznia dwa tysiące dwudziestego szóstego roku",
+        ),
+    ]:
+        assert PL.date(value) == expected
 
 
 def test_measure_text():
     # real handler formats: spaced, attached, ranges, and things that must NOT match
-    _check(
-        [
-            (
-                "reading: 0.156 mm/s on x",
-                "reading: zero przecinek sto pięćdziesiąt sześć milimetra na sekundę on x",
-            ),
-            (
-                "value:2.6mm/s freq:100Hz",
-                "value:dwa przecinek sześć milimetra na sekundę freq:sto herców",
-            ),
-            (
-                "Temperature: 30.3°C",
-                "Temperature: trzydzieści przecinek trzy stopnia Celsjusza",
-            ),
-            ("max 5.0 mm/s", "max pięć milimetrów na sekundę"),
-            ("1019 hPa", "tysiąc dziewiętnaście hektopaskali"),
-            (
-                "range 20.5–25.3°C today",  # noqa: RUF001
-                "range dwadzieścia przecinek pięć do dwadzieścia pięć przecinek trzy stopnia Celsjusza today",
-            ),
-            ("band 10-100 Hz", "band dziesięć do sto herców"),
-            ("45% of the limit", "czterdzieści pięć procent of the limit"),
-            ("peak 0.5 m/s²", "peak zero przecinek pięć metra na sekundę do kwadratu"),
-            ("gusts 12 km/h", "gusts dwanaście kilometrów na godzinę"),
-            # must be left alone (no unit / structural):
-            ("ISO 9001 zone", "ISO 9001 zone"),
-            ("DIN 5008-1 referenced", "DIN 5008-1 referenced"),
-            ("on 2026-07-04 at 14:30", "on 2026-07-04 at 14:30"),
-            ("version 2.5 build", "version 2.5 build"),
-        ],
-        PL.measure_text,
-    )
+    for value, expected in [
+        (
+            "reading: 0.156 mm/s on x",
+            "reading: zero przecinek sto pięćdziesiąt sześć milimetra na sekundę on x",
+        ),
+        (
+            "value:2.6mm/s freq:100Hz",
+            "value:dwa przecinek sześć milimetra na sekundę freq:sto herców",
+        ),
+        (
+            "Temperature: 30.3°C",
+            "Temperature: trzydzieści przecinek trzy stopnia Celsjusza",
+        ),
+        ("max 5.0 mm/s", "max pięć milimetrów na sekundę"),
+        ("1019 hPa", "tysiąc dziewiętnaście hektopaskali"),
+        (
+            "range 20.5–25.3°C today",  # noqa: RUF001
+            "range dwadzieścia przecinek pięć do dwadzieścia pięć przecinek trzy stopnia Celsjusza today",
+        ),
+        ("band 10-100 Hz", "band dziesięć do sto herców"),
+        ("45% of the limit", "czterdzieści pięć procent of the limit"),
+        ("peak 0.5 m/s²", "peak zero przecinek pięć metra na sekundę do kwadratu"),
+        ("gusts 12 km/h", "gusts dwanaście kilometrów na godzinę"),
+        # must be left alone (no unit / structural):
+        ("ISO 9001 zone", "ISO 9001 zone"),
+        ("DIN 5008-1 referenced", "DIN 5008-1 referenced"),
+        ("on 2026-07-04 at 14:30", "on 2026-07-04 at 14:30"),
+        ("version 2.5 build", "version 2.5 build"),
+    ]:
+        assert PL.measure_text(value) == expected
 
 
 def test_email():
-    _check(
-        [
-            (
-                "jan.kowalski@example.com",
-                "jan kropka kowalski małpka example kropka com",
-            ),
-            ("a-b_c@x.pl", "a myślnik b podkreślnik c małpka x kropka pl"),
-        ],
-        PL.email,
-    )
+    for value, expected in [
+        (
+            "jan.kowalski@example.com",
+            "jan kropka kowalski małpka example kropka com",
+        ),
+        ("a-b_c@x.pl", "a myślnik b podkreślnik c małpka x kropka pl"),
+    ]:
+        assert PL.email(value) == expected
 
 
 def test_guidance():
@@ -169,25 +154,23 @@ def test_guidance():
 
 def test_spell_acronyms():
     # known acronyms -> spelled letter-by-letter in Polish; numbers untouched
-    _check(
-        [
-            ("RMS", "er em es"),
-            ("UTC", "u te ce"),
-            ("ISO 9001", "i es o 9001"),
-            ("DIN 5008-1", "de i en 5008-1"),
-            ("Czas 08:13 UTC", "Czas 08:13 u te ce"),
-            ("poziom RMS na ISO", "poziom er em es na i es o"),
-            # NEVER spelled: lowercase word (case-sensitive), substring in a longer word,
-            # a boundary near-miss, an unknown all-caps name (a customer code), or a
-            # DOMAIN acronym not in the generic default (PPV — an app adds it by subclass):
-            ("din w hali", "din w hali"),
-            ("izolacja", "izolacja"),
-            ("DINO", "DINO"),
-            ("klient ACME", "klient ACME"),
-            ("poziom PPV tu", "poziom PPV tu"),
-        ],
-        PL.spell_acronyms,
-    )
+    for value, expected in [
+        ("RMS", "er em es"),
+        ("UTC", "u te ce"),
+        ("ISO 9001", "i es o 9001"),
+        ("DIN 5008-1", "de i en 5008-1"),
+        ("Czas 08:13 UTC", "Czas 08:13 u te ce"),
+        ("poziom RMS na ISO", "poziom er em es na i es o"),
+        # NEVER spelled: lowercase word (case-sensitive), substring in a longer word,
+        # a boundary near-miss, an unknown all-caps name (a customer code), or a
+        # DOMAIN acronym not in the generic default (PPV — an app adds it by subclass):
+        ("din w hali", "din w hali"),
+        ("izolacja", "izolacja"),
+        ("DINO", "DINO"),
+        ("klient ACME", "klient ACME"),
+        ("poziom PPV tu", "poziom PPV tu"),
+    ]:
+        assert PL.spell_acronyms(value) == expected
 
 
 def test_spell_acronyms_english():
@@ -224,20 +207,17 @@ def test_datetime_text():
 
 def test_large_numbers():
     # millions / milliards must not KeyError (regression: cardinal() capped at thousands)
-    _check(
-        [
-            ("1000000", "milion"),
-            ("2000000", "dwa miliony"),
-            ("5000000", "pięć milionów"),
-            ("1000000000", "miliard"),
-            (
-                "1234567",
-                "milion dwieście trzydzieści cztery tysiące "
-                "pięćset sześćdziesiąt siedem",
-            ),
-        ],
-        PL.number,
-    )
+    for value, expected in [
+        ("1000000", "milion"),
+        ("2000000", "dwa miliony"),
+        ("5000000", "pięć milionów"),
+        ("1000000000", "miliard"),
+        (
+            "1234567",
+            "milion dwieście trzydzieści cztery tysiące pięćset sześćdziesiąt siedem",
+        ),
+    ]:
+        assert PL.number(value) == expected
     assert PL.unit("1000000", "Hz") == "milion herców"
     # a long fraction reads its digits as one cardinal, so it must scale too
     assert PL.number("1.1234567").startswith("jeden przecinek milion")
