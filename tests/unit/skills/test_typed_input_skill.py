@@ -16,13 +16,13 @@ from signalwire.core.function_result import FunctionResult
 from signalwire.skills.typed_input.skill import TypedInputSkill
 
 _PARAMS = {
-    "field": "installer_email",
+    "field": "contact_email",
     "input_type": "email",
     "open_prompt": {
         "en": "Please type the email on your screen.",
         "pl": "Wpisz adres e-mail na ekranie.",
     },
-    "field_label": {"en": "Installer's email", "pl": "Adres e-mail instalatora"},
+    "field_label": {"en": "Contact email", "pl": "Adres e-mail kontaktowy"},
     "invalid_prompt": {
         "en": "That does not look like a valid email; please type it again.",
         "pl": "To nie wygląda na poprawny adres; wpisz go ponownie.",
@@ -69,18 +69,28 @@ class TestParameterSchema:
 class TestSetup:
     def test_derives_per_field_names(self):
         skill = _make_skill()
-        assert skill.gd_key == "typed_installer_email"
-        assert skill.request_tool == "request_installer_email"
-        assert skill.confirm_tool == "confirm_installer_email"
+        assert skill.gd_key == "typed_contact_email"
+        assert skill.request_tool == "request_contact_email"
+        assert skill.confirm_tool == "confirm_contact_email"
 
     def test_instance_key_is_per_field(self):
-        assert _make_skill().get_instance_key() == "typed_input_installer_email"
+        assert _make_skill().get_instance_key() == "typed_input_contact_email"
 
     def test_setup_fails_without_field(self):
         skill = TypedInputSkill(
             agent=Mock(), params={"open_prompt": {}, "field_label": {}}
         )
         assert skill.setup() is False
+
+    def test_setup_fails_without_a_required_prompt(self):
+        # field present but a required per-language prompt map missing -> fail loud,
+        # so the skill never silently speaks "" at runtime.
+        for missing in ("open_prompt", "field_label", "invalid_prompt"):
+            params = {k: v for k, v in _PARAMS.items() if k != missing}
+            skill = TypedInputSkill(agent=Mock(), params=params)
+            assert skill.setup() is False, (
+                f"setup() should fail when {missing} is absent"
+            )
 
 
 class TestRegisterTools:
@@ -89,7 +99,7 @@ class TestRegisterTools:
         skill.agent.define_tool = Mock()
         skill.register_tools()
         names = [c.kwargs["name"] for c in skill.agent.define_tool.call_args_list]
-        assert names == ["request_installer_email", "confirm_installer_email"]
+        assert names == ["request_contact_email", "confirm_contact_email"]
         # the value comes from global_data, never a model argument
         for c in skill.agent.define_tool.call_args_list:
             assert c.kwargs["parameters"] == {}
@@ -103,7 +113,7 @@ class TestOpenHandler:
         assert result.response == "Wpisz adres e-mail na ekranie."
         actions = _actions_json(result)
         assert "input_request" in actions
-        assert "typed_installer_email" in actions
+        assert "typed_contact_email" in actions
         assert "email" in actions
         assert "wait_for_user" in actions
 
@@ -122,13 +132,13 @@ class TestConfirmHandler:
     def test_valid_email_reads_back_spoken_form(self):
         skill = _make_skill()
         raw = {
-            "global_data": {"language": "pl", "typed_installer_email": "a.b@gmail.com"}
+            "global_data": {"language": "pl", "typed_contact_email": "a.b@gmail.com"}
         }
         result = skill._confirm_handler({}, raw)
         # Polish spoken form, the raw value, and the reopen tool for a NO.
         assert "a kropka b małpka gmail kropka com" in result.response
         assert "a.b@gmail.com" in result.response
-        assert "request_installer_email" in result.response
+        assert "request_contact_email" in result.response
         # a read-back does NOT reopen the keypad
         assert "input_request" not in _actions_json(result)
 
@@ -140,7 +150,7 @@ class TestConfirmHandler:
 
     def test_invalid_email_reopens_keypad(self):
         skill = _make_skill()
-        raw = {"global_data": {"language": "en", "typed_installer_email": "notanemail"}}
+        raw = {"global_data": {"language": "en", "typed_contact_email": "notanemail"}}
         result = skill._confirm_handler({}, raw)
         assert result.response == _PARAMS["invalid_prompt"]["en"]
         assert "input_request" in _actions_json(result)

@@ -23,7 +23,7 @@ Validation, the user-event payload, and the spoken read-back come from `signalwi
 
 ## Parameters
 
-- `field` (string, **required**) — field key, e.g. `installer_email`. Tools become
+- `field` (string, **required**) — field key, e.g. `contact_email`. Tools become
   `request_<field>` / `confirm_<field>`; the typed value lands in `global_data['typed_<field>']`.
 - `input_type` (string, default `text`) — one of `email`, `phone`, `number`, `text`. Drives
   validation and the read-back form (an email is read as words; anything else is spelled out).
@@ -41,13 +41,13 @@ Add it once per field; each instance gets its own `request_`/`confirm_` tools.
 
 ```python
 agent.add_skill("typed_input", {
-    "field": "installer_email",
+    "field": "contact_email",
     "input_type": "email",
     "open_prompt": {
         "en": "Please type the email on your screen.",
         "pl": "Wpisz adres e-mail na ekranie.",
     },
-    "field_label": {"en": "Installer's email", "pl": "Adres e-mail instalatora"},
+    "field_label": {"en": "Contact email", "pl": "Adres e-mail kontaktowy"},
     "invalid_prompt": {
         "en": "That does not look like a valid email; please type it again.",
         "pl": "To nie wygląda na poprawny adres; wpisz go ponownie.",
