@@ -1,4 +1,15 @@
-"""Polish verbalizer tests for signalwire.conversation_kit.verbalizer."""
+"""
+Copyright (c) 2026 SignalWire
+
+This file is part of the SignalWire SDK.
+
+Licensed under the MIT License.
+See LICENSE file in the project root for full license information.
+
+Polish verbalizer tests for signalwire.conversation_kit.verbalizer.
+"""
+
+import pytest
 
 from signalwire.conversation_kit.verbalizer import get
 
@@ -14,8 +25,14 @@ def test_lang_dispatch():
     assert get("pl").lang == "pl"
     assert get("pl-PL").lang == "pl"
     assert get("PL").lang == "pl"
-    assert get("fr").lang == "en"  # unknown -> English fallback
-    assert get(None).lang == "en"
+    # An unregistered language falls back to the neutral BASE (lang "und"), NOT English,
+    # so it keeps the base's generic guidance() instead of English's deliberate opt-out.
+    assert get("fr").lang == "und"
+    assert get(None).lang == "und"
+    assert (
+        get("de").guidance() != ""
+    )  # generic guidance survives for an unknown language
+    assert get("en").guidance() == ""  # the registered English plugin still opts out
 
 
 def test_cardinals():
@@ -136,14 +153,12 @@ def test_email():
 
 def test_guidance():
     # PL inherits the generic, language-agnostic guidance from the base.
-    g = PL.guidance({"severity": "nasilenie", "RMS vibration": "poziom drgań (RMS)"})
+    g = PL.guidance({"severity": "nasilenie", "threshold": "próg"})
     assert "naturally and idiomatically" in g  # generic speak-naturally rule
     assert "EXACTLY as written" in g  # number rule (PL has MEASURE_UNITS)
     assert "narrate the assembly" in g  # email-narration rule (now shared/base)
     assert "never the ISO" in g  # date rule
-    assert (
-        "severity = nasilenie" in g and "poziom drgań (RMS)" in g
-    )  # glossary woven in
+    assert "severity = nasilenie" in g and "threshold = próg" in g  # glossary woven in
     assert PL.INSTRUCTION.startswith("Mów po polsku")
     assert get("en").guidance() == ""  # English opts out
     # the number rule is gated on MEASURE_UNITS — a unit-less base verbalizer omits it
@@ -157,18 +172,19 @@ def test_spell_acronyms():
     _check(
         [
             ("RMS", "er em es"),
-            ("PPV", "pe pe fau"),
             ("UTC", "u te ce"),
             ("ISO 10816", "i es o 10816"),
             ("DIN 4150-3", "de i en 4150-3"),
             ("Czas 08:13 UTC", "Czas 08:13 u te ce"),
             ("poziom RMS na ISO", "poziom er em es na i es o"),
             # NEVER spelled: lowercase word (case-sensitive), substring in a longer word,
-            # a boundary near-miss, or an unknown all-caps name (a customer code):
+            # a boundary near-miss, an unknown all-caps name (a customer code), or a
+            # DOMAIN acronym not in the generic default (PPV — an app adds it by subclass):
             ("din w hali", "din w hali"),
             ("izolacja", "izolacja"),
             ("DINO", "DINO"),
-            ("klient ITH", "klient ITH"),
+            ("klient ACME", "klient ACME"),
+            ("poziom PPV tu", "poziom PPV tu"),
         ],
         PL.spell_acronyms,
     )
@@ -204,6 +220,61 @@ def test_datetime_text():
         get("en").datetime_text("Time: 2026-07-01 11:31 UTC")
         == "Time: 2026-07-01 11:31 UTC"
     )
+
+
+def test_large_numbers():
+    # millions / milliards must not KeyError (regression: cardinal() capped at thousands)
+    _check(
+        [
+            ("1000000", "milion"),
+            ("2000000", "dwa miliony"),
+            ("5000000", "pięć milionów"),
+            ("1000000000", "miliard"),
+            (
+                "1234567",
+                "milion dwieście trzydzieści cztery tysiące "
+                "pięćset sześćdziesiąt siedem",
+            ),
+        ],
+        PL.number,
+    )
+    assert PL.unit("1000000", "Hz") == "milion herców"
+    # a long fraction reads its digits as one cardinal, so it must scale too
+    assert PL.number("1.1234567").startswith("jeden przecinek milion")
+    # above the milliard scale we fail loudly rather than mis-say a number
+    with pytest.raises(ValueError):
+        PL.number("1" + "0" * 12)
+
+
+def test_range_word():
+    # base/English range connector is "to"; Polish overrides to "do"
+    assert PL.measure_text("band 10-100 Hz") == "band dziesięć do sto herców"
+    from signalwire.conversation_kit.verbalizer.base import Verbalizer
+
+    class _EnLike(Verbalizer):
+        MEASURE_UNITS = ("Hz",)
+
+    assert _EnLike().measure_text("band 10-100 Hz") == "band 10 to 100 Hz"
+
+
+def test_time_out_of_range():
+    for bad in [(24, 0), (11, 60), (-1, 0), (0, -5)]:
+        with pytest.raises(ValueError):
+            PL.time(*bad)
+
+
+def test_datetime_text_invalid_is_untouched():
+    # date-shaped but impossible -> left exactly as-is (these passes are text-safe)
+    assert PL.datetime_text("x 2026-13-45 y") == "x 2026-13-45 y"
+    assert PL.datetime_text("t 2026-07-01 25:99 z") == "t 2026-07-01 25:99 z"
+    assert PL.datetime_text("2026-02-30 11:31") == "2026-02-30 11:31"
+
+
+def test_datetime_text_z_suffix():
+    # ISO "11:31Z" (no space, Z) -> normalized to a spellable " UTC", not glued
+    out = PL.datetime_text("2026-07-01T11:31Z")
+    assert out.endswith("jedenasta trzydzieści jeden UTC")
+    assert "jedenZ" not in out and "jedenastaZ" not in out
 
 
 if __name__ == "__main__":

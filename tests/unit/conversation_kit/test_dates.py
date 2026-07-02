@@ -1,4 +1,13 @@
-"""Tests for signalwire.conversation_kit.dates.compute_date — `today` pinned for determinism."""
+"""
+Copyright (c) 2026 SignalWire
+
+This file is part of the SignalWire SDK.
+
+Licensed under the MIT License.
+See LICENSE file in the project root for full license information.
+
+Tests for signalwire.conversation_kit.dates.compute_date — `today` pinned for determinism.
+"""
 
 from datetime import date
 
@@ -58,6 +67,33 @@ def test_in_days_offset():
     assert compute_date({"in_days": 0}, today) is None  # a zero offset is not a date
     # an explicit day-of-month still wins when the caller names a calendar number
     assert compute_date({"day": 2}, today) == date(2026, 7, 2)
+
+
+def test_bare_day_absent_in_month_rolls_forward():
+    # "the 31st" in a 30-day month resolves to the next month that has a 31st,
+    # not None. Same for "the 30th" in February.
+    assert compute_date({"day": 31}, date(2026, 6, 15)) == date(2026, 7, 31)
+    assert compute_date({"day": 30}, date(2026, 2, 10)) == date(2026, 3, 30)
+    assert compute_date({"day": 29}, date(2026, 2, 1)) == date(
+        2026, 3, 29
+    )  # 2026 not leap
+
+
+def test_out_of_range_month_or_year_is_none():
+    # An explicitly-supplied but invalid month/year is a hard error, never silently
+    # coerced to today's month/year.
+    d = date(2026, 1, 1)
+    assert compute_date({"day": 5, "month": 13}, d) is None
+    assert compute_date({"day": 5, "month": 0}, d) is None
+    assert compute_date({"day": 5, "year": 99}, d) is None
+
+
+def test_bool_is_not_an_int_day_or_offset():
+    # bool ⊂ int in Python — True must NOT read as day/month/in_days = 1.
+    d = date(2026, 1, 1)
+    assert compute_date({"day": True}, d) is None
+    assert compute_date({"in_days": True}, d) is None
+    assert compute_date({"day": 5, "month": True}, d) is None
 
 
 def test_unresolvable_returns_none():

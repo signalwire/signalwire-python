@@ -56,14 +56,20 @@ class Verbalizer:
 
     #: Generic technical acronyms ``spell_acronyms`` reads letter-by-letter so a TTS
     #: engine says "er em es", not "rms". Language-agnostic membership (only the
-    #: spelling differs per language); extend by overriding in a subclass. Kept to
-    #: well-known acronyms on purpose — capitalization alone never triggers spelling,
-    #: so an all-caps name (a customer code, a device id) is left spoken as-is.
-    ACRONYMS: ClassVar[frozenset[str]] = frozenset({"DIN", "ISO", "PPV", "RMS", "UTC"})
+    #: spelling differs per language); kept to widely-recognized, domain-neutral
+    #: acronyms on purpose. An application adds its OWN domain acronyms by subclassing
+    #: and overriding (e.g. ``ACRONYMS = Verbalizer.ACRONYMS | {"PPV"}``). Capitalization
+    #: alone never triggers spelling, so an all-caps name (a customer code, a device id)
+    #: is left spoken as-is.
+    ACRONYMS: ClassVar[frozenset[str]] = frozenset({"DIN", "ISO", "RMS", "UTC"})
 
     #: Whether this language verbalizes dates/times in ``datetime_text``. The base and
     #: English read ISO dates/times acceptably as-is, so it stays a no-op there.
     VERBALIZES_DATETIME: ClassVar[bool] = False
+
+    #: Spoken connector between the two ends of a numeric range in ``measure_text``
+    #: ("10 to 100 Hz"). Override per language (Polish "do", German "bis").
+    RANGE_WORD: ClassVar[str] = "to"
 
     def guidance(self, glossary: dict[str, str] | None = None) -> str:
         """LLM speaking instructions for everything done via instruction (not
@@ -120,7 +126,10 @@ class Verbalizer:
         return iso
 
     def time(self, hour: int, minute: int) -> str:
-        """A 24-hour clock time spoken naturally. Base: passthrough 'HH:MM'."""
+        """A 24-hour clock time spoken naturally. Base: passthrough 'HH:MM'.
+        Raises ValueError outside 0-23 / 0-59 (``datetime_text`` catches it)."""
+        if not (0 <= hour <= 23 and 0 <= minute <= 59):
+            raise ValueError(f"time out of range: {hour}:{minute}")
         return f"{hour:02d}:{minute:02d}"
 
     # --- identifiers (structure is universal; only the words differ) ---- #
@@ -155,10 +164,14 @@ class Verbalizer:
         # number. Both separators are accepted because an LLM may emit either. The
         # en dash in the character class below is a deliberate alternative
         # separator, so RUF001 (ambiguous-character) is suppressed on that line.
+        # ``RANGE_WORD`` is the language's connector ("to"/"do"/"bis"). The two ends
+        # are read in isolation; a language that inflects range endpoints for case
+        # (Polish idiomatically "od <gen> do <gen>") is a documented simplification.
         text = re.sub(
             rf"({num})\s*[–-]\s*({num})\s*({units})(?![\w])",  # noqa: RUF001
             lambda m: (
-                f"{self.number(m.group(1))} do {self.unit(m.group(2), m.group(3))}"
+                f"{self.number(m.group(1))} {self.RANGE_WORD} "
+                f"{self.unit(m.group(2), m.group(3))}"
             ),
             text,
         )
@@ -198,20 +211,34 @@ class Verbalizer:
         """Verbalize ISO dates and date-times in free text, so a TTS engine reads them
         naturally instead of the model guessing at the digits (on a combined timestamp it
         mixes the day into the minutes). No-op unless the language sets VERBALIZES_DATETIME.
-        Date-times are matched before bare dates; a trailing "UTC"/"Z" is left in place for
-        the acronym pass to spell.
+        Date-times are matched before bare dates; a trailing "Z"/"UTC" is normalized to a
+        spoken " UTC" for the acronym pass to spell. A date-shaped but INVALID token
+        (e.g. "2026-13-45", "25:99") is left untouched — these passes are safe over any text.
         """
         if not text or not self.VERBALIZES_DATETIME:
             return text
 
         def _datetime(m: re.Match[str]) -> str:
-            iso, hour, minute = m.group(1), int(m.group(2)), int(m.group(3))
-            suffix = m.group(4) or ""
-            return f"{self.date(iso, with_weekday=False)}, {self.time(hour, minute)}{suffix}"
+            try:
+                spoken_date = self.date(m.group(1), with_weekday=False)
+                spoken_time = self.time(int(m.group(2)), int(m.group(3)))
+            except (ValueError, KeyError):
+                return m.group(0)  # not a real date/time — leave the token alone
+            suffix = " UTC" if m.group(4) else ""  # normalize Z/UTC -> spellable " UTC"
+            return f"{spoken_date}, {spoken_time}{suffix}"
+
+        def _bare_date(m: re.Match[str]) -> str:
+            try:
+                return self.date(m.group(1))
+            except (ValueError, KeyError):
+                return m.group(0)
 
         text = re.sub(
             r"\b(\d{4}-\d{2}-\d{2})[ T](\d{2}):(\d{2})(?::\d{2})?( ?UTC| ?Z)?\b",
             _datetime,
             text,
         )
-        return re.sub(r"\b(\d{4}-\d{2}-\d{2})\b", lambda m: self.date(m.group(1)), text)
+        # A date FOLLOWED BY a clock time is the date-time pass's job — the lookahead
+        # keeps this bare-date pass from re-grabbing the date half of a date-time whose
+        # time was invalid (so "2026-07-01 25:99" stays wholly untouched, not split).
+        return re.sub(r"\b(\d{4}-\d{2}-\d{2})\b(?![ T]\d{2}:\d{2})", _bare_date, text)

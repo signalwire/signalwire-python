@@ -10,7 +10,7 @@ conversation-kit — product-agnostic language utilities for voice agents.
 
 Three layers a spoken-conversation agent needs, none tied to any particular product:
 
-    from conversation_kit import compute_date, validate_input, verbalizer
+    from signalwire.conversation_kit import compute_date, validate_input, verbalizer
 
     compute_date({"weekday": "saturday", "which": "next"}, date.today())  # spoken -> ISO date
     validate_input("a@b.com", "email")                                    # input checks

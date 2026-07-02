@@ -18,6 +18,7 @@ re-prompt result) live in the agent. No third-party dependencies.
 
 from __future__ import annotations
 
+import math
 import re
 
 # Pragmatic, TTS/keypad-oriented email shape: a@b.c with no spaces. Deliberately
@@ -38,10 +39,10 @@ def is_valid_phone(value: str) -> bool:
 
 def is_valid_number(value: str) -> bool:
     try:
-        float((value or "").strip().replace(",", "."))
-        return True
+        n = float((value or "").strip().replace(",", "."))
     except ValueError:
         return False
+    return math.isfinite(n)  # reject nan/inf/-inf — the verbalizer can't speak them
 
 
 _VALIDATORS = {
@@ -70,7 +71,7 @@ INPUT_REQUEST_TYPE = "input_request"
 
 def input_request_payload(
     field: str, label: str = "", input_type: str = "text"
-) -> dict:
+) -> dict[str, str]:
     """The payload an agent emits (as a user_event) to ask the app to reveal a
     typed-input field. `field` is the key the typed value comes back under."""
     return {

@@ -101,26 +101,46 @@ def _under_1000(n: int) -> str:
     return " ".join(parts)
 
 
+# Scale words per 1000^k (k = 1..3): (nom_sg, nom_pl, gen_pl). Polish groups digits
+# in threes; each non-zero group takes its scale word in the count-agreement form
+# its own value selects (see _bucket).
+_SCALES = (
+    ("tysiąc", "tysiące", "tysięcy"),
+    ("milion", "miliony", "milionów"),
+    ("miliard", "miliardy", "miliardów"),
+)
+
+
 def cardinal(n: int) -> str:
-    """Non-negative integer -> Polish words (0..999_999, covers our value range)."""
+    """Non-negative integer -> Polish words, up to 999_999_999_999. A larger value
+    raises ValueError (we cover up to the miliard scale)."""
     if n < 0:
         return "minus " + cardinal(-n)
     if n == 0:
         return "zero"
-    if n < 1000:
-        return _under_1000(n)
-    th, rem = divmod(n, 1000)
+    if n >= 1_000_000_000_000:
+        raise ValueError("value too large to verbalize")
+    groups = []
+    rest = n
+    while rest > 0:
+        rest, g = divmod(rest, 1000)
+        groups.append(g)  # [0]=units, [1]=thousands, [2]=millions, [3]=milliards
     parts = []
-    if th == 1:
-        parts.append("tysiąc")
-    else:
-        word = {"nom_sg": "tysiąc", "nom_pl": "tysiące", "gen_pl": "tysięcy"}[
-            _bucket(th)
-        ]
-        parts.append(_under_1000(th))
-        parts.append(word)
-    if rem:
-        parts.append(_under_1000(rem))
+    for idx in range(len(groups) - 1, -1, -1):
+        g = groups[idx]
+        if g == 0:
+            continue
+        if idx == 0:
+            parts.append(_under_1000(g))
+            continue
+        nom_sg, nom_pl, gen_pl = _SCALES[idx - 1]
+        if g == 1:  # 'tysiąc'/'milion', never 'jeden tysiąc'
+            parts.append(nom_sg)
+        else:
+            parts.append(_under_1000(g))
+            parts.append(
+                {"nom_sg": nom_sg, "nom_pl": nom_pl, "gen_pl": gen_pl}[_bucket(g)]
+            )
     return " ".join(parts)
 
 
@@ -346,6 +366,7 @@ class PolishVerbalizer(Verbalizer):
     MEASURE_UNITS: ClassVar[tuple[str, ...]] = tuple(_UNITS)
     INSTRUCTION: ClassVar[str] = "Mów po polsku. Odpowiadaj w języku polskim."
     VERBALIZES_DATETIME: ClassVar[bool] = True
+    RANGE_WORD: ClassVar[str] = "do"  # "10 do 100 Hz" (base default "to" is English)
     # guidance() is inherited from the base — the speaking rules are language-agnostic.
     # Polish-ness comes from INSTRUCTION + the glossary terms + the transforms above.
 
@@ -387,9 +408,12 @@ class PolishVerbalizer(Verbalizer):
 
     def date(self, iso: str, with_weekday: bool = True, with_year: bool = True) -> str:
         y, m, d = (int(p) for p in iso.split("-"))
+        dt = _date(
+            y, m, d
+        )  # validates y/m/d up front: an impossible date raises ValueError
         parts = []
         if with_weekday:
-            parts.append(_WEEKDAYS[_date(y, m, d).weekday()] + ",")
+            parts.append(_WEEKDAYS[dt.weekday()] + ",")
         parts.append(_ordinal_gen(d))
         parts.append(_MONTHS[m])
         if with_year:
@@ -397,7 +421,9 @@ class PolishVerbalizer(Verbalizer):
         return " ".join(parts)
 
     def time(self, hour: int, minute: int) -> str:
-        h = _PL_HOURS.get(hour, str(hour))
+        if not (0 <= hour <= 23 and 0 <= minute <= 59):
+            raise ValueError(f"time out of range: {hour}:{minute}")
+        h = _PL_HOURS[hour]
         if minute == 0:
             return h
         mins = f"zero {cardinal(minute)}" if 1 <= minute <= 9 else cardinal(minute)
