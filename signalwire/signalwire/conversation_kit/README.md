@@ -72,9 +72,9 @@ canonical lowercase list.
 from signalwire.conversation_kit import validate_input, input_request_payload
 
 validate_input("a.b@gmail.com", "email")    # True  (also "phone", "number")
-input_request_payload("installer_email", label="Installer's email", input_type="email")
-# -> {"type": "input_request", "field": "installer_email",
-#     "label": "Installer's email", "input_type": "email"}
+input_request_payload("contact_email", label="Contact email", input_type="email")
+# -> {"type": "input_request", "field": "contact_email",
+#     "label": "Contact email", "input_type": "email"}
 ```
 
 `input_request_payload(...)` is the small event an agent sends to a connected app to reveal +
