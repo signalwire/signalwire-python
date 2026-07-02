@@ -23,7 +23,7 @@ from collections.abc import Mapping
 from datetime import date, timedelta
 from typing import Any
 
-WEEKDAYS = [
+WEEKDAYS = (
     "monday",
     "tuesday",
     "wednesday",
@@ -31,7 +31,7 @@ WEEKDAYS = [
     "friday",
     "saturday",
     "sunday",
-]
+)
 
 # JSON-schema `properties` for a `resolve_date` tool — the universal contract
 # (multilingual hints baked in). An agent drops this straight into its tool schema:
@@ -76,33 +76,51 @@ def compute_date(args: Mapping[str, Any], today: date) -> date | None:
     None. Convention: 'next <weekday>' = that weekday in the FOLLOWING calendar
     week; this/coming/nearest/bare = the soonest upcoming one (never today — a
     same-day weekday rolls to next week; readback can adjust)."""
-    # 1) Explicit calendar date: day (+ optional month/year). If it lands in the
-    #    past with no year stated, roll forward to the next occurrence: an explicit
-    #    month -> same date next year; a bare day -> the same day next month ("the
-    #    4th" on Jun 26 = Jul 4, not Jun 4 next year).
+    # 1) Explicit calendar date: day (+ optional month/year). With no year stated,
+    #    resolve to the SOONEST occurrence on/after `today`: a bare day rolls
+    #    month-by-month to the next month that actually contains it ("the 4th" on
+    #    Jun 26 = Jul 4; "the 31st" in a 30-day month = the next month with a 31st);
+    #    an explicit month rolls to next year. `bool` is excluded (it is an `int`
+    #    subclass, so `True` would otherwise read as day/month 1).
     day = args.get("day")
-    if isinstance(day, int) and 1 <= day <= 31:
-        has_month = isinstance(args.get("month"), int) and 1 <= args["month"] <= 12
-        has_year = isinstance(args.get("year"), int)
-        month = args["month"] if has_month else today.month
-        year = args["year"] if has_year else today.year
-        try:
-            target = date(year, month, day)
-        except ValueError:
+    if isinstance(day, int) and not isinstance(day, bool) and 1 <= day <= 31:
+        month_arg = args.get("month")
+        year_arg = args.get("year")
+        # An explicitly-supplied month/year that is out of range is a hard error —
+        # never silently substitute today's (a garbled 'month:13' must not book).
+        if month_arg is not None and not (
+            isinstance(month_arg, int)
+            and not isinstance(month_arg, bool)
+            and 1 <= month_arg <= 12
+        ):
             return None
-        if target < today and not has_year:
+        if year_arg is not None and not (
+            isinstance(year_arg, int)
+            and not isinstance(year_arg, bool)
+            and 1000 <= year_arg <= 9999
+        ):
+            return None
+        # Fully-stated y/m/d: take it verbatim (even if past); an impossible date
+        # (e.g. Feb 30) is None.
+        if year_arg is not None:
             try:
-                if has_month:
-                    target = date(year + 1, month, day)
-                else:
-                    target = (
-                        date(year + 1, 1, day)
-                        if month == 12
-                        else date(year, month + 1, day)
-                    )
+                return date(year_arg, month_arg or today.month, day)
             except ValueError:
                 return None
-        return target
+        # No year: soonest matching date >= today. With an explicit month the month
+        # is fixed (rolls to next year); a bare day walks forward month by month.
+        for i in range(14):
+            y = today.year + (today.month - 1 + i) // 12
+            m = (today.month - 1 + i) % 12 + 1
+            if month_arg is not None and m != month_arg:
+                continue
+            try:
+                cand = date(y, m, day)
+            except ValueError:
+                continue
+            if cand >= today:
+                return cand
+        return None
 
     # 2) Relative day word.
     rel = str(args.get("relative") or "").strip().lower()
@@ -115,7 +133,7 @@ def compute_date(args: Mapping[str, Any], today: date) -> date | None:
     #     from `day` (a calendar day-of-month) so a spoken offset never lands on the
     #     wrong date.
     in_days = args.get("in_days")
-    if isinstance(in_days, int) and in_days > 0:
+    if isinstance(in_days, int) and not isinstance(in_days, bool) and in_days > 0:
         return today + timedelta(days=in_days)
 
     # 3) Weekday (+ which).
@@ -123,7 +141,7 @@ def compute_date(args: Mapping[str, Any], today: date) -> date | None:
     if wd in WEEKDAYS:
         wd_idx = WEEKDAYS.index(wd)
         which = str(args.get("which") or "this").strip().lower()
-        if which in ("next", "next_week", "following"):
+        if which == "next":
             next_monday = today + timedelta(days=7 - today.weekday())
             return next_monday + timedelta(days=wd_idx)
         ahead = (wd_idx - today.weekday()) % 7

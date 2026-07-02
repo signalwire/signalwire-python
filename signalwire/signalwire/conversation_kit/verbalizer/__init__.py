@@ -8,7 +8,7 @@ See LICENSE file in the project root for full license information.
 
 verbalizer — language-agnostic, TTS-ready verbalization with language plugins.
 
-    from conversation_kit.verbalizer import get
+    from signalwire.conversation_kit.verbalizer import get
     v = get("pl")
     v.number("2.6")               # 'dwa przecinek sześć'
     v.unit("0.156", "mm/s")       # 'zero przecinek sto pięćdziesiąt sześć milimetra na sekundę'
@@ -21,7 +21,7 @@ and calling `register(MyVerbalizer())`.
 
 from __future__ import annotations
 
-from .base import Verbalizer
+from .base import Numeric, Verbalizer
 from .registry import available, get, register
 from .languages.en import EnglishVerbalizer
 from .languages.pl import PolishVerbalizer
@@ -31,6 +31,7 @@ register(PolishVerbalizer())
 
 __all__ = [
     "EnglishVerbalizer",
+    "Numeric",
     "PolishVerbalizer",
     "Verbalizer",
     "available",

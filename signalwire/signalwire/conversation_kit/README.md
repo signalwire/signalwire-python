@@ -128,12 +128,13 @@ unless the language opts in, so they're safe to run over any string):
 | Pass | Rewrites | Gated on | Notes |
 |------|----------|----------|-------|
 | `measure_text(text)` | every `<number> <unit>` and `<a>-<b> <unit>` range | `MEASURE_UNITS` set | leaves ISO codes, dates, versions, bare numbers untouched |
-| `datetime_text(text)` | ISO dates and date-times (`2026-07-01 11:31 UTC`) | `VERBALIZES_DATETIME` | date-times first; leaves a trailing `UTC`/`Z` for `spell_acronyms` |
+| `datetime_text(text)` | ISO dates and date-times (`2026-07-01 11:31 UTC`) | `VERBALIZES_DATETIME` | date-times first; normalizes a trailing `Z`/`UTC` to a spellable ` UTC`; a date-shaped-but-invalid token is left untouched |
 | `spell_acronyms(text)` | known acronyms → letter-by-letter (`RMS` → `er em es`) | `ACRONYMS` non-empty | case-sensitive, whole-token; never touches lowercase words or unknown all-caps names |
 
 Run them in this order — `measure_text` → `datetime_text` → `spell_acronyms` — so the datetime
-pass can hand its trailing `UTC` to the acronym pass. `get(lang)` falls back to English for an
-unregistered language, so callers never guard.
+pass can hand its trailing `UTC` to the acronym pass. `get(lang)` falls back to the neutral base
+verbalizer for an unregistered language (which keeps the generic `guidance()` — English opts out
+of it), so callers never guard.
 
 ## Adding a language
 
@@ -155,7 +156,8 @@ class GermanVerbalizer(Verbalizer):
     MEASURE_UNITS: ClassVar[tuple[str, ...]] = ("mm/s", "Hz", "°C")
     INSTRUCTION: ClassVar[str] = "Sprich auf Deutsch."
     VERBALIZES_DATETIME: ClassVar[bool] = True     # opt in to date()/time()/datetime_text()
-    # ACRONYMS defaults to {DIN, ISO, PPV, RMS, UTC}; override to extend per language.
+    # ACRONYMS defaults to domain-neutral {DIN, ISO, RMS, UTC}; add your app's own
+    # domain acronyms by overriding (e.g. ACRONYMS = Verbalizer.ACRONYMS | {"PPV"}).
 
     def number(self, value): ...
     def date(self, iso, with_weekday=True, with_year=True): ...

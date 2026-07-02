@@ -1,4 +1,13 @@
-"""Tests for signalwire.conversation_kit.inputs — typed-input validation + payload."""
+"""
+Copyright (c) 2026 SignalWire
+
+This file is part of the SignalWire SDK.
+
+Licensed under the MIT License.
+See LICENSE file in the project root for full license information.
+
+Tests for signalwire.conversation_kit.inputs — typed-input validation + payload.
+"""
 
 from signalwire.conversation_kit import (
     input_request_payload,
@@ -33,6 +42,10 @@ def test_number():
     assert is_valid_number("3.14")
     assert not is_valid_number("abc")
     assert not is_valid_number("")
+    # float() parses these, but the verbalizer can't speak them -> reject as invalid.
+    assert not is_valid_number("nan")
+    assert not is_valid_number("inf")
+    assert not is_valid_number("-inf")
 
 
 def test_validate_input_dispatch():
