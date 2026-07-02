@@ -107,12 +107,12 @@ def test_measure_text():
     _check(
         [
             (
-                "RMS velocity: 0.156 mm/s on x",
-                "RMS velocity: zero przecinek sto pięćdziesiąt sześć milimetra na sekundę on x",
+                "reading: 0.156 mm/s on x",
+                "reading: zero przecinek sto pięćdziesiąt sześć milimetra na sekundę on x",
             ),
             (
-                "PPV:2.6mm/s freq:100Hz",
-                "PPV:dwa przecinek sześć milimetra na sekundę freq:sto herców",
+                "value:2.6mm/s freq:100Hz",
+                "value:dwa przecinek sześć milimetra na sekundę freq:sto herców",
             ),
             (
                 "Temperature: 30.3°C",
@@ -129,8 +129,8 @@ def test_measure_text():
             ("peak 0.5 m/s²", "peak zero przecinek pięć metra na sekundę do kwadratu"),
             ("gusts 12 km/h", "gusts dwanaście kilometrów na godzinę"),
             # must be left alone (no unit / structural):
-            ("ISO 10816 zone", "ISO 10816 zone"),
-            ("DIN 4150-3 referenced", "DIN 4150-3 referenced"),
+            ("ISO 9001 zone", "ISO 9001 zone"),
+            ("DIN 5008-1 referenced", "DIN 5008-1 referenced"),
             ("on 2026-07-04 at 14:30", "on 2026-07-04 at 14:30"),
             ("version 2.5 build", "version 2.5 build"),
         ],
@@ -142,8 +142,8 @@ def test_email():
     _check(
         [
             (
-                "karolczyk.jakub@gmail.com",
-                "karolczyk kropka jakub małpka gmail kropka com",
+                "jan.kowalski@example.com",
+                "jan kropka kowalski małpka example kropka com",
             ),
             ("a-b_c@x.pl", "a myślnik b podkreślnik c małpka x kropka pl"),
         ],
@@ -173,8 +173,8 @@ def test_spell_acronyms():
         [
             ("RMS", "er em es"),
             ("UTC", "u te ce"),
-            ("ISO 10816", "i es o 10816"),
-            ("DIN 4150-3", "de i en 4150-3"),
+            ("ISO 9001", "i es o 9001"),
+            ("DIN 5008-1", "de i en 5008-1"),
             ("Czas 08:13 UTC", "Czas 08:13 u te ce"),
             ("poziom RMS na ISO", "poziom er em es na i es o"),
             # NEVER spelled: lowercase word (case-sensitive), substring in a longer word,
@@ -192,7 +192,7 @@ def test_spell_acronyms():
 
 def test_spell_acronyms_english():
     en = get("en")
-    assert en.spell_acronyms("RMS at ISO 10816") == "R M S at I S O 10816"
+    assert en.spell_acronyms("RMS at ISO 9001") == "R M S at I S O 9001"
     assert en.spell_acronyms("the din of the machine") == "the din of the machine"
 
 

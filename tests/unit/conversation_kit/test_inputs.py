@@ -19,12 +19,12 @@ from signalwire.conversation_kit import (
 
 
 def test_email():
-    assert is_valid_email("karolczyk.jakub@gmail.com")
+    assert is_valid_email("jan.kowalski@example.com")
     assert is_valid_email("a@b.co")
     # A valid-format typo is still valid format (only the human read-back catches it).
-    assert is_valid_email("karolczyk.jakib@gmail.com")
-    assert not is_valid_email("karolczyk.jakib")  # no @
-    assert not is_valid_email("jakub@gmail")  # no TLD dot
+    assert is_valid_email("jan.kowalsky@example.com")
+    assert not is_valid_email("jan.kowalsky")  # no @
+    assert not is_valid_email("jan@example")  # no TLD dot
     assert not is_valid_email("a b@gmail.com")  # space
     assert not is_valid_email("")
 
@@ -59,11 +59,11 @@ def test_validate_input_dispatch():
 
 
 def test_input_request_payload():
-    p = input_request_payload("typed_installer_email", "Installer email", "email")
+    p = input_request_payload("contact_email", "Contact email", "email")
     assert p == {
         "type": "input_request",
-        "field": "typed_installer_email",
-        "label": "Installer email",
+        "field": "contact_email",
+        "label": "Contact email",
         "input_type": "email",
     }
     # Defaults.
