@@ -22,6 +22,8 @@ class AIConfigMixin(_HostTyped):
     Mixin class containing all AI configuration methods for AgentBase
     """
 
+    _multilingual: dict[str, Any] | None = None
+
     def add_hint(self, hint: str) -> "AgentBase":
         """
         Add a simple string hint to help the AI agent understand certain words better
