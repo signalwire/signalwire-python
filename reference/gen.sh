@@ -11,7 +11,7 @@
 # editable install to resolve imports — that is preserved here.
 #
 # Usage:  reference/gen.sh            # generate pages + `mkdocs build`
-#         reference/gen.sh --no-build # generate pages only (mike runs the build)
+#         reference/gen.sh --no-build # generate pages only (CI builds + deploys)
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # .../reference

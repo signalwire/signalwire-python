@@ -9,7 +9,7 @@ docs_dir: _docs
 site_dir: _site
 use_directory_urls: false
 
-# Mike serves each version under /<version>/, so links must be relative.
+# Served under the project-pages subpath (/signalwire-python/); links stay relative.
 theme:
   name: material
   custom_dir: overrides
@@ -33,11 +33,6 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
-
-extra:
-  version:
-    provider: mike
-    default: latest
 
 extra_css:
   - assets/fern/tokens.css

@@ -1,35 +1,41 @@
 # API reference docs (pilot).
 #
 # Builds the SignalWire Python SDK API reference (MkDocs Material + mkdocstrings)
-# and publishes it to this repo's OWN GitHub Pages via mike (versioned):
+# and publishes a single, unversioned "latest" site to this repo's OWN GitHub Pages:
 #   https://signalwire.github.io/signalwire-python/
 #
-# Triggers on `v*` release tags — each release deploys its versioned doc set via
-# mike and re-aliases `latest` — plus workflow_dispatch for manual/fork-preview runs.
+# Triggers on `v*` release tags — each release rebuilds + republishes the site —
+# plus workflow_dispatch for manual/fork-preview runs. (Versioning via mike was
+# intentionally left out of the pilot; it can be added back later.)
 #
 # MANUAL REPO SETTING REQUIRED to go live (one-time, in the GitHub UI):
 #   Settings -> Pages -> Build and deployment -> Source = "Deploy from a branch"
-#   -> Branch = `gh-pages` / `(root)`. mike pushes the built site there.
+#   -> Branch = `gh-pages` / `(root)`. `mkdocs gh-deploy` pushes the built site there.
 name: reference-docs
+
+env:
+  # Match the repo's other workflows (redundant here since this workflow's
+  # actions are pinned to v6, which is already Node 24-native).
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 on:
   workflow_dispatch:        # manual runs (and fork-preview builds)
   push:
     tags:
-      - "v*"                # each release deploys its versioned doc set via mike, alongside publish-release.yml
+      - "v*"                # each release rebuilds + republishes the site, alongside publish-release.yml
 
 permissions:
-  contents: write   # mike pushes the built site to the gh-pages branch
+  contents: write   # gh-deploy pushes the built site to the gh-pages branch
 
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
-          fetch-depth: 0   # mike needs full history + the gh-pages branch
+          fetch-depth: 0   # gh-deploy needs the gh-pages branch history
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.11"
 
@@ -39,7 +45,7 @@ jobs:
           pip install -r reference/requirements.txt
           pip install -e .
 
-      - name: Configure git for mike
+      - name: Configure git
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -47,16 +53,5 @@ jobs:
       - name: Generate API pages
         run: bash reference/gen.sh --no-build
 
-      - name: Resolve version
-        id: ver
-        run: |
-          # Pilot: use the package version. Production: derive from the v* tag,
-          # e.g. VERSION="${GITHUB_REF_NAME#v}".
-          VERSION=$(python -c "import tomllib;print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-
-      - name: Deploy with mike (versioned) to gh-pages
-        run: |
-          mike deploy --config-file reference/mkdocs.yml --push --update-aliases \
-            "${{ steps.ver.outputs.version }}" latest
-          mike set-default --config-file reference/mkdocs.yml --push latest
+      - name: Build + deploy to gh-pages
+        run: python3 -m mkdocs gh-deploy --config-file reference/mkdocs.yml --force

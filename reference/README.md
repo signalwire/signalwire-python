@@ -2,7 +2,7 @@
 
 Language-native API reference for the SignalWire Python SDK, generated from
 docstrings with **MkDocs Material + mkdocstrings**, wrapped in the SignalWire
-**Fern navbar**, and versioned with **mike**. Published to this repo's own
+**Fern navbar**, and published as a single unversioned site to this repo's own
 GitHub Pages:
 
 > https://signalwire.github.io/signalwire-python/
@@ -32,8 +32,8 @@ first — keep that.
 From the repo root, in a virtualenv:
 
 ```bash
+pip install -r reference/requirements.txt
 pip install -e .
-pip install mkdocs-material "mkdocstrings[python]" mike
 
 # Generate API pages + build the static site into reference/_site
 bash reference/gen.sh
@@ -46,35 +46,21 @@ mkdocs serve --config-file reference/mkdocs.yml
 `use_directory_urls: false`, so every page is a real `.html` file and the site
 works under the `/signalwire-python/` base path.
 
-## Versioning (mike)
+## Deploy
 
-`extra.version.provider: mike` in `mkdocs.yml` turns on Material's version
-selector; it reads `versions.json` from the site root at runtime. mike commits
-each deployed version to a local `gh-pages` branch.
-
-```bash
-bash reference/gen.sh --no-build                      # generate pages first
-
-# Deploy a version and (re)point the `latest` alias at it; set it as default.
-mike deploy  --config-file reference/mkdocs.yml --update-aliases 3.0.2 latest
-mike set-default --config-file reference/mkdocs.yml latest
-mike list    --config-file reference/mkdocs.yml       # -> 3.0.2 [latest], 3.0.1
-
-mike serve   --config-file reference/mkdocs.yml       # preview all versions + selector
-```
-
-Add `--push` to push the `gh-pages` branch to the remote (CI does this; do not
-locally).
+A single, unversioned "latest" site is published to the `gh-pages` branch via
+`mkdocs gh-deploy` (CI does this — see below). Versioning (a per-release version
+selector via `mike`) was intentionally left out of the pilot and can be added
+later without touching the markup.
 
 ## CI
 
 `.github/workflows/reference-docs.yml` (plain `actions/setup-python`, no Docker):
 
-- **Pilot triggers:** `workflow_dispatch` + push to `docs/api-reference-pilot`.
-- Installs the SDK editable + `mkdocs-material`, `mkdocstrings[python]`, `mike`,
-  runs `gen.sh --no-build`, then `mike deploy --push --update-aliases <version> latest`.
-- **Production trigger (later):** `v*` tags (commented in the workflow), so each
-  release deploys its version and re-aliases `latest`.
+- **Triggers:** `v*` release tags (each release rebuilds + republishes) plus
+  `workflow_dispatch` for manual / fork-preview runs.
+- Installs from `reference/requirements.txt` + the SDK editable, runs
+  `gen.sh --no-build`, then `mkdocs gh-deploy --force` to the `gh-pages` branch.
 
 ## Manual repo setting required to go live
 
@@ -83,14 +69,13 @@ One-time, in the GitHub UI:
 > **Settings → Pages → Build and deployment → Source = "Deploy from a branch" →
 > Branch = `gh-pages` / `(root)`.**
 
-mike pushes the built site to `gh-pages`; Pages then serves it at
+`mkdocs gh-deploy` pushes the built site to `gh-pages`; Pages then serves it at
 `https://signalwire.github.io/signalwire-python/`.
 
 ## Pilot simplifications
 
-- **Language switcher:** cross-site links with Python marked active; other
-  languages point at the POC demo (no per-language hosted site exists yet).
 - **Theme toggle:** drives Material's own light/dark color scheme. No
   cross-origin `localStorage` theme sync with signalwire.com/docs (different
   origin — out of scope).
-- Out of scope: llms.txt/markdown emission, Docker, other languages, custom domain.
+- Out of scope: versioning (mike), llms.txt/markdown emission, Docker, other
+  languages, custom domain.
