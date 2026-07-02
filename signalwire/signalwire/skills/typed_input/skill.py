@@ -59,7 +59,7 @@ class TypedInputSkill(SkillBase):
                 "field": {
                     "type": "string",
                     "description": (
-                        "Field key, e.g. 'installer_email'. Tools become request_<field> / "
+                        "Field key, e.g. 'contact_email'. Tools become request_<field> / "
                         "confirm_<field>; the typed value lands in global_data['typed_<field>']."
                     ),
                     "required": True,
@@ -109,14 +109,23 @@ class TypedInputSkill(SkillBase):
                 "typed_input requires a non-empty string 'field' parameter"
             )
             return False
+        # The three per-language prompt maps are required (the schema marks them so,
+        # but the loader doesn't enforce it) — fail loud rather than speak "" at runtime.
+        for name in ("open_prompt", "field_label", "invalid_prompt"):
+            val = self.params.get(name)
+            if not isinstance(val, dict) or not val:
+                self.logger.error(
+                    f"typed_input requires a non-empty '{name}' per-language map"
+                )
+                return False
         self.field: str = field
         self.input_type: str = self.params.get("input_type", "text")
         self.gd_key: str = f"typed_{field}"
         self.request_tool: str = f"request_{field}"
         self.confirm_tool: str = f"confirm_{field}"
-        self.open_prompt: dict[str, str] = self.params.get("open_prompt") or {}
-        self.field_label: dict[str, str] = self.params.get("field_label") or {}
-        self.invalid_prompt: dict[str, str] = self.params.get("invalid_prompt") or {}
+        self.open_prompt: dict[str, str] = self.params["open_prompt"]
+        self.field_label: dict[str, str] = self.params["field_label"]
+        self.invalid_prompt: dict[str, str] = self.params["invalid_prompt"]
         return True
 
     def register_tools(self) -> None:
