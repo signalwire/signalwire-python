@@ -2,7 +2,7 @@
 # Regenerate: python3 porting-sdk/scripts/generate_python_rest_types.py
 #
 # One typed CRUD subclass per full-CRUD resource: closed typed create/update params
-# (explicit spec fields) + an ``extras`` escape hatch and a ``**kwargs`` tail for
+# (explicit spec fields) + an ``extras`` escape hatch and a ``**_reserved_kw`` tail for
 # unknown / reserved-word wire fields, bound to the resource's spec types.
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ class ProjectTokens(BaseResource):
         permissions: list[TokenPermission],
         subproject_id: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> TokenResponse:
         body: dict[str, Any] = {
             k: v
@@ -44,7 +44,7 @@ class ProjectTokens(BaseResource):
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("TokenResponse", self._http.post(self._base_path, body=body))
 
     def update(
@@ -54,7 +54,7 @@ class ProjectTokens(BaseResource):
         name: str | None = None,
         permissions: list[TokenPermission] | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> TokenResponse:
         body: dict[str, Any] = {
             k: v
@@ -63,7 +63,7 @@ class ProjectTokens(BaseResource):
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("TokenResponse", self._http.patch(self._path(token_id), body=body))
 
     def delete(self, token_id: str) -> dict[str, Any]:

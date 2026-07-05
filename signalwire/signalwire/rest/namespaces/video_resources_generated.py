@@ -2,7 +2,7 @@
 # Regenerate: python3 porting-sdk/scripts/generate_python_rest_types.py
 #
 # One typed CRUD subclass per full-CRUD resource: closed typed create/update params
-# (explicit spec fields) + an ``extras`` escape hatch and a ``**kwargs`` tail for
+# (explicit spec fields) + an ``extras`` escape hatch and a ``**_reserved_kw`` tail for
 # unknown / reserved-word wire fields, bound to the resource's spec types.
 from __future__ import annotations
 
@@ -99,7 +99,7 @@ class VideoConferences(
         light_success: str | None = None,
         light_negative: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> Conference:
         body: dict[str, Any] = {
             k: v
@@ -130,7 +130,7 @@ class VideoConferences(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("Conference", self._http.post(self._base_path, body=body))
 
     def update(
@@ -162,7 +162,7 @@ class VideoConferences(
         light_success: str | None = None,
         light_negative: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> Conference:
         body: dict[str, Any] = {
             k: v
@@ -195,7 +195,7 @@ class VideoConferences(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("Conference", self._http.put(self._path(id), body=body))
 
     def list_conference_tokens(
@@ -218,12 +218,12 @@ class VideoConferences(
         *,
         url: str,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> Stream:
         body: dict[str, Any] = {k: v for k, v in {"url": url}.items() if v is not None}
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("Stream", self._http.post(self._path(id, "streams"), body=body))
 
 
@@ -309,7 +309,7 @@ class VideoRoomTokens(BaseResource):
         meta: dict[str, Any] | None = None,
         sync_audio_video: bool | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> RoomTokenResponse:
         body: dict[str, Any] = {
             k: v
@@ -337,7 +337,7 @@ class VideoRoomTokens(BaseResource):
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("RoomTokenResponse", self._http.post(self._base_path, body=body))
 
 
@@ -371,7 +371,7 @@ class VideoRooms(
         meta: dict[str, Any] | None = None,
         sync_audio_video: bool | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> RoomResponse:
         body: dict[str, Any] = {
             k: v
@@ -395,7 +395,7 @@ class VideoRooms(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("RoomResponse", self._http.post(self._base_path, body=body))
 
     def update(
@@ -417,7 +417,7 @@ class VideoRooms(
         meta: dict[str, Any] | None = None,
         sync_audio_video: bool | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> RoomResponse:
         body: dict[str, Any] = {
             k: v
@@ -440,7 +440,7 @@ class VideoRooms(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("RoomResponse", self._http.put(self._path(id), body=body))
 
     def list_streams(self, id: str, **params: Any) -> ListStreamsResponse:
@@ -455,12 +455,12 @@ class VideoRooms(
         *,
         url: str,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> Stream:
         body: dict[str, Any] = {k: v for k, v in {"url": url}.items() if v is not None}
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("Stream", self._http.post(self._path(id, "streams"), body=body))
 
 
@@ -479,12 +479,12 @@ class VideoStreams(BaseResource):
         *,
         url: str,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> Stream:
         body: dict[str, Any] = {k: v for k, v in {"url": url}.items() if v is not None}
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("Stream", self._http.put(self._path(id), body=body))
 
     def delete(self, id: str) -> dict[str, Any]:

@@ -2,7 +2,7 @@
 # Regenerate: python3 porting-sdk/scripts/generate_python_rest_types.py
 #
 # One typed CRUD subclass per full-CRUD resource: closed typed create/update params
-# (explicit spec fields) + an ``extras`` escape hatch and a ``**kwargs`` tail for
+# (explicit spec fields) + an ``extras`` escape hatch and a ``**_reserved_kw`` tail for
 # unknown / reserved-word wire fields, bound to the resource's spec types.
 from __future__ import annotations
 
@@ -90,7 +90,7 @@ class Addresses(BaseResource):
         address_type: AddressType | None = None,
         address_number: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> AddressResponse:
         body: dict[str, Any] = {
             k: v
@@ -111,7 +111,7 @@ class Addresses(BaseResource):
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("AddressResponse", self._http.post(self._base_path, body=body))
 
     def get(self, id: str, **params: Any) -> AddressResponse:
@@ -136,7 +136,7 @@ class ImportedNumbers(BaseResource):
         number_type: Literal["longcode", "tollfree"],
         capabilities: list[Literal["sms", "voice", "fax", "mms"]] | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> PhoneNumberResponse:
         body: dict[str, Any] = {
             k: v
@@ -149,7 +149,7 @@ class ImportedNumbers(BaseResource):
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("PhoneNumberResponse", self._http.post(self._base_path, body=body))
 
 
@@ -187,7 +187,7 @@ class Mfa(BaseResource):
         max_attempts: int | None = None,
         allow_alphas: bool | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> MfaResponse:
         body: dict[str, Any] = {
             k: v
@@ -204,7 +204,7 @@ class Mfa(BaseResource):
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("MfaResponse", self._http.post(self._path("sms"), body=body))
 
     def call(
@@ -218,7 +218,7 @@ class Mfa(BaseResource):
         max_attempts: int | None = None,
         allow_alphas: bool | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> MfaResponse:
         body: dict[str, Any] = {
             k: v
@@ -235,7 +235,7 @@ class Mfa(BaseResource):
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("MfaResponse", self._http.post(self._path("call"), body=body))
 
     def verify(
@@ -244,14 +244,14 @@ class Mfa(BaseResource):
         *,
         token: str,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> MfaVerifyResponse:
         body: dict[str, Any] = {
             k: v for k, v in {"token": token}.items() if v is not None
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "MfaVerifyResponse",
             self._http.post(self._path(mfa_request_id, "verify"), body=body),
@@ -279,7 +279,7 @@ class NumberGroups(
         name: str,
         sticky_sender: bool | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> NumberGroupResponse:
         body: dict[str, Any] = {
             k: v
@@ -288,7 +288,7 @@ class NumberGroups(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("NumberGroupResponse", self._http.post(self._base_path, body=body))
 
     def update(
@@ -299,7 +299,7 @@ class NumberGroups(
         name: str | None = None,
         sticky_sender: bool | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> NumberGroupResponse:
         body: dict[str, Any] = {
             k: v
@@ -308,7 +308,7 @@ class NumberGroups(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("NumberGroupResponse", self._http.put(self._path(id), body=body))
 
     def list_memberships(
@@ -328,7 +328,7 @@ class NumberGroups(
         *,
         phone_number_id: uuid,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> NumberGroupMembershipResponse:
         body: dict[str, Any] = {
             k: v
@@ -337,7 +337,7 @@ class NumberGroups(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "NumberGroupMembershipResponse",
             self._http.post(
@@ -376,14 +376,18 @@ class PhoneNumbers(
         super().__init__(http, "/api/relay/rest/phone_numbers")
 
     def create(  # type: ignore[override]
-        self, *, number: str, extras: Mapping[str, Any] | None = None, **kwargs: Any
+        self,
+        *,
+        number: str,
+        extras: Mapping[str, Any] | None = None,
+        **_reserved_kw: Any,
     ) -> PhoneNumberResponse:
         body: dict[str, Any] = {
             k: v for k, v in {"number": number}.items() if v is not None
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("PhoneNumberResponse", self._http.post(self._base_path, body=body))
 
     def update(
@@ -425,7 +429,7 @@ class PhoneNumbers(
         message_relay_context: str | None = None,
         message_relay_application: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> PhoneNumberResponse:
         body: dict[str, Any] = {
             k: v
@@ -468,7 +472,7 @@ class PhoneNumbers(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("PhoneNumberResponse", self._http.put(self._path(id), body=body))
 
     def search(self, **params: Any) -> AvailablePhoneNumbersResponse:
@@ -573,7 +577,7 @@ class Queues(
         name: str | None = None,
         max_size: int | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> QueueResponse:
         body: dict[str, Any] = {
             k: v
@@ -582,7 +586,7 @@ class Queues(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("QueueResponse", self._http.post(self._base_path, body=body))
 
     def update(
@@ -593,7 +597,7 @@ class Queues(
         name: str | None = None,
         max_size: int | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> QueueResponse:
         body: dict[str, Any] = {
             k: v
@@ -602,7 +606,7 @@ class Queues(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("QueueResponse", self._http.put(self._path(id), body=body))
 
     def list_members(self, queue_id: str, **params: Any) -> QueueMemberListResponse:
@@ -699,14 +703,14 @@ class RegistryCampaigns(BaseResource):
         *,
         name: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> CampaignResponse:
         body: dict[str, Any] = {
             k: v for k, v in {"name": name}.items() if v is not None
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("CampaignResponse", self._http.put(self._path(id), body=body))
 
     def list_numbers(self, id: str, **params: Any) -> AssignedNumberListResponse:
@@ -728,7 +732,7 @@ class RegistryCampaigns(BaseResource):
         phone_numbers: list[str] | None = None,
         status_callback_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> OrderResponse:
         body: dict[str, Any] = {
             k: v
@@ -740,7 +744,7 @@ class RegistryCampaigns(BaseResource):
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "OrderResponse", self._http.post(self._path(id, "orders"), body=body)
         )
@@ -798,7 +802,7 @@ class ShortCodes(BaseResource):
         message_laml_application_id: uuid | None = None,
         message_relay_context: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> ShortCodeResponse:
         body: dict[str, Any] = {
             k: v
@@ -816,7 +820,7 @@ class ShortCodes(BaseResource):
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("ShortCodeResponse", self._http.put(self._path(id), body=body))
 
 
@@ -840,7 +844,7 @@ class SipProfile(BaseResource):
         default_encryption: Literal["required", "optional"] | None = None,
         default_send_as: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SipProfileResponse:
         body: dict[str, Any] = {
             k: v
@@ -855,7 +859,7 @@ class SipProfile(BaseResource):
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("SipProfileResponse", self._http.put(self._base_path, body=body))
 
 
@@ -881,7 +885,7 @@ class VerifiedCallers(
         name: str | None = None,
         extension: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> VerifiedCallerIDResponse:
         body: dict[str, Any] = {
             k: v
@@ -890,7 +894,7 @@ class VerifiedCallers(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "VerifiedCallerIDResponse", self._http.post(self._base_path, body=body)
         )
@@ -902,14 +906,14 @@ class VerifiedCallers(
         *,
         name: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> VerifiedCallerIDResponse:
         body: dict[str, Any] = {
             k: v for k, v in {"name": name}.items() if v is not None
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "VerifiedCallerIDResponse", self._http.put(self._path(id), body=body)
         )
@@ -925,7 +929,7 @@ class VerifiedCallers(
         *,
         verification_code: str,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> VerifiedCallerIDResponse:
         body: dict[str, Any] = {
             k: v
@@ -934,7 +938,7 @@ class VerifiedCallers(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "VerifiedCallerIDResponse",
             self._http.put(self._path(id, "verification"), body=body),

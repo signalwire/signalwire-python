@@ -2,7 +2,7 @@
 # Regenerate: python3 porting-sdk/scripts/generate_python_rest_types.py
 #
 # One typed CRUD subclass per full-CRUD resource: closed typed create/update params
-# (explicit spec fields) + an ``extras`` escape hatch and a ``**kwargs`` tail for
+# (explicit spec fields) + an ``extras`` escape hatch and a ``**_reserved_kw`` tail for
 # unknown / reserved-word wire fields, bound to the resource's spec types.
 from __future__ import annotations
 

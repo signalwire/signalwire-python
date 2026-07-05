@@ -2,7 +2,7 @@
 # Regenerate: python3 porting-sdk/scripts/generate_python_rest_types.py
 #
 # One typed CRUD subclass per full-CRUD resource: closed typed create/update params
-# (explicit spec fields) + an ``extras`` escape hatch and a ``**kwargs`` tail for
+# (explicit spec fields) + an ``extras`` escape hatch and a ``**_reserved_kw`` tail for
 # unknown / reserved-word wire fields, bound to the resource's spec types.
 from __future__ import annotations
 
@@ -143,7 +143,7 @@ class GenericResources(BaseResource):
         phone_route_id: uuid,
         handler: UsedForType,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> PhoneRouteResponse:
         body: dict[str, Any] = {
             k: v
@@ -152,7 +152,7 @@ class GenericResources(BaseResource):
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "PhoneRouteResponse",
             self._http.post(self._path(id, "phone_routes"), body=body),
@@ -164,7 +164,7 @@ class GenericResources(BaseResource):
         *,
         domain_application_id: uuid,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> DomainApplicationResponse:
         body: dict[str, Any] = {
             k: v
@@ -173,7 +173,7 @@ class GenericResources(BaseResource):
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "DomainApplicationResponse",
             self._http.post(self._path(id, "domain_applications"), body=body),
@@ -208,7 +208,7 @@ class AiAgents(
         pronounce: list[Pronounce] | None = None,
         SWAIG: SWAIG | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> AIAgentResponse:
         body: dict[str, Any] = {
             k: v
@@ -229,7 +229,7 @@ class AiAgents(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("AIAgentResponse", self._http.post(self._base_path, body=body))
 
     def update(
@@ -249,7 +249,7 @@ class AiAgents(
         agent_id: uuid | None = None,
         name: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> AIAgentResponse:
         body: dict[str, Any] = {
             k: v
@@ -270,7 +270,7 @@ class AiAgents(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("AIAgentResponse", self._http.patch(self._path(id), body=body))
 
 
@@ -290,14 +290,18 @@ class CallFlows(
         super().__init__(http, "/api/fabric/resources/call_flows")
 
     def create(  # type: ignore[override]
-        self, *, title: str, extras: Mapping[str, Any] | None = None, **kwargs: Any
+        self,
+        *,
+        title: str,
+        extras: Mapping[str, Any] | None = None,
+        **_reserved_kw: Any,
     ) -> CallFlowResponse:
         body: dict[str, Any] = {
             k: v for k, v in {"title": title}.items() if v is not None
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("CallFlowResponse", self._http.post(self._base_path, body=body))
 
     def update(
@@ -308,7 +312,7 @@ class CallFlows(
         title: str | None = None,
         document_version: int | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> CallFlowResponse:
         body: dict[str, Any] = {
             k: v
@@ -317,7 +321,7 @@ class CallFlows(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("CallFlowResponse", self._http.put(self._path(id), body=body))
 
     def list_addresses(  # type: ignore[override]
@@ -385,7 +389,7 @@ class ConferenceRooms(
         room_join_video_off: bool | None = None,
         user_join_video_off: bool | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> ConferenceRoomResponse:
         body: dict[str, Any] = {
             k: v
@@ -412,7 +416,7 @@ class ConferenceRooms(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "ConferenceRoomResponse", self._http.post(self._base_path, body=body)
         )
@@ -440,7 +444,7 @@ class ConferenceRooms(
         room_join_video_off: bool | None = None,
         user_join_video_off: bool | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> ConferenceRoomResponse:
         body: dict[str, Any] = {
             k: v
@@ -467,7 +471,7 @@ class ConferenceRooms(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("ConferenceRoomResponse", self._http.put(self._path(id), body=body))
 
     def list_addresses(  # type: ignore[override]
@@ -519,7 +523,7 @@ class CxmlApplications(BaseResource):
         sms_status_callback: str | None = None,
         sms_status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> CxmlApplicationResponse:
         body: dict[str, Any] = {
             k: v
@@ -543,7 +547,7 @@ class CxmlApplications(BaseResource):
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "CxmlApplicationResponse", self._http.put(self._path(id), body=body)
         )
@@ -583,7 +587,7 @@ class CxmlScripts(
         status_callback_url: str | None = None,
         status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> CXMLScriptResponse:
         body: dict[str, Any] = {
             k: v
@@ -597,7 +601,7 @@ class CxmlScripts(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("CXMLScriptResponse", self._http.post(self._base_path, body=body))
 
     def update(
@@ -610,7 +614,7 @@ class CxmlScripts(
         status_callback_url: str | None = None,
         status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> CXMLScriptResponse:
         body: dict[str, Any] = {
             k: v
@@ -624,7 +628,7 @@ class CxmlScripts(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("CXMLScriptResponse", self._http.put(self._path(id), body=body))
 
 
@@ -653,7 +657,7 @@ class CxmlWebhooks(
         status_callback_url: str | None = None,
         status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> CXMLWebhookResponse:
         body: dict[str, Any] = {
             k: v
@@ -671,7 +675,7 @@ class CxmlWebhooks(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("CXMLWebhookResponse", self._http.post(self._base_path, body=body))
 
     def update(
@@ -688,7 +692,7 @@ class CxmlWebhooks(
         status_callback_url: str | None = None,
         status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> CXMLWebhookResponse:
         body: dict[str, Any] = {
             k: v
@@ -706,7 +710,7 @@ class CxmlWebhooks(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("CXMLWebhookResponse", self._http.patch(self._path(id), body=body))
 
 
@@ -731,14 +735,14 @@ class FreeswitchConnectors(
         name: str,
         token: uuid,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> FreeswitchConnectorResponse:
         body: dict[str, Any] = {
             k: v for k, v in {"name": name, "token": token}.items() if v is not None
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "FreeswitchConnectorResponse", self._http.post(self._base_path, body=body)
         )
@@ -752,7 +756,7 @@ class FreeswitchConnectors(
         caller_id: str | None = None,
         send_as: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> FreeswitchConnectorResponse:
         body: dict[str, Any] = {
             k: v
@@ -765,7 +769,7 @@ class FreeswitchConnectors(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "FreeswitchConnectorResponse", self._http.put(self._path(id), body=body)
         )
@@ -793,7 +797,7 @@ class RelayApplications(
         topic: str,
         call_status_callback_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> RelayApplicationResponse:
         body: dict[str, Any] = {
             k: v
@@ -806,7 +810,7 @@ class RelayApplications(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "RelayApplicationResponse", self._http.post(self._base_path, body=body)
         )
@@ -820,7 +824,7 @@ class RelayApplications(
         topic: str | None = None,
         call_status_callback_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> RelayApplicationResponse:
         body: dict[str, Any] = {
             k: v
@@ -833,7 +837,7 @@ class RelayApplications(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "RelayApplicationResponse", self._http.put(self._path(id), body=body)
         )
@@ -867,7 +871,7 @@ class SipEndpoints(
         call_handler: CallHandlerType,
         calling_handler_resource_id: uuid | None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SipEndpointResponse:
         body: dict[str, Any] = {
             k: v
@@ -886,7 +890,7 @@ class SipEndpoints(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("SipEndpointResponse", self._http.post(self._base_path, body=body))
 
     def update(
@@ -903,7 +907,7 @@ class SipEndpoints(
         call_handler: CallHandlerType | None = None,
         calling_handler_resource_id: uuid | None | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SipEndpointResponse:
         body: dict[str, Any] = {
             k: v
@@ -921,7 +925,7 @@ class SipEndpoints(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("SipEndpointResponse", self._http.put(self._path(id), body=body))
 
 
@@ -947,7 +951,7 @@ class SipGateways(
         ciphers: list[Ciphers],
         codecs: list[Codecs],
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SipGatewayResponse:
         body: dict[str, Any] = {
             k: v
@@ -962,7 +966,7 @@ class SipGateways(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("SipGatewayResponse", self._http.post(self._base_path, body=body))
 
     def update(
@@ -976,7 +980,7 @@ class SipGateways(
         ciphers: list[Ciphers] | None = None,
         codecs: list[Codecs] | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SipGatewayResponse:
         body: dict[str, Any] = {
             k: v
@@ -991,7 +995,7 @@ class SipGateways(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("SipGatewayResponse", self._http.patch(self._path(id), body=body))
 
 
@@ -1024,7 +1028,7 @@ class Subscribers(
         region: str | None = None,
         company_name: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SubscriberResponse:
         body: dict[str, Any] = {
             k: v
@@ -1044,7 +1048,7 @@ class Subscribers(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("SubscriberResponse", self._http.post(self._base_path, body=body))
 
     def update(
@@ -1063,7 +1067,7 @@ class Subscribers(
         region: str | None = None,
         company_name: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SubscriberResponse:
         body: dict[str, Any] = {
             k: v
@@ -1083,7 +1087,7 @@ class Subscribers(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("SubscriberResponse", self._http.put(self._path(id), body=body))
 
     def list_sip_endpoints(
@@ -1108,7 +1112,7 @@ class Subscribers(
         codecs: list[Codecs] | None = None,
         encryption: Encryption | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SubscriberSIPEndpoint:
         body: dict[str, Any] = {
             k: v
@@ -1125,7 +1129,7 @@ class Subscribers(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "SubscriberSIPEndpoint",
             self._http.post(
@@ -1157,7 +1161,7 @@ class Subscribers(
         codecs: list[Codecs] | None = None,
         encryption: Encryption | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SubscriberSIPEndpoint:
         body: dict[str, Any] = {
             k: v
@@ -1174,7 +1178,7 @@ class Subscribers(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "SubscriberSIPEndpoint",
             self._http.patch(
@@ -1211,7 +1215,7 @@ class SwmlScripts(
         contents: str,
         status_callback_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SwmlScriptResponse:
         body: dict[str, Any] = {
             k: v
@@ -1224,7 +1228,7 @@ class SwmlScripts(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("SwmlScriptResponse", self._http.post(self._base_path, body=body))
 
     def update(
@@ -1236,7 +1240,7 @@ class SwmlScripts(
         contents: str | None = None,
         status_callback_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SwmlScriptResponse:
         body: dict[str, Any] = {
             k: v
@@ -1249,7 +1253,7 @@ class SwmlScripts(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("SwmlScriptResponse", self._http.put(self._path(id), body=body))
 
 
@@ -1278,7 +1282,7 @@ class SwmlWebhooks(
         status_callback_url: str | None = None,
         status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SWMLWebhookResponse:
         body: dict[str, Any] = {
             k: v
@@ -1296,7 +1300,7 @@ class SwmlWebhooks(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("SWMLWebhookResponse", self._http.post(self._base_path, body=body))
 
     def update(
@@ -1313,7 +1317,7 @@ class SwmlWebhooks(
         status_callback_url: str | None = None,
         status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SWMLWebhookResponse:
         body: dict[str, Any] = {
             k: v
@@ -1331,7 +1335,7 @@ class SwmlWebhooks(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("SWMLWebhookResponse", self._http.patch(self._path(id), body=body))
 
 
@@ -1357,7 +1361,7 @@ class FabricTokens(BaseResource):
         region: str | None = None,
         company_name: str | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SubscriberTokenResponse:
         body: dict[str, Any] = {
             k: v
@@ -1379,7 +1383,7 @@ class FabricTokens(BaseResource):
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "SubscriberTokenResponse",
             self._http.post(self._path("subscribers", "tokens"), body=body),
@@ -1390,14 +1394,14 @@ class FabricTokens(BaseResource):
         *,
         refresh_token: jwt,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SubscriberRefreshTokenResponse:
         body: dict[str, Any] = {
             k: v for k, v in {"refresh_token": refresh_token}.items() if v is not None
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "SubscriberRefreshTokenResponse",
             self._http.post(self._path("subscribers", "tokens", "refresh"), body=body),
@@ -1409,7 +1413,7 @@ class FabricTokens(BaseResource):
         address_id: uuid,
         expires_at: int | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SubscriberInviteTokenCreateResponse:
         body: dict[str, Any] = {
             k: v
@@ -1418,7 +1422,7 @@ class FabricTokens(BaseResource):
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "SubscriberInviteTokenCreateResponse",
             self._http.post(self._path("subscriber", "invites"), body=body),
@@ -1430,7 +1434,7 @@ class FabricTokens(BaseResource):
         allowed_addresses: list[uuid],
         expire_at: int | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SubscriberGuestTokenCreateResponse:
         body: dict[str, Any] = {
             k: v
@@ -1442,21 +1446,25 @@ class FabricTokens(BaseResource):
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "SubscriberGuestTokenCreateResponse",
             self._http.post(self._path("guests", "tokens"), body=body),
         )
 
     def create_embed_token(
-        self, *, token: str, extras: Mapping[str, Any] | None = None, **kwargs: Any
+        self,
+        *,
+        token: str,
+        extras: Mapping[str, Any] | None = None,
+        **_reserved_kw: Any,
     ) -> EmbedsTokensResponse:
         body: dict[str, Any] = {
             k: v for k, v in {"token": token}.items() if v is not None
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast(
             "EmbedsTokensResponse",
             self._http.post(self._path("embeds", "tokens"), body=body),

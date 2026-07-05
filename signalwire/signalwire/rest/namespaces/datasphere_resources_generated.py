@@ -2,7 +2,7 @@
 # Regenerate: python3 porting-sdk/scripts/generate_python_rest_types.py
 #
 # One typed CRUD subclass per full-CRUD resource: closed typed create/update params
-# (explicit spec fields) + an ``extras`` escape hatch and a ``**kwargs`` tail for
+# (explicit spec fields) + an ``extras`` escape hatch and a ``**_reserved_kw`` tail for
 # unknown / reserved-word wire fields, bound to the resource's spec types.
 from __future__ import annotations
 
@@ -42,9 +42,9 @@ class DatasphereDocuments(
         body: DocumentCreateRequest,
         *,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> Document:
-        merged: dict[str, Any] = {**body, **(extras or {}), **kwargs}
+        merged: dict[str, Any] = {**body, **(extras or {}), **_reserved_kw}
         return cast("Document", self._http.post(self._base_path, body=merged))
 
     def update(
@@ -54,14 +54,14 @@ class DatasphereDocuments(
         *,
         tags: list[str] | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> Document:
         body: dict[str, Any] = {
             k: v for k, v in {"tags": tags}.items() if v is not None
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("Document", self._http.patch(self._path(id), body=body))
 
     def search(
@@ -76,7 +76,7 @@ class DatasphereDocuments(
         pos_to_expand: list[str] | None = None,
         max_synonyms: int | None = None,
         extras: Mapping[str, Any] | None = None,
-        **kwargs: Any,
+        **_reserved_kw: Any,
     ) -> SearchResponse:
         body: dict[str, Any] = {
             k: v
@@ -94,7 +94,7 @@ class DatasphereDocuments(
         }
         if extras:
             body.update(extras)
-        body.update(kwargs)
+        body.update(_reserved_kw)
         return cast("SearchResponse", self._http.post(self._path("search"), body=body))
 
     def list_chunks(self, document_id: str, **params: Any) -> ChunkListResponse:
