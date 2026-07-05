@@ -16,7 +16,13 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from importlib.resources.abc import Traversable
+try:
+    # Python 3.11+: the Traversable ABC lives under importlib.resources.abc.
+    from importlib.resources.abc import Traversable
+except ModuleNotFoundError:
+    # Python 3.10: importlib.resources.abc does not exist yet; the ABC is at
+    # importlib.abc.Traversable (used here only as a type annotation).
+    from importlib.abc import Traversable
 from unittest.mock import Mock, patch, MagicMock, mock_open
 from typing import Dict, List, Any, Optional
 
