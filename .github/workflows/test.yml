@@ -44,6 +44,15 @@ jobs:
         uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
+          # Cache pip's wheel/download store keyed on the dep manifests. The
+          # `Install signalwire-python (editable + dev deps)` step was ~87s (88%
+          # of the job) re-downloading + building the same wheels every run; a
+          # warm pip cache installs from local wheels instead. Keys on both the
+          # package (pyproject.toml) and dev deps so a manifest change invalidates.
+          cache: 'pip'
+          cache-dependency-path: |
+            signalwire-python/pyproject.toml
+            signalwire-python/requirements-dev.txt
 
       - name: Install Python test harnesses (mock_relay + mock_signalwire)
         run: |
