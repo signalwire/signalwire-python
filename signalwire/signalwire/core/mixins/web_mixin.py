@@ -67,7 +67,9 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
     # has-type ordering gap. Runtime is unaffected (no assignment here).
     _app: Any | None
     _proxy_url_base: str | None
-    _dynamic_config_callback: Callable[[dict[str, Any], dict[str, Any], dict[str, Any], Any], None] | None
+    _dynamic_config_callback: (
+        Callable[[dict[str, Any], dict[str, Any], dict[str, Any], Any], None] | None
+    )
 
     def get_app(self) -> FastAPI:
         """
@@ -282,9 +284,7 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                         await self._handle_swaig_request(request, Response())
                     )
                 if clean_path == "post_prompt":
-                    return _as_response(
-                        await self._handle_post_prompt_request(request)
-                    )
+                    return _as_response(await self._handle_post_prompt_request(request))
                 if clean_path == "check_for_input":
                     return _as_response(
                         await self._handle_check_for_input_request(request)
@@ -392,9 +392,7 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         try:
             if mode == "cgi":
                 # CGI handler returns the response body as a string to print.
-                cgi_response: str = self.handle_serverless_request(
-                    event, context, mode
-                )
+                cgi_response: str = self.handle_serverless_request(event, context, mode)
                 print(cgi_response)
                 return cgi_response
             if mode == "azure_function":
@@ -552,7 +550,9 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                 @router.post(path)
                 @router.post(path_with_slash)
                 async def handle_callback(
-                    request: Request, response: Response, cb_path: str | None = callback_path
+                    request: Request,
+                    response: Response,
+                    cb_path: str | None = callback_path,
                 ) -> Response:
                     """Handle GET/POST requests to a registered callback path"""
                     # Store the callback path in request state for _handle_request to use
@@ -1202,7 +1202,9 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             )
 
     def on_request(
-        self, request_data: dict[str, Any] | None = None, callback_path: str | None = None
+        self,
+        request_data: dict[str, Any] | None = None,
+        callback_path: str | None = None,
     ) -> dict[str, Any] | None:
         """
         Called when SWML is requested, with request data when available
@@ -1301,7 +1303,10 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         self._routing_callbacks[normalized_path] = callback_fn
 
     def set_dynamic_config_callback(
-        self, callback: Callable[[dict[str, Any], dict[str, Any], dict[str, Any], "AgentBase"], None]
+        self,
+        callback: Callable[
+            [dict[str, Any], dict[str, Any], dict[str, Any], "AgentBase"], None
+        ],
     ) -> "AgentBase":
         """
         Set a callback function for dynamic agent configuration

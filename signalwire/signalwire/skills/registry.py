@@ -320,9 +320,7 @@ class SkillRegistry:
         self._load_entry_points()
 
         # Helper function to add skill to schema
-        def add_skill_to_schema(
-            skill_class: type[SkillBase], source: str
-        ) -> None:
+        def add_skill_to_schema(skill_class: type[SkillBase], source: str) -> None:
             try:
                 skill_name = skill_class.SKILL_NAME
                 if skill_name is None:

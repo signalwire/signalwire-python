@@ -71,9 +71,7 @@ class GatherInfo:
         self._completion_action = completion_action
         self._prompt = prompt
 
-    def add_question(
-        self, key: str, question: str, **kwargs: Any
-    ) -> "GatherInfo":
+    def add_question(self, key: str, question: str, **kwargs: Any) -> "GatherInfo":
         """
         Add a question to gather.
 

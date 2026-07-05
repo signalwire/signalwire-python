@@ -22,6 +22,12 @@ class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object a
     Mixin class containing all AI configuration methods for AgentBase
     """
 
+    # Optional ASR-driven multilingual config (Mode B). AgentBase.__init__ sets it
+    # to None; set_multilingual() assigns the dict. Declared explicitly so the base
+    # type is dict|None (mypy would otherwise infer a non-optional dict from the
+    # setter and reject AgentBase's None initializer).
+    _multilingual: dict[str, Any] | None = None
+
     def add_hint(self, hint: str) -> "AgentBase":
         """
         Add a simple string hint to help the AI agent understand certain words better

@@ -39,7 +39,3 @@ relay-rest.delete_domain_application: sdk-gap — see above.
 
 video.list_logs: sdk-gap — `client.logs` serves messaging/voice/fax/conference logs only; there is no `client.video.logs` accessor for GET `/api/video/logs`.
 video.get_log: sdk-gap — no `client.video.logs` accessor (see above).
-
-## compatibility — bare per-country available-numbers node
-
-compatibility.list_available_phone_number_resources_by_country: sdk-gap — CompatPhoneNumbers exposes `list_available_countries` (collection) + `search_local` (`/{IsoCountry}/Local`) + `search_toll_free` (`/{IsoCountry}/TollFree`), but no method hits the bare `/AvailablePhoneNumbers/{IsoCountry}` node.

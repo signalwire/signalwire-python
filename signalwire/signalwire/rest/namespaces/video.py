@@ -16,7 +16,24 @@ warnings.warn(
     stacklevel=2,
 )
 
-from .video_resources_generated import VideoConferenceTokens, VideoConferences, VideoRoomRecordings, VideoRoomSessions, VideoRoomTokens, VideoRooms, VideoStreams  # noqa: E402  (re-export after the deprecation warn — intentional)
+from .video_resources_generated import (  # noqa: E402  (re-export after the deprecation warn — intentional)
+    VideoConferenceTokens,
+    VideoConferences,
+    VideoRoomRecordings,
+    VideoRoomSessions,
+    VideoRoomTokens,
+    VideoRooms,
+    VideoStreams,
+)
 from ._client_tree_generated import VideoNamespace  # noqa: E402  (re-export after the deprecation warn — intentional)
 
-__all__ = ["VideoConferenceTokens", "VideoConferences", "VideoNamespace", "VideoRoomRecordings", "VideoRoomSessions", "VideoRoomTokens", "VideoRooms", "VideoStreams"]
+__all__ = [
+    "VideoConferenceTokens",
+    "VideoConferences",
+    "VideoNamespace",
+    "VideoRoomRecordings",
+    "VideoRoomSessions",
+    "VideoRoomTokens",
+    "VideoRooms",
+    "VideoStreams",
+]

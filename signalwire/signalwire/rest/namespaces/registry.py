@@ -16,7 +16,18 @@ warnings.warn(
     stacklevel=2,
 )
 
-from .relay_rest_resources_generated import RegistryBrands, RegistryCampaigns, RegistryNumbers, RegistryOrders  # noqa: E402  (re-export after the deprecation warn — intentional)
+from .relay_rest_resources_generated import (  # noqa: E402  (re-export after the deprecation warn — intentional)
+    RegistryBrands,
+    RegistryCampaigns,
+    RegistryNumbers,
+    RegistryOrders,
+)
 from ._client_tree_generated import RegistryNamespace  # noqa: E402  (re-export after the deprecation warn — intentional)
 
-__all__ = ["RegistryBrands", "RegistryCampaigns", "RegistryNamespace", "RegistryNumbers", "RegistryOrders"]
+__all__ = [
+    "RegistryBrands",
+    "RegistryCampaigns",
+    "RegistryNamespace",
+    "RegistryNumbers",
+    "RegistryOrders",
+]

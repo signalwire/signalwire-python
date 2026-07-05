@@ -357,7 +357,9 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
     _AUTO_ANSWER_VERBS: ClassVar[set[str]] = {"play", "connect"}
 
     @staticmethod
-    def _load_service_config(config_file: str | None, service_name: str) -> dict[str, Any]:
+    def _load_service_config(
+        config_file: str | None, service_name: str
+    ) -> dict[str, Any]:
         """Load service configuration from config file if available"""
         from signalwire.core.config_loader import ConfigLoader
 
@@ -1504,9 +1506,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         # which properly handles SWML_PROXY_URL_BASE environment variable
         return super()._build_webhook_url(endpoint, query_params)
 
-    def _find_summary_in_post_data(
-        self, body: "PostPrompt", logger: Any
-    ) -> Any:
+    def _find_summary_in_post_data(self, body: "PostPrompt", logger: Any) -> Any:
         """
         Attempt to find a summary in the post-prompt response data
 
@@ -1694,9 +1694,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         return ephemeral_agent
 
-    async def _handle_request(
-        self, request: Request, response: Response
-    ) -> Response:
+    async def _handle_request(self, request: Request, response: Response) -> Response:
         """
         Override SWMLService's _handle_request to use AgentBase's _render_swml
 

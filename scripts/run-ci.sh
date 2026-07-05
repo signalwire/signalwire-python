@@ -122,7 +122,12 @@ rest_coverage_gate() {
         return 1
     fi
     python3 -c "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:$port/__mock__/journal/reset',method='POST'),timeout=5).read()"
-    MOCK_SIGNALWIRE_PORT="$port" python3 -m pytest "$PORT_ROOT/tests/unit/rest/" -k full_mock -p no:xdist -q -o addopts="" || return 1
+    # Drive every generated wire test (the `*_generated_test.py` suite, `*Wire`
+    # classes) against the mock to populate the coverage journal. These replaced the
+    # old hand `*_full_mock` tests (bb2c6cf); the previous `-k full_mock` selector
+    # matched nothing after that, so the journal stayed empty and coverage failed.
+    MOCK_SIGNALWIRE_PORT="$port" python3 -m pytest \
+        "$PORT_ROOT/tests/unit/rest/" -k Wire -p no:xdist -q -o addopts="" || return 1
     python3 -m mock_signalwire.rest_coverage \
         --mock-url "http://127.0.0.1:$port" \
         --spec-root "$PORTING_SDK_DIR/rest-apis" \
