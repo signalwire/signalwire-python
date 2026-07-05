@@ -47,6 +47,7 @@ try:
     from fastapi.responses import JSONResponse
     from fastapi.security import HTTPBasic, HTTPBasicCredentials  # noqa: F401
     from pydantic import BaseModel  # noqa: F401
+    from signalwire.core.web import HostAppRouter
 except ImportError:
     raise ImportError(
         "fastapi is required. Install it with: pip install fastapi"
@@ -642,14 +643,15 @@ class SWMLService(ToolMixin):
         """
         self.verb_registry.register_handler(handler)
 
-    def as_router(self) -> APIRouter:
+    def as_router(self) -> "HostAppRouter":
         """
-        Create a FastAPI router for this service
+        Create a router to embed this service's routes in a host web app.
 
         Returns:
-            APIRouter: FastAPI router
+            HostAppRouter: a FastAPI ``APIRouter`` subclass (behaviourally an
+            ``APIRouter``; the named type is the cross-port ``as_router`` contract).
         """
-        router = APIRouter(redirect_slashes=False)
+        router = HostAppRouter(redirect_slashes=False)
 
         # Root endpoint with and without trailing slash
         @router.get("/")

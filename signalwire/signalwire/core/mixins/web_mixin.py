@@ -18,6 +18,7 @@ from collections.abc import Awaitable, Callable
 
 from fastapi import Depends, FastAPI, APIRouter, Request, Response
 from fastapi.responses import JSONResponse
+from signalwire.core.web import HostAppRouter
 
 from signalwire.core.logging_config import get_execution_mode
 from signalwire.core.security.security_utils import (
@@ -172,15 +173,16 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
 
         return self._app
 
-    def as_router(self) -> APIRouter:
+    def as_router(self) -> "HostAppRouter":
         """
-        Get a FastAPI router for this agent
+        Get a router to embed this agent's routes in a host web app.
 
         Returns:
-            FastAPI router
+            HostAppRouter: a FastAPI ``APIRouter`` subclass (behaviourally an
+            ``APIRouter``; the named type is the cross-port ``as_router`` contract).
         """
         # Create a router with explicit redirect_slashes=False
-        router = APIRouter(redirect_slashes=False)
+        router = HostAppRouter(redirect_slashes=False)
 
         # Register routes explicitly
         self._register_routes(router)
