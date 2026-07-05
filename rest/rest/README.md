@@ -37,7 +37,6 @@ client.calling.dial(
 - Full Fabric API: 13 resource types with CRUD + addresses, tokens, and generic resources
 - Datasphere: document management and semantic search
 - Video: rooms, sessions, recordings, conferences, tokens, streams
-- Compatibility API: full Twilio-compatible LAML surface
 - Phone number management, 10DLC registry, MFA, logs, and more
 - Shared `requests.Session` for connection pooling across all calls
 - Dict returns -- raw JSON, no wrapper objects to learn
@@ -48,7 +47,6 @@ client.calling.dial(
 - [Client Reference](docs/client-reference.md) -- RestClient constructor, namespaces, error handling
 - [Fabric Resources](docs/fabric.md) -- managing AI agents, SWML scripts, subscribers, call flows, and more
 - [Calling Commands](docs/calling.md) -- REST-based call control (dial, play, record, collect, AI, etc.)
-- [Compatibility API](docs/compat.md) -- Twilio-compatible LAML endpoints
 - [All Namespaces](docs/namespaces.md) -- phone numbers, video, datasphere, logs, registry, and more
 
 ## Examples
@@ -77,7 +75,6 @@ signalwire/rest/
         fabric.py        # 13 resource types + generic resources + addresses + tokens
         calling.py       # 37 command dispatch methods via single POST
         phone_numbers.py # Search, purchase, update, release
-        compat.py        # Twilio-compatible LAML API
         video.py         # Rooms, sessions, recordings, conferences
         datasphere.py    # Documents, search, chunks
         ... and 15 more
