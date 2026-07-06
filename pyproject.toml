@@ -149,6 +149,7 @@ include-package-data = true
 
 [tool.setuptools.package-data]
 signalwire = [
+    "py.typed",
     "schema.json",
     "**/*.json",
     "skills/*/README.md",
