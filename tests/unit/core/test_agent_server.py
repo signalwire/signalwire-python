@@ -365,10 +365,9 @@ class TestSipRouting:
         server.register(agent, "/support")
         server.setup_sip_routing(auto_map=True)
 
-        # Directly invoke the callback
-        mock_request = Mock()
+        # Directly invoke the callback with the framework-free (body, headers) shape
         body = {"call": {"to": "sip:support@example.com"}}
-        result = server._sip_routing_callback(mock_request, body)
+        result = server._sip_routing_callback(body, {})
         assert result == "/support"
 
     def test_sip_routing_callback_with_unknown_username(self) -> None:
@@ -378,18 +377,16 @@ class TestSipRouting:
         server.register(agent, "/support")
         server.setup_sip_routing(auto_map=True)
 
-        mock_request = Mock()
         body = {"call": {"to": "sip:unknown@example.com"}}
-        result = server._sip_routing_callback(mock_request, body)
+        result = server._sip_routing_callback(body, {})
         assert result is None
 
     def test_sip_routing_callback_no_sip_username(self) -> None:
         """Test the SIP routing callback with no extractable username"""
         server = AgentServer()
         server.setup_sip_routing()
-        mock_request = Mock()
         body: dict[str, Any] = {}
-        result = server._sip_routing_callback(mock_request, body)
+        result = server._sip_routing_callback(body, {})
         assert result is None
 
 

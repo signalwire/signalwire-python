@@ -2367,4 +2367,142 @@ class TestSchemaNotFoundWarning:
             schema_validation=False,
         )
         assert svc.name == "no_schema_warn"
+
+
+class TestDecomposedHandleRequestCore:
+    """Drive the framework-free ``handle_request(method, url, headers, body)`` core
+    directly, proving the three behavior paths (401 auth / 307 routing-redirect /
+    200 SWML) match the FastAPI ``_handle_request`` path.
+    """
+
+    def _svc(self) -> SWMLService:
+        return SWMLService(
+            name="hr_core", route="/", host="127.0.0.1", port=3001,
+            basic_auth=("u", "p"), schema_validation=False,
+        )
+
+    # -- 200: plain SWML render --
+
+    def test_core_200_renders_swml(self) -> None:
+        """A GET with valid auth returns (200, {}, <swml-json>)."""
+        svc = self._svc()
+        status, headers, body_str = svc.handle_request(
+            "GET", "http://127.0.0.1:3001/", _auth_header("u", "p")
+        )
+        assert status == 200
+        assert headers == {}
+        doc = json.loads(body_str)
+        assert doc["version"] == "1.0.0"
+        assert "main" in doc["sections"]
+
+    def test_core_200_matches_fastapi_path(self) -> None:
+        """The decomposed core's 200 body is identical to the FastAPI path."""
+        svc = self._svc()
+        _, _, core_body = svc.handle_request(
+            "GET", "http://127.0.0.1:3001/", _auth_header("u", "p")
+        )
+        client = _build_test_client(svc)
+        fastapi_resp = client.get("/", headers=_auth_header("u", "p"))
+        assert fastapi_resp.status_code == 200
+        assert json.loads(core_body) == fastapi_resp.json()
+
+    # -- 401: auth failure --
+
+    def test_core_401_on_missing_auth(self) -> None:
+        """No Authorization header -> (401, WWW-Authenticate: Basic, error json)."""
+        svc = self._svc()
+        status, headers, body_str = svc.handle_request(
+            "GET", "http://127.0.0.1:3001/", {}
+        )
+        assert status == 401
+        assert headers.get("WWW-Authenticate") == "Basic"
+        assert json.loads(body_str)["error"] == "Unauthorized"
+
+    def test_core_401_on_bad_credentials(self) -> None:
+        """Wrong credentials -> 401 (timing-safe compare fails)."""
+        svc = self._svc()
+        status, headers, _ = svc.handle_request(
+            "GET", "http://127.0.0.1:3001/", _auth_header("u", "wrong")
+        )
+        assert status == 401
+        assert headers.get("WWW-Authenticate") == "Basic"
+
+    def test_core_401_matches_fastapi_path(self) -> None:
+        """Both the decomposed core and the FastAPI path 401 on missing auth.
+
+        The decomposed core carries ``WWW-Authenticate: Basic`` in its returned
+        headers triple (the framework-free contract). The FastAPI adapter
+        preserves the original ``HTTPException``-raise path exactly (FastAPI
+        builds a fresh error response from the exception). The behavior-neutral
+        invariant asserted here is the 401 status code on both.
+        """
+        svc = self._svc()
+        core_status, core_headers, _ = svc.handle_request(
+            "GET", "http://127.0.0.1:3001/", {}
+        )
+        client = _build_test_client(svc)
+        fastapi_resp = client.get("/")
+        assert core_status == 401
+        assert core_headers.get("WWW-Authenticate") == "Basic"
+        assert fastapi_resp.status_code == 401
+
+    # -- 307: routing-callback redirect --
+
+    def test_core_307_routing_redirect(self) -> None:
+        """A routing callback returning a route -> (307, Location, "")."""
+        svc = self._svc()
+
+        def cb(body: dict[str, Any], headers: dict[str, Any]) -> str | None:
+            # Prove the decomposed (body, headers) shape is what the core passes.
+            assert body["call"]["to"] == "sip:test@example.com"
+            assert isinstance(headers, dict)
+            return "/other-agent"
+
+        svc.register_routing_callback(cb, "/sip")
+        status, headers, body_str = svc.handle_request(
+            "POST",
+            "http://127.0.0.1:3001/sip",
+            _auth_header("u", "p"),
+            {"call": {"to": "sip:test@example.com"}},
+        )
+        assert status == 307
+        assert headers.get("Location") == "/other-agent"
+        assert body_str == ""
+
+    def test_core_307_matches_fastapi_path(self) -> None:
+        """The FastAPI path produces the same 307 + Location for the same callback."""
+        svc = self._svc()
+        svc.register_routing_callback(
+            lambda body, headers: "/other-agent", "/sip"
+        )
+        core_status, core_headers, _ = svc.handle_request(
+            "POST",
+            "http://127.0.0.1:3001/sip",
+            _auth_header("u", "p"),
+            {"call": {"to": "sip:test@example.com"}},
+        )
+        client = _build_test_client(svc)
+        fastapi_resp = client.post(
+            "/sip",
+            json={"call": {"to": "sip:test@example.com"}},
+            headers=_auth_header("u", "p"),
+            follow_redirects=False,
+        )
+        assert core_status == 307
+        assert fastapi_resp.status_code == 307
+        assert core_headers.get("Location") == "/other-agent"
+        assert fastapi_resp.headers.get("location") == "/other-agent"
+
+    def test_core_routing_none_continues_to_200(self) -> None:
+        """A callback returning None falls through to a normal 200 SWML render."""
+        svc = self._svc()
+        svc.register_routing_callback(lambda body, headers: None, "/sip")
+        status, _, body_str = svc.handle_request(
+            "POST",
+            "http://127.0.0.1:3001/sip",
+            _auth_header("u", "p"),
+            {"call": {"to": "sip:test@example.com"}},
+        )
+        assert status == 200
+        assert json.loads(body_str)["version"] == "1.0.0"
         assert svc.schema_utils is not None

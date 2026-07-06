@@ -739,9 +739,9 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
 
                 if request.method == "POST" and body:
                     req_log.debug("processing_routing_callback", path=callback_path)
-                    # Call the routing callback
+                    # Call the routing callback: (body, headers) -> route | None
                     try:
-                        route = callback_fn(request, body)
+                        route = callback_fn(body, dict(request.headers))
                         if route is not None:
                             req_log.info("routing_request", route=route)
                             # Return a redirect to the new route
@@ -1274,7 +1274,7 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
 
     def register_routing_callback(
         self,
-        callback_fn: Callable[[Request, dict[str, Any]], str | None],
+        callback_fn: Callable[[dict[str, Any], dict[str, Any]], str | None],
         path: str = "/sip",
     ) -> None:
         """
@@ -1285,12 +1285,16 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         created that will handle requests. This endpoint will use the callback to
         determine if the request should be processed by this service or redirected.
 
-        The callback should take a request object and request body dictionary and return:
+        The callback receives the parsed request body dictionary and the request
+        headers dictionary — ``callback_fn(body, headers)`` — and returns:
         - A route string if it should be routed to a different endpoint
         - None if normal processing should continue
 
+        This framework-free ``(body, headers) -> str | None`` shape matches the
+        decomposed request-dispatch core and the other SDK ports.
+
         Args:
-            callback_fn: The callback function to register
+            callback_fn: The callback function to register, ``(body, headers)``.
             path: The path where this callback should be registered (default: "/sip")
         """
         # Normalize the path (remove trailing slash)

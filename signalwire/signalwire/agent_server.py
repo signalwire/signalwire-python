@@ -190,9 +190,10 @@ class AgentServer:
             for agent_route, agent in self.agents.items():
                 self._auto_map_agent_sip_usernames(agent, agent_route)
 
-        # Create a unified routing callback that checks all registered usernames
+        # Create a unified routing callback that checks all registered usernames.
+        # Framework-free (body, headers) shape; this callback only reads the body.
         def server_sip_routing_callback(
-            request: Request, body: dict[str, Any]
+            body: dict[str, Any], headers: dict[str, Any]
         ) -> str | None:
             """Unified SIP routing callback that checks all registered usernames"""
             # Extract the SIP username
@@ -712,15 +713,18 @@ class AgentServer:
             uvicorn.run(self.app, host=host, port=port, log_level=self.log_level)
 
     def register_global_routing_callback(
-        self, callback_fn: Callable[[Request, dict[str, Any]], str | None], path: str
+        self,
+        callback_fn: Callable[[dict[str, Any], dict[str, Any]], str | None],
+        path: str,
     ) -> None:
         """
         Register a routing callback across all agents
 
         This allows you to add unified routing logic to all agents at the same path.
+        The callback receives ``(body, headers)`` — the framework-free shape.
 
         Args:
-            callback_fn: The callback function to register
+            callback_fn: The callback function to register, ``(body, headers)``.
             path: The path to register the callback at
         """
         # Normalize the path

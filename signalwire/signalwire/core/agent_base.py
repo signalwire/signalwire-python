@@ -724,8 +724,12 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             Self for method chaining
         """
 
-        # Create a routing callback that handles SIP usernames
-        def sip_routing_callback(request: Request, body: dict[str, Any]) -> str | None:
+        # Create a routing callback that handles SIP usernames.
+        # Signature is the framework-free (body, headers) shape; this callback
+        # only inspects the body (via extract_sip_username), never the headers.
+        def sip_routing_callback(
+            body: dict[str, Any], headers: dict[str, Any]
+        ) -> str | None:
             # Extract SIP username from the request body
             sip_username = self.extract_sip_username(body)
 
@@ -1693,6 +1697,83 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         ephemeral_agent._is_ephemeral = True
 
         return ephemeral_agent
+
+    def handle_request(
+        self,
+        method: str,
+        url: str,
+        headers: dict[str, Any],
+        body: dict[str, Any] | None = None,
+    ) -> tuple[int, dict[str, Any], str]:
+        """
+        Framework-free request-dispatch core for AgentBase.
+
+        Overrides :meth:`SWMLService.handle_request` so the primitive dispatch
+        surface renders SWML via AgentBase's :meth:`_render_swml` (mirroring the
+        FastAPI ``_handle_root_request`` path), instead of the base
+        ``render_document``. Performs proxy detection, basic-auth, the
+        routing-callback check, and ``on_swml_request`` modification over plain
+        primitives, returning a ``(status, headers, body_string)`` triple with the
+        401-auth and 307-redirect behavior preserved.
+
+        Args:
+            method: HTTP method, e.g. ``"GET"`` or ``"POST"``.
+            url: The full request URL as a string.
+            headers: Request headers as a plain dict.
+            body: The already-parsed JSON body for POST requests, or ``None``.
+
+        Returns:
+            A ``(status_code, response_headers, body_string)`` triple.
+        """
+        body = body if body is not None else {}
+        callback_path = self._callback_path_for_url(url)
+
+        # Proxy detection (shared primitive core from SWMLService)
+        self._detect_proxy_from_primitives(url, headers)
+
+        # Auth
+        if not self._check_basic_auth_headers(headers):
+            return (
+                401,
+                {"WWW-Authenticate": "Basic"},
+                json.dumps({"error": "Unauthorized"}),
+            )
+
+        # call_id: body for POST, absent for the primitive path otherwise
+        call_id: str | None = None
+        if method == "POST" and body:
+            call_id = body.get("call_id")
+            if not call_id and "call" in body:
+                call_data = body.get("call")
+                if isinstance(call_data, dict):
+                    call_id = call_data.get("call_id")
+
+            # Routing callback: (body, headers) -> route | None
+            if (
+                callback_path
+                and getattr(self, "_routing_callbacks", None)
+                and callback_path in self._routing_callbacks
+            ):
+                callback_fn = self._routing_callbacks[callback_path]
+                try:
+                    route = callback_fn(body, headers)
+                    if route is not None:
+                        self.log.info("routing_request", route=route)
+                        return (307, {"Location": route}, "")
+                except Exception as e:
+                    self.log.error("error_in_routing_callback", error=str(e))
+
+        # Allow subclasses to inspect/modify the request. on_swml_request retains
+        # its FastAPI-Request third arg for back-compat; the primitive path passes
+        # None (subclasses that need the raw request use the FastAPI path).
+        modifications = None
+        try:
+            modifications = self.on_swml_request(body, callback_path, None)
+        except Exception as e:
+            self.log.error("error_in_request_modifier", error=str(e))
+
+        swml = self._render_swml(call_id, modifications)
+        return (200, {}, swml)
 
     async def _handle_request(self, request: Request, response: Response) -> Response:
         """

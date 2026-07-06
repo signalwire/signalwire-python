@@ -1750,3 +1750,71 @@ class TestAgentId:
     def test_custom_agent_id(self) -> None:
         agent = _make_agent(name="id_test", agent_id="custom-123", use_pom=False)
         assert agent.agent_id == "custom-123"
+
+
+class TestAgentBaseDecomposedHandleRequest:
+    """Drive AgentBase's framework-free ``handle_request`` override directly,
+    proving its 401-auth / 307-routing-redirect / 200-SWML behavior paths and
+    that it renders via AgentBase's ``_render_swml`` (AI verb present).
+    """
+
+    def _agent(self) -> AgentBase:
+        return _make_agent(
+            name="hr_agent", route="/", basic_auth=("user", "pass"), use_pom=False
+        )
+
+    @staticmethod
+    def _auth() -> Dict[str, str]:
+        import base64
+        creds = base64.b64encode(b"user:pass").decode()
+        return {"Authorization": f"Basic {creds}"}
+
+    def test_agent_core_200_renders_agent_swml(self) -> None:
+        """200 path renders AgentBase SWML (contains the AI verb, not just base)."""
+        agent = self._agent()
+        status, headers, body_str = agent.handle_request(
+            "GET", "http://127.0.0.1:3000/", self._auth()
+        )
+        assert status == 200
+        assert headers == {}
+        doc = json.loads(body_str)
+        assert doc["version"] == "1.0.0"
+        main = doc["sections"]["main"]
+        verbs = {k for verb in main if isinstance(verb, dict) for k in verb}
+        assert "ai" in verbs  # AgentBase rendering, not base render_document
+
+    def test_agent_core_401_on_missing_auth(self) -> None:
+        agent = self._agent()
+        status, headers, body_str = agent.handle_request(
+            "GET", "http://127.0.0.1:3000/", {}
+        )
+        assert status == 401
+        assert headers.get("WWW-Authenticate") == "Basic"
+        assert json.loads(body_str)["error"] == "Unauthorized"
+
+    def test_agent_core_307_routing_redirect(self) -> None:
+        agent = self._agent()
+        agent.register_routing_callback(
+            lambda body, headers: "/elsewhere", "/sip"
+        )
+        status, headers, body_str = agent.handle_request(
+            "POST",
+            "http://127.0.0.1:3000/sip",
+            self._auth(),
+            {"call": {"to": "sip:x@example.com"}},
+        )
+        assert status == 307
+        assert headers.get("Location") == "/elsewhere"
+        assert body_str == ""
+
+    def test_agent_core_routing_none_continues_to_200(self) -> None:
+        agent = self._agent()
+        agent.register_routing_callback(lambda body, headers: None, "/sip")
+        status, _, body_str = agent.handle_request(
+            "POST",
+            "http://127.0.0.1:3000/sip",
+            self._auth(),
+            {"call": {"to": "sip:x@example.com"}},
+        )
+        assert status == 200
+        assert json.loads(body_str)["version"] == "1.0.0"
