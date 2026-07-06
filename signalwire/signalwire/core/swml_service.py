@@ -36,7 +36,6 @@ try:
     import fastapi  # noqa: F401
     from fastapi import (
         FastAPI,
-        APIRouter,
         Depends,  # noqa: F401
         HTTPException,
         Query,  # noqa: F401

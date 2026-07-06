@@ -207,6 +207,6 @@ def make_webhook_validation_dependency(
 __all__ = [
     "SIGNALWIRE_SIGNATURE_HEADER",
     "TWILIO_COMPAT_SIGNATURE_HEADER",
-    "validate",
     "make_webhook_validation_dependency",
+    "validate",
 ]
