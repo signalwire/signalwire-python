@@ -1,10 +1,10 @@
-"""Back-compat shim — DO NOT add to other ports. x-sdk-back-compat-shim
+"""Deprecated import path for ``number_groups`` REST symbols.
 
-Deprecated import path. The REST layer is spec-generated; these symbols moved out of
-``namespaces.number_groups`` (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.number_groups import NumberGroupsResource`` working
-but emits a DeprecationWarning. Prefer ``client.number_groups`` (no import needed). PYTHON-ONLY: the
-surface oracle skips this file, so no other port implements these.
+These symbols moved out of ``namespaces.number_groups`` when the REST layer was
+regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
+re-export keeps ``from signalwire.signalwire.rest.namespaces.number_groups import NumberGroupsResource``
+working but emits a :class:`DeprecationWarning`. Prefer ``client.number_groups`` instead
+(no import needed).
 """
 
 import warnings

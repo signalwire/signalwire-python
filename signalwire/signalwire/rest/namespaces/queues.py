@@ -1,10 +1,10 @@
-"""Back-compat shim — DO NOT add to other ports. x-sdk-back-compat-shim
+"""Deprecated import path for ``queues`` REST symbols.
 
-Deprecated import path. The REST layer is spec-generated; these symbols moved out of
-``namespaces.queues`` (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.queues import QueuesResource`` working
-but emits a DeprecationWarning. Prefer ``client.queues`` (no import needed). PYTHON-ONLY: the
-surface oracle skips this file, so no other port implements these.
+These symbols moved out of ``namespaces.queues`` when the REST layer was
+regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
+re-export keeps ``from signalwire.signalwire.rest.namespaces.queues import QueuesResource``
+working but emits a :class:`DeprecationWarning`. Prefer ``client.queues`` instead
+(no import needed).
 """
 
 import warnings

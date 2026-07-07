@@ -144,7 +144,7 @@ class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TU
 
     Extends ``ReadResource`` (list + get) with create/update/delete. Generic over
     the spec-generated response/request types so each concrete resource publishes
-    its real per-operation shapes (the signature oracle resolves the subclass's
+    its real per-operation shapes (the type checker resolves each subclass's
     binding). At runtime every method still returns the raw server JSON dict — the
     type params are static only.
     """
@@ -186,8 +186,7 @@ class FabricResource(CrudWithAddresses[TList, TItem, TCreate, TUpdate]):
     """Standard fabric resource with CRUD + addresses.
 
     Intermediate generic base — concrete leaf resources bind the four type
-    parameters. Mirrors the TS port's ``FabricResource<TList, TItem, TCreate,
-    TUpdate>``. Lives here (not in the fabric namespace) so the generated
+    parameters. Lives here (not in the fabric namespace) so the generated
     ``fabric_resources_generated`` subclasses can inherit it without a cycle.
     """
 

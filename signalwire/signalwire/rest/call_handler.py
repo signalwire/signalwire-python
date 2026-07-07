@@ -1,9 +1,9 @@
-"""Back-compat shim — DO NOT add to other ports. x-sdk-back-compat-shim
+"""Deprecated import path for ``PhoneCallHandler``.
 
-Deprecated import path. ``PhoneCallHandler`` moved into the spec-generated types module.
-``from signalwire.signalwire.rest import PhoneCallHandler`` is the supported import; this
-re-export keeps the old DEEP path ``...rest.call_handler import PhoneCallHandler`` working but
-emits a DeprecationWarning. PYTHON-ONLY: the surface oracle skips this file.
+``PhoneCallHandler`` moved into the generated types module. Prefer
+``from signalwire.signalwire.rest import PhoneCallHandler``. This re-export keeps the
+old deep path ``...rest.call_handler import PhoneCallHandler`` working but emits a
+:class:`DeprecationWarning`.
 """
 
 import warnings

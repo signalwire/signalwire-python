@@ -4,7 +4,7 @@ Webhook signature validation for SignalWire-signed HTTP requests.
 Copyright (c) 2025 SignalWire. Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
-Implements both schemes from porting-sdk/webhooks.md:
+Implements both SignalWire webhook signature schemes:
 
 - Scheme A (RELAY/SWML/JSON): hex(HMAC-SHA1(key, url + raw_body))
 - Scheme B (Compat/cXML form): base64(HMAC-SHA1(key, url + sortedFormParams))
@@ -213,8 +213,8 @@ def validate_webhook_signature(
             ``X-Twilio-Signature`` for cXML compat). Missing / empty returns
             False without raising.
         url: The full URL SignalWire POSTed to (scheme, host, optional port,
-            path, query). Must match what the platform saw — see the
-            ``URL reconstruction`` section of porting-sdk/webhooks.md.
+            path, query). Must match exactly what the platform saw when it
+            computed the signature.
         raw_body: The raw request body bytes as a UTF-8 string, BEFORE any
             JSON / form parsing. Must be a ``str`` — passing a parsed dict
             raises ``TypeError``.

@@ -174,7 +174,6 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
                          enforced on POST /, /swaig, /post_prompt — unsigned or
                          invalidly-signed requests get a 403. Falls back to the
                          SIGNALWIRE_SIGNING_KEY env var if not passed.
-                         See porting-sdk/webhooks.md for the contract.
             trust_proxy_for_signature: If True, honor X-Forwarded-Proto /
                          X-Forwarded-Host when reconstructing the URL during
                          signature validation. Default False — proxy headers

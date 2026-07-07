@@ -71,8 +71,8 @@ def validate(
 
     The ``headers`` map is consulted for the signature header
     (``X-SignalWire-Signature`` or the ``X-Twilio-Signature`` alias); ``method``
-    is accepted for signature-shape parity with the cross-port contract but is
-    not part of the HMAC. Returns ``(403, {}, "")`` on any failure (missing/bad
+    is accepted to keep a stable signature but is not part of the HMAC. Returns
+    ``(403, {}, "")`` on any failure (missing/bad
     signature, non-UTF-8 body, validator error) — no body detail, to avoid
     leaking which branch tripped.
 
