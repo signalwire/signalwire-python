@@ -31,6 +31,7 @@ The tool automatically detects function types, provides appropriate execution en
 - **Serverless Environment Simulation**: Complete platform simulation for Lambda, CGI, Cloud Functions, and Azure Functions with environment variable management
 - **Automatic Log Suppression**: Logs are suppressed by default unless `--verbose` flag is used
 - **Enhanced Parameter Display**: Shows all JSON Schema constraints including enum values, min/max, patterns, and more
+- **`--parse-only` / `--dry-run`**: Validate an invocation's arguments and exit without running the agent or hitting the network (prints `parse OK`; exits non-zero on invalid args)
 
 ## Installation
 
@@ -154,6 +155,41 @@ The tool automatically:
 - Suppresses logs by default for cleaner output
 - Shows logs when `--verbose` is specified
 - Always suppresses output when using `--dump-swml` to ensure valid JSON
+
+## Argument Validation: `--parse-only` / `--dry-run`
+
+`--parse-only` (alias `--dry-run`) validates a `swaig-test` invocation's arguments and exits **without** loading the agent, touching the filesystem, or making any network request. It is the machine-checkable way to confirm that a documented `swaig-test` command line is well-formed.
+
+```bash
+# Valid invocation -> prints "parse OK", exits 0
+swaig-test examples/my_agent.py --list-tools --parse-only
+
+# --dry-run is an exact alias
+swaig-test examples/my_agent.py --dump-swml --dry-run
+```
+
+### Contract (canonical — every SDK port mirrors this exactly)
+
+This is the reference definition of the flag. Each language port implements the identical behavior so the cross-port DOC-CLI gate can validate documented invocations mechanically rather than heuristically:
+
+- **Names**: `--parse-only`, with `--dry-run` as an exact synonym. Both are boolean (take no value).
+- **What it does**: parse every argument and run all cross-flag validation (the same parsing and validation the tool performs for a normal run), then stop.
+- **What it does NOT do**: it never loads or imports the agent file, never checks whether the agent file exists on disk, never generates SWML, never executes a function, and never opens a network connection. Argument well-formedness is validated; the *world* is not touched. (A syntactically valid invocation naming a non-existent agent file therefore still reports `parse OK` — file existence is a runtime concern, not an argument-validity concern.)
+- **On valid arguments**: print exactly the single line `parse OK` to stdout and exit `0`.
+- **On invalid arguments** (unknown flag, missing required positional, mutually-exclusive flags supplied together, bad choice value, etc.): print the parser's error to stderr and exit **non-zero** (the standard argparse usage-error exit code is `2`). `--parse-only` does not suppress or soften any argument error — it surfaces exactly the error a normal run would.
+- **Precedence**: `--parse-only` short-circuits *after* successful argument validation and *before* any action flag (`--list-tools`, `--dump-swml`, `--exec`, `--list-agents`) takes effect. When present it always wins over those actions — including `--dump-swml`, whose normal stdout suppression is bypassed so the `parse OK` line is always printed.
+- **Position-independent**: `--parse-only` is honored wherever it appears on the command line, including *after* an `--exec FUNCTION ...` (which otherwise treats trailing tokens as function arguments). This matters because the gate appends the flag to the end of each documented invocation.
+
+```bash
+# Bogus flag -> parser error on stderr, non-zero exit
+swaig-test examples/my_agent.py --parse-only --no-such-flag   # exit 2
+
+# Missing required agent path -> usage error, non-zero exit
+swaig-test --parse-only                                       # exit 2
+
+# Mutually-exclusive flags still rejected under --parse-only
+swaig-test examples/my_agent.py --route /x --agent-class Y --parse-only  # exit 2
+```
 
 ## Serverless Environment Simulation
 
