@@ -30,8 +30,6 @@ import re
 from importlib.metadata import version as _pkg_version
 from typing import TYPE_CHECKING
 
-import pytest
-
 if TYPE_CHECKING:
     from signalwire.rest.client import RestClient
 
@@ -74,19 +72,10 @@ class TestWirePercentEncodingPin:
 class TestWireUserAgentPin:
     """The recorded User-Agent is ``<name>/<installed-package-version>``, not a stale literal."""
 
-    # KNOWN-FAILING against the current python reference: ``rest/_base.py`` hardcodes
-    # ``User-Agent: signalwire-agents-python-rest/1.0`` (SDK_BUG_LEDGER P1 — "wrong name
-    # and version; derive from package version"). This is a strict xfail so:
-    #   * the pin does NOT redden the suite while the P1 is open, but
-    #   * the moment the UA is fixed to derive from the package version, the xfail
-    #     "unexpectedly passes" → strict-xfail turns that into a FAILURE, forcing this
-    #     marker to be removed. That self-policing is the regression-pin contract:
-    #     remove the xfail when you fix the UA, and the pin then guards against re-drift.
-    @pytest.mark.xfail(
-        strict=True,
-        reason="SDK_BUG_LEDGER P1: python UA is hardcoded 'signalwire-agents-python-rest/1.0' "
-        "instead of deriving from the package version. Remove this marker when the UA is fixed.",
-    )
+    # SDK_BUG_LEDGER P1 (FIXED 2026-07-07): ``rest/_base.py`` now derives the UA from
+    # the installed package version (``signalwire-python/<version>``) instead of the
+    # stale hardcoded ``signalwire-agents-python-rest/1.0``. The xfail marker has been
+    # removed so this pin now HARD-ENFORCES the fix and guards against re-drift.
     def test_user_agent_version_tracks_the_package_version(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:

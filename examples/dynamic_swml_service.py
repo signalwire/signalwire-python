@@ -54,7 +54,7 @@ class DynamicGreetingService(SWMLService):
         self.reset_document()
         
         # Add answer verb
-        self.add_answer_verb()
+        self.add_verb("answer", {})
         
         # Add play verb for generic greeting
         self.add_verb("play", {
@@ -97,7 +97,7 @@ class DynamicGreetingService(SWMLService):
         self.reset_document()
         
         # Add answer verb
-        self.add_answer_verb()
+        self.add_verb("answer", {})
         
         # Customize greeting based on caller_name if provided
         caller_name = request_data.get("caller_name")
@@ -207,7 +207,7 @@ class CallRouterService(SWMLService):
         self.reset_document()
         
         # Add answer verb
-        self.add_answer_verb()
+        self.add_verb("answer", {})
         
         # Add play verb for greeting
         self.add_verb("play", {
@@ -248,7 +248,7 @@ class CallRouterService(SWMLService):
         
         # Create a new document
         self.reset_document()
-        self.add_answer_verb()
+        self.add_verb("answer", {})
         
         # Check if this is a high-volume period
         high_volume = request_data.get("high_volume", False)
@@ -402,7 +402,7 @@ def main():
     
     # Start the server
     try:
-        service.run(host=args.host, port=args.port)
+        service.serve(host=args.host, port=args.port)
     except KeyboardInterrupt:
         logger.info("server_shutdown")
         print("\nShutting down...")

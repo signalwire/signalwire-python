@@ -9,12 +9,30 @@ See LICENSE file in the project root for full license information.
 HTTP client infrastructure and base resource classes for the REST client.
 """
 
+from importlib.metadata import PackageNotFoundError, version
 from typing import Any, Generic, TypeVar, cast
 
 import requests
 from signalwire.core.logging_config import get_logger
 
 logger = get_logger("rest_client")
+
+
+def _user_agent() -> str:
+    """Build the REST client User-Agent from the installed package version.
+
+    The version segment is derived at runtime from ``signalwire-sdk`` (the dist
+    name in ``pyproject.toml``) so it can never drift from a hardcoded literal
+    (SDK_BUG_LEDGER P1: the old ``signalwire-agents-python-rest/1.0`` was both the
+    wrong product token and a stale ``/1.0`` while the package was at 3.x). The
+    product token stays stable at ``signalwire-python``.
+    """
+    try:
+        pkg_version = version("signalwire-sdk")
+    except PackageNotFoundError:  # pragma: no cover - only when running uninstalled
+        pkg_version = "unknown"
+    return f"signalwire-python/{pkg_version}"
+
 
 # CRUD response/request type parameters. Each concrete resource binds these to its
 # spec-generated TypedDicts (e.g. CrudResource[ListRoomsResponse, RoomResponse,
@@ -52,7 +70,7 @@ class HttpClient:
             {
                 "Content-Type": "application/json",
                 "Accept": "application/json",
-                "User-Agent": "signalwire-agents-python-rest/1.0",
+                "User-Agent": _user_agent(),
             }
         )
         logger.debug("HttpClient initialized", host=host, project=project[:8] + "...")
