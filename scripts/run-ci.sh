@@ -194,6 +194,9 @@ sched_gate GEN-IDIOM desc="generated surface follows the port's idiom" \
 sched_gate RELEASE-FRESH desc="publish path runs the gates before releasing" \
     -- python3 "$PORTING_SDK_DIR/scripts/release_fresh.py" --port python --repo "$PORT_ROOT"
 
+sched_gate README-INCLUDE desc="doc code blocks are byte-identical to their gate-compiled fixture regions" \
+    -- python3 "$PORTING_SDK_DIR/scripts/readme_include.py" --port python --repo .
+
 sched_run
 rc=$?
 if [ "$rc" -eq 0 ]; then
