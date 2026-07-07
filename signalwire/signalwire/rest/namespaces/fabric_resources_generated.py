@@ -197,7 +197,6 @@ class AiAgents(
         self,
         *,
         prompt: AIPrompt,
-        agent_id: uuid,
         name: str,
         global_data: dict[str, Any] | None = None,
         hints: list[str | Hint] | None = None,
@@ -207,6 +206,7 @@ class AiAgents(
         post_prompt_url: str | None = None,
         pronounce: list[Pronounce] | None = None,
         SWAIG: SWAIG | None = None,
+        agent_id: uuid | None = None,
         extras: Mapping[str, Any] | None = None,
         **_reserved_kw: Any,
     ) -> AIAgentResponse:
@@ -861,7 +861,6 @@ class SipEndpoints(
     def create(  # type: ignore[override]
         self,
         *,
-        id: uuid,
         username: str,
         caller_id: str,
         send_as: str,
@@ -870,6 +869,7 @@ class SipEndpoints(
         encryption: Encryption,
         call_handler: CallHandlerType,
         calling_handler_resource_id: uuid | None,
+        id: uuid | None = None,
         extras: Mapping[str, Any] | None = None,
         **_reserved_kw: Any,
     ) -> SipEndpointResponse:
