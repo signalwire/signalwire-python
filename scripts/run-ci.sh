@@ -175,6 +175,25 @@ sched_gate GEN-FRESH desc="generated REST/RELAY types reproduce from specs" \
     -- python3 "$PORTING_SDK_DIR/scripts/generate_python_rest_types.py" \
         --signalwire-python "$PORT_ROOT/signalwire" --check
 
+# ---- expansion gates (GATE_EXPANSION_PLAN) — enforcing ----------------------
+# python is the reference: GEN-TYPE-DEGENERACY + GEN-IDIOM self-skip clean;
+# PUBLIC-JARGON + RELEASE-FRESH enforce; ROUTE-COLLISION enforces (modulo the
+# user-approved ROUTE_COLLISION_ALLOW.md list_addresses singular-path entries).
+sched_gate GEN-TYPE-DEGENERACY desc="no degenerate/over-broad generated param types" \
+    -- python3 "$PORTING_SDK_DIR/scripts/gen_type_degeneracy.py" --port python --repo "$PORT_ROOT"
+
+sched_gate PUBLIC-JARGON desc="no internal jargon in public identifiers/docstrings" \
+    -- python3 "$PORTING_SDK_DIR/scripts/public_jargon.py" --port python --repo "$PORT_ROOT"
+
+sched_gate ROUTE-COLLISION desc="no split routes / duplicate CRUD bases (modulo allowlist)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/route_collision.py" --port python --repo "$PORT_ROOT"
+
+sched_gate GEN-IDIOM desc="generated surface follows the port's idiom" \
+    -- python3 "$PORTING_SDK_DIR/scripts/gen_idiom.py" --port python --repo "$PORT_ROOT"
+
+sched_gate RELEASE-FRESH desc="publish path runs the gates before releasing" \
+    -- python3 "$PORTING_SDK_DIR/scripts/release_fresh.py" --port python --repo "$PORT_ROOT"
+
 sched_run
 rc=$?
 if [ "$rc" -eq 0 ]; then
