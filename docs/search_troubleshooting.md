@@ -30,6 +30,7 @@ Results: []
    Examine the similarity scores in verbose output.
 
 3. Check the distance threshold:
+<!-- snippet: no-compile config-excerpt -->
    ```python
    {
        "distance_threshold": 0.7  # Very strict -- may filter out valid results
@@ -88,6 +89,7 @@ def search_with_fallback(self, query):
 
 Results are returned but do not match the query intent.
 
+<!-- snippet: no-compile output-illustration -->
 ```python
 Query: "Python authentication examples"
 Results:
@@ -162,6 +164,7 @@ self.add_skill("native_vector_search", {
 
 The best result appears lower in the list instead of first.
 
+<!-- snippet: no-compile output-illustration -->
 ```python
 Query: "voice configuration"
 Results:
@@ -197,11 +200,13 @@ Results:
 2. **Keyword matches boosting wrong results** -- A result containing both query keywords (e.g., "Configuration for voice, database, and API...") may receive a keyword boost even though it is less relevant than a focused document.
 
 3. **Increase result count** -- Returning more results allows the LLM to select the most relevant one:
+<!-- snippet: no-compile config-excerpt -->
    ```python
    {"count": 5}
    ```
 
 4. **Custom reranking via formatter callback:**
+<!-- snippet: no-compile method-body-excerpt -->
    ```python
    def _format_with_reranking(self, response, agent, query, results, **kwargs):
        """Rerank based on custom logic"""
@@ -221,6 +226,7 @@ Search results appear cut off mid-sentence or are incomplete.
 **Diagnosis:**
 
 1. Check the content length budget:
+<!-- snippet: no-compile config-excerpt -->
    ```python
    {"max_content_length": 16384}  # May be too small for the number of results
    ```
@@ -232,6 +238,7 @@ Search results appear cut off mid-sentence or are incomplete.
    ```
 
 3. Check result count relative to budget:
+<!-- snippet: no-compile config-excerpt -->
    ```python
    {
        "count": 10,
@@ -242,6 +249,7 @@ Search results appear cut off mid-sentence or are incomplete.
 **Common Causes and Solutions:**
 
 1. **max_content_length too low** -- Increase the budget:
+<!-- snippet: no-compile config-excerpt -->
    ```python
    {"max_content_length": 32768}  # 32KB (default)
    ```
@@ -255,6 +263,7 @@ Search results appear cut off mid-sentence or are incomplete.
    ```
 
 3. **Too many results for the budget** -- Reduce the result count so each result gets more space:
+<!-- snippet: no-compile config-excerpt -->
    ```python
    {
        "count": 3,
@@ -306,6 +315,7 @@ The agent does not invoke the search function even when the user asks questions 
    ```
 
 2. **No prompt instructions telling the agent to search** -- Add explicit guidance:
+<!-- snippet: no-compile method-body-excerpt -->
    ```python
    self.prompt_add_section(
        "Search First Policy",
@@ -319,6 +329,7 @@ The agent does not invoke the search function even when the user asks questions 
    ```
 
 3. **LLM believes it already knows the answer** -- Strengthen the prompt:
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    "ALWAYS search before answering, even if you think you know the answer"
    ```
@@ -586,6 +597,7 @@ Search queries take 500ms or more instead of the expected 20-50ms range.
    ```
 
 3. Check which model is being used:
+<!-- snippet: no-compile config-excerpt -->
    ```python
    {"model_name": "large"}  # Large models are significantly slower
    ```
@@ -593,6 +605,7 @@ Search queries take 500ms or more instead of the expected 20-50ms range.
 **Common Causes and Solutions:**
 
 1. **Using the large model** -- Switch to the mini model for 2-3x faster queries with minimal quality loss:
+<!-- snippet: no-compile config-excerpt -->
    ```python
    {"model_name": "mini"}
    ```
@@ -609,11 +622,13 @@ Search queries take 500ms or more instead of the expected 20-50ms range.
    ```
 
 3. **Too many results requested** -- Reduce the result count:
+<!-- snippet: no-compile config-excerpt -->
    ```python
    {"count": 3}  # Faster than requesting 10+
    ```
 
 4. **Remote pgvector with high network latency** -- For single-agent deployments, consider using a local SQLite index instead:
+<!-- snippet: no-compile config-excerpt -->
    ```python
    {"index_path": "./local.swsearch"}
    ```
@@ -765,6 +780,7 @@ When troubleshooting search issues, work through this checklist in order:
 
 - **Write specific, detailed function descriptions** -- The LLM uses the description to decide when to call the search function. Generic descriptions like "Search docs" lead to the function not being invoked.
 - **Add explicit prompt instructions** telling the agent to search before answering:
+<!-- snippet: no-compile method-body-excerpt -->
   ```python
   self.prompt_add_section("Instructions", bullets=[
       "Always search before answering technical questions",
@@ -775,6 +791,7 @@ When troubleshooting search issues, work through this checklist in order:
 - **Match the model name** between the index build and the agent configuration.
 - **Set a balanced distance threshold** -- Start with 0.4 and adjust based on testing.
 - **Tune result count and content length** together to avoid truncation:
+<!-- snippet: no-compile config-excerpt -->
   ```python
   {
       "count": 3,

@@ -319,6 +319,7 @@ gateway = MCPGateway(config_path="mcp_config.json")
    ```
 
 2. Enable debug logging:
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    import logging
    logging.basicConfig(level=logging.DEBUG)

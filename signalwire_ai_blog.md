@@ -127,6 +127,7 @@ At its core, the SDK embraces three fundamental principles that distinguish it f
 
 The `AgentBase` class serves as the foundational abstraction that defines the core interface every agent implementation must provide. This isn't simply a base class—it's an architectural contract that ensures consistency across all agent types while enabling specialized behavior.
 
+<!-- snippet: no-compile class-skeleton (interface illustration; method bodies elided to comments) -->
 ```python
 class AgentBase:
     def __init__(
@@ -2505,6 +2506,7 @@ When deciding when to use SWAIG functions, consider the following:
 
 A key aspect of SWAIG functions is their well-defined parameter schema. This schema helps the AI understand what information to extract from the conversation and how to format it when calling the function. The schema uses a JSON Schema-inspired format:
 
+<!-- snippet: no-compile decorator-fragment (decorator with no function below it) -->
 ```python
 @AgentBase.tool(
     name="book_appointment",
@@ -2789,6 +2791,7 @@ SWAIG functions often provide access to sensitive operations or data, so the SDK
 
 By default, all SWAIG functions are marked as secure, meaning they require proper authentication:
 
+<!-- snippet: no-compile decorator-fragment (decorator with no function below it) -->
 ```python
 @AgentBase.tool(
     name="get_account_details",
@@ -2807,6 +2810,7 @@ Secure functions use token-based authentication for each call, with tokens that 
 
 To improve the user experience during function execution, you can configure "fillers" - phrases that the AI will say while waiting for a function to complete:
 
+<!-- snippet: no-compile decorator-fragment (decorator with no function below it) -->
 ```python
 @AgentBase.tool(
     name="search_database",
@@ -3068,6 +3072,7 @@ The ConciergeAgent operates through a simple flow:
 
 This is implemented through a key SWAIG function:
 
+<!-- snippet: no-compile decorator-fragment (decorator with no function below it) -->
 ```python
 @AgentBase.tool(
     name="route_call",

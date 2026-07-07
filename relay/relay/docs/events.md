@@ -23,6 +23,7 @@ async def handle(call):
 
 Actions returned by `play()`, `record()`, etc. have a `wait()` method that resolves when the operation completes:
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 action = await call.play([{"type": "tts", "params": {"text": "Hello"}}])
 event = await action.wait(timeout=30.0)

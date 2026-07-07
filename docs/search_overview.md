@@ -263,6 +263,7 @@ Chunk B: "installation instructions" -> similarity: 0.23 (not similar)
 
 The `distance_threshold` parameter filters out low-similarity results. Only chunks with similarity above the threshold are returned:
 
+<!-- snippet: no-compile config-excerpt -->
 ```python
 "distance_threshold": 0.3  # Very strict - only near-perfect matches
 "distance_threshold": 0.5  # Balanced - good matches

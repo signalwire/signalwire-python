@@ -82,6 +82,7 @@ DataMap tools follow a pipeline execution model on the SignalWire server:
 ### Core Components
 
 1. **Builder Pattern**: Fluent interface for constructing data_map configurations
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    tool = (DataMap('function_name')
        .description('Function purpose')
@@ -109,6 +110,7 @@ DataMap tools follow a pipeline execution model on the SignalWire server:
 The system supports different tool patterns:
 
 1. **API Integration Tools**: Direct REST API calls
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    weather_tool = (DataMap('get_weather')
        .webhook('GET', 'https://api.weather.com/v1/current?q=${location}')
@@ -117,6 +119,7 @@ The system supports different tool patterns:
    ```
 
 2. **Expression-Based Tools**: Pattern matching without API calls
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    control_tool = (DataMap('file_control')
        .expression(r'start.*', FunctionResult().add_action('start', True))
@@ -125,6 +128,7 @@ The system supports different tool patterns:
    ```
 
 3. **Array Processing Tools**: Handle list responses
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    search_tool = (DataMap('search_docs')
        .webhook('GET', 'https://api.docs.com/search')
@@ -341,6 +345,7 @@ The SDK implements a multi-layer security model:
 The SDK is designed to be highly extensible:
 
 1. **Custom Agents**: Extend AgentBase to create specialized agents
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    class CustomAgent(AgentBase):
        def __init__(self):
@@ -348,6 +353,7 @@ The SDK is designed to be highly extensible:
    ```
 
 2. **Tool Registration**: Add new tools using the decorator pattern
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    @AgentBase.tool(
        name="tool_name", 
@@ -360,6 +366,7 @@ The SDK is designed to be highly extensible:
    ```
 
 3. **Prompt Customization**: Add sections, hints, languages
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    agent.add_language(name="English", code="en-US", voice="elevenlabs.josh")
    agent.add_hints(["SignalWire", "SWML", "SWAIG"])
@@ -368,12 +375,14 @@ The SDK is designed to be highly extensible:
 4. **Session Management**: The SDK includes session management for secure function calls
 
 5. **Request Handling**: Override request handling methods
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    def on_swml_request(self, request_data):
        # Custom request handling
    ```
 
 6. **Custom Prefabs**: Create reusable agent patterns
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    class MyCustomPrefab(AgentBase):
        def __init__(self, config_param1, config_param2, **kwargs):
@@ -383,6 +392,7 @@ The SDK is designed to be highly extensible:
    ```
 
 7. **Dynamic Configuration**: Per-request agent configuration for flexible behavior
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    def configure_agent_dynamically(self, query_params, body_params, headers, agent):
        # Configure agent differently based on request data
@@ -408,6 +418,7 @@ The SDK is designed to be highly extensible:
    ```
 
 9. **Custom Skills**: Create reusable skill modules
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    from signalwire.core.skill_base import SkillBase
    
@@ -684,6 +695,7 @@ Users can create their own prefab agents by extending `AgentBase` or any existin
 Key steps for creating custom prefabs:
 
 1. **Extend the base class**:
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    class MyCustomPrefab(AgentBase):
        def __init__(self, custom_param, **kwargs):
@@ -702,6 +714,7 @@ Key steps for creating custom prefabs:
    ```
 
 3. **Add specialized tools**:
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    @AgentBase.tool(
        name="specialized_function", 
@@ -714,6 +727,7 @@ Key steps for creating custom prefabs:
    ```
 
 4. **Create a factory method** (optional):
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    @classmethod
    def create(cls, config_dict, **kwargs):

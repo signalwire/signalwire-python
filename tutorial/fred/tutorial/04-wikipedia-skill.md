@@ -149,6 +149,7 @@ Understanding the magic behind `add_skill()`:
 After adding the skill, Fred gains the `search_wiki` function:
 
 **Function Signature:**
+<!-- snippet: no-compile signature-illustration (pseudo-signature; `string` is not a Python type) -->
 ```python
 search_wiki(query: string) -> string
 ```

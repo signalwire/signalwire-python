@@ -188,6 +188,7 @@ Check:
 ### SSL Certificate Errors
 
 For self-signed certificates:
+<!-- snippet: no-compile config-key-fragment (single dict entry, not a module) -->
 ```python
 "verify_ssl": False
 ```
@@ -205,6 +206,7 @@ Verify:
 ### Session Timeouts
 
 Increase timeout if needed:
+<!-- snippet: no-compile config-key-fragment (single dict entry, not a module) -->
 ```python
 "session_timeout": 600  # 10 minutes
 ```

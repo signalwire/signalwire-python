@@ -574,6 +574,7 @@ service.start()
 
 ### WebService Class
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 class WebService:
     def __init__(self,
@@ -602,6 +603,7 @@ class WebService:
 #### Methods
 
 ##### start()
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def start(self,
           host: str = "0.0.0.0",
@@ -612,12 +614,14 @@ def start(self,
 Start the web service.
 
 ##### add_directory()
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def add_directory(self, route: str, directory: str) -> None
 ```
 Add a new directory to serve.
 
 ##### remove_directory()
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def remove_directory(self, route: str) -> None
 ```

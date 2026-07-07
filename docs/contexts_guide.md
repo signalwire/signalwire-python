@@ -227,6 +227,7 @@ context = contexts.add_context(name: str) -> Context
 
 Represents a conversation context or workflow state.
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 class Context:
     def add_step(self, name: str) -> Step
@@ -300,6 +301,7 @@ class Context:
 
 Represents a single step within a context workflow.
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 class Step:
     # Content definition (choose one approach)
@@ -493,15 +495,15 @@ class SecureBankingAgent(AgentBase):
         public = contexts.add_context("public")
         public.add_step("welcome") \
             .set_text("Welcome to banking support. Are you an existing customer?") \
-            .set_functions(["datetime", "web_search"])  # Safe functions only \
-            .set_valid_contexts(["authenticated", "public"])
+            .set_functions(["datetime", "web_search"]) \
+            .set_valid_contexts(["authenticated", "public"])  # Safe functions only
         
         # Authenticated context - restricted for security
         auth = contexts.add_context("authenticated")
         auth.add_step("account_access") \
             .set_text("I can help with your account. What do you need assistance with?") \
-            .set_functions("none")  # No external functions for account data \
-            .set_valid_contexts(["public"])  # Can log out
+            .set_functions("none") \
+            .set_valid_contexts(["public"])  # No external functions; can log out
 ```
 
 ### Function Access Patterns
@@ -655,6 +657,7 @@ Each question has a `type` that controls the JSON schema of the `answer` paramet
 
 When `confirm=True`, the AI must read the answer back to the caller and get explicit confirmation before submitting:
 
+<!-- snippet: no-compile method-chain-excerpt -->
 ```python
 .add_gather_question(
     "last_name",
@@ -675,6 +678,7 @@ How it works:
 
 Each question can have additional instructions and specific functions made available:
 
+<!-- snippet: no-compile method-chain-excerpt -->
 ```python
 .add_gather_question(
     "home_airport",
@@ -834,7 +838,7 @@ class TechnicalSupportAgent(AgentBase):
         hardware.add_step("hardware_diagnosis") \
             .add_section("Current Task", "Guide user through hardware diagnostics") \
             .add_section("Available Tools", "Use web search to find hardware specifications and troubleshooting guides") \
-            .set_functions(["web_search"])  # Can search for hardware info \
+            .set_functions(["web_search"]) \
             .set_step_criteria("Hardware issue diagnosed") \
             .set_valid_steps(["hardware_solution"])
         
@@ -848,7 +852,7 @@ class TechnicalSupportAgent(AgentBase):
         software.add_step("software_diagnosis") \
             .add_section("Current Task", "Diagnose software-related issues") \
             .add_section("Available Tools", "Use web search for software updates and datetime to check for recent changes") \
-            .set_functions(["web_search", "datetime"])  # Can check for updates \
+            .set_functions(["web_search", "datetime"]) \
             .set_step_criteria("Software issue identified") \
             .set_valid_steps(["software_fix", "escalation"])
         
@@ -859,7 +863,7 @@ class TechnicalSupportAgent(AgentBase):
         
         software.add_step("escalation") \
             .set_text("I'll escalate this to our specialist team.") \
-            .set_functions("none")  # No tools needed for escalation \
+            .set_functions("none") \
             .set_step_criteria("Escalation ticket created")
         
         software.add_step("resolution") \
@@ -872,7 +876,7 @@ class TechnicalSupportAgent(AgentBase):
         network.add_step("network_diagnosis") \
             .add_section("Current Task", "Diagnose network and connectivity issues") \
             .add_section("Available Tools", "Use web search to check service status and datetime for outage windows") \
-            .set_functions(["web_search", "datetime"])  # Check service status \
+            .set_functions(["web_search", "datetime"]) \
             .set_step_criteria("Network issue diagnosed") \
             .set_valid_steps(["network_fix"])
         
@@ -923,7 +927,7 @@ class LoanApplicationAgent(AgentBase):
                 "Social Security Number",
                 "Phone number and email"
             ]) \
-            .set_functions(["datetime"])  # Can validate dates \
+            .set_functions(["datetime"]) \
             .set_step_criteria("All personal information collected and verified") \
             .set_valid_steps(["employment_info", "personal_info"])  # Can review/edit
         
@@ -954,7 +958,7 @@ class LoanApplicationAgent(AgentBase):
         # Step 6: Submission
         application.add_step("submit") \
             .set_text("Thank you! Your loan application has been submitted successfully. You'll receive a decision within 2-3 business days.") \
-            .set_functions("none")  # No tools needed for final message \
+            .set_functions("none") \
             .set_step_criteria("Application submitted and confirmation provided")
             # No valid_steps = end of process
 
@@ -996,7 +1000,7 @@ class EcommerceServiceAgent(AgentBase):
         orders.add_step("order_assistance") \
             .add_section("Current Task", "Help with order status, modifications, and tracking") \
             .add_section("Available Tools", "Use datetime to check delivery dates and processing times") \
-            .set_functions(["datetime"])  # Can check delivery dates \
+            .set_functions(["datetime"]) \
             .set_step_criteria("Order issue resolved or escalated") \
             .set_valid_contexts(["main"])
         
@@ -1010,7 +1014,7 @@ class EcommerceServiceAgent(AgentBase):
                 "Provide return instructions",
                 "Process refund if applicable"
             ]) \
-            .set_functions("none")  # Sensitive financial operations \
+            .set_functions("none") \
             .set_step_criteria("Return request processed") \
             .set_valid_contexts(["main"])
         
@@ -1019,7 +1023,7 @@ class EcommerceServiceAgent(AgentBase):
         products.add_step("product_help") \
             .add_section("Current Task", "Help customers with product questions") \
             .add_section("Available Tools", "Use web search to find detailed product information and specifications") \
-            .set_functions(["web_search"])  # Can search for product info \
+            .set_functions(["web_search"]) \
             .set_step_criteria("Product question answered") \
             .set_valid_contexts(["main"])
         
@@ -1027,7 +1031,7 @@ class EcommerceServiceAgent(AgentBase):
         account = contexts.add_context("account")
         account.add_step("account_help") \
             .set_text("I can help with account-related questions. Please verify your identity first.") \
-            .set_functions("none")  # Security-sensitive context \
+            .set_functions("none") \
             .set_step_criteria("Account issue resolved") \
             .set_valid_contexts(["main"])
 

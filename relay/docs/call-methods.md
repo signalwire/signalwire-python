@@ -20,6 +20,7 @@ Methods like `play()`, `record()`, `detect()`, etc. return **Action** objects. T
 
 ### Wait inline (blocking)
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 action = await call.play([{"type": "tts", "params": {"text": "Hello"}}])
 await action.wait()  # blocks until playback finishes
@@ -28,6 +29,7 @@ await action.wait()  # blocks until playback finishes
 
 ### Fire and forget (background)
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 action = await call.play([{"type": "tts", "params": {"text": "Hello"}}])
 # don't call action.wait() — continue immediately while audio plays
@@ -76,6 +78,7 @@ Some actions also have `pause()`, `resume()`, and `volume()`.
 
 Answer an inbound call.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.answer()
 ```
@@ -84,6 +87,7 @@ await call.answer()
 
 End the call.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.hangup()
 await call.hangup(reason="busy")
@@ -93,6 +97,7 @@ await call.hangup(reason="busy")
 
 Decline control, returning the call to routing.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.pass_()
 ```
@@ -130,6 +135,7 @@ await action.stop()
 
 Record the call. Returns a `RecordAction` with `stop()`, `pause()`, `resume()`, and `wait()`.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 action = await call.record(audio={"format": "wav", "stereo": True, "direction": "both"})
 # ... later ...
@@ -144,6 +150,7 @@ print(f"Recording URL: {event.params.get('url')}")
 
 Play audio and collect DTMF or speech input. Returns a `CollectAction`.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 action = await call.play_and_collect(
     [{"type": "tts", "params": {"text": "Press 1 for sales, 2 for support."}}],
@@ -157,6 +164,7 @@ digit = event.params.get("result", {}).get("params", {}).get("digits", "")
 
 Collect input without playing audio.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 action = await call.collect(
     digits={"max": 4, "terminators": "#"},
@@ -172,6 +180,7 @@ event = await action.wait()
 
 Bridge the call to another destination.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.connect(
     [[{"type": "phone", "params": {"to_number": "+15551234567", "from_number": "+15559876543"}}]],
@@ -183,6 +192,7 @@ await call.connect(
 
 Unbridge a connected call.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.disconnect()
 ```
@@ -193,6 +203,7 @@ await call.disconnect()
 
 Send DTMF tones.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.send_digits("1234#")
 ```
@@ -203,6 +214,7 @@ await call.send_digits("1234#")
 
 Detect machine, fax, or digits.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 action = await call.detect({"type": "machine"}, timeout=30.0)
 event = await action.wait()
@@ -214,6 +226,7 @@ event = await action.wait()
 
 Transfer via SIP REFER.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.refer({"type": "sip", "params": {"to": "sip:user@example.com"}})
 ```
@@ -224,6 +237,7 @@ await call.refer({"type": "sip", "params": {"to": "sip:user@example.com"}})
 
 Transfer call control to another RELAY app or SWML script.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.transfer("https://example.com/swml-endpoint")
 ```
@@ -232,6 +246,7 @@ await call.transfer("https://example.com/swml-endpoint")
 
 ### `send_fax(document, *, identity=None, header_info=None, control_id=None) -> FaxAction`
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 action = await call.send_fax("https://example.com/document.pdf", identity="+15551234567")
 event = await action.wait()
@@ -239,6 +254,7 @@ event = await action.wait()
 
 ### `receive_fax(*, control_id=None) -> FaxAction`
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 action = await call.receive_fax()
 event = await action.wait()
@@ -250,6 +266,7 @@ event = await action.wait()
 
 Intercept call media and stream to an RTP endpoint.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 action = await call.tap(
     {"type": "audio", "params": {"direction": "both"}},
@@ -263,6 +280,7 @@ action = await call.tap(
 
 Stream call audio to a WebSocket endpoint.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 action = await call.stream(
     "wss://example.com/audio",
@@ -280,6 +298,7 @@ await action.stop()
 
 Collect a payment via DTMF.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 action = await call.pay(
     "https://pay.example.com",
@@ -294,12 +313,14 @@ event = await action.wait()
 
 ### `join_conference(name, *, muted=None, beep=None, max_participants=None, record=None, ...) -> dict`
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.join_conference("my_conference", muted=False, beep="onEnter")
 ```
 
 ### `leave_conference(conference_id) -> dict`
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.leave_conference("conf-123")
 ```
@@ -308,6 +329,7 @@ await call.leave_conference("conf-123")
 
 ### `hold() -> dict` / `unhold() -> dict`
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.hold()
 # ... later ...
@@ -318,6 +340,7 @@ await call.unhold()
 
 ### `denoise() -> dict` / `denoise_stop() -> dict`
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.denoise()
 # ... later ...
@@ -328,6 +351,7 @@ await call.denoise_stop()
 
 ### `transcribe(*, control_id=None, status_url=None) -> TranscribeAction`
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 action = await call.transcribe(status_url="https://example.com/transcription")
 # ... later ...
@@ -338,12 +362,14 @@ await action.stop()
 
 ### `live_transcribe(action_obj) -> dict`
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.live_transcribe({"start": {"language": "en-US"}})
 ```
 
 ### `live_translate(action_obj, *, status_url=None) -> dict`
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.live_translate({"start": {"source": "en-US", "target": "es"}})
 ```
@@ -354,6 +380,7 @@ await call.live_translate({"start": {"source": "en-US", "target": "es"}})
 
 Echo audio back to the caller (useful for testing).
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.echo(timeout=30.0)
 ```
@@ -364,6 +391,7 @@ await call.echo(timeout=30.0)
 
 Start an AI agent session on the call.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 action = await call.ai(
     prompt={"text": "You are a helpful support agent."},
@@ -389,12 +417,14 @@ Put an AI session on/off hold.
 
 ### `join_room(name, *, status_url=None) -> dict`
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.join_room("my_room")
 ```
 
 ### `leave_room() -> dict`
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.leave_room()
 ```
@@ -403,12 +433,14 @@ await call.leave_room()
 
 ### `queue_enter(queue_name, *, control_id=None, status_url=None) -> dict`
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.queue_enter("support")
 ```
 
 ### `queue_leave(queue_name, *, control_id=None, queue_id=None, status_url=None) -> dict`
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.queue_leave("support", queue_id="q-123")
 ```
@@ -419,6 +451,7 @@ await call.queue_leave("support", queue_id="q-123")
 
 Bind a DTMF sequence to trigger a RELAY method.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.bind_digit(
     "*1",
@@ -429,6 +462,7 @@ await call.bind_digit(
 
 ### `clear_digit_bindings(*, realm=None) -> dict`
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.clear_digit_bindings()
 ```
@@ -439,6 +473,7 @@ await call.clear_digit_bindings()
 
 Send a custom event.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await call.user_event(event="order_placed", order_id="12345")
 ```
@@ -460,6 +495,7 @@ call.on("calling.call.play", on_play)
 
 Wait for a specific event.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 event = await call.wait_for("calling.call.play", timeout=30.0)
 ```
@@ -468,6 +504,7 @@ event = await call.wait_for("calling.call.play", timeout=30.0)
 
 Wait for the call to end.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 event = await call.wait_for_ended()
 print(f"End reason: {event.params.get('end_reason')}")

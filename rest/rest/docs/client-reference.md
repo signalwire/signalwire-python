@@ -2,6 +2,7 @@
 
 ## Constructor
 
+<!-- snippet: no-compile signature-illustration (constructor signature; annotations shown in call form, not a def) -->
 ```python
 RestClient(
     project: str = None,   # SIGNALWIRE_PROJECT_ID
