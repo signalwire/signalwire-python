@@ -250,3 +250,8 @@ my_chunks
 
 # run-ci gate-scheduler scratch (repo-local; auto-cleaned)
 .sw-tmp/
+
+# Track the shared Claude Code permission set (rest of .claude/ stays local)
+!.claude/
+.claude/*
+!.claude/settings.json
