@@ -542,8 +542,6 @@ class AIParams(TypedDict, total=False):
     attention_timeout_prompt: str
     asr_diarize: bool | SWMLVar
     asr_speaker_affinity: bool | SWMLVar
-    audible_debug: bool | SWMLVar
-    audible_latency: bool | SWMLVar
     background_file: str
     background_file_loops: int | None | SWMLVar
     background_file_volume: int | SWMLVar
@@ -554,7 +552,6 @@ class AIParams(TypedDict, total=False):
     barge_match_string: str
     barge_min_words: int | SWMLVar
     barge_functions: bool | SWMLVar
-    cache_mode: bool | SWMLVar
     conscience: str
     convo: list[ConversationMessage]
     conversation_id: str
@@ -566,7 +563,6 @@ class AIParams(TypedDict, total=False):
     digit_terminators: str
     digit_timeout: int | SWMLVar
     end_of_speech_timeout: int | SWMLVar
-    enable_accounting: bool | SWMLVar
     enable_thinking: bool | SWMLVar
     enable_vision: bool | SWMLVar
     energy_level: float | SWMLVar
@@ -587,6 +583,7 @@ class AIParams(TypedDict, total=False):
     input_poll_freq: int | SWMLVar
     interrupt_on_noise: bool | SWMLVar
     interrupt_prompt: str
+    # deprecated: languages_enabled
     languages_enabled: bool | SWMLVar
     local_tz: str
     llm_diarize_aware: bool | SWMLVar
@@ -618,7 +615,6 @@ class AIParams(TypedDict, total=False):
     transfer_summary: bool | SWMLVar
     turn_detection_timeout: int | SWMLVar
     tts_number_format: Literal["international"] | Literal["national"]
-    verbose_logs: bool | SWMLVar
     video_listening_file: str
     video_idle_file: str
     video_talking_file: str

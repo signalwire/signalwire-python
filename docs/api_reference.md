@@ -3131,7 +3131,7 @@ Base class providing SWML document generation and HTTP service capabilities. `Ag
 
 #### Key Methods
 
-##### `get_swml_document() -> Dict[str, Any]`
+##### `get_document() -> Dict[str, Any]`
 Generate the complete SWML document for the service.
 
 ##### `handle_request(request_data: Dict[str, Any]) -> Dict[str, Any]`

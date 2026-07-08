@@ -192,3 +192,8 @@ delete_state: user-defined helper shown in docs/agent_guide.md lifecycle-hook ex
 ## Teaching-by-comparison references
 
 setup_google_search: legacy-API straw-man shown in docs/skills_system.md §Migration Guide (labelled "Before (manual implementation)") to contrast against the modern `add_skill("web_search")` API
+super: Python builtin `super().__init__(...)` shown in agent_guide.md subclassing examples — language construct, not an SDK symbol
+download: third-party calls `nltk.download(...)` / `spacy download` in docs/search_overview.md troubleshooting table — not SDK methods
+is_function_call: LiveKit's RunResult test-framework API (`result.expect.next_event().is_function_call(...)`) shown in docs/livekit_comparison.md for contrast — external framework
+next_event: LiveKit's RunResult test-framework API shown in docs/livekit_comparison.md for contrast — external framework
+register_function: Pipecat's `llm.register_function()` shown in docs/pipecat_comparison.md feature-comparison table for contrast — external framework
