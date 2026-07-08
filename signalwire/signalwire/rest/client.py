@@ -32,7 +32,7 @@ class RestClient(_GeneratedResourceTree):
         # Use namespaced resources
         client.fabric.ai_agents.list()
         client.calling.play(call_id, play=[...])
-        client.phone_numbers.search(area_code="512")
+        client.phone_numbers.search(areacode="512")
         client.video.rooms.create(name="standup")
 
     The resource object tree (flat resources + namespace containers) is generated from
