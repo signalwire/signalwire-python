@@ -40,7 +40,7 @@ from __future__ import annotations
 
 import os
 from typing import NoReturn
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Mapping
 
 from fastapi import HTTPException, Request, Response, status
 
@@ -49,6 +49,63 @@ from signalwire.core.security.webhook_validator import validate_webhook_signatur
 
 SIGNALWIRE_SIGNATURE_HEADER = "x-signalwire-signature"
 TWILIO_COMPAT_SIGNATURE_HEADER = "x-twilio-signature"
+
+
+def validate(
+    method: str,
+    url: str,
+    headers: Mapping[str, str],
+    body: str,
+    *,
+    signing_key: str,
+) -> tuple[int, dict[str, str], str] | None:
+    """Framework-free webhook-validation decision.
+
+    This is the **cross-port** validation core: it takes a request decomposed
+    into language-neutral primitives and returns either a 403-shaped response
+    triple to short-circuit with, or ``None`` to let the handler run. Every
+    port implements this same shape (dotnet ``WebhookValidationMiddleware.
+    Validate``, Rack/PSGI middleware, a Hono handler, …); the framework-specific
+    wrapper (:func:`make_webhook_validation_dependency` here) is the only idiom
+    on top of it.
+
+    The ``headers`` map is consulted for the signature header
+    (``X-SignalWire-Signature`` or the ``X-Twilio-Signature`` alias); ``method``
+    is accepted to keep a stable signature but is not part of the HMAC. Returns
+    ``(403, {}, "")`` on any failure (missing/bad
+    signature, non-UTF-8 body, validator error) — no body detail, to avoid
+    leaking which branch tripped.
+
+    Args:
+        method: HTTP method (part of the cross-port contract; not HMAC'd).
+        url: The public URL SignalWire POSTed to (already reconstructed).
+        headers: Case-insensitively-looked-up request headers.
+        body: The raw request body as a UTF-8 string.
+        signing_key: The customer's Signing Key. Required, non-empty.
+
+    Returns:
+        ``None`` if the signature is valid; ``(403, {}, "")`` otherwise.
+
+    Raises:
+        ValueError: if ``signing_key`` is empty.
+    """
+    if not signing_key:
+        raise ValueError("signing_key is required")
+
+    signature = headers.get(SIGNALWIRE_SIGNATURE_HEADER)
+    if signature is None:
+        signature = headers.get(TWILIO_COMPAT_SIGNATURE_HEADER)
+    if not signature:
+        return (status.HTTP_403_FORBIDDEN, {}, "")
+
+    try:
+        ok = validate_webhook_signature(signing_key, signature, url, body)
+    except (TypeError, ValueError):
+        return (status.HTTP_403_FORBIDDEN, {}, "")
+
+    if not ok:
+        return (status.HTTP_403_FORBIDDEN, {}, "")
+    return None
 
 
 def _reconstruct_url(request: Request, *, trust_proxy: bool) -> str:
@@ -76,14 +133,6 @@ def _reconstruct_url(request: Request, *, trust_proxy: bool) -> str:
             return f"{fwd_proto}://{fwd_host}{path_and_query}"
 
     return str(request.url)
-
-
-def _extract_signature_header(request: Request) -> str | None:
-    """Return the SignalWire signature header (or ``X-Twilio-Signature`` alias)."""
-    sig = request.headers.get(SIGNALWIRE_SIGNATURE_HEADER)
-    if sig is None:
-        sig = request.headers.get(TWILIO_COMPAT_SIGNATURE_HEADER)
-    return sig
 
 
 def make_webhook_validation_dependency(
@@ -137,21 +186,18 @@ def make_webhook_validation_dependency(
             # Non-UTF-8 body cannot match an HMAC over UTF-8 input.
             _forbidden()
 
-        signature = _extract_signature_header(request)
-        if not signature:
-            _forbidden()
-
+        # Decompose the FastAPI Request into primitives and hand off to the
+        # framework-free cross-port core. The FastAPI-specific parts (raw-body
+        # capture above, proxy-aware URL reconstruction) stay here as idiom.
         url = _reconstruct_url(request, trust_proxy=trust_proxy)
-
-        try:
-            ok = validate_webhook_signature(signing_key, signature, url, raw_body_str)
-        except (TypeError, ValueError):
-            # Programming errors or non-string body — treat as invalid for the
-            # request without leaking which branch tripped.
-            _forbidden()
-            return
-
-        if not ok:
+        rejection = validate(
+            request.method,
+            url,
+            request.headers,
+            raw_body_str,
+            signing_key=signing_key,
+        )
+        if rejection is not None:
             _forbidden()
         # Valid — fall through and let the handler run.
 
@@ -162,4 +208,5 @@ __all__ = [
     "SIGNALWIRE_SIGNATURE_HEADER",
     "TWILIO_COMPAT_SIGNATURE_HEADER",
     "make_webhook_validation_dependency",
+    "validate",
 ]

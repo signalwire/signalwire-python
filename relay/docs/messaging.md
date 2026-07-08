@@ -6,6 +6,7 @@ Send and receive SMS/MMS messages through the RELAY client.
 
 Use `client.send_message()` to send an outbound SMS or MMS.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 message = await client.send_message(
     to_number="+15552222222",
@@ -16,6 +17,7 @@ message = await client.send_message(
 
 ### Wait for delivery
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 message = await client.send_message(
     to_number="+15552222222",
@@ -30,6 +32,7 @@ if message.reason:
 
 ### Fire and forget
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 message = await client.send_message(
     to_number="+15552222222",
@@ -41,6 +44,7 @@ message = await client.send_message(
 
 ### Callback on completion
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 message = await client.send_message(
     to_number="+15552222222",
@@ -52,6 +56,7 @@ message = await client.send_message(
 
 ### MMS (media messages)
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 message = await client.send_message(
     to_number="+15552222222",
@@ -63,6 +68,7 @@ message = await client.send_message(
 
 ### All parameters
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 message = await client.send_message(
     to_number="+15552222222",       # required — E.164 format

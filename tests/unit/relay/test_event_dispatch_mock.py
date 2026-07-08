@@ -24,10 +24,14 @@ import uuid
 
 import pytest
 
+from typing import Any
+
 from signalwire.relay.client import RelayClient, _active_clients
+from signalwire.relay.call import Call
+from signalwire.relay.event import RelayEvent
 from signalwire.relay.constants import METHOD_SIGNALWIRE_EVENT
 
-from .conftest import _RELAY_MOCK_AVAILABLE
+from .conftest import _MockRelayHarness, _RELAY_MOCK_AVAILABLE
 
 
 pytestmark = pytest.mark.skipif(
@@ -41,12 +45,14 @@ pytestmark = pytest.mark.skipif(
 # ---------------------------------------------------------------------------
 
 
-async def _answered_call(client, mock_relay, call_id: str = "evt-call-1"):
-    captured: dict[str, object] = {}
+async def _answered_call(
+    client: RelayClient, mock_relay: _MockRelayHarness, call_id: str = "evt-call-1"
+) -> Call:
+    captured: dict[str, Call] = {}
     handler_done = asyncio.Event()
 
     @client.on_call
-    async def _handle(call):
+    async def _handle(call: Call) -> None:
         captured["call"] = call
         await call.answer()
         handler_done.set()
@@ -58,7 +64,7 @@ async def _answered_call(client, mock_relay, call_id: str = "evt-call-1"):
     return call
 
 
-def _bare_event_frame(event_type: str, params: dict) -> dict:
+def _bare_event_frame(event_type: str, params: dict[str, Any]) -> dict[str, Any]:
     return {
         "jsonrpc": "2.0",
         "id": str(uuid.uuid4()),
@@ -73,8 +79,8 @@ def _bare_event_frame(event_type: str, params: dict) -> dict:
 
 
 async def test_record_pause_journals_record_pause(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_call(signalwire_relay_client, mock_relay, "ec-rec-pa")
     action = await call.record(audio={"format": "wav"}, control_id="ec-rec-pa-1")
     await action.pause(behavior="continuous")
@@ -86,8 +92,8 @@ async def test_record_pause_journals_record_pause(
 
 
 async def test_record_resume_journals_record_resume(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_call(signalwire_relay_client, mock_relay, "ec-rec-re")
     action = await call.record(audio={"format": "wav"}, control_id="ec-rec-re-1")
     await action.resume()
@@ -96,8 +102,8 @@ async def test_record_resume_journals_record_resume(
 
 
 async def test_collect_start_input_timers_journals_correctly(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """A standalone collect's start_input_timers journals the right method."""
     call = await _answered_call(signalwire_relay_client, mock_relay, "ec-col-sit")
     action = await call.collect(
@@ -111,8 +117,8 @@ async def test_collect_start_input_timers_journals_correctly(
 
 
 async def test_play_volume_carries_negative_value(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     call = await _answered_call(signalwire_relay_client, mock_relay, "ec-pvol")
     action = await call.play(
         [{"type": "silence", "params": {"duration": 60}}],
@@ -129,8 +135,8 @@ async def test_play_volume_carries_negative_value(
 
 
 async def test_unknown_event_type_does_not_crash(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """Pushing a frame with an unknown event_type doesn't break the SDK."""
     mock_relay.push(_bare_event_frame("nonsense.unknown", {"foo": "bar"}))
     # Drive a follow-up call to prove the SDK is still alive.
@@ -139,8 +145,8 @@ async def test_unknown_event_type_does_not_crash(
 
 
 async def test_event_with_bad_call_id_is_dropped(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """An event with a call_id that doesn't match any registered call is dropped."""
     mock_relay.push(
         _bare_event_frame(
@@ -157,8 +163,8 @@ async def test_event_with_bad_call_id_is_dropped(
 
 
 async def test_event_with_empty_event_type_is_dropped(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """An event whose event_type is empty string is logged and skipped."""
     mock_relay.push(_bare_event_frame("", {"call_id": "x"}))
     await asyncio.sleep(0.1)
@@ -171,8 +177,8 @@ async def test_event_with_empty_event_type_is_dropped(
 
 
 async def test_three_concurrent_actions_resolve_independently(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """Three actions with different control_ids each receive their own events."""
     call = await _answered_call(signalwire_relay_client, mock_relay, "ec-3acts")
     play1 = await call.play(
@@ -213,8 +219,8 @@ async def test_three_concurrent_actions_resolve_independently(
 
 
 async def test_event_ack_sent_back_to_server(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """After receiving signalwire.event, SDK sends back a JSON-RPC response.
 
     The mock journals every recv frame — we look for a frame with the
@@ -260,8 +266,8 @@ async def test_event_ack_sent_back_to_server(
 
 
 async def test_dial_event_routes_via_tag_when_no_top_level_call_id(
-    mock_relay, relay_ws_redirect
-):
+    mock_relay: _MockRelayHarness, relay_ws_redirect: Any
+) -> None:
     """A calling.call.dial event with no top-level call_id routes via tag.
 
     Production wire shape: the dial event's ``params`` doesn't carry
@@ -310,7 +316,9 @@ async def test_dial_event_routes_via_tag_when_no_top_level_call_id(
 # ---------------------------------------------------------------------------
 
 
-async def test_server_ping_acked_by_sdk(signalwire_relay_client, mock_relay):
+async def test_server_ping_acked_by_sdk(
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """The mock pushes a signalwire.ping; SDK responds with a JSON-RPC result."""
     ping_id = "ping-test-1"
     mock_relay.push(
@@ -339,8 +347,8 @@ async def test_server_ping_acked_by_sdk(signalwire_relay_client, mock_relay):
 
 
 async def test_authorization_state_event_captured(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """A pushed signalwire.authorization.state event updates SDK internal state."""
     mock_relay.push(
         _bare_event_frame(
@@ -362,8 +370,8 @@ async def test_authorization_state_event_captured(
 
 
 async def test_calling_error_event_does_not_crash(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """An emitted calling.error event is logged but doesn't break recv loop."""
     mock_relay.push(
         _bare_event_frame(
@@ -381,8 +389,8 @@ async def test_calling_error_event_does_not_crash(
 
 
 async def test_call_state_event_updates_state(
-    signalwire_relay_client, mock_relay
-):
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """A state event for an existing call updates its .state field."""
     call = await _answered_call(signalwire_relay_client, mock_relay, "ec-stt")
     mock_relay.push(
@@ -398,13 +406,15 @@ async def test_call_state_event_updates_state(
     assert call.state == "ending"
 
 
-async def test_call_listener_fires_on_event(signalwire_relay_client, mock_relay):
+async def test_call_listener_fires_on_event(
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
     """Custom event listeners registered via ``call.on(...)`` fire on matching events."""
     call = await _answered_call(signalwire_relay_client, mock_relay, "ec-list")
     fired = asyncio.Event()
-    seen = []
+    seen: list[RelayEvent] = []
 
-    def _on_play(event):
+    def _on_play(event: RelayEvent) -> None:
         seen.append(event)
         fired.set()
 

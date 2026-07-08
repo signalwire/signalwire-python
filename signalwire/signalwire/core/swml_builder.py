@@ -13,7 +13,8 @@ It allows for chaining method calls to build up a document step by step.
 """
 
 import types
-from typing import Any, TypeVar
+from typing import TYPE_CHECKING, Any, TypeVar
+from collections.abc import Callable
 
 try:
     from typing import Self  # type: ignore[attr-defined]  # 3.11+; typing_extensions fallback below
@@ -22,11 +23,22 @@ except ImportError:
 
 from signalwire.core.swml_service import SWMLService
 
+if TYPE_CHECKING:
+    # The SWML verb methods are installed dynamically at runtime (_create_verb_methods,
+    # from schema.json). Inheriting the generated _SwmlVerbs Protocol gives the type
+    # checker the static signatures for those verbs (answer/play/ai/record/...). Generated
+    # from schema.json — see swml_verbs_generated.py. TYPE_CHECKING-only: no runtime base.
+    from signalwire.core.swml_verbs_generated import _SwmlVerbs
+
+    _VerbsBase = _SwmlVerbs
+else:
+    _VerbsBase = object
+
 
 T = TypeVar("T", bound="SWMLBuilder")
 
 
-class SWMLBuilder:
+class SWMLBuilder(_VerbsBase):
     """
     Fluent builder for SWML documents
 
@@ -94,7 +106,7 @@ class SWMLBuilder:
         post_prompt: str | None = None,
         post_prompt_url: str | None = None,
         swaig: dict[str, Any] | None = None,
-        **kwargs,
+        **kwargs: Any,
     ) -> Self:
         """
         Add an 'ai' verb to the main section
@@ -112,15 +124,18 @@ class SWMLBuilder:
         """
         config: dict[str, Any] = {}
 
-        # Handle prompt (either text or POM, but not both)
+        # Handle prompt (either text or POM, but not both). The SWML `ai` verb requires
+        # `prompt` to be an OBJECT — {"text": ...} or {"pom": [...]}; a bare string is a
+        # fatal error in the AI engine (mod_openai app_config.c: `!cJSON_IsObject(prompt)`
+        # fires calling.error and aborts the call), so wrap accordingly.
         if prompt_text is not None:
-            config["prompt"] = prompt_text
+            config["prompt"] = {"text": prompt_text}
         elif prompt_pom is not None:
-            config["prompt"] = prompt_pom
+            config["prompt"] = {"pom": prompt_pom}
 
-        # Add optional parameters
+        # Add optional parameters. post_prompt is the same object contract as prompt.
         if post_prompt is not None:
-            config["post_prompt"] = post_prompt
+            config["post_prompt"] = {"text": post_prompt}
         if post_prompt_url is not None:
             config["post_prompt_url"] = post_prompt_url
         if swaig is not None:
@@ -280,7 +295,11 @@ class SWMLBuilder:
             # Handle sleep verb specially since it takes an integer directly
             if verb_name == "sleep":
 
-                def sleep_method(self_instance, duration=None, **kwargs):
+                def sleep_method(
+                    self_instance: "SWMLBuilder",
+                    duration: int | None = None,
+                    **kwargs: Any,
+                ) -> "SWMLBuilder":
                     """
                     Add the sleep verb to the document.
 
@@ -307,8 +326,12 @@ class SWMLBuilder:
                 continue
 
             # Generate the method implementation for normal verbs
-            def make_verb_method(name):
-                def verb_method(self_instance, **kwargs):
+            def make_verb_method(
+                name: str,
+            ) -> Callable[..., "SWMLBuilder"]:
+                def verb_method(
+                    self_instance: "SWMLBuilder", **kwargs: Any
+                ) -> "SWMLBuilder":
                     """
                     Dynamically generated method for SWML verb - returns self for chaining
                     """
@@ -377,7 +400,11 @@ class SWMLBuilder:
             # Handle sleep verb specially since it takes an integer directly
             if name == "sleep":
 
-                def sleep_method(self_instance, duration=None, **kwargs):
+                def sleep_method(
+                    self_instance: "SWMLBuilder",
+                    duration: int | None = None,
+                    **kwargs: Any,
+                ) -> "SWMLBuilder":
                     """
                     Add the sleep verb to the document.
 
@@ -403,7 +430,9 @@ class SWMLBuilder:
                 return types.MethodType(sleep_method, self)
 
             # Generate the method implementation for normal verbs
-            def verb_method(self_instance, **kwargs):
+            def verb_method(
+                self_instance: "SWMLBuilder", **kwargs: Any
+            ) -> "SWMLBuilder":
                 """
                 Dynamically generated method for SWML verb - returns self for chaining
                 """

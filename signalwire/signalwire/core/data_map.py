@@ -174,7 +174,7 @@ class DataMap:
     def expression(
         self,
         test_value: str,
-        pattern: str | Pattern,
+        pattern: str | Pattern[str],
         output: FunctionResult,
         nomatch_output: FunctionResult | None = None,
     ) -> "DataMap":
@@ -444,7 +444,7 @@ def create_simple_api_tool(
     name: str,
     url: str,
     response_template: str,
-    parameters: dict[str, dict] | None = None,
+    parameters: dict[str, dict[str, Any]] | None = None,
     method: str = "GET",
     headers: dict[str, str] | None = None,
     body: dict[str, Any] | None = None,
@@ -499,7 +499,7 @@ def create_simple_api_tool(
 def create_expression_tool(
     name: str,
     patterns: dict[str, tuple[str, FunctionResult]],
-    parameters: dict[str, dict] | None = None,
+    parameters: dict[str, dict[str, Any]] | None = None,
 ) -> DataMap:
     """
     Create an expression-based tool for pattern matching responses

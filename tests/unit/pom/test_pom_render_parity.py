@@ -32,20 +32,20 @@ from signalwire.pom.pom import PromptObjectModel, Section
 # ----------------------------------------------------------------------------
 
 class TestEmptyPom:
-    def test_empty_render_markdown_is_empty_string(self):
+    def test_empty_render_markdown_is_empty_string(self) -> None:
         pom = PromptObjectModel()
         assert pom.render_markdown() == ""
 
-    def test_empty_render_xml_is_just_prompt_tags(self):
+    def test_empty_render_xml_is_just_prompt_tags(self) -> None:
         pom = PromptObjectModel()
         expected = '<?xml version="1.0" encoding="UTF-8"?>\n<prompt>\n</prompt>'
         assert pom.render_xml() == expected
 
-    def test_empty_to_json_is_empty_array(self):
+    def test_empty_to_json_is_empty_array(self) -> None:
         pom = PromptObjectModel()
         assert pom.to_json() == "[]"
 
-    def test_empty_to_yaml(self):
+    def test_empty_to_yaml(self) -> None:
         pom = PromptObjectModel()
         # PyYAML's default for an empty list is "[]\n"
         assert pom.to_yaml() == "[]\n"
@@ -56,13 +56,13 @@ class TestEmptyPom:
 # ----------------------------------------------------------------------------
 
 class TestSimpleSection:
-    def test_render_markdown_exact(self):
+    def test_render_markdown_exact(self) -> None:
         pom = PromptObjectModel()
         pom.add_section(title="Greeting", body="Hello world")
         expected = "## Greeting\n\nHello world\n"
         assert pom.render_markdown() == expected
 
-    def test_render_xml_exact(self):
+    def test_render_xml_exact(self) -> None:
         pom = PromptObjectModel()
         pom.add_section(title="Greeting", body="Hello world")
         expected = (
@@ -82,14 +82,14 @@ class TestSimpleSection:
 # ----------------------------------------------------------------------------
 
 class TestBullets:
-    def test_render_markdown_with_bullets(self):
+    def test_render_markdown_with_bullets(self) -> None:
         pom = PromptObjectModel()
         pom.add_section(title="Goals", body="Be helpful",
                        bullets=["Be concise", "Be clear"])
         expected = "## Goals\n\nBe helpful\n\n- Be concise\n- Be clear\n"
         assert pom.render_markdown() == expected
 
-    def test_render_xml_with_bullets(self):
+    def test_render_xml_with_bullets(self) -> None:
         pom = PromptObjectModel()
         pom.add_section(title="Goals", body="Be helpful",
                        bullets=["Be concise", "Be clear"])
@@ -114,14 +114,14 @@ class TestBullets:
 # ----------------------------------------------------------------------------
 
 class TestSubsections:
-    def test_render_markdown_with_subsection(self):
+    def test_render_markdown_with_subsection(self) -> None:
         pom = PromptObjectModel()
         s = pom.add_section(title="Top", body="Top body")
         s.add_subsection(title="Sub1", body="Sub1 body", bullets=["a", "b"])
         expected = "## Top\n\nTop body\n\n### Sub1\n\nSub1 body\n\n- a\n- b\n"
         assert pom.render_markdown() == expected
 
-    def test_render_xml_with_subsection(self):
+    def test_render_xml_with_subsection(self) -> None:
         pom = PromptObjectModel()
         s = pom.add_section(title="Top", body="Top body")
         s.add_subsection(title="Sub1", body="Sub1 body", bullets=["a", "b"])
@@ -152,7 +152,7 @@ class TestSubsections:
 # ----------------------------------------------------------------------------
 
 class TestNumberedSections:
-    def test_render_markdown_numbered_propagates_to_siblings(self):
+    def test_render_markdown_numbered_propagates_to_siblings(self) -> None:
         # Once any sibling is numbered=True, all siblings (without explicit
         # numbered=False) get numbered.
         pom = PromptObjectModel()
@@ -161,7 +161,7 @@ class TestNumberedSections:
         expected = "## 1. S1\n\nb1\n\n## 2. S2\n\nb2\n"
         assert pom.render_markdown() == expected
 
-    def test_render_xml_numbered_propagates(self):
+    def test_render_xml_numbered_propagates(self) -> None:
         pom = PromptObjectModel()
         pom.add_section(title="S1", body="b1", numbered=True)
         pom.add_section(title="S2", body="b2")
@@ -186,13 +186,13 @@ class TestNumberedSections:
 # ----------------------------------------------------------------------------
 
 class TestNumberedBullets:
-    def test_render_markdown_numbered_bullets(self):
+    def test_render_markdown_numbered_bullets(self) -> None:
         pom = PromptObjectModel()
         pom.add_section(title="X", bullets=["one", "two"], numberedBullets=True)
         expected = "## X\n\n1. one\n2. two\n"
         assert pom.render_markdown() == expected
 
-    def test_render_xml_numbered_bullets_use_id_attr(self):
+    def test_render_xml_numbered_bullets_use_id_attr(self) -> None:
         pom = PromptObjectModel()
         pom.add_section(title="X", bullets=["one", "two"], numberedBullets=True)
         expected = (
@@ -215,7 +215,7 @@ class TestNumberedBullets:
 # ----------------------------------------------------------------------------
 
 class TestSerialization:
-    def test_to_json_exact_shape(self):
+    def test_to_json_exact_shape(self) -> None:
         pom = PromptObjectModel()
         s = pom.add_section(title="A", body="ab")
         s.add_subsection(title="A1", body="a1b", bullets=["x"])
@@ -238,7 +238,7 @@ class TestSerialization:
         )
         assert pom.to_json() == expected
 
-    def test_to_yaml_exact_shape(self):
+    def test_to_yaml_exact_shape(self) -> None:
         pom = PromptObjectModel()
         s = pom.add_section(title="A", body="ab")
         s.add_subsection(title="A1", body="a1b", bullets=["x"])
@@ -253,7 +253,7 @@ class TestSerialization:
         )
         assert pom.to_yaml() == expected
 
-    def test_from_json_round_trip_preserves_structure(self):
+    def test_from_json_round_trip_preserves_structure(self) -> None:
         pom = PromptObjectModel()
         s = pom.add_section(title="A", body="ab")
         s.add_subsection(title="A1", body="a1b", bullets=["x", "y"])
@@ -261,7 +261,7 @@ class TestSerialization:
         restored = PromptObjectModel.from_json(json_str)
         assert restored.to_json() == json_str
 
-    def test_from_yaml_round_trip_preserves_structure(self):
+    def test_from_yaml_round_trip_preserves_structure(self) -> None:
         pom = PromptObjectModel()
         s = pom.add_section(title="A", body="ab")
         s.add_subsection(title="A1", body="a1b", bullets=["x", "y"])
@@ -275,7 +275,7 @@ class TestSerialization:
 # ----------------------------------------------------------------------------
 
 class TestFindSection:
-    def test_find_section_top_level(self):
+    def test_find_section_top_level(self) -> None:
         pom = PromptObjectModel()
         pom.add_section(title="One", body="b1")
         pom.add_section(title="Two", body="b2")
@@ -283,7 +283,7 @@ class TestFindSection:
         assert s is not None
         assert s.body == "b2"
 
-    def test_find_section_recurses_into_subsections(self):
+    def test_find_section_recurses_into_subsections(self) -> None:
         pom = PromptObjectModel()
         s = pom.add_section(title="Outer", body="ob")
         s.add_subsection(title="Inner", body="ib")
@@ -291,7 +291,7 @@ class TestFindSection:
         assert found is not None
         assert found.body == "ib"
 
-    def test_find_section_returns_none_for_missing(self):
+    def test_find_section_returns_none_for_missing(self) -> None:
         pom = PromptObjectModel()
         pom.add_section(title="Only", body="b")
         assert pom.find_section("Missing") is None
@@ -302,7 +302,7 @@ class TestFindSection:
 # ----------------------------------------------------------------------------
 
 class TestAddPomAsSubsection:
-    def test_add_pom_to_existing_section_by_title(self):
+    def test_add_pom_to_existing_section_by_title(self) -> None:
         host = PromptObjectModel()
         host.add_section(title="Host", body="hb")
 
@@ -316,7 +316,7 @@ class TestAddPomAsSubsection:
         assert host_section.subsections[0].title == "Guest"
         assert host_section.subsections[0].body == "gb"
 
-    def test_add_pom_to_section_object_directly(self):
+    def test_add_pom_to_section_object_directly(self) -> None:
         host = PromptObjectModel()
         target = host.add_section(title="Host", body="hb")
 

@@ -1,75 +1,33 @@
-"""
-Copyright (c) 2025 SignalWire
+"""Deprecated import path for ``registry`` REST symbols.
 
-This file is part of the SignalWire SDK.
-
-Licensed under the MIT License.
-See LICENSE file in the project root for full license information.
-
-10DLC Campaign Registry namespace — brands, campaigns, orders, numbers.
+These symbols moved out of ``namespaces.registry`` when the REST layer was
+regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
+re-export keeps ``from signalwire.signalwire.rest.namespaces.registry import RegistryBrands``
+working but emits a :class:`DeprecationWarning`. Prefer ``client.registry`` instead
+(no import needed).
 """
 
-from .._base import BaseResource
+import warnings
 
+warnings.warn(
+    "signalwire.signalwire.rest.namespaces.registry is deprecated; use client.registry. "
+    "This back-compat shim will be removed in a future release.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class RegistryBrands(BaseResource):
-    """10DLC brand management."""
+from .relay_rest_resources_generated import (  # noqa: E402  (re-export after the deprecation warn — intentional)
+    RegistryBrands,
+    RegistryCampaigns,
+    RegistryNumbers,
+    RegistryOrders,
+)
+from ._client_tree_generated import RegistryNamespace  # noqa: E402  (re-export after the deprecation warn — intentional)
 
-    def list(self, **params):
-        return self._http.get(self._base_path, params=params or None)
-
-    def create(self, **kwargs):
-        return self._http.post(self._base_path, body=kwargs)
-
-    def get(self, brand_id):
-        return self._http.get(self._path(brand_id))
-
-    def list_campaigns(self, brand_id, **params):
-        return self._http.get(self._path(brand_id, "campaigns"), params=params or None)
-
-    def create_campaign(self, brand_id, **kwargs):
-        return self._http.post(self._path(brand_id, "campaigns"), body=kwargs)
-
-
-class RegistryCampaigns(BaseResource):
-    """10DLC campaign management."""
-
-    def get(self, campaign_id):
-        return self._http.get(self._path(campaign_id))
-
-    def update(self, campaign_id, **kwargs):
-        return self._http.put(self._path(campaign_id), body=kwargs)
-
-    def list_numbers(self, campaign_id, **params):
-        return self._http.get(self._path(campaign_id, "numbers"), params=params or None)
-
-    def list_orders(self, campaign_id, **params):
-        return self._http.get(self._path(campaign_id, "orders"), params=params or None)
-
-    def create_order(self, campaign_id, **kwargs):
-        return self._http.post(self._path(campaign_id, "orders"), body=kwargs)
-
-
-class RegistryOrders(BaseResource):
-    """10DLC assignment order management."""
-
-    def get(self, order_id):
-        return self._http.get(self._path(order_id))
-
-
-class RegistryNumbers(BaseResource):
-    """10DLC number assignment management."""
-
-    def delete(self, number_id):
-        return self._http.delete(self._path(number_id))
-
-
-class RegistryNamespace:
-    """10DLC Campaign Registry namespace."""
-
-    def __init__(self, http):
-        base = "/api/relay/rest/registry/beta"
-        self.brands = RegistryBrands(http, f"{base}/brands")
-        self.campaigns = RegistryCampaigns(http, f"{base}/campaigns")
-        self.orders = RegistryOrders(http, f"{base}/orders")
-        self.numbers = RegistryNumbers(http, f"{base}/numbers")
+__all__ = [
+    "RegistryBrands",
+    "RegistryCampaigns",
+    "RegistryNamespace",
+    "RegistryNumbers",
+    "RegistryOrders",
+]

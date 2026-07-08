@@ -348,8 +348,8 @@ class WebService:
                 "directory_browsing": self.enable_directory_browsing,
             }
 
-        @self.app.get("/")
-        async def root():
+        @self.app.get("/", response_model=None)
+        async def root() -> "Response | dict[str, Any]":
             """Root endpoint showing available directories"""
             html = """
             <!DOCTYPE html>
@@ -420,7 +420,7 @@ class WebService:
                 ),
                 route: str = route,
                 directory: str = directory,
-            ):
+            ) -> "Response":
                 """Serve files with security checks"""
                 if security:
                     self._get_current_username(credentials)

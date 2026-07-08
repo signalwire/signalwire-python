@@ -1,62 +1,25 @@
-"""
-Copyright (c) 2025 SignalWire
+"""Deprecated import path for ``logs`` REST symbols.
 
-This file is part of the SignalWire SDK.
-
-Licensed under the MIT License.
-See LICENSE file in the project root for full license information.
-
-Logs namespace — message, voice, fax, and conference logs (read-only).
+These symbols moved out of ``namespaces.logs`` when the REST layer was
+regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
+re-export keeps ``from signalwire.signalwire.rest.namespaces.logs import MessageLogs``
+working but emits a :class:`DeprecationWarning`. Prefer ``client.logs`` instead
+(no import needed).
 """
 
-from .._base import BaseResource
+import warnings
 
+warnings.warn(
+    "signalwire.signalwire.rest.namespaces.logs is deprecated; use client.logs. "
+    "This back-compat shim will be removed in a future release.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class MessageLogs(BaseResource):
-    """Message log queries."""
+from .message_resources_generated import MessageLogs  # noqa: E402  (re-export after the deprecation warn — intentional)
+from .voice_resources_generated import VoiceLogs  # noqa: E402  (re-export after the deprecation warn — intentional)
+from .fax_resources_generated import FaxLogs  # noqa: E402  (re-export after the deprecation warn — intentional)
+from .logs_resources_generated import ConferenceLogs  # noqa: E402  (re-export after the deprecation warn — intentional)
+from ._client_tree_generated import LogsNamespace  # noqa: E402  (re-export after the deprecation warn — intentional)
 
-    def list(self, **params):
-        return self._http.get(self._base_path, params=params or None)
-
-    def get(self, log_id):
-        return self._http.get(self._path(log_id))
-
-
-class VoiceLogs(BaseResource):
-    """Voice log queries."""
-
-    def list(self, **params):
-        return self._http.get(self._base_path, params=params or None)
-
-    def get(self, log_id):
-        return self._http.get(self._path(log_id))
-
-    def list_events(self, log_id, **params):
-        return self._http.get(self._path(log_id, "events"), params=params or None)
-
-
-class FaxLogs(BaseResource):
-    """Fax log queries."""
-
-    def list(self, **params):
-        return self._http.get(self._base_path, params=params or None)
-
-    def get(self, log_id):
-        return self._http.get(self._path(log_id))
-
-
-class ConferenceLogs(BaseResource):
-    """Conference log queries."""
-
-    def list(self, **params):
-        return self._http.get(self._base_path, params=params or None)
-
-
-class LogsNamespace:
-    """Logs API namespace."""
-
-    def __init__(self, http):
-        self.messages = MessageLogs(http, "/api/messaging/logs")
-        self.voice = VoiceLogs(http, "/api/voice/logs")
-        self.fax = FaxLogs(http, "/api/fax/logs")
-        self.conferences = ConferenceLogs(http, "/api/logs/conferences")
+__all__ = ["ConferenceLogs", "FaxLogs", "LogsNamespace", "MessageLogs", "VoiceLogs"]

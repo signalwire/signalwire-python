@@ -11,17 +11,15 @@ See LICENSE file in the project root for full license information.
 Unit tests for the DateTime skill module
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
-from datetime import datetime, timezone
+from typing import Any  # noqa: E402
+from unittest.mock import Mock, patch, MagicMock  # noqa: E402
+from datetime import datetime, timezone  # noqa: E402
 
-import pytz
-
-from signalwire.skills.datetime.skill import DateTimeSkill
-from signalwire.core.function_result import FunctionResult
+from signalwire.skills.datetime.skill import DateTimeSkill  # noqa: E402
+from signalwire.core.function_result import FunctionResult  # noqa: E402
 
 
-def _make_skill(params=None):
+def _make_skill(params: dict[str, Any] | None = None) -> DateTimeSkill:
     """
     Helper to create a DateTimeSkill with a mocked agent.
     """
@@ -32,7 +30,7 @@ def _make_skill(params=None):
     mock_agent = Mock()
     mock_agent.define_tool = Mock()
     skill = DateTimeSkill(agent=mock_agent, params=default_params)
-    return skill
+    return skill  # noqa: RET504
 
 
 # ---------------------------------------------------------------------------
@@ -42,22 +40,22 @@ def _make_skill(params=None):
 class TestDateTimeSkillClassAttributes:
     """Verify class-level constants and metadata."""
 
-    def test_skill_name(self):
+    def test_skill_name(self) -> None:
         assert DateTimeSkill.SKILL_NAME == "datetime"
 
-    def test_skill_description(self):
+    def test_skill_description(self) -> None:
         assert DateTimeSkill.SKILL_DESCRIPTION == "Get current date, time, and timezone information"
 
-    def test_skill_version(self):
+    def test_skill_version(self) -> None:
         assert DateTimeSkill.SKILL_VERSION == "1.0.0"
 
-    def test_required_packages(self):
+    def test_required_packages(self) -> None:
         assert DateTimeSkill.REQUIRED_PACKAGES == ["pytz"]
 
-    def test_required_env_vars(self):
+    def test_required_env_vars(self) -> None:
         assert DateTimeSkill.REQUIRED_ENV_VARS == []
 
-    def test_supports_multiple_instances_default(self):
+    def test_supports_multiple_instances_default(self) -> None:
         assert DateTimeSkill.SUPPORTS_MULTIPLE_INSTANCES is False
 
 
@@ -68,21 +66,21 @@ class TestDateTimeSkillClassAttributes:
 class TestDateTimeSkillInit:
     """Tests for __init__ (inherited from SkillBase)."""
 
-    def test_agent_is_stored(self):
+    def test_agent_is_stored(self) -> None:
         mock_agent = Mock()
         skill = DateTimeSkill(agent=mock_agent)
         assert skill.agent is mock_agent
 
-    def test_params_default_to_empty_dict(self):
+    def test_params_default_to_empty_dict(self) -> None:
         skill = DateTimeSkill(agent=Mock())
         assert skill.params == {}
 
-    def test_logger_created(self):
+    def test_logger_created(self) -> None:
         skill = DateTimeSkill(agent=Mock())
         assert skill.logger is not None
         assert skill.logger.name == "signalwire.skills.datetime"
 
-    def test_swaig_fields_extracted_from_params(self):
+    def test_swaig_fields_extracted_from_params(self) -> None:
         params = {"swaig_fields": {"meta_data": {"x": 1}}}
         skill = DateTimeSkill(agent=Mock(), params=params)
         assert skill.swaig_fields == {"meta_data": {"x": 1}}
@@ -96,19 +94,19 @@ class TestDateTimeSkillInit:
 class TestDateTimeSkillSetup:
     """Tests for the setup method."""
 
-    def test_setup_returns_true(self):
+    def test_setup_returns_true(self) -> None:
         skill = _make_skill()
         result = skill.setup()
         assert result is True
 
-    def test_setup_calls_validate_packages(self):
+    def test_setup_calls_validate_packages(self) -> None:
         skill = _make_skill()
         with patch.object(skill, 'validate_packages', return_value=True) as mock_vp:
             result = skill.setup()
             mock_vp.assert_called_once()
             assert result is True
 
-    def test_setup_returns_false_when_packages_missing(self):
+    def test_setup_returns_false_when_packages_missing(self) -> None:
         skill = _make_skill()
         with patch.object(skill, 'validate_packages', return_value=False):
             result = skill.setup()
@@ -122,26 +120,26 @@ class TestDateTimeSkillSetup:
 class TestDateTimeSkillRegisterTools:
     """Tests for tool registration."""
 
-    def test_register_tools_calls_define_tool_twice(self):
+    def test_register_tools_calls_define_tool_twice(self) -> None:
         skill = _make_skill()
         skill.register_tools()
         assert skill.agent.define_tool.call_count == 2
 
-    def test_register_tools_registers_get_current_time(self):
+    def test_register_tools_registers_get_current_time(self) -> None:
         skill = _make_skill()
         skill.register_tools()
         calls = skill.agent.define_tool.call_args_list
         tool_names = [call.kwargs.get("name") for call in calls]
         assert "get_current_time" in tool_names
 
-    def test_register_tools_registers_get_current_date(self):
+    def test_register_tools_registers_get_current_date(self) -> None:
         skill = _make_skill()
         skill.register_tools()
         calls = skill.agent.define_tool.call_args_list
         tool_names = [call.kwargs.get("name") for call in calls]
         assert "get_current_date" in tool_names
 
-    def test_register_tools_passes_handlers(self):
+    def test_register_tools_passes_handlers(self) -> None:
         skill = _make_skill()
         skill.register_tools()
         calls = skill.agent.define_tool.call_args_list
@@ -149,7 +147,7 @@ class TestDateTimeSkillRegisterTools:
             assert "handler" in call.kwargs
             assert callable(call.kwargs["handler"])
 
-    def test_register_tools_merges_swaig_fields(self):
+    def test_register_tools_merges_swaig_fields(self) -> None:
         skill = _make_skill(params={"swaig_fields": {"web_hook_url": "http://example.com"}})
         skill.register_tools()
         calls = skill.agent.define_tool.call_args_list
@@ -164,44 +162,44 @@ class TestDateTimeSkillRegisterTools:
 class TestGetTimeHandler:
     """Tests for the _get_time_handler method."""
 
-    def test_default_utc_timezone(self):
+    def test_default_utc_timezone(self) -> None:
         skill = _make_skill()
-        result = skill._get_time_handler({}, None)
+        result = skill._get_time_handler({}, None)  # type: ignore[arg-type]  # raw_data unused by handler
         assert isinstance(result, FunctionResult)
         assert "The current time is" in result.response
         assert "UTC" in result.response
 
-    def test_explicit_utc_timezone(self):
+    def test_explicit_utc_timezone(self) -> None:
         skill = _make_skill()
-        result = skill._get_time_handler({"timezone": "UTC"}, None)
+        result = skill._get_time_handler({"timezone": "UTC"}, None)  # type: ignore[arg-type]  # raw_data unused by handler
         assert "The current time is" in result.response
         assert "UTC" in result.response
 
-    def test_utc_case_insensitive(self):
+    def test_utc_case_insensitive(self) -> None:
         skill = _make_skill()
-        result = skill._get_time_handler({"timezone": "utc"}, None)
+        result = skill._get_time_handler({"timezone": "utc"}, None)  # type: ignore[arg-type]  # raw_data unused by handler
         assert "The current time is" in result.response
         assert "UTC" in result.response
 
-    def test_specific_timezone(self):
+    def test_specific_timezone(self) -> None:
         skill = _make_skill()
-        result = skill._get_time_handler({"timezone": "America/New_York"}, None)
+        result = skill._get_time_handler({"timezone": "America/New_York"}, None)  # type: ignore[arg-type]  # raw_data unused by handler
         assert isinstance(result, FunctionResult)
         assert "The current time is" in result.response
 
-    def test_europe_timezone(self):
+    def test_europe_timezone(self) -> None:
         skill = _make_skill()
-        result = skill._get_time_handler({"timezone": "Europe/London"}, None)
+        result = skill._get_time_handler({"timezone": "Europe/London"}, None)  # type: ignore[arg-type]  # raw_data unused by handler
         assert "The current time is" in result.response
 
-    def test_invalid_timezone_returns_error(self):
+    def test_invalid_timezone_returns_error(self) -> None:
         skill = _make_skill()
-        result = skill._get_time_handler({"timezone": "Invalid/Timezone"}, None)
+        result = skill._get_time_handler({"timezone": "Invalid/Timezone"}, None)  # type: ignore[arg-type]  # raw_data unused by handler
         assert isinstance(result, FunctionResult)
         assert "Error getting time" in result.response
 
     @patch("signalwire.skills.datetime.skill.datetime")
-    def test_time_format(self, mock_datetime):
+    def test_time_format(self, mock_datetime: MagicMock) -> None:
         """Verify the time string format using a fixed datetime."""
         fixed_dt = datetime(2025, 6, 15, 14, 30, 45, tzinfo=timezone.utc)
         mock_datetime.now.return_value = fixed_dt
@@ -210,7 +208,7 @@ class TestGetTimeHandler:
         mock_datetime.now.return_value = fixed_dt
 
         skill = _make_skill()
-        result = skill._get_time_handler({"timezone": "UTC"}, None)
+        result = skill._get_time_handler({"timezone": "UTC"}, None)  # type: ignore[arg-type]  # raw_data unused by handler
         assert isinstance(result, FunctionResult)
         assert "The current time is" in result.response
 
@@ -222,37 +220,37 @@ class TestGetTimeHandler:
 class TestGetDateHandler:
     """Tests for the _get_date_handler method."""
 
-    def test_default_utc_timezone(self):
+    def test_default_utc_timezone(self) -> None:
         skill = _make_skill()
-        result = skill._get_date_handler({}, None)
+        result = skill._get_date_handler({}, None)  # type: ignore[arg-type]  # raw_data unused by handler
         assert isinstance(result, FunctionResult)
         assert "Today's date is" in result.response
         assert "UTC" not in result.response  # date format doesn't include timezone
 
-    def test_explicit_utc_timezone(self):
+    def test_explicit_utc_timezone(self) -> None:
         skill = _make_skill()
-        result = skill._get_date_handler({"timezone": "UTC"}, None)
+        result = skill._get_date_handler({"timezone": "UTC"}, None)  # type: ignore[arg-type]  # raw_data unused by handler
         assert "Today's date is" in result.response
 
-    def test_utc_case_insensitive(self):
+    def test_utc_case_insensitive(self) -> None:
         skill = _make_skill()
-        result = skill._get_date_handler({"timezone": "utc"}, None)
+        result = skill._get_date_handler({"timezone": "utc"}, None)  # type: ignore[arg-type]  # raw_data unused by handler
         assert "Today's date is" in result.response
 
-    def test_specific_timezone(self):
+    def test_specific_timezone(self) -> None:
         skill = _make_skill()
-        result = skill._get_date_handler({"timezone": "Asia/Tokyo"}, None)
+        result = skill._get_date_handler({"timezone": "Asia/Tokyo"}, None)  # type: ignore[arg-type]  # raw_data unused by handler
         assert isinstance(result, FunctionResult)
         assert "Today's date is" in result.response
 
-    def test_invalid_timezone_returns_error(self):
+    def test_invalid_timezone_returns_error(self) -> None:
         skill = _make_skill()
-        result = skill._get_date_handler({"timezone": "Fake/Zone"}, None)
+        result = skill._get_date_handler({"timezone": "Fake/Zone"}, None)  # type: ignore[arg-type]  # raw_data unused by handler
         assert isinstance(result, FunctionResult)
         assert "Error getting date" in result.response
 
     @patch("signalwire.skills.datetime.skill.datetime")
-    def test_date_format(self, mock_datetime):
+    def test_date_format(self, mock_datetime: MagicMock) -> None:
         """Verify the date string format using a fixed datetime."""
         fixed_dt = datetime(2025, 1, 20, 10, 0, 0, tzinfo=timezone.utc)
         mock_datetime.now.return_value = fixed_dt
@@ -260,7 +258,7 @@ class TestGetDateHandler:
         mock_datetime.now.return_value = fixed_dt
 
         skill = _make_skill()
-        result = skill._get_date_handler({"timezone": "UTC"}, None)
+        result = skill._get_date_handler({"timezone": "UTC"}, None)  # type: ignore[arg-type]  # raw_data unused by handler
         assert isinstance(result, FunctionResult)
         assert "Today's date is" in result.response
 
@@ -272,12 +270,12 @@ class TestGetDateHandler:
 class TestGetHints:
     """Tests for the get_hints method."""
 
-    def test_returns_empty_list(self):
+    def test_returns_empty_list(self) -> None:
         skill = _make_skill()
         hints = skill.get_hints()
         assert hints == []
 
-    def test_returns_list_type(self):
+    def test_returns_list_type(self) -> None:
         skill = _make_skill()
         hints = skill.get_hints()
         assert isinstance(hints, list)
@@ -290,27 +288,27 @@ class TestGetHints:
 class TestGetPromptSections:
     """Tests for the get_prompt_sections method."""
 
-    def test_returns_list(self):
+    def test_returns_list(self) -> None:
         skill = _make_skill()
         sections = skill.get_prompt_sections()
         assert isinstance(sections, list)
 
-    def test_returns_one_section(self):
+    def test_returns_one_section(self) -> None:
         skill = _make_skill()
         sections = skill.get_prompt_sections()
         assert len(sections) == 1
 
-    def test_section_has_title(self):
+    def test_section_has_title(self) -> None:
         skill = _make_skill()
         sections = skill.get_prompt_sections()
         assert sections[0]["title"] == "Date and Time Information"
 
-    def test_section_has_body(self):
+    def test_section_has_body(self) -> None:
         skill = _make_skill()
         sections = skill.get_prompt_sections()
         assert "date and time" in sections[0]["body"].lower()
 
-    def test_section_has_bullets(self):
+    def test_section_has_bullets(self) -> None:
         skill = _make_skill()
         sections = skill.get_prompt_sections()
         bullets = sections[0]["bullets"]
@@ -325,18 +323,18 @@ class TestGetPromptSections:
 class TestGetParameterSchema:
     """Tests for the get_parameter_schema classmethod."""
 
-    def test_returns_dict(self):
+    def test_returns_dict(self) -> None:
         schema = DateTimeSkill.get_parameter_schema()
         assert isinstance(schema, dict)
 
-    def test_includes_swaig_fields(self):
+    def test_includes_swaig_fields(self) -> None:
         schema = DateTimeSkill.get_parameter_schema()
         assert "swaig_fields" in schema
 
-    def test_no_tool_name_since_not_multi_instance(self):
+    def test_no_tool_name_since_not_multi_instance(self) -> None:
         schema = DateTimeSkill.get_parameter_schema()
         assert "tool_name" not in schema
 
-    def test_swaig_fields_type_is_object(self):
+    def test_swaig_fields_type_is_object(self) -> None:
         schema = DateTimeSkill.get_parameter_schema()
         assert schema["swaig_fields"]["type"] == "object"

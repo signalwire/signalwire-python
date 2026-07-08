@@ -136,6 +136,7 @@ if self.tags is not None:
 ```
 
 ### 3. **Response Processing with Foreach**
+<!-- snippet: no-compile fluent-chain-excerpt (leading-dot method call lifted from a builder chain) -->
 ```python
 .foreach({
     "input_key": "results",           # API response key containing array
@@ -152,6 +153,7 @@ The `foreach` mechanism:
 - Limits processing to `max` items
 
 ### 4. **Variable Expansion in Output**
+<!-- snippet: no-compile fluent-chain-excerpt (leading-dot method call lifted from a builder chain) -->
 ```python
 .output(SwaigFunctionResult('I found ${results.length} result(s) for "${args.query}":\n\n${formatted_results}'))
 ```
@@ -162,6 +164,7 @@ References:
 - `${formatted_results}`: String built by foreach
 
 ### 5. **Error Handling**
+<!-- snippet: no-compile fluent-chain-excerpt (leading-dot method calls lifted from a builder chain) -->
 ```python
 .error_keys(['error', 'message'])
 .fallback_output(SwaigFunctionResult(self.no_results_message.replace('{query}', '${args.query}')))

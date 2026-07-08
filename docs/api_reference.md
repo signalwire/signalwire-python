@@ -20,6 +20,7 @@ The `AgentBase` class is the foundation for creating AI agents. It extends `SWML
 
 ### Constructor
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 AgentBase(
     name: str,
@@ -135,6 +136,7 @@ agent.set_post_prompt("Always be polite and professional.")
 
 ##### `set_prompt_llm_params`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def set_prompt_llm_params(**params) -> AgentBase
 ```
@@ -163,6 +165,7 @@ agent.set_prompt_llm_params(
 
 ##### `set_post_prompt_llm_params`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def set_post_prompt_llm_params(**params) -> AgentBase
 ```
@@ -189,6 +192,7 @@ agent.set_post_prompt_llm_params(
 
 ##### `prompt_add_section`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def prompt_add_section(
     title: str, 
@@ -232,6 +236,7 @@ agent.prompt_add_section(
 
 ##### `prompt_add_to_section`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def prompt_add_to_section(
     title: str, 
@@ -262,6 +267,7 @@ agent.prompt_add_to_section("Process", bullets=["Follow up", "Close ticket"])
 
 ##### `prompt_add_subsection`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def prompt_add_subsection(
     parent_title: str, 
@@ -292,6 +298,7 @@ agent.prompt_add_subsection(
 
 ##### `add_language`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def add_language(
     name: str, 
@@ -369,6 +376,7 @@ agent.add_hints(["SignalWire", "SWML", "API", "webhook", "SIP"])
 
 ##### `add_pattern_hint`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def add_pattern_hint(
     hint: str, 
@@ -396,6 +404,7 @@ agent.add_pattern_hint(
 
 ##### `add_pronunciation`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def add_pronunciation(
     replace: str, 
@@ -418,6 +427,7 @@ agent.add_pronunciation("SWML", "swim-el")
 
 ##### `set_pronunciations`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def set_pronunciations(
     pronunciations: List[Dict[str, Any]]
@@ -512,6 +522,7 @@ agent.update_global_data({
 
 ##### `define_tool`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def define_tool(
     name: str,
@@ -598,6 +609,7 @@ class MyAgent(AgentBase):
 
 ##### `register_swaig_function`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def register_swaig_function(
     function_dict: Dict[str, Any]
@@ -662,6 +674,7 @@ def hangup_hook(self, args, raw_data):
 
 ##### `add_skill`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def add_skill(
     skill_name: str, 
@@ -750,6 +763,7 @@ if agent.has_skill("web_search"):
 
 ##### `set_native_functions`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def set_native_functions(
     function_names: List[str]
@@ -774,6 +788,7 @@ agent.set_native_functions(["transfer", "hangup", "send_sms"])
 
 ##### `set_internal_fillers`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def set_internal_fillers(
     internal_fillers: Dict[str, Dict[str, List[str]]]
@@ -807,6 +822,7 @@ agent.set_internal_fillers({
 
 ##### `add_internal_filler`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def add_internal_filler(
     function_name: str, 
@@ -833,6 +849,7 @@ agent.add_internal_filler("next_step", "en-US", [
 
 ##### `add_function_include`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def add_function_include(
     url: str, 
@@ -858,6 +875,7 @@ agent.add_function_include(
 
 ##### `set_function_includes`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def set_function_includes(
     includes: List[Dict[str, Any]]
@@ -940,6 +958,7 @@ agent.clear_swaig_query_params()
 
 ##### `enable_debug_events`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def enable_debug_events(level: int = 1) -> AgentBase
 ```
@@ -1085,6 +1104,7 @@ agent.add_pre_answer_verb("set", {"source": "ai_agent"}) \
 
 ##### `set_dynamic_config_callback`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def set_dynamic_config_callback(
     callback: Callable[[dict, dict, dict, AgentBase], None]
@@ -1114,6 +1134,7 @@ agent.set_dynamic_config_callback(configure_agent)
 
 ##### `enable_sip_routing`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def enable_sip_routing(
     auto_map: bool = True, 
@@ -1145,6 +1166,7 @@ agent.register_sip_username("sales")
 
 ##### `register_routing_callback`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def register_routing_callback(
     callback_fn: Callable[[Request, Dict[str, Any]], Optional[str]], 
@@ -1202,6 +1224,7 @@ main_app.include_router(agent_router, prefix="/agent")
 
 ##### `on_summary`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def on_summary(
     summary: Optional[Dict[str, Any]],
@@ -1252,6 +1275,7 @@ class MyAgent(AgentBase):
 
 ##### `on_debug_event`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def on_debug_event(handler: Callable) -> Callable
 ```
@@ -1296,6 +1320,7 @@ class MyAgent(AgentBase):
 
 ##### `on_function_call`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def on_function_call(
     name: str,
@@ -1326,6 +1351,7 @@ class MyAgent(AgentBase):
 
 ##### `on_request`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def on_request(
     request_data: Optional[dict] = None, 
@@ -1343,6 +1369,7 @@ Override to handle general requests.
 
 ##### `on_swml_request`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def on_swml_request(
     request_data: Optional[dict] = None, 
@@ -1382,6 +1409,7 @@ class MyAgent(AgentBase):
 
 ##### `get_basic_auth_credentials`
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 def get_basic_auth_credentials(
     include_source: bool = False
@@ -1426,6 +1454,7 @@ The `FunctionResult` class is used to create structured responses from SWAIG fun
 
 ### Constructor
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 FunctionResult(
     response: Optional[str] = None, 
@@ -2173,6 +2202,7 @@ The `DataMap` class provides a declarative approach to creating SWAIG tools that
 
 ### Constructor
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 DataMap(function_name: str)
 ```
@@ -2783,6 +2813,7 @@ support_context = contexts.add_context("support")
 
 The Context class represents a conversation context containing multiple steps with enhanced features:
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 class Context:
     def add_step(self, name: str) -> Step
@@ -3054,6 +3085,7 @@ Represents a SWAIG function definition with metadata and validation.
 
 #### Constructor
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 SWAIGFunction(
     function: str,

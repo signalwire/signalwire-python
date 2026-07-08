@@ -1,28 +1,24 @@
-"""
-Copyright (c) 2025 SignalWire
+"""Deprecated import path for ``short_codes`` REST symbols.
 
-This file is part of the SignalWire SDK.
-
-Licensed under the MIT License.
-See LICENSE file in the project root for full license information.
-
-Short Codes namespace — list, get, update (no create/delete).
+These symbols moved out of ``namespaces.short_codes`` when the REST layer was
+regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
+re-export keeps ``from signalwire.signalwire.rest.namespaces.short_codes import ShortCodesResource``
+working but emits a :class:`DeprecationWarning`. Prefer ``client.short_codes`` instead
+(no import needed).
 """
 
-from .._base import BaseResource
+import warnings
 
+warnings.warn(
+    "signalwire.signalwire.rest.namespaces.short_codes is deprecated; use client.short_codes. "
+    "This back-compat shim will be removed in a future release.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class ShortCodesResource(BaseResource):
-    """Short code management (read + update only)."""
+from .relay_rest_resources_generated import ShortCodes  # noqa: E402  (re-export after the deprecation warn — intentional)
 
-    def __init__(self, http):
-        super().__init__(http, "/api/relay/rest/short_codes")
+# Back-compat aliases (old name -> generated bare name):
+ShortCodesResource = ShortCodes
 
-    def list(self, **params):
-        return self._http.get(self._base_path, params=params or None)
-
-    def get(self, short_code_id):
-        return self._http.get(self._path(short_code_id))
-
-    def update(self, short_code_id, **kwargs):
-        return self._http.put(self._path(short_code_id), body=kwargs)
+__all__ = ["ShortCodesResource"]

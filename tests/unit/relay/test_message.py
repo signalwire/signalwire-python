@@ -10,6 +10,7 @@ import pytest
 import pytest_asyncio
 
 from signalwire.relay.client import RelayClient, RelayError, _active_clients
+from signalwire.relay.event import RelayEvent
 from signalwire.relay.message import Message
 from signalwire.relay.constants import (
     EVENT_MESSAGING_RECEIVE,
@@ -22,6 +23,7 @@ from signalwire.relay.constants import (
 
 from .conftest import (
     AutoAuthMockWebSocket,
+    MockWebSocket,
     make_event,
     make_jsonrpc_response,
 )
@@ -35,7 +37,7 @@ class TestMessage:
     """Tests for the Message data class and state tracking."""
 
     @pytest.mark.asyncio
-    async def test_initial_state(self):
+    async def test_initial_state(self) -> None:
         msg = Message(
             message_id="msg-1",
             direction="outbound",
@@ -52,7 +54,7 @@ class TestMessage:
         assert msg.result is None
 
     @pytest.mark.asyncio
-    async def test_dispatch_event_updates_state(self):
+    async def test_dispatch_event_updates_state(self) -> None:
         msg = Message(message_id="msg-1", state="queued")
         await msg._dispatch_event({
             "event_type": EVENT_MESSAGING_STATE,
@@ -62,7 +64,7 @@ class TestMessage:
         assert not msg.is_done
 
     @pytest.mark.asyncio
-    async def test_dispatch_terminal_state_resolves(self):
+    async def test_dispatch_terminal_state_resolves(self) -> None:
         msg = Message(message_id="msg-1", state="queued")
         await msg._dispatch_event({
             "event_type": EVENT_MESSAGING_STATE,
@@ -73,7 +75,7 @@ class TestMessage:
         assert msg.result is not None
 
     @pytest.mark.asyncio
-    async def test_dispatch_failed_state(self):
+    async def test_dispatch_failed_state(self) -> None:
         msg = Message(message_id="msg-1", state="queued")
         await msg._dispatch_event({
             "event_type": EVENT_MESSAGING_STATE,
@@ -88,10 +90,10 @@ class TestMessage:
         assert msg.is_done
 
     @pytest.mark.asyncio
-    async def test_wait_returns_terminal_event(self):
+    async def test_wait_returns_terminal_event(self) -> None:
         msg = Message(message_id="msg-1", state="queued")
 
-        async def deliver():
+        async def deliver() -> None:
             await asyncio.sleep(0.01)
             await msg._dispatch_event({
                 "event_type": EVENT_MESSAGING_STATE,
@@ -103,13 +105,13 @@ class TestMessage:
         assert event.params["message_state"] == "delivered"
 
     @pytest.mark.asyncio
-    async def test_wait_timeout(self):
+    async def test_wait_timeout(self) -> None:
         msg = Message(message_id="msg-1", state="queued")
         with pytest.raises(asyncio.TimeoutError):
             await msg.wait(timeout=0.01)
 
     @pytest.mark.asyncio
-    async def test_on_completed_callback(self):
+    async def test_on_completed_callback(self) -> None:
         results = []
         msg = Message(message_id="msg-1", state="queued")
         msg._on_completed = lambda event: results.append(event)
@@ -122,11 +124,11 @@ class TestMessage:
         assert results[0].params["message_state"] == "delivered"
 
     @pytest.mark.asyncio
-    async def test_on_completed_async_callback(self):
+    async def test_on_completed_async_callback(self) -> None:
         results = []
         msg = Message(message_id="msg-1", state="queued")
 
-        async def on_done(event):
+        async def on_done(event: RelayEvent) -> None:
             results.append(event)
 
         msg._on_completed = on_done
@@ -139,7 +141,7 @@ class TestMessage:
         assert len(results) == 1
 
     @pytest.mark.asyncio
-    async def test_on_completed_error_is_caught(self):
+    async def test_on_completed_error_is_caught(self) -> None:
         msg = Message(message_id="msg-1", state="queued")
         msg._on_completed = lambda event: 1 / 0  # raises ZeroDivisionError
 
@@ -151,7 +153,7 @@ class TestMessage:
         assert msg.is_done
 
     @pytest.mark.asyncio
-    async def test_listener_called_on_state_change(self):
+    async def test_listener_called_on_state_change(self) -> None:
         events = []
         msg = Message(message_id="msg-1", state="queued")
         msg.on(lambda event: events.append(event))
@@ -163,7 +165,7 @@ class TestMessage:
         assert len(events) == 1
 
     @pytest.mark.asyncio
-    async def test_listener_error_is_caught(self):
+    async def test_listener_error_is_caught(self) -> None:
         msg = Message(message_id="msg-1", state="queued")
         msg.on(lambda event: 1 / 0)
 
@@ -175,7 +177,7 @@ class TestMessage:
         assert msg.state == "sent"
 
     @pytest.mark.asyncio
-    async def test_repr(self):
+    async def test_repr(self) -> None:
         msg = Message(
             message_id="msg-1",
             direction="outbound",
@@ -196,7 +198,7 @@ class TestSendMessage:
     """Tests for RelayClient.send_message()."""
 
     @pytest.mark.asyncio
-    async def test_send_message_basic(self):
+    async def test_send_message_basic(self) -> None:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
@@ -208,8 +210,8 @@ class TestSendMessage:
             # Override auto_reply to include message_id
             original_send = ws.send
 
-            async def custom_send(raw):
-                await MockWebSocketSendBase.send(ws, raw)
+            async def custom_send(raw: str) -> None:
+                await MockWebSocket.send(ws, raw)
                 msg = json.loads(raw)
                 if msg.get("method") == "messaging.send":
                     ws.feed_message(make_jsonrpc_response(msg["id"], {
@@ -249,7 +251,7 @@ class TestSendMessage:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_send_message_with_media(self):
+    async def test_send_message_with_media(self) -> None:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
@@ -274,7 +276,7 @@ class TestSendMessage:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_send_message_with_all_params(self):
+    async def test_send_message_with_all_params(self) -> None:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
@@ -306,7 +308,7 @@ class TestSendMessage:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_send_message_requires_body_or_media(self):
+    async def test_send_message_requires_body_or_media(self) -> None:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
@@ -325,7 +327,7 @@ class TestSendMessage:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_send_message_on_completed(self):
+    async def test_send_message_on_completed(self) -> None:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
@@ -356,7 +358,7 @@ class TestMessagingEventRouting:
     """Tests for messaging event dispatch in RelayClient."""
 
     @pytest.mark.asyncio
-    async def test_inbound_message_routing(self):
+    async def test_inbound_message_routing(self) -> None:
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
 
@@ -367,7 +369,7 @@ class TestMessagingEventRouting:
             received_messages = []
 
             @client.on_message
-            async def handle_message(message):
+            async def handle_message(message: Message) -> None:
                 received_messages.append(message)
 
             await client.connect()
@@ -401,7 +403,7 @@ class TestMessagingEventRouting:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_inbound_message_no_handler(self):
+    async def test_inbound_message_no_handler(self) -> None:
         """Inbound message with no handler should just log a warning."""
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
@@ -427,7 +429,7 @@ class TestMessagingEventRouting:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_outbound_message_state_routing(self):
+    async def test_outbound_message_state_routing(self) -> None:
         """messaging.state events should route to tracked outbound messages."""
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
@@ -471,7 +473,7 @@ class TestMessagingEventRouting:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_state_event_for_unknown_message(self):
+    async def test_state_event_for_unknown_message(self) -> None:
         """State event for unknown message_id should be ignored."""
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
@@ -492,7 +494,7 @@ class TestMessagingEventRouting:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_message_handler_error_is_caught(self):
+    async def test_message_handler_error_is_caught(self) -> None:
         """Error in on_message handler should be caught, not crash the loop."""
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
@@ -502,7 +504,7 @@ class TestMessagingEventRouting:
             client = RelayClient(project="test-project", token="test-token")
 
             @client.on_message
-            async def handle_message(message):
+            async def handle_message(message: Message) -> None:
                 raise RuntimeError("handler boom")
 
             await client.connect()
@@ -522,7 +524,7 @@ class TestMessagingEventRouting:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_inbound_message_with_media_and_tags(self):
+    async def test_inbound_message_with_media_and_tags(self) -> None:
         """Verify all fields are populated on inbound messages."""
         _active_clients.clear()
         ws = AutoAuthMockWebSocket(auto_reply_all=True)
@@ -534,7 +536,7 @@ class TestMessagingEventRouting:
             received = []
 
             @client.on_message
-            async def handle_message(message):
+            async def handle_message(message: Message) -> None:
                 received.append(message)
 
             await client.connect()
@@ -573,7 +575,7 @@ class TestMessageProperties:
     """Direct property access on a uniquely-named Message variable."""
 
     @pytest.mark.asyncio
-    async def test_message_is_done_initial(self):
+    async def test_message_is_done_initial(self) -> None:
         outbound_msg = Message(
             message_id="m-prop-1", direction="outbound", state="queued"
         )
@@ -581,7 +583,7 @@ class TestMessageProperties:
         assert outbound_msg.is_done is False
 
     @pytest.mark.asyncio
-    async def test_message_is_done_after_terminal(self):
+    async def test_message_is_done_after_terminal(self) -> None:
         outbound_msg = Message(message_id="m-prop-2", state="queued")
         await outbound_msg._dispatch_event({
             "event_type": EVENT_MESSAGING_STATE,
@@ -590,13 +592,13 @@ class TestMessageProperties:
         assert outbound_msg.is_done is True
 
     @pytest.mark.asyncio
-    async def test_message_result_initial(self):
+    async def test_message_result_initial(self) -> None:
         outbound_msg = Message(message_id="m-prop-3", state="queued")
         # Property access — should be None until terminal state
         assert outbound_msg.result is None
 
     @pytest.mark.asyncio
-    async def test_message_result_after_terminal(self):
+    async def test_message_result_after_terminal(self) -> None:
         outbound_msg = Message(message_id="m-prop-4", state="queued")
         await outbound_msg._dispatch_event({
             "event_type": EVENT_MESSAGING_STATE,
@@ -612,9 +614,9 @@ class TestMessageOn:
     """Direct method call to Message.on so the audit binds it to Message."""
 
     @pytest.mark.asyncio
-    async def test_message_on_registers_listener(self):
+    async def test_message_on_registers_listener(self) -> None:
         outbound_msg = Message(message_id="m-on-1", state="queued")
-        events_seen: list = []
+        events_seen: list[RelayEvent] = []
         outbound_msg.on(lambda event: events_seen.append(event))
         await outbound_msg._dispatch_event({
             "event_type": EVENT_MESSAGING_STATE,
@@ -624,10 +626,10 @@ class TestMessageOn:
         assert events_seen[0].params["message_state"] == "sent"
 
     @pytest.mark.asyncio
-    async def test_message_on_multiple_listeners(self):
+    async def test_message_on_multiple_listeners(self) -> None:
         outbound_msg = Message(message_id="m-on-2", state="queued")
-        events_a: list = []
-        events_b: list = []
+        events_a: list[RelayEvent] = []
+        events_b: list[RelayEvent] = []
         outbound_msg.on(lambda event: events_a.append(event))
         outbound_msg.on(lambda event: events_b.append(event))
         await outbound_msg._dispatch_event({
@@ -642,10 +644,10 @@ class TestMessageWait:
     """Direct method call to Message.wait so the audit binds it to Message."""
 
     @pytest.mark.asyncio
-    async def test_message_wait_returns_terminal_event(self):
+    async def test_message_wait_returns_terminal_event(self) -> None:
         outbound_msg = Message(message_id="m-wait-1", state="queued")
 
-        async def deliver_later():
+        async def deliver_later() -> None:
             await asyncio.sleep(0.01)
             await outbound_msg._dispatch_event({
                 "event_type": EVENT_MESSAGING_STATE,
@@ -660,13 +662,13 @@ class TestMessageWait:
         assert terminal_event.params["message_state"] == "delivered"
 
     @pytest.mark.asyncio
-    async def test_message_wait_timeout_raises(self):
+    async def test_message_wait_timeout_raises(self) -> None:
         outbound_msg = Message(message_id="m-wait-2", state="queued")
         with pytest.raises(asyncio.TimeoutError):
             await outbound_msg.wait(timeout=0.01)
 
     @pytest.mark.asyncio
-    async def test_message_wait_no_timeout(self):
+    async def test_message_wait_no_timeout(self) -> None:
         """wait() without timeout returns immediately if already done."""
         outbound_msg = Message(message_id="m-wait-3", state="queued")
         await outbound_msg._dispatch_event({
@@ -684,7 +686,7 @@ class TestMessageRepr:
     """Direct __repr__ call so the audit picks up Message.__repr__."""
 
     @pytest.mark.asyncio
-    async def test_message_repr_contains_id_and_direction(self):
+    async def test_message_repr_contains_id_and_direction(self) -> None:
         outbound_msg = Message(
             message_id="m-repr-1",
             direction="outbound",
@@ -698,7 +700,7 @@ class TestMessageRepr:
         assert "queued" in rendered
 
     @pytest.mark.asyncio
-    async def test_message_repr_includes_phone_numbers(self):
+    async def test_message_repr_includes_phone_numbers(self) -> None:
         outbound_msg = Message(
             message_id="m-repr-2",
             direction="inbound",

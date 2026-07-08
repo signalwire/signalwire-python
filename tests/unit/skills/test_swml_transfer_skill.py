@@ -5,20 +5,18 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Unit tests for the SWMLTransfer skill module
 """
 
-import pytest
-from unittest.mock import Mock, patch, MagicMock
+from typing import Any
+
+from unittest.mock import Mock, patch
 
 from signalwire.skills.swml_transfer.skill import SWMLTransferSkill
-from signalwire.core.function_result import FunctionResult
 
 
-def _make_skill(params=None):
+def _make_skill(params: dict[str, Any] | None = None) -> SWMLTransferSkill:
     """
     Helper to create a SWMLTransferSkill with a mocked agent.
     Provides sensible defaults for all required parameters.
@@ -58,22 +56,22 @@ def _make_skill(params=None):
 class TestSWMLTransferSkillClassAttributes:
     """Verify class-level constants and metadata."""
 
-    def test_skill_name(self):
+    def test_skill_name(self) -> None:
         assert SWMLTransferSkill.SKILL_NAME == "swml_transfer"
 
-    def test_skill_description(self):
+    def test_skill_description(self) -> None:
         assert SWMLTransferSkill.SKILL_DESCRIPTION == "Transfer calls between agents based on pattern matching"
 
-    def test_skill_version(self):
+    def test_skill_version(self) -> None:
         assert SWMLTransferSkill.SKILL_VERSION == "1.0.0"
 
-    def test_required_packages(self):
+    def test_required_packages(self) -> None:
         assert SWMLTransferSkill.REQUIRED_PACKAGES == []
 
-    def test_required_env_vars(self):
+    def test_required_env_vars(self) -> None:
         assert SWMLTransferSkill.REQUIRED_ENV_VARS == []
 
-    def test_supports_multiple_instances(self):
+    def test_supports_multiple_instances(self) -> None:
         assert SWMLTransferSkill.SUPPORTS_MULTIPLE_INSTANCES is True
 
 
@@ -84,26 +82,26 @@ class TestSWMLTransferSkillClassAttributes:
 class TestSWMLTransferSkillInit:
     """Tests for __init__ (inherited from SkillBase)."""
 
-    def test_agent_is_stored(self):
+    def test_agent_is_stored(self) -> None:
         mock_agent = Mock()
         skill = SWMLTransferSkill(agent=mock_agent, params={"transfers": {}})
         assert skill.agent is mock_agent
 
-    def test_params_stored(self):
+    def test_params_stored(self) -> None:
         params = {"transfers": {"/sales/": {"url": "http://x"}}}
         skill = SWMLTransferSkill(agent=Mock(), params=params)
         assert "/sales/" in skill.params["transfers"]
 
-    def test_params_default_to_empty_dict(self):
+    def test_params_default_to_empty_dict(self) -> None:
         skill = SWMLTransferSkill(agent=Mock())
         assert skill.params == {}
 
-    def test_logger_created(self):
+    def test_logger_created(self) -> None:
         skill = SWMLTransferSkill(agent=Mock())
         assert skill.logger is not None
         assert skill.logger.name == "signalwire.skills.swml_transfer"
 
-    def test_swaig_fields_extracted_from_params(self):
+    def test_swaig_fields_extracted_from_params(self) -> None:
         params = {"swaig_fields": {"meta_data": {"x": 1}}, "transfers": {}}
         skill = SWMLTransferSkill(agent=Mock(), params=params)
         assert skill.swaig_fields == {"meta_data": {"x": 1}}
@@ -117,17 +115,17 @@ class TestSWMLTransferSkillInit:
 class TestGetInstanceKey:
     """Tests for get_instance_key method."""
 
-    def test_default_instance_key(self):
+    def test_default_instance_key(self) -> None:
         skill = _make_skill()
         skill.setup()
         assert skill.get_instance_key() == "swml_transfer_transfer_call"
 
-    def test_custom_tool_name_instance_key(self):
+    def test_custom_tool_name_instance_key(self) -> None:
         skill = _make_skill({"tool_name": "route_call"})
         skill.setup()
         assert skill.get_instance_key() == "swml_transfer_route_call"
 
-    def test_instance_key_before_setup_uses_params(self):
+    def test_instance_key_before_setup_uses_params(self) -> None:
         """get_instance_key reads from self.params, so it works before setup."""
         skill = _make_skill({"tool_name": "early_key"})
         assert skill.get_instance_key() == "swml_transfer_early_key"
@@ -140,77 +138,77 @@ class TestGetInstanceKey:
 class TestSetup:
     """Tests for setup() validation and configuration."""
 
-    def test_setup_returns_true_with_valid_params(self):
+    def test_setup_returns_true_with_valid_params(self) -> None:
         skill = _make_skill()
         assert skill.setup() is True
 
-    def test_setup_stores_tool_name_default(self):
+    def test_setup_stores_tool_name_default(self) -> None:
         skill = _make_skill()
         skill.setup()
         assert skill.tool_name == "transfer_call"
 
-    def test_setup_stores_custom_tool_name(self):
+    def test_setup_stores_custom_tool_name(self) -> None:
         skill = _make_skill({"tool_name": "my_transfer"})
         skill.setup()
         assert skill.tool_name == "my_transfer"
 
-    def test_setup_stores_description_default(self):
+    def test_setup_stores_description_default(self) -> None:
         skill = _make_skill()
         skill.setup()
         assert skill.description == "Transfer call based on pattern matching"
 
-    def test_setup_stores_custom_description(self):
+    def test_setup_stores_custom_description(self) -> None:
         skill = _make_skill({"description": "Route the call"})
         skill.setup()
         assert skill.description == "Route the call"
 
-    def test_setup_stores_parameter_name_default(self):
+    def test_setup_stores_parameter_name_default(self) -> None:
         skill = _make_skill()
         skill.setup()
         assert skill.parameter_name == "transfer_type"
 
-    def test_setup_stores_custom_parameter_name(self):
+    def test_setup_stores_custom_parameter_name(self) -> None:
         skill = _make_skill({"parameter_name": "dest"})
         skill.setup()
         assert skill.parameter_name == "dest"
 
-    def test_setup_stores_parameter_description_default(self):
+    def test_setup_stores_parameter_description_default(self) -> None:
         skill = _make_skill()
         skill.setup()
         assert skill.parameter_description == "The type of transfer to perform"
 
-    def test_setup_stores_default_message(self):
+    def test_setup_stores_default_message(self) -> None:
         skill = _make_skill()
         skill.setup()
         assert skill.default_message == "Please specify a valid transfer type."
 
-    def test_setup_stores_custom_default_message(self):
+    def test_setup_stores_custom_default_message(self) -> None:
         skill = _make_skill({"default_message": "Unknown transfer."})
         skill.setup()
         assert skill.default_message == "Unknown transfer."
 
-    def test_setup_stores_default_post_process(self):
+    def test_setup_stores_default_post_process(self) -> None:
         skill = _make_skill()
         skill.setup()
         assert skill.default_post_process is False
 
-    def test_setup_stores_custom_default_post_process(self):
+    def test_setup_stores_custom_default_post_process(self) -> None:
         skill = _make_skill({"default_post_process": True})
         skill.setup()
         assert skill.default_post_process is True
 
-    def test_setup_stores_required_fields_default(self):
+    def test_setup_stores_required_fields_default(self) -> None:
         skill = _make_skill()
         skill.setup()
         assert skill.required_fields == {}
 
-    def test_setup_stores_custom_required_fields(self):
+    def test_setup_stores_custom_required_fields(self) -> None:
         fields = {"caller_name": "The caller's name"}
         skill = _make_skill({"required_fields": fields})
         skill.setup()
         assert skill.required_fields == fields
 
-    def test_setup_sets_defaults_on_transfer_configs(self):
+    def test_setup_sets_defaults_on_transfer_configs(self) -> None:
         """Verify setup fills in defaults for optional config fields."""
         transfers = {
             "/billing/": {"url": "https://example.com/billing"}
@@ -225,28 +223,28 @@ class TestSetup:
 
     # --- Failure cases ---
 
-    def test_setup_fails_missing_transfers(self):
+    def test_setup_fails_missing_transfers(self) -> None:
         skill = _make_skill({"transfers": None})
         assert skill.setup() is False
 
-    def test_setup_fails_empty_transfers(self):
+    def test_setup_fails_empty_transfers(self) -> None:
         """Empty dict is falsy for 'not self.params.get(param)'."""
         skill = _make_skill({"transfers": {}})
         assert skill.setup() is False
 
-    def test_setup_fails_transfers_not_dict(self):
+    def test_setup_fails_transfers_not_dict(self) -> None:
         skill = _make_skill({"transfers": "not_a_dict"})
         assert skill.setup() is False
 
-    def test_setup_fails_transfer_config_not_dict(self):
+    def test_setup_fails_transfer_config_not_dict(self) -> None:
         skill = _make_skill({"transfers": {"/bad/": "string_config"}})
         assert skill.setup() is False
 
-    def test_setup_fails_transfer_missing_url_and_address(self):
+    def test_setup_fails_transfer_missing_url_and_address(self) -> None:
         skill = _make_skill({"transfers": {"/nowhere/": {"message": "hi"}}})
         assert skill.setup() is False
 
-    def test_setup_fails_transfer_has_both_url_and_address(self):
+    def test_setup_fails_transfer_has_both_url_and_address(self) -> None:
         skill = _make_skill({
             "transfers": {
                 "/both/": {
@@ -265,34 +263,34 @@ class TestSetup:
 class TestRegisterTools:
     """Tests for register_tools() method."""
 
-    def test_register_calls_register_swaig_function(self):
+    def test_register_calls_register_swaig_function(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
         skill.agent.register_swaig_function.assert_called_once()
 
-    def test_registered_function_name(self):
+    def test_registered_function_name(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
         call_args = skill.agent.register_swaig_function.call_args[0][0]
         assert call_args["function"] == "transfer_call"
 
-    def test_registered_function_custom_name(self):
+    def test_registered_function_custom_name(self) -> None:
         skill = _make_skill({"tool_name": "route_it"})
         skill.setup()
         skill.register_tools()
         call_args = skill.agent.register_swaig_function.call_args[0][0]
         assert call_args["function"] == "route_it"
 
-    def test_registered_function_description(self):
+    def test_registered_function_description(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
         call_args = skill.agent.register_swaig_function.call_args[0][0]
         assert call_args["description"] == "Transfer call based on pattern matching"
 
-    def test_registered_function_has_transfer_type_param(self):
+    def test_registered_function_has_transfer_type_param(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -301,7 +299,7 @@ class TestRegisterTools:
         assert "transfer_type" in params["properties"]
         assert "transfer_type" in params.get("required", [])
 
-    def test_registered_function_custom_parameter_name(self):
+    def test_registered_function_custom_parameter_name(self) -> None:
         skill = _make_skill({"parameter_name": "dest_type"})
         skill.setup()
         skill.register_tools()
@@ -309,7 +307,7 @@ class TestRegisterTools:
         params = call_args["parameters"]
         assert "dest_type" in params["properties"]
 
-    def test_registered_function_has_expressions(self):
+    def test_registered_function_has_expressions(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -318,7 +316,7 @@ class TestRegisterTools:
         # 2 patterns + 1 fallback = 3 expressions
         assert len(data_map["expressions"]) == 3
 
-    def test_registered_function_fallback_expression(self):
+    def test_registered_function_fallback_expression(self) -> None:
         skill = _make_skill()
         skill.setup()
         skill.register_tools()
@@ -328,7 +326,7 @@ class TestRegisterTools:
         assert fallback["pattern"] == r"/.*/"
         assert fallback["output"]["response"] == "Please specify a valid transfer type."
 
-    def test_url_transfer_uses_swml_transfer_action(self):
+    def test_url_transfer_uses_swml_transfer_action(self) -> None:
         """A 'url' config should produce an expression with SWML transfer action."""
         skill = _make_skill()
         skill.setup()
@@ -346,7 +344,7 @@ class TestRegisterTools:
         main_section = swml_action["SWML"]["sections"]["main"]
         assert any("transfer" in step for step in main_section)
 
-    def test_address_transfer_uses_connect_action(self):
+    def test_address_transfer_uses_connect_action(self) -> None:
         """An 'address' config should produce an expression with connect action."""
         skill = _make_skill()
         skill.setup()
@@ -361,7 +359,7 @@ class TestRegisterTools:
         connect_step = [s for s in main_section if "connect" in s][0]
         assert connect_step["connect"]["to"] == "+15551234567"
 
-    def test_address_transfer_with_from_addr(self):
+    def test_address_transfer_with_from_addr(self) -> None:
         """An address config with from_addr should include 'from' in the connect action."""
         transfers = {
             "/vip/": {
@@ -381,7 +379,7 @@ class TestRegisterTools:
         connect_step = [s for s in main_section if "connect" in s][0]
         assert connect_step["connect"]["from"] == "+15550001111"
 
-    def test_address_transfer_non_final(self):
+    def test_address_transfer_non_final(self) -> None:
         """An address config with final=False uses 'false' in SWML transfer key."""
         skill = _make_skill()
         skill.setup()
@@ -393,7 +391,7 @@ class TestRegisterTools:
         swml_action = [a for a in actions if "SWML" in a][0]
         assert swml_action["transfer"] == "false"
 
-    def test_required_fields_added_as_parameters(self):
+    def test_required_fields_added_as_parameters(self) -> None:
         skill = _make_skill({"required_fields": {"caller_name": "Name of caller"}})
         skill.setup()
         skill.register_tools()
@@ -402,7 +400,7 @@ class TestRegisterTools:
         assert "caller_name" in params["properties"]
         assert "caller_name" in params.get("required", [])
 
-    def test_required_fields_saved_in_global_data(self):
+    def test_required_fields_saved_in_global_data(self) -> None:
         """When required_fields is set, expressions should contain set_global_data actions."""
         skill = _make_skill({"required_fields": {"caller_name": "Name of caller"}})
         skill.setup()
@@ -418,7 +416,7 @@ class TestRegisterTools:
         assert "call_data" in gd
         assert gd["call_data"]["caller_name"] == "${args.caller_name}"
 
-    def test_required_fields_in_fallback_expression(self):
+    def test_required_fields_in_fallback_expression(self) -> None:
         """The fallback expression should also save required fields."""
         skill = _make_skill({"required_fields": {"caller_name": "Name of caller"}})
         skill.setup()
@@ -430,7 +428,7 @@ class TestRegisterTools:
         global_data_actions = [a for a in actions if "set_global_data" in a]
         assert len(global_data_actions) >= 1
 
-    def test_register_tools_fallback_without_register_swaig_function(self):
+    def test_register_tools_fallback_without_register_swaig_function(self) -> None:
         """When agent lacks register_swaig_function, the skill must take
         the else-branch and log an error — it must NOT silently do nothing."""
         skill = _make_skill()
@@ -452,13 +450,13 @@ class TestRegisterTools:
 class TestGetHints:
     """Tests for get_hints() method."""
 
-    def test_get_hints_returns_list(self):
+    def test_get_hints_returns_list(self) -> None:
         skill = _make_skill()
         skill.setup()
         hints = skill.get_hints()
         assert isinstance(hints, list)
 
-    def test_get_hints_contains_common_words(self):
+    def test_get_hints_contains_common_words(self) -> None:
         skill = _make_skill()
         skill.setup()
         hints = skill.get_hints()
@@ -467,14 +465,14 @@ class TestGetHints:
         assert "speak to" in hints
         assert "talk to" in hints
 
-    def test_get_hints_extracts_pattern_names(self):
+    def test_get_hints_extracts_pattern_names(self) -> None:
         skill = _make_skill()
         skill.setup()
         hints = skill.get_hints()
         assert "sales" in hints
         assert "support" in hints
 
-    def test_get_hints_handles_pipe_separated_patterns(self):
+    def test_get_hints_handles_pipe_separated_patterns(self) -> None:
         transfers = {
             "/billing|accounts/i": {"url": "https://example.com/billing"}
         }
@@ -484,7 +482,7 @@ class TestGetHints:
         assert "billing" in hints
         assert "accounts" in hints
 
-    def test_get_hints_skips_catch_all_patterns(self):
+    def test_get_hints_skips_catch_all_patterns(self) -> None:
         """Patterns starting with '.' (like '.*') should be skipped."""
         transfers = {
             "/.*/": {"url": "https://example.com/fallback"}
@@ -496,7 +494,7 @@ class TestGetHints:
         for h in hints:
             assert h != ".*"
 
-    def test_get_hints_strips_regex_delimiters(self):
+    def test_get_hints_strips_regex_delimiters(self) -> None:
         """Leading/trailing slashes should be stripped from patterns."""
         transfers = {
             "/billing/": {"url": "https://example.com/billing"}
@@ -506,7 +504,7 @@ class TestGetHints:
         hints = skill.get_hints()
         assert "billing" in hints
 
-    def test_get_hints_strips_flags(self):
+    def test_get_hints_strips_flags(self) -> None:
         """Trailing flags like /i should be stripped."""
         transfers = {
             "/technical/i": {"url": "https://example.com/tech"}
@@ -524,32 +522,32 @@ class TestGetHints:
 class TestGetPromptSections:
     """Tests for get_prompt_sections() method."""
 
-    def test_returns_list(self):
+    def test_returns_list(self) -> None:
         skill = _make_skill()
         skill.setup()
         sections = skill.get_prompt_sections()
         assert isinstance(sections, list)
 
-    def test_returns_two_sections(self):
+    def test_returns_two_sections(self) -> None:
         """Should have 'Transferring' and 'Transfer Instructions' sections."""
         skill = _make_skill()
         skill.setup()
         sections = skill.get_prompt_sections()
         assert len(sections) == 2
 
-    def test_transferring_section_title(self):
+    def test_transferring_section_title(self) -> None:
         skill = _make_skill()
         skill.setup()
         sections = skill.get_prompt_sections()
         assert sections[0]["title"] == "Transferring"
 
-    def test_transferring_section_body_includes_tool_name(self):
+    def test_transferring_section_body_includes_tool_name(self) -> None:
         skill = _make_skill()
         skill.setup()
         sections = skill.get_prompt_sections()
         assert "transfer_call" in sections[0]["body"]
 
-    def test_transferring_section_bullets(self):
+    def test_transferring_section_bullets(self) -> None:
         skill = _make_skill()
         skill.setup()
         sections = skill.get_prompt_sections()
@@ -559,13 +557,13 @@ class TestGetPromptSections:
         combined = " ".join(bullets)
         assert "sales" in combined.lower() or "example.com" in combined
 
-    def test_transfer_instructions_section_title(self):
+    def test_transfer_instructions_section_title(self) -> None:
         skill = _make_skill()
         skill.setup()
         sections = skill.get_prompt_sections()
         assert sections[1]["title"] == "Transfer Instructions"
 
-    def test_transfer_instructions_bullets_mention_tool_name(self):
+    def test_transfer_instructions_bullets_mention_tool_name(self) -> None:
         skill = _make_skill()
         skill.setup()
         sections = skill.get_prompt_sections()
@@ -573,7 +571,7 @@ class TestGetPromptSections:
         combined = " ".join(bullets)
         assert "transfer_call" in combined
 
-    def test_transfer_instructions_bullets_mention_param_name(self):
+    def test_transfer_instructions_bullets_mention_param_name(self) -> None:
         skill = _make_skill()
         skill.setup()
         sections = skill.get_prompt_sections()
@@ -581,7 +579,7 @@ class TestGetPromptSections:
         combined = " ".join(bullets)
         assert "transfer_type" in combined
 
-    def test_required_fields_appear_in_instructions(self):
+    def test_required_fields_appear_in_instructions(self) -> None:
         skill = _make_skill({"required_fields": {"caller_name": "The name of the caller"}})
         skill.setup()
         sections = skill.get_prompt_sections()
@@ -591,7 +589,7 @@ class TestGetPromptSections:
         assert "The name of the caller" in combined
         assert "call_data" in combined
 
-    def test_empty_transfers_returns_empty(self):
+    def test_empty_transfers_returns_empty(self) -> None:
         """If setup fails (empty transfers), prompt sections are not reachable.
         But if transfers was somehow set to empty dict post-setup, returns []."""
         skill = _make_skill()
@@ -600,7 +598,7 @@ class TestGetPromptSections:
         sections = skill.get_prompt_sections()
         assert sections == []
 
-    def test_catch_all_pattern_skipped_in_bullets(self):
+    def test_catch_all_pattern_skipped_in_bullets(self) -> None:
         """Patterns starting with '.' should not appear in transfer bullets."""
         transfers = {
             "/.*/": {"url": "https://example.com/fallback"},
@@ -614,7 +612,7 @@ class TestGetPromptSections:
         assert len(bullets) == 1
         assert "sales" in bullets[0]
 
-    def test_address_destination_in_bullets(self):
+    def test_address_destination_in_bullets(self) -> None:
         """Address-based transfers should show the address in bullets."""
         transfers = {
             "/helpdesk/": {"address": "+15559990000"}
@@ -634,53 +632,53 @@ class TestGetPromptSections:
 class TestGetParameterSchema:
     """Tests for get_parameter_schema() classmethod."""
 
-    def test_returns_dict(self):
+    def test_returns_dict(self) -> None:
         schema = SWMLTransferSkill.get_parameter_schema()
         assert isinstance(schema, dict)
 
-    def test_includes_transfers_key(self):
+    def test_includes_transfers_key(self) -> None:
         schema = SWMLTransferSkill.get_parameter_schema()
         assert "transfers" in schema
 
-    def test_transfers_required(self):
+    def test_transfers_required(self) -> None:
         schema = SWMLTransferSkill.get_parameter_schema()
         assert schema["transfers"]["required"] is True
 
-    def test_includes_description_key(self):
+    def test_includes_description_key(self) -> None:
         schema = SWMLTransferSkill.get_parameter_schema()
         assert "description" in schema
         assert schema["description"]["required"] is False
 
-    def test_includes_parameter_name_key(self):
+    def test_includes_parameter_name_key(self) -> None:
         schema = SWMLTransferSkill.get_parameter_schema()
         assert "parameter_name" in schema
         assert schema["parameter_name"]["default"] == "transfer_type"
 
-    def test_includes_parameter_description_key(self):
+    def test_includes_parameter_description_key(self) -> None:
         schema = SWMLTransferSkill.get_parameter_schema()
         assert "parameter_description" in schema
 
-    def test_includes_default_message_key(self):
+    def test_includes_default_message_key(self) -> None:
         schema = SWMLTransferSkill.get_parameter_schema()
         assert "default_message" in schema
         assert schema["default_message"]["default"] == "Please specify a valid transfer type."
 
-    def test_includes_default_post_process_key(self):
+    def test_includes_default_post_process_key(self) -> None:
         schema = SWMLTransferSkill.get_parameter_schema()
         assert "default_post_process" in schema
         assert schema["default_post_process"]["default"] is False
 
-    def test_includes_required_fields_key(self):
+    def test_includes_required_fields_key(self) -> None:
         schema = SWMLTransferSkill.get_parameter_schema()
         assert "required_fields" in schema
         assert schema["required_fields"]["type"] == "object"
 
-    def test_inherits_swaig_fields(self):
+    def test_inherits_swaig_fields(self) -> None:
         """Should include base class swaig_fields parameter."""
         schema = SWMLTransferSkill.get_parameter_schema()
         assert "swaig_fields" in schema
 
-    def test_inherits_tool_name_for_multi_instance(self):
+    def test_inherits_tool_name_for_multi_instance(self) -> None:
         """Since SUPPORTS_MULTIPLE_INSTANCES is True, tool_name should be present."""
         schema = SWMLTransferSkill.get_parameter_schema()
         assert "tool_name" in schema
@@ -693,7 +691,7 @@ class TestGetParameterSchema:
 class TestEdgeCases:
     """Edge-case and integration tests."""
 
-    def test_single_url_transfer(self):
+    def test_single_url_transfer(self) -> None:
         """Skill with only one URL-based transfer."""
         transfers = {"/only/": {"url": "https://example.com/only"}}
         skill = _make_skill({"transfers": transfers})
@@ -703,7 +701,7 @@ class TestEdgeCases:
         # 1 pattern + 1 fallback
         assert len(call_args["data_map"]["expressions"]) == 2
 
-    def test_single_address_transfer(self):
+    def test_single_address_transfer(self) -> None:
         """Skill with only one address-based transfer."""
         transfers = {"/only/": {"address": "+15551112222"}}
         skill = _make_skill({"transfers": transfers})
@@ -712,7 +710,7 @@ class TestEdgeCases:
         call_args = skill.agent.register_swaig_function.call_args[0][0]
         assert len(call_args["data_map"]["expressions"]) == 2
 
-    def test_many_transfers(self):
+    def test_many_transfers(self) -> None:
         """Skill with many transfer patterns."""
         transfers = {}
         for i in range(10):
@@ -724,7 +722,7 @@ class TestEdgeCases:
         # 10 patterns + 1 fallback
         assert len(call_args["data_map"]["expressions"]) == 11
 
-    def test_transfer_with_no_optional_fields(self):
+    def test_transfer_with_no_optional_fields(self) -> None:
         """Transfer config with only 'url' should get all defaults filled by setup."""
         transfers = {"/minimal/": {"url": "https://example.com/minimal"}}
         skill = _make_skill({"transfers": transfers})
@@ -735,7 +733,7 @@ class TestEdgeCases:
         assert "post_process" in config
         assert "final" in config
 
-    def test_expression_string_references_parameter_name(self):
+    def test_expression_string_references_parameter_name(self) -> None:
         """Each expression's 'string' field should reference the parameter_name."""
         skill = _make_skill({"parameter_name": "my_param"})
         skill.setup()
@@ -745,7 +743,7 @@ class TestEdgeCases:
         for expr in expressions:
             assert expr["string"] == "${args.my_param}"
 
-    def test_multiple_required_fields(self):
+    def test_multiple_required_fields(self) -> None:
         """Multiple required fields should all appear as parameters and in global data."""
         fields = {
             "caller_name": "Name of the caller",

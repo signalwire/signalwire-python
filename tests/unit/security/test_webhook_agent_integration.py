@@ -15,11 +15,12 @@ import base64
 import hashlib
 import hmac
 import logging
+from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from signalwire import AgentBase
+from signalwire.core.agent_base import AgentBase
 from signalwire.core.security.webhook_middleware import SIGNALWIRE_SIGNATURE_HEADER
 
 
@@ -34,14 +35,15 @@ def _scheme_a_sig(key: str, url: str, raw_body: str) -> str:
     ).hexdigest()
 
 
-def _build_app(agent: AgentBase):
+def _build_app(agent: AgentBase) -> Any:
     """Use the AgentBase's get_app() to materialize the FastAPI app."""
     return agent.get_app()
 
 
-def _basic_auth_headers(agent: AgentBase) -> dict:
+def _basic_auth_headers(agent: AgentBase) -> dict[str, str]:
     """AgentBase auto-generates basic-auth credentials. Build the header."""
-    user, password = agent.get_basic_auth_credentials()
+    creds = agent.get_basic_auth_credentials()
+    user, password = creds[0], creds[1]
     token = base64.b64encode(f"{user}:{password}".encode()).decode()
     return {"Authorization": f"Basic {token}"}
 
@@ -51,7 +53,7 @@ def _basic_auth_headers(agent: AgentBase) -> dict:
 # ---------------------------------------------------------------------------
 
 class TestAgentSignedWebhooks:
-    def test_post_swaig_with_valid_signature_runs_handler(self):
+    def test_post_swaig_with_valid_signature_runs_handler(self) -> None:
         agent = AgentBase(name="t1", signing_key=SIGNING_KEY)
         app = _build_app(agent)
         client = TestClient(app, base_url="http://testserver")
@@ -76,7 +78,7 @@ class TestAgentSignedWebhooks:
             f"valid signature was rejected: status={resp.status_code} body={resp.text}"
         )
 
-    def test_post_swaig_without_signature_returns_403(self):
+    def test_post_swaig_without_signature_returns_403(self) -> None:
         agent = AgentBase(name="t2", signing_key=SIGNING_KEY)
         app = _build_app(agent)
         client = TestClient(app)
@@ -91,7 +93,7 @@ class TestAgentSignedWebhooks:
         )
         assert resp.status_code == 403
 
-    def test_post_swaig_with_wrong_signature_returns_403(self):
+    def test_post_swaig_with_wrong_signature_returns_403(self) -> None:
         agent = AgentBase(name="t3", signing_key=SIGNING_KEY)
         app = _build_app(agent)
         client = TestClient(app)
@@ -107,7 +109,7 @@ class TestAgentSignedWebhooks:
         )
         assert resp.status_code == 403
 
-    def test_unsigned_agent_accepts_any_request(self):
+    def test_unsigned_agent_accepts_any_request(self) -> None:
         """When signing_key is NOT set, requests pass through (legacy behaviour)."""
         agent = AgentBase(name="t4")  # no signing_key
         app = _build_app(agent)
@@ -148,7 +150,7 @@ class _CaptureHandler(logging.Handler):
 
 
 class TestAgentNoKeyWarning:
-    def test_warning_emitted_when_signing_key_unset(self, monkeypatch):
+    def test_warning_emitted_when_signing_key_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """AgentBase logs a prominent WARNING when neither arg nor env is set."""
         monkeypatch.delenv("SIGNALWIRE_SIGNING_KEY", raising=False)
 
@@ -172,7 +174,7 @@ class TestAgentNoKeyWarning:
             f"expected disabled-warning in logs; got: {[r.getMessage() for r in capture.records]}"
         )
 
-    def test_no_warning_when_key_is_set(self, monkeypatch):
+    def test_no_warning_when_key_is_set(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Setting the key suppresses the warning."""
         monkeypatch.delenv("SIGNALWIRE_SIGNING_KEY", raising=False)
 
@@ -202,13 +204,13 @@ class TestAgentNoKeyWarning:
 # ---------------------------------------------------------------------------
 
 class TestAgentEnvFallback:
-    def test_env_signing_key_picked_up_when_no_explicit_arg(self, monkeypatch):
+    def test_env_signing_key_picked_up_when_no_explicit_arg(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """SIGNALWIRE_SIGNING_KEY env var supplies the key when arg is omitted."""
         monkeypatch.setenv("SIGNALWIRE_SIGNING_KEY", SIGNING_KEY)
         agent = AgentBase(name="envtest")
         assert agent.signing_key == SIGNING_KEY
 
-    def test_explicit_arg_overrides_env(self, monkeypatch):
+    def test_explicit_arg_overrides_env(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Explicit constructor arg wins over the env var."""
         monkeypatch.setenv("SIGNALWIRE_SIGNING_KEY", "env-key")
         agent = AgentBase(name="envtest2", signing_key="explicit-key")

@@ -46,6 +46,7 @@ setLevel: logging.Logger.setLevel — stdlib
 debug: logging.Logger.debug — stdlib logger method (also used on self.log in service classes)
 info: logging.Logger.info — stdlib logger method (most common logger call)
 warning: logging.Logger.warning — stdlib logger method
+error: logging.Logger.error — stdlib logger method (also used on self.log in service classes)
 
 ## Python stdlib: threading / sys / builtins
 
@@ -63,6 +64,7 @@ init: generic initializer name — stdlib / third-party (pinecone.init shown in 
 ArgumentParser: argparse.ArgumentParser — stdlib
 add_argument: argparse.ArgumentParser.add_argument — stdlib
 parse_known_args: argparse.ArgumentParser.parse_known_args — stdlib
+parse_args: argparse.ArgumentParser.parse_args — stdlib (the CLI examples' `parser.parse_args()`)
 
 ## structlog (third-party, used by examples/survey_agent_example.py)
 
@@ -93,6 +95,9 @@ inc: prometheus_client.Counter.inc — monitoring example in search_deployment.m
 from_documents: langchain/pinecone Pinecone.from_documents — search comparison in docs/search_overview.md
 split_documents: langchain RecursiveCharacterTextSplitter.split_documents — search comparison
 similarity_search: langchain/pinecone Pinecone.similarity_search — search comparison
+build_index: real IndexBuilder.build_index (signalwire/search/index_builder.py) — Python-only search skill, absent from the cross-port surface
+build_index_from_sources: real IndexBuilder.build_index_from_sources (signalwire/search/index_builder.py) — Python-only search skill, absent from the cross-port surface
+migrate_sqlite_to_pgvector: real migration helper (signalwire/search/migration.py) — Python-only search skill, absent from the cross-port surface
 argsort: numpy.argsort — DIY search example in docs/search_overview.md
 md: filename-extension regex false positive (matches `file.md (…`) in docs/search_overview.md processing listing
 do_search: user-defined method inside a caching example in docs/search_deployment.md

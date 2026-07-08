@@ -15,6 +15,8 @@ Python reference and every port.
 """
 
 import re
+from collections.abc import Mapping
+from typing import Any, TypeVar
 
 # Header names whose values are credentials/secrets and must never be handed to
 # user callbacks or written to logs. Compared case-insensitively.
@@ -35,7 +37,10 @@ _URL_CREDENTIALS_RE = re.compile(r"://([^:@/]+):([^@/]+)@")
 _HOSTNAME_REJECT_RE = re.compile(r"[\s/\\\x00-\x1f\x7f]")
 
 
-def filter_sensitive_headers(headers):
+_V = TypeVar("_V")
+
+
+def filter_sensitive_headers(headers: Mapping[str, _V]) -> dict[str, _V]:
     """Return a copy of ``headers`` with sensitive (credential-bearing) headers
     removed, so request headers can be safely passed to user callbacks.
 
@@ -51,7 +56,7 @@ def filter_sensitive_headers(headers):
     return {k: v for k, v in headers.items() if k.lower() not in SENSITIVE_HEADERS}
 
 
-def redact_url(url):
+def redact_url(url: Any) -> Any:
     """Mask the password in a URL's userinfo before logging.
 
     ``https://user:secret@host/path`` -> ``https://user:****@host/path``.
@@ -68,7 +73,7 @@ def redact_url(url):
     return _URL_CREDENTIALS_RE.sub(r"://\1:****@", url)
 
 
-def is_valid_hostname(host):
+def is_valid_hostname(host: str) -> bool:
     """Standalone hostname sanity check: reject empty hosts and any host
     containing whitespace, slashes, or control characters.
 

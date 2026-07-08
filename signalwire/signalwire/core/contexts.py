@@ -71,7 +71,7 @@ class GatherInfo:
         self._completion_action = completion_action
         self._prompt = prompt
 
-    def add_question(self, key: str, question: str, **kwargs) -> "GatherInfo":
+    def add_question(self, key: str, question: str, **kwargs: Any) -> "GatherInfo":
         """
         Add a question to gather.
 
@@ -1190,7 +1190,7 @@ class ContextBuilder:
       - No user-defined SWAIG tool collides with a reserved native name
     """
 
-    def __init__(self, agent):
+    def __init__(self, agent: Any) -> None:
         self._agent = agent
         self._contexts: dict[str, Context] = {}
         self._context_order: list[str] = []

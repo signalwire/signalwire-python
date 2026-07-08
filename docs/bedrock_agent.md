@@ -69,6 +69,7 @@ if __name__ == "__main__":
 
 ## Constructor Parameters
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 BedrockAgent(
     name: str = "bedrock_agent",      # Agent name

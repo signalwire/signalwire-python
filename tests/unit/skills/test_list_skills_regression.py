@@ -12,7 +12,7 @@ import signalwire
 from signalwire.skills.registry import skill_registry
 
 
-def test_top_level_list_skills_returns_real_inventory():
+def test_top_level_list_skills_returns_real_inventory() -> None:
     skills = signalwire.list_skills()
     assert isinstance(skills, list)
     assert len(skills) > 0, "list_skills() must return the skill inventory, not raise/empty"
@@ -25,7 +25,7 @@ def test_top_level_list_skills_returns_real_inventory():
         assert "version" in s and "required_packages" in s
 
 
-def test_discover_skills_returns_inventory_not_none():
+def test_discover_skills_returns_inventory_not_none() -> None:
     discovered = skill_registry.discover_skills()
     assert discovered is not None, "discover_skills() must not be a no-op returning None"
     assert isinstance(discovered, list) and len(discovered) > 0

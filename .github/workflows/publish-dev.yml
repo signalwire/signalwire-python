@@ -14,7 +14,56 @@ on:
       - '.github/workflows/publish-release.yml'
 
 jobs:
+  # Gate the publish: run the full CI gate set (TEST -> SIGNATURES -> DRIFT ->
+  # NO-CHEAT) before anything is uploaded to PyPI, so a red tree can't ship.
+  # Mirrors test.yml's setup (porting-sdk checkout for the mock harnesses +
+  # audit scripts, then `bash scripts/run-ci.sh`).
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.11', '3.12', '3.13']
+    steps:
+      - name: Checkout signalwire-python
+        uses: actions/checkout@v6
+        with:
+          path: signalwire-python
+
+      - name: Checkout porting-sdk (mock_relay + mock_signalwire test harnesses + audit scripts)
+        uses: actions/checkout@v6
+        with:
+          repository: signalwire/porting-sdk
+          path: porting-sdk
+          token: ${{ secrets.PORTING_SDK_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install Python test harnesses (mock_relay + mock_signalwire)
+        run: |
+          pip install -e porting-sdk/test_harness/mock_relay
+          pip install -e porting-sdk/test_harness/mock_signalwire
+
+      - name: Install griffe (used by porting-sdk's enumerate_python_signatures.py for the SIGNATURES gate)
+        run: pip install 'griffe==2.1.0'
+
+      - name: Install signalwire-python (editable + dev deps)
+        working-directory: signalwire-python
+        run: |
+          pip install -e .
+          pip install -r requirements-dev.txt
+
+      - name: Run CI gate script (TEST -> SIGNATURES -> DRIFT -> NO-CHEAT)
+        working-directory: signalwire-python
+        env:
+          PORTING_SDK: ${{ github.workspace }}/porting-sdk
+        run: bash scripts/run-ci.sh
+
   publish-dev:
+    needs: test
     runs-on: ubuntu-latest
     environment: pypi-dev
     permissions:

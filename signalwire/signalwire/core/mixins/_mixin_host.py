@@ -20,7 +20,7 @@ Analysed in isolation a mixin can't see those, producing a large cluster of
 ``self.<host member>`` and every ``return self`` against the true class — no
 hand-maintained surface list to keep in sync. At runtime it is plain ``object``,
 so it contributes nothing to the MRO, adds no behaviour, and never appears on
-the audit oracle's public surface. The forward reference avoids the import cycle
+the public surface. The forward reference avoids the import cycle
 (agent_base imports the mixins, not vice-versa).
 """
 
@@ -40,3 +40,7 @@ if TYPE_CHECKING:
     from signalwire.core._agent_host import AgentHost as _HostTyped
 else:
     _HostTyped = object
+
+# Explicit re-export: the mixins import _HostTyped from here. Under --strict
+# (no_implicit_reexport) an aliased import isn't re-exported unless named in __all__.
+__all__ = ["_HostTyped"]

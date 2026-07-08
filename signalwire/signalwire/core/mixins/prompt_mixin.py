@@ -19,7 +19,7 @@ else:
 from signalwire.core.mixins._mixin_host import _HostTyped
 
 
-class PromptMixin(_HostTyped):
+class PromptMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at runtime; AgentBase under TYPE_CHECKING — intentional split
     """
     Mixin class containing all prompt-related methods for AgentBase
     """
@@ -28,7 +28,7 @@ class PromptMixin(_HostTyped):
     # (Optional) so the checker resolves it without a cross-class has-type gap.
     _contexts_builder: Any | None
 
-    def _process_prompt_sections(self):
+    def _process_prompt_sections(self) -> None:
         """
         Process declarative PROMPT_SECTIONS attribute from a subclass
 
@@ -128,7 +128,9 @@ class PromptMixin(_HostTyped):
                                         bullets=sub_bullets if sub_bullets else None,
                                     )
 
-    def define_contexts(self, contexts=None) -> Union["AgentBase", "ContextBuilder"]:
+    def define_contexts(
+        self, contexts: "dict[str, Any] | ContextBuilder | None" = None
+    ) -> Union["AgentBase", "ContextBuilder"]:
         """
         Define contexts and steps for this agent (alternative to POM/prompt)
 
@@ -148,6 +150,7 @@ class PromptMixin(_HostTyped):
             return self
         # Legacy behavior - return ContextBuilder
         if self._contexts_builder is None:
+            # ContextBuilder.__init__ is untyped (cross-file: core/contexts.py).
             self._contexts_builder = ContextBuilder(self)
             self._contexts_defined = True
 
@@ -186,7 +189,7 @@ class PromptMixin(_HostTyped):
             self._contexts_builder.reset()
         return self
 
-    def _validate_prompt_mode_exclusivity(self):
+    def _validate_prompt_mode_exclusivity(self) -> None:
         """
         Validate that POM sections and raw text are not mixed in the main prompt
 

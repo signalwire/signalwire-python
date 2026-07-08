@@ -314,14 +314,18 @@ class SkillRegistry:
                 }
             }
         """
-        skills_schema = {}
+        skills_schema: dict[str, dict[str, Any]] = {}
 
         # Load entry points first
         self._load_entry_points()
 
         # Helper function to add skill to schema
-        def add_skill_to_schema(skill_class, source):
+        def add_skill_to_schema(skill_class: type[SkillBase], source: str) -> None:
             try:
+                skill_name = skill_class.SKILL_NAME
+                if skill_name is None:
+                    return
+
                 # Get parameter schema
                 try:
                     parameter_schema = skill_class.get_parameter_schema()
@@ -329,8 +333,8 @@ class SkillRegistry:
                     # Skill doesn't implement get_parameter_schema yet
                     parameter_schema = {}
 
-                skills_schema[skill_class.SKILL_NAME] = {
-                    "name": skill_class.SKILL_NAME,
+                skills_schema[skill_name] = {
+                    "name": skill_name,
                     "description": skill_class.SKILL_DESCRIPTION,
                     "version": getattr(skill_class, "SKILL_VERSION", "1.0.0"),
                     "supports_multiple_instances": getattr(

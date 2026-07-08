@@ -11,7 +11,7 @@ Spider skill for fast web scraping with SignalWire AI Agents.
 
 import re
 import collections
-from typing import Any, ClassVar, cast
+from typing import Any, ClassVar, TYPE_CHECKING, cast
 from urllib.parse import urljoin, urlparse
 import requests
 from lxml import html
@@ -19,6 +19,9 @@ from lxml.etree import XPathEvalError
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
+
+if TYPE_CHECKING:
+    from signalwire.core.agent_base import AgentBase
 
 
 class SpiderSkill(SkillBase):
@@ -145,7 +148,7 @@ class SpiderSkill(SkillBase):
         )
         return schema
 
-    def __init__(self, agent, params: dict[str, Any]):
+    def __init__(self, agent: "AgentBase", params: dict[str, Any]):
         """Initialize the spider skill with configuration parameters."""
         super().__init__(agent, params)
 
@@ -519,7 +522,7 @@ class SpiderSkill(SkillBase):
             return FunctionResult("Max pages must be at least 1")
 
         # Simple breadth-first crawl
-        visited: set = set()
+        visited: set[Any] = set[Any]()
         to_visit = [(start_url, 0)]  # (url, depth)
         results = []
 

@@ -88,6 +88,7 @@ await client.unreceive(["sales"])
 
 Use `client.dial()` to place an outbound call:
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 call = await client.dial([
     [{"type": "phone", "params": {"to_number": "+15551234567", "from_number": "+15559876543"}}]
@@ -100,6 +101,7 @@ await call.hangup()
 
 The outer list represents serial attempts; the inner list represents parallel attempts. For example, to try two numbers simultaneously:
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 call = await client.dial([
     [
@@ -121,6 +123,7 @@ export SIGNALWIRE_LOG_LEVEL=debug
 
 For use within an existing async application:
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 async with RelayClient(contexts=["default"]) as client:
     call = await client.dial([...])

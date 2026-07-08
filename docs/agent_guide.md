@@ -566,6 +566,7 @@ The SDK implements an automated security mechanism for SWAIG functions to ensure
 
 By default, all SWAIG functions are marked as `secure=True`, which enables token-based security:
 
+<!-- snippet: no-compile elided-body -->
 ```python
 @agent.tool(
     name="get_account_details",
@@ -603,6 +604,7 @@ The token system secures both SWAIG functions and post-prompt endpoints:
 
 You can disable token security for specific functions when appropriate:
 
+<!-- snippet: no-compile elided-body -->
 ```python
 @agent.tool(
     name="get_public_information",
@@ -1095,6 +1097,7 @@ class DynamicSkillAgent(AgentBase):
    ```
 
 2. **Handle missing dependencies gracefully**:
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    try:
        agent.add_skill("web_search")
@@ -1694,6 +1697,7 @@ def configure_agent(self, query_params, body_params, headers, agent):
 
 You can support both static and dynamic patterns during migration:
 
+<!-- snippet: no-compile elided-body -->
 ```python
 class MyAgent(AgentBase):
     def __init__(self, use_dynamic=False):

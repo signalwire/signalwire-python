@@ -5,16 +5,14 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Unit tests for InfoGathererSkill and SkillBase namespace helpers
 """
 
-import pytest
+from typing import Any
+
 from unittest.mock import Mock
 
-from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
 from signalwire.skills.info_gatherer.skill import InfoGathererSkill
 
@@ -23,21 +21,21 @@ from signalwire.skills.info_gatherer.skill import InfoGathererSkill
 # Helpers
 # ---------------------------------------------------------------------------
 
-SAMPLE_QUESTIONS = [
+SAMPLE_QUESTIONS: list[dict[str, Any]] = [
     {"key_name": "full_name", "question_text": "What is your full name?"},
     {"key_name": "email", "question_text": "What is your email?", "confirm": True},
     {"key_name": "reason", "question_text": "How can we help you today?"},
 ]
 
 
-def _make_skill(params=None):
+def _make_skill(params: dict[str, Any] | None = None) -> InfoGathererSkill:
     """Create an InfoGathererSkill with a mocked agent."""
     mock_agent = Mock()
     mock_agent.define_tool = Mock()
     return InfoGathererSkill(agent=mock_agent, params=params)
 
 
-def _setup_skill(params=None):
+def _setup_skill(params: dict[str, Any] | None = None) -> InfoGathererSkill:
     """Create, setup and register an InfoGathererSkill."""
     skill = _make_skill(params)
     assert skill.setup() is True
@@ -50,19 +48,19 @@ def _setup_skill(params=None):
 # ===========================================================================
 
 class TestInfoGathererSkillMetadata:
-    def test_skill_name(self):
+    def test_skill_name(self) -> None:
         assert InfoGathererSkill.SKILL_NAME == "info_gatherer"
 
-    def test_skill_description(self):
+    def test_skill_description(self) -> None:
         assert InfoGathererSkill.SKILL_DESCRIPTION is not None
 
-    def test_supports_multiple_instances(self):
+    def test_supports_multiple_instances(self) -> None:
         assert InfoGathererSkill.SUPPORTS_MULTIPLE_INSTANCES is True
 
-    def test_no_required_packages(self):
+    def test_no_required_packages(self) -> None:
         assert InfoGathererSkill.REQUIRED_PACKAGES == []
 
-    def test_no_required_env_vars(self):
+    def test_no_required_env_vars(self) -> None:
         assert InfoGathererSkill.REQUIRED_ENV_VARS == []
 
 
@@ -71,21 +69,21 @@ class TestInfoGathererSkillMetadata:
 # ===========================================================================
 
 class TestParameterSchema:
-    def test_schema_has_questions(self):
+    def test_schema_has_questions(self) -> None:
         schema = InfoGathererSkill.get_parameter_schema()
         assert "questions" in schema
         assert schema["questions"]["required"] is True
 
-    def test_schema_has_prefix(self):
+    def test_schema_has_prefix(self) -> None:
         schema = InfoGathererSkill.get_parameter_schema()
         assert "prefix" in schema
         assert schema["prefix"]["required"] is False
 
-    def test_schema_has_completion_message(self):
+    def test_schema_has_completion_message(self) -> None:
         schema = InfoGathererSkill.get_parameter_schema()
         assert "completion_message" in schema
 
-    def test_schema_has_tool_name(self):
+    def test_schema_has_tool_name(self) -> None:
         schema = InfoGathererSkill.get_parameter_schema()
         assert "tool_name" in schema  # from SUPPORTS_MULTIPLE_INSTANCES
 
@@ -95,31 +93,31 @@ class TestParameterSchema:
 # ===========================================================================
 
 class TestSetup:
-    def test_setup_success(self):
+    def test_setup_success(self) -> None:
         skill = _make_skill({"questions": SAMPLE_QUESTIONS})
         assert skill.setup() is True
 
-    def test_setup_missing_questions(self):
+    def test_setup_missing_questions(self) -> None:
         skill = _make_skill({})
         assert skill.setup() is False
 
-    def test_setup_empty_questions(self):
+    def test_setup_empty_questions(self) -> None:
         skill = _make_skill({"questions": []})
         assert skill.setup() is False
 
-    def test_setup_invalid_question_missing_key_name(self):
+    def test_setup_invalid_question_missing_key_name(self) -> None:
         skill = _make_skill({"questions": [{"question_text": "hi"}]})
         assert skill.setup() is False
 
-    def test_setup_invalid_question_missing_question_text(self):
+    def test_setup_invalid_question_missing_question_text(self) -> None:
         skill = _make_skill({"questions": [{"key_name": "x"}]})
         assert skill.setup() is False
 
-    def test_setup_questions_not_list(self):
+    def test_setup_questions_not_list(self) -> None:
         skill = _make_skill({"questions": "not a list"})
         assert skill.setup() is False
 
-    def test_setup_question_not_dict(self):
+    def test_setup_question_not_dict(self) -> None:
         skill = _make_skill({"questions": ["not a dict"]})
         assert skill.setup() is False
 
@@ -129,12 +127,12 @@ class TestSetup:
 # ===========================================================================
 
 class TestInstanceKey:
-    def test_instance_key_without_prefix(self):
+    def test_instance_key_without_prefix(self) -> None:
         skill = _make_skill({"questions": SAMPLE_QUESTIONS})
         skill.setup()
         assert skill.get_instance_key() == "info_gatherer"
 
-    def test_instance_key_with_prefix(self):
+    def test_instance_key_with_prefix(self) -> None:
         skill = _make_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         skill.setup()
         assert skill.get_instance_key() == "info_gatherer_intake"
@@ -145,17 +143,17 @@ class TestInstanceKey:
 # ===========================================================================
 
 class TestToolNames:
-    def test_tool_names_without_prefix(self):
+    def test_tool_names_without_prefix(self) -> None:
         skill = _setup_skill({"questions": SAMPLE_QUESTIONS})
         assert skill.start_tool_name == "start_questions"
         assert skill.submit_tool_name == "submit_answer"
 
-    def test_tool_names_with_prefix(self):
+    def test_tool_names_with_prefix(self) -> None:
         skill = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "medical"})
         assert skill.start_tool_name == "medical_start_questions"
         assert skill.submit_tool_name == "medical_submit_answer"
 
-    def test_define_tool_called_with_correct_names(self):
+    def test_define_tool_called_with_correct_names(self) -> None:
         skill = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         calls = skill.agent.define_tool.call_args_list
         tool_names = [c.kwargs["name"] for c in calls]
@@ -168,17 +166,17 @@ class TestToolNames:
 # ===========================================================================
 
 class TestNamespaceHelpers:
-    def test_namespace_with_prefix(self):
+    def test_namespace_with_prefix(self) -> None:
         skill = _make_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         skill.setup()
         assert skill._get_skill_namespace() == "skill:intake"
 
-    def test_namespace_without_prefix(self):
+    def test_namespace_without_prefix(self) -> None:
         skill = _make_skill({"questions": SAMPLE_QUESTIONS})
         skill.setup()
         assert skill._get_skill_namespace() == "skill:info_gatherer"
 
-    def test_get_skill_data_present(self):
+    def test_get_skill_data_present(self) -> None:
         skill = _make_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         skill.setup()
         raw_data = {
@@ -189,20 +187,20 @@ class TestNamespaceHelpers:
         data = skill.get_skill_data(raw_data)
         assert data["question_index"] == 2
 
-    def test_get_skill_data_missing(self):
+    def test_get_skill_data_missing(self) -> None:
         skill = _make_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         skill.setup()
-        raw_data = {"global_data": {}}
+        raw_data: dict[str, Any] = {"global_data": {}}
         data = skill.get_skill_data(raw_data)
         assert data == {}
 
-    def test_get_skill_data_no_global_data(self):
+    def test_get_skill_data_no_global_data(self) -> None:
         skill = _make_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         skill.setup()
         data = skill.get_skill_data({})
         assert data == {}
 
-    def test_update_skill_data(self):
+    def test_update_skill_data(self) -> None:
         skill = _make_skill({"questions": SAMPLE_QUESTIONS, "prefix": "billing"})
         skill.setup()
         result = FunctionResult("test")
@@ -225,7 +223,7 @@ class TestNamespaceHelpers:
 # ===========================================================================
 
 class TestGlobalData:
-    def test_global_data_structure(self):
+    def test_global_data_structure(self) -> None:
         skill = _make_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         skill.setup()
         gd = skill.get_global_data()
@@ -235,7 +233,7 @@ class TestGlobalData:
         assert state["question_index"] == 0
         assert state["answers"] == []
 
-    def test_global_data_without_prefix(self):
+    def test_global_data_without_prefix(self) -> None:
         skill = _make_skill({"questions": SAMPLE_QUESTIONS})
         skill.setup()
         gd = skill.get_global_data()
@@ -247,14 +245,14 @@ class TestGlobalData:
 # ===========================================================================
 
 class TestPromptSections:
-    def test_prompt_sections_returned(self):
+    def test_prompt_sections_returned(self) -> None:
         skill = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         sections = skill.get_prompt_sections()
         assert len(sections) == 1
         assert "intake_start_questions" in sections[0]["body"]
         assert "intake_submit_answer" in sections[0]["body"]
 
-    def test_prompt_sections_no_prefix(self):
+    def test_prompt_sections_no_prefix(self) -> None:
         skill = _setup_skill({"questions": SAMPLE_QUESTIONS})
         sections = skill.get_prompt_sections()
         assert "start_questions" in sections[0]["body"]
@@ -265,7 +263,9 @@ class TestPromptSections:
 # ===========================================================================
 
 class TestStartQuestions:
-    def _raw_data(self, prefix, questions, index=0):
+    def _raw_data(
+        self, prefix: str, questions: list[dict[str, Any]], index: int = 0
+    ) -> dict[str, Any]:
         ns = f"skill:{prefix}"
         return {
             "global_data": {
@@ -277,14 +277,14 @@ class TestStartQuestions:
             }
         }
 
-    def test_returns_first_question(self):
+    def test_returns_first_question(self) -> None:
         skill = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         raw = self._raw_data("intake", SAMPLE_QUESTIONS)
         result = skill._handle_start_questions({}, raw)
         text = result.to_dict()["response"]
         assert "What is your full name?" in text
 
-    def test_first_question_is_marked_first(self):
+    def test_first_question_is_marked_first(self) -> None:
         skill = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         raw = self._raw_data("intake", SAMPLE_QUESTIONS)
         result = skill._handle_start_questions({}, raw)
@@ -292,21 +292,21 @@ class TestStartQuestions:
         assert "Ask each question one at a time" in text
         assert "Previous answer saved" not in text
 
-    def test_no_questions(self):
+    def test_no_questions(self) -> None:
         skill = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         raw = self._raw_data("intake", [])
         result = skill._handle_start_questions({}, raw)
         assert "don't have any questions" in result.to_dict()["response"]
 
-    def test_index_out_of_range(self):
+    def test_index_out_of_range(self) -> None:
         skill = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         raw = self._raw_data("intake", SAMPLE_QUESTIONS, index=99)
         result = skill._handle_start_questions({}, raw)
         assert "don't have any questions" in result.to_dict()["response"]
 
-    def test_missing_skill_data(self):
+    def test_missing_skill_data(self) -> None:
         skill = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
-        raw = {"global_data": {}}
+        raw: dict[str, Any] = {"global_data": {}}
         result = skill._handle_start_questions({}, raw)
         assert "don't have any questions" in result.to_dict()["response"]
 
@@ -316,7 +316,13 @@ class TestStartQuestions:
 # ===========================================================================
 
 class TestSubmitAnswer:
-    def _raw_data(self, prefix, questions, index=0, answers=None):
+    def _raw_data(
+        self,
+        prefix: str,
+        questions: list[dict[str, Any]],
+        index: int = 0,
+        answers: list[dict[str, Any]] | None = None,
+    ) -> dict[str, Any]:
         ns = f"skill:{prefix}"
         return {
             "global_data": {
@@ -328,7 +334,7 @@ class TestSubmitAnswer:
             }
         }
 
-    def test_submit_first_answer_returns_next_question(self):
+    def test_submit_first_answer_returns_next_question(self) -> None:
         skill = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         raw = self._raw_data("intake", SAMPLE_QUESTIONS, index=0)
         result = skill._handle_submit_answer({"answer": "John Doe"}, raw)
@@ -336,7 +342,7 @@ class TestSubmitAnswer:
         assert "What is your email?" in d["response"]
         assert "Previous answer saved" in d["response"]
 
-    def test_submit_stores_answer_in_global_data(self):
+    def test_submit_stores_answer_in_global_data(self) -> None:
         skill = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         raw = self._raw_data("intake", SAMPLE_QUESTIONS, index=0)
         result = skill._handle_submit_answer({"answer": "John Doe"}, raw)
@@ -352,7 +358,7 @@ class TestSubmitAnswer:
         assert len(state["answers"]) == 1
         assert state["answers"][0] == {"key_name": "full_name", "answer": "John Doe"}
 
-    def test_submit_last_answer_returns_completion(self):
+    def test_submit_last_answer_returns_completion(self) -> None:
         skill = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         raw = self._raw_data("intake", SAMPLE_QUESTIONS, index=2, answers=[
             {"key_name": "full_name", "answer": "John"},
@@ -362,7 +368,7 @@ class TestSubmitAnswer:
         d = result.to_dict()
         assert "All questions have been answered" in d["response"]
 
-    def test_submit_custom_completion_message(self):
+    def test_submit_custom_completion_message(self) -> None:
         skill = _setup_skill({
             "questions": [{"key_name": "name", "question_text": "Name?"}],
             "prefix": "quick",
@@ -380,13 +386,13 @@ class TestSubmitAnswer:
         result = skill._handle_submit_answer({"answer": "Alice"}, raw)
         assert "Done! Thanks for answering." in result.to_dict()["response"]
 
-    def test_submit_beyond_last_question(self):
+    def test_submit_beyond_last_question(self) -> None:
         skill = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         raw = self._raw_data("intake", SAMPLE_QUESTIONS, index=99)
         result = skill._handle_submit_answer({"answer": "extra"}, raw)
         assert "already been answered" in result.to_dict()["response"]
 
-    def test_confirm_flag_propagated(self):
+    def test_confirm_flag_propagated(self) -> None:
         skill = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         # Submit answer to question 0, should get question 1 (email, confirm=True)
         raw = self._raw_data("intake", SAMPLE_QUESTIONS, index=0)
@@ -400,7 +406,7 @@ class TestSubmitAnswer:
 # ===========================================================================
 
 class TestMultipleInstances:
-    def test_two_instances_have_different_namespaces(self):
+    def test_two_instances_have_different_namespaces(self) -> None:
         skill_a = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         skill_b = _setup_skill({
             "questions": [{"key_name": "allergy", "question_text": "Allergies?"}],
@@ -410,7 +416,7 @@ class TestMultipleInstances:
         assert skill_a._get_skill_namespace() == "skill:intake"
         assert skill_b._get_skill_namespace() == "skill:medical"
 
-    def test_two_instances_have_different_tool_names(self):
+    def test_two_instances_have_different_tool_names(self) -> None:
         skill_a = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         skill_b = _setup_skill({
             "questions": [{"key_name": "allergy", "question_text": "Allergies?"}],
@@ -421,7 +427,7 @@ class TestMultipleInstances:
         assert skill_a.submit_tool_name == "intake_submit_answer"
         assert skill_b.submit_tool_name == "medical_submit_answer"
 
-    def test_two_instances_have_different_instance_keys(self):
+    def test_two_instances_have_different_instance_keys(self) -> None:
         skill_a = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         skill_b = _setup_skill({
             "questions": [{"key_name": "allergy", "question_text": "Allergies?"}],
@@ -429,7 +435,7 @@ class TestMultipleInstances:
         })
         assert skill_a.get_instance_key() != skill_b.get_instance_key()
 
-    def test_two_instances_read_isolated_state(self):
+    def test_two_instances_read_isolated_state(self) -> None:
         skill_a = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         skill_b = _setup_skill({
             "questions": [{"key_name": "allergy", "question_text": "Allergies?"}],
@@ -446,7 +452,7 @@ class TestMultipleInstances:
         assert data_a["question_index"] == 1
         assert data_b["question_index"] == 0
 
-    def test_two_instances_global_data_isolated(self):
+    def test_two_instances_global_data_isolated(self) -> None:
         skill_a = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
         skill_b = _setup_skill({
             "questions": [{"key_name": "allergy", "question_text": "Allergies?"}],
@@ -465,7 +471,7 @@ class TestMultipleInstances:
 # ===========================================================================
 
 class TestQuestionInstruction:
-    def test_first_question_format(self):
+    def test_first_question_format(self) -> None:
         text = InfoGathererSkill._generate_question_instruction(
             "What is your name?", needs_confirmation=False, is_first_question=True,
         )
@@ -473,33 +479,33 @@ class TestQuestionInstruction:
         assert "What is your name?" in text
         assert "Previous answer saved" not in text
 
-    def test_subsequent_question_format(self):
+    def test_subsequent_question_format(self) -> None:
         text = InfoGathererSkill._generate_question_instruction(
             "What is your email?", needs_confirmation=False, is_first_question=False,
         )
         assert "Previous answer saved" in text
         assert "What is your email?" in text
 
-    def test_confirmation_required(self):
+    def test_confirmation_required(self) -> None:
         text = InfoGathererSkill._generate_question_instruction(
             "SSN?", needs_confirmation=True, is_first_question=True,
         )
         assert "Read the answer back" in text
 
-    def test_no_confirmation(self):
+    def test_no_confirmation(self) -> None:
         text = InfoGathererSkill._generate_question_instruction(
             "Color?", needs_confirmation=False, is_first_question=True,
         )
         assert "Read the answer back" not in text
 
-    def test_prompt_add_included(self):
+    def test_prompt_add_included(self) -> None:
         text = InfoGathererSkill._generate_question_instruction(
             "DOB?", needs_confirmation=False, is_first_question=True,
             prompt_add="Format in YYYY-MM-DD",
         )
         assert "Note: Format in YYYY-MM-DD" in text
 
-    def test_prompt_add_empty(self):
+    def test_prompt_add_empty(self) -> None:
         text = InfoGathererSkill._generate_question_instruction(
             "DOB?", needs_confirmation=False, is_first_question=True,
             prompt_add="",

@@ -63,6 +63,7 @@ Add this inside Fred's `__init__` method, after the skill configuration:
 Let's break down each part:
 
 **The Decorator:**
+<!-- snippet: no-compile decorator-fragment (decorator with no function below it) -->
 ```python
 @self.tool(
     name="share_fun_fact",          # Function name the AI will use
@@ -72,6 +73,7 @@ Let's break down each part:
 ```
 
 **The Function Signature:**
+<!-- snippet: no-compile signature-only (function signature with commented-out body) -->
 ```python
 def share_fun_fact(args, raw_data):
     # args: Dictionary of parameters passed by AI
@@ -79,6 +81,7 @@ def share_fun_fact(args, raw_data):
 ```
 
 **The Implementation:**
+<!-- snippet: no-compile method-body-excerpt (statements lifted from inside the function, incl. bare return) -->
 ```python
 import random                       # Import inside function is fine
 facts = [...]                       # List of facts
@@ -92,6 +95,7 @@ The `@self.tool()` decorator is Fred's way of registering SWAIG functions. Let's
 
 ### Decorator Parameters
 
+<!-- snippet: no-compile decorator-fragment (decorator with no function below it) -->
 ```python
 @self.tool(
     name="function_name",           # Required: Unique function identifier
@@ -208,11 +212,13 @@ Replace the simple version with this enhanced one:
 ### Best Practices for Function Implementation
 
 1. **Parameter Validation**
+   <!-- snippet: no-compile method-body-excerpt (indented statement lifted from inside the function) -->
    ```python
    category = args.get("category", "random")  # Always provide defaults
    ```
 
 2. **Error Handling**
+   <!-- snippet: no-compile method-body-excerpt (indented statement lifted from inside the function) -->
    ```python
    if not fact_list:
        return SwaigFunctionResult("I don't have any facts in that category.")
@@ -230,12 +236,14 @@ SWAIG functions must return a `SwaigFunctionResult` object. This class provides 
 
 ### Basic Result
 
+<!-- snippet: no-compile method-body-excerpt (bare return outside a function) -->
 ```python
 return SwaigFunctionResult("Simple text response")
 ```
 
 ### Result with Actions
 
+<!-- snippet: no-compile method-body-excerpt (bare return outside a function) -->
 ```python
 result = SwaigFunctionResult("Playing background music")
 result.add_action("play_audio", {"url": "https://example.com/music.mp3"})
@@ -244,6 +252,7 @@ return result
 
 ### Multiple Actions
 
+<!-- snippet: no-compile method-body-excerpt (bare return outside a function) -->
 ```python
 result = SwaigFunctionResult("Setting up the call")
 result.add_actions([

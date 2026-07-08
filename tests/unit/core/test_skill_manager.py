@@ -13,11 +13,13 @@ Unit tests for SkillManager class
 
 import pytest
 import os
+from typing import Any, ClassVar
 from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
 
 from signalwire.core.skill_manager import SkillManager
 from signalwire.core.skill_base import SkillBase
+from signalwire.core.agent_base import AgentBase
 
 
 class MockSkill(SkillBase):
@@ -25,13 +27,13 @@ class MockSkill(SkillBase):
     SKILL_NAME = "mock_skill"
     SKILL_DESCRIPTION = "A mock skill for testing"
     SKILL_VERSION = "1.0.0"
-    REQUIRED_PACKAGES = []
-    REQUIRED_ENV_VARS = []
+    REQUIRED_PACKAGES: ClassVar[list[str]] = []
+    REQUIRED_ENV_VARS: ClassVar[list[str]] = []
     SUPPORTS_MULTIPLE_INSTANCES = False
 
     @classmethod
-    def get_parameter_schema(cls):
-        schema = super().get_parameter_schema()
+    def get_parameter_schema(cls) -> dict[str, Any]:
+        schema: dict[str, Any] = super().get_parameter_schema()
         schema["mock_param"] = {
             "type": "string",
             "description": "A mock parameter",
@@ -40,17 +42,17 @@ class MockSkill(SkillBase):
         }
         return schema
 
-    def __init__(self, agent, params=None):
+    def __init__(self, agent: AgentBase, params: dict[str, Any] | None = None) -> None:
         super().__init__(agent, params)
         self.setup_called = False
         self.register_tools_called = False
         self.cleanup_called = False
 
-    def setup(self):
+    def setup(self) -> bool:
         self.setup_called = True
         return True
 
-    def register_tools(self):
+    def register_tools(self) -> None:
         self.register_tools_called = True
         self.agent.define_tool(
             name="mock_tool",
@@ -68,8 +70,8 @@ class FailingMockSkill(SkillBase):
     SUPPORTS_MULTIPLE_INSTANCES = False
 
     @classmethod
-    def get_parameter_schema(cls):
-        schema = super().get_parameter_schema()
+    def get_parameter_schema(cls) -> dict[str, Any]:
+        schema: dict[str, Any] = super().get_parameter_schema()
         schema["fail_param"] = {
             "type": "string",
             "description": "A fail parameter",
@@ -77,24 +79,24 @@ class FailingMockSkill(SkillBase):
         }
         return schema
 
-    def setup(self):
+    def setup(self) -> bool:
         return False
 
-    def register_tools(self):
+    def register_tools(self) -> None:
         pass
 
 
 class TestSkillManagerBasic:
     """Test basic SkillManager functionality"""
     
-    def test_initialization(self, mock_agent):
+    def test_initialization(self, mock_agent: AgentBase) -> None:
         """Test SkillManager initialization"""
         skill_manager = SkillManager(mock_agent)
         
         assert skill_manager.agent is mock_agent
         assert skill_manager.loaded_skills == {}
     
-    def test_agent_reference(self, mock_agent):
+    def test_agent_reference(self, mock_agent: AgentBase) -> None:
         """Test that skill manager maintains agent reference"""
         skill_manager = SkillManager(mock_agent)
         
@@ -104,7 +106,7 @@ class TestSkillManagerBasic:
 class TestSkillManagerLoading:
     """Test skill loading functionality"""
     
-    def test_load_skill_success(self, mock_agent):
+    def test_load_skill_success(self, mock_agent: AgentBase) -> None:
         """Test successful skill loading"""
         skill_manager = SkillManager(mock_agent)
         
@@ -120,7 +122,7 @@ class TestSkillManagerLoading:
         assert skill_instance.setup_called is True
         assert skill_instance.register_tools_called is True
     
-    def test_load_skill_with_params(self, mock_agent):
+    def test_load_skill_with_params(self, mock_agent: AgentBase) -> None:
         """Test loading skill with parameters"""
         skill_manager = SkillManager(mock_agent)
         
@@ -131,7 +133,7 @@ class TestSkillManagerLoading:
         skill_instance = list(skill_manager.loaded_skills.values())[0]
         assert skill_instance.params == params
     
-    def test_load_skill_setup_failure(self, mock_agent):
+    def test_load_skill_setup_failure(self, mock_agent: AgentBase) -> None:
         """Test loading skill that fails setup"""
         skill_manager = SkillManager(mock_agent)
         
@@ -141,7 +143,7 @@ class TestSkillManagerLoading:
         assert "Failed to setup skill" in error
         assert len(skill_manager.loaded_skills) == 0
     
-    def test_load_already_loaded_skill(self, mock_agent):
+    def test_load_already_loaded_skill(self, mock_agent: AgentBase) -> None:
         """Test loading skill that's already loaded"""
         skill_manager = SkillManager(mock_agent)
         
@@ -154,7 +156,7 @@ class TestSkillManagerLoading:
         assert success2 is False
         assert "already loaded" in error2
     
-    def test_load_skill_initialization_error(self, mock_agent):
+    def test_load_skill_initialization_error(self, mock_agent: AgentBase) -> None:
         """Test loading skill that fails during initialization"""
         skill_manager = SkillManager(mock_agent)
         
@@ -164,18 +166,18 @@ class TestSkillManagerLoading:
             SUPPORTS_MULTIPLE_INSTANCES = False
 
             @classmethod
-            def get_parameter_schema(cls):
-                schema = super().get_parameter_schema()
+            def get_parameter_schema(cls) -> dict[str, Any]:
+                schema: dict[str, Any] = super().get_parameter_schema()
                 schema["broken_param"] = {"type": "string", "description": "A param", "required": False}
                 return schema
 
-            def __init__(self, agent, params=None):
+            def __init__(self, agent: AgentBase, params: dict[str, Any] | None = None) -> None:
                 raise Exception("Initialization failed")
 
-            def setup(self):
+            def setup(self) -> bool:
                 return True
 
-            def register_tools(self):
+            def register_tools(self) -> None:
                 pass
         
         success, error = skill_manager.load_skill("broken_skill", BrokenSkill)
@@ -183,7 +185,7 @@ class TestSkillManagerLoading:
         assert success is False
         assert "Error loading skill" in error
     
-    def test_load_skill_without_class_registry_missing(self, mock_agent):
+    def test_load_skill_without_class_registry_missing(self, mock_agent: AgentBase) -> None:
         """Test loading skill without providing class when registry is missing"""
         skill_manager = SkillManager(mock_agent)
         
@@ -199,7 +201,7 @@ class TestSkillManagerLoading:
 class TestSkillManagerUnloading:
     """Test skill unloading functionality"""
     
-    def test_unload_skill_success(self, mock_agent):
+    def test_unload_skill_success(self, mock_agent: AgentBase) -> None:
         """Test successful skill unloading"""
         skill_manager = SkillManager(mock_agent)
         
@@ -216,7 +218,7 @@ class TestSkillManagerUnloading:
         assert success is True
         assert len(skill_manager.loaded_skills) == 0
     
-    def test_unload_nonexistent_skill(self, mock_agent):
+    def test_unload_nonexistent_skill(self, mock_agent: AgentBase) -> None:
         """Test unloading non-existent skill"""
         skill_manager = SkillManager(mock_agent)
         
@@ -224,14 +226,14 @@ class TestSkillManagerUnloading:
         
         assert success is False
     
-    def test_unload_skill_cleanup_called(self, mock_agent):
+    def test_unload_skill_cleanup_called(self, mock_agent: AgentBase) -> None:
         """Test that cleanup is called during unloading"""
         skill_manager = SkillManager(mock_agent)
         
         class CleanupSkill(MockSkill):
             SKILL_NAME = "cleanup_skill"
-            
-            def cleanup(self):
+
+            def cleanup(self) -> None:
                 self.cleanup_called = True
         
         # Load and unload skill
@@ -241,13 +243,13 @@ class TestSkillManagerUnloading:
         
         skill_manager.unload_skill(instance_key)
         
-        assert skill_instance.cleanup_called is True
+        assert skill_instance.cleanup_called is True  # type: ignore[attr-defined]  # dynamic attr on CleanupSkill subclass
 
 
 class TestSkillManagerQueries:
     """Test skill query functionality"""
     
-    def test_list_loaded_skills(self, mock_agent):
+    def test_list_loaded_skills(self, mock_agent: AgentBase) -> None:
         """Test listing loaded skills"""
         skill_manager = SkillManager(mock_agent)
         
@@ -264,7 +266,7 @@ class TestSkillManagerQueries:
         # Only one skill should be loaded due to single instance restriction
         assert len(loaded) == 1
     
-    def test_has_skill_loaded(self, mock_agent):
+    def test_has_skill_loaded(self, mock_agent: AgentBase) -> None:
         """Test checking if skill is loaded"""
         skill_manager = SkillManager(mock_agent)
         
@@ -280,13 +282,13 @@ class TestSkillManagerQueries:
         skill_manager.unload_skill(instance_key)
         assert skill_manager.has_skill("mock_skill") is False
     
-    def test_has_skill_nonexistent(self, mock_agent):
+    def test_has_skill_nonexistent(self, mock_agent: AgentBase) -> None:
         """Test checking for non-existent skill"""
         skill_manager = SkillManager(mock_agent)
         
         assert skill_manager.has_skill("nonexistent_skill") is False
     
-    def test_get_skill_instance(self, mock_agent):
+    def test_get_skill_instance(self, mock_agent: AgentBase) -> None:
         """Test getting skill instance"""
         skill_manager = SkillManager(mock_agent)
         
@@ -298,7 +300,7 @@ class TestSkillManagerQueries:
         assert isinstance(instance, MockSkill)
         assert instance.agent is mock_agent
     
-    def test_get_skill_instance_not_loaded(self, mock_agent):
+    def test_get_skill_instance_not_loaded(self, mock_agent: AgentBase) -> None:
         """Test getting instance of non-loaded skill"""
         skill_manager = SkillManager(mock_agent)
         
@@ -309,19 +311,19 @@ class TestSkillManagerQueries:
 class TestSkillManagerValidation:
     """Test skill validation functionality"""
     
-    def test_validate_skill_requirements_success(self, mock_agent):
+    def test_validate_skill_requirements_success(self, mock_agent: AgentBase) -> None:
         """Test successful skill requirement validation"""
         skill_manager = SkillManager(mock_agent)
         
         class ValidSkill(MockSkill):
             SKILL_NAME = "valid_skill"
-            REQUIRED_PACKAGES = []  # No requirements
-            REQUIRED_ENV_VARS = []
+            REQUIRED_PACKAGES: ClassVar[list[str]] = []  # No requirements
+            REQUIRED_ENV_VARS: ClassVar[list[str]] = []
         
         success, error = skill_manager.load_skill("valid_skill", ValidSkill)
         assert success is True
     
-    def test_validate_skill_missing_env_vars(self, mock_agent):
+    def test_validate_skill_missing_env_vars(self, mock_agent: AgentBase) -> None:
         """Test skill with missing environment variables"""
         skill_manager = SkillManager(mock_agent)
         
@@ -333,7 +335,7 @@ class TestSkillManagerValidation:
         assert success is False
         assert "Missing required environment variables" in error
     
-    def test_validate_skill_with_env_vars(self, mock_agent, mock_env_vars):
+    def test_validate_skill_with_env_vars(self, mock_agent: AgentBase, mock_env_vars: dict[str, str]) -> None:
         """Test skill with required environment variables present"""
         skill_manager = SkillManager(mock_agent)
         
@@ -344,7 +346,7 @@ class TestSkillManagerValidation:
         success, error = skill_manager.load_skill("env_skill", EnvSkill)
         assert success is True
     
-    def test_validate_skill_missing_packages(self, mock_agent):
+    def test_validate_skill_missing_packages(self, mock_agent: AgentBase) -> None:
         """Test skill with missing packages"""
         skill_manager = SkillManager(mock_agent)
         
@@ -360,14 +362,14 @@ class TestSkillManagerValidation:
 class TestSkillManagerErrorHandling:
     """Test error handling and edge cases"""
     
-    def test_load_skill_exception_during_setup(self, mock_agent):
+    def test_load_skill_exception_during_setup(self, mock_agent: AgentBase) -> None:
         """Test loading skill that raises exception during setup"""
         skill_manager = SkillManager(mock_agent)
         
         class ExceptionSkill(MockSkill):
             SKILL_NAME = "exception_skill"
-            
-            def setup(self):
+
+            def setup(self) -> bool:
                 raise Exception("Setup failed")
         
         success, error = skill_manager.load_skill("exception_skill", ExceptionSkill)
@@ -375,14 +377,14 @@ class TestSkillManagerErrorHandling:
         assert success is False
         assert "Error loading skill" in error
     
-    def test_load_skill_exception_during_register_tools(self, mock_agent):
+    def test_load_skill_exception_during_register_tools(self, mock_agent: AgentBase) -> None:
         """Test loading skill that raises exception during tool registration"""
         skill_manager = SkillManager(mock_agent)
         
         class ExceptionSkill(MockSkill):
             SKILL_NAME = "exception_skill"
-            
-            def register_tools(self):
+
+            def register_tools(self) -> None:
                 raise Exception("Tool registration failed")
         
         success, error = skill_manager.load_skill("exception_skill", ExceptionSkill)
@@ -394,12 +396,12 @@ class TestSkillManagerErrorHandling:
 class TestSkillManagerIntegration:
     """Test integration with other components"""
     
-    def test_skill_tool_registration_with_agent(self, mock_agent):
+    def test_skill_tool_registration_with_agent(self, mock_agent: AgentBase) -> None:
         """Test that skill tools are properly registered with agent"""
         skill_manager = SkillManager(mock_agent)
         
         # Mock the agent's define_tool method
-        mock_agent.define_tool = Mock()
+        mock_agent.define_tool = Mock()  # type: ignore[method-assign]  # mock
         
         success, error = skill_manager.load_skill("mock_skill", MockSkill)
         
@@ -407,14 +409,14 @@ class TestSkillManagerIntegration:
         # Should have called agent.define_tool
         mock_agent.define_tool.assert_called_once()
     
-    def test_multiple_skills_loaded(self, mock_agent):
+    def test_multiple_skills_loaded(self, mock_agent: AgentBase) -> None:
         """Test loading multiple skills with different names"""
         skill_manager = SkillManager(mock_agent)
         
         class Skill1(MockSkill):
             SKILL_NAME = "skill1"
-            
-            def register_tools(self):
+
+            def register_tools(self) -> None:
                 self.register_tools_called = True
                 self.agent.define_tool(
                     name="skill1_tool",
@@ -422,11 +424,11 @@ class TestSkillManagerIntegration:
                     parameters={"type": "object", "properties": {}},
                     handler=lambda: {"result": "skill1"}
                 )
-        
+
         class Skill2(MockSkill):
             SKILL_NAME = "skill2"
-            
-            def register_tools(self):
+
+            def register_tools(self) -> None:
                 self.register_tools_called = True
                 self.agent.define_tool(
                     name="skill2_tool",
@@ -434,7 +436,7 @@ class TestSkillManagerIntegration:
                     parameters={"type": "object", "properties": {}},
                     handler=lambda: {"result": "skill2"}
                 )
-        
+
         # Load both skills - should work since they have different names and tools
         success1, _ = skill_manager.load_skill("skill1", Skill1)
         success2, _ = skill_manager.load_skill("skill2", Skill2)
@@ -443,27 +445,27 @@ class TestSkillManagerIntegration:
         assert success2 is True
         assert len(skill_manager.list_loaded_skills()) == 2
     
-    def test_skill_unload_cleanup_order(self, mock_agent):
+    def test_skill_unload_cleanup_order(self, mock_agent: AgentBase) -> None:
         """Test that skills are cleaned up in proper order"""
         skill_manager = SkillManager(mock_agent)
         
-        cleanup_order = []
-        
+        cleanup_order: list[str | None] = []
+
         class OrderedSkill(MockSkill):
-            def __init__(self, agent, params=None, skill_id=None):
+            def __init__(self, agent: AgentBase, params: dict[str, Any] | None = None, skill_id: str | None = None) -> None:
                 super().__init__(agent, params)
                 self.skill_id = skill_id
-            
-            def cleanup(self):
+
+            def cleanup(self) -> None:
                 cleanup_order.append(self.skill_id)
-        
+
         # Create skill classes with different IDs and names
         class Skill1(OrderedSkill):
             SKILL_NAME = "skill1"
-            def __init__(self, agent, params=None):
+            def __init__(self, agent: AgentBase, params: dict[str, Any] | None = None) -> None:
                 super().__init__(agent, params, "skill1")
-                
-            def register_tools(self):
+
+            def register_tools(self) -> None:
                 self.register_tools_called = True
                 self.agent.define_tool(
                     name="skill1_tool",
@@ -471,13 +473,13 @@ class TestSkillManagerIntegration:
                     parameters={"type": "object", "properties": {}},
                     handler=lambda: {"result": "skill1"}
                 )
-        
+
         class Skill2(OrderedSkill):
             SKILL_NAME = "skill2"
-            def __init__(self, agent, params=None):
+            def __init__(self, agent: AgentBase, params: dict[str, Any] | None = None) -> None:
                 super().__init__(agent, params, "skill2")
-                
-            def register_tools(self):
+
+            def register_tools(self) -> None:
                 self.register_tools_called = True
                 self.agent.define_tool(
                     name="skill2_tool",

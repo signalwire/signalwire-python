@@ -19,7 +19,7 @@ from signalwire.utils import is_serverless_mode
 
 
 class TestGetExecutionMode:
-    def test_default_is_server(self):
+    def test_default_is_server(self) -> None:
         # Clear all detected env vars; should default to "server".
         env_keys = [
             "GATEWAY_INTERFACE",
@@ -33,28 +33,28 @@ class TestGetExecutionMode:
                 os.environ.pop(k, None)
             assert get_execution_mode() == "server"
 
-    def test_cgi_detected_via_gateway_interface(self):
+    def test_cgi_detected_via_gateway_interface(self) -> None:
         with patch.dict(os.environ, {"GATEWAY_INTERFACE": "CGI/1.1"}, clear=False):
             assert get_execution_mode() == "cgi"
 
-    def test_lambda_detected_via_function_name(self):
+    def test_lambda_detected_via_function_name(self) -> None:
         with patch.dict(os.environ, {"AWS_LAMBDA_FUNCTION_NAME": "my-fn"}, clear=False):
             os.environ.pop("GATEWAY_INTERFACE", None)
             assert get_execution_mode() == "lambda"
 
-    def test_lambda_detected_via_task_root(self):
+    def test_lambda_detected_via_task_root(self) -> None:
         with patch.dict(os.environ, {"LAMBDA_TASK_ROOT": "/var/task"}, clear=False):
             os.environ.pop("GATEWAY_INTERFACE", None)
             os.environ.pop("AWS_LAMBDA_FUNCTION_NAME", None)
             assert get_execution_mode() == "lambda"
 
-    def test_google_cloud_function_detected(self):
+    def test_google_cloud_function_detected(self) -> None:
         with patch.dict(os.environ, {"FUNCTION_TARGET": "my_handler"}, clear=False):
             for k in ("GATEWAY_INTERFACE", "AWS_LAMBDA_FUNCTION_NAME", "LAMBDA_TASK_ROOT"):
                 os.environ.pop(k, None)
             assert get_execution_mode() == "google_cloud_function"
 
-    def test_azure_function_detected(self):
+    def test_azure_function_detected(self) -> None:
         with patch.dict(os.environ, {"AZURE_FUNCTIONS_ENVIRONMENT": "Production"}, clear=False):
             for k in (
                 "GATEWAY_INTERFACE", "AWS_LAMBDA_FUNCTION_NAME", "LAMBDA_TASK_ROOT",
@@ -65,7 +65,7 @@ class TestGetExecutionMode:
 
 
 class TestIsServerlessMode:
-    def test_server_mode_is_not_serverless(self):
+    def test_server_mode_is_not_serverless(self) -> None:
         env_keys = [
             "GATEWAY_INTERFACE",
             "AWS_LAMBDA_FUNCTION_NAME", "LAMBDA_TASK_ROOT",
@@ -78,12 +78,12 @@ class TestIsServerlessMode:
                 os.environ.pop(k, None)
             assert is_serverless_mode() is False
 
-    def test_lambda_is_serverless(self):
+    def test_lambda_is_serverless(self) -> None:
         with patch.dict(os.environ, {"AWS_LAMBDA_FUNCTION_NAME": "fn"}, clear=False):
             os.environ.pop("GATEWAY_INTERFACE", None)
             assert is_serverless_mode() is True
 
-    def test_cgi_is_serverless(self):
+    def test_cgi_is_serverless(self) -> None:
         # CGI is not a long-running server — counts as serverless.
         with patch.dict(os.environ, {"GATEWAY_INTERFACE": "CGI/1.1"}, clear=False):
             assert is_serverless_mode() is True

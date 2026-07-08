@@ -140,6 +140,7 @@ The skill integrates with WeatherAPI.com's current weather endpoint:
 ## Temperature Unit Support
 
 ### Fahrenheit Configuration
+<!-- snippet: no-compile config-key-fragment (single dict entry, not a module) -->
 ```python
 "temperature_unit": "fahrenheit"
 ```
@@ -147,6 +148,7 @@ The skill integrates with WeatherAPI.com's current weather endpoint:
 - Displays as "degrees Fahrenheit"
 
 ### Celsius Configuration  
+<!-- snippet: no-compile config-key-fragment (single dict entry, not a module) -->
 ```python
 "temperature_unit": "celsius"
 ```

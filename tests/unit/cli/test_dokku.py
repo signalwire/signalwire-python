@@ -72,31 +72,31 @@ from signalwire.cli.dokku import (
 class TestColors:
     """Tests for the ANSI color constants."""
 
-    def test_colors_has_red(self):
+    def test_colors_has_red(self) -> None:
         assert Colors.RED == '\033[0;31m'
 
-    def test_colors_has_green(self):
+    def test_colors_has_green(self) -> None:
         assert Colors.GREEN == '\033[0;32m'
 
-    def test_colors_has_yellow(self):
+    def test_colors_has_yellow(self) -> None:
         assert Colors.YELLOW == '\033[1;33m'
 
-    def test_colors_has_blue(self):
+    def test_colors_has_blue(self) -> None:
         assert Colors.BLUE == '\033[0;34m'
 
-    def test_colors_has_cyan(self):
+    def test_colors_has_cyan(self) -> None:
         assert Colors.CYAN == '\033[0;36m'
 
-    def test_colors_has_magenta(self):
+    def test_colors_has_magenta(self) -> None:
         assert Colors.MAGENTA == '\033[0;35m'
 
-    def test_colors_has_bold(self):
+    def test_colors_has_bold(self) -> None:
         assert Colors.BOLD == '\033[1m'
 
-    def test_colors_has_dim(self):
+    def test_colors_has_dim(self) -> None:
         assert Colors.DIM == '\033[2m'
 
-    def test_colors_has_nc(self):
+    def test_colors_has_nc(self) -> None:
         assert Colors.NC == '\033[0m'
 
 
@@ -107,32 +107,32 @@ class TestColors:
 class TestPrintFunctions:
     """Tests for colored print utility functions."""
 
-    def test_print_step(self, capsys):
+    def test_print_step(self, capsys: pytest.CaptureFixture[str]) -> None:
         print_step("Installing packages")
         captured = capsys.readouterr()
         assert "==>" in captured.out
         assert "Installing packages" in captured.out
         assert Colors.BLUE in captured.out
 
-    def test_print_success(self, capsys):
+    def test_print_success(self, capsys: pytest.CaptureFixture[str]) -> None:
         print_success("Done!")
         captured = capsys.readouterr()
         assert "Done!" in captured.out
         assert Colors.GREEN in captured.out
 
-    def test_print_warning(self, capsys):
+    def test_print_warning(self, capsys: pytest.CaptureFixture[str]) -> None:
         print_warning("Watch out")
         captured = capsys.readouterr()
         assert "Watch out" in captured.out
         assert Colors.YELLOW in captured.out
 
-    def test_print_error(self, capsys):
+    def test_print_error(self, capsys: pytest.CaptureFixture[str]) -> None:
         print_error("Something failed")
         captured = capsys.readouterr()
         assert "Something failed" in captured.out
         assert Colors.RED in captured.out
 
-    def test_print_header(self, capsys):
+    def test_print_header(self, capsys: pytest.CaptureFixture[str]) -> None:
         print_header("My Header")
         captured = capsys.readouterr()
         assert "My Header" in captured.out
@@ -148,29 +148,29 @@ class TestPrompt:
     """Tests for interactive prompt functions."""
 
     @patch('builtins.input', return_value='myvalue')
-    def test_prompt_returns_user_input(self, mock_input):
+    def test_prompt_returns_user_input(self, mock_input: MagicMock) -> None:
         result = prompt("Enter name")
         assert result == 'myvalue'
         mock_input.assert_called_once_with("Enter name: ")
 
     @patch('builtins.input', return_value='')
-    def test_prompt_returns_default_on_empty(self, mock_input):
+    def test_prompt_returns_default_on_empty(self, mock_input: MagicMock) -> None:
         result = prompt("Enter name", "default-val")
         assert result == 'default-val'
         mock_input.assert_called_once_with("Enter name [default-val]: ")
 
     @patch('builtins.input', return_value='custom')
-    def test_prompt_returns_user_input_over_default(self, mock_input):
+    def test_prompt_returns_user_input_over_default(self, mock_input: MagicMock) -> None:
         result = prompt("Enter name", "default-val")
         assert result == 'custom'
 
     @patch('builtins.input', return_value='  spaced  ')
-    def test_prompt_strips_whitespace(self, mock_input):
+    def test_prompt_strips_whitespace(self, mock_input: MagicMock) -> None:
         result = prompt("Enter name")
         assert result == 'spaced'
 
     @patch('builtins.input', return_value='  ')
-    def test_prompt_empty_after_strip_returns_default(self, mock_input):
+    def test_prompt_empty_after_strip_returns_default(self, mock_input: MagicMock) -> None:
         result = prompt("Question", "fallback")
         assert result == 'fallback'
 
@@ -179,39 +179,39 @@ class TestPromptYesNo:
     """Tests for the yes/no prompt function."""
 
     @patch('builtins.input', return_value='')
-    def test_default_true_on_empty(self, mock_input):
+    def test_default_true_on_empty(self, mock_input: MagicMock) -> None:
         result = prompt_yes_no("Continue?", default=True)
         assert result is True
         assert "Y/n" in mock_input.call_args[0][0]
 
     @patch('builtins.input', return_value='')
-    def test_default_false_on_empty(self, mock_input):
+    def test_default_false_on_empty(self, mock_input: MagicMock) -> None:
         result = prompt_yes_no("Continue?", default=False)
         assert result is False
         assert "y/N" in mock_input.call_args[0][0]
 
     @patch('builtins.input', return_value='y')
-    def test_accepts_y(self, mock_input):
+    def test_accepts_y(self, mock_input: MagicMock) -> None:
         assert prompt_yes_no("OK?", default=False) is True
 
     @patch('builtins.input', return_value='yes')
-    def test_accepts_yes(self, mock_input):
+    def test_accepts_yes(self, mock_input: MagicMock) -> None:
         assert prompt_yes_no("OK?", default=False) is True
 
     @patch('builtins.input', return_value='Y')
-    def test_accepts_uppercase_y(self, mock_input):
+    def test_accepts_uppercase_y(self, mock_input: MagicMock) -> None:
         assert prompt_yes_no("OK?", default=False) is True
 
     @patch('builtins.input', return_value='n')
-    def test_rejects_n(self, mock_input):
+    def test_rejects_n(self, mock_input: MagicMock) -> None:
         assert prompt_yes_no("OK?", default=True) is False
 
     @patch('builtins.input', return_value='no')
-    def test_rejects_no(self, mock_input):
+    def test_rejects_no(self, mock_input: MagicMock) -> None:
         assert prompt_yes_no("OK?", default=True) is False
 
     @patch('builtins.input', return_value='maybe')
-    def test_non_yes_returns_false(self, mock_input):
+    def test_non_yes_returns_false(self, mock_input: MagicMock) -> None:
         assert prompt_yes_no("OK?", default=True) is False
 
 
@@ -222,20 +222,20 @@ class TestPromptYesNo:
 class TestGeneratePassword:
     """Tests for the password generation function."""
 
-    def test_default_length(self):
+    def test_default_length(self) -> None:
         pw = generate_password()
         assert len(pw) == 32
 
-    def test_custom_length(self):
+    def test_custom_length(self) -> None:
         pw = generate_password(length=16)
         assert len(pw) == 16
 
-    def test_uniqueness(self):
+    def test_uniqueness(self) -> None:
         pw1 = generate_password()
         pw2 = generate_password()
         assert pw1 != pw2
 
-    def test_contains_only_url_safe_chars(self):
+    def test_contains_only_url_safe_chars(self) -> None:
         pw = generate_password(64)
         # token_urlsafe uses A-Z, a-z, 0-9, -, _
         for ch in pw:
@@ -249,32 +249,32 @@ class TestGeneratePassword:
 class TestDokkuProjectGeneratorInit:
     """Tests for DokkuProjectGenerator initialization and name derivation."""
 
-    def test_basic_name_derivation(self):
+    def test_basic_name_derivation(self) -> None:
         gen = DokkuProjectGenerator("my-agent", {})
         assert gen.app_name == "my-agent"
         assert gen.agent_slug == "my-agent"
         assert gen.agent_class == "MyAgentAgent"
 
-    def test_underscore_name_derivation(self):
+    def test_underscore_name_derivation(self) -> None:
         gen = DokkuProjectGenerator("my_cool_agent", {})
         assert gen.agent_slug == "my-cool-agent"
         assert gen.agent_class == "MyCoolAgentAgent"
 
-    def test_space_in_name(self):
+    def test_space_in_name(self) -> None:
         gen = DokkuProjectGenerator("My Agent", {})
         assert gen.agent_slug == "my-agent"
         assert gen.agent_class == "MyAgentAgent"
 
-    def test_single_word_name(self):
+    def test_single_word_name(self) -> None:
         gen = DokkuProjectGenerator("bot", {})
         assert gen.agent_slug == "bot"
         assert gen.agent_class == "BotAgent"
 
-    def test_default_project_dir(self):
+    def test_default_project_dir(self) -> None:
         gen = DokkuProjectGenerator("myapp", {})
         assert gen.project_dir == Path("./myapp")
 
-    def test_custom_project_dir(self):
+    def test_custom_project_dir(self) -> None:
         gen = DokkuProjectGenerator("myapp", {'project_dir': '/tmp/custom'})
         assert str(gen.project_dir) == "/tmp/custom"
 
@@ -286,7 +286,7 @@ class TestDokkuProjectGeneratorGenerate:
     @patch.object(DokkuProjectGenerator, '_write_simple_files')
     @patch.object(DokkuProjectGenerator, '_write_core_files')
     @patch('signalwire.cli.dokku.print_success')
-    def test_generate_simple_mode(self, mock_ps, mock_core, mock_simple, mock_cicd, tmp_path):
+    def test_generate_simple_mode(self, mock_ps: MagicMock, mock_core: MagicMock, mock_simple: MagicMock, mock_cicd: MagicMock, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("testapp", {'project_dir': str(tmp_path / 'out')})
         result = gen.generate()
         assert result is True
@@ -298,7 +298,7 @@ class TestDokkuProjectGeneratorGenerate:
     @patch.object(DokkuProjectGenerator, '_write_simple_files')
     @patch.object(DokkuProjectGenerator, '_write_core_files')
     @patch('signalwire.cli.dokku.print_success')
-    def test_generate_cicd_mode(self, mock_ps, mock_core, mock_simple, mock_cicd, tmp_path):
+    def test_generate_cicd_mode(self, mock_ps: MagicMock, mock_core: MagicMock, mock_simple: MagicMock, mock_cicd: MagicMock, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("testapp", {
             'project_dir': str(tmp_path / 'out'),
             'cicd': True
@@ -312,7 +312,7 @@ class TestDokkuProjectGeneratorGenerate:
     @patch.object(DokkuProjectGenerator, '_write_core_files', side_effect=OSError("disk full"))
     @patch('signalwire.cli.dokku.print_error')
     @patch('signalwire.cli.dokku.print_success')
-    def test_generate_handles_exception(self, mock_ps, mock_pe, mock_core, tmp_path):
+    def test_generate_handles_exception(self, mock_ps: MagicMock, mock_pe: MagicMock, mock_core: MagicMock, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("testapp", {'project_dir': str(tmp_path / 'out')})
         result = gen.generate()
         assert result is False
@@ -323,18 +323,18 @@ class TestDokkuProjectGeneratorGenerate:
 class TestDokkuProjectGeneratorWriteFile:
     """Tests for the _write_file helper."""
 
-    def test_write_file_creates_file(self, tmp_path):
+    def test_write_file_creates_file(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("testapp", {'project_dir': str(tmp_path)})
         gen._write_file('hello.txt', 'Hello World')
         assert (tmp_path / 'hello.txt').exists()
         assert (tmp_path / 'hello.txt').read_text() == 'Hello World'
 
-    def test_write_file_creates_nested_dirs(self, tmp_path):
+    def test_write_file_creates_nested_dirs(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("testapp", {'project_dir': str(tmp_path)})
         gen._write_file('a/b/c.txt', 'nested')
         assert (tmp_path / 'a' / 'b' / 'c.txt').exists()
 
-    def test_write_file_executable(self, tmp_path):
+    def test_write_file_executable(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("testapp", {'project_dir': str(tmp_path)})
         gen._write_file('script.sh', '#!/bin/bash', executable=True)
         mode = (tmp_path / 'script.sh').stat().st_mode
@@ -344,7 +344,7 @@ class TestDokkuProjectGeneratorWriteFile:
 class TestDokkuProjectGeneratorCoreFIles:
     """Tests that _write_core_files creates all expected files."""
 
-    def test_core_files_without_web(self, tmp_path):
+    def test_core_files_without_web(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {'project_dir': str(tmp_path)})
         gen._write_core_files()
         assert (tmp_path / 'Procfile').exists()
@@ -360,7 +360,7 @@ class TestDokkuProjectGeneratorCoreFIles:
         assert 'AgentBase' in content
         assert 'AgentServer' not in content
 
-    def test_core_files_with_web(self, tmp_path):
+    def test_core_files_with_web(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {
             'project_dir': str(tmp_path),
             'web': True
@@ -370,33 +370,33 @@ class TestDokkuProjectGeneratorCoreFIles:
         assert 'AgentServer' in content
         assert (tmp_path / 'web' / 'index.html').exists()
 
-    def test_procfile_content(self, tmp_path):
+    def test_procfile_content(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {'project_dir': str(tmp_path)})
         gen._write_core_files()
         content = (tmp_path / 'Procfile').read_text()
         assert 'gunicorn' in content
         assert 'uvicorn' in content
 
-    def test_runtime_content(self, tmp_path):
+    def test_runtime_content(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {'project_dir': str(tmp_path)})
         gen._write_core_files()
         content = (tmp_path / 'runtime.txt').read_text()
         assert 'python-3.11' in content
 
-    def test_env_example_contains_app_name(self, tmp_path):
+    def test_env_example_contains_app_name(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("my-cool-app", {'project_dir': str(tmp_path)})
         gen._write_core_files()
         content = (tmp_path / '.env.example').read_text()
         assert 'my-cool-app' in content
 
-    def test_app_json_contains_app_name(self, tmp_path):
+    def test_app_json_contains_app_name(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("testbot", {'project_dir': str(tmp_path)})
         gen._write_core_files()
         content = (tmp_path / 'app.json').read_text()
         data = json.loads(content)
         assert data['name'] == 'testbot'
 
-    def test_app_py_uses_correct_class_name(self, tmp_path):
+    def test_app_py_uses_correct_class_name(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("my-agent", {'project_dir': str(tmp_path)})
         gen._write_core_files()
         content = (tmp_path / 'app.py').read_text()
@@ -407,7 +407,7 @@ class TestDokkuProjectGeneratorCoreFIles:
 class TestDokkuProjectGeneratorSimpleFiles:
     """Tests for _write_simple_files."""
 
-    def test_simple_files_created(self, tmp_path):
+    def test_simple_files_created(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {
             'project_dir': str(tmp_path),
             'dokku_host': 'dokku.example.com',
@@ -417,7 +417,7 @@ class TestDokkuProjectGeneratorSimpleFiles:
         assert (tmp_path / 'deploy.sh').exists()
         assert (tmp_path / 'README.md').exists()
 
-    def test_deploy_script_is_executable(self, tmp_path):
+    def test_deploy_script_is_executable(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {
             'project_dir': str(tmp_path),
             'dokku_host': 'dokku.example.com',
@@ -427,7 +427,7 @@ class TestDokkuProjectGeneratorSimpleFiles:
         mode = (tmp_path / 'deploy.sh').stat().st_mode
         assert mode & 0o755 == 0o755
 
-    def test_deploy_script_contains_host(self, tmp_path):
+    def test_deploy_script_contains_host(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {
             'project_dir': str(tmp_path),
             'dokku_host': 'dokku.myhost.com',
@@ -437,7 +437,7 @@ class TestDokkuProjectGeneratorSimpleFiles:
         content = (tmp_path / 'deploy.sh').read_text()
         assert 'dokku.myhost.com' in content
 
-    def test_readme_contains_app_name(self, tmp_path):
+    def test_readme_contains_app_name(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {
             'project_dir': str(tmp_path),
             'dokku_host': 'dokku.example.com',
@@ -447,7 +447,7 @@ class TestDokkuProjectGeneratorSimpleFiles:
         content = (tmp_path / 'README.md').read_text()
         assert 'myapp' in content
 
-    def test_default_dokku_host(self, tmp_path):
+    def test_default_dokku_host(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {
             'project_dir': str(tmp_path),
         })
@@ -459,7 +459,7 @@ class TestDokkuProjectGeneratorSimpleFiles:
 class TestDokkuProjectGeneratorCicdFiles:
     """Tests for _write_cicd_files."""
 
-    def test_cicd_files_created(self, tmp_path):
+    def test_cicd_files_created(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {'project_dir': str(tmp_path)})
         gen._write_cicd_files()
         assert (tmp_path / '.github' / 'workflows' / 'deploy.yml').exists()
@@ -468,35 +468,35 @@ class TestDokkuProjectGeneratorCicdFiles:
         assert (tmp_path / '.dokku' / 'services.yml').exists()
         assert (tmp_path / 'README.md').exists()
 
-    def test_deploy_workflow_content(self, tmp_path):
+    def test_deploy_workflow_content(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {'project_dir': str(tmp_path)})
         gen._write_cicd_files()
         content = (tmp_path / '.github' / 'workflows' / 'deploy.yml').read_text()
         assert 'Deploy' in content
         assert 'dokku-deploy-system' in content
 
-    def test_preview_workflow_content(self, tmp_path):
+    def test_preview_workflow_content(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {'project_dir': str(tmp_path)})
         gen._write_cicd_files()
         content = (tmp_path / '.github' / 'workflows' / 'preview.yml').read_text()
         assert 'Preview' in content
         assert 'pull_request' in content
 
-    def test_config_yml_content(self, tmp_path):
+    def test_config_yml_content(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {'project_dir': str(tmp_path)})
         gen._write_cicd_files()
         content = (tmp_path / '.dokku' / 'config.yml').read_text()
         assert 'resources:' in content
         assert 'healthcheck:' in content
 
-    def test_services_yml_content(self, tmp_path):
+    def test_services_yml_content(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {'project_dir': str(tmp_path)})
         gen._write_cicd_files()
         content = (tmp_path / '.dokku' / 'services.yml').read_text()
         assert 'postgres:' in content
         assert 'redis:' in content
 
-    def test_cicd_readme_contains_app_name(self, tmp_path):
+    def test_cicd_readme_contains_app_name(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("superbot", {'project_dir': str(tmp_path)})
         gen._write_cicd_files()
         content = (tmp_path / 'README.md').read_text()
@@ -506,7 +506,7 @@ class TestDokkuProjectGeneratorCicdFiles:
 class TestDokkuProjectGeneratorWebFiles:
     """Tests for _write_web_files."""
 
-    def test_web_dir_created(self, tmp_path):
+    def test_web_dir_created(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {
             'project_dir': str(tmp_path),
             'route': 'swaig'
@@ -515,7 +515,7 @@ class TestDokkuProjectGeneratorWebFiles:
         assert (tmp_path / 'web').is_dir()
         assert (tmp_path / 'web' / 'index.html').exists()
 
-    def test_web_index_html_contains_agent_name(self, tmp_path):
+    def test_web_index_html_contains_agent_name(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("Cool Bot", {
             'project_dir': str(tmp_path),
             'route': 'swaig'
@@ -532,7 +532,7 @@ class TestDokkuProjectGeneratorWebFiles:
 class TestDokkuProjectGeneratorFullGenerate:
     """Integration-level tests for full project generation with tmp_path."""
 
-    def test_full_simple_generate(self, tmp_path):
+    def test_full_simple_generate(self, tmp_path: Path) -> None:
         out = tmp_path / "proj"
         gen = DokkuProjectGenerator("test-agent", {
             'project_dir': str(out),
@@ -552,7 +552,7 @@ class TestDokkuProjectGeneratorFullGenerate:
         assert not (out / '.github').exists()
         assert not (out / '.dokku').exists()
 
-    def test_full_cicd_generate(self, tmp_path):
+    def test_full_cicd_generate(self, tmp_path: Path) -> None:
         out = tmp_path / "proj"
         gen = DokkuProjectGenerator("test-agent", {
             'project_dir': str(out),
@@ -565,7 +565,7 @@ class TestDokkuProjectGeneratorFullGenerate:
         # No simple deploy.sh
         assert not (out / 'deploy.sh').exists()
 
-    def test_full_generate_with_web(self, tmp_path):
+    def test_full_generate_with_web(self, tmp_path: Path) -> None:
         out = tmp_path / "proj"
         gen = DokkuProjectGenerator("web-agent", {
             'project_dir': str(out),
@@ -585,8 +585,9 @@ class TestDokkuProjectGeneratorFullGenerate:
 class TestCmdInit:
     """Tests for the cmd_init CLI command handler."""
 
-    def _make_args(self, name='testapp', cicd=False, web=False, host=None,
-                   dir_val=None, force=False):
+    def _make_args(self, name: str = 'testapp', cicd: bool = False, web: bool = False,
+                   host: str | None = None, dir_val: str | None = None,
+                   force: bool = False) -> argparse.Namespace:
         args = argparse.Namespace()
         args.name = name
         args.cicd = cicd
@@ -598,7 +599,7 @@ class TestCmdInit:
 
     @patch.object(DokkuProjectGenerator, 'generate', return_value=True)
     @patch('signalwire.cli.dokku.Path')
-    def test_init_simple_with_host(self, mock_path_cls, mock_gen):
+    def test_init_simple_with_host(self, mock_path_cls: MagicMock, mock_gen: MagicMock) -> None:
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = False
         mock_path_cls.return_value = mock_path_instance
@@ -610,7 +611,7 @@ class TestCmdInit:
 
     @patch.object(DokkuProjectGenerator, 'generate', return_value=True)
     @patch('signalwire.cli.dokku.Path')
-    def test_init_cicd_mode(self, mock_path_cls, mock_gen):
+    def test_init_cicd_mode(self, mock_path_cls: MagicMock, mock_gen: MagicMock) -> None:
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = False
         mock_path_cls.return_value = mock_path_instance
@@ -621,7 +622,7 @@ class TestCmdInit:
 
     @patch.object(DokkuProjectGenerator, 'generate', return_value=False)
     @patch('signalwire.cli.dokku.Path')
-    def test_init_generation_failure_returns_1(self, mock_path_cls, mock_gen):
+    def test_init_generation_failure_returns_1(self, mock_path_cls: MagicMock, mock_gen: MagicMock) -> None:
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = False
         mock_path_cls.return_value = mock_path_instance
@@ -633,7 +634,7 @@ class TestCmdInit:
     @patch('signalwire.cli.dokku.shutil')
     @patch.object(DokkuProjectGenerator, 'generate', return_value=True)
     @patch('signalwire.cli.dokku.Path')
-    def test_init_force_overwrites_existing_dir(self, mock_path_cls, mock_gen, mock_shutil):
+    def test_init_force_overwrites_existing_dir(self, mock_path_cls: MagicMock, mock_gen: MagicMock, mock_shutil: MagicMock) -> None:
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True
         mock_path_cls.return_value = mock_path_instance
@@ -645,7 +646,7 @@ class TestCmdInit:
 
     @patch('signalwire.cli.dokku.prompt_yes_no', return_value=False)
     @patch('signalwire.cli.dokku.Path')
-    def test_init_existing_dir_no_force_aborts(self, mock_path_cls, mock_prompt):
+    def test_init_existing_dir_no_force_aborts(self, mock_path_cls: MagicMock, mock_prompt: MagicMock) -> None:
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True
         mock_path_cls.return_value = mock_path_instance
@@ -658,8 +659,8 @@ class TestCmdInit:
     @patch('signalwire.cli.dokku.prompt', return_value='dokku.example.com')
     @patch.object(DokkuProjectGenerator, 'generate', return_value=True)
     @patch('signalwire.cli.dokku.Path')
-    def test_init_interactive_mode_simple(self, mock_path_cls, mock_gen,
-                                          mock_prompt, mock_yes_no):
+    def test_init_interactive_mode_simple(self, mock_path_cls: MagicMock, mock_gen: MagicMock,
+                                          mock_prompt: MagicMock, mock_yes_no: MagicMock) -> None:
         """When no --host and no --cicd, enters interactive mode."""
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = False
@@ -674,7 +675,7 @@ class TestCmdInit:
     @patch('signalwire.cli.dokku.prompt_yes_no', side_effect=[True, True])
     @patch.object(DokkuProjectGenerator, 'generate', return_value=True)
     @patch('signalwire.cli.dokku.Path')
-    def test_init_interactive_cicd_mode(self, mock_path_cls, mock_gen, mock_yes_no):
+    def test_init_interactive_cicd_mode(self, mock_path_cls: MagicMock, mock_gen: MagicMock, mock_yes_no: MagicMock) -> None:
         """When user chooses cicd in interactive mode."""
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = False
@@ -686,7 +687,7 @@ class TestCmdInit:
 
     @patch.object(DokkuProjectGenerator, 'generate', return_value=True)
     @patch('signalwire.cli.dokku.Path')
-    def test_init_with_web_flag(self, mock_path_cls, mock_gen):
+    def test_init_with_web_flag(self, mock_path_cls: MagicMock, mock_gen: MagicMock) -> None:
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = False
         mock_path_cls.return_value = mock_path_instance
@@ -697,7 +698,7 @@ class TestCmdInit:
 
     @patch.object(DokkuProjectGenerator, 'generate', return_value=True)
     @patch('signalwire.cli.dokku.Path')
-    def test_init_custom_dir(self, mock_path_cls, mock_gen):
+    def test_init_custom_dir(self, mock_path_cls: MagicMock, mock_gen: MagicMock) -> None:
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = False
         mock_path_cls.return_value = mock_path_instance
@@ -714,14 +715,14 @@ class TestCmdInit:
 class TestCmdDeploy:
     """Tests for the cmd_deploy CLI command handler."""
 
-    def _make_args(self, app=None, host=None):
+    def _make_args(self, app: str | None = None, host: str | None = None) -> argparse.Namespace:
         args = argparse.Namespace()
         args.app = app
         args.host = host
         return args
 
     @patch('signalwire.cli.dokku.Path')
-    def test_deploy_no_procfile_returns_error(self, mock_path_cls):
+    def test_deploy_no_procfile_returns_error(self, mock_path_cls: MagicMock) -> None:
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = False
         mock_path_cls.return_value = mock_path_instance
@@ -732,11 +733,11 @@ class TestCmdDeploy:
 
     @patch('signalwire.cli.dokku.subprocess')
     @patch('signalwire.cli.dokku.Path')
-    def test_deploy_with_app_name_and_host(self, mock_path_cls, mock_subprocess):
+    def test_deploy_with_app_name_and_host(self, mock_path_cls: MagicMock, mock_subprocess: MagicMock) -> None:
         # Procfile exists, .git exists
         path_instances = {}
 
-        def path_side_effect(p):
+        def path_side_effect(p: str) -> MagicMock:
             if p not in path_instances:
                 m = MagicMock()
                 path_instances[p] = m
@@ -761,10 +762,10 @@ class TestCmdDeploy:
 
     @patch('signalwire.cli.dokku.subprocess')
     @patch('signalwire.cli.dokku.Path')
-    def test_deploy_git_push_failure(self, mock_path_cls, mock_subprocess):
+    def test_deploy_git_push_failure(self, mock_path_cls: MagicMock, mock_subprocess: MagicMock) -> None:
         path_instances = {}
 
-        def path_side_effect(p):
+        def path_side_effect(p: str) -> MagicMock:
             if p not in path_instances:
                 m = MagicMock()
                 path_instances[p] = m
@@ -795,10 +796,10 @@ class TestCmdDeploy:
 
     @patch('signalwire.cli.dokku.subprocess')
     @patch('signalwire.cli.dokku.Path')
-    def test_deploy_initializes_git_if_needed(self, mock_path_cls, mock_subprocess):
+    def test_deploy_initializes_git_if_needed(self, mock_path_cls: MagicMock, mock_subprocess: MagicMock) -> None:
         path_instances = {}
 
-        def path_side_effect(p):
+        def path_side_effect(p: str) -> MagicMock:
             if p not in path_instances:
                 m = MagicMock()
                 path_instances[p] = m
@@ -828,10 +829,10 @@ class TestCmdDeploy:
     @patch('signalwire.cli.dokku.prompt', side_effect=['myapp', 'dokku.example.com'])
     @patch('signalwire.cli.dokku.subprocess')
     @patch('signalwire.cli.dokku.Path')
-    def test_deploy_prompts_for_missing_info(self, mock_path_cls, mock_subprocess, mock_prompt):
+    def test_deploy_prompts_for_missing_info(self, mock_path_cls: MagicMock, mock_subprocess: MagicMock, mock_prompt: MagicMock) -> None:
         path_instances = {}
 
-        def path_side_effect(p):
+        def path_side_effect(p: str) -> MagicMock:
             if p not in path_instances:
                 m = MagicMock()
                 path_instances[p] = m
@@ -856,10 +857,10 @@ class TestCmdDeploy:
     @patch('signalwire.cli.dokku.subprocess')
     @patch('builtins.open', mock_open(read_data='{"name": "from-json"}'))
     @patch('signalwire.cli.dokku.Path')
-    def test_deploy_reads_app_name_from_app_json(self, mock_path_cls, mock_subprocess):
+    def test_deploy_reads_app_name_from_app_json(self, mock_path_cls: MagicMock, mock_subprocess: MagicMock) -> None:
         path_instances = {}
 
-        def path_side_effect(p):
+        def path_side_effect(p: str) -> MagicMock:
             if p not in path_instances:
                 m = MagicMock()
                 path_instances[p] = m
@@ -888,7 +889,8 @@ class TestCmdDeploy:
 class TestCmdLogs:
     """Tests for the cmd_logs CLI command handler."""
 
-    def _make_args(self, app=None, host=None, tail=False, num=None):
+    def _make_args(self, app: str | None = None, host: str | None = None,
+                   tail: bool = False, num: int | None = None) -> argparse.Namespace:
         args = argparse.Namespace()
         args.app = app
         args.host = host
@@ -897,7 +899,7 @@ class TestCmdLogs:
         return args
 
     @patch('signalwire.cli.dokku.subprocess')
-    def test_logs_basic(self, mock_subprocess):
+    def test_logs_basic(self, mock_subprocess: MagicMock) -> None:
         args = self._make_args(app='myapp', host='dokku.example.com')
         result = cmd_logs(args)
         assert result == 0
@@ -906,14 +908,14 @@ class TestCmdLogs:
         assert cmd == ['ssh', 'dokku@dokku.example.com', 'logs', 'myapp']
 
     @patch('signalwire.cli.dokku.subprocess')
-    def test_logs_with_tail(self, mock_subprocess):
+    def test_logs_with_tail(self, mock_subprocess: MagicMock) -> None:
         args = self._make_args(app='myapp', host='dokku.example.com', tail=True)
         result = cmd_logs(args)
         cmd = mock_subprocess.run.call_args[0][0]
         assert '-t' in cmd
 
     @patch('signalwire.cli.dokku.subprocess')
-    def test_logs_with_num(self, mock_subprocess):
+    def test_logs_with_num(self, mock_subprocess: MagicMock) -> None:
         args = self._make_args(app='myapp', host='dokku.example.com', num=50)
         result = cmd_logs(args)
         cmd = mock_subprocess.run.call_args[0][0]
@@ -921,7 +923,7 @@ class TestCmdLogs:
         assert '50' in cmd
 
     @patch('signalwire.cli.dokku.subprocess')
-    def test_logs_with_tail_and_num(self, mock_subprocess):
+    def test_logs_with_tail_and_num(self, mock_subprocess: MagicMock) -> None:
         args = self._make_args(app='myapp', host='dokku.example.com', tail=True, num=100)
         result = cmd_logs(args)
         cmd = mock_subprocess.run.call_args[0][0]
@@ -932,7 +934,7 @@ class TestCmdLogs:
     @patch('signalwire.cli.dokku._get_app_name', return_value='fromjson')
     @patch('signalwire.cli.dokku.prompt', return_value='dokku.example.com')
     @patch('signalwire.cli.dokku.subprocess')
-    def test_logs_prompts_for_missing_info(self, mock_subprocess, mock_prompt, mock_get_name):
+    def test_logs_prompts_for_missing_info(self, mock_subprocess: MagicMock, mock_prompt: MagicMock, mock_get_name: MagicMock) -> None:
         args = self._make_args()  # no app, no host
         result = cmd_logs(args)
         assert result == 0
@@ -947,7 +949,8 @@ class TestCmdLogs:
 class TestCmdConfig:
     """Tests for the cmd_config CLI command handler."""
 
-    def _make_args(self, action='show', vars_list=None, app=None, host=None):
+    def _make_args(self, action: str = 'show', vars_list: list[str] | None = None,
+                   app: str | None = None, host: str | None = None) -> argparse.Namespace:
         args = argparse.Namespace()
         args.config_action = action
         args.vars = vars_list or []
@@ -956,7 +959,7 @@ class TestCmdConfig:
         return args
 
     @patch('signalwire.cli.dokku.subprocess')
-    def test_config_show(self, mock_subprocess):
+    def test_config_show(self, mock_subprocess: MagicMock) -> None:
         args = self._make_args(action='show', app='myapp', host='dokku.example.com')
         result = cmd_config(args)
         assert result == 0
@@ -965,7 +968,7 @@ class TestCmdConfig:
         assert 'myapp' in cmd
 
     @patch('signalwire.cli.dokku.subprocess')
-    def test_config_set(self, mock_subprocess):
+    def test_config_set(self, mock_subprocess: MagicMock) -> None:
         args = self._make_args(
             action='set',
             vars_list=['KEY=value', 'OTHER=thing'],
@@ -980,7 +983,7 @@ class TestCmdConfig:
         assert 'OTHER=thing' in cmd
 
     @patch('signalwire.cli.dokku.subprocess')
-    def test_config_unset(self, mock_subprocess):
+    def test_config_unset(self, mock_subprocess: MagicMock) -> None:
         args = self._make_args(
             action='unset',
             vars_list=['KEY'],
@@ -993,12 +996,12 @@ class TestCmdConfig:
         assert 'config:unset' in cmd
         assert 'KEY' in cmd
 
-    def test_config_set_no_vars_returns_error(self):
+    def test_config_set_no_vars_returns_error(self) -> None:
         args = self._make_args(action='set', app='myapp', host='dokku.example.com')
         result = cmd_config(args)
         assert result == 1
 
-    def test_config_unset_no_vars_returns_error(self):
+    def test_config_unset_no_vars_returns_error(self) -> None:
         args = self._make_args(action='unset', app='myapp', host='dokku.example.com')
         result = cmd_config(args)
         assert result == 1
@@ -1006,7 +1009,7 @@ class TestCmdConfig:
     @patch('signalwire.cli.dokku._get_app_name', return_value='fromjson')
     @patch('signalwire.cli.dokku.prompt', return_value='dokku.example.com')
     @patch('signalwire.cli.dokku.subprocess')
-    def test_config_prompts_for_missing_info(self, mock_subprocess, mock_prompt, mock_get_name):
+    def test_config_prompts_for_missing_info(self, mock_subprocess: MagicMock, mock_prompt: MagicMock, mock_get_name: MagicMock) -> None:
         args = self._make_args(action='show')  # no app, no host
         result = cmd_config(args)
         assert result == 0
@@ -1021,7 +1024,8 @@ class TestCmdConfig:
 class TestCmdScale:
     """Tests for the cmd_scale CLI command handler."""
 
-    def _make_args(self, scale_args=None, app=None, host=None):
+    def _make_args(self, scale_args: list[str] | None = None,
+                   app: str | None = None, host: str | None = None) -> argparse.Namespace:
         args = argparse.Namespace()
         args.scale_args = scale_args or []
         args.app = app
@@ -1029,7 +1033,7 @@ class TestCmdScale:
         return args
 
     @patch('signalwire.cli.dokku.subprocess')
-    def test_scale_show_current(self, mock_subprocess):
+    def test_scale_show_current(self, mock_subprocess: MagicMock) -> None:
         args = self._make_args(app='myapp', host='dokku.example.com')
         result = cmd_scale(args)
         assert result == 0
@@ -1040,7 +1044,7 @@ class TestCmdScale:
         assert len(cmd) == 4  # ssh, dokku@host, ps:scale, myapp
 
     @patch('signalwire.cli.dokku.subprocess')
-    def test_scale_set(self, mock_subprocess):
+    def test_scale_set(self, mock_subprocess: MagicMock) -> None:
         args = self._make_args(
             scale_args=['web=2'],
             app='myapp',
@@ -1053,7 +1057,7 @@ class TestCmdScale:
         assert 'web=2' in cmd
 
     @patch('signalwire.cli.dokku.subprocess')
-    def test_scale_set_multiple(self, mock_subprocess):
+    def test_scale_set_multiple(self, mock_subprocess: MagicMock) -> None:
         args = self._make_args(
             scale_args=['web=2', 'worker=3'],
             app='myapp',
@@ -1068,7 +1072,7 @@ class TestCmdScale:
     @patch('signalwire.cli.dokku._get_app_name', return_value='fromjson')
     @patch('signalwire.cli.dokku.prompt', return_value='dokku.example.com')
     @patch('signalwire.cli.dokku.subprocess')
-    def test_scale_prompts_for_missing_info(self, mock_subprocess, mock_prompt, mock_get_name):
+    def test_scale_prompts_for_missing_info(self, mock_subprocess: MagicMock, mock_prompt: MagicMock, mock_get_name: MagicMock) -> None:
         args = self._make_args()  # no app, no host
         result = cmd_scale(args)
         assert result == 0
@@ -1085,7 +1089,7 @@ class TestGetAppName:
 
     @patch('builtins.open', mock_open(read_data='{"name": "json-app"}'))
     @patch('signalwire.cli.dokku.Path')
-    def test_reads_from_app_json(self, mock_path_cls):
+    def test_reads_from_app_json(self, mock_path_cls: MagicMock) -> None:
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True
         mock_path_cls.return_value = mock_path_instance
@@ -1095,7 +1099,7 @@ class TestGetAppName:
 
     @patch('signalwire.cli.dokku.prompt', return_value='prompted-app')
     @patch('signalwire.cli.dokku.Path')
-    def test_prompts_when_no_app_json(self, mock_path_cls, mock_prompt):
+    def test_prompts_when_no_app_json(self, mock_path_cls: MagicMock, mock_prompt: MagicMock) -> None:
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = False
         mock_path_cls.return_value = mock_path_instance
@@ -1106,7 +1110,7 @@ class TestGetAppName:
     @patch('signalwire.cli.dokku.prompt', return_value='fallback')
     @patch('builtins.open', side_effect=json.JSONDecodeError("err", "doc", 0))
     @patch('signalwire.cli.dokku.Path')
-    def test_prompts_on_invalid_json(self, mock_path_cls, mock_open_fn, mock_prompt):
+    def test_prompts_on_invalid_json(self, mock_path_cls: MagicMock, mock_open_fn: MagicMock, mock_prompt: MagicMock) -> None:
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True
         mock_path_cls.return_value = mock_path_instance
@@ -1116,7 +1120,7 @@ class TestGetAppName:
 
     @patch('builtins.open', mock_open(read_data='{}'))
     @patch('signalwire.cli.dokku.Path')
-    def test_returns_empty_string_when_name_missing(self, mock_path_cls):
+    def test_returns_empty_string_when_name_missing(self, mock_path_cls: MagicMock) -> None:
         mock_path_instance = MagicMock()
         mock_path_instance.exists.return_value = True
         mock_path_cls.return_value = mock_path_instance
@@ -1134,7 +1138,7 @@ class TestMain:
 
     @patch('signalwire.cli.dokku.cmd_init', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'init', 'myapp', '--host', 'dokku.test.com'])
-    def test_main_init_command(self, mock_cmd_init):
+    def test_main_init_command(self, mock_cmd_init: MagicMock) -> None:
         result = main()
         assert result == 0
         mock_cmd_init.assert_called_once()
@@ -1145,7 +1149,7 @@ class TestMain:
 
     @patch('signalwire.cli.dokku.cmd_init', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'init', 'myapp', '--cicd'])
-    def test_main_init_cicd(self, mock_cmd_init):
+    def test_main_init_cicd(self, mock_cmd_init: MagicMock) -> None:
         result = main()
         assert result == 0
         args = mock_cmd_init.call_args[0][0]
@@ -1153,7 +1157,7 @@ class TestMain:
 
     @patch('signalwire.cli.dokku.cmd_init', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'init', 'myapp', '--web'])
-    def test_main_init_web(self, mock_cmd_init):
+    def test_main_init_web(self, mock_cmd_init: MagicMock) -> None:
         result = main()
         assert result == 0
         args = mock_cmd_init.call_args[0][0]
@@ -1161,7 +1165,7 @@ class TestMain:
 
     @patch('signalwire.cli.dokku.cmd_init', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'init', 'myapp', '--force'])
-    def test_main_init_force(self, mock_cmd_init):
+    def test_main_init_force(self, mock_cmd_init: MagicMock) -> None:
         result = main()
         assert result == 0
         args = mock_cmd_init.call_args[0][0]
@@ -1169,7 +1173,7 @@ class TestMain:
 
     @patch('signalwire.cli.dokku.cmd_init', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'init', 'myapp', '-f'])
-    def test_main_init_force_short(self, mock_cmd_init):
+    def test_main_init_force_short(self, mock_cmd_init: MagicMock) -> None:
         result = main()
         assert result == 0
         args = mock_cmd_init.call_args[0][0]
@@ -1177,7 +1181,7 @@ class TestMain:
 
     @patch('signalwire.cli.dokku.cmd_init', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'init', 'myapp', '--dir', '/tmp/out'])
-    def test_main_init_custom_dir(self, mock_cmd_init):
+    def test_main_init_custom_dir(self, mock_cmd_init: MagicMock) -> None:
         result = main()
         assert result == 0
         args = mock_cmd_init.call_args[0][0]
@@ -1185,7 +1189,7 @@ class TestMain:
 
     @patch('signalwire.cli.dokku.cmd_deploy', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'deploy', '--app', 'myapp', '--host', 'dokku.test.com'])
-    def test_main_deploy_command(self, mock_cmd_deploy):
+    def test_main_deploy_command(self, mock_cmd_deploy: MagicMock) -> None:
         result = main()
         assert result == 0
         mock_cmd_deploy.assert_called_once()
@@ -1195,7 +1199,7 @@ class TestMain:
 
     @patch('signalwire.cli.dokku.cmd_deploy', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'deploy', '-a', 'myapp', '-H', 'dokku.test.com'])
-    def test_main_deploy_short_flags(self, mock_cmd_deploy):
+    def test_main_deploy_short_flags(self, mock_cmd_deploy: MagicMock) -> None:
         result = main()
         assert result == 0
         args = mock_cmd_deploy.call_args[0][0]
@@ -1204,7 +1208,7 @@ class TestMain:
 
     @patch('signalwire.cli.dokku.cmd_logs', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'logs', '-a', 'myapp', '-H', 'h', '-t', '-n', '20'])
-    def test_main_logs_command(self, mock_cmd_logs):
+    def test_main_logs_command(self, mock_cmd_logs: MagicMock) -> None:
         result = main()
         assert result == 0
         mock_cmd_logs.assert_called_once()
@@ -1215,7 +1219,7 @@ class TestMain:
 
     @patch('signalwire.cli.dokku.cmd_config', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'config', 'set', 'KEY=val', '-a', 'myapp', '-H', 'h'])
-    def test_main_config_set_command(self, mock_cmd_config):
+    def test_main_config_set_command(self, mock_cmd_config: MagicMock) -> None:
         result = main()
         assert result == 0
         mock_cmd_config.assert_called_once()
@@ -1225,7 +1229,7 @@ class TestMain:
 
     @patch('signalwire.cli.dokku.cmd_config', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'config', 'show', '-a', 'myapp', '-H', 'h'])
-    def test_main_config_show_command(self, mock_cmd_config):
+    def test_main_config_show_command(self, mock_cmd_config: MagicMock) -> None:
         result = main()
         assert result == 0
         args = mock_cmd_config.call_args[0][0]
@@ -1233,7 +1237,7 @@ class TestMain:
 
     @patch('signalwire.cli.dokku.cmd_config', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'config', 'unset', 'KEY', '-a', 'myapp', '-H', 'h'])
-    def test_main_config_unset_command(self, mock_cmd_config):
+    def test_main_config_unset_command(self, mock_cmd_config: MagicMock) -> None:
         result = main()
         assert result == 0
         args = mock_cmd_config.call_args[0][0]
@@ -1242,7 +1246,7 @@ class TestMain:
 
     @patch('signalwire.cli.dokku.cmd_scale', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'scale', 'web=2', '-a', 'myapp', '-H', 'h'])
-    def test_main_scale_command(self, mock_cmd_scale):
+    def test_main_scale_command(self, mock_cmd_scale: MagicMock) -> None:
         result = main()
         assert result == 0
         mock_cmd_scale.assert_called_once()
@@ -1250,7 +1254,7 @@ class TestMain:
         assert args.scale_args == ['web=2']
 
     @patch('sys.argv', ['sw-agent-dokku'])
-    def test_main_no_command_returns_1(self):
+    def test_main_no_command_returns_1(self) -> None:
         result = main()
         assert result == 1
 
@@ -1262,68 +1266,68 @@ class TestMain:
 class TestTemplates:
     """Tests to verify template content is correctly defined."""
 
-    def test_procfile_template_has_gunicorn(self):
+    def test_procfile_template_has_gunicorn(self) -> None:
         assert 'gunicorn' in PROCFILE_TEMPLATE
         assert 'UvicornWorker' in PROCFILE_TEMPLATE
 
-    def test_runtime_template_has_python(self):
+    def test_runtime_template_has_python(self) -> None:
         assert 'python-3.11' in RUNTIME_TEMPLATE
 
-    def test_requirements_template_has_deps(self):
+    def test_requirements_template_has_deps(self) -> None:
         assert 'signalwire-agents' in REQUIREMENTS_TEMPLATE
         assert 'gunicorn' in REQUIREMENTS_TEMPLATE
         assert 'uvicorn' in REQUIREMENTS_TEMPLATE
 
-    def test_checks_template_has_health(self):
+    def test_checks_template_has_health(self) -> None:
         assert '/health' in CHECKS_TEMPLATE
 
-    def test_gitignore_template_excludes_env(self):
+    def test_gitignore_template_excludes_env(self) -> None:
         assert '.env' in GITIGNORE_TEMPLATE
         assert '__pycache__' in GITIGNORE_TEMPLATE
 
-    def test_env_example_template_has_placeholders(self):
+    def test_env_example_template_has_placeholders(self) -> None:
         assert '{app_name}' in ENV_EXAMPLE_TEMPLATE
         assert 'SIGNALWIRE_SPACE_NAME' in ENV_EXAMPLE_TEMPLATE
 
-    def test_app_template_has_class_placeholder(self):
+    def test_app_template_has_class_placeholder(self) -> None:
         assert '{agent_class}' in APP_TEMPLATE
         assert '{agent_name}' in APP_TEMPLATE
         assert '{agent_slug}' in APP_TEMPLATE
 
-    def test_app_template_with_web_has_server(self):
+    def test_app_template_with_web_has_server(self) -> None:
         assert 'AgentServer' in APP_TEMPLATE_WITH_WEB
         assert 'setup_swml_handler' in APP_TEMPLATE_WITH_WEB
 
-    def test_app_json_template_is_valid_json_after_format(self):
+    def test_app_json_template_is_valid_json_after_format(self) -> None:
         content = APP_JSON_TEMPLATE.format(app_name='test')
         data = json.loads(content)
         assert data['name'] == 'test'
 
-    def test_deploy_workflow_template_mentions_dokku(self):
+    def test_deploy_workflow_template_mentions_dokku(self) -> None:
         assert 'dokku-deploy-system' in DEPLOY_WORKFLOW_TEMPLATE
 
-    def test_preview_workflow_template_mentions_pull_request(self):
+    def test_preview_workflow_template_mentions_pull_request(self) -> None:
         assert 'pull_request' in PREVIEW_WORKFLOW_TEMPLATE
 
-    def test_dokku_config_template_has_resources(self):
+    def test_dokku_config_template_has_resources(self) -> None:
         assert 'resources:' in DOKKU_CONFIG_TEMPLATE
         assert 'memory:' in DOKKU_CONFIG_TEMPLATE
 
-    def test_services_template_has_postgres(self):
+    def test_services_template_has_postgres(self) -> None:
         assert 'postgres:' in SERVICES_TEMPLATE
 
-    def test_web_index_template_has_html(self):
+    def test_web_index_template_has_html(self) -> None:
         assert '<!DOCTYPE html>' in WEB_INDEX_TEMPLATE
         assert '{agent_name}' in WEB_INDEX_TEMPLATE
 
-    def test_deploy_script_template_has_bash(self):
+    def test_deploy_script_template_has_bash(self) -> None:
         assert '#!/bin/bash' in DEPLOY_SCRIPT_TEMPLATE
         assert '{app_name}' in DEPLOY_SCRIPT_TEMPLATE
 
-    def test_readme_simple_template_has_deploy(self):
+    def test_readme_simple_template_has_deploy(self) -> None:
         assert 'deploy' in README_SIMPLE_TEMPLATE.lower()
 
-    def test_readme_cicd_template_has_github(self):
+    def test_readme_cicd_template_has_github(self) -> None:
         assert 'GitHub' in README_CICD_TEMPLATE
 
 
@@ -1334,33 +1338,33 @@ class TestTemplates:
 class TestEdgeCases:
     """Tests for various edge cases and special scenarios."""
 
-    def test_generate_password_length_zero(self):
+    def test_generate_password_length_zero(self) -> None:
         pw = generate_password(length=0)
         assert pw == ''
 
-    def test_generate_password_length_one(self):
+    def test_generate_password_length_one(self) -> None:
         pw = generate_password(length=1)
         assert len(pw) == 1
 
-    def test_agent_class_name_mixed_delimiters(self):
+    def test_agent_class_name_mixed_delimiters(self) -> None:
         gen = DokkuProjectGenerator("my-cool_app name", {})
         # "my-cool_app name" -> slug: "my-cool-app-name"
         # class: split on - and _ and space -> My Cool App Name + Agent
         assert gen.agent_slug == "my-cool-app-name"
         assert gen.agent_class == "MyCoolAppNameAgent"
 
-    def test_agent_class_name_all_caps(self):
+    def test_agent_class_name_all_caps(self) -> None:
         gen = DokkuProjectGenerator("ABC", {})
         assert gen.agent_slug == "abc"
         assert gen.agent_class == "AbcAgent"
 
     @patch('signalwire.cli.dokku.subprocess')
-    def test_deploy_remote_url_format(self, mock_subprocess):
+    def test_deploy_remote_url_format(self, mock_subprocess: MagicMock) -> None:
         """Verify the dokku remote URL is correctly formed."""
         with patch('signalwire.cli.dokku.Path') as mock_path_cls:
             path_instances = {}
 
-            def path_side_effect(p):
+            def path_side_effect(p: str) -> MagicMock:
                 if p not in path_instances:
                     m = MagicMock()
                     path_instances[p] = m
@@ -1388,7 +1392,7 @@ class TestEdgeCases:
                     break
 
     @patch('signalwire.cli.dokku.subprocess')
-    def test_logs_command_structure(self, mock_subprocess):
+    def test_logs_command_structure(self, mock_subprocess: MagicMock) -> None:
         """Verify the SSH log command is correctly formed."""
         args = argparse.Namespace(
             app='testapp', host='my.dokku.host', tail=True, num=200
@@ -1403,7 +1407,7 @@ class TestEdgeCases:
         assert '--num' in cmd
         assert '200' in cmd
 
-    def test_config_set_empty_vars_list(self):
+    def test_config_set_empty_vars_list(self) -> None:
         """Empty vars list (not None, but []) should still fail."""
         args = argparse.Namespace(
             config_action='set', vars=[], app='myapp', host='dokku.example.com'
@@ -1411,7 +1415,7 @@ class TestEdgeCases:
         result = cmd_config(args)
         assert result == 1
 
-    def test_config_unset_empty_vars_list(self):
+    def test_config_unset_empty_vars_list(self) -> None:
         """Empty vars list (not None, but []) should still fail."""
         args = argparse.Namespace(
             config_action='unset', vars=[], app='myapp', host='dokku.example.com'
@@ -1420,7 +1424,7 @@ class TestEdgeCases:
         assert result == 1
 
     @patch('signalwire.cli.dokku.subprocess')
-    def test_scale_show_no_extra_args(self, mock_subprocess):
+    def test_scale_show_no_extra_args(self, mock_subprocess: MagicMock) -> None:
         """When scale_args is empty, just show current scale without extra args."""
         args = argparse.Namespace(
             scale_args=[], app='myapp', host='dokku.example.com'
@@ -1430,7 +1434,7 @@ class TestEdgeCases:
         # Should be exactly: ssh dokku@host ps:scale myapp
         assert cmd == ['ssh', 'dokku@dokku.example.com', 'ps:scale', 'myapp']
 
-    def test_generate_creates_project_dir_if_missing(self, tmp_path):
+    def test_generate_creates_project_dir_if_missing(self, tmp_path: Path) -> None:
         """generate() should create the project directory with parents."""
         deep_dir = tmp_path / "a" / "b" / "c"
         gen = DokkuProjectGenerator("myapp", {
@@ -1444,7 +1448,7 @@ class TestEdgeCases:
     @patch('signalwire.cli.dokku.cmd_init', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'init', 'my-app', '--cicd', '--web',
                         '--host', 'h', '--dir', '/tmp/d', '-f'])
-    def test_main_all_init_flags(self, mock_cmd_init):
+    def test_main_all_init_flags(self, mock_cmd_init: MagicMock) -> None:
         """All init flags can be passed together."""
         result = main()
         assert result == 0

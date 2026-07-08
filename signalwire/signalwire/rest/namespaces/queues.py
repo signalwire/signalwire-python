@@ -1,30 +1,24 @@
-"""
-Copyright (c) 2025 SignalWire
+"""Deprecated import path for ``queues`` REST symbols.
 
-This file is part of the SignalWire SDK.
-
-Licensed under the MIT License.
-See LICENSE file in the project root for full license information.
-
-Queues namespace — CRUD + member management.
+These symbols moved out of ``namespaces.queues`` when the REST layer was
+regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
+re-export keeps ``from signalwire.signalwire.rest.namespaces.queues import QueuesResource``
+working but emits a :class:`DeprecationWarning`. Prefer ``client.queues`` instead
+(no import needed).
 """
 
-from .._base import CrudResource
+import warnings
 
+warnings.warn(
+    "signalwire.signalwire.rest.namespaces.queues is deprecated; use client.queues. "
+    "This back-compat shim will be removed in a future release.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class QueuesResource(CrudResource):
-    """Queue management with member operations."""
+from .relay_rest_resources_generated import Queues  # noqa: E402  (re-export after the deprecation warn — intentional)
 
-    _update_method = "PUT"
+# Back-compat aliases (old name -> generated bare name):
+QueuesResource = Queues
 
-    def __init__(self, http):
-        super().__init__(http, "/api/relay/rest/queues")
-
-    def list_members(self, queue_id, **params):
-        return self._http.get(self._path(queue_id, "members"), params=params or None)
-
-    def get_next_member(self, queue_id):
-        return self._http.get(self._path(queue_id, "members", "next"))
-
-    def get_member(self, queue_id, member_id):
-        return self._http.get(self._path(queue_id, "members", member_id))
+__all__ = ["QueuesResource"]

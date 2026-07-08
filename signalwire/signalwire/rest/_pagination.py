@@ -5,11 +5,13 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Pagination support for list endpoints that return paged results.
 """
+
+from typing import Any
+
+from ._base import HttpClient
 
 
 class PaginatedIterator:
@@ -20,20 +22,26 @@ class PaginatedIterator:
             print(item)
     """
 
-    def __init__(self, http, path, params=None, data_key="data"):
+    def __init__(
+        self,
+        http: HttpClient,
+        path: str,
+        params: dict[str, Any] | None = None,
+        data_key: str = "data",
+    ) -> None:
         self._http = http
         self._path = path
-        self._params = dict(params or {})
+        self._params: dict[str, Any] = dict(params or {})
         self._data_key = data_key
-        self._current_page = None
-        self._items = []
+        self._current_page: Any = None
+        self._items: list[Any] = []
         self._index = 0
         self._done = False
 
-    def __iter__(self):
+    def __iter__(self) -> "PaginatedIterator":
         return self
 
-    def __next__(self):
+    def __next__(self) -> Any:
         while self._index >= len(self._items):
             if self._done:
                 raise StopIteration
@@ -43,7 +51,7 @@ class PaginatedIterator:
         self._index += 1
         return item
 
-    def _fetch_next(self):
+    def _fetch_next(self) -> None:
         resp = self._http.get(self._path, params=self._params or None)
         data = resp.get(self._data_key, [])
         self._items.extend(data)

@@ -2,6 +2,7 @@
 
 ## Constructor
 
+<!-- snippet: no-compile signature-illustration -->
 ```python
 RelayClient(
     project: str = None,          # SIGNALWIRE_PROJECT_ID
@@ -29,6 +30,7 @@ client.run()
 
 Manual lifecycle control for use in async code.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await client.connect()
 # ... use client ...
@@ -37,6 +39,7 @@ await client.disconnect()
 
 Also supports async context manager:
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 async with RelayClient(contexts=["default"]) as client:
     ...
@@ -61,6 +64,7 @@ Place an outbound call. Returns a `Call` once the remote party answers.
 - `max_duration` -- max call duration in minutes
 - `dial_timeout` -- seconds to wait before raising `TimeoutError` (default: 120)
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 call = await client.dial([
     [{"type": "phone", "params": {"to_number": "+15551234567", "from_number": "+15559876543"}}]
@@ -81,6 +85,7 @@ async def handle(message):
 
 Send an outbound SMS/MMS. Returns a `Message` that tracks delivery state.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 message = await client.send_message(
     to_number="+15552222222",
@@ -100,6 +105,7 @@ Send a raw JSON-RPC request. Used internally by Call methods, but available for 
 
 Dynamically subscribe to or unsubscribe from contexts after connecting.
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 await client.receive(["new-context"])
 await client.unreceive(["old-context"])
@@ -130,6 +136,7 @@ For multiple WebSocket connections in one process, set `RELAY_MAX_CONNECTIONS` (
 
 ## Error Handling
 
+<!-- snippet: no-compile await-fragment -->
 ```python
 from signalwire.relay import RelayError
 

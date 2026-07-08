@@ -87,7 +87,7 @@ class VoicemailService(SWMLService):
         self.reset_document()
         
         # Add answer verb - temporarily using add_verb
-        self.add_answer_verb()
+        self.add_verb("answer", {})
         
         # Add play verb for greeting - try using auto-vivified method
         try:
@@ -192,7 +192,7 @@ class IvrMenuService(SWMLService):
         self.reset_document()
         
         # Add answer verb
-        self.add_answer_verb()
+        self.add_verb("answer", {})
         
         # Add main menu section
         self.add_section("main_menu")
@@ -288,7 +288,7 @@ class CallTransferService(SWMLService):
         self.reset_document()
         
         # Add answer verb
-        self.add_answer_verb()
+        self.add_verb("answer", {})
         
         # Add play verb for greeting
         self.add_verb("play", {
@@ -381,7 +381,7 @@ def main():
         
         # Start the server
         try:
-            service.run(host=args.host, port=args.port)
+            service.serve(host=args.host, port=args.port)
         except KeyboardInterrupt:
             logger.info("server_shutdown")
             print("\nShutting down...")

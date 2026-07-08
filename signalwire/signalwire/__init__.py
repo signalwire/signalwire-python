@@ -12,8 +12,15 @@ SignalWire SDK
 A package for building AI agents using SignalWire's AI and SWML capabilities.
 """
 
+from typing import TYPE_CHECKING, Any
+
 # Configure logging before any other imports to ensure early initialization
 from .core.logging_config import configure_logging
+
+if TYPE_CHECKING:
+    from signalwire.rest.client import RestClient as _RestClient
+    from signalwire.core.skill_base import SkillBase
+    from signalwire.skills.registry import SkillRegistry
 
 configure_logging()
 
@@ -53,14 +60,14 @@ from signalwire.web import WebService  # noqa: E402
 
 # Lazy import skills to avoid slow startup for CLI tools
 # Skills are now loaded on-demand when requested
-def _get_skill_registry():
+def _get_skill_registry() -> "SkillRegistry":
     """Lazy import and return skill registry"""
     import signalwire.skills
 
     return signalwire.skills.skill_registry
 
 
-def list_skills():
+def list_skills() -> list[dict[str, Any]]:
     """List all available skills with metadata.
 
     Returns one dict per skill (name, description, version, required packages /
@@ -71,7 +78,7 @@ def list_skills():
     return skill_registry.list_skills()
 
 
-def list_skills_with_params():
+def list_skills_with_params() -> dict[str, dict[str, Any]]:
     """
     Get complete schema for all available skills including parameter metadata
 
@@ -98,7 +105,7 @@ def list_skills_with_params():
     return skill_registry.get_all_skills_schema()
 
 
-def register_skill(skill_class):
+def register_skill(skill_class: "type[SkillBase]") -> None:
     """
     Register a custom skill class
 
@@ -119,7 +126,7 @@ def register_skill(skill_class):
     return skill_registry.register_skill(skill_class)
 
 
-def add_skill_directory(path):
+def add_skill_directory(path: str) -> None:
     """
     Add a directory to search for skills
 
@@ -138,7 +145,7 @@ def add_skill_directory(path):
     return skill_registry.add_skill_directory(path)
 
 
-def RestClient(*args, **kwargs):
+def RestClient(*args: Any, **kwargs: Any) -> "_RestClient":
     """Create a SignalWire REST API client (lazy import)"""
     from signalwire.rest import RestClient as _RestClient
 

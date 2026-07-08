@@ -9,12 +9,18 @@ See LICENSE file in the project root for full license information.
 SwaigFunction class for defining and managing SWAIG function interfaces
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from collections.abc import Callable
 import logging
 
 # Import here to avoid circular imports
 from signalwire.core.function_result import FunctionResult
+
+if TYPE_CHECKING:
+    # The inbound SWAIG function-webhook payload, typed from the spec (a plain dict at
+    # runtime; TYPE_CHECKING-only so there's no import cost / cycle). Generated from
+    # porting-sdk/swaig-specs/swaig-request.yaml (vendored from mod_openai).
+    from signalwire.core.swaig_request_generated import SwaigRequest
 
 
 class SWAIGFunction:
@@ -44,9 +50,9 @@ class SWAIGFunction:
     def __init__(
         self,
         name: str,
-        handler: Callable,
+        handler: Callable[..., Any],
         description: str,
-        parameters: dict[str, dict] | None = None,
+        parameters: dict[str, dict[str, Any]] | None = None,
         secure: bool = False,
         fillers: dict[str, list[str]] | None = None,
         wait_file: str | None = None,
@@ -54,8 +60,8 @@ class SWAIGFunction:
         webhook_url: str | None = None,
         required: list[str] | None = None,
         is_typed_handler: bool = False,
-        **extra_swaig_fields,
-    ):
+        **extra_swaig_fields: Any,
+    ) -> None:
         """
         Initialize a new SWAIG function.
 
@@ -104,7 +110,7 @@ class SWAIGFunction:
         # Mark as external if webhook_url is provided
         self.is_external = webhook_url is not None
 
-    def _ensure_parameter_structure(self) -> dict:
+    def _ensure_parameter_structure(self) -> dict[str, Any]:
         """
         Ensure the parameters are correctly structured for SWML
 
@@ -127,14 +133,14 @@ class SWAIGFunction:
 
         return result
 
-    def __call__(self, *args, **kwargs):
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
         """
         Call the underlying handler function
         """
         return self.handler(*args, **kwargs)
 
     def execute(
-        self, args: dict[str, Any], raw_data: dict[str, Any] | None = None
+        self, args: dict[str, Any], raw_data: "SwaigRequest | None" = None
     ) -> dict[str, Any]:
         """
         Execute the function with the given arguments
@@ -175,7 +181,7 @@ class SWAIGFunction:
                 "Sorry, I couldn't complete that action. Please try again or contact support if the issue persists."
             ).to_dict()
 
-    def validate_args(self, args: dict[str, Any]) -> tuple:
+    def validate_args(self, args: dict[str, Any]) -> tuple[Any, ...]:
         """
         Validate the arguments against the parameter schema.
 

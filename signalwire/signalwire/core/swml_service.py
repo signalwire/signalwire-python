@@ -36,7 +36,6 @@ try:
     import fastapi  # noqa: F401
     from fastapi import (
         FastAPI,
-        APIRouter,
         Depends,  # noqa: F401
         HTTPException,
         Query,  # noqa: F401
@@ -44,8 +43,10 @@ try:
         Request,
         Response,
     )
+    from fastapi.responses import JSONResponse
     from fastapi.security import HTTPBasic, HTTPBasicCredentials  # noqa: F401
     from pydantic import BaseModel  # noqa: F401
+    from signalwire.core.web import HostAppRouter
 except ImportError:
     raise ImportError(
         "fastapi is required. Install it with: pip install fastapi"
@@ -68,6 +69,21 @@ from signalwire.core.mixins.tool_mixin import ToolMixin  # noqa: E402
 
 # Maximum request body size (10MB, matches CGI limit). Mirrors WebMixin.
 MAX_REQUEST_BODY_SIZE = 10 * 1024 * 1024
+
+
+def _as_response(result: "Response | dict[str, Any]") -> "Response":
+    """Coerce a handler result into a Response for FastAPI route handlers.
+
+    The internal ``_handle_*`` methods may return a bare dict (their historical
+    contract, relied on by direct-call unit tests). FastAPI route handlers must
+    be annotated ``-> Response`` (a union return annotation breaks response-model
+    construction at startup), so the decorated wrappers funnel the result through
+    here: dicts become JSONResponse (behavior-equivalent to FastAPI's own dict
+    serialization), Responses pass through unchanged.
+    """
+    if isinstance(result, Response):
+        return result
+    return JSONResponse(content=result)
 
 
 class SWMLService(ToolMixin):
@@ -224,7 +240,11 @@ class SWMLService(ToolMixin):
             # Handle sleep verb specially since it takes an integer directly
             if verb_name == "sleep":
 
-                def sleep_method(self_instance, duration=None, **kwargs):
+                def sleep_method(
+                    self_instance: "SWMLService",
+                    duration: int | None = None,
+                    **kwargs: Any,
+                ) -> bool:
                     """
                     Add the sleep verb to the document.
 
@@ -252,8 +272,8 @@ class SWMLService(ToolMixin):
                 continue
 
             # Generate the method implementation for normal verbs
-            def make_verb_method(name):
-                def verb_method(self_instance, **kwargs):
+            def make_verb_method(name: str) -> Callable[..., bool]:
+                def verb_method(self_instance: "SWMLService", **kwargs: Any) -> bool:
                     """
                     Dynamically generated method for SWML verb
                     """
@@ -328,7 +348,11 @@ class SWMLService(ToolMixin):
             # Handle sleep verb specially since it takes an integer directly
             if name == "sleep":
 
-                def sleep_method(self_instance, duration=None, **kwargs):
+                def sleep_method(
+                    self_instance: "SWMLService",
+                    duration: int | None = None,
+                    **kwargs: Any,
+                ) -> bool:
                     """
                     Add the sleep verb to the document.
 
@@ -354,7 +378,7 @@ class SWMLService(ToolMixin):
                 return types.MethodType(sleep_method, self)
 
             # Generate the method implementation for normal verbs
-            def verb_method(self_instance, **kwargs):
+            def verb_method(self_instance: "SWMLService", **kwargs: Any) -> bool:
                 """
                 Dynamically generated method for SWML verb
                 """
@@ -618,19 +642,20 @@ class SWMLService(ToolMixin):
         """
         self.verb_registry.register_handler(handler)
 
-    def as_router(self) -> APIRouter:
+    def as_router(self) -> "HostAppRouter":
         """
-        Create a FastAPI router for this service
+        Create a router to embed this service's routes in a host web app.
 
         Returns:
-            APIRouter: FastAPI router
+            HostAppRouter: a FastAPI ``APIRouter`` subclass (behaviourally an
+            ``APIRouter``; the named type is the cross-port ``as_router`` contract).
         """
-        router = APIRouter(redirect_slashes=False)
+        router = HostAppRouter(redirect_slashes=False)
 
         # Root endpoint with and without trailing slash
         @router.get("/")
         @router.post("/")
-        async def handle_root(request: Request, response: Response):
+        async def handle_root(request: Request, response: Response) -> Response:
             """Handle requests to the root endpoint"""
             return await self._handle_request(request, response)
 
@@ -639,8 +664,8 @@ class SWMLService(ToolMixin):
         @router.get("/swaig/")
         @router.post("/swaig")
         @router.post("/swaig/")
-        async def handle_swaig(request: Request, response: Response):
-            return await self._handle_swaig_request(request, response)
+        async def handle_swaig(request: Request, response: Response) -> Response:
+            return _as_response(await self._handle_swaig_request(request, response))
 
         # Register routing callbacks as needed
         if hasattr(self, "_routing_callbacks") and self._routing_callbacks:
@@ -658,8 +683,10 @@ class SWMLService(ToolMixin):
                 @router.post(path)
                 @router.post(path_with_slash)
                 async def handle_callback(
-                    request: Request, response: Response, cb_path=callback_path
-                ):
+                    request: Request,
+                    response: Response,
+                    cb_path: str = callback_path,
+                ) -> Response:
                     """Handle requests to callback endpoints"""
                     # Store the callback path in the request state
                     request.state.callback_path = cb_path
@@ -725,7 +752,9 @@ class SWMLService(ToolMixin):
         """
         return self, None
 
-    async def _handle_swaig_request(self, request: Request, response: Response):
+    async def _handle_swaig_request(
+        self, request: Request, response: Response
+    ) -> Response | dict[str, Any]:
         """Generic SWAIG endpoint handler.
 
         GET: returns the SWML document via _swaig_render_get_response().
@@ -864,7 +893,7 @@ class SWMLService(ToolMixin):
 
     def register_routing_callback(
         self,
-        callback_fn: Callable[[Request, dict[str, Any]], str | None],
+        callback_fn: Callable[[dict[str, Any], dict[str, Any]], str | None],
         path: str = "/sip",
     ) -> None:
         """
@@ -875,12 +904,16 @@ class SWMLService(ToolMixin):
         created that will handle requests. This endpoint will use the callback to
         determine if the request should be processed by this service or redirected.
 
-        The callback should take a request object and request body dictionary and return:
+        The callback receives the parsed request body dictionary and the request
+        headers dictionary — ``callback_fn(body, headers)`` — and returns:
         - A route string if it should be routed to a different endpoint
         - None if normal processing should continue
 
+        This framework-free ``(body, headers) -> str | None`` shape matches the
+        decomposed :meth:`handle_request` core and the other SDK ports.
+
         Args:
-            callback_fn: The callback function to register
+            callback_fn: The callback function to register, ``(body, headers)``.
             path: The path where this callback should be registered (default: "/sip")
         """
         # Normalize the path to ensure consistent lookup
@@ -933,66 +966,118 @@ class SWMLService(ToolMixin):
 
         return None
 
-    async def _handle_request(self, request: Request, response: Response):
+    def handle_request(
+        self,
+        method: str,
+        url: str,
+        headers: dict[str, str],
+        body: dict[str, Any] | None = None,
+    ) -> tuple[int, dict[str, str], str]:
         """
-        Internal handler for both GET and POST requests
+        Framework-free request-dispatch core.
+
+        This is the primitive dispatch surface the SDK ports share (mirrors, e.g.,
+        the dotnet ``(int, Dictionary, string) HandleRequest(method, path, headers,
+        body)``). It performs proxy detection, basic-auth, the routing-callback
+        check, and ``on_request`` modification exactly as the FastAPI
+        :meth:`_handle_request` path does, but over plain primitives instead of
+        FastAPI ``Request``/``Response`` objects.
+
+        The FastAPI :meth:`_handle_request` adapter delegates here so both paths
+        produce identical responses (same status codes, same headers, same body).
 
         Args:
-            request: FastAPI Request object
-            response: FastAPI Response object
+            method: HTTP method, e.g. ``"GET"`` or ``"POST"``.
+            url: The full request URL as a string (used for proxy detection and
+                to derive the callback path).
+            headers: Request headers as a plain dict.
+            body: The already-parsed JSON body for POST requests, or ``None``.
 
         Returns:
-            Response with SWML document or error
+            A ``(status_code, response_headers, body_string)`` triple. The
+            body_string is a JSON document for 200 responses; for a routing
+            redirect it is empty and ``status_code`` is 307 with a ``Location``
+            header; for an auth failure it is a JSON error with status 401 and a
+            ``WWW-Authenticate: Basic`` header.
+        """
+        callback_path = self._callback_path_for_url(url)
+        return self._handle_request_core(
+            method, url, headers, body if body is not None else {}, callback_path
+        )
+
+    def _callback_path_for_url(self, url: str) -> str | None:
+        """
+        Derive the registered routing-callback path (if any) that a given URL
+        targets. The FastAPI path gets this from ``request.state.callback_path``
+        (set by the router); the primitive :meth:`handle_request` recovers the
+        equivalent by matching the URL's normalized path against the registered
+        callbacks.
+        """
+        if not getattr(self, "_routing_callbacks", None):
+            return None
+        path = urlparse(url).path if "://" in url or url.startswith("/") else url
+        normalized = "/" + path.strip("/") if path.strip("/") else path.rstrip("/")
+        # Match against the registered (already-normalized) callback paths,
+        # allowing for the service route prefix.
+        for cb_path in self._routing_callbacks:
+            if normalized == cb_path or normalized.endswith(cb_path):
+                return cb_path
+        return None
+
+    def _handle_request_core(
+        self,
+        method: str,
+        url: str,
+        headers: dict[str, str],
+        body: dict[str, Any],
+        callback_path: str | None,
+    ) -> tuple[int, dict[str, str], str]:
+        """
+        Shared decomposed dispatch logic over primitives, returning a
+        ``(status, headers, body_string)`` triple. Both :meth:`handle_request`
+        and the FastAPI :meth:`_handle_request` delegate here; this is the single
+        source of dispatch behavior.
         """
         # Always detect proxy from current request - allows mixing direct and proxied access
-        self._detect_proxy_from_request(request)
+        self._detect_proxy_from_primitives(url, headers)
 
         # Check auth
-        if not self._check_basic_auth(request):
-            response.headers["WWW-Authenticate"] = "Basic"
-            raise HTTPException(status_code=401, detail="Unauthorized")
+        if not self._check_basic_auth_headers(headers):
+            return (
+                401,
+                {"WWW-Authenticate": "Basic"},
+                json.dumps({"error": "Unauthorized"}),
+            )
 
-        # Get callback path from request state
-        callback_path = getattr(request.state, "callback_path", None)
+        # Process request body if it's a POST with a parsed (non-empty) body,
+        # for a callback path with a callback registered for it.
+        # (Matches the original: the routing callback only ran when a non-empty
+        # raw body was successfully parsed.)
+        if (
+            method == "POST"
+            and body
+            and callback_path
+            and getattr(self, "_routing_callbacks", None)
+            and callback_path in self._routing_callbacks
+        ):
+            callback_fn = self._routing_callbacks[callback_path]
+            self.log.debug(
+                "checking_routing",
+                path=callback_path,
+                body_keys=list(body.keys()),
+            )
 
-        # Process request body if it's a POST
-        body = {}
-        if request.method == "POST":
+            # Call the callback function: (body, headers) -> route | None
             try:
-                raw_body = await request.body()
-                if raw_body:
-                    body = await request.json()
+                route = callback_fn(body, headers)
 
-                    # Check if this is a callback path and we have a callback registered for it
-                    if (
-                        callback_path
-                        and hasattr(self, "_routing_callbacks")
-                        and callback_path in self._routing_callbacks
-                    ):
-                        callback_fn = self._routing_callbacks[callback_path]
-                        self.log.debug(
-                            "checking_routing",
-                            path=callback_path,
-                            body_keys=list(body.keys()),
-                        )
-
-                        # Call the callback function
-                        try:
-                            route = callback_fn(request, body)
-
-                            if route is not None:
-                                self.log.info("routing_request", route=route)
-                                # We should return a redirect to the new route
-                                # Use 307 to preserve the POST method and its body
-                                response = Response(status_code=307)
-                                response.headers["Location"] = route
-                                return response
-                        except Exception as e:
-                            self.log.error("error_in_routing_callback", error=str(e))
+                if route is not None:
+                    self.log.info("routing_request", route=route)
+                    # Return a redirect to the new route.
+                    # Use 307 to preserve the POST method and its body.
+                    return (307, {"Location": route}, "")
             except Exception as e:
-                self.log.error("error_parsing_body", error=str(e))
-                # Continue with empty body if parsing fails
-                pass
+                self.log.error("error_in_routing_callback", error=str(e))
 
         # Allow for customized handling in subclasses
         modifications = self.on_request(body, callback_path)
@@ -1012,17 +1097,72 @@ class SWMLService(ToolMixin):
 
             # Create a new document with the modifications
             modified_doc = json.dumps(document)
-            return Response(content=modified_doc, media_type="application/json")
+            return (200, {}, modified_doc)
 
         # Get the current SWML document
         swml = self.render_document()
 
         # Return the SWML document
-        return Response(content=swml, media_type="application/json")
+        return (200, {}, swml)
+
+    async def _handle_request(self, request: Request, response: Response) -> Response:
+        """
+        Internal FastAPI handler for both GET and POST requests.
+
+        This is a thin adapter: it extracts primitives from the FastAPI
+        ``Request``, delegates to the framework-free :meth:`_handle_request_core`,
+        and marshals the ``(status, headers, body)`` triple back into a FastAPI
+        ``Response`` — preserving the 401-auth and 307-redirect behavior exactly.
+
+        Args:
+            request: FastAPI Request object
+            response: FastAPI Response object
+
+        Returns:
+            Response with SWML document or error
+        """
+        # Get callback path from request state (set by the router)
+        callback_path = getattr(request.state, "callback_path", None)
+
+        # Parse the request body if it's a POST (best-effort; empty on failure)
+        body: dict[str, Any] = {}
+        if request.method == "POST":
+            try:
+                raw_body = await request.body()
+                if raw_body:
+                    body = await request.json()
+            except Exception as e:
+                self.log.error("error_parsing_body", error=str(e))
+                # Continue with empty body if parsing fails
+                body = {}
+
+        status, out_headers, body_str = self._handle_request_core(
+            request.method,
+            str(request.url),
+            dict(request.headers),
+            body,
+            callback_path,
+        )
+
+        # 401: preserve the original HTTPException-based auth-failure path exactly
+        if status == 401:
+            response.headers["WWW-Authenticate"] = "Basic"
+            raise HTTPException(status_code=401, detail="Unauthorized")
+
+        # 307: routing redirect preserving method + body
+        if status == 307:
+            redirect = Response(status_code=307)
+            redirect.headers["Location"] = out_headers["Location"]
+            return redirect
+
+        # 200: SWML (or modified) document
+        return Response(content=body_str, media_type="application/json")
 
     def on_request(
-        self, request_data: dict | None = None, callback_path: str | None = None
-    ) -> dict | None:
+        self,
+        request_data: dict[str, Any] | None = None,
+        callback_path: str | None = None,
+    ) -> dict[str, Any] | None:
         """
         Called when SWML is requested, with request data when available
 
@@ -1101,7 +1241,7 @@ class SWMLService(ToolMixin):
             @app.post("/{full_path:path}")
             async def handle_all_routes(
                 request: Request, response: Response, full_path: str
-            ):
+            ) -> Response:
                 # Get our route path without leading slash for comparison
                 route_path = normalized_route.lstrip("/")
                 route_with_slash = route_path + "/"
@@ -1140,7 +1280,7 @@ class SWMLService(ToolMixin):
 
                 # Not our route or not matching our patterns
                 self.log.debug("no_route_match", path=full_path)
-                return {"error": "Path not found"}
+                return JSONResponse(content={"error": "Path not found"})
 
             # Log all routes for debugging
             self.log.debug("registered_routes", service=self.name)
@@ -1211,7 +1351,28 @@ class SWMLService(ToolMixin):
         Returns:
             True if auth is valid, False otherwise
         """
-        auth_header = request.headers.get("Authorization")
+        return self._check_basic_auth_headers(dict(request.headers))
+
+    def _check_basic_auth_headers(self, headers: dict[str, str]) -> bool:
+        """
+        Framework-free basic-auth check driven by a plain headers dict.
+
+        This is the primitive core that :meth:`_check_basic_auth` (FastAPI
+        ``Request``) delegates to, so both the FastAPI path and the decomposed
+        :meth:`handle_request` core share identical auth behavior.
+
+        Args:
+            headers: Request headers as a plain dict (case-sensitive keys as
+                supplied; the Authorization lookup tolerates common casings).
+
+        Returns:
+            True if auth is valid, False otherwise
+        """
+        auth_header = (
+            headers.get("Authorization")
+            or headers.get("authorization")
+            or headers.get("AUTHORIZATION")
+        )
         if not auth_header:
             return False
 
@@ -1455,13 +1616,40 @@ class SWMLService(ToolMixin):
         Args:
             request: FastAPI Request object
         """
+        self._detect_proxy_from_primitives(str(request.url), dict(request.headers))
+
+    def _detect_proxy_from_primitives(self, url: str, headers: dict[str, str]) -> None:
+        """
+        Framework-free proxy detection driven by a URL string and a plain
+        headers dict.
+
+        This is the primitive core that :meth:`_detect_proxy_from_request`
+        (FastAPI ``Request``) delegates to, so both the FastAPI path and the
+        decomposed :meth:`handle_request` core auto-configure ``proxy_url_base``
+        identically.
+
+        Args:
+            url: The full request URL as a string.
+            headers: Request headers as a plain dict (lowercase keys as produced
+                by ``dict(request.headers)``; lookups tolerate common casings).
+        """
+
+        def _hget(name: str, default: str | None = None) -> str | None:
+            # Tolerate both the original casing and the lowercase form that
+            # ``dict(request.headers)`` produces, so direct callers of
+            # handle_request may pass conventionally-cased header names.
+            val = headers.get(name)
+            if val is None:
+                val = headers.get(name.lower())
+            return default if val is None else val
+
         # If SWML_PROXY_URL_BASE was already set (e.g., from environment), don't override it
         if self._proxy_url_base:
             return
 
         # First check for standard X-Forwarded headers (used by most proxies including ngrok)
-        forwarded_host = request.headers.get("X-Forwarded-Host")
-        forwarded_proto = request.headers.get("X-Forwarded-Proto", "http")
+        forwarded_host = _hget("X-Forwarded-Host")
+        forwarded_proto = _hget("X-Forwarded-Proto", "http")
 
         if forwarded_host:
             # Direct X-Forwarded-* headers - most common case
@@ -1476,7 +1664,7 @@ class SWMLService(ToolMixin):
         # If no standard headers, check other proxy detection methods
 
         # Check for Forwarded header (RFC 7239)
-        forwarded = request.headers.get("Forwarded")
+        forwarded = _hget("Forwarded")
         if forwarded:
             # Parse RFC 7239 Forwarded header
             try:
@@ -1501,12 +1689,12 @@ class SWMLService(ToolMixin):
                 self.log.warning("forwarded_header_parse_error", error=str(e))
 
         # Try to detect from the URL itself for transparent proxies
-        if str(request.url).startswith(("https://", "http://")) and not any(
-            str(request.url).startswith(f"http://{h}")
+        if url.startswith(("https://", "http://")) and not any(
+            url.startswith(f"http://{h}")
             for h in ["localhost", "127.0.0.1", self.host, "0.0.0.0"]  # noqa: S104  # literal in a list of local-host candidates, not a new bind
         ):
             # This is likely a transparent proxy - extract base URL
-            parsed = urlparse(str(request.url))
+            parsed = urlparse(url)
             base_url = f"{parsed.scheme}://{parsed.netloc}"
             self._proxy_url_base = base_url
             self.log.info(
@@ -1517,9 +1705,7 @@ class SWMLService(ToolMixin):
             return
 
         # Check for other common proxy setups
-        original_host = request.headers.get("X-Original-Host") or request.headers.get(
-            "Host"
-        )
+        original_host = _hget("X-Original-Host") or _hget("Host")
         if original_host:
             # Only use Host if it doesn't look like our local server
             local_hosts = [self.host, "localhost", "127.0.0.1", "0.0.0.0"]  # noqa: S104  # literal in a list of local-host candidates, not a new bind
@@ -1530,7 +1716,7 @@ class SWMLService(ToolMixin):
                 not any(h in original_host for h in local_hosts)
                 and local_port not in original_host
             ):
-                proto = "https" if request.url.scheme == "https" else "http"
+                proto = "https" if urlparse(url).scheme == "https" else "http"
                 self._proxy_url_base = f"{proto}://{original_host}"
                 self.log.info(
                     "proxy_auto_detected",
@@ -1540,7 +1726,7 @@ class SWMLService(ToolMixin):
                 return
 
         # If forward_for header exists, we're likely behind a proxy but couldn't determine the URL
-        forwarded_for = request.headers.get("X-Forwarded-For")
+        forwarded_for = _hget("X-Forwarded-For")
         if forwarded_for:
             self.log.warning(
                 "proxy_detected_but_url_unknown",

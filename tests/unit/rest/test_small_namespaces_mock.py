@@ -22,6 +22,8 @@ Each test:
 """
 
 from __future__ import annotations
+from signalwire.rest.client import RestClient
+from .conftest import _MockHarness
 
 
 # ---------------------------------------------------------------------------
@@ -30,7 +32,7 @@ from __future__ import annotations
 
 
 class TestAddresses:
-    def test_list(self, signalwire_client, mock):
+    def test_list(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.addresses.list(page_size=10)
         assert isinstance(body, dict)
         assert "data" in body
@@ -41,12 +43,18 @@ class TestAddresses:
         assert last.matched_route is not None
         assert last.query_params.get("page_size") == ["10"]
 
-    def test_create(self, signalwire_client, mock):
+    def test_create(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.addresses.create(
-            address_type="commercial",
+            label="Main Office",
+            address_type="Office",
             first_name="Ada",
             last_name="Lovelace",
             country="US",
+            street_number="123",
+            street_name="Main St",
+            city="Anytown",
+            state="CA",
+            postal_code="94000",
         )
         assert isinstance(body, dict)
         # An Address resource carries an 'id' field.
@@ -55,11 +63,11 @@ class TestAddresses:
         assert last.method == "POST"
         assert last.path == "/api/relay/rest/addresses"
         sent = last.body or {}
-        assert sent.get("address_type") == "commercial"
+        assert sent.get("address_type") == "Office"
         assert sent.get("first_name") == "Ada"
         assert sent.get("country") == "US"
 
-    def test_get(self, signalwire_client, mock):
+    def test_get(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.addresses.get("addr-123")
         assert isinstance(body, dict)
         assert "id" in body
@@ -68,7 +76,7 @@ class TestAddresses:
         assert last.path == "/api/relay/rest/addresses/addr-123"
         assert last.matched_route is not None
 
-    def test_delete(self, signalwire_client, mock):
+    def test_delete(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.addresses.delete("addr-123")
         # 204 on delete returns {}.
         assert body == {} or isinstance(body, dict)
@@ -84,7 +92,7 @@ class TestAddresses:
 
 
 class TestRecordings:
-    def test_list(self, signalwire_client, mock):
+    def test_list(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.recordings.list(page_size=5)
         assert isinstance(body, dict)
         assert "data" in body
@@ -94,7 +102,7 @@ class TestRecordings:
         assert last.path == "/api/relay/rest/recordings"
         assert last.query_params.get("page_size") == ["5"]
 
-    def test_get(self, signalwire_client, mock):
+    def test_get(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.recordings.get("rec-123")
         assert isinstance(body, dict)
         # The Recording schema has an 'id' field.
@@ -103,7 +111,7 @@ class TestRecordings:
         assert last.method == "GET"
         assert last.path == "/api/relay/rest/recordings/rec-123"
 
-    def test_delete(self, signalwire_client, mock):
+    def test_delete(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.recordings.delete("rec-123")
         assert body == {} or isinstance(body, dict)
         last = mock.last_request()
@@ -118,7 +126,7 @@ class TestRecordings:
 
 
 class TestShortCodes:
-    def test_list(self, signalwire_client, mock):
+    def test_list(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.short_codes.list(page_size=20)
         assert isinstance(body, dict)
         assert "data" in body
@@ -127,7 +135,7 @@ class TestShortCodes:
         assert last.method == "GET"
         assert last.path == "/api/relay/rest/short_codes"
 
-    def test_get(self, signalwire_client, mock):
+    def test_get(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.short_codes.get("sc-1")
         assert isinstance(body, dict)
         assert "id" in body
@@ -135,8 +143,10 @@ class TestShortCodes:
         assert last.method == "GET"
         assert last.path == "/api/relay/rest/short_codes/sc-1"
 
-    def test_update(self, signalwire_client, mock):
-        body = signalwire_client.short_codes.update("sc-1", name="Marketing SMS")
+    def test_update(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+        body = signalwire_client.short_codes.update(
+            "sc-1", name="Marketing SMS", message_handler="relay_context",
+        )
         assert isinstance(body, dict)
         assert "id" in body
         last = mock.last_request()
@@ -153,12 +163,11 @@ class TestShortCodes:
 
 
 class TestImportedNumbers:
-    def test_create(self, signalwire_client, mock):
+    def test_create(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.imported_numbers.create(
             number="+15551234567",
-            sip_username="alice",
-            sip_password="secret",
-            sip_proxy="sip.example.com",
+            number_type="longcode",
+            capabilities=["sms", "voice"],
         )
         assert isinstance(body, dict)
         # The imported-number response has an 'id'.
@@ -168,8 +177,8 @@ class TestImportedNumbers:
         assert last.path == "/api/relay/rest/imported_phone_numbers"
         sent = last.body or {}
         assert sent.get("number") == "+15551234567"
-        assert sent.get("sip_username") == "alice"
-        assert sent.get("sip_proxy") == "sip.example.com"
+        assert sent.get("number_type") == "longcode"
+        assert sent.get("capabilities") == ["sms", "voice"]
 
 
 # ---------------------------------------------------------------------------
@@ -178,9 +187,11 @@ class TestImportedNumbers:
 
 
 class TestMfa:
-    def test_call(self, signalwire_client, mock):
+    def test_call(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.mfa.call(
             to="+15551234567",
+            # Spec field is `from` (a Python keyword), exposed as the typed kwarg `from_`;
+            # the generated method maps it back to the wire key `from`.
             from_="+15559876543",
             message="Your code is {code}",
         )
@@ -192,7 +203,7 @@ class TestMfa:
         assert last.path == "/api/relay/rest/mfa/call"
         sent = last.body or {}
         assert sent.get("to") == "+15551234567"
-        assert sent.get("from_") == "+15559876543"
+        assert sent.get("from") == "+15559876543"
         assert sent.get("message") == "Your code is {code}"
 
 
@@ -202,19 +213,19 @@ class TestMfa:
 
 
 class TestSipProfile:
-    def test_update(self, signalwire_client, mock):
+    def test_update(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.sip_profile.update(
-            domain="myco.sip.signalwire.com",
+            domain_identifier="myco",
             default_codecs=["PCMU", "PCMA"],
         )
         assert isinstance(body, dict)
-        # The SIP profile resource has a 'domain' field.
-        assert "domain" in body or "default_codecs" in body
+        # The SIP profile resource carries a 'domain_identifier' field.
+        assert "domain_identifier" in body or "default_codecs" in body
         last = mock.last_request()
         assert last.method == "PUT"
         assert last.path == "/api/relay/rest/sip_profile"
         sent = last.body or {}
-        assert sent.get("domain") == "myco.sip.signalwire.com"
+        assert sent.get("domain_identifier") == "myco"
         assert sent.get("default_codecs") == ["PCMU", "PCMA"]
 
 
@@ -224,7 +235,7 @@ class TestSipProfile:
 
 
 class TestNumberGroups:
-    def test_list_memberships(self, signalwire_client, mock):
+    def test_list_memberships(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.number_groups.list_memberships(
             "ng-1", page_size=10,
         )
@@ -236,7 +247,7 @@ class TestNumberGroups:
         assert last.path == "/api/relay/rest/number_groups/ng-1/number_group_memberships"
         assert last.query_params.get("page_size") == ["10"]
 
-    def test_delete_membership(self, signalwire_client, mock):
+    def test_delete_membership(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.number_groups.delete_membership("mem-1")
         assert body == {} or isinstance(body, dict)
         last = mock.last_request()
@@ -251,7 +262,7 @@ class TestNumberGroups:
 
 
 class TestProjectTokens:
-    def test_update(self, signalwire_client, mock):
+    def test_update(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.project.tokens.update(
             "tok-1", name="renamed-token",
         )
@@ -263,7 +274,7 @@ class TestProjectTokens:
         sent = last.body or {}
         assert sent.get("name") == "renamed-token"
 
-    def test_delete(self, signalwire_client, mock):
+    def test_delete(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.project.tokens.delete("tok-1")
         assert body == {} or isinstance(body, dict)
         last = mock.last_request()
@@ -278,7 +289,7 @@ class TestProjectTokens:
 
 
 class TestDatasphere:
-    def test_get_chunk(self, signalwire_client, mock):
+    def test_get_chunk(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.datasphere.documents.get_chunk(
             "doc-1", "chunk-99",
         )
@@ -296,7 +307,7 @@ class TestDatasphere:
 
 
 class TestQueues:
-    def test_get_member(self, signalwire_client, mock):
+    def test_get_member(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
         body = signalwire_client.queues.get_member("q-1", "mem-7")
         assert isinstance(body, dict)
         # A queue member has 'queue_id' and 'call_id' per the spec example.

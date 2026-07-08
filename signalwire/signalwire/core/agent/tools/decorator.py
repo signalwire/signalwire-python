@@ -9,16 +9,23 @@ See LICENSE file in the project root for full license information.
 Tool decorator functionality.
 """
 
+from typing import Any, TypeVar
+from collections.abc import Callable
+
 from signalwire.core.logging_config import get_logger
 
 logger = get_logger(__name__)
+
+_F = TypeVar("_F", bound=Callable[..., Any])
 
 
 class ToolDecorator:
     """Handles tool decoration logic."""
 
     @staticmethod
-    def create_instance_decorator(registry):
+    def create_instance_decorator(
+        registry: Any,
+    ) -> Callable[..., Callable[[_F], _F]]:
         """
         Create instance tool decorator.
 
@@ -29,7 +36,7 @@ class ToolDecorator:
             Decorator function
         """
 
-        def decorator(name=None, **kwargs):
+        def decorator(name: str | None = None, **kwargs: Any) -> Callable[[_F], _F]:
             """
             Decorator for defining SWAIG tools in a class.
 
@@ -78,7 +85,7 @@ class ToolDecorator:
             guidance.
             """
 
-            def inner_decorator(func):
+            def inner_decorator(func: _F) -> _F:
                 nonlocal name
                 if name is None:
                     name = func.__name__
@@ -90,7 +97,7 @@ class ToolDecorator:
                 webhook_url = kwargs.pop("webhook_url", None)
                 required = kwargs.pop("required", None)
 
-                handler = func
+                handler: Callable[..., Any] = func
                 is_typed = False
 
                 # If parameters not explicitly provided, try type inference
@@ -138,7 +145,7 @@ class ToolDecorator:
         return decorator
 
     @classmethod
-    def create_class_decorator(cls):
+    def create_class_decorator(cls) -> Callable[..., Callable[[_F], _F]]:
         """
         Create class tool decorator.
 
@@ -146,7 +153,7 @@ class ToolDecorator:
             Decorator function
         """
 
-        def tool(name=None, **kwargs):
+        def tool(name: str | None = None, **kwargs: Any) -> Callable[[_F], _F]:
             """
             Class method decorator for defining SWAIG tools.
 
@@ -180,11 +187,11 @@ class ToolDecorator:
                     ...
             """
 
-            def decorator(func):
+            def decorator(func: _F) -> _F:
                 # Mark the function as a tool
-                func._is_tool = True
-                func._tool_name = name if name else func.__name__
-                func._tool_params = kwargs
+                func._is_tool = True  # type: ignore[attr-defined]  # dynamic marker attrs read back by ToolRegistry.register_class_decorated_tools
+                func._tool_name = name if name else func.__name__  # type: ignore[attr-defined]
+                func._tool_params = kwargs  # type: ignore[attr-defined]
 
                 # Return the original function
                 return func

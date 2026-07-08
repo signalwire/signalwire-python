@@ -1,22 +1,24 @@
-"""
-Copyright (c) 2025 SignalWire
+"""Deprecated import path for ``lookup`` REST symbols.
 
-This file is part of the SignalWire SDK.
-
-Licensed under the MIT License.
-See LICENSE file in the project root for full license information.
-
-Phone Number Lookup namespace.
+These symbols moved out of ``namespaces.lookup`` when the REST layer was
+regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
+re-export keeps ``from signalwire.signalwire.rest.namespaces.lookup import LookupResource``
+working but emits a :class:`DeprecationWarning`. Prefer ``client.lookup`` instead
+(no import needed).
 """
 
-from .._base import BaseResource
+import warnings
 
+warnings.warn(
+    "signalwire.signalwire.rest.namespaces.lookup is deprecated; use client.lookup. "
+    "This back-compat shim will be removed in a future release.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class LookupResource(BaseResource):
-    """Phone number lookup (carrier, CNAM)."""
+from .relay_rest_resources_generated import Lookup  # noqa: E402  (re-export after the deprecation warn — intentional)
 
-    def __init__(self, http):
-        super().__init__(http, "/api/relay/rest/lookup")
+# Back-compat aliases (old name -> generated bare name):
+LookupResource = Lookup
 
-    def phone_number(self, e164, **params):
-        return self._http.get(self._path("phone_number", e164), params=params or None)
+__all__ = ["LookupResource"]

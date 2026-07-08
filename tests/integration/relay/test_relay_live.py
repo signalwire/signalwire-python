@@ -1,3 +1,4 @@
+from typing import Any
 """Live integration tests for RELAY client.
 
 Skipped by default — requires real credentials in environment variables:
@@ -37,15 +38,15 @@ skip_no_phone = pytest.mark.skipif(
 
 @skip_no_creds
 class TestRelayLive:
-    def setup_method(self):
+    def setup_method(self) -> None:
         _active_clients.clear()
 
-    def teardown_method(self):
+    def teardown_method(self) -> None:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_connect_disconnect(self):
-        kwargs = {"project": _PROJECT, "token": _TOKEN}
+    async def test_connect_disconnect(self) -> None:
+        kwargs: dict[str, Any] = {"project": _PROJECT, "token": _TOKEN}
         if _HOST:
             kwargs["host"] = _HOST
         client = RelayClient(**kwargs)
@@ -58,8 +59,8 @@ class TestRelayLive:
         assert not client._connected
 
     @pytest.mark.asyncio
-    async def test_protocol_string(self):
-        kwargs = {"project": _PROJECT, "token": _TOKEN}
+    async def test_protocol_string(self) -> None:
+        kwargs: dict[str, Any] = {"project": _PROJECT, "token": _TOKEN}
         if _HOST:
             kwargs["host"] = _HOST
         client = RelayClient(**kwargs)
@@ -71,9 +72,9 @@ class TestRelayLive:
         await client.disconnect()
 
     @pytest.mark.asyncio
-    async def test_ping(self):
+    async def test_ping(self) -> None:
         """Verify the server sends pings and we respond correctly."""
-        kwargs = {"project": _PROJECT, "token": _TOKEN}
+        kwargs: dict[str, Any] = {"project": _PROJECT, "token": _TOKEN}
         if _HOST:
             kwargs["host"] = _HOST
         client = RelayClient(**kwargs)
@@ -87,8 +88,8 @@ class TestRelayLive:
 
     @skip_no_phone
     @pytest.mark.asyncio
-    async def test_dial_and_hangup(self):
-        kwargs = {"project": _PROJECT, "token": _TOKEN}
+    async def test_dial_and_hangup(self) -> None:
+        kwargs: dict[str, Any] = {"project": _PROJECT, "token": _TOKEN}
         if _HOST:
             kwargs["host"] = _HOST
         client = RelayClient(**kwargs)
@@ -102,9 +103,9 @@ class TestRelayLive:
 
         # Wait briefly then hang up
         await asyncio.sleep(2)
-        try:
+        try:  # noqa: SIM105 - best-effort cleanup; contextlib.suppress is not clearer here
             await call.hangup()
-        except Exception:
+        except Exception:  # noqa: S110 - call may have already ended; cleanup is best-effort
             pass  # Call may have already ended
 
         await client.disconnect()

@@ -11,9 +11,7 @@ See LICENSE file in the project root for full license information.
 Comprehensive tests for type-hint-based tool schema inference.
 """
 
-import pytest
-from typing import Optional, List, Dict, Literal
-from unittest.mock import Mock, MagicMock
+from typing import Any, Optional, List, Dict, Literal
 
 from signalwire.core.agent.tools.type_inference import (
     infer_schema,
@@ -21,7 +19,9 @@ from signalwire.core.agent.tools.type_inference import (
     _resolve_type,
     _parse_docstring_args,
 )
+from signalwire.core.agent_base import AgentBase
 from signalwire.core.function_result import FunctionResult
+from signalwire.core.swaig_function import SWAIGFunction
 
 
 # ===========================================================================
@@ -31,72 +31,72 @@ from signalwire.core.function_result import FunctionResult
 class TestResolveType:
     """Tests for the _resolve_type helper."""
 
-    def test_str(self):
+    def test_str(self) -> None:
         schema, optional = _resolve_type(str)
         assert schema == {"type": "string"}
         assert optional is False
 
-    def test_int(self):
+    def test_int(self) -> None:
         schema, optional = _resolve_type(int)
         assert schema == {"type": "integer"}
         assert optional is False
 
-    def test_float(self):
+    def test_float(self) -> None:
         schema, optional = _resolve_type(float)
         assert schema == {"type": "number"}
         assert optional is False
 
-    def test_bool(self):
+    def test_bool(self) -> None:
         schema, optional = _resolve_type(bool)
         assert schema == {"type": "boolean"}
         assert optional is False
 
-    def test_list(self):
+    def test_list(self) -> None:
         schema, optional = _resolve_type(list)
         assert schema == {"type": "array"}
         assert optional is False
 
-    def test_dict(self):
+    def test_dict(self) -> None:
         schema, optional = _resolve_type(dict)
         assert schema == {"type": "object"}
         assert optional is False
 
-    def test_optional_str(self):
+    def test_optional_str(self) -> None:
         schema, optional = _resolve_type(Optional[str])
         assert schema == {"type": "string"}
         assert optional is True
 
-    def test_optional_int(self):
+    def test_optional_int(self) -> None:
         schema, optional = _resolve_type(Optional[int])
         assert schema == {"type": "integer"}
         assert optional is True
 
-    def test_literal_strings(self):
+    def test_literal_strings(self) -> None:
         schema, optional = _resolve_type(Literal["a", "b", "c"])
         assert schema == {"type": "string", "enum": ["a", "b", "c"]}
         assert optional is False
 
-    def test_literal_ints(self):
+    def test_literal_ints(self) -> None:
         schema, optional = _resolve_type(Literal[1, 2, 3])
         assert schema == {"type": "integer", "enum": [1, 2, 3]}
         assert optional is False
 
-    def test_list_of_str(self):
+    def test_list_of_str(self) -> None:
         schema, optional = _resolve_type(List[str])
         assert schema == {"type": "array", "items": {"type": "string"}}
         assert optional is False
 
-    def test_list_of_int(self):
+    def test_list_of_int(self) -> None:
         schema, optional = _resolve_type(List[int])
         assert schema == {"type": "array", "items": {"type": "integer"}}
         assert optional is False
 
-    def test_dict_str_any(self):
+    def test_dict_str_any(self) -> None:
         schema, optional = _resolve_type(Dict[str, int])
         assert schema == {"type": "object"}
         assert optional is False
 
-    def test_unknown_type_falls_back_to_string(self):
+    def test_unknown_type_falls_back_to_string(self) -> None:
         class CustomType:
             pass
         schema, optional = _resolve_type(CustomType)
@@ -111,22 +111,22 @@ class TestResolveType:
 class TestParseDocstringArgs:
     """Tests for docstring parsing."""
 
-    def test_empty_docstring(self):
+    def test_empty_docstring(self) -> None:
         summary, params = _parse_docstring_args("")
         assert summary == ""
         assert params == {}
 
-    def test_none_docstring(self):
-        summary, params = _parse_docstring_args(None)
+    def test_none_docstring(self) -> None:
+        summary, params = _parse_docstring_args(None)  # type: ignore[arg-type]  # intentional invalid input
         assert summary == ""
         assert params == {}
 
-    def test_summary_only(self):
+    def test_summary_only(self) -> None:
         summary, params = _parse_docstring_args("Get the weather forecast.")
         assert summary == "Get the weather forecast."
         assert params == {}
 
-    def test_args_block(self):
+    def test_args_block(self) -> None:
         doc = """Get the weather forecast.
 
         Args:
@@ -138,7 +138,7 @@ class TestParseDocstringArgs:
         assert params["city"] == "Name of the city"
         assert params["units"] == "Temperature units (celsius or fahrenheit)"
 
-    def test_args_block_with_type_annotations(self):
+    def test_args_block_with_type_annotations(self) -> None:
         doc = """Look up a user.
 
         Args:
@@ -150,7 +150,7 @@ class TestParseDocstringArgs:
         assert params["name"] == "The user's name"
         assert params["age"] == "The user's age"
 
-    def test_args_block_with_returns_section(self):
+    def test_args_block_with_returns_section(self) -> None:
         doc = """Do something.
 
         Args:
@@ -164,7 +164,7 @@ class TestParseDocstringArgs:
         assert params["x"] == "First param"
         assert params["y"] == "Second param"
 
-    def test_multiline_param_description(self):
+    def test_multiline_param_description(self) -> None:
         doc = """Search function.
 
         Args:
@@ -185,44 +185,44 @@ class TestParseDocstringArgs:
 class TestInferSchemaDetection:
     """Tests for when infer_schema should and should not activate."""
 
-    def test_old_style_args_raw_data(self):
+    def test_old_style_args_raw_data(self) -> None:
         """Old-style (args, raw_data) should not be treated as typed."""
-        def handler(args, raw_data):
+        def handler(args: dict[str, Any], raw_data: dict[str, Any]) -> None:
             pass
         params, required, desc, is_typed, has_raw_data = infer_schema(handler)
         assert is_typed is False
 
-    def test_old_style_args_only(self):
+    def test_old_style_args_only(self) -> None:
         """Old-style (args,) should not be treated as typed."""
-        def handler(args):
+        def handler(args: dict[str, Any]) -> None:
             pass
         params, required, desc, is_typed, has_raw_data = infer_schema(handler)
         assert is_typed is False
 
-    def test_varargs_fallback(self):
+    def test_varargs_fallback(self) -> None:
         """Functions with *args should fall back to old style."""
-        def handler(*args):
+        def handler(*args: Any) -> None:
             pass
         params, required, desc, is_typed, has_raw_data = infer_schema(handler)
         assert is_typed is False
 
-    def test_kwargs_fallback(self):
+    def test_kwargs_fallback(self) -> None:
         """Functions with **kwargs should fall back to old style."""
-        def handler(**kwargs):
+        def handler(**kwargs: Any) -> None:
             pass
         params, required, desc, is_typed, has_raw_data = infer_schema(handler)
         assert is_typed is False
 
-    def test_typed_params_detected(self):
+    def test_typed_params_detected(self) -> None:
         """Typed parameters should be detected as new style."""
-        def handler(city: str, units: str = "celsius"):
+        def handler(city: str, units: str = "celsius") -> None:
             pass
         params, required, desc, is_typed, has_raw_data = infer_schema(handler)
         assert is_typed is True
 
-    def test_zero_param_tool(self):
+    def test_zero_param_tool(self) -> None:
         """Function with no params (after self filtering) is a valid zero-param typed tool."""
-        def handler():
+        def handler() -> None:
             """Get the current time."""
             pass
         params, required, desc, is_typed, has_raw_data = infer_schema(handler)
@@ -231,18 +231,18 @@ class TestInferSchemaDetection:
         assert required == []
         assert desc == "Get the current time."
 
-    def test_self_filtered_out(self):
+    def test_self_filtered_out(self) -> None:
         """self parameter should be filtered out."""
-        def handler(self, city: str):
+        def handler(self: Any, city: str) -> None:
             pass
         params, required, desc, is_typed, has_raw_data = infer_schema(handler)
         assert is_typed is True
         assert "self" not in params
         assert "city" in params
 
-    def test_no_annotations_fallback(self):
+    def test_no_annotations_fallback(self) -> None:
         """No type hints on non-standard param names should fall back."""
-        def handler(city, units):
+        def handler(city, units) -> None:  # type: ignore[no-untyped-def]  # intentional: exercises the no-annotations fallback path
             pass
         params, required, desc, is_typed, has_raw_data = infer_schema(handler)
         assert is_typed is False
@@ -255,44 +255,44 @@ class TestInferSchemaDetection:
 class TestInferSchemaTypes:
     """Tests for correct type mapping in inferred schemas."""
 
-    def test_string_param(self):
-        def handler(name: str):
+    def test_string_param(self) -> None:
+        def handler(name: str) -> None:
             pass
         params, *_ = infer_schema(handler)
         assert params["name"]["type"] == "string"
 
-    def test_int_param(self):
-        def handler(count: int):
+    def test_int_param(self) -> None:
+        def handler(count: int) -> None:
             pass
         params, *_ = infer_schema(handler)
         assert params["count"]["type"] == "integer"
 
-    def test_float_param(self):
-        def handler(price: float):
+    def test_float_param(self) -> None:
+        def handler(price: float) -> None:
             pass
         params, *_ = infer_schema(handler)
         assert params["price"]["type"] == "number"
 
-    def test_bool_param(self):
-        def handler(enabled: bool):
+    def test_bool_param(self) -> None:
+        def handler(enabled: bool) -> None:
             pass
         params, *_ = infer_schema(handler)
         assert params["enabled"]["type"] == "boolean"
 
-    def test_list_param(self):
-        def handler(items: list):
+    def test_list_param(self) -> None:
+        def handler(items: list[Any]) -> None:
             pass
         params, *_ = infer_schema(handler)
         assert params["items"]["type"] == "array"
 
-    def test_dict_param(self):
-        def handler(data: dict):
+    def test_dict_param(self) -> None:
+        def handler(data: dict[str, Any]) -> None:
             pass
         params, *_ = infer_schema(handler)
         assert params["data"]["type"] == "object"
 
-    def test_optional_param(self):
-        def handler(name: str, nickname: Optional[str] = None):
+    def test_optional_param(self) -> None:
+        def handler(name: str, nickname: Optional[str] = None) -> None:
             pass
         params, required, *_ = infer_schema(handler)
         assert params["name"]["type"] == "string"
@@ -300,15 +300,15 @@ class TestInferSchemaTypes:
         assert "name" in required
         assert "nickname" not in required
 
-    def test_literal_param(self):
-        def handler(color: Literal["red", "green", "blue"]):
+    def test_literal_param(self) -> None:
+        def handler(color: Literal["red", "green", "blue"]) -> None:
             pass
         params, *_ = infer_schema(handler)
         assert params["color"]["type"] == "string"
         assert params["color"]["enum"] == ["red", "green", "blue"]
 
-    def test_list_of_str_param(self):
-        def handler(tags: List[str]):
+    def test_list_of_str_param(self) -> None:
+        def handler(tags: List[str]) -> None:
             pass
         params, *_ = infer_schema(handler)
         assert params["tags"]["type"] == "array"
@@ -322,26 +322,26 @@ class TestInferSchemaTypes:
 class TestInferSchemaRequired:
     """Tests for required vs optional parameter detection."""
 
-    def test_no_default_is_required(self):
-        def handler(city: str):
+    def test_no_default_is_required(self) -> None:
+        def handler(city: str) -> None:
             pass
         _, required, *_ = infer_schema(handler)
         assert "city" in required
 
-    def test_with_default_is_optional(self):
-        def handler(city: str = "London"):
+    def test_with_default_is_optional(self) -> None:
+        def handler(city: str = "London") -> None:
             pass
         _, required, *_ = infer_schema(handler)
         assert "city" not in required
 
-    def test_optional_type_is_not_required(self):
-        def handler(city: Optional[str]):
+    def test_optional_type_is_not_required(self) -> None:
+        def handler(city: Optional[str]) -> None:
             pass
         _, required, *_ = infer_schema(handler)
         assert "city" not in required
 
-    def test_mixed_required_optional(self):
-        def handler(city: str, units: str = "celsius", country: Optional[str] = None):
+    def test_mixed_required_optional(self) -> None:
+        def handler(city: str, units: str = "celsius", country: Optional[str] = None) -> None:
             pass
         _, required, *_ = infer_schema(handler)
         assert "city" in required
@@ -356,21 +356,21 @@ class TestInferSchemaRequired:
 class TestInferSchemaDocstring:
     """Tests for docstring-driven description and parameter docs."""
 
-    def test_description_from_docstring(self):
-        def handler(city: str):
+    def test_description_from_docstring(self) -> None:
+        def handler(city: str) -> None:
             """Get the weather forecast."""
             pass
         _, _, desc, *_ = infer_schema(handler)
         assert desc == "Get the weather forecast."
 
-    def test_no_docstring(self):
-        def handler(city: str):
+    def test_no_docstring(self) -> None:
+        def handler(city: str) -> None:
             pass
         _, _, desc, *_ = infer_schema(handler)
         assert desc is None
 
-    def test_param_descriptions_from_docstring(self):
-        def handler(city: str, units: str = "celsius"):
+    def test_param_descriptions_from_docstring(self) -> None:
+        def handler(city: str, units: str = "celsius") -> None:
             """Get the weather.
 
             Args:
@@ -390,30 +390,30 @@ class TestInferSchemaDocstring:
 class TestInferSchemaRawData:
     """Tests for raw_data parameter detection and exclusion."""
 
-    def test_raw_data_detected(self):
-        def handler(city: str, raw_data: dict = None):
+    def test_raw_data_detected(self) -> None:
+        def handler(city: str, raw_data: Optional[dict[str, Any]] = None) -> None:
             pass
         _, _, _, is_typed, has_raw_data = infer_schema(handler)
         assert is_typed is True
         assert has_raw_data is True
 
-    def test_raw_data_excluded_from_schema(self):
-        def handler(city: str, raw_data: dict = None):
+    def test_raw_data_excluded_from_schema(self) -> None:
+        def handler(city: str, raw_data: Optional[dict[str, Any]] = None) -> None:
             pass
         params, *_ = infer_schema(handler)
         assert "raw_data" not in params
         assert "city" in params
 
-    def test_no_raw_data(self):
-        def handler(city: str):
+    def test_no_raw_data(self) -> None:
+        def handler(city: str) -> None:
             pass
         _, _, _, is_typed, has_raw_data = infer_schema(handler)
         assert is_typed is True
         assert has_raw_data is False
 
-    def test_only_raw_data(self):
+    def test_only_raw_data(self) -> None:
         """Function with only raw_data param is a zero-param typed tool with raw_data."""
-        def handler(raw_data: dict):
+        def handler(raw_data: dict[str, Any]) -> None:
             pass
         params, required, _, is_typed, has_raw_data = infer_schema(handler)
         assert is_typed is True
@@ -429,8 +429,8 @@ class TestInferSchemaRawData:
 class TestCreateTypedHandlerWrapper:
     """Tests for the handler wrapper function."""
 
-    def test_wrapper_unpacks_args(self):
-        def handler(city: str, units: str = "celsius"):
+    def test_wrapper_unpacks_args(self) -> None:
+        def handler(city: str, units: str = "celsius") -> FunctionResult:
             return FunctionResult(f"Weather in {city} ({units})")
 
         wrapper = create_typed_handler_wrapper(handler, has_raw_data=False)
@@ -439,9 +439,10 @@ class TestCreateTypedHandlerWrapper:
         assert "London" in result.response
         assert "fahrenheit" in result.response
 
-    def test_wrapper_passes_raw_data(self):
-        def handler(city: str, raw_data: dict = None):
-            return FunctionResult(f"Weather in {city}, call={raw_data.get('call_id', 'none')}")
+    def test_wrapper_passes_raw_data(self) -> None:
+        def handler(city: str, raw_data: Optional[dict[str, Any]] = None) -> FunctionResult:
+            call_id = raw_data.get("call_id", "none") if raw_data else "none"
+            return FunctionResult(f"Weather in {city}, call={call_id}")
 
         wrapper = create_typed_handler_wrapper(handler, has_raw_data=True)
         result = wrapper({"city": "Paris"}, {"call_id": "abc123"})
@@ -449,8 +450,8 @@ class TestCreateTypedHandlerWrapper:
         assert "Paris" in result.response
         assert "abc123" in result.response
 
-    def test_wrapper_without_raw_data(self):
-        def handler(name: str):
+    def test_wrapper_without_raw_data(self) -> None:
+        def handler(name: str) -> FunctionResult:
             return FunctionResult(f"Hello, {name}")
 
         wrapper = create_typed_handler_wrapper(handler, has_raw_data=False)
@@ -458,30 +459,30 @@ class TestCreateTypedHandlerWrapper:
         assert isinstance(result, FunctionResult)
         assert "Alice" in result.response
 
-    def test_wrapper_preserves_name(self):
-        def my_tool(x: str):
+    def test_wrapper_preserves_name(self) -> None:
+        def my_tool(x: str) -> None:
             pass
 
         wrapper = create_typed_handler_wrapper(my_tool, has_raw_data=False)
         assert wrapper.__name__ == "my_tool"
 
-    def test_wrapper_preserves_doc(self):
-        def my_tool(x: str):
+    def test_wrapper_preserves_doc(self) -> None:
+        def my_tool(x: str) -> None:
             """My tool docstring."""
             pass
 
         wrapper = create_typed_handler_wrapper(my_tool, has_raw_data=False)
         assert wrapper.__doc__ == "My tool docstring."
 
-    def test_wrapper_has_wrapped_attr(self):
-        def my_tool(x: str):
+    def test_wrapper_has_wrapped_attr(self) -> None:
+        def my_tool(x: str) -> None:
             pass
 
         wrapper = create_typed_handler_wrapper(my_tool, has_raw_data=False)
-        assert wrapper.__wrapped__ is my_tool
+        assert wrapper.__wrapped__ is my_tool  # type: ignore[attr-defined]  # __wrapped__ set by functools.wraps
 
-    def test_wrapper_with_empty_args(self):
-        def handler():
+    def test_wrapper_with_empty_args(self) -> None:
+        def handler() -> FunctionResult:
             return FunctionResult("done")
 
         wrapper = create_typed_handler_wrapper(handler, has_raw_data=False)
@@ -489,8 +490,8 @@ class TestCreateTypedHandlerWrapper:
         assert isinstance(result, FunctionResult)
         assert result.response == "done"
 
-    def test_wrapper_with_default_values(self):
-        def handler(city: str, units: str = "celsius"):
+    def test_wrapper_with_default_values(self) -> None:
+        def handler(city: str, units: str = "celsius") -> FunctionResult:
             return FunctionResult(f"{city}:{units}")
 
         wrapper = create_typed_handler_wrapper(handler, has_raw_data=False)
@@ -507,16 +508,15 @@ class TestCreateTypedHandlerWrapper:
 class TestEndToEndIntegration:
     """Tests that type inference works end-to-end through the decorator and registry."""
 
-    def test_class_decorator_with_typed_handler(self):
+    def test_class_decorator_with_typed_handler(self) -> None:
         """Test that @AgentBase.tool() with typed params infers schema correctly."""
-        from signalwire import AgentBase
 
         class TestAgent(AgentBase):
-            def __init__(self):
+            def __init__(self) -> None:
                 super().__init__("Test Agent", route="/test")
 
             @AgentBase.tool(name="get_weather")
-            def get_weather(self, city: str, units: str = "celsius"):
+            def get_weather(self, city: str, units: str = "celsius") -> FunctionResult:
                 """Get the weather forecast.
 
                 Args:
@@ -527,7 +527,7 @@ class TestEndToEndIntegration:
 
         agent = TestAgent()
         func = agent._tool_registry.get_function("get_weather")
-        assert func is not None
+        assert isinstance(func, SWAIGFunction)
         assert func.is_typed_handler is True
         assert "city" in func.parameters
         assert func.parameters["city"]["type"] == "string"
@@ -538,37 +538,35 @@ class TestEndToEndIntegration:
         assert "units" not in func.required
         assert func.description == "Get the weather forecast."
 
-    def test_class_decorator_with_explicit_params_not_overridden(self):
+    def test_class_decorator_with_explicit_params_not_overridden(self) -> None:
         """Explicit parameters= should always win over inference."""
-        from signalwire import AgentBase
 
         explicit_params = {
             "location": {"type": "string", "description": "Location name"}
         }
 
         class TestAgent(AgentBase):
-            def __init__(self):
+            def __init__(self) -> None:
                 super().__init__("Test Agent", route="/test2")
 
             @AgentBase.tool(name="get_weather2", parameters=explicit_params, description="Explicit desc")
-            def get_weather(self, city: str, units: str = "celsius"):
+            def get_weather(self, city: str, units: str = "celsius") -> FunctionResult:
                 """Get the weather forecast."""
                 return FunctionResult(f"Weather in {city}")
 
         agent = TestAgent()
         func = agent._tool_registry.get_function("get_weather2")
-        assert func is not None
+        assert isinstance(func, SWAIGFunction)
         assert func.is_typed_handler is False
         assert "location" in func.parameters
         assert "city" not in func.parameters
         assert func.description == "Explicit desc"
 
-    def test_class_decorator_old_style_still_works(self):
+    def test_class_decorator_old_style_still_works(self) -> None:
         """Old-style (self, args, raw_data) should work as before."""
-        from signalwire import AgentBase
 
         class TestAgent(AgentBase):
-            def __init__(self):
+            def __init__(self) -> None:
                 super().__init__("Test Agent", route="/test3")
 
             @AgentBase.tool(
@@ -576,25 +574,24 @@ class TestEndToEndIntegration:
                 description="Old style tool",
                 parameters={"x": {"type": "string", "description": "Input"}},
             )
-            def old_tool(self, args, raw_data):
+            def old_tool(self, args, raw_data) -> FunctionResult:  # type: ignore[no-untyped-def]  # intentional: exercises the old-style (untyped args, raw_data) path
                 return FunctionResult("done")
 
         agent = TestAgent()
         func = agent._tool_registry.get_function("old_tool")
-        assert func is not None
+        assert isinstance(func, SWAIGFunction)
         assert func.is_typed_handler is False
         assert func.parameters == {"x": {"type": "string", "description": "Input"}}
 
-    def test_typed_handler_execution_through_on_function_call(self):
+    def test_typed_handler_execution_through_on_function_call(self) -> None:
         """Typed handler should execute correctly through the standard dispatch."""
-        from signalwire import AgentBase
 
         class TestAgent(AgentBase):
-            def __init__(self):
+            def __init__(self) -> None:
                 super().__init__("Test Agent", route="/test4")
 
             @AgentBase.tool(name="greet")
-            def greet(self, name: str, greeting: str = "Hello"):
+            def greet(self, name: str, greeting: str = "Hello") -> FunctionResult:
                 """Greet someone.
 
                 Args:
@@ -609,16 +606,15 @@ class TestEndToEndIntegration:
         assert "Hi" in result.response
         assert "Alice" in result.response
 
-    def test_typed_handler_with_defaults(self):
+    def test_typed_handler_with_defaults(self) -> None:
         """Typed handler should use defaults for missing args."""
-        from signalwire import AgentBase
 
         class TestAgent(AgentBase):
-            def __init__(self):
+            def __init__(self) -> None:
                 super().__init__("Test Agent", route="/test5")
 
             @AgentBase.tool(name="greet2")
-            def greet(self, name: str, greeting: str = "Hello"):
+            def greet(self, name: str, greeting: str = "Hello") -> FunctionResult:
                 """Greet someone."""
                 return FunctionResult(f"{greeting}, {name}!")
 
@@ -628,16 +624,15 @@ class TestEndToEndIntegration:
         assert "Hello" in result.response
         assert "Bob" in result.response
 
-    def test_typed_handler_with_raw_data(self):
+    def test_typed_handler_with_raw_data(self) -> None:
         """Typed handler with raw_data should receive it."""
-        from signalwire import AgentBase
 
         class TestAgent(AgentBase):
-            def __init__(self):
+            def __init__(self) -> None:
                 super().__init__("Test Agent", route="/test6")
 
             @AgentBase.tool(name="check_call")
-            def check_call(self, query: str, raw_data: dict = None):
+            def check_call(self, query: str, raw_data: Optional[dict[str, Any]] = None) -> FunctionResult:
                 """Check the call.
 
                 Args:
@@ -652,16 +647,15 @@ class TestEndToEndIntegration:
         assert "test" in result.response
         assert "c42" in result.response
 
-    def test_literal_enum_in_swml(self):
+    def test_literal_enum_in_swml(self) -> None:
         """Literal types should produce enum in SWML output."""
-        from signalwire import AgentBase
 
         class TestAgent(AgentBase):
-            def __init__(self):
+            def __init__(self) -> None:
                 super().__init__("Test Agent", route="/test7")
 
             @AgentBase.tool(name="set_mode")
-            def set_mode(self, mode: Literal["auto", "manual", "off"]):
+            def set_mode(self, mode: Literal["auto", "manual", "off"]) -> FunctionResult:
                 """Set the operating mode.
 
                 Args:
@@ -671,17 +665,17 @@ class TestEndToEndIntegration:
 
         agent = TestAgent()
         func = agent._tool_registry.get_function("set_mode")
+        assert isinstance(func, SWAIGFunction)
         assert func.parameters["mode"]["type"] == "string"
         assert func.parameters["mode"]["enum"] == ["auto", "manual", "off"]
 
-    def test_instance_decorator_with_typed_handler(self):
+    def test_instance_decorator_with_typed_handler(self) -> None:
         """Test the instance-level @agent.tool() decorator with typed params."""
-        from signalwire import AgentBase
 
         agent = AgentBase("Test Agent", route="/test8")
 
         @agent._tool_decorator(name="lookup")
-        def lookup(user_id: int, include_details: bool = False):
+        def lookup(user_id: int, include_details: bool = False) -> FunctionResult:
             """Look up a user.
 
             Args:
@@ -691,7 +685,7 @@ class TestEndToEndIntegration:
             return FunctionResult(f"User {user_id}")
 
         func = agent._tool_registry.get_function("lookup")
-        assert func is not None
+        assert isinstance(func, SWAIGFunction)
         assert func.is_typed_handler is True
         assert func.parameters["user_id"]["type"] == "integer"
         assert func.parameters["include_details"]["type"] == "boolean"
@@ -699,16 +693,15 @@ class TestEndToEndIntegration:
         assert "include_details" not in func.required
         assert func.description == "Look up a user."
 
-    def test_swml_output_includes_inferred_schema(self):
+    def test_swml_output_includes_inferred_schema(self) -> None:
         """The generated SWML should include the inferred parameter schema."""
-        from signalwire import AgentBase
 
         class TestAgent(AgentBase):
-            def __init__(self):
+            def __init__(self) -> None:
                 super().__init__("Test Agent", route="/test9")
 
             @AgentBase.tool(name="search")
-            def search(self, query: str, limit: int = 10):
+            def search(self, query: str, limit: int = 10) -> FunctionResult:
                 """Search for items.
 
                 Args:
@@ -719,6 +712,7 @@ class TestEndToEndIntegration:
 
         agent = TestAgent()
         func = agent._tool_registry.get_function("search")
+        assert isinstance(func, SWAIGFunction)
         swaig = func.to_swaig("https://example.com")
 
         assert swaig["function"] == "search"

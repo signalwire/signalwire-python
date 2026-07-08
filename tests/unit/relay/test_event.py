@@ -32,7 +32,7 @@ from signalwire.relay.event import (
 class TestRelayEvent:
     """Test base RelayEvent."""
 
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.state",
             "params": {"call_id": "abc-123", "call_state": "answered"},
@@ -42,7 +42,7 @@ class TestRelayEvent:
         assert event.call_id == "abc-123"
         assert event.params["call_state"] == "answered"
 
-    def test_from_empty_payload(self):
+    def test_from_empty_payload(self) -> None:
         event = RelayEvent.from_payload({})
         assert event.event_type == ""
         assert event.call_id == ""
@@ -51,7 +51,7 @@ class TestRelayEvent:
 
 
 class TestCallStateEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.state",
             "params": {
@@ -70,7 +70,7 @@ class TestCallStateEvent:
 
 
 class TestCallReceiveEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.receive",
             "params": {
@@ -91,7 +91,7 @@ class TestCallReceiveEvent:
         assert event.tag == "t1"
         assert event.segment_id == "s1"
 
-    def test_context_falls_back_to_protocol(self):
+    def test_context_falls_back_to_protocol(self) -> None:
         payload = {
             "event_type": "calling.call.receive",
             "params": {"call_id": "c1", "protocol": "support"},
@@ -101,7 +101,7 @@ class TestCallReceiveEvent:
 
 
 class TestPlayEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.play",
             "params": {"call_id": "c1", "control_id": "ctl1", "state": "playing"},
@@ -112,7 +112,7 @@ class TestPlayEvent:
 
 
 class TestRecordEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.record",
             "params": {
@@ -131,7 +131,7 @@ class TestRecordEvent:
         assert event.duration == 15.5
         assert event.size == 128000
 
-    def test_url_from_nested_record(self):
+    def test_url_from_nested_record(self) -> None:
         payload = {
             "event_type": "calling.call.record",
             "params": {
@@ -148,7 +148,7 @@ class TestRecordEvent:
 
 
 class TestCollectEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.collect",
             "params": {
@@ -164,7 +164,7 @@ class TestCollectEvent:
         assert event.final is True
         assert event.state == "finished"
 
-    def test_final_none_when_absent(self):
+    def test_final_none_when_absent(self) -> None:
         payload = {
             "event_type": "calling.call.collect",
             "params": {"call_id": "c1", "control_id": "ctl1"},
@@ -174,7 +174,7 @@ class TestCollectEvent:
 
 
 class TestConnectEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.connect",
             "params": {
@@ -189,7 +189,7 @@ class TestConnectEvent:
 
 
 class TestDetectEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.detect",
             "params": {
@@ -203,7 +203,7 @@ class TestDetectEvent:
 
 
 class TestFaxEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.fax",
             "params": {
@@ -218,7 +218,7 @@ class TestFaxEvent:
 
 
 class TestTapEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.tap",
             "params": {
@@ -236,7 +236,7 @@ class TestTapEvent:
 
 
 class TestStreamEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.stream",
             "params": {
@@ -254,7 +254,7 @@ class TestStreamEvent:
 
 
 class TestSendDigitsEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.send_digits",
             "params": {"call_id": "c1", "control_id": "ctl1", "state": "finished"},
@@ -265,7 +265,7 @@ class TestSendDigitsEvent:
 
 
 class TestDialEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.dial",
             "params": {
@@ -281,7 +281,7 @@ class TestDialEvent:
 
 
 class TestReferEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.refer",
             "params": {
@@ -299,7 +299,7 @@ class TestReferEvent:
 
 
 class TestDenoiseEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.denoise",
             "params": {"call_id": "c1", "denoised": True},
@@ -307,7 +307,7 @@ class TestDenoiseEvent:
         event = DenoiseEvent.from_payload(payload)
         assert event.denoised is True
 
-    def test_default_false(self):
+    def test_default_false(self) -> None:
         payload = {
             "event_type": "calling.call.denoise",
             "params": {"call_id": "c1"},
@@ -317,7 +317,7 @@ class TestDenoiseEvent:
 
 
 class TestPayEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.pay",
             "params": {"call_id": "c1", "control_id": "ctl1", "state": "finished"},
@@ -328,7 +328,7 @@ class TestPayEvent:
 
 
 class TestQueueEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.queue",
             "params": {
@@ -350,7 +350,7 @@ class TestQueueEvent:
 
 
 class TestEchoEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.echo",
             "params": {"call_id": "c1", "state": "echoing"},
@@ -360,7 +360,7 @@ class TestEchoEvent:
 
 
 class TestTranscribeEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.transcribe",
             "params": {
@@ -382,7 +382,7 @@ class TestTranscribeEvent:
 
 
 class TestHoldEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.call.hold",
             "params": {"call_id": "c1", "state": "hold"},
@@ -392,7 +392,7 @@ class TestHoldEvent:
 
 
 class TestConferenceEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.conference",
             "params": {
@@ -408,7 +408,7 @@ class TestConferenceEvent:
 
 
 class TestCallingErrorEvent:
-    def test_from_payload(self):
+    def test_from_payload(self) -> None:
         payload = {
             "event_type": "calling.error",
             "params": {"call_id": "c1", "code": "500", "message": "Server error"},
@@ -419,24 +419,24 @@ class TestCallingErrorEvent:
 
 
 class TestParseEvent:
-    def test_known_event_types_return_typed(self):
+    def test_known_event_types_return_typed(self) -> None:
         for event_type, cls in EVENT_CLASS_MAP.items():
             payload = {"event_type": event_type, "params": {"call_id": "c1"}}
             event = parse_event(payload)
             assert isinstance(event, cls)
 
-    def test_unknown_event_type_returns_base(self):
+    def test_unknown_event_type_returns_base(self) -> None:
         payload = {"event_type": "calling.call.unknown_future_event", "params": {"call_id": "c1"}}
         event = parse_event(payload)
         assert type(event) is RelayEvent
         assert event.event_type == "calling.call.unknown_future_event"
 
-    def test_empty_payload(self):
+    def test_empty_payload(self) -> None:
         event = parse_event({})
         assert type(event) is RelayEvent
         assert event.event_type == ""
 
-    def test_event_class_map_complete(self):
+    def test_event_class_map_complete(self) -> None:
         """Verify all expected event types are in the map."""
         expected = [
             "calling.call.state",
@@ -478,7 +478,7 @@ from signalwire.relay.event import MessageReceiveEvent, MessageStateEvent
 class TestMessageReceiveEvent:
     """Tests for MessageReceiveEvent.from_payload."""
 
-    def test_from_payload_basic_inbound(self):
+    def test_from_payload_basic_inbound(self) -> None:
         payload = {
             "event_type": "messaging.receive",
             "params": {
@@ -507,7 +507,7 @@ class TestMessageReceiveEvent:
         assert receive_event.media == []
         assert receive_event.tags == []
 
-    def test_from_payload_with_media_and_tags(self):
+    def test_from_payload_with_media_and_tags(self) -> None:
         payload = {
             "event_type": "messaging.receive",
             "params": {
@@ -535,7 +535,7 @@ class TestMessageReceiveEvent:
         assert receive_event.tags == ["vip", "support"]
         assert receive_event.context == "support"
 
-    def test_from_payload_empty_params(self):
+    def test_from_payload_empty_params(self) -> None:
         receive_event = MessageReceiveEvent.from_payload(
             {"event_type": "messaging.receive", "params": {}}
         )
@@ -550,7 +550,7 @@ class TestMessageReceiveEvent:
 class TestMessageStateEvent:
     """Tests for MessageStateEvent.from_payload."""
 
-    def test_from_payload_outbound_delivered(self):
+    def test_from_payload_outbound_delivered(self) -> None:
         payload = {
             "event_type": "messaging.state",
             "params": {
@@ -577,7 +577,7 @@ class TestMessageStateEvent:
         assert state_event.body == "Hello"
         assert state_event.reason == ""
 
-    def test_from_payload_failed_with_reason(self):
+    def test_from_payload_failed_with_reason(self) -> None:
         payload = {
             "event_type": "messaging.state",
             "params": {
@@ -594,7 +594,7 @@ class TestMessageStateEvent:
         assert state_event.reason == "spam"
         assert state_event.tags == ["promo"]
 
-    def test_from_payload_empty_params(self):
+    def test_from_payload_empty_params(self) -> None:
         state_event = MessageStateEvent.from_payload(
             {"event_type": "messaging.state", "params": {}}
         )
@@ -617,7 +617,7 @@ class TestParseEventBehavior:
     above and exercises the full message-event paths.
     """
 
-    def test_parse_event_routes_to_call_state(self):
+    def test_parse_event_routes_to_call_state(self) -> None:
         payload = {
             "event_type": "calling.call.state",
             "params": {
@@ -631,7 +631,7 @@ class TestParseEventBehavior:
         assert event_obj.call_state == "answered"
         assert event_obj.direction == "inbound"
 
-    def test_parse_event_routes_to_messaging_receive(self):
+    def test_parse_event_routes_to_messaging_receive(self) -> None:
         payload = {
             "event_type": "messaging.receive",
             "params": {
@@ -648,7 +648,7 @@ class TestParseEventBehavior:
         assert event_obj.body == "Hello"
         assert event_obj.message_state == "received"
 
-    def test_parse_event_routes_to_messaging_state(self):
+    def test_parse_event_routes_to_messaging_state(self) -> None:
         payload = {
             "event_type": "messaging.state",
             "params": {
@@ -663,7 +663,7 @@ class TestParseEventBehavior:
         assert event_obj.message_id == "msg-pe-2"
         assert event_obj.message_state == "sent"
 
-    def test_parse_event_unknown_returns_base_relayevent(self):
+    def test_parse_event_unknown_returns_base_relayevent(self) -> None:
         payload = {
             "event_type": "calling.unknown.future_v999",
             "params": {"call_id": "c1"},
@@ -673,7 +673,7 @@ class TestParseEventBehavior:
         assert type(event_obj) is RelayEvent
         assert event_obj.event_type == "calling.unknown.future_v999"
 
-    def test_parse_event_empty_payload(self):
+    def test_parse_event_empty_payload(self) -> None:
         event_obj = parse_event({})
         assert type(event_obj) is RelayEvent
         assert event_obj.event_type == ""
@@ -693,7 +693,7 @@ import signalwire.relay.event as relay_event_module
 class TestParseEventViaModule:
     """Module-attribute invocation: relay_event_module.parse_event(...)."""
 
-    def test_parse_event_module_attr_call_state(self):
+    def test_parse_event_module_attr_call_state(self) -> None:
         payload = {
             "event_type": "calling.call.state",
             "params": {"call_id": "cm-1", "call_state": "answered"},
@@ -705,7 +705,7 @@ class TestParseEventViaModule:
         assert event_obj.call_state == "answered"
         assert event_obj.call_id == "cm-1"
 
-    def test_parse_event_module_attr_messaging_receive(self):
+    def test_parse_event_module_attr_messaging_receive(self) -> None:
         payload = {
             "event_type": "messaging.receive",
             "params": {
@@ -720,7 +720,7 @@ class TestParseEventViaModule:
         assert isinstance(event_obj, MessageReceiveEvent)
         assert event_obj.message_id == "mm-1"
 
-    def test_parse_event_module_attr_unknown(self):
+    def test_parse_event_module_attr_unknown(self) -> None:
         payload = {
             "event_type": "calling.unknown.future",
             "params": {"call_id": "u1"},

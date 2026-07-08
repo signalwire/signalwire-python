@@ -28,7 +28,7 @@ class PomBuilder:
     you can create any section structure that fits your needs.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize a new POM builder with an empty POM"""
         self.pom = PromptObjectModel()
         self._sections: dict[str, Section] = {}

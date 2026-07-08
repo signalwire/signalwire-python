@@ -17,10 +17,16 @@ if TYPE_CHECKING:
 from signalwire.core.mixins._mixin_host import _HostTyped
 
 
-class AIConfigMixin(_HostTyped):
+class AIConfigMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at runtime; AgentBase under TYPE_CHECKING — intentional split
     """
     Mixin class containing all AI configuration methods for AgentBase
     """
+
+    # Optional ASR-driven multilingual config (Mode B). AgentBase.__init__ sets it
+    # to None; set_multilingual() assigns the dict. Declared explicitly so the base
+    # type is dict|None (mypy would otherwise infer a non-optional dict from the
+    # setter and reject AgentBase's None initializer).
+    _multilingual: dict[str, Any] | None = None
 
     def add_hint(self, hint: str) -> "AgentBase":
         """
@@ -629,7 +635,7 @@ class AIConfigMixin(_HostTyped):
         self._mcp_server_enabled = True
         return self
 
-    def set_prompt_llm_params(self, **params) -> "AgentBase":
+    def set_prompt_llm_params(self, **params: Any) -> "AgentBase":
         """
         Set LLM parameters for the main prompt.
 
@@ -664,7 +670,7 @@ class AIConfigMixin(_HostTyped):
 
         return self
 
-    def set_post_prompt_llm_params(self, **params) -> "AgentBase":
+    def set_post_prompt_llm_params(self, **params: Any) -> "AgentBase":
         """
         Set LLM parameters for the post-prompt.
 

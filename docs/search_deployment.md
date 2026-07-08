@@ -1617,16 +1617,19 @@ Embedding generation accounts for 30-50% of total query time. The mini model pro
 **Optimizing query performance:**
 
 1. **Use mini model:**
+<!-- snippet: no-compile config-excerpt -->
    ```python
    {"model_name": "mini"}
    ```
 
 2. **Reduce result count:**
+<!-- snippet: no-compile config-excerpt -->
    ```python
    {"count": 3}  # Faster than 5 or 10
    ```
 
 3. **Set appropriate threshold:**
+<!-- snippet: no-compile config-excerpt -->
    ```python
    {"distance_threshold": 0.4}  # Filters early, reduces processing
    ```
@@ -2099,6 +2102,7 @@ sw-search ./examples --backend pgvector \
    ```
 
 3. Agents connect to the shared database:
+<!-- snippet: no-compile indented-list-excerpt -->
    ```python
    agent.add_skill("native_vector_search", {
        "backend": "pgvector",

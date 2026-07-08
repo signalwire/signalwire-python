@@ -11,6 +11,7 @@ import os
 import hmac
 import json
 import base64
+from typing import Any
 
 from fastapi import Request
 
@@ -18,7 +19,7 @@ from fastapi import Request
 from signalwire.core.mixins._mixin_host import _HostTyped
 
 
-class AuthMixin(_HostTyped):
+class AuthMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at runtime; AgentBase under TYPE_CHECKING — intentional split
     """
     Mixin class containing all authentication-related methods for AgentBase
     """
@@ -146,7 +147,7 @@ class AuthMixin(_HostTyped):
         response += json.dumps({"error": "Unauthorized"})
         return response
 
-    def _check_lambda_auth(self, event) -> bool:
+    def _check_lambda_auth(self, event: dict[str, Any] | None) -> bool:
         """
         Check basic auth in Lambda mode using event headers
 
@@ -179,7 +180,7 @@ class AuthMixin(_HostTyped):
         except Exception:
             return False
 
-    def _send_lambda_auth_challenge(self) -> dict:
+    def _send_lambda_auth_challenge(self) -> dict[str, Any]:
         """
         Send authentication challenge in Lambda mode
 
@@ -195,7 +196,7 @@ class AuthMixin(_HostTyped):
             "body": json.dumps({"error": "Unauthorized"}),
         }
 
-    def _check_google_cloud_function_auth(self, request) -> bool:
+    def _check_google_cloud_function_auth(self, request: Any) -> bool:
         """
         Check basic auth in Google Cloud Functions mode using request headers
 
@@ -226,7 +227,7 @@ class AuthMixin(_HostTyped):
         except Exception:
             return False
 
-    def _send_google_cloud_function_auth_challenge(self):
+    def _send_google_cloud_function_auth_challenge(self) -> Any:
         """
         Send authentication challenge in Google Cloud Functions mode
 
@@ -244,7 +245,7 @@ class AuthMixin(_HostTyped):
             },
         )
 
-    def _check_azure_function_auth(self, req) -> bool:
+    def _check_azure_function_auth(self, req: Any) -> bool:
         """
         Check basic auth in Azure Functions mode using request object
 
@@ -274,7 +275,7 @@ class AuthMixin(_HostTyped):
         except Exception:
             return False
 
-    def _send_azure_function_auth_challenge(self):
+    def _send_azure_function_auth_challenge(self) -> Any:
         """
         Send authentication challenge in Azure Functions mode
 

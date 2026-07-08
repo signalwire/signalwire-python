@@ -11,6 +11,6 @@ SignalWire REST API client module.
 
 from .client import RestClient
 from ._base import SignalWireRestError
-from .call_handler import PhoneCallHandler
+from .namespaces.relay_rest_types_generated import PhoneCallHandler
 
 __all__ = ["PhoneCallHandler", "RestClient", "SignalWireRestError"]

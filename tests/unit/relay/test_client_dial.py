@@ -7,6 +7,8 @@ calling.call.dial events matched by tag.
 
 import asyncio
 import json
+from typing import Any
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -23,7 +25,7 @@ from signalwire.relay.constants import (
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _make_client(**kwargs) -> RelayClient:
+def _make_client(**kwargs: Any) -> RelayClient:
     """Create a RelayClient with mocked internals for unit testing."""
     client = RelayClient(project="test-proj", token="test-token", **kwargs)
     client._ws = MagicMock()
@@ -34,7 +36,7 @@ def _make_client(**kwargs) -> RelayClient:
 
 
 def _make_dial_event(tag: str, dial_state: str, call_id: str = "winner-call-id",
-                     node_id: str = "winner-node-id") -> dict:
+                     node_id: str = "winner-node-id") -> dict[str, Any]:
     """Build a calling.call.dial event payload."""
     return {
         "event_type": EVENT_CALL_DIAL,
@@ -57,7 +59,7 @@ def _make_dial_event(tag: str, dial_state: str, call_id: str = "winner-call-id",
 
 
 def _make_state_event(call_id: str, tag: str, call_state: str,
-                      node_id: str = "node-1") -> dict:
+                      node_id: str = "node-1") -> dict[str, Any]:
     """Build a calling.call.state event payload."""
     return {
         "event_type": EVENT_CALL_STATE,
@@ -80,7 +82,7 @@ def _make_state_event(call_id: str, tag: str, call_state: str,
 
 class TestHandleDialEvent:
     @pytest.mark.asyncio
-    async def test_dial_answered_resolves_future(self):
+    async def test_dial_answered_resolves_future(self) -> None:
         client = _make_client()
         tag = "test-tag-1"
 
@@ -103,7 +105,7 @@ class TestHandleDialEvent:
         assert "winner-call-id" in client._calls
 
     @pytest.mark.asyncio
-    async def test_dial_failed_rejects_future(self):
+    async def test_dial_failed_rejects_future(self) -> None:
         client = _make_client()
         tag = "test-tag-2"
 
@@ -119,7 +121,7 @@ class TestHandleDialEvent:
             fut.result()
 
     @pytest.mark.asyncio
-    async def test_dial_dialing_does_not_resolve(self):
+    async def test_dial_dialing_does_not_resolve(self) -> None:
         client = _make_client()
         tag = "test-tag-3"
 
@@ -133,7 +135,7 @@ class TestHandleDialEvent:
         assert not fut.done()
 
     @pytest.mark.asyncio
-    async def test_dial_unknown_tag_ignored(self):
+    async def test_dial_unknown_tag_ignored(self) -> None:
         """A dial event for a tag we have no pending dial on must be silently
         ignored — it must NOT add anything to _pending_dials and must NOT
         register a Call from the event payload."""
@@ -154,7 +156,7 @@ class TestHandleDialEvent:
 
 class TestHandleEventDialRouting:
     @pytest.mark.asyncio
-    async def test_state_event_creates_call_for_pending_dial(self):
+    async def test_state_event_creates_call_for_pending_dial(self) -> None:
         """calling.call.state events during dial create Call objects."""
         client = _make_client()
         tag = "dial-tag-1"
@@ -177,7 +179,7 @@ class TestHandleEventDialRouting:
         assert call.state == "created"
 
     @pytest.mark.asyncio
-    async def test_state_event_routes_to_existing_call(self):
+    async def test_state_event_routes_to_existing_call(self) -> None:
         """Once a call is registered, state events route normally."""
         client = _make_client()
         tag = "dial-tag-2"
@@ -197,7 +199,7 @@ class TestHandleEventDialRouting:
         assert call.state == "ringing"
 
     @pytest.mark.asyncio
-    async def test_dial_event_uses_existing_call(self):
+    async def test_dial_event_uses_existing_call(self) -> None:
         """If the call was already created by state events, dial event reuses it."""
         client = _make_client()
         tag = "dial-tag-3"
@@ -224,7 +226,7 @@ class TestHandleEventDialRouting:
         assert call is client._calls["winner-id"]
 
     @pytest.mark.asyncio
-    async def test_ended_call_cleaned_up(self):
+    async def test_ended_call_cleaned_up(self) -> None:
         """Calls that end during dial are cleaned up from _calls."""
         client = _make_client()
         tag = "dial-tag-4"
@@ -248,12 +250,12 @@ class TestHandleEventDialRouting:
 
 class TestHandleEventInbound:
     @pytest.mark.asyncio
-    async def test_inbound_call_creates_call_and_invokes_handler(self):
+    async def test_inbound_call_creates_call_and_invokes_handler(self) -> None:
         client = _make_client()
-        received_calls = []
+        received_calls: list[Call] = []
 
         @client.on_call
-        async def handler(call):
+        async def handler(call: Call) -> None:
             received_calls.append(call)
 
         payload = {
@@ -282,7 +284,7 @@ class TestHandleEventInbound:
 
 class TestHandleEventCallIdRouting:
     @pytest.mark.asyncio
-    async def test_event_routes_to_call_by_call_id(self):
+    async def test_event_routes_to_call_by_call_id(self) -> None:
         client = _make_client()
 
         # Pre-register a call
@@ -307,7 +309,7 @@ class TestHandleEventCallIdRouting:
         assert len(dispatched) == 1
 
     @pytest.mark.asyncio
-    async def test_unknown_call_id_ignored(self):
+    async def test_unknown_call_id_ignored(self) -> None:
         """A play event whose call_id is not registered must be dropped:
         the client must not auto-create a Call entry for an unknown id."""
         client = _make_client()
@@ -329,7 +331,7 @@ class TestHandleEventCallIdRouting:
 
 class TestRegisterDialLeg:
     @pytest.mark.asyncio
-    async def test_creates_and_registers_call(self):
+    async def test_creates_and_registers_call(self) -> None:
         client = _make_client()
         tag = "reg-tag-1"
         client._dial_calls_by_tag[tag] = []
@@ -356,9 +358,10 @@ class TestRegisterDialLeg:
 
 class TestDisconnectCleanup:
     @pytest.mark.asyncio
-    async def test_disconnect_cancels_pending_dials(self):
+    async def test_disconnect_cancels_pending_dials(self) -> None:
         client = _make_client()
-        client._ws.close = AsyncMock()
+        assert client._ws is not None
+        client._ws.close = AsyncMock()  # type: ignore[method-assign]  # mock
         loop = asyncio.get_running_loop()
 
         fut = loop.create_future()
@@ -372,7 +375,7 @@ class TestDisconnectCleanup:
         assert len(client._dial_calls_by_tag) == 0
 
     @pytest.mark.asyncio
-    async def test_clear_pending_rejects_dials(self):
+    async def test_clear_pending_rejects_dials(self) -> None:
         client = _make_client()
         loop = asyncio.get_running_loop()
 

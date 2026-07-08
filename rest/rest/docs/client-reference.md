@@ -2,6 +2,7 @@
 
 ## Constructor
 
+<!-- snippet: no-compile signature-illustration (constructor signature; annotations shown in call form, not a def) -->
 ```python
 RestClient(
     project: str = None,   # SIGNALWIRE_PROJECT_ID
@@ -72,7 +73,6 @@ Every API surface is available as a namespace attribute on the client:
 | `client.project` | API token management |
 | `client.pubsub` | PubSub token creation |
 | `client.chat` | Chat token creation |
-| `client.compat` | Twilio-compatible LAML API |
 
 ## Error Handling
 

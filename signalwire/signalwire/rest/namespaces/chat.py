@@ -1,22 +1,24 @@
-"""
-Copyright (c) 2025 SignalWire
+"""Deprecated import path for ``chat`` REST symbols.
 
-This file is part of the SignalWire SDK.
-
-Licensed under the MIT License.
-See LICENSE file in the project root for full license information.
-
-Chat API namespace — token creation.
+These symbols moved out of ``namespaces.chat`` when the REST layer was
+regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
+re-export keeps ``from signalwire.signalwire.rest.namespaces.chat import ChatResource``
+working but emits a :class:`DeprecationWarning`. Prefer ``client.chat`` instead
+(no import needed).
 """
 
-from .._base import BaseResource
+import warnings
 
+warnings.warn(
+    "signalwire.signalwire.rest.namespaces.chat is deprecated; use client.chat. "
+    "This back-compat shim will be removed in a future release.",
+    DeprecationWarning,
+    stacklevel=2,
+)
 
-class ChatResource(BaseResource):
-    """Chat token generation."""
+from .chat_resources_generated import Chat  # noqa: E402  (re-export after the deprecation warn — intentional)
 
-    def __init__(self, http):
-        super().__init__(http, "/api/chat/tokens")
+# Back-compat aliases (old name -> generated bare name):
+ChatResource = Chat
 
-    def create_token(self, **kwargs):
-        return self._http.post(self._base_path, body=kwargs)
+__all__ = ["ChatResource"]

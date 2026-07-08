@@ -13,7 +13,7 @@ Unit tests for PromptMixin
 
 import pytest
 from unittest.mock import Mock, patch, MagicMock, PropertyMock
-from typing import Dict, List, Any, Optional
+from typing import Any, Iterator, Optional
 
 from signalwire.core.mixins.prompt_mixin import PromptMixin
 
@@ -26,13 +26,13 @@ class MockPromptHost(PromptMixin):
 
     def __init__(
         self,
-        use_pom=True,
-        pom=None,
-        name="TestAgent",
-        prompt_manager=None,
-        contexts_builder=None,
-        contexts_defined=False,
-    ):
+        use_pom: bool = True,
+        pom: Any = None,
+        name: str = "TestAgent",
+        prompt_manager: Any = None,
+        contexts_builder: Any = None,
+        contexts_defined: bool = False,
+    ) -> None:
         self._use_pom = use_pom
         self.pom = pom
         self.name = name
@@ -47,7 +47,7 @@ class MockPromptHost(PromptMixin):
 # ---------------------------------------------------------------------------
 
 @pytest.fixture
-def mock_prompt_manager():
+def mock_prompt_manager() -> Mock:
     """Return a fresh Mock standing in for PromptManager."""
     pm = Mock()
     pm.get_prompt.return_value = None
@@ -56,7 +56,7 @@ def mock_prompt_manager():
 
 
 @pytest.fixture
-def host(mock_prompt_manager):
+def host(mock_prompt_manager: Mock) -> MockPromptHost:
     """Return a MockPromptHost wired with a mock prompt manager."""
     return MockPromptHost(prompt_manager=mock_prompt_manager)
 
@@ -68,20 +68,20 @@ def host(mock_prompt_manager):
 class TestSetPromptText:
     """Tests for PromptMixin.set_prompt_text"""
 
-    def test_delegates_to_prompt_manager(self, host):
+    def test_delegates_to_prompt_manager(self, host: MockPromptHost) -> None:
         result = host.set_prompt_text("Hello world")
         host._prompt_manager.set_prompt_text.assert_called_once_with("Hello world")
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockPromptHost) -> None:
         result = host.set_prompt_text("prompt")
         assert result is host
 
-    def test_empty_string_is_accepted(self, host):
+    def test_empty_string_is_accepted(self, host: MockPromptHost) -> None:
         result = host.set_prompt_text("")
         host._prompt_manager.set_prompt_text.assert_called_once_with("")
         assert result is host
 
-    def test_long_prompt_text(self, host):
+    def test_long_prompt_text(self, host: MockPromptHost) -> None:
         long_text = "x" * 10000
         result = host.set_prompt_text(long_text)
         host._prompt_manager.set_prompt_text.assert_called_once_with(long_text)
@@ -95,15 +95,15 @@ class TestSetPromptText:
 class TestSetPostPrompt:
     """Tests for PromptMixin.set_post_prompt"""
 
-    def test_delegates_to_prompt_manager(self, host):
+    def test_delegates_to_prompt_manager(self, host: MockPromptHost) -> None:
         result = host.set_post_prompt("Summarize the conversation")
         host._prompt_manager.set_post_prompt.assert_called_once_with("Summarize the conversation")
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockPromptHost) -> None:
         result = host.set_post_prompt("summary")
         assert result is host
 
-    def test_empty_string(self, host):
+    def test_empty_string(self, host: MockPromptHost) -> None:
         result = host.set_post_prompt("")
         host._prompt_manager.set_post_prompt.assert_called_once_with("")
         assert result is host
@@ -116,22 +116,22 @@ class TestSetPostPrompt:
 class TestSetPromptPom:
     """Tests for PromptMixin.set_prompt_pom"""
 
-    def test_delegates_to_prompt_manager(self, host):
+    def test_delegates_to_prompt_manager(self, host: MockPromptHost) -> None:
         pom_data = [{"title": "Section A", "body": "Body A"}]
         result = host.set_prompt_pom(pom_data)
         host._prompt_manager.set_prompt_pom.assert_called_once_with(pom_data)
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockPromptHost) -> None:
         result = host.set_prompt_pom([])
         assert result is host
 
-    def test_empty_list(self, host):
+    def test_empty_list(self, host: MockPromptHost) -> None:
         result = host.set_prompt_pom([])
         host._prompt_manager.set_prompt_pom.assert_called_once_with([])
         assert result is host
 
-    def test_complex_pom_structure(self, host):
-        pom_data = [
+    def test_complex_pom_structure(self, host: MockPromptHost) -> None:
+        pom_data: list[dict[str, Any]] = [
             {"title": "Section A", "body": "Body A", "bullets": ["b1", "b2"]},
             {"title": "Section B", "body": "Body B", "subsections": [
                 {"title": "Sub B1", "body": "Sub body"}
@@ -149,7 +149,7 @@ class TestSetPromptPom:
 class TestPromptAddSection:
     """Tests for PromptMixin.prompt_add_section"""
 
-    def test_delegates_basic_section(self, host):
+    def test_delegates_basic_section(self, host: MockPromptHost) -> None:
         result = host.prompt_add_section("Intro", body="Welcome")
         host._prompt_manager.prompt_add_section.assert_called_once_with(
             title="Intro",
@@ -160,11 +160,11 @@ class TestPromptAddSection:
             subsections=None,
         )
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockPromptHost) -> None:
         result = host.prompt_add_section("Title")
         assert result is host
 
-    def test_with_bullets(self, host):
+    def test_with_bullets(self, host: MockPromptHost) -> None:
         bullets = ["Point 1", "Point 2"]
         host.prompt_add_section("Rules", bullets=bullets)
         host._prompt_manager.prompt_add_section.assert_called_once_with(
@@ -176,7 +176,7 @@ class TestPromptAddSection:
             subsections=None,
         )
 
-    def test_with_numbered_flags(self, host):
+    def test_with_numbered_flags(self, host: MockPromptHost) -> None:
         host.prompt_add_section("Steps", numbered=True, numbered_bullets=True)
         host._prompt_manager.prompt_add_section.assert_called_once_with(
             title="Steps",
@@ -187,7 +187,7 @@ class TestPromptAddSection:
             subsections=None,
         )
 
-    def test_with_subsections(self, host):
+    def test_with_subsections(self, host: MockPromptHost) -> None:
         subs = [{"title": "Sub1", "body": "sub body"}]
         host.prompt_add_section("Main", subsections=subs)
         host._prompt_manager.prompt_add_section.assert_called_once_with(
@@ -199,7 +199,7 @@ class TestPromptAddSection:
             subsections=subs,
         )
 
-    def test_all_parameters(self, host):
+    def test_all_parameters(self, host: MockPromptHost) -> None:
         bullets = ["a", "b"]
         subs = [{"title": "Sub", "body": "sb"}]
         host.prompt_add_section(
@@ -227,7 +227,7 @@ class TestPromptAddSection:
 class TestPromptAddToSection:
     """Tests for PromptMixin.prompt_add_to_section"""
 
-    def test_add_body(self, host):
+    def test_add_body(self, host: MockPromptHost) -> None:
         result = host.prompt_add_to_section("Intro", body="More text")
         host._prompt_manager.prompt_add_to_section.assert_called_once_with(
             title="Intro",
@@ -236,7 +236,7 @@ class TestPromptAddToSection:
             bullets=None,
         )
 
-    def test_add_single_bullet(self, host):
+    def test_add_single_bullet(self, host: MockPromptHost) -> None:
         host.prompt_add_to_section("Rules", bullet="New rule")
         host._prompt_manager.prompt_add_to_section.assert_called_once_with(
             title="Rules",
@@ -245,7 +245,7 @@ class TestPromptAddToSection:
             bullets=None,
         )
 
-    def test_add_multiple_bullets(self, host):
+    def test_add_multiple_bullets(self, host: MockPromptHost) -> None:
         bullets = ["rule1", "rule2"]
         host.prompt_add_to_section("Rules", bullets=bullets)
         host._prompt_manager.prompt_add_to_section.assert_called_once_with(
@@ -255,7 +255,7 @@ class TestPromptAddToSection:
             bullets=bullets,
         )
 
-    def test_add_body_and_bullets(self, host):
+    def test_add_body_and_bullets(self, host: MockPromptHost) -> None:
         host.prompt_add_to_section("Mixed", body="intro", bullet="b1", bullets=["b2"])
         host._prompt_manager.prompt_add_to_section.assert_called_once_with(
             title="Mixed",
@@ -264,7 +264,7 @@ class TestPromptAddToSection:
             bullets=["b2"],
         )
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockPromptHost) -> None:
         result = host.prompt_add_to_section("S")
         assert result is host
 
@@ -276,7 +276,7 @@ class TestPromptAddToSection:
 class TestPromptAddSubsection:
     """Tests for PromptMixin.prompt_add_subsection"""
 
-    def test_basic_subsection(self, host):
+    def test_basic_subsection(self, host: MockPromptHost) -> None:
         result = host.prompt_add_subsection("Parent", "Child", body="child body")
         host._prompt_manager.prompt_add_subsection.assert_called_once_with(
             parent_title="Parent",
@@ -285,7 +285,7 @@ class TestPromptAddSubsection:
             bullets=None,
         )
 
-    def test_subsection_with_bullets(self, host):
+    def test_subsection_with_bullets(self, host: MockPromptHost) -> None:
         bullets = ["x", "y"]
         host.prompt_add_subsection("P", "C", bullets=bullets)
         host._prompt_manager.prompt_add_subsection.assert_called_once_with(
@@ -295,7 +295,7 @@ class TestPromptAddSubsection:
             bullets=bullets,
         )
 
-    def test_returns_self_for_chaining(self, host):
+    def test_returns_self_for_chaining(self, host: MockPromptHost) -> None:
         result = host.prompt_add_subsection("P", "C")
         assert result is host
 
@@ -307,16 +307,16 @@ class TestPromptAddSubsection:
 class TestPromptHasSection:
     """Tests for PromptMixin.prompt_has_section"""
 
-    def test_section_exists(self, host):
+    def test_section_exists(self, host: MockPromptHost) -> None:
         host._prompt_manager.prompt_has_section.return_value = True
         assert host.prompt_has_section("Intro") is True
         host._prompt_manager.prompt_has_section.assert_called_once_with("Intro")
 
-    def test_section_does_not_exist(self, host):
+    def test_section_does_not_exist(self, host: MockPromptHost) -> None:
         host._prompt_manager.prompt_has_section.return_value = False
         assert host.prompt_has_section("NonExistent") is False
 
-    def test_empty_title(self, host):
+    def test_empty_title(self, host: MockPromptHost) -> None:
         host._prompt_manager.prompt_has_section.return_value = False
         assert host.prompt_has_section("") is False
 
@@ -328,11 +328,11 @@ class TestPromptHasSection:
 class TestGetPrompt:
     """Tests for PromptMixin.get_prompt"""
 
-    def test_returns_prompt_manager_result_when_available(self, host):
+    def test_returns_prompt_manager_result_when_available(self, host: MockPromptHost) -> None:
         host._prompt_manager.get_prompt.return_value = "Manager prompt"
         assert host.get_prompt() == "Manager prompt"
 
-    def test_returns_pom_render_dict_when_available(self, host):
+    def test_returns_pom_render_dict_when_available(self, host: MockPromptHost) -> None:
         host._prompt_manager.get_prompt.return_value = None
         mock_pom = Mock()
         mock_pom.render_dict.return_value = [{"title": "S", "body": "B"}]
@@ -343,7 +343,7 @@ class TestGetPrompt:
         assert result == [{"title": "S", "body": "B"}]
         mock_pom.render_dict.assert_called_once()
 
-    def test_falls_back_to_to_dict(self, host):
+    def test_falls_back_to_to_dict(self, host: MockPromptHost) -> None:
         host._prompt_manager.get_prompt.return_value = None
         mock_pom = Mock(spec=[])  # no render_dict
         mock_pom.to_dict = Mock(return_value=[{"title": "T"}])
@@ -353,7 +353,7 @@ class TestGetPrompt:
         result = host.get_prompt()
         assert result == [{"title": "T"}]
 
-    def test_falls_back_to_to_list(self, host):
+    def test_falls_back_to_to_list(self, host: MockPromptHost) -> None:
         host._prompt_manager.get_prompt.return_value = None
         mock_pom = Mock(spec=[])
         mock_pom.to_list = Mock(return_value=[{"title": "L"}])
@@ -363,7 +363,7 @@ class TestGetPrompt:
         result = host.get_prompt()
         assert result == [{"title": "L"}]
 
-    def test_falls_back_to_render_returning_json_string(self, host):
+    def test_falls_back_to_render_returning_json_string(self, host: MockPromptHost) -> None:
         host._prompt_manager.get_prompt.return_value = None
         mock_pom = Mock(spec=[])
         mock_pom.render = Mock(return_value='[{"title": "R"}]')
@@ -373,7 +373,7 @@ class TestGetPrompt:
         result = host.get_prompt()
         assert result == [{"title": "R"}]
 
-    def test_render_returning_non_json_string_returns_raw(self, host):
+    def test_render_returning_non_json_string_returns_raw(self, host: MockPromptHost) -> None:
         """When render() returns a non-JSON string, the raw string is still returned.
 
         The inner try/except catches the JSON decode error and passes, but
@@ -389,7 +389,7 @@ class TestGetPrompt:
         result = host.get_prompt()
         assert result == "not json at all {{{"
 
-    def test_render_returning_list_directly(self, host):
+    def test_render_returning_list_directly(self, host: MockPromptHost) -> None:
         host._prompt_manager.get_prompt.return_value = None
         mock_pom = Mock(spec=[])
         mock_pom.render = Mock(return_value=[{"title": "Direct"}])
@@ -399,13 +399,13 @@ class TestGetPrompt:
         result = host.get_prompt()
         assert result == [{"title": "Direct"}]
 
-    def test_falls_back_to_pom_sections_attribute(self, host):
+    def test_falls_back_to_pom_sections_attribute(self, host: MockPromptHost) -> None:
         """When no standard method exists, the code inspects pom.__dict__['_sections']."""
         host._prompt_manager.get_prompt.return_value = None
 
         class BarePom:
-            def __init__(self):
-                self._sections = [{"title": "bare"}]
+            def __init__(self) -> None:
+                self._sections: list[dict[str, str]] = [{"title": "bare"}]
 
         host.pom = BarePom()
         host._use_pom = True
@@ -413,20 +413,20 @@ class TestGetPrompt:
         result = host.get_prompt()
         assert result == [{"title": "bare"}]
 
-    def test_default_prompt_when_pom_not_in_use(self, host):
+    def test_default_prompt_when_pom_not_in_use(self, host: MockPromptHost) -> None:
         host._prompt_manager.get_prompt.return_value = None
         host._use_pom = False
         host.name = "Acme Bot"
         assert host.get_prompt() == "You are Acme Bot, a helpful AI assistant."
 
-    def test_default_prompt_when_pom_is_none(self, host):
+    def test_default_prompt_when_pom_is_none(self, host: MockPromptHost) -> None:
         host._prompt_manager.get_prompt.return_value = None
         host._use_pom = True
         host.pom = None
         host.name = "Helper"
         assert host.get_prompt() == "You are Helper, a helpful AI assistant."
 
-    def test_pom_exception_falls_back_to_default(self, host):
+    def test_pom_exception_falls_back_to_default(self, host: MockPromptHost) -> None:
         """When the POM raises an exception, the mixin logs and returns default."""
         host._prompt_manager.get_prompt.return_value = None
         mock_pom = Mock()
@@ -439,12 +439,12 @@ class TestGetPrompt:
         assert result == "You are CrashBot, a helpful AI assistant."
         host.log.error.assert_called_once()
 
-    def test_pom_with_empty_sections_dict_falls_to_default(self, host):
+    def test_pom_with_empty_sections_dict_falls_to_default(self, host: MockPromptHost) -> None:
         """When __dict__['_sections'] is not a list, fall to default."""
         host._prompt_manager.get_prompt.return_value = None
 
         class WeirdPom:
-            def __init__(self):
+            def __init__(self) -> None:
                 self._sections = "not a list"
 
         host.pom = WeirdPom()
@@ -454,7 +454,7 @@ class TestGetPrompt:
         result = host.get_prompt()
         assert result == "You are Bot, a helpful AI assistant."
 
-    def test_prompt_manager_returns_list(self, host):
+    def test_prompt_manager_returns_list(self, host: MockPromptHost) -> None:
         """When prompt_manager.get_prompt returns a list, it is returned directly."""
         host._prompt_manager.get_prompt.return_value = [{"title": "FromManager"}]
         assert host.get_prompt() == [{"title": "FromManager"}]
@@ -467,11 +467,11 @@ class TestGetPrompt:
 class TestGetPostPrompt:
     """Tests for PromptMixin.get_post_prompt"""
 
-    def test_returns_prompt_manager_result(self, host):
+    def test_returns_prompt_manager_result(self, host: MockPromptHost) -> None:
         host._prompt_manager.get_post_prompt.return_value = "Post text"
         assert host.get_post_prompt() == "Post text"
 
-    def test_returns_none_when_not_set(self, host):
+    def test_returns_none_when_not_set(self, host: MockPromptHost) -> None:
         host._prompt_manager.get_post_prompt.return_value = None
         assert host.get_post_prompt() is None
 
@@ -483,11 +483,11 @@ class TestGetPostPrompt:
 class TestValidatePromptModeExclusivity:
     """Tests for PromptMixin._validate_prompt_mode_exclusivity"""
 
-    def test_delegates_to_prompt_manager(self, host):
+    def test_delegates_to_prompt_manager(self, host: MockPromptHost) -> None:
         host._validate_prompt_mode_exclusivity()
         host._prompt_manager._validate_prompt_mode_exclusivity.assert_called_once()
 
-    def test_propagates_value_error(self, host):
+    def test_propagates_value_error(self, host: MockPromptHost) -> None:
         host._prompt_manager._validate_prompt_mode_exclusivity.side_effect = ValueError("conflict")
         with pytest.raises(ValueError, match="conflict"):
             host._validate_prompt_mode_exclusivity()
@@ -500,13 +500,13 @@ class TestValidatePromptModeExclusivity:
 class TestDefineContextsWithArg:
     """Tests for PromptMixin.define_contexts when called with contexts arg"""
 
-    def test_sets_contexts_and_returns_self(self, host):
-        ctx = {"main": {"steps": []}}
+    def test_sets_contexts_and_returns_self(self, host: MockPromptHost) -> None:
+        ctx: dict[str, Any] = {"main": {"steps": []}}
         result = host.define_contexts(contexts=ctx)
         host._prompt_manager.define_contexts.assert_called_once_with(ctx)
         assert result is host
 
-    def test_with_dict_contexts(self, host):
+    def test_with_dict_contexts(self, host: MockPromptHost) -> None:
         ctx = {"ctx1": {"steps": [{"name": "s1"}]}}
         result = host.define_contexts(contexts=ctx)
         assert result is host
@@ -521,7 +521,7 @@ class TestDefineContextsWithoutArg:
     """Tests for PromptMixin.define_contexts when called without contexts arg"""
 
     @patch("signalwire.core.mixins.prompt_mixin.ContextBuilder")
-    def test_creates_context_builder_on_first_call(self, MockCB, host):
+    def test_creates_context_builder_on_first_call(self, MockCB: Mock, host: MockPromptHost) -> None:
         host._contexts_builder = None
         mock_cb_instance = MockCB.return_value
 
@@ -532,7 +532,7 @@ class TestDefineContextsWithoutArg:
         assert host._contexts_defined is True
 
     @patch("signalwire.core.mixins.prompt_mixin.ContextBuilder")
-    def test_returns_existing_builder_on_subsequent_calls(self, MockCB, host):
+    def test_returns_existing_builder_on_subsequent_calls(self, MockCB: Mock, host: MockPromptHost) -> None:
         existing_builder = Mock()
         host._contexts_builder = existing_builder
 
@@ -550,14 +550,14 @@ class TestContextsProperty:
     """Tests for PromptMixin.contexts property"""
 
     @patch("signalwire.core.mixins.prompt_mixin.ContextBuilder")
-    def test_returns_context_builder(self, MockCB, host):
+    def test_returns_context_builder(self, MockCB: Mock, host: MockPromptHost) -> None:
         host._contexts_builder = None
         mock_cb = MockCB.return_value
 
         result = host.contexts
         assert result is mock_cb
 
-    def test_returns_existing_builder(self, host):
+    def test_returns_existing_builder(self, host: MockPromptHost) -> None:
         existing = Mock()
         host._contexts_builder = existing
 
@@ -573,13 +573,13 @@ class TestProcessPromptSections:
 
     # ----- Skipping conditions -----
 
-    def test_skipped_when_no_prompt_sections_attr(self, host):
+    def test_skipped_when_no_prompt_sections_attr(self, host: MockPromptHost) -> None:
         """No PROMPT_SECTIONS attribute => nothing happens."""
         assert not hasattr(host.__class__, "PROMPT_SECTIONS")
         host._process_prompt_sections()
         host._prompt_manager.prompt_add_section.assert_not_called()
 
-    def test_skipped_when_prompt_sections_is_none(self, host):
+    def test_skipped_when_prompt_sections_is_none(self, host: MockPromptHost) -> None:
         host.__class__.PROMPT_SECTIONS = None
         try:
             host._process_prompt_sections()
@@ -587,7 +587,7 @@ class TestProcessPromptSections:
         finally:
             del host.__class__.PROMPT_SECTIONS
 
-    def test_skipped_when_use_pom_is_false(self, host):
+    def test_skipped_when_use_pom_is_false(self, host: MockPromptHost) -> None:
         host.__class__.PROMPT_SECTIONS = {"Section": "content"}
         host._use_pom = False
         try:
@@ -598,7 +598,7 @@ class TestProcessPromptSections:
 
     # ----- Dict-based PROMPT_SECTIONS -----
 
-    def test_dict_with_string_content(self):
+    def test_dict_with_string_content(self) -> None:
         """Dict mapping title -> plain string adds a body section."""
 
         class StrHost(MockPromptHost):
@@ -606,7 +606,7 @@ class TestProcessPromptSections:
 
         h = StrHost()
         h._process_prompt_sections()
-        h.prompt_add_section = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
         # Re-run after patching to verify the call was made by the real method
         # Better approach: spy on the instance
         pm = Mock()
@@ -614,33 +614,33 @@ class TestProcessPromptSections:
         # Need to call again fresh
         h2 = StrHost(prompt_manager=pm)
         # Spy on the instance method
-        h2.prompt_add_section = Mock()
+        h2.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
         h2._process_prompt_sections()
         h2.prompt_add_section.assert_called_once_with("Greeting", body="Hello there")
 
-    def test_dict_with_list_content(self):
+    def test_dict_with_list_content(self) -> None:
         """Dict mapping title -> list of strings adds bullets."""
 
         class ListHost(MockPromptHost):
-            PROMPT_SECTIONS = {"Rules": ["Rule 1", "Rule 2"]}
+            PROMPT_SECTIONS: dict[str, Any] = {"Rules": ["Rule 1", "Rule 2"]}
 
         h = ListHost()
-        h.prompt_add_section = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         h.prompt_add_section.assert_called_once_with("Rules", bullets=["Rule 1", "Rule 2"])
 
-    def test_dict_with_empty_list_skipped(self):
+    def test_dict_with_empty_list_skipped(self) -> None:
         """Dict mapping title -> empty list does NOT create a section."""
 
         class EmptyListHost(MockPromptHost):
-            PROMPT_SECTIONS = {"Empty": []}
+            PROMPT_SECTIONS: dict[str, Any] = {"Empty": []}
 
         h = EmptyListHost()
-        h.prompt_add_section = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         h.prompt_add_section.assert_not_called()
 
-    def test_dict_with_dict_content_body_only(self):
+    def test_dict_with_dict_content_body_only(self) -> None:
         """Dict mapping title -> dict with body key."""
 
         class DictBodyHost(MockPromptHost):
@@ -649,8 +649,8 @@ class TestProcessPromptSections:
             }
 
         h = DictBodyHost()
-        h.prompt_add_section = Mock()
-        h.prompt_add_subsection = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        h.prompt_add_subsection = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         h.prompt_add_section.assert_called_once_with(
             "Info",
@@ -660,7 +660,7 @@ class TestProcessPromptSections:
             numbered_bullets=False,
         )
 
-    def test_dict_with_dict_content_bullets(self):
+    def test_dict_with_dict_content_bullets(self) -> None:
         """Dict mapping title -> dict with bullets key."""
 
         class DictBulletsHost(MockPromptHost):
@@ -669,8 +669,8 @@ class TestProcessPromptSections:
             }
 
         h = DictBulletsHost()
-        h.prompt_add_section = Mock()
-        h.prompt_add_subsection = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        h.prompt_add_subsection = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         h.prompt_add_section.assert_called_once_with(
             "Tips",
@@ -680,7 +680,7 @@ class TestProcessPromptSections:
             numbered_bullets=False,
         )
 
-    def test_dict_with_dict_content_numbered(self):
+    def test_dict_with_dict_content_numbered(self) -> None:
         """Dict mapping title -> dict with numbered flags."""
 
         class NumHost(MockPromptHost):
@@ -694,8 +694,8 @@ class TestProcessPromptSections:
             }
 
         h = NumHost()
-        h.prompt_add_section = Mock()
-        h.prompt_add_subsection = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        h.prompt_add_subsection = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         h.prompt_add_section.assert_called_once_with(
             "Steps",
@@ -705,20 +705,20 @@ class TestProcessPromptSections:
             numbered_bullets=True,
         )
 
-    def test_dict_with_dict_content_empty_skipped(self):
+    def test_dict_with_dict_content_empty_skipped(self) -> None:
         """Dict -> dict with no body, no bullets, no subsections => section is skipped."""
 
         class EmptyDictHost(MockPromptHost):
-            PROMPT_SECTIONS = {
+            PROMPT_SECTIONS: dict[str, Any] = {
                 "Nothing": {}
             }
 
         h = EmptyDictHost()
-        h.prompt_add_section = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         h.prompt_add_section.assert_not_called()
 
-    def test_dict_with_subsections(self):
+    def test_dict_with_subsections(self) -> None:
         """Dict -> dict containing subsections list."""
 
         class SubHost(MockPromptHost):
@@ -733,8 +733,8 @@ class TestProcessPromptSections:
             }
 
         h = SubHost()
-        h.prompt_add_section = Mock()
-        h.prompt_add_subsection = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        h.prompt_add_subsection = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
 
         h.prompt_add_section.assert_called_once_with(
@@ -752,7 +752,7 @@ class TestProcessPromptSections:
             "Parent", "Child2", body="", bullets=["b1"],
         )
 
-    def test_dict_subsection_without_title_skipped(self):
+    def test_dict_subsection_without_title_skipped(self) -> None:
         """Subsections without a 'title' key are skipped."""
 
         class NoTitleSubHost(MockPromptHost):
@@ -766,12 +766,12 @@ class TestProcessPromptSections:
             }
 
         h = NoTitleSubHost()
-        h.prompt_add_section = Mock()
-        h.prompt_add_subsection = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        h.prompt_add_subsection = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         h.prompt_add_subsection.assert_not_called()
 
-    def test_dict_subsection_empty_body_and_bullets_skipped(self):
+    def test_dict_subsection_empty_body_and_bullets_skipped(self) -> None:
         """Subsections with empty body and empty bullets are skipped."""
 
         class EmptySubHost(MockPromptHost):
@@ -785,14 +785,14 @@ class TestProcessPromptSections:
             }
 
         h = EmptySubHost()
-        h.prompt_add_section = Mock()
-        h.prompt_add_subsection = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        h.prompt_add_subsection = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         h.prompt_add_subsection.assert_not_called()
 
     # ----- List-based PROMPT_SECTIONS -----
 
-    def test_list_sections_with_pom(self):
+    def test_list_sections_with_pom(self) -> None:
         """List-based PROMPT_SECTIONS processed when POM is available."""
         mock_pom = Mock()
 
@@ -803,8 +803,8 @@ class TestProcessPromptSections:
             ]
 
         h = ListSectionHost(pom=mock_pom)
-        h.prompt_add_section = Mock()
-        h.prompt_add_subsection = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        h.prompt_add_subsection = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
 
         assert h.prompt_add_section.call_count == 2
@@ -815,7 +815,7 @@ class TestProcessPromptSections:
             "Section B", body="", bullets=["b1", "b2"], numbered=False, numbered_bullets=False,
         )
 
-    def test_list_sections_without_pom_does_nothing(self):
+    def test_list_sections_without_pom_does_nothing(self) -> None:
         """List-based PROMPT_SECTIONS skipped when pom is None."""
 
         class ListNoPomHost(MockPromptHost):
@@ -824,11 +824,11 @@ class TestProcessPromptSections:
             ]
 
         h = ListNoPomHost(pom=None)
-        h.prompt_add_section = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         h.prompt_add_section.assert_not_called()
 
-    def test_list_section_without_title_skipped(self):
+    def test_list_section_without_title_skipped(self) -> None:
         """List entries without 'title' are silently skipped."""
         mock_pom = Mock()
 
@@ -838,11 +838,11 @@ class TestProcessPromptSections:
             ]
 
         h = NoTitleListHost(pom=mock_pom)
-        h.prompt_add_section = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         h.prompt_add_section.assert_not_called()
 
-    def test_list_section_empty_body_and_no_bullets_skipped(self):
+    def test_list_section_empty_body_and_no_bullets_skipped(self) -> None:
         """List section with empty body and no bullets (and no subsections) is skipped."""
         mock_pom = Mock()
 
@@ -852,11 +852,11 @@ class TestProcessPromptSections:
             ]
 
         h = EmptyListSectionHost(pom=mock_pom)
-        h.prompt_add_section = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         h.prompt_add_section.assert_not_called()
 
-    def test_list_section_with_subsections(self):
+    def test_list_section_with_subsections(self) -> None:
         """List-based section with subsections."""
         mock_pom = Mock()
 
@@ -873,14 +873,14 @@ class TestProcessPromptSections:
             ]
 
         h = ListSubHost(pom=mock_pom)
-        h.prompt_add_section = Mock()
-        h.prompt_add_subsection = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        h.prompt_add_subsection = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
 
         h.prompt_add_section.assert_called_once()
         assert h.prompt_add_subsection.call_count == 2
 
-    def test_list_section_subsection_without_title_skipped(self):
+    def test_list_section_subsection_without_title_skipped(self) -> None:
         """Subsections in list mode without title are skipped."""
         mock_pom = Mock()
 
@@ -896,12 +896,12 @@ class TestProcessPromptSections:
             ]
 
         h = ListSubNoTitleHost(pom=mock_pom)
-        h.prompt_add_section = Mock()
-        h.prompt_add_subsection = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        h.prompt_add_subsection = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         h.prompt_add_subsection.assert_not_called()
 
-    def test_list_section_subsection_empty_content_skipped(self):
+    def test_list_section_subsection_empty_content_skipped(self) -> None:
         """Subsections in list mode with empty body and bullets are skipped."""
         mock_pom = Mock()
 
@@ -917,12 +917,12 @@ class TestProcessPromptSections:
             ]
 
         h = ListSubEmptyHost(pom=mock_pom)
-        h.prompt_add_section = Mock()
-        h.prompt_add_subsection = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        h.prompt_add_subsection = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         h.prompt_add_subsection.assert_not_called()
 
-    def test_list_section_with_numbered_flags(self):
+    def test_list_section_with_numbered_flags(self) -> None:
         """List-based sections pass numbered flags through."""
         mock_pom = Mock()
 
@@ -937,8 +937,8 @@ class TestProcessPromptSections:
             ]
 
         h = NumListHost(pom=mock_pom)
-        h.prompt_add_section = Mock()
-        h.prompt_add_subsection = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        h.prompt_add_subsection = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         h.prompt_add_section.assert_called_once_with(
             "Steps",
@@ -950,7 +950,7 @@ class TestProcessPromptSections:
 
     # ----- Multiple sections in dict -----
 
-    def test_dict_multiple_sections(self):
+    def test_dict_multiple_sections(self) -> None:
         """Multiple sections in a dict are all processed."""
 
         class MultiHost(MockPromptHost):
@@ -961,8 +961,8 @@ class TestProcessPromptSections:
             }
 
         h = MultiHost()
-        h.prompt_add_section = Mock()
-        h.prompt_add_subsection = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        h.prompt_add_subsection = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         assert h.prompt_add_section.call_count == 3
 
@@ -974,11 +974,11 @@ class TestProcessPromptSections:
 class TestMethodChaining:
     """Verify that mixin methods support fluent chaining."""
 
-    def test_chain_set_prompt_text_and_post_prompt(self, host):
+    def test_chain_set_prompt_text_and_post_prompt(self, host: MockPromptHost) -> None:
         result = host.set_prompt_text("main").set_post_prompt("post")
         assert result is host
 
-    def test_chain_add_sections(self, host):
+    def test_chain_add_sections(self, host: MockPromptHost) -> None:
         result = (
             host
             .prompt_add_section("A", body="a")
@@ -988,12 +988,12 @@ class TestMethodChaining:
         )
         assert result is host
 
-    def test_chain_set_prompt_pom(self, host):
+    def test_chain_set_prompt_pom(self, host: MockPromptHost) -> None:
         result = host.set_prompt_pom([]).set_post_prompt("post")
         assert result is host
 
-    def test_chain_define_contexts_with_arg(self, host):
-        result = host.define_contexts(contexts={"c": {}}).set_post_prompt("post")
+    def test_chain_define_contexts_with_arg(self, host: MockPromptHost) -> None:
+        result = host.define_contexts(contexts={"c": {}}).set_post_prompt("post")  # type: ignore[union-attr]  # define_contexts(contexts=...) returns self, not ContextBuilder
         assert result is host
 
 
@@ -1004,14 +1004,14 @@ class TestMethodChaining:
 class TestEdgeCases:
     """Miscellaneous edge-case tests for PromptMixin."""
 
-    def test_get_prompt_default_with_special_chars_in_name(self, host):
+    def test_get_prompt_default_with_special_chars_in_name(self, host: MockPromptHost) -> None:
         host._prompt_manager.get_prompt.return_value = None
         host._use_pom = False
         host.name = "Agent <O'Brien> & Friends"
         expected = "You are Agent <O'Brien> & Friends, a helpful AI assistant."
         assert host.get_prompt() == expected
 
-    def test_prompt_add_section_title_only(self, host):
+    def test_prompt_add_section_title_only(self, host: MockPromptHost) -> None:
         """Adding a section with only a title is valid."""
         result = host.prompt_add_section("Title Only")
         host._prompt_manager.prompt_add_section.assert_called_once_with(
@@ -1024,7 +1024,7 @@ class TestEdgeCases:
         )
         assert result is host
 
-    def test_prompt_add_to_section_no_content(self, host):
+    def test_prompt_add_to_section_no_content(self, host: MockPromptHost) -> None:
         """Calling prompt_add_to_section with no content args still delegates."""
         result = host.prompt_add_to_section("Title")
         host._prompt_manager.prompt_add_to_section.assert_called_once_with(
@@ -1035,7 +1035,7 @@ class TestEdgeCases:
         )
         assert result is host
 
-    def test_prompt_add_subsection_empty_body_and_bullets(self, host):
+    def test_prompt_add_subsection_empty_body_and_bullets(self, host: MockPromptHost) -> None:
         """Subsection with default empty body and no bullets."""
         result = host.prompt_add_subsection("P", "C")
         host._prompt_manager.prompt_add_subsection.assert_called_once_with(
@@ -1046,18 +1046,18 @@ class TestEdgeCases:
         )
         assert result is host
 
-    def test_prompt_manager_raises_on_set_prompt_text(self, host):
+    def test_prompt_manager_raises_on_set_prompt_text(self, host: MockPromptHost) -> None:
         """If the prompt manager raises, the exception propagates."""
         host._prompt_manager.set_prompt_text.side_effect = ValueError("conflict")
         with pytest.raises(ValueError, match="conflict"):
             host.set_prompt_text("oops")
 
-    def test_prompt_manager_raises_on_set_prompt_pom(self, host):
+    def test_prompt_manager_raises_on_set_prompt_pom(self, host: MockPromptHost) -> None:
         host._prompt_manager.set_prompt_pom.side_effect = ValueError("use_pom must be True")
         with pytest.raises(ValueError, match="use_pom must be True"):
             host.set_prompt_pom([{"title": "T"}])
 
-    def test_get_prompt_pom_no_usable_method_no_sections_attr(self, host):
+    def test_get_prompt_pom_no_usable_method_no_sections_attr(self, host: MockPromptHost) -> None:
         """POM object with no known method and no _sections in __dict__ returns default."""
         host._prompt_manager.get_prompt.return_value = None
 
@@ -1072,14 +1072,14 @@ class TestEdgeCases:
         assert result == "You are MinBot, a helpful AI assistant."
 
     @patch("signalwire.core.mixins.prompt_mixin.ContextBuilder")
-    def test_define_contexts_without_arg_sets_contexts_defined(self, MockCB, host):
+    def test_define_contexts_without_arg_sets_contexts_defined(self, MockCB: Mock, host: MockPromptHost) -> None:
         host._contexts_builder = None
         host._contexts_defined = False
         host.define_contexts()
         assert host._contexts_defined is True
 
     @patch("signalwire.core.mixins.prompt_mixin.ContextBuilder")
-    def test_define_contexts_without_arg_does_not_reset_flag(self, MockCB, host):
+    def test_define_contexts_without_arg_does_not_reset_flag(self, MockCB: Mock, host: MockPromptHost) -> None:
         """Calling define_contexts() twice does not reset _contexts_defined."""
         host._contexts_builder = None
         host._contexts_defined = False
@@ -1089,7 +1089,7 @@ class TestEdgeCases:
         host.define_contexts()
         assert host._contexts_defined is True
 
-    def test_process_prompt_sections_dict_subsection_with_body_and_bullets(self):
+    def test_process_prompt_sections_dict_subsection_with_body_and_bullets(self) -> None:
         """Subsection that has both body and bullets is added."""
 
         class BothSubHost(MockPromptHost):
@@ -1103,14 +1103,14 @@ class TestEdgeCases:
             }
 
         h = BothSubHost()
-        h.prompt_add_section = Mock()
-        h.prompt_add_subsection = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        h.prompt_add_subsection = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         h.prompt_add_subsection.assert_called_once_with(
             "Parent", "Sub", body="sub body", bullets=["sb1"],
         )
 
-    def test_process_prompt_sections_list_subsection_with_body_and_bullets(self):
+    def test_process_prompt_sections_list_subsection_with_body_and_bullets(self) -> None:
         """List-mode subsection that has both body and bullets is added."""
         mock_pom = Mock()
 
@@ -1126,14 +1126,14 @@ class TestEdgeCases:
             ]
 
         h = ListBothSubHost(pom=mock_pom)
-        h.prompt_add_section = Mock()
-        h.prompt_add_subsection = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        h.prompt_add_subsection = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         h.prompt_add_subsection.assert_called_once_with(
             "P", "S", body="sb", bullets=["x"],
         )
 
-    def test_process_prompt_sections_dict_with_subsections_key_but_empty_body(self):
+    def test_process_prompt_sections_dict_with_subsections_key_but_empty_body(self) -> None:
         """Section dict has 'subsections' key so it is created even without body."""
 
         class SubOnlyHost(MockPromptHost):
@@ -1146,14 +1146,14 @@ class TestEdgeCases:
             }
 
         h = SubOnlyHost()
-        h.prompt_add_section = Mock()
-        h.prompt_add_subsection = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        h.prompt_add_subsection = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         # Section should be created because 'subsections' key is present
         h.prompt_add_section.assert_called_once()
         h.prompt_add_subsection.assert_called_once()
 
-    def test_process_prompt_sections_list_with_subsections_key_but_empty_body(self):
+    def test_process_prompt_sections_list_with_subsections_key_but_empty_body(self) -> None:
         """List mode: section has 'subsections' key so it is created even without body."""
         mock_pom = Mock()
 
@@ -1168,8 +1168,8 @@ class TestEdgeCases:
             ]
 
         h = ListSubOnlyHost(pom=mock_pom)
-        h.prompt_add_section = Mock()
-        h.prompt_add_subsection = Mock()
+        h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
+        h.prompt_add_subsection = Mock()  # type: ignore[method-assign]  # mock
         h._process_prompt_sections()
         h.prompt_add_section.assert_called_once()
         h.prompt_add_subsection.assert_called_once()

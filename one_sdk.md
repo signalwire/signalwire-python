@@ -187,6 +187,7 @@ The One SDK doc says webhook mode should "translate handlers into SWML documents
 1. **Rename `SwaigFunctionResult` to `FunctionResult`** in Python (the other 6 already use this name). Keep `SwaigFunctionResult` as an alias for backwards compat.
 
 2. **Add a unified `SignalWire` entry point** as a convenience wrapper in each SDK:
+   <!-- snippet: no-compile indented-illustration (proposed API, nested under a list item) -->
    ```python
    sw = SignalWire(project="...", token="...", space="...")
    sw.agents   # returns AgentBase-like interface

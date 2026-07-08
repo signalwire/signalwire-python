@@ -388,7 +388,9 @@ class FunctionResult:
         """
         return self.add_action("change_context", context_name)
 
-    def execute_swml(self, swml_content, transfer: bool = False) -> "FunctionResult":
+    def execute_swml(
+        self, swml_content: "str | dict[str, Any] | Any", transfer: bool = False
+    ) -> "FunctionResult":
         """
         Execute SWML content with optional transfer behavior.
 

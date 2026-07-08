@@ -226,8 +226,25 @@ swaig-test agent.py --simulate-serverless cgi --cgi-host example.com --dump-swml
 
 def main() -> int:
     """Main entry point for the CLI tool"""
-    # Set up suppression early if we're dumping SWML
-    if "--dump-swml" in sys.argv:
+    # Detect --parse-only / --dry-run FIRST and strip it from argv.
+    # It is detected before everything else because:
+    #   1. --dump-swml installs a global stdout suppressor below; parse-only must
+    #      still be able to print its one "parse OK" line, so we skip that setup.
+    #   2. The --exec split further down consumes every token after the function
+    #      name as a function argument, so a --parse-only trailing an --exec
+    #      invocation (the position the DOC-CLI gate appends it) would otherwise be
+    #      swallowed and never reach argparse. Stripping it here makes the flag
+    #      position-independent — it works whether it precedes or follows --exec.
+    # It is still declared as a normal argparse argument below so it appears in
+    # --help and validates like any flag.
+    parse_only_early = False
+    if "--parse-only" in sys.argv or "--dry-run" in sys.argv:
+        parse_only_early = True
+        sys.argv = [a for a in sys.argv if a not in ("--parse-only", "--dry-run")]
+
+    # Set up suppression early if we're dumping SWML (but never under --parse-only,
+    # which must be free to print its result line).
+    if "--dump-swml" in sys.argv and not parse_only_early:
         setup_output_suppression()
 
     # Check for help sections early
@@ -410,6 +427,18 @@ def main() -> int:
         "--help-examples", action="store_true", help="Show comprehensive usage examples"
     )
 
+    # Parse-only / dry-run: validate the invocation's arguments and exit WITHOUT
+    # loading the agent or hitting the network. Used by the DOC-CLI gate to prove a
+    # documented invocation's arguments are well-formed. Canonical contract mirrored
+    # by every port -- see the "--parse-only / --dry-run" section of docs/cli_guide.md.
+    parser.add_argument(
+        "--parse-only",
+        "--dry-run",
+        action="store_true",
+        dest="parse_only",
+        help="Validate arguments and exit without running the agent (prints 'parse OK')",
+    )
+
     args = parser.parse_args()
 
     # Restore original sys.argv
@@ -433,6 +462,16 @@ def main() -> int:
     ):
         # If no tool_name and no special flags, default to listing tools
         args.list_tools = True
+
+    # ===== PARSE-ONLY / DRY-RUN =====
+    # All argparse parsing + cross-flag validation has succeeded by this point.
+    # Report success and exit WITHOUT loading the agent, touching the filesystem,
+    # or hitting the network. (parser.parse_args()/parser.error() already exited
+    # non-zero on any bad flag or invalid combination above.) The flag is detected
+    # both early (stripped from argv, position-independent) and via argparse.
+    if parse_only_early or args.parse_only:
+        print("parse OK")
+        return 0
 
     # ===== SERVERLESS SIMULATION SETUP =====
     serverless_simulator = None
