@@ -170,7 +170,7 @@ swaig-test fred.py --dump-swml --verbose
 swaig-test fred.py --dump-swml --call-type sip --call-direction inbound
 
 # Custom caller info
-swaig-test fred.py --dump-swml --call-from "+15551234567" --call-to "+15559876543"
+swaig-test fred.py --dump-swml --from-number "+15551234567" --to-extension "+15559876543"
 ```
 
 #### Test Serverless Deployment

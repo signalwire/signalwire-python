@@ -2863,12 +2863,12 @@ Verify webhook URLs are generated correctly:
 ```bash
 # Check Lambda webhook URL
 swaig-test examples/my_agent.py --simulate-serverless lambda \
-  --dump-swml --format-json | jq '.sections.main[1].ai.SWAIG.defaults.web_hook_url'
+  --dump-swml --raw | jq '.sections.main[1].ai.SWAIG.defaults.web_hook_url'
 
 # Check CGI webhook URL
 swaig-test examples/my_agent.py --simulate-serverless cgi \
   --cgi-host my-production-server.com \
-  --dump-swml --format-json | jq '.sections.main[1].ai.SWAIG.defaults.web_hook_url'
+  --dump-swml --raw | jq '.sections.main[1].ai.SWAIG.defaults.web_hook_url'
 ```
 
 ### Testing Best Practices

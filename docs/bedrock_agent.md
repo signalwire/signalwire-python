@@ -221,7 +221,7 @@ swaig-test examples/bedrock_with_skills.py --list
 swaig-test examples/bedrock_with_skills.py --dump
 
 # Test a function
-swaig-test examples/bedrock_with_skills.py --function calculate_sum --args '{"a": 5, "b": 3}'
+swaig-test examples/bedrock_with_skills.py --exec calculate_sum
 ```
 
 ## Complete Example
