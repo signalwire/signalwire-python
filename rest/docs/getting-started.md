@@ -4,7 +4,7 @@ The REST client provides synchronous access to all SignalWire APIs using standar
 
 ## Installation
 
-The REST client is included in the `signalwire-sdk` package:
+The REST client is included in the `signalwire-agents` package:
 
 ```bash
 pip install signalwire-sdk

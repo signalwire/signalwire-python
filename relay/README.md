@@ -5,7 +5,7 @@ Real-time call control and messaging over WebSocket using Python's asyncio. The 
 ## Quick Start
 
 ```python
-from signalwire_agents.relay import RelayClient
+from signalwire.relay import RelayClient
 
 client = RelayClient(
     project="your-project-id",
@@ -62,7 +62,7 @@ client.run()
 ## Module Structure
 
 ```
-signalwire_agents/relay/
+signalwire/relay/
     __init__.py      # Public exports
     client.py        # RelayClient -- WebSocket connection, auth, event dispatch
     call.py          # Call object -- all calling methods and Action classes

@@ -5,9 +5,9 @@ Synchronous REST client for managing SignalWire resources, controlling live call
 ## Quick Start
 
 ```python
-from signalwire_agents.rest import SignalWireClient
+from signalwire.rest import RestClient
 
-client = SignalWireClient(
+client = RestClient(
     project="your-project-id",
     token="your-api-token",
     host="example.signalwire.com",
@@ -32,7 +32,7 @@ client.calling.dial(
 
 ## Features
 
-- Single `SignalWireClient` with namespaced sub-objects for every API
+- Single `RestClient` with namespaced sub-objects for every API
 - All 37 calling commands: dial, play, record, collect, detect, tap, stream, AI, transcribe, and more
 - Full Fabric API: 13 resource types with CRUD + addresses, tokens, and generic resources
 - Datasphere: document management and semantic search
@@ -44,7 +44,7 @@ client.calling.dial(
 ## Documentation
 
 - [Getting Started](docs/getting-started.md) -- installation, configuration, first API call
-- [Client Reference](docs/client-reference.md) -- SignalWireClient constructor, namespaces, error handling
+- [Client Reference](docs/client-reference.md) -- RestClient constructor, namespaces, error handling
 - [Fabric Resources](docs/fabric.md) -- managing AI agents, SWML scripts, subscribers, call flows, and more
 - [Calling Commands](docs/calling.md) -- REST-based call control (dial, play, record, collect, AI, etc.)
 - [All Namespaces](docs/namespaces.md) -- phone numbers, video, datasphere, logs, registry, and more
@@ -66,9 +66,9 @@ client.calling.dial(
 ## Module Structure
 
 ```
-signalwire_agents/rest/
-    __init__.py          # Public exports: SignalWireClient, SignalWireRestError
-    client.py            # SignalWireClient -- namespace wiring, env var resolution
+signalwire/rest/
+    __init__.py          # Public exports: RestClient, SignalWireRestError
+    client.py            # RestClient -- namespace wiring, env var resolution
     _base.py             # HttpClient, BaseResource, CrudResource, CrudWithAddresses
     _pagination.py       # PaginatedIterator for list endpoints
     namespaces/

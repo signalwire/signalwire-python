@@ -4,7 +4,7 @@ The RELAY client connects to SignalWire via WebSocket and gives you real-time, i
 
 ## Installation
 
-The RELAY client is included in the `signalwire-sdk` package:
+The RELAY client is included in the `signalwire-agents` package:
 
 ```bash
 pip install signalwire-sdk
