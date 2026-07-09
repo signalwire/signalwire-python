@@ -19,6 +19,25 @@ MAX_CONTEXTS = 50
 MAX_STEPS_PER_CONTEXT = 100
 
 
+#: Valid values for a step's or context's ``history`` visibility mode.
+#:
+#: ``keep``     nothing is cleared — every prior step's instructions *and*
+#:              dialogue stay in the model's context.
+#: ``default``  prior step instructions are hidden; the dialogue is kept.
+#: ``hide``     prior instructions hidden **and** the prior dialogue pulled
+#:              out of the model's context. The only way back in is an
+#:              explicit ``${step_history.*}`` reference in the new prompt.
+HISTORY_MODES = ("keep", "default", "hide")
+
+
+def _validate_history(mode: str) -> str:
+    if mode not in HISTORY_MODES:
+        raise ValueError(
+            f"history must be one of {HISTORY_MODES}, got {mode!r}"
+        )
+    return mode
+
+
 class GatherQuestion:
     """Represents a single question in a gather_info configuration"""
 
@@ -30,6 +49,7 @@ class GatherQuestion:
         confirm: bool = False,
         prompt: str | None = None,
         functions: list[str] | None = None,
+        isolated: bool | None = None,
     ):
         self.key = key
         self.question = question
@@ -37,6 +57,8 @@ class GatherQuestion:
         self.confirm = confirm
         self.prompt = prompt
         self.functions = functions
+        # Tri-state: None means "inherit the gather_info default"
+        self.isolated = isolated
 
     def to_dict(self) -> dict[str, Any]:
         """Convert question to dictionary for SWML generation"""
@@ -49,6 +71,9 @@ class GatherQuestion:
             d["prompt"] = self.prompt
         if self.functions:
             d["functions"] = self.functions
+        # Emitted even when False, so it can override an isolated gather
+        if self.isolated is not None:
+            d["isolated"] = self.isolated
         return d
 
 
@@ -65,11 +90,13 @@ class GatherInfo:
         output_key: str | None = None,
         completion_action: str | None = None,
         prompt: str | None = None,
+        isolated: bool = False,
     ):
         self._questions: list[GatherQuestion] = []
         self._output_key = output_key
         self._completion_action = completion_action
         self._prompt = prompt
+        self._isolated = isolated
 
     def add_question(self, key: str, question: str, **kwargs: Any) -> "GatherInfo":
         """
@@ -78,7 +105,7 @@ class GatherInfo:
         Args:
             key: Key name for storing the answer in global_data
             question: The question text to ask
-            **kwargs: Optional fields - type, confirm, prompt, functions
+            **kwargs: Optional fields - type, confirm, prompt, functions, isolated
 
         Returns:
             Self for method chaining
@@ -90,6 +117,7 @@ class GatherInfo:
             confirm=kwargs.get("confirm", False),
             prompt=kwargs.get("prompt"),
             functions=kwargs.get("functions"),
+            isolated=kwargs.get("isolated"),
         )
         self._questions.append(q)
         return self
@@ -105,6 +133,8 @@ class GatherInfo:
             d["output_key"] = self._output_key
         if self._completion_action:
             d["completion_action"] = self._completion_action
+        if self._isolated:
+            d["isolated"] = True
         return d
 
 
@@ -129,6 +159,9 @@ class Step:
         self._end: bool = False
         self._skip_user_turn: bool = False
         self._skip_to_next_step: bool = False
+
+        # Visibility of everything that came before this step
+        self._history: str | None = None
 
         # Reset object for context switching from steps
         self._reset_system_prompt: str | None = None
@@ -339,11 +372,46 @@ class Step:
         self._skip_to_next_step = skip
         return self
 
+    def set_history(self, history: str) -> "Step":
+        """
+        Control what the model still sees when this step is entered.
+
+        The mode applies at the moment this step is entered and governs
+        everything that came before it — including the turn that triggered the
+        transition. It does not affect this step's own turns, which accumulate
+        fresh. Nothing is deleted: the call log keeps every message.
+
+        Args:
+            history: One of:
+                - "keep": clear nothing. Every prior step's instructions and
+                  dialogue stay visible to the model.
+                - "default": hide the prior step *instructions*, keep the
+                  user/assistant dialogue. This is the default when unset.
+                - "hide": hide the prior instructions *and* pull the prior
+                  dialogue out of the model's context. Pair it with a
+                  ``${step_history.*}`` reference in this step's text to choose
+                  exactly what comes back.
+
+        Raises:
+            ValueError: if history is not one of the three modes.
+
+        Returns:
+            Self for method chaining
+
+        Example:
+            >>> step.set_history("hide").set_text(
+            ...     "Previously: ${step_history.prev.summary}\\n\\nNow help them."
+            ... )
+        """
+        self._history = _validate_history(history)
+        return self
+
     def set_gather_info(
         self,
         output_key: str | None = None,
         completion_action: str | None = None,
         prompt: str | None = None,
+        isolated: bool = False,
     ) -> "Step":
         """
         Enable info gathering for this step. Questions are presented one at a time
@@ -362,12 +430,20 @@ class Step:
                 and named steps must exist in the same context.
             prompt: Preamble text injected once when entering the gather step, giving
                 the model personality/context for why it is asking these questions
+            isolated: Default for every question in this gather. When True, a
+                question is asked with the sibling Q&A hidden from the model, so
+                it must ask rather than derive the answer from an earlier one.
+                A question's own ``isolated`` overrides this. The hidden turns
+                remain in the call log.
 
         Returns:
             Self for method chaining
         """
         self._gather_info = GatherInfo(
-            output_key=output_key, completion_action=completion_action, prompt=prompt
+            output_key=output_key,
+            completion_action=completion_action,
+            prompt=prompt,
+            isolated=isolated,
         )
         return self
 
@@ -379,6 +455,7 @@ class Step:
         confirm: bool = False,
         prompt: str | None = None,
         functions: list[str] | None = None,
+        isolated: bool | None = None,
     ) -> "Step":
         """
         Add a question to this step's gather_info configuration.
@@ -412,6 +489,10 @@ class Step:
             functions: Names of functions to unlock for this question only.
                 These are activated on top of `gather_submit`. All other step
                 functions remain locked out.
+            isolated: Override the gather's ``isolated`` default for this one
+                question. True hides the sibling Q&A while this question is
+                asked; False keeps it visible even in an isolated gather.
+                None (default) inherits the gather's setting.
 
         Returns:
             Self for method chaining.
@@ -425,6 +506,7 @@ class Step:
             confirm=confirm,
             prompt=prompt,
             functions=functions,
+            isolated=isolated,
         )
         return self
 
@@ -538,6 +620,9 @@ class Step:
         if self._skip_to_next_step:
             step_dict["skip_to_next_step"] = True
 
+        if self._history is not None:
+            step_dict["history"] = self._history
+
         # Add reset object if any reset parameters are set
         reset_obj: dict[str, Any] = {}
         if self._reset_system_prompt is not None:
@@ -617,6 +702,9 @@ class Context:
         # Context fillers
         self._enter_fillers: dict[str, list[str]] | None = None
         self._exit_fillers: dict[str, list[str]] | None = None
+
+        # Default visibility mode for the steps in this context
+        self._history: str | None = None
 
     def add_step(
         self,
@@ -844,6 +932,25 @@ class Context:
             Self for method chaining
         """
         self._user_prompt = user_prompt
+        return self
+
+    def set_history(self, history: str) -> "Context":
+        """
+        Set the default visibility mode for every step in this context.
+
+        A step's own ``set_history()`` overrides this. See ``Step.set_history``
+        for what each mode does.
+
+        Args:
+            history: One of "keep", "default", or "hide".
+
+        Raises:
+            ValueError: if history is not one of the three modes.
+
+        Returns:
+            Self for method chaining
+        """
+        self._history = _validate_history(history)
         return self
 
     def set_isolated(self, isolated: bool) -> "Context":
@@ -1126,6 +1233,9 @@ class Context:
 
         if self._exit_fillers is not None:
             context_dict["exit_fillers"] = self._exit_fillers
+
+        if self._history is not None:
+            context_dict["history"] = self._history
 
         return context_dict
 
