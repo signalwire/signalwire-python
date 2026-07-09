@@ -21,7 +21,7 @@ Each question object:
 ## Single Instance Usage
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 agent = AgentBase(name="intake", route="/intake")
 

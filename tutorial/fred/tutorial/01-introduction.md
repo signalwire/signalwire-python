@@ -43,7 +43,7 @@ User calls → SignalWire Platform → Your Agent → SWML Response → AI Conve
 The SignalWire SDK provides a clean abstraction layer:
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class MyAgent(AgentBase):
     def __init__(self):

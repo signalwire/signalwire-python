@@ -1,5 +1,12 @@
 # SignalWire SDK: Why the SDK, Not Raw SWML
 
+<!-- snippet-setup: shared imports the examples on this page assume -->
+```python
+from signalwire import AgentBase, AgentServer, DataMap, FunctionResult, SwaigFunctionResult, SWMLService
+from signalwire.core.skill_base import SkillBase
+```
+
+
 ## The Problem with Raw SWML
 
 SWML (SignalWire Markup Language) is a JSON document format that defines how an agent behaves during a call -- 30+ verbs, an AI verb with dozens of parameters, SWAIG (SignalWire AI Gateway) function definitions with JSON Schema, post-prompt URLs, webhook authentication, language arrays, pronunciation rules, hints, global data, contexts, steps, gather configs. Writing it by hand means constructing deeply nested JSON, manually building authenticated webhook URLs, hand-coding parameter schemas, and deploying separate webhook servers for your tools. Every agent becomes a bespoke JSON engineering project.
@@ -26,6 +33,7 @@ Call ends → SignalWire POSTs analytics to agent's /post_prompt/ endpoint
 
 The agent auto-detects its own public URL -- including behind ngrok, load balancers, API Gateway, or any reverse proxy (via `X-Forwarded-Host`, `Forwarded` header, or `SWML_PROXY_URL_BASE` env var). It embeds Basic Auth credentials directly into the webhook URLs. It generates per-call security tokens for each function. The developer writes none of this:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import AgentBase
 
@@ -257,6 +265,7 @@ The SDK's contexts/steps/function restrictions are the primitives that make PGI 
 
 ## Deployment: One `run()` Call
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 agent = MyAgent()
 agent.run()
@@ -284,6 +293,7 @@ For standalone mode, the SDK provides:
 
 ## Multi-Agent Hosting
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import AgentServer
 

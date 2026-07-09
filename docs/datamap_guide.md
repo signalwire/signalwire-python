@@ -2,6 +2,12 @@
 
 A comprehensive guide to understanding, implementing, and testing DataMap configurations in SignalWire AI Agents from the SWML (SignalWire Markup Language) perspective.
 
+<!-- snippet-setup: shared imports the guide examples assume -->
+```python
+from signalwire import DataMap, FunctionResult, SwaigFunctionResult
+from signalwire.core.data_map import create_expression_tool
+```
+
 ## Table of Contents
 
 ### 1. Introduction to DataMap in SWML
@@ -2317,10 +2323,13 @@ from signalwire.core.data_map import create_expression_tool
 
 control = create_expression_tool(
     name='media_control',
+    # Maps a test value to a (regex, FunctionResult) tuple. The test value is
+    # matched against the pattern; on a match the FunctionResult is emitted.
     patterns={
-        r'start|play|begin': FunctionResult().add_action('start', True),
-        r'stop|end|pause': FunctionResult().add_action('stop', True),
-        r'next|skip': FunctionResult().add_action('next', True)
+        '${args.command}': (
+            r'start|play|begin',
+            FunctionResult().add_action('start', True),
+        ),
     },
     parameters={
         'command': {'type': 'string', 'description': 'Control command'}

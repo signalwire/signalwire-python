@@ -1,11 +1,19 @@
 # SignalWire Agents Skills System
 
+<!-- snippet-setup: shared imports the examples on this page assume -->
+```python
+from signalwire import AgentBase, AgentServer, DataMap, FunctionResult, SwaigFunctionResult, SWMLService
+from signalwire.core.skill_base import SkillBase
+```
+
+
 The SignalWire Agents SDK now includes a modular skills system that lets you add capabilities to your agents with simple one-liner calls and configurable parameters.
 
 ## What's New
 
 Instead of manually implementing every agent capability, you can now:
 
+<!-- snippet: no-run skill setup needs an external backend/API key (e.g. web_search, mcp_gateway) -->
 ```python
 from signalwire import AgentBase
 
@@ -220,6 +228,7 @@ agent.add_skill("swml_transfer", {
 ## Usage Examples
 
 ### Basic Usage
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import AgentBase
 
@@ -234,6 +243,7 @@ agent.run()
 ```
 
 ### Skills with Custom Parameters
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import AgentBase
 
@@ -287,6 +297,7 @@ for skill in skill_registry.list_skills():
 ```
 
 ### Runtime Skill Management
+<!-- snippet: no-run skill setup needs an external backend/API key (e.g. web_search, mcp_gateway) -->
 ```python
 agent = AgentBase("Dynamic Agent")
 
@@ -444,6 +455,7 @@ class WebSearchAgent(AgentBase):
 ```
 
 **After (skills system with parameters):**
+<!-- snippet: no-run skill setup needs an external backend/API key (e.g. web_search, mcp_gateway) -->
 ```python
 # Simple one-liner with custom configuration
 agent = AgentBase("WebSearchAgent")

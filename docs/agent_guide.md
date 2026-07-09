@@ -1,5 +1,12 @@
 # SignalWire AI Agent Guide
 
+<!-- snippet-setup: shared imports the examples on this page assume -->
+```python
+from signalwire import AgentBase, AgentServer, DataMap, FunctionResult, SwaigFunctionResult, SWMLService
+from signalwire.core.skill_base import SkillBase
+```
+
+
 ## Table of Contents
 - [Introduction](#introduction)
 - [Architecture Overview](#architecture-overview)
@@ -100,6 +107,7 @@ The SignalWire AI Agent SDK provides a `run()` method that automatically detects
 
 ### Deployment with `run()`
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 def main():
     agent = MyAgent()
@@ -620,6 +628,7 @@ def get_public_information(self, args, raw_data):
 
 The default token expiration is 60 minutes (3600 seconds), but you can configure this when initializing your agent:
 
+<!-- snippet: no-run illustrative fragment (references `MyAgent` established in the surrounding prose) -->
 ```python
 agent = MyAgent(
     name="my_agent",
@@ -970,6 +979,7 @@ except ValueError as e:
 You can create your own skills by extending the `SkillBase` class:
 
 ```python
+from typing import List, Dict, Any
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
 
@@ -1861,6 +1871,7 @@ The debug events system provides real-time visibility into what the AI module is
 
 #### Basic Setup
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 agent = AgentBase("my_agent")
 agent.enable_debug_events()  # That's it — events are auto-logged
@@ -1876,6 +1887,7 @@ With just `enable_debug_events()`, every debug event is logged through the agent
 
 To act on specific events (alerting, metrics, custom logging), register a handler:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 agent = AgentBase("my_agent")
 agent.enable_debug_events()
@@ -2071,6 +2083,7 @@ When `auto_map=True`, the agent automatically registers SIP usernames based on:
 
 For multi-agent setups, centralized routing is more efficient:
 
+<!-- snippet: no-run illustrative fragment (references `registration_agent` established in the surrounding prose) -->
 ```python
 # Create an AgentServer
 server = AgentServer(host="0.0.0.0", port=3000)
@@ -2336,17 +2349,16 @@ The SDK includes several built-in prefab agents:
 
 Collects structured information from users:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire.prefabs import InfoGathererAgent
 
 agent = InfoGathererAgent(
-    fields=[
-        {"name": "full_name", "prompt": "What is your full name?"},
-        {"name": "email", "prompt": "What is your email address?", 
-         "validation": r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"},
-        {"name": "reason", "prompt": "How can I help you today?"}
+    questions=[
+        {"key_name": "full_name", "question_text": "What is your full name?"},
+        {"key_name": "email", "question_text": "What is your email address?", "confirm": True},
+        {"key_name": "reason", "question_text": "How can I help you today?"}
     ],
-    confirmation_template="Thanks {full_name}, I'll help you with {reason}. I'll send a confirmation to {email}.",
     name="info-gatherer",
     route="/info-gatherer"
 )
@@ -2358,13 +2370,16 @@ agent.serve(host="0.0.0.0", port=8000)
 
 Answers questions based on a knowledge base:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire.prefabs import FAQBotAgent
 
 agent = FAQBotAgent(
-    knowledge_base_path="./docs",
-    personality="I'm a product documentation assistant.",
-    citation_style="inline",
+    faqs=[
+        {"question": "What are your hours?", "answer": "We're open 9am-5pm Monday through Friday."},
+        {"question": "How do I reset my password?", "answer": "Visit the login page and click 'Forgot password'."}
+    ],
+    persona="I'm a product documentation assistant.",
     name="knowledge-base",
     route="/knowledge-base"
 )
@@ -2376,21 +2391,18 @@ agent.serve(host="0.0.0.0", port=8000)
 
 Routes users to specialized agents:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire.prefabs import ConciergeAgent
 
 agent = ConciergeAgent(
-    routing_map={
-        "technical_support": {
-            "url": "http://tech-support-agent:8001",
-            "criteria": ["error", "broken", "not working"]
-        },
-        "sales": {
-            "url": "http://sales-agent:8002",
-            "criteria": ["pricing", "purchase", "subscribe"]
-        }
+    venue_name="Grand Plaza Hotel",
+    services=["room service", "concierge desk", "valet parking"],
+    amenities={
+        "pool": {"hours": "6am-10pm", "location": "rooftop"},
+        "gym": {"hours": "24/7", "location": "2nd floor"}
     },
-    greeting="Welcome to SignalWire. How can I help you today?",
+    welcome_message="Welcome to the Grand Plaza. How can I help you today?",
     name="concierge",
     route="/concierge"
 )
@@ -2402,6 +2414,7 @@ agent.serve(host="0.0.0.0", port=8000)
 
 Conducts structured surveys with different question types:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire.prefabs import SurveyAgent
 
@@ -2422,7 +2435,7 @@ agent = SurveyAgent(
         {
             "id": "feedback",
             "text": "Do you have any specific feedback about how we can improve?",
-            "type": "text"
+            "type": "open_ended"
         }
     ],
     name="satisfaction-survey",
@@ -2436,6 +2449,7 @@ agent.serve(host="0.0.0.0", port=8000)
 
 Handles call routing and department transfers:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire.prefabs import ReceptionistAgent
 
@@ -2556,6 +2570,7 @@ class CustomerSupportAgent(AgentBase):
 
 #### Using the Custom Prefab
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 # Create an instance of the custom prefab
 support_agent = CustomerSupportAgent(
@@ -2902,6 +2917,7 @@ For more detailed testing documentation, see the [CLI Guide](cli_guide.md).
 
 ### Simple Question-Answering Agent
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import AgentBase
 from signalwire.core.function_result import FunctionResult
@@ -2947,6 +2963,7 @@ if __name__ == "__main__":
 
 ### Multi-Language Customer Service Agent
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 class CustomerServiceAgent(AgentBase):
     def __init__(self):

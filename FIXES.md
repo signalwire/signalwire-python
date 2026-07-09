@@ -137,6 +137,7 @@ if not str(full_path).startswith(str(static_dir) + os.sep) and full_path != stat
 
 **Fix:** Applied `html.escape()` to all user-controlled values rendered into HTML: file names in links and the URL path in the page title and heading.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (XSS)
 items.append(f'<li>📁 <a href="{item.name}/">{item.name}/</a></li>')
@@ -158,6 +159,7 @@ f"<title>Directory listing for {__import__('html').escape(url_path)}</title>"
 
 **Fix:** Replaced all f-string interpolation with parameterized queries using `?` placeholders.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (SQL injection)
 conditions.append(f"metadata_text LIKE '%{term}%'")
@@ -179,6 +181,7 @@ cursor.execute(query_sql, params)
 
 **Fix:** Added regex sanitization to strip all characters except alphanumeric and underscore.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before
 table_name = f"chunks_{collection_name}"
@@ -318,6 +321,7 @@ password = self.basic_auth_password
 
 **Fix:** Changed to `split(":", 1)` to split only on the first colon.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (breaks on passwords with colons)
 username, password = decoded.split(":")
@@ -336,6 +340,7 @@ username, password = decoded.split(":", 1)
 
 **Fix:** Changed to explicit `None` checks.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (rejects port=0 and host="")
 host = host or self.host
@@ -356,6 +361,7 @@ port = port if port is not None else self.port
 
 **Fix:** Replaced with `urllib.parse.urlencode()` which properly percent-encodes all values.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (breaks on special characters)
 params = "&".join([f"{k}={v}" for k, v in filtered_params.items()])
@@ -423,6 +429,7 @@ if config.get("auto_answer") is not False:
 
 **Fix:** Changed to explicit `None` check.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (discards 0, False, [], etc.)
 self.response = response or ""
@@ -441,6 +448,7 @@ self.response = response if response is not None else ""
 
 **Fix:** Parse string content to dict via `json.loads()` so the transfer key can be added. Falls back to wrapping in a dict if parsing fails.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (crashes on string + transfer=True)
 swml_data = swml_content  # string
@@ -462,6 +470,7 @@ except (json.JSONDecodeError, ValueError):
 
 **Fix:** Shallow-copy the dict before modification.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (mutates caller's dict)
 swml_data = swml_content
@@ -548,6 +557,7 @@ result['final_score'] = result.get('final_score', result['score']) * 2.0
 
 **Fix:** Moved `fetchall()` inside the conditional block and added `else: rows = []`.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (fetchall without execute when no conditions)
 if specific_conditions:
@@ -572,6 +582,7 @@ else:
 
 **Fix:** Added `conn = None` initialization before the try block and `finally: if conn: conn.close()` to ensure cleanup on all code paths.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (leaks on exception)
 conn = sqlite3.connect(self.index_path)
@@ -616,6 +627,7 @@ SearchRequest(query=query, similarity_threshold=distance, ...)
 
 **Fix:** Check for a running loop first. If one exists, use a ThreadPoolExecutor to run the async method in a separate thread. If no loop is running, use `asyncio.run()` which properly creates and cleans up an event loop.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (crashes in async context)
 loop = asyncio.get_event_loop()
@@ -641,6 +653,7 @@ except RuntimeError:
 
 **Fix:** Changed to `SET LOCAL ivfflat.probes = ...` which is the correct parameter for IVFFlat indexes.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (wrong index type parameter)
 cursor.execute(f"SET LOCAL hnsw.ef_search = {max(count, 40)}")
@@ -659,6 +672,7 @@ cursor.execute(f"SET LOCAL ivfflat.probes = {max(count, 10)}")
 
 **Fix:** Added `except HTTPException: raise` before the broad `except Exception:` to let HTTPExceptions pass through.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (HTTPException caught by own handler)
 try:
@@ -710,6 +724,7 @@ except (OSError, FileNotFoundError):
 
 **Fix:** Only pass prefix when route is not `/`.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (creates //swml when route is "/")
 app.include_router(router, prefix=self.route)
@@ -758,6 +773,7 @@ elif mode == 'azure_function':
 
 **Fix:** Set `auto_error=False` to match the bearer auth behavior and let the handler decide whether to reject.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (rejects requests without auth header before handler runs)
 self.basic_auth = HTTPBasic()
@@ -836,6 +852,7 @@ request_data = {"session_id": session_id, ...}
 
 **Fix:** Wrapped `response.json()` in a try/except with a fallback that uses the raw response text.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (crashes on non-JSON errors)
 error_data = response.json()
@@ -963,6 +980,7 @@ def cleanup(self) -> None:
 
 **Fix:** Replaced with an explicit for loop using context managers.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (file handles not explicitly closed)
 total_chunks = sum(len(json.load(open(f))['chunks']) for f in chunk_files_created)
@@ -1049,6 +1067,7 @@ _model_lock = threading.Lock()
 
 **Fix:** Check multiple possible attribute names.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (only checks one attribute)
 if model and hasattr(model, 'model_name'):
@@ -1071,12 +1090,13 @@ if model:
 
 **Fix:** Use the existing `_get_cached_model()` function from `query_processor` which caches model instances.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (loads model from disk every call)
 model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
 
 # After (uses cached instance)
-from signalwire_agents.search.query_processor import _get_cached_model
+from signalwire.search.query_processor import _get_cached_model
 model = _get_cached_model('sentence-transformers/all-mpnet-base-v2')
 ```
 
@@ -1090,6 +1110,7 @@ model = _get_cached_model('sentence-transformers/all-mpnet-base-v2')
 
 **Fix:** Added duplicate checks before appending context sentences.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (allows duplicates)
 if i > 0 and sentences[i-1] not in current_chunk:
@@ -1146,6 +1167,7 @@ if self.index_nlp_backend not in ['basic', 'nltk', 'spacy']:
 
 **Fix:** Changed to `os.pathsep` which is `:` on Unix and `;` on Windows.
 
+<!-- snippet: no-run before/after code-audit excerpt (illustrative fragment) -->
 ```python
 # Before (breaks on Windows)
 env_paths = os.environ.get('SIGNALWIRE_SKILL_PATHS', '').split(':')

@@ -86,6 +86,7 @@ message = await client.send_message(
 
 Register a handler with `@client.on_message` to receive inbound SMS/MMS.
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire.relay import RelayClient
 
@@ -171,6 +172,7 @@ from signalwire.relay import MessageReceiveEvent, MessageStateEvent
 
 The same `RelayClient` handles both calls and messages:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 client = RelayClient(project="...", token="...", contexts=["default"])
 

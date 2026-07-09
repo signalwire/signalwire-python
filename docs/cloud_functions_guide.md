@@ -22,6 +22,7 @@ The agent automatically detects Google Cloud Functions environment using these v
 ### Deployment Steps
 
 1. **Create your agent file** (`main.py`):
+<!-- snippet: no-run requires optional third-party package `functions_framework` -->
 ```python
 import functions_framework
 from your_agent_module import YourAgent
@@ -104,6 +105,7 @@ my-agent-function/
 ```
 
 2. **Create `__init__.py`**:
+<!-- snippet: no-run requires optional third-party package `azure` -->
 ```python
 import azure.functions as func
 from your_agent_module import YourAgent
@@ -200,6 +202,7 @@ Both platforms support HTTP Basic Authentication:
 ### Automatic Authentication
 The agent automatically validates credentials in cloud function environments:
 
+<!-- snippet: no-run illustrative fragment (references `YourAgent` established in the surrounding prose) -->
 ```python
 agent = YourAgent(
     name="my-agent",
@@ -419,6 +422,7 @@ print(f"Detected mode: {get_execution_mode()}")
 ```
 
 **URL Generation:**
+<!-- snippet: no-run illustrative fragment (references `YourAgent` established in the surrounding prose) -->
 ```python
 # Check generated URLs
 agent = YourAgent(name="test")

@@ -27,8 +27,8 @@ A friendly agent that can search Wikipedia for factual information.
 Fred is curious, helpful, and loves sharing knowledge from Wikipedia.
 """
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import SwaigFunctionResult
 
 class FredTheWikiBot(AgentBase):
     """Fred - Your friendly Wikipedia assistant"""
@@ -211,8 +211,8 @@ A friendly agent that can search Wikipedia for factual information.
 Fred is curious, helpful, and loves sharing knowledge from Wikipedia.
 """
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import SwaigFunctionResult
 
 class FredTheWikiBot(AgentBase):
     """Fred - Your friendly Wikipedia assistant"""
@@ -291,6 +291,7 @@ class FredTheWikiBot(AgentBase):
 
 Add a simple main function to test:
 
+<!-- snippet: no-run illustrative fragment (references `FredTheWikiBot` established in the surrounding prose) -->
 ```python
 def main():
     """Test Fred's basic structure"""

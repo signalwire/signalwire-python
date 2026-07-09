@@ -70,6 +70,7 @@ With pgvector, `--output` specifies the collection name, not a filename.
 
 ### Python API (IndexBuilder)
 
+<!-- snippet: no-run blocking/long-running call (server or live connection) -->
 ```python
 from signalwire.search import IndexBuilder
 
@@ -761,6 +762,7 @@ sw-search ./critical_chunks.json ./docs/other/ \
 
 **Scraping API documentation:**
 
+<!-- snippet: no-run live REST/HTTP call to a real host (needs credentials/network) -->
 ```python
 import json
 import requests
@@ -951,6 +953,7 @@ builder.toJSON("chunks.json");
 
 **Using JSON schema validator:**
 
+<!-- snippet: no-run reads a data/index file that must be built first (needs a real artifact) -->
 ```python
 import json
 import jsonschema
@@ -970,6 +973,7 @@ except jsonschema.ValidationError as e:
 
 **Basic validation script:**
 
+<!-- snippet: no-run reads a data/index file that must be built first (needs a real artifact) -->
 ```python
 import json
 
@@ -1550,6 +1554,7 @@ sw-search validate \
 
 **Validate using Python API:**
 
+<!-- snippet: no-run constructs SearchEngine with an index file that must exist first -->
 ```python
 from signalwire.search import SearchEngine
 engine = SearchEngine('docs.swsearch')

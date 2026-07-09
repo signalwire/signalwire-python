@@ -4,6 +4,7 @@ Synchronous REST client for managing SignalWire resources, controlling live call
 
 ## Quick Start
 
+<!-- snippet: no-run live REST/HTTP call to a real host (needs credentials/network) -->
 ```python
 from signalwire.rest import RestClient
 

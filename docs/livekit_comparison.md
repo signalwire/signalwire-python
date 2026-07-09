@@ -83,6 +83,7 @@ Developer writes Agent class with instructions + tools
 ### 2.3 Developer Experience Comparison
 
 **SignalWire - Minimal Agent:**
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import AgentBase
 
@@ -97,6 +98,7 @@ agent.run()  # Works: server, CGI, Lambda, Cloud Functions, Azure
 ```
 
 **LiveKit Agents - Minimal Agent:**
+<!-- snippet: no-run requires optional third-party package `livekit` -->
 ```python
 from livekit.agents import Agent, AgentSession, RunContext
 from livekit.agents import function_tool

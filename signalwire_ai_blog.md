@@ -65,8 +65,8 @@ class MyAgent(AgentBase):
 **DataMap Tools**: Create API integrations without webhook infrastructure. DataMap tools execute on SignalWire's servers, allowing you to integrate with REST APIs through declarative configuration rather than custom endpoints:
 
 ```python
-from signalwire_agents.core.data_map import DataMap
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.data_map import DataMap
+from signalwire.core.function_result import SwaigFunctionResult
 
 weather_tool = (DataMap('get_weather')
     .parameter('location', 'string', 'City name', required=True)
@@ -179,6 +179,7 @@ The `AgentBase` class provides the complete implementation of all SDK capabiliti
 
 **HTTP Server Integration**: Built on FastAPI for production-ready performance and ecosystem compatibility. The agent automatically configures endpoints, request validation, and response formatting:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 # Automatic endpoint creation
 router.get("/") and router.post("/")                    # Main conversation endpoint
@@ -248,6 +249,7 @@ DataMap tools transform API integration from an imperative programming exercise 
 
 **Method Chaining Interface**: DataMap uses a fluent interface that makes configuration readable and discoverable:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 user_lookup = (DataMap('lookup_user')
     .parameter('user_id', 'string', 'User identifier', required=True)
@@ -575,7 +577,7 @@ Check if search functionality is available:
 
 ```python
 try:
-    from signalwire_agents.search import IndexBuilder, SearchEngine
+    from signalwire.search import IndexBuilder, SearchEngine
     print("✅ Search functionality is available")
 except ImportError as e:
     print(f"❌ Search not available: {e}")
@@ -689,8 +691,9 @@ Creating your first AI agent with the SignalWire SDK has never been easier thank
 
 Let's start with the most basic agent that can hold conversations:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class QuickStartAssistant(AgentBase):
     def __init__(self):
@@ -713,8 +716,9 @@ This minimal agent can already:
 
 Now let's transform this basic agent into a powerful assistant by adding skills. The Skills System allows you to add complex capabilities with simple one-liner calls:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class EnhancedAssistant(AgentBase):
     def __init__(self):
@@ -1083,7 +1087,7 @@ You can create custom skills to extend the SDK's capabilities:
 #### Basic Custom Skill
 
 ```python
-from signalwire_agents.core.skill_base import SkillBase
+from signalwire.core.skill_base import SkillBase
 
 class DatabaseLookupSkill(SkillBase):
     """Custom skill for database queries"""
@@ -1130,7 +1134,7 @@ class DatabaseLookupSkill(SkillBase):
         # Your database query logic here
         results = self.query_database(table, criteria, limit)
         
-        from signalwire_agents.core.function_result import SwaigFunctionResult
+        from signalwire.core.function_result import SwaigFunctionResult
         return SwaigFunctionResult(f"Found {len(results)} records in {table}")
     
     def query_database(self, table, criteria, limit):
@@ -1147,6 +1151,7 @@ agent.add_skill("database_lookup", {
 
 #### Advanced Custom Skill with Configuration
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 class WeatherAPISkill(Skill):
     """Custom weather skill with API integration"""
@@ -1228,6 +1233,7 @@ agent.add_skill("web_search", {
 
 #### Error Handling
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 # Skills should handle errors gracefully
 class RobustCustomSkill(Skill):
@@ -1247,6 +1253,7 @@ class RobustCustomSkill(Skill):
 
 #### Performance Considerations
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 # Cache expensive operations
 class CachedAPISkill(Skill):
@@ -1321,8 +1328,8 @@ DataMap tools use a fluent builder pattern that makes configuration intuitive an
 #### Basic DataMap Structure
 
 ```python
-from signalwire_agents.core.data_map import DataMap
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.data_map import DataMap
+from signalwire.core.function_result import SwaigFunctionResult
 
 # Simple API call example
 weather_tool = (DataMap('get_weather')
@@ -1337,6 +1344,7 @@ agent.register_swaig_function(weather_tool.to_swaig_function())
 
 #### Advanced Configuration Example
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 # Complex API integration with correct configuration
 user_lookup_tool = (DataMap('lookup_user')
@@ -1370,6 +1378,7 @@ DataMap tools support comprehensive REST API integration patterns:
 
 #### HTTP Methods and Parameters
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 # GET request with query parameters in URL
 get_tool = (DataMap('search_products')
@@ -1527,12 +1536,12 @@ robust_tool = (DataMap('robust_api_call')
 
 #### Simple DataMap Example
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 # Simple, working DataMap tool
 basic_tool = (DataMap('lookup_user')
     .parameter('user_id', 'string', 'User ID', required=True)
-    .webhook('GET', 'https://api.users.com/users/${args.user_id}')
-    .header('Accept', 'application/json')
+    .webhook('GET', 'https://api.users.com/users/${args.user_id}', headers={'Accept': 'application/json'})
     .output(SwaigFunctionResult('${response.name} (${response.email})'))
 )
 ```
@@ -1701,6 +1710,7 @@ sw-search docs/ --include "*.md,*.pdf,*.docx,*.txt"
 
 You can also build indexes programmatically:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 from signalwire_agents.cli.search import IndexBuilder
 
@@ -1715,8 +1725,9 @@ from signalwire_agents.cli.search import IndexBuilder
 
 Add the search skill to your agent:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 agent = AgentBase("Knowledge Assistant")
 agent.set_prompt_text("I help answer questions using our knowledge base and can search the web for additional information.")
@@ -1859,8 +1870,9 @@ sw-search technical_docs/ --model "sentence-transformers/allenai-specter" --outp
 
 Add rich metadata to enable filtered searches:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
-from signalwire_agents.search import IndexBuilder
+from signalwire.search import IndexBuilder
 
 builder = IndexBuilder()
 
@@ -1899,6 +1911,7 @@ agent.add_skill("native_vector_search", {
 
 Keep indexes current with automatic updates:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 from signalwire_agents.search import IndexWatcher
 import asyncio
@@ -1921,6 +1934,7 @@ asyncio.create_task(maintain_search_index())
 
 Track search performance and user queries:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 from signalwire_agents.search import SearchAnalytics
 
@@ -2015,6 +2029,7 @@ accurate_config = {
 
 #### Security and Privacy
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 # Secure deployment configuration
 secure_agent = Agent(
@@ -2287,8 +2302,9 @@ The SignalWire SDK follows a **stateless-first design philosophy**. By default, 
 
 The stateless-first approach means:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 # This agent is stateless by default
 agent = Agent(
@@ -2845,7 +2861,7 @@ The InfoGathererAgent is designed to systematically collect information from use
 Setting up an InfoGathererAgent is straightforward:
 
 ```python
-from signalwire_agents.prefabs import InfoGathererAgent
+from signalwire.prefabs import InfoGathererAgent
 
 # Create an agent that collects user registration information
 registration_agent = InfoGathererAgent(
@@ -2896,6 +2912,7 @@ Here's a simplified view of the flow:
 
 While the base implementation is sufficient for many use cases, you can extend it to add custom validation, processing, or follow-up actions:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 class CustomInfoGatherer(InfoGathererAgent):
     def __init__(self):
@@ -2945,8 +2962,9 @@ The FAQBotAgent is designed to answer questions using a provided knowledge base.
 
 To set up a FAQBotAgent, you provide it with FAQ content in one of several formats:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
-from signalwire_agents.prefabs import FAQBotAgent
+from signalwire.prefabs import FAQBotAgent
 
 # Create an agent with direct FAQ content
 support_agent = FAQBotAgent(
@@ -3001,6 +3019,7 @@ The agent doesn't typically need custom SWAIG functions since its primary purpos
 
 For more control over the FAQBotAgent's behavior:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 # Create a more customized FAQ bot
 advanced_faq_agent = FAQBotAgent(
@@ -3032,8 +3051,9 @@ The ConciergeAgent acts as a front-line receptionist or dispatcher, helping to u
 
 Setting up a basic ConciergeAgent involves defining the available routes:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
-from signalwire_agents.prefabs import ConciergeAgent
+from signalwire.prefabs import ConciergeAgent
 
 # Create a concierge agent for a customer service system
 concierge = ConciergeAgent(
@@ -3095,6 +3115,7 @@ This is implemented through a key SWAIG function:
 
 For more sophisticated routing needs, you can extend the ConciergeAgent with additional context and logic:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 class EnhancedConcierge(ConciergeAgent):
     def __init__(self):
@@ -3149,8 +3170,9 @@ The SurveyAgent specializes in collecting structured feedback through surveys. I
 
 Setting up a SurveyAgent involves defining the survey questions and rating scales:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
-from signalwire_agents.prefabs import SurveyAgent
+from signalwire.prefabs import SurveyAgent
 
 # Create a customer satisfaction survey agent
 csat_survey = SurveyAgent(
@@ -3198,6 +3220,7 @@ This flexibility allows for creating sophisticated surveys that can gather both 
 
 You can extend the SurveyAgent to add custom processing of survey results:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 class EnhancedSurveyAgent(SurveyAgent):
     def __init__(self):
@@ -3237,7 +3260,7 @@ This allows the survey to not just collect data but also to take immediate actio
 While the SDK provides several useful prefab agents, you may want to create your own reusable agent templates for specific use cases. Here's how to create your own prefab:
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class AppointmentSchedulerAgent(AgentBase):
     """
@@ -3364,6 +3387,7 @@ class AppointmentSchedulerAgent(AgentBase):
 
 Once defined, this custom prefab can be used just like the built-in ones:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 # Create an instance with custom configuration
 scheduler = AppointmentSchedulerAgent(
@@ -3404,11 +3428,11 @@ The datetime skill is particularly valuable because timezone handling, business 
 
 A real-world example is order status checking. Your e-commerce platform likely has an API endpoint like `GET /api/orders/{order_id}` that returns order details. With a DataMap tool, you can integrate this directly:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 order_status_tool = (DataMap('check_order_status')
     .parameter('order_id', 'string', 'Customer order number', required=True)
-    .webhook('GET', 'https://api.yourstore.com/orders/${args.order_id}')
-    .header('Authorization', 'Bearer ${env.STORE_API_TOKEN}')
+    .webhook('GET', 'https://api.yourstore.com/orders/${args.order_id}', headers={'Authorization': 'Bearer ${env.STORE_API_TOKEN}'})
     .output(SwaigFunctionResult("""
         Order ${args.order_id} status: ${response.status}
         ${if response.status == "shipped"}
@@ -3705,6 +3729,7 @@ Consider a telecommunications company that needs AI agents for sales, technical 
 
 A better approach uses specialized agents with a routing layer:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 # Main entry point agent
 class TelecomConcierge(ConciergeAgent):
@@ -3786,6 +3811,7 @@ services:
 
 For agents that need persistent state, you'll need session affinity or external state management:
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
 # External state management with Redis
 class StatefulAgent(Agent):
@@ -3863,10 +3889,11 @@ One of the most common applications for voice AI is enhancing customer service o
 
 #### Complete Implementation
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
-from signalwire_agents import AgentBase
-from signalwire_agents.core.data_map import DataMap
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.data_map import DataMap
+from signalwire.core.function_result import SwaigFunctionResult
 
 class EcommerceServiceAgent(AgentBase):
     def __init__(self):
@@ -4096,9 +4123,10 @@ Healthcare organizations need sophisticated scheduling systems that handle compl
 
 #### Implementation Overview
 
+<!-- snippet: no-run long-form blog snippet (narrative fragment / older-API example) -->
 ```python
-from signalwire_agents import AgentBase
-from signalwire_agents.prefabs import InfoGathererAgent
+from signalwire import AgentBase
+from signalwire.prefabs import InfoGathererAgent
 import datetime
 import json
 

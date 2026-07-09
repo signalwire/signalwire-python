@@ -4,6 +4,7 @@ Real-time call control and messaging over WebSocket using Python's asyncio. The 
 
 ## Quick Start
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire.relay import RelayClient
 

@@ -70,6 +70,7 @@ export SWML_BASIC_AUTH_PASSWORD=mysecurepassword
 
 SWML-based services automatically use the unified security configuration:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import AgentBase
 
@@ -87,6 +88,7 @@ agent.run()
 
 The standalone search service also supports the same security configuration:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire.search import SearchService
 
@@ -286,6 +288,7 @@ The contract is shared across all SignalWire SDK ports — see [`porting-sdk/web
 
 Pass `signing_key` to the AgentBase constructor (or set `SIGNALWIRE_SIGNING_KEY` in the environment):
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import AgentBase
 
@@ -311,6 +314,7 @@ This is intentional: silently accepting unsigned webhooks in production is a foo
 
 If you're not using AgentBase, the validator function is exposed directly:
 
+<!-- snippet: no-run illustrative fragment (references `request` established in the surrounding prose) -->
 ```python
 from signalwire.core.security import validate_webhook_signature
 

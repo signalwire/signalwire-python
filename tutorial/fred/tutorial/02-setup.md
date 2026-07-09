@@ -94,12 +94,12 @@ Create a test file called `test_install.py`:
 """Test SignalWire SDK installation"""
 
 try:
-    from signalwire_agents import AgentBase
+    from signalwire import AgentBase
     print("✅ SignalWire SDK imported successfully!")
     
     # Check version
-    import signalwire_agents
-    print(f"   Version: {signalwire_agents.__version__}")
+    import signalwire
+    print(f"   Version: {signalwire.__version__}")
     
 except ImportError as e:
     print(f"❌ Import failed: {e}")
@@ -125,7 +125,7 @@ Let's create a minimal agent to ensure everything works:
 #!/usr/bin/env python3
 """Minimal test agent"""
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 # Create a minimal agent
 agent = AgentBase("Test Agent", route="/test")
@@ -259,7 +259,7 @@ def check_setup():
     
     # Check imports
     try:
-        import signalwire_agents
+        import signalwire
         print("✅ SignalWire SDK - Installed")
     except ImportError:
         print("❌ SignalWire SDK - Not installed")

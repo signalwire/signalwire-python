@@ -2,6 +2,12 @@
 
 This document provides a comprehensive reference for all public APIs in the SignalWire SDK.
 
+<!-- snippet-setup: shared imports the reference examples assume -->
+```python
+from signalwire import AgentBase, DataMap, FunctionResult, SwaigFunctionResult, SWMLService
+from signalwire.core.data_map import create_expression_tool
+```
+
 ## Table of Contents
 
 1. [AgentBase Class](#agentbase-class) - Core agent functionality
@@ -1213,6 +1219,7 @@ Get the agent as a FastAPI router for embedding in larger applications.
 - APIRouter: FastAPI router instance
 
 **Usage:**
+<!-- snippet: no-run FastAPI integration fragment (framework objects established in surrounding prose) -->
 ```python
 # Embed agent in larger FastAPI app
 main_app = FastAPI()
@@ -2445,15 +2452,19 @@ data_map.fallback_output(
 Process array responses by iterating over elements.
 
 **Parameters:**
-- `foreach_config` (Union[str, Dict]): Array path or configuration object
+- `foreach_config` (Dict): Configuration object with keys `input_key`, `output_key`, `append`, and optional `max`
 
 **Simple Array Processing:**
 ```python
 # Process array of search results
 data_map = (DataMap('search_docs')
     .webhook('GET', 'https://api.docs.com/search?q=${args.query}')
-    .foreach('${response.results}')  # Iterate over results array
-    .output(FunctionResult('Found: ${foreach.title} - ${foreach.summary}'))
+    .foreach({
+        'input_key': 'results',              # Key in the response holding the array
+        'output_key': 'formatted_results',   # Name of the built string variable
+        'append': 'Found: ${this.title} - ${this.summary}\n'
+    })
+    .output(FunctionResult('${formatted_results}'))
 )
 ```
 
@@ -2461,20 +2472,17 @@ data_map = (DataMap('search_docs')
 ```python
 # Complex foreach configuration
 data_map.foreach({
-    'array': '${response.items}',
-    'limit': 3,  # Process only first 3 items
-    'filter': {
-        'field': 'status',
-        'value': 'active'
-    }
+    'input_key': 'items',
+    'output_key': 'formatted_items',
+    'max': 3,  # Process only first 3 items
+    'append': 'Item: ${this.name} (${this.status})\n'
 })
 ```
 
 **Foreach Variable Access:**
-- `${foreach.field}`: Current array element field
-- `${foreach.nested.field}`: Nested fields in current element
-- `${foreach_index}`: Current iteration index (0-based)
-- `${foreach_count}`: Total number of items being processed
+- `${this.field}`: Current array element field
+- `${this.nested.field}`: Nested fields in current element
+- `${output_key}`: The accumulated string built by `append` across all items
 
 ### Pattern-Based Processing
 
@@ -2621,8 +2629,12 @@ search_tool = (DataMap('search_knowledge')
         'category': '${args.category}',
         'limit': 5
     })
-    .foreach('${response.results}')
-    .output(FunctionResult('Found: ${foreach.title} - ${foreach.summary}'))
+    .foreach({
+        'input_key': 'results',
+        'output_key': 'formatted_results',
+        'append': 'Found: ${this.title} - ${this.summary}\n'
+    })
+    .output(FunctionResult('${formatted_results}'))
     .fallback_output(FunctionResult('Search service is temporarily unavailable'))
 )
 ```
@@ -2802,6 +2814,7 @@ Create a new context in the workflow.
 - Context: Context object for method chaining
 
 **Usage:**
+<!-- snippet: no-run illustrative fragment (references `contexts` established in the surrounding prose) -->
 ```python
 # Create multiple contexts
 greeting_context = contexts.add_context("greeting")
@@ -2858,6 +2871,7 @@ class Context:
 
 #### Usage Examples
 
+<!-- snippet: no-run illustrative fragment (references `contexts` established in the surrounding prose) -->
 ```python
 # Workflow container context (just organizes steps)
 main_context = contexts.add_context("main")
@@ -3017,6 +3031,7 @@ agent.add_skill("native_vector_search", {
 Create a new skill by extending `SkillBase`:
 
 ```python
+from typing import List, Dict, Any
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.data_map import DataMap
 from signalwire.core.function_result import FunctionResult
@@ -3107,16 +3122,17 @@ SWAIGFunction(
 from signalwire.core.swaig_function import SWAIGFunction
 
 # Create SWAIG function
+def get_weather(args, raw_data):
+    return f"The weather in {args.get('location')} is sunny."
+
 swaig_func = SWAIGFunction(
-    function="get_weather",
+    name="get_weather",
+    handler=get_weather,
     description="Get current weather",
     parameters={
-        "type": "object",
-        "properties": {
-            "location": {"type": "string", "description": "City name"}
-        },
-        "required": ["location"]
+        "location": {"type": "string", "description": "City name"}
     },
+    required=["location"],
     secure=True,
     fillers={"en-US": ["Checking weather..."]}
 )
@@ -3189,6 +3205,7 @@ The SDK supports various environment variables for configuration:
 
 ### Usage
 
+<!-- snippet: no-run skill setup needs an external backend/API key (e.g. web_search, mcp_gateway) -->
 ```python
 import os
 
@@ -3211,6 +3228,7 @@ agent.add_skill("web_search", {
 
 Here's a comprehensive example using multiple SDK components:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import AgentBase, FunctionResult, DataMap
 

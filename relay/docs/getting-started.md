@@ -30,6 +30,7 @@ Alternatively, you can authenticate with a JWT token:
 
 ## Minimal Example
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire.relay import RelayClient
 
@@ -58,6 +59,7 @@ export SIGNALWIRE_API_TOKEN=your-api-token
 export SIGNALWIRE_SPACE=example.signalwire.com
 ```
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire.relay import RelayClient
 

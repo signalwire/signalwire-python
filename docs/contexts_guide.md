@@ -1,5 +1,12 @@
 # Contexts and Steps Guide
 
+<!-- snippet-setup: shared imports the examples on this page assume -->
+```python
+from signalwire import AgentBase, AgentServer, DataMap, FunctionResult, SwaigFunctionResult, SWMLService
+from signalwire.core.skill_base import SkillBase
+```
+
+
 ## Table of Contents
 
 - [Overview](#overview)
@@ -73,6 +80,7 @@ When entering a context, these parameters control conversation behavior:
 
 Contexts can have their own prompts (separate from entry parameters):
 
+<!-- snippet: no-run illustrative fragment (references `context` established in the surrounding prose) -->
 ```python
 # Simple string prompt
 context.set_prompt("Context-specific guidance")
@@ -106,6 +114,7 @@ The system provides fine-grained control over conversation flow:
 
 ### Basic Single-Context Workflow
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import AgentBase
 
@@ -151,6 +160,7 @@ if __name__ == "__main__":
 
 ### Multi-Context Workflow
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 class CustomerServiceAgent(AgentBase):
     def __init__(self):
@@ -420,6 +430,7 @@ step.set_valid_contexts([])
 
 Context-level navigation settings are inherited by steps:
 
+<!-- snippet: no-run illustrative fragment (references `context` established in the surrounding prose) -->
 ```python
 # Set at context level
 context.set_valid_contexts(["main", "help"])
@@ -809,6 +820,7 @@ Flow:
 
 ### Example 1: Technical Support Troubleshooting
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 class TechnicalSupportAgent(AgentBase):
     def __init__(self):
@@ -894,6 +906,7 @@ if __name__ == "__main__":
 
 ### Example 2: Multi-Step Application Process
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 class LoanApplicationAgent(AgentBase):
     def __init__(self):
@@ -971,6 +984,7 @@ if __name__ == "__main__":
 
 ### Example 3: E-commerce Customer Service
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 class EcommerceServiceAgent(AgentBase):
     def __init__(self):
@@ -1093,6 +1107,7 @@ Design intuitive navigation that matches user expectations:
 
 Restrict functions based on security and context needs:
 
+<!-- snippet: no-run illustrative fragment (references `public_step` established in the surrounding prose) -->
 ```python
 # Public areas - limited functions
 public_step.set_functions(["datetime", "web_search"])
@@ -1159,6 +1174,7 @@ step.add_section("Role", "You are a technical specialist") \
 
 **Error**: When using a single context with a name other than "default"
 
+<!-- snippet: no-run illustrative fragment (references `contexts` established in the surrounding prose) -->
 ```python
 # Wrong
 context = contexts.add_context("main")  # Error!

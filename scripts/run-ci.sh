@@ -207,12 +207,12 @@ sched_gate SNIPPET-COMPILE desc="documented code snippets compile" \
 sched_gate DOC-CLI desc="documented swaig-test invocations parse against the real CLI" \
     -- python3 "$PORTING_SDK_DIR/scripts/doc_cli.py" --port python --repo "$PORT_ROOT"
 
-# SNIPPET-RUN lands REPORT-ONLY: python has a large doc-fragment backlog (~733
-# snippets after auto-skipping 232 non-program fragments — mostly page-scoped/
-# undefined names and stale package paths). Burn the backlog (page-setup
-# preambles / doc fixes), then drop --report-only. ~130s parallelized.
-sched_gate SNIPPET-RUN defer=1 desc="dynamic-port doc snippets run to a zero exit against the mock (report-only: burning fragment backlog)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/snippet_run.py" --port python --repo "$PORT_ROOT" --report-only
+# SNIPPET-RUN is BLOCKING: the fragment backlog is burned to zero. Residual
+# non-runnable snippets carry `<!-- snippet: no-run <reason> -->` markers (blocking
+# servers, live REST/network calls, optional-dep imports, prose-context fragments,
+# before/after excerpts); real API-mismatch doc bugs were fixed. ~130s parallelized.
+sched_gate SNIPPET-RUN defer=1 desc="dynamic-port doc snippets run to a zero exit against the mock" \
+    -- python3 "$PORTING_SDK_DIR/scripts/snippet_run.py" --port python --repo "$PORT_ROOT"
 
 sched_gate EXAMPLES-RUN defer=1 desc="shipped examples load/start against the mock (modulo EXAMPLES_RUN_ALLOW.md)" \
     -- python3 "$PORTING_SDK_DIR/scripts/examples_run.py" --port python --repo "$PORT_ROOT"

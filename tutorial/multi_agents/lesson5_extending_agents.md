@@ -23,8 +23,8 @@ Skills are reusable modules that add capabilities to agents. They encapsulate fu
 
 ```python
 # my_custom_skill.py
-from signalwire_agents.skills import SkillBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.skills import SkillBase
+from signalwire.core.function_result import SwaigFunctionResult
 
 class WeatherSkill(SkillBase):
     """Skill for weather information"""
@@ -101,7 +101,7 @@ class WeatherSkill(SkillBase):
 ### Using Custom Skills
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class WeatherAgent(AgentBase):
     def __init__(self):
@@ -150,7 +150,7 @@ Managing state allows agents to remember information across conversations and in
 ### Session-Based State
 
 ```python
-from signalwire_agents.core.session_manager import SessionManager
+from signalwire.core.security.session_manager import SessionManager
 
 class StatefulAgent(AgentBase):
     def __init__(self):
@@ -200,6 +200,7 @@ class StatefulAgent(AgentBase):
 
 ### Persistent State with Database
 
+<!-- snippet: no-run requires optional third-party package `asyncpg` -->
 ```python
 import asyncpg
 from datetime import datetime
@@ -462,6 +463,7 @@ class ConditionalAgent(AgentBase):
 
 ### REST API Integration
 
+<!-- snippet: no-run requires optional third-party package `aiohttp` -->
 ```python
 import aiohttp
 from typing import Dict, Any
@@ -552,6 +554,7 @@ class WebhookAgent(AgentBase):
 
 ### Message Queue Integration
 
+<!-- snippet: no-run requires optional third-party package `aioredis` -->
 ```python
 import asyncio
 import aioredis
