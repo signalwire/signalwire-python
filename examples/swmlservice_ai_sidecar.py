@@ -104,4 +104,4 @@ class SalesSidecar(SWMLService):
 
 
 if __name__ == "__main__":
-    SalesSidecar().run()
+    SalesSidecar().serve()

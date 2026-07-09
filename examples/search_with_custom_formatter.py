@@ -107,8 +107,8 @@ def context_aware_formatter(response, agent, query, results, **kwargs):
 
 class SearchDemoAgent(AgentBase):
     def __init__(self):
-        super().__init__()
-        
+        super().__init__(name="Search Demo Agent")
+
         # Add information about formatters to prompt
         self.prompt_add_section(
             title="Search Result Formatting",

@@ -847,6 +847,7 @@ class CircuitBreaker:
 
 ### Factory Pattern for Agents
 
+<!-- snippet: no-run illustrative factory over hypothetical SalesAgent/SupportAgent/TriageAgent subclasses (not real SDK symbols; pedagogical pattern only) -->
 ```python
 class AgentFactory:
     """Factory for creating configured agents"""

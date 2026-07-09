@@ -128,5 +128,5 @@ if __name__ == "__main__":
     agent = StepFunctionInheritanceAgent()
     # Render and pretty-print the resulting SWML so you can see exactly
     # which steps have a `functions` key in the output and which don't.
-    swml = agent.get_app().render_swml()
-    print(json.dumps(swml, indent=2))
+    swml = agent.render_document()
+    print(json.dumps(json.loads(swml), indent=2))

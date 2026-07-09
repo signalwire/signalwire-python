@@ -197,6 +197,26 @@ sched_gate RELEASE-FRESH desc="publish path runs the gates before releasing" \
 sched_gate README-INCLUDE desc="doc code blocks are byte-identical to their gate-compiled fixture regions" \
     -- python3 "$PORTING_SDK_DIR/scripts/readme_include.py" --port python --repo .
 
+# ---- §C1 doc/example execution gates -----------------------------------------
+# SNIPPET-COMPILE (~18s, compile-only) + DOC-CLI (parallelized probe pool, ~25s)
+# are cheap → cheap wave, blocking. SNIPPET-RUN + EXAMPLES-RUN execute code
+# (mock-backed) and are minutes-long even when green → defer=1 heavy wave.
+sched_gate SNIPPET-COMPILE desc="documented code snippets compile" \
+    -- python3 "$PORTING_SDK_DIR/scripts/snippet_compile.py" --port python --repo "$PORT_ROOT"
+
+sched_gate DOC-CLI desc="documented swaig-test invocations parse against the real CLI" \
+    -- python3 "$PORTING_SDK_DIR/scripts/doc_cli.py" --port python --repo "$PORT_ROOT"
+
+# SNIPPET-RUN lands REPORT-ONLY: python has a large doc-fragment backlog (~733
+# snippets after auto-skipping 232 non-program fragments — mostly page-scoped/
+# undefined names and stale package paths). Burn the backlog (page-setup
+# preambles / doc fixes), then drop --report-only. ~130s parallelized.
+sched_gate SNIPPET-RUN defer=1 desc="dynamic-port doc snippets run to a zero exit against the mock (report-only: burning fragment backlog)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/snippet_run.py" --port python --repo "$PORT_ROOT" --report-only
+
+sched_gate EXAMPLES-RUN defer=1 desc="shipped examples load/start against the mock (modulo EXAMPLES_RUN_ALLOW.md)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/examples_run.py" --port python --repo "$PORT_ROOT"
+
 sched_run
 rc=$?
 if [ "$rc" -eq 0 ]; then

@@ -147,5 +147,5 @@ class GatherPerQuestionFunctionsAgent(AgentBase):
 
 if __name__ == "__main__":
     agent = GatherPerQuestionFunctionsAgent()
-    swml = agent.get_app().render_swml()
-    print(json.dumps(swml, indent=2))
+    swml = agent.render_document()
+    print(json.dumps(json.loads(swml), indent=2))

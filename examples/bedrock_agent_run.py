@@ -3,7 +3,7 @@
 Test BedrockAgent with standard agent run
 """
 
-from signalwire import BedrockAgent, run_agent
+from signalwire import BedrockAgent
 
 # Create a Bedrock agent
 agent = BedrockAgent(
@@ -22,5 +22,5 @@ def get_time():
 
 # Run the agent
 if __name__ == "__main__":
-    print("Starting BedrockAgent with run_agent()...")
-    run_agent(agent)
+    print("Starting BedrockAgent...")
+    agent.serve()

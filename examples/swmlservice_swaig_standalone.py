@@ -70,4 +70,4 @@ class StandaloneSWAIG(SWMLService):
 
 
 if __name__ == "__main__":
-    StandaloneSWAIG().run()
+    StandaloneSWAIG().serve()
