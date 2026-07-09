@@ -6,3 +6,4 @@ followed by a reason. Only for lines that are intentionally non-runnable
 
 - swaig-test <file> [--cli-flags] --exec <function> [--function-args] — grammar/syntax template with literal <placeholder> tokens, not a runnable command (docs/cli_guide.md, 2026-07-08)
 - $func '{"test":"data"}' — inside a bash `for func in ...` loop; $func is a shell variable, not a real function name (docs/cli_guide.md, 2026-07-08)
+- --no-such-flag — DELIBERATE parser-error demo (`# exit 2`): the doc shows what a bogus flag does. A parse-reject is the documented behavior, not a bug. (docs/cli_guide.md:185, 2026-07-08)
