@@ -26,6 +26,7 @@ Use $ARGUMENTS for context passed to this skill.
 
 ## Usage
 
+<!-- snippet: no-run add_skill('claude_skills') sets up against a real ~/.claude/skills directory (external dependency, not present in CI) -->
 ```python
 from signalwire import AgentBase
 
