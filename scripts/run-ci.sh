@@ -77,6 +77,10 @@ python3 -m pip freeze 2>/dev/null \
 # FMT — ruff format. LOCAL applies; CI --check.
 fmt_gate() {
     if [ -n "${CI:-}" ]; then
+        # TEMP DIAGNOSTIC: emit the exact diff CI's ruff wants + its version/config,
+        # to resolve a local-clean/CI-dirty split on contexts.py. Remove after.
+        python3 -m ruff --version
+        python3 -m ruff format --check --diff "$PORT_ROOT/signalwire" || true
         python3 -m ruff format --check "$PORT_ROOT/signalwire"
     else
         python3 -m ruff format "$PORT_ROOT/signalwire" >/dev/null
