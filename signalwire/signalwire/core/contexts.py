@@ -32,9 +32,7 @@ HISTORY_MODES = ("keep", "default", "hide")
 
 def _validate_history(mode: str) -> str:
     if mode not in HISTORY_MODES:
-        raise ValueError(
-            f"history must be one of {HISTORY_MODES}, got {mode!r}"
-        )
+        raise ValueError(f"history must be one of {HISTORY_MODES}, got {mode!r}")
     return mode
 
 
