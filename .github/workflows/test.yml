@@ -65,8 +65,25 @@ jobs:
           pip install -e .
           pip install -r requirements-dev.txt
 
+      - name: Select gate tier (promote to nightly if PR touches docs/examples)
+        id: tier
+        working-directory: signalwire-python
+        run: |
+          tier=pr
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            if git fetch --no-tags --depth=1 origin "$base" 2>/dev/null \
+               && git diff --name-only "$base"...HEAD 2>/dev/null \
+                  | grep -qE '^(docs/|examples/|README|.*\.md$)'; then
+              tier=nightly
+              echo "PR touches docs/examples -> running heavy doc gates (tier=nightly)"
+            fi
+          fi
+          echo "tier=$tier" >> "$GITHUB_OUTPUT"
+
       - name: Run CI gate script (TEST -> SIGNATURES -> DRIFT -> NO-CHEAT)
         working-directory: signalwire-python
         env:
           PORTING_SDK: ${{ github.workspace }}/porting-sdk
+          SW_CI_TIER: ${{ steps.tier.outputs.tier }}
         run: bash scripts/run-ci.sh

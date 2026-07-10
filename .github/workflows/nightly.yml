@@ -1,0 +1,150 @@
+name: Nightly (heavy doc gates)
+
+# Runs the HEAVY doc-execution gates that per-PR run-ci skips (SNIPPET-COMPILE,
+# SNIPPET-RUN, EXAMPLES-RUN — tier=nightly) via SW_CI_TIER=nightly, which runs the
+# FULL gate set (nightly is a superset of the per-PR tier).
+#
+# Skip-if-unchanged: the guard fingerprints the (port, porting-sdk, python) HEAD SHA
+# triple into a cache key. A GREEN heavy run saves that key; the next nightly probes
+# it (restore, lookup-only) — a HIT means the exact triple already passed, so the
+# heavy job is skipped. A no-op nightly costs a cache probe, not the full run.
+
+on:
+  schedule:
+    - cron: '5 7 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Run even if nothing changed since the last successful nightly'
+        type: boolean
+        default: false
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  # Opt into Node.js 24 ahead of GitHub's 2026-06-02 default switch.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.check.outputs.changed }}
+      cache_key: ${{ steps.fp.outputs.cache_key }}
+    steps:
+      - name: Fingerprint input HEAD SHAs (port + porting-sdk + python)
+        id: fp
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PSDK_TOKEN: ${{ secrets.PORTING_SDK_TOKEN }}
+        run: |
+          set -euo pipefail
+          port_sha='${{ github.sha }}'
+          psdk_sha=$(GH_TOKEN="$PSDK_TOKEN" gh api repos/signalwire/porting-sdk/commits/main --jq .sha)
+          py_sha=$(gh api repos/signalwire/signalwire-python/commits/main --jq .sha)
+          echo "cache_key=nightly-green-v1-${port_sha}-${psdk_sha}-${py_sha}" >> "$GITHUB_OUTPUT"
+          echo "inputs -> port=$port_sha psdk=$psdk_sha python=$py_sha"
+      - name: Probe last-green marker
+        id: probe
+        uses: actions/cache/restore@v4
+        with:
+          path: .nightly-green-marker
+          key: ${{ steps.fp.outputs.cache_key }}
+          lookup-only: true
+      - name: Decide
+        id: check
+        env:
+          FORCE: ${{ github.event.inputs.force }}
+        run: |
+          set -euo pipefail
+          if [ "$FORCE" = "true" ]; then echo "changed=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          if [ "${{ steps.probe.outputs.cache-hit }}" = "true" ]; then
+            echo "input triple already passed a nightly -> skipping heavy gates"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "input triple not yet green -> running heavy gates"
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  heavy:
+    needs: guard
+    if: needs.guard.outputs.changed == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.11', '3.12', '3.13']
+    steps:
+      - name: Checkout signalwire-python
+        uses: actions/checkout@v6
+        with:
+          path: signalwire-python
+
+      - name: Checkout porting-sdk (mock_relay + mock_signalwire test harnesses + audit scripts)
+        uses: actions/checkout@v6
+        with:
+          repository: signalwire/porting-sdk
+          path: porting-sdk
+          token: ${{ secrets.PORTING_SDK_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+
+      - name: Install Python test harnesses (mock_relay + mock_signalwire)
+        run: |
+          pip install -e porting-sdk/test_harness/mock_relay
+          pip install -e porting-sdk/test_harness/mock_signalwire
+
+      - name: Install griffe (used by porting-sdk's enumerate_python_signatures.py for the SIGNATURES gate)
+        # PINNED. The SIGNATURES gate regenerates the oracle and DRIFT diffs it
+        # byte-for-byte against the committed file. An unpinned `pip install
+        # griffe` floated 2.0.2 -> 2.1.0 and tripped DRIFT on a no-op surface.
+        # The oracle no longer embeds the griffe version (provenance dropped),
+        # so this pin is belt-and-suspenders: it keeps the regen deterministic
+        # if a future griffe release changes the actual signature serialization.
+        run: pip install 'griffe==2.1.0'
+
+      - name: Install signalwire-python (editable + dev deps)
+        working-directory: signalwire-python
+        run: |
+          pip install -e .
+          pip install -r requirements-dev.txt
+
+      - name: Select gate tier (promote to nightly if PR touches docs/examples)
+        id: tier
+        working-directory: signalwire-python
+        run: |
+          tier=pr
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            base="${{ github.event.pull_request.base.sha }}"
+            if git fetch --no-tags --depth=1 origin "$base" 2>/dev/null \
+               && git diff --name-only "$base"...HEAD 2>/dev/null \
+                  | grep -qE '^(docs/|examples/|README|.*\.md$)'; then
+              tier=nightly
+              echo "PR touches docs/examples -> running heavy doc gates (tier=nightly)"
+            fi
+          fi
+          echo "tier=$tier" >> "$GITHUB_OUTPUT"
+
+      - name: Run CI gate script (TEST -> SIGNATURES -> DRIFT -> NO-CHEAT)
+        working-directory: signalwire-python
+        env:
+          PORTING_SDK: ${{ github.workspace }}/porting-sdk
+          SW_CI_TIER: nightly
+          SW_CI_TIER: ${{ steps.tier.outputs.tier }}
+        run: bash scripts/run-ci.sh
+
+      - name: Record green marker for this input triple
+        run: 'echo green > .nightly-green-marker'
+      - uses: actions/cache/save@v4
+        with:
+          path: .nightly-green-marker
+          key: ${{ needs.guard.outputs.cache_key }}
+
