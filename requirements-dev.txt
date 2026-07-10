@@ -1,5 +1,7 @@
 # Development and Testing Dependencies
-ruff>=0.15            # FMT + LINT gates in scripts/run-ci.sh (ruff format / check)
+ruff==0.15.21         # FMT + LINT gates in scripts/run-ci.sh; PINNED exact — an
+                      # unpinned `>=` lets a newer ruff reformat files that passed
+                      # under the version a dev has installed (local≠CI drift).
 pytest>=7.4.0
 pytest-cov>=4.1.0
 pytest-asyncio>=0.21.0
