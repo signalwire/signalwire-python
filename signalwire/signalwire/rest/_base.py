@@ -14,6 +14,7 @@ from typing import Any, Generic, TypeVar, cast
 
 import requests
 from signalwire.core.logging_config import get_logger
+from signalwire.rest._pagination import PaginatedIterator
 
 logger = get_logger("rest_client")
 
@@ -134,6 +135,24 @@ class ReadResource(BaseResource, Generic[TList, TItem]):
 
     def list(self, **params: Any) -> TList:
         return cast(TList, self._http.get(self._base_path, params=params or None))
+
+    def paginate(self, **params: Any) -> PaginatedIterator:
+        """Iterate every item across all pages of this resource's list endpoint.
+
+        ``list()`` returns a single raw page (the server's first response). For
+        endpoints that paginate on the wire (a ``links.next`` / ``page_token`` in
+        the response), ``paginate()`` follows those links and yields each item:
+
+            for address in client.fabric.addresses.paginate():
+                ...
+
+        Wires the resource layer to the tested ``PaginatedIterator`` (which walks
+        ``resp["data"]`` and follows ``resp["links"]["next"]``), so callers no
+        longer hand-construct the path + token loop.
+        """
+        return PaginatedIterator(
+            self._http, self._base_path, params=params or None, data_key="data"
+        )
 
     def get(self, resource_id: str) -> TItem:
         return cast(TItem, self._http.get(self._path(resource_id)))

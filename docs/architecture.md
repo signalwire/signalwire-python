@@ -1126,7 +1126,21 @@ Key environment variables:
 - `SWML_SSL_CERT_PATH`: Path to SSL certificate
 - `SWML_SSL_KEY_PATH`: Path to SSL key
 - `SWML_DOMAIN`: Domain name for the service
-- `SWML_SCHEMA_PATH`: Optional path to override the schema.json location
+
+Proxy / request-trust knobs (all default OFF — enable only behind a trusted proxy):
+- `SWML_TRUST_PROXY_HEADERS`: trust `X-Forwarded-*` host/proto headers (`1`/`true`/`yes`)
+- `SWML_TRUST_REMOTE_USER`: trust the `REMOTE_USER` CGI header for auth
+- `SWML_ALLOW_PRIVATE_URLS`: allow webhook/target URLs that resolve to private IPs
+  (off by default to block SSRF)
+- `SWML_PROXY_DEBUG`: verbose proxy-header resolution logging
+
+Other knobs:
+- `SWML_SKIP_SCHEMA_VALIDATION`: skip SWML schema validation (`1`) — for debugging only
+- `SIGNALWIRE_LOG_FORMAT`: log renderer, `console` (default) or `json`
+- `SIGNALWIRE_SPACE_NAME`: default space name used by `sw-agent-init` scaffolding
+
+The schema.json location is overridden via the `schema_path=` constructor argument
+of `AgentBase` / `SWMLService` (not an environment variable).
 
 ## Request Flow
 

@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.0.2] - 2026-07-11
+
+- REST: `ReadResource.paginate()` wires the `PaginatedIterator` into every list
+  resource so callers can page through all results (follows `links.next`).
+- Docs: corrected env-var names and documented previously-undocumented knobs
+  (including the proxy/SSRF trust toggles);
+  fixed stale skill/namespace counts and phantom method references.
+
 ## [3.0.1] - 2026-04-12
 
 - Update install instructions and PyPI URLs to use `signalwire-sdk`

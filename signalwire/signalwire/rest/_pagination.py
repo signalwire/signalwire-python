@@ -9,9 +9,13 @@ See LICENSE file in the project root for full license information.
 Pagination support for list endpoints that return paged results.
 """
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from ._base import HttpClient
+if TYPE_CHECKING:
+    # Type-only import: _base imports this module (ReadResource.paginate), so a
+    # runtime `from ._base import HttpClient` would be a circular import. HttpClient
+    # is used here purely as an annotation, so guard it under TYPE_CHECKING.
+    from ._base import HttpClient
 
 
 class PaginatedIterator:
@@ -24,7 +28,7 @@ class PaginatedIterator:
 
     def __init__(
         self,
-        http: HttpClient,
+        http: "HttpClient",
         path: str,
         params: dict[str, Any] | None = None,
         data_key: str = "data",
