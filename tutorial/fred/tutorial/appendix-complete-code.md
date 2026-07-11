@@ -13,6 +13,7 @@ Here's the complete implementation of Fred and the management script for your re
 
 ## Complete fred.py
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 #!/usr/bin/env python3
 """
@@ -22,8 +23,8 @@ A friendly agent that can search Wikipedia for factual information.
 Fred is curious, helpful, and loves sharing knowledge from Wikipedia.
 """
 
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import SwaigFunctionResult
 
 class FredTheWikiBot(AgentBase):
     """Fred - Your friendly Wikipedia assistant"""

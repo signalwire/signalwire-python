@@ -231,6 +231,7 @@ self.prompt_add_section(
 
 Here's the complete `sales_agent_with_search.py`:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 #!/usr/bin/env python3
 """
@@ -238,7 +239,7 @@ Sales Agent with Knowledge Base - Morgan
 A PC building sales specialist with access to product knowledge
 """
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class SalesAgentWithSearch(AgentBase):
     def __init__(self):

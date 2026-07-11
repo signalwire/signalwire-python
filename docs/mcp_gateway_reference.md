@@ -445,6 +445,7 @@ swaig-test test/test_agent.py --dump-swml
 
 ### 3. End-to-End Testing
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 # test/test_agent.py
 from signalwire import AgentBase

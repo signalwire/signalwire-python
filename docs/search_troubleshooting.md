@@ -553,6 +553,7 @@ vector type not found in the database
    ```
 
 **Validate connection string programmatically:**
+<!-- snippet: no-run troubleshooting snippet that asserts on an unset env var (PGVECTOR_CONNECTION) -->
 ```python
 import os
 conn = os.getenv("PGVECTOR_CONNECTION")
@@ -562,6 +563,7 @@ assert ":" in conn.split("@")[1], "Missing port"
 ```
 
 **Test connection:**
+<!-- snippet: no-run requires optional third-party package `sqlalchemy` -->
 ```python
 from sqlalchemy import create_engine
 

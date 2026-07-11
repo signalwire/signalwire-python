@@ -39,7 +39,7 @@ This skill creates one SWAIG tool:
 ### Basic Usage
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 agent = AgentBase("Wikipedia Assistant")
 

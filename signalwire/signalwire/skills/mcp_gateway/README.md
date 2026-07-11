@@ -46,8 +46,9 @@ Either Basic Auth credentials OR Bearer token:
 
 ### Basic Usage (All Services)
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class MyAgent(AgentBase):
     def __init__(self):

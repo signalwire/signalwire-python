@@ -285,6 +285,7 @@ agent.add_skill("web_search", {
 
 Parameters are passed to the skill constructor and accessible via `self.params`:
 
+<!-- snippet: no-run illustrative fragment (references `SkillBase` established in the surrounding prose) -->
 ```python
 class WebSearchSkill(SkillBase):
     def setup(self) -> bool:

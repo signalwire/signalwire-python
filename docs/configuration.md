@@ -9,6 +9,7 @@ All SignalWire services (SWML-based agents, Search, MCP Gateway) now support opt
 ## Quick Start
 
 ### Zero Configuration (Default)
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 # Works exactly as before - no config needed
 agent = MyAgent()
@@ -16,6 +17,7 @@ agent.run()
 ```
 
 ### With Configuration File
+<!-- snippet: no-run illustrative fragment (references `MyAgent` established in the surrounding prose) -->
 ```python
 # Automatically detects config.json if present
 agent = MyAgent()
@@ -289,6 +291,7 @@ if loader.has_config():
 
 ### Using with Services
 
+<!-- snippet: no-run requires optional third-party package `flask` -->
 ```python
 # SWML Service
 from signalwire import AgentBase

@@ -48,8 +48,9 @@ The `AgentServer` class allows you to host multiple agents on a single port, eac
 
 ### Basic Usage
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
-from signalwire_agents import AgentServer, AgentBase
+from signalwire import AgentServer, AgentBase
 
 # Create the server
 server = AgentServer(
@@ -84,9 +85,7 @@ server.run()
 server = AgentServer(
     host="0.0.0.0",        # Network interface
     port=3001,             # TCP port
-    log_level="debug",     # Logging verbosity
-    auth_user="custom",    # Override auto-generated auth
-    auth_pass="secret"     # Override auto-generated password
+    log_level="debug"      # Logging verbosity
 )
 ```
 

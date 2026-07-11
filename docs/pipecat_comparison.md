@@ -76,6 +76,7 @@ Developer writes Pipeline
 ### 2.3 Developer Experience Comparison
 
 **SignalWire - Minimal Agent:**
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import AgentBase
 

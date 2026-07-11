@@ -417,6 +417,7 @@ For full CLI reference, see [CLI Guide](cli_guide.md). For advanced indexing opt
 
 Add the `native_vector_search` skill to any agent to enable search:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 #!/usr/bin/env python3
 import os
@@ -518,6 +519,7 @@ sw-search validate knowledge.swsearch --verbose
 
 OpenAI Assistants provide a hosted file-search solution where documents are uploaded to OpenAI and everything is managed:
 
+<!-- snippet: no-run requires optional third-party package `openai` -->
 ```python
 from openai import OpenAI
 client = OpenAI()
@@ -547,6 +549,7 @@ Note: LLM inference costs apply to all approaches and are not included above.
 
 LangChain combined with a managed vector database (Pinecone, Weaviate, Qdrant) provides a flexible but complex approach:
 
+<!-- snippet: no-run requires optional third-party package `langchain` -->
 ```python
 from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import Pinecone
@@ -582,6 +585,7 @@ agent.add_skill("native_vector_search", {
 
 Building a custom solution with an embedding API (OpenAI, Cohere) and custom search logic:
 
+<!-- snippet: no-run requires optional third-party package `openai` -->
 ```python
 import openai
 import numpy as np

@@ -394,18 +394,18 @@ The serverless simulation automatically generates appropriate webhook URLs for e
 # Lambda Function URL
 swaig-test examples/my_agent.py --simulate-serverless lambda \
   --aws-function-url https://custom123.lambda-url.us-west-2.on.aws/ \
-  --dump-swml --format-json | jq '.sections.main[1].ai.SWAIG.defaults.web_hook_url'
+  --dump-swml --raw | jq '.sections.main[1].ai.SWAIG.defaults.web_hook_url'
 
 # CGI with custom host
 swaig-test examples/my_agent.py --simulate-serverless cgi \
   --cgi-host my-production-server.com \
   --cgi-https \
-  --dump-swml --format-json | jq '.sections.main[1].ai.SWAIG.defaults.web_hook_url'
+  --dump-swml --raw | jq '.sections.main[1].ai.SWAIG.defaults.web_hook_url'
 
 # Cloud Functions with custom URL
 swaig-test examples/my_agent.py --simulate-serverless cloud_function \
   --gcp-function-url https://my-custom-function.cloudfunctions.net \
-  --dump-swml --format-json | jq '.sections.main[1].ai.SWAIG.defaults.web_hook_url'
+  --dump-swml --raw | jq '.sections.main[1].ai.SWAIG.defaults.web_hook_url'
 ```
 
 ### Function Execution in Serverless Context
@@ -423,7 +423,7 @@ swaig-test examples/my_agent.py --simulate-serverless lambda \
 # Example output shows Lambda event format
 swaig-test examples/my_agent.py --simulate-serverless lambda \
   --exec calculate --expression "2+2" \
-  --full-request --format-json
+  --full-request --raw
 ```
 
 **Lambda Response Format:**
@@ -524,11 +524,11 @@ swaig-test examples/my_agent.py --simulate-serverless lambda \
 ```bash
 # Pretty-print JSON output
 swaig-test examples/my_agent.py --simulate-serverless lambda \
-  --dump-swml --format-json
+  --dump-swml --raw
 
 # Raw JSON for piping
 swaig-test examples/my_agent.py --simulate-serverless lambda \
-  --dump-swml --format-json | jq '.sections.main[1].ai.SWAIG.functions[0]'
+  --dump-swml --raw | jq '.sections.main[1].ai.SWAIG.functions[0]'
 ```
 
 ### Serverless Best Practices
@@ -585,7 +585,7 @@ The tool maintains backward compatibility with existing serverless parameters:
 
 ```bash
 # Legacy syntax (still supported)
-swaig-test examples/my_agent.py --serverless-mode lambda --function my_function --args '{"param":"value"}'
+swaig-test examples/my_agent.py --simulate-serverless lambda --exec my_function
 
 # New syntax (recommended)
 swaig-test examples/my_agent.py --simulate-serverless lambda --exec my_function --param value
@@ -611,12 +611,11 @@ swaig-test examples/joke_skill_demo.py --exec get_joke --type jokes
 swaig-test examples/agent.py --verbose --custom-data '{"test":"data"}' --exec my_function --param value
 ```
 
-### JSON Syntax (Alternative)
+Function arguments are passed as flags after `--exec <function>`:
 
 ```bash
-# JSON syntax (alternative approach)
-swaig-test examples/joke_skill_demo.py get_joke '{"type":"dadjokes"}'
-swaig-test examples/web_search_agent.py web_search '{"query":"AI agents","limit":5}'
+swaig-test examples/joke_skill_demo.py --exec get_joke --type dadjokes
+swaig-test examples/web_search_agent.py --exec web_search --query "AI agents" --limit 5
 ```
 
 ## CLI Argument Syntax
@@ -773,16 +772,16 @@ The tool automatically detects whether a function is a local webhook, external w
 
 ```bash
 # Test local webhook function - auto-detected
-swaig-test examples/datasphere_webhook_env_demo.py search_knowledge '{"query":"SignalWire"}'
+swaig-test examples/datasphere_webhook_env_demo.py --exec search_knowledge
 
 # Test DataMap function - auto-detected  
-swaig-test examples/datasphere_serverless_env_demo.py search_knowledge '{"query":"SignalWire"}'
+swaig-test examples/datasphere_serverless_env_demo.py --exec search_knowledge
 
 # Test local webhook function with get_weather
-swaig-test examples/simple_agent.py get_weather '{"location":"New York"}' --verbose
+swaig-test examples/simple_agent.py --exec get_weather --verbose
 
 # Test math skill function - auto-detected
-swaig-test examples/datasphere_serverless_env_demo.py calculate '{"expression":"25 * 47"}'
+swaig-test examples/datasphere_serverless_env_demo.py --exec calculate
 ```
 
 #### External Webhook Function Testing
@@ -791,7 +790,7 @@ External webhook functions are automatically detected and tested by making HTTP 
 
 ```bash
 # Test external webhook with verbose output
-swaig-test examples/my_agent.py getWeather '{"location":"San Francisco"}' --verbose
+swaig-test examples/my_agent.py --exec getWeather --verbose
 
 # List functions with their types (local vs external)
 swaig-test examples/my_agent.py --list-tools
@@ -847,10 +846,10 @@ You can test agents that have both local and external webhook functions:
 
 ```bash
 # Test local function
-swaig-test examples/my_agent.py getHelp '{}'
+swaig-test examples/my_agent.py --exec getHelp
 
 # Test external function
-swaig-test examples/my_agent.py getWeather '{"location":"Tokyo"}'
+swaig-test examples/my_agent.py --exec getWeather
 
 # Show all function types
 swaig-test examples/my_agent.py --list-tools
@@ -1007,21 +1006,16 @@ swaig-test examples/agent.py --dump-swml --verbose
 # Output: Fake data details + agent info + SWML
 ```
 
-## Alternative CLI Argument Syntax
+## Passing Function Arguments
 
-### Using --args Separator
-
-Instead of JSON strings, use CLI-style arguments:
+After `--exec <function>`, every following flag is passed to the function as an
+argument (the tool converts each value using the function's parameter schema):
 
 ```bash
-# Traditional JSON syntax
-swaig-test examples/agent.py search_function '{"query":"test","limit":10,"verbose":true}'
+swaig-test examples/agent.py --exec search_function --query "test" --limit 10 --verbose
 
-# Alternative CLI syntax  
-swaig-test examples/agent.py search_function --args --query "test" --limit 10 --verbose
-
-# Schema-based type conversion
-swaig-test examples/agent.py calculate --args --expression "25 * 47" --precision 2
+# Schema-based type conversion (numbers, booleans) is automatic:
+swaig-test examples/agent.py --exec calculate --expression "25 * 47" --precision 2
 ```
 
 ### Argument Type Handling
@@ -1040,16 +1034,16 @@ The tool automatically converts arguments based on function schema:
 
 ```bash
 # Simple string parameter
-swaig-test examples/agent.py greet --args --name "Alice"
+swaig-test examples/agent.py --exec greet --name "Alice"
 
 # Multiple parameters with type conversion
-swaig-test examples/agent.py search --args --query "AI" --limit 5 --include-metadata
+swaig-test examples/agent.py --exec search --query "AI" --limit 5 --include-metadata
 
 # Boolean flags
-swaig-test examples/agent.py process --args --input "data" --verify --async false
+swaig-test examples/agent.py --exec process --input "data" --verify --async false
 
 # Array parameters (comma-separated)
-swaig-test examples/agent.py filter --args --categories "tech,science,health" --max-results 20
+swaig-test examples/agent.py --exec filter --categories "tech,science,health" --max-results 20
 ```
 
 ## DataMap Function Execution
@@ -1068,7 +1062,7 @@ DataMap functions follow the SignalWire server-side processing pipeline:
 
 ```bash
 # Test DataSphere serverless search with verbose output
-swaig-test examples/datasphere_serverless_env_demo.py search_knowledge '{"query":"SignalWire"}' --verbose
+swaig-test examples/datasphere_serverless_env_demo.py --exec search_knowledge --verbose
 ```
 
 **Example Execution Flow:**
@@ -1177,10 +1171,10 @@ def get_weather_external(self, args, raw_data):
 
 ```bash
 # Test external webhook function
-swaig-test examples/my_agent.py getWeather '{"location":"Paris"}' --verbose
+swaig-test examples/my_agent.py --exec getWeather --verbose
 
 # Compare with local function
-swaig-test examples/my_agent.py getHelp '{}' --verbose
+swaig-test examples/my_agent.py --exec getHelp --verbose
 ```
 
 **External Webhook Request Format:**
@@ -1210,7 +1204,7 @@ The CLI tool sends the same payload format that SignalWire uses:
 
 ```bash
 # Test with unreachable external service
-swaig-test examples/my_agent.py testBrokenWebhook '{"message":"test"}' --verbose
+swaig-test examples/my_agent.py --exec testBrokenWebhook --verbose
 ```
 
 Output shows connection errors and HTTP status codes:
@@ -1227,13 +1221,13 @@ Dict: {
 
 #### 1. Default Mode (Minimal Data)
 ```bash
-swaig-test my_agent.py my_function '{"param":"value"}'
+swaig-test my_agent.py --exec my_function
 ```
 **Includes**: `function`, `argument`, `call_id`, `meta_data`, `global_data`
 
 #### 2. Comprehensive Mode (Full SignalWire Environment)
 ```bash
-swaig-test my_agent.py my_function '{"param":"value"}' --fake-full-data
+swaig-test my_agent.py --exec my_function --fake-full-data
 ```
 
 **Includes complete post_data with all SignalWire keys:**
@@ -1247,7 +1241,7 @@ swaig-test my_agent.py my_function '{"param":"value"}' --fake-full-data
 
 #### 3. Custom Data Mode
 ```bash
-swaig-test my_agent.py my_function '{"param":"value"}' --custom-data '{"call_id":"test-123","global_data":{"environment":"production"}}'
+swaig-test my_agent.py --exec my_function --custom-data '{"call_id":"test-123","global_data":{"environment":"production"}}'
 ```
 
 ### Comprehensive Post Data Example
@@ -1310,7 +1304,7 @@ swaig-test my_agent.py my_function '{"param":"value"}' --custom-data '{"call_id"
 
 ```bash
 # Test DataSphere serverless function
-swaig-test examples/datasphere_serverless_env_demo.py search_knowledge '{"query":"AI agents"}' --verbose
+swaig-test examples/datasphere_serverless_env_demo.py --exec search_knowledge --verbose
 ```
 
 **Expected Output:**
@@ -1341,7 +1335,7 @@ Response: I found results for "AI agents": ...
 
 ```bash
 # Test webhook-style math function
-swaig-test examples/datasphere_serverless_env_demo.py calculate '{"expression":"25 * 47"}' --verbose
+swaig-test examples/datasphere_serverless_env_demo.py --exec calculate --verbose
 ```
 
 **Expected Output:**
@@ -1358,7 +1352,7 @@ FunctionResult: The result of 25 * 47 is 1175.
 
 ```bash
 # Test datetime function with comprehensive data
-swaig-test examples/datasphere_serverless_env_demo.py get_datetime '{}' --fake-full-data
+swaig-test examples/datasphere_serverless_env_demo.py --exec get_datetime --fake-full-data
 ```
 
 ## Function Type Detection
@@ -1428,11 +1422,10 @@ Available SWAIG functions:
 | `--method` | HTTP method for mock request (default: POST) |
 | `--body` | JSON string for mock request body |
 
-### Alternative Syntax
+### Function Arguments
 
-| Option | Description |
-|--------|-------------|
-| `--args` | Separator for CLI-style function arguments |
+Arguments to a function are passed as flags after `--exec <function>` — there is
+no separate `--args` option. See [Passing Function Arguments](#passing-function-arguments).
 
 ## Real-World Examples
 
@@ -1608,10 +1601,10 @@ swaig-test examples/agent.py --dump-swml \
 
 ```bash
 # Traditional JSON approach
-swaig-test examples/datasphere_agent.py search_knowledge '{"query":"SignalWire features","count":"3","distance":"0.5"}'
+swaig-test examples/datasphere_agent.py --exec search_knowledge
 
 # CLI syntax approach
-swaig-test examples/datasphere_agent.py search_knowledge --args \
+swaig-test examples/datasphere_agent.py --exec search_knowledge \
   --query "SignalWire features" \
   --count 3 \
   --distance 0.5
@@ -1621,7 +1614,7 @@ swaig-test examples/datasphere_agent.py search_knowledge --args \
 
 ```bash
 # CLI syntax with automatic type conversion
-swaig-test examples/math_agent.py calculate --args \
+swaig-test examples/math_agent.py --exec calculate \
   --expression "sqrt(144) + log(100)" \
   --precision 4 \
   --scientific-notation false
@@ -1631,7 +1624,7 @@ swaig-test examples/math_agent.py calculate --args \
 
 ```bash
 # Function with string, number, boolean, and array parameters
-swaig-test examples/complex_agent.py process_data --args \
+swaig-test examples/complex_agent.py --exec process_data \
   --input-text "Process this data" \
   --max-items 50 \
   --include-metadata \
@@ -1815,17 +1808,17 @@ Look for:
 
 ### CLI Syntax Debugging
 
-For `--args` parsing issues:
+For function-argument parsing issues:
 
 ```bash
 # Verify function schema
 swaig-test my_agent.py --list-tools --verbose | grep -A 10 my_function
 
 # Test with simple parameters first
-swaig-test my_agent.py my_function --args --simple-param "value"
+swaig-test my_agent.py --exec my_function --simple-param "value"
 
 # Check type conversion
-swaig-test my_agent.py my_function --args --number-param 42 --bool-param --verbose
+swaig-test my_agent.py --exec my_function --number-param 42 --bool-param --verbose
 ```
 
 Look for:
@@ -1840,7 +1833,7 @@ Test how DataMap functions handle API failures:
 
 ```bash
 # Test with verbose output to see fallback processing
-swaig-test my_agent.py my_datamap_func '{"input":"test"}' --verbose
+swaig-test my_agent.py --exec my_datamap_func --verbose
 ```
 
 If the primary webhook fails, you'll see:
@@ -1856,7 +1849,7 @@ Simulate different environments with custom data:
 
 ```bash
 # Simulate production environment
-swaig-test my_agent.py my_function '{"input":"test"}' --fake-full-data --custom-data '{
+swaig-test my_agent.py --exec my_function --fake-full-data --custom-data '{
   "global_data": {
     "environment": "production", 
     "api_tier": "premium",
@@ -1874,7 +1867,7 @@ swaig-test my_agent.py my_function '{"input":"test"}' --fake-full-data --custom-
 For DataMap functions with multiple webhooks and complex foreach processing:
 
 ```bash
-swaig-test my_agent.py complex_search '{"query":"test","filters":["type1","type2"]}' --verbose
+swaig-test my_agent.py --exec complex_search --verbose
 ```
 
 This shows the complete processing pipeline:
@@ -1924,7 +1917,7 @@ The tool returns appropriate exit codes:
 # GitHub Actions example
 - name: Test SWAIG Functions
   run: |
-    swaig-test my_agent.py critical_function '{"input":"test"}' --fake-full-data
+    swaig-test my_agent.py --exec critical_function --fake-full-data
     if [ $? -ne 0 ]; then
       echo "Critical function test failed"
       exit 1
@@ -2032,7 +2025,7 @@ swaig-test my_agent.py --simulate-serverless cgi \
 
 # Debug webhook URL generation
 swaig-test my_agent.py --simulate-serverless lambda \
-  --dump-swml --format-json | jq '.sections.main[1].ai.SWAIG.defaults.web_hook_url'
+  --dump-swml --raw | jq '.sections.main[1].ai.SWAIG.defaults.web_hook_url'
 ```
 
 #### Function Execution Debugging
@@ -2085,7 +2078,7 @@ Look for:
 
 ```bash
 # Test with valid API key - shows successful DataMap processing
-API_NINJAS_KEY=your_api_key swaig-test examples/joke_skill_demo.py get_joke '{"type": "jokes"}' --verbose
+API_NINJAS_KEY=your_api_key swaig-test examples/joke_skill_demo.py --exec get_joke --verbose
 ```
 
 **Expected Output:**
@@ -2108,7 +2101,7 @@ Response: Here's a joke: What do you call a bear with no teeth? A gummy bear!
 
 ```bash
 # Test with invalid API key - shows fallback output processing
-swaig-test examples/joke_agent.py get_joke '{"type": "jokes"}' --verbose
+swaig-test examples/joke_agent.py --exec get_joke --verbose
 ```
 
 **Expected Output (when API key is invalid):**

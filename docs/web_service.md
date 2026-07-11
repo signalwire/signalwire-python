@@ -1,5 +1,12 @@
 # WebService Documentation
 
+<!-- snippet-setup: shared imports the examples on this page assume -->
+```python
+from signalwire import AgentBase, AgentServer, DataMap, FunctionResult, SwaigFunctionResult, SWMLService
+from signalwire.core.skill_base import SkillBase
+```
+
+
 The `WebService` class provides static file serving capabilities for the SignalWire SDK. It follows the same architectural pattern as `SearchService`, allowing it to run as a standalone service or alongside your AI agents.
 
 ## Table of Contents
@@ -41,6 +48,7 @@ pip install signalwire-sdk
 
 ## Quick Start
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import WebService
 
@@ -193,6 +201,7 @@ MIIEvQIBADANBgkqhkiG9w0BAQE...
 
 ### Method 2: Direct Parameters
 
+<!-- snippet: no-run reads a data/index file that must be built first (needs a real artifact) -->
 ```python
 service = WebService(directories={"/docs": "./docs"})
 service.start(
@@ -265,6 +274,7 @@ Serve files from mounted directories
 
 ### Basic File Serving
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import WebService
 
@@ -284,6 +294,7 @@ service.start()
 
 ### With Directory Browsing
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 service = WebService(
     directories={"/files": "./public"},
@@ -307,6 +318,7 @@ service = WebService(
 
 ### Dynamic Directory Management
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 service = WebService()
 
@@ -322,6 +334,7 @@ service.start()
 
 ### With Custom Authentication
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 service = WebService(
     directories={"/private": "./sensitive-docs"},
@@ -332,6 +345,7 @@ service.start()
 
 ### HTTPS with Let's Encrypt
 
+<!-- snippet: no-run reads a data/index file that must be built first (needs a real artifact) -->
 ```python
 # Assuming you have Let's Encrypt certificates
 service = WebService(
@@ -346,6 +360,7 @@ service.start(
 
 ### Multi-Environment Configuration
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 import os
 
@@ -376,6 +391,7 @@ else:
 
 Run WebService as a dedicated static file server:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 # web_server.py
 from signalwire import WebService
@@ -396,6 +412,7 @@ if __name__ == "__main__":
 
 Run WebService alongside your AI agents on different ports:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 # main.py
 from signalwire import AgentBase, WebService
@@ -562,6 +579,7 @@ service = WebService(
 
 Enable debug logging to troubleshoot issues:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -631,6 +649,7 @@ Remove a directory from being served.
 
 WebService complements AI agents by providing static file serving:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import AgentBase, WebService
 

@@ -23,6 +23,7 @@ from signalwire import BedrockAgent
 
 ### Creating a BedrockAgent
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import BedrockAgent
 
@@ -40,6 +41,7 @@ agent.run()
 
 ### With Skills and Tools
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import BedrockAgent
 
@@ -221,11 +223,12 @@ swaig-test examples/bedrock_with_skills.py --list
 swaig-test examples/bedrock_with_skills.py --dump
 
 # Test a function
-swaig-test examples/bedrock_with_skills.py --function calculate_sum --args '{"a": 5, "b": 3}'
+swaig-test examples/bedrock_with_skills.py --exec calculate_sum
 ```
 
 ## Complete Example
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 #!/usr/bin/env python3
 from signalwire import BedrockAgent
@@ -302,8 +305,8 @@ Migrating from a standard Agent to BedrockAgent is straightforward:
 
 ```python
 # Before
-from signalwire import Agent
-agent = Agent(name="my_agent")
+from signalwire import AgentBase
+agent = AgentBase(name="my_agent")
 
 # After
 from signalwire import BedrockAgent

@@ -113,6 +113,7 @@ class WeatherSkill(SkillBase):
 
 Register individual skill classes programmatically:
 
+<!-- snippet: no-run requires optional third-party package `my_weather_skill` -->
 ```python
 from signalwire import AgentBase, register_skill
 from my_weather_skill import WeatherSkill
@@ -136,6 +137,7 @@ class MyAgent(AgentBase):
 
 Register directories containing multiple skills:
 
+<!-- snippet: no-run references an example filesystem path the reader supplies -->
 ```python
 from signalwire import add_skill_directory
 
@@ -160,6 +162,7 @@ agent.add_skill("stock_market", {"api_key": "..."})
 
 Create installable skill packages using setuptools entry points:
 
+<!-- snippet: no-run CLI invocation excerpt (not a Python program under this runner) -->
 ```python
 # setup.py for your skill package
 from setuptools import setup, find_packages
@@ -234,6 +237,7 @@ my_skills_directory/
 
 Third-party skills are fully integrated with the SDK's discovery system:
 
+<!-- snippet: no-run depends on an env var / user-provided skill not present in this environment -->
 ```python
 from signalwire import list_skills_with_params
 
@@ -402,6 +406,7 @@ def setup(self) -> bool:
 
 Test your skills before distribution:
 
+<!-- snippet: no-run requires optional third-party package `my_weather_skill` -->
 ```python
 # test_my_skill.py
 import unittest
@@ -445,6 +450,7 @@ If your skill isn't being discovered:
 
 For skills with relative imports:
 
+<!-- snippet: no-run requires optional third-party package `my_skills` -->
 ```python
 # Use absolute imports in skill.py
 from my_skills.weather.utils import parse_temperature
@@ -493,6 +499,7 @@ my-signalwire-skills/
     └── test_translation.py
 ```
 
+<!-- snippet: no-run CLI invocation excerpt (not a Python program under this runner) -->
 ```python
 # setup.py
 from setuptools import setup, find_packages
@@ -523,6 +530,7 @@ Install and use:
 pip install git+https://github.com/yourname/my-signalwire-skills.git
 ```
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import AgentBase
 

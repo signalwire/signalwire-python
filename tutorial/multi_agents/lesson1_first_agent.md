@@ -48,7 +48,7 @@ Simple Sales Agent - Morgan
 A friendly PC building sales specialist
 """
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class SalesAgent(AgentBase):
     def __init__(self):
@@ -180,6 +180,7 @@ SignalWire supports multiple text-to-speech voices. Let's configure Morgan's voi
 
 Here's the complete `sales_agent.py`:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 #!/usr/bin/env python3
 """
@@ -187,7 +188,7 @@ Simple Sales Agent - Morgan
 A friendly PC building sales specialist
 """
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class SalesAgent(AgentBase):
     def __init__(self):

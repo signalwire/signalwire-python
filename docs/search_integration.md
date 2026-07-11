@@ -907,6 +907,7 @@ class ABTestAgent(AgentBase):
 
 **Systematic evaluation approach:**
 
+<!-- snippet: no-run illustrative fragment (references `search` established in the surrounding prose) -->
 ```python
 test_queries = [
     "how to create an agent",

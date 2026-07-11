@@ -68,6 +68,7 @@ The doc proposes `new SignalWire({ project, token })` as the branded entry point
 These are three different classes with three different constructors. A developer doing AI agents never touches RelayClient. A developer doing call control never touches AgentBase. They don't feel like one SDK.
 
 **To align with the vision:** A single `SignalWire` entry point that exposes all three as namespaces:
+<!-- snippet: no-run design/vision essay — illustrative pseudo-API, not runnable -->
 ```python
 sw = SignalWire(project=PROJECT, token=TOKEN)
 sw.agents  # → AgentBase functionality
@@ -127,6 +128,7 @@ These **are** consistent. The fleet is well-aligned on naming.
 
 The One SDK doc shows `call.answer()`, `call.prompt()`, `call.connect()` — direct call control. Our AI Agents SDK works differently:
 
+<!-- snippet: no-run design/vision essay — illustrative pseudo-API, not runnable -->
 ```python
 # Our current model: declare, don't command
 agent = AgentBase("my-agent")

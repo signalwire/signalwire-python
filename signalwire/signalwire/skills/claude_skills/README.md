@@ -26,8 +26,9 @@ Use $ARGUMENTS for context passed to this skill.
 
 ## Usage
 
+<!-- snippet: no-run add_skill('claude_skills') sets up against a real ~/.claude/skills directory (external dependency, not present in CI) -->
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 agent = AgentBase(name="my-agent")
 
@@ -438,8 +439,9 @@ Directory structure:
 ```
 
 Agent code:
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 agent = AgentBase(name="code-assistant")
 

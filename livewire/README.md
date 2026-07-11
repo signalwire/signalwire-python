@@ -11,7 +11,7 @@ SignalWire infrastructure.  Just change your import path.
 # from livekit.agents import Agent, AgentSession, function_tool, cli
 
 # After (LiveWire -- runs on SignalWire)
-from signalwire_agents.livewire import (
+from signalwire.livewire import (
     Agent,
     AgentSession,
     AgentServer,

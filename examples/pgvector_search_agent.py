@@ -23,10 +23,7 @@ class PGVectorSearchAgent(AgentBase):
     """Agent that uses pgvector for document search"""
     
     def __init__(self):
-        super().__init__()
-        
-        # Set agent name and description
-        self.agent_name = "PGVector Search Assistant"
+        super().__init__(name="PGVector Search Assistant")
         
         # Configure the main prompt
         self.prompt_add_section(

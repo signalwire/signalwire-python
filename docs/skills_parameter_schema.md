@@ -340,6 +340,7 @@ All skills automatically inherit these base parameters from `SkillBase`:
 
 Skills like `datetime` and `math` that don't need configuration:
 
+<!-- snippet: no-run typed method-signature fragment (uses typing names outside a complete module) -->
 ```python
 @classmethod
 def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
@@ -351,6 +352,7 @@ def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
 
 Skills like `web_search` with multiple configuration options:
 
+<!-- snippet: no-run typed method-signature fragment (uses typing names outside a complete module) -->
 ```python
 @classmethod
 def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:

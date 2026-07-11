@@ -310,6 +310,7 @@ pip install signalwire-sdk[search-queryonly]
 
 **Verification:**
 
+<!-- snippet: no-run documents a diagnostic helper not exported by signalwire.search -->
 ```python
 from signalwire.search import check_dependencies
 
@@ -908,6 +909,7 @@ export SEARCH_CORS_ORIGINS='["https://app.example.com", "https://api.example.com
 
 **Rate limiting:**
 
+<!-- snippet: no-run requires optional third-party package `slowapi` -->
 ```python
 from slowapi import Limiter
 limiter = Limiter(key_func=get_remote_address)
@@ -1005,6 +1007,7 @@ sw-search migrate --info ./knowledge.swsearch
 
 **Step 4: Migrate using the Python API (alternative).**
 
+<!-- snippet: no-run reads a data/index file that must be built first (needs a real artifact) -->
 ```python
 from signalwire.search import SearchIndexMigrator
 
@@ -1136,6 +1139,7 @@ sw-search search ./knowledge.swsearch "test query"
 
 Before (pgvector):
 
+<!-- snippet: no-run illustrative fragment (references `os` established in the surrounding prose) -->
 ```python
 {
     "backend": "pgvector",
@@ -1254,6 +1258,7 @@ done
 
 **Step 4: Benchmark before switching.**
 
+<!-- snippet: no-run illustrative fragment (references `search_mini` established in the surrounding prose) -->
 ```python
 import time
 
@@ -1773,6 +1778,7 @@ connection_string = "postgresql://user:pass@pgbouncer:6432/knowledge"
 
 **SQLAlchemy connection pool (application-level):**
 
+<!-- snippet: no-run requires optional third-party package `sqlalchemy` -->
 ```python
 import os
 from sqlalchemy import create_engine
@@ -1896,6 +1902,7 @@ def monitored_search(query):
 
 **Prometheus integration:**
 
+<!-- snippet: no-run requires optional third-party package `prometheus_client` -->
 ```python
 from prometheus_client import Counter, Histogram
 
@@ -2115,6 +2122,7 @@ This means developers do not need the full ML stack, local setup is faster, inde
 
 **Batch migration script for multiple indexes:**
 
+<!-- snippet: no-run depends on an env var / user-provided skill not present in this environment -->
 ```python
 #!/usr/bin/env python3
 """Migrate all development indexes to production."""

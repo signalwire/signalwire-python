@@ -12,6 +12,7 @@ pip install signalwire-sdk
 
 ## Import Changes
 
+<!-- snippet: no-run before/after migration example showing the old signalwire_agents package -->
 ```python
 # Before
 from signalwire_agents import AgentBase

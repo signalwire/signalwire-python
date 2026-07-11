@@ -167,6 +167,15 @@ signalwire = [
 target-version = "py310"
 line-length = 88
 
+[tool.ruff.format]
+# Pin STABLE formatting explicitly. Without this, CI's `ruff format --check` was
+# resolving preview-mode formatting (it wanted the preview-only frozenset({...})
+# collapse) while a local stable run left the file unchanged — a local≠CI split
+# with no visible cause. An explicit `preview = false` overrides any ambient
+# RUFF_PREVIEW env / default drift so the gate is deterministic and matches a
+# plain local `ruff format`.
+preview = false
+
 [tool.ruff.lint]
 # E4/E7/E9 + F are the ruff defaults (E501 line-length intentionally excluded —
 # formatting is owned by `ruff format`, not the linter). B = flake8-bugbear

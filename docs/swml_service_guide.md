@@ -37,6 +37,7 @@ pip install signalwire-sdk
 
 Here's a simple example of creating an SWML service:
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire.core.swml_service import SWMLService
 
@@ -120,10 +121,12 @@ import logging
 logging.getLogger().setLevel(logging.WARNING)  # Only show warnings and above
 ```
 
-You can also pass `suppress_logs=True` when initializing an agent or service:
+You can also pass `suppress_logs=True` when initializing an agent:
 
 ```python
-service = SWMLService(
+from signalwire import AgentBase
+
+agent = AgentBase(
     name="my-service",
     suppress_logs=True
 )
@@ -190,6 +193,7 @@ self.add_verb("play", {
 
 You can register custom verb handlers for specialized verb processing:
 
+<!-- snippet: no-run illustrative fragment (references `service` established in the surrounding prose) -->
 ```python
 from signalwire.core.swml_handler import SWMLVerbHandler
 
@@ -274,6 +278,7 @@ The `SWMLService` class allows you to register custom routing callbacks that can
 
 You can use the `register_routing_callback` method to register a function that will be called to process requests to a specific path:
 
+<!-- snippet: no-run illustrative fragment (references `service` established in the surrounding prose) -->
 ```python
 def my_routing_callback(request, body):
     """

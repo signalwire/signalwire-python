@@ -124,7 +124,7 @@ Understanding the magic behind `add_skill()`:
 1. **Skill Loading**
    ```python
    # The SDK dynamically imports the skill module
-   from signalwire_agents.skills.wikipedia_search.skill import WikipediaSearchSkill
+   from signalwire.skills.wikipedia_search.skill import WikipediaSearchSkill
    ```
 
 2. **Skill Initialization**
@@ -170,6 +170,7 @@ Let's add some test code to verify the skill works:
 
 ### Step 3: Update Main Function
 
+<!-- snippet: no-run illustrative fragment (references `FredTheWikiBot` established in the surrounding prose) -->
 ```python
 def main():
     """Run Fred the Wiki Bot"""

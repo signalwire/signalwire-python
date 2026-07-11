@@ -5,6 +5,7 @@ runs on SignalWire infrastructure.
 
 ## Step 1: Change your imports
 
+<!-- snippet: no-run requires optional third-party package `livekit` -->
 ```python
 # Before
 from livekit.agents import Agent, AgentSession, cli
@@ -12,7 +13,7 @@ from livekit.agents import function_tool
 from livekit.plugins import deepgram, openai, cartesia, silero
 
 # After
-from signalwire_agents.livewire import (
+from signalwire.livewire import (
     Agent,
     AgentSession,
     AgentServer,
@@ -31,6 +32,7 @@ from signalwire_agents.livewire import (
 The `@function_tool` decorator works identically.  Parameter type-hints are
 extracted automatically and mapped to SignalWire's SWAIG function schema.
 
+<!-- snippet: no-run illustrative fragment (references `function_tool` established in the surrounding prose) -->
 ```python
 @function_tool
 def get_weather(location: str) -> str:
@@ -40,6 +42,7 @@ def get_weather(location: str) -> str:
 
 ## Step 3: Keep your Agent + AgentSession pattern
 
+<!-- snippet: no-run illustrative fragment (references `Agent` established in the surrounding prose) -->
 ```python
 agent = Agent(
     instructions="You are a helpful weather assistant.",
@@ -58,6 +61,7 @@ session = AgentSession(
 
 ## Step 4: Replace cli.run_app with LiveWire's run_app
 
+<!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 # Before
 if __name__ == "__main__":

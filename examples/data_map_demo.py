@@ -192,10 +192,9 @@ def print_data_map_examples():
     print("\n1. Simple API Tool (Weather):")
     print(f"   Generated SWAIG: {weather.to_swaig_function()}")
     
-    # Expression tool
+    # Expression tool — patterns map a test_value to a (regex, FunctionResult) tuple
     patterns = {
-        r'start.*': FunctionResult().add_action('start_playback', {'file': '${args.filename}'}),
-        r'stop.*': FunctionResult().add_action('stop_playback', True)
+        '${args.command}': (r'start.*', FunctionResult().add_action('start_playback', {'file': '${args.filename}'})),
     }
     
     file_control = create_expression_tool(

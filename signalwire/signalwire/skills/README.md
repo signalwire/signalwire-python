@@ -84,9 +84,9 @@ See LICENSE file in the project root for full license information.
 
 from typing import List, Dict, Any
 
-from signalwire_agents.core.skill_base import SkillBase
-from signalwire_agents.core.data_map import DataMap
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.skill_base import SkillBase
+from signalwire.core.data_map import DataMap
+from signalwire.core.function_result import SwaigFunctionResult
 
 
 class YourSkillClass(SkillBase):
@@ -243,7 +243,7 @@ pip install . --force-reinstall
 ### 2. Test Skill Discovery
 
 ```python
-from signalwire_agents.skills.registry import skill_registry
+from signalwire.skills.registry import skill_registry
 
 skill_registry.discover_skills()
 skills = skill_registry.list_skills()
@@ -254,8 +254,9 @@ for skill in skills:
 
 ### 3. Test Skill Usage
 
+<!-- snippet: no-run illustrative skill name a reader would provide (not a built-in skill) -->
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class TestAgent(AgentBase):
     def __init__(self):
@@ -313,7 +314,7 @@ Detailed explanation of the skill's purpose and capabilities.
 ### Basic Usage
 
 ```python
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class MyAgent(AgentBase):
     def __init__(self):
@@ -359,7 +360,7 @@ This demo shows how to use your skill with the SignalWire Agents SDK.
 Run with: python examples/your_skill_demo.py
 """
 
-from signalwire_agents import AgentBase
+from signalwire import AgentBase
 
 class YourSkillAgent(AgentBase):
     def __init__(self):

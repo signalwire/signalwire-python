@@ -36,6 +36,7 @@ listener.on('call', async (call) => {
 ```
 
 **Python**
+<!-- snippet: no-run design/vision essay — illustrative pseudo-API, not runnable -->
 ```python
 @listener.on_call
 async def handle_call(call):

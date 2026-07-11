@@ -22,8 +22,8 @@ SWAIG (SignalWire AI Gateway) functions allow your agent to perform actions beyo
 ### Basic Function Structure
 
 ```python
-from signalwire_agents import AgentBase
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire import AgentBase
+from signalwire.core.function_result import SwaigFunctionResult
 
 class MyAgent(AgentBase):
     def __init__(self):
@@ -277,7 +277,7 @@ Effective logging is crucial for troubleshooting and monitoring.
 ### Using the Logger
 
 ```python
-from signalwire_agents.core.logging_config import get_logger
+from signalwire.core.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -439,6 +439,7 @@ WantedBy=multi-user.target
 
 ### Health Monitoring
 
+<!-- snippet: no-run illustrative fragment (references `server` established in the surrounding prose) -->
 ```python
 # Add custom health checks
 @server.app.get("/health/detailed")
@@ -467,7 +468,7 @@ async def detailed_health():
 
 ```python
 import pytest
-from signalwire_agents.core.function_result import SwaigFunctionResult
+from signalwire.core.function_result import SwaigFunctionResult
 
 @pytest.mark.asyncio
 async def test_calculate_price():
