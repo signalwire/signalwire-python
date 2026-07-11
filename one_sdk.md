@@ -33,11 +33,11 @@ Every SDK generates identical SWML JSON. The `set_param("realtime", {"voice": "v
 
 ### Same Skills System
 
-All 18 skills exist in every SDK with the same names, same tool names, same parameter schemas. `add_skill("datetime")` works identically across all 7 languages.
+All 17 skills exist in every SDK with the same names, same tool names, same parameter schemas. `add_skill("datetime")` works identically across all 7 languages.
 
 ### Same REST Namespaces
 
-All 21 REST API namespaces (Fabric, Calling, PhoneNumbers, Datasphere, Video, Compat, etc.) exist in every SDK with the same method names and paths.
+All 20 REST API namespaces (Fabric, Calling, PhoneNumbers, Datasphere, Video, Compat, etc.) exist in every SDK with the same method names and paths.
 
 ### Platform-Native Idioms
 
@@ -165,7 +165,7 @@ The One SDK doc says: "Consistency is maintained through shared design documents
 - **PORTING_GUIDE.md** — The master specification (1200+ lines)
 - **CHECKLIST_TEMPLATE.md** — Every feature as a checkbox
 - **SWAIG_FUNCTION_RESULT_REFERENCE.md** — Exact JSON for all 40+ actions
-- **SKILLS_MANIFEST.md** — All 18 skills with exact specs
+- **SKILLS_MANIFEST.md** — All 17 skills with exact specs
 - **RELAY_IMPLEMENTATION_GUIDE.md** — Wire protocol reference
 - **rest-apis/*.yaml** — OpenAPI specs for all REST namespaces
 - **schema.json** — SWML verb schema (the source of truth for verbs)
