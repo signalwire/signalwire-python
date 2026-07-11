@@ -133,7 +133,7 @@ all = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/signalwire/signalwire-agents"
+Homepage = "https://github.com/signalwire/signalwire-python"
 
 [project.scripts]
 swaig-test = "signalwire.cli.swaig_test_wrapper:main"
