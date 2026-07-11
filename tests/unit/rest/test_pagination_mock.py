@@ -147,3 +147,32 @@ class TestPaginatedIterator:
         else:
             stopped = False
         assert stopped, "expected StopIteration on second __next__()"
+
+    def test_resource_paginate_walks_all_pages(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        """ReadResource.paginate() wires the resource layer to PaginatedIterator:
+        a caller pages through every item without hand-constructing the path/token
+        loop. Two mock pages (first carries links.next), collected in order."""
+        from signalwire.rest._base import ReadResource
+
+        _push_scenario(
+            mock, _FABRIC_ADDRESSES_ENDPOINT_ID, status=200,
+            response={
+                "data": [{"id": "r-1"}, {"id": "r-2"}],
+                "links": {"next": f"{_FABRIC_ADDRESSES_PATH}?cursor=page2"},
+            },
+        )
+        _push_scenario(
+            mock, _FABRIC_ADDRESSES_ENDPOINT_ID, status=200,
+            response={"data": [{"id": "r-3"}], "links": {}},
+        )
+
+        resource: ReadResource[Any, Any] = ReadResource(
+            signalwire_client._http, _FABRIC_ADDRESSES_PATH
+        )
+        collected = [item["id"] for item in resource.paginate()]
+        assert collected == ["r-1", "r-2", "r-3"]
+        gets = [e for e in mock.journal if e.path == _FABRIC_ADDRESSES_PATH]
+        assert len(gets) == 2, f"expected 2 paginated GETs, got {len(gets)}"
+        assert gets[1].query_params.get("cursor") == ["page2"]
