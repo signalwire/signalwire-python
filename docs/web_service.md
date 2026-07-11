@@ -94,12 +94,12 @@ service = WebService(
 ```bash
 # Basic authentication
 export SWML_BASIC_AUTH_USER="admin"
-export SWML_BASIC_AUTH_PASS="secretpassword"
+export SWML_BASIC_AUTH_PASSWORD="secretpassword"
 
 # SSL/HTTPS configuration
 export SWML_SSL_ENABLED=true
-export SWML_SSL_CERT="/path/to/cert.pem"
-export SWML_SSL_KEY="/path/to/key.pem"
+export SWML_SSL_CERT_PATH="/path/to/cert.pem"
+export SWML_SSL_KEY_PATH="/path/to/key.pem"
 
 # Security settings
 export SWML_ALLOWED_HOSTS="example.com,*.example.com"
@@ -145,7 +145,7 @@ Create a `web.json` or `swml_web.json` file:
 WebService implements HTTP Basic Authentication. Credentials can be set via:
 
 1. **Constructor**: `basic_auth=("username", "password")`
-2. **Environment**: `SWML_BASIC_AUTH_USER` and `SWML_BASIC_AUTH_PASS`
+2. **Environment**: `SWML_BASIC_AUTH_USER` and `SWML_BASIC_AUTH_PASSWORD`
 3. **Config file**: `security.basic_auth` section
 4. **Auto-generated**: If not specified, generates random credentials
 
@@ -187,16 +187,8 @@ WebService provides multiple ways to enable HTTPS:
 
 ```bash
 # Using file paths
-export SWML_SSL_CERT="/path/to/cert.pem"
-export SWML_SSL_KEY="/path/to/key.pem"
-
-# Or using inline PEM content
-export SWML_SSL_CERT_INLINE="-----BEGIN CERTIFICATE-----
-MIIDXTCCAkWgAwIBAgIJAKLdQVPy...
------END CERTIFICATE-----"
-export SWML_SSL_KEY_INLINE="-----BEGIN PRIVATE KEY-----
-MIIEvQIBADANBgkqhkiG9w0BAQE...
------END PRIVATE KEY-----"
+export SWML_SSL_CERT_PATH="/path/to/cert.pem"
+export SWML_SSL_KEY_PATH="/path/to/key.pem"
 ```
 
 ### Method 2: Direct Parameters
@@ -233,8 +225,8 @@ openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem \
     -days 365 -nodes -subj "/CN=localhost"
 
 # Use with WebService
-export SWML_SSL_CERT="cert.pem"
-export SWML_SSL_KEY="key.pem"
+export SWML_SSL_CERT_PATH="cert.pem"
+export SWML_SSL_KEY_PATH="key.pem"
 ```
 
 ## API Endpoints
@@ -473,8 +465,8 @@ After=network.target
 Type=simple
 User=www-data
 WorkingDirectory=/opt/signalwire
-Environment="SWML_SSL_CERT=/etc/ssl/certs/server.crt"
-Environment="SWML_SSL_KEY=/etc/ssl/private/server.key"
+Environment="SWML_SSL_CERT_PATH=/etc/ssl/certs/server.crt"
+Environment="SWML_SSL_KEY_PATH=/etc/ssl/private/server.key"
 ExecStart=/usr/bin/python3 -c "from signalwire import WebService; WebService(directories={'/': '/var/www/html'}).start()"
 Restart=always
 
