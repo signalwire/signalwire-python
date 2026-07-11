@@ -1472,3 +1472,92 @@ class TestContextBuilderReset:
         builder = self._make_builder()
         builder.reset()  # should not raise
         assert len(builder._contexts) == 0
+
+class TestHistoryMode:
+    """Step/context `history` visibility mode (keep | default | hide)."""
+
+    def test_step_history_emitted(self) -> None:
+        step = Step("s").set_text("t").set_history("hide")
+        assert step.to_dict()["history"] == "hide"
+
+    def test_step_history_absent_by_default(self) -> None:
+        step = Step("s").set_text("t")
+        assert "history" not in step.to_dict()
+
+    def test_step_history_keep(self) -> None:
+        assert Step("s").set_text("t").set_history("keep").to_dict()["history"] == "keep"
+
+    def test_step_history_default_is_emitted_when_explicit(self) -> None:
+        # Explicit "default" is still written out — it overrides a context default
+        assert Step("s").set_text("t").set_history("default").to_dict()["history"] == "default"
+
+    def test_step_history_invalid_raises(self) -> None:
+        with pytest.raises(ValueError, match="history must be one of"):
+            Step("s").set_history("bogus")
+
+    def test_step_history_is_chainable(self) -> None:
+        step = Step("s")
+        assert step.set_history("hide") is step
+
+    def test_context_history_emitted(self) -> None:
+        ctx = Context("c")
+        ctx.set_history("keep")
+        ctx.add_step("s").set_text("t")
+        assert ctx.to_dict()["history"] == "keep"
+
+    def test_context_history_absent_by_default(self) -> None:
+        ctx = Context("c")
+        ctx.add_step("s").set_text("t")
+        assert "history" not in ctx.to_dict()
+
+    def test_context_history_invalid_raises(self) -> None:
+        with pytest.raises(ValueError, match="history must be one of"):
+            Context("c").set_history("nope")
+
+    def test_step_history_overrides_context_in_swml(self) -> None:
+        """Both are emitted; the runtime resolves step -> context -> default."""
+        ctx = Context("c")
+        ctx.set_history("keep")
+        ctx.add_step("s").set_text("t").set_history("hide")
+        d = ctx.to_dict()
+        assert d["history"] == "keep"
+        assert d["steps"][0]["history"] == "hide"
+
+
+class TestGatherIsolated:
+    """gather_info.isolated and per-question isolated overrides."""
+
+    def test_gather_isolated_emitted(self) -> None:
+        g = GatherInfo(isolated=True)
+        g.add_question("k", "Q?")
+        assert g.to_dict()["isolated"] is True
+
+    def test_gather_isolated_absent_by_default(self) -> None:
+        g = GatherInfo()
+        g.add_question("k", "Q?")
+        assert "isolated" not in g.to_dict()
+
+    def test_question_isolated_absent_by_default(self) -> None:
+        q = GatherQuestion(key="k", question="Q?")
+        assert "isolated" not in q.to_dict()
+
+    def test_question_isolated_true(self) -> None:
+        q = GatherQuestion(key="k", question="Q?", isolated=True)
+        assert q.to_dict()["isolated"] is True
+
+    def test_question_isolated_false_is_emitted(self) -> None:
+        """False must survive to SWML so it can override an isolated gather."""
+        q = GatherQuestion(key="k", question="Q?", isolated=False)
+        assert q.to_dict()["isolated"] is False
+
+    def test_step_gather_isolated_roundtrip(self) -> None:
+        step = Step("collect").set_text("t")
+        step.set_gather_info(output_key="cust", isolated=True)
+        step.add_gather_question("name", "Your name?")
+        step.add_gather_question("zip", "Your ZIP?", isolated=False)
+
+        gather = step.to_dict()["gather_info"]
+        assert gather["isolated"] is True
+        assert gather["output_key"] == "cust"
+        assert "isolated" not in gather["questions"][0]
+        assert gather["questions"][1]["isolated"] is False
