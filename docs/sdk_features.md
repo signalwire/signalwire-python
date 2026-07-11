@@ -481,7 +481,7 @@ The SDK handles auth automatically:
 | Dynamic config | Custom middleware | `set_dynamic_config_callback()` |
 | Post-call analytics | Parse raw webhook payload | `on_summary()` callback |
 | Health checks | Manual endpoints | Built-in `/health` and `/ready` |
-| Call recording | Manual SWML verb insertion | `enable_record_call()` |
+| Call recording | Manual SWML verb insertion | `record_call()` |
 | SSL/TLS | Manual cert configuration | Env var driven |
 
 The SDK turns what would be a multi-file infrastructure project into a single Python class. The SWML is correct by construction. The webhooks route themselves. The auth is automatic. The deployment is universal. The developer focuses on what the agent should *do*, not how to wire it together.

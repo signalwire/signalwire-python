@@ -2702,7 +2702,6 @@ my-prefab-agents/
 - `set_state(call_id, data)` 
 - `update_state(call_id, data)`
 - `clear_state(call_id)`
-- `cleanup_expired_state()`
 
 ### SIP Routing Methods
 
