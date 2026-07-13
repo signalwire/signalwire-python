@@ -151,6 +151,9 @@ sched_gate SIGNATURES desc="regenerate python_signatures.json (reference oracle)
 sched_gate DRIFT deps=SIGNATURES desc="python_signatures.json unchanged after regen" \
     -- bash -c "cd '$PORTING_SDK_DIR' && git diff --quiet -- python_signatures.json"
 
+sched_gate SEMVER-DIFF deps=SIGNATURES desc="version bump matches surface change vs python_signatures.baseline.json (the reference is not exempt)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/semver_diff.py" --port python --repo "$PORT_ROOT"
+
 sched_gate NO-CHEAT desc="audit_no_cheat_tests" \
     -- python3 "$PORTING_SDK_DIR/scripts/audit_no_cheat_tests.py" --root "$PORT_ROOT"
 
