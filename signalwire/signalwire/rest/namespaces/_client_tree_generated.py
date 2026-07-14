@@ -46,6 +46,9 @@ from .message_resources_generated import (
 from .project_resources_generated import (
     ProjectTokens,
 )
+from .projects_resources_generated import (
+    Projects,
+)
 from .pubsub_resources_generated import (
     PubSub,
 )
@@ -161,6 +164,7 @@ class _GeneratedResourceTree:
         self.mfa = Mfa(http)
         self.number_groups = NumberGroups(http)
         self.phone_numbers = PhoneNumbers(http)
+        self.projects = Projects(http)
         self.pubsub = PubSub(http)
         self.queues = Queues(http)
         self.recordings = Recordings(http)
