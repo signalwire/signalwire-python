@@ -255,3 +255,7 @@ my_chunks
 !.claude/
 .claude/*
 !.claude/settings.json
+
+# generated reference build output
+reference/_docs/
+reference/_site/
