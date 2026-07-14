@@ -11,8 +11,10 @@ Prompt management functionality for AgentBase.
 
 from typing import Any, cast
 import inspect
+import json
 
 from signalwire.core.logging_config import get_logger
+from signalwire.pom import PromptObjectModel
 
 logger = get_logger(__name__)
 
@@ -124,7 +126,14 @@ class PromptManager:
             ValueError: If use_pom is False
         """
         if self.agent._use_pom:
-            self.agent.pom = pom
+            # The renderer treats self.agent.pom as a PromptObjectModel (it calls
+            # .to_dict()), so storing a bare list crashes at render time. Build the
+            # model from the section list; pass through anything already a POM.
+            self.agent.pom = (
+                PromptObjectModel.from_json(json.dumps(pom))
+                if isinstance(pom, list)
+                else pom
+            )
         else:
             raise ValueError("use_pom must be True to use set_prompt_pom")
 

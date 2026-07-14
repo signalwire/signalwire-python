@@ -138,13 +138,16 @@ class TestAgentBasePromptMethods:
             self.agent._prompt_manager.set_prompt_pom([{"title": "X", "body": "y"}])
 
     def test_set_prompt_pom_succeeds_when_use_pom_true(self) -> None:
-        """set_prompt_pom assigns the POM list when use_pom is True."""
+        """set_prompt_pom builds a PromptObjectModel from the section list when use_pom is True."""
+        from signalwire.pom import PromptObjectModel
+
         with pytest.MonkeyPatch().context() as m:
             m.setattr("signalwire.core.agent_base.uvicorn", Mock())
             agent = AgentBase("pom_agent", use_pom=True, schema_validation=False)
         sections = [{"title": "Greeting", "body": "Hello"}]
         agent._prompt_manager.set_prompt_pom(sections)
-        assert agent.pom == sections  # type: ignore[comparison-overlap]  # pom holds the raw list at runtime
+        assert isinstance(agent.pom, PromptObjectModel)
+        assert agent.pom.to_dict() == sections
 
 
 class TestAgentBaseConfigurationMethods:
