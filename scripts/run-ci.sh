@@ -253,10 +253,13 @@ sched_gate STATUS-CLAIM desc="doc status/capability claims match the shipped sur
     -- python3 "$PORTING_SDK_DIR/scripts/status_claim.py" --port python --repo "$PORT_ROOT" \
         --surface "$PORTING_SDK_DIR/python_surface.json"
 
-# GATE-INVENTORY (§1.11b) — porting-sdk's generated GATE_INVENTORY.md stays fresh
-# vs the reference run-ci; any repo that adds a gate fails until the inventory regens.
-sched_gate GATE-INVENTORY desc="porting-sdk GATE_INVENTORY.md is fresh (gen_gate_inventory --check)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/gen_gate_inventory.py" --check
+# NOTE: §1.11b (GATE-INVENTORY freshness) is NOT wired here. gen_gate_inventory.py
+# resolves its reference port as a sibling checkout (DEFAULT_REFERENCE=signalwire-
+# typescript), which does not exist in a port's CI layout (porting-sdk is a subdir
+# of the port workspace, so ../signalwire-typescript is absent → exit 2). The check
+# is inherently porting-sdk-side and already runs in porting-sdk's own CI
+# (.github/workflows/test.yml, with --reference ./signalwire-typescript). Wiring it
+# per-port would require each port to also check out the TS reference — not worth it.
 
 # SNIPPET-RUN is BLOCKING: the fragment backlog is burned to zero. Residual
 # non-runnable snippets carry `<!-- snippet: no-run <reason> -->` markers (blocking
