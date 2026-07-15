@@ -24,7 +24,7 @@ if TYPE_CHECKING:
 
 configure_logging()
 
-__version__ = "3.1.0"
+__version__ = "3.2.0"
 
 # Import core classes for easier access.
 # These imports are intentionally placed after configure_logging() so the SDK's
