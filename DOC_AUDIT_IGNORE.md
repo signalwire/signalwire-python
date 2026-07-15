@@ -197,3 +197,42 @@ download: third-party calls `nltk.download(...)` / `spacy download` in docs/sear
 is_function_call: LiveKit's RunResult test-framework API (`result.expect.next_event().is_function_call(...)`) shown in docs/livekit_comparison.md for contrast — external framework
 next_event: LiveKit's RunResult test-framework API shown in docs/livekit_comparison.md for contrast — external framework
 register_function: Pipecat's `llm.register_function()` shown in docs/pipecat_comparison.md feature-comparison table for contrast — external framework
+
+## Tutorial series (tutorial/) — teaching apps built with third-party libs + user helpers
+
+# The tutorial/multi_agents lessons and tutorial/fred walk a developer through
+# building a full application: they call asyncio/aiohttp/asyncpg/redis APIs and
+# domain helpers the *user* writes (order flow, customer DB), none of which are
+# SignalWire SDK symbols. Grouped here so DOC-AUDIT stays exact on the real SDK
+# surface without flagging tutorial application code.
+
+# asyncio / aiohttp / asyncpg / redis (third-party runtime the tutorials use)
+ClientSession: aiohttp.ClientSession — third-party HTTP client used in tutorial/multi_agents lessons
+gather: asyncio.gather — stdlib coroutine aggregation in tutorial/multi_agents/lesson4
+create_task: asyncio.create_task — stdlib task scheduling in tutorial/multi_agents lessons
+acquire: asyncpg pool.acquire() connection checkout in tutorial/multi_agents/lesson5
+fetch: asyncpg connection.fetch() query in tutorial/multi_agents/lesson5
+create_pool: asyncpg.create_pool — third-party DB pool in tutorial/multi_agents/lesson5
+create_redis_pool: aioredis pool constructor in tutorial/multi_agents/lesson5
+lpop: redis LPOP command in tutorial/multi_agents/lesson5
+rpush: redis RPUSH command in tutorial/multi_agents/lesson5
+sub: re.sub / string helper in tutorial/multi_agents/lesson4 — not an SDK method
+
+# user-defined application helpers the tutorials teach the reader to implement
+_configure_prompt: user-defined helper shown in tutorial/multi_agents/lesson3
+_expire_cache: user-defined helper shown in tutorial/multi_agents/lesson4
+add_data: user-defined helper shown in tutorial/multi_agents/lesson4
+add_task: user-defined helper shown in tutorial/multi_agents/lesson5
+get_customer_status: user-defined helper shown in tutorial/multi_agents/lesson5
+get_item_price: user-defined helper shown in tutorial/multi_agents/lesson5 (order-flow example)
+get_or_create: user-defined helper shown in tutorial/multi_agents/lesson5
+handle_task: user-defined helper shown in tutorial/multi_agents/lesson5
+notify_customer: user-defined helper shown in tutorial/multi_agents/lesson5
+process_queue: user-defined helper shown in tutorial/multi_agents/lesson5
+set_persona: user-defined helper shown in tutorial/multi_agents/lesson5
+submit_order: user-defined helper shown in tutorial/multi_agents/lesson5 (order-flow example)
+update_order_status: user-defined helper shown in tutorial/multi_agents/lesson5
+
+# stdlib
+rstrip: str.rstrip — stdlib string method (tutorial lesson3 + skills/swml_transfer/README.md prose)
+urlopen: urllib.request.urlopen — stdlib HTTP call in tutorial/fred/tutorial/appendix-docker-deployment.md

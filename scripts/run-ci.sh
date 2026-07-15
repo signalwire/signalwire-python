@@ -65,7 +65,13 @@ PY
 
 cd "$PORT_ROOT"
 
+# Gate-enforcement plan (Part D): python's red list is burned, so its widened
+# (wave-A) gate findings BLOCK rather than report-only. Default OFF here; a
+# caller may still set SW_WAVE_A_REPORT_ONLY=1 to inspect the report-only view.
+export SW_WAVE_A_REPORT_ONLY="${SW_WAVE_A_REPORT_ONLY:-0}"
+
 echo "==> running CI gates for $PORT_NAME (porting-sdk at $PORTING_SDK_DIR)"
+echo "==> wave-A gate findings are ${SW_WAVE_A_REPORT_ONLY:+BLOCKING (SW_WAVE_A_REPORT_ONLY=$SW_WAVE_A_REPORT_ONLY)}"
 
 # Record the resolved web-stack versions up front (CI-only web-layer failures have
 # been impossible to diagnose without the runner's actual resolution).
@@ -226,15 +232,60 @@ sched_gate COUNT-CLAIM desc="numeric doc claims (skills/namespaces) match realit
 sched_gate ACCESSOR-TRUTH desc="documented backtick method() refs exist in source" \
     -- python3 "$PORTING_SDK_DIR/scripts/accessor_truth.py" --port python --repo "$PORT_ROOT"
 
+# DOC-AUDIT — every method/class referenced in docs/examples resolves to a real
+# symbol in the python surface oracle (python_surface.json, in porting-sdk). The
+# DOC_AUDIT_IGNORE.md ledger excuses stdlib/third-party/user-tutorial-helper refs.
+sched_gate DOC-AUDIT desc="audit_docs vs python_surface.json (the reference oracle)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/audit_docs.py" \
+        --root "$PORT_ROOT" \
+        --surface "$PORTING_SDK_DIR/python_surface.json" \
+        --ignore "$PORT_ROOT/DOC_AUDIT_IGNORE.md"
+
+# DOC-WIRE (§A1) — the documented REST fixtures are wire-clean against the spec
+# (strict-flag mock journals wire_violations; runner replays the doc calls). Cheap.
+sched_gate DOC-WIRE desc="documented REST doc fixtures put the spec wire shape on the wire (areacode/params:{text})" \
+    -- python3 "$PORTING_SDK_DIR/scripts/doc_wire.py" --port python --repo "$PORT_ROOT" \
+        --runner "python3 $PORT_ROOT/scripts/doc_wire_runner.py"
+
+# STATUS-CLAIM (§C2) — no false capability/status claims in docs (e.g. "not
+# implemented" / "transport pending" for surface that exists).
+sched_gate STATUS-CLAIM desc="doc status/capability claims match the shipped surface" \
+    -- python3 "$PORTING_SDK_DIR/scripts/status_claim.py" --port python --repo "$PORT_ROOT" \
+        --surface "$PORTING_SDK_DIR/python_surface.json"
+
+# NOTE: §1.11b (GATE-INVENTORY freshness) is NOT wired here. gen_gate_inventory.py
+# resolves its reference port as a sibling checkout (DEFAULT_REFERENCE=signalwire-
+# typescript), which does not exist in a port's CI layout (porting-sdk is a subdir
+# of the port workspace, so ../signalwire-typescript is absent → exit 2). The check
+# is inherently porting-sdk-side and already runs in porting-sdk's own CI
+# (.github/workflows/test.yml, with --reference ./signalwire-typescript). Wiring it
+# per-port would require each port to also check out the TS reference — not worth it.
+
 # SNIPPET-RUN is BLOCKING: the fragment backlog is burned to zero. Residual
 # non-runnable snippets carry `<!-- snippet: no-run <reason> -->` markers (blocking
 # servers, live REST/network calls, optional-dep imports, prose-context fragments,
 # before/after excerpts); real API-mismatch doc bugs were fixed. ~130s parallelized.
-sched_gate SNIPPET-RUN tier=nightly defer=1 desc="dynamic-port doc snippets run to a zero exit against the mock" \
-    -- python3 "$PORTING_SDK_DIR/scripts/snippet_run.py" --port python --repo "$PORT_ROOT"
+sched_gate SNIPPET-RUN tier=nightly defer=1 desc="dynamic-port doc snippets run to a zero exit against the mock (STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
+    -- env MOCK_RELAY_STRICT=1 python3 "$PORTING_SDK_DIR/scripts/snippet_run.py" --port python --repo "$PORT_ROOT"
 
-sched_gate EXAMPLES-RUN tier=nightly defer=1 desc="shipped examples load/start against the mock (modulo EXAMPLES_RUN_ALLOW.md)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/examples_run.py" --port python --repo "$PORT_ROOT"
+sched_gate EXAMPLES-RUN tier=nightly defer=1 desc="shipped examples load/start against the mock (modulo EXAMPLES_RUN_ALLOW.md; STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
+    -- env MOCK_RELAY_STRICT=1 python3 "$PORTING_SDK_DIR/scripts/examples_run.py" --port python --repo "$PORT_ROOT"
+
+# WAIT-LIVENESS (§2.4) — the wait_liveness corpus runs against the python
+# reference and produces the golden LIVENESS classification (play/record wait()
+# blocks until the completing event, then returns — never busy-hangs or early-
+# returns). For python (the oracle) proving the corpus runs IS the gate; the
+# ports diff their classification against this golden. Nightly (spawns dump
+# programs). Report-only is NOT used — python is the oracle floor.
+sched_gate WAIT-LIVENESS tier=nightly defer=1 desc="wait() liveness corpus runs on the reference + yields the golden classification" \
+    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_wait_liveness.py" --show-oracle --python-sdk "$PORT_ROOT"
+
+# ---- Day-one deterministic doc/tree-hygiene gates ---------------------------
+sched_gate DOC-LINKS desc="every relative markdown link resolves to a tracked file" \
+    -- python3 "$PORTING_SDK_DIR/scripts/doc_links.py" --port python --repo "$PORT_ROOT"
+
+sched_gate ROOT-HYGIENE desc="no audit/scratch clutter tracked at repo root (allowlist ROOT_HYGIENE_ALLOW.md)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/root_hygiene.py" --port python --repo "$PORT_ROOT"
 
 sched_run
 rc=$?

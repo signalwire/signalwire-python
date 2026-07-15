@@ -148,7 +148,7 @@ from signalwire.rest import RestClient
 client = RestClient(project="...", token="...", host="example.signalwire.com")
 
 client.fabric.ai_agents.create(name="Support Bot", prompt={"text": "You are helpful."})
-client.calling.play(call_id, play=[{"type": "tts", "text": "Hello!"}])
+client.calling.play(call_id, play=[{"type": "tts", "params": {"text": "Hello!"}}])
 client.phone_numbers.search(areacode="512")
 client.datasphere.documents.search(query_string="billing policy")
 ```

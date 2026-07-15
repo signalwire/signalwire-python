@@ -17,7 +17,7 @@ client = RestClient()
 def main():
     # 1. Search for available phone numbers
     print("Searching available numbers...")
-    available = client.phone_numbers.search(area_code="512", max_results=3)
+    available = client.phone_numbers.search(areacode="512", max_results=3)
     for num in available.get("data", []):
         print(f"  - {num.get('e164', num.get('number', 'unknown'))}")
 
