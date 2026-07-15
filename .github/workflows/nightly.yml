@@ -51,7 +51,7 @@ jobs:
           echo "inputs -> port=$port_sha psdk=$psdk_sha python=$py_sha"
       - name: Probe last-green marker
         id: probe
-        uses: actions/cache/restore@v4
+        uses: actions/cache/restore@v6
         with:
           path: .nightly-green-marker
           key: ${{ steps.fp.outputs.cache_key }}
@@ -126,7 +126,7 @@ jobs:
 
       - name: Record green marker for this input triple
         run: 'echo green > .nightly-green-marker'
-      - uses: actions/cache/save@v4
+      - uses: actions/cache/save@v6
         with:
           path: .nightly-green-marker
           key: ${{ needs.guard.outputs.cache_key }}
