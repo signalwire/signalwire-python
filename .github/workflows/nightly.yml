@@ -81,12 +81,12 @@ jobs:
         python: ['3.10', '3.11', '3.12', '3.13']
     steps:
       - name: Checkout signalwire-python
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: signalwire-python
 
       - name: Checkout porting-sdk (mock_relay + mock_signalwire test harnesses + audit scripts)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: signalwire/porting-sdk
           path: porting-sdk
