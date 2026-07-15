@@ -36,7 +36,7 @@ def main():
     # 2. Play TTS audio
     print("\nPlaying TTS on call...")
     try:
-        client.calling.play(call_id, play=[{"type": "tts", "text": "Welcome to SignalWire."}])
+        client.calling.play(call_id, play=[{"type": "tts", "params": {"text": "Welcome to SignalWire."}}])
         print("  Play started")
     except SignalWireRestError as e:
         print(f"  Play failed (expected in demo): {e.status_code}")

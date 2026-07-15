@@ -37,7 +37,7 @@ def main():
     safe("Collect", lambda: client.calling.collect(
         CALL_ID,
         digits={"max": 4, "terminators": "#"},
-        play=[{"type": "tts", "text": "Enter your PIN followed by pound."}],
+        play=[{"type": "tts", "params": {"text": "Enter your PIN followed by pound."}}],
     ))
     safe("Start input timers", lambda: client.calling.collect_start_input_timers(CALL_ID))
     safe("Stop collect", lambda: client.calling.collect_stop(CALL_ID))
