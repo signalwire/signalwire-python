@@ -286,24 +286,28 @@ ENTRYPOINT ["python", "fred.py"]
 
 ### 2. Secrets Management
 
-Never hardcode credentials. Use Docker secrets or environment files:
+Never hardcode credentials. Keep them out of the compose file by loading an
+environment file that is not committed to source control:
 
 ```yaml
-# docker-compose with secrets
+# docker-compose using an env file for secrets
 version: '3.8'
-
-secrets:
-  fred_password:
-    file: ./secrets/fred_password.txt
 
 services:
   fred:
     # ... other config ...
-    secrets:
-      - fred_password
-    environment:
-      - SWML_BASIC_AUTH_PASSWORD_FILE=/run/secrets/fred_password
+    env_file:
+      - ./secrets/fred.env   # not committed; holds SWML_BASIC_AUTH_PASSWORD=...
 ```
+
+```bash
+# ./secrets/fred.env
+SWML_BASIC_AUTH_USER=fred
+SWML_BASIC_AUTH_PASSWORD=your-secure-password
+```
+
+The SDK reads `SWML_BASIC_AUTH_USER` / `SWML_BASIC_AUTH_PASSWORD` directly from
+the process environment.
 
 ### 3. Reverse Proxy Setup
 
