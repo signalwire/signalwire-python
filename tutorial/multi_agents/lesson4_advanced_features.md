@@ -315,7 +315,7 @@ class DebugAgent(AgentBase):
 server = AgentServer(log_level="debug")
 
 # Or via environment variable
-export SWML_LOG_LEVEL=debug
+export SIGNALWIRE_LOG_LEVEL=debug
 
 # Available levels:
 # - debug: Detailed information for debugging
@@ -373,9 +373,9 @@ def debug_state(self, args, raw_data):
 
 ```bash
 # Core configuration
-export SWML_AUTH_USER=produser
-export SWML_AUTH_PASS=strongpassword
-export SWML_LOG_LEVEL=info
+export SWML_BASIC_AUTH_USER=produser
+export SWML_BASIC_AUTH_PASSWORD=strongpassword
+export SIGNALWIRE_LOG_LEVEL=info
 
 # SSL configuration
 export SWML_SSL_ENABLED=true
@@ -427,7 +427,7 @@ After=network.target
 Type=simple
 User=agent
 WorkingDirectory=/opt/signalwire-agent
-Environment="SWML_LOG_LEVEL=info"
+Environment="SIGNALWIRE_LOG_LEVEL=info"
 Environment="SWML_SSL_ENABLED=true"
 ExecStart=/usr/bin/python3 /opt/signalwire-agent/agent.py
 Restart=always

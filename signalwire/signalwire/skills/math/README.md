@@ -116,8 +116,9 @@ The calculate tool accepts one parameter:
 - Uses regex pattern matching for character validation
 
 ### Safe Evaluation
-- Uses Python's `eval()` with restricted builtins (empty `__builtins__`)
-- No access to system functions or imports
+- Parses the expression to an AST (`ast.parse(..., mode="eval")`) and walks it with a restricted evaluator that only permits numeric constants and a fixed set of arithmetic operators (`+`, `-`, `*`, `/`, `%`, `**`, unary `+`/`-`)
+- Never calls Python's built-in `eval`, so there is no access to names, attributes, calls, system functions, or imports
+- Caps the exponent to prevent resource exhaustion
 - Cannot execute arbitrary code
 
 ### Error Handling
