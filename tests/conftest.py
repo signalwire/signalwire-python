@@ -48,7 +48,7 @@ def mock_env_vars() -> Iterator[dict[str, str]]:
     """Mock environment variables for testing"""
     env_vars = {
         "SIGNALWIRE_PROJECT_ID": "test-project-id",
-        "SIGNALWIRE_TOKEN": "test-token",
+        "SIGNALWIRE_API_TOKEN": "test-token",
         "SIGNALWIRE_SPACE": "test.signalwire.com",
         "OPENAI_API_KEY": "test-openai-key",
         "TEST_ENV_VAR": "test-value"

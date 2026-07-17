@@ -132,7 +132,7 @@ class TestGetParameterSchema:
 
     def test_token_env_var(self) -> None:
         schema = DataSphereSkill.get_parameter_schema()
-        assert schema["token"].get("env_var") == "SIGNALWIRE_TOKEN"
+        assert schema["token"].get("env_var") == "SIGNALWIRE_API_TOKEN"
 
     def test_count_defaults(self) -> None:
         schema = DataSphereSkill.get_parameter_schema()
