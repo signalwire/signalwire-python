@@ -148,28 +148,70 @@ sched_init "$@"
 sched_gate TEST defer=1 desc="python -m pytest tests/unit/" \
     -- python -m pytest tests/unit/
 
-# SIGNATURES regenerates the porting-sdk oracle → DRIFT git-diffs it. deps=SIGNATURES.
-sched_gate SIGNATURES desc="regenerate python_signatures.json (reference oracle)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/enumerate_python_signatures.py" \
-        --signalwire-python "$PORT_ROOT/signalwire" \
-        --out "$PORTING_SDK_DIR/python_signatures.json"
+# ---- Part 5 gate SUITES ------------------------------------------------------
+# The former per-gate SIGNATURES/DRIFT/SEMVER-DIFF/GEN-TYPE-DEGENERACY/ROUTE-
+# COLLISION/GEN-IDIOM/GEN-FRESH/ERROR-ENVELOPE/PAGINATION-WIRED/DOC-WIRE/
+# REST-COVERAGE/SPEC-PARITY/WAIT-LIVENESS/RELEASE-FRESH gates now run under the
+# shared Part-5 SUITE engines. Each suite emits every original gate NAME as a
+# `[SUITE:RULE] ... PASS/FAIL` rule ID (failure identity + allowlists + finding
+# output unchanged); a suite exits nonzero iff any of its rules fails. Byte-
+# identity vs the old per-gate path is proven by porting-sdk tests/test_suite_
+# parity*.py.
+#
+# PYTHON IS THE ORACLE, so it schedules FAR FEWER suite members than the ports:
+# it wires NONE of the diff-vs-oracle rules (SURFACE-FRESH/SURFACE-DIFF/
+# BEHAVIORAL-*/EMISSION/SKILL-CONTRACT/SWAIG-*/DOC-LANG-PURITY) — there is no
+# oracle for python to diff AGAINST. Each suite's build_rules() already returns
+# python's smaller (oracle) rule set, so a python suite line runs exactly its
+# scheduled members. Two suites are DELIBERATELY NOT wired for python:
+#   * DOC-TRUTH — its rule table always emits DOC-LANG-PURITY ("no python-
+#     verbatim docs in a NON-python port"), which python has never scheduled and
+#     which self-skips as a no-op; with no --rules filter on that suite, wiring it
+#     would inject a gate python's baseline lacks. So DOC-AUDIT/DOC-LINKS/DOC-ENV/
+#     COUNT-CLAIM/ACCESSOR-TRUTH/STATUS-CLAIM/README-INCLUDE stay STANDALONE below.
+#   * LEDGER — emits only SUPPRESSION-LEDGER/IGNORE-LEDGER-VERIFY, neither of which
+#     python schedules; wiring it would invent two gates. Not wired.
+#
+# The former single-gate scheduler features are preserved INSIDE the suites:
+#   * SIGNATURES→DRIFT→SEMVER-DIFF ordering (python's SIGNATURES regenerates the
+#     porting-sdk oracle python_signatures.json; DRIFT git-diffs it; SEMVER-DIFF
+#     reads the regenerated file) lives in the SURFACE suite, which regenerates,
+#     consumes in order, then git-restores the oracle — leaving both trees clean.
+#   * BEHAVIORAL's mixed tiers are split with --rules: a per-PR line (5 rules) and
+#     a nightly line (WAIT-LIVENESS).
 
-sched_gate DRIFT deps=SIGNATURES desc="python_signatures.json unchanged after regen" \
-    -- bash -c "cd '$PORTING_SDK_DIR' && git diff --quiet -- python_signatures.json"
+# SURFACE (parity spine): SIGNATURES→DRIFT→SEMVER-DIFF ordered + GEN-TYPE-
+# DEGENERACY/ROUTE-COLLISION/GEN-IDIOM. python is the oracle so there is no
+# SURFACE-FRESH/SURFACE-DIFF. The suite regenerates the oracle in porting-sdk and
+# restores it after DRIFT/SEMVER consume it. Cheap wave (parity spine).
+sched_gate SURFACE desc="surface parity suite (SIGNATURES/DRIFT/SEMVER-DIFF/GEN-TYPE-DEGENERACY/ROUTE-COLLISION/GEN-IDIOM)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/surface.py" --port python --repo "$PORT_ROOT"
 
-sched_gate SEMVER-DIFF deps=SIGNATURES desc="version bump matches surface change vs python_signatures.baseline.json (the reference is not exempt)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/semver_diff.py" --port python --repo "$PORT_ROOT"
+# GEN (regen-from-specs family): python schedules only GEN-FRESH.
+sched_gate GEN desc="generated-code freshness suite (GEN-FRESH)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/gen.py" --port python --repo "$PORT_ROOT"
 
+# BEHAVIORAL, per-PR rules: python's oracle set is ERROR-ENVELOPE/PAGINATION-
+# WIRED/DOC-WIRE/REST-COVERAGE/SPEC-PARITY (no BEHAVIORAL-*/EMISSION/SKILL-
+# CONTRACT/SWAIG-* — those diff a port against python). REST-COVERAGE/SPEC-PARITY
+# are heavy (spin the mock) → defer=1. WAIT-LIVENESS is the nightly line below.
+sched_gate BEHAVIORAL defer=1 desc="behavioral suite, per-PR rules (ERROR-ENVELOPE/PAGINATION-WIRED/DOC-WIRE/REST-COVERAGE/SPEC-PARITY)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/behavioral.py" --port python --repo "$PORT_ROOT" \
+        --rules ERROR-ENVELOPE,PAGINATION-WIRED,DOC-WIRE,REST-COVERAGE,SPEC-PARITY
+
+sched_gate BEHAVIORAL-NIGHTLY tier=nightly defer=1 desc="behavioral suite, nightly rules (WAIT-LIVENESS)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/behavioral.py" --port python --repo "$PORT_ROOT" \
+        --rules WAIT-LIVENESS
+
+# PACKAGE: python schedules only RELEASE-FRESH (no ARTIFACT-DENY/PACKAGE-SMOKE/
+# META-CONSISTENT).
+sched_gate PACKAGE desc="package suite, per-PR rules (RELEASE-FRESH)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/package.py" --port python --repo "$PORT_ROOT" \
+        --rules RELEASE-FRESH
+
+# ---- gates that stay standalone ----------------------------------------------
 sched_gate NO-CHEAT desc="audit_no_cheat_tests" \
     -- python3 "$PORTING_SDK_DIR/scripts/audit_no_cheat_tests.py" --root "$PORT_ROOT"
-
-sched_gate REST-COVERAGE defer=1 desc="every implemented REST route covered success+error (parity + allowlist)" \
-    --fn rest_coverage_gate
-
-sched_gate SPEC-PARITY defer=1 desc="implemented routes == canonical spec (modulo SPEC_IMPLEMENTATION_GAPS.md)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/diff_spec_implementation.py" \
-        --sdk "$PORT_ROOT/signalwire/signalwire" \
-        --gaps "$PORTING_SDK_DIR/SPEC_IMPLEMENTATION_GAPS.md"
 
 sched_gate FMT defer=1 desc="ruff format (local: apply; CI: --check)" \
     --fn fmt_gate
@@ -180,28 +222,16 @@ sched_gate LINT desc="ruff check zero findings" \
 sched_gate TYPECHECK desc="mypy zero findings" \
     -- python3 -m mypy --config-file "$PORT_ROOT/pyproject.toml"
 
-sched_gate GEN-FRESH desc="generated REST/RELAY types reproduce from specs" \
-    -- python3 "$PORTING_SDK_DIR/scripts/generate_python_rest_types.py" \
-        --signalwire-python "$PORT_ROOT/signalwire" --check
+# GEN-FRESH runs under the GEN suite (above).
 
 # ---- expansion gates (GATE_EXPANSION_PLAN) — enforcing ----------------------
-# python is the reference: GEN-TYPE-DEGENERACY + GEN-IDIOM self-skip clean;
-# PUBLIC-JARGON + RELEASE-FRESH enforce; ROUTE-COLLISION enforces (modulo the
-# user-approved ROUTE_COLLISION_ALLOW.md list_addresses singular-path entries).
-sched_gate GEN-TYPE-DEGENERACY desc="no degenerate/over-broad generated param types" \
-    -- python3 "$PORTING_SDK_DIR/scripts/gen_type_degeneracy.py" --port python --repo "$PORT_ROOT"
-
+# GEN-TYPE-DEGENERACY / ROUTE-COLLISION / GEN-IDIOM now run under the SURFACE
+# suite; RELEASE-FRESH under the PACKAGE suite. PUBLIC-JARGON stays standalone
+# (public-API source analysis, not a suite family). README-INCLUDE stays
+# standalone: it is a DOC-TRUTH member, but DOC-TRUTH is not wired for python (it
+# would inject DOC-LANG-PURITY — see the SUITES note above).
 sched_gate PUBLIC-JARGON desc="no internal jargon in public identifiers/docstrings" \
     -- python3 "$PORTING_SDK_DIR/scripts/public_jargon.py" --port python --repo "$PORT_ROOT"
-
-sched_gate ROUTE-COLLISION desc="no split routes / duplicate CRUD bases (modulo allowlist)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/route_collision.py" --port python --repo "$PORT_ROOT"
-
-sched_gate GEN-IDIOM desc="generated surface follows the port's idiom" \
-    -- python3 "$PORTING_SDK_DIR/scripts/gen_idiom.py" --port python --repo "$PORT_ROOT"
-
-sched_gate RELEASE-FRESH desc="publish path runs the gates before releasing" \
-    -- python3 "$PORTING_SDK_DIR/scripts/release_fresh.py" --port python --repo "$PORT_ROOT"
 
 sched_gate README-INCLUDE desc="doc code blocks are byte-identical to their gate-compiled fixture regions" \
     -- python3 "$PORTING_SDK_DIR/scripts/readme_include.py" --port python --repo .
@@ -219,12 +249,10 @@ sched_gate DOC-CLI desc="documented swaig-test invocations parse against the rea
 # Wave-3 doc/API-truth gates — deterministic source/doc analysis (no build, no
 # mock, ~1.3s for all six). Per-PR tier: cheap enough to catch doc/API drift at
 # PR time rather than a day later in nightly.
-sched_gate ERROR-ENVELOPE desc="REST error carries the full (status,body,url,method) envelope + raised on >=400" \
-    -- python3 "$PORTING_SDK_DIR/scripts/error_envelope.py" --port python --repo "$PORT_ROOT"
+# ERROR-ENVELOPE + PAGINATION-WIRED run under the BEHAVIORAL suite (above).
+# DEAD-PUBLIC-ERROR stays standalone (source analysis of exported error types).
 sched_gate DEAD-PUBLIC-ERROR desc="exported error types are raised/caught/user-signalled (no dead error surface)" \
     -- python3 "$PORTING_SDK_DIR/scripts/dead_public_error.py" --port python --repo "$PORT_ROOT"
-sched_gate PAGINATION-WIRED desc="shipped iterator-protocol paginator is wired into list()" \
-    -- python3 "$PORTING_SDK_DIR/scripts/pagination_wired.py" --port python --repo "$PORT_ROOT"
 sched_gate DOC-ENV desc="documented SIGNALWIRE_*/SWML_* env vars <=> code-read vars agree" \
     -- python3 "$PORTING_SDK_DIR/scripts/doc_env.py" --port python --repo "$PORT_ROOT"
 sched_gate COUNT-CLAIM desc="numeric doc claims (skills/namespaces) match reality" \
@@ -241,11 +269,7 @@ sched_gate DOC-AUDIT desc="audit_docs vs python_surface.json (the reference orac
         --surface "$PORTING_SDK_DIR/python_surface.json" \
         --ignore "$PORT_ROOT/DOC_AUDIT_IGNORE.md"
 
-# DOC-WIRE (§A1) — the documented REST fixtures are wire-clean against the spec
-# (strict-flag mock journals wire_violations; runner replays the doc calls). Cheap.
-sched_gate DOC-WIRE desc="documented REST doc fixtures put the spec wire shape on the wire (areacode/params:{text})" \
-    -- python3 "$PORTING_SDK_DIR/scripts/doc_wire.py" --port python --repo "$PORT_ROOT" \
-        --runner "python3 $PORT_ROOT/scripts/doc_wire_runner.py"
+# DOC-WIRE (§A1) runs under the BEHAVIORAL suite (above).
 
 # STATUS-CLAIM (§C2) — no false capability/status claims in docs (e.g. "not
 # implemented" / "transport pending" for surface that exists).
@@ -271,14 +295,7 @@ sched_gate SNIPPET-RUN tier=nightly defer=1 desc="dynamic-port doc snippets run 
 sched_gate EXAMPLES-RUN tier=nightly defer=1 desc="shipped examples load/start against the mock (modulo EXAMPLES_RUN_ALLOW.md; STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
     -- env MOCK_RELAY_STRICT=1 python3 "$PORTING_SDK_DIR/scripts/examples_run.py" --port python --repo "$PORT_ROOT"
 
-# WAIT-LIVENESS (§2.4) — the wait_liveness corpus runs against the python
-# reference and produces the golden LIVENESS classification (play/record wait()
-# blocks until the completing event, then returns — never busy-hangs or early-
-# returns). For python (the oracle) proving the corpus runs IS the gate; the
-# ports diff their classification against this golden. Nightly (spawns dump
-# programs). Report-only is NOT used — python is the oracle floor.
-sched_gate WAIT-LIVENESS tier=nightly defer=1 desc="wait() liveness corpus runs on the reference + yields the golden classification" \
-    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_wait_liveness.py" --show-oracle --python-sdk "$PORT_ROOT"
+# WAIT-LIVENESS (§2.4) runs under the BEHAVIORAL-NIGHTLY suite line (above).
 
 # ---- Day-one deterministic doc/tree-hygiene gates ---------------------------
 sched_gate DOC-LINKS desc="every relative markdown link resolves to a tracked file" \
