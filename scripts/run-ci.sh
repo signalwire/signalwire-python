@@ -95,17 +95,21 @@ fmt_gate() {
 
 # REST-COVERAGE — every implemented REST route covered success+error. Self-
 # contained: spins its own mock on an ephemeral port, runs the rest/ suite serially,
-# then checks the journal.
+# then checks the journal for BOTH coverage AND wire-truth (STRICT-MOCKS §2.2a:
+# any journaled wire_violation reds the gate — respelling-proof, since it reads the
+# mock's own spec-vs-wire judgement).
 rest_coverage_gate() {
     local port
     port="$(pick_free_port)" || {
         echo "FATAL: could not acquire a free port for mock_signalwire" >&2
         return 1
     }
+    mkdir -p "$PORT_ROOT/.sw-tmp"
+    local mocklog="$PORT_ROOT/.sw-tmp/rest_cov_mock.$$.log"
     local mock_pkg_parent="$PORTING_SDK_DIR/test_harness/mock_signalwire"
     export PYTHONPATH="$mock_pkg_parent${PYTHONPATH:+:$PYTHONPATH}"
     python3 -m mock_signalwire --host 127.0.0.1 --port "$port" --log-level error \
-        >/tmp/rest_cov_mock.$$.log 2>&1 &
+        >"$mocklog" 2>&1 &
     local mock_pid=$!
     # shellcheck disable=SC2064
     trap "kill $mock_pid 2>/dev/null" RETURN
@@ -113,7 +117,7 @@ rest_coverage_gate() {
     for i in $(seq 1 30); do
         if ! kill -0 "$mock_pid" 2>/dev/null; then
             echo "FATAL: mock_signalwire (pid $mock_pid) exited before becoming healthy" >&2
-            sed 's/^/    mock: /' "/tmp/rest_cov_mock.$$.log" >&2 || true
+            sed 's/^/    mock: /' "$mocklog" >&2 || true
             return 1
         fi
         if python3 -c "import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:$port/__mock__/health',timeout=1)" 2>/dev/null; then
@@ -124,7 +128,7 @@ rest_coverage_gate() {
     done
     if [ "$healthy" -ne 1 ]; then
         echo "FATAL: mock_signalwire never became healthy on port $port within ~15s" >&2
-        sed 's/^/    mock: /' "/tmp/rest_cov_mock.$$.log" >&2 || true
+        sed 's/^/    mock: /' "$mocklog" >&2 || true
         return 1
     fi
     python3 -c "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:$port/__mock__/journal/reset',method='POST'),timeout=5).read()"
@@ -132,21 +136,43 @@ rest_coverage_gate() {
     # classes) against the mock to populate the coverage journal. These replaced the
     # old hand `*_full_mock` tests (bb2c6cf); the previous `-k full_mock` selector
     # matched nothing after that, so the journal stayed empty and coverage failed.
+    #
+    # EXCLUDE `wire_regression_pins_test.py`: that hand-authored pin DELIBERATELY
+    # sends undeclared query params (q/tag/emoji on addresses) to exercise the
+    # percent-encoding round-trip — a legitimate hostile probe, not a wire bug. It
+    # would otherwise litter the journal with intentional wire_violations that the
+    # STRICT-MOCKS post-pass below would (correctly, for a real fixture) red on. It
+    # still runs in the TEST gate for its actual assertion; it just doesn't belong in
+    # the wire-truth coverage journal. The 438 generated *Wire tests still give full
+    # success+error coverage.
     MOCK_SIGNALWIRE_PORT="$port" python3 -m pytest \
-        "$PORT_ROOT/tests/unit/rest/" -k Wire -p no:xdist -q -o addopts="" || return 1
+        "$PORT_ROOT/tests/unit/rest/" -k "Wire and not wire_regression_pins" \
+        -p no:xdist -q -o addopts="" || return 1
     python3 -m mock_signalwire.rest_coverage \
         --mock-url "http://127.0.0.1:$port" \
         --spec-root "$PORTING_SDK_DIR/rest-apis" \
         --allowlist "$PORTING_SDK_DIR/REST_COVERAGE_BASELINE.md" \
         --allowlist "$PORT_ROOT/REST_COVERAGE_GAPS.md" \
-        --gap-baseline "$PORTING_SDK_DIR/REST_COVERAGE_GAP_BASELINE.md"
+        --gap-baseline "$PORTING_SDK_DIR/REST_COVERAGE_GAP_BASELINE.md" || return 1
+    # STRICT-MOCKS §2.2a — fail the gate on ANY journaled wire_violation. The shared
+    # helper reads the same live mock journal and exits non-zero on any offender
+    # (see porting-sdk/scripts/assert_no_wire_violations.py). WIRE_VIOLATIONS_ALLOW.md
+    # holds ONLY owner-signed spec-gap parks (recordings page_size + fabric cursor,
+    # pending prime-rails confirmation of the server-side param).
+    python3 "$PORTING_SDK_DIR/scripts/assert_no_wire_violations.py" \
+        --rest-mock-url "http://127.0.0.1:$port" \
+        --allowlist "$PORT_ROOT/WIRE_VIOLATIONS_ALLOW.md"
 }
 
 # ---- register gates ----------------------------------------------------------
 sched_init "$@"
 
-sched_gate TEST defer=1 desc="python -m pytest tests/unit/" \
-    -- python -m pytest tests/unit/
+# STRICT-MOCKS §2.2b — run the RELAY unit tests against a strict mock_relay
+# (MOCK_RELAY_STRICT=1): any unknown frame field / duplicate command-id is rejected
+# with an error frame, so a wrong RELAY wire shape fails the test rather than being
+# silently accepted. The reference RELAY suite is already wire-clean under strict.
+sched_gate TEST defer=1 desc="python -m pytest tests/unit/ (STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
+    -- env MOCK_RELAY_STRICT=1 python -m pytest tests/unit/
 
 # SIGNATURES regenerates the porting-sdk oracle → DRIFT git-diffs it. deps=SIGNATURES.
 sched_gate SIGNATURES desc="regenerate python_signatures.json (reference oracle)" \
