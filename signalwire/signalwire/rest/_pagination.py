@@ -62,7 +62,14 @@ class PaginatedIterator:
 
         links = resp.get("links", {})
         next_url = links.get("next")
-        if next_url and data:
+        # Termination is driven ONLY by the absence of a next link, NOT by an
+        # empty ``data`` array on this page.  A page can legitimately carry a
+        # ``links.next`` (more pages exist) while returning zero items on THIS
+        # page — e.g. a filtered page that happens to match nothing here.  The
+        # old ``next_url and data`` condition stopped on such a page and
+        # silently dropped every subsequent page; iterate while a next link
+        # exists, empty page or not.
+        if next_url:
             # Parse cursor/page token from next URL if present
             # Most SignalWire APIs use page_token or cursor param
             from urllib.parse import urlparse, parse_qs
