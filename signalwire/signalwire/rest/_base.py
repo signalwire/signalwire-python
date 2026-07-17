@@ -47,17 +47,40 @@ TUpdate = TypeVar("TUpdate")
 
 
 class SignalWireRestError(Exception):
-    """Raised when the SignalWire REST API returns a non-2xx response."""
+    """Raised when the SignalWire REST API returns a non-2xx response.
+
+    ``status_code`` is the HTTP status; for a TRANSPORT failure (the request never
+    reached a response — connection refused, DNS failure, connection reset) it is
+    ``None`` and the raised type is :class:`SignalWireRestTransportError`. Callers
+    catch this one family for every REST failure, HTTP or transport.
+    """
 
     def __init__(
-        self, status_code: int, body: Any, url: str, method: str = "GET"
+        self, status_code: int | None, body: Any, url: str, method: str = "GET"
     ) -> None:
         self.status_code = status_code
         self.body = body
         self.url = url
         self.method = method
-        message = f"{method} {url} returned {status_code}: {body}"
+        if status_code is None:
+            message = f"{method} {url} failed to reach the server: {body}"
+        else:
+            message = f"{method} {url} returned {status_code}: {body}"
         super().__init__(message)
+
+
+class SignalWireRestTransportError(SignalWireRestError):
+    """Raised when a REST request never reached a response — a transport-level
+    failure (connection refused, DNS failure, connection reset, TLS error).
+
+    A member of the :class:`SignalWireRestError` family (``status_code`` is ``None``,
+    ``body`` is the underlying transport error message) so a caller catching
+    ``SignalWireRestError`` handles both HTTP-error and transport-error responses with
+    one ``except``, instead of the bare ``requests.ConnectionError`` leaking through.
+    """
+
+    def __init__(self, body: Any, url: str, method: str = "GET") -> None:
+        super().__init__(None, body, url, method)
 
 
 class HttpClient:
@@ -85,7 +108,14 @@ class HttpClient:
     ) -> Any:
         url = self._base_url + path
         logger.debug("REST request", method=method, path=path)
-        resp = self._session.request(method, url, json=body, params=params)
+        try:
+            resp = self._session.request(method, url, json=body, params=params)
+        except requests.RequestException as exc:
+            # Transport failure (connection refused / DNS / reset / TLS): the request
+            # never produced a response. Wrap in the typed error family so a caller
+            # catching SignalWireRestError handles it too, instead of a bare
+            # requests.ConnectionError leaking out.
+            raise SignalWireRestTransportError(str(exc), path, method) from exc
         if not resp.ok:
             try:
                 err_body: Any = resp.json()
