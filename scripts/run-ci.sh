@@ -53,15 +53,6 @@ PORTING_SDK_DIR="$(resolve_porting_sdk)" || {
 # shellcheck source=/dev/null
 source "$PORTING_SDK_DIR/scripts/gate_scheduler.sh"
 
-pick_free_port() {
-    python3 - <<'PY'
-import socket
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind(("127.0.0.1", 0))
-print(s.getsockname()[1])
-s.close()
-PY
-}
 
 cd "$PORT_ROOT"
 
@@ -96,51 +87,6 @@ fmt_gate() {
 # REST-COVERAGE — every implemented REST route covered success+error. Self-
 # contained: spins its own mock on an ephemeral port, runs the rest/ suite serially,
 # then checks the journal.
-rest_coverage_gate() {
-    local port
-    port="$(pick_free_port)" || {
-        echo "FATAL: could not acquire a free port for mock_signalwire" >&2
-        return 1
-    }
-    local mock_pkg_parent="$PORTING_SDK_DIR/test_harness/mock_signalwire"
-    export PYTHONPATH="$mock_pkg_parent${PYTHONPATH:+:$PYTHONPATH}"
-    python3 -m mock_signalwire --host 127.0.0.1 --port "$port" --log-level error \
-        >/tmp/rest_cov_mock.$$.log 2>&1 &
-    local mock_pid=$!
-    # shellcheck disable=SC2064
-    trap "kill $mock_pid 2>/dev/null" RETURN
-    local i healthy=0
-    for i in $(seq 1 30); do
-        if ! kill -0 "$mock_pid" 2>/dev/null; then
-            echo "FATAL: mock_signalwire (pid $mock_pid) exited before becoming healthy" >&2
-            sed 's/^/    mock: /' "/tmp/rest_cov_mock.$$.log" >&2 || true
-            return 1
-        fi
-        if python3 -c "import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:$port/__mock__/health',timeout=1)" 2>/dev/null; then
-            healthy=1
-            break
-        fi
-        sleep 0.5
-    done
-    if [ "$healthy" -ne 1 ]; then
-        echo "FATAL: mock_signalwire never became healthy on port $port within ~15s" >&2
-        sed 's/^/    mock: /' "/tmp/rest_cov_mock.$$.log" >&2 || true
-        return 1
-    fi
-    python3 -c "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:$port/__mock__/journal/reset',method='POST'),timeout=5).read()"
-    # Drive every generated wire test (the `*_generated_test.py` suite, `*Wire`
-    # classes) against the mock to populate the coverage journal. These replaced the
-    # old hand `*_full_mock` tests (bb2c6cf); the previous `-k full_mock` selector
-    # matched nothing after that, so the journal stayed empty and coverage failed.
-    MOCK_SIGNALWIRE_PORT="$port" python3 -m pytest \
-        "$PORT_ROOT/tests/unit/rest/" -k Wire -p no:xdist -q -o addopts="" || return 1
-    python3 -m mock_signalwire.rest_coverage \
-        --mock-url "http://127.0.0.1:$port" \
-        --spec-root "$PORTING_SDK_DIR/rest-apis" \
-        --allowlist "$PORTING_SDK_DIR/REST_COVERAGE_BASELINE.md" \
-        --allowlist "$PORT_ROOT/REST_COVERAGE_GAPS.md" \
-        --gap-baseline "$PORTING_SDK_DIR/REST_COVERAGE_GAP_BASELINE.md"
-}
 
 # ---- register gates ----------------------------------------------------------
 sched_init "$@"

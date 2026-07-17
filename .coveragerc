@@ -1,5 +1,5 @@
 [run]
-source = signalwire_agents
+source = signalwire
 omit =
     */tests/*
     */test_*
