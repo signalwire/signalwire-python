@@ -133,7 +133,7 @@ def get_env_credentials() -> dict[str, str]:
     return {
         "space": os.environ.get("SIGNALWIRE_SPACE_NAME", ""),
         "project": os.environ.get("SIGNALWIRE_PROJECT_ID", ""),
-        "token": os.environ.get("SIGNALWIRE_TOKEN", ""),
+        "token": os.environ.get("SIGNALWIRE_API_TOKEN", ""),
     }
 
 
@@ -192,7 +192,7 @@ Thumbs.db
 TEMPLATE_ENV_EXAMPLE = """# SignalWire Credentials
 SIGNALWIRE_SPACE_NAME=your-space
 SIGNALWIRE_PROJECT_ID=your-project-id
-SIGNALWIRE_TOKEN=your-api-token
+SIGNALWIRE_API_TOKEN=your-api-token
 
 # Agent Server Configuration
 HOST=0.0.0.0
@@ -1719,7 +1719,7 @@ Edit `.env` to configure:
 |----------|-------------|
 | `SIGNALWIRE_SPACE_NAME` | Your SignalWire space name |
 | `SIGNALWIRE_PROJECT_ID` | Your SignalWire project ID |
-| `SIGNALWIRE_TOKEN` | Your SignalWire API token |
+| `SIGNALWIRE_API_TOKEN` | Your SignalWire API token |
 | `HOST` | Server host (default: 0.0.0.0) |
 | `PORT` | Server port (default: 5000) |
 
@@ -2317,7 +2317,7 @@ Set your phone number's SWML URL to the endpoint URL shown after deployment.
         env_content = f"""# SignalWire Credentials
 SIGNALWIRE_SPACE_NAME={self.credentials.get("space", "")}
 SIGNALWIRE_PROJECT_ID={self.credentials.get("project", "")}
-SIGNALWIRE_TOKEN={self.credentials.get("token", "")}
+SIGNALWIRE_API_TOKEN={self.credentials.get("token", "")}
 
 # Agent Server Configuration
 HOST=0.0.0.0

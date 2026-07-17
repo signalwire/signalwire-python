@@ -51,7 +51,7 @@ class DataSphereSkill(SkillBase):
                     "description": "SignalWire API token",
                     "required": True,
                     "hidden": True,
-                    "env_var": "SIGNALWIRE_TOKEN",
+                    "env_var": "SIGNALWIRE_API_TOKEN",
                 },
                 "document_id": {
                     "type": "string",
