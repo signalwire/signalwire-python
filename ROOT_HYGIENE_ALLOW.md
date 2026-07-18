@@ -18,3 +18,4 @@ offender verbatim.
 - REST_COVERAGE_GAPS.md — required audit-contract file read by porting-sdk rest_coverage (REST-COVERAGE) at repo root (mike@signalwire.com, 2026-07-15)
 - ROUTE_COLLISION_ALLOW.md — allowlist read by porting-sdk route_collision.py (ROUTE-COLLISION) at repo root (mike@signalwire.com, 2026-07-15)
 - SNIPPET_RUN_ALLOW.md — allowlist read by porting-sdk snippet_run.py (SNIPPET-RUN) at repo root (mike@signalwire.com, 2026-07-15)
+- WIRE_VIOLATIONS_ALLOW.md — STRICT-MOCKS signed-exception ledger read by porting-sdk assert_no_wire_violations.py / examples_run.py / snippet_run.py at repo root (mike@signalwire.com, 2026-07-18)

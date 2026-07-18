@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 from signalwire.rest._base import (
     SignalWireRestError,
+    SignalWireRestTransportError,
     CrudResource,
     CrudWithAddresses,
 )
@@ -78,6 +79,24 @@ class TestHttpClient:
         with pytest.raises(SignalWireRestError) as exc_info:
             http.get("/api/missing")
         assert exc_info.value.status_code == 404
+
+    def test_transport_error_wrapped(
+        self, http: HttpClient, mock_session: MagicMock
+    ) -> None:
+        # A transport failure (connection refused / reset / DNS) must surface as the
+        # typed SignalWireRestTransportError (a SignalWireRestError-family member with
+        # status_code=None), NOT a bare requests.ConnectionError.
+        import requests
+
+        mock_session.request.side_effect = requests.ConnectionError(
+            "connection refused"
+        )
+        with pytest.raises(SignalWireRestTransportError) as exc_info:
+            http.get("/api/anything")
+        assert isinstance(exc_info.value, SignalWireRestError)  # one family
+        assert exc_info.value.status_code is None
+        assert exc_info.value.method == "GET"
+        assert exc_info.value.url == "/api/anything"
 
 
 class TestCrudResource:
