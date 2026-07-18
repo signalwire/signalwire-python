@@ -29,6 +29,15 @@
 set -u
 set -o pipefail
 
+# STRICT-MOCKS 400-mode (plan §2.2c): after the clean fleet cycle, strict is the
+# DEFAULT. The REST mock (mock_signalwire) 400s on any wire_violation and the RELAY
+# mock (mock_relay) rejects any unknown-field/duplicate-id frame — so every mock
+# consumer inherits wire-truth directly, not only the gates that read the journal.
+# Exported here so every mock this run spawns (REST-COVERAGE, per-test harness, the
+# doc/example gates) inherits it. Override to 0 to debug in flag-mode.
+export MOCK_SIGNALWIRE_STRICT="${MOCK_SIGNALWIRE_STRICT:-1}"
+export MOCK_RELAY_STRICT="${MOCK_RELAY_STRICT:-1}"
+
 PORT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PORT_NAME="signalwire-python"
 
