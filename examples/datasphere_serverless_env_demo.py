@@ -17,7 +17,7 @@ from environment variables, showing best practices for production deployment.
 Required Environment Variables:
 - SIGNALWIRE_SPACE_NAME: Your SignalWire space name
 - SIGNALWIRE_PROJECT_ID: Your SignalWire project ID  
-- SIGNALWIRE_TOKEN: Your SignalWire authentication token
+- SIGNALWIRE_API_TOKEN: Your SignalWire authentication token
 - DATASPHERE_DOCUMENT_ID: The DataSphere document ID to search
 
 Optional Environment Variables:
@@ -29,7 +29,7 @@ Optional Environment Variables:
 Usage:
     export SIGNALWIRE_SPACE_NAME="your-space"
     export SIGNALWIRE_PROJECT_ID="your-project-id"
-    export SIGNALWIRE_TOKEN="your-token"
+    export SIGNALWIRE_API_TOKEN="your-token"
     export DATASPHERE_DOCUMENT_ID="your-document-id"
     python examples/datasphere_serverless_env_demo.py
 """
@@ -46,7 +46,7 @@ def get_required_env_var(name: str) -> str:
         print("\nRequired environment variables:")
         print("- SIGNALWIRE_SPACE_NAME: Your SignalWire space name")
         print("- SIGNALWIRE_PROJECT_ID: Your SignalWire project ID")
-        print("- SIGNALWIRE_TOKEN: Your SignalWire authentication token")
+        print("- SIGNALWIRE_API_TOKEN: Your SignalWire authentication token")
         print("- DATASPHERE_DOCUMENT_ID: The DataSphere document ID to search")
         print("\nOptional environment variables:")
         print("- DATASPHERE_COUNT: Number of search results (default: 3)")
@@ -70,7 +70,7 @@ def main():
     print("Loading configuration from environment variables...")
     space_name = get_required_env_var('SIGNALWIRE_SPACE_NAME')
     project_id = get_required_env_var('SIGNALWIRE_PROJECT_ID')
-    token = get_required_env_var('SIGNALWIRE_TOKEN')
+    token = get_required_env_var('SIGNALWIRE_API_TOKEN')
     document_id = get_required_env_var('DATASPHERE_DOCUMENT_ID')
     
     # Get optional environment variables with defaults
