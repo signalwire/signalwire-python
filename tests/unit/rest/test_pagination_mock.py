@@ -76,7 +76,10 @@ class TestPaginatedIterator:
         A fresh per-test client starts with an empty (auth-scoped) journal and
         scenario queue, so we stage the two pages exactly once — no reset dance.
         """
-        # Page 1 — has a next cursor.
+        # Page 1 — has a next page. The server's links.next carries the real wire
+        # param the fabric list endpoint round-trips: ``page_token`` (a cursor token
+        # that starts with PA/PB), NOT a ``cursor`` param (which no SignalWire REST
+        # endpoint accepts — see rest-apis/fabric/openapi.yaml ListFabricAddressesQuery).
         _push_scenario(
             mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
             status=200,
@@ -85,7 +88,7 @@ class TestPaginatedIterator:
                     {"id": "addr-1", "name": "first"},
                     {"id": "addr-2", "name": "second"},
                 ],
-                "links": {"next": "http://example.com/api/fabric/addresses?cursor=page2"},
+                "links": {"next": "http://example.com/api/fabric/addresses?page_token=PA_page2"},
             },
         )
         # Page 2 — terminal (no next).
@@ -114,10 +117,10 @@ class TestPaginatedIterator:
             f"expected 2 paginated GETs, got {len(gets)} entries: "
             f"{[(e.method, e.path, e.query_params) for e in gets]}"
         )
-        # The second fetch carries the ``cursor=page2`` param parsed from
-        # the first response's ``links.next``.
-        assert gets[1].query_params.get("cursor") == ["page2"], (
-            f"second fetch missing cursor=page2: {gets[1].query_params}"
+        # The second fetch carries the ``page_token`` param parsed from the first
+        # response's ``links.next`` — the real wire token the server round-trips.
+        assert gets[1].query_params.get("page_token") == ["PA_page2"], (
+            f"second fetch missing page_token=PA_page2: {gets[1].query_params}"
         )
 
     def test_next_raises_stop_iteration_when_done(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
@@ -218,7 +221,7 @@ class TestPaginatedIterator:
             mock, _FABRIC_ADDRESSES_ENDPOINT_ID, status=200,
             response={
                 "data": [{"id": "r-1"}, {"id": "r-2"}],
-                "links": {"next": f"{_FABRIC_ADDRESSES_PATH}?cursor=page2"},
+                "links": {"next": f"{_FABRIC_ADDRESSES_PATH}?page_token=PA_page2"},
             },
         )
         _push_scenario(
@@ -233,4 +236,4 @@ class TestPaginatedIterator:
         assert collected == ["r-1", "r-2", "r-3"]
         gets = [e for e in mock.journal if e.path == _FABRIC_ADDRESSES_PATH]
         assert len(gets) == 2, f"expected 2 paginated GETs, got {len(gets)}"
-        assert gets[1].query_params.get("cursor") == ["page2"]
+        assert gets[1].query_params.get("page_token") == ["PA_page2"]
