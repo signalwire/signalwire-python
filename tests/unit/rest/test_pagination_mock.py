@@ -173,7 +173,7 @@ class TestPaginatedIterator:
             status=200,
             response={
                 "data": [],
-                "links": {"next": f"{_FABRIC_ADDRESSES_PATH}?cursor=page2"},
+                "links": {"next": f"{_FABRIC_ADDRESSES_PATH}?page_token=PA_page2"},
             },
         )
         # Page 2 — the real item, terminal (no next).
@@ -204,8 +204,8 @@ class TestPaginatedIterator:
             f"expected 2 paginated GETs across the empty page and the next, "
             f"got {len(gets)}: {[(e.method, e.path, e.query_params) for e in gets]}"
         )
-        assert gets[1].query_params.get("cursor") == ["page2"], (
-            f"second fetch missing cursor=page2 parsed from the empty page's "
+        assert gets[1].query_params.get("page_token") == ["PA_page2"], (
+            f"second fetch missing page_token=PA_page2 parsed from the empty page's "
             f"links.next: {gets[1].query_params}"
         )
 
