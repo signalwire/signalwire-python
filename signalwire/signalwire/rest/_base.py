@@ -9,12 +9,18 @@ See LICENSE file in the project root for full license information.
 HTTP client infrastructure and base resource classes for the REST client.
 """
 
+import time
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any, Generic, TypeVar, cast
 
 import requests
 from signalwire.core.logging_config import get_logger
 from signalwire.rest._pagination import PaginatedIterator
+from signalwire.rest._request_options import (
+    RequestOptions,
+    resolve,
+    status_is_retryable,
+)
 
 logger = get_logger("rest_client")
 
@@ -86,8 +92,15 @@ class SignalWireRestTransportError(SignalWireRestError):
 class HttpClient:
     """Thin wrapper around requests.Session with Basic Auth and JSON handling."""
 
-    def __init__(self, project: str, token: str, host: str) -> None:
+    def __init__(
+        self,
+        project: str,
+        token: str,
+        host: str,
+        request_options: RequestOptions | None = None,
+    ) -> None:
         self._base_url = f"https://{host}"
+        self._request_options = request_options
         self._session = requests.Session()
         self._session.auth = (project, token)
         self._session.headers.update(
@@ -99,49 +112,120 @@ class HttpClient:
         )
         logger.debug("HttpClient initialized", host=host, project=project[:8] + "...")
 
+    def _sleep(self, seconds: float) -> None:
+        """Backoff sleep between retries. A seam so tests can drive the retry
+        loop without wall-clock delay (the mock proves attempt ORDERING, not
+        real time)."""
+        if seconds > 0:
+            time.sleep(seconds)
+
+    def _retry_after_seconds(self, resp: requests.Response) -> float | None:
+        """Parse a ``Retry-After`` header (delta-seconds form) if present."""
+        value = resp.headers.get("Retry-After")
+        if value is None:
+            return None
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None  # HTTP-date form: fall back to computed backoff
+
     def _request(
         self,
         method: str,
         path: str,
         body: Any = None,
         params: dict[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> Any:
         url = self._base_url + path
+        opts = resolve(self._request_options, request_options)
         logger.debug("REST request", method=method, path=path)
-        try:
-            resp = self._session.request(method, url, json=body, params=params)
-        except requests.RequestException as exc:
-            # Transport failure (connection refused / DNS / reset / TLS): the request
-            # never produced a response. Wrap in the typed error family so a caller
-            # catching SignalWireRestError handles it too, instead of a bare
-            # requests.ConnectionError leaking out.
-            raise SignalWireRestTransportError(str(exc), path, method) from exc
-        if not resp.ok:
-            try:
-                err_body: Any = resp.json()
-            except Exception:
-                err_body = resp.text
-            raise SignalWireRestError(resp.status_code, err_body, path, method)
-        if resp.status_code == 204 or not resp.content:
-            return {}
-        return resp.json()
 
-    def get(self, path: str, params: dict[str, Any] | None = None) -> Any:
-        return self._request("GET", path, params=params)
+        # total attempts = retries + 1; retry on a retryable status (idempotency-
+        # aware) or a transport error, honoring Retry-After then exponential
+        # backoff. abort_signal is checked cooperatively before every attempt.
+        attempt = 0
+        while True:
+            attempt += 1
+            if opts.abort_signal is not None and opts.abort_signal.is_set():
+                # Cancelled before this attempt — surface as the transport-error
+                # family (no response was produced), not a bare exception.
+                raise SignalWireRestTransportError(
+                    "request cancelled by abort_signal", path, method
+                )
+
+            try:
+                resp = self._session.request(
+                    method, url, json=body, params=params, timeout=opts.timeout
+                )
+            except requests.RequestException as exc:
+                # Transport failure (connection refused / DNS / reset / TLS /
+                # timeout): the request never produced a response. Retry if
+                # attempts remain, else wrap in the typed error family so a caller
+                # catching SignalWireRestError handles it too.
+                if attempt <= opts.retries:
+                    self._sleep(opts.retry_backoff * 2 ** (attempt - 1))
+                    continue
+                raise SignalWireRestTransportError(str(exc), path, method) from exc
+
+            if not resp.ok:
+                if attempt <= opts.retries and status_is_retryable(
+                    method, resp.status_code, opts
+                ):
+                    delay = self._retry_after_seconds(resp)
+                    if delay is None:
+                        delay = opts.retry_backoff * 2 ** (attempt - 1)
+                    self._sleep(delay)
+                    continue
+                try:
+                    err_body: Any = resp.json()
+                except Exception:
+                    err_body = resp.text
+                raise SignalWireRestError(resp.status_code, err_body, path, method)
+
+            if resp.status_code == 204 or not resp.content:
+                return {}
+            return resp.json()
+
+    def get(
+        self,
+        path: str,
+        params: dict[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
+    ) -> Any:
+        return self._request(
+            "GET", path, params=params, request_options=request_options
+        )
 
     def post(
-        self, path: str, body: Any = None, params: dict[str, Any] | None = None
+        self,
+        path: str,
+        body: Any = None,
+        params: dict[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> Any:
-        return self._request("POST", path, body=body, params=params)
+        return self._request(
+            "POST", path, body=body, params=params, request_options=request_options
+        )
 
-    def put(self, path: str, body: Any = None) -> Any:
-        return self._request("PUT", path, body=body)
+    def put(
+        self,
+        path: str,
+        body: Any = None,
+        request_options: RequestOptions | None = None,
+    ) -> Any:
+        return self._request("PUT", path, body=body, request_options=request_options)
 
-    def patch(self, path: str, body: Any = None) -> Any:
-        return self._request("PATCH", path, body=body)
+    def patch(
+        self,
+        path: str,
+        body: Any = None,
+        request_options: RequestOptions | None = None,
+    ) -> Any:
+        return self._request("PATCH", path, body=body, request_options=request_options)
 
-    def delete(self, path: str) -> Any:
-        return self._request("DELETE", path)
+    def delete(self, path: str, request_options: RequestOptions | None = None) -> Any:
+        return self._request("DELETE", path, request_options=request_options)
 
 
 class BaseResource:

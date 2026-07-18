@@ -384,17 +384,36 @@ class _MockHarness:
         requests.post(f"{self.url}/__mock__/journal/reset", timeout=5)
         requests.post(f"{self.url}/__mock__/scenarios/reset", timeout=5)
 
-    def push_scenario(self, endpoint_id: str, status: int, response: Any) -> None:
+    def push_scenario(
+        self,
+        endpoint_id: str,
+        status: int,
+        response: Any,
+        headers: dict[str, str] | None = None,
+        delay_ms: int | None = None,
+    ) -> None:
         """Stage a consume-once response override for ``endpoint_id``.
 
         Scoped to THIS client's auth header (REST's session key is the
         ``Authorization`` header), so a concurrent test can't consume the
         override and a stale one can't bleed across tests.
+
+        Multiple pushes on the same endpoint are consumed FIFO — stage
+        ``503`` then let the request retry into the default ``200`` (or stage
+        ``503`` then ``200``) to exercise the retry contract over the real mock.
+        ``headers`` can carry ``Retry-After``; ``delay_ms`` arms a server-side
+        delay so a client's ``timeout`` fires (both proven on the wire, not
+        mock.patch).
         """
         url = f"{self.url}/__mock__/scenarios/{endpoint_id}"
         if self.auth_header:
             url = f"{url}?session_id={quote(self.auth_header, safe='')}"
-        resp = requests.post(url, json={"status": status, "response": response}, timeout=5)
+        payload: dict[str, Any] = {"status": status, "response": response}
+        if headers is not None:
+            payload["headers"] = headers
+        if delay_ms is not None:
+            payload["delay_ms"] = delay_ms
+        resp = requests.post(url, json=payload, timeout=5)
         resp.raise_for_status()
 
 
@@ -442,8 +461,8 @@ def signalwire_client(mock: _MockHarness, monkeypatch: pytest.MonkeyPatch) -> It
 
     original_init = HttpClient.__init__
 
-    def _patched_init(self: HttpClient, project: str, token: str, host: str) -> None:
-        original_init(self, project, token, host)
+    def _patched_init(self: HttpClient, *args: object, **kwargs: object) -> None:
+        original_init(self, *args, **kwargs)  # threads request_options through
         self._base_url = mock.url
 
     monkeypatch.setattr(HttpClient, "__init__", _patched_init)

@@ -12,6 +12,7 @@ RestClient — top-level REST client with namespaced sub-objects.
 import os
 
 from ._base import HttpClient
+from ._request_options import RequestOptions
 from .namespaces._client_tree_generated import _GeneratedResourceTree
 
 
@@ -44,6 +45,7 @@ class RestClient(_GeneratedResourceTree):
         project: str | None = None,
         token: str | None = None,
         host: str | None = None,
+        request_options: RequestOptions | None = None,
     ) -> None:
         project = project or os.environ.get("SIGNALWIRE_PROJECT_ID", "")
         token = token or os.environ.get("SIGNALWIRE_API_TOKEN", "")
@@ -57,7 +59,7 @@ class RestClient(_GeneratedResourceTree):
             )
 
         self._project = project
-        self._http = HttpClient(project, token, host)
+        self._http = HttpClient(project, token, host, request_options=request_options)
 
         # Generated resource tree (flat resources + namespace containers).
         self._wire_resources(self._http)
