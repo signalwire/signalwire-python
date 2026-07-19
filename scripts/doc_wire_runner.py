@@ -22,15 +22,21 @@ from __future__ import annotations
 import os
 import sys
 
-from signalwire.rest import RestClient
+from signalwire.rest import RequestOptions, RestClient
 from signalwire.rest._base import HttpClient
 
 
 def _client(base_url: str) -> RestClient:
     original_init = HttpClient.__init__
 
-    def _patched_init(self: HttpClient, project: str, token: str, host: str) -> None:
-        original_init(self, project, token, host)
+    def _patched_init(
+        self: HttpClient,
+        project: str,
+        token: str,
+        host: str,
+        request_options: RequestOptions | None = None,
+    ) -> None:
+        original_init(self, project, token, host, request_options=request_options)
         self._base_url = base_url
 
     HttpClient.__init__ = _patched_init  # type: ignore[method-assign]

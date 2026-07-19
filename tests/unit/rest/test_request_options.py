@@ -20,7 +20,7 @@ Contract pinned here (the oracle):
 from __future__ import annotations
 
 import threading
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -37,7 +37,9 @@ if TYPE_CHECKING:
 _ADDRESSES_ENDPOINT_ID = "fabric.list_fabric_addresses"
 
 
-def _addresses(client: RestClient, request_options: RequestOptions | None = None):
+def _addresses(
+    client: RestClient, request_options: RequestOptions | None = None
+) -> Any:
     """Drive one GET /api/fabric/addresses through the real transport."""
     return client._http.get("/api/fabric/addresses", request_options=request_options)
 

@@ -10,7 +10,7 @@ cooperative cancellation. Supplied at two levels:
   that *shallow-overrides* the client default for that one call — an unset
   (``None``) field falls back to the client default, then the built-in default.
 
-The timeout + retry semantics are the oracle-pinned, wire-observable contract
+The timeout + retry semantics are the reference-pinned, wire-observable contract
 (the mock sees N attempts and honors the backoff ordering). ``abort_signal``
 fidelity is per-port idiom (see the cross-port design): every port exposes the
 field; how deeply the cancellation cuts is the language's business. In python a
