@@ -41,6 +41,11 @@ class PaginatedIterator:
         self._items: list[Any] = []
         self._index = 0
         self._done = False
+        # Cycle guard: next-link cursors already followed. A server that keeps
+        # returning the SAME ``links.next`` would otherwise loop forever (the
+        # empty-page fix terminates only on an ABSENT next link, so a repeating
+        # next became an infinite loop). Seeing a repeat terminates iteration.
+        self._seen_next: set[str] = set()
 
     def __iter__(self) -> "PaginatedIterator":
         return self
@@ -70,6 +75,13 @@ class PaginatedIterator:
         # silently dropped every subsequent page; iterate while a next link
         # exists, empty page or not.
         if next_url:
+            # Cycle guard: a ``links.next`` we have already followed means the
+            # server is looping (a repeating cursor) — terminate instead of
+            # re-fetching the same page forever.
+            if next_url in self._seen_next:
+                self._done = True
+                return
+            self._seen_next.add(next_url)
             # Parse cursor/page token from next URL if present
             # Most SignalWire APIs use page_token or cursor param
             from urllib.parse import urlparse, parse_qs
