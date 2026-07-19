@@ -116,7 +116,22 @@ class TestHttpClient:
         assert isinstance(exc_info.value, SignalWireRestError)  # one family
         assert exc_info.value.status_code is None
         assert exc_info.value.method == "GET"
-        assert exc_info.value.url == "/api/anything"
+        # D1: error.url is the FULL URL (scheme+host+path), not the bare path.
+        assert exc_info.value.url == "https://test.signalwire.com/api/anything"
+
+    def test_error_url_is_full_url_with_query(
+        self, http: HttpClient, mock_session: MagicMock
+    ) -> None:
+        # D1 (owner-approved 2026-07-18): error.url carries the FULL URL WITH the query
+        # string — copy-pasteable, with query context, not the bare path the fleet used
+        # to store behind a `url`-named field.
+        mock_session.request.return_value = MockResponse(404, {"error": "nope"})
+        with pytest.raises(SignalWireRestError) as exc_info:
+            http.get("/api/items", params={"page_size": 25, "cursor": "abc"})
+        url = exc_info.value.url
+        assert url.startswith("https://test.signalwire.com/api/items?")
+        assert "page_size=25" in url
+        assert "cursor=abc" in url
 
 
 class TestCrudResource:

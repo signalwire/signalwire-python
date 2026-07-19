@@ -153,6 +153,20 @@ class HttpClient:
         request_options: RequestOptions | None = None,
     ) -> Any:
         url = self._base_url + path
+        # D1 (owner-approved 2026-07-18): error.url is the FULL URL WITH the query
+        # string preserved — the reference decision the fleet never actually took (the
+        # ports stored the bare path behind a `url`-named field). Build the full URL
+        # including the query so an error message / .url attribute is copy-pasteable and
+        # carries the query context. (urlencode with doseq=True mirrors requests' own
+        # list-param expansion.)
+        full_url = url
+        if params:
+            from urllib.parse import urlencode  # noqa: PLC0415
+            qs = urlencode(
+                {k: v for k, v in params.items() if v is not None}, doseq=True
+            )
+            if qs:
+                full_url = f"{url}?{qs}"
         opts = resolve(self._request_options, request_options)
         logger.debug("REST request", method=method, path=path)
 
@@ -166,7 +180,7 @@ class HttpClient:
                 # Cancelled before this attempt — surface as the transport-error
                 # family (no response was produced), not a bare exception.
                 raise SignalWireRestTransportError(
-                    "request cancelled by abort_signal", path, method
+                    "request cancelled by abort_signal", full_url, method
                 )
 
             try:
@@ -181,7 +195,7 @@ class HttpClient:
                 if attempt <= opts.retries:
                     self._sleep(opts.retry_backoff * 2 ** (attempt - 1))
                     continue
-                raise SignalWireRestTransportError(str(exc), path, method) from exc
+                raise SignalWireRestTransportError(str(exc), full_url, method) from exc
 
             if not resp.ok:
                 if attempt <= opts.retries and status_is_retryable(
@@ -196,7 +210,7 @@ class HttpClient:
                     err_body: Any = resp.json()
                 except Exception:
                     err_body = resp.text
-                raise SignalWireRestError(resp.status_code, err_body, path, method)
+                raise SignalWireRestError(resp.status_code, err_body, full_url, method)
 
             if resp.status_code == 204 or not resp.content:
                 return {}
