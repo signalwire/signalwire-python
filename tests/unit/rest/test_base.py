@@ -14,6 +14,26 @@ from signalwire.rest._base import HttpClient
 from unittest.mock import MagicMock
 
 
+class TestBaseUrlScheme:
+    """§2.2: a loopback host (local mock/dev server) gets http://; a real space gets
+    https://. Lets a shipped example run verbatim against the local mock without a
+    separate URL knob. Pure _base_url construction — no transport mocked."""
+
+    @pytest.mark.parametrize("host", [
+        "127.0.0.1:8790", "127.0.0.1", "localhost:3000", "localhost",
+    ])
+    def test_loopback_host_uses_http(self, host: str) -> None:
+        c = HttpClient("proj", "tok", host)
+        assert c._base_url == f"http://{host}", c._base_url
+
+    @pytest.mark.parametrize("host", [
+        "example.signalwire.com", "myspace.signalwire.com",
+    ])
+    def test_real_space_uses_https(self, host: str) -> None:
+        c = HttpClient("proj", "tok", host)
+        assert c._base_url == f"https://{host}", c._base_url
+
+
 class TestSignalWireRestError:
     def test_error_attributes(self) -> None:
         err = SignalWireRestError(404, {"error": "not found"}, "/api/test", "GET")

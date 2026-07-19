@@ -41,6 +41,15 @@ def _user_agent() -> str:
     return f"signalwire-python/{pkg_version}"
 
 
+def _is_loopback_host(host: str) -> bool:
+    """True if ``host`` (bare host or host:port) is a local loopback address — a
+    local mock/dev server that speaks plain HTTP. Used to pick http:// vs https://
+    so a shipped example runs verbatim against the local mock. A real SignalWire
+    space (``<name>.signalwire.com``) is never loopback, so production is unaffected."""
+    hostname = host.rsplit(":", 1)[0] if ":" in host else host
+    return hostname in ("127.0.0.1", "localhost", "::1", "[::1]")
+
+
 # CRUD response/request type parameters. Each concrete resource binds these to its
 # spec-generated TypedDicts (e.g. CrudResource[ListRoomsResponse, RoomResponse,
 # CreateRoomRequest, UpdateRoomRequest]); the signature oracle resolves the
@@ -99,7 +108,13 @@ class HttpClient:
         host: str,
         request_options: RequestOptions | None = None,
     ) -> None:
-        self._base_url = f"https://{host}"
+        # A loopback host (127.0.0.1[:port] / localhost[:port]) is a local mock/dev
+        # server that speaks plain HTTP — use http:// for it. Every other host is the
+        # real platform over https://. This lets a shipped example run verbatim against
+        # the local mock (SIGNALWIRE_SPACE=127.0.0.1:<port>) without a code change or a
+        # separate URL knob; production is unaffected (a real space is never loopback).
+        scheme = "http" if _is_loopback_host(host) else "https"
+        self._base_url = f"{scheme}://{host}"
         self._request_options = request_options
         self._session = requests.Session()
         self._session.auth = (project, token)
