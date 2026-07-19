@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from signalwire.rest.client import RestClient as _RestClient
     from signalwire.core.skill_base import SkillBase
     from signalwire.skills.registry import SkillRegistry
+
     # §6.2-python: the public symbols are LAZY at runtime (PEP 562, below) so
     # `import signalwire` doesn't drag FastAPI/uvicorn/pydantic at import time; the
     # eager imports here keep type checkers and IDEs fully aware of the real types.

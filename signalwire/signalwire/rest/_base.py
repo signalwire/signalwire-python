@@ -76,15 +76,19 @@ class SignalWireRestError(Exception):
     """
 
     def __init__(
-        self, status_code: int | None, body: Any, url: str, method: str = "GET",
+        self,
+        status_code: int | None,
+        body: Any,
+        url: str,
+        method: str = "GET",
         headers: dict[str, str] | None = None,
     ) -> None:
         self.status_code = status_code
         self.body = body
         self.url = url
         self.method = method
-        self.headers = headers
-        self.request_id = _extract_request_id(headers)
+        self.headers: dict[str, str] | None = headers
+        self.request_id: str | None = _extract_request_id(headers)
         if status_code is None:
             message = f"{method} {url} failed to reach the server: {body}"
         else:
@@ -97,7 +101,10 @@ class SignalWireRestError(Exception):
 # Header names SignalWire (and common proxies) use for the platform request id, in
 # preference order. Matched case-insensitively.
 _REQUEST_ID_HEADERS = (
-    "x-request-id", "x-signalwire-request-id", "request-id", "x-amzn-requestid",
+    "x-request-id",
+    "x-signalwire-request-id",
+    "request-id",
+    "x-amzn-requestid",
 )
 
 
@@ -189,7 +196,8 @@ class HttpClient:
         # list-param expansion.)
         full_url = url
         if params:
-            from urllib.parse import urlencode  # noqa: PLC0415
+            from urllib.parse import urlencode
+
             qs = urlencode(
                 {k: v for k, v in params.items() if v is not None}, doseq=True
             )
@@ -239,7 +247,10 @@ class HttpClient:
                 except Exception:
                     err_body = resp.text
                 raise SignalWireRestError(
-                    resp.status_code, err_body, full_url, method,
+                    resp.status_code,
+                    err_body,
+                    full_url,
+                    method,
                     headers=dict(resp.headers),
                 )
 
@@ -254,7 +265,10 @@ class HttpClient:
                 # SignalWireRestError for every REST failure). status_code is the real
                 # 2xx; body is the raw text so the caller can see what arrived.
                 raise SignalWireRestError(
-                    resp.status_code, resp.text, full_url, method,
+                    resp.status_code,
+                    resp.text,
+                    full_url,
+                    method,
                     headers=dict(resp.headers),
                 ) from exc
 

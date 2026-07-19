@@ -19,3 +19,5 @@ offender verbatim.
 - ROUTE_COLLISION_ALLOW.md — allowlist read by porting-sdk route_collision.py (ROUTE-COLLISION) at repo root (mike@signalwire.com, 2026-07-15)
 - SNIPPET_RUN_ALLOW.md — allowlist read by porting-sdk snippet_run.py (SNIPPET-RUN) at repo root (mike@signalwire.com, 2026-07-15)
 - WIRE_VIOLATIONS_ALLOW.md — STRICT-MOCKS signed-exception ledger read by porting-sdk assert_no_wire_violations.py / examples_run.py / snippet_run.py at repo root (mike@signalwire.com, 2026-07-18)
+- WIRED_MODES.md — wired-modes manifest read by porting-sdk check_wired_modes.py (WIRED-MODES merge-coherence guard) at repo root (mike@signalwire.com, 2026-07-19)
+- .doc_surface_floor — committed doc-coverage ratchet floor read by porting-sdk doc_surface.py (DOC-SURFACE) at repo root (mike@signalwire.com, 2026-07-19)

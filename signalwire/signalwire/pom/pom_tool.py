@@ -89,13 +89,25 @@ def main() -> None:
         description="POM Tool - work with Prompt Object Model files",
     )
     parser.add_argument("input_file", help="POM file to load (JSON or YAML)")
-    parser.add_argument("--output", default="md", metavar="<format>",
-                        choices=["md", "xml", "json", "yaml"],
-                        help="Output format: md, xml, json, yaml [default: md]")
-    parser.add_argument("--outfile", default=None, metavar="<file>",
-                        help="Output file (if not specified, prints to stdout)")
-    parser.add_argument("--merge_pom", default=None, metavar="<arg>",
-                        help='Merge another POM into a section: "<section name>:<filename>"')
+    parser.add_argument(
+        "--output",
+        default="md",
+        metavar="<format>",
+        choices=["md", "xml", "json", "yaml"],
+        help="Output format: md, xml, json, yaml [default: md]",
+    )
+    parser.add_argument(
+        "--outfile",
+        default=None,
+        metavar="<file>",
+        help="Output file (if not specified, prints to stdout)",
+    )
+    parser.add_argument(
+        "--merge_pom",
+        default=None,
+        metavar="<arg>",
+        help='Merge another POM into a section: "<section name>:<filename>"',
+    )
     ns = parser.parse_args()
 
     input_file = ns.input_file
