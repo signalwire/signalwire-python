@@ -10,11 +10,14 @@ from unittest.mock import MagicMock
 
 class TestPhoneNumbers:
     def test_search(self, client: RestClient, mock_session: MagicMock) -> None:
+        # spec wire key is `areacode` (relay-rest/openapi.yaml), NOT `area_code` — this
+        # passthrough test previously enshrined the wrong key (round-4). Wire-truth is
+        # proven by the strict-mock generated test, not this fake-transport shape test.
         mock_session.request.return_value = MockResponse(200, {"data": []})
-        client.phone_numbers.search(area_code="512")
+        client.phone_numbers.search(areacode="512")
         mock_session.request.assert_called_with(
             "GET", "https://test.signalwire.com/api/relay/rest/phone_numbers/search",
-            json=None, params={"area_code": "512"}, timeout=30.0,
+            json=None, params={"areacode": "512"}, timeout=30.0,
         )
 
     def test_update_uses_put(self, client: RestClient, mock_session: MagicMock) -> None:
