@@ -68,20 +68,47 @@ class SignalWireRestError(Exception):
     reached a response — connection refused, DNS failure, connection reset) it is
     ``None`` and the raised type is :class:`SignalWireRestTransportError`. Callers
     catch this one family for every REST failure, HTTP or transport.
+
+    §6.6 error-observability: ``headers`` is the response header map (or ``None`` for a
+    transport error that produced no response) and ``request_id`` is the platform request
+    id pulled from those headers — client-side observability with NO wire-contract change,
+    so a caller can log/correlate a failure against SignalWire's own request id.
     """
 
     def __init__(
-        self, status_code: int | None, body: Any, url: str, method: str = "GET"
+        self, status_code: int | None, body: Any, url: str, method: str = "GET",
+        headers: dict[str, str] | None = None,
     ) -> None:
         self.status_code = status_code
         self.body = body
         self.url = url
         self.method = method
+        self.headers = headers
+        self.request_id = _extract_request_id(headers)
         if status_code is None:
             message = f"{method} {url} failed to reach the server: {body}"
         else:
             message = f"{method} {url} returned {status_code}: {body}"
+        if self.request_id:
+            message += f" (request-id: {self.request_id})"
         super().__init__(message)
+
+
+# Header names SignalWire (and common proxies) use for the platform request id, in
+# preference order. Matched case-insensitively.
+_REQUEST_ID_HEADERS = (
+    "x-request-id", "x-signalwire-request-id", "request-id", "x-amzn-requestid",
+)
+
+
+def _extract_request_id(headers: dict[str, str] | None) -> str | None:
+    if not headers:
+        return None
+    lowered = {k.lower(): v for k, v in headers.items()}
+    for name in _REQUEST_ID_HEADERS:
+        if name in lowered:
+            return lowered[name]
+    return None
 
 
 class SignalWireRestTransportError(SignalWireRestError):
@@ -92,10 +119,11 @@ class SignalWireRestTransportError(SignalWireRestError):
     ``body`` is the underlying transport error message) so a caller catching
     ``SignalWireRestError`` handles both HTTP-error and transport-error responses with
     one ``except``, instead of the bare ``requests.ConnectionError`` leaking through.
+    ``headers``/``request_id`` are ``None`` (no response was produced).
     """
 
     def __init__(self, body: Any, url: str, method: str = "GET") -> None:
-        super().__init__(None, body, url, method)
+        super().__init__(None, body, url, method, headers=None)
 
 
 class HttpClient:
@@ -210,7 +238,10 @@ class HttpClient:
                     err_body: Any = resp.json()
                 except Exception:
                     err_body = resp.text
-                raise SignalWireRestError(resp.status_code, err_body, full_url, method)
+                raise SignalWireRestError(
+                    resp.status_code, err_body, full_url, method,
+                    headers=dict(resp.headers),
+                )
 
             if resp.status_code == 204 or not resp.content:
                 return {}

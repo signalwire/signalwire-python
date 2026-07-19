@@ -122,6 +122,7 @@ class MockResponse:
         self.content = content
         self.ok = 200 <= status_code < 300
         self.text = str(json_data)
+        self.headers: dict[str, str] = {}  # §6.6: real Response has .headers
 
     def json(self) -> object:
         return self._json

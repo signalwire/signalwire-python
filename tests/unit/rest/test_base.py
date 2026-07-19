@@ -14,6 +14,34 @@ from signalwire.rest._base import HttpClient
 from unittest.mock import MagicMock
 
 
+class TestErrorObservability:
+    """§6.6: the error carries the response headers + the platform request-id, so a
+    caller can log/correlate a failure. No wire-contract change — pure client surface."""
+
+    def test_request_id_and_headers_on_http_error(
+        self, http: HttpClient, mock_session: MagicMock
+    ) -> None:
+        resp = MockResponse(500, {"error": "boom"})
+        resp.headers = {"X-Request-Id": "req-abc-123", "Content-Type": "application/json"}
+        mock_session.request.return_value = resp
+        with pytest.raises(SignalWireRestError) as exc_info:
+            http.get("/api/x")
+        err = exc_info.value
+        assert err.request_id == "req-abc-123"
+        assert err.headers is not None and err.headers.get("X-Request-Id") == "req-abc-123"
+        assert "req-abc-123" in str(err)
+
+    def test_transport_error_has_no_headers(
+        self, http: HttpClient, mock_session: MagicMock
+    ) -> None:
+        import requests
+        mock_session.request.side_effect = requests.ConnectionError("refused")
+        with pytest.raises(SignalWireRestTransportError) as exc_info:
+            http.get("/api/x")
+        assert exc_info.value.headers is None
+        assert exc_info.value.request_id is None
+
+
 class TestBaseUrlScheme:
     """§2.2: a loopback host (local mock/dev server) gets http://; a real space gets
     https://. Lets a shipped example run verbatim against the local mock without a
