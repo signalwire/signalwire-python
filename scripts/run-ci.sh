@@ -322,6 +322,19 @@ sched_gate DOC-LINKS desc="every relative markdown link resolves to a tracked fi
 sched_gate ROOT-HYGIENE desc="no audit/scratch clutter tracked at repo root (allowlist ROOT_HYGIENE_ALLOW.md)" \
     -- python3 "$PORTING_SDK_DIR/scripts/root_hygiene.py" --port python --repo "$PORT_ROOT"
 
+# WIRED-MODES (Part 1.6, D7): the merge-coherence guard — every load-bearing run-ci mode
+# line declared in WIRED_MODES.md must still be present in this file, so a merge cannot
+# silently drop a strict export / post-pass (the strict-mocks × Part-5 race class).
+# check_wired_modes.py fails the gate if a declared line is ever silently dropped.
+sched_gate WIRED-MODES desc="declared load-bearing run-ci modes present (WIRED_MODES.md)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/check_wired_modes.py" --port python --repo "$PORT_ROOT"
+
+# DOC-SURFACE (§6.3): public docstring-coverage floor with a ratchet
+# (.doc_surface_floor). Report-only semantics: reds only on a REGRESSION below the
+# committed floor; improvements re-pin via --write-floor.
+sched_gate DOC-SURFACE desc="public docstring coverage >= committed floor (.doc_surface_floor)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/doc_surface.py" --port python --repo "$PORT_ROOT"
+
 sched_run
 rc=$?
 if [ "$rc" -eq 0 ]; then

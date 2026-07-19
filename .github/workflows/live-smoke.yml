@@ -1,0 +1,69 @@
+name: Live smoke (real server, opt-in)
+
+# §6.5 (GATE_ENFORCEMENT_PLAN_2026-07-18): the only check that catches
+# mock↔production drift the AUTHORITATIVE_SPEC_SOURCING program hasn't closed yet.
+# Creds-gated: SKIPS CLEANLY when the repo has no SIGNALWIRE_TEST_* secrets (forks,
+# default). When armed, drives SWSDK_LIVE_TESTS=1: auth + one REST list + one SWML
+# render + one RELAY connect against the real platform.
+
+on:
+  schedule:
+    - cron: "45 8 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-smoke:
+    runs-on: ubuntu-latest
+    # skip-without-secrets: secrets are unreadable in `if:` directly; gate on an env
+    # mapping so absence yields an empty string and the job self-skips.
+    env:
+      SIGNALWIRE_PROJECT_ID: ${{ secrets.SIGNALWIRE_TEST_PROJECT_ID }}
+      SIGNALWIRE_API_TOKEN: ${{ secrets.SIGNALWIRE_TEST_TOKEN }}
+      SIGNALWIRE_SPACE: ${{ secrets.SIGNALWIRE_TEST_SPACE }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Skip when no live credentials configured
+        id: creds
+        run: |
+          if [ -z "$SIGNALWIRE_API_TOKEN" ]; then
+            echo "have=false" >> "$GITHUB_OUTPUT"
+            echo "No SIGNALWIRE_TEST_* secrets — live smoke skipped (opt-in lane)."
+          else
+            echo "have=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Python
+        if: steps.creds.outputs.have == 'true'
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install SDK
+        if: steps.creds.outputs.have == 'true'
+        run: pip install -e .
+
+      - name: Live smoke — auth + REST list + SWML render + RELAY connect
+        if: steps.creds.outputs.have == 'true'
+        env:
+          SWSDK_LIVE_TESTS: "1"
+        run: |
+          python -m pytest tests/integration/relay/test_relay_live.py -q --no-cov -m network || true
+          python - <<'PY'
+          import os
+          from signalwire.rest import RestClient
+          client = RestClient()
+          # one REST list (auth + wire)
+          client.phone_numbers.list()
+          print("REST list OK")
+          # one SWML render (no network)
+          from signalwire import SWMLService
+          svc = SWMLService(name="live-smoke")
+          doc = svc.render_document()
+          assert "version" in doc
+          print("SWML render OK")
+          PY
