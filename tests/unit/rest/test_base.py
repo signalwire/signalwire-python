@@ -14,6 +14,25 @@ from signalwire.rest._base import HttpClient
 from unittest.mock import MagicMock
 
 
+class TestInvalidJson200:
+    """3-python-c: a 2xx with an undecodable body surfaces as the typed error family, not
+    a bare requests.JSONDecodeError leaking to the caller."""
+
+    def test_200_with_non_json_body_raises_typed_error(
+        self, http: HttpClient, mock_session: MagicMock
+    ) -> None:
+        resp = MockResponse(200, None, content=b"<html>oops</html>")
+        resp.text = "<html>oops</html>"
+        def _raise_json() -> object:
+            raise ValueError("Expecting value: line 1 column 1 (char 0)")
+        resp.json = _raise_json  # type: ignore[method-assign]
+        mock_session.request.return_value = resp
+        with pytest.raises(SignalWireRestError) as exc_info:
+            http.get("/api/x")
+        assert exc_info.value.status_code == 200
+        assert "oops" in str(exc_info.value.body)
+
+
 class TestErrorObservability:
     """§6.6: the error carries the response headers + the platform request-id, so a
     caller can log/correlate a failure. No wire-contract change — pure client surface."""

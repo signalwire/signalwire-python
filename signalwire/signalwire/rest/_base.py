@@ -245,7 +245,18 @@ class HttpClient:
 
             if resp.status_code == 204 or not resp.content:
                 return {}
-            return resp.json()
+            try:
+                return resp.json()
+            except ValueError as exc:
+                # A 2xx with an undecodable body (truncated / HTML error page / non-JSON)
+                # must surface as the typed error family, NOT a bare
+                # requests.JSONDecodeError leaking to the caller (who catches
+                # SignalWireRestError for every REST failure). status_code is the real
+                # 2xx; body is the raw text so the caller can see what arrived.
+                raise SignalWireRestError(
+                    resp.status_code, resp.text, full_url, method,
+                    headers=dict(resp.headers),
+                ) from exc
 
     def get(
         self,
