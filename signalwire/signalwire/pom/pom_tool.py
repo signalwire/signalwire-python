@@ -13,11 +13,11 @@ Options:
     --merge_pom=<arg>   Merge another POM into a section: "<section name>:<filename>"
 """
 
+import argparse
 import sys
 import json
 from pathlib import Path
 import yaml
-from docopt import docopt
 from signalwire.pom import PromptObjectModel
 
 
@@ -82,19 +82,26 @@ def render_pom(pom: "PromptObjectModel", output_format: str) -> str:
 
 def main() -> None:
     """Main entry point for the POM tool."""
-    args = docopt(__doc__)
+    # §6.2-python: argparse (stdlib) replaced the unmaintained docopt — identical CLI
+    # surface (same flags/defaults/usage), one fewer dependency.
+    parser = argparse.ArgumentParser(
+        prog="pom_tool",
+        description="POM Tool - work with Prompt Object Model files",
+    )
+    parser.add_argument("input_file", help="POM file to load (JSON or YAML)")
+    parser.add_argument("--output", default="md", metavar="<format>",
+                        choices=["md", "xml", "json", "yaml"],
+                        help="Output format: md, xml, json, yaml [default: md]")
+    parser.add_argument("--outfile", default=None, metavar="<file>",
+                        help="Output file (if not specified, prints to stdout)")
+    parser.add_argument("--merge_pom", default=None, metavar="<arg>",
+                        help='Merge another POM into a section: "<section name>:<filename>"')
+    ns = parser.parse_args()
 
-    input_file = args["<input_file>"]
-    output_format = args["--output"] or "md"
-    output_file = args["--outfile"]
-    merge_pom = args["--merge_pom"]
-
-    # Validate output format
-    if output_format not in ["md", "xml", "json", "yaml"]:
-        print(
-            f"Error: Invalid output format '{output_format}'. Must be one of: md, xml, json, yaml"
-        )
-        sys.exit(1)
+    input_file = ns.input_file
+    output_format = ns.output
+    output_file = ns.outfile
+    merge_pom = ns.merge_pom
 
     try:
         # Load the POM
