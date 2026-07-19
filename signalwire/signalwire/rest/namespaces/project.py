@@ -2,7 +2,7 @@
 
 These symbols moved out of ``namespaces.project`` when the REST layer was
 regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.project import ProjectTokens``
+re-export keeps ``from signalwire.rest.namespaces.project import ProjectTokens``
 working but emits a :class:`DeprecationWarning`. Prefer ``client.project`` instead
 (no import needed).
 """
@@ -10,7 +10,7 @@ working but emits a :class:`DeprecationWarning`. Prefer ``client.project`` inste
 import warnings
 
 warnings.warn(
-    "signalwire.signalwire.rest.namespaces.project is deprecated; use client.project. "
+    "signalwire.rest.namespaces.project is deprecated; use client.project. "
     "This back-compat shim will be removed in a future release.",
     DeprecationWarning,
     stacklevel=2,

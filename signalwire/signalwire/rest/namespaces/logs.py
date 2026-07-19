@@ -2,7 +2,7 @@
 
 These symbols moved out of ``namespaces.logs`` when the REST layer was
 regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.logs import MessageLogs``
+re-export keeps ``from signalwire.rest.namespaces.logs import MessageLogs``
 working but emits a :class:`DeprecationWarning`. Prefer ``client.logs`` instead
 (no import needed).
 """
@@ -10,7 +10,7 @@ working but emits a :class:`DeprecationWarning`. Prefer ``client.logs`` instead
 import warnings
 
 warnings.warn(
-    "signalwire.signalwire.rest.namespaces.logs is deprecated; use client.logs. "
+    "signalwire.rest.namespaces.logs is deprecated; use client.logs. "
     "This back-compat shim will be removed in a future release.",
     DeprecationWarning,
     stacklevel=2,

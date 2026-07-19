@@ -2,7 +2,7 @@
 
 These symbols moved out of ``namespaces.fabric`` when the REST layer was
 regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.fabric import FabricResource``
+re-export keeps ``from signalwire.rest.namespaces.fabric import FabricResource``
 working but emits a :class:`DeprecationWarning`. Prefer ``client.fabric`` instead
 (no import needed).
 """
@@ -10,7 +10,7 @@ working but emits a :class:`DeprecationWarning`. Prefer ``client.fabric`` instea
 import warnings
 
 warnings.warn(
-    "signalwire.signalwire.rest.namespaces.fabric is deprecated; use client.fabric. "
+    "signalwire.rest.namespaces.fabric is deprecated; use client.fabric. "
     "This back-compat shim will be removed in a future release.",
     DeprecationWarning,
     stacklevel=2,

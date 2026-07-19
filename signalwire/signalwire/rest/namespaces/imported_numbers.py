@@ -2,7 +2,7 @@
 
 These symbols moved out of ``namespaces.imported_numbers`` when the REST layer was
 regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.imported_numbers import ImportedNumbersResource``
+re-export keeps ``from signalwire.rest.namespaces.imported_numbers import ImportedNumbersResource``
 working but emits a :class:`DeprecationWarning`. Prefer ``client.imported_numbers`` instead
 (no import needed).
 """
@@ -10,7 +10,7 @@ working but emits a :class:`DeprecationWarning`. Prefer ``client.imported_number
 import warnings
 
 warnings.warn(
-    "signalwire.signalwire.rest.namespaces.imported_numbers is deprecated; use client.imported_numbers. "
+    "signalwire.rest.namespaces.imported_numbers is deprecated; use client.imported_numbers. "
     "This back-compat shim will be removed in a future release.",
     DeprecationWarning,
     stacklevel=2,

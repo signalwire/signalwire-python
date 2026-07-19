@@ -2,7 +2,7 @@
 
 These symbols moved out of ``namespaces.pubsub`` when the REST layer was
 regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.pubsub import PubSubResource``
+re-export keeps ``from signalwire.rest.namespaces.pubsub import PubSubResource``
 working but emits a :class:`DeprecationWarning`. Prefer ``client.pubsub`` instead
 (no import needed).
 """
@@ -10,7 +10,7 @@ working but emits a :class:`DeprecationWarning`. Prefer ``client.pubsub`` instea
 import warnings
 
 warnings.warn(
-    "signalwire.signalwire.rest.namespaces.pubsub is deprecated; use client.pubsub. "
+    "signalwire.rest.namespaces.pubsub is deprecated; use client.pubsub. "
     "This back-compat shim will be removed in a future release.",
     DeprecationWarning,
     stacklevel=2,
