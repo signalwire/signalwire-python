@@ -11,10 +11,12 @@ SignalWire REST API client module.
 
 from .client import RestClient
 from ._base import SignalWireRestError, SignalWireRestTransportError
+from ._request_options import RequestOptions
 from .namespaces.relay_rest_types_generated import PhoneCallHandler
 
 __all__ = [
     "PhoneCallHandler",
+    "RequestOptions",
     "RestClient",
     "SignalWireRestError",
     "SignalWireRestTransportError",

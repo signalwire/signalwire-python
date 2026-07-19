@@ -70,6 +70,7 @@ import pytest
 import requests
 
 from signalwire.rest._base import HttpClient
+from signalwire.rest._request_options import RequestOptions
 from signalwire.rest.client import RestClient
 
 
@@ -113,7 +114,9 @@ _MOCK_AVAILABLE = _MOCK_PKG_DIR is not None
 class MockResponse:
     """Simulates a requests.Response — used by the legacy ``mock_session`` fixture."""
 
-    def __init__(self, status_code: int = 200, json_data: object = None, content: bytes = b"ok") -> None:
+    def __init__(
+        self, status_code: int = 200, json_data: object = None, content: bytes = b"ok"
+    ) -> None:
         self.status_code = status_code
         self._json = json_data if json_data is not None else {}
         self.content = content
@@ -255,14 +258,21 @@ class _SharedServer:
             if _MOCK_PKG_DIR:
                 existing = child_env.get("PYTHONPATH", "")
                 child_env["PYTHONPATH"] = (
-                    f"{_MOCK_PKG_DIR}{os.pathsep}{existing}" if existing else _MOCK_PKG_DIR
+                    f"{_MOCK_PKG_DIR}{os.pathsep}{existing}"
+                    if existing
+                    else _MOCK_PKG_DIR
                 )
             self._child = subprocess.Popen(  # noqa: S603  (spawns the local mock server, fixed argv)
                 [
-                    sys.executable, "-m", "mock_signalwire",
-                    "--host", "127.0.0.1",
-                    "--port", str(port),
-                    "--log-level", "error",
+                    sys.executable,
+                    "-m",
+                    "mock_signalwire",
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    str(port),
+                    "--log-level",
+                    "error",
                 ],
                 env=child_env,
                 stdout=subprocess.DEVNULL,
@@ -360,7 +370,9 @@ class _MockHarness:
         entries = self._raw_journal()
         if not self.auth_header:
             return entries
-        return [e for e in entries if e.headers.get("authorization") == self.auth_header]
+        return [
+            e for e in entries if e.headers.get("authorization") == self.auth_header
+        ]
 
     def last_request(self) -> _JournalEntry:
         """Most recent journal entry for THIS client.  Raises if empty."""
@@ -384,17 +396,36 @@ class _MockHarness:
         requests.post(f"{self.url}/__mock__/journal/reset", timeout=5)
         requests.post(f"{self.url}/__mock__/scenarios/reset", timeout=5)
 
-    def push_scenario(self, endpoint_id: str, status: int, response: Any) -> None:
+    def push_scenario(
+        self,
+        endpoint_id: str,
+        status: int,
+        response: Any,
+        headers: dict[str, str] | None = None,
+        delay_ms: int | None = None,
+    ) -> None:
         """Stage a consume-once response override for ``endpoint_id``.
 
         Scoped to THIS client's auth header (REST's session key is the
         ``Authorization`` header), so a concurrent test can't consume the
         override and a stale one can't bleed across tests.
+
+        Multiple pushes on the same endpoint are consumed FIFO — stage
+        ``503`` then let the request retry into the default ``200`` (or stage
+        ``503`` then ``200``) to exercise the retry contract over the real mock.
+        ``headers`` can carry ``Retry-After``; ``delay_ms`` arms a server-side
+        delay so a client's ``timeout`` fires (both proven on the wire, not
+        mock.patch).
         """
         url = f"{self.url}/__mock__/scenarios/{endpoint_id}"
         if self.auth_header:
             url = f"{url}?session_id={quote(self.auth_header, safe='')}"
-        resp = requests.post(url, json={"status": status, "response": response}, timeout=5)
+        payload: dict[str, Any] = {"status": status, "response": response}
+        if headers is not None:
+            payload["headers"] = headers
+        if delay_ms is not None:
+            payload["delay_ms"] = delay_ms
+        resp = requests.post(url, json=payload, timeout=5)
         resp.raise_for_status()
 
 
@@ -412,7 +443,9 @@ def mock() -> _MockHarness:
 
 
 @pytest.fixture
-def signalwire_client(mock: _MockHarness, monkeypatch: pytest.MonkeyPatch) -> Iterator[RestClient]:
+def signalwire_client(
+    mock: _MockHarness, monkeypatch: pytest.MonkeyPatch
+) -> Iterator[RestClient]:
     """A real ``RestClient`` whose HTTP transport hits the shared mock.
 
     Each client authenticates with the constant project ``test_proj`` and a
@@ -432,9 +465,9 @@ def signalwire_client(mock: _MockHarness, monkeypatch: pytest.MonkeyPatch) -> It
     to the ``RestClient`` class.
     """
     token = f"test_tok_{uuid.uuid4().hex[:12]}"
-    auth_header = "Basic " + base64.b64encode(
-        f"{_REST_PROJECT}:{token}".encode()
-    ).decode()
+    auth_header = (
+        "Basic " + base64.b64encode(f"{_REST_PROJECT}:{token}".encode()).decode()
+    )
 
     # Scope the harness view to this client's auth header.
     mock.project = _REST_PROJECT
@@ -442,8 +475,14 @@ def signalwire_client(mock: _MockHarness, monkeypatch: pytest.MonkeyPatch) -> It
 
     original_init = HttpClient.__init__
 
-    def _patched_init(self: HttpClient, project: str, token: str, host: str) -> None:
-        original_init(self, project, token, host)
+    def _patched_init(
+        self: HttpClient,
+        project: str,
+        token: str,
+        host: str,
+        request_options: RequestOptions | None = None,
+    ) -> None:
+        original_init(self, project, token, host, request_options=request_options)
         self._base_url = mock.url
 
     monkeypatch.setattr(HttpClient, "__init__", _patched_init)
