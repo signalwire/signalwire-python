@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+from pathlib import Path
 from collections.abc import Callable, Coroutine
 from typing import Any
 from unittest.mock import AsyncMock, patch, MagicMock
@@ -160,7 +161,7 @@ class TestRelayCaFile:
         assert _build_relay_ssl_context() is None
 
     def test_ca_file_builds_context_loading_it(
-        self, monkeypatch: pytest.MonkeyPatch, tmp_path
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
     ) -> None:
         import ssl as ssl_module
         from unittest.mock import patch as _patch

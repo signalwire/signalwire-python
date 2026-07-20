@@ -40,6 +40,20 @@ export SWML_BASIC_AUTH_PASSWORD=mysecurepassword
 | `SWML_DOMAIN` | - | Domain name for SSL (used for URL generation) |
 | `SWML_SSL_VERIFY_MODE` | `CERT_REQUIRED` | SSL verification mode |
 
+### Outbound TLS Trust (custom CA bundles)
+
+These govern the trust root used for the SDK's **outbound** connections to
+SignalWire. When set, the named PEM file becomes the CA bundle used to verify the
+server certificate; when unset, the system trust store is used. TLS verification is
+never disabled — an unset value falls back to the default trusted roots, never to
+"no verification". Use these for private/self-signed deployments or corporate TLS
+inspection.
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SIGNALWIRE_RELAY_CA_FILE` | *(system trust store)* | Path to a CA bundle (PEM) trusted for the RELAY WebSocket (`wss://`) connection |
+| `SIGNALWIRE_REST_CA_FILE` | *(system trust store)* | Path to a CA bundle (PEM) trusted for the REST (`https://`) client |
+
 ### Authentication
 
 | Variable | Default | Description |

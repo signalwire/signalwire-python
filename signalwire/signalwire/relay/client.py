@@ -119,11 +119,15 @@ def _scrub_frame(raw: object) -> str:
     ``SIGNALWIRE_LOG_LEVEL=debug`` session never emits live credentials or the
     re-auth blob. Non-string / structural content is preserved so the frame stays
     diagnostic."""
-    text = raw.decode("utf-8", "replace") if isinstance(raw, (bytes, bytearray)) else str(raw)
+    text = (
+        raw.decode("utf-8", "replace")
+        if isinstance(raw, (bytes, bytearray))
+        else str(raw)
+    )
     return _SCRUB_RE.sub(r'\1"***"', text)
 
 
-def _build_relay_ssl_context() -> "ssl_module.SSLContext | None":
+def _build_relay_ssl_context() -> ssl_module.SSLContext | None:
     """Return a TLS context trusting SIGNALWIRE_RELAY_CA_FILE, or None.
 
     A5 fleet CA-var contract: when SIGNALWIRE_RELAY_CA_FILE names a CA bundle,
@@ -330,7 +334,9 @@ class RelayClient:
             uri,
             ping_interval=None,
             max_size=10 * 1024 * 1024,
-            **({"ssl": ssl_context} if ssl_context is not None else {}),
+            # ssl_context is None when SIGNALWIRE_RELAY_CA_FILE is unset, which
+            # tells websockets to use its default (system trust store) for wss://.
+            ssl=ssl_context,
         )
         self._connected = True
         self._reconnect_delay = RECONNECT_MIN_DELAY
