@@ -14,8 +14,12 @@ A package for building AI agents using SignalWire's AI and SWML capabilities.
 
 from typing import TYPE_CHECKING, Any
 
-# Configure logging before any other imports to ensure early initialization
-from .core.logging_config import configure_logging
+# Library-safe logging: importing signalwire installs ONLY a NullHandler on the
+# `signalwire` namespace logger (done at logging_config module load). It does NOT
+# configure global logging — that would hijack the host application's logging (its
+# structlog config, its root/generic-named loggers). The app opts in to SDK log
+# OUTPUT by calling configure_logging() explicitly; the server/CLI entry points do.
+from .core.logging_config import configure_logging  # noqa: F401  (re-exported)
 
 if TYPE_CHECKING:
     from signalwire.rest.client import RestClient as _RestClient
@@ -47,8 +51,6 @@ if TYPE_CHECKING:
     from signalwire.agents.bedrock import BedrockAgent
     from signalwire.utils.schema_utils import SchemaValidationError
     from signalwire.web import WebService
-
-configure_logging()
 
 __version__ = "3.2.0"
 

@@ -204,6 +204,12 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         """
         import uvicorn
 
+        # Opt-in to SDK logging OUTPUT at the serve entry point (importing the SDK
+        # is library-safe / silent; running a server is where the app wants logs).
+        from signalwire.core.logging_config import configure_logging
+
+        configure_logging()
+
         if self._app is None:
             # Create a FastAPI app with explicit redirect_slashes=False
             app = FastAPI(

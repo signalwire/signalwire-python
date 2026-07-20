@@ -1200,6 +1200,12 @@ class SWMLService(ToolMixin):
         """
         import uvicorn
 
+        # Opt-in to SDK logging OUTPUT at the serve entry point (import is
+        # library-safe / silent; serving is where the app wants logs).
+        from signalwire.core.logging_config import configure_logging
+
+        configure_logging()
+
         # Store SSL configuration (override environment if explicitly provided)
         if ssl_enabled is not None:
             self.ssl_enabled = ssl_enabled

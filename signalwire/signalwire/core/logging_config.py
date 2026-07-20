@@ -43,6 +43,25 @@ def strip_control_chars(
 _logging_configured = False
 
 
+def _install_library_null_handler() -> None:
+    """Attach a NullHandler to the ``signalwire`` namespace logger (the standard
+    library pattern for a well-behaved library, per the stdlib logging HOWTO).
+
+    This is the ONLY logging side effect of importing the SDK. It makes the SDK's
+    own loggers silent-by-default (no "No handlers could be found" warning) WITHOUT
+    touching the root logger, the host application's structlog config, or any
+    host-owned logger — so ``import signalwire`` never hijacks the app's logging.
+    The app opts in to SDK log OUTPUT by calling ``configure_logging()`` explicitly
+    (the server/CLI entry points do this)."""
+    sw_logger = logging.getLogger("signalwire")
+    if not any(isinstance(h, logging.NullHandler) for h in sw_logger.handlers):
+        sw_logger.addHandler(logging.NullHandler())
+
+
+# Import-time side effect: ONLY the library NullHandler. NOT global configuration.
+_install_library_null_handler()
+
+
 def get_execution_mode() -> str:
     """
     Determine the execution mode based on environment variables
@@ -307,7 +326,9 @@ def get_logger(name: str) -> Any:
     Returns:
         A structlog BoundLogger that supports .bind(), .info(), .debug(), etc.
     """
-    # Ensure logging is configured
-    configure_logging()
-
+    # Library-safe: do NOT auto-configure global logging here. Every SDK module
+    # calls get_logger() at import, so auto-configuring would hijack the host
+    # app's logging the moment any SDK submodule is imported. The SDK's own
+    # logger carries a NullHandler (installed at module load) so it's silent by
+    # default; the app opts in to SDK output via configure_logging().
     return structlog.get_logger(name)
