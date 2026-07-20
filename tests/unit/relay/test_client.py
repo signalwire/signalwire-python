@@ -111,6 +111,44 @@ class TestClientInit:
             RelayClient(project="p", token="t", host=bad_host)
 
 
+class TestSecretScrub:
+    """SECRET-SCRUB (A6/enterprise): raw RELAY frames must not leak credentials or
+    the authorization_state re-auth blob into debug logs."""
+
+    def test_scrub_masks_authorization_state(self) -> None:
+        from signalwire.relay.client import _scrub_frame
+
+        raw = '{"method":"signalwire.event","params":{"authorization_state":"AENCBLOBxyz=="}}'
+        out = _scrub_frame(raw)
+        assert "AENCBLOBxyz==" not in out
+        assert '"authorization_state":"***"' in out
+        assert "signalwire.event" in out  # structure preserved
+
+    def test_scrub_masks_project_and_token(self) -> None:
+        from signalwire.relay.client import _scrub_frame
+
+        raw = '{"params":{"authentication":{"project":"PROJ-abc","token":"PT-secret"}}}'
+        out = _scrub_frame(raw)
+        assert "PROJ-abc" not in out
+        assert "PT-secret" not in out
+        assert '"project":"***"' in out
+        assert '"token":"***"' in out
+
+    def test_scrub_masks_jwt_token(self) -> None:
+        from signalwire.relay.client import _scrub_frame
+
+        raw = '{"params":{"authentication":{"jwt_token":"eyJhbGci.SECRET.sig"}}}'
+        out = _scrub_frame(raw)
+        assert "eyJhbGci.SECRET.sig" not in out
+        assert '"jwt_token":"***"' in out
+
+    def test_scrub_leaves_benign_frame_intact(self) -> None:
+        from signalwire.relay.client import _scrub_frame
+
+        raw = '{"method":"calling.play","params":{"call_id":"c-1","state":"finished"}}'
+        assert _scrub_frame(raw) == raw
+
+
 class TestRelayCaFile:
     """A5 fleet CA-var contract (hard-cut, no aliases): SIGNALWIRE_RELAY_CA_FILE
     supplies a custom CA bundle for the RELAY WebSocket transport."""

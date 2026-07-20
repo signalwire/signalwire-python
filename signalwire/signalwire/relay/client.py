@@ -101,6 +101,28 @@ except ValueError:
 _active_clients: set[int] = set()
 
 
+# Credential-bearing JSON keys whose VALUES must never appear in debug logs
+# (SECRET-SCRUB, A6/enterprise): the raw RELAY frames carry the connect
+# authentication (project/token/jwt_token) and the server's encrypted
+# ``authorization_state`` re-auth blob. Logging a raw frame verbatim leaks these.
+_SCRUB_KEYS = ("token", "project", "jwt_token", "authorization_state")
+_SCRUB_RE = re.compile(
+    r'("(?:' + "|".join(_SCRUB_KEYS) + r')"\s*:\s*)"(?:\\.|[^"\\])*"'
+)
+
+
+def _scrub_frame(raw: object) -> str:
+    """Return a log-safe repr of a raw RELAY frame with credential VALUES masked.
+
+    Masks the string values of ``token``/``project``/``jwt_token``/
+    ``authorization_state`` keys wherever they appear in the (JSON) frame, so a
+    ``SIGNALWIRE_LOG_LEVEL=debug`` session never emits live credentials or the
+    re-auth blob. Non-string / structural content is preserved so the frame stays
+    diagnostic."""
+    text = raw.decode("utf-8", "replace") if isinstance(raw, (bytes, bytearray)) else str(raw)
+    return _SCRUB_RE.sub(r'\1"***"', text)
+
+
 def _build_relay_ssl_context() -> "ssl_module.SSLContext | None":
     """Return a TLS context trusting SIGNALWIRE_RELAY_CA_FILE, or None.
 
@@ -760,10 +782,12 @@ class RelayClient:
                 try:
                     msg = json.loads(raw)
                 except json.JSONDecodeError:
-                    logger.warning(f"Invalid JSON received: {raw!r}")
+                    logger.warning(f"Invalid JSON received: {_scrub_frame(raw)!r}")
                     continue
 
-                logger.debug(f"<< {raw!r}")
+                # SECRET-SCRUB: mask credential/authorization_state values so a
+                # debug-level log never leaks live creds or the re-auth blob.
+                logger.debug(f"<< {_scrub_frame(raw)}")
                 await self._handle_message(msg)
         except websockets.exceptions.ConnectionClosed:
             logger.info("WebSocket connection closed")
