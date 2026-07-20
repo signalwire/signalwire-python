@@ -37,11 +37,14 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: signalwire/porting-sdk
-          # PINNED to the gate-enforcement plan branch: WIRED-MODES/DOC-SURFACE call
-          # porting-sdk scripts (check_wired_modes.py, doc_surface.py) not yet on main,
-          # and DRIFT diffs the regenerated 6.6 oracle committed there. REVERT this ref
-          # to main when the porting-sdk plan branch merges.
-          ref: main
+          # PINNED to the A+ campaign branch wave/1-aplus: PY-7 threads request_options
+          # through the REST generator (generate_python_rest_types.py) + regenerates the
+          # python_signatures.json oracle + the python_route_registry.py RecordingHttp
+          # shim — all on porting-sdk wave/1-aplus. CI's DRIFT/GEN-FRESH/ROUTE-COLLISION/
+          # SPEC-PARITY gates use these; on main they lack request_options and crash
+          # (RecordingHttp.get() got an unexpected keyword argument 'request_options').
+          # REVERT this ref to main when porting-sdk wave/1-aplus merges.
+          ref: wave/1-aplus
           path: porting-sdk
           token: ${{ secrets.PORTING_SDK_TOKEN }}
 

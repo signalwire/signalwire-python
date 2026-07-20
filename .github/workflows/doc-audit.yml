@@ -36,16 +36,11 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: signalwire/porting-sdk
-          # PINNED to the gate-enforcement plan branch: WIRED-MODES/DOC-SURFACE call
-          # porting-sdk scripts (check_wired_modes.py, doc_surface.py) not yet on main,
-          # and DRIFT diffs the regenerated 6.6 oracle committed there. REVERT this ref
-          # to main when the porting-sdk plan branch merges.
-          ref: main
+          # PINNED to the A+ campaign branch wave/1-aplus (see test.yml). REVERT to
+          # main when porting-sdk wave/1-aplus merges.
+          ref: wave/1-aplus
           path: porting-sdk
           token: ${{ secrets.PORTING_SDK_TOKEN }}
-          # porting-sdk is the source of truth for the Python surface — pin to
-          # main so the audit reflects the latest reference.
-          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v6
