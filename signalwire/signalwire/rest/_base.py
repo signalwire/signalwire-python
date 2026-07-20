@@ -9,6 +9,7 @@ See LICENSE file in the project root for full license information.
 HTTP client infrastructure and base resource classes for the REST client.
 """
 
+import os
 import time
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any, Generic, TypeVar, cast
@@ -153,6 +154,15 @@ class HttpClient:
         self._request_options = request_options
         self._session = requests.Session()
         self._session.auth = (project, token)
+        # A5 (fleet CA-var contract, hard-cut no aliases): a custom CA bundle for
+        # the REST transport is supplied via SIGNALWIRE_REST_CA_FILE. When set, it
+        # becomes the session's verify bundle (requests uses it for TLS
+        # verification of the platform cert). Unset → requests' default trust
+        # store. This is the REST half of the fleet-standard pair
+        # (SIGNALWIRE_RELAY_CA_FILE is the RELAY half).
+        _rest_ca_file = os.environ.get("SIGNALWIRE_REST_CA_FILE")
+        if _rest_ca_file:
+            self._session.verify = _rest_ca_file
         self._session.headers.update(
             {
                 "Content-Type": "application/json",
