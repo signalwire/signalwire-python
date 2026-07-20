@@ -24,6 +24,7 @@ import asyncio
 import json
 import os
 import re
+import ssl as ssl_module
 import uuid
 from typing import Any, TYPE_CHECKING
 from collections.abc import Callable, Coroutine
@@ -98,6 +99,22 @@ except ValueError:
 
 # Process-wide tracking of active RelayClient connections
 _active_clients: set[int] = set()
+
+
+def _build_relay_ssl_context() -> "ssl_module.SSLContext | None":
+    """Return a TLS context trusting SIGNALWIRE_RELAY_CA_FILE, or None.
+
+    A5 fleet CA-var contract: when SIGNALWIRE_RELAY_CA_FILE names a CA bundle,
+    build a default client TLS context that loads it as the trust root for the
+    RELAY WebSocket connection. Unset → None (websockets uses the system trust
+    store). Kept module-level so the connect path stays readable and the behavior
+    is unit-testable without a live socket."""
+    ca_file = os.environ.get("SIGNALWIRE_RELAY_CA_FILE")
+    if not ca_file:
+        return None
+    ctx = ssl_module.create_default_context()
+    ctx.load_verify_locations(cafile=ca_file)
+    return ctx
 
 
 class RelayClient:
@@ -280,8 +297,18 @@ class RelayClient:
         uri = f"wss://{self.host}"
         logger.info(f"Connecting to {uri}")
 
+        # A5 (fleet CA-var contract, hard-cut no aliases): a custom CA bundle for
+        # the RELAY WebSocket transport is supplied via SIGNALWIRE_RELAY_CA_FILE.
+        # When set, build a TLS context that trusts it; unset → websockets' default
+        # (system trust store). This is the RELAY half of the fleet-standard pair
+        # (SIGNALWIRE_REST_CA_FILE is the REST half).
+        ssl_context = _build_relay_ssl_context()
+
         self._ws = await websockets.connect(
-            uri, ping_interval=None, max_size=10 * 1024 * 1024
+            uri,
+            ping_interval=None,
+            max_size=10 * 1024 * 1024,
+            **({"ssl": ssl_context} if ssl_context is not None else {}),
         )
         self._connected = True
         self._reconnect_delay = RECONNECT_MIN_DELAY

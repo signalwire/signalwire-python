@@ -110,6 +110,40 @@ class TestClientInit:
         with pytest.raises(ValueError, match="Invalid host"):
             RelayClient(project="p", token="t", host=bad_host)
 
+
+class TestRelayCaFile:
+    """A5 fleet CA-var contract (hard-cut, no aliases): SIGNALWIRE_RELAY_CA_FILE
+    supplies a custom CA bundle for the RELAY WebSocket transport."""
+
+    def test_no_ca_file_returns_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from signalwire.relay.client import _build_relay_ssl_context
+
+        monkeypatch.delenv("SIGNALWIRE_RELAY_CA_FILE", raising=False)
+        assert _build_relay_ssl_context() is None
+
+    def test_ca_file_builds_context_loading_it(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path
+    ) -> None:
+        import ssl as ssl_module
+        from unittest.mock import patch as _patch
+
+        from signalwire.relay.client import _build_relay_ssl_context
+
+        ca = tmp_path / "custom-ca.pem"
+        ca.write_text("-----BEGIN CERTIFICATE-----\n...\n-----END CERTIFICATE-----\n")
+        monkeypatch.setenv("SIGNALWIRE_RELAY_CA_FILE", str(ca))
+
+        # Assert the helper loads exactly our CA file into the context (mock the
+        # loader — we test the WIRING, not real cert parsing).
+        real_ctx = ssl_module.create_default_context()
+        with _patch.object(real_ctx, "load_verify_locations") as loader, _patch(
+            "signalwire.relay.client.ssl_module.create_default_context",
+            return_value=real_ctx,
+        ):
+            ctx = _build_relay_ssl_context()
+        assert ctx is real_ctx
+        loader.assert_called_once_with(cafile=str(ca))
+
     def test_custom_host(self) -> None:
         c = RelayClient(project="p", token="t", host="custom.relay.com")
         assert c.host == "custom.relay.com"
