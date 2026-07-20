@@ -12,6 +12,8 @@ from collections.abc import Mapping
 from .._base import CrudResource
 
 if TYPE_CHECKING:
+    from .._request_options import RequestOptions
+
     from .datasphere_types_generated import (
         ChunkListResponse,
         ChunkResponse,
@@ -42,10 +44,16 @@ class DatasphereDocuments(
         body: DocumentCreateRequest,
         *,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> Document:
         merged: dict[str, Any] = {**body, **(extras or {}), **_reserved_kw}
-        return cast("Document", self._http.post(self._base_path, body=merged))
+        return cast(
+            "Document",
+            self._http.post(
+                self._base_path, body=merged, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -54,6 +62,7 @@ class DatasphereDocuments(
         *,
         tags: list[str] | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> Document:
         body: dict[str, Any] = {
@@ -62,7 +71,12 @@ class DatasphereDocuments(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("Document", self._http.patch(self._path(id), body=body))
+        return cast(
+            "Document",
+            self._http.patch(
+                self._path(id), body=body, request_options=request_options
+            ),
+        )
 
     def search(
         self,
@@ -76,6 +90,7 @@ class DatasphereDocuments(
         pos_to_expand: list[str] | None = None,
         max_synonyms: int | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SearchResponse:
         body: dict[str, Any] = {
@@ -95,26 +110,57 @@ class DatasphereDocuments(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("SearchResponse", self._http.post(self._path("search"), body=body))
+        return cast(
+            "SearchResponse",
+            self._http.post(
+                self._path("search"), body=body, request_options=request_options
+            ),
+        )
 
-    def list_chunks(self, document_id: str, **params: Any) -> ChunkListResponse:
+    def list_chunks(
+        self,
+        document_id: str,
+        *,
+        request_options: RequestOptions | None = None,
+        **params: Any,
+    ) -> ChunkListResponse:
         return cast(
             "ChunkListResponse",
-            self._http.get(self._path(document_id, "chunks"), params=params or None),
+            self._http.get(
+                self._path(document_id, "chunks"),
+                params=params or None,
+                request_options=request_options,
+            ),
         )
 
     def get_chunk(
-        self, document_id: str, chunk_id: str, **params: Any
+        self,
+        document_id: str,
+        chunk_id: str,
+        *,
+        request_options: RequestOptions | None = None,
+        **params: Any,
     ) -> ChunkResponse:
         return cast(
             "ChunkResponse",
             self._http.get(
-                self._path(document_id, "chunks", chunk_id), params=params or None
+                self._path(document_id, "chunks", chunk_id),
+                params=params or None,
+                request_options=request_options,
             ),
         )
 
-    def delete_chunk(self, document_id: str, chunk_id: str) -> dict[str, Any]:
+    def delete_chunk(
+        self,
+        document_id: str,
+        chunk_id: str,
+        *,
+        request_options: RequestOptions | None = None,
+    ) -> dict[str, Any]:
         return cast(
             "dict[str, Any]",
-            self._http.delete(self._path(document_id, "chunks", chunk_id)),
+            self._http.delete(
+                self._path(document_id, "chunks", chunk_id),
+                request_options=request_options,
+            ),
         )

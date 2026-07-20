@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import re
 from importlib.metadata import version as _pkg_version
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from signalwire.rest.client import RestClient
@@ -51,7 +51,11 @@ class TestWirePercentEncodingPin:
     # is not rejected by the wire-truth gate for using an undeclared param NAME (which is a
     # separate concern the strict-mocks gate owns). One rich value exercises every hostile
     # character; the server's ``parse_qs`` recovers it exactly iff the client encoded right.
-    HOSTILE = {
+    # Annotated ``dict[str, Any]`` (not the inferred ``dict[str, str]``) so the
+    # ``list(**HOSTILE)`` splat lands cleanly on ``list``'s ``**params: Any`` query tail:
+    # ``list`` now also declares a keyword-only ``request_options`` param before that tail,
+    # and mypy would otherwise try to satisfy it from the unpacked ``str`` values.
+    HOSTILE: dict[str, Any] = {
         "filter_label": "a b&c+d=é\N{SNOWMAN}",
     }
 

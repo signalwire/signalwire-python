@@ -12,6 +12,8 @@ from collections.abc import Mapping
 from .._base import BaseResource
 
 if TYPE_CHECKING:
+    from .._request_options import RequestOptions
+
     from .messages_types_generated import (
         Message,
     )
@@ -34,6 +36,7 @@ class Messages(BaseResource):
         status_callback: str | None = None,
         custom_variables: dict[str, str] | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> Message:
         body_: dict[str, Any] = {
@@ -52,7 +55,12 @@ class Messages(BaseResource):
         if extras:
             body_.update(extras)
         body_.update(_reserved_kw)
-        return cast("Message", self._http.post(self._base_path, body=body_))
+        return cast(
+            "Message",
+            self._http.post(
+                self._base_path, body=body_, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -60,6 +68,7 @@ class Messages(BaseResource):
         *,
         body: str,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> Message:
         body_: dict[str, Any] = {
@@ -68,4 +77,9 @@ class Messages(BaseResource):
         if extras:
             body_.update(extras)
         body_.update(_reserved_kw)
-        return cast("Message", self._http.patch(self._path(message_id), body=body_))
+        return cast(
+            "Message",
+            self._http.patch(
+                self._path(message_id), body=body_, request_options=request_options
+            ),
+        )
