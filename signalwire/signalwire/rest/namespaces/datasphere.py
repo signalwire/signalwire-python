@@ -2,7 +2,7 @@
 
 These symbols moved out of ``namespaces.datasphere`` when the REST layer was
 regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.datasphere import DatasphereDocuments``
+re-export keeps ``from signalwire.rest.namespaces.datasphere import DatasphereDocuments``
 working but emits a :class:`DeprecationWarning`. Prefer ``client.datasphere`` instead
 (no import needed).
 """
@@ -10,7 +10,7 @@ working but emits a :class:`DeprecationWarning`. Prefer ``client.datasphere`` in
 import warnings
 
 warnings.warn(
-    "signalwire.signalwire.rest.namespaces.datasphere is deprecated; use client.datasphere. "
+    "signalwire.rest.namespaces.datasphere is deprecated; use client.datasphere. "
     "This back-compat shim will be removed in a future release.",
     DeprecationWarning,
     stacklevel=2,

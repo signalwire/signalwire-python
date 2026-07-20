@@ -2,7 +2,7 @@
 
 These symbols moved out of ``namespaces.recordings`` when the REST layer was
 regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.recordings import RecordingsResource``
+re-export keeps ``from signalwire.rest.namespaces.recordings import RecordingsResource``
 working but emits a :class:`DeprecationWarning`. Prefer ``client.recordings`` instead
 (no import needed).
 """
@@ -10,7 +10,7 @@ working but emits a :class:`DeprecationWarning`. Prefer ``client.recordings`` in
 import warnings
 
 warnings.warn(
-    "signalwire.signalwire.rest.namespaces.recordings is deprecated; use client.recordings. "
+    "signalwire.rest.namespaces.recordings is deprecated; use client.recordings. "
     "This back-compat shim will be removed in a future release.",
     DeprecationWarning,
     stacklevel=2,

@@ -10,11 +10,14 @@ from unittest.mock import MagicMock
 
 class TestPhoneNumbers:
     def test_search(self, client: RestClient, mock_session: MagicMock) -> None:
+        # spec wire key is `areacode` (relay-rest/openapi.yaml), NOT `area_code` — this
+        # passthrough test previously enshrined the wrong key (round-4). Wire-truth is
+        # proven by the strict-mock generated test, not this fake-transport shape test.
         mock_session.request.return_value = MockResponse(200, {"data": []})
-        client.phone_numbers.search(area_code="512")
+        client.phone_numbers.search(areacode="512")
         mock_session.request.assert_called_with(
             "GET", "https://test.signalwire.com/api/relay/rest/phone_numbers/search",
-            json=None, params={"area_code": "512"}, timeout=30.0,
+            json=None, params={"areacode": "512"}, timeout=30.0,
         )
 
     def test_update_uses_put(self, client: RestClient, mock_session: MagicMock) -> None:
@@ -237,3 +240,24 @@ class TestPubSubChat:
             "POST", "https://test.signalwire.com/api/chat/tokens",
             json={"ttl": 60, "channels": {"room": {"read": True}}}, params=None, timeout=30.0,
         )
+
+
+class TestDeprecationShimPaths:
+    """3-python-b: the 21 namespace deprecation shims must warn with the REAL installed
+    import path (signalwire.rest.namespaces.X), not the doubled repo-layout path
+    (signalwire.signalwire.…) they used to name — a user can't act on a path that
+    doesn't exist."""
+
+    def test_shim_warns_with_real_import_path(self) -> None:
+        import importlib
+        import warnings
+
+        with warnings.catch_warnings(record=True) as w:
+            warnings.simplefilter("always")
+            import signalwire.rest.namespaces.calling  # noqa: F401
+            importlib.reload(signalwire.rest.namespaces.calling)
+        dep = [x for x in w if issubclass(x.category, DeprecationWarning)]
+        assert dep, "shim did not warn"
+        msg = str(dep[-1].message)
+        assert "signalwire.rest.namespaces.calling is deprecated" in msg
+        assert "signalwire.signalwire" not in msg

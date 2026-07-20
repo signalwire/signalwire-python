@@ -2,7 +2,7 @@
 
 These symbols moved out of ``namespaces.registry`` when the REST layer was
 regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.registry import RegistryBrands``
+re-export keeps ``from signalwire.rest.namespaces.registry import RegistryBrands``
 working but emits a :class:`DeprecationWarning`. Prefer ``client.registry`` instead
 (no import needed).
 """
@@ -10,7 +10,7 @@ working but emits a :class:`DeprecationWarning`. Prefer ``client.registry`` inst
 import warnings
 
 warnings.warn(
-    "signalwire.signalwire.rest.namespaces.registry is deprecated; use client.registry. "
+    "signalwire.rest.namespaces.registry is deprecated; use client.registry. "
     "This back-compat shim will be removed in a future release.",
     DeprecationWarning,
     stacklevel=2,

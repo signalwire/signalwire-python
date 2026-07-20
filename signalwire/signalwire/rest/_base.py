@@ -41,6 +41,15 @@ def _user_agent() -> str:
     return f"signalwire-python/{pkg_version}"
 
 
+def _is_loopback_host(host: str) -> bool:
+    """True if ``host`` (bare host or host:port) is a local loopback address — a
+    local mock/dev server that speaks plain HTTP. Used to pick http:// vs https://
+    so a shipped example runs verbatim against the local mock. A real SignalWire
+    space (``<name>.signalwire.com``) is never loopback, so production is unaffected."""
+    hostname = host.rsplit(":", 1)[0] if ":" in host else host
+    return hostname in ("127.0.0.1", "localhost", "::1", "[::1]")
+
+
 # CRUD response/request type parameters. Each concrete resource binds these to its
 # spec-generated TypedDicts (e.g. CrudResource[ListRoomsResponse, RoomResponse,
 # CreateRoomRequest, UpdateRoomRequest]); the signature oracle resolves the
@@ -59,20 +68,54 @@ class SignalWireRestError(Exception):
     reached a response — connection refused, DNS failure, connection reset) it is
     ``None`` and the raised type is :class:`SignalWireRestTransportError`. Callers
     catch this one family for every REST failure, HTTP or transport.
+
+    §6.6 error-observability: ``headers`` is the response header map (or ``None`` for a
+    transport error that produced no response) and ``request_id`` is the platform request
+    id pulled from those headers — client-side observability with NO wire-contract change,
+    so a caller can log/correlate a failure against SignalWire's own request id.
     """
 
     def __init__(
-        self, status_code: int | None, body: Any, url: str, method: str = "GET"
+        self,
+        status_code: int | None,
+        body: Any,
+        url: str,
+        method: str = "GET",
+        headers: dict[str, str] | None = None,
     ) -> None:
         self.status_code = status_code
         self.body = body
         self.url = url
         self.method = method
+        self.headers: dict[str, str] | None = headers
+        self.request_id: str | None = _extract_request_id(headers)
         if status_code is None:
             message = f"{method} {url} failed to reach the server: {body}"
         else:
             message = f"{method} {url} returned {status_code}: {body}"
+        if self.request_id:
+            message += f" (request-id: {self.request_id})"
         super().__init__(message)
+
+
+# Header names SignalWire (and common proxies) use for the platform request id, in
+# preference order. Matched case-insensitively.
+_REQUEST_ID_HEADERS = (
+    "x-request-id",
+    "x-signalwire-request-id",
+    "request-id",
+    "x-amzn-requestid",
+)
+
+
+def _extract_request_id(headers: dict[str, str] | None) -> str | None:
+    if not headers:
+        return None
+    lowered = {k.lower(): v for k, v in headers.items()}
+    for name in _REQUEST_ID_HEADERS:
+        if name in lowered:
+            return lowered[name]
+    return None
 
 
 class SignalWireRestTransportError(SignalWireRestError):
@@ -83,10 +126,11 @@ class SignalWireRestTransportError(SignalWireRestError):
     ``body`` is the underlying transport error message) so a caller catching
     ``SignalWireRestError`` handles both HTTP-error and transport-error responses with
     one ``except``, instead of the bare ``requests.ConnectionError`` leaking through.
+    ``headers``/``request_id`` are ``None`` (no response was produced).
     """
 
     def __init__(self, body: Any, url: str, method: str = "GET") -> None:
-        super().__init__(None, body, url, method)
+        super().__init__(None, body, url, method, headers=None)
 
 
 class HttpClient:
@@ -99,7 +143,13 @@ class HttpClient:
         host: str,
         request_options: RequestOptions | None = None,
     ) -> None:
-        self._base_url = f"https://{host}"
+        # A loopback host (127.0.0.1[:port] / localhost[:port]) is a local mock/dev
+        # server that speaks plain HTTP — use http:// for it. Every other host is the
+        # real platform over https://. This lets a shipped example run verbatim against
+        # the local mock (SIGNALWIRE_SPACE=127.0.0.1:<port>) without a code change or a
+        # separate URL knob; production is unaffected (a real space is never loopback).
+        scheme = "http" if _is_loopback_host(host) else "https"
+        self._base_url = f"{scheme}://{host}"
         self._request_options = request_options
         self._session = requests.Session()
         self._session.auth = (project, token)
@@ -138,6 +188,21 @@ class HttpClient:
         request_options: RequestOptions | None = None,
     ) -> Any:
         url = self._base_url + path
+        # D1 (owner-approved 2026-07-18): error.url is the FULL URL WITH the query
+        # string preserved — the reference decision the fleet never actually took (the
+        # ports stored the bare path behind a `url`-named field). Build the full URL
+        # including the query so an error message / .url attribute is copy-pasteable and
+        # carries the query context. (urlencode with doseq=True mirrors requests' own
+        # list-param expansion.)
+        full_url = url
+        if params:
+            from urllib.parse import urlencode
+
+            qs = urlencode(
+                {k: v for k, v in params.items() if v is not None}, doseq=True
+            )
+            if qs:
+                full_url = f"{url}?{qs}"
         opts = resolve(self._request_options, request_options)
         logger.debug("REST request", method=method, path=path)
 
@@ -151,7 +216,7 @@ class HttpClient:
                 # Cancelled before this attempt — surface as the transport-error
                 # family (no response was produced), not a bare exception.
                 raise SignalWireRestTransportError(
-                    "request cancelled by abort_signal", path, method
+                    "request cancelled by abort_signal", full_url, method
                 )
 
             try:
@@ -166,7 +231,7 @@ class HttpClient:
                 if attempt <= opts.retries:
                     self._sleep(opts.retry_backoff * 2 ** (attempt - 1))
                     continue
-                raise SignalWireRestTransportError(str(exc), path, method) from exc
+                raise SignalWireRestTransportError(str(exc), full_url, method) from exc
 
             if not resp.ok:
                 if attempt <= opts.retries and status_is_retryable(
@@ -181,11 +246,31 @@ class HttpClient:
                     err_body: Any = resp.json()
                 except Exception:
                     err_body = resp.text
-                raise SignalWireRestError(resp.status_code, err_body, path, method)
+                raise SignalWireRestError(
+                    resp.status_code,
+                    err_body,
+                    full_url,
+                    method,
+                    headers=dict(resp.headers),
+                )
 
             if resp.status_code == 204 or not resp.content:
                 return {}
-            return resp.json()
+            try:
+                return resp.json()
+            except ValueError as exc:
+                # A 2xx with an undecodable body (truncated / HTML error page / non-JSON)
+                # must surface as the typed error family, NOT a bare
+                # requests.JSONDecodeError leaking to the caller (who catches
+                # SignalWireRestError for every REST failure). status_code is the real
+                # 2xx; body is the raw text so the caller can see what arrived.
+                raise SignalWireRestError(
+                    resp.status_code,
+                    resp.text,
+                    full_url,
+                    method,
+                    headers=dict(resp.headers),
+                ) from exc
 
     def get(
         self,

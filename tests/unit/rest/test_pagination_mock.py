@@ -237,3 +237,35 @@ class TestPaginatedIterator:
         gets = [e for e in mock.journal if e.path == _FABRIC_ADDRESSES_PATH]
         assert len(gets) == 2, f"expected 2 paginated GETs, got {len(gets)}"
         assert gets[1].query_params.get("page_token") == ["PA_page2"]
+
+    def test_repeating_next_link_terminates(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        """Cycle guard (3-rust-b's python half): a server that keeps returning the SAME
+        ``links.next`` (with or without items) must TERMINATE, not loop forever making
+        identical requests. Before the guard, the empty-page fix (terminate only on
+        absent next) made a repeating next an infinite loop."""
+        same_next = "http://example.com/api/fabric/addresses?page_token=PA_loop"
+        # Two pages that both point at the same next cursor. The guard fires when the
+        # cursor REPEATS (page 2's next == page 2's own request), so iteration ends
+        # after consuming both pages' items instead of looping on page 3, 4, ….
+        _push_scenario(
+            mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
+            status=200,
+            response={"data": [{"id": "a-1"}], "links": {"next": same_next}},
+        )
+        _push_scenario(
+            mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
+            status=200,
+            response={"data": [{"id": "a-2"}], "links": {"next": same_next}},
+        )
+
+        it = PaginatedIterator(
+            signalwire_client._http,
+            _FABRIC_ADDRESSES_PATH,
+            data_key="data",
+        )
+        items = list(it)  # must not hang
+        assert [i["id"] for i in items] == ["a-1", "a-2"]
+        # exactly 2 requests hit the wire — the repeated cursor was not re-fetched
+        assert len(mock.journal) == 2

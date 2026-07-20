@@ -22,40 +22,80 @@ if TYPE_CHECKING:
     from signalwire.core.skill_base import SkillBase
     from signalwire.skills.registry import SkillRegistry
 
+    # §6.2-python: the public symbols are LAZY at runtime (PEP 562, below) so
+    # `import signalwire` doesn't drag FastAPI/uvicorn/pydantic at import time; the
+    # eager imports here keep type checkers and IDEs fully aware of the real types.
+    from signalwire.core.agent_base import AgentBase
+    from signalwire.core.contexts import (
+        ContextBuilder,
+        Context,
+        Step,
+        GatherInfo,
+        GatherQuestion,
+        create_simple_context,
+    )
+    from signalwire.core.data_map import (
+        DataMap,
+        create_simple_api_tool,
+        create_expression_tool,
+    )
+    from signalwire.agent_server import AgentServer
+    from signalwire.core.swml_service import SWMLService
+    from signalwire.core.swml_builder import SWMLBuilder
+    from signalwire.core.function_result import FunctionResult, SwaigFunctionResult
+    from signalwire.core.swaig_function import SWAIGFunction
+    from signalwire.agents.bedrock import BedrockAgent
+    from signalwire.utils.schema_utils import SchemaValidationError
+    from signalwire.web import WebService
+
 configure_logging()
 
 __version__ = "3.2.0"
 
-# Import core classes for easier access.
-# These imports are intentionally placed after configure_logging() so the SDK's
-# logging is initialized before any submodule is imported (E402 expected).
-from .core.agent_base import AgentBase  # noqa: E402
-from .core.contexts import (  # noqa: E402
-    ContextBuilder,
-    Context,
-    Step,
-    GatherInfo,
-    GatherQuestion,
-    create_simple_context,
-)
-from .core.data_map import (  # noqa: E402
-    DataMap,
-    create_simple_api_tool,
-    create_expression_tool,
-)
-from signalwire.agent_server import AgentServer  # noqa: E402
-from signalwire.core.swml_service import SWMLService  # noqa: E402
-from signalwire.core.swml_builder import SWMLBuilder  # noqa: E402
-from signalwire.core.function_result import (  # noqa: E402
-    FunctionResult,
-    SwaigFunctionResult,
-)
-from signalwire.core.swaig_function import SWAIGFunction  # noqa: E402
-from signalwire.agents.bedrock import BedrockAgent  # noqa: E402
-from signalwire.utils.schema_utils import SchemaValidationError  # noqa: E402
+# §6.2-python (owner decision: NO packaging split — one package, all deps required;
+# IMPORT-TIME behavior only): the agent/web symbols are lazy-imported via module
+# __getattr__ (PEP 562) so `import signalwire` no longer drags FastAPI / uvicorn /
+# starlette / pydantic into every process — a REST-only script imports in
+# milliseconds. First ATTRIBUTE ACCESS (signalwire.AgentBase,
+# `from signalwire import AgentBase`) triggers the real import and caches it on the
+# module, so the public surface is byte-identical to the old eager form.
+_LAZY_IMPORTS: dict[str, tuple[str, str]] = {
+    "AgentBase": ("signalwire.core.agent_base", "AgentBase"),
+    "ContextBuilder": ("signalwire.core.contexts", "ContextBuilder"),
+    "Context": ("signalwire.core.contexts", "Context"),
+    "Step": ("signalwire.core.contexts", "Step"),
+    "GatherInfo": ("signalwire.core.contexts", "GatherInfo"),
+    "GatherQuestion": ("signalwire.core.contexts", "GatherQuestion"),
+    "create_simple_context": ("signalwire.core.contexts", "create_simple_context"),
+    "DataMap": ("signalwire.core.data_map", "DataMap"),
+    "create_simple_api_tool": ("signalwire.core.data_map", "create_simple_api_tool"),
+    "create_expression_tool": ("signalwire.core.data_map", "create_expression_tool"),
+    "AgentServer": ("signalwire.agent_server", "AgentServer"),
+    "SWMLService": ("signalwire.core.swml_service", "SWMLService"),
+    "SWMLBuilder": ("signalwire.core.swml_builder", "SWMLBuilder"),
+    "FunctionResult": ("signalwire.core.function_result", "FunctionResult"),
+    "SwaigFunctionResult": ("signalwire.core.function_result", "SwaigFunctionResult"),
+    "SWAIGFunction": ("signalwire.core.swaig_function", "SWAIGFunction"),
+    "BedrockAgent": ("signalwire.agents.bedrock", "BedrockAgent"),
+    "SchemaValidationError": ("signalwire.utils.schema_utils", "SchemaValidationError"),
+    "WebService": ("signalwire.web", "WebService"),
+}
 
-# Import WebService for static file serving
-from signalwire.web import WebService  # noqa: E402
+
+def __getattr__(name: str) -> Any:
+    """PEP 562 lazy attribute resolution for the public agent/web symbols."""
+    spec = _LAZY_IMPORTS.get(name)
+    if spec is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    import importlib
+
+    value = getattr(importlib.import_module(spec[0]), spec[1])
+    globals()[name] = value  # cache — subsequent access skips __getattr__
+    return value
+
+
+def __dir__() -> list[str]:
+    return sorted(set(globals()) | set(_LAZY_IMPORTS))
 
 
 # Lazy import skills to avoid slow startup for CLI tools

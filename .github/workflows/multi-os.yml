@@ -1,0 +1,69 @@
+name: Multi-OS (nightly)
+
+# §6.4 (GATE_ENFORCEMENT_PLAN_2026-07-18): ubuntu-only CI cannot certify a
+# cross-platform SDK. Runs the two OS-SENSITIVE suites — TEST + PACKAGE-SMOKE — on
+# macOS and Windows on the nightly tier (runner cost), with a skip-if-unchanged
+# guard (the concurrency group + nightly cron mean at most one run per day per ref).
+
+on:
+  schedule:
+    - cron: "30 8 * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: multi-os-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  multi-os:
+    name: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout signalwire-python
+        uses: actions/checkout@v7
+        with:
+          path: signalwire-python
+
+      - name: Checkout porting-sdk (mock harnesses + package_smoke)
+        uses: actions/checkout@v7
+        with:
+          repository: signalwire/porting-sdk
+          # PINNED to the gate-enforcement plan branch: WIRED-MODES/DOC-SURFACE call
+          # porting-sdk scripts (check_wired_modes.py, doc_surface.py) not yet on main,
+          # and DRIFT diffs the regenerated 6.6 oracle committed there. REVERT this ref
+          # to main when the porting-sdk plan branch merges.
+          ref: plan/a-bar-2026-07-18
+          path: porting-sdk
+          token: ${{ secrets.PORTING_SDK_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install harnesses + SDK
+        shell: bash
+        run: |
+          pip install -e porting-sdk/test_harness/mock_relay
+          pip install -e porting-sdk/test_harness/mock_signalwire
+          pip install -e ./signalwire-python
+          pip install -r signalwire-python/requirements-dev.txt
+
+      - name: TEST (unit suite under strict RELAY mock)
+        shell: bash
+        working-directory: signalwire-python
+        env:
+          MOCK_RELAY_STRICT: "1"
+        run: python -m pytest tests/unit/ -q --no-cov
+
+      - name: PACKAGE-SMOKE (build + install + import from the built artifact)
+        shell: bash
+        working-directory: signalwire-python
+        run: python3 ../porting-sdk/scripts/package_smoke.py --port python --repo .

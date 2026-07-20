@@ -28,7 +28,6 @@ dependencies = [
     "pydantic>=2.11.4",
     "PyYAML>=6.0.2",
     "Requests>=2.32.4",
-    "docopt>=0.6.2",
     "structlog>=25.3.0",
     "uvicorn>=0.34.2",
     "beautifulsoup4>=4.12.3",

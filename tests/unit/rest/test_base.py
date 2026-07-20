@@ -14,6 +14,73 @@ from signalwire.rest._base import HttpClient
 from unittest.mock import MagicMock
 
 
+class TestInvalidJson200:
+    """3-python-c: a 2xx with an undecodable body surfaces as the typed error family, not
+    a bare requests.JSONDecodeError leaking to the caller."""
+
+    def test_200_with_non_json_body_raises_typed_error(
+        self, http: HttpClient, mock_session: MagicMock
+    ) -> None:
+        resp = MockResponse(200, None, content=b"<html>oops</html>")
+        resp.text = "<html>oops</html>"
+        def _raise_json() -> object:
+            raise ValueError("Expecting value: line 1 column 1 (char 0)")
+        resp.json = _raise_json  # type: ignore[method-assign]
+        mock_session.request.return_value = resp
+        with pytest.raises(SignalWireRestError) as exc_info:
+            http.get("/api/x")
+        assert exc_info.value.status_code == 200
+        assert "oops" in str(exc_info.value.body)
+
+
+class TestErrorObservability:
+    """§6.6: the error carries the response headers + the platform request-id, so a
+    caller can log/correlate a failure. No wire-contract change — pure client surface."""
+
+    def test_request_id_and_headers_on_http_error(
+        self, http: HttpClient, mock_session: MagicMock
+    ) -> None:
+        resp = MockResponse(500, {"error": "boom"})
+        resp.headers = {"X-Request-Id": "req-abc-123", "Content-Type": "application/json"}
+        mock_session.request.return_value = resp
+        with pytest.raises(SignalWireRestError) as exc_info:
+            http.get("/api/x")
+        err = exc_info.value
+        assert err.request_id == "req-abc-123"
+        assert err.headers is not None and err.headers.get("X-Request-Id") == "req-abc-123"
+        assert "req-abc-123" in str(err)
+
+    def test_transport_error_has_no_headers(
+        self, http: HttpClient, mock_session: MagicMock
+    ) -> None:
+        import requests
+        mock_session.request.side_effect = requests.ConnectionError("refused")
+        with pytest.raises(SignalWireRestTransportError) as exc_info:
+            http.get("/api/x")
+        assert exc_info.value.headers is None
+        assert exc_info.value.request_id is None
+
+
+class TestBaseUrlScheme:
+    """§2.2: a loopback host (local mock/dev server) gets http://; a real space gets
+    https://. Lets a shipped example run verbatim against the local mock without a
+    separate URL knob. Pure _base_url construction — no transport mocked."""
+
+    @pytest.mark.parametrize("host", [
+        "127.0.0.1:8790", "127.0.0.1", "localhost:3000", "localhost",
+    ])
+    def test_loopback_host_uses_http(self, host: str) -> None:
+        c = HttpClient("proj", "tok", host)
+        assert c._base_url == f"http://{host}", c._base_url
+
+    @pytest.mark.parametrize("host", [
+        "example.signalwire.com", "myspace.signalwire.com",
+    ])
+    def test_real_space_uses_https(self, host: str) -> None:
+        c = HttpClient("proj", "tok", host)
+        assert c._base_url == f"https://{host}", c._base_url
+
+
 class TestSignalWireRestError:
     def test_error_attributes(self) -> None:
         err = SignalWireRestError(404, {"error": "not found"}, "/api/test", "GET")
@@ -96,7 +163,22 @@ class TestHttpClient:
         assert isinstance(exc_info.value, SignalWireRestError)  # one family
         assert exc_info.value.status_code is None
         assert exc_info.value.method == "GET"
-        assert exc_info.value.url == "/api/anything"
+        # D1: error.url is the FULL URL (scheme+host+path), not the bare path.
+        assert exc_info.value.url == "https://test.signalwire.com/api/anything"
+
+    def test_error_url_is_full_url_with_query(
+        self, http: HttpClient, mock_session: MagicMock
+    ) -> None:
+        # D1 (owner-approved 2026-07-18): error.url carries the FULL URL WITH the query
+        # string — copy-pasteable, with query context, not the bare path the fleet used
+        # to store behind a `url`-named field.
+        mock_session.request.return_value = MockResponse(404, {"error": "nope"})
+        with pytest.raises(SignalWireRestError) as exc_info:
+            http.get("/api/items", params={"page_size": 25, "cursor": "abc"})
+        url = exc_info.value.url
+        assert url.startswith("https://test.signalwire.com/api/items?")
+        assert "page_size=25" in url
+        assert "cursor=abc" in url
 
 
 class TestCrudResource:

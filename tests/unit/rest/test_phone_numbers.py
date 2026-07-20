@@ -29,10 +29,16 @@ class TestPhoneNumbersCrud:
         )
 
     def test_search(self, client: RestClient, mock_session: MagicMock) -> None:
+        # search(**params) passes params through verbatim, so the CALLER must use the
+        # spec wire key `areacode` (relay-rest/openapi.yaml: `- name: areacode`), NOT
+        # `area_code`. This passthrough-shape test previously enshrined the wrong key
+        # `area_code` (round-4 finding). Wire-TRUTH is proven by the strict-mock
+        # generated test (phone_numbers_generated_test.py::test_phone_numbers_search);
+        # this only documents the passthrough shape.
         mock_session.request.return_value = MockResponse(200, {"data": []})
-        client.phone_numbers.search(area_code="512")
+        client.phone_numbers.search(areacode="512")
         mock_session.request.assert_called_with(
-            "GET", f"{BASE}/search", json=None, params={"area_code": "512"}, timeout=30.0,
+            "GET", f"{BASE}/search", json=None, params={"areacode": "512"}, timeout=30.0,
         )
 
     def test_update_uses_put(self, client: RestClient, mock_session: MagicMock) -> None:
