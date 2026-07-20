@@ -134,12 +134,24 @@ class RelayClient:
             # JWT auth — project/token not required (project_id is inside the token)
             if not self.project:
                 self.project = ""
-        elif not self.project or not self.token:
-            raise ValueError(
-                "project and token are required (or provide jwt_token). "
-                "Pass them directly or set SIGNALWIRE_PROJECT_ID / "
-                "SIGNALWIRE_API_TOKEN / SIGNALWIRE_JWT_TOKEN env vars."
-            )
+        else:
+            # A6 credential contract: fail fast pre-connect with a PER-VARIABLE
+            # actionable error — name exactly which credential is missing and the
+            # env var that supplies it, so the caller fixes the right one (a
+            # combined "project and token" message misleads when only one is
+            # absent). JWT is the alternative for both.
+            if not self.project:
+                raise ValueError(
+                    "project is required. Pass project=... or set the "
+                    "SIGNALWIRE_PROJECT_ID env var (or use jwt_token / "
+                    "SIGNALWIRE_JWT_TOKEN for JWT auth)."
+                )
+            if not self.token:
+                raise ValueError(
+                    "token is required. Pass token=... or set the "
+                    "SIGNALWIRE_API_TOKEN env var (or use jwt_token / "
+                    "SIGNALWIRE_JWT_TOKEN for JWT auth)."
+                )
 
         # Validate host to prevent SSRF / header injection
         if any(c in self.host for c in ("@", "/", "?", "\r", "\n", " ")):

@@ -74,18 +74,30 @@ class TestClientInit:
 
     @patch.dict(os.environ, {}, clear=True)
     def test_missing_creds_raises(self) -> None:
-        with pytest.raises(ValueError, match="project and token are required"):
+        # Both missing: fail fast on the first (project), per-var actionable.
+        with pytest.raises(ValueError, match="project is required") as exc:
             RelayClient(project="", token="")
+        assert "SIGNALWIRE_PROJECT_ID" in str(exc.value)
 
     @patch.dict(os.environ, {}, clear=True)
     def test_missing_project_raises(self) -> None:
-        with pytest.raises(ValueError):
+        # A6 credential contract: the error names WHICH credential is missing and
+        # the actionable env var to set — not a generic "project and token" blob.
+        with pytest.raises(ValueError, match="project is required") as exc:
             RelayClient(project="", token="t")
+        msg = str(exc.value)
+        assert "SIGNALWIRE_PROJECT_ID" in msg
+        # token WAS supplied — the error must not claim it's the missing one.
+        assert "token is required" not in msg
 
     @patch.dict(os.environ, {}, clear=True)
     def test_missing_token_raises(self) -> None:
-        with pytest.raises(ValueError):
+        with pytest.raises(ValueError, match="token is required") as exc:
             RelayClient(project="p", token="")
+        msg = str(exc.value)
+        assert "SIGNALWIRE_API_TOKEN" in msg
+        # project WAS supplied — the error must not claim it's the missing one.
+        assert "project is required" not in msg
 
     @pytest.mark.parametrize("bad_host", [
         "host.com/path",
