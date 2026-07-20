@@ -117,6 +117,39 @@ async def test_play_resolves_on_finished_event(signalwire_relay_client: RelayCli
     assert event.params.get("state") == "finished"
 
 
+async def test_wait_timeout_does_not_poison_action(
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
+    """N3.1 (A2/Wave1): a timed-out ``wait(timeout)`` must NOT cancel the action's
+    completion future. After the timeout, the still-pending terminal event must
+    resolve the action normally, ``is_done``/``result`` become truthy, and a second
+    ``wait()`` returns the terminal event — mirroring Message.wait's shield.
+
+    Before the fix, ``asyncio.wait_for(self._done, timeout)`` cancelled ``_done`` on
+    timeout, permanently poisoning the action: the event never resolved it and a
+    re-``wait()`` raised CancelledError."""
+    call = await _answered_inbound_call(
+        signalwire_relay_client, mock_relay, "call-play-poison"
+    )
+    # Terminal event arrives at 120ms — AFTER the 30ms first wait() times out.
+    mock_relay.arm_method(
+        "calling.play",
+        [{"emit": {"state": "finished"}, "delay_ms": 120}],
+    )
+    action = await call.play(
+        [{"type": "silence", "params": {"duration": 1}}],
+        control_id="play-ctl-poison",
+    )
+    # First wait times out BEFORE the event.
+    with pytest.raises(asyncio.TimeoutError):
+        await action.wait(timeout=0.03)
+    # The action must NOT be poisoned: the pending event still resolves it.
+    event = await action.wait(timeout=5)
+    assert action.is_done is True
+    assert action.completed is True
+    assert event.params.get("state") == "finished"
+
+
 async def test_play_stop_journals_play_stop(signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness) -> None:
     call = await _answered_inbound_call(
         signalwire_relay_client, mock_relay, "call-play-stop"

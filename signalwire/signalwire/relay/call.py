@@ -112,9 +112,15 @@ class Action:
                 )
 
     async def wait(self, timeout: float | None = None) -> RelayEvent:
-        """Wait for the action to complete. Returns the terminal event."""
+        """Wait for the action to complete. Returns the terminal event.
+
+        Raises ``asyncio.TimeoutError`` if ``timeout`` is exceeded. A timed-out
+        wait does NOT poison the action: ``self._done`` is shielded so the
+        ``wait_for`` cancellation stops the wait, not the underlying completion
+        future — the still-pending terminal event resolves the action normally
+        and a subsequent ``wait()`` returns it (mirrors ``Message.wait``)."""
         if timeout is not None:
-            return await asyncio.wait_for(self._done, timeout=timeout)
+            return await asyncio.wait_for(asyncio.shield(self._done), timeout=timeout)
         return await self._done
 
     @property
