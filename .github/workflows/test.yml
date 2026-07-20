@@ -41,7 +41,7 @@ jobs:
           # porting-sdk scripts (check_wired_modes.py, doc_surface.py) not yet on main,
           # and DRIFT diffs the regenerated 6.6 oracle committed there. REVERT this ref
           # to main when the porting-sdk plan branch merges.
-          ref: plan/a-bar-2026-07-18
+          ref: main
           path: porting-sdk
           token: ${{ secrets.PORTING_SDK_TOKEN }}
 
