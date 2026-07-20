@@ -105,6 +105,7 @@ _RELAY_MOCK_AVAILABLE = _RELAY_MOCK_PKG_DIR is not None
 # Mock WebSocket  (legacy transport double — see module docstring backend #1)
 # ---------------------------------------------------------------------------
 
+
 class MockWebSocket:
     """Simulates websockets.WebSocketClientProtocol for unit tests.
 
@@ -150,9 +151,7 @@ class MockWebSocket:
 
     def feed_close(self) -> None:
         """Inject a ConnectionClosed exception to end the recv loop."""
-        self._recv_queue.put_nowait(
-            websockets.exceptions.ConnectionClosed(None, None)
-        )
+        self._recv_queue.put_nowait(websockets.exceptions.ConnectionClosed(None, None))
 
     async def close(self) -> None:
         self.closed = True
@@ -168,7 +167,9 @@ class AutoAuthMockWebSocket(MockWebSocket):
     a matching success response into the recv queue.
     """
 
-    def __init__(self, protocol: str = "test-protocol-abc123", auto_reply_all: bool = False) -> None:
+    def __init__(
+        self, protocol: str = "test-protocol-abc123", auto_reply_all: bool = False
+    ) -> None:
         super().__init__()
         self.protocol = protocol
         self.auto_reply_all = auto_reply_all
@@ -177,19 +178,51 @@ class AutoAuthMockWebSocket(MockWebSocket):
         await super().send(raw)
         msg = json.loads(raw)
         if msg.get("method") == METHOD_SIGNALWIRE_CONNECT:
-            self.feed_message(make_jsonrpc_response(msg["id"], {
-                "protocol": self.protocol,
-                "identity": "test-identity",
-            }))
+            self.feed_message(
+                make_jsonrpc_response(
+                    msg["id"],
+                    {
+                        "protocol": self.protocol,
+                        "identity": "test-identity",
+                    },
+                )
+            )
         elif self.auto_reply_all and "id" in msg and "method" in msg:
-            self.feed_message(make_jsonrpc_response(msg["id"], {
-                "code": "200", "message": "OK",
-            }))
+            self.feed_message(
+                make_jsonrpc_response(
+                    msg["id"],
+                    {
+                        "code": "200",
+                        "message": "OK",
+                    },
+                )
+            )
+
+
+class AuthRejectMockWebSocket(MockWebSocket):
+    """MockWebSocket that rejects signalwire.connect with a JSON-RPC error.
+
+    Simulates a 401-class credential rejection: the server answers the connect
+    request with an error frame instead of a protocol result. Drives the A6
+    bounded-reconnect contract (the client must RAISE after bounded retry, not
+    infinite-reconnect).
+    """
+
+    def __init__(self, message: str = "auth rejected: bad token") -> None:
+        super().__init__()
+        self.message = message
+
+    async def send(self, raw: str) -> None:
+        await super().send(raw)
+        msg = json.loads(raw)
+        if msg.get("method") == METHOD_SIGNALWIRE_CONNECT:
+            self.feed_message(make_jsonrpc_error(msg["id"], -32000, self.message))
 
 
 # ---------------------------------------------------------------------------
 # Helper factories
 # ---------------------------------------------------------------------------
+
 
 def make_jsonrpc_response(req_id: str, result: Any) -> dict[str, Any]:
     """Build a JSON-RPC 2.0 success response."""
@@ -241,6 +274,7 @@ def make_calling_response(
 # Legacy fixtures (transport double)
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture
 def relay_client() -> Iterator[RelayClient]:
     """Fresh RelayClient with test credentials.  Clears _active_clients."""
@@ -251,7 +285,9 @@ def relay_client() -> Iterator[RelayClient]:
 
 
 @pytest_asyncio.fixture
-async def connected_client() -> AsyncIterator[tuple[RelayClient, AutoAuthMockWebSocket]]:
+async def connected_client() -> AsyncIterator[
+    tuple[RelayClient, AutoAuthMockWebSocket]
+]:
     """A RelayClient that is connected via a mocked WebSocket.
 
     Yields ``(client, mock_ws)``.  Disconnects on teardown.
@@ -259,8 +295,11 @@ async def connected_client() -> AsyncIterator[tuple[RelayClient, AutoAuthMockWeb
     _active_clients.clear()
     mock_ws = AutoAuthMockWebSocket()
 
-    with patch("signalwire.relay.client.websockets.connect",
-               new_callable=AsyncMock, return_value=mock_ws):
+    with patch(
+        "signalwire.relay.client.websockets.connect",
+        new_callable=AsyncMock,
+        return_value=mock_ws,
+    ):
         client = RelayClient(project="test-project", token="test-token")
         await client.connect()
         yield client, mock_ws
@@ -339,6 +378,7 @@ def _resolve_http_port(ws_port: int) -> int:
 
 def _probe_health(http_url: str) -> bool:
     import requests
+
     try:
         resp = requests.get(f"{http_url}/__mock__/health", timeout=_PROBE_TIMEOUT_S)
         if resp.status_code != 200:
@@ -373,13 +413,15 @@ class _SharedRelayServer:
             relay_host = f"127.0.0.1:{ws_port}"
 
             if _probe_health(http_url):
-                self.http_url, self.ws_url, self.relay_host = http_url, ws_url, relay_host
+                self.http_url, self.ws_url, self.relay_host = (
+                    http_url,
+                    ws_url,
+                    relay_host,
+                )
                 return self
 
             if not _RELAY_MOCK_AVAILABLE:
-                self._error = (
-                    "mock_relay not adjacent — clone porting-sdk next to signalwire-python"
-                )
+                self._error = "mock_relay not adjacent — clone porting-sdk next to signalwire-python"
                 pytest.skip(self._error)
 
             child_env = dict(os.environ)
@@ -387,15 +429,22 @@ class _SharedRelayServer:
                 existing = child_env.get("PYTHONPATH", "")
                 child_env["PYTHONPATH"] = (
                     f"{_RELAY_MOCK_PKG_DIR}{os.pathsep}{existing}"
-                    if existing else _RELAY_MOCK_PKG_DIR
+                    if existing
+                    else _RELAY_MOCK_PKG_DIR
                 )
             self._child = subprocess.Popen(
                 [
-                    sys.executable, "-m", "mock_relay",
-                    "--host", "127.0.0.1",
-                    "--ws-port", str(ws_port),
-                    "--http-port", str(http_port),
-                    "--log-level", "error",
+                    sys.executable,
+                    "-m",
+                    "mock_relay",
+                    "--host",
+                    "127.0.0.1",
+                    "--ws-port",
+                    str(ws_port),
+                    "--http-port",
+                    str(http_port),
+                    "--log-level",
+                    "error",
                 ],
                 env=child_env,
                 stdout=subprocess.DEVNULL,
@@ -406,7 +455,11 @@ class _SharedRelayServer:
             deadline = time.time() + _STARTUP_TIMEOUT_S
             while time.time() < deadline:
                 if _probe_health(http_url):
-                    self.http_url, self.ws_url, self.relay_host = http_url, ws_url, relay_host
+                    self.http_url, self.ws_url, self.relay_host = (
+                        http_url,
+                        ws_url,
+                        relay_host,
+                    )
                     return self
                 time.sleep(0.1)
 
@@ -483,7 +536,9 @@ class _MockRelayHarness:
     # -- scoping helper ------------------------------------------------------
 
     def _session_query(self) -> str:
-        return f"?session_id={quote(self.session_id, safe='')}" if self.session_id else ""
+        return (
+            f"?session_id={quote(self.session_id, safe='')}" if self.session_id else ""
+        )
 
     # -- journal -------------------------------------------------------------
 
@@ -495,9 +550,7 @@ class _MockRelayHarness:
         resp.raise_for_status()
         return [_RelayJournalEntry.from_dict(d) for d in resp.json()]
 
-    def journal_recv(
-        self, *, method: Optional[str] = None
-    ) -> list[_RelayJournalEntry]:
+    def journal_recv(self, *, method: Optional[str] = None) -> list[_RelayJournalEntry]:
         """Return inbound (SDK→server) journal entries, optionally by method."""
         entries = [e for e in self.journal() if e.direction == "recv"]
         if method is not None:
@@ -537,9 +590,7 @@ class _MockRelayHarness:
 
     # -- scenario plumbing ---------------------------------------------------
 
-    def arm_method(
-        self, method: str, events: Iterable[dict[str, Any]]
-    ) -> None:
+    def arm_method(self, method: str, events: Iterable[dict[str, Any]]) -> None:
         """Queue scripted post-RPC events for ``method`` (FIFO consume-once).
 
         Scoped to this session so a concurrent test can't consume the queue.

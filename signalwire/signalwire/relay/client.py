@@ -61,6 +61,7 @@ from .constants import (
     METHOD_SIGNALWIRE_RECEIVE,
     METHOD_SIGNALWIRE_UNRECEIVE,
     RECONNECT_BACKOFF_FACTOR,
+    RECONNECT_MAX_AUTH_ATTEMPTS,
     RECONNECT_MAX_DELAY,
     RECONNECT_MIN_DELAY,
 )
@@ -260,6 +261,12 @@ class RelayClient:
         self._execute_queue: list[
             tuple[dict[str, Any], asyncio.Future[dict[str, Any]]]
         ] = []
+        # A6 bounded-reconnect state: whether authentication has ever succeeded
+        # (a drop after this is a TRANSIENT loss → reconnect indefinitely), and
+        # the count of consecutive auth rejections before any success (a
+        # PERMANENT credential failure → bounded, then raise).
+        self._authenticated_ever: bool = False
+        self._auth_reject_attempts: int = 0
 
     def __del__(self) -> None:
         _active_clients.discard(id(self))
@@ -384,6 +391,12 @@ class RelayClient:
             params["authorization_state"] = self._authorization_state
 
         result = await self._send_request(METHOD_SIGNALWIRE_CONNECT, params)
+
+        # Authentication succeeded: from here on a connection drop is a
+        # transient loss (reconnect indefinitely), not a credential failure.
+        # Reset the permanent-auth-failure counter (A6 bounded reconnect).
+        self._authenticated_ever = True
+        self._auth_reject_attempts = 0
 
         # Capture server-assigned protocol and identity
         self._relay_protocol = result.get("protocol", self._relay_protocol)
@@ -654,6 +667,30 @@ class RelayClient:
                     await self._recv_task
             except asyncio.CancelledError:
                 break
+            except RelayError as exc:
+                # A6 bounded reconnect: a RelayError out of connect() before we
+                # ever authenticated is a PERMANENT credential rejection (the
+                # server refused the connect creds), NOT a transient blip.
+                # Bound the retries and then RAISE the server's message — never
+                # loop forever on bad creds, never silent exit-0. A transport
+                # error (ConnectionRefused/OSError, server not up yet) is caught
+                # by the broad handler below and keeps reconnecting.
+                if not self._authenticated_ever:
+                    self._auth_reject_attempts += 1
+                    if self._auth_reject_attempts >= RECONNECT_MAX_AUTH_ATTEMPTS:
+                        logger.error(
+                            "RELAY authentication rejected "
+                            f"{self._auth_reject_attempts} time(s); giving up: {exc}"
+                        )
+                        await self.disconnect()
+                        raise
+                    logger.warning(
+                        "RELAY authentication rejected "
+                        f"({self._auth_reject_attempts}/{RECONNECT_MAX_AUTH_ATTEMPTS}); "
+                        f"retrying: {exc}"
+                    )
+                else:
+                    logger.exception("Connection error")
             except Exception:
                 logger.exception("Connection error")
 
