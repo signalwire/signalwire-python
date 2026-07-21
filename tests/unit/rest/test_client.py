@@ -59,3 +59,30 @@ class TestRestClient:
         assert hasattr(client, "project")
         assert hasattr(client, "pubsub")
         assert hasattr(client, "chat")
+
+
+class TestRestCaFile:
+    """A5 fleet CA-var contract (hard-cut, no aliases): SIGNALWIRE_REST_CA_FILE
+    supplies a custom CA bundle for the REST transport."""
+
+    def test_ca_file_env_var_sets_session_verify(self) -> None:
+        env = {
+            "SIGNALWIRE_PROJECT_ID": "p",
+            "SIGNALWIRE_API_TOKEN": "t",
+            "SIGNALWIRE_SPACE": "x.signalwire.com",
+            "SIGNALWIRE_REST_CA_FILE": "/etc/ssl/custom-ca.pem",
+        }
+        with patch.dict(os.environ, env):
+            c = RestClient()
+            assert c._http._session.verify == "/etc/ssl/custom-ca.pem"
+
+    def test_no_ca_file_uses_default_verify(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("SIGNALWIRE_PROJECT_ID", "p")
+        monkeypatch.setenv("SIGNALWIRE_API_TOKEN", "t")
+        monkeypatch.setenv("SIGNALWIRE_SPACE", "x.signalwire.com")
+        monkeypatch.delenv("SIGNALWIRE_REST_CA_FILE", raising=False)
+        c = RestClient()
+        # requests' default verify is True (use the system trust store).
+        assert c._http._session.verify is True

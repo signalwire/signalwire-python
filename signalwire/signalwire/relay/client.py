@@ -24,6 +24,7 @@ import asyncio
 import json
 import os
 import re
+import ssl as ssl_module
 import uuid
 from typing import Any, TYPE_CHECKING
 from collections.abc import Callable, Coroutine
@@ -60,6 +61,7 @@ from .constants import (
     METHOD_SIGNALWIRE_RECEIVE,
     METHOD_SIGNALWIRE_UNRECEIVE,
     RECONNECT_BACKOFF_FACTOR,
+    RECONNECT_MAX_AUTH_ATTEMPTS,
     RECONNECT_MAX_DELAY,
     RECONNECT_MIN_DELAY,
 )
@@ -100,6 +102,48 @@ except ValueError:
 _active_clients: set[int] = set()
 
 
+# Credential-bearing JSON keys whose VALUES must never appear in debug logs
+# (SECRET-SCRUB, A6/enterprise): the raw RELAY frames carry the connect
+# authentication (project/token/jwt_token) and the server's encrypted
+# ``authorization_state`` re-auth blob. Logging a raw frame verbatim leaks these.
+_SCRUB_KEYS = ("token", "project", "jwt_token", "authorization_state")
+_SCRUB_RE = re.compile(
+    r'("(?:' + "|".join(_SCRUB_KEYS) + r')"\s*:\s*)"(?:\\.|[^"\\])*"'
+)
+
+
+def _scrub_frame(raw: object) -> str:
+    """Return a log-safe repr of a raw RELAY frame with credential VALUES masked.
+
+    Masks the string values of ``token``/``project``/``jwt_token``/
+    ``authorization_state`` keys wherever they appear in the (JSON) frame, so a
+    ``SIGNALWIRE_LOG_LEVEL=debug`` session never emits live credentials or the
+    re-auth blob. Non-string / structural content is preserved so the frame stays
+    diagnostic."""
+    text = (
+        raw.decode("utf-8", "replace")
+        if isinstance(raw, (bytes, bytearray))
+        else str(raw)
+    )
+    return _SCRUB_RE.sub(r'\1"***"', text)
+
+
+def _build_relay_ssl_context() -> ssl_module.SSLContext | None:
+    """Return a TLS context trusting SIGNALWIRE_RELAY_CA_FILE, or None.
+
+    A5 fleet CA-var contract: when SIGNALWIRE_RELAY_CA_FILE names a CA bundle,
+    build a default client TLS context that loads it as the trust root for the
+    RELAY WebSocket connection. Unset → None (websockets uses the system trust
+    store). Kept module-level so the connect path stays readable and the behavior
+    is unit-testable without a live socket."""
+    ca_file = os.environ.get("SIGNALWIRE_RELAY_CA_FILE")
+    if not ca_file:
+        return None
+    ctx = ssl_module.create_default_context()
+    ctx.load_verify_locations(cafile=ca_file)
+    return ctx
+
+
 class RelayClient:
     """Manages a WebSocket connection to SignalWire RELAY.
 
@@ -134,12 +178,24 @@ class RelayClient:
             # JWT auth — project/token not required (project_id is inside the token)
             if not self.project:
                 self.project = ""
-        elif not self.project or not self.token:
-            raise ValueError(
-                "project and token are required (or provide jwt_token). "
-                "Pass them directly or set SIGNALWIRE_PROJECT_ID / "
-                "SIGNALWIRE_API_TOKEN / SIGNALWIRE_JWT_TOKEN env vars."
-            )
+        else:
+            # A6 credential contract: fail fast pre-connect with a PER-VARIABLE
+            # actionable error — name exactly which credential is missing and the
+            # env var that supplies it, so the caller fixes the right one (a
+            # combined "project and token" message misleads when only one is
+            # absent). JWT is the alternative for both.
+            if not self.project:
+                raise ValueError(
+                    "project is required. Pass project=... or set the "
+                    "SIGNALWIRE_PROJECT_ID env var (or use jwt_token / "
+                    "SIGNALWIRE_JWT_TOKEN for JWT auth)."
+                )
+            if not self.token:
+                raise ValueError(
+                    "token is required. Pass token=... or set the "
+                    "SIGNALWIRE_API_TOKEN env var (or use jwt_token / "
+                    "SIGNALWIRE_JWT_TOKEN for JWT auth)."
+                )
 
         # Validate host to prevent SSRF / header injection
         if any(c in self.host for c in ("@", "/", "?", "\r", "\n", " ")):
@@ -205,6 +261,12 @@ class RelayClient:
         self._execute_queue: list[
             tuple[dict[str, Any], asyncio.Future[dict[str, Any]]]
         ] = []
+        # A6 bounded-reconnect state: whether authentication has ever succeeded
+        # (a drop after this is a TRANSIENT loss → reconnect indefinitely), and
+        # the count of consecutive auth rejections before any success (a
+        # PERMANENT credential failure → bounded, then raise).
+        self._authenticated_ever: bool = False
+        self._auth_reject_attempts: int = 0
 
     def __del__(self) -> None:
         _active_clients.discard(id(self))
@@ -227,6 +289,30 @@ class RelayClient:
         self._bg_tasks.add(task)
         task.add_done_callback(self._bg_tasks.discard)
         return task
+
+    def _scrub_log(self, text: str) -> str:
+        """Log-safe repr with live credential VALUES masked wherever they appear.
+
+        Composes over :func:`_scrub_frame` (the key-shape mask, ``"token":"..."``)
+        and then masks any *verbatim* occurrence of THIS connection's live
+        credential values (project / token / jwt_token / authorization_state).
+        The key-shape pass alone misses a credential value the server reflects
+        into a NON-credential field (e.g. an auth-response ``identity`` derived
+        from the project, or the raw ``identity=`` diagnostic) — so a
+        ``SIGNALWIRE_LOG_LEVEL=debug`` session must never emit the raw value even
+        there. Defense-in-depth: value-masking is stronger than, and additive to,
+        the key-shape scrub.
+        """
+        out = _scrub_frame(text)
+        for value in (
+            self.project,
+            self.token,
+            self.jwt_token,
+            self._authorization_state,
+        ):
+            if value:
+                out = out.replace(value, "***")
+        return out
 
     @property
     def relay_protocol(self) -> str:
@@ -268,8 +354,20 @@ class RelayClient:
         uri = f"wss://{self.host}"
         logger.info(f"Connecting to {uri}")
 
+        # A5 (fleet CA-var contract, hard-cut no aliases): a custom CA bundle for
+        # the RELAY WebSocket transport is supplied via SIGNALWIRE_RELAY_CA_FILE.
+        # When set, build a TLS context that trusts it; unset → websockets' default
+        # (system trust store). This is the RELAY half of the fleet-standard pair
+        # (SIGNALWIRE_REST_CA_FILE is the REST half).
+        ssl_context = _build_relay_ssl_context()
+
         self._ws = await websockets.connect(
-            uri, ping_interval=None, max_size=10 * 1024 * 1024
+            uri,
+            ping_interval=None,
+            max_size=10 * 1024 * 1024,
+            # ssl_context is None when SIGNALWIRE_RELAY_CA_FILE is unset, which
+            # tells websockets to use its default (system trust store) for wss://.
+            ssl=ssl_context,
         )
         self._connected = True
         self._reconnect_delay = RECONNECT_MIN_DELAY
@@ -318,6 +416,12 @@ class RelayClient:
 
         result = await self._send_request(METHOD_SIGNALWIRE_CONNECT, params)
 
+        # Authentication succeeded: from here on a connection drop is a
+        # transient loss (reconnect indefinitely), not a credential failure.
+        # Reset the permanent-auth-failure counter (A6 bounded reconnect).
+        self._authenticated_ever = True
+        self._auth_reject_attempts = 0
+
         # Capture server-assigned protocol and identity
         self._relay_protocol = result.get("protocol", self._relay_protocol)
         self._identity = result.get("identity", self._identity)
@@ -327,7 +431,10 @@ class RelayClient:
         # session. Internal-only — not part of the public surface.
         self._session_id = result.get("sessionid", self._session_id)
         logger.debug(
-            f"Auth response: protocol={self._relay_protocol} identity={self._identity}"
+            self._scrub_log(
+                f"Auth response: protocol={self._relay_protocol} "
+                f"identity={self._identity}"
+            )
         )
 
     async def disconnect(self) -> None:
@@ -587,6 +694,30 @@ class RelayClient:
                     await self._recv_task
             except asyncio.CancelledError:
                 break
+            except RelayError as exc:
+                # A6 bounded reconnect: a RelayError out of connect() before we
+                # ever authenticated is a PERMANENT credential rejection (the
+                # server refused the connect creds), NOT a transient blip.
+                # Bound the retries and then RAISE the server's message — never
+                # loop forever on bad creds, never silent exit-0. A transport
+                # error (ConnectionRefused/OSError, server not up yet) is caught
+                # by the broad handler below and keeps reconnecting.
+                if not self._authenticated_ever:
+                    self._auth_reject_attempts += 1
+                    if self._auth_reject_attempts >= RECONNECT_MAX_AUTH_ATTEMPTS:
+                        logger.error(
+                            "RELAY authentication rejected "
+                            f"{self._auth_reject_attempts} time(s); giving up: {exc}"
+                        )
+                        await self.disconnect()
+                        raise
+                    logger.warning(
+                        "RELAY authentication rejected "
+                        f"({self._auth_reject_attempts}/{RECONNECT_MAX_AUTH_ATTEMPTS}); "
+                        f"retrying: {exc}"
+                    )
+                else:
+                    logger.exception("Connection error")
             except Exception:
                 logger.exception("Connection error")
 
@@ -721,10 +852,17 @@ class RelayClient:
                 try:
                     msg = json.loads(raw)
                 except json.JSONDecodeError:
-                    logger.warning(f"Invalid JSON received: {raw!r}")
+                    logger.warning(
+                        f"Invalid JSON received: {self._scrub_log(str(raw))!r}"
+                    )
                     continue
 
-                logger.debug(f"<< {raw!r}")
+                # SECRET-SCRUB: mask credential/authorization_state values so a
+                # debug-level log never leaks live creds or the re-auth blob —
+                # including a value the server reflects into a non-credential
+                # field (e.g. identity derived from the project). _scrub_log
+                # composes the key-shape mask with verbatim value-masking.
+                logger.debug(f"<< {self._scrub_log(str(raw))}")
                 await self._handle_message(msg)
         except websockets.exceptions.ConnectionClosed:
             logger.info("WebSocket connection closed")

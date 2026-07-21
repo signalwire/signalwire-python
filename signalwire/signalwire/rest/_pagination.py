@@ -11,6 +11,8 @@ Pagination support for list endpoints that return paged results.
 
 from typing import TYPE_CHECKING, Any
 
+from signalwire.rest._request_options import RequestOptions
+
 if TYPE_CHECKING:
     # Type-only import: _base imports this module (ReadResource.paginate), so a
     # runtime `from ._base import HttpClient` would be a circular import. HttpClient
@@ -32,11 +34,15 @@ class PaginatedIterator:
         path: str,
         params: dict[str, Any] | None = None,
         data_key: str = "data",
+        request_options: RequestOptions | None = None,
     ) -> None:
         self._http = http
         self._path = path
         self._params: dict[str, Any] = dict(params or {})
         self._data_key = data_key
+        # Per-call request options (timeout / retry / headers) applied to every
+        # page fetch this iterator performs.
+        self._request_options = request_options
         self._current_page: Any = None
         self._items: list[Any] = []
         self._index = 0
@@ -61,7 +67,11 @@ class PaginatedIterator:
         return item
 
     def _fetch_next(self) -> None:
-        resp = self._http.get(self._path, params=self._params or None)
+        resp = self._http.get(
+            self._path,
+            params=self._params or None,
+            request_options=self._request_options,
+        )
         data = resp.get(self._data_key, [])
         self._items.extend(data)
 

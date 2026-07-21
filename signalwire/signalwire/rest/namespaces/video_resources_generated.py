@@ -12,6 +12,8 @@ from collections.abc import Mapping
 from .._base import BaseResource, CrudResource, ReadResource
 
 if TYPE_CHECKING:
+    from .._request_options import RequestOptions
+
     from .video_types_generated import (
         Conference,
         ConferenceSize,
@@ -50,13 +52,23 @@ class VideoConferenceTokens(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/video/conference_tokens")
 
-    def get(self, id: str, **params: Any) -> ConferenceToken:
+    def get(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> ConferenceToken:
         return cast(
-            "ConferenceToken", self._http.get(self._path(id), params=params or None)
+            "ConferenceToken",
+            self._http.get(
+                self._path(id), params=params or None, request_options=request_options
+            ),
         )
 
-    def reset(self, id: str) -> ConferenceToken:
-        return cast("ConferenceToken", self._http.post(self._path(id, "reset")))
+    def reset(
+        self, id: str, *, request_options: RequestOptions | None = None
+    ) -> ConferenceToken:
+        return cast(
+            "ConferenceToken",
+            self._http.post(self._path(id, "reset"), request_options=request_options),
+        )
 
 
 class VideoConferences(
@@ -99,6 +111,7 @@ class VideoConferences(
         light_success: str | None = None,
         light_negative: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> Conference:
         body: dict[str, Any] = {
@@ -131,7 +144,12 @@ class VideoConferences(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("Conference", self._http.post(self._base_path, body=body))
+        return cast(
+            "Conference",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -162,6 +180,7 @@ class VideoConferences(
         light_success: str | None = None,
         light_negative: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> Conference:
         body: dict[str, Any] = {
@@ -196,20 +215,33 @@ class VideoConferences(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("Conference", self._http.put(self._path(id), body=body))
+        return cast(
+            "Conference",
+            self._http.put(self._path(id), body=body, request_options=request_options),
+        )
 
     def list_conference_tokens(
-        self, id: str, **params: Any
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
     ) -> ListConferenceTokensResponse:
         return cast(
             "ListConferenceTokensResponse",
-            self._http.get(self._path(id, "conference_tokens"), params=params or None),
+            self._http.get(
+                self._path(id, "conference_tokens"),
+                params=params or None,
+                request_options=request_options,
+            ),
         )
 
-    def list_streams(self, id: str, **params: Any) -> ListStreamsResponse:
+    def list_streams(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> ListStreamsResponse:
         return cast(
             "ListStreamsResponse",
-            self._http.get(self._path(id, "streams"), params=params or None),
+            self._http.get(
+                self._path(id, "streams"),
+                params=params or None,
+                request_options=request_options,
+            ),
         )
 
     def create_stream(
@@ -218,13 +250,19 @@ class VideoConferences(
         *,
         url: str,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> Stream:
         body: dict[str, Any] = {k: v for k, v in {"url": url}.items() if v is not None}
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("Stream", self._http.post(self._path(id, "streams"), body=body))
+        return cast(
+            "Stream",
+            self._http.post(
+                self._path(id, "streams"), body=body, request_options=request_options
+            ),
+        )
 
 
 class VideoRoomRecordings(BaseResource):
@@ -233,24 +271,44 @@ class VideoRoomRecordings(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/video/room_recordings")
 
-    def list(self, **params: Any) -> ListRoomRecordingsResponse:
+    def list(
+        self, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> ListRoomRecordingsResponse:
         return cast(
             "ListRoomRecordingsResponse",
-            self._http.get(self._base_path, params=params or None),
+            self._http.get(
+                self._base_path, params=params or None, request_options=request_options
+            ),
         )
 
-    def get(self, id: str, **params: Any) -> RoomRecording:
+    def get(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> RoomRecording:
         return cast(
-            "RoomRecording", self._http.get(self._path(id), params=params or None)
+            "RoomRecording",
+            self._http.get(
+                self._path(id), params=params or None, request_options=request_options
+            ),
         )
 
-    def delete(self, id: str) -> dict[str, Any]:
-        return cast("dict[str, Any]", self._http.delete(self._path(id)))
+    def delete(
+        self, id: str, *, request_options: RequestOptions | None = None
+    ) -> dict[str, Any]:
+        return cast(
+            "dict[str, Any]",
+            self._http.delete(self._path(id), request_options=request_options),
+        )
 
-    def list_events(self, id: str, **params: Any) -> ListRoomRecordingEventsResponse:
+    def list_events(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> ListRoomRecordingEventsResponse:
         return cast(
             "ListRoomRecordingEventsResponse",
-            self._http.get(self._path(id, "events"), params=params or None),
+            self._http.get(
+                self._path(id, "events"),
+                params=params or None,
+                request_options=request_options,
+            ),
         )
 
 
@@ -260,24 +318,40 @@ class VideoRoomSessions(ReadResource["ListRoomSessionsResponse", "RoomSessionSum
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/video/room_sessions")
 
-    def list_events(self, id: str, **params: Any) -> ListRoomSessionEventsResponse:
+    def list_events(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> ListRoomSessionEventsResponse:
         return cast(
             "ListRoomSessionEventsResponse",
-            self._http.get(self._path(id, "events"), params=params or None),
+            self._http.get(
+                self._path(id, "events"),
+                params=params or None,
+                request_options=request_options,
+            ),
         )
 
-    def list_members(self, id: str, **params: Any) -> ListRoomSessionMembersResponse:
+    def list_members(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> ListRoomSessionMembersResponse:
         return cast(
             "ListRoomSessionMembersResponse",
-            self._http.get(self._path(id, "members"), params=params or None),
+            self._http.get(
+                self._path(id, "members"),
+                params=params or None,
+                request_options=request_options,
+            ),
         )
 
     def list_recordings(
-        self, id: str, **params: Any
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
     ) -> ListRoomSessionRecordingsResponse:
         return cast(
             "ListRoomSessionRecordingsResponse",
-            self._http.get(self._path(id, "recordings"), params=params or None),
+            self._http.get(
+                self._path(id, "recordings"),
+                params=params or None,
+                request_options=request_options,
+            ),
         )
 
 
@@ -309,6 +383,7 @@ class VideoRoomTokens(BaseResource):
         meta: dict[str, Any] | None = None,
         sync_audio_video: bool | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> RoomTokenResponse:
         body: dict[str, Any] = {
@@ -338,7 +413,12 @@ class VideoRoomTokens(BaseResource):
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("RoomTokenResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "RoomTokenResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
 
 class VideoRooms(
@@ -371,6 +451,7 @@ class VideoRooms(
         meta: dict[str, Any] | None = None,
         sync_audio_video: bool | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> RoomResponse:
         body: dict[str, Any] = {
@@ -396,7 +477,12 @@ class VideoRooms(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("RoomResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "RoomResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -417,6 +503,7 @@ class VideoRooms(
         meta: dict[str, Any] | None = None,
         sync_audio_video: bool | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> RoomResponse:
         body: dict[str, Any] = {
@@ -441,12 +528,21 @@ class VideoRooms(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("RoomResponse", self._http.put(self._path(id), body=body))
+        return cast(
+            "RoomResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
+        )
 
-    def list_streams(self, id: str, **params: Any) -> ListStreamsResponse:
+    def list_streams(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> ListStreamsResponse:
         return cast(
             "ListStreamsResponse",
-            self._http.get(self._path(id, "streams"), params=params or None),
+            self._http.get(
+                self._path(id, "streams"),
+                params=params or None,
+                request_options=request_options,
+            ),
         )
 
     def create_stream(
@@ -455,13 +551,19 @@ class VideoRooms(
         *,
         url: str,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> Stream:
         body: dict[str, Any] = {k: v for k, v in {"url": url}.items() if v is not None}
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("Stream", self._http.post(self._path(id, "streams"), body=body))
+        return cast(
+            "Stream",
+            self._http.post(
+                self._path(id, "streams"), body=body, request_options=request_options
+            ),
+        )
 
 
 class VideoStreams(BaseResource):
@@ -470,8 +572,15 @@ class VideoStreams(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/video/streams")
 
-    def get(self, id: str, **params: Any) -> Stream:
-        return cast("Stream", self._http.get(self._path(id), params=params or None))
+    def get(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> Stream:
+        return cast(
+            "Stream",
+            self._http.get(
+                self._path(id), params=params or None, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -479,13 +588,22 @@ class VideoStreams(BaseResource):
         *,
         url: str,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> Stream:
         body: dict[str, Any] = {k: v for k, v in {"url": url}.items() if v is not None}
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("Stream", self._http.put(self._path(id), body=body))
+        return cast(
+            "Stream",
+            self._http.put(self._path(id), body=body, request_options=request_options),
+        )
 
-    def delete(self, id: str) -> dict[str, Any]:
-        return cast("dict[str, Any]", self._http.delete(self._path(id)))
+    def delete(
+        self, id: str, *, request_options: RequestOptions | None = None
+    ) -> dict[str, Any]:
+        return cast(
+            "dict[str, Any]",
+            self._http.delete(self._path(id), request_options=request_options),
+        )

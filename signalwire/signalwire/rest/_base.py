@@ -9,6 +9,7 @@ See LICENSE file in the project root for full license information.
 HTTP client infrastructure and base resource classes for the REST client.
 """
 
+import os
 import time
 from importlib.metadata import PackageNotFoundError, version
 from typing import Any, Generic, TypeVar, cast
@@ -153,6 +154,15 @@ class HttpClient:
         self._request_options = request_options
         self._session = requests.Session()
         self._session.auth = (project, token)
+        # A5 (fleet CA-var contract, hard-cut no aliases): a custom CA bundle for
+        # the REST transport is supplied via SIGNALWIRE_REST_CA_FILE. When set, it
+        # becomes the session's verify bundle (requests uses it for TLS
+        # verification of the platform cert). Unset → requests' default trust
+        # store. This is the REST half of the fleet-standard pair
+        # (SIGNALWIRE_RELAY_CA_FILE is the RELAY half).
+        _rest_ca_file = os.environ.get("SIGNALWIRE_REST_CA_FILE")
+        if _rest_ca_file:
+            self._session.verify = _rest_ca_file
         self._session.headers.update(
             {
                 "Content-Type": "application/json",
@@ -332,10 +342,21 @@ class ReadResource(BaseResource, Generic[TList, TItem]):
     defined once here.
     """
 
-    def list(self, **params: Any) -> TList:
-        return cast(TList, self._http.get(self._base_path, params=params or None))
+    def list(
+        self, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> TList:
+        return cast(
+            TList,
+            self._http.get(
+                self._base_path,
+                params=params or None,
+                request_options=request_options,
+            ),
+        )
 
-    def paginate(self, **params: Any) -> PaginatedIterator:
+    def paginate(
+        self, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> PaginatedIterator:
         """Iterate every item across all pages of this resource's list endpoint.
 
         ``list()`` returns a single raw page (the server's first response). For
@@ -347,14 +368,24 @@ class ReadResource(BaseResource, Generic[TList, TItem]):
 
         Wires the resource layer to the tested ``PaginatedIterator`` (which walks
         ``resp["data"]`` and follows ``resp["links"]["next"]``), so callers no
-        longer hand-construct the path + token loop.
+        longer hand-construct the path + token loop. ``request_options`` (a per-call
+        timeout / retry / header override) is applied to EVERY page fetch.
         """
         return PaginatedIterator(
-            self._http, self._base_path, params=params or None, data_key="data"
+            self._http,
+            self._base_path,
+            params=params or None,
+            data_key="data",
+            request_options=request_options,
         )
 
-    def get(self, resource_id: str) -> TItem:
-        return cast(TItem, self._http.get(self._path(resource_id)))
+    def get(
+        self, resource_id: str, *, request_options: RequestOptions | None = None
+    ) -> TItem:
+        return cast(
+            TItem,
+            self._http.get(self._path(resource_id), request_options=request_options),
+        )
 
 
 class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TUpdate]):
@@ -369,7 +400,9 @@ class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TU
 
     _update_method = "PATCH"
 
-    def create(self, **kwargs: Any) -> TItem:
+    def create(
+        self, *, request_options: RequestOptions | None = None, **kwargs: Any
+    ) -> TItem:
         # Honest fallback: the body accepts arbitrary wire fields and at runtime
         # is a plain dict. Concrete resources override this with a generated
         # CLOSED typed signature (explicit spec fields + an ``extras`` door); the
@@ -377,26 +410,58 @@ class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TU
         # TCreate shape to the signature oracle, NOT this base method body. (A
         # bare ``**kwargs: TCreate`` here is wrong — it would type each kwarg
         # VALUE as a whole TCreate — and is what the generated overrides replace.)
-        return cast(TItem, self._http.post(self._base_path, body=kwargs))
+        return cast(
+            TItem,
+            self._http.post(
+                self._base_path, body=kwargs, request_options=request_options
+            ),
+        )
 
-    def update(self, resource_id: str, /, **kwargs: Any) -> TItem:
+    def update(
+        self,
+        resource_id: str,
+        /,
+        *,
+        request_options: RequestOptions | None = None,
+        **kwargs: Any,
+    ) -> TItem:
         # resource_id is positional-only so a subclass may rename it without an LSP
         # override conflict. Same contract as ``create``: honest ``**kwargs: Any``
         # fallback; the concrete generated override carries the closed typed shape, the
         # binding carries TUpdate for the oracle.
         method = getattr(self._http, self._update_method.lower())
-        return cast(TItem, method(self._path(resource_id), body=kwargs))
+        return cast(
+            TItem,
+            method(
+                self._path(resource_id),
+                body=kwargs,
+                request_options=request_options,
+            ),
+        )
 
-    def delete(self, resource_id: str) -> TItem:
-        return cast(TItem, self._http.delete(self._path(resource_id)))
+    def delete(
+        self, resource_id: str, *, request_options: RequestOptions | None = None
+    ) -> TItem:
+        return cast(
+            TItem,
+            self._http.delete(self._path(resource_id), request_options=request_options),
+        )
 
 
 class CrudWithAddresses(CrudResource[TList, TItem, TCreate, TUpdate]):
     """CRUD resource that also supports listing addresses."""
 
-    def list_addresses(self, resource_id: str, **params: Any) -> Any:
+    def list_addresses(
+        self,
+        resource_id: str,
+        *,
+        request_options: RequestOptions | None = None,
+        **params: Any,
+    ) -> Any:
         return self._http.get(
-            self._path(resource_id, "addresses"), params=params or None
+            self._path(resource_id, "addresses"),
+            params=params or None,
+            request_options=request_options,
         )
 
 

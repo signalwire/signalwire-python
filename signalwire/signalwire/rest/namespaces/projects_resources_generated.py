@@ -12,6 +12,8 @@ from collections.abc import Mapping
 from .._base import CrudResource
 
 if TYPE_CHECKING:
+    from .._request_options import RequestOptions
+
     from .projects_types_generated import (
         Project,
         ProjectCreate,
@@ -38,6 +40,7 @@ class Projects(
         protect_fax_media: bool | None = None,
         force_https_requests: bool | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> Project:
         body: dict[str, Any] = {
@@ -54,7 +57,12 @@ class Projects(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("Project", self._http.post(self._base_path, body=body))
+        return cast(
+            "Project",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -67,6 +75,7 @@ class Projects(
         protect_fax_media: bool | None = None,
         force_https_requests: bool | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> Project:
         body: dict[str, Any] = {
@@ -83,10 +92,19 @@ class Projects(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("Project", self._http.patch(self._path(id), body=body))
+        return cast(
+            "Project",
+            self._http.patch(
+                self._path(id), body=body, request_options=request_options
+            ),
+        )
 
-    def rotate_signing_key(self, id: str) -> ProjectWithSigningKey:
+    def rotate_signing_key(
+        self, id: str, *, request_options: RequestOptions | None = None
+    ) -> ProjectWithSigningKey:
         return cast(
             "ProjectWithSigningKey",
-            self._http.post(self._path(id, "signing-key", "rotate")),
+            self._http.post(
+                self._path(id, "signing-key", "rotate"), request_options=request_options
+            ),
         )

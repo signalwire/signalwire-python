@@ -372,7 +372,15 @@ class AgentServer:
 
         # Imported lazily here so tests can patch
         # signalwire.core.logging_config.get_execution_mode at call time.
-        from signalwire.core.logging_config import get_execution_mode
+        from signalwire.core.logging_config import (
+            configure_logging,
+            get_execution_mode,
+        )
+
+        # Opt-in to SDK logging OUTPUT at the run entry point (import is
+        # library-safe / silent; running is where the app wants logs). This also
+        # applies the CGI-off / auto detection that configure_logging performs.
+        configure_logging()
 
         # Detect execution mode
         mode = get_execution_mode()

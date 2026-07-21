@@ -180,7 +180,8 @@ async def test_connect_rejects_empty_creds_at_constructor(
     monkeypatch.delenv("SIGNALWIRE_PROJECT_ID", raising=False)
     monkeypatch.delenv("SIGNALWIRE_API_TOKEN", raising=False)
     monkeypatch.delenv("SIGNALWIRE_JWT_TOKEN", raising=False)
-    with pytest.raises(ValueError, match="project and token are required"):
+    # A6: per-var actionable pre-connect error (project checked first).
+    with pytest.raises(ValueError, match="project is required"):
         RelayClient(project="", token="", host="anywhere")
 
 
