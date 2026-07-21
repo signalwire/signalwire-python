@@ -290,6 +290,30 @@ class RelayClient:
         task.add_done_callback(self._bg_tasks.discard)
         return task
 
+    def _scrub_log(self, text: str) -> str:
+        """Log-safe repr with live credential VALUES masked wherever they appear.
+
+        Composes over :func:`_scrub_frame` (the key-shape mask, ``"token":"..."``)
+        and then masks any *verbatim* occurrence of THIS connection's live
+        credential values (project / token / jwt_token / authorization_state).
+        The key-shape pass alone misses a credential value the server reflects
+        into a NON-credential field (e.g. an auth-response ``identity`` derived
+        from the project, or the raw ``identity=`` diagnostic) — so a
+        ``SIGNALWIRE_LOG_LEVEL=debug`` session must never emit the raw value even
+        there. Defense-in-depth: value-masking is stronger than, and additive to,
+        the key-shape scrub.
+        """
+        out = _scrub_frame(text)
+        for value in (
+            self.project,
+            self.token,
+            self.jwt_token,
+            self._authorization_state,
+        ):
+            if value:
+                out = out.replace(value, "***")
+        return out
+
     @property
     def relay_protocol(self) -> str:
         """Server-assigned protocol string from the connect response."""
@@ -407,7 +431,10 @@ class RelayClient:
         # session. Internal-only — not part of the public surface.
         self._session_id = result.get("sessionid", self._session_id)
         logger.debug(
-            f"Auth response: protocol={self._relay_protocol} identity={self._identity}"
+            self._scrub_log(
+                f"Auth response: protocol={self._relay_protocol} "
+                f"identity={self._identity}"
+            )
         )
 
     async def disconnect(self) -> None:
@@ -825,12 +852,17 @@ class RelayClient:
                 try:
                     msg = json.loads(raw)
                 except json.JSONDecodeError:
-                    logger.warning(f"Invalid JSON received: {_scrub_frame(raw)!r}")
+                    logger.warning(
+                        f"Invalid JSON received: {self._scrub_log(str(raw))!r}"
+                    )
                     continue
 
                 # SECRET-SCRUB: mask credential/authorization_state values so a
-                # debug-level log never leaks live creds or the re-auth blob.
-                logger.debug(f"<< {_scrub_frame(raw)}")
+                # debug-level log never leaks live creds or the re-auth blob —
+                # including a value the server reflects into a non-credential
+                # field (e.g. identity derived from the project). _scrub_log
+                # composes the key-shape mask with verbatim value-masking.
+                logger.debug(f"<< {self._scrub_log(str(raw))}")
                 await self._handle_message(msg)
         except websockets.exceptions.ConnectionClosed:
             logger.info("WebSocket connection closed")

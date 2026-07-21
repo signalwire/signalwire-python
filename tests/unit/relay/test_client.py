@@ -155,6 +155,47 @@ class TestSecretScrub:
         raw = '{"method":"calling.play","params":{"call_id":"c-1","state":"finished"}}'
         assert _scrub_frame(raw) == raw
 
+    def test_scrub_log_masks_credential_value_echoed_in_noncredential_field(
+        self,
+    ) -> None:
+        """The key-shape scrub misses a credential VALUE the server reflects into
+        a non-credential field (identity derived from the project). _scrub_log's
+        value-masking layer must still mask it — a debug log never leaks the raw
+        credential even when it appears outside a ``"project": ...`` position."""
+        from signalwire.relay.client import RelayClient
+
+        client = RelayClient(project="PJ-TESTLEAK", token="PT-TESTLEAK")
+        # Server auth-response reflects the project into ``identity``.
+        raw = '{"result":{"identity":"mock-relay-identity-PJ-TESTLEAK","protocol":"pr-1"}}'
+        out = client._scrub_log(raw)
+        assert "PJ-TESTLEAK" not in out  # the raw project value is gone
+        assert "mock-relay-identity-***" in out  # masked in place, structure kept
+        assert "pr-1" in out  # benign content preserved
+
+    def test_scrub_log_masks_token_anywhere(self) -> None:
+        from signalwire.relay.client import RelayClient
+
+        client = RelayClient(project="PJ-X", token="PT-TESTLEAK")
+        out = client._scrub_log("Auth response: protocol=pr identity=echo-PT-TESTLEAK")
+        assert "PT-TESTLEAK" not in out
+        assert "echo-***" in out
+
+    def test_scrub_log_still_applies_key_shape_mask(self) -> None:
+        from signalwire.relay.client import RelayClient
+
+        client = RelayClient(project="PJ-X", token="PT-Y")
+        raw = '{"params":{"authentication":{"authorization_state":"AENC-BLOB"}}}'
+        out = client._scrub_log(raw)
+        assert "AENC-BLOB" not in out
+        assert '"authorization_state":"***"' in out
+
+    def test_scrub_log_leaves_unrelated_frame_intact(self) -> None:
+        from signalwire.relay.client import RelayClient
+
+        client = RelayClient(project="PJ-X", token="PT-Y")
+        raw = '{"method":"calling.play","params":{"call_id":"c-1"}}'
+        assert client._scrub_log(raw) == raw
+
 
 class TestRelayCaFile:
     """A5 fleet CA-var contract (hard-cut, no aliases): SIGNALWIRE_RELAY_CA_FILE
