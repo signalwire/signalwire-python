@@ -38,7 +38,7 @@ jobs:
           repository: signalwire/porting-sdk
           # PINNED to the A+ campaign branch wave/1-aplus (see test.yml). REVERT to
           # main when porting-sdk wave/1-aplus merges.
-          ref: wave/1-aplus
+          ref: main
           path: porting-sdk
           token: ${{ secrets.PORTING_SDK_TOKEN }}
 

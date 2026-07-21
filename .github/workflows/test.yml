@@ -44,7 +44,7 @@ jobs:
           # SPEC-PARITY gates use these; on main they lack request_options and crash
           # (RecordingHttp.get() got an unexpected keyword argument 'request_options').
           # REVERT this ref to main when porting-sdk wave/1-aplus merges.
-          ref: wave/1-aplus
+          ref: main
           path: porting-sdk
           token: ${{ secrets.PORTING_SDK_TOKEN }}
 
