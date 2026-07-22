@@ -35,11 +35,10 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: signalwire/porting-sdk
-          # PINNED to the gate-enforcement plan branch: WIRED-MODES/DOC-SURFACE call
-          # porting-sdk scripts (check_wired_modes.py, doc_surface.py) not yet on main,
-          # and DRIFT diffs the regenerated 6.6 oracle committed there. REVERT this ref
-          # to main when the porting-sdk plan branch merges.
-          ref: main
+          # Coordinated-pass pin: `main` normally; set the PORTING_SDK_REF repo variable
+          # to a wave branch to test a coordinated porting-sdk change, declared on the PR
+          # (see porting-sdk/COORDINATED_PASS.md). No revert commit.
+          ref: ${{ vars.PORTING_SDK_REF || 'main' }}
           path: porting-sdk
           token: ${{ secrets.PORTING_SDK_TOKEN }}
 
