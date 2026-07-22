@@ -126,6 +126,9 @@ jobs:
         env:
           PORTING_SDK: ${{ github.workspace }}/porting-sdk
           SW_CI_TIER: nightly
+          # COORDINATED-PASS reads the live PR body/labels via `gh api` to see a
+          # `Coordinated-With:` declaration edited after the triggering push.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash scripts/run-ci.sh
 
       - name: Record green marker for this input triple
