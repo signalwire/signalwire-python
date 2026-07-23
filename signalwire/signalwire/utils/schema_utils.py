@@ -440,7 +440,7 @@ class SchemaUtils:
             return None
         return set(prop_map.keys())
 
-    def validate_verb_top_level_keys(
+    def _validate_verb_top_level_keys(
         self, verb_name: str, verb_config: dict[str, Any]
     ) -> tuple[bool, list[str]]:
         """Shallow strict-render check: reject unknown/misspelled TOP-LEVEL keys

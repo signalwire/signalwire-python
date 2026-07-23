@@ -547,7 +547,7 @@ class SWMLService(ToolMixin):
             # full validation would false-reject valid documents. The shallow
             # check is a no-op when validation is disabled.
             if is_valid:
-                is_valid, errors = self.schema_utils.validate_verb_top_level_keys(
+                is_valid, errors = self.schema_utils._validate_verb_top_level_keys(
                     verb_name, config
                 )
         else:
@@ -624,7 +624,7 @@ class SWMLService(ToolMixin):
             # deep schema, which would false-reject the ai verb's legitimate
             # empty-pom / SWAIG emissions). No-op when validation is disabled.
             if is_valid:
-                is_valid, errors = self.schema_utils.validate_verb_top_level_keys(
+                is_valid, errors = self.schema_utils._validate_verb_top_level_keys(
                     verb_name, config
                 )
         else:
