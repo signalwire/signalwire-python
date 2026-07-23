@@ -47,6 +47,15 @@ from signalwire.rest._base import _user_agent
 
 DEFAULT_PATH = "/api/ai/chat"
 
+# The service streams keepalive whitespace ahead of slow responses (every
+# ~10s), so liveness is byte-driven, not wall-clock: no total cap (turn
+# length is the server's business), ``sock_read`` as the dead-connection
+# detector (60s of true byte silence means the request is dead — the proxy
+# itself severs after 30s of upstream silence), and a bounded connect.
+# The leading whitespace is valid JSON, so ``resp.json()`` is unaffected.
+# Pass your own ``session=`` to override.
+DEFAULT_TIMEOUT = aiohttp.ClientTimeout(total=None, connect=10, sock_read=60)
+
 
 # ── Errors ───────────────────────────────────────────────────────────
 
@@ -177,7 +186,7 @@ class AIChatClient:
     async def _ensure_session(self) -> aiohttp.ClientSession:
         if self._session is None:
             self._session = aiohttp.ClientSession(
-                auth=self._auth, headers=self._headers
+                auth=self._auth, headers=self._headers, timeout=DEFAULT_TIMEOUT
             )
         return self._session
 

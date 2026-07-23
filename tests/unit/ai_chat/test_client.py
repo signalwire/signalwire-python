@@ -194,6 +194,40 @@ async def test_response_models(stub: StubService) -> None:
         assert log.call_timeline == [{"t": 1}]
 
 
+# ── Session timeout policy ───────────────────────────────────────────
+
+
+async def test_default_timeout_is_heartbeat_aligned() -> None:
+    # The service streams keepalive whitespace on slow turns, so the client's
+    # liveness detection must be byte-driven (sock_read), never wall-clock
+    # (total) — a total cap would kill long turns the server keeps alive.
+    client = AIChatClient(PROJECT, TOKEN, url="http://example.invalid/")
+    session = await client._ensure_session()
+    try:
+        assert session.timeout.total is None
+        assert session.timeout.sock_read == 60
+        assert session.timeout.connect == 10
+    finally:
+        await client.close()
+
+
+async def test_caller_session_timeout_is_respected(stub: StubService) -> None:
+    # A caller-supplied session keeps its own timeout policy untouched.
+    import aiohttp
+
+    own = aiohttp.ClientSession(
+        auth=aiohttp.BasicAuth(PROJECT, TOKEN),
+        timeout=aiohttp.ClientTimeout(total=5),
+    )
+    client = AIChatClient(PROJECT, TOKEN, url=stub.url, session=own)
+    try:
+        await client.chat("c", "m")
+        assert own.timeout.total == 5
+    finally:
+        await client.close()
+        await own.close()
+
+
 # ── URL resolution ───────────────────────────────────────────────────
 
 
