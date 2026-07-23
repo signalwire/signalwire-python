@@ -35,8 +35,11 @@ first, then closes:
   silently.
 """
 
+from typing import Any
+
 import pytest
 
+from signalwire.core.agent_base import AgentBase
 from signalwire.core.swml_service import SWMLService
 from signalwire.utils.schema_utils import SchemaValidationError
 
@@ -78,7 +81,7 @@ class TestMisspelledKeyRejected:
             ("prompt", {"txt": "hi"}),  # misspelled text
         ],
     )
-    def test_misspelled_or_unknown_key_raises(self, verb: str, config: dict) -> None:
+    def test_misspelled_or_unknown_key_raises(self, verb: str, config: dict[str, Any]) -> None:
         svc = _strict_service()
         with pytest.raises(SchemaValidationError):
             svc.add_verb(verb, config)
@@ -148,11 +151,7 @@ class TestAiVerbStrictKeys:
 
 
 class TestDanglingStepFunctionReference:
-    def _agent(self):  # type: ignore[no-untyped-def]
-        # Import here so the test file loads even in environments that only
-        # exercise the service layer.
-        from signalwire.core.agent_base import AgentBase
-
+    def _agent(self) -> AgentBase:
         return AgentBase(name="ctxagent", route="/ctx", schema_validation=True)
 
     def test_dangling_function_ref_raises(self) -> None:
@@ -206,12 +205,13 @@ class TestDanglingStepFunctionReference:
 
     def test_functions_none_and_empty_render(self) -> None:
         # "none" and [] are explicit disable-all — never dangling.
+        value: str | list[str]
         for value in ("none", []):
             agent = self._agent()
             contexts = agent.define_contexts()
             support = contexts.add_context("default")
             step = support.add_step("help")
             step.set_text("help the caller")
-            step.set_functions(value)  # type: ignore[arg-type]
+            step.set_functions(value)
             doc = contexts.to_dict()
             assert "default" in doc
