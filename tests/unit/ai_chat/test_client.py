@@ -103,6 +103,28 @@ async def test_basic_auth_and_envelope(stub: StubService) -> None:
     assert body["params"] == {"id": "conv-1", "message": "hello", "role": "user"}
 
 
+async def test_chat_auto_create_passthrough_params(stub: StubService) -> None:
+    # chat accepts the auto-create passthrough params the server does
+    # (specs/ai-chat.yaml: chat optional includes conversation_timeout, reinit)
+    async with AIChatClient(PROJECT, TOKEN, url=stub.url) as client:
+        await client.chat(
+            "conv-1",
+            "hello",
+            config_url="http://cfg",
+            timeout=600,
+            reinit=True,
+        )
+    params = stub.requests[0]["body"]["params"]
+    assert params == {
+        "id": "conv-1",
+        "message": "hello",
+        "role": "user",
+        "config_url": "http://cfg",
+        "conversation_timeout": 600,
+        "reinit": True,
+    }
+
+
 async def test_params_never_carry_identity(stub: StubService) -> None:
     async with AIChatClient(PROJECT, TOKEN, url=stub.url) as client:
         await client.create_conversation(

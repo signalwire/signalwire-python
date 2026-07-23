@@ -251,12 +251,15 @@ class AIChatClient:
         role: str = "user",
         config_url: str | None = None,
         user_metadata: dict[str, Any] | None = None,
+        timeout: int | None = None,
+        reinit: bool = False,
     ) -> ChatResponse:
         """Send a message and return the AI reply.
 
         This awaits a full LLM round trip server-side — expect seconds.
         Passing ``config_url`` auto-creates the conversation if it doesn't
-        exist yet.
+        exist yet; ``timeout`` and ``reinit`` apply to that auto-create,
+        with the same meaning as on :meth:`create_conversation`.
         """
         params: dict[str, Any] = {
             "id": conversation_id,
@@ -267,6 +270,10 @@ class AIChatClient:
             params["config_url"] = config_url
         if user_metadata:
             params["user_meta_data"] = user_metadata
+        if timeout:
+            params["conversation_timeout"] = timeout
+        if reinit:
+            params["reinit"] = True
         result = await self._request("chat", params)
         return ChatResponse(
             text=result.get("response", ""),
