@@ -534,6 +534,15 @@ class SWMLService(ToolMixin):
             handler = self.verb_registry.get_handler(verb_name)
             assert handler is not None  # noqa: S101  # type-narrowing invariant (not input validation): guaranteed by has_handler() above
             is_valid, errors = handler.validate_config(config)
+            # A handler's validate_config carries verb-specific diagnostics
+            # (e.g. the ai verb's prompt/SWAIG shape checks) but does NOT run
+            # the schema's closed-key check — so unknown/misspelled top-level
+            # keys would slip through silently (r5 silent-drop family). Run the
+            # schema pass too so a handler verb rejects stray keys like every
+            # other verb. The schema pass is a no-op when validation is
+            # disabled, so this never tightens the validation-off path.
+            if is_valid:
+                is_valid, errors = self.schema_utils.validate_verb(verb_name, config)
         else:
             # Use schema-based validation for standard verbs
             is_valid, errors = self.schema_utils.validate_verb(verb_name, config)
@@ -603,6 +612,11 @@ class SWMLService(ToolMixin):
             handler = self.verb_registry.get_handler(verb_name)
             assert handler is not None  # noqa: S101  # type-narrowing invariant (not input validation): guaranteed by has_handler() above
             is_valid, errors = handler.validate_config(config)
+            # See add_verb: also run the schema pass so a handler verb rejects
+            # unknown/misspelled top-level keys (the schema's closed-key check
+            # the handler doesn't perform). No-op when validation is disabled.
+            if is_valid:
+                is_valid, errors = self.schema_utils.validate_verb(verb_name, config)
         else:
             # Use schema-based validation for standard verbs
             is_valid, errors = self.schema_utils.validate_verb(verb_name, config)
