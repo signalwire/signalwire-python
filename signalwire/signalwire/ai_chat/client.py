@@ -39,7 +39,7 @@ Credentials come from the constructor or the standard environment variables
 
 import os
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import aiohttp
 
@@ -50,10 +50,11 @@ DEFAULT_PATH = "/api/ai/chat"
 
 # ── Errors ───────────────────────────────────────────────────────────
 
+
 class AIChatError(Exception):
     """Base error for AI Chat service failures."""
 
-    def __init__(self, code: Optional[int], message: str) -> None:
+    def __init__(self, code: int | None, message: str) -> None:
         self.code = code
         self.message = message
         super().__init__(f"[{code}] {message}")
@@ -86,38 +87,40 @@ _ERROR_BY_CODE = {
 
 # ── Response models ──────────────────────────────────────────────────
 
+
 @dataclass
 class ConversationInfo:
     id: str
     status: str
-    initial_message: Optional[str] = None
+    initial_message: str | None = None
 
 
 @dataclass
 class ChatResponse:
     text: str
     conversation_id: str
-    user_event: Optional[Dict[str, Any]] = None
+    user_event: dict[str, Any] | None = None
 
 
 @dataclass
 class ChatLog:
-    messages: List[Dict[str, Any]] = field(default_factory=list)
-    call_timeline: List[Dict[str, Any]] = field(default_factory=list)
+    messages: list[dict[str, Any]] = field(default_factory=list)
+    call_timeline: list[dict[str, Any]] = field(default_factory=list)
 
 
 # ── Client ───────────────────────────────────────────────────────────
+
 
 class AIChatClient:
     """Async client for the SignalWire AI Chat service."""
 
     def __init__(
         self,
-        project: Optional[str] = None,
-        token: Optional[str] = None,
-        space: Optional[str] = None,
-        url: Optional[str] = None,
-        session: Optional[aiohttp.ClientSession] = None,
+        project: str | None = None,
+        token: str | None = None,
+        space: str | None = None,
+        url: str | None = None,
+        session: aiohttp.ClientSession | None = None,
     ) -> None:
         self._project = project or os.environ.get("SIGNALWIRE_PROJECT_ID", "")
         self._token = token or os.environ.get("SIGNALWIRE_API_TOKEN", "")
@@ -137,11 +140,20 @@ class AIChatClient:
         self._request_counter = 0
 
     @staticmethod
-    def _resolve_url(url: Optional[str], space: str) -> str:
+    def _resolve_url(url: str | None, space: str) -> str:
         if url:
             return url
         dev_url = os.environ.get("RAILS_DEV_MODE", "").strip()
-        if dev_url and dev_url.lower() not in ("false", "0", "no", "off", "true", "1", "yes", "on"):
+        if dev_url and dev_url.lower() not in (
+            "false",
+            "0",
+            "no",
+            "off",
+            "true",
+            "1",
+            "yes",
+            "on",
+        ):
             # RAILS_DEV_MODE doubles as the service's persona switch, so
             # plain booleans mean "on" without carrying a URL — only a real
             # URL-looking value overrides the target here.
@@ -176,7 +188,7 @@ class AIChatClient:
 
     # ── Wire ─────────────────────────────────────────────────────────
 
-    async def _request(self, method: str, params: Dict[str, Any]) -> Dict[str, Any]:
+    async def _request(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
         session = await self._ensure_session()
         self._request_counter += 1
         payload = {
@@ -188,13 +200,21 @@ class AIChatClient:
         async with session.post(self.url, json=payload) as resp:
             try:
                 body = await resp.json()
-            except (aiohttp.ContentTypeError, ValueError):
-                raise AIChatError(resp.status, f"non-JSON response (HTTP {resp.status})")
+            except (aiohttp.ContentTypeError, ValueError) as err:
+                raise AIChatError(
+                    resp.status, f"non-JSON response (HTTP {resp.status})"
+                ) from err
         if "error" in body:
             error = body["error"] or {}
             code = error.get("code")
-            raise _ERROR_BY_CODE.get(code, AIChatError)(code, error.get("message", ""))
-        return body.get("result") or {}
+            exc_type = (
+                _ERROR_BY_CODE.get(code, AIChatError)
+                if code is not None
+                else AIChatError
+            )
+            raise exc_type(code, error.get("message", ""))
+        result = body.get("result")
+        return result if isinstance(result, dict) else {}
 
     # ── API methods ──────────────────────────────────────────────────
 
@@ -202,13 +222,13 @@ class AIChatClient:
         self,
         conversation_id: str,
         config_url: str,
-        user_message: Optional[str] = None,
-        timeout: Optional[int] = None,
-        user_metadata: Optional[Dict[str, Any]] = None,
+        user_message: str | None = None,
+        timeout: int | None = None,
+        user_metadata: dict[str, Any] | None = None,
         reinit: bool = False,
     ) -> ConversationInfo:
         """Create a conversation (or reinitialize an existing one)."""
-        params: Dict[str, Any] = {"id": conversation_id, "config_url": config_url}
+        params: dict[str, Any] = {"id": conversation_id, "config_url": config_url}
         if user_message:
             params["user_message"] = user_message
         if timeout:
@@ -229,8 +249,8 @@ class AIChatClient:
         conversation_id: str,
         message: str,
         role: str = "user",
-        config_url: Optional[str] = None,
-        user_metadata: Optional[Dict[str, Any]] = None,
+        config_url: str | None = None,
+        user_metadata: dict[str, Any] | None = None,
     ) -> ChatResponse:
         """Send a message and return the AI reply.
 
@@ -238,8 +258,10 @@ class AIChatClient:
         Passing ``config_url`` auto-creates the conversation if it doesn't
         exist yet.
         """
-        params: Dict[str, Any] = {
-            "id": conversation_id, "message": message, "role": role,
+        params: dict[str, Any] = {
+            "id": conversation_id,
+            "message": message,
+            "role": role,
         }
         if config_url:
             params["config_url"] = config_url
@@ -273,13 +295,14 @@ class AIChatClient:
     async def summarize(
         self,
         conversation_id: str,
-        summary_prompt: Optional[str] = None,
+        summary_prompt: str | None = None,
         **sampling: Any,
     ) -> str:
         """AI summary of the conversation (rate limited server-side)."""
-        params: Dict[str, Any] = {"id": conversation_id}
+        params: dict[str, Any] = {"id": conversation_id}
         if summary_prompt:
             params["summary_prompt"] = summary_prompt
         params.update({k: v for k, v in sampling.items() if v is not None})
         result = await self._request("summarize", params)
-        return result.get("summary", "")
+        summary = result.get("summary", "")
+        return summary if isinstance(summary, str) else str(summary)
