@@ -16,3 +16,4 @@ real example bug; every entry names a concrete external requirement.
 - examples/quickstart_rest.py — issues a real fabric.ai_agents.create() REST call on load; needs real SignalWire project creds (401 against mock) (mike, 2026-07-08)
 - examples/lambda_agent.py — requires the optional `mangum` AWS-Lambda adapter (deployment-only, not a base dependency) (mike, 2026-07-08)
 - examples/swml_service_example.py — interactive: calls input() for a menu choice; cannot run headless (EOFError) (mike, 2026-07-08)
+- relay/examples/relay_dial_and_play.py — drives an outbound RELAY call via a direct `await client.connect()` (no reconnect loop), which opens a real `wss://` RELAY WebSocket; the EXAMPLES-RUN harness starts only the REST mock (no RELAY WS endpoint), so connect() raises immediately. Needs a real SignalWire RELAY endpoint (mike, 2026-07-23)

@@ -40,9 +40,7 @@ class MCPAgent(AgentBase):
         # Headers are sent on every request for authentication.
         self.add_mcp_server(
             "https://mcp.example.com/tools",
-            headers={
-                "Authorization": "Bearer sk-your-mcp-api-key"
-            }
+            headers={"Authorization": "Bearer sk-your-mcp-api-key"},
         )
 
         # ── MCP Client with Resources ──────────────────────────────
@@ -52,34 +50,37 @@ class MCPAgent(AgentBase):
         # URI templates (e.g. crm://customer/{caller_id}).
         self.add_mcp_server(
             "https://mcp.example.com/crm",
-            headers={
-                "Authorization": "Bearer sk-your-crm-key"
-            },
+            headers={"Authorization": "Bearer sk-your-crm-key"},
             resources=True,
-            resource_vars={
-                "caller_id": "${caller_id_number}",
-                "tenant": "acme-corp"
-            }
+            resource_vars={"caller_id": "${caller_id_number}", "tenant": "acme-corp"},
         )
 
         # ── Agent Configuration ─────────────────────────────────────
-        self.prompt_add_section("Role", body=(
-            "You are a helpful customer support agent. "
-            "You have access to the customer's profile via global_data. "
-            "Use the available tools to look up information and assist the caller."
-        ))
+        self.prompt_add_section(
+            "Role",
+            body=(
+                "You are a helpful customer support agent. "
+                "You have access to the customer's profile via global_data. "
+                "Use the available tools to look up information and assist the caller."
+            ),
+        )
 
         # Reference MCP resource data in the prompt
-        self.prompt_add_section("Customer Context", body=(
-            "Customer name: ${global_data.customer_name}\n"
-            "Account status: ${global_data.account_status}\n"
-            "If customer data is not available, ask the caller for their name."
-        ))
+        self.prompt_add_section(
+            "Customer Context",
+            body=(
+                "Customer name: ${global_data.customer_name}\n"
+                "Account status: ${global_data.account_status}\n"
+                "If customer data is not available, ask the caller for their name."
+            ),
+        )
 
-        self.set_params({
-            "attention_timeout": 15000,
-            "conscience": "Be helpful and concise.",
-        })
+        self.set_params(
+            {
+                "attention_timeout": 15000,
+                "conscience": "Be helpful and concise.",
+            }
+        )
 
     # ── Local Tools ─────────────────────────────────────────────────
     # These are available both as SWAIG webhooks (voice calls) AND
@@ -89,32 +90,24 @@ class MCPAgent(AgentBase):
         "get_weather",
         description="Get the current weather for a location",
         parameters={
-            "location": {
-                "type": "string",
-                "description": "City name or zip code"
-            }
-        }
+            "location": {"type": "string", "description": "City name or zip code"}
+        },
     )
     def get_weather(self, args, raw_data):
         """Look up weather — available via both SWAIG and MCP"""
         location = args.get("location", "unknown")
-        return FunctionResult(
-            f"Currently 72°F and sunny in {location}."
-        )
+        return FunctionResult(f"Currently 72°F and sunny in {location}.")
 
     @AgentBase.tool(
         "create_ticket",
         description="Create a support ticket for the customer",
         parameters={
-            "subject": {
-                "type": "string",
-                "description": "Ticket subject"
-            },
+            "subject": {"type": "string", "description": "Ticket subject"},
             "description": {
                 "type": "string",
-                "description": "Detailed description of the issue"
-            }
-        }
+                "description": "Detailed description of the issue",
+            },
+        },
     )
     def create_ticket(self, args, raw_data):
         """Create a support ticket — available via both SWAIG and MCP"""

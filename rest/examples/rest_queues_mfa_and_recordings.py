@@ -36,7 +36,9 @@ def main():
     # 3. Get and update queue
     if queue_id:
         detail = client.queues.get(queue_id)
-        print(f"\nQueue detail: {detail.get('friendly_name', 'N/A')} (max: {detail.get('max_size', 'N/A')})")
+        print(
+            f"\nQueue detail: {detail.get('friendly_name', 'N/A')} (max: {detail.get('max_size', 'N/A')})"
+        )
 
         client.queues.update(queue_id, name="Priority Support Queue")
         print("  Updated queue name")
@@ -66,7 +68,9 @@ def main():
     first_rec = (recordings.get("data") or [{}])[0]
     if first_rec.get("id"):
         rec_detail = client.recordings.get(first_rec["id"])
-        print(f"  Recording: {rec_detail.get('duration', 'N/A')}s, {rec_detail.get('format', 'N/A')}")
+        print(
+            f"  Recording: {rec_detail.get('duration', 'N/A')}s, {rec_detail.get('format', 'N/A')}"
+        )
 
     # --- MFA ---
 
@@ -94,7 +98,9 @@ def main():
             message="Your verification code is {{code}}",
             token_length=6,
         )
-        print(f"  MFA call sent: {voice_result.get('id', voice_result.get('request_id'))}")
+        print(
+            f"  MFA call sent: {voice_result.get('id', voice_result.get('request_id'))}"
+        )
     except SignalWireRestError as e:
         print(f"  MFA call failed (expected in demo): {e.status_code}")
 

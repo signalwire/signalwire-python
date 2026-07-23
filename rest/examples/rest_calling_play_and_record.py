@@ -34,9 +34,15 @@ def main():
         call_id = "demo-call-id"
 
     # 2. Play TTS audio
+    #    The control_id ties later pause/resume/stop commands to this playback.
+    control_id = "demo-play-control-id"
     print("\nPlaying TTS on call...")
     try:
-        client.calling.play(call_id, play=[{"type": "tts", "params": {"text": "Welcome to SignalWire."}}])
+        client.calling.play(
+            call_id,
+            play=[{"type": "tts", "params": {"text": "Welcome to SignalWire."}}],
+            control_id=control_id,
+        )
         print("  Play started")
     except SignalWireRestError as e:
         print(f"  Play failed (expected in demo): {e.status_code}")
@@ -44,10 +50,15 @@ def main():
     # 3. Pause, resume, adjust volume, stop playback
     print("\nControlling playback...")
     for action, fn in [
-        ("Pause", lambda: client.calling.play_pause(call_id)),
-        ("Resume", lambda: client.calling.play_resume(call_id)),
-        ("Volume +2dB", lambda: client.calling.play_volume(call_id, volume=2.0)),
-        ("Stop", lambda: client.calling.play_stop(call_id)),
+        ("Pause", lambda: client.calling.play_pause(call_id, control_id=control_id)),
+        ("Resume", lambda: client.calling.play_resume(call_id, control_id=control_id)),
+        (
+            "Volume +2dB",
+            lambda: client.calling.play_volume(
+                call_id, control_id=control_id, volume=2.0
+            ),
+        ),
+        ("Stop", lambda: client.calling.play_stop(call_id, control_id=control_id)),
     ]:
         try:
             fn()
@@ -56,9 +67,14 @@ def main():
             print(f"  {action}: failed ({e.status_code})")
 
     # 4. Record the call
+    rec_control_id = "demo-record-control-id"
     print("\nRecording call...")
     try:
-        client.calling.record(call_id, beep=True, format="mp3")
+        client.calling.record(
+            call_id,
+            control_id=rec_control_id,
+            audio={"format": "mp3", "beep": True},
+        )
         print("  Recording started")
     except SignalWireRestError as e:
         print(f"  Record failed (expected in demo): {e.status_code}")
@@ -66,9 +82,18 @@ def main():
     # 5. Pause, resume, stop recording
     print("\nControlling recording...")
     for action, fn in [
-        ("Pause", lambda: client.calling.record_pause(call_id)),
-        ("Resume", lambda: client.calling.record_resume(call_id)),
-        ("Stop", lambda: client.calling.record_stop(call_id)),
+        (
+            "Pause",
+            lambda: client.calling.record_pause(call_id, control_id=rec_control_id),
+        ),
+        (
+            "Resume",
+            lambda: client.calling.record_resume(call_id, control_id=rec_control_id),
+        ),
+        (
+            "Stop",
+            lambda: client.calling.record_stop(call_id, control_id=rec_control_id),
+        ),
     ]:
         try:
             fn()
@@ -79,9 +104,10 @@ def main():
     # 6. Transcribe the call
     print("\nTranscribing call...")
     try:
-        client.calling.transcribe(call_id, language="en-US")
+        transcribe_control_id = "demo-transcribe-control-id"
+        client.calling.transcribe(call_id, control_id=transcribe_control_id)
         print("  Transcription started")
-        client.calling.transcribe_stop(call_id)
+        client.calling.transcribe_stop(call_id, control_id=transcribe_control_id)
         print("  Transcription stopped")
     except SignalWireRestError as e:
         print(f"  Transcribe failed (expected in demo): {e.status_code}")

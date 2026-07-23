@@ -18,8 +18,10 @@ def main():
     # 1. Create a subscriber
     print("Creating subscriber...")
     subscriber = client.fabric.subscribers.create(
-        name="Alice Johnson",
         email="alice@example.com",
+        first_name="Alice",
+        last_name="Johnson",
+        display_name="Alice Johnson",
     )
     sub_id = subscriber["id"]
     inner_sub_id = subscriber.get("subscriber", {}).get("id", sub_id)
@@ -77,7 +79,6 @@ def main():
     print("\nGenerating subscriber token...")
     try:
         token = client.fabric.tokens.create_subscriber_token(
-            subscriber_id=inner_sub_id,
             reference=inner_sub_id,
         )
         print(f"  Token: {str(token.get('token', ''))[:40]}...")
