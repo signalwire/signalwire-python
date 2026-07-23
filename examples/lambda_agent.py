@@ -32,13 +32,13 @@ Features:
     - Environment-based configuration
 """
 
-import os
 import sys
 from datetime import datetime
+from pathlib import Path
 
 # Add the signalwire module to the path if needed
 # (not needed if installed via pip)
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from signalwire import AgentBase
 from signalwire.core.function_result import FunctionResult
@@ -70,8 +70,7 @@ class HealthCheckAgent(AgentBase):
 
         # Configure prompt using prompt_add_section (the public API)
         self.prompt_add_section(
-            "Role",
-            body="You are a helpful AI assistant running in AWS Lambda."
+            "Role", body="You are a helpful AI assistant running in AWS Lambda."
         )
         self.prompt_add_section(
             "Instructions",
@@ -79,7 +78,7 @@ class HealthCheckAgent(AgentBase):
                 "Greet users warmly and offer help",
                 "Use the greet_user function when asked to greet someone",
                 "Use the get_time function when asked about the current time",
-            ]
+            ],
         )
 
     @AgentBase.tool("Greet a user by name")
@@ -107,6 +106,7 @@ app = agent.get_app()
 # This handles all the API Gateway <-> FastAPI translation
 handler = Mangum(app)
 
+
 def lambda_handler(event, context):
     """
     AWS Lambda entry point
@@ -130,6 +130,7 @@ def main():
     print("\nStarting agent server...")
     print("Note: Works in any deployment mode (server/CGI/Lambda)")
     agent.run()
+
 
 if __name__ == "__main__":
     main()

@@ -18,17 +18,28 @@ from signalwire.rest import RestClient, SignalWireRestError
 client = RestClient()
 
 
+def unassign_number(num_id):
+    """Attempt to unassign one number, reporting success/failure independently."""
+    try:
+        client.registry.numbers.delete(num_id)
+        print(f"  Unassigned number {num_id}")
+    except SignalWireRestError as e:
+        print(f"  Unassign failed: {e.status_code}")
+
+
 def main():
     # 1. Register a brand
     print("Registering 10DLC brand...")
     try:
         brand = client.registry.brands.create(
-            company_name="Acme Corp",
-            ein="12-3456789",
-            entity_type="PRIVATE_PROFIT",
-            vertical="TECHNOLOGY",
-            website="https://acme.example.com",
-            country="US",
+            {
+                "name": "Acme Corp",
+                "company_name": "Acme Corp",
+                "ein": "12-3456789",
+                "legal_entity_type": "PRIVATE_PROFIT",
+                "company_vertical": "TECHNOLOGY",
+                "company_website": "https://acme.example.com",
+            }
         )
         brand_id = brand["id"]
         print(f"  Registered brand: {brand_id}")
@@ -47,7 +58,9 @@ def main():
     # 3. Get brand details
     if brand_id:
         detail = client.registry.brands.get(brand_id)
-        print(f"\nBrand detail: {detail.get('name', 'N/A')} ({detail.get('state', 'N/A')})")
+        print(
+            f"\nBrand detail: {detail.get('name', 'N/A')} ({detail.get('state', 'N/A')})"
+        )
 
     # 4. Create a campaign under the brand
     campaign_id = None
@@ -56,9 +69,12 @@ def main():
         try:
             campaign = client.registry.brands.create_campaign(
                 brand_id,
-                use_case="MIXED",
-                description="Customer notifications and support messages",
-                sample_message="Your order #12345 has shipped.",
+                {
+                    "name": "Order notifications",
+                    "sms_use_case": "MIXED",
+                    "description": "Customer notifications and support messages",
+                    "sample1": "Your order #12345 has shipped.",
+                },
             )
             campaign_id = campaign["id"]
             print(f"  Created campaign: {campaign_id}")
@@ -77,11 +93,14 @@ def main():
     # 6. Get and update campaign
     if campaign_id:
         camp_detail = client.registry.campaigns.get(campaign_id)
-        print(f"\nCampaign: {camp_detail.get('name', 'N/A')} ({camp_detail.get('state', 'N/A')})")
+        print(
+            f"\nCampaign: {camp_detail.get('name', 'N/A')} ({camp_detail.get('state', 'N/A')})"
+        )
 
         try:
             client.registry.campaigns.update(
-                campaign_id, description="Updated: customer notifications",
+                campaign_id,
+                name="Updated: customer notifications",
             )
             print("  Campaign description updated")
         except SignalWireRestError as e:
@@ -93,7 +112,8 @@ def main():
         print("\nCreating number assignment order...")
         try:
             order = client.registry.campaigns.create_order(
-                campaign_id, phone_numbers=["+15125551234"],
+                campaign_id,
+                phone_numbers=["+15125551234"],
             )
             order_id = order["id"]
             print(f"  Created order: {order_id}")
@@ -121,11 +141,7 @@ def main():
         print("\nUnassigning numbers...")
         nums = client.registry.campaigns.list_numbers(campaign_id)
         for n in nums.get("data", []):
-            try:
-                client.registry.numbers.delete(n["id"])
-                print(f"  Unassigned number {n['id']}")
-            except SignalWireRestError as e:
-                print(f"  Unassign failed: {e.status_code}")
+            unassign_number(n["id"])
 
 
 if __name__ == "__main__":

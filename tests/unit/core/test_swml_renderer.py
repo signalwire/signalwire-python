@@ -172,6 +172,13 @@ class TestSwmlRenderer:
         assert "main" in parsed["sections"]
         assert len(parsed["sections"]["main"]) == 1
 
+        # Regression: the play block must be SCHEMA-VALID — text is played via the
+        # `say:` URL scheme, NOT a `text` key (the SWML play verb has no `text`).
+        # Previously emitted {"play": {"text": ...}}, which the schema rejects.
+        play = parsed["sections"]["main"][0]["play"]
+        assert play == {"url": "say:Hello there!"}, play
+        assert "text" not in play
+
     def test_render_function_response_swml_with_actions(self) -> None:
         """Test rendering function response SWML with actions"""
         actions = [

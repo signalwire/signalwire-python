@@ -534,6 +534,22 @@ class SWMLService(ToolMixin):
             handler = self.verb_registry.get_handler(verb_name)
             assert handler is not None  # noqa: S101  # type-narrowing invariant (not input validation): guaranteed by has_handler() above
             is_valid, errors = handler.validate_config(config)
+            # A handler's validate_config carries verb-specific diagnostics
+            # (e.g. the ai verb's prompt/SWAIG shape checks) but does NOT reject
+            # unknown/misspelled TOP-LEVEL keys — so a typo'd key would slip
+            # through silently (r5 silent-drop family: ai temperatur/zzz). Add a
+            # shallow unknown-top-level-key check against the schema so a handler
+            # verb rejects stray keys like every other verb. We deliberately do
+            # NOT run the full deep schema here: the ai verb's DEEP shapes
+            # (an empty prompt.pom for a promptless agent, the SWAIG function
+            # shape) are the handler's remit and are legitimately emitted by the
+            # SDK in forms the JSON-schema's oneOf/pom rules don't all accept —
+            # full validation would false-reject valid documents. The shallow
+            # check is a no-op when validation is disabled.
+            if is_valid:
+                is_valid, errors = self.schema_utils._validate_verb_top_level_keys(
+                    verb_name, config
+                )
         else:
             # Use schema-based validation for standard verbs
             is_valid, errors = self.schema_utils.validate_verb(verb_name, config)
@@ -603,6 +619,14 @@ class SWMLService(ToolMixin):
             handler = self.verb_registry.get_handler(verb_name)
             assert handler is not None  # noqa: S101  # type-narrowing invariant (not input validation): guaranteed by has_handler() above
             is_valid, errors = handler.validate_config(config)
+            # See add_verb: also run the shallow unknown-top-level-key check so a
+            # handler verb rejects misspelled/unknown top-level keys (NOT the full
+            # deep schema, which would false-reject the ai verb's legitimate
+            # empty-pom / SWAIG emissions). No-op when validation is disabled.
+            if is_valid:
+                is_valid, errors = self.schema_utils._validate_verb_top_level_keys(
+                    verb_name, config
+                )
         else:
             # Use schema-based validation for standard verbs
             is_valid, errors = self.schema_utils.validate_verb(verb_name, config)

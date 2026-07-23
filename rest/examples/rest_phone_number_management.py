@@ -63,7 +63,8 @@ def main():
         print("\nAdding number to group...")
         try:
             membership = client.number_groups.add_membership(
-                group_id, phone_number_id=num_id,
+                group_id,
+                phone_number_id=num_id,
             )
             mem_id = membership.get("id")
             print(f"  Membership: {mem_id}")
@@ -86,11 +87,13 @@ def main():
     # 8. Create a verified caller
     print("\nCreating verified caller...")
     try:
-        caller = client.verified_callers.create(phone_number="+15125559999")
+        caller = client.verified_callers.create(number="+15125559999")
         caller_id = caller["id"]
         print(f"  Created verified caller: {caller_id}")
         # Submit verification code
-        client.verified_callers.submit_verification(caller_id, verification_code="123456")
+        client.verified_callers.submit_verification(
+            caller_id, verification_code="123456"
+        )
         print("  Verification code submitted")
     except SignalWireRestError as e:
         print(f"  Verified caller failed (expected in demo): {e.status_code}")
@@ -119,12 +122,15 @@ def main():
     print("\nCreating address...")
     try:
         addr = client.addresses.create(
-            friendly_name="HQ Address",
-            street="123 Main St",
+            label="HQ Address",
+            country="US",
+            first_name="Acme",
+            last_name="Operations",
+            street_number="123",
+            street_name="Main St",
             city="Austin",
-            region="TX",
+            state="TX",
             postal_code="78701",
-            iso_country="US",
         )
         addr_id = addr["id"]
         print(f"  Created address: {addr_id}")

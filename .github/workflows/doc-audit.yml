@@ -36,9 +36,10 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: signalwire/porting-sdk
-          # PINNED to the A+ campaign branch wave/1-aplus (see test.yml). REVERT to
-          # main when porting-sdk wave/1-aplus merges.
-          ref: main
+          # Coordinated-pass pin: `main` normally; set the PORTING_SDK_REF repo variable
+          # to a wave branch to test a coordinated porting-sdk change, declared on the PR
+          # (see porting-sdk/COORDINATED_PASS.md). No revert commit.
+          ref: ${{ vars.PORTING_SDK_REF || 'main' }}
           path: porting-sdk
           token: ${{ secrets.PORTING_SDK_TOKEN }}
 

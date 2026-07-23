@@ -79,13 +79,10 @@ class StepFunctionInheritanceAgent(AgentBase):
 
         # ── Step 1: explicit whitelist ─────────────────────────────────
         # `lookup_account` is the only tool active in this step.
-        ctx.add_step("step_lookup") \
-            .set_text(
-                "Greet the customer and ask for their account number. "
-                "Use lookup_account to fetch their details."
-            ) \
-            .set_functions(["lookup_account"]) \
-            .set_valid_steps(["step_inherit"])
+        ctx.add_step("step_lookup").set_text(
+            "Greet the customer and ask for their account number. "
+            "Use lookup_account to fetch their details."
+        ).set_functions(["lookup_account"]).set_valid_steps(["step_inherit"])
 
         # ── Step 2: NO set_functions() call → inheritance ──────────────
         # Because we didn't call set_functions(), this step inherits the
@@ -93,35 +90,27 @@ class StepFunctionInheritanceAgent(AgentBase):
         # here, even though we never asked for it. Most of the time this
         # is a bug. To break the inheritance, call set_functions() with an
         # explicit list (even if it's empty).
-        ctx.add_step("step_inherit") \
-            .set_text(
-                "Confirm the customer's identity. (No set_functions() here, "
-                "so lookup_account is still active — this is the inheritance "
-                "trap.)"
-            ) \
-            .set_valid_steps(["step_explicit"])
+        ctx.add_step("step_inherit").set_text(
+            "Confirm the customer's identity. (No set_functions() here, "
+            "so lookup_account is still active — this is the inheritance "
+            "trap.)"
+        ).set_valid_steps(["step_explicit"])
 
         # ── Step 3: explicit replacement ───────────────────────────────
         # Whitelist replaces the inherited set. lookup_account is now
         # inactive; only process_payment is active.
-        ctx.add_step("step_explicit") \
-            .set_text(
-                "Take the customer's payment. Use process_payment. "
-                "lookup_account is no longer available."
-            ) \
-            .set_functions(["process_payment"]) \
-            .set_valid_steps(["step_disabled"])
+        ctx.add_step("step_explicit").set_text(
+            "Take the customer's payment. Use process_payment. "
+            "lookup_account is no longer available."
+        ).set_functions(["process_payment"]).set_valid_steps(["step_disabled"])
 
         # ── Step 4: explicit disable-all ───────────────────────────────
         # Pass [] (or "none") to lock out every user-defined tool.
         # Internal navigation tools (next_step) are unaffected.
-        ctx.add_step("step_disabled") \
-            .set_text(
-                "Thank the customer and wrap up. No tools are needed here, "
-                "so we lock everything down with set_functions([])."
-            ) \
-            .set_functions([]) \
-            .set_end(True)
+        ctx.add_step("step_disabled").set_text(
+            "Thank the customer and wrap up. No tools are needed here, "
+            "so we lock everything down with set_functions([])."
+        ).set_functions([]).set_end(True)
 
 
 if __name__ == "__main__":

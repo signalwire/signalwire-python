@@ -13,53 +13,51 @@ See LICENSE file in the project root for full license information.
 Example of using the ReceptionistAgent prefab to create a call routing system
 """
 
-import os
-import sys
 import json
 import argparse
 
 # Import the ReceptionistAgent prefab
 from signalwire.prefabs import ReceptionistAgent
-from signalwire.core.function_result import FunctionResult
+
 
 class CustomReceptionistAgent(ReceptionistAgent):
     """
     Extending the ReceptionistAgent prefab with custom functionality
-    
+
     This example demonstrates:
     1. Using the prefab with minimal configuration
     2. Adding custom voice and greeting
     3. Overriding the on_summary method to log call data
     """
-    
+
     def __init__(self, **kwargs):
         # Define departments with their descriptions and transfer numbers
         departments = [
             {
-                "name": "sales", 
-                "description": "For product inquiries, pricing, and purchasing", 
-                "number": "+15551235555"
+                "name": "sales",
+                "description": "For product inquiries, pricing, and purchasing",
+                "number": "+15551235555",
             },
             {
-                "name": "support", 
-                "description": "For technical assistance, troubleshooting, and bug reports", 
-                "number": "+15551236666"
+                "name": "support",
+                "description": "For technical assistance, troubleshooting, and bug reports",
+                "number": "+15551236666",
             },
             {
-                "name": "billing", 
-                "description": "For payment questions, invoices, and subscription changes", 
-                "number": "+15551237777"
+                "name": "billing",
+                "description": "For payment questions, invoices, and subscription changes",
+                "number": "+15551237777",
             },
             {
-                "name": "general", 
-                "description": "For all other inquiries or if you're not sure which department you need", 
-                "number": "+15551238888"
-            }
+                "name": "general",
+                "description": "For all other inquiries or if you're not sure which department you need",
+                "number": "+15551238888",
+            },
         ]
-        
+
         # Custom greeting message
         greeting = "Hello, thank you for calling ACME Corporation. How may I direct your call today?"
-        
+
         # Initialize the base ReceptionistAgent with our configuration
         super().__init__(
             departments=departments,
@@ -67,29 +65,26 @@ class CustomReceptionistAgent(ReceptionistAgent):
             route="/reception",
             greeting=greeting,
             voice="inworld.Mark",  # Using proper voice format
-            **kwargs
+            **kwargs,
         )
-        
+
         # Add additional custom prompt section if needed
         self.prompt_add_section(
             "Company Information",
-            body="ACME Corporation is a leading provider of innovative solutions. Our business hours are Monday through Friday, 9 AM to 5 PM Eastern Time."
+            body="ACME Corporation is a leading provider of innovative solutions. Our business hours are Monday through Friday, 9 AM to 5 PM Eastern Time.",
         )
-        
+
         # Add a prompt section that clarifies available departments for transfers
         departments_text = "Available departments for transfer:\n"
         for dept in departments:
             departments_text += f"- {dept['name'].title()}: {dept['description']}\n"
-        
-        self.prompt_add_section(
-            "Transfer Options",
-            body=departments_text
-        )
-    
+
+        self.prompt_add_section("Transfer Options", body=departments_text)
+
     def on_summary(self, summary, raw_data=None):
         """
         Process the conversation summary with custom handling
-        
+
         Args:
             summary: Summary data from the conversation
             raw_data: The complete raw POST data from the request
@@ -101,7 +96,7 @@ class CustomReceptionistAgent(ReceptionistAgent):
             # - Send to a CRM
             # - Generate analytics
             print(f"Call Summary: {json.dumps(summary, indent=2)}")
-            
+
             # You could trigger follow-up actions based on satisfaction
             satisfaction = summary.get("satisfaction", "")
             if satisfaction == "low":
@@ -111,16 +106,17 @@ class CustomReceptionistAgent(ReceptionistAgent):
 
 def main():
     """Run the ReceptionistAgent example"""
-    
+
     # Parse command-line arguments
     parser = argparse.ArgumentParser(description="ReceptionistAgent Example")
     parser.add_argument("--host", default="0.0.0.0", help="Host to bind the server to")
-    parser.add_argument("--port", type=int, default=3000, help="Port to bind the server to")
+    parser.add_argument(
+        "--port", type=int, default=3000, help="Port to bind the server to"
+    )
     args, _ = parser.parse_known_args()
-    
+
     # Create our custom receptionist agent
-    agent = CustomReceptionistAgent(host=args.host, port=args.port)
-    return agent
+    return CustomReceptionistAgent(host=args.host, port=args.port)
 
 
 if __name__ == "__main__":
@@ -139,4 +135,4 @@ if __name__ == "__main__":
 
     print("\nStarting agent server...")
     print("Note: Works in any deployment mode (server/CGI/Lambda)")
-    agent.run() 
+    agent.run()

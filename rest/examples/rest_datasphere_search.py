@@ -11,7 +11,7 @@ For full HTTP debug output:
 
 import time
 
-from signalwire.rest import RestClient, SignalWireRestError
+from signalwire.rest import RestClient
 
 client = RestClient()
 
@@ -20,16 +20,18 @@ def main():
     # 1. Upload a document (a publicly accessible text file)
     print("Uploading document to Datasphere...")
     doc = client.datasphere.documents.create(
-        url="https://filesamples.com/samples/document/txt/sample3.txt",
-        tags=["support", "demo"],
+        {
+            "url": "https://filesamples.com/samples/document/txt/sample3.txt",
+            "tags": ["support", "demo"],
+        }
     )
     doc_id = doc["id"]
     print(f"  Document created: {doc_id} (status: {doc.get('status')})")
 
     # 2. Wait for vectorization to complete
     print("\nWaiting for document to be vectorized...")
-    for i in range(30):
-        time.sleep(2)
+    for i in range(3):
+        time.sleep(1)
         doc_status = client.datasphere.documents.get(doc_id)
         status = doc_status.get("status", "unknown")
         print(f"  Poll {i + 1}: status={status}")
