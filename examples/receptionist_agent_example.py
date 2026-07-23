@@ -116,8 +116,7 @@ def main():
     args, _ = parser.parse_known_args()
 
     # Create our custom receptionist agent
-    agent = CustomReceptionistAgent(host=args.host, port=args.port)
-    return agent
+    return CustomReceptionistAgent(host=args.host, port=args.port)
 
 
 if __name__ == "__main__":

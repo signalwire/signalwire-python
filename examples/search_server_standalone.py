@@ -54,14 +54,13 @@ Security Features:
 - Additional security configuration available (see docs/security.md)
 """
 
-import os
 import sys
 import logging
 import argparse
 from pathlib import Path
 
 # Add the parent directory to the path so we can import the package
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)

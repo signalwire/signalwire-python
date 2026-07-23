@@ -21,11 +21,11 @@ It shows three different approaches to building SWML documents:
 Each approach creates a standalone SWML service that can be run independently.
 """
 
-import os
 import sys
+from pathlib import Path
 
 # Add the parent directory to the path so we can import the package
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from signalwire.core.swml_service import SWMLService
 from signalwire.core.swml_builder import SWMLBuilder

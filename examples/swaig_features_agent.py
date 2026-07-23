@@ -83,12 +83,13 @@ The resulting SWAIG array in SWML will have the following structure:
 ]
 """
 
-import os
 import sys
 from datetime import datetime
+from pathlib import Path
+from typing import ClassVar
 
 # Add the parent directory to the path so we can import the package
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from signalwire import AgentBase
 from signalwire.core.function_result import FunctionResult
@@ -100,7 +101,7 @@ class SwaigFeaturesAgent(AgentBase):
     """
 
     # Define the prompt sections declaratively
-    PROMPT_SECTIONS = {
+    PROMPT_SECTIONS: ClassVar[dict] = {
         "Personality": "You are a friendly and helpful assistant.",
         "Goal": "Demonstrate advanced SWAIG features.",
         "Instructions": [

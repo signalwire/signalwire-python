@@ -88,7 +88,7 @@ class PGVectorSearchAgent(AgentBase):
 
     @AgentBase.tool("search_with_metadata")
     def search_with_metadata_filter(
-        self, query: str, category: str = None, tags: list = None
+        self, query: str, category: str | None = None, tags: list | None = None
     ):
         """Advanced search with metadata filtering (requires custom implementation)"""
         # This is a placeholder showing how you might implement custom search

@@ -41,6 +41,11 @@ export MOCK_RELAY_STRICT="${MOCK_RELAY_STRICT:-1}"
 PORT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PORT_NAME="signalwire-python"
 
+# Shipped example directories (examples/, rest/examples/, relay/examples/). Linted
+# and format-checked as a group by the EXAMPLES-LINT / EXAMPLES-FMT gates. ruff
+# reads pyproject's per-file-ignores for examples/**, so the SDK ruleset stays intact.
+EXAMPLE_DIRS=("$PORT_ROOT/examples" "$PORT_ROOT/rest/examples" "$PORT_ROOT/relay/examples")
+
 resolve_porting_sdk() {
     if [ -n "${PORTING_SDK:-}" ] && [ -d "$PORTING_SDK/scripts" ]; then
         echo "$PORTING_SDK"
@@ -99,6 +104,19 @@ fmt_gate() {
             echo "    (FMT auto-applied formatting to your working tree — review & stage)"
         fi
         python3 -m ruff format --check "$PORT_ROOT/signalwire"
+    fi
+}
+
+# EXAMPLES-FMT — ruff format over the shipped example dirs. LOCAL applies; CI --check.
+examples_fmt_gate() {
+    if [ -n "${CI:-}" ]; then
+        python3 -m ruff format --check "${EXAMPLE_DIRS[@]}"
+    else
+        python3 -m ruff format "${EXAMPLE_DIRS[@]}" >/dev/null
+        if ! (cd "$PORT_ROOT" && git diff --quiet 2>/dev/null); then
+            echo "    (EXAMPLES-FMT auto-applied formatting to your working tree — review & stage)"
+        fi
+        python3 -m ruff format --check "${EXAMPLE_DIRS[@]}"
     fi
 }
 
@@ -217,6 +235,15 @@ sched_gate FMT defer=1 desc="ruff format (local: apply; CI: --check)" \
 
 sched_gate LINT desc="ruff check zero findings" \
     -- python3 -m ruff check "$PORT_ROOT/signalwire"
+
+# EXAMPLES-LINT / EXAMPLES-FMT — the shipped example dirs are ruff-clean too. Cheap
+# static checks (no build, no mock) → per-PR cheap wave. ruff honors pyproject's
+# examples/** per-file-ignores, so this enforces the same ruleset the SDK uses.
+sched_gate EXAMPLES-LINT desc="ruff check zero findings over examples/ rest/examples/ relay/examples/" \
+    -- python3 -m ruff check "${EXAMPLE_DIRS[@]}"
+
+sched_gate EXAMPLES-FMT desc="ruff format over the example dirs (local: apply; CI: --check)" \
+    --fn examples_fmt_gate
 
 sched_gate TYPECHECK desc="mypy zero findings" \
     -- python3 -m mypy --config-file "$PORT_ROOT/pyproject.toml"

@@ -69,7 +69,7 @@ class DynamicGreetingService(SWMLService):
 
         self.log.debug("default_document_built")
 
-    def on_request(self, request_data: dict = None) -> dict:
+    def on_request(self, request_data: dict | None = None) -> dict:
         """
         Customize the SWML document based on the request data
 
@@ -245,7 +245,7 @@ class CallRouterService(SWMLService):
 
         self.log.debug("default_document_built")
 
-    def on_request(self, request_data: dict = None) -> dict:
+    def on_request(self, request_data: dict | None = None) -> dict:
         """
         Route calls differently based on POST data
 

@@ -19,7 +19,7 @@ This uses the refactored AgentBase class that internally uses SWMLService.
 """
 
 from datetime import datetime
-import os
+from pathlib import Path
 import json
 import argparse
 
@@ -49,21 +49,21 @@ class SimpleAgent(AgentBase):
         # Find schema.json in the current directory or parent directory
         # The schema.json file defines the valid structure for SWML documents
         # and is used for validation during document creation
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        parent_dir = os.path.dirname(current_dir)
+        current_dir = Path(__file__).resolve().parent
+        parent_dir = current_dir.parent
 
         # Try to find schema.json in several locations
         # This allows the example to work regardless of where it's run from
         schema_locations = [
-            os.path.join(current_dir, "schema.json"),
-            os.path.join(parent_dir, "schema.json"),
-            os.path.join(os.path.dirname(os.path.dirname(__file__)), "schema.json"),
+            current_dir / "schema.json",
+            parent_dir / "schema.json",
+            Path(__file__).parent.parent / "schema.json",
         ]
 
         schema_path = None
         for loc in schema_locations:
-            if os.path.exists(loc):
-                schema_path = loc
+            if loc.exists():
+                schema_path = str(loc)
                 logger.info("schema_found", path=schema_path)
                 break
 

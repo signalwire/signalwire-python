@@ -183,8 +183,7 @@ class RoutingExample(SWMLService):
 
 def main():
     # Create an instance of our example service
-    service = RoutingExample()
-    return service
+    return RoutingExample()
 
 
 if __name__ == "__main__":

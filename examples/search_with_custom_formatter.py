@@ -87,9 +87,12 @@ def context_aware_formatter(response, agent, query, results, **kwargs):
     formatted = ""
 
     # Check if this appears to be a follow-up question
-    if hasattr(agent, "last_search_query"):
-        if agent.last_search_query and query != agent.last_search_query:
-            formatted += f"📝 *Following up from your previous search about '{agent.last_search_query}'*\n\n"
+    if (
+        hasattr(agent, "last_search_query")
+        and agent.last_search_query
+        and query != agent.last_search_query
+    ):
+        formatted += f"📝 *Following up from your previous search about '{agent.last_search_query}'*\n\n"
 
     # Store current query for next time
     agent.last_search_query = query

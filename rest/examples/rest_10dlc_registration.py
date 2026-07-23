@@ -18,6 +18,15 @@ from signalwire.rest import RestClient, SignalWireRestError
 client = RestClient()
 
 
+def unassign_number(num_id):
+    """Attempt to unassign one number, reporting success/failure independently."""
+    try:
+        client.registry.numbers.delete(num_id)
+        print(f"  Unassigned number {num_id}")
+    except SignalWireRestError as e:
+        print(f"  Unassign failed: {e.status_code}")
+
+
 def main():
     # 1. Register a brand
     print("Registering 10DLC brand...")
@@ -132,11 +141,7 @@ def main():
         print("\nUnassigning numbers...")
         nums = client.registry.campaigns.list_numbers(campaign_id)
         for n in nums.get("data", []):
-            try:
-                client.registry.numbers.delete(n["id"])
-                print(f"  Unassigned number {n['id']}")
-            except SignalWireRestError as e:
-                print(f"  Unassign failed: {e.status_code}")
+            unassign_number(n["id"])
 
 
 if __name__ == "__main__":

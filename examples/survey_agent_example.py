@@ -21,12 +21,12 @@ Features demonstrated:
 4. Processing survey results
 """
 
-import os
 import logging
 import sys
 import json
 import argparse
 from datetime import datetime
+from pathlib import Path
 
 # Import structlog for proper structured logging
 import structlog
@@ -312,18 +312,18 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     # Find schema.json in the current directory or parent directory
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(current_dir)
+    current_dir = Path(__file__).resolve().parent
+    parent_dir = current_dir.parent
 
     schema_locations = [
-        os.path.join(current_dir, "schema.json"),
-        os.path.join(parent_dir, "schema.json"),
+        current_dir / "schema.json",
+        parent_dir / "schema.json",
     ]
 
     schema_path = None
     for loc in schema_locations:
-        if os.path.exists(loc):
-            schema_path = loc
+        if loc.exists():
+            schema_path = str(loc)
             logger.info("schema_found", path=schema_path)
             break
 

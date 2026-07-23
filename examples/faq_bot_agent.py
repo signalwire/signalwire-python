@@ -21,11 +21,12 @@ Key concepts demonstrated:
 4. Customizing agent behavior at runtime
 """
 
-import os
 import sys
+from pathlib import Path
+from typing import ClassVar
 
 # Add the parent directory to the path so we can import the package
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from signalwire import AgentBase
 
@@ -48,7 +49,7 @@ class FAQBotAgent(AgentBase):
     # Define the prompt sections declaratively with placeholders
     # This demonstrates creating reusable prompt templates that can be
     # customized for different instances of the same agent type
-    PROMPT_SECTIONS = {
+    PROMPT_SECTIONS: ClassVar[dict] = {
         "Personality": "You are a helpful FAQ assistant for {company_name}.",
         "Goal": "Answer customer questions using only the provided FAQ knowledge base.",
         "Instructions": [

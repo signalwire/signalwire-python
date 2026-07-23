@@ -32,13 +32,13 @@ Features:
     - Environment-based configuration
 """
 
-import os
 import sys
 from datetime import datetime
+from pathlib import Path
 
 # Add the signalwire module to the path if needed
 # (not needed if installed via pip)
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from signalwire import AgentBase
 from signalwire.core.function_result import FunctionResult

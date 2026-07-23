@@ -18,6 +18,15 @@ from signalwire.rest import RestClient, SignalWireRestError
 client = RestClient()
 
 
+def run_action(action, fn):
+    """Attempt one call-control action and report OK/failed independently."""
+    try:
+        fn()
+        print(f"  {action}: OK")
+    except SignalWireRestError as e:
+        print(f"  {action}: failed ({e.status_code})")
+
+
 def main():
     # 1. Dial an outbound call
     print("Dialing outbound call...")
@@ -60,11 +69,7 @@ def main():
         ),
         ("Stop", lambda: client.calling.play_stop(call_id, control_id=control_id)),
     ]:
-        try:
-            fn()
-            print(f"  {action}: OK")
-        except SignalWireRestError as e:
-            print(f"  {action}: failed ({e.status_code})")
+        run_action(action, fn)
 
     # 4. Record the call
     rec_control_id = "demo-record-control-id"
@@ -95,11 +100,7 @@ def main():
             lambda: client.calling.record_stop(call_id, control_id=rec_control_id),
         ),
     ]:
-        try:
-            fn()
-            print(f"  {action}: OK")
-        except SignalWireRestError as e:
-            print(f"  {action}: failed ({e.status_code})")
+        run_action(action, fn)
 
     # 6. Transcribe the call
     print("\nTranscribing call...")

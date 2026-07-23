@@ -21,13 +21,14 @@ Key concepts demonstrated:
 4. Multiple approaches to structuring prompt data
 """
 
-import os
 import sys
 import json
 from datetime import datetime
+from pathlib import Path
+from typing import ClassVar
 
 # Add the parent directory to the path so we can import the package
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from signalwire import AgentBase
 from signalwire.core.function_result import FunctionResult
@@ -54,7 +55,7 @@ class DeclarativeAgent(AgentBase):
 
     # Define the entire prompt structure declaratively as a class attribute
     # This will be automatically processed by AgentBase when the class is instantiated
-    PROMPT_SECTIONS = {
+    PROMPT_SECTIONS: ClassVar[dict] = {
         # Simple string sections are rendered as-is
         "Personality": "You are a friendly and helpful AI assistant who responds in a casual, conversational tone.",
         # Short sections can be defined with a simple string
@@ -233,7 +234,7 @@ class PomFormatAgent(AgentBase):
     # Define the prompt using the direct POM format (list of sections)
     # This format matches the internal representation used by the POM
     # and provides more control over the exact structure
-    PROMPT_SECTIONS = [
+    PROMPT_SECTIONS: ClassVar[list] = [
         {
             "title": "Assistant Role",  # Section title
             "body": "You are a technical support agent for SignalWire products.",

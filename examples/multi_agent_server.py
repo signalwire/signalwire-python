@@ -38,16 +38,16 @@ Usage examples:
    curl "http://localhost:3000/dynamic?tier=enterprise&industry=tech&voice=inworld.Mark"
 """
 
-import os
 import sys
 import json
 from datetime import datetime
+from pathlib import Path
 from fastapi import FastAPI
 from signalwire import AgentBase
 from comprehensive_dynamic_agent import ComprehensiveDynamicAgent
 
 # Add the parent directory to the path so we can import the package
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from signalwire.prefabs import InfoGathererAgent
 from signalwire.core.function_result import FunctionResult
@@ -131,7 +131,7 @@ class CustomInfoGatherer(InfoGathererAgent):
 
         # Simulate CRM save by writing to a local file
         # In a real implementation, this would call a CRM API
-        with open("customer_data.json", "a") as f:
+        with Path("customer_data.json").open("a") as f:
             f.write(
                 json.dumps(
                     {

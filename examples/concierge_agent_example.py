@@ -20,10 +20,10 @@ Features demonstrated:
 3. Running the agent server
 """
 
-import os
 import logging
 import sys
 import argparse
+from pathlib import Path
 
 # Import the ConciergeAgent prefab
 from signalwire.prefabs import ConciergeAgent
@@ -50,18 +50,18 @@ def main():
     args, _ = parser.parse_known_args()
 
     # Find schema.json in the current directory or parent directory
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    parent_dir = os.path.dirname(current_dir)
+    current_dir = Path(__file__).resolve().parent
+    parent_dir = current_dir.parent
 
     schema_locations = [
-        os.path.join(current_dir, "schema.json"),
-        os.path.join(parent_dir, "schema.json"),
+        current_dir / "schema.json",
+        parent_dir / "schema.json",
     ]
 
     schema_path = None
     for loc in schema_locations:
-        if os.path.exists(loc):
-            schema_path = loc
+        if loc.exists():
+            schema_path = str(loc)
             logger.info(f"Found schema.json at: {schema_path}")
             break
 
@@ -136,7 +136,7 @@ def main():
     )
 
     # Create the concierge agent
-    agent = ConciergeAgent(
+    return ConciergeAgent(
         venue_name=venue_name,
         services=services,
         amenities=amenities,
@@ -147,8 +147,6 @@ def main():
         host=args.host,
         port=args.port,
     )
-
-    return agent
 
 
 if __name__ == "__main__":

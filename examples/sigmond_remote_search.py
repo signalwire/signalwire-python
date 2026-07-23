@@ -34,9 +34,10 @@ and use it to answer questions about the SDK.
 import os
 import sys
 import logging
+from pathlib import Path
 
 # Add the parent directory to the path so we can import the package
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from signalwire import AgentBase
 
