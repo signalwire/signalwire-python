@@ -85,6 +85,14 @@ class ChatInProgressError(AIChatError):
     """Another message is being processed for this conversation (-32007)."""
 
 
+class SummaryError(AIChatError):
+    """Summary generation failed. ``summarize`` returns EXACTLY ONE of
+    ``{summary}`` (success) or ``{error}`` (generation failed), and the failure
+    rides the JSON-RPC *success* envelope — not an ``error`` object — so it never
+    reaches the ``_ERROR_BY_CODE`` mapping. Surfaced here so a failed summary
+    can't masquerade as an empty string. ``code`` is None (no JSON-RPC code)."""
+
+
 _ERROR_BY_CODE = {
     -32001: ConversationNotFoundError,
     -32005: RateLimitError,
@@ -213,6 +221,10 @@ class AIChatClient:
                 raise AIChatError(
                     resp.status, f"non-JSON response (HTTP {resp.status})"
                 ) from err
+        # Success/failure is decided by the JSON-RPC body, NOT the HTTP status:
+        # the service's keepalive heartbeat commits ``200`` before the turn's
+        # outcome is known (heartbeat.py), so a slow error arrives as
+        # ``200 + {"error": …}``. Never gate on ``resp.status`` here.
         if "error" in body:
             error = body["error"] or {}
             code = error.get("code")
@@ -314,11 +326,19 @@ class AIChatClient:
         summary_prompt: str | None = None,
         **sampling: Any,
     ) -> str:
-        """AI summary of the conversation (rate limited server-side)."""
+        """AI summary of the conversation (rate limited server-side).
+
+        Raises :class:`SummaryError` when the server reports that summary
+        generation failed — the service returns EXACTLY ONE of ``{summary}`` or
+        ``{error}`` (both on the success envelope), so a failure must surface as
+        an error, never as an empty string.
+        """
         params: dict[str, Any] = {"id": conversation_id}
         if summary_prompt:
             params["summary_prompt"] = summary_prompt
         params.update({k: v for k, v in sampling.items() if v is not None})
         result = await self._request("summarize", params)
+        if "error" in result and "summary" not in result:
+            raise SummaryError(None, str(result["error"]))
         summary = result.get("summary", "")
         return summary if isinstance(summary, str) else str(summary)

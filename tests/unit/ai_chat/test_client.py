@@ -21,6 +21,7 @@ from signalwire.ai_chat import (
     ChatInProgressError,
     ConversationNotFoundError,
     RateLimitError,
+    SummaryError,
 )
 
 PROJECT = "proj-1"
@@ -192,6 +193,28 @@ async def test_response_models(stub: StubService) -> None:
         log = await client.log("c")
         assert log.messages[0]["content"] == "m"
         assert log.call_timeline == [{"t": 1}]
+
+
+# ── summarize: one_of {summary | error} ──────────────────────────────
+
+
+async def test_summarize_returns_summary(stub: StubService) -> None:
+    stub.result = {"summary": "a concise summary"}
+    async with AIChatClient(PROJECT, TOKEN, url=stub.url) as client:
+        assert await client.summarize("c") == "a concise summary"
+
+
+async def test_summarize_error_branch_raises(stub: StubService) -> None:
+    # summarize returns EXACTLY ONE of {summary} or {error}, and the failure
+    # rides the SUCCESS envelope (not a JSON-RPC error object). It must surface
+    # as SummaryError, never be swallowed into an empty string.
+    stub.result = {"error": "Failed to generate summary"}
+    async with AIChatClient(PROJECT, TOKEN, url=stub.url) as client:
+        with pytest.raises(SummaryError) as exc:
+            await client.summarize("c")
+    assert "Failed to generate summary" in str(exc.value)
+    assert exc.value.code is None
+    assert isinstance(exc.value, AIChatError)
 
 
 # ── Session timeout policy ───────────────────────────────────────────

@@ -20,6 +20,7 @@ from .client import (
     ConversationInfo,
     ConversationNotFoundError,
     RateLimitError,
+    SummaryError,
 )
 
 __all__ = [
@@ -32,4 +33,5 @@ __all__ = [
     "ConversationInfo",
     "ConversationNotFoundError",
     "RateLimitError",
+    "SummaryError",
 ]
