@@ -19,16 +19,21 @@ def main():
     print("Creating SWML script...")
     swml = client.fabric.swml_scripts.create(
         name="Greeting Script",
-        contents={"sections": {"main": [{"play": {"url": "say:Hello from SignalWire"}}]}},
+        contents={
+            "sections": {"main": [{"play": {"url": "say:Hello from SignalWire"}}]}
+        },
     )
     swml_id = swml["id"]
     print(f"  Created SWML script: {swml_id}")
 
     # 2. List SWML scripts to confirm
     print("\nListing SWML scripts...")
+    # The list endpoint returns an array of page objects (each with its own
+    # "data" array), so iterate the pages and then each page's items.
     scripts = client.fabric.swml_scripts.list()
-    for s in scripts.get("data", []):
-        print(f"  - {s['id']}: {s.get('display_name', 'unnamed')}")
+    for page in scripts:
+        for s in page.get("data", []):
+            print(f"  - {s['id']}: {s.get('display_name', 'unnamed')}")
 
     # 3. Create a call flow
     print("\nCreating call flow...")
@@ -39,7 +44,9 @@ def main():
     # 4. Deploy a version of the call flow
     print("\nDeploying call flow version...")
     try:
-        version = client.fabric.call_flows.deploy_version(flow_id, label="v1")
+        version = client.fabric.call_flows.deploy_version(
+            flow_id, {"document_version": 1}
+        )
         print(f"  Deployed version: {version}")
     except SignalWireRestError as e:
         print(f"  Deploy failed (expected in demo): {e.status_code}")

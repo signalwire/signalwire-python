@@ -17,12 +17,12 @@ Set these env vars (or pass them directly to RestClient):
 
 import os
 
-from signalwire.rest import RestClient, PhoneCallHandler
+from signalwire.rest import RestClient
 
 
 def main() -> None:
-    pn_sid = os.environ["PHONE_NUMBER_SID"]
-    webhook_url = os.environ["SWML_WEBHOOK_URL"]
+    pn_sid = os.environ.get("PHONE_NUMBER_SID", "00000000-0000-0000-0000-000000000000")
+    webhook_url = os.environ.get("SWML_WEBHOOK_URL", "https://example.com/swml-handler")
 
     client = RestClient()
 
@@ -42,8 +42,10 @@ def main() -> None:
     pn = client.phone_numbers.get(pn_sid)
     print(f"  call_handler = {pn.get('call_handler')!r}")
     print(f"  call_relay_script_url = {pn.get('call_relay_script_url')!r}")
-    print(f"  calling_handler_resource_id (server-derived) = "
-          f"{pn.get('calling_handler_resource_id')!r}")
+    print(
+        f"  calling_handler_resource_id (server-derived) = "
+        f"{pn.get('calling_handler_resource_id')!r}"
+    )
 
     # To route to something other than an SWML webhook, use:
     #   client.phone_numbers.set_cxml_webhook(sid, url=...)       # LAML / Twilio-compat

@@ -407,6 +407,64 @@ class SchemaUtils:
 
         return len(errors) == 0, errors
 
+    def _verb_top_level_property_names(self, verb_name: str) -> set[str] | None:
+        """Resolve the set of KNOWN top-level property names for a verb's config
+        object, following a single ``$ref`` (e.g. AI -> AIObject). Returns None
+        when the verb's config schema is not a closed object-with-properties
+        (i.e. we cannot enumerate a known-key set, so no shallow check applies)."""
+        if verb_name not in self.verbs:
+            return None
+        verb_def = self.verbs[verb_name]["definition"]
+        props = verb_def.get("properties", {})
+        body = props.get(verb_name)
+        if not isinstance(body, dict):
+            return None
+        # Follow a single $ref (AI -> AIObject) to the object that declares the
+        # verb config's own properties.
+        if "$ref" in body:
+            ref_name = body["$ref"].split("/")[-1]
+            body = self.schema.get("$defs", {}).get(ref_name, {})
+        if not isinstance(body, dict) or body.get("type") != "object":
+            return None
+        prop_map = body.get("properties")
+        if not isinstance(prop_map, dict):
+            return None
+        # Only meaningful as a closed-key check when the schema itself closes the
+        # object (additionalProperties:false or unevaluatedProperties disallowed).
+        closes = (
+            body.get("additionalProperties") is False
+            or body.get("unevaluatedProperties") is False
+            or body.get("unevaluatedProperties") == {"not": {}}
+        )
+        if not closes:
+            return None
+        return set(prop_map.keys())
+
+    def _validate_verb_top_level_keys(
+        self, verb_name: str, verb_config: dict[str, Any]
+    ) -> tuple[bool, list[str]]:
+        """Shallow strict-render check: reject unknown/misspelled TOP-LEVEL keys
+        in a verb config against the schema's known property set, WITHOUT running
+        the full deep schema (which would false-reject legitimate deep emissions
+        such as the ai verb's empty prompt.pom). Used for handler verbs (the ai
+        verb) whose deep shapes the handler owns. A no-op when validation is
+        disabled or when the verb has no enumerable closed key-set."""
+        if not self._validation_enabled:
+            return True, []
+        if verb_name not in self.verbs:
+            return False, [f"Unknown verb: {verb_name}"]
+        known = self._verb_top_level_property_names(verb_name)
+        if known is None:
+            # No enumerable closed key-set — nothing shallow to enforce.
+            return True, []
+        unknown = [k for k in verb_config if k not in known]
+        if unknown:
+            return False, [
+                f"Unknown/misspelled key(s) {sorted(unknown)} for verb "
+                f"'{verb_name}'. Known keys: {sorted(known)}"
+            ]
+        return True, []
+
     def validate_document(self, document: dict[str, Any]) -> tuple[bool, list[str]]:
         """
         Validate a complete SWML document against the schema.

@@ -8,7 +8,6 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-
 """
 Simple Static Agent Example (Traditional Way)
 
@@ -34,66 +33,60 @@ Try these requests:
 
 from signalwire import AgentBase
 
+
 class SimpleStaticAgent(AgentBase):
     def __init__(self):
         super().__init__(
-            name="Simple Customer Service Agent",
-            auto_answer=True,
-            record_call=True
+            name="Simple Customer Service Agent", auto_answer=True, record_call=True
         )
-        
+
         # STATIC CONFIGURATION - Set once during initialization
-        
+
         # Voice and language (never changes)
         self.add_language("English", "en-US", "inworld.Mark")
-        
+
         # AI parameters (never changes)
-        self.set_params({
-            "ai_model": "gpt-4.1-nano",
-            "end_of_speech_timeout": 500,
-            "attention_timeout": 15000,
-            "background_file_volume": -20
-        })
-        
-        # Hints for speech recognition (never changes)
-        self.add_hints([
-            "SignalWire",
-            "SWML", 
-            "API",
-            "webhook",
-            "SIP"
-        ])
-        
-        # Global data (same for every call)
-        self.set_global_data({
-            "agent_type": "customer_service",
-            "service_level": "standard",
-            "features_enabled": ["basic_conversation", "help_desk"],
-            "session_info": {
-                "environment": "production",
-                "version": "1.0"
+        self.set_params(
+            {
+                "ai_model": "gpt-4.1-nano",
+                "end_of_speech_timeout": 500,
+                "attention_timeout": 15000,
+                "background_file_volume": -20,
             }
-        })
-        
+        )
+
+        # Hints for speech recognition (never changes)
+        self.add_hints(["SignalWire", "SWML", "API", "webhook", "SIP"])
+
+        # Global data (same for every call)
+        self.set_global_data(
+            {
+                "agent_type": "customer_service",
+                "service_level": "standard",
+                "features_enabled": ["basic_conversation", "help_desk"],
+                "session_info": {"environment": "production", "version": "1.0"},
+            }
+        )
+
         # Prompt sections (never changes)
         self.prompt_add_section(
             "Role and Purpose",
             "You are a professional customer service representative. Your goal is to help "
-            "customers with their questions and provide excellent service."
+            "customers with their questions and provide excellent service.",
         )
-        
+
         self.prompt_add_section(
             "Guidelines",
             "Follow these customer service principles:",
             bullets=[
                 "Listen carefully to customer needs",
-                "Provide accurate and helpful information", 
+                "Provide accurate and helpful information",
                 "Maintain a professional and friendly tone",
                 "Escalate complex issues when appropriate",
-                "Always confirm understanding before ending"
-            ]
+                "Always confirm understanding before ending",
+            ],
         )
-        
+
         self.prompt_add_section(
             "Available Services",
             "You can help customers with:",
@@ -102,18 +95,18 @@ class SimpleStaticAgent(AgentBase):
                 "Account questions and support",
                 "Technical troubleshooting guidance",
                 "Billing and payment inquiries",
-                "Service status and updates"
-            ]
+                "Service status and updates",
+            ],
         )
 
 
 if __name__ == "__main__":
     agent = SimpleStaticAgent()
-    
+
     print("Starting Simple Static Agent")
     print("\nConfiguration: STATIC (set once at startup)")
     print("- Voice: inworld.Mark (professional)")
-    print("- Service Level: standard") 
+    print("- Service Level: standard")
     print("- Speech Timeout: 500ms")
     print("- Features: basic conversation, help desk")
     print("\nAgent available at: http://localhost:3000/")
@@ -123,5 +116,5 @@ if __name__ == "__main__":
     print("\nNote: Configuration never changes regardless of request parameters")
     print("Note: Works in any deployment mode (server/CGI/Lambda)")
     print()
-    
-    agent.run() 
+
+    agent.run()

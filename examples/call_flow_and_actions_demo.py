@@ -69,16 +69,19 @@ class CallFlowDemoAgent(AgentBase):
         # --- Prompt ---
         self.prompt_add_section(
             "Role",
-            body="You are a call center demo agent that showcases call-flow features."
+            body="You are a call center demo agent that showcases call-flow features.",
         )
-        self.prompt_add_section("Instructions", bullets=[
-            "Use transfer_to_support when the caller asks to speak to a person",
-            "Use send_confirmation to send the caller an SMS",
-            "Use start_recording when the caller agrees to be recorded",
-            "Use play_hold_music to play background music",
-            "Use update_preferences to save caller preferences",
-            "Use adjust_speech when the caller mentions unusual names or terms",
-        ])
+        self.prompt_add_section(
+            "Instructions",
+            bullets=[
+                "Use transfer_to_support when the caller asks to speak to a person",
+                "Use send_confirmation to send the caller an SMS",
+                "Use start_recording when the caller agrees to be recorded",
+                "Use play_hold_music to play background music",
+                "Use update_preferences to save caller preferences",
+                "Use adjust_speech when the caller mentions unusual names or terms",
+            ],
+        )
 
         # --- LLM parameters ---
         self.set_params({"temperature": 0.3})
@@ -89,18 +92,13 @@ class CallFlowDemoAgent(AgentBase):
 
         # Play a US ringback tone before answering. auto_answer=False prevents
         # the play verb from implicitly answering the call.
-        self.add_pre_answer_verb("play", {
-            "urls": ["ring:us"],
-            "auto_answer": False
-        })
+        self.add_pre_answer_verb("play", {"urls": ["ring:us"], "auto_answer": False})
 
         # Configure the answer verb with a maximum call duration of 1 hour.
         self.add_answer_verb({"max_duration": 3600})
 
         # After answering, play a welcome message before the AI takes over.
-        self.add_post_answer_verb("play", {
-            "url": "say:Welcome to the call flow demo."
-        })
+        self.add_post_answer_verb("play", {"url": "say:Welcome to the call flow demo."})
 
         # After the AI conversation ends, cleanly hang up the call.
         self.add_post_ai_verb("hangup", {})
@@ -119,8 +117,7 @@ class CallFlowDemoAgent(AgentBase):
         @self.on_debug_event
         def handle_debug(event_type, data):
             if event_type == "barge":
-                self.log.info("barge_detected",
-                              elapsed_ms=data.get("barge_elapsed_ms"))
+                self.log.info("barge_detected", elapsed_ms=data.get("barge_elapsed_ms"))
             elif event_type == "llm_error":
                 self.log.error("llm_error", error=data.get("error"))
             else:
@@ -138,26 +135,22 @@ class CallFlowDemoAgent(AgentBase):
                 "type": "string",
                 "description": "Department name (e.g. billing, technical)",
             }
-        }
+        },
     )
     def transfer_to_support(self, department: str):
         """Transfer the call to a support department."""
         destinations = {
-            "billing":   "+15551000001",
+            "billing": "+15551000001",
             "technical": "+15551000002",
-            "sales":     "+15551000003",
+            "sales": "+15551000003",
         }
         dest = destinations.get(department.lower(), "+15551000000")
 
         # post_process=True lets the AI speak one more time before the
         # transfer actually executes — useful for a goodbye message.
-        return (
-            FunctionResult(
-                f"Transferring you to {department} support now.",
-                post_process=True
-            )
-            .connect(dest, final=True)
-        )
+        return FunctionResult(
+            f"Transferring you to {department} support now.", post_process=True
+        ).connect(dest, final=True)
 
     @AgentBase.tool(
         name="send_confirmation",
@@ -170,34 +163,24 @@ class CallFlowDemoAgent(AgentBase):
             "message": {
                 "type": "string",
                 "description": "The confirmation message text",
-            }
-        }
+            },
+        },
     )
     def send_confirmation(self, phone: str, message: str):
         """Send an SMS message to the caller."""
-        return (
-            FunctionResult(f"Sending confirmation to {phone}.")
-            .send_sms(
-                to_number=phone,
-                from_number="+15559999999",
-                body=message
-            )
+        return FunctionResult(f"Sending confirmation to {phone}.").send_sms(
+            to_number=phone, from_number="+15559999999", body=message
         )
 
-    @AgentBase.tool(
-        name="start_recording",
-        description="Start recording the call"
-    )
+    @AgentBase.tool(name="start_recording", description="Start recording the call")
     def start_recording(self):
         """Begin background call recording in stereo WAV format."""
-        return (
-            FunctionResult("Recording has started.")
-            .record_call(control_id="demo-recording", stereo=True, format="wav")
+        return FunctionResult("Recording has started.").record_call(
+            control_id="demo-recording", stereo=True, format="wav"
         )
 
     @AgentBase.tool(
-        name="play_hold_music",
-        description="Play hold music in the background"
+        name="play_hold_music", description="Play hold music in the background"
     )
     def play_hold_music(self):
         """Play background music and put the caller on hold."""
@@ -218,20 +201,19 @@ class CallFlowDemoAgent(AgentBase):
             "value": {
                 "type": "string",
                 "description": "Preference value",
-            }
-        }
+            },
+        },
     )
     def update_preferences(self, key: str, value: str):
         """Update global session data and toggle functions based on preferences."""
-        result = (
-            FunctionResult(f"Preference '{key}' set to '{value}'.")
-            .update_global_data({key: value})
-        )
+        result = FunctionResult(
+            f"Preference '{key}' set to '{value}'."
+        ).update_global_data({key: value})
         # Example: disable the send_confirmation tool if notifications are off
         if key == "notifications" and value == "off":
-            result.toggle_functions([
-                {"function": "send_confirmation", "active": False}
-            ])
+            result.toggle_functions(
+                [{"function": "send_confirmation", "active": False}]
+            )
         return result
 
     @AgentBase.tool(
@@ -242,7 +224,7 @@ class CallFlowDemoAgent(AgentBase):
                 "type": "string",
                 "description": "Comma-separated terms to add as speech hints",
             }
-        }
+        },
     )
     def adjust_speech(self, hints: str):
         """Add dynamic hints and adjust speech timeout for better recognition."""

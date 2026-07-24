@@ -55,24 +55,28 @@ class SessionStateDemoAgent(AgentBase):
 
         # --- Prompt ---
         self.prompt_add_section(
-            "Role",
-            body="You are a customer service agent that tracks session state."
+            "Role", body="You are a customer service agent that tracks session state."
         )
-        self.prompt_add_section("Instructions", bullets=[
-            "Greet the caller and ask how you can help",
-            "Use update_customer_info to record information the caller provides",
-            "Use get_session_info to check what information has been collected",
-            "Use end_session when the caller is done",
-        ])
+        self.prompt_add_section(
+            "Instructions",
+            bullets=[
+                "Greet the caller and ask how you can help",
+                "Use update_customer_info to record information the caller provides",
+                "Use get_session_info to check what information has been collected",
+                "Use end_session when the caller is done",
+            ],
+        )
 
         # --- Global data ---
         # Seed the session with default values. The AI can reference these as
         # ${global_data.status} in prompts, and tools can read/update them.
-        self.set_global_data({
-            "status": "active",
-            "customer_name": "",
-            "issue_type": "",
-        })
+        self.set_global_data(
+            {
+                "status": "active",
+                "customer_name": "",
+                "issue_type": "",
+            }
+        )
 
         # --- Post-prompt ---
         # This instructs the platform to generate a structured summary after
@@ -124,19 +128,17 @@ class SessionStateDemoAgent(AgentBase):
             "value": {
                 "type": "string",
                 "description": "The value to set",
-            }
-        }
+            },
+        },
     )
     def update_customer_info(self, field: str, value: str):
         """Update a field in the session's global data."""
-        return (
-            FunctionResult(f"Updated {field} to '{value}'.")
-            .update_global_data({field: value})
+        return FunctionResult(f"Updated {field} to '{value}'.").update_global_data(
+            {field: value}
         )
 
     @AgentBase.tool(
-        name="get_session_info",
-        description="Retrieve current session information"
+        name="get_session_info", description="Retrieve current session information"
     )
     def get_session_info(self):
         """Return a summary of what has been collected so far."""
@@ -155,7 +157,7 @@ class SessionStateDemoAgent(AgentBase):
                 "type": "string",
                 "description": "Reason for ending the session",
             }
-        }
+        },
     )
     def end_session(self, reason: str):
         """Mark the session as closed and terminate the call."""
@@ -171,6 +173,8 @@ if __name__ == "__main__":
     agent = SessionStateDemoAgent()
     print("Session & State Demo")
     print(f"  Route: {agent.route}")
-    print("  Features: on_summary, set_global_data, set_post_prompt, update_global_data, hangup")
+    print(
+        "  Features: on_summary, set_global_data, set_post_prompt, update_global_data, hangup"
+    )
     print("Note: Works in any deployment mode (server/CGI/Lambda)")
     agent.run()

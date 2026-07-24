@@ -38,6 +38,7 @@ import os
 import sys
 from signalwire import AgentBase
 
+
 def get_required_env_var(name: str) -> str:
     """Get a required environment variable or exit with error"""
     value = os.getenv(name)
@@ -56,30 +57,32 @@ def get_required_env_var(name: str) -> str:
         sys.exit(1)
     return value
 
+
 def parse_tags(tags_str: str) -> list:
     """Parse comma-separated tags string into list"""
     if not tags_str:
         return None
-    return [tag.strip() for tag in tags_str.split(',') if tag.strip()]
+    return [tag.strip() for tag in tags_str.split(",") if tag.strip()]
+
 
 def main():
     print("DataSphere Webhook Environment Demo")
     print("=" * 50)
-    
+
     # Get required environment variables
     print("Loading configuration from environment variables...")
-    space_name = get_required_env_var('SIGNALWIRE_SPACE_NAME')
-    project_id = get_required_env_var('SIGNALWIRE_PROJECT_ID')
-    token = get_required_env_var('SIGNALWIRE_API_TOKEN')
-    document_id = get_required_env_var('DATASPHERE_DOCUMENT_ID')
-    
+    space_name = get_required_env_var("SIGNALWIRE_SPACE_NAME")
+    project_id = get_required_env_var("SIGNALWIRE_PROJECT_ID")
+    token = get_required_env_var("SIGNALWIRE_API_TOKEN")
+    document_id = get_required_env_var("DATASPHERE_DOCUMENT_ID")
+
     # Get optional environment variables with defaults
-    count = int(os.getenv('DATASPHERE_COUNT', '3'))
-    distance = float(os.getenv('DATASPHERE_DISTANCE', '4.0'))
-    language = os.getenv('DATASPHERE_LANGUAGE')
-    tags_str = os.getenv('DATASPHERE_TAGS', '')
+    count = int(os.getenv("DATASPHERE_COUNT", "3"))
+    distance = float(os.getenv("DATASPHERE_DISTANCE", "4.0"))
+    language = os.getenv("DATASPHERE_LANGUAGE")
+    tags_str = os.getenv("DATASPHERE_TAGS", "")
     tags = parse_tags(tags_str)
-    
+
     print(f"✓ Space: {space_name}")
     print(f"✓ Project ID: {project_id[:8]}...")  # Only show first 8 chars for security
     print(f"✓ Token: {'*' * len(token)}")  # Hide token completely
@@ -90,13 +93,15 @@ def main():
         print(f"✓ Language: {language}")
     if tags:
         print(f"✓ Tags: {', '.join(tags)}")
-    
+
     # Create agent
-    agent = AgentBase("DataSphere Knowledge Assistant", route="/datasphere-webhook-demo")
-    
+    agent = AgentBase(
+        "DataSphere Knowledge Assistant", route="/datasphere-webhook-demo"
+    )
+
     # Configure voice
     agent.add_language("English", "en-US", "inworld.Mark")
-    
+
     # Add basic skills
     print("\nAdding basic skills...")
     try:
@@ -104,47 +109,47 @@ def main():
         print("✓ Added datetime skill")
     except Exception as e:
         print(f"✗ Failed to add datetime skill: {e}")
-    
+
     try:
         agent.add_skill("math")
         print("✓ Added math skill")
     except Exception as e:
         print(f"✗ Failed to add math skill: {e}")
-    
+
     # Build DataSphere configuration
     datasphere_config = {
-        'space_name': space_name,
-        'project_id': project_id,
-        'token': token,
-        'document_id': document_id,
-        'count': count,
-        'distance': distance,
-        'tool_name': 'search_knowledge',
-        'no_results_message': "I couldn't find any information about '{query}' in the knowledge base. Try rephrasing your question or asking about a different topic.",
-        'swaig_fields': {
-            'fillers': {
-                'en-US': [
+        "space_name": space_name,
+        "project_id": project_id,
+        "token": token,
+        "document_id": document_id,
+        "count": count,
+        "distance": distance,
+        "tool_name": "search_knowledge",
+        "no_results_message": "I couldn't find any information about '{query}' in the knowledge base. Try rephrasing your question or asking about a different topic.",
+        "swaig_fields": {
+            "fillers": {
+                "en-US": [
                     "Searching the knowledge base...",
                     "Looking up information for you...",
-                    "Checking our database..."
+                    "Checking our database...",
                 ]
             }
-        }
+        },
     }
-    
+
     # Add optional parameters if they were provided
     if language:
-        datasphere_config['language'] = language
+        datasphere_config["language"] = language
     if tags:
-        datasphere_config['tags'] = tags
-    
+        datasphere_config["tags"] = tags
+
     # Add traditional DataSphere skill (webhook-based)
     print("\nAdding DataSphere skill (webhook-based)...")
     try:
         agent.add_skill("datasphere", datasphere_config)
         print("✓ Added DataSphere skill successfully")
-        print(f"  - Tool name: search_knowledge")
-        print(f"  - Execution: Webhook-based (traditional)")
+        print("  - Tool name: search_knowledge")
+        print("  - Execution: Webhook-based (traditional)")
         print(f"  - Document: {document_id}")
         print(f"  - Max results: {count}")
         print(f"  - Distance threshold: {distance}")
@@ -156,29 +161,29 @@ def main():
         print(f"✗ Failed to add DataSphere skill: {e}")
         print("  Check that your credentials and document ID are correct")
         return
-    
+
     # Show agent capabilities
     print(f"\nREADY: Agent ready at: {agent.get_full_url()}")
     print("\nAgent Capabilities:")
     print("DATE: Date and time information")
     print("MATH: Mathematical calculations")
     print("SEARCH: Knowledge base search (webhook execution)")
-    
+
     print("\nDataSphere Webhook Features:")
     print("• Executes via traditional webhook endpoints")
     print("• Full Python logic for response processing")
     print("• Custom error handling and formatting")
     print("• Requests library for HTTP calls")
     print("• Uses environment variables for secure configuration")
-    
+
     print("\nExample queries you can try:")
     print('• "What time is it?"')
     print('• "Calculate 25 * 47"')
     print('• "Search for information about [topic]"')
     print('• "Look up [specific question about your knowledge base]"')
-    
+
     # Show environment configuration
-    print(f"\nEnvironment Configuration:")
+    print("\nEnvironment Configuration:")
     print(f"• Space: {space_name}")
     print(f"• Document: {document_id}")
     print(f"• Results per search: {count}")
@@ -187,16 +192,16 @@ def main():
         print(f"• Language: {language}")
     if tags:
         print(f"• Tags: {', '.join(tags)}")
-    
+
     print("\nTo modify configuration, update these environment variables:")
     print("export DATASPHERE_COUNT=5          # More results")
-    print("export DATASPHERE_DISTANCE=2.0     # Stricter matching") 
+    print("export DATASPHERE_DISTANCE=2.0     # Stricter matching")
     print("export DATASPHERE_TAGS='FAQ,Help'  # Filter by tags")
     print("export DATASPHERE_LANGUAGE='en'    # Language filter")
-    
-    print("\n" + "="*60)
+
+    print("\n" + "=" * 60)
     print("WEBHOOK vs SERVERLESS COMPARISON")
-    print("="*60)
+    print("=" * 60)
     print("This demo uses the WEBHOOK-based DataSphere skill:")
     print("✓ Full Python control over request/response")
     print("✓ Custom error handling and logging")
@@ -211,10 +216,11 @@ def main():
     print("✓ Lower latency and higher reliability")
     print("✗ Template-based response formatting only")
     print("✗ Limited custom logic")
-    
+
     print("\nStarting agent server...")
     print("Note: Works in any deployment mode (server/CGI/Lambda)")
     agent.run()
 
+
 if __name__ == "__main__":
-    main() 
+    main()

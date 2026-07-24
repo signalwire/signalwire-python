@@ -16,7 +16,10 @@ See LICENSE file in the project root for full license information.
 # region: relay
 from signalwire.relay import RelayClient
 
-client = RelayClient(project="...", token="...", host="example.signalwire.com", contexts=["default"])
+client = RelayClient(
+    project="...", token="...", host="example.signalwire.com", contexts=["default"]
+)
+
 
 @client.on_call
 async def handle(call):
@@ -24,6 +27,7 @@ async def handle(call):
     action = await call.play([{"type": "tts", "params": {"text": "Welcome!"}}])
     await action.wait()
     await call.hangup()
+
 
 client.run()
 # endregion: relay
