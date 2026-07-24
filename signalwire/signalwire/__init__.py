@@ -81,6 +81,10 @@ _LAZY_IMPORTS: dict[str, tuple[str, str]] = {
     "BedrockAgent": ("signalwire.agents.bedrock", "BedrockAgent"),
     "SchemaValidationError": ("signalwire.utils.schema_utils", "SchemaValidationError"),
     "WebService": ("signalwire.web", "WebService"),
+    # AI Chat client — lazy so its aiohttp dep loads only on first access (mirrors how
+    # every other public client here is exposed; RestClient's factory form is the odd
+    # one out). Makes `from signalwire import AIChatClient` work like every sibling.
+    "AIChatClient": ("signalwire.ai_chat", "AIChatClient"),
 }
 
 
@@ -195,6 +199,7 @@ def RestClient(*args: Any, **kwargs: Any) -> "_RestClient":
 
 
 __all__ = [
+    "AIChatClient",
     "AgentBase",
     "AgentServer",
     "BedrockAgent",
