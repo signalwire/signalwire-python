@@ -20,7 +20,7 @@ class Section(TypedDict, total=False):
     main: list[SWMLMethod]
 
 
-SWMLMethod: TypeAlias = "Answer | AI | AmazonBedrock | Cond | Connect | Denoise | EnterQueue | Execute | Goto | Label | LiveTranscribe | LiveTranslate | Hangup | JoinRoom | JoinConference | Play | Prompt | ReceiveFax | Record | RecordCall | Request | Return | SendDigits | SendFax | SendSMS | Set | Sleep | SIPRefer | StopDenoise | StopRecordCall | StopTap | Switch | Tap | Transfer | Unset | Pay | DetectMachine | UserEvent"
+SWMLMethod: TypeAlias = "Answer | AI | AmazonBedrock | Cond | Connect | Denoise | EnterQueue | Execute | Goto | Label | LiveTranscribe | AiSidecar | LiveTranslate | Hangup | JoinRoom | JoinConference | Play | Prompt | ReceiveFax | Record | RecordCall | Request | Return | SendDigits | SendFax | SendSMS | Set | Sleep | SIPRefer | StopDenoise | StopRecordCall | StopTap | Switch | Tap | Transfer | Unset | Pay | DetectMachine | UserEvent"
 
 
 class Answer(TypedDict, total=False):
@@ -295,7 +295,7 @@ class ConnectDeviceSingle(TypedDict, total=False):
     codecs: str
     webrtc_media: bool | SWMLVar
     session_timeout: int | SWMLVar
-    ringback: list[str]
+    ringback: list[str] | RingbackConfig
     result: ConnectSwitch | list[CondParams]
     timeout: int | SWMLVar
     max_duration: int | SWMLVar
@@ -319,7 +319,7 @@ class ConnectDeviceSerial(TypedDict, total=False):
     codecs: str
     webrtc_media: bool | SWMLVar
     session_timeout: int | SWMLVar
-    ringback: list[str]
+    ringback: list[str] | RingbackConfig
     result: ConnectSwitch | list[CondParams]
     timeout: int | SWMLVar
     max_duration: int | SWMLVar
@@ -343,7 +343,7 @@ class ConnectDeviceParallel(TypedDict, total=False):
     codecs: str
     webrtc_media: bool | SWMLVar
     session_timeout: int | SWMLVar
-    ringback: list[str]
+    ringback: list[str] | RingbackConfig
     result: ConnectSwitch | list[CondParams]
     timeout: int | SWMLVar
     max_duration: int | SWMLVar
@@ -367,7 +367,7 @@ class ConnectDeviceSerialParallel(TypedDict, total=False):
     codecs: str
     webrtc_media: bool | SWMLVar
     session_timeout: int | SWMLVar
-    ringback: list[str]
+    ringback: list[str] | RingbackConfig
     result: ConnectSwitch | list[CondParams]
     timeout: int | SWMLVar
     max_duration: int | SWMLVar
@@ -1530,6 +1530,30 @@ class UserInputAction(TypedDict, total=False):
     user_input: str
 
 
+class AiSidecar(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    ai_sidecar: dict[str, Any]
+
+
+class RingbackConfig(TypedDict, total=False):
+    """Ringback configuration (the modern object form). Declared as a named $defs entry so every generator emits a TYPED shape via $ref rather than collapsing an inline object to an untyped map; the legacy URI array remains the other oneOf branch.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    url: str
+    urls: list[str]
+    volume: float
+    auto_answer: bool
+    say_voice: str
+    say_language: str
+    say_gender: Literal["male", "female"]
+    status_url: str
+    loop: int
+
+
 class ConnectConfig(TypedDict, total=False):
     """Dial a SIP URI or phone number.
 
@@ -1542,7 +1566,7 @@ class ConnectConfig(TypedDict, total=False):
     codecs: str
     webrtc_media: bool | SWMLVar
     session_timeout: int | SWMLVar
-    ringback: list[str]
+    ringback: list[str] | RingbackConfig
     result: ConnectSwitch | list[CondParams]
     timeout: int | SWMLVar
     max_duration: int | SWMLVar
@@ -1595,6 +1619,27 @@ class LiveTranscribeConfig(TypedDict, total=False):
     """
 
     action: TranscribeAction
+
+
+class AiSidecarConfig(TypedDict, total=False):
+    """Start ai_sidecar mode — live_transcribe with an LLM/SWAIG/MCP loop on top.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    prompt: str | dict[str, Any]
+    lang: str
+    model: str
+    direction: list[Literal["remote-caller", "local-caller"]]
+    customer_role: Literal["remote-caller", "local-caller"]
+    url: str
+    SWAIG: SWAIG
+    permissions: dict[str, Any]
+    global_data: dict[str, Any]
+    hints: list[str]
+    params: dict[str, Any]
+    action: dict[str, Any]
 
 
 class LiveTranslateConfig(TypedDict, total=False):
@@ -1897,6 +1942,10 @@ class _SwmlVerbs:
         self: _Self, config: LiveTranscribeConfig | None = None
     ) -> _Self:
         """Start live transcription of the call. The transcription will be sent to the specified webhook URL."""
+        raise NotImplementedError  # installed dynamically at runtime
+
+    def ai_sidecar(self: _Self, config: AiSidecarConfig | None = None) -> _Self:
+        """Start ai_sidecar mode — live_transcribe with an LLM/SWAIG/MCP loop on top."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def live_translate(self: _Self, config: LiveTranslateConfig | None = None) -> _Self:
