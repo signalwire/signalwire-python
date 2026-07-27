@@ -538,14 +538,26 @@ class TestGeneratedFilesAreUtf8:
         gen._write_simple_files()
 
         script = tmp_path / 'deploy.sh'
-        raw = script.read_bytes()
-        # Decodes as UTF-8 (would raise if written in cp1252 or latin-1)...
-        text = raw.decode('utf-8')
-        # ...and matches what the template intended, byte for byte.
-        assert text == script.read_text(encoding='utf-8')
-        # Guard the premise: this file really does carry the characters that
-        # break the Windows default codec. If a template edit removes them the
-        # test still passes but stops proving anything -- so assert they exist.
+        # Decodes as UTF-8 -- raises if the file was written in cp1252/latin-1.
+        text = script.read_bytes().decode('utf-8')
+
+        # Compare against the source template, NOT against a second read of the
+        # file: text-mode writes translate "\n" -> "\r\n" on Windows and
+        # `read_text` translates it back (universal newlines), so
+        # `read_bytes().decode()` and `read_text()` legitimately differ there.
+        # Line endings are not what this test is about -- the encoding of the
+        # non-ASCII characters is. (Comparing those two reads is what made this
+        # test fail on the Windows runner while the encoding fix itself was fine.)
+        expected = DEPLOY_SCRIPT_TEMPLATE.format(
+            app_name='myapp', dokku_host='dokku.example.com', route='swaig'
+        )
+        assert text.splitlines() == expected.splitlines()
+
+        # The characters that break the Windows default codec must survive
+        # byte-for-byte -- this is the actual regression being guarded.
+        assert self._non_ascii(text) == self._non_ascii(expected)
+        # Guard the premise: if a template edit ever removed these, the test
+        # would still pass but stop proving anything.
         assert self._non_ascii(text), "expected non-ASCII content in deploy.sh"
 
     def test_generated_content_is_not_cp1252_encodable(self, tmp_path: Path) -> None:
