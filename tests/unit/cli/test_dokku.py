@@ -274,9 +274,14 @@ class TestDokkuProjectGeneratorInit:
         gen = DokkuProjectGenerator("myapp", {})
         assert gen.project_dir == Path("./myapp")
 
-    def test_custom_project_dir(self) -> None:
-        gen = DokkuProjectGenerator("myapp", {'project_dir': '/tmp/custom'})
-        assert str(gen.project_dir) == "/tmp/custom"
+    def test_custom_project_dir(self, tmp_path: Path) -> None:
+        # Compare Path objects, not str() against a POSIX literal: `str(Path)`
+        # renders with the platform separator, so a hardcoded "/tmp/custom" can
+        # never match on Windows (it yields "\tmp\custom"). Using `tmp_path`
+        # also keeps the test off a hardcoded /tmp.
+        custom = tmp_path / "custom"
+        gen = DokkuProjectGenerator("myapp", {'project_dir': str(custom)})
+        assert gen.project_dir == custom
 
 
 class TestDokkuProjectGeneratorGenerate:
@@ -327,18 +332,46 @@ class TestDokkuProjectGeneratorWriteFile:
         gen = DokkuProjectGenerator("testapp", {'project_dir': str(tmp_path)})
         gen._write_file('hello.txt', 'Hello World')
         assert (tmp_path / 'hello.txt').exists()
-        assert (tmp_path / 'hello.txt').read_text() == 'Hello World'
+        assert (tmp_path / 'hello.txt').read_text(encoding="utf-8") == 'Hello World'
 
     def test_write_file_creates_nested_dirs(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("testapp", {'project_dir': str(tmp_path)})
         gen._write_file('a/b/c.txt', 'nested')
         assert (tmp_path / 'a' / 'b' / 'c.txt').exists()
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="POSIX permission bits: Windows has no execute bit, so st_mode never "
+               "carries 0o755 (it reports 0o666/0o444 from the read-only attribute). "
+               "The Windows-side behaviour is covered by "
+               "test_write_file_executable_requests_chmod below.",
+    )
     def test_write_file_executable(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("testapp", {'project_dir': str(tmp_path)})
         gen._write_file('script.sh', '#!/bin/bash', executable=True)
         mode = (tmp_path / 'script.sh').stat().st_mode
         assert mode & 0o755 == 0o755
+
+    def test_write_file_executable_requests_chmod(self, tmp_path: Path) -> None:
+        """`executable=True` must chmod 0o755 -- assertable on every platform.
+
+        Windows drops the POSIX bits, so the observable-mode assertion above cannot
+        run there. Asserting the *request* keeps the contract covered on Windows and
+        catches a regression that silently stopped chmod-ing.
+        """
+        gen = DokkuProjectGenerator("testapp", {'project_dir': str(tmp_path)})
+        with patch.object(Path, 'chmod', autospec=True) as mock_chmod:
+            gen._write_file('script.sh', '#!/bin/bash', executable=True)
+        assert (tmp_path / 'script.sh').exists()
+        mock_chmod.assert_called_once()
+        assert mock_chmod.call_args[0][1] == 0o755
+
+    def test_write_file_not_executable_does_not_chmod(self, tmp_path: Path) -> None:
+        """The default path must not chmod at all (guards the flag's meaning)."""
+        gen = DokkuProjectGenerator("testapp", {'project_dir': str(tmp_path)})
+        with patch.object(Path, 'chmod', autospec=True) as mock_chmod:
+            gen._write_file('plain.txt', 'data')
+        mock_chmod.assert_not_called()
 
 
 class TestDokkuProjectGeneratorCoreFIles:
@@ -356,7 +389,7 @@ class TestDokkuProjectGeneratorCoreFIles:
         assert (tmp_path / 'app.json').exists()
         assert (tmp_path / 'app.py').exists()
         # Standard template used (not web)
-        content = (tmp_path / 'app.py').read_text()
+        content = (tmp_path / 'app.py').read_text(encoding="utf-8")
         assert 'AgentBase' in content
         assert 'AgentServer' not in content
 
@@ -366,40 +399,40 @@ class TestDokkuProjectGeneratorCoreFIles:
             'web': True
         })
         gen._write_core_files()
-        content = (tmp_path / 'app.py').read_text()
+        content = (tmp_path / 'app.py').read_text(encoding="utf-8")
         assert 'AgentServer' in content
         assert (tmp_path / 'web' / 'index.html').exists()
 
     def test_procfile_content(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {'project_dir': str(tmp_path)})
         gen._write_core_files()
-        content = (tmp_path / 'Procfile').read_text()
+        content = (tmp_path / 'Procfile').read_text(encoding="utf-8")
         assert 'gunicorn' in content
         assert 'uvicorn' in content
 
     def test_runtime_content(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {'project_dir': str(tmp_path)})
         gen._write_core_files()
-        content = (tmp_path / 'runtime.txt').read_text()
+        content = (tmp_path / 'runtime.txt').read_text(encoding="utf-8")
         assert 'python-3.11' in content
 
     def test_env_example_contains_app_name(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("my-cool-app", {'project_dir': str(tmp_path)})
         gen._write_core_files()
-        content = (tmp_path / '.env.example').read_text()
+        content = (tmp_path / '.env.example').read_text(encoding="utf-8")
         assert 'my-cool-app' in content
 
     def test_app_json_contains_app_name(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("testbot", {'project_dir': str(tmp_path)})
         gen._write_core_files()
-        content = (tmp_path / 'app.json').read_text()
+        content = (tmp_path / 'app.json').read_text(encoding="utf-8")
         data = json.loads(content)
         assert data['name'] == 'testbot'
 
     def test_app_py_uses_correct_class_name(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("my-agent", {'project_dir': str(tmp_path)})
         gen._write_core_files()
-        content = (tmp_path / 'app.py').read_text()
+        content = (tmp_path / 'app.py').read_text(encoding="utf-8")
         assert 'class MyAgentAgent' in content
         assert 'name="my-agent"' in content
 
@@ -417,6 +450,12 @@ class TestDokkuProjectGeneratorSimpleFiles:
         assert (tmp_path / 'deploy.sh').exists()
         assert (tmp_path / 'README.md').exists()
 
+    @pytest.mark.skipif(
+        sys.platform == "win32",
+        reason="POSIX permission bits: Windows has no execute bit, so st_mode never "
+               "carries 0o755. Windows-side coverage is "
+               "test_deploy_script_requests_executable_mode below.",
+    )
     def test_deploy_script_is_executable(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {
             'project_dir': str(tmp_path),
@@ -427,6 +466,22 @@ class TestDokkuProjectGeneratorSimpleFiles:
         mode = (tmp_path / 'deploy.sh').stat().st_mode
         assert mode & 0o755 == 0o755
 
+    def test_deploy_script_requests_executable_mode(self, tmp_path: Path) -> None:
+        """deploy.sh must be written with executable=True on every platform."""
+        gen = DokkuProjectGenerator("myapp", {
+            'project_dir': str(tmp_path),
+            'dokku_host': 'dokku.example.com',
+            'route': 'swaig'
+        })
+        with patch.object(Path, 'chmod', autospec=True) as mock_chmod:
+            gen._write_simple_files()
+        chmodded = {
+            Path(c[0][0]).name: c[0][1] for c in mock_chmod.call_args_list
+        }
+        assert chmodded == {'deploy.sh': 0o755}, (
+            "deploy.sh (and only it) must be made executable"
+        )
+
     def test_deploy_script_contains_host(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {
             'project_dir': str(tmp_path),
@@ -434,7 +489,7 @@ class TestDokkuProjectGeneratorSimpleFiles:
             'route': 'swaig'
         })
         gen._write_simple_files()
-        content = (tmp_path / 'deploy.sh').read_text()
+        content = (tmp_path / 'deploy.sh').read_text(encoding="utf-8")
         assert 'dokku.myhost.com' in content
 
     def test_readme_contains_app_name(self, tmp_path: Path) -> None:
@@ -444,7 +499,7 @@ class TestDokkuProjectGeneratorSimpleFiles:
             'route': 'swaig'
         })
         gen._write_simple_files()
-        content = (tmp_path / 'README.md').read_text()
+        content = (tmp_path / 'README.md').read_text(encoding="utf-8")
         assert 'myapp' in content
 
     def test_default_dokku_host(self, tmp_path: Path) -> None:
@@ -452,8 +507,93 @@ class TestDokkuProjectGeneratorSimpleFiles:
             'project_dir': str(tmp_path),
         })
         gen._write_simple_files()
-        content = (tmp_path / 'deploy.sh').read_text()
+        content = (tmp_path / 'deploy.sh').read_text(encoding="utf-8")
         assert 'dokku.yourdomain.com' in content
+
+
+class TestGeneratedFilesAreUtf8:
+    """Generated files must be written as UTF-8 regardless of platform locale.
+
+    Several templates embed box-drawing characters (U+2500 '-', U+2550 '=') and
+    arrows (U+2192). `Path.write_text()` without an explicit `encoding` uses the
+    platform default, which on Windows is cp1252 -- it cannot represent those
+    code points and raises `UnicodeEncodeError: 'charmap' codec can't encode
+    characters in position ...` (nightly Multi-OS run 30238061313, windows-latest;
+    8 direct failures plus 4 more surfacing as `generate()` returning False).
+
+    These assertions are platform-independent: they check the bytes on disk are
+    valid UTF-8 and round-trip to the original text, which is what an explicit
+    `encoding="utf-8"` guarantees and what the platform default does not.
+    """
+
+    def _non_ascii(self, text: str) -> set[str]:
+        return {c for c in text if ord(c) > 127}
+
+    def test_deploy_script_round_trips_as_utf8(self, tmp_path: Path) -> None:
+        gen = DokkuProjectGenerator("myapp", {
+            'project_dir': str(tmp_path),
+            'dokku_host': 'dokku.example.com',
+            'route': 'swaig',
+        })
+        gen._write_simple_files()
+
+        script = tmp_path / 'deploy.sh'
+        raw = script.read_bytes()
+        # Decodes as UTF-8 (would raise if written in cp1252 or latin-1)...
+        text = raw.decode('utf-8')
+        # ...and matches what the template intended, byte for byte.
+        assert text == script.read_text(encoding='utf-8')
+        # Guard the premise: this file really does carry the characters that
+        # break the Windows default codec. If a template edit removes them the
+        # test still passes but stops proving anything -- so assert they exist.
+        assert self._non_ascii(text), "expected non-ASCII content in deploy.sh"
+
+    def test_generated_content_is_not_cp1252_encodable(self, tmp_path: Path) -> None:
+        """The regression premise: this content genuinely cannot be cp1252.
+
+        Without this, an `encoding="utf-8"` fix could silently become untested if
+        the templates were ever reduced to pure ASCII.
+        """
+        gen = DokkuProjectGenerator("myapp", {
+            'project_dir': str(tmp_path),
+            'dokku_host': 'dokku.example.com',
+            'route': 'swaig',
+        })
+        gen._write_simple_files()
+        gen._write_cicd_files()
+
+        offenders = []
+        for path in sorted(tmp_path.rglob('*')):
+            if not path.is_file():
+                continue
+            text = path.read_text(encoding='utf-8')  # must not raise
+            try:
+                text.encode('cp1252')
+            except UnicodeEncodeError:
+                offenders.append(path.name)
+
+        assert offenders, (
+            "no generated file contains cp1252-hostile characters -- the UTF-8 "
+            "regression this guards is no longer reachable; re-check the templates"
+        )
+
+    def test_all_generated_files_decode_as_utf8(self, tmp_path: Path) -> None:
+        """Every file a full generate() produces must be valid UTF-8."""
+        gen = DokkuProjectGenerator("myapp", {
+            'project_dir': str(tmp_path / 'proj'),
+            'dokku_host': 'dokku.example.com',
+            'route': 'swaig',
+            'cicd': True,
+            'web': True,
+        })
+        assert gen.generate() is True
+
+        checked = 0
+        for path in sorted((tmp_path / 'proj').rglob('*')):
+            if path.is_file():
+                path.read_bytes().decode('utf-8')  # raises on a mis-encoded write
+                checked += 1
+        assert checked > 0, "generate() produced no files to check"
 
 
 class TestDokkuProjectGeneratorCicdFiles:
@@ -471,35 +611,35 @@ class TestDokkuProjectGeneratorCicdFiles:
     def test_deploy_workflow_content(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {'project_dir': str(tmp_path)})
         gen._write_cicd_files()
-        content = (tmp_path / '.github' / 'workflows' / 'deploy.yml').read_text()
+        content = (tmp_path / '.github' / 'workflows' / 'deploy.yml').read_text(encoding="utf-8")
         assert 'Deploy' in content
         assert 'dokku-deploy-system' in content
 
     def test_preview_workflow_content(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {'project_dir': str(tmp_path)})
         gen._write_cicd_files()
-        content = (tmp_path / '.github' / 'workflows' / 'preview.yml').read_text()
+        content = (tmp_path / '.github' / 'workflows' / 'preview.yml').read_text(encoding="utf-8")
         assert 'Preview' in content
         assert 'pull_request' in content
 
     def test_config_yml_content(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {'project_dir': str(tmp_path)})
         gen._write_cicd_files()
-        content = (tmp_path / '.dokku' / 'config.yml').read_text()
+        content = (tmp_path / '.dokku' / 'config.yml').read_text(encoding="utf-8")
         assert 'resources:' in content
         assert 'healthcheck:' in content
 
     def test_services_yml_content(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("myapp", {'project_dir': str(tmp_path)})
         gen._write_cicd_files()
-        content = (tmp_path / '.dokku' / 'services.yml').read_text()
+        content = (tmp_path / '.dokku' / 'services.yml').read_text(encoding="utf-8")
         assert 'postgres:' in content
         assert 'redis:' in content
 
     def test_cicd_readme_contains_app_name(self, tmp_path: Path) -> None:
         gen = DokkuProjectGenerator("superbot", {'project_dir': str(tmp_path)})
         gen._write_cicd_files()
-        content = (tmp_path / 'README.md').read_text()
+        content = (tmp_path / 'README.md').read_text(encoding="utf-8")
         assert 'superbot' in content
 
 
@@ -521,7 +661,7 @@ class TestDokkuProjectGeneratorWebFiles:
             'route': 'swaig'
         })
         gen._write_web_files()
-        content = (tmp_path / 'web' / 'index.html').read_text()
+        content = (tmp_path / 'web' / 'index.html').read_text(encoding="utf-8")
         assert 'Cool Bot' in content
 
 
@@ -574,7 +714,7 @@ class TestDokkuProjectGeneratorFullGenerate:
         result = gen.generate()
         assert result is True
         assert (out / 'web' / 'index.html').exists()
-        content = (out / 'app.py').read_text()
+        content = (out / 'app.py').read_text(encoding="utf-8")
         assert 'AgentServer' in content
 
 
@@ -703,7 +843,7 @@ class TestCmdInit:
         mock_path_instance.exists.return_value = False
         mock_path_cls.return_value = mock_path_instance
 
-        args = self._make_args(host='dokku.example.com', dir_val='/tmp/custom')
+        args = self._make_args(host='dokku.example.com', dir_val='build/custom')
         result = cmd_init(args)
         assert result == 0
 
@@ -1180,12 +1320,12 @@ class TestMain:
         assert args.force is True
 
     @patch('signalwire.cli.dokku.cmd_init', return_value=0)
-    @patch('sys.argv', ['sw-agent-dokku', 'init', 'myapp', '--dir', '/tmp/out'])
+    @patch('sys.argv', ['sw-agent-dokku', 'init', 'myapp', '--dir', 'build/out'])
     def test_main_init_custom_dir(self, mock_cmd_init: MagicMock) -> None:
         result = main()
         assert result == 0
         args = mock_cmd_init.call_args[0][0]
-        assert args.dir == '/tmp/out'
+        assert args.dir == 'build/out'
 
     @patch('signalwire.cli.dokku.cmd_deploy', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'deploy', '--app', 'myapp', '--host', 'dokku.test.com'])
@@ -1447,7 +1587,7 @@ class TestEdgeCases:
 
     @patch('signalwire.cli.dokku.cmd_init', return_value=0)
     @patch('sys.argv', ['sw-agent-dokku', 'init', 'my-app', '--cicd', '--web',
-                        '--host', 'h', '--dir', '/tmp/d', '-f'])
+                        '--host', 'h', '--dir', 'build/d', '-f'])
     def test_main_all_init_flags(self, mock_cmd_init: MagicMock) -> None:
         """All init flags can be passed together."""
         result = main()
@@ -1457,5 +1597,5 @@ class TestEdgeCases:
         assert args.cicd is True
         assert args.web is True
         assert args.host == 'h'
-        assert args.dir == '/tmp/d'
+        assert args.dir == 'build/d'
         assert args.force is True
