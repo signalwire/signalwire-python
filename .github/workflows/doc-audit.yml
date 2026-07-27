@@ -59,8 +59,13 @@ jobs:
       # deleted livewire member stops resolving instead of staying excused by a stale
       # committed file. Mirrors run-ci.sh's SURFACE-NATIVE gate (DOC-AUDIT deps on it).
       - name: Regenerate the native-only doc-audit sidecar
+        # `python` (the setup-python shim), not bare `python3` — see the PACKAGE-SMOKE
+        # note in multi-os.yml. This job is ubuntu-only, where setup-python front-loads
+        # its dir so both names currently resolve to the toolcache; using the shim keeps
+        # that true if this workflow ever gains a macOS runner, where bare `python3`
+        # resolves to the framework Python instead.
         run: |
-          python3 signalwire-python/scripts/emit_surface_native.py \
+          python signalwire-python/scripts/emit_surface_native.py \
             --out signalwire-python/port_surface_native.json
 
       - name: Run audit_docs.py against the Python surface
@@ -68,7 +73,7 @@ jobs:
         # surface oracle by design, but livewire/ docs are in this perimeter, so its
         # real members only resolve via the sidecar. See scripts/emit_surface_native.py.
         run: |
-          python3 porting-sdk/scripts/audit_docs.py \
+          python porting-sdk/scripts/audit_docs.py \
             --root signalwire-python \
             --surface porting-sdk/python_surface.json \
             --ignore signalwire-python/DOC_AUDIT_IGNORE.md \
