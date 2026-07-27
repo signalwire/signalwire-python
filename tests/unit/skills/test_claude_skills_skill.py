@@ -9,6 +9,7 @@ See LICENSE file in the project root for full license information.
 Unit tests for the Claude Skills skill module.
 """
 
+import sys
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -285,19 +286,32 @@ class TestShellInjection:
             assert "hello" in result.response
             assert "!`" not in result.response
 
-    def test_timeout_handling(self) -> None:
-        skill = _make_skill({"skills_path": "/tmp", "allow_shell_injection": True})  # noqa: S108
+    def test_timeout_handling(self, tmp_path: Path) -> None:
+        skill = _make_skill(
+            {"skills_path": str(tmp_path), "allow_shell_injection": True}
+        )
         skill._allow_shell_injection = True
         skill._shell_timeout = 1
-        content = "!`sleep 10`"
-        result = skill._execute_shell_injection(content, Path("/tmp"), timeout=1)  # noqa: S108
+        # The command must block for longer than the timeout on EVERY platform:
+        # `sleep` is not a Windows shell builtin, so it exits immediately there
+        # and the timeout path is never reached. A python -c sleep is portable
+        # and is the same interpreter already running the suite.
+        blocking = f'"{sys.executable}" -c "import time; time.sleep(10)"'
+        content = f"!`{blocking}`"
+        # cwd must be a directory that exists on this platform: the product
+        # passes it to subprocess.run(cwd=...), and a nonexistent cwd fails the
+        # spawn outright ([WinError 267] The directory name is invalid) before
+        # the timeout can fire, so the assertion would never see a timeout.
+        result = skill._execute_shell_injection(content, tmp_path, timeout=1)
         assert "[command timed out:" in result
 
-    def test_error_handling(self) -> None:
-        skill = _make_skill({"skills_path": "/tmp", "allow_shell_injection": True})  # noqa: S108
+    def test_error_handling(self, tmp_path: Path) -> None:
+        skill = _make_skill(
+            {"skills_path": str(tmp_path), "allow_shell_injection": True}
+        )
         skill._allow_shell_injection = True
         content = "!`nonexistent_command_xyz_12345`"
-        result = skill._execute_shell_injection(content, Path("/tmp"), timeout=5)  # noqa: S108
+        result = skill._execute_shell_injection(content, tmp_path, timeout=5)
         # The command will produce stderr but still return (non-zero exit code)
         # subprocess.run doesn't raise on non-zero exit, so result is stdout (empty)
         # This is expected behavior — command runs but produces no stdout
@@ -311,28 +325,32 @@ class TestShellInjection:
 class TestVariableSubstitution:
     """Test ${CLAUDE_SKILL_DIR} and ${CLAUDE_SESSION_ID} substitution."""
 
-    def test_skill_dir_replaced(self) -> None:
-        skill = _make_skill({"skills_path": "/tmp"})  # noqa: S108
+    def test_skill_dir_replaced(self, tmp_path: Path) -> None:
+        skill = _make_skill({"skills_path": str(tmp_path)})
         content = "Path: ${CLAUDE_SKILL_DIR}/file.txt"
-        result = skill._substitute_variables(content, Path("/opt/skills/my-skill"))
-        assert result == "Path: /opt/skills/my-skill/file.txt"
+        # The product substitutes str(skill_dir), so the expectation must be
+        # built from the same Path rather than a POSIX literal:
+        # str(Path("/opt/skills/my-skill")) is "\opt\skills\my-skill" on Windows.
+        skill_dir = Path("/opt/skills/my-skill")
+        result = skill._substitute_variables(content, skill_dir)
+        assert result == f"Path: {skill_dir}/file.txt"
 
-    def test_session_id_replaced(self) -> None:
-        skill = _make_skill({"skills_path": "/tmp"})  # noqa: S108
+    def test_session_id_replaced(self, tmp_path: Path) -> None:
+        skill = _make_skill({"skills_path": str(tmp_path)})
         content = "Session: ${CLAUDE_SESSION_ID}"
-        result = skill._substitute_variables(content, Path("/tmp"), {"call_id": "abc-123"})  # noqa: S108
+        result = skill._substitute_variables(content, tmp_path, {"call_id": "abc-123"})
         assert result == "Session: abc-123"
 
-    def test_missing_raw_data_graceful(self) -> None:
-        skill = _make_skill({"skills_path": "/tmp"})  # noqa: S108
+    def test_missing_raw_data_graceful(self, tmp_path: Path) -> None:
+        skill = _make_skill({"skills_path": str(tmp_path)})
         content = "Session: ${CLAUDE_SESSION_ID}"
-        result = skill._substitute_variables(content, Path("/tmp"), None)  # noqa: S108
+        result = skill._substitute_variables(content, tmp_path, None)
         assert result == "Session: "
 
-    def test_missing_call_id_graceful(self) -> None:
-        skill = _make_skill({"skills_path": "/tmp"})  # noqa: S108
+    def test_missing_call_id_graceful(self, tmp_path: Path) -> None:
+        skill = _make_skill({"skills_path": str(tmp_path)})
         content = "Session: ${CLAUDE_SESSION_ID}"
-        result = skill._substitute_variables(content, Path("/tmp"), {"other_key": "val"})  # noqa: S108
+        result = skill._substitute_variables(content, tmp_path, {"other_key": "val"})
         assert result == "Session: "
 
 
@@ -343,27 +361,27 @@ class TestVariableSubstitution:
 class TestFallbackArguments:
     """Test fallback argument appending when body lacks bare $ARGUMENTS."""
 
-    def test_body_with_bare_arguments_no_fallback(self) -> None:
-        skill = _make_skill({"skills_path": "/tmp"})  # noqa: S108
+    def test_body_with_bare_arguments_no_fallback(self, tmp_path: Path) -> None:
+        skill = _make_skill({"skills_path": str(tmp_path)})
         result = skill._substitute_arguments("Use $ARGUMENTS here", "some input")
         assert result == "Use some input here"
         assert "ARGUMENTS:" not in result
 
-    def test_body_without_arguments_appends_fallback(self) -> None:
-        skill = _make_skill({"skills_path": "/tmp"})  # noqa: S108
+    def test_body_without_arguments_appends_fallback(self, tmp_path: Path) -> None:
+        skill = _make_skill({"skills_path": str(tmp_path)})
         result = skill._substitute_arguments("Do the thing", "some input")
         assert "Do the thing" in result
         assert "\n\nARGUMENTS: some input" in result
 
-    def test_indexed_form_triggers_fallback(self) -> None:
-        skill = _make_skill({"skills_path": "/tmp"})  # noqa: S108
+    def test_indexed_form_triggers_fallback(self, tmp_path: Path) -> None:
+        skill = _make_skill({"skills_path": str(tmp_path)})
         result = skill._substitute_arguments("Use $ARGUMENTS[0] only", "hello world")
         # $ARGUMENTS[0] is indexed — bare $ARGUMENTS not present, so fallback appends
         assert "hello" in result
         assert "\n\nARGUMENTS: hello world" in result
 
-    def test_empty_arguments_no_append(self) -> None:
-        skill = _make_skill({"skills_path": "/tmp"})  # noqa: S108
+    def test_empty_arguments_no_append(self, tmp_path: Path) -> None:
+        skill = _make_skill({"skills_path": str(tmp_path)})
         result = skill._substitute_arguments("Do the thing", "")
         assert result == "Do the thing"
         assert "ARGUMENTS:" not in result
@@ -563,7 +581,13 @@ class TestHandlerPipeline:
     def test_full_pipeline_ordering(self) -> None:
         """Shell injection -> variables -> arguments -> wrapping."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            skill_dir = Path(tmpdir) / "pipeline-skill"
+            # setup() canonicalizes skills_path via .resolve(), so the dir the
+            # product reports is the RESOLVED one. On Windows the temp dir is
+            # handed out in 8.3 short form (C:\Users\RUNNER~1\...) and resolve()
+            # expands it to the long form (C:\Users\runneradmin\...) — comparing
+            # an unresolved expectation to resolved output fails. Resolve here
+            # too, so both sides name the same directory the same way.
+            skill_dir = (Path(tmpdir).resolve()) / "pipeline-skill"
             body = "Dir: ${CLAUDE_SKILL_DIR} | Args: $ARGUMENTS"
             _write_skill_md(skill_dir, "pipeline-skill", body=body)
 
@@ -591,7 +615,9 @@ class TestHandlerPipeline:
     def test_shell_then_variables_then_arguments(self) -> None:
         """Verify processing order: shell first, then vars, then args."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            skill_dir = Path(tmpdir) / "order-skill"
+            # .resolve() to match the product's canonicalized skills_path — see
+            # test_full_pipeline_ordering for the Windows 8.3 short-path detail.
+            skill_dir = (Path(tmpdir).resolve()) / "order-skill"
             # Shell outputs something, then variable and arg substitution happens
             body = "Shell: !`echo shellout` | Dir: ${CLAUDE_SKILL_DIR} | Arg: $ARGUMENTS"
             _write_skill_md(skill_dir, "order-skill", body=body)
@@ -632,7 +658,9 @@ class TestHandlerPipeline:
     def test_section_loading_with_pipeline(self) -> None:
         """Test that section files also go through the pipeline."""
         with tempfile.TemporaryDirectory() as tmpdir:
-            skill_dir = Path(tmpdir) / "section-skill"
+            # .resolve() to match the product's canonicalized skills_path — see
+            # test_full_pipeline_ordering for the Windows 8.3 short-path detail.
+            skill_dir = (Path(tmpdir).resolve()) / "section-skill"
             _write_skill_md(skill_dir, "section-skill", body="Main body")
 
             # Create a section file with variable placeholders

@@ -69,17 +69,23 @@ class TestSchemaUtils:
     def test_get_default_schema_path_importlib_resources_old(self) -> None:
         """Test default schema path using importlib.resources (Python 3.7-3.8)"""
         utils = SchemaUtils.__new__(SchemaUtils)
-        
+
+        # The resource is a Path, and the method returns str(path) — so the
+        # expected value must be built the same way rather than hardcoded as a
+        # POSIX literal. str(Path("/old/schema.json")) is "\old\schema.json" on
+        # Windows, which is correct behavior, not a bug.
+        resource = Path("/old") / "schema.json"
+
         with patch('importlib.resources.files', side_effect=AttributeError):
             with patch('importlib.resources.path') as mock_path:
                 mock_context = Mock()
-                mock_context.__enter__ = Mock(return_value=Path("/old/schema.json"))
+                mock_context.__enter__ = Mock(return_value=resource)
                 mock_context.__exit__ = Mock(return_value=None)
                 mock_path.return_value = mock_context
-                
+
                 result = utils._get_default_schema_path()
-                
-                assert result == "/old/schema.json"
+
+                assert result == str(resource)
     
     def test_get_default_schema_path_manual_search(self) -> None:
         """Test default schema path using manual file search when importlib.resources fails"""
@@ -94,15 +100,23 @@ class TestSchemaUtils:
                 raise ImportError("mocked")
             return original_files(package)
 
+        # The product composes candidates with os.path.join(os.getcwd(), ...),
+        # which yields "/current\schema.json" on Windows. Build the expected
+        # string with the same join so the test asserts the contract (the cwd
+        # candidate is searched first and returned) instead of a POSIX-only
+        # spelling of it.
+        cwd = os.path.join(os.sep, "current")  # noqa: PTH118
+        expected = os.path.join(cwd, "schema.json")  # noqa: PTH118
+
         with patch('importlib.resources.files', side_effect=failing_files):
             with patch('os.path.exists') as mock_exists:
-                with patch('os.getcwd', return_value="/current"):
+                with patch('os.getcwd', return_value=cwd):
                     # First path exists
-                    mock_exists.side_effect = lambda path: path == "/current/schema.json"
+                    mock_exists.side_effect = lambda path: path == expected
 
                     result = utils._get_default_schema_path()
 
-                    assert result == "/current/schema.json"
+                    assert result == expected
 
     def test_get_default_schema_path_not_found(self) -> None:
         """Test default schema path when file is not found anywhere"""

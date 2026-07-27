@@ -1478,6 +1478,59 @@ class TestRunForever:
             assert client._ws is None
         _active_clients.clear()
 
+    @pytest.mark.asyncio
+    async def test_run_forever_survives_loop_without_signal_handlers(self) -> None:
+        """_run_forever must not die where loop.add_signal_handler is unsupported.
+
+        asyncio's loop-level signal handling is Unix-only: on Windows BOTH the
+        Proactor and Selector loops raise NotImplementedError unconditionally.
+        Before the guard, that exception escaped on the FIRST statement of
+        _run_forever(), so RelayClient.run() never reached connect() on Windows
+        — a real product defect, not a test artifact.
+
+        This reproduces the platform condition directly (patching the loop
+        method to raise exactly what Windows raises) rather than skipping on
+        win32, so the contract is covered on every OS the suite runs on.
+        """
+        _active_clients.clear()
+        connect_count = 0
+
+        async def mock_connect(*args: Any, **kwargs: Any) -> AutoAuthMockWebSocket:
+            nonlocal connect_count
+            connect_count += 1
+            return AutoAuthMockWebSocket()
+
+        loop = asyncio.get_running_loop()
+
+        def no_signal_handlers(*args: Any, **kwargs: Any) -> None:
+            raise NotImplementedError
+
+        with (
+            patch(
+                "signalwire.relay.client.websockets.connect", side_effect=mock_connect
+            ),
+            patch("signalwire.relay.client._CLIENT_PING_INTERVAL", 999),
+            patch.object(loop, "add_signal_handler", no_signal_handlers),
+        ):
+            client = RelayClient(project="p", token="t")
+
+            async def stop_after_connect() -> None:
+                while connect_count < 1:
+                    await asyncio.sleep(0.01)
+                await asyncio.sleep(0.05)
+                client._closing = True
+                if client._ws:
+                    await client._ws.close()
+
+            task = asyncio.ensure_future(client._run_forever())
+            stopper = asyncio.ensure_future(stop_after_connect())
+            # The bug made this raise NotImplementedError instead of connecting.
+            await asyncio.wait_for(task, timeout=5.0)
+            stopper.cancel()
+            # It got PAST the signal registration and did real work.
+            assert connect_count >= 1
+        _active_clients.clear()
+
 
 # ===================================================================
 # PY-4 / A6 — bounded reconnect on PERMANENT auth rejection.
@@ -1988,18 +2041,26 @@ class TestPingLoopInternals:
                 return_value=ws,
             ),
             patch("signalwire.relay.client._CLIENT_PING_INTERVAL", 0.01),
-            patch("signalwire.relay.client._EXECUTE_TIMEOUT", 0.01),
             patch("signalwire.relay.client._MAX_PING_FAILURES", 1),
             patch("signalwire.relay.client.RECONNECT_MIN_DELAY", 0.01),
         ):
             client = RelayClient(project="p", token="t")
+            # connect() must NOT run under the 10ms ping timeout. The auth
+            # round-trip needs several event-loop turns (AutoAuthMockWebSocket
+            # queues the reply, then _recv_task has to be scheduled and drain
+            # it), and _send_request reads _EXECUTE_TIMEOUT at call time. A 10ms
+            # deadline is below the Windows asyncio timer granularity (~15.6ms
+            # clock tick), so the connect request could time out before the loop
+            # ever ran the recv task — "Request timeout for signalwire.connect".
+            # Shorten the timeout only for the pings this test is about.
             await client.connect()
 
-            # Don't respond to pings — they'll timeout and trigger force_close
-            await asyncio.sleep(0.3)
+            with patch("signalwire.relay.client._EXECUTE_TIMEOUT", 0.01):
+                # Don't respond to pings — they'll timeout and trigger force_close
+                await asyncio.sleep(0.3)
 
-            # After max failures, should have force-closed
-            assert client._connected is False
+                # After max failures, should have force-closed
+                assert client._connected is False
             await client.disconnect()
         _active_clients.clear()
 
