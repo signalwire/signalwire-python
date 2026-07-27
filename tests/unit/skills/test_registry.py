@@ -1408,15 +1408,21 @@ class TestEntryPointLoading:
 
         call_log = []
 
+        # The product turns each entry into Path(path_str), so match on the Path
+        # itself instead of a str() spelling of it: str(Path("/env/skills")) is
+        # "\env\skills" on Windows, so the literal comparison never matched
+        # there and the env-var search looked broken when it was not.
+        env_path = Path("/env/skills")
+
         def fake_load_from_path(name: str, path: Path) -> type[SkillBase] | None:
             call_log.append((name, path))
-            if str(path) == "/env/skills":
+            if path == env_path:
                 return MockSkill
             return None
 
         with patch.object(registry, '_load_entry_points'):
             with patch.object(registry, '_load_skill_from_path', side_effect=fake_load_from_path):
-                with patch.dict('os.environ', {'SIGNALWIRE_SKILL_PATHS': '/env/skills'}):
+                with patch.dict('os.environ', {'SIGNALWIRE_SKILL_PATHS': str(env_path)}):
                     result = registry._load_skill_on_demand("mock_skill")
 
         assert result is MockSkill

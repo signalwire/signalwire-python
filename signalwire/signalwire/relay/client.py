@@ -24,6 +24,7 @@ import asyncio
 import json
 import os
 import re
+import signal
 import ssl as ssl_module
 import uuid
 from typing import Any, TYPE_CHECKING
@@ -680,11 +681,27 @@ class RelayClient:
         """Connect and maintain the connection with auto-reconnect."""
         # Register SIGINT handler so Ctrl+C triggers a clean shutdown
         # instead of dumping a stack trace.
+        #
+        # loop.add_signal_handler() is a Unix-only asyncio capability: the
+        # Windows Proactor/Selector loops raise NotImplementedError
+        # unconditionally (CPython Lib/asyncio/events.py). Without this guard a
+        # bare `NotImplementedError` escaped _run_forever() on the very first
+        # statement, so RelayClient.run() could never connect on Windows at
+        # all. Degrade instead: on a platform with no loop-level signal
+        # handling, Ctrl+C still stops the client — asyncio.run() surfaces it
+        # as KeyboardInterrupt, which run() suppresses — we just lose the
+        # graceful _shutdown() handshake.
         loop = asyncio.get_running_loop()
-        loop.add_signal_handler(
-            __import__("signal").SIGINT,
-            lambda: asyncio.ensure_future(self._shutdown()),
-        )
+        try:
+            loop.add_signal_handler(
+                signal.SIGINT,
+                lambda: asyncio.ensure_future(self._shutdown()),
+            )
+        except NotImplementedError:
+            logger.debug(
+                "Loop-level SIGINT handling unavailable on this platform; "
+                "falling back to KeyboardInterrupt-driven shutdown"
+            )
 
         while not self._closing:
             try:
