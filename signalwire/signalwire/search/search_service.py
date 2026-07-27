@@ -436,12 +436,14 @@ class SearchService:
         # SQLite backend
         try:
             import sqlite3
+            from contextlib import closing
 
-            conn = sqlite3.connect(index_path)
-            cursor = conn.cursor()
-            cursor.execute("SELECT value FROM config WHERE key = 'embedding_model'")
-            result = cursor.fetchone()
-            conn.close()
+            # `closing` so the handle is released even when the query raises —
+            # an unclosed handle makes the file undeletable on Windows.
+            with closing(sqlite3.connect(index_path)) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT value FROM config WHERE key = 'embedding_model'")
+                result = cursor.fetchone()
             return result[0] if result else "sentence-transformers/all-mpnet-base-v2"
         except Exception as e:
             logger.warning(f"Could not get model name from index: {e}")
