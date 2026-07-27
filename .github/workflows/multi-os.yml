@@ -65,13 +65,16 @@ jobs:
       - name: PACKAGE-SMOKE (build + install + import from the built artifact)
         shell: bash
         working-directory: signalwire-python
-        # `python`, NOT `python3` — `python` is the shim actions/setup-python puts on
-        # PATH, so it is the 3.12 interpreter provisioned above (and the one the
-        # `pip install` step installed `build` into). Bare `python3` on the macOS
-        # runner resolves to /Library/Frameworks/Python.framework/Versions/3.12/bin/
-        # python3 — the PRE-INSTALLED framework Python, ahead of the toolcache — a
-        # different interpreter with no `build` module. That is the nightly failure
-        # (run 30238061313, macos-latest): "No module named build". package_smoke.py
-        # is not at fault; it correctly uses sys.executable, so it faithfully used
-        # whichever interpreter this line handed it.
+        # `python`, not `python3`: use the SAME name `pip` above pairs with, so this
+        # step provably runs the interpreter the deps were installed into. (On the
+        # macOS/arm64 runner BOTH names resolve to the pre-installed framework Python
+        # — setup-python does not win PATH there — and `pip` is that Python's pip, so
+        # the whole job is consistently one interpreter. Pinning the name keeps it that
+        # way if the image's precedence ever changes.)
+        #
+        # The nightly failure (run 30238061313, macos-latest) was
+        # "No module named build" — NOT an interpreter mismatch: `build` was never a
+        # declared dependency at all, so the gate silently relied on the runner image
+        # shipping it. Now declared in requirements-dev.txt, which the step above
+        # installs. package_smoke.py is not at fault; it correctly uses sys.executable.
         run: python ../porting-sdk/scripts/package_smoke.py --port python --repo .
