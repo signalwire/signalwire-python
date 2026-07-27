@@ -55,12 +55,24 @@ jobs:
           cd signalwire-python
           python -m py_compile examples/*.py rest/examples/*.py relay/examples/*.py
 
+      # Regenerate the native-only sidecar BEFORE the audit reads it, so a renamed or
+      # deleted livewire member stops resolving instead of staying excused by a stale
+      # committed file. Mirrors run-ci.sh's SURFACE-NATIVE gate (DOC-AUDIT deps on it).
+      - name: Regenerate the native-only doc-audit sidecar
+        run: |
+          python3 signalwire-python/scripts/emit_surface_native.py \
+            --out signalwire-python/port_surface_native.json
+
       - name: Run audit_docs.py against the Python surface
+        # --native-names is load-bearing: signalwire.livewire.* is excluded from the
+        # surface oracle by design, but livewire/ docs are in this perimeter, so its
+        # real members only resolve via the sidecar. See scripts/emit_surface_native.py.
         run: |
           python3 porting-sdk/scripts/audit_docs.py \
             --root signalwire-python \
             --surface porting-sdk/python_surface.json \
-            --ignore signalwire-python/DOC_AUDIT_IGNORE.md
+            --ignore signalwire-python/DOC_AUDIT_IGNORE.md \
+            --native-names signalwire-python/port_surface_native.json
 
       - name: Summary
         if: always()

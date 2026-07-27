@@ -1,0 +1,120 @@
+{
+  "modules": {
+    "signalwire.livewire": {
+      "_bases": {
+        "Agent": [],
+        "AgentHandoff": [],
+        "AgentServer": [],
+        "AgentSession": [],
+        "ChatContext": [],
+        "InferenceLLM": [],
+        "InferenceSTT": [],
+        "InferenceTTS": [],
+        "JobContext": [],
+        "JobProcess": [],
+        "Room": [],
+        "RunContext": [],
+        "StopResponse": [
+          "Exception"
+        ],
+        "ToolError": [
+          "Exception"
+        ]
+      },
+      "classes": {
+        "Agent": [
+          "__init__",
+          "llm_node",
+          "on_enter",
+          "on_exit",
+          "on_user_turn_completed",
+          "session",
+          "session",
+          "stt_node",
+          "tts_node",
+          "update_instructions",
+          "update_tools"
+        ],
+        "AgentHandoff": [
+          "__init__"
+        ],
+        "AgentServer": [
+          "__init__",
+          "rtc_session"
+        ],
+        "AgentSession": [
+          "__init__",
+          "generate_reply",
+          "history",
+          "interrupt",
+          "say",
+          "start",
+          "update_agent",
+          "userdata",
+          "userdata"
+        ],
+        "ChatContext": [
+          "__init__",
+          "append"
+        ],
+        "InferenceLLM": [
+          "__init__"
+        ],
+        "InferenceSTT": [
+          "__init__"
+        ],
+        "InferenceTTS": [
+          "__init__"
+        ],
+        "JobContext": [
+          "__init__",
+          "connect",
+          "wait_for_participant"
+        ],
+        "JobProcess": [
+          "__init__"
+        ],
+        "Room": [],
+        "RunContext": [
+          "__init__",
+          "userdata"
+        ],
+        "StopResponse": [],
+        "ToolError": []
+      },
+      "functions": [
+        "function_tool",
+        "run_app"
+      ]
+    },
+    "signalwire.livewire.plugins": {
+      "_bases": {
+        "CartesiaTTS": [],
+        "DeepgramSTT": [],
+        "ElevenLabsTTS": [],
+        "OpenAILLM": [],
+        "SileroVAD": []
+      },
+      "classes": {
+        "CartesiaTTS": [
+          "__init__"
+        ],
+        "DeepgramSTT": [
+          "__init__"
+        ],
+        "ElevenLabsTTS": [
+          "__init__"
+        ],
+        "OpenAILLM": [
+          "__init__"
+        ],
+        "SileroVAD": [
+          "__init__",
+          "load"
+        ]
+      },
+      "functions": []
+    }
+  },
+  "names": "python-native"
+}
