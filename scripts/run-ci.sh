@@ -300,14 +300,31 @@ sched_gate COUNT-CLAIM desc="numeric doc claims (skills/namespaces) match realit
 sched_gate ACCESSOR-TRUTH desc="documented backtick method() refs exist in source" \
     -- python3 "$PORTING_SDK_DIR/scripts/accessor_truth.py" --port python --repo "$PORT_ROOT"
 
+# SURFACE-NATIVE — regenerate the doc-audit resolvable-name sidecar BEFORE DOC-AUDIT
+# consumes it, so a renamed/deleted native-only member stops resolving instead of
+# silently staying excused by a stale file. Cheap (an ast walk of 2 modules).
+sched_gate SURFACE-NATIVE desc="regenerate port_surface_native.json (native-only doc-audit sidecar)" \
+    -- python3 "$PORT_ROOT/scripts/emit_surface_native.py" --out "$PORT_ROOT/port_surface_native.json"
+
 # DOC-AUDIT — every method/class referenced in docs/examples resolves to a real
 # symbol in the python surface oracle (python_surface.json, in porting-sdk). The
 # DOC_AUDIT_IGNORE.md ledger excuses stdlib/third-party/user-tutorial-helper refs.
-sched_gate DOC-AUDIT desc="audit_docs vs python_surface.json (the reference oracle)" \
+#
+# --native-names is LOAD-BEARING, not belt-and-braces. enumerate_python.py excludes
+# signalwire.livewire.* from the oracle by design (user-approved 2026-07-24: shipped by
+# python + typescript only, so oracle-ising it would force ~44 omissions x 8 ports),
+# but livewire/ DOCS are inside this perimeter — so livewire refs were unresolvable BY
+# CONSTRUCTION (7 findings for 5 methods that are all really implemented). The sidecar
+# carries those real native members, which is the mechanism audit_docs documents for
+# exactly this ("the enumerator carrying the port's idiom, not a doc-audit omission").
+# An ignore-ledger entry would have been the wrong fix: real shipped members excused by
+# name is a permanent blind spot that also hides a future typo in those names.
+sched_gate DOC-AUDIT deps=SURFACE-NATIVE desc="audit_docs vs python_surface.json (the reference oracle)" \
     -- python3 "$PORTING_SDK_DIR/scripts/audit_docs.py" \
         --root "$PORT_ROOT" \
         --surface "$PORTING_SDK_DIR/python_surface.json" \
-        --ignore "$PORT_ROOT/DOC_AUDIT_IGNORE.md"
+        --ignore "$PORT_ROOT/DOC_AUDIT_IGNORE.md" \
+        --native-names "$PORT_ROOT/port_surface_native.json"
 
 # DOC-WIRE (§A1) — the documented REST fixtures are wire-clean against the spec
 # (strict-flag mock journals wire_violations; runner replays the doc calls). Cheap.
