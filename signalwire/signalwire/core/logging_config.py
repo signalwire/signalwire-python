@@ -24,19 +24,53 @@ import re
 import sys
 
 import structlog
+from collections.abc import Callable
 from typing import Any
 
 _CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]")
 
 
-def strip_control_chars(
-    logger: Any, method_name: str, event_dict: dict[str, Any]
-) -> dict[str, Any]:
+def strip_control_chars(event_dict: dict[str, Any]) -> dict[str, Any]:
     """Strip control characters from log event values to prevent log injection."""
     for key, value in event_dict.items():
         if isinstance(value, str):
             event_dict[key] = _CONTROL_CHAR_RE.sub("", value)
     return event_dict
+
+
+class _as_processor:
+    """Adapt a single-argument event-dict transform to structlog's processor protocol.
+
+    structlog calls every processor as ``(logger, method_name, event_dict)``, but a
+    transform like :func:`strip_control_chars` only ever needs the event dict. This
+    keeps the public function honest — one parameter, the thing it actually uses —
+    and confines the structlog plumbing to the registration sites.
+
+    Two adapters wrapping the same transform compare equal, so a processor chain can
+    be tested for membership.
+    """
+
+    __slots__ = ("_transform",)
+
+    def __init__(self, transform: Callable[[dict[str, Any]], dict[str, Any]]) -> None:
+        self._transform = transform
+
+    def __call__(
+        self, logger: Any, method_name: str, event_dict: dict[str, Any]
+    ) -> dict[str, Any]:
+        return self._transform(event_dict)
+
+    def __eq__(self, other: object) -> bool:
+        if isinstance(other, _as_processor):
+            return self._transform == other._transform
+        return NotImplemented
+
+    def __hash__(self) -> int:
+        return hash(self._transform)
+
+    def __repr__(self) -> str:
+        name = getattr(self._transform, "__name__", repr(self._transform))
+        return f"<_as_processor {name}>"
 
 
 # Global flag to ensure configuration only happens once
@@ -168,7 +202,7 @@ def _get_structlog_processors() -> list[Any]:
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
-        strip_control_chars,
+        _as_processor(strip_control_chars),
     ]
 
 
@@ -196,7 +230,7 @@ def _get_formatter_processors() -> list[Any]:
         structlog.processors.StackInfoRenderer(),
         structlog.processors.format_exc_info,
         structlog.processors.UnicodeDecoder(),
-        strip_control_chars,
+        _as_processor(strip_control_chars),
         _drop_internal_keys,
     ]
 

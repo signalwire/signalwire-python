@@ -17,6 +17,7 @@ import json
 import os
 import sys
 from collections.abc import Iterator
+from typing import Any
 from unittest.mock import patch
 from io import StringIO
 
@@ -27,6 +28,7 @@ from signalwire.core.logging_config import (
     get_execution_mode,
     configure_logging,
     reset_logging_configuration,
+    strip_control_chars,
 )
 
 
@@ -403,6 +405,118 @@ class TestJsonMode:
             data = json.loads(output)
             assert data["user"] == "alice"
             assert data["event"] == "login"
+
+
+# ===========================================================================
+# Control-character stripping (log-injection prevention)
+# ===========================================================================
+
+
+class TestStripControlChars:
+    """`strip_control_chars` is a one-argument public function that scrubs control
+    characters from log event values; the structlog 3-argument processor protocol
+    is supplied by a private adapter at each registration site.
+
+    These tests exercise the REAL configured chain (not the function in isolation)
+    so that a broken adapter at either registration site is caught.
+    """
+
+    def test_public_function_takes_only_the_event_dict(self) -> None:
+        """The public contract is one parameter: the event dict."""
+        import inspect
+
+        params = list(inspect.signature(strip_control_chars).parameters)
+        assert params == ["event_dict"]
+
+    def test_strips_control_chars_from_values(self) -> None:
+        event_dict = {"event": "hello\x00world", "field": "a\x07b\x1fc", "n": 42}
+        result = strip_control_chars(event_dict)
+        assert result["event"] == "helloworld"
+        assert result["field"] == "abc"
+        # Non-string values pass through untouched.
+        assert result["n"] == 42
+
+    def test_registered_in_both_processor_chains(self) -> None:
+        """Both registration sites must carry the adapter, not the bare function."""
+        # Resolve from the live module: other tests in this file call
+        # importlib.reload(), which rebinds these symbols to fresh objects.
+        import signalwire.core.logging_config as lc
+
+        wrapped = lc._as_processor(lc.strip_control_chars)
+        chains = (lc._get_structlog_processors(), lc._get_formatter_processors())
+        for chain in chains:
+            matches = [p for p in chain if p == wrapped]
+            assert matches, f"strip_control_chars adapter missing from {chain!r}"
+
+    def test_adapter_is_callable_with_the_structlog_protocol(self) -> None:
+        """The adapter accepts structlog's (logger, method_name, event_dict) call."""
+        from signalwire.core.logging_config import _as_processor
+
+        processor = _as_processor(strip_control_chars)
+        result = processor(None, "info", {"event": "x\x00y"})
+        assert result["event"] == "xy"
+
+    def test_control_chars_stripped_through_the_real_chain(self) -> None:
+        """End-to-end: a control character in a logged value never reaches output.
+
+        This drives BOTH registration sites: the structlog processor chain
+        (`_get_structlog_processors`) and the ProcessorFormatter chain
+        (`_get_formatter_processors`).
+        """
+        with patch.dict(os.environ, {'SIGNALWIRE_LOG_FORMAT': 'json', 'SIGNALWIRE_LOG_LEVEL': 'debug'}):
+            configure_logging()
+
+            buf = StringIO()
+            sw = logging.getLogger("signalwire")
+            handler = sw.handlers[0]
+            assert isinstance(handler, logging.StreamHandler)
+            handler.stream = buf
+
+            log = get_logger("signalwire.test_control_chars")
+            # A forged log line: NUL + BEL in the event, ESC control byte in a
+            # bound field.
+            bound = log.bind(user="ali\x07ce", note="x\x1by")
+            bound.info("logged\x00in")
+
+            output = buf.getvalue().strip()
+            assert output, "Expected JSON output"
+            data = json.loads(output)
+
+            assert data["event"] == "loggedin"
+            assert data["user"] == "alice"
+            assert data["note"] == "xy"
+
+            # Nothing in the raw rendered line carries a control character.
+            for ch in ("\x00", "\x07", "\x1b"):
+                assert ch not in output
+
+    def test_both_chains_run_the_processor(self) -> None:
+        """Prove the processor is actually invoked twice per record — once by the
+        structlog chain and once by the ProcessorFormatter chain — so a silently
+        dropped registration site cannot pass."""
+        import signalwire.core.logging_config as lc
+
+        calls: list[dict[str, Any]] = []
+        original = lc.strip_control_chars
+
+        def spy(event_dict: dict[str, Any]) -> dict[str, Any]:
+            calls.append(event_dict)
+            return original(event_dict)
+
+        with patch.dict(os.environ, {'SIGNALWIRE_LOG_FORMAT': 'json', 'SIGNALWIRE_LOG_LEVEL': 'debug'}):
+            with patch.object(lc, "strip_control_chars", spy):
+                configure_logging()
+
+                buf = StringIO()
+                sw = logging.getLogger("signalwire")
+                handler = sw.handlers[0]
+                assert isinstance(handler, logging.StreamHandler)
+                handler.stream = buf
+
+                lc.get_logger("signalwire.test_both_chains").info("evt\x00x")
+
+        assert len(calls) == 2, f"expected both chains to run it, got {len(calls)}"
+        assert buf.getvalue().strip()
 
 
 # ===========================================================================
