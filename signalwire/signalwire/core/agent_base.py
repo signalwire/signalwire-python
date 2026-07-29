@@ -1410,39 +1410,62 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
     ) -> tuple[Any, dict[str, Any] | None]:
         req_log = self.log.bind(endpoint="swaig", function=function_name)
 
-        # Validate security token if present.
+        # Validate the security token.
+        #
+        # A tool registered with secure=True REQUIRES a valid __token. An
+        # ABSENT token is refused exactly like an invalid one -- omitting the
+        # credential must never be weaker than presenting a wrong one, or
+        # `secure` would be a flag that permits anonymous calls.
+        #
+        # The refusal shape is a 200 + FunctionResult body, NOT an HTTP error:
+        # the engine (mod_openai) has no handling for a SWAIG refusal status,
+        # so the tool reports that it cannot execute and the model relays it.
         token = request.query_params.get("__token") or request.query_params.get("token")
-        if token:
-            req_log.debug("token_found", token_length=len(token))
-            if (
-                hasattr(self, "_session_manager")
-                and function_name in self._tool_registry._swaig_functions
-                and call_id is not None
-            ):
-                is_valid = self._session_manager.validate_tool_token(
-                    function_name, token, call_id
+        if (
+            hasattr(self, "_session_manager")
+            and function_name in self._tool_registry._swaig_functions
+        ):
+            if token:
+                req_log.debug("token_found", token_length=len(token))
+            else:
+                req_log.warning("token_missing")
+
+            # A token can only be validated against a call_id; without one
+            # there is nothing to check it against, so treat it as unvalidated.
+            if token and call_id is not None:
+                is_valid = bool(
+                    self._session_manager.validate_tool_token(
+                        function_name, token, call_id
+                    )
                 )
-                if is_valid:
-                    req_log.debug("token_valid")
-                else:
+            else:
+                is_valid = False
+
+            if is_valid:
+                req_log.debug("token_valid")
+            else:
+                if token:
                     req_log.warning("token_invalid")
                     if hasattr(self._session_manager, "debug_token"):
                         debug_info = self._session_manager.debug_token(token)
                         req_log.debug("token_debug", debug=json.dumps(debug_info))
-                    func_entry = self._tool_registry._swaig_functions.get(function_name)
-                    if func_entry and (
-                        func_entry.secure
-                        if hasattr(func_entry, "secure")
-                        else func_entry.get("secure", True)
-                    ):
-                        from signalwire.core.function_result import FunctionResult
+                func_entry = self._tool_registry._swaig_functions.get(function_name)
+                if func_entry and (
+                    func_entry.secure
+                    if hasattr(func_entry, "secure")
+                    else func_entry.get("secure", True)
+                ):
+                    req_log.warning(
+                        "secure_function_refused", token_present=bool(token)
+                    )
+                    from signalwire.core.function_result import FunctionResult
 
-                        return self, FunctionResult(
-                            response=(
-                                "I'm sorry, the security token for this function is invalid "
-                                "or expired. I cannot execute this action."
-                            )
-                        ).to_dict()
+                    return self, FunctionResult(
+                        response=(
+                            "I'm sorry, the security token for this function is invalid "
+                            "or expired. I cannot execute this action."
+                        )
+                    ).to_dict()
 
         # Dynamic-config ephemeral agent.
         target = self
