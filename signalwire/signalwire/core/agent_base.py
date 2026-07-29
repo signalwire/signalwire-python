@@ -110,8 +110,13 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
     3. Declarative PROMPT_SECTIONS class attribute
     """
 
-    # Subclasses can define this to declaratively set prompt sections
-    PROMPT_SECTIONS = None
+    # Subclasses can define this to declaratively set prompt sections.
+    # ClassVar: this is read off the CLASS (`cls.PROMPT_SECTIONS` in
+    # PromptMixin._process_prompt_sections) and is never assigned per-instance.
+    # Untyped, mypy inferred it as an INSTANCE variable, which made every
+    # subclass that correctly declared `PROMPT_SECTIONS: ClassVar[...]` a
+    # "Cannot override instance variable with class variable" [misc] error.
+    PROMPT_SECTIONS: ClassVar[dict[str, Any] | list[Any] | None] = None
 
     # Attributes set dynamically (on ephemeral copies / when native functions are
     # configured) rather than unconditionally in __init__. Declared here so the

@@ -13,7 +13,6 @@ Unit tests for search index builder module
 
 import pytest
 import tempfile
-import os
 import sqlite3
 from contextlib import closing
 from typing import Any
@@ -364,8 +363,8 @@ class TestIndexBuilderDatabaseCreation:
 
     def teardown_method(self) -> None:
         """Clean up test fixtures"""
-        if self.temp_db and os.path.exists(self.temp_db):
-            os.remove(self.temp_db)
+        if self.temp_db:
+            Path(self.temp_db).unlink(missing_ok=True)
 
     def test_create_database_basic(self) -> None:
         """Test basic database creation"""
@@ -397,7 +396,7 @@ class TestIndexBuilderDatabaseCreation:
         )
 
         # Verify database was created
-        assert os.path.exists(self.temp_db)
+        assert Path(self.temp_db).exists()
 
         # Verify schema
         conn = sqlite3.connect(self.temp_db)
@@ -431,7 +430,7 @@ class TestIndexBuilderDatabaseCreation:
         self.builder._create_database(self.temp_db, chunks, ["en"], ["/home"], ["txt"])
 
         # File should be recreated
-        assert os.path.exists(self.temp_db)
+        assert Path(self.temp_db).exists()
 
         conn = sqlite3.connect(self.temp_db)
         cursor = conn.cursor()
@@ -475,8 +474,8 @@ class TestIndexBuilderIndexValidation:
 
     def teardown_method(self) -> None:
         """Clean up test fixtures"""
-        if self.temp_db and os.path.exists(self.temp_db):
-            os.remove(self.temp_db)
+        if self.temp_db:
+            Path(self.temp_db).unlink(missing_ok=True)
 
     def test_validate_index_nonexistent_file(self) -> None:
         """Test validation of non-existent index file"""
@@ -652,8 +651,8 @@ class TestIndexBuilderBuildMethods:
 
     def teardown_method(self) -> None:
         """Clean up test fixtures"""
-        if self.temp_db and os.path.exists(self.temp_db):
-            os.remove(self.temp_db)
+        if self.temp_db:
+            Path(self.temp_db).unlink(missing_ok=True)
 
     @patch("signalwire.search.index_builder.preprocess_document_content")
     def test_build_index_from_sources_success(self, mock_preprocess: MagicMock) -> None:
@@ -722,7 +721,7 @@ class TestIndexBuilderBuildMethods:
             self.builder.build_index_from_sources(sources, temp_db, file_types)
 
             # Database should not be created
-            assert not os.path.exists(temp_db)
+            assert not Path(temp_db).exists()
 
     def test_build_index_from_sources_no_chunks(self, tmp_path: Path) -> None:
         """Test index building with no chunks created"""
@@ -744,7 +743,7 @@ class TestIndexBuilderBuildMethods:
             self.builder.build_index_from_sources(sources, temp_db, file_types)
 
             # Database should not be created
-            assert not os.path.exists(temp_db)
+            assert not Path(temp_db).exists()
 
     @patch("signalwire.search.index_builder.np")
     def test_build_index_from_sources_embedding_error(self, mock_np: MagicMock) -> None:
@@ -838,5 +837,4 @@ class TestIndexBuilderEdgeCases:
                 assert dimensions == "768"  # Default
                 conn.close()
         finally:
-            if os.path.exists(temp_db):
-                os.remove(temp_db)
+            Path(temp_db).unlink(missing_ok=True)

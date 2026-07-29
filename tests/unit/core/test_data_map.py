@@ -350,15 +350,25 @@ class TestDataMapFactoryFunctions:
 
     def test_create_expression_tool(self) -> None:
         """Test create_expression_tool factory"""
+        # NOTE: create_expression_tool takes dict[test_value -> (pattern, result)],
+        # so the test_value is the KEY -- two patterns cannot share one test_value
+        # (this literal previously repeated "${args.command}" twice and the second
+        # entry silently clobbered the first, so only "stop" was ever exercised).
         patterns = {
             "${args.command}": ("start", FunctionResult().add_action("start", True)),
-            "${args.command}": ("stop", FunctionResult().add_action("stop", True)),
+            "${args.mode}": ("stop", FunctionResult().add_action("stop", True)),
         }
 
         data_map = create_expression_tool("control_tool", patterns)
 
         assert isinstance(data_map, DataMap)
         assert data_map.function_name == "control_tool"
+        # Both entries must survive -- one expression per pattern, in order.
+        expressions = data_map.to_swaig_function()["data_map"]["expressions"]
+        assert [(e["string"], e["pattern"]) for e in expressions] == [
+            ("${args.command}", "start"),
+            ("${args.mode}", "stop"),
+        ]
 
     def test_create_expression_tool_with_parameters(self) -> None:
         """Test create_expression_tool with parameters"""

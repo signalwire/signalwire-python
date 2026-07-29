@@ -105,27 +105,27 @@ def _build_mixin(**overrides: Any) -> Any:
     tool_registry = MagicMock()
     tool_registry._swaig_functions = {}
 
-    defaults: dict[str, Any] = dict(
-        _app=None,
-        _basic_auth=("user", "pass"),
-        _proxy_url_base=None,
-        _proxy_url_base_from_env=False,
-        _proxy_detection_done=False,
-        _current_request=None,
-        _dynamic_config_callback=None,
-        _is_ephemeral=False,
-        _suppress_logs=False,
-        _routing_callbacks={},
-        _tool_registry=tool_registry,
-        _session_manager=MagicMock(),
-        log=log,
-        name="test_agent",
-        route="/agent",
-        host="0.0.0.0",
-        port=3000,
-        ssl_enabled=False,
-        schema_utils=MagicMock(),
-    )
+    defaults: dict[str, Any] = {
+        "_app": None,
+        "_basic_auth": ("user", "pass"),
+        "_proxy_url_base": None,
+        "_proxy_url_base_from_env": False,
+        "_proxy_detection_done": False,
+        "_current_request": None,
+        "_dynamic_config_callback": None,
+        "_is_ephemeral": False,
+        "_suppress_logs": False,
+        "_routing_callbacks": {},
+        "_tool_registry": tool_registry,
+        "_session_manager": MagicMock(),
+        "log": log,
+        "name": "test_agent",
+        "route": "/agent",
+        "host": "0.0.0.0",
+        "port": 3000,
+        "ssl_enabled": False,
+        "schema_utils": MagicMock(),
+    }
     defaults.update(overrides)
 
     # WebMixin is typed as Any to mypy (its module isn't fully resolvable under

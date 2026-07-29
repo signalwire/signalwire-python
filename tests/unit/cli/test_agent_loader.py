@@ -54,7 +54,12 @@ class _MockSWMLService:
 class _MockAgentBase(_MockSWMLService):
     """Minimal stand-in for AgentBase (inherits from SWMLService stand-in)."""
 
-    _tool_registry: dict[str, object] = {}
+    def __init__(self) -> None:
+        # Per-instance, mirroring the real AgentBase: the production registry is
+        # built in __init__ and identity-compared per agent (agent_base.py uses
+        # ``id(agent._tool_registry)``). A class-level dict here would be shared
+        # by every _MockAgentBase() the suite constructs.
+        self._tool_registry: dict[str, object] = {}
 
 
 class _MockServiceCapture:
@@ -213,7 +218,7 @@ class TestDiscoverServicesInFile:
 
         names = [r["name"] for r in results]
         assert "MySvcClass" in names
-        cls_entry = [r for r in results if r["name"] == "MySvcClass"][0]
+        cls_entry = next(r for r in results if r["name"] == "MySvcClass")
         assert cls_entry["type"] == "class"
 
 

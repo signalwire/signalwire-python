@@ -38,7 +38,8 @@ def run_swaig_test(
         "-m",
         "signalwire.cli.swaig_test_wrapper",
         str(agent_path),
-    ] + list(args)
+        *args,
+    ]
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
         return result.returncode, result.stdout, result.stderr

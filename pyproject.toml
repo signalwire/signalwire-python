@@ -194,6 +194,15 @@ select = ["E4", "E7", "E9", "F", "B", "S", "C4", "PERF", "SIM", "PTH", "RET", "R
 # F401 unused imports, F841 unused variables, SIM/RET/PERF/C4/PTH/UP/RUF/B and every
 # other bandit rule all still red the gate.
 "tests/**" = ["S101", "E402", "S104", "S105", "S106"]
+# _resolve_type() must keep accepting the LEGACY `typing.Optional[X]` spelling as
+# well as PEP-604 `X | None`, and this file is where that contract is proven. Two
+# tests (test_optional_str / test_optional_int) pass `Optional[str]`/`Optional[int]`
+# as DATA to the function under test; the modern `X | None` spelling is already
+# covered separately in the same file (the handler-signature tests). UP045 would
+# rewrite the legacy cases into duplicates of the modern ones, deleting the only
+# coverage of the legacy path. The annotations in this file that are actually
+# annotations are already PEP-604.
+"tests/unit/core/agent/tools/test_type_inference.py" = ["UP045"]
 # sw-agent-dokku is a developer-run deploy CLI that shells out to git/ssh with
 # fixed list-form arg vectors (shell=False, so no shell interpolation). The
 # dynamic parts (app name, dokku host, config vars) are the operator's own CLI
