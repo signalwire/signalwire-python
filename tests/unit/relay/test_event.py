@@ -1,6 +1,5 @@
 """Unit tests for relay event parsing and typed event classes."""
 
-import pytest
 from signalwire.relay.event import (
     RelayEvent,
     CallStateEvent,
@@ -138,7 +137,11 @@ class TestRecordEvent:
                 "call_id": "c1",
                 "control_id": "ctl1",
                 "state": "finished",
-                "record": {"url": "https://nested.com/rec.mp3", "duration": 10.0, "size": 5000},
+                "record": {
+                    "url": "https://nested.com/rec.mp3",
+                    "duration": 10.0,
+                    "size": 5000,
+                },
             },
         }
         event = RecordEvent.from_payload(payload)
@@ -155,7 +158,10 @@ class TestCollectEvent:
                 "call_id": "c1",
                 "control_id": "ctl1",
                 "state": "finished",
-                "result": {"type": "digit", "params": {"digits": "1234", "terminator": "#"}},
+                "result": {
+                    "type": "digit",
+                    "params": {"digits": "1234", "terminator": "#"},
+                },
                 "final": True,
             },
         }
@@ -426,7 +432,10 @@ class TestParseEvent:
             assert isinstance(event, cls)
 
     def test_unknown_event_type_returns_base(self) -> None:
-        payload = {"event_type": "calling.call.unknown_future_event", "params": {"call_id": "c1"}}
+        payload = {
+            "event_type": "calling.call.unknown_future_event",
+            "params": {"call_id": "c1"},
+        }
         event = parse_event(payload)
         assert type(event) is RelayEvent
         assert event.event_type == "calling.call.unknown_future_event"
@@ -610,6 +619,7 @@ class TestMessageStateEvent:
 # parse_event — additional direct tests with explicit assertions on each
 # returned typed event so the behaviour is exercised, not just enumerated.
 # ---------------------------------------------------------------------------
+
 
 class TestParseEventBehavior:
     """Direct tests on parse_event() output asserting on resulting event class

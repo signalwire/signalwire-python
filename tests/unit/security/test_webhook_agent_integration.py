@@ -52,6 +52,7 @@ def _basic_auth_headers(agent: AgentBase) -> dict[str, str]:
 # Signed: valid signature → 200, invalid → 403
 # ---------------------------------------------------------------------------
 
+
 class TestAgentSignedWebhooks:
     def test_post_swaig_with_valid_signature_runs_handler(self) -> None:
         agent = AgentBase(name="t1", signing_key=SIGNING_KEY)
@@ -132,6 +133,7 @@ class TestAgentSignedWebhooks:
 # Startup warning when key is unset
 # ---------------------------------------------------------------------------
 
+
 class _CaptureHandler(logging.Handler):
     """Minimal handler used to harvest LogRecords from the SDK's namespaced logger.
 
@@ -150,7 +152,9 @@ class _CaptureHandler(logging.Handler):
 
 
 class TestAgentNoKeyWarning:
-    def test_warning_emitted_when_signing_key_unset(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_warning_emitted_when_signing_key_unset(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """AgentBase logs a prominent WARNING when neither arg nor env is set."""
         monkeypatch.delenv("SIGNALWIRE_SIGNING_KEY", raising=False)
 
@@ -163,7 +167,8 @@ class TestAgentNoKeyWarning:
             agent_logger.removeHandler(capture)
 
         warning_records = [
-            r for r in capture.records
+            r
+            for r in capture.records
             if r.levelno >= logging.WARNING
             and (
                 "webhook_signature_validation_disabled" in r.getMessage()
@@ -187,7 +192,8 @@ class TestAgentNoKeyWarning:
             agent_logger.removeHandler(capture)
 
         warning_records = [
-            r for r in capture.records
+            r
+            for r in capture.records
             if r.levelno >= logging.WARNING
             and (
                 "webhook_signature_validation_disabled" in r.getMessage()
@@ -203,8 +209,11 @@ class TestAgentNoKeyWarning:
 # Env var fallback
 # ---------------------------------------------------------------------------
 
+
 class TestAgentEnvFallback:
-    def test_env_signing_key_picked_up_when_no_explicit_arg(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_env_signing_key_picked_up_when_no_explicit_arg(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """SIGNALWIRE_SIGNING_KEY env var supplies the key when arg is omitted."""
         monkeypatch.setenv("SIGNALWIRE_SIGNING_KEY", SIGNING_KEY)
         agent = AgentBase(name="envtest")

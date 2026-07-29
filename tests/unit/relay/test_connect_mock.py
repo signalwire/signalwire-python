@@ -18,13 +18,11 @@ Each test checks two things:
 
 from __future__ import annotations
 
-import asyncio
-import os
 from typing import Any
 
 import pytest
 
-from signalwire.relay.client import RelayClient, RelayError, _active_clients
+from signalwire.relay.client import RelayClient, _active_clients
 from signalwire.relay.constants import (
     AGENT_STRING,
     METHOD_SIGNALWIRE_CONNECT,
@@ -134,7 +132,8 @@ async def test_reconnect_with_protocol_string_includes_protocol_in_frame(
 
     # The second connect frame must carry the same protocol field.
     connect_frames = [
-        e for e in mock_relay.journal_recv(method=METHOD_SIGNALWIRE_CONNECT)
+        e
+        for e in mock_relay.journal_recv(method=METHOD_SIGNALWIRE_CONNECT)
         if e.frame["params"].get("protocol") == issued["protocol"]
     ]
     assert connect_frames, (
@@ -251,7 +250,8 @@ async def test_connect_with_jwt_carries_jwt_on_wire(
     # client, so the shared mock's journal also holds connect frames from other
     # tests/sessions. Identify ours by the unique jwt_token we sent.
     jwt_connects = [
-        e for e in mock_relay.journal_recv(method=METHOD_SIGNALWIRE_CONNECT)
+        e
+        for e in mock_relay.journal_recv(method=METHOD_SIGNALWIRE_CONNECT)
         if e.frame["params"].get("authentication", {}).get("jwt_token")
         == "fake-jwt-eyJ.AaaA.BbB"
     ]

@@ -23,6 +23,7 @@ from signalwire.skills.native_vector_search.skill import NativeVectorSearchSkill
 # bypassing any heavy imports that the real __init__ chain may trigger.
 # ---------------------------------------------------------------------------
 
+
 def _make_skill(params: dict[str, Any] | None = None) -> NativeVectorSearchSkill:
     """Instantiate NativeVectorSearchSkill with a mocked agent."""
     mock_agent = Mock()
@@ -38,31 +39,38 @@ def _make_skill(params: dict[str, Any] | None = None) -> NativeVectorSearchSkill
 # Class attributes and parameter schema
 # ===========================================================================
 
+
 class TestSkillClassAttributes:
     """Verify class-level constants on NativeVectorSearchSkill."""
 
     def test_skill_name(self) -> None:
         from signalwire.skills.native_vector_search.skill import NativeVectorSearchSkill
+
         assert NativeVectorSearchSkill.SKILL_NAME == "native_vector_search"
 
     def test_skill_description(self) -> None:
         from signalwire.skills.native_vector_search.skill import NativeVectorSearchSkill
+
         assert "vector" in NativeVectorSearchSkill.SKILL_DESCRIPTION.lower()
 
     def test_skill_version(self) -> None:
         from signalwire.skills.native_vector_search.skill import NativeVectorSearchSkill
+
         assert NativeVectorSearchSkill.SKILL_VERSION == "1.0.0"
 
     def test_supports_multiple_instances(self) -> None:
         from signalwire.skills.native_vector_search.skill import NativeVectorSearchSkill
+
         assert NativeVectorSearchSkill.SUPPORTS_MULTIPLE_INSTANCES is True
 
     def test_required_packages_empty(self) -> None:
         from signalwire.skills.native_vector_search.skill import NativeVectorSearchSkill
+
         assert NativeVectorSearchSkill.REQUIRED_PACKAGES == []
 
     def test_required_env_vars_empty(self) -> None:
         from signalwire.skills.native_vector_search.skill import NativeVectorSearchSkill
+
         assert NativeVectorSearchSkill.REQUIRED_ENV_VARS == []
 
 
@@ -71,40 +79,66 @@ class TestParameterSchema:
 
     def test_schema_has_expected_keys(self) -> None:
         from signalwire.skills.native_vector_search.skill import NativeVectorSearchSkill
+
         schema = NativeVectorSearchSkill.get_parameter_schema()
 
         expected_keys = [
-            "index_file", "build_index", "source_dir", "remote_url",
-            "index_name", "count", "similarity_threshold", "tags",
-            "global_tags", "file_types", "exclude_patterns",
-            "no_results_message", "response_prefix", "response_postfix",
-            "max_content_length", "response_format_callback", "description",
-            "hints", "nlp_backend", "query_nlp_backend", "index_nlp_backend",
-            "backend", "connection_string", "collection_name", "verbose",
-            "keyword_weight", "model_name", "overwrite",
+            "index_file",
+            "build_index",
+            "source_dir",
+            "remote_url",
+            "index_name",
+            "count",
+            "similarity_threshold",
+            "tags",
+            "global_tags",
+            "file_types",
+            "exclude_patterns",
+            "no_results_message",
+            "response_prefix",
+            "response_postfix",
+            "max_content_length",
+            "response_format_callback",
+            "description",
+            "hints",
+            "nlp_backend",
+            "query_nlp_backend",
+            "index_nlp_backend",
+            "backend",
+            "connection_string",
+            "collection_name",
+            "verbose",
+            "keyword_weight",
+            "model_name",
+            "overwrite",
             # inherited from SkillBase
-            "swaig_fields", "tool_name",
+            "swaig_fields",
+            "tool_name",
         ]
         for key in expected_keys:
             assert key in schema, f"Missing schema key: {key}"
 
     def test_schema_count_defaults_to_five(self) -> None:
         from signalwire.skills.native_vector_search.skill import NativeVectorSearchSkill
+
         schema = NativeVectorSearchSkill.get_parameter_schema()
         assert schema["count"]["default"] == 5
 
     def test_schema_backend_enum(self) -> None:
         from signalwire.skills.native_vector_search.skill import NativeVectorSearchSkill
+
         schema = NativeVectorSearchSkill.get_parameter_schema()
         assert set(schema["backend"]["enum"]) == {"sqlite", "pgvector"}
 
     def test_schema_nlp_backend_enum(self) -> None:
         from signalwire.skills.native_vector_search.skill import NativeVectorSearchSkill
+
         schema = NativeVectorSearchSkill.get_parameter_schema()
         assert set(schema["nlp_backend"]["enum"]) == {"basic", "spacy", "nltk"}
 
     def test_schema_model_name_default(self) -> None:
         from signalwire.skills.native_vector_search.skill import NativeVectorSearchSkill
+
         schema = NativeVectorSearchSkill.get_parameter_schema()
         assert schema["model_name"]["default"] == "mini"
 
@@ -112,6 +146,7 @@ class TestParameterSchema:
 # ===========================================================================
 # get_instance_key
 # ===========================================================================
+
 
 class TestGetInstanceKey:
     """Test the get_instance_key method."""
@@ -122,7 +157,9 @@ class TestGetInstanceKey:
         assert key == "native_vector_search_search_knowledge_default"
 
     def test_custom_tool_name_and_index_file(self) -> None:
-        skill = _make_skill({"tool_name": "my_tool", "index_file": "/tmp/test.swsearch"})  # noqa: S108
+        skill = _make_skill(
+            {"tool_name": "my_tool", "index_file": "/tmp/test.swsearch"}
+        )
         key = skill.get_instance_key()
         assert key == "native_vector_search_my_tool_/tmp/test.swsearch"
 
@@ -131,12 +168,15 @@ class TestGetInstanceKey:
 # setup() -- remote mode
 # ===========================================================================
 
+
 class TestSetupRemoteMode:
     """Test setup() when remote_url is configured."""
 
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
     @patch("signalwire.skills.native_vector_search.skill.requests", create=True)
-    def test_remote_setup_success(self, mock_requests_mod: Mock, mock_validate: Mock) -> None:
+    def test_remote_setup_success(
+        self, mock_requests_mod: Mock, mock_validate: Mock
+    ) -> None:
         """Successful health check sets use_remote=True and search_available=True."""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -154,7 +194,9 @@ class TestSetupRemoteMode:
 
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
     @patch("signalwire.skills.native_vector_search.skill.requests", create=True)
-    def test_remote_setup_auth_failure(self, mock_requests_mod: Mock, mock_validate: Mock) -> None:
+    def test_remote_setup_auth_failure(
+        self, mock_requests_mod: Mock, mock_validate: Mock
+    ) -> None:
         """401 from remote server means search_available=False."""
         mock_response = Mock()
         mock_response.status_code = 401
@@ -170,7 +212,9 @@ class TestSetupRemoteMode:
 
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
     @patch("signalwire.skills.native_vector_search.skill.requests", create=True)
-    def test_remote_setup_non_200_status(self, mock_requests_mod: Mock, mock_validate: Mock) -> None:
+    def test_remote_setup_non_200_status(
+        self, mock_requests_mod: Mock, mock_validate: Mock
+    ) -> None:
         """Non-200 and non-401 status returns False."""
         mock_response = Mock()
         mock_response.status_code = 500
@@ -234,22 +278,31 @@ class TestSetupRemoteMode:
 # setup() -- local mode (no remote_url)
 # ===========================================================================
 
+
 class TestSetupLocalMode:
     """Test setup() when no remote_url is set (local mode)."""
 
     def test_local_setup_search_import_failure(self) -> None:
         """When search dependencies are missing, setup still returns True."""
-        with patch.dict("sys.modules", {
-            "signalwire.search": None,
-        }), patch(
-            "signalwire.skills.native_vector_search.skill.NativeVectorSearchSkill.setup"
-        ) as _:
+        with (
+            patch.dict(
+                "sys.modules",
+                {
+                    "signalwire.search": None,
+                },
+            ),
+            patch(
+                "signalwire.skills.native_vector_search.skill.NativeVectorSearchSkill.setup"
+            ) as _,
+        ):
             # We need to test the actual method, so call it manually
             pass
 
         # Simpler approach: just call setup and mock the import inside
         skill = _make_skill()
-        with patch("builtins.__import__", side_effect=_import_raiser("signalwire.search")):
+        with patch(
+            "builtins.__import__", side_effect=_import_raiser("signalwire.search")
+        ):
             result = skill.setup()
 
         assert result is True
@@ -259,7 +312,9 @@ class TestSetupLocalMode:
     def test_local_setup_default_params(self) -> None:
         """Default local setup populates expected attributes."""
         skill = _make_skill()
-        with patch("builtins.__import__", side_effect=_import_raiser("signalwire.search")):
+        with patch(
+            "builtins.__import__", side_effect=_import_raiser("signalwire.search")
+        ):
             skill.setup()
 
         assert skill.tool_name == "search_knowledge"
@@ -285,7 +340,9 @@ class TestSetupLocalMode:
             "model_name": "base",
         }
         skill = _make_skill(params)
-        with patch("builtins.__import__", side_effect=_import_raiser("signalwire.search")):
+        with patch(
+            "builtins.__import__", side_effect=_import_raiser("signalwire.search")
+        ):
             skill.setup()
 
         assert skill.tool_name == "custom_search"
@@ -300,7 +357,9 @@ class TestSetupLocalMode:
     def test_deprecated_nlp_backend_warning(self) -> None:
         """Using deprecated 'nlp_backend' param triggers a warning and applies to both backends."""
         skill = _make_skill({"nlp_backend": "spacy"})
-        with patch("builtins.__import__", side_effect=_import_raiser("signalwire.search")):
+        with patch(
+            "builtins.__import__", side_effect=_import_raiser("signalwire.search")
+        ):
             skill.setup()
 
         assert skill.index_nlp_backend == "spacy"
@@ -308,11 +367,15 @@ class TestSetupLocalMode:
 
     def test_invalid_nlp_backend_fallback(self) -> None:
         """Invalid NLP backend names fall back to 'basic'."""
-        skill = _make_skill({
-            "index_nlp_backend": "invalid_backend",
-            "query_nlp_backend": "another_invalid",
-        })
-        with patch("builtins.__import__", side_effect=_import_raiser("signalwire.search")):
+        skill = _make_skill(
+            {
+                "index_nlp_backend": "invalid_backend",
+                "query_nlp_backend": "another_invalid",
+            }
+        )
+        with patch(
+            "builtins.__import__", side_effect=_import_raiser("signalwire.search")
+        ):
             skill.setup()
 
         assert skill.index_nlp_backend == "basic"
@@ -331,10 +394,16 @@ class TestSetupLocalMode:
         mock_query_processor = Mock()
         mock_query_processor.preprocess_query = Mock()
 
-        with patch.dict("sys.modules", {
-            "signalwire.search": mock_search_mod,
-            "signalwire.search.query_processor": mock_query_processor,
-        }), patch("os.path.exists", return_value=True):
+        with (
+            patch.dict(
+                "sys.modules",
+                {
+                    "signalwire.search": mock_search_mod,
+                    "signalwire.search.query_processor": mock_query_processor,
+                },
+            ),
+            patch("os.path.exists", return_value=True),
+        ):
             skill = _make_skill({"index_file": "/tmp/test.swsearch"})  # noqa: S108
             result = skill.setup()
 
@@ -347,10 +416,16 @@ class TestSetupLocalMode:
         mock_search_mod = Mock()
         mock_query_processor = Mock()
 
-        with patch.dict("sys.modules", {
-            "signalwire.search": mock_search_mod,
-            "signalwire.search.query_processor": mock_query_processor,
-        }), patch("os.path.exists", return_value=False):
+        with (
+            patch.dict(
+                "sys.modules",
+                {
+                    "signalwire.search": mock_search_mod,
+                    "signalwire.search.query_processor": mock_query_processor,
+                },
+            ),
+            patch("os.path.exists", return_value=False),
+        ):
             skill = _make_skill({"index_file": "/tmp/nonexistent.swsearch"})  # noqa: S108
             result = skill.setup()
 
@@ -368,15 +443,20 @@ class TestSetupLocalMode:
 
         mock_query_processor = Mock()
 
-        with patch.dict("sys.modules", {
-            "signalwire.search": mock_search_mod,
-            "signalwire.search.query_processor": mock_query_processor,
-        }):
-            skill = _make_skill({
-                "backend": "pgvector",
-                "connection_string": "postgresql://user:pass@localhost:5432/db",
-                "collection_name": "my_collection",
-            })
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search": mock_search_mod,
+                "signalwire.search.query_processor": mock_query_processor,
+            },
+        ):
+            skill = _make_skill(
+                {
+                    "backend": "pgvector",
+                    "connection_string": "postgresql://user:pass@localhost:5432/db",
+                    "collection_name": "my_collection",
+                }
+            )
             result = skill.setup()
 
         assert result is True
@@ -393,10 +473,13 @@ class TestSetupLocalMode:
         mock_search_mod = Mock()
         mock_query_processor = Mock()
 
-        with patch.dict("sys.modules", {
-            "signalwire.search": mock_search_mod,
-            "signalwire.search.query_processor": mock_query_processor,
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search": mock_search_mod,
+                "signalwire.search.query_processor": mock_query_processor,
+            },
+        ):
             skill = _make_skill({"backend": "pgvector"})
             result = skill.setup()
 
@@ -409,15 +492,20 @@ class TestSetupLocalMode:
         mock_search_mod.SearchEngine = Mock(side_effect=Exception("Connection refused"))
         mock_query_processor = Mock()
 
-        with patch.dict("sys.modules", {
-            "signalwire.search": mock_search_mod,
-            "signalwire.search.query_processor": mock_query_processor,
-        }):
-            skill = _make_skill({
-                "backend": "pgvector",
-                "connection_string": "postgresql://localhost/db",
-                "collection_name": "col",
-            })
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search": mock_search_mod,
+                "signalwire.search.query_processor": mock_query_processor,
+            },
+        ):
+            skill = _make_skill(
+                {
+                    "backend": "pgvector",
+                    "connection_string": "postgresql://localhost/db",
+                    "collection_name": "col",
+                }
+            )
             result = skill.setup()
 
         assert result is True
@@ -427,6 +515,7 @@ class TestSetupLocalMode:
 # ===========================================================================
 # setup() -- auto-build index
 # ===========================================================================
+
 
 class TestSetupAutoBuild:
     """Test setup() when build_index is True."""
@@ -446,15 +535,23 @@ class TestSetupAutoBuild:
 
         mock_query_processor = Mock()
 
-        with patch.dict("sys.modules", {
-            "signalwire.search": mock_search_mod,
-            "signalwire.search.models": mock_models,
-            "signalwire.search.query_processor": mock_query_processor,
-        }), patch("os.path.exists", return_value=False):
-            skill = _make_skill({
-                "build_index": True,
-                "source_dir": "/data/my_docs",
-            })
+        with (
+            patch.dict(
+                "sys.modules",
+                {
+                    "signalwire.search": mock_search_mod,
+                    "signalwire.search.models": mock_models,
+                    "signalwire.search.query_processor": mock_query_processor,
+                },
+            ),
+            patch("os.path.exists", return_value=False),
+        ):
+            skill = _make_skill(
+                {
+                    "build_index": True,
+                    "source_dir": "/data/my_docs",
+                }
+            )
             skill.setup()
 
         # index_file should be derived from source_dir name
@@ -466,15 +563,23 @@ class TestSetupAutoBuild:
         mock_search_mod = Mock()
         mock_query_processor = Mock()
 
-        with patch.dict("sys.modules", {
-            "signalwire.search": mock_search_mod,
-            "signalwire.search.query_processor": mock_query_processor,
-        }), patch("os.path.exists", return_value=True):
-            skill = _make_skill({
-                "build_index": True,
-                "source_dir": "/data/docs",
-                "index_file": "/tmp/existing.swsearch",  # noqa: S108
-            })
+        with (
+            patch.dict(
+                "sys.modules",
+                {
+                    "signalwire.search": mock_search_mod,
+                    "signalwire.search.query_processor": mock_query_processor,
+                },
+            ),
+            patch("os.path.exists", return_value=True),
+        ):
+            skill = _make_skill(
+                {
+                    "build_index": True,
+                    "source_dir": "/data/docs",
+                    "index_file": "/tmp/existing.swsearch",  # noqa: S108
+                }
+            )
             skill.setup()
 
         # IndexBuilder should NOT have been called since index already exists
@@ -497,16 +602,24 @@ class TestSetupAutoBuild:
 
         mock_query_processor = Mock()
 
-        with patch.dict("sys.modules", {
-            "signalwire.search": mock_search_mod,
-            "signalwire.search.models": mock_models,
-            "signalwire.search.query_processor": mock_query_processor,
-        }), patch("os.path.exists", return_value=False):
-            skill = _make_skill({
-                "build_index": True,
-                "source_dir": "/data/docs",
-                "index_file": "/tmp/test.swsearch",  # noqa: S108
-            })
+        with (
+            patch.dict(
+                "sys.modules",
+                {
+                    "signalwire.search": mock_search_mod,
+                    "signalwire.search.models": mock_models,
+                    "signalwire.search.query_processor": mock_query_processor,
+                },
+            ),
+            patch("os.path.exists", return_value=False),
+        ):
+            skill = _make_skill(
+                {
+                    "build_index": True,
+                    "source_dir": "/data/docs",
+                    "index_file": "/tmp/test.swsearch",  # noqa: S108
+                }
+            )
             result = skill.setup()
 
         assert result is True
@@ -527,18 +640,23 @@ class TestSetupAutoBuild:
 
         mock_query_processor = Mock()
 
-        with patch.dict("sys.modules", {
-            "signalwire.search": mock_search_mod,
-            "signalwire.search.models": mock_models,
-            "signalwire.search.query_processor": mock_query_processor,
-        }):
-            skill = _make_skill({
-                "build_index": True,
-                "source_dir": "/data/docs",
-                "backend": "pgvector",
-                "connection_string": "postgresql://localhost/db",
-                "collection_name": "my_col",
-            })
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search": mock_search_mod,
+                "signalwire.search.models": mock_models,
+                "signalwire.search.query_processor": mock_query_processor,
+            },
+        ):
+            skill = _make_skill(
+                {
+                    "build_index": True,
+                    "source_dir": "/data/docs",
+                    "backend": "pgvector",
+                    "connection_string": "postgresql://localhost/db",
+                    "collection_name": "my_col",
+                }
+            )
             skill.setup()
 
         mock_builder_cls.assert_called_once_with(
@@ -555,14 +673,21 @@ class TestSetupAutoBuild:
 # register_tools()
 # ===========================================================================
 
+
 class TestRegisterTools:
     """Test register_tools method."""
 
-    def _setup_skill_for_register(self, params: dict[str, Any] | None = None) -> NativeVectorSearchSkill:
+    def _setup_skill_for_register(
+        self, params: dict[str, Any] | None = None
+    ) -> NativeVectorSearchSkill:
         """Helper to create a skill ready for register_tools."""
         skill = _make_skill(params or {})
         # Manually set attributes that setup() would set
-        skill.tool_name = params.get("tool_name", "search_knowledge") if params else "search_knowledge"
+        skill.tool_name = (
+            params.get("tool_name", "search_knowledge")
+            if params
+            else "search_knowledge"
+        )
         skill.count = params.get("count", 5) if params else 5
         skill.use_remote = False
         return skill
@@ -576,7 +701,10 @@ class TestRegisterTools:
         call_kwargs = skill.agent.define_tool.call_args
         # define_tool is called via self.define_tool which delegates to agent.define_tool
         # Check that the tool name and handler are present
-        assert call_kwargs.kwargs.get("name") or call_kwargs[1].get("name") == "search_knowledge"
+        assert (
+            call_kwargs.kwargs.get("name")
+            or call_kwargs[1].get("name") == "search_knowledge"
+        )
 
     def test_register_tools_creates_knowledge_search_section(self) -> None:
         """When section does not exist, a new one is created."""
@@ -614,6 +742,7 @@ class TestRegisterTools:
 # _search_handler()
 # ===========================================================================
 
+
 class TestSearchHandler:
     """Test the _search_handler method."""
 
@@ -644,7 +773,9 @@ class TestSearchHandler:
 
     def test_search_unavailable(self) -> None:
         """When search is not available, return an error message."""
-        skill = self._setup_skill_for_search(search_available=False, import_error="missing dep")
+        skill = self._setup_skill_for_search(
+            search_available=False, import_error="missing dep"
+        )
         result = skill._search_handler({"query": "test"}, {})
 
         assert isinstance(result, FunctionResult)
@@ -684,13 +815,20 @@ class TestSearchHandler:
 
     def test_local_search_no_results(self) -> None:
         """Local search returning no results uses no_results_message."""
-        mock_preprocess = Mock(return_value={"enhanced_text": "test", "vector": [0.1, 0.2]})
+        mock_preprocess = Mock(
+            return_value={"enhanced_text": "test", "vector": [0.1, 0.2]}
+        )
         skill = self._setup_skill_for_search()
         skill.search_engine.search.return_value = []  # type: ignore[union-attr]  # mock search_engine
 
-        with patch.dict("sys.modules", {
-            "signalwire.search.query_processor": Mock(preprocess_query=mock_preprocess),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search.query_processor": Mock(
+                    preprocess_query=mock_preprocess
+                ),
+            },
+        ):
             result = skill._search_handler({"query": "test"}, {})
 
         assert isinstance(result, FunctionResult)
@@ -705,9 +843,14 @@ class TestSearchHandler:
         )
         skill.search_engine.search.return_value = []  # type: ignore[union-attr]  # mock search_engine
 
-        with patch.dict("sys.modules", {
-            "signalwire.search.query_processor": Mock(preprocess_query=mock_preprocess),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search.query_processor": Mock(
+                    preprocess_query=mock_preprocess
+                ),
+            },
+        ):
             result = skill._search_handler({"query": "test"}, {})
 
         assert result.response.startswith("[START]")
@@ -715,7 +858,9 @@ class TestSearchHandler:
 
     def test_local_search_with_results(self) -> None:
         """Successful local search formats results correctly."""
-        mock_preprocess = Mock(return_value={"enhanced_text": "test query", "vector": [0.1]})
+        mock_preprocess = Mock(
+            return_value={"enhanced_text": "test query", "vector": [0.1]}
+        )
         skill = self._setup_skill_for_search()
         skill.search_engine.search.return_value = [  # type: ignore[union-attr]  # mock search_engine
             {
@@ -727,9 +872,14 @@ class TestSearchHandler:
         ]
         skill.search_engine.config = {}  # type: ignore[union-attr]  # mock search_engine
 
-        with patch.dict("sys.modules", {
-            "signalwire.search.query_processor": Mock(preprocess_query=mock_preprocess),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search.query_processor": Mock(
+                    preprocess_query=mock_preprocess
+                ),
+            },
+        ):
             result = skill._search_handler({"query": "test query"}, {})
 
         assert isinstance(result, FunctionResult)
@@ -744,14 +894,29 @@ class TestSearchHandler:
         mock_preprocess = Mock(return_value={"enhanced_text": "q", "vector": [0.1]})
         skill = self._setup_skill_for_search()
         skill.search_engine.search.return_value = [  # type: ignore[union-attr]  # mock search_engine
-            {"content": "Answer 1", "score": 0.9, "metadata": {"filename": "a.md"}, "tags": []},
-            {"content": "Answer 2", "score": 0.8, "metadata": {"filename": "b.md"}, "tags": []},
+            {
+                "content": "Answer 1",
+                "score": 0.9,
+                "metadata": {"filename": "a.md"},
+                "tags": [],
+            },
+            {
+                "content": "Answer 2",
+                "score": 0.8,
+                "metadata": {"filename": "b.md"},
+                "tags": [],
+            },
         ]
         skill.search_engine.config = {}  # type: ignore[union-attr]  # mock search_engine
 
-        with patch.dict("sys.modules", {
-            "signalwire.search.query_processor": Mock(preprocess_query=mock_preprocess),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search.query_processor": Mock(
+                    preprocess_query=mock_preprocess
+                ),
+            },
+        ):
             result = skill._search_handler({"query": "q"}, {})
 
         assert "Found 2 relevant results" in result.response
@@ -764,13 +929,23 @@ class TestSearchHandler:
         skill = self._setup_skill_for_search(max_content_length=1500)
         long_content = "x" * 5000
         skill.search_engine.search.return_value = [  # type: ignore[union-attr]  # mock search_engine
-            {"content": long_content, "score": 0.9, "metadata": {"filename": "a.md"}, "tags": []},
+            {
+                "content": long_content,
+                "score": 0.9,
+                "metadata": {"filename": "a.md"},
+                "tags": [],
+            },
         ]
         skill.search_engine.config = {}  # type: ignore[union-attr]  # mock search_engine
 
-        with patch.dict("sys.modules", {
-            "signalwire.search.query_processor": Mock(preprocess_query=mock_preprocess),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search.query_processor": Mock(
+                    preprocess_query=mock_preprocess
+                ),
+            },
+        ):
             result = skill._search_handler({"query": "q"}, {})
 
         # The content should be truncated and end with "..."
@@ -785,13 +960,23 @@ class TestSearchHandler:
             response_postfix="<<POSTFIX>>",
         )
         skill.search_engine.search.return_value = [  # type: ignore[union-attr]  # mock search_engine
-            {"content": "Answer", "score": 0.9, "metadata": {"filename": "a.md"}, "tags": []},
+            {
+                "content": "Answer",
+                "score": 0.9,
+                "metadata": {"filename": "a.md"},
+                "tags": [],
+            },
         ]
         skill.search_engine.config = {}  # type: ignore[union-attr]  # mock search_engine
 
-        with patch.dict("sys.modules", {
-            "signalwire.search.query_processor": Mock(preprocess_query=mock_preprocess),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search.query_processor": Mock(
+                    preprocess_query=mock_preprocess
+                ),
+            },
+        ):
             result = skill._search_handler({"query": "q"}, {})
 
         assert "<<PREFIX>>" in result.response
@@ -804,9 +989,14 @@ class TestSearchHandler:
         skill.search_engine.search.return_value = []  # type: ignore[union-attr]  # mock search_engine
         skill.search_engine.config = {}  # type: ignore[union-attr]  # mock search_engine
 
-        with patch.dict("sys.modules", {
-            "signalwire.search.query_processor": Mock(preprocess_query=mock_preprocess),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search.query_processor": Mock(
+                    preprocess_query=mock_preprocess
+                ),
+            },
+        ):
             skill._search_handler({"query": "q", "count": 3}, {})
 
         # Check that search was called with count=3
@@ -819,9 +1009,14 @@ class TestSearchHandler:
         skill = self._setup_skill_for_search()
         skill.search_engine.config = {}  # type: ignore[union-attr]  # mock search_engine
 
-        with patch.dict("sys.modules", {
-            "signalwire.search.query_processor": Mock(preprocess_query=mock_preprocess),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search.query_processor": Mock(
+                    preprocess_query=mock_preprocess
+                ),
+            },
+        ):
             result = skill._search_handler({"query": "test"}, {})
 
         assert isinstance(result, FunctionResult)
@@ -834,9 +1029,14 @@ class TestSearchHandler:
         skill = self._setup_skill_for_search()
         skill.search_engine.config = {}  # type: ignore[union-attr]  # mock search_engine
 
-        with patch.dict("sys.modules", {
-            "signalwire.search.query_processor": Mock(preprocess_query=mock_preprocess),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search.query_processor": Mock(
+                    preprocess_query=mock_preprocess
+                ),
+            },
+        ):
             result = skill._search_handler({"query": "test"}, {})
 
         assert "language processing" in result.response.lower()
@@ -847,9 +1047,14 @@ class TestSearchHandler:
         skill = self._setup_skill_for_search()
         skill.search_engine.config = {}  # type: ignore[union-attr]  # mock search_engine
 
-        with patch.dict("sys.modules", {
-            "signalwire.search.query_processor": Mock(preprocess_query=mock_preprocess),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search.query_processor": Mock(
+                    preprocess_query=mock_preprocess
+                ),
+            },
+        ):
             result = skill._search_handler({"query": "test"}, {})
 
         assert "indexing" in result.response.lower()
@@ -860,9 +1065,14 @@ class TestSearchHandler:
         skill = self._setup_skill_for_search()
         skill.search_engine.config = {}  # type: ignore[union-attr]  # mock search_engine
 
-        with patch.dict("sys.modules", {
-            "signalwire.search.query_processor": Mock(preprocess_query=mock_preprocess),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search.query_processor": Mock(
+                    preprocess_query=mock_preprocess
+                ),
+            },
+        ):
             result = skill._search_handler({"query": "test"}, {})
 
         assert "temporarily unavailable" in result.response.lower()
@@ -876,13 +1086,23 @@ class TestSearchHandler:
 
         skill = self._setup_skill_for_search(response_format_callback=my_callback)
         skill.search_engine.search.return_value = [  # type: ignore[union-attr]  # mock search_engine
-            {"content": "Answer", "score": 0.9, "metadata": {"filename": "a.md"}, "tags": []},
+            {
+                "content": "Answer",
+                "score": 0.9,
+                "metadata": {"filename": "a.md"},
+                "tags": [],
+            },
         ]
         skill.search_engine.config = {}  # type: ignore[union-attr]  # mock search_engine
 
-        with patch.dict("sys.modules", {
-            "signalwire.search.query_processor": Mock(preprocess_query=mock_preprocess),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search.query_processor": Mock(
+                    preprocess_query=mock_preprocess
+                ),
+            },
+        ):
             result = skill._search_handler({"query": "hello"}, {})
 
         assert result.response == "CUSTOM: hello"
@@ -898,9 +1118,14 @@ class TestSearchHandler:
         skill.search_engine.search.return_value = []  # type: ignore[union-attr]  # mock search_engine
         skill.search_engine.config = {}  # type: ignore[union-attr]  # mock search_engine
 
-        with patch.dict("sys.modules", {
-            "signalwire.search.query_processor": Mock(preprocess_query=mock_preprocess),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search.query_processor": Mock(
+                    preprocess_query=mock_preprocess
+                ),
+            },
+        ):
             result = skill._search_handler({"query": "hello"}, {})
 
         assert result.response == "CUSTOM NO RESULTS"
@@ -914,13 +1139,23 @@ class TestSearchHandler:
 
         skill = self._setup_skill_for_search(response_format_callback=bad_callback)
         skill.search_engine.search.return_value = [  # type: ignore[union-attr]  # mock search_engine
-            {"content": "Answer", "score": 0.9, "metadata": {"filename": "a.md"}, "tags": []},
+            {
+                "content": "Answer",
+                "score": 0.9,
+                "metadata": {"filename": "a.md"},
+                "tags": [],
+            },
         ]
         skill.search_engine.config = {}  # type: ignore[union-attr]  # mock search_engine
 
-        with patch.dict("sys.modules", {
-            "signalwire.search.query_processor": Mock(preprocess_query=mock_preprocess),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search.query_processor": Mock(
+                    preprocess_query=mock_preprocess
+                ),
+            },
+        ):
             result = skill._search_handler({"query": "hello"}, {})
 
         # Should fall back to the original formatted response
@@ -933,15 +1168,27 @@ class TestSearchHandler:
         def exploding_callback(**kwargs: Any) -> str:
             raise ValueError("boom")
 
-        skill = self._setup_skill_for_search(response_format_callback=exploding_callback)
+        skill = self._setup_skill_for_search(
+            response_format_callback=exploding_callback
+        )
         skill.search_engine.search.return_value = [  # type: ignore[union-attr]  # mock search_engine
-            {"content": "Answer", "score": 0.9, "metadata": {"filename": "a.md"}, "tags": []},
+            {
+                "content": "Answer",
+                "score": 0.9,
+                "metadata": {"filename": "a.md"},
+                "tags": [],
+            },
         ]
         skill.search_engine.config = {}  # type: ignore[union-attr]  # mock search_engine
 
-        with patch.dict("sys.modules", {
-            "signalwire.search.query_processor": Mock(preprocess_query=mock_preprocess),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search.query_processor": Mock(
+                    preprocess_query=mock_preprocess
+                ),
+            },
+        ):
             result = skill._search_handler({"query": "hello"}, {})
 
         # Should still have a valid response
@@ -964,9 +1211,14 @@ class TestSearchHandler:
         ]
         skill.search_engine.config = {}  # type: ignore[union-attr]  # mock search_engine
 
-        with patch.dict("sys.modules", {
-            "signalwire.search.query_processor": Mock(preprocess_query=mock_preprocess),
-        }):
+        with patch.dict(
+            "sys.modules",
+            {
+                "signalwire.search.query_processor": Mock(
+                    preprocess_query=mock_preprocess
+                ),
+            },
+        ):
             result = skill._search_handler({"query": "q"}, {})
 
         assert "tag1" in result.response
@@ -976,6 +1228,7 @@ class TestSearchHandler:
 # ===========================================================================
 # _search_remote()
 # ===========================================================================
+
 
 class TestSearchRemote:
     """Test the _search_remote method."""
@@ -1103,6 +1356,7 @@ class TestSearchRemote:
 # _search_handler() with remote mode
 # ===========================================================================
 
+
 class TestSearchHandlerRemoteMode:
     """Test _search_handler when use_remote=True."""
 
@@ -1131,9 +1385,16 @@ class TestSearchHandlerRemoteMode:
     def test_remote_handler_calls_search_remote(self) -> None:
         """Handler in remote mode calls _search_remote."""
         skill = self._setup_remote_skill_for_search()
-        skill._search_remote = Mock(return_value=[  # type: ignore[method-assign]  # mock
-            {"content": "Result", "score": 0.9, "metadata": {"filename": "r.md"}, "tags": []},
-        ])
+        skill._search_remote = Mock(
+            return_value=[  # type: ignore[method-assign]  # mock
+                {
+                    "content": "Result",
+                    "score": 0.9,
+                    "metadata": {"filename": "r.md"},
+                    "tags": [],
+                },
+            ]
+        )
 
         result = skill._search_handler({"query": "test"}, {})
 
@@ -1153,6 +1414,7 @@ class TestSearchHandlerRemoteMode:
 # ===========================================================================
 # get_hints(), get_global_data(), get_prompt_sections(), cleanup()
 # ===========================================================================
+
 
 class TestMiscMethods:
     """Test auxiliary methods on the skill."""
@@ -1207,13 +1469,13 @@ class TestMiscMethods:
         invoke shutil.rmtree at all in that path."""
         skill = _make_skill()
         # Pre-condition: skill has no _temp_dirs attribute.
-        assert not hasattr(skill, '_temp_dirs')
+        assert not hasattr(skill, "_temp_dirs")
         with patch("shutil.rmtree") as mock_rmtree:
             skill.cleanup()
         # No rmtree calls because the hasattr guard short-circuits.
         assert mock_rmtree.call_count == 0
         # The attribute is still absent — cleanup didn't invent one.
-        assert not hasattr(skill, '_temp_dirs')
+        assert not hasattr(skill, "_temp_dirs")
 
     def test_cleanup_with_temp_dirs(self) -> None:
         """cleanup removes temp directories."""
@@ -1232,7 +1494,9 @@ class TestMiscMethods:
         skill = _make_skill()
         skill._temp_dirs = ["/tmp/fake_dir1", "/tmp/fake_dir2", "/tmp/fake_dir3"]  # type: ignore[attr-defined]  # noqa: S108  # dynamic optional attr, read via hasattr guard in cleanup
 
-        with patch("shutil.rmtree", side_effect=OSError("permission denied")) as mock_rmtree:
+        with patch(
+            "shutil.rmtree", side_effect=OSError("permission denied")
+        ) as mock_rmtree:
             skill.cleanup()
         # All three dirs were attempted even though every call raised.
         assert mock_rmtree.call_count == 3
@@ -1243,6 +1507,7 @@ class TestMiscMethods:
 # ===========================================================================
 # _add_prompt_section()
 # ===========================================================================
+
 
 class TestAddPromptSection:
     """Test _add_prompt_section method."""
@@ -1283,12 +1548,15 @@ class TestAddPromptSection:
 # Helpers
 # ===========================================================================
 
+
 def _import_raiser(blocked_module: str) -> Callable[..., Any]:
     """
     Return a side_effect function for patching builtins.__import__ that raises
     ImportError for a specific module while allowing everything else.
     """
-    real_import = __builtins__.__import__ if hasattr(__builtins__, '__import__') else __import__
+    real_import = (
+        __builtins__.__import__ if hasattr(__builtins__, "__import__") else __import__
+    )
 
     def _custom_import(name: str, *args: Any, **kwargs: Any) -> Any:
         if name == blocked_module or name.startswith(blocked_module + "."):

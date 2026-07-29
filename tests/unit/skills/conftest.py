@@ -8,6 +8,7 @@ skill's ``logger.name`` are testing a *configured* logger's identity, so
 configure logging once for this test package. This mirrors what a real
 deployment does at its serve/run entry point.
 """
+
 from __future__ import annotations
 
 import pytest

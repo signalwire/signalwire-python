@@ -11,11 +11,11 @@ See LICENSE file in the project root for full license information.
 Unit tests for the Math skill module
 """
 
-from typing import Any  # noqa: E402
-from unittest.mock import Mock  # noqa: E402
+from typing import Any
+from unittest.mock import Mock
 
-from signalwire.skills.math.skill import MathSkill  # noqa: E402
-from signalwire.core.function_result import FunctionResult  # noqa: E402
+from signalwire.skills.math.skill import MathSkill
+from signalwire.core.function_result import FunctionResult
 
 
 def _make_skill(params: dict[str, Any] | None = None) -> MathSkill:
@@ -35,6 +35,7 @@ def _make_skill(params: dict[str, Any] | None = None) -> MathSkill:
 # ---------------------------------------------------------------------------
 # Class-level attributes
 # ---------------------------------------------------------------------------
+
 
 class TestMathSkillClassAttributes:
     """Verify class-level constants and metadata."""
@@ -59,6 +60,7 @@ class TestMathSkillClassAttributes:
 # Setup
 # ---------------------------------------------------------------------------
 
+
 class TestMathSkillSetup:
     """Tests for the setup method."""
 
@@ -70,6 +72,7 @@ class TestMathSkillSetup:
 # ---------------------------------------------------------------------------
 # register_tools
 # ---------------------------------------------------------------------------
+
 
 class TestMathSkillRegisterTools:
     """Tests for register_tools."""
@@ -92,7 +95,10 @@ class TestMathSkillRegisterTools:
         call_kwargs = skill.agent.define_tool.call_args
         kwargs = call_kwargs.kwargs if call_kwargs.kwargs else call_kwargs[1]
         assert "description" in kwargs
-        assert "mathematical" in kwargs["description"].lower() or "calculation" in kwargs["description"].lower()
+        assert (
+            "mathematical" in kwargs["description"].lower()
+            or "calculation" in kwargs["description"].lower()
+        )
 
     def test_register_tools_has_expression_parameter(self) -> None:
         skill = _make_skill()
@@ -114,6 +120,7 @@ class TestMathSkillRegisterTools:
 # ---------------------------------------------------------------------------
 # _calculate_handler - valid expressions
 # ---------------------------------------------------------------------------
+
 
 class TestCalculateHandlerValid:
     """Tests for _calculate_handler with valid expressions."""
@@ -169,6 +176,7 @@ class TestCalculateHandlerValid:
 # _calculate_handler - empty / missing expression
 # ---------------------------------------------------------------------------
 
+
 class TestCalculateHandlerEmpty:
     """Tests for _calculate_handler with empty or missing expressions."""
 
@@ -194,6 +202,7 @@ class TestCalculateHandlerEmpty:
 # ---------------------------------------------------------------------------
 # _calculate_handler - unsafe characters
 # ---------------------------------------------------------------------------
+
 
 class TestCalculateHandlerUnsafe:
     """Tests for _calculate_handler with unsafe / disallowed input."""
@@ -227,6 +236,7 @@ class TestCalculateHandlerUnsafe:
 # _calculate_handler - division by zero
 # ---------------------------------------------------------------------------
 
+
 class TestCalculateHandlerDivisionByZero:
     """Tests for _calculate_handler with division by zero."""
 
@@ -246,6 +256,7 @@ class TestCalculateHandlerDivisionByZero:
 # ---------------------------------------------------------------------------
 # _calculate_handler - invalid expression (syntax errors)
 # ---------------------------------------------------------------------------
+
 
 class TestCalculateHandlerInvalidExpression:
     """Tests for _calculate_handler with syntactically invalid expressions."""
@@ -267,6 +278,7 @@ class TestCalculateHandlerInvalidExpression:
 # get_hints
 # ---------------------------------------------------------------------------
 
+
 class TestMathSkillGetHints:
     """Tests for get_hints."""
 
@@ -283,6 +295,7 @@ class TestMathSkillGetHints:
 # ---------------------------------------------------------------------------
 # get_prompt_sections
 # ---------------------------------------------------------------------------
+
 
 class TestMathSkillGetPromptSections:
     """Tests for get_prompt_sections."""
@@ -320,6 +333,7 @@ class TestMathSkillGetPromptSections:
 # ---------------------------------------------------------------------------
 # get_parameter_schema
 # ---------------------------------------------------------------------------
+
 
 class TestMathSkillGetParameterSchema:
     """Tests for get_parameter_schema."""

@@ -58,7 +58,10 @@ class TestPlayBackgroundFileSkillClassAttributes:
         assert PlayBackgroundFileSkill.SKILL_NAME == "play_background_file"
 
     def test_skill_description(self) -> None:
-        assert PlayBackgroundFileSkill.SKILL_DESCRIPTION == "Control background file playback"
+        assert (
+            PlayBackgroundFileSkill.SKILL_DESCRIPTION
+            == "Control background file playback"
+        )
 
     def test_skill_version(self) -> None:
         assert PlayBackgroundFileSkill.SKILL_VERSION == "1.0.0"
@@ -129,11 +132,15 @@ class TestPlayBackgroundFileSkillValidation:
     """Tests for _validate_config."""
 
     def test_files_must_be_list(self) -> None:
-        with pytest.raises(ValueError, match="files parameter must be a non-empty list"):
+        with pytest.raises(
+            ValueError, match="files parameter must be a non-empty list"
+        ):
             _make_skill({"files": "not-a-list"})
 
     def test_files_must_not_be_empty(self) -> None:
-        with pytest.raises(ValueError, match="files parameter must be a non-empty list"):
+        with pytest.raises(
+            ValueError, match="files parameter must be a non-empty list"
+        ):
             _make_skill({"files": []})
 
     def test_file_must_be_dict(self) -> None:
@@ -145,7 +152,9 @@ class TestPlayBackgroundFileSkillValidation:
             _make_skill({"files": [{"description": "d", "url": "http://x"}]})
 
     def test_file_missing_description(self) -> None:
-        with pytest.raises(ValueError, match="File 0 missing required field: description"):
+        with pytest.raises(
+            ValueError, match="File 0 missing required field: description"
+        ):
             _make_skill({"files": [{"key": "k", "url": "http://x"}]})
 
     def test_file_missing_url(self) -> None:
@@ -158,12 +167,23 @@ class TestPlayBackgroundFileSkillValidation:
 
     def test_file_key_whitespace_only(self) -> None:
         with pytest.raises(ValueError, match="must be a non-empty string"):
-            _make_skill({"files": [{"key": "  ", "description": "d", "url": "http://x"}]})
+            _make_skill(
+                {"files": [{"key": "  ", "description": "d", "url": "http://x"}]}
+            )
 
     def test_file_wait_must_be_boolean(self) -> None:
         with pytest.raises(ValueError, match="must be a boolean"):
             _make_skill(
-                {"files": [{"key": "k", "description": "d", "url": "http://x", "wait": "yes"}]}
+                {
+                    "files": [
+                        {
+                            "key": "k",
+                            "description": "d",
+                            "url": "http://x",
+                            "wait": "yes",
+                        }
+                    ]
+                }
             )
 
     def test_file_key_invalid_characters(self) -> None:
@@ -329,7 +349,10 @@ class TestPlayBackgroundFileSkillGetTools:
         playback_action = [a for a in actions if "playback_bg" in a]
         assert len(playback_action) == 1
         # wait=True means the value should be a dict with file and wait
-        assert playback_action[0]["playback_bg"]["file"] == "https://example.com/massey.mp4"
+        assert (
+            playback_action[0]["playback_bg"]["file"]
+            == "https://example.com/massey.mp4"
+        )
         assert playback_action[0]["playback_bg"]["wait"] is True
 
     def test_start_expression_with_wait_false_default(self) -> None:

@@ -65,6 +65,7 @@ def _write_skill_md(
 # Class-level attributes
 # ---------------------------------------------------------------------------
 
+
 class TestClassAttributes:
     """Verify class-level constants and metadata."""
 
@@ -72,7 +73,10 @@ class TestClassAttributes:
         assert ClaudeSkillsSkill.SKILL_NAME == "claude_skills"
 
     def test_skill_description(self) -> None:
-        assert ClaudeSkillsSkill.SKILL_DESCRIPTION == "Load Claude SKILL.md files as agent tools"
+        assert (
+            ClaudeSkillsSkill.SKILL_DESCRIPTION
+            == "Load Claude SKILL.md files as agent tools"
+        )
 
     def test_skill_version(self) -> None:
         assert ClaudeSkillsSkill.SKILL_VERSION == "1.0.0"
@@ -90,6 +94,7 @@ class TestClassAttributes:
 # ---------------------------------------------------------------------------
 # Frontmatter parsing
 # ---------------------------------------------------------------------------
+
 
 class TestParseSkillMd:
     """Test frontmatter parsing including all spec fields."""
@@ -116,7 +121,11 @@ class TestParseSkillMd:
     def test_compatibility_field(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             skill_dir = Path(tmpdir) / "my-skill"
-            _write_skill_md(skill_dir, "my-skill", extra_frontmatter={"compatibility": "claude-code >= 1.0"})
+            _write_skill_md(
+                skill_dir,
+                "my-skill",
+                extra_frontmatter={"compatibility": "claude-code >= 1.0"},
+            )
             skill = _make_skill({"skills_path": tmpdir})
             skill.setup()
             assert skill._skills[0]["compatibility"] == "claude-code >= 1.0"
@@ -124,7 +133,9 @@ class TestParseSkillMd:
     def test_context_field(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             skill_dir = Path(tmpdir) / "my-skill"
-            _write_skill_md(skill_dir, "my-skill", extra_frontmatter={"context": "fork"})
+            _write_skill_md(
+                skill_dir, "my-skill", extra_frontmatter={"context": "fork"}
+            )
             skill = _make_skill({"skills_path": tmpdir})
             skill.setup()
             assert skill._skills[0]["context"] == "fork"
@@ -132,7 +143,9 @@ class TestParseSkillMd:
     def test_agent_field(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             skill_dir = Path(tmpdir) / "my-skill"
-            _write_skill_md(skill_dir, "my-skill", extra_frontmatter={"agent": "Explore"})
+            _write_skill_md(
+                skill_dir, "my-skill", extra_frontmatter={"agent": "Explore"}
+            )
             skill = _make_skill({"skills_path": tmpdir})
             skill.setup()
             assert skill._skills[0]["agent"] == "Explore"
@@ -140,7 +153,9 @@ class TestParseSkillMd:
     def test_allowed_tools_field(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             skill_dir = Path(tmpdir) / "my-skill"
-            _write_skill_md(skill_dir, "my-skill", extra_frontmatter={"allowed-tools": "Read, Grep"})
+            _write_skill_md(
+                skill_dir, "my-skill", extra_frontmatter={"allowed-tools": "Read, Grep"}
+            )
             skill = _make_skill({"skills_path": tmpdir})
             skill.setup()
             assert skill._skills[0]["allowed_tools"] == "Read, Grep"
@@ -156,7 +171,9 @@ class TestParseSkillMd:
     def test_hooks_field(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             skill_dir = Path(tmpdir) / "my-skill"
-            _write_skill_md(skill_dir, "my-skill", extra_frontmatter={"hooks": "pre-run"})
+            _write_skill_md(
+                skill_dir, "my-skill", extra_frontmatter={"hooks": "pre-run"}
+            )
             skill = _make_skill({"skills_path": tmpdir})
             skill.setup()
             assert skill._skills[0]["hooks"] == "pre-run"
@@ -176,14 +193,18 @@ class TestParseSkillMd:
 # Invocation control
 # ---------------------------------------------------------------------------
 
+
 class TestInvocationControl:
     """Test disable-model-invocation and user-invocable flags."""
 
     def test_disable_model_invocation_skips_tool_and_prompt(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             skill_dir = Path(tmpdir) / "disabled-skill"
-            _write_skill_md(skill_dir, "disabled-skill",
-                            extra_frontmatter={"disable-model-invocation": True})
+            _write_skill_md(
+                skill_dir,
+                "disabled-skill",
+                extra_frontmatter={"disable-model-invocation": True},
+            )
             skill = _make_skill({"skills_path": tmpdir})
             skill.setup()
 
@@ -199,8 +220,12 @@ class TestInvocationControl:
     def test_user_invocable_false_skips_tool_keeps_prompt(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             skill_dir = Path(tmpdir) / "knowledge-skill"
-            _write_skill_md(skill_dir, "knowledge-skill", body="Knowledge content",
-                            extra_frontmatter={"user-invocable": False})
+            _write_skill_md(
+                skill_dir,
+                "knowledge-skill",
+                body="Knowledge content",
+                extra_frontmatter={"user-invocable": False},
+            )
             skill = _make_skill({"skills_path": tmpdir})
             skill.setup()
 
@@ -217,9 +242,14 @@ class TestInvocationControl:
     def test_ignore_invocation_control_registers_everything(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             skill_dir = Path(tmpdir) / "disabled-skill"
-            _write_skill_md(skill_dir, "disabled-skill",
-                            extra_frontmatter={"disable-model-invocation": True})
-            skill = _make_skill({"skills_path": tmpdir, "ignore_invocation_control": True})
+            _write_skill_md(
+                skill_dir,
+                "disabled-skill",
+                extra_frontmatter={"disable-model-invocation": True},
+            )
+            skill = _make_skill(
+                {"skills_path": tmpdir, "ignore_invocation_control": True}
+            )
             skill.setup()
 
             assert skill._skills[0]["_skip_tool"] is False
@@ -251,6 +281,7 @@ class TestInvocationControl:
 # ---------------------------------------------------------------------------
 # Shell injection
 # ---------------------------------------------------------------------------
+
 
 class TestShellInjection:
     """Test shell injection pattern handling."""
@@ -322,6 +353,7 @@ class TestShellInjection:
 # Variable substitution
 # ---------------------------------------------------------------------------
 
+
 class TestVariableSubstitution:
     """Test ${CLAUDE_SKILL_DIR} and ${CLAUDE_SESSION_ID} substitution."""
 
@@ -358,6 +390,7 @@ class TestVariableSubstitution:
 # Fallback argument appending
 # ---------------------------------------------------------------------------
 
+
 class TestFallbackArguments:
     """Test fallback argument appending when body lacks bare $ARGUMENTS."""
 
@@ -390,6 +423,7 @@ class TestFallbackArguments:
 # ---------------------------------------------------------------------------
 # File discovery
 # ---------------------------------------------------------------------------
+
 
 class TestFileDiscovery:
     """Test scripts/ and assets/ discovery."""
@@ -464,6 +498,7 @@ class TestFileDiscovery:
 # Prompt section fix (renamed to _get_prompt_sections)
 # ---------------------------------------------------------------------------
 
+
 class TestPromptSectionFix:
     """Test that skip_prompt works correctly via base class."""
 
@@ -494,6 +529,7 @@ class TestPromptSectionFix:
 # Unsupported feature warnings
 # ---------------------------------------------------------------------------
 
+
 class TestUnsupportedFeatureWarnings:
     """Test that unsupported frontmatter fields trigger warnings."""
 
@@ -510,7 +546,9 @@ class TestUnsupportedFeatureWarnings:
     def test_agent_warning(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             skill_dir = Path(tmpdir) / "agent-skill"
-            _write_skill_md(skill_dir, "agent-skill", extra_frontmatter={"agent": "Explore"})
+            _write_skill_md(
+                skill_dir, "agent-skill", extra_frontmatter={"agent": "Explore"}
+            )
             skill = _make_skill({"skills_path": tmpdir})
             with patch("signalwire.skills.claude_skills.skill.logger") as mock_logger:
                 skill.setup()
@@ -520,7 +558,11 @@ class TestUnsupportedFeatureWarnings:
     def test_allowed_tools_warning(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             skill_dir = Path(tmpdir) / "tools-skill"
-            _write_skill_md(skill_dir, "tools-skill", extra_frontmatter={"allowed-tools": "Read, Grep"})
+            _write_skill_md(
+                skill_dir,
+                "tools-skill",
+                extra_frontmatter={"allowed-tools": "Read, Grep"},
+            )
             skill = _make_skill({"skills_path": tmpdir})
             with patch("signalwire.skills.claude_skills.skill.logger") as mock_logger:
                 skill.setup()
@@ -530,7 +572,9 @@ class TestUnsupportedFeatureWarnings:
     def test_model_warning(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             skill_dir = Path(tmpdir) / "model-skill"
-            _write_skill_md(skill_dir, "model-skill", extra_frontmatter={"model": "opus"})
+            _write_skill_md(
+                skill_dir, "model-skill", extra_frontmatter={"model": "opus"}
+            )
             skill = _make_skill({"skills_path": tmpdir})
             with patch("signalwire.skills.claude_skills.skill.logger") as mock_logger:
                 skill.setup()
@@ -540,7 +584,9 @@ class TestUnsupportedFeatureWarnings:
     def test_hooks_warning(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
             skill_dir = Path(tmpdir) / "hooks-skill"
-            _write_skill_md(skill_dir, "hooks-skill", extra_frontmatter={"hooks": "pre-run"})
+            _write_skill_md(
+                skill_dir, "hooks-skill", extra_frontmatter={"hooks": "pre-run"}
+            )
             skill = _make_skill({"skills_path": tmpdir})
             with patch("signalwire.skills.claude_skills.skill.logger") as mock_logger:
                 skill.setup()
@@ -555,8 +601,11 @@ class TestUnsupportedFeatureWarnings:
             with patch("signalwire.skills.claude_skills.skill.logger") as mock_logger:
                 skill.setup()
             warning_calls = [str(c) for c in mock_logger.warning.call_args_list]
-            assert any("shell injection pattern" in c and "allow_shell_injection is disabled" in c
-                        for c in warning_calls)
+            assert any(
+                "shell injection pattern" in c
+                and "allow_shell_injection is disabled" in c
+                for c in warning_calls
+            )
 
     def test_no_warnings_for_clean_skill(self) -> None:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -566,14 +615,18 @@ class TestUnsupportedFeatureWarnings:
             with patch("signalwire.skills.claude_skills.skill.logger") as mock_logger:
                 skill.setup()
             warning_calls = [str(c) for c in mock_logger.warning.call_args_list]
-            unsupported_warnings = [c for c in warning_calls
-                                     if "not supported" in c or "shell injection" in c]
+            unsupported_warnings = [
+                c
+                for c in warning_calls
+                if "not supported" in c or "shell injection" in c
+            ]
             assert len(unsupported_warnings) == 0
 
 
 # ---------------------------------------------------------------------------
 # Handler pipeline integration
 # ---------------------------------------------------------------------------
+
 
 class TestHandlerPipeline:
     """Test the full handler processing pipeline."""
@@ -591,11 +644,13 @@ class TestHandlerPipeline:
             body = "Dir: ${CLAUDE_SKILL_DIR} | Args: $ARGUMENTS"
             _write_skill_md(skill_dir, "pipeline-skill", body=body)
 
-            skill = _make_skill({
-                "skills_path": tmpdir,
-                "response_prefix": "PREFIX",
-                "response_postfix": "POSTFIX",
-            })
+            skill = _make_skill(
+                {
+                    "skills_path": tmpdir,
+                    "response_prefix": "PREFIX",
+                    "response_postfix": "POSTFIX",
+                }
+            )
             skill.setup()
             skill.register_tools()
 
@@ -619,13 +674,17 @@ class TestHandlerPipeline:
             # test_full_pipeline_ordering for the Windows 8.3 short-path detail.
             skill_dir = (Path(tmpdir).resolve()) / "order-skill"
             # Shell outputs something, then variable and arg substitution happens
-            body = "Shell: !`echo shellout` | Dir: ${CLAUDE_SKILL_DIR} | Arg: $ARGUMENTS"
+            body = (
+                "Shell: !`echo shellout` | Dir: ${CLAUDE_SKILL_DIR} | Arg: $ARGUMENTS"
+            )
             _write_skill_md(skill_dir, "order-skill", body=body)
 
-            skill = _make_skill({
-                "skills_path": tmpdir,
-                "allow_shell_injection": True,
-            })
+            skill = _make_skill(
+                {
+                    "skills_path": tmpdir,
+                    "allow_shell_injection": True,
+                }
+            )
             skill.setup()
             skill.register_tools()
 
@@ -665,8 +724,7 @@ class TestHandlerPipeline:
 
             # Create a section file with variable placeholders
             (skill_dir / "reference.md").write_text(
-                "Ref dir: ${CLAUDE_SKILL_DIR} | Args: $ARGUMENTS",
-                encoding="utf-8"
+                "Ref dir: ${CLAUDE_SKILL_DIR} | Args: $ARGUMENTS", encoding="utf-8"
             )
 
             skill = _make_skill({"skills_path": tmpdir})
@@ -685,6 +743,7 @@ class TestHandlerPipeline:
 # ---------------------------------------------------------------------------
 # Parameter schema
 # ---------------------------------------------------------------------------
+
 
 class TestParameterSchema:
     """Test get_parameter_schema includes new params."""

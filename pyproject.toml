@@ -183,8 +183,17 @@ preview = false
 select = ["E4", "E7", "E9", "F", "B", "S", "C4", "PERF", "SIM", "PTH", "RET", "RUF", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
-# Tests are built on assert; bandit's S101 is noise there.
-"tests/**" = ["S101"]
+# tests/ is held to the SAME ruleset as the SDK (owner-ruled 2026-07-29), with the
+# same four test-idiomatic carve-outs already granted to examples/** plus S101:
+#   S101 — the whole point of a test is `assert`.
+#   E402 — tests/conftest.py MUST insert the project root on sys.path BEFORE importing
+#          signalwire.*, so imports-not-at-top is structurally forced, not sloppiness.
+#   S104 — binding 0.0.0.0 is how a server test says "listen on all interfaces".
+#   S105/S106 — literal "password"/"token" values ARE the fixture; they are not secrets.
+# Everything else stays enforced, so tests/ is burnable to zero and STAYS zero:
+# F401 unused imports, F841 unused variables, SIM/RET/PERF/C4/PTH/UP/RUF/B and every
+# other bandit rule all still red the gate.
+"tests/**" = ["S101", "E402", "S104", "S105", "S106"]
 # sw-agent-dokku is a developer-run deploy CLI that shells out to git/ssh with
 # fixed list-form arg vectors (shell=False, so no shell interpolation). The
 # dynamic parts (app name, dokku host, config vars) are the operator's own CLI

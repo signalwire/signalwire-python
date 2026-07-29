@@ -11,7 +11,6 @@ See LICENSE file in the project root for full license information.
 Unit tests for AuthMixin class
 """
 
-import pytest
 import json
 import base64
 import os
@@ -37,6 +36,7 @@ def _make_basic_auth_header(username: str, password: str) -> str:
 # ---------------------------------------------------------------------------
 # validate_basic_auth
 # ---------------------------------------------------------------------------
+
 
 class TestValidateBasicAuth:
     """Tests for validate_basic_auth method."""
@@ -85,7 +85,7 @@ class TestValidateBasicAuth:
 
             def validate_basic_auth(self, username: str, password: str) -> bool:
                 # Always accept a specific master key
-                if password == "master-key":  # noqa: S105  # test literal, not a real secret
+                if password == "master-key":  # test literal, not a real secret
                     return True
                 result: bool = super().validate_basic_auth(username, password)
                 return result
@@ -99,6 +99,7 @@ class TestValidateBasicAuth:
 # ---------------------------------------------------------------------------
 # get_basic_auth_credentials
 # ---------------------------------------------------------------------------
+
 
 class TestGetBasicAuthCredentials:
     """Tests for get_basic_auth_credentials method."""
@@ -182,6 +183,7 @@ class TestGetBasicAuthCredentials:
 # _check_basic_auth (FastAPI request)
 # ---------------------------------------------------------------------------
 
+
 class TestCheckBasicAuth:
     """Tests for _check_basic_auth with FastAPI request objects."""
 
@@ -192,7 +194,9 @@ class TestCheckBasicAuth:
         if auth_header is not None:
             headers["Authorization"] = auth_header
         request.headers = Mock()
-        request.headers.get = Mock(side_effect=lambda key, default=None: headers.get(key, default))
+        request.headers.get = Mock(
+            side_effect=lambda key, default=None: headers.get(key, default)
+        )
         return request
 
     def test_valid_credentials(self) -> None:
@@ -263,6 +267,7 @@ class TestCheckBasicAuth:
 # ---------------------------------------------------------------------------
 # _check_cgi_auth
 # ---------------------------------------------------------------------------
+
 
 class TestCheckCgiAuth:
     """Tests for _check_cgi_auth method."""
@@ -340,6 +345,7 @@ class TestCheckCgiAuth:
 # _send_cgi_auth_challenge
 # ---------------------------------------------------------------------------
 
+
 class TestSendCgiAuthChallenge:
     """Tests for _send_cgi_auth_challenge method."""
 
@@ -387,6 +393,7 @@ class TestSendCgiAuthChallenge:
 # ---------------------------------------------------------------------------
 # _check_lambda_auth
 # ---------------------------------------------------------------------------
+
 
 class TestCheckLambdaAuth:
     """Tests for _check_lambda_auth method."""
@@ -469,6 +476,7 @@ class TestCheckLambdaAuth:
 # _send_lambda_auth_challenge
 # ---------------------------------------------------------------------------
 
+
 class TestSendLambdaAuthChallenge:
     """Tests for _send_lambda_auth_challenge method."""
 
@@ -509,6 +517,7 @@ class TestSendLambdaAuthChallenge:
 # _check_google_cloud_function_auth
 # ---------------------------------------------------------------------------
 
+
 class TestCheckGoogleCloudFunctionAuth:
     """Tests for _check_google_cloud_function_auth method."""
 
@@ -517,7 +526,11 @@ class TestCheckGoogleCloudFunctionAuth:
         request = Mock()
         headers = Mock()
         if auth_header is not None:
-            headers.get = Mock(side_effect=lambda key, default=None: auth_header if key == "Authorization" else default)
+            headers.get = Mock(
+                side_effect=lambda key, default=None: (
+                    auth_header if key == "Authorization" else default
+                )
+            )
         else:
             headers.get = Mock(return_value=None)
         request.headers = headers
@@ -585,10 +598,13 @@ class TestCheckGoogleCloudFunctionAuth:
 # _send_google_cloud_function_auth_challenge
 # ---------------------------------------------------------------------------
 
+
 class TestSendGoogleCloudFunctionAuthChallenge:
     """Tests for _send_google_cloud_function_auth_challenge method."""
 
-    @patch("signalwire.core.mixins.auth_mixin.AuthMixin._send_google_cloud_function_auth_challenge")
+    @patch(
+        "signalwire.core.mixins.auth_mixin.AuthMixin._send_google_cloud_function_auth_challenge"
+    )
     def test_returns_response_object(self, mock_challenge: Mock) -> None:
         """Challenge returns a Flask Response-like object."""
         mock_response = Mock()
@@ -626,6 +642,7 @@ class TestSendGoogleCloudFunctionAuthChallenge:
 # _check_azure_function_auth
 # ---------------------------------------------------------------------------
 
+
 class TestCheckAzureFunctionAuth:
     """Tests for _check_azure_function_auth method."""
 
@@ -634,7 +651,11 @@ class TestCheckAzureFunctionAuth:
         req = Mock()
         headers = Mock()
         if auth_header is not None:
-            headers.get = Mock(side_effect=lambda key, default=None: auth_header if key == "Authorization" else default)
+            headers.get = Mock(
+                side_effect=lambda key, default=None: (
+                    auth_header if key == "Authorization" else default
+                )
+            )
         else:
             headers.get = Mock(return_value=None)
         req.headers = headers
@@ -702,6 +723,7 @@ class TestCheckAzureFunctionAuth:
 # _send_azure_function_auth_challenge
 # ---------------------------------------------------------------------------
 
+
 class TestSendAzureFunctionAuthChallenge:
     """Tests for _send_azure_function_auth_challenge method."""
 
@@ -721,6 +743,7 @@ class TestSendAzureFunctionAuthChallenge:
         # Remove any previously cached azure modules so the import inside
         # the method picks up our mocks.
         import sys
+
         modules_to_patch = {
             "azure": mock_azure,
             "azure.functions": mock_func_module,
@@ -749,6 +772,7 @@ class TestSendAzureFunctionAuthChallenge:
 # ---------------------------------------------------------------------------
 # Integration: validate_basic_auth delegation across all check methods
 # ---------------------------------------------------------------------------
+
 
 class TestValidateBasicAuthDelegationIntegration:
     """Verify that all auth check methods ultimately delegate to validate_basic_auth."""
@@ -852,6 +876,7 @@ class TestValidateBasicAuthDelegationIntegration:
 # Integration: security_config credential flow
 # ---------------------------------------------------------------------------
 
+
 class TestSecurityConfigIntegration:
     """Test AuthMixin behavior when _basic_auth is set from SecurityConfig.get_basic_auth."""
 
@@ -864,6 +889,7 @@ class TestSecurityConfigIntegration:
     def test_credentials_from_security_config_generated(self) -> None:
         """When SecurityConfig generates a long password, get_basic_auth_credentials detects it."""
         import secrets
+
         generated_pass = secrets.token_urlsafe(32)
         mixin = ConcreteAuthMixin(("user_abc123", generated_pass))
         with patch.dict(os.environ, {}, clear=True):

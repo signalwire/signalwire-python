@@ -14,7 +14,7 @@ Unit tests for SWML renderer module
 import pytest
 import json
 from unittest.mock import patch, MagicMock
-from typing import Dict, List, Any, Optional
+from typing import Any
 
 from signalwire.core.swml_renderer import SwmlRenderer
 from signalwire.core.swml_service import SWMLService
@@ -50,9 +50,7 @@ class TestSwmlRenderer:
         """Test SWML rendering with post prompt"""
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            "You are helpful",
-            service,
-            post_prompt="Provide a summary"
+            "You are helpful", service, post_prompt="Provide a summary"
         )
 
         parsed = json.loads(result)
@@ -68,18 +66,14 @@ class TestSwmlRenderer:
                 "description": "Get weather information",
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "location": {"type": "string"}
-                    }
-                }
+                    "properties": {"location": {"type": "string"}},
+                },
             }
         ]
 
         service = _make_service()
         result = SwmlRenderer.render_swml(
-            "You are helpful",
-            service,
-            swaig_functions=functions
+            "You are helpful", service, swaig_functions=functions
         )
 
         parsed = json.loads(result)
@@ -94,15 +88,11 @@ class TestSwmlRenderer:
         """Test SWML rendering with POM format"""
         pom_data = [
             {"title": "Section 1", "body": "Content 1"},
-            {"title": "Section 2", "body": "Content 2"}
+            {"title": "Section 2", "body": "Content 2"},
         ]
 
         service = _make_service()
-        result = SwmlRenderer.render_swml(
-            pom_data,
-            service,
-            prompt_is_pom=True
-        )
+        result = SwmlRenderer.render_swml(pom_data, service, prompt_is_pom=True)
 
         parsed = json.loads(result)
         ai_verb = parsed["sections"]["main"][0]
@@ -116,7 +106,7 @@ class TestSwmlRenderer:
             "You are helpful",
             service,
             startup_hook_url="https://example.com/startup",
-            hangup_hook_url="https://example.com/hangup"
+            hangup_hook_url="https://example.com/hangup",
         )
 
         parsed = json.loads(result)
@@ -131,7 +121,7 @@ class TestSwmlRenderer:
         result = SwmlRenderer.render_swml(
             "You are helpful",
             service,
-            default_webhook_url="https://example.com/webhook"
+            default_webhook_url="https://example.com/webhook",
         )
 
         parsed = json.loads(result)
@@ -139,19 +129,18 @@ class TestSwmlRenderer:
 
         assert "SWAIG" in ai_verb["ai"]
         assert "defaults" in ai_verb["ai"]["SWAIG"]
-        assert ai_verb["ai"]["SWAIG"]["defaults"]["web_hook_url"] == "https://example.com/webhook"
+        assert (
+            ai_verb["ai"]["SWAIG"]["defaults"]["web_hook_url"]
+            == "https://example.com/webhook"
+        )
 
-    @patch('yaml.dump')
+    @patch("yaml.dump")
     def test_render_swml_yaml_format(self, mock_yaml_dump: MagicMock) -> None:
         """Test SWML rendering in YAML format"""
         mock_yaml_dump.return_value = "version: 1.0.0\nsections:\n  main: []"
 
         service = _make_service()
-        result = SwmlRenderer.render_swml(
-            "You are helpful",
-            service,
-            format="yaml"
-        )
+        result = SwmlRenderer.render_swml("You are helpful", service, format="yaml")
 
         assert isinstance(result, str)
         assert "version: 1.0.0" in result
@@ -181,16 +170,11 @@ class TestSwmlRenderer:
 
     def test_render_function_response_swml_with_actions(self) -> None:
         """Test rendering function response SWML with actions"""
-        actions = [
-            {"play": {"url": "test.mp3"}},
-            {"hangup": {"reason": "completed"}}
-        ]
+        actions = [{"play": {"url": "test.mp3"}}, {"hangup": {"reason": "completed"}}]
 
         service = _make_service()
         result = SwmlRenderer.render_function_response_swml(
-            "Response complete",
-            service,
-            actions=actions
+            "Response complete", service, actions=actions
         )
 
         parsed = json.loads(result)
@@ -199,16 +183,16 @@ class TestSwmlRenderer:
         # Should have play verb for response plus actions
         assert len(main_section) == 3  # response + 2 actions
 
-    @patch('yaml.dump')
-    def test_render_function_response_swml_yaml(self, mock_yaml_dump: MagicMock) -> None:
+    @patch("yaml.dump")
+    def test_render_function_response_swml_yaml(
+        self, mock_yaml_dump: MagicMock
+    ) -> None:
         """Test rendering function response SWML in YAML format"""
         mock_yaml_dump.return_value = "version: 1.0.0\nsections:\n  main: []"
 
         service = _make_service()
         result = SwmlRenderer.render_function_response_swml(
-            "Hello",
-            service,
-            format="yaml"
+            "Hello", service, format="yaml"
         )
 
         assert isinstance(result, str)
@@ -272,11 +256,9 @@ class TestSwmlRendererIntegration:
                 "description": "Get user account balance",
                 "parameters": {
                     "type": "object",
-                    "properties": {
-                        "account_id": {"type": "string"}
-                    },
-                    "required": ["account_id"]
-                }
+                    "properties": {"account_id": {"type": "string"}},
+                    "required": ["account_id"],
+                },
             },
             {
                 "function": "transfer_funds",
@@ -286,11 +268,11 @@ class TestSwmlRendererIntegration:
                     "properties": {
                         "from_account": {"type": "string"},
                         "to_account": {"type": "string"},
-                        "amount": {"type": "number"}
+                        "amount": {"type": "number"},
                     },
-                    "required": ["from_account", "to_account", "amount"]
-                }
-            }
+                    "required": ["from_account", "to_account", "amount"],
+                },
+            },
         ]
 
         service = _make_service()
@@ -303,7 +285,7 @@ class TestSwmlRendererIntegration:
             startup_hook_url="https://bank.example.com/call-start",
             hangup_hook_url="https://bank.example.com/call-end",
             default_webhook_url="https://bank.example.com/functions",
-            params={"temperature": 0.7, "max_tokens": 150}
+            params={"temperature": 0.7, "max_tokens": 150},
         )
 
         parsed = json.loads(result)
@@ -329,20 +311,20 @@ class TestSwmlRendererIntegration:
         pom_sections: list[dict[str, Any]] = [
             {
                 "title": "Role",
-                "body": "You are a customer service representative for TechCorp."
+                "body": "You are a customer service representative for TechCorp.",
             },
             {
                 "title": "Guidelines",
                 "bullets": [
                     "Always be polite and professional",
                     "Ask clarifying questions when needed",
-                    "Escalate complex issues to human agents"
-                ]
+                    "Escalate complex issues to human agents",
+                ],
             },
             {
                 "title": "Available Actions",
-                "body": "You can help with account inquiries, technical support, and billing questions."
-            }
+                "body": "You can help with account inquiries, technical support, and billing questions.",
+            },
         ]
 
         service = _make_service()
@@ -350,7 +332,7 @@ class TestSwmlRendererIntegration:
             prompt=pom_sections,
             service=service,
             prompt_is_pom=True,
-            post_prompt="Provide a brief summary of how you helped the customer."
+            post_prompt="Provide a brief summary of how you helped the customer.",
         )
 
         parsed = json.loads(result)
@@ -367,9 +349,7 @@ class TestSwmlRendererIntegration:
 
         service = _make_service()
         result = SwmlRenderer.render_function_response_swml(
-            response_text,
-            service,
-            actions=actions
+            response_text, service, actions=actions
         )
 
         parsed = json.loads(result)
@@ -378,7 +358,7 @@ class TestSwmlRendererIntegration:
         # Should have initial response plus actions
         assert len(main_section) == 2
 
-    @patch('yaml.dump')
+    @patch("yaml.dump")
     def test_yaml_output_format(self, mock_yaml_dump: MagicMock) -> None:
         """Test YAML output format"""
         mock_yaml_dump.return_value = "version: 1.0.0\nsections:\n  main: []"
@@ -387,11 +367,8 @@ class TestSwmlRendererIntegration:
         result = SwmlRenderer.render_swml(
             "You are helpful",
             service,
-            swaig_functions=[{
-                "function": "test",
-                "description": "Test function"
-            }],
-            format="yaml"
+            swaig_functions=[{"function": "test", "description": "Test function"}],
+            format="yaml",
         )
 
         # Should be valid YAML

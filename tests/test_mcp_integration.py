@@ -1,12 +1,11 @@
 from typing import Any
+
 #!/usr/bin/env python3
 """Tests for MCP server endpoint and add_mcp_server configuration."""
 
-import json
 import pytest
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.function_result import FunctionResult
-from signalwire.core.mixins.mcp_server_mixin import MCPServerMixin
 
 
 class TestMCPServerMixin:
@@ -20,17 +19,17 @@ class TestMCPServerMixin:
         # Register a tool manually for testing
         from signalwire.core.swaig_function import SWAIGFunction
 
-        def weather_handler(agent_self: Any, args: dict[str, Any], raw: dict[str, Any]) -> Any:
+        def weather_handler(
+            agent_self: Any, args: dict[str, Any], raw: dict[str, Any]
+        ) -> Any:
             return FunctionResult(f"72F sunny in {args.get('location', 'unknown')}")
 
         func = SWAIGFunction(
             name="get_weather",
             handler=weather_handler,
             description="Get the weather for a location",
-            parameters={
-                "location": {"type": "string", "description": "City name"}
-            },
-            required=["location"]
+            parameters={"location": {"type": "string", "description": "City name"}},
+            required=["location"],
         )
         agent._swaig_functions = {"get_weather": func}
 
@@ -51,16 +50,18 @@ class TestMCPServerMixin:
     def test_initialize_handshake(self) -> None:
         """Initialize returns protocol version and capabilities"""
         agent = self._make_agent()
-        resp = agent._handle_mcp_request({
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "initialize",
-            "params": {
-                "protocolVersion": "2025-06-18",
-                "capabilities": {},
-                "clientInfo": {"name": "test", "version": "1.0"}
+        resp = agent._handle_mcp_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-06-18",
+                    "capabilities": {},
+                    "clientInfo": {"name": "test", "version": "1.0"},
+                },
             }
-        })
+        )
 
         assert resp["jsonrpc"] == "2.0"
         assert resp["id"] == 1
@@ -71,22 +72,18 @@ class TestMCPServerMixin:
     def test_initialized_notification(self) -> None:
         """notifications/initialized returns empty result"""
         agent = self._make_agent()
-        resp = agent._handle_mcp_request({
-            "jsonrpc": "2.0",
-            "method": "notifications/initialized"
-        })
+        resp = agent._handle_mcp_request(
+            {"jsonrpc": "2.0", "method": "notifications/initialized"}
+        )
 
         assert "result" in resp
 
     def test_tools_list(self) -> None:
         """tools/list returns registered tools in MCP format"""
         agent = self._make_agent()
-        resp = agent._handle_mcp_request({
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": "tools/list",
-            "params": {}
-        })
+        resp = agent._handle_mcp_request(
+            {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}
+        )
 
         assert resp["id"] == 2
         tools = resp["result"]["tools"]
@@ -96,15 +93,14 @@ class TestMCPServerMixin:
     def test_tools_call(self) -> None:
         """tools/call invokes the handler and returns content"""
         agent = self._make_agent()
-        resp = agent._handle_mcp_request({
-            "jsonrpc": "2.0",
-            "id": 3,
-            "method": "tools/call",
-            "params": {
-                "name": "get_weather",
-                "arguments": {"location": "Orlando"}
+        resp = agent._handle_mcp_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "tools/call",
+                "params": {"name": "get_weather", "arguments": {"location": "Orlando"}},
             }
-        })
+        )
 
         assert resp["id"] == 3
         assert resp["result"]["isError"] == False
@@ -116,12 +112,14 @@ class TestMCPServerMixin:
     def test_tools_call_unknown(self) -> None:
         """tools/call with unknown tool returns error"""
         agent = self._make_agent()
-        resp = agent._handle_mcp_request({
-            "jsonrpc": "2.0",
-            "id": 4,
-            "method": "tools/call",
-            "params": {"name": "nonexistent", "arguments": {}}
-        })
+        resp = agent._handle_mcp_request(
+            {
+                "jsonrpc": "2.0",
+                "id": 4,
+                "method": "tools/call",
+                "params": {"name": "nonexistent", "arguments": {}},
+            }
+        )
 
         assert "error" in resp
         assert resp["error"]["code"] == -32602
@@ -130,12 +128,9 @@ class TestMCPServerMixin:
     def test_unknown_method(self) -> None:
         """Unknown method returns method not found error"""
         agent = self._make_agent()
-        resp = agent._handle_mcp_request({
-            "jsonrpc": "2.0",
-            "id": 5,
-            "method": "resources/list",
-            "params": {}
-        })
+        resp = agent._handle_mcp_request(
+            {"jsonrpc": "2.0", "id": 5, "method": "resources/list", "params": {}}
+        )
 
         assert "error" in resp
         assert resp["error"]["code"] == -32601
@@ -143,22 +138,16 @@ class TestMCPServerMixin:
     def test_ping(self) -> None:
         """ping returns empty result"""
         agent = self._make_agent()
-        resp = agent._handle_mcp_request({
-            "jsonrpc": "2.0",
-            "id": 6,
-            "method": "ping"
-        })
+        resp = agent._handle_mcp_request({"jsonrpc": "2.0", "id": 6, "method": "ping"})
 
         assert "result" in resp
 
     def test_invalid_jsonrpc_version(self) -> None:
         """Non-2.0 version returns error"""
         agent = self._make_agent()
-        resp = agent._handle_mcp_request({
-            "jsonrpc": "1.0",
-            "id": 7,
-            "method": "initialize"
-        })
+        resp = agent._handle_mcp_request(
+            {"jsonrpc": "1.0", "id": 7, "method": "initialize"}
+        )
 
         assert "error" in resp
         assert resp["error"]["code"] == -32600
@@ -179,8 +168,7 @@ class TestAddMCPServer:
         """MCP server with auth headers"""
         agent = AgentBase(name="test", route="/test")
         agent.add_mcp_server(
-            "https://mcp.example.com/tools",
-            headers={"Authorization": "Bearer sk-xxx"}
+            "https://mcp.example.com/tools", headers={"Authorization": "Bearer sk-xxx"}
         )
 
         assert agent._mcp_servers[0]["headers"]["Authorization"] == "Bearer sk-xxx"
@@ -191,11 +179,13 @@ class TestAddMCPServer:
         agent.add_mcp_server(
             "https://mcp.example.com/crm",
             resources=True,
-            resource_vars={"caller_id": "${caller_id_number}"}
+            resource_vars={"caller_id": "${caller_id_number}"},
         )
 
         assert agent._mcp_servers[0]["resources"] == True
-        assert agent._mcp_servers[0]["resource_vars"]["caller_id"] == "${caller_id_number}"
+        assert (
+            agent._mcp_servers[0]["resource_vars"]["caller_id"] == "${caller_id_number}"
+        )
 
     def test_add_multiple_servers(self) -> None:
         """Multiple MCP servers"""

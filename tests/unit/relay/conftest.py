@@ -58,7 +58,8 @@ import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, AsyncIterator, Callable, Iterable, Iterator, Optional, cast
+from typing import Any, cast
+from collections.abc import AsyncIterator, Callable, Iterable, Iterator
 from unittest.mock import AsyncMock, patch
 from urllib.parse import quote
 
@@ -82,7 +83,7 @@ from signalwire.relay.constants import METHOD_SIGNALWIRE_CONNECT
 # ---------------------------------------------------------------------------
 
 
-def _discover_mock_package(name: str) -> Optional[str]:
+def _discover_mock_package(name: str) -> str | None:
     """Return the ``../porting-sdk/test_harness/<name>/`` package root (prepended
     to ``sys.path``), or ``None`` when no adjacent ``porting-sdk`` is reachable."""
     here = Path(__file__).resolve()
@@ -386,7 +387,7 @@ def _ws_port_accepting(ws_port: int) -> bool:
         return False
 
 
-def _probe_health(http_url: str, ws_port: Optional[int] = None) -> bool:
+def _probe_health(http_url: str, ws_port: int | None = None) -> bool:
     """Whether a usable mock_relay is already up.
 
     Checks BOTH transports. The HTTP health endpoint and the WS endpoint are two
@@ -414,14 +415,14 @@ class _SharedRelayServer:
     """Process-wide handle to the one shared mock_relay server (WS + HTTP)."""
 
     def __init__(self) -> None:
-        self.http_url: Optional[str] = None
-        self.ws_url: Optional[str] = None
-        self.relay_host: Optional[str] = None
-        self._child: Optional[subprocess.Popen[bytes]] = None
+        self.http_url: str | None = None
+        self.ws_url: str | None = None
+        self.relay_host: str | None = None
+        self._child: subprocess.Popen[bytes] | None = None
         self._lock = threading.Lock()
-        self._error: Optional[str] = None
+        self._error: str | None = None
 
-    def ensure(self) -> "_SharedRelayServer":
+    def ensure(self) -> _SharedRelayServer:
         with self._lock:
             if self.http_url is not None:
                 return self
@@ -523,7 +524,7 @@ class _RelayJournalEntry:
     session_id: str
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "_RelayJournalEntry":
+    def from_dict(cls, d: dict[str, Any]) -> _RelayJournalEntry:
         return cls(
             timestamp=float(d.get("timestamp", 0.0)),
             direction=str(d.get("direction", "")),
@@ -572,7 +573,7 @@ class _MockRelayHarness:
         resp.raise_for_status()
         return [_RelayJournalEntry.from_dict(d) for d in resp.json()]
 
-    def journal_recv(self, *, method: Optional[str] = None) -> list[_RelayJournalEntry]:
+    def journal_recv(self, *, method: str | None = None) -> list[_RelayJournalEntry]:
         """Return inbound (SDK→server) journal entries, optionally by method."""
         entries = [e for e in self.journal() if e.direction == "recv"]
         if method is not None:
@@ -580,7 +581,7 @@ class _MockRelayHarness:
         return entries
 
     def journal_send(
-        self, *, event_type: Optional[str] = None
+        self, *, event_type: str | None = None
     ) -> list[_RelayJournalEntry]:
         """Return server→SDK frames, optionally filtered by inner event_type."""
         entries = [e for e in self.journal() if e.direction == "send"]
@@ -642,7 +643,7 @@ class _MockRelayHarness:
         self,
         frame: dict[str, Any],
         *,
-        session_id: Optional[str] = None,
+        session_id: str | None = None,
     ) -> dict[str, Any]:
         """Push a single ``signalwire.event`` (or other) frame to the SDK.
 
@@ -661,13 +662,13 @@ class _MockRelayHarness:
     def inbound_call(
         self,
         *,
-        call_id: Optional[str] = None,
+        call_id: str | None = None,
         from_number: str = "+15551234567",
         to_number: str = "+15559876543",
         context: str = "default",
-        auto_states: Optional[list[str]] = None,
+        auto_states: list[str] | None = None,
         delay_ms: int = 50,
-        session_id: Optional[str] = None,
+        session_id: str | None = None,
     ) -> dict[str, Any]:
         """Inject an inbound call announcement.
 
@@ -742,7 +743,7 @@ def mock_relay() -> _MockRelayHarness:
     )
 
 
-def _ws_redirect_to_mock(shared: "_SharedRelayServer") -> Any:
+def _ws_redirect_to_mock(shared: _SharedRelayServer) -> Any:
     """Build the websockets.connect override that points the SDK at the mock.
 
     The SDK builds its URI as ``f"wss://{self.host}"`` — wss://, no port.  We

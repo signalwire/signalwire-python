@@ -26,7 +26,9 @@ _FABRIC_ADDRESSES_PATH = "/api/fabric/addresses"
 _FABRIC_ADDRESSES_ENDPOINT_ID = "fabric.list_fabric_addresses"
 
 
-def _push_scenario(mock: _MockHarness, endpoint_id: str, status: int, response: dict[str, Any]) -> None:
+def _push_scenario(
+    mock: _MockHarness, endpoint_id: str, status: int, response: dict[str, Any]
+) -> None:
     """Push one consume-once scenario, scoped to THIS client's auth header.
 
     Scoping (``mock.push_scenario`` -> ``?session_id=<auth header>``) keeps a
@@ -36,7 +38,9 @@ def _push_scenario(mock: _MockHarness, endpoint_id: str, status: int, response: 
 
 
 class TestPaginatedIterator:
-    def test_init_state(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_init_state(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         """Constructor records http/path/params/data_key without fetching."""
         it = PaginatedIterator(
             signalwire_client._http,
@@ -55,7 +59,9 @@ class TestPaginatedIterator:
         # Journal must be empty — no HTTP went out.
         assert mock.journal == []
 
-    def test_iter_returns_self(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_iter_returns_self(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         """``__iter__`` returns the iterator itself; ``iter(it)`` is the same."""
         it = PaginatedIterator(
             signalwire_client._http,
@@ -70,7 +76,9 @@ class TestPaginatedIterator:
         # Still no HTTP yet.
         assert mock.journal == []
 
-    def test_next_pages_through_all_items(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_next_pages_through_all_items(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         """Walks two pages and stops on the page without ``links.next``.
 
         A fresh per-test client starts with an empty (auth-scoped) journal and
@@ -81,19 +89,23 @@ class TestPaginatedIterator:
         # that starts with PA/PB), NOT a ``cursor`` param (which no SignalWire REST
         # endpoint accepts — see rest-apis/fabric/openapi.yaml ListFabricAddressesQuery).
         _push_scenario(
-            mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
+            mock,
+            _FABRIC_ADDRESSES_ENDPOINT_ID,
             status=200,
             response={
                 "data": [
                     {"id": "addr-1", "name": "first"},
                     {"id": "addr-2", "name": "second"},
                 ],
-                "links": {"next": "http://example.com/api/fabric/addresses?page_token=PA_page2"},
+                "links": {
+                    "next": "http://example.com/api/fabric/addresses?page_token=PA_page2"
+                },
             },
         )
         # Page 2 — terminal (no next).
         _push_scenario(
-            mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
+            mock,
+            _FABRIC_ADDRESSES_ENDPOINT_ID,
             status=200,
             response={
                 "data": [
@@ -123,11 +135,14 @@ class TestPaginatedIterator:
             f"second fetch missing page_token=PA_page2: {gets[1].query_params}"
         )
 
-    def test_next_raises_stop_iteration_when_done(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
+    def test_next_raises_stop_iteration_when_done(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
         """After exhausting items and seeing no next cursor, raise StopIteration."""
         # One terminal page.
         _push_scenario(
-            mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
+            mock,
+            _FABRIC_ADDRESSES_ENDPOINT_ID,
             status=200,
             response={
                 "data": [{"id": "only-one"}],
@@ -169,7 +184,8 @@ class TestPaginatedIterator:
         """
         # Page 1 — EMPTY data but a next cursor pointing at page 2.
         _push_scenario(
-            mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
+            mock,
+            _FABRIC_ADDRESSES_ENDPOINT_ID,
             status=200,
             response={
                 "data": [],
@@ -178,7 +194,8 @@ class TestPaginatedIterator:
         )
         # Page 2 — the real item, terminal (no next).
         _push_scenario(
-            mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
+            mock,
+            _FABRIC_ADDRESSES_ENDPOINT_ID,
             status=200,
             response={
                 "data": [{"id": "addr-late", "name": "found-after-empty-page"}],
@@ -218,14 +235,18 @@ class TestPaginatedIterator:
         from signalwire.rest._base import ReadResource
 
         _push_scenario(
-            mock, _FABRIC_ADDRESSES_ENDPOINT_ID, status=200,
+            mock,
+            _FABRIC_ADDRESSES_ENDPOINT_ID,
+            status=200,
             response={
                 "data": [{"id": "r-1"}, {"id": "r-2"}],
                 "links": {"next": f"{_FABRIC_ADDRESSES_PATH}?page_token=PA_page2"},
             },
         )
         _push_scenario(
-            mock, _FABRIC_ADDRESSES_ENDPOINT_ID, status=200,
+            mock,
+            _FABRIC_ADDRESSES_ENDPOINT_ID,
+            status=200,
             response={"data": [{"id": "r-3"}], "links": {}},
         )
 
@@ -250,12 +271,14 @@ class TestPaginatedIterator:
         # cursor REPEATS (page 2's next == page 2's own request), so iteration ends
         # after consuming both pages' items instead of looping on page 3, 4, ….
         _push_scenario(
-            mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
+            mock,
+            _FABRIC_ADDRESSES_ENDPOINT_ID,
             status=200,
             response={"data": [{"id": "a-1"}], "links": {"next": same_next}},
         )
         _push_scenario(
-            mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
+            mock,
+            _FABRIC_ADDRESSES_ENDPOINT_ID,
             status=200,
             response={"data": [{"id": "a-2"}], "links": {"next": same_next}},
         )
