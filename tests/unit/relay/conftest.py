@@ -51,7 +51,6 @@ import asyncio
 import atexit
 import json
 import os
-import socket
 import subprocess
 import sys
 import threading
