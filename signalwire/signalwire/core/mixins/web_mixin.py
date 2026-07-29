@@ -120,6 +120,31 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             async def add_security_headers(
                 request: Request, call_next: Callable[[Request], Awaitable[Response]]
             ) -> Response:
+                """
+                HTTP middleware that stamps security headers on every response.
+
+                Runs the downstream handler first, then unconditionally sets:
+
+                - ``X-Content-Type-Options: nosniff``
+                - ``X-Frame-Options: DENY``
+                - ``Referrer-Policy: strict-origin-when-cross-origin``
+
+                and additionally, only when SSL is on (either ``_ssl_enabled``
+                or ``ssl_enabled`` is truthy):
+
+                - ``Strict-Transport-Security: max-age=31536000; includeSubDomains``
+
+                Headers are assigned, not appended, so they override anything a
+                handler set. HSTS is gated because sending it over plain HTTP
+                would pin clients to a scheme this process is not serving.
+
+                Args:
+                    request: The incoming request, passed through untouched.
+                    call_next: The next handler in the middleware chain.
+
+                Returns:
+                    The downstream response with the headers added.
+                """
                 response = await call_next(request)
                 response.headers["X-Content-Type-Options"] = "nosniff"
                 response.headers["X-Frame-Options"] = "DENY"
@@ -151,6 +176,32 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             @app.get("/{full_path:path}")
             @app.post("/{full_path:path}")
             async def handle_all_routes(request: Request, full_path: str) -> Response:
+                """
+                Catch-all fallback for paths the mounted router did not match.
+
+                Registered last, so the real endpoints (``/health``,
+                ``/ready``, and everything on the agent's router prefix) win.
+                It only classifies the leftovers, and does NOT dispatch:
+
+                - A path that does not begin with this agent's route →
+                  ``JSONResponse({"error": "Invalid route"})``.
+                - Anything else → an empty **204** response.
+
+                Both are 200-family: the error case returns 200 with an error
+                body (the status code is left at FastAPI's default), and the
+                on-route case returns 204 rather than being handled. This is
+                the ``get_app()`` variant, used for serverless/ASGI adapters
+                such as Mangum; the ``serve()`` variant of this name is the one
+                that actually routes to ``/swaig``, ``/post_prompt`` and the
+                registered callbacks.
+
+                Args:
+                    request: The incoming request (used for logging only).
+                    full_path: The matched path with no leading slash.
+
+                Returns:
+                    The error JSON body, or a 204.
+                """
                 self.log.debug("request_received", path=full_path)
 
                 # Check if the path is meant for this agent
@@ -246,6 +297,29 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             async def add_security_headers(
                 request: Request, call_next: Callable[[Request], Awaitable[Response]]
             ) -> Response:
+                """
+                HTTP middleware that stamps security headers on every response.
+
+                Identical to the middleware installed by ``get_app()`` — the
+                two entry points build independent FastAPI apps, so each
+                registers its own copy. Runs the downstream handler, then
+                unconditionally sets:
+
+                - ``X-Content-Type-Options: nosniff``
+                - ``X-Frame-Options: DENY``
+                - ``Referrer-Policy: strict-origin-when-cross-origin``
+
+                plus, only when ``_ssl_enabled`` or ``ssl_enabled`` is truthy:
+
+                - ``Strict-Transport-Security: max-age=31536000; includeSubDomains``
+
+                Args:
+                    request: The incoming request, passed through untouched.
+                    call_next: The next handler in the middleware chain.
+
+                Returns:
+                    The downstream response with the headers added.
+                """
                 response = await call_next(request)
                 response.headers["X-Content-Type-Options"] = "nosniff"
                 response.headers["X-Frame-Options"] = "DENY"
@@ -265,6 +339,42 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             @app.get("/{full_path:path}")
             @app.post("/{full_path:path}")
             async def handle_all_routes(request: Request, full_path: str) -> Response:
+                """
+                Catch-all that dispatches this agent's endpoints by path
+                suffix.
+
+                Registered before the router is included, and it matches
+                everything, so under ``serve()`` this — not the router — is
+                what handles the agent's endpoints. A path not starting with
+                the agent's route returns ``JSONResponse({"error": "Invalid
+                route"})``. Otherwise the remainder after the route prefix is
+                stripped of slashes and dispatched:
+
+                - empty (the route root) → ``_handle_root_request`` (the SWML
+                  document)
+                - ``debug`` → ``_handle_debug_request``
+                - ``swaig`` → ``_handle_swaig_request``
+                - ``post_prompt`` → ``_handle_post_prompt_request``
+                - ``check_for_input`` → ``_handle_check_for_input_request``
+                - ``debug_events`` → ``_handle_debug_events_request``
+                - an exact match against a registered routing-callback path →
+                  that path is stashed on ``request.state.callback_path`` and
+                  the request goes to ``_handle_root_request``
+
+                Anything else returns ``JSONResponse({"error": "Path not
+                found"})``. Both error bodies come back with FastAPI's default
+                **200** status, not 404 — callers must read the body to detect
+                a miss. Dict-returning internal handlers are normalized through
+                ``_as_response``.
+
+                Args:
+                    request: The incoming request.
+                    full_path: The matched path with no leading slash.
+
+                Returns:
+                    The dispatched handler's response, or one of the two error
+                    bodies above.
+                """
                 self.log.debug("request_received", path=full_path)
 
                 # Check if the path is meant for this agent
@@ -1380,6 +1490,24 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         """
 
         def signal_handler(signum: int, frame: Any) -> None:
+            """
+            Log the shutdown signal, run cleanup, and exit the process.
+
+            Installed for both SIGTERM (what Kubernetes sends) and SIGINT
+            (Ctrl+C). The cleanup block is currently a no-op placeholder — it
+            checks for ``_session_manager`` but performs no teardown — and any
+            exception raised inside it is logged as ``cleanup_error`` and
+            swallowed. Either way the ``finally`` clause calls ``sys.exit(0)``,
+            so the process always terminates with status 0 and cleanup failure
+            never blocks shutdown.
+
+            Because it exits from a signal handler, in-flight requests are not
+            drained.
+
+            Args:
+                signum: The signal number that fired.
+                frame: The interrupted stack frame (unused).
+            """
             self.log.info("shutdown_signal_received", signal=signum)
 
             # Perform cleanup

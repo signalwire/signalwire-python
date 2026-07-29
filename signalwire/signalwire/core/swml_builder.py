@@ -329,6 +329,33 @@ class SWMLBuilder(_VerbsBase):
             def make_verb_method(
                 name: str,
             ) -> Callable[..., "SWMLBuilder"]:
+                """
+                Build the builder method for one SWML verb.
+
+                The closure exists to bind ``name`` per verb — without it every
+                generated method would share the loop variable and emit the
+                last verb in the schema.
+
+                The returned function takes only keyword arguments, drops every
+                kwarg whose value is None (so unset options never reach the
+                wire), passes the surviving dict to
+                ``service.add_verb(name, config)``, and returns the builder for
+                chaining. It carries the verb's schema ``description`` as its
+                ``__doc__`` when the schema supplies one.
+
+                ``sleep`` is NOT built here — it takes a bare integer rather
+                than an object in SWML and is special-cased by the caller.
+
+                Args:
+                    name: The SWML verb name, used as both the emitted key and
+                        the method name.
+
+                Returns:
+                    An unbound function of ``(self_instance, **kwargs) ->
+                    SWMLBuilder``, which the caller binds with
+                    ``types.MethodType`` and caches.
+                """
+
                 def verb_method(
                     self_instance: "SWMLBuilder", **kwargs: Any
                 ) -> "SWMLBuilder":

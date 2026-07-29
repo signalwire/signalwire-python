@@ -729,6 +729,33 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         def sip_routing_callback(
             body: dict[str, Any], headers: dict[str, Any]
         ) -> str | None:
+            """
+            Routing callback registered at ``path`` for inbound SIP requests.
+
+            Pulls the SIP username out of the body with
+            ``extract_sip_username`` (the user part of the ``call.to`` SIP/TEL
+            URI) and logs whether it is one of this agent's registered
+            ``_sip_usernames``, compared lower-cased.
+
+            **Always returns None**, on every branch — matched, unmatched, and
+            no-username-found alike. Under the routing contract
+            (``register_routing_callback``) None means "keep processing here",
+            so this endpoint never emits the 307 redirect that a non-None
+            return would produce: an unmatched username is logged and then
+            still handled by this agent rather than being sent elsewhere. The
+            match check is observational only.
+
+            ``headers`` is part of the framework-free ``(body, headers)``
+            callback shape shared with the other ports; this implementation
+            does not read it.
+
+            Args:
+                body: Parsed JSON request body.
+                headers: Request headers (unused here).
+
+            Returns:
+                Always None — continue normal processing at this route.
+            """
             # Extract SIP username from the request body
             sip_username = self.extract_sip_username(body)
 
