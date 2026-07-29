@@ -155,9 +155,9 @@ class TestWebServiceInit:
     def test_default_directories_empty(self, web_service: Any) -> None:
         assert web_service.directories == {}
 
-    def test_custom_directories(self) -> None:
-        ws = _make_web_service(directories={"/static": "/tmp"})
-        assert ws.directories == {"/static": "/tmp"}
+    def test_custom_directories(self, tmp_path: Path) -> None:
+        ws = _make_web_service(directories={"/static": str(tmp_path)})
+        assert ws.directories == {"/static": str(tmp_path)}
         _stop_patches(ws)
 
     def test_enable_directory_browsing_default_off(self, web_service: Any) -> None:
@@ -1075,7 +1075,7 @@ class TestLoadConfigBranches:
             mock_cl_cls.find_config_file.return_value = "/fake/config.yaml"
             from signalwire.web.web_service import WebService
 
-            ws = WebService(port=9999, directories={})
+            WebService(port=9999, directories={})
         # get_section should never be called
         mock_loader.get_section.assert_not_called()
 
@@ -1189,11 +1189,11 @@ class TestRouteHandlers:
         assert "directories" in data
         assert "directory_browsing" in data
 
-    def test_root_endpoint_html(self) -> None:
+    def test_root_endpoint_html(self, tmp_path: Path) -> None:
         """GET / should return HTML listing available directories."""
         from starlette.testclient import TestClient
 
-        ws = self._make_testable_service(directories={"/docs": "/tmp"})
+        ws = self._make_testable_service(directories={"/docs": str(tmp_path)})
         client = TestClient(ws.app)
         resp = client.get("/")
         assert resp.status_code == 200
@@ -1495,10 +1495,10 @@ class TestSecurityMiddleware:
 class TestMountDirectoriesEdgeCases:
     """Additional edge cases for _mount_directories (line 362)."""
 
-    def test_mount_no_app_returns_early(self) -> None:
+    def test_mount_no_app_returns_early(self, tmp_path: Path) -> None:
         """When self.app is None, _mount_directories should return immediately."""
         ws = _make_web_service(fastapi_available=False)
-        ws.directories = {"/test": "/tmp"}
+        ws.directories = {"/test": str(tmp_path)}
         ws._mount_directories()  # should not raise
         _stop_patches(ws)
 

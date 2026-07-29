@@ -279,8 +279,10 @@ class TestSWAIGFunctionValidation:
         # validate_args returns (is_valid, errors) tuple
         is_valid, errors = func.validate_args({"param1": "value"})
         assert is_valid is True
+        assert errors == []
         is_valid, errors = func.validate_args({"invalid": "value"})
         assert isinstance(is_valid, bool)
+        assert isinstance(errors, list)
 
     def test_function_name_validation(self) -> None:
         """Test function name validation"""

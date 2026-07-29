@@ -1028,7 +1028,7 @@ class TestFileExtraction:
         # and 'text' in 'text/html' is True -> goes to _extract_text first
         # Actually 'plain' in 'text/html' is False but 'text' in 'text/html' is True
         # So it hits the 'plain' or 'text' branch -> _extract_text
-        with patch.object(self.processor, "_extract_text", return_value="content") as m:
+        with patch.object(self.processor, "_extract_text", return_value="content"):
             result = self.processor._extract_text_from_file("page.html")
         assert result == "content"
 

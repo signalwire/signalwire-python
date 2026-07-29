@@ -203,6 +203,19 @@ select = ["E4", "E7", "E9", "F", "B", "S", "C4", "PERF", "SIM", "PTH", "RET", "R
 # coverage of the legacy path. The annotations in this file that are actually
 # annotations are already PEP-604.
 "tests/unit/core/agent/tools/test_type_inference.py" = ["UP045"]
+# These three test files re-invoke the CURRENT interpreter to get a clean
+# subprocess: `sys.executable` (an absolute path, never PATH-resolved) plus a
+# fixed list-form arg vector, with the default shell=False — so there is no
+# shell to interpolate into. The only non-literal arguments are values the test
+# itself chose (an agent file path under tests/, a locally-picked free port),
+# never untrusted or network input. A subprocess is structurally required here:
+# import-time weight and CLI behavior cannot be measured inside the pytest
+# process that has already imported everything. Same rationale as
+# cli/dokku.py below; scoped per-file rather than tests/** so any NEW
+# subprocess call in the suite still reds the gate.
+"tests/test_examples.py" = ["S603"]
+"tests/unit/test_import_time.py" = ["S603"]
+"tests/unit/relay/conftest.py" = ["S603"]
 # sw-agent-dokku is a developer-run deploy CLI that shells out to git/ssh with
 # fixed list-form arg vectors (shell=False, so no shell interpolation). The
 # dynamic parts (app name, dokku host, config vars) are the operator's own CLI

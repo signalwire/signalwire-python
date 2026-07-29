@@ -475,11 +475,11 @@ class TestSWMLHandlerIntegration:
             if verb_name == "ai":
                 config = handler.build_config(prompt_text="Test")
                 is_valid, errors = handler.validate_config(config)
-                assert is_valid is True
             else:
                 config = handler.build_config(required_field="test")
                 is_valid, errors = handler.validate_config(config)
-                assert is_valid is True
+            assert is_valid is True
+            assert errors == []
 
     def test_handler_error_scenarios(self) -> None:
         """Test error handling scenarios"""

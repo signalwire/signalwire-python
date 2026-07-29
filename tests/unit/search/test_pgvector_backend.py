@@ -32,6 +32,16 @@ from typing import Any
 # ---------------------------------------------------------------------------
 
 
+class _ConnectFailure(Exception):
+    """Stands in for the driver error psycopg2.connect() raises.
+
+    psycopg2 is not installed in the test environment (the whole module is
+    mocked), so ``psycopg2.OperationalError`` is not importable here. A
+    dedicated type lets the tests assert that ``_connect`` re-raises the
+    driver's own exception unchanged instead of passing on any error at all.
+    """
+
+
 class _FakeIdentifier:
     """Mimics psycopg2.sql.Identifier for testing."""
 
@@ -232,6 +242,9 @@ class TestPgVectorBackendConnect:
             backend = PgVectorBackend("postgresql://localhost/testdb")
 
         assert "Connected to PostgreSQL database" in caplog.text
+        # The success log must correspond to a real connection being retained,
+        # not just an info line emitted on the way past.
+        assert backend.conn is mock_conn
 
     @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
     @patch("signalwire.search.pgvector_backend.psycopg2")
@@ -240,11 +253,13 @@ class TestPgVectorBackendConnect:
         self, mock_reg: MagicMock, mock_pg: MagicMock, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test vector type not found produces specific error log"""
-        mock_pg.connect.side_effect = Exception("vector type not found in the catalog")
+        mock_pg.connect.side_effect = _ConnectFailure(
+            "vector type not found in the catalog"
+        )
 
         with (
             caplog.at_level(logging.ERROR, logger="signalwire.search.pgvector_backend"),
-            pytest.raises(Exception),
+            pytest.raises(_ConnectFailure, match="vector type not found"),
         ):
             PgVectorBackend("postgresql://localhost/testdb")
 
@@ -257,11 +272,11 @@ class TestPgVectorBackendConnect:
         self, mock_reg: MagicMock, mock_pg: MagicMock, caplog: pytest.LogCaptureFixture
     ) -> None:
         """Test generic connection failure produces error log"""
-        mock_pg.connect.side_effect = Exception("host not reachable")
+        mock_pg.connect.side_effect = _ConnectFailure("host not reachable")
 
         with (
             caplog.at_level(logging.ERROR, logger="signalwire.search.pgvector_backend"),
-            pytest.raises(Exception),
+            pytest.raises(_ConnectFailure, match="host not reachable"),
         ):
             PgVectorBackend("postgresql://localhost/testdb")
 
@@ -398,7 +413,7 @@ class TestPgVectorBackendCreateSchema:
 
     def test_create_schema_sanitizes_collection_name(self) -> None:
         """Test that special characters in collection name are replaced"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
 
         backend.create_schema("my-collection.v2!", embedding_dim=768)
 
@@ -415,7 +430,7 @@ class TestPgVectorBackendCreateSchema:
 
     def test_create_schema_default_embedding_dim(self) -> None:
         """Test create_schema uses default embedding_dim of 768"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
 
         backend.create_schema("test")
 
@@ -433,7 +448,7 @@ class TestPgVectorBackendCreateSchema:
 
     def test_create_schema_calls_ensure_connection(self) -> None:
         """Test that create_schema checks connection"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, _mock_cursor = self._make_backend()
 
         with patch.object(backend, "_ensure_connection") as mock_ensure:
             backend.create_schema("test")
@@ -546,7 +561,7 @@ class TestPgVectorBackendStoreChunks:
         self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock
     ) -> None:
         """Test storing chunks with numpy array embeddings"""
-        mock_conn, mock_cursor = _make_mock_conn()
+        mock_conn, _mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
         backend = PgVectorBackend("postgresql://localhost/testdb")
 
@@ -575,7 +590,7 @@ class TestPgVectorBackendStoreChunks:
         self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock
     ) -> None:
         """Test storing chunks without embeddings"""
-        mock_conn, mock_cursor = _make_mock_conn()
+        mock_conn, _mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
         backend = PgVectorBackend("postgresql://localhost/testdb")
 
@@ -601,7 +616,7 @@ class TestPgVectorBackendStoreChunks:
         self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock
     ) -> None:
         """Test that extra chunk keys become metadata"""
-        mock_conn, mock_cursor = _make_mock_conn()
+        mock_conn, _mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
         backend = PgVectorBackend("postgresql://localhost/testdb")
 
@@ -631,7 +646,7 @@ class TestPgVectorBackendStoreChunks:
         self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock
     ) -> None:
         """Test that searchable metadata text is generated correctly"""
-        mock_conn, mock_cursor = _make_mock_conn()
+        mock_conn, _mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
         backend = PgVectorBackend("postgresql://localhost/testdb")
 
@@ -664,7 +679,7 @@ class TestPgVectorBackendStoreChunks:
         self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock
     ) -> None:
         """Test storing multiple chunks at once"""
-        mock_conn, mock_cursor = _make_mock_conn()
+        mock_conn, _mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
         backend = PgVectorBackend("postgresql://localhost/testdb")
 
@@ -685,7 +700,7 @@ class TestPgVectorBackendStoreChunks:
         self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock
     ) -> None:
         """Test metadata extraction from JSON content during storage"""
-        mock_conn, mock_cursor = _make_mock_conn()
+        mock_conn, _mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
         backend = PgVectorBackend("postgresql://localhost/testdb")
 
@@ -713,7 +728,7 @@ class TestPgVectorBackendStoreChunks:
         self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock
     ) -> None:
         """Test that store_chunks calls _ensure_connection"""
-        mock_conn, mock_cursor = _make_mock_conn()
+        mock_conn, _mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
         backend = PgVectorBackend("postgresql://localhost/testdb")
 
@@ -774,7 +789,7 @@ class TestPgVectorBackendGetStats:
 
     def test_get_stats_with_config(self) -> None:
         """Test get_stats returns correct statistics with config"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
 
         created_at = datetime(2025, 1, 15, 12, 0, 0)
         mock_cursor.fetchone.side_effect = [
@@ -804,7 +819,7 @@ class TestPgVectorBackendGetStats:
 
     def test_get_stats_without_config(self) -> None:
         """Test get_stats when no config exists"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
 
         mock_cursor.fetchone.side_effect = [
             (10,),  # total chunks
@@ -820,7 +835,7 @@ class TestPgVectorBackendGetStats:
 
     def test_get_stats_with_none_created_at(self) -> None:
         """Test get_stats when created_at is None"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
 
         mock_cursor.fetchone.side_effect = [
             (0,),
@@ -848,7 +863,7 @@ class TestPgVectorBackendListCollections:
 
     def test_list_collections_returns_names(self) -> None:
         """Test list_collections returns collection names"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
         mock_cursor.fetchall.return_value = [("alpha",), ("beta",), ("gamma",)]
 
         result = backend.list_collections()
@@ -857,7 +872,7 @@ class TestPgVectorBackendListCollections:
 
     def test_list_collections_empty(self) -> None:
         """Test list_collections with no collections"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
         mock_cursor.fetchall.return_value = []
 
         result = backend.list_collections()
@@ -866,7 +881,7 @@ class TestPgVectorBackendListCollections:
 
     def test_list_collections_calls_ensure_connection(self) -> None:
         """Test that list_collections checks connection"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
         mock_cursor.fetchall.return_value = []
 
         with patch.object(backend, "_ensure_connection") as mock_ensure:
@@ -906,7 +921,7 @@ class TestPgVectorBackendDeleteCollection:
 
     def test_delete_collection_sanitizes_name(self) -> None:
         """Test that delete_collection sanitizes collection name"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
 
         backend.delete_collection("bad-name.here!")
 
@@ -919,7 +934,7 @@ class TestPgVectorBackendDeleteCollection:
 
     def test_delete_collection_calls_ensure_connection(self) -> None:
         """Test that delete_collection checks connection"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, _mock_cursor = self._make_backend()
 
         with patch.object(backend, "_ensure_connection") as mock_ensure:
             backend.delete_collection("test")

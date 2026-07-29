@@ -93,7 +93,7 @@ class TestAgentCreation:
 
     def test_creation_with_noop_params(self) -> None:
         """STT, TTS, VAD, turn_detection trigger noop logs."""
-        agent = Agent(
+        Agent(
             instructions="test",
             stt="deepgram",
             tts="cartesia",

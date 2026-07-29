@@ -9,6 +9,7 @@ See LICENSE file in the project root for full license information.
 Unit tests for NativeVectorSearchSkill
 """
 
+from pathlib import Path
 from typing import Any
 from collections.abc import Callable
 
@@ -156,12 +157,11 @@ class TestGetInstanceKey:
         key = skill.get_instance_key()
         assert key == "native_vector_search_search_knowledge_default"
 
-    def test_custom_tool_name_and_index_file(self) -> None:
-        skill = _make_skill(
-            {"tool_name": "my_tool", "index_file": "/tmp/test.swsearch"}
-        )
+    def test_custom_tool_name_and_index_file(self, tmp_path: Path) -> None:
+        index_file = str(tmp_path / "test.swsearch")
+        skill = _make_skill({"tool_name": "my_tool", "index_file": index_file})
         key = skill.get_instance_key()
-        assert key == "native_vector_search_my_tool_/tmp/test.swsearch"
+        assert key == f"native_vector_search_my_tool_{index_file}"
 
 
 # ===========================================================================

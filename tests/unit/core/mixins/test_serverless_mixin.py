@@ -375,6 +375,8 @@ class TestGCFHandlerRootPath:
         with patch.dict("sys.modules", {"flask": Mock(Response=mock_response_cls)}):
             result = mixin._handle_google_cloud_function_request(request)
 
+        # The constructed Response must be the one handed back to the caller.
+        assert result is mock_response_instance
         mock_response_cls.assert_called_once()
         call_kwargs = mock_response_cls.call_args[1]
         assert call_kwargs["status"] == 200
@@ -391,8 +393,11 @@ class TestGCFHandlerRootPath:
         with patch.dict("sys.modules", {"flask": Mock(Response=mock_response_cls)}):
             result = mixin._handle_google_cloud_function_request(request)
 
+        assert result is mock_response_cls.return_value
         call_kwargs = mock_response_cls.call_args[1]
         assert call_kwargs["status"] == 200
+        # The test's actual claim: the body really is the SWML document.
+        assert call_kwargs["response"] == mixin._swml_response
 
 
 class TestGCFHandlerFunctionRouting:

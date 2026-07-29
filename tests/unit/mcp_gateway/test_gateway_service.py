@@ -39,6 +39,15 @@ pytest.importorskip(
 # filesystem, network, or real MCP processes.
 # ---------------------------------------------------------------------------
 
+# Fixture credentials. The gateway config below and the _auth_headers_* helpers
+# MUST agree, or every authenticated request in this file 401s — so they share
+# these constants instead of repeating the literals. Naming them also keeps the
+# values out of function signatures, where they read as hardcoded credential
+# defaults.
+_FIXTURE_USER = "admin"
+_FIXTURE_PASSWORD = "secret"
+_FIXTURE_BEARER_TOKEN = "test-bearer-token"
+
 
 def _minimal_config() -> dict[str, Any]:
     """Return a minimal valid configuration dictionary."""
@@ -46,9 +55,9 @@ def _minimal_config() -> dict[str, Any]:
         "server": {
             "host": "0.0.0.0",
             "port": 8080,
-            "auth_user": "admin",
-            "auth_password": "secret",
-            "auth_token": "test-bearer-token",
+            "auth_user": _FIXTURE_USER,
+            "auth_password": _FIXTURE_PASSWORD,
+            "auth_token": _FIXTURE_BEARER_TOKEN,
         },
         "services": {},
         "session": {
@@ -138,14 +147,14 @@ def _create_gateway(
 
 
 def _auth_headers_basic(
-    user: str = "admin", password: str = "secret"
+    user: str = _FIXTURE_USER, password: str = _FIXTURE_PASSWORD
 ) -> dict[str, str]:
     """Return HTTP headers for Basic authentication."""
     creds = base64.b64encode(f"{user}:{password}".encode()).decode()
     return {"Authorization": f"Basic {creds}"}
 
 
-def _auth_headers_bearer(token: str = "test-bearer-token") -> dict[str, str]:
+def _auth_headers_bearer(token: str) -> dict[str, str]:
     """Return HTTP headers for Bearer token authentication."""
     return {"Authorization": f"Bearer {token}"}
 
@@ -160,7 +169,7 @@ class TestMCPGatewayInit:
 
     def test_init_loads_config_via_config_loader(self) -> None:
         """When ConfigLoader has_config() returns True, config is loaded through it."""
-        gateway, mocks = _create_gateway()
+        _gateway, mocks = _create_gateway()
         assert mocks["config_loader"].has_config.called
         assert mocks["config_loader"].get_config.called
         assert mocks["config_loader"].substitute_vars.called
@@ -210,7 +219,7 @@ class TestMCPGatewayInit:
 
     def test_init_validates_services_on_startup(self) -> None:
         """validate_services() is called during __init__."""
-        gateway, mocks = _create_gateway()
+        _gateway, mocks = _create_gateway()
         mocks["mcp_manager"].validate_services.assert_called_once()
 
     def test_init_logs_warning_for_failed_validation(self) -> None:
@@ -618,7 +627,7 @@ class TestAuthentication:
     def test_bearer_token_auth_success(self) -> None:
         resp = self.client.get(
             "/services",
-            headers=_auth_headers_bearer("test-bearer-token"),
+            headers=_auth_headers_bearer(_FIXTURE_BEARER_TOKEN),
         )
         assert resp.status_code == 200
 
@@ -1280,7 +1289,7 @@ class TestRunMethod:
                 "signalwire.mcp_gateway.gateway_service.make_server",
                 return_value=mock_server,
             ) as mock_make,
-            patch("signalwire.mcp_gateway.gateway_service.signal") as mock_signal,
+            patch("signalwire.mcp_gateway.gateway_service.signal"),
             patch("os.path.exists", return_value=False),
         ):
             # simulate immediate shutdown via KeyboardInterrupt
@@ -1409,8 +1418,8 @@ class TestEdgeCases:
 
     def test_multiple_gateway_instances_are_independent(self) -> None:
         """Two gateways do not share state."""
-        gw1, mocks1 = _create_gateway()
-        gw2, mocks2 = _create_gateway()
+        gw1, _mocks1 = _create_gateway()
+        gw2, _mocks2 = _create_gateway()
         assert gw1.app is not gw2.app
         assert gw1.mcp_manager is not gw2.mcp_manager
 
@@ -1435,21 +1444,22 @@ class TestEdgeCases:
         assert "logging" not in gateway.config
         assert gateway.app is not None
 
-    def test_config_with_log_file(self) -> None:
+    def test_config_with_log_file(self, tmp_path: Path) -> None:
         """When [logging].file is set, a FileHandler must be installed on
         the root logger pointed at that file path."""
+        log_file = str(tmp_path / "test_gateway.log")
         config = _minimal_config()
-        config["logging"] = {"level": "DEBUG", "file": "/tmp/test_gateway.log"}
+        config["logging"] = {"level": "DEBUG", "file": log_file}
         # Create a real-ish mock handler that won't break the logging system
         mock_handler = MagicMock(spec=logging.FileHandler)
         mock_handler.level = logging.DEBUG
         mock_handler.formatter = None
         mock_handler.filters = []
         with patch("logging.FileHandler", return_value=mock_handler) as mock_fh:
-            gateway, _ = _create_gateway(config)
+            _gateway, _ = _create_gateway(config)
         # FileHandler was constructed targeting the configured path.
         assert mock_fh.call_count >= 1
-        assert mock_fh.call_args[0][0] == "/tmp/test_gateway.log"
+        assert mock_fh.call_args[0][0] == log_file
         # Clean up: remove the mock handler from the root logger to avoid
         # poisoning other tests
         root = logging.getLogger()
@@ -1491,7 +1501,7 @@ class TestEdgeCases:
 
     def test_call_tool_with_zero_timeout(self) -> None:
         """Timeout of 0 should be rejected."""
-        gateway, mocks = _create_gateway()
+        gateway, _mocks = _create_gateway()
         client = gateway.app.test_client()
 
         payload = {

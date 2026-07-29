@@ -266,7 +266,7 @@ class TestConnectAuth:
     async def test_sends_signalwire_connect(
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
-        client, ws = connected_client
+        _client, ws = connected_client
         # Find the connect message
         connect_msg = None
         for msg in ws.sent_messages:
@@ -285,7 +285,7 @@ class TestConnectAuth:
     async def test_stores_protocol_and_identity(
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
-        client, ws = connected_client
+        client, _ws = connected_client
         assert client._relay_protocol == "test-protocol-abc123"
         assert client._identity == "test-identity"
 
@@ -293,14 +293,14 @@ class TestConnectAuth:
     async def test_connected_flag_set(
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
-        client, ws = connected_client
+        client, _ws = connected_client
         assert client._connected is True
 
     @pytest.mark.asyncio
     async def test_recv_task_started(
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
-        client, ws = connected_client
+        client, _ws = connected_client
         assert client._recv_task is not None
         assert not client._recv_task.done()
 
@@ -308,7 +308,7 @@ class TestConnectAuth:
     async def test_ping_task_started(
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
-        client, ws = connected_client
+        client, _ws = connected_client
         assert client._ping_task is not None
 
     @pytest.mark.asyncio
@@ -451,7 +451,7 @@ class TestDisconnect:
     async def test_disconnect_sets_flags(
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
-        client, ws = connected_client
+        client, _ws = connected_client
         await client.disconnect()
         assert client._closing is True
         assert client._connected is False
@@ -461,18 +461,29 @@ class TestDisconnect:
     async def test_disconnect_cancels_tasks(
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
-        client, ws = connected_client
+        client, _ws = connected_client
         recv = client._recv_task
         ping = client._ping_task
+        assert recv is not None
+        assert ping is not None
         await client.disconnect()
         assert client._recv_task is None
         assert client._ping_task is None
+        # The handles were captured so the test can prove the tasks actually
+        # STOPPED, not merely got dropped from the client — clearing the
+        # attribute without cancelling would leak both tasks. disconnect() only
+        # REQUESTS cancellation, so the loop must run for them to observe it.
+        # `done()` rather than `cancelled()`: _recv_loop catches CancelledError
+        # and returns normally, so it finishes done-but-not-cancelled.
+        await asyncio.sleep(0)
+        assert recv.done()
+        assert ping.done()
 
     @pytest.mark.asyncio
     async def test_disconnect_cancels_pending_futures(
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
-        client, ws = connected_client
+        client, _ws = connected_client
         loop = asyncio.get_running_loop()
         fut = loop.create_future()
         client._pending["test-id"] = fut
@@ -484,7 +495,7 @@ class TestDisconnect:
     async def test_disconnect_cancels_queued_requests(
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
-        client, ws = connected_client
+        client, _ws = connected_client
         loop = asyncio.get_running_loop()
         fut = loop.create_future()
         client._execute_queue.append(({"method": "test"}, fut))
@@ -496,7 +507,7 @@ class TestDisconnect:
     async def test_disconnect_removes_from_active_clients(
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
-        client, ws = connected_client
+        client, _ws = connected_client
         assert id(client) in _active_clients
         await client.disconnect()
         assert id(client) not in _active_clients
@@ -590,7 +601,7 @@ class TestMessageHandling:
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
         """signalwire.connect responses should not be checked for code field."""
-        client, ws = connected_client
+        client, _ws = connected_client
         # The auth already succeeded — just verify protocol was stored
         assert client._relay_protocol == "test-protocol-abc123"
 
@@ -701,7 +712,7 @@ class TestClientEventDispatch:
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
         """Events should be ACKed back to the server."""
-        client, ws = connected_client
+        _client, ws = connected_client
         ws.sent_messages.clear()
 
         event = make_event(
@@ -812,7 +823,7 @@ class TestClientEventDispatch:
         make_call: Callable[..., Call],
     ) -> None:
         client, ws = connected_client
-        call = make_call(client, call_id="c-end")
+        make_call(client, call_id="c-end")
         assert "c-end" in client._calls
 
         event = make_event(
@@ -828,7 +839,7 @@ class TestClientEventDispatch:
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
         """Server disconnect should be ACKed."""
-        client, ws = connected_client
+        _client, ws = connected_client
         ws.sent_messages.clear()
 
         disconnect_msg = {
@@ -854,7 +865,7 @@ class TestPing:
     async def test_server_ping_gets_pong(
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
-        client, ws = connected_client
+        _client, ws = connected_client
         ws.sent_messages.clear()
 
         ping = make_server_ping(msg_id="ping-1")
@@ -944,7 +955,7 @@ class TestPing:
     async def test_force_close(
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
-        client, ws = connected_client
+        client, _ws = connected_client
         client._force_close()
         assert client._connected is False
 
@@ -1050,7 +1061,7 @@ class TestTimeouts:
     async def test_execute_timeout_raises(
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
-        client, ws = connected_client
+        client, _ws = connected_client
 
         with (
             patch("signalwire.relay.client._EXECUTE_TIMEOUT", 0.05),
@@ -1063,7 +1074,7 @@ class TestTimeouts:
     async def test_execute_timeout_force_closes(
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
-        client, ws = connected_client
+        client, _ws = connected_client
 
         with patch("signalwire.relay.client._EXECUTE_TIMEOUT", 0.05):
             with contextlib.suppress(RelayError):
@@ -1267,7 +1278,7 @@ class TestRelayProtocolProperty:
     async def test_relay_protocol_property(
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
-        client, ws = connected_client
+        client, _ws = connected_client
         assert client.relay_protocol == "test-protocol-abc123"
 
 
@@ -1676,7 +1687,7 @@ class TestFlushQueueDoneFutures:
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
         """Already-done futures in queue should be skipped — line 414."""
-        client, ws = connected_client
+        client, _ws = connected_client
         loop = asyncio.get_running_loop()
         done_fut = loop.create_future()
         done_fut.cancel()  # Mark as done
@@ -1728,7 +1739,7 @@ class TestClearPendingRequests:
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
         """_clear_pending_requests rejects all pending — lines 432-438."""
-        client, ws = connected_client
+        client, _ws = connected_client
         loop = asyncio.get_running_loop()
 
         fut1 = loop.create_future()
@@ -1965,7 +1976,7 @@ class TestSendWithNoWs:
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
         """_send_pong with _ws=None should return early — line 613."""
-        client, ws = connected_client
+        client, _ws = connected_client
         client._ws = None
         await client._send_pong("test-id")  # Should not raise
 
@@ -1974,7 +1985,7 @@ class TestSendWithNoWs:
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
         """_send_event_ack with _ws=None should return early — line 624."""
-        client, ws = connected_client
+        client, _ws = connected_client
         client._ws = None
         await client._send_event_ack("test-id")  # Should not raise
 
@@ -2062,7 +2073,7 @@ class TestPingLoopInternals:
         flip _connected, must NOT close the websocket, and must NOT mutate
         the ping-failure counter — the actual probing is the client ping
         loop's job."""
-        client, ws = connected_client
+        client, _ws = connected_client
         # Capture state before the handler runs.
         was_connected = client._connected
         prior_failures = client._ping_failures
@@ -2087,7 +2098,7 @@ class TestSafeSendNoWs:
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
         """_safe_send with _ws=None should do nothing."""
-        client, ws = connected_client
+        client, _ws = connected_client
         loop = asyncio.get_running_loop()
         future = loop.create_future()
         client._ws = None
@@ -2150,7 +2161,7 @@ class TestJwtAuth:
     async def test_legacy_auth_sends_project_token(
         self, connected_client: tuple[RelayClient, AutoAuthMockWebSocket]
     ) -> None:
-        client, ws = connected_client
+        _client, ws = connected_client
         connect_msg = None
         for msg in ws.sent_messages:
             if msg.get("method") == METHOD_SIGNALWIRE_CONNECT:

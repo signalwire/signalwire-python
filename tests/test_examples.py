@@ -66,7 +66,7 @@ def list_tools(agent_path: Path) -> list[str]:
     """
     List tools available in an agent.
     """
-    returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
+    returncode, stdout, _stderr = run_swaig_test(agent_path, "--list-tools")
     if returncode != 0:
         return []
     tools = []
@@ -521,7 +521,7 @@ class TestSpecialExamples:
         if not agent_path.exists():
             pytest.skip("search_server_standalone.py not found")
         # This is a search server, not an agent - may not work with swaig-test
-        returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
+        returncode, _stdout, stderr = run_swaig_test(agent_path, "--list-tools")
         # Accept if it loads or fails with expected message
         if returncode != 0 and (
             "not an agent" in stderr.lower() or "no agent" in stderr.lower()

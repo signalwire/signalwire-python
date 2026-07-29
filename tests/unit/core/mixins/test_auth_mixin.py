@@ -616,7 +616,11 @@ class TestSendGoogleCloudFunctionAuthChallenge:
         mock_challenge.return_value = mock_response
 
         mixin = ConcreteAuthMixin()
-        result = mock_challenge()
+        # Call the method ON THE MIXIN, not the patched mock directly —
+        # `mock_challenge()` would only assert that a Mock returns its own
+        # configured return_value, which proves nothing about AuthMixin.
+        result = mixin._send_google_cloud_function_auth_challenge()
+        mock_challenge.assert_called_once()
         assert result.status_code == 401
         assert "WWW-Authenticate" in result.headers
 
@@ -630,6 +634,8 @@ class TestSendGoogleCloudFunctionAuthChallenge:
         with patch.dict("sys.modules", {"flask": Mock(Response=mock_response_cls)}):
             result = mixin._send_google_cloud_function_auth_challenge()
 
+        # The constructed Response must be the one handed back to the caller.
+        assert result is mock_response_instance
         mock_response_cls.assert_called_once()
         call_kwargs = mock_response_cls.call_args
         assert call_kwargs[1]["status"] == 401
@@ -761,6 +767,8 @@ class TestSendAzureFunctionAuthChallenge:
                 else:
                     sys.modules.pop(mod_name, None)
 
+        # The constructed HttpResponse must be the one handed back to the caller.
+        assert result is mock_http_response_instance
         mock_http_response_cls.assert_called_once()
         call_kwargs = mock_http_response_cls.call_args
         assert call_kwargs[1]["status_code"] == 401

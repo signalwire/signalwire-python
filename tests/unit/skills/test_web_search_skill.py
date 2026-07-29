@@ -765,7 +765,7 @@ class TestExtractHtmlContent:
         )
         mock_response.raise_for_status = Mock()
         with patch.object(scraper.session, "get", return_value=mock_response):
-            text, metrics = scraper.extract_html_content("https://example.com")
+            text, _metrics = scraper.extract_html_content("https://example.com")
             assert len(text) <= 50
 
     def test_custom_content_limit(self) -> None:
@@ -775,7 +775,7 @@ class TestExtractHtmlContent:
         mock_response.content = f"<html><body>{long_text}</body></html>".encode()
         mock_response.raise_for_status = Mock()
         with patch.object(scraper.session, "get", return_value=mock_response):
-            text, metrics = scraper.extract_html_content(
+            text, _metrics = scraper.extract_html_content(
                 "https://example.com", content_limit=30
             )
             assert len(text) <= 30
@@ -851,7 +851,7 @@ class TestExtractRedditContent:
         mock_response.raise_for_status = Mock()
         mock_get.return_value = mock_response
 
-        text, metrics = scraper.extract_reddit_content(
+        text, _metrics = scraper.extract_reddit_content(
             "https://reddit.com/r/test/comments/123"
         )
         assert "commenter1" in text
@@ -1177,7 +1177,7 @@ class TestSearchAndScrapeBest:
         with patch.object(
             scraper, "search_and_scrape_best", return_value="results"
         ) as mock_best:
-            result = scraper.search_and_scrape("test query", num_results=2, delay=0.1)
+            scraper.search_and_scrape("test query", num_results=2, delay=0.1)
             mock_best.assert_called_once_with(
                 query="test query",
                 num_results=2,

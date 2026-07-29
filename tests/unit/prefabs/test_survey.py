@@ -144,7 +144,7 @@ class TestSurveyInitialization:
                 "required": True,
             }
         ]
-        survey, mock_init = _make_survey(
+        survey, _mock_init = _make_survey(
             survey_name="My Survey",
             questions=questions,
             brand_name="Acme",
@@ -158,7 +158,7 @@ class TestSurveyInitialization:
 
     def test_super_init_called_with_correct_args(self) -> None:
         """AgentBase.__init__ is invoked with the expected keyword arguments."""
-        survey, mock_init = _make_survey(
+        _survey, mock_init = _make_survey(
             name="custom_name",
             route="/custom",
         )
