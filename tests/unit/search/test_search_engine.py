@@ -11,6 +11,7 @@ See LICENSE file in the project root for full license information.
 Unit tests for search engine module
 """
 
+import os
 import pytest
 import sqlite3
 import json
