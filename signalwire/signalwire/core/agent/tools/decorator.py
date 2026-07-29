@@ -86,6 +86,39 @@ class ToolDecorator:
             """
 
             def inner_decorator(func: _F) -> _F:
+                """
+                Register ``func`` with the registry and return it unchanged.
+
+                Pops ``parameters``, ``description``, ``secure`` (default
+                True), ``fillers``, ``webhook_url`` and ``required`` out of the
+                decorator's kwargs; whatever kwargs remain are forwarded to
+                ``registry.define_tool()`` as extra SWAIG fields.
+
+                Name resolution: the ``name`` given to the decorator, else
+                ``func.__name__``.
+
+                Schema resolution: if no explicit ``parameters`` were passed,
+                ``infer_schema(func)`` derives them from the type hints. When
+                inference reports a typed handler, the inferred parameters
+                replace the empty dict, the inferred required-list and
+                docstring summary fill in ``required``/``description`` only
+                where those were left None, and the registered handler becomes
+                ``create_typed_handler_wrapper(func, has_raw_data)`` so the
+                registry can still call it with the (args, raw_data)
+                convention. If inference declines (old-style ``(args,
+                raw_data)`` signature, ``*args``/``**kwargs``, or no
+                annotations), the raw function is registered as-is.
+
+                Description fallback order: explicit ``description`` kwarg,
+                then ``func.__doc__``, then the literal ``"Function <name>"``.
+
+                Args:
+                    func: The function to register as a SWAIG tool.
+
+                Returns:
+                    ``func`` unmodified — the decorator has a registration side
+                    effect only, so the decorated name stays directly callable.
+                """
                 nonlocal name
                 if name is None:
                     name = func.__name__
@@ -188,6 +221,33 @@ class ToolDecorator:
             """
 
             def decorator(func: _F) -> _F:
+                """
+                Mark ``func`` as a class-decorated SWAIG tool.
+
+                Unlike the instance decorator, nothing is registered here —
+                there is no agent instance yet at class-definition time. This
+                only stamps three marker attributes onto the function, which
+                ``ToolRegistry.register_class_decorated_tools()`` scans for at
+                agent construction time and turns into real tool definitions:
+
+                - ``_is_tool``: True
+                - ``_tool_name``: the ``name`` given to the decorator, else
+                  ``func.__name__``
+                - ``_tool_params``: every remaining decorator kwarg
+                  (``description``, ``parameters``, ``secure``, ``fillers``,
+                  …), passed through verbatim
+
+                Because registration is deferred, type inference does NOT run
+                here: schema inference happens when the registry processes the
+                marked function.
+
+                Args:
+                    func: The method being decorated.
+
+                Returns:
+                    ``func`` itself, so the method stays a normal callable
+                    attribute of the class.
+                """
                 # Mark the function as a tool
                 func._is_tool = True  # type: ignore[attr-defined]  # dynamic marker attrs read back by ToolRegistry.register_class_decorated_tools
                 func._tool_name = name if name else func.__name__  # type: ignore[attr-defined]

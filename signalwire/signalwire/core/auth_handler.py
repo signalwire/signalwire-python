@@ -152,6 +152,32 @@ class AuthHandler:
             else None,
             api_key: str | None = None,  # Get from header in request
         ) -> dict[str, Any]:
+            """
+            Authenticate a request from the FastAPI security schemes.
+
+            Bearer is tried first, then Basic; the first scheme that verifies
+            wins and no later scheme is consulted. Both comparisons go through
+            ``secrets.compare_digest``. The ``api_key`` parameter is accepted
+            but NOT consulted here — API-key auth in this dependency is
+            unimplemented, so a request bearing only an API key is treated as
+            unauthenticated (``AuthHandler.flask_decorator`` does honour the
+            API-key header; this FastAPI path does not).
+
+            On failure with ``optional=False`` this raises
+            ``HTTPException(401, detail="Invalid authentication credentials")``
+            with a ``WWW-Authenticate: Basic`` header — Basic is always
+            advertised as the challenge, even when Bearer is the configured
+            scheme. With ``optional=True`` no exception is raised and the
+            handler runs with ``authenticated=False``.
+
+            Returns:
+                ``{"authenticated": bool, "method": "bearer" | "basic" | None}``.
+                ``method`` is None whenever ``authenticated`` is False.
+
+            Raises:
+                HTTPException: 401 when no scheme verifies and ``optional`` is
+                    False.
+            """
             # Try each auth method
             authenticated = False
             auth_method = None
@@ -189,6 +215,33 @@ class AuthHandler:
 
         @wraps(f)
         def decorated(*args: Any, **kwargs: Any) -> Any:
+            """
+            Authenticate the current Flask request, then call the view.
+
+            Schemes are tried in this order, and the first that verifies calls
+            through to the wrapped view with the original ``*args``/``**kwargs``:
+
+            1. ``Authorization: Bearer <token>`` — only if a bearer token is
+               configured; the token is everything after the 7-character
+               ``"Bearer "`` prefix.
+            2. The configured API-key header (``X-API-Key`` unless
+               ``security_config.api_key_header`` overrides it).
+            3. Flask's parsed ``request.authorization`` (HTTP Basic), matching
+               both username and password.
+
+            Every comparison uses ``secrets.compare_digest``.
+
+            On failure it logs an ``auth_failed`` event with the client IP,
+            method and path, and returns a Flask ``Response`` with body
+            ``"Authentication required"``, status **401**, and header
+            ``WWW-Authenticate: Basic realm="SignalWire Service"``. Note this
+            RETURNS a response rather than raising, and the challenge is always
+            Basic regardless of which schemes are enabled.
+
+            Returns:
+                The wrapped view's return value on success, else the 401
+                ``Response``.
+            """
             from flask import request, Response
 
             # Try Bearer token first

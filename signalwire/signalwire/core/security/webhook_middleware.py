@@ -176,6 +176,32 @@ def make_webhook_validation_dependency(
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)
 
     async def dependency(request: Request, response: Response) -> None:
+        """Validate this request's SignalWire webhook signature.
+
+        Reads the raw body first and stashes the bytes on
+        ``request.state.raw_body`` so the endpoint can re-parse them without
+        re-reading the (already-consumed) stream, and so the HMAC is computed
+        over the exact bytes received rather than a re-serialization.
+        Reconstructs the public URL via ``_reconstruct_url`` (``SWML_PROXY_URL_BASE``
+        > ``X-Forwarded-*`` when ``trust_proxy`` > ``request.url``), then hands
+        the primitives to :func:`validate`.
+
+        Every rejection path — a body that is not valid UTF-8, a missing
+        signature header, a signature that does not verify — raises the same
+        bare ``HTTPException(403)`` with no body detail, so a caller cannot
+        tell which check failed. On success it returns None and FastAPI runs
+        the endpoint.
+
+        Args:
+            request: The incoming request; its body is consumed here.
+            response: FastAPI-injected response object. Present to satisfy the
+                dependency signature; this function does not write to it
+                (rejection is by raised exception, since returning a Response
+                from a ``dependencies=[...]`` entry does not short-circuit).
+
+        Raises:
+            HTTPException: 403 on any validation failure.
+        """
         # Capture raw body BEFORE any other consumer reads the stream.
         # request.body() caches internally so subsequent calls are safe.
         raw_bytes = await request.body()

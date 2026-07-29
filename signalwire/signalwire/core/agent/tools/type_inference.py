@@ -288,6 +288,24 @@ def create_typed_handler_wrapper(
     """
 
     def wrapper(args: dict[str, Any], raw_data: dict[str, Any] | None) -> Any:
+        """
+        Call the wrapped typed handler with the SWAIG calling convention.
+
+        Splats ``args`` into keyword arguments of the original function; when
+        the original declared a ``raw_data`` parameter, ``raw_data`` is passed
+        alongside as a keyword. No validation or coercion happens here — the
+        dict is assumed to already match the inferred schema, so a missing
+        required key surfaces as the original function's ``TypeError``.
+
+        Args:
+            args: The SWAIG argument dict from the AI, keyed by parameter name.
+            raw_data: The full SWAIG POST body; forwarded only if the wrapped
+                function declared ``raw_data``, otherwise ignored.
+
+        Returns:
+            Whatever the wrapped function returns (typically a
+            ``SwaigFunctionResult``).
+        """
         if has_raw_data:
             return func(raw_data=raw_data, **args)
         return func(**args)
