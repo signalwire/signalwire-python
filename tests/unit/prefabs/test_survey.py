@@ -10,9 +10,8 @@ Unit tests for SurveyAgent prefab
 """
 
 import pytest
-import json
 from typing import Any
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import patch, MagicMock
 
 from signalwire.prefabs.survey import SurveyAgent
 
@@ -20,6 +19,7 @@ from signalwire.prefabs.survey import SurveyAgent
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _make_survey(
     survey_name: str = "Test Survey",
@@ -134,7 +134,13 @@ class TestSurveyInitialization:
     def test_basic_initialization(self) -> None:
         """SurveyAgent stores survey_name, questions, and defaults correctly."""
         questions = [
-            {"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5, "required": True}
+            {
+                "id": "q1",
+                "text": "Rate us?",
+                "type": "rating",
+                "scale": 5,
+                "required": True,
+            }
         ]
         survey, mock_init = _make_survey(
             survey_name="My Survey",
@@ -198,9 +204,7 @@ class TestSurveyInitialization:
 
     def test_kwargs_forwarded_to_super(self) -> None:
         """Extra keyword arguments are forwarded to AgentBase.__init__."""
-        questions = [
-            {"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}
-        ]
+        questions = [{"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}]
         with patch(
             "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
         ) as mock_init:
@@ -351,13 +355,9 @@ class TestSetupSurveyAgent:
 
     def test_prompt_sections_added(self) -> None:
         """_setup_survey_agent adds expected prompt sections."""
-        questions = [
-            {"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}
-        ]
+        questions = [{"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}]
 
-        with patch(
-            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
-        ):
+        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
             with patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
@@ -385,13 +385,9 @@ class TestSetupSurveyAgent:
 
     def test_post_prompt_set(self) -> None:
         """_setup_survey_agent calls set_post_prompt with a JSON template."""
-        questions = [
-            {"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}
-        ]
+        questions = [{"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}]
 
-        with patch(
-            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
-        ):
+        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
             with patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
@@ -423,9 +419,7 @@ class TestSetupSurveyAgent:
             },
         ]
 
-        with patch(
-            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
-        ):
+        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
             with patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
@@ -460,13 +454,9 @@ class TestSetupSurveyAgent:
 
     def test_params_set(self) -> None:
         """set_params is called with expected AI parameters."""
-        questions = [
-            {"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}
-        ]
+        questions = [{"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}]
 
-        with patch(
-            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
-        ):
+        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
             with patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
@@ -491,13 +481,9 @@ class TestSetupSurveyAgent:
 
     def test_global_data_set(self) -> None:
         """set_global_data is called with survey metadata."""
-        questions = [
-            {"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}
-        ]
+        questions = [{"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}]
 
-        with patch(
-            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
-        ):
+        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
             with patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
@@ -525,13 +511,9 @@ class TestSetupSurveyAgent:
 
     def test_native_functions_set(self) -> None:
         """set_native_functions is called with check_time."""
-        questions = [
-            {"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}
-        ]
+        questions = [{"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}]
 
-        with patch(
-            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
-        ):
+        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
             with patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
@@ -553,49 +535,37 @@ class TestValidateResponse:
     def test_valid_rating_response(self) -> None:
         """A numeric rating within range is valid."""
         survey = _bare_survey()
-        result = survey.validate_response(
-            {"question_id": "q1", "response": "3"}, {}
-        )
+        result = survey.validate_response({"question_id": "q1", "response": "3"}, {})
         assert "valid" in result.response.lower()
 
     def test_valid_rating_boundary_low(self) -> None:
         """Rating of 1 (lower boundary) is valid."""
         survey = _bare_survey()
-        result = survey.validate_response(
-            {"question_id": "q1", "response": "1"}, {}
-        )
+        result = survey.validate_response({"question_id": "q1", "response": "1"}, {})
         assert "valid" in result.response.lower()
 
     def test_valid_rating_boundary_high(self) -> None:
         """Rating at the upper boundary is valid."""
         survey = _bare_survey()
-        result = survey.validate_response(
-            {"question_id": "q1", "response": "5"}, {}
-        )
+        result = survey.validate_response({"question_id": "q1", "response": "5"}, {})
         assert "valid" in result.response.lower()
 
     def test_invalid_rating_too_high(self) -> None:
         """Rating above scale is invalid."""
         survey = _bare_survey()
-        result = survey.validate_response(
-            {"question_id": "q1", "response": "6"}, {}
-        )
+        result = survey.validate_response({"question_id": "q1", "response": "6"}, {})
         assert "invalid" in result.response.lower()
 
     def test_invalid_rating_too_low(self) -> None:
         """Rating of 0 is invalid."""
         survey = _bare_survey()
-        result = survey.validate_response(
-            {"question_id": "q1", "response": "0"}, {}
-        )
+        result = survey.validate_response({"question_id": "q1", "response": "0"}, {})
         assert "invalid" in result.response.lower()
 
     def test_invalid_rating_negative(self) -> None:
         """Negative rating is invalid."""
         survey = _bare_survey()
-        result = survey.validate_response(
-            {"question_id": "q1", "response": "-1"}, {}
-        )
+        result = survey.validate_response({"question_id": "q1", "response": "-1"}, {})
         assert "invalid" in result.response.lower()
 
     def test_invalid_rating_non_numeric(self) -> None:
@@ -609,33 +579,25 @@ class TestValidateResponse:
     def test_valid_yes_no_yes(self) -> None:
         """'yes' is valid for a yes_no question."""
         survey = _bare_survey()
-        result = survey.validate_response(
-            {"question_id": "q2", "response": "yes"}, {}
-        )
+        result = survey.validate_response({"question_id": "q2", "response": "yes"}, {})
         assert "valid" in result.response.lower()
 
     def test_valid_yes_no_no(self) -> None:
         """'no' is valid for a yes_no question."""
         survey = _bare_survey()
-        result = survey.validate_response(
-            {"question_id": "q2", "response": "no"}, {}
-        )
+        result = survey.validate_response({"question_id": "q2", "response": "no"}, {})
         assert "valid" in result.response.lower()
 
     def test_valid_yes_no_y(self) -> None:
         """'y' is valid for a yes_no question."""
         survey = _bare_survey()
-        result = survey.validate_response(
-            {"question_id": "q2", "response": "y"}, {}
-        )
+        result = survey.validate_response({"question_id": "q2", "response": "y"}, {})
         assert "valid" in result.response.lower()
 
     def test_valid_yes_no_n(self) -> None:
         """'n' is valid for a yes_no question."""
         survey = _bare_survey()
-        result = survey.validate_response(
-            {"question_id": "q2", "response": "n"}, {}
-        )
+        result = survey.validate_response({"question_id": "q2", "response": "n"}, {})
         assert "valid" in result.response.lower()
 
     def test_invalid_yes_no(self) -> None:
@@ -673,18 +635,18 @@ class TestValidateResponse:
     def test_valid_open_ended_non_required(self) -> None:
         """An empty answer to a non-required open-ended question is valid."""
         survey = _bare_survey()
-        result = survey.validate_response(
-            {"question_id": "q4", "response": ""}, {}
-        )
+        result = survey.validate_response({"question_id": "q4", "response": ""}, {})
         # q4 is not required, so empty is fine
-        assert "valid" in result.response.lower() or "recorded" in result.response.lower() or result.response != ""
+        assert (
+            "valid" in result.response.lower()
+            or "recorded" in result.response.lower()
+            or result.response != ""
+        )
 
     def test_invalid_open_ended_required_empty(self) -> None:
         """An empty answer to a required open-ended question is invalid."""
         survey = _bare_survey()
-        result = survey.validate_response(
-            {"question_id": "q5", "response": ""}, {}
-        )
+        result = survey.validate_response({"question_id": "q5", "response": ""}, {})
         assert "required" in result.response.lower()
 
     def test_valid_open_ended_required(self) -> None:
@@ -701,13 +663,17 @@ class TestValidateResponse:
         result = survey.validate_response(
             {"question_id": "nonexistent", "response": "anything"}, {}
         )
-        assert "not found" in result.response.lower() or "error" in result.response.lower()
+        assert (
+            "not found" in result.response.lower() or "error" in result.response.lower()
+        )
 
     def test_missing_question_id(self) -> None:
         """Missing question_id in args returns an error."""
         survey = _bare_survey()
         result = survey.validate_response({"response": "3"}, {})
-        assert "not found" in result.response.lower() or "error" in result.response.lower()
+        assert (
+            "not found" in result.response.lower() or "error" in result.response.lower()
+        )
 
     def test_missing_response_field(self) -> None:
         """Missing response in args defaults to empty string and validates accordingly."""
@@ -721,9 +687,7 @@ class TestValidateResponse:
         from signalwire.core.function_result import FunctionResult
 
         survey = _bare_survey()
-        result = survey.validate_response(
-            {"question_id": "q1", "response": "3"}, {}
-        )
+        result = survey.validate_response({"question_id": "q1", "response": "3"}, {})
         assert isinstance(result, FunctionResult)
 
     def test_rating_whitespace_trimmed(self) -> None:
@@ -749,9 +713,7 @@ class TestLogResponse:
     def test_log_known_question(self) -> None:
         """log_response acknowledges a response for a known question."""
         survey = _bare_survey()
-        result = survey.log_response(
-            {"question_id": "q1", "response": "5"}, {}
-        )
+        result = survey.log_response({"question_id": "q1", "response": "5"}, {})
         assert "recorded" in result.response.lower()
         assert "How satisfied" in result.response
 
@@ -769,17 +731,13 @@ class TestLogResponse:
         from signalwire.core.function_result import FunctionResult
 
         survey = _bare_survey()
-        result = survey.log_response(
-            {"question_id": "q1", "response": "3"}, {}
-        )
+        result = survey.log_response({"question_id": "q1", "response": "3"}, {})
         assert isinstance(result, FunctionResult)
 
     def test_log_response_includes_question_text(self) -> None:
         """The acknowledgement mentions the question text."""
         survey = _bare_survey()
-        result = survey.log_response(
-            {"question_id": "q2", "response": "yes"}, {}
-        )
+        result = survey.log_response({"question_id": "q2", "response": "yes"}, {})
         assert "Would you recommend us?" in result.response
 
     def test_missing_question_id(self) -> None:
@@ -826,7 +784,9 @@ class TestOnSummary:
         captured = capsys.readouterr()
         assert captured.out == ""
 
-    def test_on_summary_with_empty_dict(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_on_summary_with_empty_dict(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         """on_summary with an empty dict produces no output (empty dict is falsy)."""
         survey = _bare_survey()
         # In Python, {} is falsy, so the `if summary:` guard skips processing.
@@ -834,7 +794,9 @@ class TestOnSummary:
         captured = capsys.readouterr()
         assert captured.out == ""
 
-    def test_on_summary_error_handling(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_on_summary_error_handling(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         """on_summary catches exceptions and prints error."""
         survey = _bare_survey()
         # Passing a dict-like that raises on json.dumps via a bad key
@@ -860,7 +822,12 @@ class TestSurveyQuestionTypes:
         """A survey with all four question types initializes without error."""
         questions: list[dict[str, Any]] = [
             {"id": "r1", "text": "Rate 1-5?", "type": "rating", "scale": 5},
-            {"id": "mc1", "text": "Pick one?", "type": "multiple_choice", "options": ["A", "B"]},
+            {
+                "id": "mc1",
+                "text": "Pick one?",
+                "type": "multiple_choice",
+                "options": ["A", "B"],
+            },
             {"id": "yn1", "text": "Yes or no?", "type": "yes_no"},
             {"id": "oe1", "text": "Comments?", "type": "open_ended"},
         ]
@@ -878,9 +845,7 @@ class TestSurveyQuestionTypes:
 
     def test_rating_custom_scale(self) -> None:
         """A rating question with a custom scale stores it properly."""
-        questions = [
-            {"id": "q1", "text": "Rate 1-10?", "type": "rating", "scale": 10}
-        ]
+        questions = [{"id": "q1", "text": "Rate 1-10?", "type": "rating", "scale": 10}]
         survey, _ = _make_survey(questions=questions)
         assert survey.questions[0]["scale"] == 10
 
@@ -891,31 +856,27 @@ class TestValidateResponseEdgeCases:
     def test_rating_with_float_string(self) -> None:
         """A float string like '3.5' is invalid for a rating question."""
         survey = _bare_survey()
-        result = survey.validate_response(
-            {"question_id": "q1", "response": "3.5"}, {}
-        )
+        result = survey.validate_response({"question_id": "q1", "response": "3.5"}, {})
         assert "invalid" in result.response.lower()
 
     def test_empty_args(self) -> None:
         """Completely empty args dict falls through to 'not found'."""
         survey = _bare_survey()
         result = survey.validate_response({}, {})
-        assert "not found" in result.response.lower() or "error" in result.response.lower()
+        assert (
+            "not found" in result.response.lower() or "error" in result.response.lower()
+        )
 
     def test_open_ended_whitespace_only_required(self) -> None:
         """Whitespace-only answer to a required open-ended question is invalid."""
         survey = _bare_survey()
-        result = survey.validate_response(
-            {"question_id": "q5", "response": "   "}, {}
-        )
+        result = survey.validate_response({"question_id": "q5", "response": "   "}, {})
         assert "required" in result.response.lower()
 
     def test_yes_no_uppercase(self) -> None:
         """'YES' in uppercase is valid for a yes_no question."""
         survey = _bare_survey()
-        result = survey.validate_response(
-            {"question_id": "q2", "response": "YES"}, {}
-        )
+        result = survey.validate_response({"question_id": "q2", "response": "YES"}, {})
         assert "valid" in result.response.lower()
 
     def test_yes_no_with_whitespace(self) -> None:
@@ -929,9 +890,7 @@ class TestValidateResponseEdgeCases:
     def test_multiple_choice_partial_match_invalid(self) -> None:
         """A partial match like 'Spee' (not exact) is invalid for multiple_choice."""
         survey = _bare_survey()
-        result = survey.validate_response(
-            {"question_id": "q3", "response": "Spee"}, {}
-        )
+        result = survey.validate_response({"question_id": "q3", "response": "Spee"}, {})
         assert "invalid" in result.response.lower()
 
 
@@ -970,9 +929,7 @@ class TestSurveySetupDetails:
 
     def test_personality_section_includes_brand(self) -> None:
         """The Personality prompt section includes the brand name."""
-        with patch(
-            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
-        ):
+        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
             with patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
@@ -1001,9 +958,7 @@ class TestSurveySetupDetails:
 
     def test_goal_section_includes_survey_name(self) -> None:
         """The Goal prompt section includes the survey name."""
-        with patch(
-            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
-        ):
+        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
             with patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
@@ -1030,9 +985,7 @@ class TestSurveySetupDetails:
 
     def test_instructions_section_has_bullets(self) -> None:
         """The Instructions prompt section contains bullet points."""
-        with patch(
-            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
-        ):
+        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
             with patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
@@ -1065,12 +1018,15 @@ class TestSurveySetupDetails:
         """The Survey Questions prompt section has subsections for each question."""
         questions: list[dict[str, Any]] = [
             {"id": "q1", "text": "Rate?", "type": "rating", "scale": 5},
-            {"id": "q2", "text": "Pick?", "type": "multiple_choice", "options": ["A", "B"]},
+            {
+                "id": "q2",
+                "text": "Pick?",
+                "type": "multiple_choice",
+                "options": ["A", "B"],
+            },
         ]
 
-        with patch(
-            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
-        ):
+        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
             with patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
@@ -1100,9 +1056,7 @@ class TestSurveySetupDetails:
 
     def test_introduction_section_body(self) -> None:
         """The Introduction section body includes the introduction message."""
-        with patch(
-            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
-        ):
+        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
             with patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
@@ -1130,9 +1084,7 @@ class TestSurveySetupDetails:
 
     def test_conclusion_section_body(self) -> None:
         """The Conclusion section body includes the conclusion message."""
-        with patch(
-            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
-        ):
+        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
             with patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
@@ -1165,9 +1117,7 @@ class TestSurveyHintsEdgeCases:
     def test_hints_no_type_specific_terms(self) -> None:
         """An open_ended-only survey has no type-specific hint terms (just name/brand)."""
         questions = [{"id": "q1", "text": "Comments?", "type": "open_ended"}]
-        with patch(
-            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
-        ):
+        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
             with patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
@@ -1191,9 +1141,7 @@ class TestSurveyHintsEdgeCases:
     def test_hints_large_rating_scale(self) -> None:
         """A rating question with scale=10 generates hints 1-10."""
         questions = [{"id": "q1", "text": "Rate?", "type": "rating", "scale": 10}]
-        with patch(
-            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
-        ):
+        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
             with patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),

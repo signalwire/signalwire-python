@@ -11,12 +11,12 @@ See LICENSE file in the project root for full license information.
 Unit tests for the DateTime skill module
 """
 
-from typing import Any  # noqa: E402
-from unittest.mock import Mock, patch, MagicMock  # noqa: E402
-from datetime import datetime, timezone  # noqa: E402
+from typing import Any
+from unittest.mock import Mock, patch, MagicMock
+from datetime import datetime, timezone
 
-from signalwire.skills.datetime.skill import DateTimeSkill  # noqa: E402
-from signalwire.core.function_result import FunctionResult  # noqa: E402
+from signalwire.skills.datetime.skill import DateTimeSkill
+from signalwire.core.function_result import FunctionResult
 
 
 def _make_skill(params: dict[str, Any] | None = None) -> DateTimeSkill:
@@ -37,6 +37,7 @@ def _make_skill(params: dict[str, Any] | None = None) -> DateTimeSkill:
 # Class-level attributes
 # ---------------------------------------------------------------------------
 
+
 class TestDateTimeSkillClassAttributes:
     """Verify class-level constants and metadata."""
 
@@ -44,7 +45,10 @@ class TestDateTimeSkillClassAttributes:
         assert DateTimeSkill.SKILL_NAME == "datetime"
 
     def test_skill_description(self) -> None:
-        assert DateTimeSkill.SKILL_DESCRIPTION == "Get current date, time, and timezone information"
+        assert (
+            DateTimeSkill.SKILL_DESCRIPTION
+            == "Get current date, time, and timezone information"
+        )
 
     def test_skill_version(self) -> None:
         assert DateTimeSkill.SKILL_VERSION == "1.0.0"
@@ -62,6 +66,7 @@ class TestDateTimeSkillClassAttributes:
 # ---------------------------------------------------------------------------
 # Initialization
 # ---------------------------------------------------------------------------
+
 
 class TestDateTimeSkillInit:
     """Tests for __init__ (inherited from SkillBase)."""
@@ -91,6 +96,7 @@ class TestDateTimeSkillInit:
 # setup()
 # ---------------------------------------------------------------------------
 
+
 class TestDateTimeSkillSetup:
     """Tests for the setup method."""
 
@@ -101,14 +107,14 @@ class TestDateTimeSkillSetup:
 
     def test_setup_calls_validate_packages(self) -> None:
         skill = _make_skill()
-        with patch.object(skill, 'validate_packages', return_value=True) as mock_vp:
+        with patch.object(skill, "validate_packages", return_value=True) as mock_vp:
             result = skill.setup()
             mock_vp.assert_called_once()
             assert result is True
 
     def test_setup_returns_false_when_packages_missing(self) -> None:
         skill = _make_skill()
-        with patch.object(skill, 'validate_packages', return_value=False):
+        with patch.object(skill, "validate_packages", return_value=False):
             result = skill.setup()
             assert result is False
 
@@ -116,6 +122,7 @@ class TestDateTimeSkillSetup:
 # ---------------------------------------------------------------------------
 # register_tools()
 # ---------------------------------------------------------------------------
+
 
 class TestDateTimeSkillRegisterTools:
     """Tests for tool registration."""
@@ -148,7 +155,9 @@ class TestDateTimeSkillRegisterTools:
             assert callable(call.kwargs["handler"])
 
     def test_register_tools_merges_swaig_fields(self) -> None:
-        skill = _make_skill(params={"swaig_fields": {"web_hook_url": "http://example.com"}})
+        skill = _make_skill(
+            params={"swaig_fields": {"web_hook_url": "http://example.com"}}
+        )
         skill.register_tools()
         calls = skill.agent.define_tool.call_args_list
         for call in calls:
@@ -158,6 +167,7 @@ class TestDateTimeSkillRegisterTools:
 # ---------------------------------------------------------------------------
 # _get_time_handler()
 # ---------------------------------------------------------------------------
+
 
 class TestGetTimeHandler:
     """Tests for the _get_time_handler method."""
@@ -217,6 +227,7 @@ class TestGetTimeHandler:
 # _get_date_handler()
 # ---------------------------------------------------------------------------
 
+
 class TestGetDateHandler:
     """Tests for the _get_date_handler method."""
 
@@ -267,6 +278,7 @@ class TestGetDateHandler:
 # get_hints()
 # ---------------------------------------------------------------------------
 
+
 class TestGetHints:
     """Tests for the get_hints method."""
 
@@ -284,6 +296,7 @@ class TestGetHints:
 # ---------------------------------------------------------------------------
 # get_prompt_sections()
 # ---------------------------------------------------------------------------
+
 
 class TestGetPromptSections:
     """Tests for the get_prompt_sections method."""
@@ -319,6 +332,7 @@ class TestGetPromptSections:
 # ---------------------------------------------------------------------------
 # get_parameter_schema()
 # ---------------------------------------------------------------------------
+
 
 class TestGetParameterSchema:
     """Tests for the get_parameter_schema classmethod."""

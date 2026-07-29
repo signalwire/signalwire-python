@@ -12,7 +12,6 @@ deployments must check the same environment variables.
 import os
 from unittest.mock import patch
 
-import pytest
 
 from signalwire.core.logging_config import get_execution_mode
 from signalwire.utils import is_serverless_mode
@@ -23,9 +22,13 @@ class TestGetExecutionMode:
         # Clear all detected env vars; should default to "server".
         env_keys = [
             "GATEWAY_INTERFACE",
-            "AWS_LAMBDA_FUNCTION_NAME", "LAMBDA_TASK_ROOT",
-            "FUNCTION_TARGET", "K_SERVICE", "GOOGLE_CLOUD_PROJECT",
-            "AZURE_FUNCTIONS_ENVIRONMENT", "FUNCTIONS_WORKER_RUNTIME",
+            "AWS_LAMBDA_FUNCTION_NAME",
+            "LAMBDA_TASK_ROOT",
+            "FUNCTION_TARGET",
+            "K_SERVICE",
+            "GOOGLE_CLOUD_PROJECT",
+            "AZURE_FUNCTIONS_ENVIRONMENT",
+            "FUNCTIONS_WORKER_RUNTIME",
             "AzureWebJobsStorage",
         ]
         with patch.dict(os.environ, {}, clear=False):
@@ -50,15 +53,25 @@ class TestGetExecutionMode:
 
     def test_google_cloud_function_detected(self) -> None:
         with patch.dict(os.environ, {"FUNCTION_TARGET": "my_handler"}, clear=False):
-            for k in ("GATEWAY_INTERFACE", "AWS_LAMBDA_FUNCTION_NAME", "LAMBDA_TASK_ROOT"):
+            for k in (
+                "GATEWAY_INTERFACE",
+                "AWS_LAMBDA_FUNCTION_NAME",
+                "LAMBDA_TASK_ROOT",
+            ):
                 os.environ.pop(k, None)
             assert get_execution_mode() == "google_cloud_function"
 
     def test_azure_function_detected(self) -> None:
-        with patch.dict(os.environ, {"AZURE_FUNCTIONS_ENVIRONMENT": "Production"}, clear=False):
+        with patch.dict(
+            os.environ, {"AZURE_FUNCTIONS_ENVIRONMENT": "Production"}, clear=False
+        ):
             for k in (
-                "GATEWAY_INTERFACE", "AWS_LAMBDA_FUNCTION_NAME", "LAMBDA_TASK_ROOT",
-                "FUNCTION_TARGET", "K_SERVICE", "GOOGLE_CLOUD_PROJECT",
+                "GATEWAY_INTERFACE",
+                "AWS_LAMBDA_FUNCTION_NAME",
+                "LAMBDA_TASK_ROOT",
+                "FUNCTION_TARGET",
+                "K_SERVICE",
+                "GOOGLE_CLOUD_PROJECT",
             ):
                 os.environ.pop(k, None)
             assert get_execution_mode() == "azure_function"
@@ -68,9 +81,13 @@ class TestIsServerlessMode:
     def test_server_mode_is_not_serverless(self) -> None:
         env_keys = [
             "GATEWAY_INTERFACE",
-            "AWS_LAMBDA_FUNCTION_NAME", "LAMBDA_TASK_ROOT",
-            "FUNCTION_TARGET", "K_SERVICE", "GOOGLE_CLOUD_PROJECT",
-            "AZURE_FUNCTIONS_ENVIRONMENT", "FUNCTIONS_WORKER_RUNTIME",
+            "AWS_LAMBDA_FUNCTION_NAME",
+            "LAMBDA_TASK_ROOT",
+            "FUNCTION_TARGET",
+            "K_SERVICE",
+            "GOOGLE_CLOUD_PROJECT",
+            "AZURE_FUNCTIONS_ENVIRONMENT",
+            "FUNCTIONS_WORKER_RUNTIME",
             "AzureWebJobsStorage",
         ]
         with patch.dict(os.environ, {}, clear=False):

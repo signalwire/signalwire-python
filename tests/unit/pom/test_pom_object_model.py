@@ -5,9 +5,6 @@ tests live in ``test_pom_builder.py``; these tests cover the raw
 PromptObjectModel API that ports must mirror.
 """
 
-import json
-import pytest
-
 from signalwire.pom.pom import PromptObjectModel, Section
 
 

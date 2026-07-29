@@ -17,11 +17,10 @@ from signalwire.relay.client import (
     RelayClient,
     RelayError,
     _active_clients,
-    _MAX_CONNECTIONS,
     _MAX_QUEUE_SIZE,
     _SUCCESS_CODE_RE,
 )
-from signalwire.relay.call import Call, PlayAction
+from signalwire.relay.call import Call
 from signalwire.relay.message import Message
 from signalwire.relay.constants import (
     AGENT_STRING,
@@ -31,7 +30,6 @@ from signalwire.relay.constants import (
     EVENT_CALL_STATE,
     METHOD_SIGNALWIRE_CONNECT,
     METHOD_SIGNALWIRE_DISCONNECT,
-    METHOD_SIGNALWIRE_EVENT,
     METHOD_SIGNALWIRE_PING,
     PROTOCOL_VERSION,
     RECONNECT_BACKOFF_FACTOR,

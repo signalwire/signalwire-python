@@ -1,4 +1,5 @@
 from typing import Any, cast
+
 #!/usr/bin/env python3
 """
 Test suite for all examples in the examples/ directory.
@@ -26,11 +27,18 @@ REPO_ROOT = Path(__file__).parent.parent
 EXAMPLES_DIR = REPO_ROOT / "examples"
 
 
-def run_swaig_test(agent_path: Path, *args: str, timeout: int = 30) -> tuple[int, str, str]:
+def run_swaig_test(
+    agent_path: Path, *args: str, timeout: int = 30
+) -> tuple[int, str, str]:
     """
     Run swaig-test on an agent file and return (returncode, stdout, stderr).
     """
-    cmd = [sys.executable, "-m", "signalwire.cli.swaig_test_wrapper", str(agent_path)] + list(args)
+    cmd = [
+        sys.executable,
+        "-m",
+        "signalwire.cli.swaig_test_wrapper",
+        str(agent_path),
+    ] + list(args)
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
         return result.returncode, result.stdout, result.stderr
@@ -44,7 +52,9 @@ def get_swml_json(agent_path: Path) -> dict[str, Any]:
     """
     returncode, stdout, stderr = run_swaig_test(agent_path, "--dump-swml", "--raw")
     if returncode != 0:
-        pytest.fail(f"swaig-test failed for {agent_path}:\nstderr: {stderr}\nstdout: {stdout}")
+        pytest.fail(
+            f"swaig-test failed for {agent_path}:\nstderr: {stderr}\nstdout: {stdout}"
+        )
     try:
         return cast("dict[str, Any]", json.loads(stdout))
     except json.JSONDecodeError as e:
@@ -59,13 +69,13 @@ def list_tools(agent_path: Path) -> list[str]:
     if returncode != 0:
         return []
     tools = []
-    for line in stdout.split('\n'):
+    for line in stdout.split("\n"):
         line = line.strip()
-        if ' - ' in line and not line.startswith('Parameters:'):
-            parts = line.split(' - ')
+        if " - " in line and not line.startswith("Parameters:"):
+            parts = line.split(" - ")
             if parts:
                 tool_name = parts[0].strip()
-                if tool_name and not tool_name.startswith('('):
+                if tool_name and not tool_name.startswith("("):
                     tools.append(tool_name)
     return tools
 
@@ -103,27 +113,35 @@ EXAMPLES_REQUIRING_DEPS = {
 class TestBasicAgentExamples:
     """Test basic agent examples that should load cleanly."""
 
-    @pytest.mark.parametrize("agent_file", [
-        "simple_agent.py",
-        "simple_static_agent.py",
-        "simple_dynamic_agent.py",
-        "simple_dynamic_enhanced.py",
-        "declarative_agent.py",
-        "faq_bot_agent.py",
-    ])
+    @pytest.mark.parametrize(
+        "agent_file",
+        [
+            "simple_agent.py",
+            "simple_static_agent.py",
+            "simple_dynamic_agent.py",
+            "simple_dynamic_enhanced.py",
+            "declarative_agent.py",
+            "faq_bot_agent.py",
+        ],
+    )
     def test_basic_agents_load(self, agent_file: str) -> None:
         """Test basic agent examples can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
             pytest.skip(f"Agent file not found: {agent_file}")
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
-        assert returncode == 0, f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        assert returncode == 0, (
+            f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        )
 
-    @pytest.mark.parametrize("agent_file", [
-        "simple_agent.py",
-        "simple_static_agent.py",
-        "declarative_agent.py",
-    ])
+    @pytest.mark.parametrize(
+        "agent_file",
+        [
+            "simple_agent.py",
+            "simple_static_agent.py",
+            "declarative_agent.py",
+        ],
+    )
     def test_basic_agents_generate_valid_swml(self, agent_file: str) -> None:
         """Test basic agents generate valid SWML."""
         agent_path = EXAMPLES_DIR / agent_file
@@ -139,18 +157,23 @@ class TestBasicAgentExamples:
 class TestContextsExamples:
     """Test context and workflow examples."""
 
-    @pytest.mark.parametrize("agent_file", [
-        "contexts_demo.py",
-        "info_gatherer_example.py",
-        "dynamic_info_gatherer_example.py",
-    ])
+    @pytest.mark.parametrize(
+        "agent_file",
+        [
+            "contexts_demo.py",
+            "info_gatherer_example.py",
+            "dynamic_info_gatherer_example.py",
+        ],
+    )
     def test_contexts_agents_load(self, agent_file: str) -> None:
         """Test context-based agents can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
             pytest.skip(f"Agent file not found: {agent_file}")
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
-        assert returncode == 0, f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        assert returncode == 0, (
+            f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        )
 
     def test_survey_agent_multi_class(self) -> None:
         """Test survey_agent_example.py with explicit agent class."""
@@ -158,16 +181,23 @@ class TestContextsExamples:
         if not agent_path.exists():
             pytest.skip("survey_agent_example.py not found")
         # This file has multiple agent classes - test with specific one
-        returncode, stdout, stderr = run_swaig_test(agent_path, "--agent-class", "ProductSurveyAgent", "--list-tools")
-        assert returncode == 0, f"Failed to load ProductSurveyAgent:\nstderr: {stderr}\nstdout: {stdout}"
+        returncode, stdout, stderr = run_swaig_test(
+            agent_path, "--agent-class", "ProductSurveyAgent", "--list-tools"
+        )
+        assert returncode == 0, (
+            f"Failed to load ProductSurveyAgent:\nstderr: {stderr}\nstdout: {stdout}"
+        )
 
 
 class TestDataMapExamples:
     """Test DataMap examples."""
 
-    @pytest.mark.parametrize("agent_file", [
-        "data_map_demo.py",
-    ])
+    @pytest.mark.parametrize(
+        "agent_file",
+        [
+            "data_map_demo.py",
+        ],
+    )
     def test_datamap_agents_load(self, agent_file: str) -> None:
         """Test DataMap agents can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
@@ -176,38 +206,54 @@ class TestDataMapExamples:
         if agent_file in NON_STANDARD_EXAMPLES:
             pytest.skip(f"Skipping {agent_file} - non-standard agent structure")
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
-        assert returncode == 0, f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        assert returncode == 0, (
+            f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        )
 
 
 class TestSkillsExamples:
     """Test skills-related examples."""
 
-    @pytest.mark.parametrize("agent_file", [
-        "skills_demo.py",
-        "wikipedia_demo.py",
-    ])
+    @pytest.mark.parametrize(
+        "agent_file",
+        [
+            "skills_demo.py",
+            "wikipedia_demo.py",
+        ],
+    )
     def test_skills_agents_load(self, agent_file: str) -> None:
         """Test skills agents can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
             pytest.skip(f"Agent file not found: {agent_file}")
         if agent_file in EXAMPLES_REQUIRING_CREDENTIALS:
-            pytest.skip(f"Skipping {agent_file} - requires {EXAMPLES_REQUIRING_CREDENTIALS[agent_file]}")
+            pytest.skip(
+                f"Skipping {agent_file} - requires {EXAMPLES_REQUIRING_CREDENTIALS[agent_file]}"
+            )
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
         # Skills may require env vars, so we accept load failure with specific error
         if returncode != 0:
             # Check if it's a missing env var error (expected for some skills)
-            if "GOOGLE_SEARCH" in stderr or "API_KEY" in stderr or "env" in stderr.lower():
+            if (
+                "GOOGLE_SEARCH" in stderr
+                or "API_KEY" in stderr
+                or "env" in stderr.lower()
+            ):
                 pytest.skip(f"Skipping {agent_file} - requires API keys")
-        assert returncode == 0, f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        assert returncode == 0, (
+            f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        )
 
 
 class TestWebSearchExamples:
     """Test web search examples (may require API keys)."""
 
-    @pytest.mark.parametrize("agent_file", [
-        "web_search_multi_instance_demo.py",
-    ])
+    @pytest.mark.parametrize(
+        "agent_file",
+        [
+            "web_search_multi_instance_demo.py",
+        ],
+    )
     def test_web_search_agents_load(self, agent_file: str) -> None:
         """Test web search agents can be loaded (may skip if no API keys)."""
         agent_path = EXAMPLES_DIR / agent_file
@@ -215,18 +261,27 @@ class TestWebSearchExamples:
             pytest.skip(f"Agent file not found: {agent_file}")
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
         if returncode != 0:
-            if "GOOGLE_SEARCH" in stderr or "API_KEY" in stderr or "GOOGLE_SEARCH" in stdout:
+            if (
+                "GOOGLE_SEARCH" in stderr
+                or "API_KEY" in stderr
+                or "GOOGLE_SEARCH" in stdout
+            ):
                 pytest.skip(f"Skipping {agent_file} - requires Google API keys")
-        assert returncode == 0, f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        assert returncode == 0, (
+            f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        )
 
 
 class TestDatasphereExamples:
     """Test Datasphere examples (may require env vars)."""
 
-    @pytest.mark.parametrize("agent_file", [
-        "datasphere_serverless_demo.py",
-        "datasphere_multi_instance_demo.py",
-    ])
+    @pytest.mark.parametrize(
+        "agent_file",
+        [
+            "datasphere_serverless_demo.py",
+            "datasphere_multi_instance_demo.py",
+        ],
+    )
     def test_datasphere_agents_load(self, agent_file: str) -> None:
         """Test Datasphere agents can be loaded (may skip if no credentials)."""
         agent_path = EXAMPLES_DIR / agent_file
@@ -234,17 +289,26 @@ class TestDatasphereExamples:
             pytest.skip(f"Agent file not found: {agent_file}")
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
         if returncode != 0:
-            if "SIGNALWIRE" in stderr or "credentials" in stderr.lower() or "SIGNALWIRE" in stdout:
+            if (
+                "SIGNALWIRE" in stderr
+                or "credentials" in stderr.lower()
+                or "SIGNALWIRE" in stdout
+            ):
                 pytest.skip(f"Skipping {agent_file} - requires SignalWire credentials")
-        assert returncode == 0, f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        assert returncode == 0, (
+            f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        )
 
 
 class TestSWAIGFeaturesExamples:
     """Test SWAIG feature examples."""
 
-    @pytest.mark.parametrize("agent_file", [
-        "swaig_features_agent.py",
-    ])
+    @pytest.mark.parametrize(
+        "agent_file",
+        [
+            "swaig_features_agent.py",
+        ],
+    )
     def test_swaig_features_agents_load(self, agent_file: str) -> None:
         """Test SWAIG feature agents can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
@@ -253,15 +317,20 @@ class TestSWAIGFeaturesExamples:
         if agent_file in NON_STANDARD_EXAMPLES:
             pytest.skip(f"Skipping {agent_file} - non-standard agent structure")
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
-        assert returncode == 0, f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        assert returncode == 0, (
+            f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        )
 
 
 class TestSWMLServiceExamples:
     """Test SWML service examples."""
 
-    @pytest.mark.parametrize("agent_file", [
-        "swml_service_routing_example.py",
-    ])
+    @pytest.mark.parametrize(
+        "agent_file",
+        [
+            "swml_service_routing_example.py",
+        ],
+    )
     def test_swml_service_agents_load(self, agent_file: str) -> None:
         """Test SWML service examples can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
@@ -270,25 +339,34 @@ class TestSWMLServiceExamples:
         if agent_file in NON_STANDARD_EXAMPLES:
             pytest.skip(f"Skipping {agent_file} - non-standard agent structure")
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
-        assert returncode == 0, f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        assert returncode == 0, (
+            f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        )
 
 
 class TestDeploymentExamples:
     """Test deployment-related examples."""
 
-    @pytest.mark.parametrize("agent_file", [
-        "kubernetes_ready_agent.py",
-        "custom_path_agent.py",
-    ])
+    @pytest.mark.parametrize(
+        "agent_file",
+        [
+            "kubernetes_ready_agent.py",
+            "custom_path_agent.py",
+        ],
+    )
     def test_deployment_agents_load(self, agent_file: str) -> None:
         """Test deployment examples can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
             pytest.skip(f"Agent file not found: {agent_file}")
         if agent_file in EXAMPLES_REQUIRING_DEPS:
-            pytest.skip(f"Skipping {agent_file} - requires {EXAMPLES_REQUIRING_DEPS[agent_file]}")
+            pytest.skip(
+                f"Skipping {agent_file} - requires {EXAMPLES_REQUIRING_DEPS[agent_file]}"
+            )
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
-        assert returncode == 0, f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        assert returncode == 0, (
+            f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        )
 
 
 class TestMultiAgentExamples:
@@ -302,8 +380,9 @@ class TestMultiAgentExamples:
         # Multi-agent files may need --agent flag
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-agents")
         # Should show agents or indicate multiple agents
-        assert returncode == 0 or "multiple" in stdout.lower() or "agent" in stdout.lower(), \
-            f"Failed to list agents:\nstderr: {stderr}\nstdout: {stdout}"
+        assert (
+            returncode == 0 or "multiple" in stdout.lower() or "agent" in stdout.lower()
+        ), f"Failed to list agents:\nstderr: {stderr}\nstdout: {stdout}"
 
     def test_multi_endpoint_agent_load(self) -> None:
         """Test multi-endpoint agent can be loaded."""
@@ -311,31 +390,41 @@ class TestMultiAgentExamples:
         if not agent_path.exists():
             pytest.skip("multi_endpoint_agent.py not found")
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
-        assert returncode == 0, f"Failed to load multi_endpoint_agent.py:\nstderr: {stderr}\nstdout: {stdout}"
+        assert returncode == 0, (
+            f"Failed to load multi_endpoint_agent.py:\nstderr: {stderr}\nstdout: {stdout}"
+        )
 
 
 class TestPrefabExamples:
     """Test prefab agent examples."""
 
-    @pytest.mark.parametrize("agent_file", [
-        "concierge_agent_example.py",
-        "receptionist_agent_example.py",
-    ])
+    @pytest.mark.parametrize(
+        "agent_file",
+        [
+            "concierge_agent_example.py",
+            "receptionist_agent_example.py",
+        ],
+    )
     def test_prefab_agents_load(self, agent_file: str) -> None:
         """Test prefab examples can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
             pytest.skip(f"Agent file not found: {agent_file}")
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
-        assert returncode == 0, f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        assert returncode == 0, (
+            f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        )
 
 
 class TestDynamicConfigExamples:
     """Test dynamic configuration examples."""
 
-    @pytest.mark.parametrize("agent_file", [
-        "comprehensive_dynamic_agent.py",
-    ])
+    @pytest.mark.parametrize(
+        "agent_file",
+        [
+            "comprehensive_dynamic_agent.py",
+        ],
+    )
     def test_dynamic_config_agents_load(self, agent_file: str) -> None:
         """Test dynamic config examples can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
@@ -344,34 +433,46 @@ class TestDynamicConfigExamples:
         if agent_file in NON_STANDARD_EXAMPLES:
             pytest.skip(f"Skipping {agent_file} - non-standard agent structure")
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
-        assert returncode == 0, f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        assert returncode == 0, (
+            f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        )
 
 
 class TestAuthExamples:
     """Test authentication examples."""
 
-    @pytest.mark.parametrize("agent_file", [
-        "env_auth_test.py",
-    ])
+    @pytest.mark.parametrize(
+        "agent_file",
+        [
+            "env_auth_test.py",
+        ],
+    )
     def test_auth_agents_load(self, agent_file: str) -> None:
         """Test auth examples can be loaded."""
         agent_path = EXAMPLES_DIR / agent_file
         if not agent_path.exists():
             pytest.skip(f"Agent file not found: {agent_file}")
         if agent_file in EXAMPLES_REQUIRING_CREDENTIALS:
-            pytest.skip(f"Skipping {agent_file} - requires {EXAMPLES_REQUIRING_CREDENTIALS[agent_file]}")
+            pytest.skip(
+                f"Skipping {agent_file} - requires {EXAMPLES_REQUIRING_CREDENTIALS[agent_file]}"
+            )
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
-        assert returncode == 0, f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        assert returncode == 0, (
+            f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        )
 
 
 class TestSearchExamples:
     """Test search-related examples (may require index files)."""
 
-    @pytest.mark.parametrize("agent_file", [
-        "sigmond_simple.py",
-        "sigmond_native_search.py",
-        "sigmond_remote_search.py",
-    ])
+    @pytest.mark.parametrize(
+        "agent_file",
+        [
+            "sigmond_simple.py",
+            "sigmond_native_search.py",
+            "sigmond_remote_search.py",
+        ],
+    )
     def test_search_agents_load(self, agent_file: str) -> None:
         """Test search agents can be loaded (may skip if no index)."""
         agent_path = EXAMPLES_DIR / agent_file
@@ -381,17 +482,22 @@ class TestSearchExamples:
         if returncode != 0:
             if "index" in stderr.lower() or "swsearch" in stderr.lower():
                 pytest.skip(f"Skipping {agent_file} - requires search index")
-        assert returncode == 0, f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        assert returncode == 0, (
+            f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        )
 
 
 class TestBedrockExamples:
     """Test AWS Bedrock examples (require AWS credentials)."""
 
-    @pytest.mark.parametrize("agent_file", [
-        "bedrock_agent_run.py",
-        "bedrock_agent_test.py",
-        "bedrock_server_test.py",
-    ])
+    @pytest.mark.parametrize(
+        "agent_file",
+        [
+            "bedrock_agent_run.py",
+            "bedrock_agent_test.py",
+            "bedrock_server_test.py",
+        ],
+    )
     def test_bedrock_agents_load(self, agent_file: str) -> None:
         """Test Bedrock agents can be loaded (skip if no AWS credentials)."""
         agent_path = EXAMPLES_DIR / agent_file
@@ -404,7 +510,9 @@ class TestBedrockExamples:
             # bedrock_with_skills.py has a skill loading issue
             if "Skill" in stdout and "not found" in stdout:
                 pytest.skip(f"Skipping {agent_file} - skill loading issue")
-        assert returncode == 0, f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        assert returncode == 0, (
+            f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
+        )
 
 
 class TestSpecialExamples:
@@ -444,12 +552,15 @@ class TestSpecialExamples:
 class TestSWMLGeneration:
     """Test that key examples generate valid SWML."""
 
-    @pytest.mark.parametrize("agent_file", [
-        "simple_agent.py",
-        "contexts_demo.py",
-        "swaig_features_agent.py",
-        "declarative_agent.py",
-    ])
+    @pytest.mark.parametrize(
+        "agent_file",
+        [
+            "simple_agent.py",
+            "contexts_demo.py",
+            "swaig_features_agent.py",
+            "declarative_agent.py",
+        ],
+    )
     def test_swml_has_ai_section(self, agent_file: str) -> None:
         """Test SWML has AI configuration."""
         agent_path = EXAMPLES_DIR / agent_file
@@ -507,7 +618,9 @@ class TestServerlessSimulation:
         returncode, stdout, stderr = run_swaig_test(
             agent_path, "--simulate-serverless", platform, "--dump-swml", "--raw"
         )
-        assert returncode == 0, f"Serverless simulation failed for {platform}:\nstderr: {stderr}"
+        assert returncode == 0, (
+            f"Serverless simulation failed for {platform}:\nstderr: {stderr}"
+        )
 
         swml = json.loads(stdout)
         assert "version" in swml, f"Invalid SWML for {platform}"

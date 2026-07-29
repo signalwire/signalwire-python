@@ -150,7 +150,7 @@ def client(mock_session: MagicMock) -> RestClient:
     """A RestClient backed by a mock session."""
     return RestClient(
         project="test-project-id",
-        token="test-token",  # noqa: S106  (test credential placeholder)
+        token="test-token",
         host="test.signalwire.com",
     )
 

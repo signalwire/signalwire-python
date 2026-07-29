@@ -1,12 +1,11 @@
 from typing import Any
+
 #!/usr/bin/env python3
 """Tests for MCP server endpoint and add_mcp_server configuration."""
 
-import json
 import pytest
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.function_result import FunctionResult
-from signalwire.core.mixins.mcp_server_mixin import MCPServerMixin
 
 
 def _sync_response(agent: "AgentBase", body: dict[str, Any]) -> dict[str, Any]:
@@ -36,9 +35,7 @@ class TestMCPServerMixin:
         agent.define_tool(
             name="get_weather",
             description="Get the weather for a location",
-            parameters={
-                "location": {"type": "string", "description": "City name"}
-            },
+            parameters={"location": {"type": "string", "description": "City name"}},
             handler=weather_handler,
             required=["location"],
         )
@@ -60,16 +57,19 @@ class TestMCPServerMixin:
     def test_initialize_handshake(self) -> None:
         """Initialize returns protocol version and capabilities"""
         agent = self._make_agent()
-        resp = _sync_response(agent, {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "initialize",
-            "params": {
-                "protocolVersion": "2025-06-18",
-                "capabilities": {},
-                "clientInfo": {"name": "test", "version": "1.0"}
-            }
-        })
+        resp = _sync_response(
+            agent,
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": "2025-06-18",
+                    "capabilities": {},
+                    "clientInfo": {"name": "test", "version": "1.0"},
+                },
+            },
+        )
 
         assert resp["jsonrpc"] == "2.0"
         assert resp["id"] == 1
@@ -80,22 +80,18 @@ class TestMCPServerMixin:
     def test_initialized_notification(self) -> None:
         """notifications/initialized returns empty result"""
         agent = self._make_agent()
-        resp = _sync_response(agent, {
-            "jsonrpc": "2.0",
-            "method": "notifications/initialized"
-        })
+        resp = _sync_response(
+            agent, {"jsonrpc": "2.0", "method": "notifications/initialized"}
+        )
 
         assert "result" in resp
 
     def test_tools_list(self) -> None:
         """tools/list returns registered tools in MCP format"""
         agent = self._make_agent()
-        resp = _sync_response(agent, {
-            "jsonrpc": "2.0",
-            "id": 2,
-            "method": "tools/list",
-            "params": {}
-        })
+        resp = _sync_response(
+            agent, {"jsonrpc": "2.0", "id": 2, "method": "tools/list", "params": {}}
+        )
 
         assert resp["id"] == 2
         tools = resp["result"]["tools"]
@@ -105,15 +101,15 @@ class TestMCPServerMixin:
     def test_tools_call(self) -> None:
         """tools/call invokes the handler and returns content"""
         agent = self._make_agent()
-        resp = _sync_response(agent, {
-            "jsonrpc": "2.0",
-            "id": 3,
-            "method": "tools/call",
-            "params": {
-                "name": "get_weather",
-                "arguments": {"location": "Orlando"}
-            }
-        })
+        resp = _sync_response(
+            agent,
+            {
+                "jsonrpc": "2.0",
+                "id": 3,
+                "method": "tools/call",
+                "params": {"name": "get_weather", "arguments": {"location": "Orlando"}},
+            },
+        )
 
         assert resp["id"] == 3
         assert resp["result"]["isError"] == False
@@ -125,12 +121,15 @@ class TestMCPServerMixin:
     def test_tools_call_unknown(self) -> None:
         """tools/call with unknown tool returns error"""
         agent = self._make_agent()
-        resp = _sync_response(agent, {
-            "jsonrpc": "2.0",
-            "id": 4,
-            "method": "tools/call",
-            "params": {"name": "nonexistent", "arguments": {}}
-        })
+        resp = _sync_response(
+            agent,
+            {
+                "jsonrpc": "2.0",
+                "id": 4,
+                "method": "tools/call",
+                "params": {"name": "nonexistent", "arguments": {}},
+            },
+        )
 
         assert "error" in resp
         assert resp["error"]["code"] == -32602
@@ -139,12 +138,9 @@ class TestMCPServerMixin:
     def test_unknown_method(self) -> None:
         """Unknown method returns method not found error"""
         agent = self._make_agent()
-        resp = _sync_response(agent, {
-            "jsonrpc": "2.0",
-            "id": 5,
-            "method": "resources/list",
-            "params": {}
-        })
+        resp = _sync_response(
+            agent, {"jsonrpc": "2.0", "id": 5, "method": "resources/list", "params": {}}
+        )
 
         assert "error" in resp
         assert resp["error"]["code"] == -32601
@@ -152,22 +148,16 @@ class TestMCPServerMixin:
     def test_ping(self) -> None:
         """ping returns empty result"""
         agent = self._make_agent()
-        resp = _sync_response(agent, {
-            "jsonrpc": "2.0",
-            "id": 6,
-            "method": "ping"
-        })
+        resp = _sync_response(agent, {"jsonrpc": "2.0", "id": 6, "method": "ping"})
 
         assert "result" in resp
 
     def test_invalid_jsonrpc_version(self) -> None:
         """Non-2.0 version returns error"""
         agent = self._make_agent()
-        resp = _sync_response(agent, {
-            "jsonrpc": "1.0",
-            "id": 7,
-            "method": "initialize"
-        })
+        resp = _sync_response(
+            agent, {"jsonrpc": "1.0", "id": 7, "method": "initialize"}
+        )
 
         assert "error" in resp
         assert resp["error"]["code"] == -32600
@@ -183,7 +173,9 @@ class TestMCPServerEndpoint:
 
         class WeatherAgent(AgentBase):
             def __init__(self) -> None:
-                super().__init__(name="weather", route="/agent", basic_auth=("user", "pass"))
+                super().__init__(
+                    name="weather", route="/agent", basic_auth=("user", "pass")
+                )
                 self.enable_mcp_server()
                 self.register_swaig_function(
                     DataMap("lookup_remote")
@@ -194,14 +186,24 @@ class TestMCPServerEndpoint:
                     .to_swaig_function()
                 )
 
-            @AgentBase.tool("get_weather", description="Weather",
-                            parameters={"location": {"type": "string", "description": "City"}})
-            def get_weather(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
+            @AgentBase.tool(
+                "get_weather",
+                description="Weather",
+                parameters={"location": {"type": "string", "description": "City"}},
+            )
+            def get_weather(
+                self, args: dict[str, Any], raw_data: dict[str, Any]
+            ) -> FunctionResult:
                 return FunctionResult(f"72F in {args.get('location')}")
 
-            @AgentBase.tool("get_forecast", description="Forecast",
-                            parameters={"location": {"type": "string", "description": "City"}})
-            async def get_forecast(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
+            @AgentBase.tool(
+                "get_forecast",
+                description="Forecast",
+                parameters={"location": {"type": "string", "description": "City"}},
+            )
+            async def get_forecast(
+                self, args: dict[str, Any], raw_data: dict[str, Any]
+            ) -> FunctionResult:
                 await asyncio.sleep(0)
                 return FunctionResult(f"Rain in {args.get('location')}")
 
@@ -213,35 +215,53 @@ class TestMCPServerEndpoint:
 
     def test_requires_basic_auth(self) -> None:
         client = self._client()
-        assert client.post("/agent/mcp", json=self._rpc("tools/list")).status_code == 401
-        wrong = client.post("/agent/mcp", json=self._rpc("tools/list"), auth=("user", "nope"))
+        assert (
+            client.post("/agent/mcp", json=self._rpc("tools/list")).status_code == 401
+        )
+        wrong = client.post(
+            "/agent/mcp", json=self._rpc("tools/list"), auth=("user", "nope")
+        )
         assert wrong.status_code == 401
 
     def test_lists_class_tools_but_not_datamap_tools(self) -> None:
-        response = self._client().post("/agent/mcp", json=self._rpc("tools/list"), auth=("user", "pass"))
+        response = self._client().post(
+            "/agent/mcp", json=self._rpc("tools/list"), auth=("user", "pass")
+        )
         names = sorted(t["name"] for t in response.json()["result"]["tools"])
         assert names == ["get_forecast", "get_weather"]
 
     def test_calls_a_class_tool(self) -> None:
         response = self._client().post(
-            "/agent/mcp", auth=("user", "pass"),
-            json=self._rpc("tools/call", {"name": "get_weather", "arguments": {"location": "Paris"}}),
+            "/agent/mcp",
+            auth=("user", "pass"),
+            json=self._rpc(
+                "tools/call",
+                {"name": "get_weather", "arguments": {"location": "Paris"}},
+            ),
         )
         assert response.json()["result"] == {
-            "content": [{"type": "text", "text": "72F in Paris"}], "isError": False,
+            "content": [{"type": "text", "text": "72F in Paris"}],
+            "isError": False,
         }
 
     def test_calls_an_async_tool(self) -> None:
         response = self._client().post(
-            "/agent/mcp", auth=("user", "pass"),
-            json=self._rpc("tools/call", {"name": "get_forecast", "arguments": {"location": "Oslo"}}),
+            "/agent/mcp",
+            auth=("user", "pass"),
+            json=self._rpc(
+                "tools/call",
+                {"name": "get_forecast", "arguments": {"location": "Oslo"}},
+            ),
         )
         assert response.json()["result"]["content"][0]["text"] == "Rain in Oslo"
 
     def test_refuses_a_datamap_tool(self) -> None:
         response = self._client().post(
-            "/agent/mcp", auth=("user", "pass"),
-            json=self._rpc("tools/call", {"name": "lookup_remote", "arguments": {"q": "x"}}),
+            "/agent/mcp",
+            auth=("user", "pass"),
+            json=self._rpc(
+                "tools/call", {"name": "lookup_remote", "arguments": {"q": "x"}}
+            ),
         )
         assert response.json()["error"]["code"] == -32602
 
@@ -261,8 +281,7 @@ class TestAddMCPServer:
         """MCP server with auth headers"""
         agent = AgentBase(name="test", route="/test")
         agent.add_mcp_server(
-            "https://mcp.example.com/tools",
-            headers={"Authorization": "Bearer sk-xxx"}
+            "https://mcp.example.com/tools", headers={"Authorization": "Bearer sk-xxx"}
         )
 
         assert agent._mcp_servers[0]["headers"]["Authorization"] == "Bearer sk-xxx"
@@ -273,11 +292,13 @@ class TestAddMCPServer:
         agent.add_mcp_server(
             "https://mcp.example.com/crm",
             resources=True,
-            resource_vars={"caller_id": "${caller_id_number}"}
+            resource_vars={"caller_id": "${caller_id_number}"},
         )
 
         assert agent._mcp_servers[0]["resources"] == True
-        assert agent._mcp_servers[0]["resource_vars"]["caller_id"] == "${caller_id_number}"
+        assert (
+            agent._mcp_servers[0]["resource_vars"]["caller_id"] == "${caller_id_number}"
+        )
 
     def test_add_multiple_servers(self) -> None:
         """Multiple MCP servers"""

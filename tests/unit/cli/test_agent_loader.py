@@ -26,9 +26,9 @@ import types
 import importlib
 import importlib.util
 import textwrap
-from collections.abc import Iterator  # noqa: E402
+from collections.abc import Iterator
 from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock, PropertyMock
+from unittest.mock import patch
 
 
 # ---------------------------------------------------------------------------
@@ -37,8 +37,10 @@ from unittest.mock import Mock, patch, MagicMock, PropertyMock
 # try/except resolves successfully.
 # ---------------------------------------------------------------------------
 
+
 class _MockSWMLService:
     """Minimal stand-in for SWMLService used in agent_loader isinstance checks."""
+
     name = "mock-service"
     route = "/mock"
 
@@ -51,11 +53,13 @@ class _MockSWMLService:
 
 class _MockAgentBase(_MockSWMLService):
     """Minimal stand-in for AgentBase (inherits from SWMLService stand-in)."""
+
     _tool_registry: dict[str, object] = {}
 
 
 class _MockServiceCapture:
     """Minimal stand-in for ServiceCapture."""
+
     pass
 
 
@@ -90,14 +94,17 @@ if _needs_stub:
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 @pytest.fixture(autouse=True)
 def _patch_module_globals() -> Iterator[None]:
     """Ensure every test sees our mock classes and the AVAILABLE flags set."""
-    with patch.object(agent_loader, "SWMLService", _MockSWMLService), \
-         patch.object(agent_loader, "AgentBase", _MockAgentBase), \
-         patch.object(agent_loader, "AGENT_BASE_AVAILABLE", True), \
-         patch.object(agent_loader, "SWML_SERVICE_AVAILABLE", True), \
-         patch.object(agent_loader, "NEW_LOADER_AVAILABLE", True):
+    with (
+        patch.object(agent_loader, "SWMLService", _MockSWMLService),
+        patch.object(agent_loader, "AgentBase", _MockAgentBase),
+        patch.object(agent_loader, "AGENT_BASE_AVAILABLE", True),
+        patch.object(agent_loader, "SWML_SERVICE_AVAILABLE", True),
+        patch.object(agent_loader, "NEW_LOADER_AVAILABLE", True),
+    ):
         yield
 
 
@@ -111,6 +118,7 @@ def _write_py(tmp_path: Path, filename: str, code: str) -> str:
 # ============================================================================
 # discover_services_in_file
 # ============================================================================
+
 
 class TestDiscoverServicesInFile:
     """Tests for the public discover_services_in_file function."""
@@ -150,7 +158,9 @@ class TestDiscoverServicesInFile:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -176,11 +186,14 @@ class TestDiscoverServicesInFile:
 
         class MySvcClass(_MockSWMLService):
             """Custom service"""
+
             pass
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -206,6 +219,7 @@ class TestDiscoverServicesInFile:
 # discover_agents_in_file
 # ============================================================================
 
+
 class TestDiscoverAgentsInFile:
     """Tests for the backward-compat discover_agents_in_file wrapper."""
 
@@ -224,7 +238,9 @@ class TestDiscoverAgentsInFile:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -256,6 +272,7 @@ class TestDiscoverAgentsInFile:
 # ============================================================================
 # _discover_services_impl
 # ============================================================================
+
 
 class TestDiscoverServicesImpl:
     """Tests for the internal _discover_services_impl."""
@@ -306,7 +323,9 @@ class TestDiscoverServicesImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -338,6 +357,7 @@ class TestDiscoverServicesImpl:
 
         class MySpecialSvc(_MockSWMLService):
             """Special"""
+
             pass
 
         inst = MySpecialSvc()
@@ -346,7 +366,9 @@ class TestDiscoverServicesImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -363,7 +385,9 @@ class TestDiscoverServicesImpl:
         with patch("importlib.util.spec_from_file_location", side_effect=patched_spec):
             results = agent_loader._discover_services_impl(path)
 
-        class_entries = [r for r in results if r["name"] == "MySpecialSvc" and r["type"] == "class"]
+        class_entries = [
+            r for r in results if r["name"] == "MySpecialSvc" and r["type"] == "class"
+        ]
         assert len(class_entries) == 0  # should be deduplicated
 
     def test_agent_instance_has_is_agent_true(self, tmp_path: Path) -> None:
@@ -376,7 +400,9 @@ class TestDiscoverServicesImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -407,6 +433,7 @@ class TestDiscoverServicesImpl:
 # load_service_from_file
 # ============================================================================
 
+
 class TestLoadServiceFromFile:
     """Tests for the public load_service_from_file function."""
 
@@ -419,8 +446,12 @@ class TestLoadServiceFromFile:
     def test_delegates_to_impl(self, tmp_path: Path) -> None:
         path = _write_py(tmp_path, "s2.py", "x = 1\n")
         sentinel = _MockSWMLService()
-        with patch.object(agent_loader, "_load_service_impl", return_value=sentinel) as m:
-            result = agent_loader.load_service_from_file(path, "ident", prefer_route=False)
+        with patch.object(
+            agent_loader, "_load_service_impl", return_value=sentinel
+        ) as m:
+            result = agent_loader.load_service_from_file(
+                path, "ident", prefer_route=False
+            )
             m.assert_called_once_with(path, "ident", False)
             assert result is sentinel
 
@@ -428,6 +459,7 @@ class TestLoadServiceFromFile:
 # ============================================================================
 # load_agent_from_file
 # ============================================================================
+
 
 class TestLoadAgentFromFile:
     """Tests for the public load_agent_from_file function."""
@@ -441,7 +473,9 @@ class TestLoadAgentFromFile:
     def test_delegates_to_impl_with_prefer_route_false(self, tmp_path: Path) -> None:
         path = _write_py(tmp_path, "a2.py", "x = 1\n")
         sentinel = _MockAgentBase()
-        with patch.object(agent_loader, "_load_service_impl", return_value=sentinel) as m:
+        with patch.object(
+            agent_loader, "_load_service_impl", return_value=sentinel
+        ) as m:
             result = agent_loader.load_agent_from_file(path, "MyClass")
             m.assert_called_once_with(path, "MyClass", prefer_route=False)
             assert result is sentinel
@@ -450,6 +484,7 @@ class TestLoadAgentFromFile:
 # ============================================================================
 # _load_service_impl
 # ============================================================================
+
 
 class TestLoadServiceImpl:
     """Tests for the internal _load_service_impl function."""
@@ -483,7 +518,9 @@ class TestLoadServiceImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -497,7 +534,9 @@ class TestLoadServiceImpl:
             return spec
 
         with patch("importlib.util.spec_from_file_location", side_effect=patched_spec):
-            result = agent_loader._load_service_impl(path, "/my-route", prefer_route=True)
+            result = agent_loader._load_service_impl(
+                path, "/my-route", prefer_route=True
+            )
         assert result is inst
 
     def test_prefer_route_not_found_raises(self, tmp_path: Path) -> None:
@@ -517,7 +556,9 @@ class TestLoadServiceImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -546,7 +587,9 @@ class TestLoadServiceImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -576,7 +619,9 @@ class TestLoadServiceImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -605,7 +650,9 @@ class TestLoadServiceImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -619,7 +666,9 @@ class TestLoadServiceImpl:
             return spec
 
         with patch("importlib.util.spec_from_file_location", side_effect=patched_spec):
-            result = agent_loader._load_service_impl(path, "MySvcClass", prefer_route=False)
+            result = agent_loader._load_service_impl(
+                path, "MySvcClass", prefer_route=False
+            )
         assert isinstance(result, MySvcClass)
 
     # --- Strategy 1: 'agent' / 'service' variable -----------------------
@@ -634,7 +683,9 @@ class TestLoadServiceImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -661,7 +712,9 @@ class TestLoadServiceImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -690,7 +743,9 @@ class TestLoadServiceImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -722,7 +777,9 @@ class TestLoadServiceImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -741,7 +798,9 @@ class TestLoadServiceImpl:
         # Strategy 1 should find 'agent' before Strategy 2 even runs
         assert result is inst2
 
-    def test_strategy2_multiple_instances_uses_first_when_no_preferred_name(self, tmp_path: Path) -> None:
+    def test_strategy2_multiple_instances_uses_first_when_no_preferred_name(
+        self, tmp_path: Path
+    ) -> None:
         code = "x = 1\n"
         path = _write_py(tmp_path, "s2c.py", code)
 
@@ -755,7 +814,9 @@ class TestLoadServiceImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -787,7 +848,9 @@ class TestLoadServiceImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -821,7 +884,9 @@ class TestLoadServiceImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -839,7 +904,9 @@ class TestLoadServiceImpl:
             with pytest.raises(ValueError, match="Multiple service classes found"):
                 agent_loader._load_service_impl(path)
 
-    def test_strategy3_class_instantiation_failure_prints_warning(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_strategy3_class_instantiation_failure_prints_warning(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         """If the single class can't be instantiated, a warning is printed."""
         code = "x = 1\n"
         path = _write_py(tmp_path, "s3c.py", code)
@@ -850,7 +917,9 @@ class TestLoadServiceImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -882,7 +951,9 @@ class TestLoadServiceImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -913,7 +984,9 @@ class TestLoadServiceImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -930,7 +1003,9 @@ class TestLoadServiceImpl:
             result = agent_loader._load_service_impl(path)
         assert result is inst
 
-    def test_strategy4_main_exception_prints_warning(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_strategy4_main_exception_prints_warning(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         """If main() raises, a warning is printed and we fall through."""
         code = "x = 1\n"
         path = _write_py(tmp_path, "s4c.py", code)
@@ -940,7 +1015,9 @@ class TestLoadServiceImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -983,7 +1060,9 @@ class TestLoadServiceImpl:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -1006,10 +1085,13 @@ class TestLoadServiceImpl:
 # Module-level import fallback (AVAILABLE flags)
 # ============================================================================
 
+
 class TestModuleFallbacks:
     """Tests verifying behaviour when base classes are not importable."""
 
-    def test_discover_services_raises_with_swml_unavailable(self, tmp_path: Path) -> None:
+    def test_discover_services_raises_with_swml_unavailable(
+        self, tmp_path: Path
+    ) -> None:
         path = _write_py(tmp_path, "f1.py", "x = 1\n")
         with patch.object(agent_loader, "SWML_SERVICE_AVAILABLE", False):
             with pytest.raises(ImportError):
@@ -1021,7 +1103,9 @@ class TestModuleFallbacks:
             with pytest.raises(ImportError):
                 agent_loader.load_service_from_file(path)
 
-    def test_load_agent_raises_with_agent_base_unavailable(self, tmp_path: Path) -> None:
+    def test_load_agent_raises_with_agent_base_unavailable(
+        self, tmp_path: Path
+    ) -> None:
         path = _write_py(tmp_path, "f3.py", "x = 1\n")
         with patch.object(agent_loader, "AGENT_BASE_AVAILABLE", False):
             with pytest.raises(ImportError):
@@ -1032,10 +1116,13 @@ class TestModuleFallbacks:
 # Edge cases
 # ============================================================================
 
+
 class TestEdgeCases:
     """Miscellaneous edge cases."""
 
-    def test_prefer_route_tries_class_instantiation_for_route(self, tmp_path: Path) -> None:
+    def test_prefer_route_tries_class_instantiation_for_route(
+        self, tmp_path: Path
+    ) -> None:
         """If no existing instance matches the route, _load_service_impl
         tries instantiating classes and checking their routes."""
         code = "x = 1\n"
@@ -1048,7 +1135,9 @@ class TestEdgeCases:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -1062,7 +1151,9 @@ class TestEdgeCases:
             return spec
 
         with patch("importlib.util.spec_from_file_location", side_effect=patched_spec):
-            result = agent_loader._load_service_impl(path, "/special", prefer_route=True)
+            result = agent_loader._load_service_impl(
+                path, "/special", prefer_route=True
+            )
         assert isinstance(result, RoutedSvc)
 
     def test_class_name_path_instantiation_error(self, tmp_path: Path) -> None:
@@ -1076,7 +1167,9 @@ class TestEdgeCases:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -1110,7 +1203,9 @@ class TestEdgeCases:
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None
@@ -1131,7 +1226,9 @@ class TestEdgeCases:
         # main() should have been called (Strategy 4)
         assert len(called) == 1
 
-    def test_discover_services_class_with_exception_in_info(self, tmp_path: Path) -> None:
+    def test_discover_services_class_with_exception_in_info(
+        self, tmp_path: Path
+    ) -> None:
         """If getting class info raises, the exception path in _discover_services_impl
         still records the class."""
         code = "x = 1\n"
@@ -1139,11 +1236,14 @@ class TestEdgeCases:
 
         class TrickySvc(_MockSWMLService):
             """Tricky doc"""
+
             pass
 
         orig_exec = importlib.util.spec_from_file_location
 
-        def patched_spec(*args: object, **kwargs: object) -> importlib.machinery.ModuleSpec:
+        def patched_spec(
+            *args: object, **kwargs: object
+        ) -> importlib.machinery.ModuleSpec:
             spec = orig_exec(*args, **kwargs)  # type: ignore[arg-type]
             assert spec is not None
             assert spec.loader is not None

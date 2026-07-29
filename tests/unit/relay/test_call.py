@@ -2,13 +2,11 @@
 
 import asyncio
 import pytest
-import uuid
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 
 from signalwire.relay.call import (
     Call,
-    Action,
     PlayAction,
     RecordAction,
     DetectAction,
@@ -35,8 +33,10 @@ from signalwire.relay.constants import (
 # Fixtures
 # ---------------------------------------------------------------------------
 
+
 class MockRelayError(Exception):
     """Mock of RelayError for testing call-gone handling."""
+
     def __init__(self, code: int, message: str) -> None:
         self.code = code
         self.message = message
@@ -67,9 +67,12 @@ async def call(mock_client: MagicMock) -> Call:
 # Call._execute tests
 # ---------------------------------------------------------------------------
 
+
 class TestCallExecute:
     @pytest.mark.asyncio
-    async def test_execute_sends_correct_method(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_execute_sends_correct_method(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call._execute("answer")
         mock_client.execute.assert_called_once_with(
             "calling.answer",
@@ -77,33 +80,52 @@ class TestCallExecute:
         )
 
     @pytest.mark.asyncio
-    async def test_execute_merges_extra_params(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_execute_merges_extra_params(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call._execute("play", {"control_id": "ctl1", "play": []})
         mock_client.execute.assert_called_once_with(
             "calling.play",
-            {"node_id": "node-1", "call_id": "call-1", "control_id": "ctl1", "play": []},
+            {
+                "node_id": "node-1",
+                "call_id": "call-1",
+                "control_id": "ctl1",
+                "play": [],
+            },
         )
 
     @pytest.mark.asyncio
-    async def test_execute_returns_result(self, call: Call, mock_client: MagicMock) -> None:
-        mock_client.execute.return_value = {"code": "200", "message": "OK", "url": "http://rec.wav"}
+    async def test_execute_returns_result(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
+        mock_client.execute.return_value = {
+            "code": "200",
+            "message": "OK",
+            "url": "http://rec.wav",
+        }
         result = await call._execute("record", {"control_id": "ctl1"})
         assert result["url"] == "http://rec.wav"
 
     @pytest.mark.asyncio
-    async def test_execute_swallows_404(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_execute_swallows_404(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         mock_client.execute.side_effect = MockRelayError(404, "Call not found")
         result = await call._execute("play", {"control_id": "ctl1"})
         assert result == {}
 
     @pytest.mark.asyncio
-    async def test_execute_swallows_410(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_execute_swallows_410(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         mock_client.execute.side_effect = MockRelayError(410, "Call gone")
         result = await call._execute("play.stop", {"control_id": "ctl1"})
         assert result == {}
 
     @pytest.mark.asyncio
-    async def test_execute_raises_non_gone_relay_errors(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_execute_raises_non_gone_relay_errors(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         """A2 contract (Wave 1): only 404/410 (call gone) are swallowed. Every
         other server error (e.g. 500) RAISES — the SDK previously swallowed ALL
         coded errors, hiding real failures the docs promised would surface."""
@@ -113,7 +135,9 @@ class TestCallExecute:
         assert exc.value.code == 500
 
     @pytest.mark.asyncio
-    async def test_execute_raises_400_class_relay_errors(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_execute_raises_400_class_relay_errors(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         """A2: a 4xx that is NOT 404/410 (e.g. 400 bad params, 401 auth) raises."""
         mock_client.execute.side_effect = MockRelayError(400, "Bad params")
         with pytest.raises(MockRelayError) as exc:
@@ -121,7 +145,9 @@ class TestCallExecute:
         assert exc.value.code == 400
 
     @pytest.mark.asyncio
-    async def test_execute_raises_non_relay_errors(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_execute_raises_non_relay_errors(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         mock_client.execute.side_effect = ConnectionError("lost")
         with pytest.raises(ConnectionError):
             await call._execute("play", {"control_id": "ctl1"})
@@ -130,6 +156,7 @@ class TestCallExecute:
 # ---------------------------------------------------------------------------
 # Call lifecycle methods
 # ---------------------------------------------------------------------------
+
 
 class TestCallLifecycle:
     @pytest.mark.asyncio
@@ -159,6 +186,7 @@ class TestCallLifecycle:
 # Action-based methods
 # ---------------------------------------------------------------------------
 
+
 class TestPlayMethod:
     @pytest.mark.asyncio
     async def test_play_returns_play_action(self, call: Call) -> None:
@@ -183,7 +211,9 @@ class TestPlayMethod:
         assert params["loop"] == 2
 
     @pytest.mark.asyncio
-    async def test_play_tts_builds_tts_media(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_play_tts_builds_tts_media(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         # Restored convenience: caller doesn't hand-build the {type,params} shape.
         await call.play_tts(text="Welcome!", gender="female")
         method, params = mock_client.execute.call_args[0]
@@ -193,7 +223,9 @@ class TestPlayMethod:
         ]
 
     @pytest.mark.asyncio
-    async def test_play_audio_builds_audio_media(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_play_audio_builds_audio_media(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.play_audio(url="https://example.com/a.mp3", volume=2.0)
         method, params = mock_client.execute.call_args[0]
         assert method == "calling.play"
@@ -203,14 +235,18 @@ class TestPlayMethod:
         assert params["volume"] == 2.0
 
     @pytest.mark.asyncio
-    async def test_play_silence_builds_silence_media(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_play_silence_builds_silence_media(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.play_silence(duration=1.5)
         method, params = mock_client.execute.call_args[0]
         assert method == "calling.play"
         assert params["play"] == [{"type": "silence", "params": {"duration": 1.5}}]
 
     @pytest.mark.asyncio
-    async def test_play_ringtone_builds_ringtone_media(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_play_ringtone_builds_ringtone_media(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.play_ringtone(name="us", duration=3.0)
         method, params = mock_client.execute.call_args[0]
         assert method == "calling.play"
@@ -219,15 +255,21 @@ class TestPlayMethod:
         ]
 
     @pytest.mark.asyncio
-    async def test_detect_digit_builds_detect(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_detect_digit_builds_detect(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.detect_digit(digits="123")
         method, params = mock_client.execute.call_args[0]
         assert method == "calling.detect"
         assert params["detect"] == {"type": "digit", "params": {"digits": "123"}}
 
     @pytest.mark.asyncio
-    async def test_detect_answering_machine_builds_detect(self, call: Call, mock_client: MagicMock) -> None:
-        await call.detect_answering_machine(end_silence_timeout=2.0, machine_words_threshold=5)
+    async def test_detect_answering_machine_builds_detect(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
+        await call.detect_answering_machine(
+            end_silence_timeout=2.0, machine_words_threshold=5
+        )
         method, params = mock_client.execute.call_args[0]
         assert method == "calling.detect"
         assert params["detect"] == {
@@ -236,14 +278,18 @@ class TestPlayMethod:
         }
 
     @pytest.mark.asyncio
-    async def test_detect_fax_builds_detect(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_detect_fax_builds_detect(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.detect_fax(tone="CED")
         method, params = mock_client.execute.call_args[0]
         assert method == "calling.detect"
         assert params["detect"] == {"type": "fax", "params": {"tone": "CED"}}
 
     @pytest.mark.asyncio
-    async def test_prompt_tts_builds_play_and_collect(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_prompt_tts_builds_play_and_collect(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.prompt_tts("Press 1", {"digits": {"max": 1}})
         method, params = mock_client.execute.call_args[0]
         assert method == "calling.play_and_collect"
@@ -251,7 +297,9 @@ class TestPlayMethod:
         assert params["collect"] == {"digits": {"max": 1}}
 
     @pytest.mark.asyncio
-    async def test_prompt_audio_builds_play_and_collect(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_prompt_audio_builds_play_and_collect(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.prompt_audio("https://example.com/menu.mp3", {"speech": {}})
         method, params = mock_client.execute.call_args[0]
         assert method == "calling.play_and_collect"
@@ -261,7 +309,9 @@ class TestPlayMethod:
         assert params["collect"] == {"speech": {}}
 
     @pytest.mark.asyncio
-    async def test_wait_for_answered_immediate_when_already_answered(self, call: Call) -> None:
+    async def test_wait_for_answered_immediate_when_already_answered(
+        self, call: Call
+    ) -> None:
         call.state = "answered"
         event = await asyncio.wait_for(call.wait_for_answered(), timeout=0.5)
         assert event.params.get("call_state") == "answered"
@@ -280,7 +330,9 @@ class TestPlayMethod:
 
     @pytest.mark.asyncio
     async def test_play_action_stop(self, call: Call, mock_client: MagicMock) -> None:
-        action = await call.play([{"type": "tts", "params": {"text": "Hi"}}], control_id="ctl1")
+        action = await call.play(
+            [{"type": "tts", "params": {"text": "Hi"}}], control_id="ctl1"
+        )
         mock_client.execute.reset_mock()
         await action.stop()
         mock_client.execute.assert_called_once_with(
@@ -289,8 +341,12 @@ class TestPlayMethod:
         )
 
     @pytest.mark.asyncio
-    async def test_play_action_pause_resume_volume(self, call: Call, mock_client: MagicMock) -> None:
-        action = await call.play([{"type": "tts", "params": {"text": "Hi"}}], control_id="ctl1")
+    async def test_play_action_pause_resume_volume(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
+        action = await call.play(
+            [{"type": "tts", "params": {"text": "Hi"}}], control_id="ctl1"
+        )
 
         mock_client.execute.reset_mock()
         await action.pause()
@@ -314,7 +370,9 @@ class TestRecordMethod:
         assert isinstance(action, RecordAction)
 
     @pytest.mark.asyncio
-    async def test_record_with_audio_params(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_record_with_audio_params(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         action = await call.record(
             audio={"format": "wav", "stereo": True, "direction": "both"},
             control_id="r1",
@@ -332,7 +390,9 @@ class TestDetectMethod:
         assert isinstance(action, DetectAction)
 
     @pytest.mark.asyncio
-    async def test_detect_with_timeout(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_detect_with_timeout(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.detect({"type": "digit"}, timeout=60.0, control_id="d1")
         params = mock_client.execute.call_args[0][1]
         assert params["timeout"] == 60.0
@@ -365,25 +425,41 @@ class TestCollectMethods:
         assert mock_client.execute.call_args[0][0] == "calling.collect"
 
     @pytest.mark.asyncio
-    async def test_standalone_collect_stop(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_standalone_collect_stop(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         action = await call.collect(digits={"max": 1}, control_id="col1")
         mock_client.execute.reset_mock()
         await action.stop()
         assert mock_client.execute.call_args[0][0] == "calling.collect.stop"
 
     @pytest.mark.asyncio
-    async def test_standalone_collect_start_input_timers(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_standalone_collect_start_input_timers(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         action = await call.collect(digits={"max": 1}, control_id="col1")
         mock_client.execute.reset_mock()
         await action.start_input_timers()
-        assert mock_client.execute.call_args[0][0] == "calling.collect.start_input_timers"
+        assert (
+            mock_client.execute.call_args[0][0] == "calling.collect.start_input_timers"
+        )
 
 
 class TestConnectDisconnect:
     @pytest.mark.asyncio
     async def test_connect(self, call: Call, mock_client: MagicMock) -> None:
         await call.connect(
-            [[{"type": "phone", "params": {"to_number": "+15551234567", "from_number": "+15559876543"}}]],
+            [
+                [
+                    {
+                        "type": "phone",
+                        "params": {
+                            "to_number": "+15551234567",
+                            "from_number": "+15559876543",
+                        },
+                    }
+                ]
+            ],
             ringback=[{"type": "ringtone", "params": {"name": "us"}}],
         )
         params = mock_client.execute.call_args[0][1]
@@ -460,7 +536,9 @@ class TestFax:
         assert mock_client.execute.call_args[0][0] == "calling.receive_fax"
 
     @pytest.mark.asyncio
-    async def test_fax_action_stop_uses_correct_prefix(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_fax_action_stop_uses_correct_prefix(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         action = await call.send_fax("https://example.com/doc.pdf", control_id="fax1")
         mock_client.execute.reset_mock()
         await action.stop()
@@ -562,7 +640,9 @@ class TestDenoise:
 class TestTranscribe:
     @pytest.mark.asyncio
     async def test_transcribe(self, call: Call, mock_client: MagicMock) -> None:
-        action = await call.transcribe(control_id="tr1", status_url="https://cb.example.com")
+        action = await call.transcribe(
+            control_id="tr1", status_url="https://cb.example.com"
+        )
         assert isinstance(action, TranscribeAction)
         params = mock_client.execute.call_args[0][1]
         assert params["status_url"] == "https://cb.example.com"
@@ -594,7 +674,9 @@ class TestDigitBindings:
         assert params["max_triggers"] == 3
 
     @pytest.mark.asyncio
-    async def test_clear_digit_bindings(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_clear_digit_bindings(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.clear_digit_bindings(realm="menu")
         params = mock_client.execute.call_args[0][1]
         assert params["realm"] == "menu"
@@ -638,7 +720,9 @@ class TestAI:
         assert isinstance(action, AIAction)
 
     @pytest.mark.asyncio
-    async def test_ai_with_full_params(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_ai_with_full_params(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.ai(
             control_id="ai1",
             agent="agent-uuid",
@@ -702,7 +786,9 @@ class TestUserEvent:
 class TestQueue:
     @pytest.mark.asyncio
     async def test_queue_enter(self, call: Call, mock_client: MagicMock) -> None:
-        await call.queue_enter("support", control_id="q1", status_url="https://example.com")
+        await call.queue_enter(
+            "support", control_id="q1", status_url="https://example.com"
+        )
         params = mock_client.execute.call_args[0][1]
         assert params["queue_name"] == "support"
         assert params["control_id"] == "q1"
@@ -721,9 +807,12 @@ class TestQueue:
 # _start_action tests
 # ---------------------------------------------------------------------------
 
+
 class TestStartAction:
     @pytest.mark.asyncio
-    async def test_ended_call_resolves_gracefully(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_ended_call_resolves_gracefully(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         """Starting an action on an ended call logs a warning and returns a resolved action."""
         call.state = CALL_STATE_ENDED
         action = await call.play([{"type": "tts", "params": {"text": "Hi"}}])
@@ -731,7 +820,9 @@ class TestStartAction:
         assert action.is_done is True
 
     @pytest.mark.asyncio
-    async def test_execute_failure_raises_and_cleans_up_action(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_execute_failure_raises_and_cleans_up_action(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         """A2 contract (Wave 1): a non-gone relay error (500) RAISES out of the
         verb — the developer sees the failure — and the action is removed from
         _actions + its future rejected (so a concurrent wait() gets the error,
@@ -745,7 +836,9 @@ class TestStartAction:
         assert not call._actions
 
     @pytest.mark.asyncio
-    async def test_call_gone_resolves_action_immediately(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_call_gone_resolves_action_immediately(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         mock_client.execute.side_effect = MockRelayError(404, "Call not found")
         action = await call.play([{"type": "tts", "params": {"text": "Hi"}}])
         assert action.completed is True
@@ -760,6 +853,7 @@ class TestStartAction:
 # ---------------------------------------------------------------------------
 # Event dispatch tests
 # ---------------------------------------------------------------------------
+
 
 class TestEventDispatch:
     @pytest.mark.asyncio
@@ -782,17 +876,25 @@ class TestEventDispatch:
         assert call._ended.done()
 
     @pytest.mark.asyncio
-    async def test_action_resolved_by_event(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_action_resolved_by_event(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         action = await call.play(
             [{"type": "tts", "params": {"text": "Hello"}}],
             control_id="ctl1",
         )
         assert not action.is_done
         # Simulate play finished event
-        await call._dispatch_event({
-            "event_type": EVENT_CALL_PLAY,
-            "params": {"call_id": "call-1", "control_id": "ctl1", "state": "finished"},
-        })
+        await call._dispatch_event(
+            {
+                "event_type": EVENT_CALL_PLAY,
+                "params": {
+                    "call_id": "call-1",
+                    "control_id": "ctl1",
+                    "state": "finished",
+                },
+            }
+        )
         assert action.is_done
         assert action.completed
         assert "ctl1" not in call._actions
@@ -805,10 +907,16 @@ class TestEventDispatch:
             events_received.append(event)
 
         call.on(EVENT_CALL_PLAY, handler)
-        await call._dispatch_event({
-            "event_type": EVENT_CALL_PLAY,
-            "params": {"call_id": "call-1", "control_id": "ctl1", "state": "playing"},
-        })
+        await call._dispatch_event(
+            {
+                "event_type": EVENT_CALL_PLAY,
+                "params": {
+                    "call_id": "call-1",
+                    "control_id": "ctl1",
+                    "state": "playing",
+                },
+            }
+        )
         assert len(events_received) == 1
         assert events_received[0].params["state"] == "playing"
 
@@ -816,10 +924,16 @@ class TestEventDispatch:
     async def test_wait_for(self, call: Call) -> None:
         async def send_event_later() -> None:
             await asyncio.sleep(0.01)
-            await call._dispatch_event({
-                "event_type": EVENT_CALL_PLAY,
-                "params": {"call_id": "call-1", "control_id": "ctl1", "state": "finished"},
-            })
+            await call._dispatch_event(
+                {
+                    "event_type": EVENT_CALL_PLAY,
+                    "params": {
+                        "call_id": "call-1",
+                        "control_id": "ctl1",
+                        "state": "finished",
+                    },
+                }
+            )
 
         task = asyncio.create_task(send_event_later())
         event = await call.wait_for(EVENT_CALL_PLAY, timeout=2.0)
@@ -830,15 +944,27 @@ class TestEventDispatch:
     async def test_wait_for_with_predicate(self, call: Call) -> None:
         async def send_events() -> None:
             await asyncio.sleep(0.01)
-            await call._dispatch_event({
-                "event_type": EVENT_CALL_PLAY,
-                "params": {"call_id": "call-1", "control_id": "ctl1", "state": "playing"},
-            })
+            await call._dispatch_event(
+                {
+                    "event_type": EVENT_CALL_PLAY,
+                    "params": {
+                        "call_id": "call-1",
+                        "control_id": "ctl1",
+                        "state": "playing",
+                    },
+                }
+            )
             await asyncio.sleep(0.01)
-            await call._dispatch_event({
-                "event_type": EVENT_CALL_PLAY,
-                "params": {"call_id": "call-1", "control_id": "ctl1", "state": "finished"},
-            })
+            await call._dispatch_event(
+                {
+                    "event_type": EVENT_CALL_PLAY,
+                    "params": {
+                        "call_id": "call-1",
+                        "control_id": "ctl1",
+                        "state": "finished",
+                    },
+                }
+            )
 
         task = asyncio.create_task(send_events())
         event = await call.wait_for(
@@ -853,10 +979,12 @@ class TestEventDispatch:
     async def test_wait_for_ended(self, call: Call) -> None:
         async def end_call() -> None:
             await asyncio.sleep(0.01)
-            await call._dispatch_event({
-                "event_type": EVENT_CALL_STATE,
-                "params": {"call_id": "call-1", "call_state": CALL_STATE_ENDED},
-            })
+            await call._dispatch_event(
+                {
+                    "event_type": EVENT_CALL_STATE,
+                    "params": {"call_id": "call-1", "call_state": CALL_STATE_ENDED},
+                }
+            )
 
         task = asyncio.create_task(end_call())
         event = await call.wait_for_ended(timeout=2.0)
@@ -868,28 +996,38 @@ class TestCollectActionEventRouting:
     """Test that CollectAction only resolves on collect events, not play events."""
 
     @pytest.mark.asyncio
-    async def test_collect_ignores_play_events(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_collect_ignores_play_events(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         action = await call.play_and_collect(
             [{"type": "tts", "params": {"text": "Press 1"}}],
             {"digits": {"max": 1}},
             control_id="pac1",
         )
         # Simulate play event — should NOT resolve the collect action
-        await call._dispatch_event({
-            "event_type": EVENT_CALL_PLAY,
-            "params": {"call_id": "call-1", "control_id": "pac1", "state": "finished"},
-        })
+        await call._dispatch_event(
+            {
+                "event_type": EVENT_CALL_PLAY,
+                "params": {
+                    "call_id": "call-1",
+                    "control_id": "pac1",
+                    "state": "finished",
+                },
+            }
+        )
         assert not action.is_done
 
         # Simulate collect result — should resolve
-        await call._dispatch_event({
-            "event_type": EVENT_CALL_COLLECT,
-            "params": {
-                "call_id": "call-1",
-                "control_id": "pac1",
-                "result": {"type": "digit", "params": {"digits": "1"}},
-            },
-        })
+        await call._dispatch_event(
+            {
+                "event_type": EVENT_CALL_COLLECT,
+                "params": {
+                    "call_id": "call-1",
+                    "control_id": "pac1",
+                    "result": {"type": "digit", "params": {"digits": "1"}},
+                },
+            }
+        )
         assert action.is_done
         assert action.result.params["result"]["type"] == "digit"
 
@@ -898,16 +1036,20 @@ class TestDetectActionEventRouting:
     """Test that DetectAction resolves on first detect result."""
 
     @pytest.mark.asyncio
-    async def test_detect_resolves_on_first_result(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_detect_resolves_on_first_result(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         action = await call.detect({"type": "machine"}, control_id="det1")
-        await call._dispatch_event({
-            "event_type": "calling.call.detect",
-            "params": {
-                "call_id": "call-1",
-                "control_id": "det1",
-                "detect": {"type": "machine", "params": {"event": "HUMAN"}},
-            },
-        })
+        await call._dispatch_event(
+            {
+                "event_type": "calling.call.detect",
+                "params": {
+                    "call_id": "call-1",
+                    "control_id": "det1",
+                    "detect": {"type": "machine", "params": {"event": "HUMAN"}},
+                },
+            }
+        )
         assert action.is_done
         assert action.result is not None
         assert action.result.params["detect"]["params"]["event"] == "HUMAN"
@@ -950,7 +1092,9 @@ class TestDetectActionMethods:
 
 class TestCollectActionMethods:
     @pytest.mark.asyncio
-    async def test_play_and_collect_stop(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_play_and_collect_stop(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         action = await call.play_and_collect(
             [{"type": "tts", "params": {"text": "Press 1"}}],
             {"digits": {"max": 1}},
@@ -961,7 +1105,9 @@ class TestCollectActionMethods:
         assert mock_client.execute.call_args[0][0] == "calling.play_and_collect.stop"
 
     @pytest.mark.asyncio
-    async def test_play_and_collect_volume(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_play_and_collect_volume(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         action = await call.play_and_collect(
             [{"type": "tts", "params": {"text": "Press 1"}}],
             {"digits": {"max": 1}},
@@ -974,7 +1120,9 @@ class TestCollectActionMethods:
         assert params["volume"] == 5.0
 
     @pytest.mark.asyncio
-    async def test_play_and_collect_with_volume_param(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_play_and_collect_with_volume_param(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.play_and_collect(
             [{"type": "tts", "params": {"text": "Press 1"}}],
             {"digits": {"max": 1}},
@@ -984,7 +1132,9 @@ class TestCollectActionMethods:
         assert params["volume"] == 3.0
 
     @pytest.mark.asyncio
-    async def test_collect_start_input_timers_method(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_collect_start_input_timers_method(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         action = await call.play_and_collect(
             [{"type": "tts", "params": {"text": "Press 1"}}],
             {"digits": {"max": 1}},
@@ -992,49 +1142,69 @@ class TestCollectActionMethods:
         )
         mock_client.execute.reset_mock()
         await action.start_input_timers()
-        assert mock_client.execute.call_args[0][0] == "calling.collect.start_input_timers"
+        assert (
+            mock_client.execute.call_args[0][0] == "calling.collect.start_input_timers"
+        )
 
 
 class TestStandaloneCollectEventRouting:
     @pytest.mark.asyncio
-    async def test_standalone_collect_resolves_on_result(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_standalone_collect_resolves_on_result(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         action = await call.collect(digits={"max": 1}, control_id="col1")
-        await call._dispatch_event({
-            "event_type": EVENT_CALL_COLLECT,
-            "params": {
-                "call_id": "call-1",
-                "control_id": "col1",
-                "result": {"type": "digit", "params": {"digits": "5"}},
-            },
-        })
+        await call._dispatch_event(
+            {
+                "event_type": EVENT_CALL_COLLECT,
+                "params": {
+                    "call_id": "call-1",
+                    "control_id": "col1",
+                    "result": {"type": "digit", "params": {"digits": "5"}},
+                },
+            }
+        )
         assert action.is_done
 
     @pytest.mark.asyncio
-    async def test_standalone_collect_ignores_non_collect_events(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_standalone_collect_ignores_non_collect_events(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         action = await call.collect(digits={"max": 1}, control_id="col1")
-        await call._dispatch_event({
-            "event_type": EVENT_CALL_PLAY,
-            "params": {"call_id": "call-1", "control_id": "col1", "state": "finished"},
-        })
+        await call._dispatch_event(
+            {
+                "event_type": EVENT_CALL_PLAY,
+                "params": {
+                    "call_id": "call-1",
+                    "control_id": "col1",
+                    "state": "finished",
+                },
+            }
+        )
         assert not action.is_done
 
     @pytest.mark.asyncio
-    async def test_standalone_collect_resolves_on_terminal_state(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_standalone_collect_resolves_on_terminal_state(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         action = await call.collect(digits={"max": 1}, control_id="col1")
-        await call._dispatch_event({
-            "event_type": EVENT_CALL_COLLECT,
-            "params": {
-                "call_id": "call-1",
-                "control_id": "col1",
-                "state": "no_input",
-            },
-        })
+        await call._dispatch_event(
+            {
+                "event_type": EVENT_CALL_COLLECT,
+                "params": {
+                    "call_id": "call-1",
+                    "control_id": "col1",
+                    "state": "no_input",
+                },
+            }
+        )
         assert action.is_done
 
 
 class TestCollectOptionalParams:
     @pytest.mark.asyncio
-    async def test_collect_with_all_params(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_collect_with_all_params(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.collect(
             digits={"max": 4},
             speech={"language": "en-US"},
@@ -1054,7 +1224,9 @@ class TestCollectOptionalParams:
 
 class TestConnectOptionalParams:
     @pytest.mark.asyncio
-    async def test_connect_with_all_params(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_connect_with_all_params(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.connect(
             [[{"type": "phone", "params": {"to_number": "+15551234567"}}]],
             tag="my-tag",
@@ -1071,7 +1243,9 @@ class TestConnectOptionalParams:
 
 class TestPayAllParams:
     @pytest.mark.asyncio
-    async def test_pay_all_optional_params(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_pay_all_optional_params(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.pay(
             "https://pay.example.com",
             control_id="pay1",
@@ -1172,7 +1346,9 @@ class TestTranscribeActionMethods:
 
 class TestConferenceAllParams:
     @pytest.mark.asyncio
-    async def test_join_conference_all_params(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_join_conference_all_params(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.join_conference(
             "my_conf",
             muted=True,
@@ -1216,7 +1392,9 @@ class TestConferenceAllParams:
 
 class TestEchoOptionalParams:
     @pytest.mark.asyncio
-    async def test_echo_with_status_url(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_echo_with_status_url(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.echo(timeout=30.0, status_url="https://example.com/echo")
         params = mock_client.execute.call_args[0][1]
         assert params["status_url"] == "https://example.com/echo"
@@ -1224,7 +1402,9 @@ class TestEchoOptionalParams:
 
 class TestAIAllParams:
     @pytest.mark.asyncio
-    async def test_ai_with_post_prompt_params(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_ai_with_post_prompt_params(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.ai(
             control_id="ai1",
             prompt={"text": "Hello"},
@@ -1246,7 +1426,9 @@ class TestAIAllParams:
 
 class TestAmazonBedrockAllParams:
     @pytest.mark.asyncio
-    async def test_amazon_bedrock_all_params(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_amazon_bedrock_all_params(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.amazon_bedrock(
             prompt="You are helpful.",
             SWAIG={"functions": []},
@@ -1266,7 +1448,9 @@ class TestAmazonBedrockAllParams:
 
 class TestAIMessageAllParams:
     @pytest.mark.asyncio
-    async def test_ai_message_with_control_id(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_ai_message_with_control_id(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         await call.ai_message(
             message_text="Hello",
             role="system",
@@ -1280,8 +1464,12 @@ class TestAIMessageAllParams:
 
 class TestQueueOptionalParams:
     @pytest.mark.asyncio
-    async def test_queue_leave_with_status_url(self, call: Call, mock_client: MagicMock) -> None:
-        await call.queue_leave("support", control_id="q1", status_url="https://example.com/q")
+    async def test_queue_leave_with_status_url(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
+        await call.queue_leave(
+            "support", control_id="q1", status_url="https://example.com/q"
+        )
         params = mock_client.execute.call_args[0][1]
         assert params["status_url"] == "https://example.com/q"
 
@@ -1292,19 +1480,27 @@ class TestEventHandlerError:
         """Verify that an exception in one event handler is caught and the
         OTHER handlers still get the event. If exception handling were
         broken, the second handler would never run."""
+
         def bad_handler(event: RelayEvent) -> None:
             raise RuntimeError("handler crashed")
 
         good_calls: list[RelayEvent] = []
+
         def good_handler(event: RelayEvent) -> None:
             good_calls.append(event)
 
         call.on(EVENT_CALL_PLAY, bad_handler)
         call.on(EVENT_CALL_PLAY, good_handler)
-        await call._dispatch_event({
-            "event_type": EVENT_CALL_PLAY,
-            "params": {"call_id": "call-1", "control_id": "ctl1", "state": "playing"},
-        })
+        await call._dispatch_event(
+            {
+                "event_type": EVENT_CALL_PLAY,
+                "params": {
+                    "call_id": "call-1",
+                    "control_id": "ctl1",
+                    "state": "playing",
+                },
+            }
+        )
         # The bad handler raised, but the good handler still fired exactly once.
         assert len(good_calls) == 1
         assert good_calls[0].event_type == EVENT_CALL_PLAY
@@ -1319,12 +1515,19 @@ class TestWaitForTimeout:
     @pytest.mark.asyncio
     async def test_wait_for_no_timeout(self, call: Call) -> None:
         """wait_for without timeout resolves when event arrives."""
+
         async def send_later() -> None:
             await asyncio.sleep(0.01)
-            await call._dispatch_event({
-                "event_type": EVENT_CALL_PLAY,
-                "params": {"call_id": "call-1", "control_id": "x", "state": "finished"},
-            })
+            await call._dispatch_event(
+                {
+                    "event_type": EVENT_CALL_PLAY,
+                    "params": {
+                        "call_id": "call-1",
+                        "control_id": "x",
+                        "state": "finished",
+                    },
+                }
+            )
 
         task = asyncio.create_task(send_later())
         event = await asyncio.wait_for(
@@ -1337,7 +1540,9 @@ class TestWaitForTimeout:
 
 class TestOnCompleted:
     @pytest.mark.asyncio
-    async def test_on_completed_sync_callback(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_on_completed_sync_callback(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         results = []
         action = await call.play(
             [{"type": "tts", "params": {"text": "Hi"}}],
@@ -1345,16 +1550,24 @@ class TestOnCompleted:
             on_completed=lambda event: results.append(event),
         )
         # Simulate play finished
-        await call._dispatch_event({
-            "event_type": EVENT_CALL_PLAY,
-            "params": {"call_id": "call-1", "control_id": "ctl1", "state": "finished"},
-        })
+        await call._dispatch_event(
+            {
+                "event_type": EVENT_CALL_PLAY,
+                "params": {
+                    "call_id": "call-1",
+                    "control_id": "ctl1",
+                    "state": "finished",
+                },
+            }
+        )
         assert action.is_done
         assert len(results) == 1
         assert results[0].params["state"] == "finished"
 
     @pytest.mark.asyncio
-    async def test_on_completed_async_callback(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_on_completed_async_callback(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         results = []
 
         async def on_done(event: RelayEvent) -> None:
@@ -1365,15 +1578,23 @@ class TestOnCompleted:
             control_id="ctl1",
             on_completed=on_done,
         )
-        await call._dispatch_event({
-            "event_type": EVENT_CALL_PLAY,
-            "params": {"call_id": "call-1", "control_id": "ctl1", "state": "finished"},
-        })
+        await call._dispatch_event(
+            {
+                "event_type": EVENT_CALL_PLAY,
+                "params": {
+                    "call_id": "call-1",
+                    "control_id": "ctl1",
+                    "state": "finished",
+                },
+            }
+        )
         await asyncio.sleep(0.01)  # let the coroutine task run
         assert len(results) == 1
 
     @pytest.mark.asyncio
-    async def test_on_completed_not_called_on_non_terminal(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_on_completed_not_called_on_non_terminal(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         results = []
         action = await call.play(
             [{"type": "tts", "params": {"text": "Hi"}}],
@@ -1381,15 +1602,23 @@ class TestOnCompleted:
             on_completed=lambda event: results.append(event),
         )
         # Non-terminal state — callback should NOT fire
-        await call._dispatch_event({
-            "event_type": EVENT_CALL_PLAY,
-            "params": {"call_id": "call-1", "control_id": "ctl1", "state": "playing"},
-        })
+        await call._dispatch_event(
+            {
+                "event_type": EVENT_CALL_PLAY,
+                "params": {
+                    "call_id": "call-1",
+                    "control_id": "ctl1",
+                    "state": "playing",
+                },
+            }
+        )
         assert not action.is_done
         assert len(results) == 0
 
     @pytest.mark.asyncio
-    async def test_on_completed_error_does_not_crash(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_on_completed_error_does_not_crash(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         def bad_callback(event: RelayEvent) -> None:
             raise RuntimeError("callback error")
 
@@ -1399,29 +1628,46 @@ class TestOnCompleted:
             on_completed=bad_callback,
         )
         # Should not raise
-        await call._dispatch_event({
-            "event_type": EVENT_CALL_PLAY,
-            "params": {"call_id": "call-1", "control_id": "ctl1", "state": "finished"},
-        })
+        await call._dispatch_event(
+            {
+                "event_type": EVENT_CALL_PLAY,
+                "params": {
+                    "call_id": "call-1",
+                    "control_id": "ctl1",
+                    "state": "finished",
+                },
+            }
+        )
         assert action.is_done
 
     @pytest.mark.asyncio
-    async def test_on_completed_on_record(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_on_completed_on_record(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         results = []
         from signalwire.relay.constants import EVENT_CALL_RECORD
+
         action = await call.record(
             control_id="r1",
             on_completed=lambda event: results.append(event),
         )
-        await call._dispatch_event({
-            "event_type": EVENT_CALL_RECORD,
-            "params": {"call_id": "call-1", "control_id": "r1", "state": "finished"},
-        })
+        await call._dispatch_event(
+            {
+                "event_type": EVENT_CALL_RECORD,
+                "params": {
+                    "call_id": "call-1",
+                    "control_id": "r1",
+                    "state": "finished",
+                },
+            }
+        )
         assert action.is_done
         assert len(results) == 1
 
     @pytest.mark.asyncio
-    async def test_on_completed_on_call_gone(self, call: Call, mock_client: MagicMock) -> None:
+    async def test_on_completed_on_call_gone(
+        self, call: Call, mock_client: MagicMock
+    ) -> None:
         """on_completed fires even when call is gone (404)."""
         mock_client.execute.side_effect = MockRelayError(404, "Call not found")
         results = []
