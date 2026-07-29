@@ -68,8 +68,7 @@ def default_skill(mock_agent: Mock) -> "SpiderSkill":
 
         from signalwire.skills.spider.skill import SpiderSkill
 
-        skill = SpiderSkill(mock_agent, {})
-    return skill
+        return SpiderSkill(mock_agent, {})
 
 
 @pytest.fixture
@@ -99,8 +98,7 @@ def custom_skill(mock_agent: Mock) -> "SpiderSkill":
 
         from signalwire.skills.spider.skill import SpiderSkill
 
-        skill = SpiderSkill(mock_agent, params)
-    return skill
+        return SpiderSkill(mock_agent, params)
 
 
 # ===================================================================

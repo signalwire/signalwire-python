@@ -89,9 +89,12 @@ class TestSearchEngineVectorSearch:
 
     def setup_method(self) -> None:
         """Set up test database"""
-        self.tmp_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-        self.db_path = self.tmp_file.name
-        self.tmp_file.close()
+        # mkstemp, not NamedTemporaryFile(delete=False): we want the temp PATH,
+        # not a live handle. NamedTemporaryFile leaves its file object open until
+        # we close it (and would leak it if setup raised in between); mkstemp
+        # hands back a bare fd we close immediately. teardown_method unlinks.
+        fd, self.db_path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
 
         # Create test database
         conn = sqlite3.connect(self.db_path)
@@ -226,9 +229,12 @@ class TestSearchEngineKeywordSearch:
 
     def setup_method(self) -> None:
         """Set up test database with FTS"""
-        self.tmp_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-        self.db_path = self.tmp_file.name
-        self.tmp_file.close()
+        # mkstemp, not NamedTemporaryFile(delete=False): we want the temp PATH,
+        # not a live handle. NamedTemporaryFile leaves its file object open until
+        # we close it (and would leak it if setup raised in between); mkstemp
+        # hands back a bare fd we close immediately. teardown_method unlinks.
+        fd, self.db_path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
 
         # Create test database
         conn = sqlite3.connect(self.db_path)
@@ -335,9 +341,12 @@ class TestSearchEngineHybridSearch:
 
     def setup_method(self) -> None:
         """Set up test database"""
-        self.tmp_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-        self.db_path = self.tmp_file.name
-        self.tmp_file.close()
+        # mkstemp, not NamedTemporaryFile(delete=False): we want the temp PATH,
+        # not a live handle. NamedTemporaryFile leaves its file object open until
+        # we close it (and would leak it if setup raised in between); mkstemp
+        # hands back a bare fd we close immediately. teardown_method unlinks.
+        fd, self.db_path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
 
         # Create minimal database for testing
         conn = sqlite3.connect(self.db_path)
@@ -557,9 +566,12 @@ class TestSearchEngineUtilities:
 
     def setup_method(self) -> None:
         """Set up test database"""
-        self.tmp_file = tempfile.NamedTemporaryFile(suffix=".db", delete=False)
-        self.db_path = self.tmp_file.name
-        self.tmp_file.close()
+        # mkstemp, not NamedTemporaryFile(delete=False): we want the temp PATH,
+        # not a live handle. NamedTemporaryFile leaves its file object open until
+        # we close it (and would leak it if setup raised in between); mkstemp
+        # hands back a bare fd we close immediately. teardown_method unlinks.
+        fd, self.db_path = tempfile.mkstemp(suffix=".db")
+        os.close(fd)
 
         # Create test database with stats
         conn = sqlite3.connect(self.db_path)

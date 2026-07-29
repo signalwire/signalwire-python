@@ -49,6 +49,7 @@ from __future__ import annotations
 
 import asyncio
 import atexit
+import contextlib
 import json
 import os
 import subprocess
@@ -796,10 +797,8 @@ async def signalwire_relay_client(
             mock_relay.session_id = client._session_id
             yield client
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 await client.disconnect()
-            except Exception:
-                pass
 
     _active_clients.clear()
 

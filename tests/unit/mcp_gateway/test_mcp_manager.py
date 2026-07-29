@@ -291,8 +291,7 @@ class TestMCPClientCallMethod:
 
     def _make_client(self) -> MCPClient:
         service = MCPService(name="svc", command=["cmd"], description="")
-        client = MCPClient(service)
-        return client
+        return MCPClient(service)
 
     def test_call_method_raises_when_shutting_down(self) -> None:
         """call_method should raise RuntimeError when shutdown is set."""

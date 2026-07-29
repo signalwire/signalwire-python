@@ -29,8 +29,7 @@ class TestAgentBaseInitialization:
         """Helper to create a properly mocked agent"""
         with pytest.MonkeyPatch().context() as m:
             m.setattr("signalwire.core.agent_base.uvicorn", Mock())
-            agent = AgentBase(schema_validation=False, **kwargs)
-        return agent
+            return AgentBase(schema_validation=False, **kwargs)
 
     def test_basic_initialization(self) -> None:
         """Test basic AgentBase initialization"""
@@ -619,8 +618,7 @@ def _make_agent(**kwargs: Any) -> AgentBase:
     """Module-level helper to create a properly mocked agent."""
     with pytest.MonkeyPatch().context() as m:
         m.setattr("signalwire.core.agent_base.uvicorn", Mock())
-        agent = AgentBase(schema_validation=False, **kwargs)
-    return agent
+        return AgentBase(schema_validation=False, **kwargs)
 
 
 class TestRenderSwml:

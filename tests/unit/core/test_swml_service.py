@@ -12,6 +12,7 @@ Unit tests for SWMLService class
 """
 
 import pytest
+import contextlib
 import json
 from typing import Any
 from unittest.mock import Mock, patch, MagicMock
@@ -770,11 +771,9 @@ class TestProxyDetection:
                 "X-Forwarded-For": "10.0.0.1, 10.0.0.2",
             }
         )
-        try:
+        # Known structlog 'message' parameter conflict in production code
+        with contextlib.suppress(TypeError):
             mock_swml_service._detect_proxy_from_request(request)
-        except TypeError:
-            # Known structlog 'message' parameter conflict in production code
-            pass
         # Cannot determine public URL from X-Forwarded-For alone
         assert mock_swml_service._proxy_url_base is None
 
@@ -2274,10 +2273,8 @@ class TestProxyDetectionDebug:
         request = self._make_request(headers={}, url="http://127.0.0.1:3001/test")
         # The log.warning call for X-Forwarded-For has a known structlog
         # 'message' parameter conflict, so catch TypeError if triggered.
-        try:
+        with contextlib.suppress(TypeError):
             svc._detect_proxy_from_request(request)
-        except TypeError:
-            pass
         assert svc._proxy_url_base is None
 
     def test_proxy_debug_mode_false(self) -> None:

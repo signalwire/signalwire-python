@@ -23,6 +23,7 @@ Driven through the real ``requests`` transport into the shared
 
 from __future__ import annotations
 
+import contextlib
 from typing import TYPE_CHECKING
 
 from signalwire.rest import RequestOptions
@@ -65,10 +66,8 @@ class TestListVerbHonorsRequestOptions:
         mock.push_scenario(
             "relay-rest.list_addresses", 503, {"errors": [{"code": "X"}]}
         )
-        try:
+        with contextlib.suppress(Exception):
             signalwire_client.addresses.list()
-        except Exception:
-            pass
         assert _attempts(mock, self._PATH, "GET") == 1
 
 
@@ -119,10 +118,8 @@ class TestCreateVerbHonorsRequestOptions:
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
         mock.push_scenario("relay-rest.create_address", 503, {"error": "x"})
-        try:
+        with contextlib.suppress(Exception):
             self._create(signalwire_client)
-        except Exception:
-            pass
         assert _attempts(mock, self._PATH, "POST") == 1
 
 
@@ -145,8 +142,6 @@ class TestGeneratedOperationMethodHonorsRequestOptions:
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
         mock.push_scenario("datasphere.search_documents", 503, {"error": "x"})
-        try:
+        with contextlib.suppress(Exception):
             signalwire_client.datasphere.documents.search(query_string="hello")
-        except Exception:
-            pass
         assert _attempts(mock, self._PATH, "POST") == 1

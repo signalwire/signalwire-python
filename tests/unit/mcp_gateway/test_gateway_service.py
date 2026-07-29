@@ -543,9 +543,7 @@ class TestLoadConfig:
                 # First call: config doesn't exist; after copy it does
                 call_count[0] += 1
                 return call_count[0] > 1
-            if path == "sample_config.json":
-                return True
-            return False
+            return path == "sample_config.json"
 
         with (
             patch("os.path.exists", side_effect=exists_side_effect),

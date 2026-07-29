@@ -32,8 +32,7 @@ def _make_skill(params: dict[str, Any] | None = None) -> WebSearchSkill:
 
     mock_agent = Mock()
     mock_agent.define_tool = Mock()
-    skill = WebSearchSkill(agent=mock_agent, params=default_params)
-    return skill
+    return WebSearchSkill(agent=mock_agent, params=default_params)
 
 
 # ---------------------------------------------------------------------------

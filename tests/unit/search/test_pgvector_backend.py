@@ -1424,8 +1424,7 @@ class TestPgVectorSearchBackendMergeResults:
             mock_conn, mock_cursor = _make_mock_conn()
             mock_pg.connect.return_value = mock_conn
             mock_cursor.fetchone.return_value = None
-            sb = PgVectorSearchBackend("postgresql://localhost/testdb", "col")
-            return sb
+            return PgVectorSearchBackend("postgresql://localhost/testdb", "col")
 
     def test_merge_results_default_weights(self) -> None:
         """Test _merge_results uses default keyword_weight of 0.3"""
@@ -1557,8 +1556,7 @@ class TestPgVectorSearchBackendMergeAllResults:
             mock_conn, mock_cursor = _make_mock_conn()
             mock_pg.connect.return_value = mock_conn
             mock_cursor.fetchone.return_value = None
-            sb = PgVectorSearchBackend("postgresql://localhost/testdb", "col")
-            return sb
+            return PgVectorSearchBackend("postgresql://localhost/testdb", "col")
 
     def test_merge_all_results_three_sources(self) -> None:
         """Max-signal-wins scoring with 0.1 per-additional-source agreement boost.
@@ -1743,8 +1741,7 @@ class TestPgVectorSearchBackendSearch:
             mock_conn, mock_cursor = _make_mock_conn()
             mock_pg.connect.return_value = mock_conn
             mock_cursor.fetchone.return_value = None
-            sb = PgVectorSearchBackend("postgresql://localhost/testdb", "col")
-            return sb
+            return PgVectorSearchBackend("postgresql://localhost/testdb", "col")
 
     def test_search_calls_all_sub_searches(self) -> None:
         """Test search invokes vector, keyword, and metadata searches"""

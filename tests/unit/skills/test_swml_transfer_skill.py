@@ -45,8 +45,7 @@ def _make_skill(params: dict[str, Any] | None = None) -> SWMLTransferSkill:
     mock_agent = Mock()
     mock_agent.define_tool = Mock()
     mock_agent.register_swaig_function = Mock()
-    skill = SWMLTransferSkill(agent=mock_agent, params=default_params)
-    return skill
+    return SWMLTransferSkill(agent=mock_agent, params=default_params)
 
 
 # ---------------------------------------------------------------------------
