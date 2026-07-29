@@ -16,6 +16,8 @@ import tempfile
 import os
 import sqlite3
 import json
+from contextlib import closing
+from typing import Any
 from unittest.mock import Mock, patch, MagicMock, mock_open
 from pathlib import Path
 
@@ -500,11 +502,117 @@ class TestIndexBuilderIndexValidation:
         with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
             self.temp_db = f.name
             f.write(b"invalid sqlite data")
-        
+
         result = self.builder.validate_index(self.temp_db)
-        
+
         assert result["valid"] is False
         assert "error" in result
+
+
+class TestValidateIndexClosesConnection:
+    """`validate_index` must close its sqlite connection on EVERY return path.
+
+    A leaked handle is invisible on POSIX (unlink succeeds regardless) but on
+    Windows it makes the file undeletable -- `PermissionError: [WinError 32] The
+    process cannot access the file because it is being used by another process`,
+    which is how this surfaced (nightly Multi-OS run 30238061313, windows-latest).
+
+    These tests assert the platform-independent invariant -- that every connection
+    opened is also closed -- so the Windows-only bug is provable on POSIX too.
+    """
+
+    def _connect_spy(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> list[sqlite3.Connection]:
+        """Record every Connection validate_index opens, so we can assert it closed."""
+        opened: list[sqlite3.Connection] = []
+        real_connect = sqlite3.connect
+
+        def spy(*args: Any, **kwargs: Any) -> sqlite3.Connection:
+            # `sqlite3.connect` is overloaded, so calling it through *args widens
+            # the result to Any; annotate to keep the spy's return type honest.
+            conn: sqlite3.Connection = real_connect(*args, **kwargs)
+            opened.append(conn)
+            return conn
+
+        monkeypatch.setattr(
+            "signalwire.search.index_builder.sqlite3.connect", spy
+        )
+        return opened
+
+    @staticmethod
+    def _is_closed(conn: sqlite3.Connection) -> bool:
+        """A closed Connection raises ProgrammingError on any further use."""
+        try:
+            conn.execute("SELECT 1")
+        except sqlite3.ProgrammingError:
+            return True
+        return False
+
+    def test_missing_tables_path_closes_connection(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The `Missing tables` early return must not leak the handle."""
+        db = tmp_path / "missing_tables.db"
+        with closing(sqlite3.connect(str(db))) as setup:
+            setup.execute("CREATE TABLE chunks (id INTEGER)")
+            setup.commit()
+
+        opened = self._connect_spy(monkeypatch)
+        result = IndexBuilder().validate_index(str(db))
+
+        assert result["valid"] is False
+        assert "Missing tables" in result["error"]
+        assert len(opened) == 1, "expected validate_index to open exactly one connection"
+        assert self._is_closed(opened[0]), "connection leaked on the missing-tables path"
+
+        # The operation Windows refuses when a handle is still open.
+        db.unlink()
+
+    def test_database_error_path_closes_connection(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The exception path must not leak the handle either.
+
+        `sqlite3.connect` is lazy, so it succeeds on a non-database file and the
+        failure surfaces from the first query -- inside the `try`, after the
+        connection exists.
+        """
+        db = tmp_path / "not_a_database.db"
+        db.write_bytes(b"invalid sqlite data")
+
+        opened = self._connect_spy(monkeypatch)
+        result = IndexBuilder().validate_index(str(db))
+
+        assert result["valid"] is False
+        assert "error" in result
+        assert len(opened) == 1, "expected validate_index to open exactly one connection"
+        assert self._is_closed(opened[0]), "connection leaked on the error path"
+
+        db.unlink()
+
+    def test_valid_index_path_closes_connection(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """The success path must close too (it did before; guard against regression)."""
+        db = tmp_path / "valid.db"
+        builder = IndexBuilder()
+        builder._create_database(
+            str(db),
+            [{"content": "Test", "filename": "t.txt", "embedding": b"data"}],
+            ["en"],
+            ["/src"],
+            ["txt"],
+        )
+
+        opened = self._connect_spy(monkeypatch)
+        result = builder.validate_index(str(db))
+
+        assert result["valid"] is True
+        assert len(opened) == 1
+        assert self._is_closed(opened[0]), "connection leaked on the success path"
+
+        db.unlink()
 
 
 class TestIndexBuilderBuildMethods:
@@ -563,10 +671,12 @@ class TestIndexBuilderBuildMethods:
             mock_create_db.assert_called_once()
             assert mock_model.encode.call_count == 2
     
-    def test_build_index_from_sources_no_files(self) -> None:
+    def test_build_index_from_sources_no_files(self, tmp_path: Path) -> None:
         """Test index building with no files found"""
-        # Don't create temp file since method should return early
-        temp_db = "/tmp/nonexistent.db"
+        # A path inside tmp_path that is deliberately never created: the method
+        # must return early. (`tmp_path`, not a hardcoded /tmp -- project rule,
+        # and it guarantees a clean directory.)
+        temp_db = str(tmp_path / "nonexistent.db")
         
         with patch.object(self.builder, '_discover_files_from_sources', return_value=[]):
             sources = [Path("/empty/dir")]
@@ -578,10 +688,10 @@ class TestIndexBuilderBuildMethods:
             # Database should not be created
             assert not os.path.exists(temp_db)
     
-    def test_build_index_from_sources_no_chunks(self) -> None:
+    def test_build_index_from_sources_no_chunks(self, tmp_path: Path) -> None:
         """Test index building with no chunks created"""
-        # Don't create temp file since method should return early
-        temp_db = "/tmp/nonexistent2.db"
+        # Deliberately-absent path; the method must return early.
+        temp_db = str(tmp_path / "nonexistent2.db")
         
         mock_files = [Path("test.txt")]
         

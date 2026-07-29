@@ -1915,17 +1915,19 @@ class ProjectGenerator:
 
         # handler.py
         handler_code = AWS_HANDLER_TEMPLATE.format(**template_vars)
-        (self.project_dir / "handler.py").write_text(handler_code)
+        (self.project_dir / "handler.py").write_text(handler_code, encoding="utf-8")
         print_success("Created handler.py")
 
         # requirements.txt
-        (self.project_dir / "requirements.txt").write_text(AWS_REQUIREMENTS_TEMPLATE)
+        (self.project_dir / "requirements.txt").write_text(
+            AWS_REQUIREMENTS_TEMPLATE, encoding="utf-8"
+        )
         print_success("Created requirements.txt")
 
         # deploy.sh
         deploy_code = AWS_DEPLOY_TEMPLATE.format(**template_vars)
         deploy_path = self.project_dir / "deploy.sh"
-        deploy_path.write_text(deploy_code)
+        deploy_path.write_text(deploy_code, encoding="utf-8")
         deploy_path.chmod(0o755)
         print_success("Created deploy.sh")
 
@@ -1933,7 +1935,9 @@ class ProjectGenerator:
         self._create_cloud_env_example("aws")
 
         # .gitignore
-        (self.project_dir / ".gitignore").write_text(TEMPLATE_GITIGNORE)
+        (self.project_dir / ".gitignore").write_text(
+            TEMPLATE_GITIGNORE, encoding="utf-8"
+        )
         print_success("Created .gitignore")
 
         # README.md
@@ -1951,17 +1955,19 @@ class ProjectGenerator:
 
         # main.py
         main_code = GCP_MAIN_TEMPLATE.format(**template_vars)
-        (self.project_dir / "main.py").write_text(main_code)
+        (self.project_dir / "main.py").write_text(main_code, encoding="utf-8")
         print_success("Created main.py")
 
         # requirements.txt
-        (self.project_dir / "requirements.txt").write_text(GCP_REQUIREMENTS_TEMPLATE)
+        (self.project_dir / "requirements.txt").write_text(
+            GCP_REQUIREMENTS_TEMPLATE, encoding="utf-8"
+        )
         print_success("Created requirements.txt")
 
         # deploy.sh
         deploy_code = GCP_DEPLOY_TEMPLATE.format(**template_vars)
         deploy_path = self.project_dir / "deploy.sh"
-        deploy_path.write_text(deploy_code)
+        deploy_path.write_text(deploy_code, encoding="utf-8")
         deploy_path.chmod(0o755)
         print_success("Created deploy.sh")
 
@@ -1969,7 +1975,9 @@ class ProjectGenerator:
         self._create_cloud_env_example("gcp")
 
         # .gitignore
-        (self.project_dir / ".gitignore").write_text(TEMPLATE_GITIGNORE)
+        (self.project_dir / ".gitignore").write_text(
+            TEMPLATE_GITIGNORE, encoding="utf-8"
+        )
         print_success("Created .gitignore")
 
         # README.md
@@ -1991,31 +1999,37 @@ class ProjectGenerator:
 
         # function_app/__init__.py
         init_code = AZURE_INIT_TEMPLATE.format(**template_vars)
-        (function_dir / "__init__.py").write_text(init_code)
+        (function_dir / "__init__.py").write_text(init_code, encoding="utf-8")
         print_success("Created function_app/__init__.py")
 
         # function_app/function.json
-        (function_dir / "function.json").write_text(AZURE_FUNCTION_JSON_TEMPLATE)
+        (function_dir / "function.json").write_text(
+            AZURE_FUNCTION_JSON_TEMPLATE, encoding="utf-8"
+        )
         print_success("Created function_app/function.json")
 
         # host.json
-        (self.project_dir / "host.json").write_text(AZURE_HOST_JSON_TEMPLATE)
+        (self.project_dir / "host.json").write_text(
+            AZURE_HOST_JSON_TEMPLATE, encoding="utf-8"
+        )
         print_success("Created host.json")
 
         # local.settings.json
         (self.project_dir / "local.settings.json").write_text(
-            AZURE_LOCAL_SETTINGS_TEMPLATE
+            AZURE_LOCAL_SETTINGS_TEMPLATE, encoding="utf-8"
         )
         print_success("Created local.settings.json")
 
         # requirements.txt
-        (self.project_dir / "requirements.txt").write_text(AZURE_REQUIREMENTS_TEMPLATE)
+        (self.project_dir / "requirements.txt").write_text(
+            AZURE_REQUIREMENTS_TEMPLATE, encoding="utf-8"
+        )
         print_success("Created requirements.txt")
 
         # deploy.sh
         deploy_code = AZURE_DEPLOY_TEMPLATE.format(**template_vars)
         deploy_path = self.project_dir / "deploy.sh"
-        deploy_path.write_text(deploy_code)
+        deploy_path.write_text(deploy_code, encoding="utf-8")
         deploy_path.chmod(0o755)
         print_success("Created deploy.sh")
 
@@ -2023,7 +2037,9 @@ class ProjectGenerator:
         self._create_cloud_env_example("azure")
 
         # .gitignore
-        (self.project_dir / ".gitignore").write_text(TEMPLATE_GITIGNORE)
+        (self.project_dir / ".gitignore").write_text(
+            TEMPLATE_GITIGNORE, encoding="utf-8"
+        )
         print_success("Created .gitignore")
 
         # README.md
@@ -2073,7 +2089,7 @@ class ProjectGenerator:
 SWML_BASIC_AUTH_USER=admin
 SWML_BASIC_AUTH_PASSWORD=your-secure-password
 """
-        (self.project_dir / ".env.example").write_text(env_content)
+        (self.project_dir / ".env.example").write_text(env_content, encoding="utf-8")
         print_success("Created .env.example")
 
     def _create_cloud_readme(self, platform: str) -> None:
@@ -2269,7 +2285,7 @@ curl -X POST https://YOUR-APP.azurewebsites.net/api/function_app/swaig \\
 Set your phone number's SWML URL to the endpoint URL shown after deployment.
 """
 
-        (self.project_dir / "README.md").write_text(readme)
+        (self.project_dir / "README.md").write_text(readme, encoding="utf-8")
         print_success("Created README.md")
 
     def _create_directories(self) -> None:
@@ -2291,24 +2307,26 @@ Set your phone number's SWML URL to the endpoint URL shown after deployment.
         agents_dir = self.project_dir / "agents"
 
         # __init__.py
-        (agents_dir / "__init__.py").write_text(TEMPLATE_AGENTS_INIT)
+        (agents_dir / "__init__.py").write_text(TEMPLATE_AGENTS_INIT, encoding="utf-8")
         print_success("Created agents/__init__.py")
 
         # main_agent.py
         agent_code = get_agent_template(
             self.config.get("agent_type", "basic"), self.features
         )
-        (agents_dir / "main_agent.py").write_text(agent_code)
+        (agents_dir / "main_agent.py").write_text(agent_code, encoding="utf-8")
         print_success("Created agents/main_agent.py")
 
         # skills/__init__.py
-        (self.project_dir / "skills" / "__init__.py").write_text(TEMPLATE_SKILLS_INIT)
+        (self.project_dir / "skills" / "__init__.py").write_text(
+            TEMPLATE_SKILLS_INIT, encoding="utf-8"
+        )
         print_success("Created skills/__init__.py")
 
     def _create_app_file(self) -> None:
         """Create main app.py entry point."""
         app_code = get_app_template(self.features)
-        (self.project_dir / "app.py").write_text(app_code)
+        (self.project_dir / "app.py").write_text(app_code, encoding="utf-8")
         print_success("Created app.py")
 
     def _create_config_files(self) -> None:
@@ -2342,43 +2360,49 @@ SWML_PROXY_URL_BASE=
 DEBUG_WEBHOOK_LEVEL=1
 """
 
-        (self.project_dir / ".env").write_text(env_content)
+        (self.project_dir / ".env").write_text(env_content, encoding="utf-8")
         print_success("Created .env")
 
         # .env.example
-        (self.project_dir / ".env.example").write_text(TEMPLATE_ENV_EXAMPLE)
+        (self.project_dir / ".env.example").write_text(
+            TEMPLATE_ENV_EXAMPLE, encoding="utf-8"
+        )
         print_success("Created .env.example")
 
         # .gitignore
-        (self.project_dir / ".gitignore").write_text(TEMPLATE_GITIGNORE)
+        (self.project_dir / ".gitignore").write_text(
+            TEMPLATE_GITIGNORE, encoding="utf-8"
+        )
         print_success("Created .gitignore")
 
         # requirements.txt
-        (self.project_dir / "requirements.txt").write_text(TEMPLATE_REQUIREMENTS)
+        (self.project_dir / "requirements.txt").write_text(
+            TEMPLATE_REQUIREMENTS, encoding="utf-8"
+        )
         print_success("Created requirements.txt")
 
     def _create_test_files(self) -> None:
         """Create test files."""
         tests_dir = self.project_dir / "tests"
 
-        (tests_dir / "__init__.py").write_text(TEMPLATE_TESTS_INIT)
+        (tests_dir / "__init__.py").write_text(TEMPLATE_TESTS_INIT, encoding="utf-8")
         print_success("Created tests/__init__.py")
 
         test_code = get_test_template(self.features.get("example_tool", True))
-        (tests_dir / "test_agent.py").write_text(test_code)
+        (tests_dir / "test_agent.py").write_text(test_code, encoding="utf-8")
         print_success("Created tests/test_agent.py")
 
     def _create_web_files(self) -> None:
         """Create web UI files."""
         web_dir = self.project_dir / "web"
 
-        (web_dir / "index.html").write_text(get_web_index_template())
+        (web_dir / "index.html").write_text(get_web_index_template(), encoding="utf-8")
         print_success("Created web/index.html")
 
     def _create_readme(self) -> None:
         """Create README.md."""
         readme = get_readme_template(self.project_name, self.features)
-        (self.project_dir / "README.md").write_text(readme)
+        (self.project_dir / "README.md").write_text(readme, encoding="utf-8")
         print_success("Created README.md")
 
     def _create_virtualenv(self) -> None:

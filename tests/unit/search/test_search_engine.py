@@ -16,6 +16,7 @@ import sqlite3
 import json
 import tempfile
 import os
+from contextlib import closing
 from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
 
@@ -26,11 +27,14 @@ from typing import Any
 class TestSearchEngineInit:
     """Test SearchEngine initialization"""
     
-    def test_init_with_valid_index(self) -> None:
+    def test_init_with_valid_index(self, tmp_path: Path) -> None:
         """Test initialization with valid index file"""
-        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp:
-            # Create a minimal database
-            conn = sqlite3.connect(tmp.name)
+        # `tmp_path`, not NamedTemporaryFile(delete=False): the latter keeps its own
+        # OS handle open for the life of the `with` block, and on Windows a file with
+        # a live handle cannot be unlinked (PermissionError/WinError 32).
+        db_path = str(tmp_path / 'valid_index.db')
+        # Create a minimal database
+        with closing(sqlite3.connect(db_path)) as conn:
             cursor = conn.cursor()
             cursor.execute('''
                 CREATE TABLE config (key TEXT, value TEXT)
@@ -39,28 +43,23 @@ class TestSearchEngineInit:
                 INSERT INTO config (key, value) VALUES ('embedding_dimensions', '768')
             ''')
             conn.commit()
-            conn.close()
-            
-            engine = SearchEngine(backend='sqlite', index_path=tmp.name)
-            assert engine.index_path == tmp.name
-            assert engine.embedding_dim == 768
-            assert engine.config['embedding_dimensions'] == '768'
 
-            os.unlink(tmp.name)
+        engine = SearchEngine(backend='sqlite', index_path=db_path)
+        assert engine.index_path == db_path
+        assert engine.embedding_dim == 768
+        assert engine.config['embedding_dimensions'] == '768'
 
-    def test_init_with_missing_config(self) -> None:
+    def test_init_with_missing_config(self, tmp_path: Path) -> None:
         """Test initialization with missing config table"""
-        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp:
-            # Create empty database
-            conn = sqlite3.connect(tmp.name)
-            conn.close()
+        db_path = str(tmp_path / 'missing_config.db')
+        # Create empty database
+        with closing(sqlite3.connect(db_path)):
+            pass
 
-            engine = SearchEngine(backend='sqlite', index_path=tmp.name)
-            assert engine.index_path == tmp.name
-            assert engine.embedding_dim == 768  # Default value
-            assert engine.config == {}
-
-            os.unlink(tmp.name)
+        engine = SearchEngine(backend='sqlite', index_path=db_path)
+        assert engine.index_path == db_path
+        assert engine.embedding_dim == 768  # Default value
+        assert engine.config == {}
 
     def test_init_with_nonexistent_file(self) -> None:
         """Test initialization with nonexistent index file"""
@@ -535,15 +534,15 @@ class TestSearchEngineUtilities:
 class TestSearchEngineEdgeCases:
     """Test edge cases and error handling"""
     
-    def test_fallback_search(self) -> None:
+    def test_fallback_search(self, tmp_path: Path) -> None:
         """Test fallback search functionality"""
-        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp:
-            # Create database with fallback search capability
-            conn = sqlite3.connect(tmp.name)
+        db_path = str(tmp_path / 'fallback.db')
+        # Create database with fallback search capability
+        with closing(sqlite3.connect(db_path)) as conn:
             cursor = conn.cursor()
-            
+
             cursor.execute('CREATE TABLE config (key TEXT, value TEXT)')
-            
+
             cursor.execute('''
                 CREATE TABLE chunks (
                     id INTEGER PRIMARY KEY,
@@ -555,23 +554,20 @@ class TestSearchEngineEdgeCases:
                     processed_content TEXT
                 )
             ''')
-            
+
             cursor.execute('''
                 INSERT INTO chunks (content, filename, section, tags, metadata, processed_content)
                 VALUES (?, ?, ?, ?, ?, ?)
             ''', ('Python tutorial content', 'tutorial.md', 'intro', '["python"]', '{}', 'python tutorial content'))
-            
+
             conn.commit()
-            conn.close()
-            
-            engine = SearchEngine(backend='sqlite', index_path=tmp.name)
-            results = engine._fallback_search('Python', count=1)
-            
-            assert len(results) == 1
-            assert 'Python' in results[0]['content']
-            assert results[0]['search_type'] == 'fallback'
-            
-            os.unlink(tmp.name)
+
+        engine = SearchEngine(backend='sqlite', index_path=db_path)
+        results = engine._fallback_search('Python', count=1)
+
+        assert len(results) == 1
+        assert 'Python' in results[0]['content']
+        assert results[0]['search_type'] == 'fallback'
     
     def test_fallback_search_database_error(self) -> None:
         """Test fallback search with database error"""

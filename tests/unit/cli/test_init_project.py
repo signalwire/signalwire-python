@@ -359,9 +359,13 @@ class TestProjectGenerator:
     """Tests for the ProjectGenerator class."""
 
     def _make_config(self, platform: str = 'local', **overrides: Any) -> dict[str, Any]:
+        # Relative, not '/tmp/...': the project rule forbids a hardcoded /tmp, and a
+        # rooted POSIX path is not portable anyway. Nothing here touches the disk --
+        # every generation path is mocked -- so no real directory is needed. Tests
+        # that assert on the value pass an explicit `tmp_path`-derived override.
         config: dict[str, Any] = {
             'project_name': 'test-agent',
-            'project_dir': '/tmp/test-agent',  # noqa: S108
+            'project_dir': 'test-agent',
             'platform': platform,
             'agent_type': 'basic',
             'features': {
@@ -379,12 +383,13 @@ class TestProjectGenerator:
         config.update(overrides)
         return config
 
-    def test_constructor(self) -> None:
-        config = self._make_config()
+    def test_constructor(self, tmp_path: Path) -> None:
+        target = tmp_path / 'test-agent'
+        config = self._make_config(project_dir=str(target))
         gen = ProjectGenerator(config)
         assert gen.project_name == 'test-agent'
         assert gen.platform == 'local'
-        assert gen.project_dir == Path('/tmp/test-agent')  # noqa: S108
+        assert gen.project_dir == target
 
     @patch.object(ProjectGenerator, '_generate_local', return_value=True)
     def test_generate_dispatches_to_local(self, mock_gen: MagicMock) -> None:
@@ -578,16 +583,21 @@ class TestMain:
         assert config['platform'] == 'aws'
 
     @patch('signalwire.cli.init_project.ProjectGenerator')
-    @patch('sys.argv', ['sw-agent-init', 'testproject', '--no-venv', '--dir', '/tmp/custom'])  # noqa: S108
-    def test_main_custom_dir(self, mock_gen_class: MagicMock) -> None:
+    def test_main_custom_dir(self, mock_gen_class: MagicMock, tmp_path: Path) -> None:
         mock_gen = Mock()
         mock_gen.generate.return_value = True
         mock_gen_class.return_value = mock_gen
 
-        main()
+        custom = tmp_path / 'custom'
+        with patch('sys.argv',
+                   ['sw-agent-init', 'testproject', '--no-venv', '--dir', str(custom)]):
+            main()
 
         config = mock_gen_class.call_args[0][0]
-        assert '/tmp/custom' in config['project_dir']  # noqa: S108
+        # main() builds `(Path(args.dir) / args.name).absolute()`. Compare Paths --
+        # a substring check against a POSIX literal fails on Windows, where the
+        # separator is `\` and a rooted POSIX path gains a drive letter.
+        assert Path(config['project_dir']) == (custom / 'testproject').absolute()
 
     @patch('signalwire.cli.init_project.ProjectGenerator')
     @patch('sys.argv', ['sw-agent-init', 'testproject', '--no-venv'])

@@ -1961,7 +1961,11 @@ class DokkuProjectGenerator:
         """Write a file to the project directory."""
         file_path = self.project_dir / path
         file_path.parent.mkdir(parents=True, exist_ok=True)
-        file_path.write_text(content)
+        # Always UTF-8, never the platform default. Several templates embed
+        # box-drawing characters (U+2500/U+2550) and arrows, which the Windows
+        # default codec (cp1252) cannot encode -- writing without an explicit
+        # encoding raises UnicodeEncodeError there.
+        file_path.write_text(content, encoding="utf-8")
 
         if executable:
             file_path.chmod(0o755)
@@ -2101,7 +2105,7 @@ def cmd_deploy(args: argparse.Namespace) -> int:
 
         try:
             with open(  # noqa: PTH123  # tests patch builtins.open while mocking Path; Path.open() would bypass the mock seam
-                "app.json"
+                "app.json", encoding="utf-8"
             ) as f:
                 app_json = json.load(f)
                 app_name = app_json.get("name")
@@ -2232,7 +2236,7 @@ def _get_app_name() -> str:
 
         try:
             with open(  # noqa: PTH123  # tests patch builtins.open while mocking Path; Path.open() would bypass the mock seam
-                "app.json"
+                "app.json", encoding="utf-8"
             ) as f:
                 # json.load() is typed -> Any; the "name" field is a string
                 # (default "" when absent). Coerce to satisfy the str return.
