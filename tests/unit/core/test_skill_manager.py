@@ -116,7 +116,7 @@ class TestSkillManagerLoading:
         assert len(skill_manager.loaded_skills) == 1
 
         # Check that skill was properly initialized
-        skill_instance = list(skill_manager.loaded_skills.values())[0]
+        skill_instance = next(iter(skill_manager.loaded_skills.values()))
         assert isinstance(skill_instance, MockSkill)
         assert skill_instance.setup_called is True
         assert skill_instance.register_tools_called is True
@@ -131,7 +131,7 @@ class TestSkillManagerLoading:
         )
 
         assert success is True
-        skill_instance = list(skill_manager.loaded_skills.values())[0]
+        skill_instance = next(iter(skill_manager.loaded_skills.values()))
         assert skill_instance.params == params
 
     def test_load_skill_setup_failure(self, mock_agent: AgentBase) -> None:
@@ -219,7 +219,7 @@ class TestSkillManagerUnloading:
         assert len(skill_manager.loaded_skills) == 1
 
         # Get the instance key
-        instance_key = list(skill_manager.loaded_skills.keys())[0]
+        instance_key = next(iter(skill_manager.loaded_skills.keys()))
 
         # Unload skill
         success = skill_manager.unload_skill(instance_key)
@@ -247,8 +247,8 @@ class TestSkillManagerUnloading:
 
         # Load and unload skill
         skill_manager.load_skill("cleanup_skill", CleanupSkill)
-        skill_instance = list(skill_manager.loaded_skills.values())[0]
-        instance_key = list(skill_manager.loaded_skills.keys())[0]
+        skill_instance = next(iter(skill_manager.loaded_skills.values()))
+        instance_key = next(iter(skill_manager.loaded_skills.keys()))
 
         skill_manager.unload_skill(instance_key)
 
@@ -287,7 +287,7 @@ class TestSkillManagerQueries:
         assert skill_manager.has_skill("mock_skill") is True
 
         # Unload skill
-        instance_key = list(skill_manager.loaded_skills.keys())[0]
+        instance_key = next(iter(skill_manager.loaded_skills.keys()))
         skill_manager.unload_skill(instance_key)
         assert skill_manager.has_skill("mock_skill") is False
 
@@ -338,7 +338,7 @@ class TestSkillManagerValidation:
 
         class EnvSkill(MockSkill):
             SKILL_NAME = "env_skill"
-            REQUIRED_ENV_VARS = ["MISSING_ENV_VAR"]
+            REQUIRED_ENV_VARS: ClassVar[list[str]] = ["MISSING_ENV_VAR"]
 
         success, error = skill_manager.load_skill("env_skill", EnvSkill)
         assert success is False
@@ -352,7 +352,9 @@ class TestSkillManagerValidation:
 
         class EnvSkill(MockSkill):
             SKILL_NAME = "env_skill"
-            REQUIRED_ENV_VARS = ["SIGNALWIRE_PROJECT_ID"]  # This is in mock_env_vars
+            REQUIRED_ENV_VARS: ClassVar[list[str]] = [
+                "SIGNALWIRE_PROJECT_ID"
+            ]  # This is in mock_env_vars
 
         success, error = skill_manager.load_skill("env_skill", EnvSkill)
         assert success is True
@@ -363,7 +365,7 @@ class TestSkillManagerValidation:
 
         class PackageSkill(MockSkill):
             SKILL_NAME = "package_skill"
-            REQUIRED_PACKAGES = ["nonexistent_package_xyz"]
+            REQUIRED_PACKAGES: ClassVar[list[str]] = ["nonexistent_package_xyz"]
 
         success, error = skill_manager.load_skill("package_skill", PackageSkill)
         assert success is False

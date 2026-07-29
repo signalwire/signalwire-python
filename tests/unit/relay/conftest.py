@@ -140,8 +140,8 @@ class MockWebSocket:
     async def __anext__(self) -> str:
         try:
             return await self.recv()
-        except (websockets.exceptions.ConnectionClosed, StopAsyncIteration):
-            raise StopAsyncIteration
+        except (websockets.exceptions.ConnectionClosed, StopAsyncIteration) as err:
+            raise StopAsyncIteration from err
 
     # --- test helpers ---
 

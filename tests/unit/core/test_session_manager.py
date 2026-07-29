@@ -411,7 +411,7 @@ class TestSessionManagerIntegration:
             assert manager.validate_token(call_id, function_name, token) is True
 
         # Test cross-validation (should all fail)
-        for i, (call_id, function_name, token) in enumerate(tokens[:10]):
+        for i, (_call_id, _function_name, token) in enumerate(tokens[:10]):
             for j, (other_call_id, other_function_name, _) in enumerate(tokens[10:20]):
                 if i != j:
                     assert (
@@ -432,14 +432,15 @@ class TestSessionManagerIntegration:
             token = manager.generate_token(f"func_{i}", f"call_{i}")
             tokens.append(token)
 
-        # All tokens should be valid base64
+        # All tokens should be valid base64. Decoded directly (no try/except): a
+        # malformed token raises here and names itself, and the length assert now
+        # reports the ACTUAL part count instead of being swallowed by a broad
+        # `except Exception: pytest.fail(...)`.
         for token in tokens:
-            try:
-                decoded = base64.urlsafe_b64decode(token.encode()).decode()
-                parts = decoded.split(".")
-                assert len(parts) == 5  # call_id.function.expiry.nonce.signature
-            except Exception:
-                pytest.fail(f"Token {token} should have valid structure")
+            decoded = base64.urlsafe_b64decode(token.encode()).decode()
+            parts = decoded.split(".")
+            # call_id.function.expiry.nonce.signature
+            assert len(parts) == 5, f"token {token} decoded to {parts!r}"
 
         # Debug info should be consistent
         for i, token in enumerate(tokens):

@@ -362,11 +362,11 @@ class TestConnectAuth:
                 project="p", token="t", contexts=["default", "support"]
             )
             await client.connect()
-            connect_msg = [
+            connect_msg = next(
                 m
                 for m in ws.sent_messages
                 if m.get("method") == METHOD_SIGNALWIRE_CONNECT
-            ][0]
+            )
             assert connect_msg["params"]["contexts"] == ["default", "support"]
             await client.disconnect()
         _active_clients.clear()

@@ -53,11 +53,11 @@ def _make_concierge(**overrides: Any) -> tuple[ConciergeAgent, MagicMock]:
             set_native_functions=Mock(),
         ),
     ):
-        kwargs: dict[str, Any] = dict(
-            venue_name=VENUE_NAME,
-            services=SERVICES,
-            amenities=AMENITIES,
-        )
+        kwargs: dict[str, Any] = {
+            "venue_name": VENUE_NAME,
+            "services": SERVICES,
+            "amenities": AMENITIES,
+        }
         kwargs.update(overrides)
         agent = ConciergeAgent(**kwargs)
 
@@ -246,7 +246,7 @@ class TestSetupConciergeAgent:
         calls = self.agent.prompt_add_section.call_args_list  # type: ignore[attr-defined]  # mock attr
         amen_calls = [c for c in calls if c[0][0] == "Amenities"]
         subsections = amen_calls[0][1]["subsections"]
-        pool_sub = [s for s in subsections if s["title"] == "Pool"][0]
+        pool_sub = next(s for s in subsections if s["title"] == "Pool")
         assert "7 AM - 10 PM" in pool_sub["body"]
         assert "2nd Floor" in pool_sub["body"]
 

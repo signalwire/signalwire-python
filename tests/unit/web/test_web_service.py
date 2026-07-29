@@ -33,7 +33,7 @@ import pytest
 
 
 # ---------------------------------------------------------------------------
-# Helpers – build a minimally-patched WebService instance
+# Helpers - build a minimally-patched WebService instance
 # ---------------------------------------------------------------------------
 
 
@@ -238,7 +238,7 @@ class TestLoadConfig:
     """Tests for _load_config with mocked ConfigLoader."""
 
     def test_no_config_file_sets_defaults(self, web_service: Any) -> None:
-        # Already exercised in fixture – directories default to empty dict
+        # Already exercised in fixture - directories default to empty dict
         assert isinstance(web_service.directories, dict)
 
     def test_config_with_service_section(self) -> None:
@@ -513,7 +513,7 @@ class TestPathTraversalProtection:
 
 
 # ---------------------------------------------------------------------------
-# XSS prevention – _generate_directory_listing
+# XSS prevention - _generate_directory_listing
 # ---------------------------------------------------------------------------
 
 
@@ -581,7 +581,7 @@ class TestXSSPrevention:
 
 
 # ---------------------------------------------------------------------------
-# _generate_directory_listing – structural tests
+# _generate_directory_listing - structural tests
 # ---------------------------------------------------------------------------
 
 
@@ -655,7 +655,7 @@ class TestDirectoryListing:
 
 
 # ---------------------------------------------------------------------------
-# _get_current_username – basic auth validation
+# _get_current_username - basic auth validation
 # ---------------------------------------------------------------------------
 
 
@@ -801,7 +801,7 @@ class TestMountDirectories:
         d = tmp_path / "web"
         d.mkdir()
         web_service.directories = {"noslash": str(d)}
-        # _mount_directories normalises the route – it should not crash
+        # _mount_directories normalises the route - it should not crash
         web_service._mount_directories()
 
 
@@ -851,7 +851,7 @@ class TestStartStop:
                 web_service.start()
 
     def test_stop_is_noop(self, web_service: Any) -> None:
-        # stop() is a placeholder – should not raise
+        # stop() is a placeholder - should not raise
         web_service.stop()
 
 

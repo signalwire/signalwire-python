@@ -256,7 +256,7 @@ class TestSidecarPatternViaSWMLService:
             }
         )
         rendered = json.loads(svc.render_document())
-        verbs = [list(v.keys())[0] for v in rendered["sections"]["main"]]
+        verbs = [next(iter(v.keys())) for v in rendered["sections"]["main"]]
         assert "answer" in verbs
         assert "ai_sidecar" in verbs
 

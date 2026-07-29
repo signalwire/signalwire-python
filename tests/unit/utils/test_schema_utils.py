@@ -169,7 +169,7 @@ class TestSchemaUtils:
 
             assert result == schema_data
         finally:
-            os.unlink(schema_path)
+            Path(schema_path).unlink()
 
     def test_load_schema_file_not_found(self) -> None:
         """Test schema loading when file doesn't exist"""
@@ -198,7 +198,7 @@ class TestSchemaUtils:
             assert result == {}
             utils.log.error.assert_called_once()
         finally:
-            os.unlink(schema_path)
+            Path(schema_path).unlink()
 
     def test_load_schema_no_path(self) -> None:
         """Test schema loading when no path is provided"""
@@ -655,7 +655,7 @@ class TestSchemaUtilsIntegration:
             assert "add_verb('ai'" in body
 
         finally:
-            os.unlink(schema_path)
+            Path(schema_path).unlink()
 
     def test_error_recovery(self) -> None:
         """Test error recovery scenarios"""

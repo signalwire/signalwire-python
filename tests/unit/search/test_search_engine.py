@@ -15,7 +15,7 @@ import pytest
 import sqlite3
 import json
 import tempfile
-import os
+import importlib.util
 from contextlib import closing
 from unittest.mock import Mock, patch, MagicMock
 from pathlib import Path
@@ -75,12 +75,7 @@ class TestSearchEngineInit:
         assert engine.model == mock_model
 
 
-try:
-    import numpy as _np
-
-    _has_numpy = True
-except ImportError:
-    _has_numpy = False
+_has_numpy = importlib.util.find_spec("numpy") is not None
 
 
 @pytest.mark.skipif(not _has_numpy, reason="numpy not installed")
@@ -165,7 +160,7 @@ class TestSearchEngineVectorSearch:
 
     def teardown_method(self) -> None:
         """Clean up test database"""
-        os.unlink(self.db_path)
+        Path(self.db_path).unlink()
 
     @patch("signalwire.search.search_engine.np")
     @patch("signalwire.search.search_engine.cosine_similarity")
@@ -294,7 +289,7 @@ class TestSearchEngineKeywordSearch:
 
     def teardown_method(self) -> None:
         """Clean up test database"""
-        os.unlink(self.db_path)
+        Path(self.db_path).unlink()
 
     def test_keyword_search_success(self) -> None:
         """Test successful keyword search"""
@@ -407,7 +402,7 @@ class TestSearchEngineHybridSearch:
 
     def teardown_method(self) -> None:
         """Clean up test database"""
-        os.unlink(self.db_path)
+        Path(self.db_path).unlink()
 
     @patch("signalwire.search.search_engine.np")
     @patch("signalwire.search.search_engine.cosine_similarity")
@@ -598,7 +593,7 @@ class TestSearchEngineUtilities:
 
     def teardown_method(self) -> None:
         """Clean up test database"""
-        os.unlink(self.db_path)
+        Path(self.db_path).unlink()
 
     def test_get_stats_success(self) -> None:
         """Test getting index statistics"""
@@ -2131,7 +2126,7 @@ class TestResultProcessing:
         ]
         penalized = engine._apply_diversity_penalties(results, 10)
         # 5th occurrence should have 0.4 penalty
-        fifth = [r for r in penalized if r["id"] == 4][0]
+        fifth = next(r for r in penalized if r["id"] == 4)
         assert fifth["diversity_penalty"] == 0.4
 
     # -- _apply_match_type_diversity --
