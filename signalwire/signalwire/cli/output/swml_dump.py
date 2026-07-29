@@ -36,6 +36,15 @@ def setup_output_suppression() -> None:
 
     # Capture and suppress print statements
     def suppressed_print(*args: Any, **kwargs: Any) -> None:
+        """Replacement for the builtin ``print`` that drops stdout writes.
+
+        Installed as ``builtins.print`` so that agent code loaded for a SWML
+        dump cannot contaminate stdout — the dumped SWML document must be the
+        only thing on stdout for the caller to parse. A call that names an
+        explicit ``file`` other than ``sys.stdout`` (typically ``sys.stderr``)
+        is forwarded to the saved original ``print``; everything else is
+        discarded silently.
+        """
         # If file is specified (like stderr), allow it
         if "file" in kwargs and kwargs["file"] is not sys.stdout:
             original_print(*args, **kwargs)
