@@ -49,6 +49,22 @@ logger = get_logger("search_service")
 if BaseModel is not None:
 
     class SearchRequest(BaseModel):
+        """Body of a ``POST /search`` request (pydantic-validated variant).
+
+        Attributes:
+            query: Natural-language search text. Expanded by
+                ``preprocess_query`` before matching.
+            index_name: Key into the service's configured indexes — an
+                ``.swsearch`` file for the sqlite backend, a collection name for
+                pgvector. An unknown key yields HTTP 404.
+            count: Maximum number of results to return.
+            similarity_threshold: Minimum similarity a chunk must reach to be
+                returned; 0.0 applies no floor.
+            tags: Restrict results to chunks carrying all of these tags.
+            language: Language code for query preprocessing; ``None`` is sent
+                to the preprocessor as ``"auto"`` for detection.
+        """
+
         query: str
         index_name: str = "default"
         count: int = 3
@@ -57,17 +73,45 @@ if BaseModel is not None:
         language: str | None = None
 
     class SearchResult(BaseModel):
+        """One matched chunk in a search response (pydantic-validated variant).
+
+        Attributes:
+            content: The chunk text as stored in the index.
+            score: Similarity of this chunk to the query; higher is closer.
+            metadata: Index-supplied chunk metadata (source filename, section
+                path, line range, detected code languages, and so on).
+        """
+
         content: str
         score: float
         metadata: dict[str, Any]
 
     class SearchResponse(BaseModel):
+        """Body of a ``POST /search`` response (pydantic-validated variant).
+
+        Attributes:
+            results: Matched chunks, best first. Empty when the index yielded
+                nothing or the underlying search raised — the service logs the
+                error and returns an empty list rather than failing the request.
+            query_analysis: What the preprocessor made of the query —
+                ``original_query``, ``enhanced_query``, ``detected_language``
+                and ``pos_analysis``.
+        """
+
         results: list[SearchResult]
         query_analysis: dict[str, Any] | None = None
 else:
     # Fallback classes when FastAPI is not available; these intentionally
     # shadow the pydantic versions above when the optional dep is absent.
     class SearchRequest:  # type: ignore[no-redef]
+        """Plain-object search request used when pydantic is not installed.
+
+        Field-for-field equivalent to the pydantic ``SearchRequest`` above, but
+        with no validation or coercion: whatever you pass is stored as-is. Only
+        :meth:`SearchService.search_direct` constructs it in this mode — without
+        FastAPI there is no HTTP route to receive one.
+        """
+
         def __init__(
             self,
             query: str,
@@ -77,6 +121,16 @@ else:
             tags: list[str] | None = None,
             language: str | None = None,
         ):
+            """Store the search parameters verbatim.
+
+            Args:
+                query: Natural-language search text.
+                index_name: Key into the service's configured indexes.
+                count: Maximum number of results to return.
+                similarity_threshold: Minimum similarity a chunk must reach.
+                tags: Restrict results to chunks carrying all of these tags.
+                language: Language code for preprocessing; ``None`` means auto.
+            """
             self.query = query
             self.index_name = index_name
             self.count = count
@@ -85,17 +139,47 @@ else:
             self.language = language
 
     class SearchResult:  # type: ignore[no-redef]
+        """Plain-object search result used when pydantic is not installed.
+
+        Carries the same three fields as the pydantic ``SearchResult`` above
+        with no validation. ``_handle_search`` builds these from the raw dicts
+        the search engine returns, and ``search_direct`` flattens them back to
+        dicts for the caller.
+        """
+
         def __init__(self, content: str, score: float, metadata: dict[str, Any]):
+            """Store one matched chunk.
+
+            Args:
+                content: The chunk text as stored in the index.
+                score: Similarity of this chunk to the query; higher is closer.
+                metadata: Index-supplied chunk metadata.
+            """
             self.content = content
             self.score = score
             self.metadata = metadata
 
     class SearchResponse:  # type: ignore[no-redef]
+        """Plain-object search response used when pydantic is not installed.
+
+        Equivalent to the pydantic ``SearchResponse`` above without validation.
+        Instances are also what the service's in-memory query cache stores, so
+        a cache hit returns the very same object to every caller.
+        """
+
         def __init__(
             self,
             results: list[SearchResult],
             query_analysis: dict[str, Any] | None = None,
         ):
+            """Store the matched chunks and the query analysis.
+
+            Args:
+                results: Matched chunks, best first; empty when nothing matched
+                    or the underlying search raised and was logged.
+                query_analysis: Preprocessor output — original and enhanced
+                    query text, detected language, and POS analysis.
+            """
             self.results = results
             self.query_analysis = query_analysis
 
@@ -211,6 +295,17 @@ class SearchService:
         async def add_security_headers(
             request: Request, call_next: Callable[[Request], Awaitable[Response]]
         ) -> Response:
+            """Stamp the configured security headers onto every response.
+
+            Args:
+                request: The incoming request; its URL scheme selects the
+                    header set, so HSTS-style headers are only added over https.
+                call_next: The rest of the middleware/route chain.
+
+            Returns:
+                The downstream response, mutated in place with the headers from
+                ``SecurityConfig.get_security_headers``.
+            """
             response = await call_next(request)
 
             # Add security headers
@@ -226,6 +321,21 @@ class SearchService:
         async def validate_host(
             request: Request, call_next: Callable[[Request], Awaitable[Response]]
         ) -> Response:
+            """Reject requests whose Host header is not in the allowed list.
+
+            Guards against DNS-rebinding and Host-header injection. The port is
+            stripped before the check, and a request with no Host header is let
+            through.
+
+            Args:
+                request: The incoming request, read for its ``host`` header.
+                call_next: The rest of the middleware/route chain.
+
+            Returns:
+                A bare ``400 Invalid host`` response when
+                ``SecurityConfig.should_allow_host`` rejects the host;
+                otherwise the downstream response unchanged.
+            """
             host = request.headers.get("host", "").split(":")[0]
             if host and not self.security.should_allow_host(host):
                 return Response(content="Invalid host", status_code=400)
@@ -270,6 +380,12 @@ class SearchService:
 
         # Create dependency for authenticated routes
         def get_authenticated() -> Any:
+            """Return the HTTP Basic security scheme, or ``None`` if disabled.
+
+            Returns:
+                The module's ``HTTPBasic`` instance when fastapi.security was
+                importable, else ``None`` — meaning routes run unauthenticated.
+            """
             if security:
                 return security
             return None
@@ -281,12 +397,42 @@ class SearchService:
             if not security
             else Depends(security),  # noqa: B008  # FastAPI DI: Depends() in default is the intended idiom
         ) -> SearchResponse:
+            """Handle ``POST /search``.
+
+            Args:
+                request: The parsed :class:`SearchRequest` body.
+                credentials: HTTP Basic credentials, injected by FastAPI when
+                    the security scheme is active; ``None`` when it is not.
+
+            Returns:
+                A :class:`SearchResponse`, served from the service's query
+                cache when the same query/index/count/tags combination was seen
+                before.
+
+            Raises:
+                HTTPException: 401 if the credentials do not match the
+                    service's basic-auth pair, or 404 if ``index_name`` is not
+                    one of the loaded indexes.
+            """
             if security:
                 self._get_current_username(credentials)
             return await self._handle_search(request)
 
         @self.app.get("/health")
         async def health() -> dict[str, Any]:
+            """Handle ``GET /health``.
+
+            Unauthenticated — it is registered without the security dependency
+            so a load balancer can probe it. Reports liveness only; it does not
+            re-check that the indexes still load.
+
+            Returns:
+                A dict with a constant ``status`` of ``"healthy"``, the active
+                ``backend``, the configured index names, whether SSL and auth
+                are enabled, and ``connection_string`` — masked to ``"***"`` on
+                the pgvector backend and ``None`` otherwise, so the DSN never
+                leaks.
+            """
             return {
                 "status": "healthy",
                 "backend": self.backend,

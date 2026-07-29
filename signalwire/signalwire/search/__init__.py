@@ -115,25 +115,94 @@ else:
     # These conditional fallbacks intentionally shadow the real imports above
     # when optional deps are absent; mypy can't model that mutual exclusion.
     def preprocess_query(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
+        """Unavailable-dependency stub for :func:`.query_processor.preprocess_query`.
+
+        Bound under this name only when one of numpy, scikit-learn,
+        sentence-transformers or nltk is missing, so ``from signalwire.search
+        import preprocess_query`` still succeeds without the extras installed.
+        Accepts and ignores any arguments; it never preprocesses a query.
+
+        Raises:
+            ImportError: Always, naming the missing packages and the
+                ``pip install signalwire-sdk[search]`` command that supplies them.
+        """
         _check_search_dependencies()
 
     def preprocess_document_content(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
+        """Unavailable-dependency stub for
+        :func:`.query_processor.preprocess_document_content`.
+
+        Bound under this name only when the search extras are missing, so the
+        import resolves and the failure is deferred to the call site with an
+        actionable message rather than raised at import time.
+
+        Raises:
+            ImportError: Always, listing the missing search dependencies.
+        """
         _check_search_dependencies()
 
     class DocumentProcessor:  # type: ignore[no-redef]
+        """Unavailable-dependency stub for
+        :class:`.document_processor.DocumentProcessor`.
+
+        Substituted for the real chunker when the search extras are absent so
+        that importing the name works; every attempt to construct one fails.
+        """
+
         def __init__(self, *args: Any, **kwargs: Any) -> None:
+            """Reject construction because the search extras are not installed.
+
+            Raises:
+                ImportError: Always, listing the missing search dependencies.
+            """
             _check_search_dependencies()
 
     class IndexBuilder:  # type: ignore[no-redef]
+        """Unavailable-dependency stub for :class:`.index_builder.IndexBuilder`.
+
+        Substituted for the real index builder when the search extras are
+        absent; construction always fails rather than silently building nothing.
+        """
+
         def __init__(self, *args: Any, **kwargs: Any) -> None:
+            """Reject construction because the search extras are not installed.
+
+            Raises:
+                ImportError: Always, listing the missing search dependencies.
+            """
             _check_search_dependencies()
 
     class SearchEngine:  # type: ignore[no-redef]
+        """Unavailable-dependency stub for :class:`.search_engine.SearchEngine`.
+
+        Substituted for the real query engine when the search extras are absent.
+        Note this stub is bound even for query-only workloads: embedding a query
+        needs sentence-transformers, so no search can run without the extras.
+        """
+
         def __init__(self, *args: Any, **kwargs: Any) -> None:
+            """Reject construction because the search extras are not installed.
+
+            Raises:
+                ImportError: Always, listing the missing search dependencies.
+            """
             _check_search_dependencies()
 
     class SearchService:  # type: ignore[no-redef]
+        """Unavailable-dependency stub for
+        :class:`.search_service.SearchService`.
+
+        Substituted for the real HTTP search service when the search extras are
+        absent. Unlike the real class — which degrades to direct search when
+        only FastAPI is missing — this stub cannot serve or search at all.
+        """
+
         def __init__(self, *args: Any, **kwargs: Any) -> None:
+            """Reject construction because the search extras are not installed.
+
+            Raises:
+                ImportError: Always, listing the missing search dependencies.
+            """
             _check_search_dependencies()
 
     __all__ = [
