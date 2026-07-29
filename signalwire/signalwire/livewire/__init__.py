@@ -114,10 +114,24 @@ class _NoopTracker:
             return True
 
     def was_logged(self, key: str) -> bool:
+        """Report whether ``once()`` has already emitted the message for *key*.
+
+        Args:
+            key: The de-duplication key passed to ``once()``.
+
+        Returns:
+            True if a message has been logged under *key*, False otherwise.
+            Does not itself log anything.
+        """
         with self._lock:
             return self._logged.get(key, False)
 
     def reset(self) -> None:
+        """Forget every key already logged, so ``once()`` will emit again.
+
+        Used mainly by tests, which share the module-level tracker and would
+        otherwise see a message suppressed because an earlier test triggered it.
+        """
         with self._lock:
             self._logged.clear()
 
@@ -162,6 +176,23 @@ class ChatContext:
         self.messages: list[dict[str, str]] = []
 
     def append(self, *, role: str = "user", text: str = "") -> "ChatContext":
+        """Append a message to the context, mirroring livekit ``ChatContext.append``.
+
+        The message is stored as ``{"role": role, "content": text}`` -- note the
+        *text* keyword lands under the ``content`` key, matching the OpenAI-style
+        chat shape rather than the argument name.
+
+        On SignalWire nothing is sent to the platform from here: prompt content
+        is carried by ``Agent(instructions=...)``, so this context is a
+        conversation buffer the caller can read back from ``messages``.
+
+        Args:
+            role: Speaker label for the message, e.g. ``"user"`` or ``"assistant"``.
+            text: Message body.
+
+        Returns:
+            self, so appends can be chained.
+        """
         self.messages.append({"role": role, "content": text})
         return self
 
@@ -269,6 +300,17 @@ class RunContext:
 
     @property
     def userdata(self) -> Any:
+        """The bound session's ``userdata``, as livekit exposes it to tool handlers.
+
+        Reads through to ``self.session.userdata`` rather than holding its own
+        copy, so a tool sees whatever the session currently carries.
+
+        Returns:
+            The session's userdata object, or an empty dict when no session is
+            attached. Tool handlers built by ``_register_function_tool`` are
+            currently constructed with ``RunContext(session=None)``, so they take
+            the empty-dict path -- a fresh dict each access, not shared state.
+        """
         if self.session is not None:
             return self.session.userdata
         return {}
@@ -344,10 +386,25 @@ class Agent:
 
     @property
     def session(self) -> Optional["AgentSession"]:
+        """The AgentSession this agent is bound to, or None before binding.
+
+        Returns:
+            The session set by ``AgentSession.start()`` / ``update_agent()``.
+            It is None on a freshly constructed Agent -- lifecycle hooks such as
+            ``on_enter`` must not assume it is populated unless a session has
+            started.
+        """
         return self._session
 
     @session.setter
     def session(self, value: "AgentSession | None") -> None:
+        """Bind this agent to *value*, or clear the binding when None.
+
+        Assignment only records the back-reference; it does not register the
+        agent with the session. The session owns that direction and sets this
+        itself from ``start()`` and ``update_agent()``, so callers rarely assign
+        it directly.
+        """
         self._session = value
 
     # ------------------------------------------------------------------
@@ -503,14 +560,40 @@ class AgentSession:
 
     @property
     def userdata(self) -> Any:
+        """Arbitrary per-session state, as livekit's ``AgentSession.userdata``.
+
+        Set from the ``userdata=`` constructor argument, defaulting to an empty
+        dict when that argument is None or omitted. The SDK never reads or
+        interprets it -- it is a caller-owned slot carried alongside the session,
+        and it is not transmitted to the SignalWire platform.
+
+        Returns:
+            Whatever object the caller stored; an empty dict by default.
+        """
         return self._userdata
 
     @userdata.setter
     def userdata(self, val: Any) -> None:
+        """Replace the session's user state wholesale with *val*.
+
+        Any object is accepted -- there is no type or shape check, and no
+        merging with the previous value. ``RunContext.userdata`` reads through
+        to this attribute, so a tool handler holding a RunContext bound to this
+        session observes the new value on its next access.
+        """
         self._userdata = val
 
     @property
     def history(self) -> list[dict[str, str]]:
+        """The session's transcript buffer, mirroring livekit's ``history``.
+
+        Returns:
+            The live list backing the session, in ``{"role": ..., "content": ...}``
+            form. It is created empty and, on SignalWire, stays empty: the
+            platform's control plane owns the conversation, and nothing in this
+            module appends to it. Callers may append to the returned list
+            themselves, but the SDK never populates or reads it.
+        """
         return self._history
 
     # ------------------------------------------------------------------
@@ -626,6 +709,29 @@ def _register_function_tool(sw_agent: Any, fn: "Callable[..., Any]") -> None:
     def handler(
         args: dict[str, Any], raw_data: dict[str, Any] | None = None
     ) -> "FunctionResult":
+        """Adapt a SWAIG tool invocation onto the wrapped LiveKit-style function.
+
+        This is the bridge between the two calling conventions: SignalWire's
+        ``define_tool`` hands the handler a flat ``args`` dict, while the
+        decorated function expects named Python parameters. Each parameter of
+        *fn* is resolved in turn -- ``self`` is skipped, a parameter annotated as
+        a ``RunContext`` receives a fresh ``RunContext(session=None)``, otherwise
+        the value comes from *args* or, when absent there, from the parameter's
+        own default. A parameter that is in neither is left unbound, so *fn*
+        raises ``TypeError`` for a genuinely missing required argument.
+
+        Args:
+            args: Tool arguments parsed by SignalWire from the LLM's call.
+            raw_data: Full SWAIG POST body. Accepted for signature compatibility
+                with ``define_tool`` and currently unused -- it is not forwarded
+                to *fn* and not exposed through the RunContext.
+
+        Returns:
+            The function's return value wrapped in a ``FunctionResult``: a str
+            is passed through as-is, anything else is rendered with ``str()``.
+            *fn* is always called synchronously, so a coroutine function would be
+            stringified as an un-awaited coroutine rather than executed.
+        """
         from signalwire.core.function_result import FunctionResult
 
         sig = inspect.signature(fn)
