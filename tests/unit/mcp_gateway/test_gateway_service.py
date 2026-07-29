@@ -545,46 +545,33 @@ class TestLoadConfig:
     def test_load_config_copies_sample_when_available(self, tmp_path: Path) -> None:
         config_path = str(tmp_path / "config.json")
 
-        # _load_config tests Path(...).exists(), not os.path.exists. Patching
-        # the latter intercepted nothing, so the real filesystem answered: the
-        # tmp_path config genuinely did not exist AND neither did
-        # sample_config.json, so the branch under test was never entered and
-        # shutil.copy was never called. Patch Path.exists, which receives the
-        # Path as self rather than a string argument.
-        call_count = [0]
+        def exists_side_effect(self: Path) -> bool:
+            # config.json is absent (so the sample path is taken); the sample is
+            # present. Delegate every other Path to the real filesystem.
+            if str(self) == config_path:
+                return False
+            if str(self) == "sample_config.json":
+                return True
+            return os.path.exists(str(self))  # noqa: PTH110  # real-fs fallback inside a Path.exists patch; Path.exists is the patched target
 
-        def exists_side_effect(self_path: Path) -> bool:
-            name = str(self_path)
-            if name == config_path:
-                # First call: config doesn't exist; after copy it does
-                call_count[0] += 1
-                return call_count[0] > 1
-            return name == "sample_config.json"
+        def copy_side_effect(src: str, dst: str) -> None:
+            # Stand in for the real copy so the source's own Path.open("r") has
+            # something real to read.
+            Path(dst).write_text(json.dumps(_minimal_config()))
 
         with (
             patch(
                 "signalwire.mcp_gateway.gateway_service.Path.exists",
-                new=exists_side_effect,
+                autospec=True,
+                side_effect=exists_side_effect,
             ),
-            patch("shutil.copy") as mock_copy,
+            patch("shutil.copy", side_effect=copy_side_effect) as mock_copy,
         ):
-            mock_file_content = json.dumps(_minimal_config())
-            mock_file = MagicMock()
-            mock_file.__enter__ = MagicMock(
-                return_value=MagicMock(read=MagicMock(return_value=mock_file_content))
-            )
-            mock_file.__exit__ = MagicMock(return_value=False)
+            loaded = self.gateway._load_config(config_path)
 
-            # _load_config reads through Path.open, not builtins.open, so
-            # patching builtins left the real read to hit a file that the
-            # mocked exists() only claimed was there.
-            with patch(
-                "signalwire.mcp_gateway.gateway_service.Path.open",
-                return_value=mock_file,
-            ):
-                self.gateway._load_config(config_path)
-
-            mock_copy.assert_called_once_with("sample_config.json", config_path)
+        mock_copy.assert_called_once_with("sample_config.json", config_path)
+        # The config actually produced by the copied sample was loaded.
+        assert loaded["server"]["port"] == _minimal_config()["server"]["port"]
 
     def test_load_config_converts_string_port_to_int(self, tmp_path: Path) -> None:
         config_data = _minimal_config()
@@ -1328,7 +1315,9 @@ class TestRunMethod:
             ),
             patch("signalwire.mcp_gateway.gateway_service.signal"),
             patch(
-                "signalwire.mcp_gateway.gateway_service.Path.exists", return_value=True
+                "signalwire.mcp_gateway.gateway_service.Path.exists",
+                autospec=True,
+                side_effect=lambda self: str(self) == "certs/server.pem",
             ),
             patch("signalwire.mcp_gateway.gateway_service.ssl") as mock_ssl,
         ):
