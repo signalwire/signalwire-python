@@ -365,6 +365,26 @@ sched_gate EXAMPLES-RUN tier=nightly defer=1 desc="shipped examples load/start a
 sched_gate WAIT-LIVENESS tier=nightly defer=1 desc="wait() liveness corpus runs on the reference + yields the golden classification" \
     -- python3 "$PORTING_SDK_DIR/scripts/diff_port_wait_liveness.py" --show-oracle --python-sdk "$PORT_ROOT"
 
+# ---- Security-property + suppression gates ----------------------------------
+# These three behavioural rules and the LEDGER suite were DEFINED for python by
+# porting-sdk and never scheduled here, so they had never run against the
+# reference. All four already pass; wiring them adds coverage, not a red.
+# Blocking tier, not nightly: measured at 0s, 0s, 0s and 2s respectively.
+sched_gate CA-VAR desc="REST + RELAY honour the custom-CA env vars" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/behavioral.py" --port python --repo "$PORT_ROOT" \
+        --rules CA-VAR
+
+sched_gate TLS-VERIFY desc="TLS verification is reachable and not silently disabled" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/behavioral.py" --port python --repo "$PORT_ROOT" \
+        --rules TLS-VERIFY
+
+sched_gate SECRET-SCRUB desc="credentials do not reach logs (static leg)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/behavioral.py" --port python --repo "$PORT_ROOT" \
+        --rules SECRET-SCRUB
+
+sched_gate LEDGER desc="ledger suite (SUPPRESSION-LEDGER/IGNORE-LEDGER-VERIFY)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/ledger.py" --port python --repo "$PORT_ROOT"
+
 # ---- Day-one deterministic doc/tree-hygiene gates ---------------------------
 sched_gate DOC-LINKS desc="every relative markdown link resolves to a tracked file" \
     -- python3 "$PORTING_SDK_DIR/scripts/doc_links.py" --port python --repo "$PORT_ROOT"
