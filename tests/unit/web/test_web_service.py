@@ -846,9 +846,11 @@ class TestStartStop:
 
     def test_start_without_uvicorn_raises(self, web_service: Any) -> None:
         web_service._basic_auth = ("u", "p")
-        with patch.dict("sys.modules", {"uvicorn": None}):
-            with pytest.raises((RuntimeError, ImportError)):
-                web_service.start()
+        with (
+            patch.dict("sys.modules", {"uvicorn": None}),
+            pytest.raises((RuntimeError, ImportError)),
+        ):
+            web_service.start()
 
     def test_stop_is_noop(self, web_service: Any) -> None:
         # stop() is a placeholder – should not raise

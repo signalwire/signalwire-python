@@ -48,11 +48,12 @@ def _make_survey(
             }
         ]
 
-    with patch(
-        "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
-    ) as mock_init:
+    with (
+        patch(
+            "signalwire.prefabs.survey.AgentBase.__init__", return_value=None
+        ) as mock_init,
         # Mock the methods that _setup_survey_agent calls on 'self'
-        with patch.multiple(
+        patch.multiple(
             "signalwire.prefabs.survey.AgentBase",
             prompt_add_section=MagicMock(),
             set_post_prompt=MagicMock(),
@@ -60,19 +61,20 @@ def _make_survey(
             set_params=MagicMock(),
             set_global_data=MagicMock(),
             set_native_functions=MagicMock(),
-        ):
-            from signalwire.prefabs.survey import SurveyAgent
+        ),
+    ):
+        from signalwire.prefabs.survey import SurveyAgent
 
-            survey = SurveyAgent(
-                survey_name=survey_name,
-                questions=questions,
-                introduction=introduction,
-                conclusion=conclusion,
-                brand_name=brand_name,
-                max_retries=max_retries,
-                name=name,
-                route=route,
-            )
+        survey = SurveyAgent(
+            survey_name=survey_name,
+            questions=questions,
+            introduction=introduction,
+            conclusion=conclusion,
+            brand_name=brand_name,
+            max_retries=max_retries,
+            name=name,
+            route=route,
+        )
     return survey, mock_init
 
 
@@ -357,8 +359,9 @@ class TestSetupSurveyAgent:
         """_setup_survey_agent adds expected prompt sections."""
         questions = [{"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}]
 
-        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
-            with patch.multiple(
+        with (
+            patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None),
+            patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
@@ -366,29 +369,31 @@ class TestSetupSurveyAgent:
                 set_params=MagicMock(),
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
-            ):
-                from signalwire.prefabs.survey import SurveyAgent
+            ),
+        ):
+            from signalwire.prefabs.survey import SurveyAgent
 
-                survey = SurveyAgent(survey_name="Test", questions=questions)
+            survey = SurveyAgent(survey_name="Test", questions=questions)
 
-                # Collect section titles from prompt_add_section calls
-                section_titles = [
-                    c.args[0] if c.args else c.kwargs.get("title")
-                    for c in survey.prompt_add_section.call_args_list  # type: ignore[attr-defined]  # mock attr
-                ]
-                assert "Personality" in section_titles
-                assert "Goal" in section_titles
-                assert "Instructions" in section_titles
-                assert "Introduction" in section_titles
-                assert "Survey Questions" in section_titles
-                assert "Conclusion" in section_titles
+            # Collect section titles from prompt_add_section calls
+            section_titles = [
+                c.args[0] if c.args else c.kwargs.get("title")
+                for c in survey.prompt_add_section.call_args_list  # type: ignore[attr-defined]  # mock attr
+            ]
+            assert "Personality" in section_titles
+            assert "Goal" in section_titles
+            assert "Instructions" in section_titles
+            assert "Introduction" in section_titles
+            assert "Survey Questions" in section_titles
+            assert "Conclusion" in section_titles
 
     def test_post_prompt_set(self) -> None:
         """_setup_survey_agent calls set_post_prompt with a JSON template."""
         questions = [{"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}]
 
-        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
-            with patch.multiple(
+        with (
+            patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None),
+            patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
@@ -396,15 +401,16 @@ class TestSetupSurveyAgent:
                 set_params=MagicMock(),
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
-            ):
-                from signalwire.prefabs.survey import SurveyAgent
+            ),
+        ):
+            from signalwire.prefabs.survey import SurveyAgent
 
-                survey = SurveyAgent(survey_name="Test", questions=questions)
-                survey.set_post_prompt.assert_called_once()  # type: ignore[attr-defined]  # mock attr
-                post_prompt_arg = survey.set_post_prompt.call_args[0][0]  # type: ignore[attr-defined]  # mock attr
-                assert "survey_name" in post_prompt_arg
-                assert "responses" in post_prompt_arg
-                assert "completion_status" in post_prompt_arg
+            survey = SurveyAgent(survey_name="Test", questions=questions)
+            survey.set_post_prompt.assert_called_once()  # type: ignore[attr-defined]  # mock attr
+            post_prompt_arg = survey.set_post_prompt.call_args[0][0]  # type: ignore[attr-defined]  # mock attr
+            assert "survey_name" in post_prompt_arg
+            assert "responses" in post_prompt_arg
+            assert "completion_status" in post_prompt_arg
 
     def test_hints_include_survey_and_brand(self) -> None:
         """add_hints includes the survey name, brand, and type-specific terms."""
@@ -419,8 +425,9 @@ class TestSetupSurveyAgent:
             },
         ]
 
-        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
-            with patch.multiple(
+        with (
+            patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None),
+            patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
@@ -428,36 +435,38 @@ class TestSetupSurveyAgent:
                 set_params=MagicMock(),
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
-            ):
-                from signalwire.prefabs.survey import SurveyAgent
+            ),
+        ):
+            from signalwire.prefabs.survey import SurveyAgent
 
-                survey = SurveyAgent(
-                    survey_name="CX Survey",
-                    questions=questions,
-                    brand_name="Acme",
-                )
+            survey = SurveyAgent(
+                survey_name="CX Survey",
+                questions=questions,
+                brand_name="Acme",
+            )
 
-                survey.add_hints.assert_called_once()  # type: ignore[attr-defined]  # mock attr
-                hints = survey.add_hints.call_args[0][0]  # type: ignore[attr-defined]  # mock attr
-                assert "CX Survey" in hints
-                assert "Acme" in hints
-                # Rating scale 1..3
-                assert "1" in hints
-                assert "2" in hints
-                assert "3" in hints
-                # yes_no
-                assert "yes" in hints
-                assert "no" in hints
-                # multiple_choice options
-                assert "Alpha" in hints
-                assert "Beta" in hints
+            survey.add_hints.assert_called_once()  # type: ignore[attr-defined]  # mock attr
+            hints = survey.add_hints.call_args[0][0]  # type: ignore[attr-defined]  # mock attr
+            assert "CX Survey" in hints
+            assert "Acme" in hints
+            # Rating scale 1..3
+            assert "1" in hints
+            assert "2" in hints
+            assert "3" in hints
+            # yes_no
+            assert "yes" in hints
+            assert "no" in hints
+            # multiple_choice options
+            assert "Alpha" in hints
+            assert "Beta" in hints
 
     def test_params_set(self) -> None:
         """set_params is called with expected AI parameters."""
         questions = [{"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}]
 
-        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
-            with patch.multiple(
+        with (
+            patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None),
+            patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
@@ -465,26 +474,28 @@ class TestSetupSurveyAgent:
                 set_params=MagicMock(),
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
-            ):
-                from signalwire.prefabs.survey import SurveyAgent
+            ),
+        ):
+            from signalwire.prefabs.survey import SurveyAgent
 
-                survey = SurveyAgent(survey_name="Test", questions=questions)
+            survey = SurveyAgent(survey_name="Test", questions=questions)
 
-                survey.set_params.assert_called_once()  # type: ignore[attr-defined]  # mock attr
-                params = survey.set_params.call_args[0][0]  # type: ignore[attr-defined]  # mock attr
-                assert params["wait_for_user"] is False
-                assert params["end_of_speech_timeout"] == 1500
-                assert params["ai_volume"] == 5
-                assert params["static_greeting_no_barge"] is True
-                # static_greeting equals the introduction message
-                assert params["static_greeting"] == survey.introduction
+            survey.set_params.assert_called_once()  # type: ignore[attr-defined]  # mock attr
+            params = survey.set_params.call_args[0][0]  # type: ignore[attr-defined]  # mock attr
+            assert params["wait_for_user"] is False
+            assert params["end_of_speech_timeout"] == 1500
+            assert params["ai_volume"] == 5
+            assert params["static_greeting_no_barge"] is True
+            # static_greeting equals the introduction message
+            assert params["static_greeting"] == survey.introduction
 
     def test_global_data_set(self) -> None:
         """set_global_data is called with survey metadata."""
         questions = [{"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}]
 
-        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
-            with patch.multiple(
+        with (
+            patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None),
+            patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
@@ -492,29 +503,31 @@ class TestSetupSurveyAgent:
                 set_params=MagicMock(),
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
-            ):
-                from signalwire.prefabs.survey import SurveyAgent
+            ),
+        ):
+            from signalwire.prefabs.survey import SurveyAgent
 
-                survey = SurveyAgent(
-                    survey_name="GD Survey",
-                    questions=questions,
-                    brand_name="GD Co",
-                    max_retries=3,
-                )
+            survey = SurveyAgent(
+                survey_name="GD Survey",
+                questions=questions,
+                brand_name="GD Co",
+                max_retries=3,
+            )
 
-                survey.set_global_data.assert_called_once()  # type: ignore[attr-defined]  # mock attr
-                gd = survey.set_global_data.call_args[0][0]  # type: ignore[attr-defined]  # mock attr
-                assert gd["survey_name"] == "GD Survey"
-                assert gd["brand_name"] == "GD Co"
-                assert gd["max_retries"] == 3
-                assert gd["questions"] is survey.questions
+            survey.set_global_data.assert_called_once()  # type: ignore[attr-defined]  # mock attr
+            gd = survey.set_global_data.call_args[0][0]  # type: ignore[attr-defined]  # mock attr
+            assert gd["survey_name"] == "GD Survey"
+            assert gd["brand_name"] == "GD Co"
+            assert gd["max_retries"] == 3
+            assert gd["questions"] is survey.questions
 
     def test_native_functions_set(self) -> None:
         """set_native_functions is called with check_time."""
         questions = [{"id": "q1", "text": "Rate us?", "type": "rating", "scale": 5}]
 
-        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
-            with patch.multiple(
+        with (
+            patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None),
+            patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
@@ -522,11 +535,12 @@ class TestSetupSurveyAgent:
                 set_params=MagicMock(),
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
-            ):
-                from signalwire.prefabs.survey import SurveyAgent
+            ),
+        ):
+            from signalwire.prefabs.survey import SurveyAgent
 
-                survey = SurveyAgent(survey_name="Test", questions=questions)
-                survey.set_native_functions.assert_called_once_with(["check_time"])  # type: ignore[attr-defined]  # mock attr
+            survey = SurveyAgent(survey_name="Test", questions=questions)
+            survey.set_native_functions.assert_called_once_with(["check_time"])  # type: ignore[attr-defined]  # mock attr
 
 
 class TestValidateResponse:
@@ -929,8 +943,9 @@ class TestSurveySetupDetails:
 
     def test_personality_section_includes_brand(self) -> None:
         """The Personality prompt section includes the brand name."""
-        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
-            with patch.multiple(
+        with (
+            patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None),
+            patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
@@ -938,28 +953,30 @@ class TestSurveySetupDetails:
                 set_params=MagicMock(),
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
-            ):
-                from signalwire.prefabs.survey import SurveyAgent
+            ),
+        ):
+            from signalwire.prefabs.survey import SurveyAgent
 
-                survey = SurveyAgent(
-                    survey_name="Test",
-                    questions=[{"id": "q1", "text": "Q?", "type": "open_ended"}],
-                    brand_name="MyCorp",
-                )
+            survey = SurveyAgent(
+                survey_name="Test",
+                questions=[{"id": "q1", "text": "Q?", "type": "open_ended"}],
+                brand_name="MyCorp",
+            )
 
-                # Find the Personality call
-                for c in survey.prompt_add_section.call_args_list:  # type: ignore[attr-defined]  # mock attr
-                    if c.args and c.args[0] == "Personality":
-                        body = c.kwargs.get("body", "")
-                        assert "MyCorp" in body
-                        break
-                else:
-                    pytest.fail("Personality section not found")
+            # Find the Personality call
+            for c in survey.prompt_add_section.call_args_list:  # type: ignore[attr-defined]  # mock attr
+                if c.args and c.args[0] == "Personality":
+                    body = c.kwargs.get("body", "")
+                    assert "MyCorp" in body
+                    break
+            else:
+                pytest.fail("Personality section not found")
 
     def test_goal_section_includes_survey_name(self) -> None:
         """The Goal prompt section includes the survey name."""
-        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
-            with patch.multiple(
+        with (
+            patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None),
+            patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
@@ -967,26 +984,28 @@ class TestSurveySetupDetails:
                 set_params=MagicMock(),
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
-            ):
-                from signalwire.prefabs.survey import SurveyAgent
+            ),
+        ):
+            from signalwire.prefabs.survey import SurveyAgent
 
-                survey = SurveyAgent(
-                    survey_name="Satisfaction Survey",
-                    questions=[{"id": "q1", "text": "Q?", "type": "open_ended"}],
-                )
+            survey = SurveyAgent(
+                survey_name="Satisfaction Survey",
+                questions=[{"id": "q1", "text": "Q?", "type": "open_ended"}],
+            )
 
-                for c in survey.prompt_add_section.call_args_list:  # type: ignore[attr-defined]  # mock attr
-                    if c.args and c.args[0] == "Goal":
-                        body = c.kwargs.get("body", "")
-                        assert "Satisfaction Survey" in body
-                        break
-                else:
-                    pytest.fail("Goal section not found")
+            for c in survey.prompt_add_section.call_args_list:  # type: ignore[attr-defined]  # mock attr
+                if c.args and c.args[0] == "Goal":
+                    body = c.kwargs.get("body", "")
+                    assert "Satisfaction Survey" in body
+                    break
+            else:
+                pytest.fail("Goal section not found")
 
     def test_instructions_section_has_bullets(self) -> None:
         """The Instructions prompt section contains bullet points."""
-        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
-            with patch.multiple(
+        with (
+            patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None),
+            patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
@@ -994,25 +1013,26 @@ class TestSurveySetupDetails:
                 set_params=MagicMock(),
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
-            ):
-                from signalwire.prefabs.survey import SurveyAgent
+            ),
+        ):
+            from signalwire.prefabs.survey import SurveyAgent
 
-                survey = SurveyAgent(
-                    survey_name="T",
-                    questions=[{"id": "q1", "text": "Q?", "type": "open_ended"}],
-                    max_retries=3,
-                )
+            survey = SurveyAgent(
+                survey_name="T",
+                questions=[{"id": "q1", "text": "Q?", "type": "open_ended"}],
+                max_retries=3,
+            )
 
-                for c in survey.prompt_add_section.call_args_list:  # type: ignore[attr-defined]  # mock attr
-                    if c.args and c.args[0] == "Instructions":
-                        bullets = c.kwargs.get("bullets", [])
-                        assert isinstance(bullets, list)
-                        assert len(bullets) > 0
-                        # Check that max_retries appears somewhere in the bullets
-                        assert any("3" in b for b in bullets)
-                        break
-                else:
-                    pytest.fail("Instructions section not found")
+            for c in survey.prompt_add_section.call_args_list:  # type: ignore[attr-defined]  # mock attr
+                if c.args and c.args[0] == "Instructions":
+                    bullets = c.kwargs.get("bullets", [])
+                    assert isinstance(bullets, list)
+                    assert len(bullets) > 0
+                    # Check that max_retries appears somewhere in the bullets
+                    assert any("3" in b for b in bullets)
+                    break
+            else:
+                pytest.fail("Instructions section not found")
 
     def test_survey_questions_section_has_subsections(self) -> None:
         """The Survey Questions prompt section has subsections for each question."""
@@ -1026,8 +1046,9 @@ class TestSurveySetupDetails:
             },
         ]
 
-        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
-            with patch.multiple(
+        with (
+            patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None),
+            patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
@@ -1035,29 +1056,31 @@ class TestSurveySetupDetails:
                 set_params=MagicMock(),
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
-            ):
-                from signalwire.prefabs.survey import SurveyAgent
+            ),
+        ):
+            from signalwire.prefabs.survey import SurveyAgent
 
-                survey = SurveyAgent(survey_name="T", questions=questions)
+            survey = SurveyAgent(survey_name="T", questions=questions)
 
-                for c in survey.prompt_add_section.call_args_list:  # type: ignore[attr-defined]  # mock attr
-                    if c.args and c.args[0] == "Survey Questions":
-                        subsections = c.kwargs.get("subsections", [])
-                        assert len(subsections) == 2
-                        # First subsection title is the question text
-                        assert subsections[0]["title"] == "Rate?"
-                        assert "Scale: 1-5" in subsections[0]["body"]
-                        # Second subsection
-                        assert subsections[1]["title"] == "Pick?"
-                        assert "A, B" in subsections[1]["body"]
-                        break
-                else:
-                    pytest.fail("Survey Questions section not found")
+            for c in survey.prompt_add_section.call_args_list:  # type: ignore[attr-defined]  # mock attr
+                if c.args and c.args[0] == "Survey Questions":
+                    subsections = c.kwargs.get("subsections", [])
+                    assert len(subsections) == 2
+                    # First subsection title is the question text
+                    assert subsections[0]["title"] == "Rate?"
+                    assert "Scale: 1-5" in subsections[0]["body"]
+                    # Second subsection
+                    assert subsections[1]["title"] == "Pick?"
+                    assert "A, B" in subsections[1]["body"]
+                    break
+            else:
+                pytest.fail("Survey Questions section not found")
 
     def test_introduction_section_body(self) -> None:
         """The Introduction section body includes the introduction message."""
-        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
-            with patch.multiple(
+        with (
+            patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None),
+            patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
@@ -1065,27 +1088,29 @@ class TestSurveySetupDetails:
                 set_params=MagicMock(),
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
-            ):
-                from signalwire.prefabs.survey import SurveyAgent
+            ),
+        ):
+            from signalwire.prefabs.survey import SurveyAgent
 
-                survey = SurveyAgent(
-                    survey_name="T",
-                    questions=[{"id": "q1", "text": "Q?", "type": "open_ended"}],
-                    introduction="Hello and welcome!",
-                )
+            survey = SurveyAgent(
+                survey_name="T",
+                questions=[{"id": "q1", "text": "Q?", "type": "open_ended"}],
+                introduction="Hello and welcome!",
+            )
 
-                for c in survey.prompt_add_section.call_args_list:  # type: ignore[attr-defined]  # mock attr
-                    if c.args and c.args[0] == "Introduction":
-                        body = c.kwargs.get("body", "")
-                        assert "Hello and welcome!" in body
-                        break
-                else:
-                    pytest.fail("Introduction section not found")
+            for c in survey.prompt_add_section.call_args_list:  # type: ignore[attr-defined]  # mock attr
+                if c.args and c.args[0] == "Introduction":
+                    body = c.kwargs.get("body", "")
+                    assert "Hello and welcome!" in body
+                    break
+            else:
+                pytest.fail("Introduction section not found")
 
     def test_conclusion_section_body(self) -> None:
         """The Conclusion section body includes the conclusion message."""
-        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
-            with patch.multiple(
+        with (
+            patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None),
+            patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
@@ -1093,22 +1118,23 @@ class TestSurveySetupDetails:
                 set_params=MagicMock(),
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
-            ):
-                from signalwire.prefabs.survey import SurveyAgent
+            ),
+        ):
+            from signalwire.prefabs.survey import SurveyAgent
 
-                survey = SurveyAgent(
-                    survey_name="T",
-                    questions=[{"id": "q1", "text": "Q?", "type": "open_ended"}],
-                    conclusion="Thanks for your time!",
-                )
+            survey = SurveyAgent(
+                survey_name="T",
+                questions=[{"id": "q1", "text": "Q?", "type": "open_ended"}],
+                conclusion="Thanks for your time!",
+            )
 
-                for c in survey.prompt_add_section.call_args_list:  # type: ignore[attr-defined]  # mock attr
-                    if c.args and c.args[0] == "Conclusion":
-                        body = c.kwargs.get("body", "")
-                        assert "Thanks for your time!" in body
-                        break
-                else:
-                    pytest.fail("Conclusion section not found")
+            for c in survey.prompt_add_section.call_args_list:  # type: ignore[attr-defined]  # mock attr
+                if c.args and c.args[0] == "Conclusion":
+                    body = c.kwargs.get("body", "")
+                    assert "Thanks for your time!" in body
+                    break
+            else:
+                pytest.fail("Conclusion section not found")
 
 
 class TestSurveyHintsEdgeCases:
@@ -1117,8 +1143,9 @@ class TestSurveyHintsEdgeCases:
     def test_hints_no_type_specific_terms(self) -> None:
         """An open_ended-only survey has no type-specific hint terms (just name/brand)."""
         questions = [{"id": "q1", "text": "Comments?", "type": "open_ended"}]
-        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
-            with patch.multiple(
+        with (
+            patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None),
+            patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
@@ -1126,23 +1153,25 @@ class TestSurveyHintsEdgeCases:
                 set_params=MagicMock(),
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
-            ):
-                from signalwire.prefabs.survey import SurveyAgent
+            ),
+        ):
+            from signalwire.prefabs.survey import SurveyAgent
 
-                survey = SurveyAgent(
-                    survey_name="Open Survey",
-                    questions=questions,
-                    brand_name="Brand",
-                )
-                hints = survey.add_hints.call_args[0][0]  # type: ignore[attr-defined]  # mock attr
-                # Only survey_name and brand_name
-                assert hints == ["Open Survey", "Brand"]
+            survey = SurveyAgent(
+                survey_name="Open Survey",
+                questions=questions,
+                brand_name="Brand",
+            )
+            hints = survey.add_hints.call_args[0][0]  # type: ignore[attr-defined]  # mock attr
+            # Only survey_name and brand_name
+            assert hints == ["Open Survey", "Brand"]
 
     def test_hints_large_rating_scale(self) -> None:
         """A rating question with scale=10 generates hints 1-10."""
         questions = [{"id": "q1", "text": "Rate?", "type": "rating", "scale": 10}]
-        with patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None):
-            with patch.multiple(
+        with (
+            patch("signalwire.prefabs.survey.AgentBase.__init__", return_value=None),
+            patch.multiple(
                 "signalwire.prefabs.survey.AgentBase",
                 prompt_add_section=MagicMock(),
                 set_post_prompt=MagicMock(),
@@ -1150,15 +1179,16 @@ class TestSurveyHintsEdgeCases:
                 set_params=MagicMock(),
                 set_global_data=MagicMock(),
                 set_native_functions=MagicMock(),
-            ):
-                from signalwire.prefabs.survey import SurveyAgent
+            ),
+        ):
+            from signalwire.prefabs.survey import SurveyAgent
 
-                survey = SurveyAgent(
-                    survey_name="S",
-                    questions=questions,
-                    brand_name="B",
-                )
-                hints = survey.add_hints.call_args[0][0]  # type: ignore[attr-defined]  # mock attr
-                # Should have S, B, then "1".."10"
-                for i in range(1, 11):
-                    assert str(i) in hints
+            survey = SurveyAgent(
+                survey_name="S",
+                questions=questions,
+                brand_name="B",
+            )
+            hints = survey.add_hints.call_args[0][0]  # type: ignore[attr-defined]  # mock attr
+            # Should have S, B, then "1".."10"
+            for i in range(1, 11):
+                assert str(i) in hints

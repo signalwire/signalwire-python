@@ -1052,12 +1052,12 @@ class TestTimeouts:
     ) -> None:
         client, ws = connected_client
 
-        with patch("signalwire.relay.client._EXECUTE_TIMEOUT", 0.05):
+        with (
+            patch("signalwire.relay.client._EXECUTE_TIMEOUT", 0.05),
             # Don't respond to the request — it should timeout
-            with pytest.raises(RelayError, match="timeout"):
-                await client.execute(
-                    "calling.answer", {"node_id": "n1", "call_id": "c1"}
-                )
+            pytest.raises(RelayError, match="timeout"),
+        ):
+            await client.execute("calling.answer", {"node_id": "n1", "call_id": "c1"})
 
     @pytest.mark.asyncio
     async def test_execute_timeout_force_closes(

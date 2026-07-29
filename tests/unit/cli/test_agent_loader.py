@@ -125,9 +125,11 @@ class TestDiscoverServicesInFile:
 
     def test_raises_when_swml_not_available(self, tmp_path: Path) -> None:
         path = _write_py(tmp_path, "svc.py", "x = 1\n")
-        with patch.object(agent_loader, "SWML_SERVICE_AVAILABLE", False):
-            with pytest.raises(ImportError, match="SWMLService not available"):
-                agent_loader.discover_services_in_file(path)
+        with (
+            patch.object(agent_loader, "SWML_SERVICE_AVAILABLE", False),
+            pytest.raises(ImportError, match="SWMLService not available"),
+        ):
+            agent_loader.discover_services_in_file(path)
 
     def test_file_not_found(self, tmp_path: Path) -> None:
         fake = str(tmp_path / "no_such_file.py")
@@ -439,9 +441,11 @@ class TestLoadServiceFromFile:
 
     def test_raises_when_swml_not_available(self, tmp_path: Path) -> None:
         path = _write_py(tmp_path, "s.py", "x = 1\n")
-        with patch.object(agent_loader, "SWML_SERVICE_AVAILABLE", False):
-            with pytest.raises(ImportError, match="SWMLService not available"):
-                agent_loader.load_service_from_file(path)
+        with (
+            patch.object(agent_loader, "SWML_SERVICE_AVAILABLE", False),
+            pytest.raises(ImportError, match="SWMLService not available"),
+        ):
+            agent_loader.load_service_from_file(path)
 
     def test_delegates_to_impl(self, tmp_path: Path) -> None:
         path = _write_py(tmp_path, "s2.py", "x = 1\n")
@@ -466,9 +470,11 @@ class TestLoadAgentFromFile:
 
     def test_raises_when_agent_base_not_available(self, tmp_path: Path) -> None:
         path = _write_py(tmp_path, "a.py", "x = 1\n")
-        with patch.object(agent_loader, "AGENT_BASE_AVAILABLE", False):
-            with pytest.raises(ImportError, match="AgentBase not available"):
-                agent_loader.load_agent_from_file(path)
+        with (
+            patch.object(agent_loader, "AGENT_BASE_AVAILABLE", False),
+            pytest.raises(ImportError, match="AgentBase not available"),
+        ):
+            agent_loader.load_agent_from_file(path)
 
     def test_delegates_to_impl_with_prefer_route_false(self, tmp_path: Path) -> None:
         path = _write_py(tmp_path, "a2.py", "x = 1\n")
@@ -634,9 +640,11 @@ class TestLoadServiceImpl:
             spec.loader.exec_module = fake_exec  # type: ignore[method-assign]
             return spec
 
-        with patch("importlib.util.spec_from_file_location", side_effect=patched_spec):
-            with pytest.raises(ValueError, match="not a valid SWMLService"):
-                agent_loader._load_service_impl(path, "NotAService", prefer_route=False)
+        with (
+            patch("importlib.util.spec_from_file_location", side_effect=patched_spec),
+            pytest.raises(ValueError, match="not a valid SWMLService"),
+        ):
+            agent_loader._load_service_impl(path, "NotAService", prefer_route=False)
 
     def test_class_name_instantiates_class(self, tmp_path: Path) -> None:
         """When the identifier is a SWMLService subclass, it should be instantiated."""
@@ -900,9 +908,11 @@ class TestLoadServiceImpl:
             spec.loader.exec_module = fake_exec  # type: ignore[method-assign]
             return spec
 
-        with patch("importlib.util.spec_from_file_location", side_effect=patched_spec):
-            with pytest.raises(ValueError, match="Multiple service classes found"):
-                agent_loader._load_service_impl(path)
+        with (
+            patch("importlib.util.spec_from_file_location", side_effect=patched_spec),
+            pytest.raises(ValueError, match="Multiple service classes found"),
+        ):
+            agent_loader._load_service_impl(path)
 
     def test_strategy3_class_instantiation_failure_prints_warning(
         self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
@@ -932,9 +942,11 @@ class TestLoadServiceImpl:
             spec.loader.exec_module = fake_exec  # type: ignore[method-assign]
             return spec
 
-        with patch("importlib.util.spec_from_file_location", side_effect=patched_spec):
-            with pytest.raises(ValueError, match="No service found"):
-                agent_loader._load_service_impl(path)
+        with (
+            patch("importlib.util.spec_from_file_location", side_effect=patched_spec),
+            pytest.raises(ValueError, match="No service found"),
+        ):
+            agent_loader._load_service_impl(path)
 
         captured = capsys.readouterr()
         assert "Warning" in captured.out
@@ -1030,9 +1042,11 @@ class TestLoadServiceImpl:
             spec.loader.exec_module = fake_exec  # type: ignore[method-assign]
             return spec
 
-        with patch("importlib.util.spec_from_file_location", side_effect=patched_spec):
-            with pytest.raises(ValueError, match="No service found"):
-                agent_loader._load_service_impl(path)
+        with (
+            patch("importlib.util.spec_from_file_location", side_effect=patched_spec),
+            pytest.raises(ValueError, match="No service found"),
+        ):
+            agent_loader._load_service_impl(path)
 
         captured = capsys.readouterr()
         assert "Warning" in captured.out
@@ -1093,23 +1107,29 @@ class TestModuleFallbacks:
         self, tmp_path: Path
     ) -> None:
         path = _write_py(tmp_path, "f1.py", "x = 1\n")
-        with patch.object(agent_loader, "SWML_SERVICE_AVAILABLE", False):
-            with pytest.raises(ImportError):
-                agent_loader.discover_services_in_file(path)
+        with (
+            patch.object(agent_loader, "SWML_SERVICE_AVAILABLE", False),
+            pytest.raises(ImportError),
+        ):
+            agent_loader.discover_services_in_file(path)
 
     def test_load_service_raises_with_swml_unavailable(self, tmp_path: Path) -> None:
         path = _write_py(tmp_path, "f2.py", "x = 1\n")
-        with patch.object(agent_loader, "SWML_SERVICE_AVAILABLE", False):
-            with pytest.raises(ImportError):
-                agent_loader.load_service_from_file(path)
+        with (
+            patch.object(agent_loader, "SWML_SERVICE_AVAILABLE", False),
+            pytest.raises(ImportError),
+        ):
+            agent_loader.load_service_from_file(path)
 
     def test_load_agent_raises_with_agent_base_unavailable(
         self, tmp_path: Path
     ) -> None:
         path = _write_py(tmp_path, "f3.py", "x = 1\n")
-        with patch.object(agent_loader, "AGENT_BASE_AVAILABLE", False):
-            with pytest.raises(ImportError):
-                agent_loader.load_agent_from_file(path)
+        with (
+            patch.object(agent_loader, "AGENT_BASE_AVAILABLE", False),
+            pytest.raises(ImportError),
+        ):
+            agent_loader.load_agent_from_file(path)
 
 
 # ============================================================================
@@ -1182,9 +1202,11 @@ class TestEdgeCases:
             spec.loader.exec_module = fake_exec  # type: ignore[method-assign]
             return spec
 
-        with patch("importlib.util.spec_from_file_location", side_effect=patched_spec):
-            with pytest.raises(ValueError, match="Failed to instantiate"):
-                agent_loader._load_service_impl(path, "BadClass", prefer_route=False)
+        with (
+            patch("importlib.util.spec_from_file_location", side_effect=patched_spec),
+            pytest.raises(ValueError, match="Failed to instantiate"),
+        ):
+            agent_loader._load_service_impl(path, "BadClass", prefer_route=False)
 
     def test_strategy3_skips_when_module_has_main(self, tmp_path: Path) -> None:
         """Strategy 3 (class discovery) is skipped when module has main()."""
@@ -1219,10 +1241,12 @@ class TestEdgeCases:
             spec.loader.exec_module = fake_exec  # type: ignore[method-assign]
             return spec
 
-        with patch("importlib.util.spec_from_file_location", side_effect=patched_spec):
+        with (
+            patch("importlib.util.spec_from_file_location", side_effect=patched_spec),
             # main() doesn't return a service, so ultimately raises ValueError
-            with pytest.raises(ValueError, match="No service found"):
-                agent_loader._load_service_impl(path)
+            pytest.raises(ValueError, match="No service found"),
+        ):
+            agent_loader._load_service_impl(path)
         # main() should have been called (Strategy 4)
         assert len(called) == 1
 

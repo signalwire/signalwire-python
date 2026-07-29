@@ -85,31 +85,31 @@ class TestSpacyModelLoading:
         mock_spacy = Mock()
         mock_spacy.load.side_effect = OSError("Model not found")
 
-        with patch.dict(sys.modules, {"spacy": mock_spacy}):
-            with patch("signalwire.search.query_processor.logger") as mock_logger:
-                # Reset the global warning flag to ensure warning is shown
-                with patch(
-                    "signalwire.search.query_processor._spacy_warning_shown", False
-                ):
-                    result = load_spacy_model("en")
+        with (
+            patch.dict(sys.modules, {"spacy": mock_spacy}),
+            patch("signalwire.search.query_processor.logger") as mock_logger,
+            # Reset the global warning flag to ensure warning is shown
+            patch("signalwire.search.query_processor._spacy_warning_shown", False),
+        ):
+            result = load_spacy_model("en")
 
-                    assert result is None
-                    mock_logger.warning.assert_called_once()
+            assert result is None
+            mock_logger.warning.assert_called_once()
 
     def test_load_spacy_model_import_error(self) -> None:
         """Test spaCy model loading when spaCy not available"""
         # Setting the module to None in sys.modules makes `import spacy` raise
         # ImportError — a version-robust alternative to patching __import__.
-        with patch.dict(sys.modules, {"spacy": None}):
-            with patch("signalwire.search.query_processor.logger") as mock_logger:
-                # Reset the global warning flag to ensure warning is shown
-                with patch(
-                    "signalwire.search.query_processor._spacy_warning_shown", False
-                ):
-                    result = load_spacy_model("en")
+        with (
+            patch.dict(sys.modules, {"spacy": None}),
+            patch("signalwire.search.query_processor.logger") as mock_logger,
+            # Reset the global warning flag to ensure warning is shown
+            patch("signalwire.search.query_processor._spacy_warning_shown", False),
+        ):
+            result = load_spacy_model("en")
 
-                    assert result is None
-                    mock_logger.warning.assert_called_once()
+            assert result is None
+            mock_logger.warning.assert_called_once()
 
     def test_load_spacy_model_different_languages(self) -> None:
         """Test loading models for different languages"""
@@ -184,12 +184,14 @@ class TestQueryVectorization:
         # ImportError — version-robust, unlike patching builtins.__import__
         # (which on 3.10 leaks into unrelated imports like numpy).
         _qp._model_cache.clear()
-        with patch.dict(sys.modules, {"sentence_transformers": None}):
-            with patch("signalwire.search.query_processor.logger") as mock_logger:
-                result = vectorize_query("test query")
+        with (
+            patch.dict(sys.modules, {"sentence_transformers": None}),
+            patch("signalwire.search.query_processor.logger") as mock_logger,
+        ):
+            result = vectorize_query("test query")
 
-                assert result is None
-                mock_logger.error.assert_called_once()
+            assert result is None
+            mock_logger.error.assert_called_once()
         _qp._model_cache.clear()
 
 

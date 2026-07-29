@@ -524,18 +524,22 @@ class TestBannerAndTips:
 
     def test_print_banner_tty(self) -> None:
         buf = io.StringIO()
-        with patch.object(sys, "stderr", buf):
-            with patch.object(buf, "isatty", return_value=True):
-                _print_banner()
+        with (
+            patch.object(sys, "stderr", buf),
+            patch.object(buf, "isatty", return_value=True),
+        ):
+            _print_banner()
         output = buf.getvalue()
         assert "\033[36m" in output  # cyan
         assert "LiveKit-compatible" in output
 
     def test_print_banner_no_tty(self) -> None:
         buf = io.StringIO()
-        with patch.object(sys, "stderr", buf):
-            with patch.object(buf, "isatty", return_value=False):
-                _print_banner()
+        with (
+            patch.object(sys, "stderr", buf),
+            patch.object(buf, "isatty", return_value=False),
+        ):
+            _print_banner()
         output = buf.getvalue()
         assert "\033[36m" not in output
         assert "LiveKit-compatible" in output
