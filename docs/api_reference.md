@@ -2695,7 +2695,7 @@ agent.register_swaig_function(swaig_function)
 
 The SDK provides helper functions for common DataMap patterns:
 
-##### `create_simple_api_tool(name: str, url: str, response_template: str, parameters: Optional[Dict[str, Dict]] = None, method: str = "GET", headers: Optional[Dict[str, str]] = None, body: Optional[Dict[str, Any]] = None, error_keys: Optional[List[str]] = None) -> DataMap`
+##### `create_simple_api_tool(name: str, url: str, response_template: str, parameters: Optional[Dict[str, Dict]] = None, method: str = "GET", headers: Optional[Dict[str, str]] = None, error_keys: Optional[List[str]] = None) -> DataMap`
 
 Create a simple API integration tool.
 
@@ -2706,7 +2706,6 @@ Create a simple API integration tool.
 - `parameters` (Optional[Dict[str, Dict]]): Parameter definitions
 - `method` (str): HTTP method (default: "GET")
 - `headers` (Optional[Dict[str, str]]): HTTP headers
-- `body` (Optional[Dict[str, Any]]): Request body
 - `error_keys` (Optional[List[str]]): Error field names
 
 **Usage:**

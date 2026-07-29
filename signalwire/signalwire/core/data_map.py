@@ -56,7 +56,7 @@ class DataMap:
             .purpose('Search documentation')
             .parameter('query', 'string', 'Search query', required=True)
             .webhook('POST', 'https://api.docs.com/search', headers={'Authorization': 'Bearer TOKEN'})
-            .body({'query': '${query}', 'limit': 3})
+            .params({'query': '${query}', 'limit': 3})
             .output(FunctionResult('Found: ${response.results[0].title} - ${response.results[0].summary}'))
             .foreach('${response.results}')
         )
@@ -275,7 +275,14 @@ class DataMap:
 
     def params(self, data: dict[str, Any]) -> "DataMap":
         """
-        Set request params for the last added webhook (alias for body)
+        Set request params for the last added webhook.
+
+        This is NOT an alias for body(): the two write different webhook keys
+        (``params`` vs ``body``), and only ``params`` is part of the webhook
+        contract — schema.json ``$defs/Webhook`` lists ``params`` among its ten
+        permitted properties and forbids everything else, and the engine's
+        webhook readers look up ``params`` and never ``body``. Use this method
+        for POST/PUT request data.
 
         Args:
             data: Request params data (can include ${variable} substitutions)
@@ -447,7 +454,6 @@ def create_simple_api_tool(
     parameters: dict[str, dict[str, Any]] | None = None,
     method: str = "GET",
     headers: dict[str, str] | None = None,
-    body: dict[str, Any] | None = None,
     error_keys: list[str] | None = None,
 ) -> DataMap:
     """
@@ -460,7 +466,6 @@ def create_simple_api_tool(
         parameters: Optional parameter definitions
         method: HTTP method (default: GET)
         headers: Optional HTTP headers
-        body: Optional request body (for POST/PUT)
         error_keys: Optional list of error indicator keys
 
     Returns:
@@ -481,10 +486,6 @@ def create_simple_api_tool(
 
     # Add webhook
     data_map.webhook(method, url, headers)
-
-    # Add body if provided
-    if body:
-        data_map.body(body)
 
     # Add error keys if provided
     if error_keys:

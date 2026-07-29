@@ -290,6 +290,60 @@ class TestDataMapFactoryFunctions:
         
         assert isinstance(data_map, DataMap)
     
+    def test_create_simple_api_tool_rejects_body(self) -> None:
+        """`create_simple_api_tool` has no `body` parameter.
+
+        `body` is not a valid webhook key: porting-sdk/schema.json `$defs/Webhook`
+        declares exactly ten properties (error_keys, expressions, foreach, headers,
+        input_args_as_params, method, output, params, require_args, url) under
+        `unevaluatedProperties: {"not": {}}`, and neither engine reader
+        (mod_openai/actions.c parse_webhook, mod_openai/bedrock.c
+        bedrock_parse_webhook) looks up "body". Accepting the argument and
+        discarding it into an unread key silently lost the caller's data.
+        """
+        with pytest.raises(TypeError):
+            create_simple_api_tool(  # type: ignore[call-arg]
+                name="poster",
+                url="https://api.example.com/search",
+                response_template="Found: ${response.title}",
+                method="POST",
+                body={"query": "${args.q}"},
+            )
+
+    def test_create_simple_api_tool_emits_no_body_key(self) -> None:
+        """The EMITTED webhook payload carries no `body` key."""
+        data_map = create_simple_api_tool(
+            name="poster",
+            url="https://api.example.com/search",
+            response_template="Found: ${response.title}",
+            parameters={"q": {"type": "string", "description": "Query"}},
+            method="POST",
+            headers={"Authorization": "Bearer TOKEN"},
+            error_keys=["error"],
+        )
+
+        emitted = data_map.to_swaig_function()
+        webhooks = emitted["data_map"]["webhooks"]
+        assert len(webhooks) == 1
+        assert "body" not in webhooks[0], f"webhook carries a body key: {webhooks[0]!r}"
+
+        allowed = {
+            "error_keys",
+            "expressions",
+            "foreach",
+            "headers",
+            "input_args_as_params",
+            "method",
+            "output",
+            "params",
+            "require_args",
+            "url",
+        }
+        assert set(webhooks[0]) <= allowed, (
+            f"webhook has keys outside schema.json $defs/Webhook: "
+            f"{sorted(set(webhooks[0]) - allowed)}"
+        )
+
     def test_create_expression_tool(self) -> None:
         """Test create_expression_tool factory"""
         patterns = {
