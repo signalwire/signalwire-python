@@ -1411,14 +1411,12 @@ class TestImprovedCompletionActionErrorMessage:
         ctx.add_step("only").set_text("Last step").set_gather_info(
             completion_action="next_step"
         ).add_gather_question("x", "Q?")
-        try:
+        with pytest.raises(ValueError) as excinfo:
             builder.validate()
-            assert False, "expected ValueError"
-        except ValueError as e:
-            msg = str(e)
-            # Suggestions an LLM can act on:
-            assert "add another step" in msg
-            assert "completion_action=None" in msg
+        msg = str(excinfo.value)
+        # Suggestions an LLM can act on:
+        assert "add another step" in msg
+        assert "completion_action=None" in msg
 
     def test_unknown_step_error_lists_available_steps(self) -> None:
         builder = self._make_builder()
@@ -1427,15 +1425,13 @@ class TestImprovedCompletionActionErrorMessage:
         ctx.add_step("beta").set_text("B").set_gather_info(
             completion_action="gamma"
         ).add_gather_question("x", "Q?")
-        try:
+        with pytest.raises(ValueError) as excinfo:
             builder.validate()
-            assert False, "expected ValueError"
-        except ValueError as e:
-            msg = str(e)
-            assert "is not a step in this context" in msg
-            # Should enumerate the legal options
-            assert "alpha" in msg
-            assert "beta" in msg
+        msg = str(excinfo.value)
+        assert "is not a step in this context" in msg
+        # Should enumerate the legal options
+        assert "alpha" in msg
+        assert "beta" in msg
 
 
 class TestInitialStep:

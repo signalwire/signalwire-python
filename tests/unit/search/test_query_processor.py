@@ -130,7 +130,7 @@ class TestSpacyModelLoading:
                 "pt_core_news_sm",
             ]
 
-            for lang, expected_model in zip(languages, expected_models):
+            for lang, expected_model in zip(languages, expected_models, strict=True):
                 load_spacy_model(lang)
                 mock_spacy.load.assert_called_with(expected_model)
 

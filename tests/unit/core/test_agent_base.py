@@ -16,7 +16,7 @@ import json
 import uuid
 import os
 from unittest.mock import Mock, patch
-from typing import Any
+from typing import Any, ClassVar
 
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.swaig_function import SWAIGFunction
@@ -576,7 +576,7 @@ class TestAgentBaseDeclarativePrompts:
         """Test processing declarative prompt sections from dict"""
 
         class TestAgent(AgentBase):
-            PROMPT_SECTIONS = {  # type: ignore[assignment]  # base declares None; subclass overrides with dict
+            PROMPT_SECTIONS: ClassVar[dict[str, Any]] = {
                 "Instructions": "Follow these rules",
                 "Rules": ["Rule 1", "Rule 2"],
                 "Complex": {
@@ -598,7 +598,7 @@ class TestAgentBaseDeclarativePrompts:
         """Test processing prompt sections when POM is disabled"""
 
         class TestAgent(AgentBase):
-            PROMPT_SECTIONS = {"Test": "Content"}  # type: ignore[assignment]  # base declares None; subclass overrides with dict
+            PROMPT_SECTIONS: ClassVar[dict[str, Any]] = {"Test": "Content"}
 
         with pytest.MonkeyPatch().context() as m:
             m.setattr("signalwire.core.agent_base.uvicorn", Mock())
@@ -650,28 +650,28 @@ class TestRenderSwml:
         agent = self._make()
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         assert "answer" in verb_names
 
     def test_render_swml_contains_ai_verb(self) -> None:
         agent = self._make()
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         assert "ai" in verb_names
 
     def test_render_swml_answer_before_ai(self) -> None:
         agent = self._make()
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         assert verb_names.index("answer") < verb_names.index("ai")
 
     def test_render_swml_no_answer_when_auto_answer_false(self) -> None:
         agent = self._make(auto_answer=False)
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         assert "answer" not in verb_names
 
     def test_render_swml_ai_section_has_prompt(self) -> None:
@@ -679,7 +679,7 @@ class TestRenderSwml:
         agent.set_prompt_text("Hello world")
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        ai_verb = [v for v in verbs if isinstance(v, dict) and "ai" in v][0]
+        ai_verb = next(v for v in verbs if isinstance(v, dict) and "ai" in v)
         ai_config = ai_verb["ai"]
         assert "prompt" in ai_config
 
@@ -687,9 +687,9 @@ class TestRenderSwml:
         agent = self._make()
         agent.set_prompt_text("Be a helpful agent")
         doc = json.loads(agent._render_swml())
-        ai_verb = [
+        ai_verb = next(
             v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
-        ][0]
+        )
         prompt = ai_verb["ai"]["prompt"]
         if isinstance(prompt, dict):
             assert "Be a helpful agent" in prompt.get("text", "")
@@ -700,9 +700,9 @@ class TestRenderSwml:
         agent = self._make()
         agent.set_post_prompt("Summarize the conversation")
         doc = json.loads(agent._render_swml())
-        ai_verb = [
+        ai_verb = next(
             v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
-        ][0]
+        )
         ai_config = ai_verb["ai"]
         assert "post_prompt" in ai_config
 
@@ -710,9 +710,9 @@ class TestRenderSwml:
         agent = self._make()
         agent.add_hints(["hint1", "hint2"])
         doc = json.loads(agent._render_swml())
-        ai_verb = [
+        ai_verb = next(
             v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
-        ][0]
+        )
         assert "hints" in ai_verb["ai"]
         assert "hint1" in ai_verb["ai"]["hints"]
         assert "hint2" in ai_verb["ai"]["hints"]
@@ -721,9 +721,9 @@ class TestRenderSwml:
         agent = self._make()
         agent.add_language("English", "en", "alice")
         doc = json.loads(agent._render_swml())
-        ai_verb = [
+        ai_verb = next(
             v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
-        ][0]
+        )
         assert "languages" in ai_verb["ai"]
         assert ai_verb["ai"]["languages"][0]["name"] == "English"
 
@@ -731,9 +731,9 @@ class TestRenderSwml:
         agent = self._make()
         agent.set_params({"temperature": 0.5})
         doc = json.loads(agent._render_swml())
-        ai_verb = [
+        ai_verb = next(
             v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
-        ][0]
+        )
         assert "params" in ai_verb["ai"]
         assert ai_verb["ai"]["params"]["temperature"] == 0.5
 
@@ -741,9 +741,9 @@ class TestRenderSwml:
         agent = self._make()
         agent.set_global_data({"key": "value"})
         doc = json.loads(agent._render_swml())
-        ai_verb = [
+        ai_verb = next(
             v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
-        ][0]
+        )
         assert "global_data" in ai_verb["ai"]
         assert ai_verb["ai"]["global_data"]["key"] == "value"
 
@@ -751,9 +751,9 @@ class TestRenderSwml:
         agent = self._make()
         agent.add_pronunciation("SQL", "sequel")
         doc = json.loads(agent._render_swml())
-        ai_verb = [
+        ai_verb = next(
             v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
-        ][0]
+        )
         assert "pronounce" in ai_verb["ai"]
         assert ai_verb["ai"]["pronounce"][0]["replace"] == "SQL"
 
@@ -761,32 +761,32 @@ class TestRenderSwml:
         agent = self._make(record_call=True)
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         assert "record_call" in verb_names
 
     def test_render_swml_record_call_before_ai(self) -> None:
         agent = self._make(record_call=True)
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         assert verb_names.index("record_call") < verb_names.index("ai")
 
     def test_render_swml_record_call_format(self) -> None:
         agent = self._make(record_call=True, record_format="wav", record_stereo=False)
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        record_verb = [v for v in verbs if isinstance(v, dict) and "record_call" in v][
-            0
-        ]
+        record_verb = next(
+            v for v in verbs if isinstance(v, dict) and "record_call" in v
+        )
         assert record_verb["record_call"]["format"] == "wav"
         assert record_verb["record_call"]["stereo"] is False
 
     def test_render_swml_with_native_functions(self) -> None:
         agent = self._make(native_functions=["transfer", "check_time"])
         doc = json.loads(agent._render_swml())
-        ai_verb = [
+        ai_verb = next(
             v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
-        ][0]
+        )
         swaig = ai_verb["ai"].get("SWAIG", {})
         assert "native_functions" in swaig
         assert "transfer" in swaig["native_functions"]
@@ -795,9 +795,9 @@ class TestRenderSwml:
         agent = self._make()
         agent.add_function_include("http://example.com/funcs", ["fn1"])
         doc = json.loads(agent._render_swml())
-        ai_verb = [
+        ai_verb = next(
             v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
-        ][0]
+        )
         swaig = ai_verb["ai"].get("SWAIG", {})
         assert "includes" in swaig
         assert swaig["includes"][0]["url"] == "http://example.com/funcs"
@@ -1045,7 +1045,7 @@ class TestVerbInsertion:
         agent.add_pre_answer_verb("sleep", {"time": 500})
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         assert verb_names.index("sleep") < verb_names.index("answer")
 
     def test_post_answer_verbs_between_answer_and_ai(self) -> None:
@@ -1053,7 +1053,7 @@ class TestVerbInsertion:
         agent.add_post_answer_verb("play", {"url": "say:Welcome"})
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         answer_idx = verb_names.index("answer")
         play_idx = verb_names.index("play")
         ai_idx = verb_names.index("ai")
@@ -1064,7 +1064,7 @@ class TestVerbInsertion:
         agent.add_post_ai_verb("hangup", {})
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         assert verb_names.index("ai") < verb_names.index("hangup")
 
     def test_full_verb_ordering(self) -> None:
@@ -1075,7 +1075,7 @@ class TestVerbInsertion:
         agent.add_post_ai_verb("hangup", {})
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         # sleep < answer < record_call < play < ai < hangup
         assert verb_names.index("sleep") < verb_names.index("answer")
         assert verb_names.index("answer") < verb_names.index("record_call")
@@ -1099,7 +1099,7 @@ class TestVerbInsertion:
         agent.add_answer_verb({"max_duration": 3600})
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        answer_verb = [v for v in verbs if isinstance(v, dict) and "answer" in v][0]
+        answer_verb = next(v for v in verbs if isinstance(v, dict) and "answer" in v)
         assert answer_verb["answer"]["max_duration"] == 3600
 
 
@@ -1619,9 +1619,9 @@ class TestToolRegistration:
             handler,
         )
         doc = json.loads(agent._render_swml())
-        ai_verb = [
+        ai_verb = next(
             v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
-        ][0]
+        )
         swaig = ai_verb["ai"].get("SWAIG", {})
         assert "functions" in swaig
         tool_names = [f["function"] for f in swaig["functions"]]

@@ -491,8 +491,8 @@ class TestRunServer:
                     ssl_keyfile=key_path,
                 )
         finally:
-            os.unlink(cert_path)
-            os.unlink(key_path)
+            Path(cert_path).unlink()
+            Path(key_path).unlink()
 
     @patch("signalwire.agent_server.uvicorn")
     def test_run_server_ssl_disabled_bad_cert(self, mock_uvicorn: MagicMock) -> None:
@@ -538,7 +538,7 @@ class TestRunServer:
                     server.app, host="0.0.0.0", port=3000, log_level="info"
                 )
         finally:
-            os.unlink(cert_path)
+            Path(cert_path).unlink()
 
 
 def _basic_auth(agent: AgentBase) -> str:

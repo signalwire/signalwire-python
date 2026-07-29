@@ -13,7 +13,7 @@ Unit tests for PromptMixin
 
 import pytest
 from unittest.mock import Mock, patch
-from typing import Any
+from typing import Any, ClassVar
 
 from signalwire.core.mixins.prompt_mixin import PromptMixin
 
@@ -635,7 +635,7 @@ class TestProcessPromptSections:
         """Dict mapping title -> plain string adds a body section."""
 
         class StrHost(MockPromptHost):
-            PROMPT_SECTIONS = {"Greeting": "Hello there"}
+            PROMPT_SECTIONS: ClassVar[dict[str, Any]] = {"Greeting": "Hello there"}
 
         h = StrHost()
         h._process_prompt_sections()
@@ -655,7 +655,7 @@ class TestProcessPromptSections:
         """Dict mapping title -> list of strings adds bullets."""
 
         class ListHost(MockPromptHost):
-            PROMPT_SECTIONS: dict[str, Any] = {"Rules": ["Rule 1", "Rule 2"]}
+            PROMPT_SECTIONS: ClassVar[dict[str, Any]] = {"Rules": ["Rule 1", "Rule 2"]}
 
         h = ListHost()
         h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
@@ -668,7 +668,7 @@ class TestProcessPromptSections:
         """Dict mapping title -> empty list does NOT create a section."""
 
         class EmptyListHost(MockPromptHost):
-            PROMPT_SECTIONS: dict[str, Any] = {"Empty": []}
+            PROMPT_SECTIONS: ClassVar[dict[str, Any]] = {"Empty": []}
 
         h = EmptyListHost()
         h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
@@ -679,7 +679,7 @@ class TestProcessPromptSections:
         """Dict mapping title -> dict with body key."""
 
         class DictBodyHost(MockPromptHost):
-            PROMPT_SECTIONS = {"Info": {"body": "Some info"}}
+            PROMPT_SECTIONS: ClassVar[dict[str, Any]] = {"Info": {"body": "Some info"}}
 
         h = DictBodyHost()
         h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
@@ -697,7 +697,9 @@ class TestProcessPromptSections:
         """Dict mapping title -> dict with bullets key."""
 
         class DictBulletsHost(MockPromptHost):
-            PROMPT_SECTIONS = {"Tips": {"bullets": ["Tip 1", "Tip 2"]}}
+            PROMPT_SECTIONS: ClassVar[dict[str, Any]] = {
+                "Tips": {"bullets": ["Tip 1", "Tip 2"]}
+            }
 
         h = DictBulletsHost()
         h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
@@ -715,7 +717,7 @@ class TestProcessPromptSections:
         """Dict mapping title -> dict with numbered flags."""
 
         class NumHost(MockPromptHost):
-            PROMPT_SECTIONS = {
+            PROMPT_SECTIONS: ClassVar[dict[str, Any]] = {
                 "Steps": {
                     "body": "Follow these steps",
                     "bullets": ["Step 1", "Step 2"],
@@ -740,7 +742,7 @@ class TestProcessPromptSections:
         """Dict -> dict with no body, no bullets, no subsections => section is skipped."""
 
         class EmptyDictHost(MockPromptHost):
-            PROMPT_SECTIONS: dict[str, Any] = {"Nothing": {}}
+            PROMPT_SECTIONS: ClassVar[dict[str, Any]] = {"Nothing": {}}
 
         h = EmptyDictHost()
         h.prompt_add_section = Mock()  # type: ignore[method-assign]  # mock
@@ -751,7 +753,7 @@ class TestProcessPromptSections:
         """Dict -> dict containing subsections list."""
 
         class SubHost(MockPromptHost):
-            PROMPT_SECTIONS = {
+            PROMPT_SECTIONS: ClassVar[dict[str, Any]] = {
                 "Parent": {
                     "body": "parent body",
                     "subsections": [
@@ -791,7 +793,7 @@ class TestProcessPromptSections:
         """Subsections without a 'title' key are skipped."""
 
         class NoTitleSubHost(MockPromptHost):
-            PROMPT_SECTIONS = {
+            PROMPT_SECTIONS: ClassVar[dict[str, Any]] = {
                 "Parent": {
                     "body": "body",
                     "subsections": [
@@ -810,7 +812,7 @@ class TestProcessPromptSections:
         """Subsections with empty body and empty bullets are skipped."""
 
         class EmptySubHost(MockPromptHost):
-            PROMPT_SECTIONS = {
+            PROMPT_SECTIONS: ClassVar[dict[str, Any]] = {
                 "Parent": {
                     "body": "body",
                     "subsections": [
@@ -832,7 +834,7 @@ class TestProcessPromptSections:
         mock_pom = Mock()
 
         class ListSectionHost(MockPromptHost):
-            PROMPT_SECTIONS = [
+            PROMPT_SECTIONS: ClassVar[list[Any]] = [
                 {"title": "Section A", "body": "Body A"},
                 {"title": "Section B", "bullets": ["b1", "b2"]},
             ]
@@ -862,7 +864,7 @@ class TestProcessPromptSections:
         """List-based PROMPT_SECTIONS skipped when pom is None."""
 
         class ListNoPomHost(MockPromptHost):
-            PROMPT_SECTIONS = [
+            PROMPT_SECTIONS: ClassVar[list[Any]] = [
                 {"title": "A", "body": "B"},
             ]
 
@@ -876,7 +878,7 @@ class TestProcessPromptSections:
         mock_pom = Mock()
 
         class NoTitleListHost(MockPromptHost):
-            PROMPT_SECTIONS = [
+            PROMPT_SECTIONS: ClassVar[list[Any]] = [
                 {"body": "No title"},
             ]
 
@@ -890,7 +892,7 @@ class TestProcessPromptSections:
         mock_pom = Mock()
 
         class EmptyListSectionHost(MockPromptHost):
-            PROMPT_SECTIONS = [
+            PROMPT_SECTIONS: ClassVar[list[Any]] = [
                 {"title": "Empty", "body": "", "bullets": []},
             ]
 
@@ -904,7 +906,7 @@ class TestProcessPromptSections:
         mock_pom = Mock()
 
         class ListSubHost(MockPromptHost):
-            PROMPT_SECTIONS = [
+            PROMPT_SECTIONS: ClassVar[list[Any]] = [
                 {
                     "title": "Main",
                     "body": "Main body",
@@ -928,7 +930,7 @@ class TestProcessPromptSections:
         mock_pom = Mock()
 
         class ListSubNoTitleHost(MockPromptHost):
-            PROMPT_SECTIONS = [
+            PROMPT_SECTIONS: ClassVar[list[Any]] = [
                 {
                     "title": "Main",
                     "body": "body",
@@ -949,7 +951,7 @@ class TestProcessPromptSections:
         mock_pom = Mock()
 
         class ListSubEmptyHost(MockPromptHost):
-            PROMPT_SECTIONS = [
+            PROMPT_SECTIONS: ClassVar[list[Any]] = [
                 {
                     "title": "Main",
                     "body": "body",
@@ -970,7 +972,7 @@ class TestProcessPromptSections:
         mock_pom = Mock()
 
         class NumListHost(MockPromptHost):
-            PROMPT_SECTIONS = [
+            PROMPT_SECTIONS: ClassVar[list[Any]] = [
                 {
                     "title": "Steps",
                     "body": "Follow these:",
@@ -997,7 +999,7 @@ class TestProcessPromptSections:
         """Multiple sections in a dict are all processed."""
 
         class MultiHost(MockPromptHost):
-            PROMPT_SECTIONS = {
+            PROMPT_SECTIONS: ClassVar[dict[str, Any]] = {
                 "A": "alpha",
                 "B": ["b1"],
                 "C": {"body": "gamma"},
@@ -1155,7 +1157,7 @@ class TestEdgeCases:
         """Subsection that has both body and bullets is added."""
 
         class BothSubHost(MockPromptHost):
-            PROMPT_SECTIONS = {
+            PROMPT_SECTIONS: ClassVar[dict[str, Any]] = {
                 "Parent": {
                     "body": "parent",
                     "subsections": [
@@ -1182,7 +1184,7 @@ class TestEdgeCases:
         mock_pom = Mock()
 
         class ListBothSubHost(MockPromptHost):
-            PROMPT_SECTIONS = [
+            PROMPT_SECTIONS: ClassVar[list[Any]] = [
                 {
                     "title": "P",
                     "body": "body",
@@ -1209,7 +1211,7 @@ class TestEdgeCases:
         """Section dict has 'subsections' key so it is created even without body."""
 
         class SubOnlyHost(MockPromptHost):
-            PROMPT_SECTIONS = {
+            PROMPT_SECTIONS: ClassVar[dict[str, Any]] = {
                 "Wrapper": {
                     "subsections": [
                         {"title": "Inner", "body": "inner body"},
@@ -1232,7 +1234,7 @@ class TestEdgeCases:
         mock_pom = Mock()
 
         class ListSubOnlyHost(MockPromptHost):
-            PROMPT_SECTIONS = [
+            PROMPT_SECTIONS: ClassVar[list[Any]] = [
                 {
                     "title": "Wrapper",
                     "subsections": [

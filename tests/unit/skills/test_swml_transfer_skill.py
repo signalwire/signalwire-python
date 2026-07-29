@@ -344,11 +344,11 @@ class TestRegisterTools:
         call_args = skill.agent.register_swaig_function.call_args[0][0]
         expressions = call_args["data_map"]["expressions"]
         # Find the sales expression (url-based)
-        sales_expr = [e for e in expressions if e["pattern"] == "/sales/i"][0]
+        sales_expr = next(e for e in expressions if e["pattern"] == "/sales/i")
         actions = sales_expr["output"]["action"]
         # Should have a SWML action with transfer key
         assert any("SWML" in a for a in actions)
-        swml_action = [a for a in actions if "SWML" in a][0]
+        swml_action = next(a for a in actions if "SWML" in a)
         assert swml_action["transfer"] == "true"
         # Check the dest in the SWML
         main_section = swml_action["SWML"]["sections"]["main"]
@@ -362,11 +362,11 @@ class TestRegisterTools:
         call_args = skill.agent.register_swaig_function.call_args[0][0]
         expressions = call_args["data_map"]["expressions"]
         # Find the support expression (address-based)
-        support_expr = [e for e in expressions if e["pattern"] == "/support/i"][0]
+        support_expr = next(e for e in expressions if e["pattern"] == "/support/i")
         actions = support_expr["output"]["action"]
-        swml_action = [a for a in actions if "SWML" in a][0]
+        swml_action = next(a for a in actions if "SWML" in a)
         main_section = swml_action["SWML"]["sections"]["main"]
-        connect_step = [s for s in main_section if "connect" in s][0]
+        connect_step = next(s for s in main_section if "connect" in s)
         assert connect_step["connect"]["to"] == "+15551234567"
 
     def test_address_transfer_with_from_addr(self) -> None:
@@ -377,11 +377,11 @@ class TestRegisterTools:
         skill.register_tools()
         call_args = skill.agent.register_swaig_function.call_args[0][0]
         expressions = call_args["data_map"]["expressions"]
-        vip_expr = [e for e in expressions if e["pattern"] == "/vip/"][0]
+        vip_expr = next(e for e in expressions if e["pattern"] == "/vip/")
         actions = vip_expr["output"]["action"]
-        swml_action = [a for a in actions if "SWML" in a][0]
+        swml_action = next(a for a in actions if "SWML" in a)
         main_section = swml_action["SWML"]["sections"]["main"]
-        connect_step = [s for s in main_section if "connect" in s][0]
+        connect_step = next(s for s in main_section if "connect" in s)
         assert connect_step["connect"]["from"] == "+15550001111"
 
     def test_address_transfer_non_final(self) -> None:
@@ -391,9 +391,9 @@ class TestRegisterTools:
         skill.register_tools()
         call_args = skill.agent.register_swaig_function.call_args[0][0]
         expressions = call_args["data_map"]["expressions"]
-        support_expr = [e for e in expressions if e["pattern"] == "/support/i"][0]
+        support_expr = next(e for e in expressions if e["pattern"] == "/support/i")
         actions = support_expr["output"]["action"]
-        swml_action = [a for a in actions if "SWML" in a][0]
+        swml_action = next(a for a in actions if "SWML" in a)
         assert swml_action["transfer"] == "false"
 
     def test_required_fields_added_as_parameters(self) -> None:

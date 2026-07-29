@@ -6,29 +6,28 @@ This file is part of the SignalWire SDK.
 
 Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
-"""
 
-"""
 Validate a JSON file against a JSON Schema.
 
 Usage:
     python validate_schema.py <schema_file> <json_file>
-    
+
 Example:
     python validate_schema.py schema.json steps3.json
 """
 
+import argparse
 import json
 import sys
-import argparse
 from pathlib import Path
-from jsonschema import validate, ValidationError, Draft7Validator
+
+from jsonschema import Draft7Validator, ValidationError, validate
 
 
 def load_json_file(filepath):
     """Load and parse a JSON file."""
     try:
-        with open(filepath) as f:
+        with Path(filepath).open() as f:
             return json.load(f)
     except FileNotFoundError:
         print(f"❌ Error: File '{filepath}' not found")

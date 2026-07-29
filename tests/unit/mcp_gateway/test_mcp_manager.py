@@ -15,6 +15,7 @@ import json
 import queue
 import threading
 import subprocess
+from pathlib import Path
 from typing import Any
 import pytest
 from unittest.mock import Mock, patch, MagicMock
@@ -159,7 +160,8 @@ class TestMCPClientSetupSandboxEnv:
         mock_makedirs.assert_not_called()
         # Should return roughly the current environment
         assert "PATH" in env
-        assert cwd == os.getcwd()
+        # Production returns a str (``str(Path.cwd())``), so compare as a str.
+        assert cwd == str(Path.cwd())
 
     # Path.mkdir, not os.makedirs: the implementation moved to pathlib and this
     # patch stopped intercepting, so the assertion failed and the real mkdir ran.
@@ -572,7 +574,7 @@ class TestMCPClientStop:
         client.stop()
 
         assert client._shutdown.is_set()
-        client.process is None
+        assert client.process is None
 
     def test_stop_force_kills_on_timeout(self) -> None:
         """stop() should force kill if terminate doesn't work in time."""

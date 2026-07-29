@@ -104,8 +104,11 @@ class TestMessage:
                 }
             )
 
-        asyncio.ensure_future(deliver())
+        # Hold the reference: an un-referenced task can be garbage-collected
+        # mid-flight, and awaiting it surfaces any exception it raised.
+        deliver_task = asyncio.ensure_future(deliver())
         event = await msg.wait(timeout=2.0)
+        await deliver_task
         assert event.params["message_state"] == "delivered"
 
     @pytest.mark.asyncio
@@ -774,8 +777,11 @@ class TestMessageWait:
                 }
             )
 
-        asyncio.ensure_future(deliver_later())
+        # Hold the reference: an un-referenced task can be garbage-collected
+        # mid-flight, and awaiting it surfaces any exception it raised.
+        deliver_task = asyncio.ensure_future(deliver_later())
         terminal_event = await outbound_msg.wait(timeout=2.0)
+        await deliver_task
         assert terminal_event.params["message_state"] == "delivered"
 
     @pytest.mark.asyncio
