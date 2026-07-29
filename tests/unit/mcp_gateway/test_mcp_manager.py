@@ -31,7 +31,7 @@ from signalwire.mcp_gateway.mcp_manager import (
 )
 
 # Sandbox base for the tests below. These tests never actually create the
-# sandbox — os.makedirs / shutil.rmtree are patched throughout — but the value
+# sandbox — Path.mkdir / shutil.rmtree are patched throughout — but the value
 # is threaded through MCPClient and asserted on, so it must be a real,
 # process-unique path rather than a hardcoded shared one. Class helpers
 # (_make_client) need it at import time, where the tmp_path fixture is not
@@ -157,24 +157,22 @@ class TestMCPClientSetupSandboxEnv:
         )
         return MCPClient(svc, sandbox_base_dir=_SANDBOX_BASE)
 
-    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_sandboxing_disabled_returns_full_env(
-        self, mock_makedirs: MagicMock
-    ) -> None:
+    @patch("signalwire.mcp_gateway.mcp_manager.Path.mkdir")
+    def test_sandboxing_disabled_returns_full_env(self, mock_mkdir: MagicMock) -> None:
         """When sandbox is disabled, the full environment is returned."""
         client = self._make_client(sandbox_config={"enabled": False})
 
         env, cwd = client._setup_sandbox_env()
 
         # Should not create sandbox dir
-        mock_makedirs.assert_not_called()
+        mock_mkdir.assert_not_called()
         # Should return roughly the current environment
         assert "PATH" in env
         # Production returns a str (``str(Path.cwd())``), so compare as a str.
         assert cwd == str(Path.cwd())
 
-    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_sandbox_enabled_restricted_env(self, mock_makedirs: MagicMock) -> None:
+    @patch("signalwire.mcp_gateway.mcp_manager.Path.mkdir", autospec=True)
+    def test_sandbox_enabled_restricted_env(self, mock_mkdir: MagicMock) -> None:
         """When sandbox is enabled with restricted_env, a minimal env is created."""
         client = self._make_client(
             sandbox_config={
@@ -186,7 +184,10 @@ class TestMCPClientSetupSandboxEnv:
 
         env, cwd = client._setup_sandbox_env()
 
-        mock_makedirs.assert_called_once()
+        assert client.sandbox_dir is not None
+        mock_mkdir.assert_called_once_with(
+            Path(client.sandbox_dir), parents=True, exist_ok=True
+        )
         # No working_dir is configured, so the cwd falls back to the process cwd.
         assert cwd == str(Path.cwd())
         # Restricted env should have limited keys
@@ -626,9 +627,7 @@ class TestMCPClientStop:
         client.process = None  # already stopped
         client.sandbox_dir = sandbox_dir
 
-        with patch(
-            "signalwire.mcp_gateway.mcp_manager.os.path.exists", return_value=True
-        ):
+        with patch("signalwire.mcp_gateway.mcp_manager.Path.exists", return_value=True):
             client.stop()
 
         mock_rmtree.assert_called_once_with(sandbox_dir)
@@ -905,8 +904,8 @@ class TestMCPClientSandboxPreexec:
 class TestMCPManagerInit:
     """Tests for MCPManager.__init__."""
 
-    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_init_with_empty_config(self, mock_makedirs: MagicMock) -> None:
+    @patch("signalwire.mcp_gateway.mcp_manager.Path.mkdir", autospec=True)
+    def test_init_with_empty_config(self, mock_mkdir: MagicMock) -> None:
         """MCPManager should initialize with an empty config."""
         config: dict[str, Any] = {}
         manager = MCPManager(config)
@@ -915,19 +914,24 @@ class TestMCPManagerInit:
         assert manager.services == {}
         assert manager.clients == {}
         assert manager.sandbox_base_dir == "./sandbox"
-        mock_makedirs.assert_called_once_with("./sandbox", exist_ok=True)
+        # autospec keeps the receiver, so the directory being created is asserted.
+        mock_mkdir.assert_called_once_with(
+            Path("./sandbox"), parents=True, exist_ok=True
+        )
 
-    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_init_with_custom_sandbox_dir(self, mock_makedirs: MagicMock) -> None:
+    @patch("signalwire.mcp_gateway.mcp_manager.Path.mkdir", autospec=True)
+    def test_init_with_custom_sandbox_dir(self, mock_mkdir: MagicMock) -> None:
         """MCPManager should use sandbox_dir from session config."""
         config = {"session": {"sandbox_dir": "/custom/sandbox"}}
         manager = MCPManager(config)
 
         assert manager.sandbox_base_dir == "/custom/sandbox"
-        mock_makedirs.assert_called_once_with("/custom/sandbox", exist_ok=True)
+        mock_mkdir.assert_called_once_with(
+            Path("/custom/sandbox"), parents=True, exist_ok=True
+        )
 
-    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_init_loads_services(self, mock_makedirs: MagicMock) -> None:
+    @patch("signalwire.mcp_gateway.mcp_manager.Path.mkdir")
+    def test_init_loads_services(self, mock_mkdir: MagicMock) -> None:
         """MCPManager should load services from config on init."""
         config = {
             "services": {
