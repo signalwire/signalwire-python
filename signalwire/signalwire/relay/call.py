@@ -125,6 +125,16 @@ class Action:
 
     @property
     def is_done(self) -> bool:
+        """Whether the terminal event for this action has already arrived.
+
+        A non-blocking poll of the completion future — ``True`` once the server
+        reported one of this action's terminal states, so ``wait()`` would
+        return immediately. Use it to check completion without awaiting.
+
+        Note this reflects the *future*, not the ``completed`` flag: they move
+        together in ``_resolve``, but ``is_done`` is the authoritative signal
+        for whether ``wait()`` blocks.
+        """
         return self._done.done()
 
 
@@ -136,6 +146,23 @@ class StoppableAction(Action):
     _command_prefix: str = ""
 
     async def stop(self) -> dict[str, Any]:
+        """Stop this in-flight operation on the server.
+
+        Posts ``calling.<prefix>.stop`` with this action's ``control_id``,
+        where ``<prefix>`` is the concrete subclass's command family
+        (``play``, ``record``, ``detect``, ``collect``, ``tap``, ``stream``,
+        ``pay``, ``transcribe``, ``ai``, or the fax direction).
+
+        The command only asks the server to stop; it does not itself mark the
+        action complete. Completion still arrives as the operation's terminal
+        event, so ``await action.wait()`` after ``stop()`` to observe the final
+        state. Requires the call to still be alive and the operation not yet
+        finished — stopping an already-finished operation is answered by the
+        server, not guarded locally.
+
+        Returns:
+            The RELAY command result dict.
+        """
         return await self.call._execute(
             f"{self._command_prefix}.stop", {"control_id": self.control_id}
         )
@@ -145,12 +172,39 @@ class PausableAction(StoppableAction):
     """A stoppable action that can also pause/resume (record, play, collect)."""
 
     async def pause(self, behavior: str | None = None) -> dict[str, Any]:
+        """Pause this operation, leaving it resumable.
+
+        Posts ``calling.<prefix>.pause`` with this action's ``control_id``.
+        Unlike :meth:`stop` the operation stays alive and holds its control_id,
+        so :meth:`resume` picks it back up and the terminal event still comes
+        later.
+
+        Args:
+            behavior: Only meaningful for a recording, where the engine accepts
+                ``"skip"`` (omit the paused span from the recording) or
+                ``"silence"`` (write silence for its duration). Omitted from
+                the wire params when falsy, letting the server default apply.
+                The play/collect pause commands carry no ``behavior`` field.
+
+        Returns:
+            The RELAY command result dict.
+        """
         params: dict[str, Any] = {"control_id": self.control_id}
         if behavior:
             params["behavior"] = behavior
         return await self.call._execute(f"{self._command_prefix}.pause", params)
 
     async def resume(self) -> dict[str, Any]:
+        """Resume this operation after :meth:`pause`.
+
+        Posts ``calling.<prefix>.resume`` with this action's ``control_id``.
+        Takes no options — a paused recording resumes under whatever
+        ``behavior`` the pause selected. Requires the operation to be paused
+        and its control_id still valid on the call.
+
+        Returns:
+            The RELAY command result dict.
+        """
         return await self.call._execute(
             f"{self._command_prefix}.resume", {"control_id": self.control_id}
         )
@@ -160,6 +214,20 @@ class VolumeAction(PausableAction):
     """A pausable action that also supports a volume adjustment (play)."""
 
     async def volume(self, volume: float) -> dict[str, Any]:
+        """Adjust the playback gain of this in-flight operation.
+
+        Posts ``calling.<prefix>.volume`` with this action's ``control_id``.
+        Takes effect on the audio still to be played; it does not restart or
+        reposition the media.
+
+        Args:
+            volume: Gain in **decibels**, not a 0-to-1 multiplier. ``0`` is
+                unmodified; negative attenuates, positive amplifies. The engine
+                requires the value and rejects anything outside -40 to +40 dB.
+
+        Returns:
+            The RELAY command result dict.
+        """
         return await self.call._execute(
             f"{self._command_prefix}.volume",
             {"control_id": self.control_id, "volume": volume},
@@ -776,6 +844,14 @@ class Call:
         )
 
         def rank(s: str) -> int:
+            """Position of a call state in the lifecycle order.
+
+            Maps ``created`` → ``ringing`` → ``answered`` → ``ending`` →
+            ``ended`` onto 0-4 so the two states can be compared with ``>=``.
+            An unrecognized or empty state returns ``-1``, which sorts before
+            every real state — so a call whose state is not yet known never
+            counts as having reached the target and the caller waits.
+            """
             return order.index(s) if s in order else -1
 
         # Already at or past the target -> return immediately (matches legacy SDK).

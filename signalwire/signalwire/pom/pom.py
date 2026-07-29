@@ -332,6 +332,31 @@ class PromptObjectModel:
         """
 
         def build_section(d: dict[str, Any], is_subsection: bool = False) -> Section:
+            """Validate one section dict and build the Section tree beneath it.
+
+            Recurses into ``subsections``, so one call on a top-level dict
+            returns that whole branch already constructed.
+
+            Type-checks ``title`` (str), ``subsections`` (list), ``bullets``
+            (list), ``numbered`` and ``numberedBullets`` (bool) when present,
+            then enforces the two content rules: every section must carry a
+            non-empty ``body``, non-empty ``bullets``, or ``subsections``, and
+            every subsection must have a ``title``. ``numbered`` and
+            ``numberedBullets`` are forwarded only when explicitly present in
+            the dict, so Section's own defaults survive their absence.
+
+            Args:
+                d: One section's parsed dict, from JSON or YAML.
+                is_subsection: True when called for a nested section, which
+                    turns on the mandatory-title rule.
+
+            Returns:
+                The Section, with its subsections already appended.
+
+            Raises:
+                ValueError: On a non-dict, a field of the wrong type, a
+                    section with no content, or an untitled subsection.
+            """
             if not isinstance(d, dict):
                 raise ValueError("Each section must be a dictionary.")
             if "title" in d and not isinstance(d["title"], str):
@@ -449,6 +474,20 @@ class PromptObjectModel:
         """
 
         def recurse(sections: list[Section]) -> Section | None:
+            """Depth-first search of a section list for a matching title.
+
+            Walks each section, descending into its subsections before moving
+            to the next sibling, so the first match in document order wins.
+            Matching is exact string equality on ``Section.title``; a section
+            with no title never matches.
+
+            Args:
+                sections: The sections to search, with their subsections.
+
+            Returns:
+                The first matching Section, or None if the whole subtree
+                contains no section with that title.
+            """
             for section in sections:
                 if section.title == title:
                     return section

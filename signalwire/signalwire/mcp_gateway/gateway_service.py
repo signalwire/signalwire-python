@@ -92,6 +92,30 @@ class MCPGateway:
         # Configure security headers
         @self.app.after_request  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
         def set_security_headers(response: Response) -> Response:
+            """Attach security headers to every gateway response.
+
+            Registered as a Flask ``after_request`` hook, so it applies to
+            error responses too.
+
+            Sets ``X-Content-Type-Options: nosniff``,
+            ``X-Frame-Options: DENY``, ``X-XSS-Protection: 1; mode=block`` and
+            a ``Content-Security-Policy`` of
+            ``default-src 'none'; frame-ancestors 'none';`` — the gateway
+            serves JSON only, so the policy blocks every subresource rather
+            than allow-listing any. On a secure request it also sets
+            ``Strict-Transport-Security: max-age=31536000; includeSubDomains``.
+
+            Note this is the gateway's own hardcoded header set, independent of
+            ``SecurityConfig.get_security_headers`` used by the FastAPI
+            services: it adds CSP, omits ``Referrer-Policy``, and its HSTS is
+            not configurable.
+
+            Args:
+                response: The outgoing Flask response.
+
+            Returns:
+                The same response, mutated in place.
+            """
             response.headers["X-Content-Type-Options"] = "nosniff"
             response.headers["X-Frame-Options"] = "DENY"
             response.headers["X-XSS-Protection"] = "1; mode=block"
@@ -286,6 +310,31 @@ class MCPGateway:
 
         @wraps(f)
         def decorated(*args: Any, **kwargs: Any) -> Any:
+            """Authenticate the current request, then call the wrapped view.
+
+            The inner wrapper produced by ``_check_auth``; ``functools.wraps``
+            keeps the view's name so Flask's routing table is unaffected.
+            Args and kwargs are the view's own (e.g. URL path params) and are
+            forwarded untouched — the credentials come from the Flask request
+            context, not the arguments.
+
+            Accepts either scheme, Bearer first: an ``Authorization: Bearer``
+            token compared against ``server.auth_token``, else HTTP Basic
+            compared against ``server.auth_user`` / ``server.auth_password``.
+            Both comparisons use ``hmac.compare_digest`` to avoid leaking the
+            secret through timing. A Bearer header that fails falls through to
+            the Basic check rather than rejecting outright.
+
+            On failure it logs an ``auth_failed`` security event carrying the
+            client IP, method and path, and returns ``401`` with
+            ``WWW-Authenticate: Basic realm="MCP Gateway"`` — the view is never
+            invoked. Note an unconfigured ``auth_token`` disables Bearer
+            (the empty expected value is skipped), so Basic remains the path.
+
+            Returns:
+                The wrapped view's return value on success, otherwise a 401
+                Flask Response.
+            """
             # Try Bearer token first
             auth_header = request.headers.get("Authorization", "")
             server_config = self.config.get("server", {})
@@ -512,6 +561,24 @@ class MCPGateway:
 
         @self.app.errorhandler(Exception)  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
         def handle_error(error: Exception) -> Any:
+            """Convert any unhandled exception into a generic 500 JSON error.
+
+            Registered as the Flask ``errorhandler(Exception)`` catch-all, so
+            it is the last resort for exceptions no route handled itself.
+
+            Deliberately opaque to the client: the exception is logged
+            server-side at ERROR level, but the response body is the fixed
+            ``{"error": "Internal server error"}`` with status 500 — the
+            exception text, type and traceback never reach the caller. Routes
+            that want a specific message must catch and return it themselves
+            (as the session routes do for ``ValueError`` → 400).
+
+            Args:
+                error: The unhandled exception.
+
+            Returns:
+                A ``(JSON response, 500)`` tuple.
+            """
             logger.error(f"Unhandled error: {error}")
             return jsonify({"error": "Internal server error"}), 500
 

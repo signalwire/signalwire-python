@@ -107,6 +107,18 @@ _ERROR_BY_CODE = {
 
 @dataclass
 class ConversationInfo:
+    """Result of :meth:`AIChatClient.create_conversation`.
+
+    Attributes:
+        id: The conversation id, echoed back from the id you supplied — the
+            service does not mint one, so this always equals the argument.
+        status: Server-reported lifecycle state, defaulting to ``"created"``
+            when the result carries no ``status`` key.
+        initial_message: The AI's opening turn when ``user_message`` was passed
+            to ``create_conversation`` (the server answers it immediately);
+            ``None`` when the conversation was created without a first message.
+    """
+
     id: str
     status: str
     initial_message: str | None = None
@@ -114,6 +126,18 @@ class ConversationInfo:
 
 @dataclass
 class ChatResponse:
+    """Result of :meth:`AIChatClient.chat` — one AI turn.
+
+    Attributes:
+        text: The AI's reply, taken from the result's ``response`` field.
+            Empty string if the service returned no ``response``.
+        conversation_id: The conversation this turn belongs to, echoed from
+            the request argument rather than read from the response.
+        user_event: The service's raw ``user_event`` object for this turn when
+            present (SWAIG/tool activity and other side-channel data emitted
+            while the turn ran); ``None`` when the turn produced none.
+    """
+
     text: str
     conversation_id: str
     user_event: dict[str, Any] | None = None
@@ -121,6 +145,15 @@ class ChatResponse:
 
 @dataclass
 class ChatLog:
+    """Result of :meth:`AIChatClient.log` — a conversation's stored history.
+
+    Attributes:
+        messages: The ``chat_log`` array — the conversation's messages as raw
+            dicts in service order. Empty list when the conversation has none.
+        call_timeline: The ``call_timeline`` array — timeline entries the
+            service recorded alongside the messages. Empty list when absent.
+    """
+
     messages: list[dict[str, Any]] = field(default_factory=list)
     call_timeline: list[dict[str, Any]] = field(default_factory=list)
 
@@ -199,6 +232,19 @@ class AIChatClient:
         return self._session
 
     async def close(self) -> None:
+        """Close the underlying aiohttp session, if this client owns it.
+
+        Only closes a session the client created itself; a session passed to
+        the constructor is left alone for its owner to close. Called
+        automatically on ``__aexit__``.
+
+        The client is NOT permanently dead afterwards: the internal session
+        reference is cleared, so the next request lazily builds a fresh
+        session with the same auth, headers and timeout. Closing is therefore
+        safe to repeat and safe to do between bursts of traffic — what it
+        costs is the connection pool, not the client. Conversations live on
+        the server and are unaffected.
+        """
         if self._owns_session and self._session is not None:
             await self._session.close()
             self._session = None
