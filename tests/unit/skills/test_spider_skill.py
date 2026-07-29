@@ -1018,9 +1018,7 @@ class TestCrawlSiteHandler:
             return resp
 
         with patch.object(default_skill, "_fetch_url", side_effect=mock_fetch):
-            result = default_skill._crawl_site_handler(
-                {"start_url": "https://example.com"}, {}
-            )
+            default_skill._crawl_site_handler({"start_url": "https://example.com"}, {})
             # With max_depth=0, should not follow links
             assert len(fetch_calls) == 1
 
@@ -1051,9 +1049,7 @@ class TestCrawlSiteHandler:
             return resp
 
         with patch.object(default_skill, "_fetch_url", side_effect=mock_fetch):
-            result = default_skill._crawl_site_handler(
-                {"start_url": "https://example.com"}, {}
-            )
+            default_skill._crawl_site_handler({"start_url": "https://example.com"}, {})
             # Should not have fetched external domain
             assert not any("other.com" in u for u in fetch_calls)
 
@@ -1086,9 +1082,7 @@ class TestCrawlSiteHandler:
             return resp
 
         with patch.object(default_skill, "_fetch_url", side_effect=mock_fetch):
-            result = default_skill._crawl_site_handler(
-                {"start_url": "https://example.com"}, {}
-            )
+            default_skill._crawl_site_handler({"start_url": "https://example.com"}, {})
             # Should follow the blog link but not the about link
             assert any("blog" in u for u in fetch_calls)
             assert not any("about" in u for u in fetch_calls)
@@ -1157,7 +1151,7 @@ class TestCrawlSiteHandler:
 
         with patch.object(default_skill, "_fetch_url", side_effect=mock_fetch):
             with patch("time.sleep") as mock_sleep:
-                result = default_skill._crawl_site_handler(
+                default_skill._crawl_site_handler(
                     {"start_url": "https://example.com"}, {}
                 )
                 mock_sleep.assert_called_with(0.5)

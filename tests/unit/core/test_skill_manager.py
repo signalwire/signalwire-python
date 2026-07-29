@@ -131,6 +131,7 @@ class TestSkillManagerLoading:
         )
 
         assert success is True
+        assert error == ""
         skill_instance = list(skill_manager.loaded_skills.values())[0]
         assert skill_instance.params == params
 
@@ -151,6 +152,7 @@ class TestSkillManagerLoading:
         # Load first time
         success1, error1 = skill_manager.load_skill("mock_skill", MockSkill)
         assert success1 is True
+        assert error1 == ""
 
         # Load second time - should fail for single-instance skills
         success2, error2 = skill_manager.load_skill("mock_skill", MockSkill)
@@ -331,6 +333,7 @@ class TestSkillManagerValidation:
 
         success, error = skill_manager.load_skill("valid_skill", ValidSkill)
         assert success is True
+        assert error == ""
 
     def test_validate_skill_missing_env_vars(self, mock_agent: AgentBase) -> None:
         """Test skill with missing environment variables"""
@@ -356,6 +359,7 @@ class TestSkillManagerValidation:
 
         success, error = skill_manager.load_skill("env_skill", EnvSkill)
         assert success is True
+        assert error == ""
 
     def test_validate_skill_missing_packages(self, mock_agent: AgentBase) -> None:
         """Test skill with missing packages"""
@@ -419,6 +423,7 @@ class TestSkillManagerIntegration:
         success, error = skill_manager.load_skill("mock_skill", MockSkill)
 
         assert success is True
+        assert error == ""
         # Should have called agent.define_tool
         mock_agent.define_tool.assert_called_once()
 

@@ -1269,7 +1269,7 @@ class TestSearch:
         mock_np.array.side_effect = Exception("bad vector")
         engine = SearchEngine(backend="sqlite", index_path=full_db)
         engine._keyword_search_only = Mock(return_value=[])  # type: ignore[method-assign]  # mock
-        results = engine.search([0.1], "python", count=3)
+        engine.search([0.1], "python", count=3)
         engine._keyword_search_only.assert_called_once()
 
     @patch("signalwire.search.search_engine.np")
@@ -1546,6 +1546,8 @@ class TestKeywordSearch:
         )
         results = engine._keyword_search("zzzznonexistent", count=5)
         engine._fallback_search.assert_called_once()
+        # The fallback's rows are what _keyword_search hands back.
+        assert [r["search_type"] for r in results] == ["fallback"]
 
     def test_scores_are_positive_floats(self, full_db: str) -> None:
         """Scores are positive floats derived from FTS rank."""

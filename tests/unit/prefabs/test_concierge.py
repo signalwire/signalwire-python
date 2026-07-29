@@ -88,7 +88,7 @@ class TestConciergeInitialization:
 
     def test_super_init_called_with_defaults(self) -> None:
         """super().__init__ receives name, route, and use_pom."""
-        agent, mock_init = _make_concierge()
+        _agent, mock_init = _make_concierge()
 
         mock_init.assert_called_once()
         _, kwargs = mock_init.call_args
@@ -98,7 +98,7 @@ class TestConciergeInitialization:
 
     def test_super_init_custom_name_and_route(self) -> None:
         """Custom name and route are forwarded to AgentBase."""
-        agent, mock_init = _make_concierge(name="lobby", route="/lobby")
+        _agent, mock_init = _make_concierge(name="lobby", route="/lobby")
 
         _, kwargs = mock_init.call_args
         assert kwargs["name"] == "lobby"
@@ -106,7 +106,7 @@ class TestConciergeInitialization:
 
     def test_extra_kwargs_forwarded_to_super(self) -> None:
         """Arbitrary **kwargs are forwarded to AgentBase.__init__."""
-        agent, mock_init = _make_concierge(host="0.0.0.0", port=9090)
+        _agent, mock_init = _make_concierge(host="0.0.0.0", port=9090)
 
         _, kwargs = mock_init.call_args
         assert kwargs["host"] == "0.0.0.0"

@@ -13,8 +13,10 @@ in signalwire.mcp_gateway.mcp_manager
 import os
 import json
 import queue
+import tempfile
 import threading
 import subprocess
+from pathlib import Path
 from typing import Any
 import pytest
 from unittest.mock import Mock, patch, MagicMock
@@ -27,6 +29,14 @@ from signalwire.mcp_gateway.mcp_manager import (
     MCPClient,
     MCPManager,
 )
+
+# Sandbox base for the tests below. These tests never actually create the
+# sandbox — os.makedirs / shutil.rmtree are patched throughout — but the value
+# is threaded through MCPClient and asserted on, so it must be a real,
+# process-unique path rather than a hardcoded shared one. Class helpers
+# (_make_client) need it at import time, where the tmp_path fixture is not
+# reachable.
+_SANDBOX_BASE = tempfile.mkdtemp(prefix="sw_mcp_sandbox_")
 
 
 # ---------------------------------------------------------------------------
@@ -129,9 +139,10 @@ class TestMCPClientInit:
     def test_custom_sandbox_base_dir(self) -> None:
         """MCPClient should accept a custom sandbox_base_dir."""
         service = MCPService(name="svc", command=["cmd"], description="desc")
-        client = MCPClient(service, sandbox_base_dir="/tmp/my_sandbox")
+        custom_base = os.path.join(_SANDBOX_BASE, "my_sandbox")
+        client = MCPClient(service, sandbox_base_dir=custom_base)
 
-        assert client.sandbox_base_dir == "/tmp/my_sandbox"
+        assert client.sandbox_base_dir == custom_base
 
 
 class TestMCPClientSetupSandboxEnv:
@@ -144,7 +155,7 @@ class TestMCPClientSetupSandboxEnv:
             description="",
             sandbox_config=sandbox_config,
         )
-        return MCPClient(svc, sandbox_base_dir="/tmp/sandbox_test")
+        return MCPClient(svc, sandbox_base_dir=_SANDBOX_BASE)
 
     @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_sandboxing_disabled_returns_full_env(
@@ -175,6 +186,8 @@ class TestMCPClientSetupSandboxEnv:
         env, cwd = client._setup_sandbox_env()
 
         mock_makedirs.assert_called_once()
+        # No working_dir is configured, so the cwd falls back to the process cwd.
+        assert cwd == str(Path.cwd())
         # Restricted env should have limited keys
         assert "PATH" in env
         assert "HOME" in env
@@ -199,6 +212,8 @@ class TestMCPClientSetupSandboxEnv:
         with patch.dict(os.environ, {"LD_PRELOAD": "evil.so"}, clear=False):
             env, cwd = client._setup_sandbox_env()
 
+        # No working_dir is configured, so the cwd falls back to the process cwd.
+        assert cwd == str(Path.cwd())
         # LD_PRELOAD should be stripped even with unrestricted
         assert "LD_PRELOAD" not in env
         # HOME should be overridden to sandbox dir
@@ -602,16 +617,17 @@ class TestMCPClientStop:
             description="",
             sandbox_config={"enabled": True},
         )
+        sandbox_dir = os.path.join(_SANDBOX_BASE, "mcp_svc_123")
         client = MCPClient(service)
         client.process = None  # already stopped
-        client.sandbox_dir = "/tmp/sandbox_test/mcp_svc_123"
+        client.sandbox_dir = sandbox_dir
 
         with patch(
             "signalwire.mcp_gateway.mcp_manager.os.path.exists", return_value=True
         ):
             client.stop()
 
-        mock_rmtree.assert_called_once_with("/tmp/sandbox_test/mcp_svc_123")
+        mock_rmtree.assert_called_once_with(sandbox_dir)
 
     def test_stop_when_no_process(self) -> None:
         """stop() should not raise when process is None."""

@@ -163,7 +163,7 @@ class TestParseDocstringArgs:
         Returns:
             Some result
         """
-        summary, params = _parse_docstring_args(doc)
+        _summary, params = _parse_docstring_args(doc)
         assert params["x"] == "First param"
         assert params["y"] == "Second param"
 
@@ -175,7 +175,7 @@ class TestParseDocstringArgs:
                 against the database
             limit: Maximum results
         """
-        summary, params = _parse_docstring_args(doc)
+        _summary, params = _parse_docstring_args(doc)
         assert "search query to execute" in params["query"]
         assert "against the database" in params["query"]
         assert params["limit"] == "Maximum results"
@@ -195,7 +195,7 @@ class TestInferSchemaDetection:
         def handler(args: dict[str, Any], raw_data: dict[str, Any]) -> None:
             pass
 
-        params, required, desc, is_typed, has_raw_data = infer_schema(handler)
+        _params, _required, _desc, is_typed, _has_raw_data = infer_schema(handler)
         assert is_typed is False
 
     def test_old_style_args_only(self) -> None:
@@ -204,7 +204,7 @@ class TestInferSchemaDetection:
         def handler(args: dict[str, Any]) -> None:
             pass
 
-        params, required, desc, is_typed, has_raw_data = infer_schema(handler)
+        _params, _required, _desc, is_typed, _has_raw_data = infer_schema(handler)
         assert is_typed is False
 
     def test_varargs_fallback(self) -> None:
@@ -213,7 +213,7 @@ class TestInferSchemaDetection:
         def handler(*args: Any) -> None:
             pass
 
-        params, required, desc, is_typed, has_raw_data = infer_schema(handler)
+        _params, _required, _desc, is_typed, _has_raw_data = infer_schema(handler)
         assert is_typed is False
 
     def test_kwargs_fallback(self) -> None:
@@ -222,7 +222,7 @@ class TestInferSchemaDetection:
         def handler(**kwargs: Any) -> None:
             pass
 
-        params, required, desc, is_typed, has_raw_data = infer_schema(handler)
+        _params, _required, _desc, is_typed, _has_raw_data = infer_schema(handler)
         assert is_typed is False
 
     def test_typed_params_detected(self) -> None:
@@ -231,7 +231,7 @@ class TestInferSchemaDetection:
         def handler(city: str, units: str = "celsius") -> None:
             pass
 
-        params, required, desc, is_typed, has_raw_data = infer_schema(handler)
+        _params, _required, _desc, is_typed, _has_raw_data = infer_schema(handler)
         assert is_typed is True
 
     def test_zero_param_tool(self) -> None:
@@ -241,7 +241,7 @@ class TestInferSchemaDetection:
             """Get the current time."""
             pass
 
-        params, required, desc, is_typed, has_raw_data = infer_schema(handler)
+        params, required, desc, is_typed, _has_raw_data = infer_schema(handler)
         assert is_typed is True
         assert params == {}
         assert required == []
@@ -253,7 +253,7 @@ class TestInferSchemaDetection:
         def handler(self: Any, city: str) -> None:
             pass
 
-        params, required, desc, is_typed, has_raw_data = infer_schema(handler)
+        params, _required, _desc, is_typed, _has_raw_data = infer_schema(handler)
         assert is_typed is True
         assert "self" not in params
         assert "city" in params
@@ -264,7 +264,7 @@ class TestInferSchemaDetection:
         def handler(city, units) -> None:  # type: ignore[no-untyped-def]  # intentional: exercises the no-annotations fallback path
             pass
 
-        params, required, desc, is_typed, has_raw_data = infer_schema(handler)
+        _params, _required, _desc, is_typed, _has_raw_data = infer_schema(handler)
         assert is_typed is False
 
 

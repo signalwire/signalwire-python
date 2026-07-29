@@ -909,10 +909,10 @@ class TestServeStaticFiles:
             assert isinstance(result, FileResponse)
             assert str(result.path) == str(index_file)
 
-    def test_serve_static_file_route_not_found(self) -> None:
+    def test_serve_static_file_route_not_found(self, tmp_path: Path) -> None:
         """Test _serve_static_file returns None for unknown route"""
         server = AgentServer()
-        server._static_directories = {"/assets": Path("/tmp")}
+        server._static_directories = {"/assets": tmp_path}
         result = server._serve_static_file("test.txt", route="/other")
         assert result is None
 

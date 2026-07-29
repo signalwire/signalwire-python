@@ -50,6 +50,7 @@ from __future__ import annotations
 import asyncio
 import atexit
 import json
+import logging
 import os
 import subprocess
 import sys
@@ -796,10 +797,18 @@ async def signalwire_relay_client(
             mock_relay.session_id = client._session_id
             yield client
         finally:
+            # Best-effort teardown. disconnect() awaits ws.close(), which can
+            # fail if the mock already tore the socket down or the test itself
+            # closed it — a teardown error must not mask the test's real
+            # result. Narrow to transport errors and log, so that an unexpected
+            # failure (a bug in disconnect()) still propagates instead of being
+            # silently swallowed.
             try:
                 await client.disconnect()
-            except Exception:
-                pass
+            except (websockets.exceptions.WebSocketException, OSError) as exc:
+                logging.getLogger(__name__).debug(
+                    "relay client teardown failed (ignored): %r", exc
+                )
 
     _active_clients.clear()
 

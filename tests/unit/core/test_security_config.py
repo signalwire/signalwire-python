@@ -950,6 +950,7 @@ class TestEdgeCases:
         with patch("os.path.exists", return_value=True):
             is_valid, error = cfg.validate_ssl_config()
         assert is_valid is True
+        assert error is None
 
     def test_allowed_hosts_single_entry(self) -> None:
         cfg = _make_config(SWML_ALLOWED_HOSTS="only-this-host.com")

@@ -435,7 +435,7 @@ class TestHandleRootRequest:
         request = _make_request("POST", body={"call_id": "cid-xyz"})
         _run(agent._handle_root_request(request))
         # Verify _render_swml was called with the extracted call_id
-        args, kwargs = agent._render_swml.call_args
+        args, _kwargs = agent._render_swml.call_args
         assert args[0] == "cid-xyz"
 
     def test_call_id_extracted_from_nested_call(self) -> None:
@@ -443,14 +443,14 @@ class TestHandleRootRequest:
         body = {"call": {"call_id": "nested-id"}}
         request = _make_request("POST", body=body)
         _run(agent._handle_root_request(request))
-        args, kwargs = agent._render_swml.call_args
+        args, _kwargs = agent._render_swml.call_args
         assert args[0] == "nested-id"
 
     def test_call_id_from_query_params_on_get(self) -> None:
         agent = _build_mixin()
         request = _make_request("GET", query_params={"call_id": "q-id"})
         _run(agent._handle_root_request(request))
-        args, kwargs = agent._render_swml.call_args
+        args, _kwargs = agent._render_swml.call_args
         assert args[0] == "q-id"
 
     def test_proxy_detection_from_forwarded_headers(self) -> None:
@@ -558,7 +558,7 @@ class TestHandleDebugRequest:
             "POST", body={"call_id": "debug-call-1"}, url_path="/agent/debug"
         )
         _run(agent._handle_debug_request(request))
-        args, kwargs = agent._render_swml.call_args
+        args, _kwargs = agent._render_swml.call_args
         assert args[0] == "debug-call-1"
 
     def test_get_extracts_call_id_from_query(self) -> None:
@@ -567,7 +567,7 @@ class TestHandleDebugRequest:
             "GET", query_params={"call_id": "q-debug"}, url_path="/agent/debug"
         )
         _run(agent._handle_debug_request(request))
-        args, kwargs = agent._render_swml.call_args
+        args, _kwargs = agent._render_swml.call_args
         assert args[0] == "q-debug"
 
     def test_post_malformed_body_still_renders(self) -> None:
@@ -682,6 +682,9 @@ class TestHandleSwaigRequest:
         )
         # Function should still be called
         agent.on_function_call.assert_called()
+        # A valid token must yield the function's SWAIG result, not an error dict.
+        assert isinstance(result, dict)
+        assert "response" in result
 
     def test_token_validation_invalid_secure_function_returns_swaig_error(self) -> None:
         """When a secure function has an invalid token, the handler returns a
@@ -729,6 +732,8 @@ class TestHandleSwaigRequest:
         result = _run(agent._handle_swaig_request(request, resp))
         # Should proceed since function is not secure
         agent.on_function_call.assert_called()
+        # ...and the caller gets the function's result, not a token error.
+        assert result == {"response": "allowed"}
 
     def test_dynamic_config_callback_creates_ephemeral(self) -> None:
         ephemeral = MagicMock()
@@ -744,6 +749,9 @@ class TestHandleSwaigRequest:
         agent._create_ephemeral_copy.assert_called_once()
         config_cb.assert_called_once()
         ephemeral.on_function_call.assert_called_once()
+        # The response must come from the EPHEMERAL copy — that is the whole
+        # point of the dynamic-config path.
+        assert result == {"response": "ephemeral"}
 
     def test_function_execution_error_returns_error_dict(self) -> None:
         agent = _build_mixin()
@@ -1141,8 +1149,11 @@ class TestRoutePrefixHandling:
     def test_serve_with_prefix(self) -> None:
         agent = _build_mixin(route="/bot")
         app = agent.get_app()
-        # Verify the router was created
+        # Verify the router was created, and that get_app() hands back that same
+        # assembled app rather than building a throwaway one.
         assert agent._app is not None
+        assert app is agent._app
+        assert agent.route == "/bot"
 
 
 # ===========================================================================
@@ -1333,7 +1344,7 @@ class TestHandleRootRequestModifications:
         agent.on_swml_request = MagicMock(return_value=mods)
         request = _make_request("POST", body={"call_id": "c1"})
         _run(agent._handle_root_request(request))
-        args, kwargs = agent._render_swml.call_args
+        args, _kwargs = agent._render_swml.call_args
         assert args[1] == mods
 
     def test_on_swml_request_exception_handled(self) -> None:
@@ -1398,6 +1409,9 @@ class TestHandleSwaigRequestMalformedBody:
         result = _run(agent._handle_swaig_request(request, resp))
         # Function should still be called on the ephemeral copy
         ephemeral.on_function_call.assert_called_once()
+        # ...and the caller still gets its result — the config-callback failure
+        # is logged, not surfaced as an error response.
+        assert result == {"response": "ok"}
 
 
 class TestHandlePostPromptRequestExtraPaths:

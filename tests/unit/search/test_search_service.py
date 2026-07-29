@@ -15,6 +15,7 @@ import sys
 import types
 import pytest
 import asyncio
+from pathlib import Path
 from unittest.mock import Mock, patch, MagicMock
 from collections.abc import Coroutine, Iterator
 from typing import Any, TypeVar
@@ -118,6 +119,14 @@ for _mod_name in list(sys.modules):
         del sys.modules[_mod_name]
 sys.modules.update(_sys_modules_snapshot)
 del _sys_modules_snapshot
+
+# The real fastapi is back in sys.modules now, so this is the exact exception
+# class SearchService raises at runtime (verified: `_handle_search`,
+# `search_direct`, and `_get_current_username` all raise
+# fastapi.exceptions.HTTPException). Imported from fastapi rather than
+# re-exported through search_service, which mypy rejects under
+# no_implicit_reexport.
+from fastapi import HTTPException
 
 
 # ---------------------------------------------------------------------------
@@ -303,7 +312,7 @@ class TestSearchServiceInit:
         assert svc.connection_string == "postgresql://localhost/db"
 
     def test_security_config_created(self, _patch_external_deps: MagicMock) -> None:
-        svc = SearchService(config_file="/some/config.json")
+        SearchService(config_file="/some/config.json")
         _patch_external_deps["SecurityConfig"].assert_called_once_with(
             config_file="/some/config.json", service_name="search"
         )
@@ -334,7 +343,7 @@ class TestLoadConfig:
         assert svc.connection_string is None
 
     def test_load_config_with_service_section(
-        self, _patch_external_deps: MagicMock
+        self, _patch_external_deps: MagicMock, tmp_path: Path
     ) -> None:
         cl_instance = _patch_external_deps["ConfigLoader"].return_value
         cl_instance.has_config.return_value = True
@@ -344,27 +353,25 @@ class TestLoadConfig:
             "connection_string": "postgresql://localhost/mydb",
             "indexes": {"docs": "my_collection"},
         }
-        _patch_external_deps[
-            "ConfigLoader"
-        ].find_config_file.return_value = "/tmp/config.json"
+        config_file = str(tmp_path / "config.json")
+        _patch_external_deps["ConfigLoader"].find_config_file.return_value = config_file
 
-        svc = SearchService(config_file="/tmp/config.json")
+        svc = SearchService(config_file=config_file)
         # The constructor overrides port with its own default 8001 after _load_config
         assert svc.port == 8001
 
     def test_load_config_indexes_only_when_dict(
-        self, _patch_external_deps: MagicMock
+        self, _patch_external_deps: MagicMock, tmp_path: Path
     ) -> None:
         cl_instance = _patch_external_deps["ConfigLoader"].return_value
         cl_instance.has_config.return_value = True
         cl_instance.get_section.return_value = {
             "indexes": "not_a_dict",
         }
-        _patch_external_deps[
-            "ConfigLoader"
-        ].find_config_file.return_value = "/tmp/config.json"
+        config_file = str(tmp_path / "config.json")
+        _patch_external_deps["ConfigLoader"].find_config_file.return_value = config_file
 
-        svc = SearchService(config_file="/tmp/config.json")
+        svc = SearchService(config_file=config_file)
         assert svc.indexes == {}
 
 
@@ -536,8 +543,11 @@ class TestHandleSearch:
         svc = SearchService()
         request = _make_search_request(index_name="nonexistent")
 
-        with pytest.raises(Exception):
+        with pytest.raises(HTTPException) as excinfo:
             _run_async(svc._handle_search(request))
+
+        assert excinfo.value.status_code == 404
+        assert "nonexistent" in str(excinfo.value.detail)
 
     def test_handle_search_success(self, service_with_engine: SearchService) -> None:
         with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
@@ -761,10 +771,10 @@ class TestGetCurrentUsername:
         creds.username = "wrong"
         creds.password = "secret"
 
-        # HTTPException is None in this test environment (no FastAPI),
-        # so the code will try to call None(...) which raises TypeError
-        with pytest.raises(Exception):
+        with pytest.raises(HTTPException) as excinfo:
             svc._get_current_username(credentials=creds)
+
+        assert excinfo.value.status_code == 401
 
     def test_invalid_password(self) -> None:
         svc = SearchService(basic_auth=("admin", "secret"))
@@ -773,8 +783,10 @@ class TestGetCurrentUsername:
         creds.username = "admin"
         creds.password = "wrong"
 
-        with pytest.raises(Exception):
+        with pytest.raises(HTTPException) as excinfo:
             svc._get_current_username(credentials=creds)
+
+        assert excinfo.value.status_code == 401
 
     def test_timing_safe_comparison_used(self) -> None:
         """Verify that secrets.compare_digest is used (timing-safe)."""
@@ -855,8 +867,11 @@ class TestSearchDirect:
     def test_search_direct_index_not_found(self) -> None:
         svc = SearchService()
 
-        with pytest.raises(Exception):
+        with pytest.raises(HTTPException) as excinfo:
             svc.search_direct("test", index_name="nonexistent")
+
+        assert excinfo.value.status_code == 404
+        assert "nonexistent" in str(excinfo.value.detail)
 
 
 # ===================================================================

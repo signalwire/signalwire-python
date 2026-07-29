@@ -71,7 +71,7 @@ async def test_send_message_includes_context(
     signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
 ) -> None:
     """The context defaults to the protocol string and flows on the wire."""
-    msg = await signalwire_relay_client.send_message(
+    await signalwire_relay_client.send_message(
         to_number="+15551112222",
         from_number="+15553334444",
         body="hi",

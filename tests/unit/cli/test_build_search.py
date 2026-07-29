@@ -13,6 +13,7 @@ Unit tests for CLI build_search module
 
 import pytest
 import sys
+import tempfile
 import types
 from pathlib import Path
 from typing import Any
@@ -68,6 +69,14 @@ from signalwire.cli.build_search import (
     search_command,
     console_entry_point,
 )
+
+# Output dirs for the --output-dir CLI tests. IndexBuilder and Path.mkdir are
+# mocked in those tests, so nothing is actually written here; the value only has
+# to be a real, process-unique path rather than a hardcoded shared one. These
+# are consumed by @patch("sys.argv", ...) decorators, which are evaluated at
+# class-body time — the tmp_path fixture does not exist yet at that point.
+_CHUNKS_OUT_DIR = tempfile.mkdtemp(prefix="sw_search_chunks_")
+_INDEX_OUT_DIR = tempfile.mkdtemp(prefix="sw_search_idx_")
 
 
 class TestBuildSearchMain:
@@ -817,7 +826,7 @@ class TestErrorHandlingEdgeCases:
         with (
             patch("pathlib.Path.exists", return_value=True),
             patch("pathlib.Path.is_file", return_value=False),
-            patch("builtins.print") as mock_print,
+            patch("builtins.print"),
             patch("traceback.print_exc") as mock_traceback,
             pytest.raises(SystemExit),
         ):
@@ -835,7 +844,7 @@ class TestErrorHandlingEdgeCases:
 
         with (
             patch("pathlib.Path.exists", return_value=True),
-            patch("builtins.print") as mock_print,
+            patch("builtins.print"),
             patch("traceback.print_exc") as mock_traceback,
             pytest.raises(SystemExit),
         ):
@@ -848,7 +857,7 @@ class TestErrorHandlingEdgeCases:
         """Test verbose search error includes traceback"""
         with (
             patch("pathlib.Path.exists", return_value=True),
-            patch("builtins.print") as mock_print,
+            patch("builtins.print"),
             patch("traceback.print_exc") as mock_traceback,
             patch(
                 "signalwire.search.search_engine.SearchEngine",
@@ -1138,7 +1147,7 @@ class TestMainJsonOutputFormat:
             "--output-format",
             "json",
             "--output-dir",
-            "/tmp/test_chunks_out",
+            _CHUNKS_OUT_DIR,
         ],
     )
     def test_json_format_output_dir_mode(self, mock_builder_class: MagicMock) -> None:
@@ -1163,7 +1172,7 @@ class TestMainOutputDirIndexFormat:
     """Tests for --output-dir with index format."""
 
     @patch("signalwire.search.index_builder.IndexBuilder")
-    @patch("sys.argv", ["sw-search", "./docs", "--output-dir", "/tmp/idx_out"])
+    @patch("sys.argv", ["sw-search", "./docs", "--output-dir", _INDEX_OUT_DIR])
     def test_output_dir_single_source_sqlite(
         self, mock_builder_class: MagicMock
     ) -> None:
@@ -1187,7 +1196,7 @@ class TestMainOutputDirIndexFormat:
         assert call_kw["output_file"].endswith(".swsearch")
 
     @patch("signalwire.search.index_builder.IndexBuilder")
-    @patch("sys.argv", ["sw-search", "./a", "./b", "--output-dir", "/tmp/idx_out"])
+    @patch("sys.argv", ["sw-search", "./a", "./b", "--output-dir", _INDEX_OUT_DIR])
     def test_output_dir_multi_source_sqlite(
         self, mock_builder_class: MagicMock
     ) -> None:
@@ -1573,7 +1582,7 @@ class TestValidateCommandExtended:
 
         with (
             patch("pathlib.Path.exists", return_value=True),
-            patch("builtins.print") as mock_print,
+            patch("builtins.print"),
             pytest.raises(SystemExit) as exc_info,
         ):
             validate_command()
@@ -1962,7 +1971,7 @@ class TestMigrateCommand:
                 "signalwire.search.migration.SearchIndexMigrator",
                 return_value=mock_migrator,
             ),
-            patch("builtins.print") as mock_print,
+            patch("builtins.print"),
             pytest.raises(SystemExit) as exc_info,
         ):
             migrate_command()
@@ -1990,7 +1999,7 @@ class TestMigrateCommand:
                 "signalwire.search.migration.SearchIndexMigrator",
                 return_value=mock_migrator,
             ),
-            patch("builtins.print") as mock_print,
+            patch("builtins.print"),
             pytest.raises(SystemExit) as exc_info,
         ):
             migrate_command()
@@ -2163,7 +2172,7 @@ class TestRemoteCommand:
 
         with (
             patch("builtins.__import__", side_effect=mock_import),
-            patch("builtins.print") as mock_print,
+            patch("builtins.print"),
             pytest.raises(SystemExit) as exc_info,
         ):
             remote_command()
@@ -2204,7 +2213,7 @@ class TestRemoteCommand:
 
         with (
             patch.dict("sys.modules", {"requests": mock_requests}),
-            patch("builtins.print") as mock_print,
+            patch("builtins.print"),
             pytest.raises(SystemExit) as exc_info,
         ):
             remote_command()
@@ -2289,7 +2298,7 @@ class TestRemoteCommand:
 
         with (
             patch.dict("sys.modules", {"requests": mock_requests}),
-            patch("builtins.print") as mock_print,
+            patch("builtins.print"),
         ):
             remote_command()
 

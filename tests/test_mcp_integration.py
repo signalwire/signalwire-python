@@ -103,7 +103,7 @@ class TestMCPServerMixin:
         )
 
         assert resp["id"] == 3
-        assert resp["result"]["isError"] == False
+        assert not resp["result"]["isError"]
         content = resp["result"]["content"]
         assert len(content) == 1
         assert content[0]["type"] == "text"
@@ -182,7 +182,7 @@ class TestAddMCPServer:
             resource_vars={"caller_id": "${caller_id_number}"},
         )
 
-        assert agent._mcp_servers[0]["resources"] == True
+        assert agent._mcp_servers[0]["resources"]
         assert (
             agent._mcp_servers[0]["resource_vars"]["caller_id"] == "${caller_id_number}"
         )
@@ -205,10 +205,10 @@ class TestAddMCPServer:
     def test_enable_mcp_server(self) -> None:
         """enable_mcp_server sets the flag"""
         agent = AgentBase(name="test", route="/test")
-        assert agent._mcp_server_enabled == False
+        assert not agent._mcp_server_enabled
 
         result = agent.enable_mcp_server()
-        assert agent._mcp_server_enabled == True
+        assert agent._mcp_server_enabled
         assert result is agent
 
 
