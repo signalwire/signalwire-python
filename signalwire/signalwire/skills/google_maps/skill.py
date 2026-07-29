@@ -135,6 +135,23 @@ def _debug_json(label: str, data: Any) -> None:
 
 
 class GoogleMapsClient:
+    """
+    Thin synchronous wrapper over the Google Places and Routes HTTP APIs.
+
+    Holds the API key and exposes the two operations the skill's SWAIG tools need:
+
+    - :meth:`validate_address` — turn a spoken address or business name into
+      ``{"address", "lat", "lng"}`` via Nearby Search and/or Autocomplete plus a
+      Place Details lookup.
+    - :meth:`compute_route` — turn two coordinate pairs into
+      ``{"distance_meters", "duration_seconds"}`` via the Routes API.
+
+    Both methods swallow request errors: they log and return None rather than
+    raising, and they short-circuit to None when the key is empty, so a
+    misconfigured key surfaces as a "no result" to the agent instead of a failed
+    tool call.
+    """
+
     def __init__(self, api_key: str):
         self.api_key = api_key
 

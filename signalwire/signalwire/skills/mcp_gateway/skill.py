@@ -272,6 +272,24 @@ class MCPGatewaySkill(SkillBase):
 
         # Create handler function
         def handler(args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
+            """
+            Forward this SWAIG call to its MCP tool through the gateway.
+
+            Defined inside ``_register_mcp_tool`` so it closes over the specific
+            ``service_name`` and ``tool_name`` for this registration; the loop over
+            a service's tools therefore produces one distinct handler per tool.
+
+            Args:
+                args: The SWAIG arguments, passed through unchanged as the MCP
+                    tool's arguments.
+                raw_data: The raw SWAIG POST body; ``_call_mcp_tool`` reads the
+                    gateway session id from ``global_data.mcp_call_id``, falling
+                    back to ``call_id``.
+
+            Returns:
+                FunctionResult: whatever ``_call_mcp_tool`` returns for the gateway
+                response.
+            """
             return self._call_mcp_tool(service_name, tool_name, args, raw_data)
 
         # Register the SWAIG function. Forward the MCP tool's required-argument

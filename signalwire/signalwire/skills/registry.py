@@ -321,6 +321,26 @@ class SkillRegistry:
 
         # Helper function to add skill to schema
         def add_skill_to_schema(skill_class: type[SkillBase], source: str) -> None:
+            """
+            Add one skill class's entry to the enclosing ``skills_schema`` dict.
+
+            Reads the class attributes (``SKILL_NAME``, ``SKILL_DESCRIPTION``,
+            ``SKILL_VERSION``, ``SUPPORTS_MULTIPLE_INSTANCES``,
+            ``REQUIRED_PACKAGES``, ``REQUIRED_ENV_VARS``) and calls
+            ``get_parameter_schema()``, treating an ``AttributeError`` from that call
+            as an empty schema so a skill that predates the method still gets listed.
+            A class whose ``SKILL_NAME`` is None is skipped entirely.
+
+            Any other exception is logged and swallowed, so one malformed skill
+            cannot abort the whole registry scan — it is simply absent from the
+            result.
+
+            Args:
+                skill_class: The SkillBase subclass to describe.
+                source: Provenance recorded on the entry ('built-in', 'external',
+                    'entry_point' or 'registered'). Callers add already-registered
+                    skills first, so a later directory scan does not overwrite them.
+            """
             try:
                 skill_name = skill_class.SKILL_NAME
                 if skill_name is None:
