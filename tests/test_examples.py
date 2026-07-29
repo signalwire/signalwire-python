@@ -232,14 +232,11 @@ class TestSkillsExamples:
             )
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
         # Skills may require env vars, so we accept load failure with specific error
-        if returncode != 0:
-            # Check if it's a missing env var error (expected for some skills)
-            if (
-                "GOOGLE_SEARCH" in stderr
-                or "API_KEY" in stderr
-                or "env" in stderr.lower()
-            ):
-                pytest.skip(f"Skipping {agent_file} - requires API keys")
+        # (a missing env var error is expected for some skills)
+        if returncode != 0 and (
+            "GOOGLE_SEARCH" in stderr or "API_KEY" in stderr or "env" in stderr.lower()
+        ):
+            pytest.skip(f"Skipping {agent_file} - requires API keys")
         assert returncode == 0, (
             f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
         )
@@ -260,13 +257,12 @@ class TestWebSearchExamples:
         if not agent_path.exists():
             pytest.skip(f"Agent file not found: {agent_file}")
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
-        if returncode != 0:
-            if (
-                "GOOGLE_SEARCH" in stderr
-                or "API_KEY" in stderr
-                or "GOOGLE_SEARCH" in stdout
-            ):
-                pytest.skip(f"Skipping {agent_file} - requires Google API keys")
+        if returncode != 0 and (
+            "GOOGLE_SEARCH" in stderr
+            or "API_KEY" in stderr
+            or "GOOGLE_SEARCH" in stdout
+        ):
+            pytest.skip(f"Skipping {agent_file} - requires Google API keys")
         assert returncode == 0, (
             f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
         )
@@ -288,13 +284,12 @@ class TestDatasphereExamples:
         if not agent_path.exists():
             pytest.skip(f"Agent file not found: {agent_file}")
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
-        if returncode != 0:
-            if (
-                "SIGNALWIRE" in stderr
-                or "credentials" in stderr.lower()
-                or "SIGNALWIRE" in stdout
-            ):
-                pytest.skip(f"Skipping {agent_file} - requires SignalWire credentials")
+        if returncode != 0 and (
+            "SIGNALWIRE" in stderr
+            or "credentials" in stderr.lower()
+            or "SIGNALWIRE" in stdout
+        ):
+            pytest.skip(f"Skipping {agent_file} - requires SignalWire credentials")
         assert returncode == 0, (
             f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
         )
@@ -479,9 +474,10 @@ class TestSearchExamples:
         if not agent_path.exists():
             pytest.skip(f"Agent file not found: {agent_file}")
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
-        if returncode != 0:
-            if "index" in stderr.lower() or "swsearch" in stderr.lower():
-                pytest.skip(f"Skipping {agent_file} - requires search index")
+        if returncode != 0 and (
+            "index" in stderr.lower() or "swsearch" in stderr.lower()
+        ):
+            pytest.skip(f"Skipping {agent_file} - requires search index")
         assert returncode == 0, (
             f"Failed to load {agent_file}:\nstderr: {stderr}\nstdout: {stdout}"
         )
@@ -526,9 +522,10 @@ class TestSpecialExamples:
         # This is a search server, not an agent - may not work with swaig-test
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
         # Accept if it loads or fails with expected message
-        if returncode != 0:
-            if "not an agent" in stderr.lower() or "no agent" in stderr.lower():
-                pytest.skip("search_server_standalone.py is not an agent file")
+        if returncode != 0 and (
+            "not an agent" in stderr.lower() or "no agent" in stderr.lower()
+        ):
+            pytest.skip("search_server_standalone.py is not an agent file")
 
     def test_lambda_handler(self) -> None:
         """Test lambda handler example."""
@@ -538,9 +535,10 @@ class TestSpecialExamples:
         # This is a test file, may not export an agent directly
         returncode, stdout, stderr = run_swaig_test(agent_path, "--list-tools")
         # Accept load or skip if it's not a standard agent
-        if returncode != 0:
-            if "no agent" in stderr.lower() or "not found" in stderr.lower():
-                pytest.skip("test_lambda_handler.py doesn't export a standard agent")
+        if returncode != 0 and (
+            "no agent" in stderr.lower() or "not found" in stderr.lower()
+        ):
+            pytest.skip("test_lambda_handler.py doesn't export a standard agent")
         # If we got this far, the swaig-test invocation must have succeeded;
         # demand a recognisable handler shape, not just "didn't crash".
         assert returncode == 0, (

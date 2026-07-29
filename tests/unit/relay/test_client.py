@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -968,10 +969,8 @@ class TestRequestQueuing:
         assert len(client._execute_queue) == 1
         # Cancel the future to avoid hanging
         task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError, RelayError):
             await task
-        except (asyncio.CancelledError, RelayError):
-            pass
         _active_clients.clear()
 
     @pytest.mark.asyncio
@@ -1036,10 +1035,8 @@ class TestRequestQueuing:
         # Cancel all queued futures
         for f in futures:
             f.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError, RelayError):
                 await f
-            except (asyncio.CancelledError, RelayError):
-                pass
         _active_clients.clear()
 
 
@@ -1069,12 +1066,10 @@ class TestTimeouts:
         client, ws = connected_client
 
         with patch("signalwire.relay.client._EXECUTE_TIMEOUT", 0.05):
-            try:
+            with contextlib.suppress(RelayError):
                 await client.execute(
                     "calling.answer", {"node_id": "n1", "call_id": "c1"}
                 )
-            except RelayError:
-                pass
 
             # Force close should have been called (connected = False)
             assert client._connected is False
@@ -1374,8 +1369,7 @@ class TestRunForever:
         async def mock_connect(*args: Any, **kwargs: Any) -> CountingMockWS:
             nonlocal connect_count
             connect_count += 1
-            ws = CountingMockWS()
-            return ws
+            return CountingMockWS()
 
         with (
             patch(
@@ -1780,10 +1774,8 @@ class TestRecvLoopExceptions:
             # Cancel the existing recv task
             if client._recv_task:
                 client._recv_task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await client._recv_task
-                except asyncio.CancelledError:
-                    pass
 
             # Replace _ws with one that immediately raises ConnectionClosed
             class ImmediateCloseWS:

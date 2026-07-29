@@ -550,9 +550,7 @@ class TestLoadConfig:
                 # First call: config doesn't exist; after copy it does
                 call_count[0] += 1
                 return call_count[0] > 1
-            if name == "sample_config.json":
-                return True
-            return False
+            return name == "sample_config.json"
 
         with (
             patch(

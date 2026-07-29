@@ -14,6 +14,7 @@ The mock's ``/__mock__/scenarios/dial`` endpoint scripts the entire dance
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import re
 import uuid
 from typing import Any
@@ -170,10 +171,8 @@ async def test_dial_auto_generates_uuid_tag_when_omitted(
         )
     finally:
         pusher.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await pusher
-        except asyncio.CancelledError:
-            pass
 
     assert call.call_id == "auto-tag-winner"
     # The tag the SDK generated should be a UUID.
@@ -233,10 +232,8 @@ async def test_dial_failed_raises_relay_error(
             )
     finally:
         pusher.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await pusher
-        except asyncio.CancelledError:
-            pass
 
 
 async def test_dial_timeout_when_no_dial_event(
