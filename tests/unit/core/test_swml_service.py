@@ -12,7 +12,6 @@ Unit tests for SWMLService class
 """
 
 import pytest
-import contextlib
 import json
 from typing import Any
 from unittest.mock import Mock, patch, MagicMock
@@ -759,21 +758,14 @@ class TestProxyDetection:
     def test_x_forwarded_for_without_host_does_not_set_proxy(
         self, mock_swml_service: SWMLService
     ) -> None:
-        """X-Forwarded-For without host info should not set proxy_url_base.
-
-        Note: The production code has a structlog parameter conflict ('message'
-        is used as both positional and keyword), but we verify the method
-        doesn't set the proxy URL by catching the TypeError.
-        """
+        """X-Forwarded-For without host info should not set proxy_url_base."""
         mock_swml_service._proxy_url_base = None
         request = self._make_request(
             headers={
                 "X-Forwarded-For": "10.0.0.1, 10.0.0.2",
             }
         )
-        # Known structlog 'message' parameter conflict in production code
-        with contextlib.suppress(TypeError):
-            mock_swml_service._detect_proxy_from_request(request)
+        mock_swml_service._detect_proxy_from_request(request)
         # Cannot determine public URL from X-Forwarded-For alone
         assert mock_swml_service._proxy_url_base is None
 
@@ -2274,10 +2266,7 @@ class TestProxyDetectionDebug:
         svc._proxy_debug = True
         # Use a URL that starts with the local host to avoid transparent proxy detection
         request = self._make_request(headers={}, url="http://127.0.0.1:3001/test")
-        # The log.warning call for X-Forwarded-For has a known structlog
-        # 'message' parameter conflict, so catch TypeError if triggered.
-        with contextlib.suppress(TypeError):
-            svc._detect_proxy_from_request(request)
+        svc._detect_proxy_from_request(request)
         assert svc._proxy_url_base is None
 
     def test_proxy_debug_mode_false(self) -> None:
