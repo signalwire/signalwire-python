@@ -229,8 +229,6 @@ class TestSendMessage:
             await client.connect()
 
             # Override auto_reply to include message_id
-            original_send = ws.send
-
             async def custom_send(raw: str) -> None:
                 await MockWebSocket.send(ws, raw)
                 msg = json.loads(raw)

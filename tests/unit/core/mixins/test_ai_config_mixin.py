@@ -54,7 +54,7 @@ class TestAddPatternHint:
     """Tests for AIConfigMixin.add_pattern_hint"""
 
     def test_adds_pattern_hint_with_all_fields(self, host: MockAIConfigHost) -> None:
-        result = host.add_pattern_hint("SignalWire", r"signal\s*wire", "SignalWire")
+        host.add_pattern_hint("SignalWire", r"signal\s*wire", "SignalWire")
         assert len(host._hints) == 1
         assert host._hints[0] == {
             "hint": "SignalWire",
@@ -323,7 +323,7 @@ class TestSetLanguages:
 
     def test_sets_languages_with_valid_list(self, host: MockAIConfigHost) -> None:
         langs = [{"name": "English", "code": "en-US", "voice": "voice1"}]
-        result = host.set_languages(langs)
+        host.set_languages(langs)
         assert host._languages is langs
 
     def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
@@ -382,7 +382,7 @@ class TestSetPronunciations:
 
     def test_sets_pronunciations_with_valid_list(self, host: MockAIConfigHost) -> None:
         rules = [{"replace": "SQL", "with": "sequel"}]
-        result = host.set_pronunciations(rules)
+        host.set_pronunciations(rules)
         assert host._pronounce is rules
 
     def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
@@ -415,7 +415,7 @@ class TestSetGlobalData:
 
     def test_sets_global_data_with_valid_dict(self, host: MockAIConfigHost) -> None:
         data = {"key": "value", "num": 42}
-        result = host.set_global_data(data)
+        host.set_global_data(data)
         assert host._global_data == data
 
     def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
@@ -443,7 +443,7 @@ class TestUpdateGlobalData:
 
     def test_updates_global_data(self, host: MockAIConfigHost) -> None:
         host._global_data = {"existing": "value"}
-        result = host.update_global_data({"new": "data"})
+        host.update_global_data({"new": "data"})
         assert host._global_data == {"existing": "value", "new": "data"}
 
     def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
@@ -470,7 +470,7 @@ class TestSetNativeFunctions:
     """Tests for AIConfigMixin.set_native_functions"""
 
     def test_sets_native_functions(self, host: MockAIConfigHost) -> None:
-        result = host.set_native_functions(["check_time", "wait_for_user"])
+        host.set_native_functions(["check_time", "wait_for_user"])
         assert host.native_functions == ["check_time", "wait_for_user"]
 
     def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
@@ -504,7 +504,7 @@ class TestSetInternalFillers:
         self, host: MockAIConfigHost
     ) -> None:
         fillers = {"next_step": {"en-US": ["Moving on...", "Let's continue..."]}}
-        result = host.set_internal_fillers(fillers)
+        host.set_internal_fillers(fillers)
         assert host._internal_fillers == fillers
 
     def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
@@ -549,7 +549,7 @@ class TestAddInternalFiller:
     """Tests for AIConfigMixin.add_internal_filler"""
 
     def test_adds_filler_for_new_function(self, host: MockAIConfigHost) -> None:
-        result = host.add_internal_filler("next_step", "en-US", ["Moving on..."])
+        host.add_internal_filler("next_step", "en-US", ["Moving on..."])
         assert host._internal_fillers["next_step"]["en-US"] == ["Moving on..."]
 
     def test_returns_self_for_chaining(self, host: MockAIConfigHost) -> None:
@@ -634,7 +634,7 @@ class TestSetFunctionIncludes:
             {"url": "https://example.com", "functions": ["fn1", "fn2"]},
             {"url": "https://other.com", "functions": ["fn3"]},
         ]
-        result = host.set_function_includes(includes)
+        host.set_function_includes(includes)
         assert len(host._function_includes) == 2
         assert host._function_includes[0]["url"] == "https://example.com"
 
@@ -699,7 +699,7 @@ class TestSetPromptLlmParams:
     """Tests for AIConfigMixin.set_prompt_llm_params"""
 
     def test_sets_params(self, host: MockAIConfigHost) -> None:
-        result = host.set_prompt_llm_params(model="gpt-4o-mini", temperature=0.7)
+        host.set_prompt_llm_params(model="gpt-4o-mini", temperature=0.7)
         assert host._prompt_llm_params["model"] == "gpt-4o-mini"
         assert host._prompt_llm_params["temperature"] == 0.7
 
@@ -738,7 +738,7 @@ class TestSetPostPromptLlmParams:
     """Tests for AIConfigMixin.set_post_prompt_llm_params"""
 
     def test_sets_params(self, host: MockAIConfigHost) -> None:
-        result = host.set_post_prompt_llm_params(model="gpt-4o-mini", temperature=0.5)
+        host.set_post_prompt_llm_params(model="gpt-4o-mini", temperature=0.5)
         assert host._post_prompt_llm_params["model"] == "gpt-4o-mini"
         assert host._post_prompt_llm_params["temperature"] == 0.5
 

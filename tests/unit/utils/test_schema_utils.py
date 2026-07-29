@@ -648,10 +648,14 @@ class TestSchemaUtilsIntegration:
             valid_config = {"prompt": "Hello"}
             is_valid, errors = utils.validate_verb("ai", valid_config)
             assert is_valid is True
+            assert errors == []
 
             invalid_config: dict[str, Any] = {}
             is_valid, errors = utils.validate_verb("ai", invalid_config)
             assert is_valid is False
+            # An invalid config must SAY why — an empty error list would make the
+            # False above unactionable for a caller.
+            assert errors
 
             # Test code generation
             signature = utils.generate_method_signature("ai")
@@ -687,3 +691,6 @@ class TestSchemaUtilsIntegration:
 
             is_valid, errors = utils.validate_verb("ai", {})
             assert is_valid is False
+            # With an empty schema the verb is unknown; the failure must be
+            # reported, not returned as a bare False.
+            assert errors

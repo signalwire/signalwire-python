@@ -71,7 +71,7 @@ class TestSetPromptText:
     """Tests for PromptMixin.set_prompt_text"""
 
     def test_delegates_to_prompt_manager(self, host: MockPromptHost) -> None:
-        result = host.set_prompt_text("Hello world")
+        host.set_prompt_text("Hello world")
         host._prompt_manager.set_prompt_text.assert_called_once_with("Hello world")
 
     def test_returns_self_for_chaining(self, host: MockPromptHost) -> None:
@@ -99,7 +99,7 @@ class TestSetPostPrompt:
     """Tests for PromptMixin.set_post_prompt"""
 
     def test_delegates_to_prompt_manager(self, host: MockPromptHost) -> None:
-        result = host.set_post_prompt("Summarize the conversation")
+        host.set_post_prompt("Summarize the conversation")
         host._prompt_manager.set_post_prompt.assert_called_once_with(
             "Summarize the conversation"
         )
@@ -124,7 +124,7 @@ class TestSetPromptPom:
 
     def test_delegates_to_prompt_manager(self, host: MockPromptHost) -> None:
         pom_data = [{"title": "Section A", "body": "Body A"}]
-        result = host.set_prompt_pom(pom_data)
+        host.set_prompt_pom(pom_data)
         host._prompt_manager.set_prompt_pom.assert_called_once_with(pom_data)
 
     def test_returns_self_for_chaining(self, host: MockPromptHost) -> None:
@@ -159,7 +159,7 @@ class TestPromptAddSection:
     """Tests for PromptMixin.prompt_add_section"""
 
     def test_delegates_basic_section(self, host: MockPromptHost) -> None:
-        result = host.prompt_add_section("Intro", body="Welcome")
+        host.prompt_add_section("Intro", body="Welcome")
         host._prompt_manager.prompt_add_section.assert_called_once_with(
             title="Intro",
             body="Welcome",
@@ -238,7 +238,7 @@ class TestPromptAddToSection:
     """Tests for PromptMixin.prompt_add_to_section"""
 
     def test_add_body(self, host: MockPromptHost) -> None:
-        result = host.prompt_add_to_section("Intro", body="More text")
+        host.prompt_add_to_section("Intro", body="More text")
         host._prompt_manager.prompt_add_to_section.assert_called_once_with(
             title="Intro",
             body="More text",
@@ -288,7 +288,7 @@ class TestPromptAddSubsection:
     """Tests for PromptMixin.prompt_add_subsection"""
 
     def test_basic_subsection(self, host: MockPromptHost) -> None:
-        result = host.prompt_add_subsection("Parent", "Child", body="child body")
+        host.prompt_add_subsection("Parent", "Child", body="child body")
         host._prompt_manager.prompt_add_subsection.assert_called_once_with(
             parent_title="Parent",
             title="Child",

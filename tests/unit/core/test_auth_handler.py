@@ -23,6 +23,14 @@ if TYPE_CHECKING:
 
 _T = TypeVar("_T")
 
+# Fixture credentials for tests that exercise auth *plumbing* (is the dependency
+# callable, does a missing credential raise 401, does the decorator preserve
+# __name__) rather than credential matching. Tests that DO care about the values
+# pass their own explicitly. Named constants keep the literals out of function
+# signatures, where they would read as a hardcoded credential default.
+_FIXTURE_USER = "testuser"
+_FIXTURE_PASSWORD = "testpass"
+
 
 # ---------------------------------------------------------------------------
 # Helpers: build a mock SecurityConfig that behaves like the real one
@@ -30,8 +38,8 @@ _T = TypeVar("_T")
 
 
 def _make_security_config(
-    username: str = "testuser",
-    password: str = "testpass",
+    username: str = _FIXTURE_USER,
+    password: str = _FIXTURE_PASSWORD,
     bearer_token: str | None = None,
     api_key: str | None = None,
     api_key_header: str = "X-API-Key",
@@ -163,7 +171,7 @@ class TestAuthHandlerInit:
         with patch("signalwire.core.auth_handler.HTTPBasic") as mock_cls:
             mock_cls.return_value = Mock()
             cfg = _make_security_config()
-            handler = AuthHandler(cfg)
+            AuthHandler(cfg)
             mock_cls.assert_called_once_with(auto_error=False)
 
     def test_auto_error_false_on_http_bearer(self) -> None:
@@ -173,7 +181,7 @@ class TestAuthHandlerInit:
         with patch("signalwire.core.auth_handler.HTTPBearer") as mock_cls:
             mock_cls.return_value = Mock()
             cfg = _make_security_config()
-            handler = AuthHandler(cfg)
+            AuthHandler(cfg)
             mock_cls.assert_called_once_with(auto_error=False)
 
     def test_basic_auth_always_enabled(self) -> None:
@@ -194,7 +202,7 @@ class TestVerifyBasicAuth:
     """Test the verify_basic_auth method, including timing-safe comparison."""
 
     def _make_handler(
-        self, username: str = "user", password: str = "pass"
+        self, username: str = _FIXTURE_USER, password: str = _FIXTURE_PASSWORD
     ) -> "AuthHandler":
         from signalwire.core.auth_handler import AuthHandler
 
@@ -343,7 +351,7 @@ class TestVerifyBasicAuth:
 class TestVerifyBearerToken:
     """Test the verify_bearer_token method."""
 
-    def _make_handler(self, bearer_token: str = "tok_abc") -> "AuthHandler":
+    def _make_handler(self, bearer_token: str) -> "AuthHandler":
         from signalwire.core.auth_handler import AuthHandler
 
         cfg = _make_security_config(bearer_token=bearer_token)
@@ -1129,7 +1137,7 @@ class TestEdgeCases:
 
         cfg = _make_security_config(username="u", password="p")
         with patch.object(AuthHandler, "_setup_auth_methods") as mock_setup:
-            handler = AuthHandler(cfg)
+            AuthHandler(cfg)
             mock_setup.assert_called_once()
 
     def test_handler_stores_security_config(self) -> None:

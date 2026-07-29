@@ -148,6 +148,7 @@ class TestHttpClient:
             params=None,
             timeout=30.0,
         )
+        assert result == {"ok": True}
 
     def test_patch(self, http: HttpClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"ok": True})
@@ -228,6 +229,7 @@ class TestCrudResource:
             params={"page": 1},
             timeout=30.0,
         )
+        assert result == {"data": []}
 
     def test_create(self, http: HttpClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(201, {"id": "new"})
@@ -240,6 +242,7 @@ class TestCrudResource:
             params=None,
             timeout=30.0,
         )
+        assert result == {"id": "new"}
 
     def test_get(self, http: HttpClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"id": "abc"})
@@ -252,6 +255,7 @@ class TestCrudResource:
             params=None,
             timeout=30.0,
         )
+        assert result == {"id": "abc"}
 
     def test_update_patch(self, http: HttpClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {"ok": True})

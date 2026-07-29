@@ -589,7 +589,7 @@ class TestAgentBaseDeclarativePrompts:
         with pytest.MonkeyPatch().context() as m:
             m.setattr("signalwire.core.agent_base.uvicorn", Mock())
             with patch.object(TestAgent, "prompt_add_section") as mock_add_section:
-                agent = TestAgent("test_agent", schema_validation=False)
+                TestAgent("test_agent", schema_validation=False)
 
                 # Should have called prompt_add_section for each section
                 assert mock_add_section.call_count == 3
@@ -603,7 +603,7 @@ class TestAgentBaseDeclarativePrompts:
         with pytest.MonkeyPatch().context() as m:
             m.setattr("signalwire.core.agent_base.uvicorn", Mock())
             with patch.object(TestAgent, "prompt_add_section") as mock_add_section:
-                agent = TestAgent("test_agent", use_pom=False, schema_validation=False)
+                TestAgent("test_agent", use_pom=False, schema_validation=False)
 
                 # Should not call prompt_add_section when POM is disabled
                 mock_add_section.assert_not_called()

@@ -1174,6 +1174,7 @@ class TestCmdLogs:
     def test_logs_with_tail(self, mock_subprocess: MagicMock) -> None:
         args = self._make_args(app="myapp", host="dokku.example.com", tail=True)
         result = cmd_logs(args)
+        assert result == 0
         cmd = mock_subprocess.run.call_args[0][0]
         assert "-t" in cmd
 
@@ -1181,6 +1182,7 @@ class TestCmdLogs:
     def test_logs_with_num(self, mock_subprocess: MagicMock) -> None:
         args = self._make_args(app="myapp", host="dokku.example.com", num=50)
         result = cmd_logs(args)
+        assert result == 0
         cmd = mock_subprocess.run.call_args[0][0]
         assert "--num" in cmd
         assert "50" in cmd
@@ -1191,6 +1193,7 @@ class TestCmdLogs:
             app="myapp", host="dokku.example.com", tail=True, num=100
         )
         result = cmd_logs(args)
+        assert result == 0
         cmd = mock_subprocess.run.call_args[0][0]
         assert "-t" in cmd
         assert "--num" in cmd

@@ -427,7 +427,7 @@ class TestRegisterTools:
         self, mock_request: Mock
     ) -> None:
         """When services list is empty, register_tools should query /services."""
-        skill, agent = _make_skill(params={"services": []})
+        skill, _agent = _make_skill(params={"services": []})
         skill.services = []
 
         services_response = Mock()

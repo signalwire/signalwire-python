@@ -377,6 +377,7 @@ class TestRecordMethod:
             audio={"format": "wav", "stereo": True, "direction": "both"},
             control_id="r1",
         )
+        assert isinstance(action, RecordAction)
         args = mock_client.execute.call_args
         params = args[0][1]
         assert params["record"]["audio"]["format"] == "wav"
@@ -1573,7 +1574,7 @@ class TestOnCompleted:
         async def on_done(event: RelayEvent) -> None:
             results.append(event)
 
-        action = await call.play(
+        await call.play(
             [{"type": "tts", "params": {"text": "Hi"}}],
             control_id="ctl1",
             on_completed=on_done,

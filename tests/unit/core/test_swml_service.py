@@ -1968,9 +1968,8 @@ class TestAsRouterWithCallbacks:
             return None
 
         svc.register_routing_callback(capture_callback, "/sip")
-        # Override on_request to capture the callback_path
-        original_on_request = svc.on_request
 
+        # Override on_request to capture the callback_path
         def capturing_on_request(
             data: dict[str, Any] | None = None, cb_path: str | None = None
         ) -> dict[str, Any] | None:
@@ -2188,6 +2187,10 @@ class TestGetBasicAuthEnvironmentSource:
         )
         u, p, source = svc.get_basic_auth_credentials(include_source=True)  # type: ignore[misc]  # include_source=True returns 3-tuple
         assert source == "provided"
+        # "provided" classifies the SOURCE (they match no env var); the
+        # explicitly-passed credentials must still come back verbatim.
+        assert u == "myuser"
+        assert p == "mypass"
 
     def test_generated_source(self) -> None:
         with patch.dict("os.environ", {}, clear=True):
