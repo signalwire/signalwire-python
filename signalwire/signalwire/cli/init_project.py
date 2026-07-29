@@ -36,6 +36,18 @@ DEFAULT_REGIONS = {
 
 # ANSI colors
 class Colors:
+    """Raw ANSI SGR escape sequences used by this generator's console output.
+
+    A namespace of constants, never instantiated. ``NC`` ("no color") is the
+    reset sequence every other constant must be closed with. The codes are
+    emitted unconditionally — there is no TTY detection or ``NO_COLOR``
+    handling — so redirected output contains the escapes verbatim.
+
+    This is ``sw-agent-init``'s own copy; ``cli/dokku.py`` defines a separate
+    ``Colors`` for ``sw-agent-dokku`` that additionally carries ``MAGENTA``.
+    The two are independent, not a shared module.
+    """
+
     RED = "\033[0;31m"
     GREEN = "\033[0;32m"
     YELLOW = "\033[1;33m"
@@ -47,18 +59,49 @@ class Colors:
 
 
 def print_step(msg: str) -> None:
+    """Print ``msg`` to stdout as a progress step, prefixed with a blue ``==>``.
+
+    Announces the scaffolding action about to be performed; the outcome is then
+    reported with :func:`print_success`, :func:`print_warning` or
+    :func:`print_error`.
+
+    Args:
+        msg: Text to display after the marker.
+    """
     print(f"{Colors.BLUE}==>{Colors.NC} {msg}")
 
 
 def print_success(msg: str) -> None:
+    """Print ``msg`` to stdout marked with a green check, reporting success.
+
+    Args:
+        msg: Text to display after the marker.
+    """
     print(f"{Colors.GREEN}✓{Colors.NC} {msg}")
 
 
 def print_warning(msg: str) -> None:
+    """Print ``msg`` to stdout marked with a yellow ``!``.
+
+    For conditions the user should know about that do not stop project
+    generation — it writes to stdout like the rest and does not change the
+    exit status.
+
+    Args:
+        msg: Text to display after the marker.
+    """
     print(f"{Colors.YELLOW}!{Colors.NC} {msg}")
 
 
 def print_error(msg: str) -> None:
+    """Print ``msg`` to stdout marked with a red ``✗``.
+
+    Reports a failure only; it does NOT write to stderr, raise, or exit — the
+    caller is responsible for aborting and returning a non-zero exit code.
+
+    Args:
+        msg: Text to display after the marker.
+    """
     print(f"{Colors.RED}✗{Colors.NC} {msg}")
 
 

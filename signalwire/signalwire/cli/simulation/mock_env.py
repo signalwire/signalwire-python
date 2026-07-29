@@ -24,6 +24,17 @@ class MockQueryParams:
         self._params = params or {}
 
     def get(self, key: str, default: str | None = None) -> str | None:
+        """Return the query-string value for ``key``, or ``default`` if absent.
+
+        Lookup is exact and case-SENSITIVE, unlike :meth:`MockHeaders.get`.
+
+        Args:
+            key: Query parameter name, matched exactly as given.
+            default: Value returned when the parameter was not supplied.
+
+        Returns:
+            The parameter value, or ``default`` (``None`` unless overridden).
+        """
         return self._params.get(key, default)
 
     def __getitem__(self, key: str) -> str:
@@ -33,12 +44,27 @@ class MockQueryParams:
         return key in self._params
 
     def items(self) -> ItemsView[str, str]:
+        """Return a view of the ``(name, value)`` pairs of every query parameter.
+
+        Returns:
+            The underlying dict's ``items()`` view — a live view, not a copy.
+        """
         return self._params.items()
 
     def keys(self) -> KeysView[str]:
+        """Return a view of the query parameter names, in insertion order.
+
+        Returns:
+            The underlying dict's ``keys()`` view — a live view, not a copy.
+        """
         return self._params.keys()
 
     def values(self) -> ValuesView[str]:
+        """Return a view of the query parameter values.
+
+        Returns:
+            The underlying dict's ``values()`` view — a live view, not a copy.
+        """
         return self._params.values()
 
 
@@ -53,6 +79,19 @@ class MockHeaders:
                 self._headers[k.lower()] = v
 
     def get(self, key: str, default: str | None = None) -> str | None:
+        """Return the header value for ``key``, or ``default`` if absent.
+
+        The lookup is case-INSENSITIVE: ``key`` is lowercased before matching,
+        so ``get("Content-Type")`` and ``get("content-type")`` are equivalent.
+        This mirrors FastAPI/Starlette header semantics.
+
+        Args:
+            key: Header name in any casing.
+            default: Value returned when the header was not supplied.
+
+        Returns:
+            The header value, or ``default`` (``None`` unless overridden).
+        """
         return self._headers.get(key.lower(), default)
 
     def __getitem__(self, key: str) -> str:
@@ -62,12 +101,36 @@ class MockHeaders:
         return key.lower() in self._headers
 
     def items(self) -> ItemsView[str, str]:
+        """Return a view of the ``(name, value)`` pairs of every header.
+
+        Names are yielded LOWERCASED — they were normalized on construction, so
+        the original casing the caller supplied is not preserved.
+
+        Returns:
+            The underlying dict's ``items()`` view — a live view, not a copy.
+        """
         return self._headers.items()
 
     def keys(self) -> KeysView[str]:
+        """Return a view of the header names, lowercased.
+
+        As with :meth:`items`, the names reflect the normalized (lowercase)
+        storage rather than the casing originally passed in.
+
+        Returns:
+            The underlying dict's ``keys()`` view — a live view, not a copy.
+        """
         return self._headers.keys()
 
     def values(self) -> ValuesView[str]:
+        """Return a view of the header values, unmodified.
+
+        Only header NAMES are normalized on construction; values are stored
+        exactly as supplied.
+
+        Returns:
+            The underlying dict's ``values()`` view — a live view, not a copy.
+        """
         return self._headers.values()
 
 
