@@ -288,6 +288,26 @@ class HttpClient:
         params: dict[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> Any:
+        """Issue a ``GET`` to ``path`` and return the decoded JSON body.
+
+        Args:
+            path: Absolute API path (e.g. ``/api/fabric/resources``), appended to
+                the client's ``scheme://host`` base URL.
+            params: Query-string parameters. ``None`` values are dropped from the
+                URL recorded on an error; list values expand repeated-key style.
+            request_options: Per-call transport overrides (timeout / retries /
+                backoff / abort signal) shallow-merged over the client default.
+
+        Returns:
+            The parsed JSON body, or ``{}`` for a ``204`` or an empty body.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response, or on a 2xx whose body is
+                not decodable JSON.
+            SignalWireRestTransportError: If no response was ever received
+                (connection refused, DNS failure, TLS error, timeout) or the
+                ``abort_signal`` was set before an attempt.
+        """
         return self._request(
             "GET", path, params=params, request_options=request_options
         )
@@ -299,6 +319,27 @@ class HttpClient:
         params: dict[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> Any:
+        """Issue a ``POST`` to ``path`` with ``body`` JSON-encoded, returning the
+        decoded JSON response.
+
+        Unlike :meth:`get`, this is a non-idempotent method: on a retryable
+        failure it retries only for a transport error or a ``429``/``503``
+        throttle, never blindly on ``500``/``502``/``504``.
+
+        Args:
+            path: Absolute API path.
+            body: Value serialised as the JSON request body. ``None`` sends no body.
+            params: Query-string parameters (some create endpoints take both).
+            request_options: Per-call transport overrides.
+
+        Returns:
+            The parsed JSON body, or ``{}`` for a ``204`` or an empty body.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response, or an undecodable 2xx body.
+            SignalWireRestTransportError: If no response was received or the request
+                was cancelled via ``abort_signal``.
+        """
         return self._request(
             "POST", path, body=body, params=params, request_options=request_options
         )
@@ -309,6 +350,24 @@ class HttpClient:
         body: Any = None,
         request_options: RequestOptions | None = None,
     ) -> Any:
+        """Issue a ``PUT`` to ``path`` with ``body`` JSON-encoded (full replace).
+
+        Takes no query parameters, unlike :meth:`get`/:meth:`post`. ``PUT`` is
+        treated as idempotent, so it retries on the full ``retry_on_status`` set.
+
+        Args:
+            path: Absolute API path, usually a specific item (``<collection>/<id>``).
+            body: Value serialised as the JSON request body.
+            request_options: Per-call transport overrides.
+
+        Returns:
+            The parsed JSON body, or ``{}`` for a ``204`` or an empty body.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response, or an undecodable 2xx body.
+            SignalWireRestTransportError: If no response was received or the request
+                was cancelled via ``abort_signal``.
+        """
         return self._request("PUT", path, body=body, request_options=request_options)
 
     def patch(
@@ -317,9 +376,45 @@ class HttpClient:
         body: Any = None,
         request_options: RequestOptions | None = None,
     ) -> Any:
+        """Issue a ``PATCH`` to ``path`` with ``body`` JSON-encoded (partial update).
+
+        Takes no query parameters. Like :meth:`post`, ``PATCH`` is non-idempotent,
+        so it retries only on a transport error or a ``429``/``503`` throttle.
+
+        Args:
+            path: Absolute API path, usually a specific item (``<collection>/<id>``).
+            body: Value serialised as the JSON request body — only the fields to change.
+            request_options: Per-call transport overrides.
+
+        Returns:
+            The parsed JSON body, or ``{}`` for a ``204`` or an empty body.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response, or an undecodable 2xx body.
+            SignalWireRestTransportError: If no response was received or the request
+                was cancelled via ``abort_signal``.
+        """
         return self._request("PATCH", path, body=body, request_options=request_options)
 
     def delete(self, path: str, request_options: RequestOptions | None = None) -> Any:
+        """Issue a ``DELETE`` to ``path``, returning the decoded JSON response.
+
+        Sends neither a body nor query parameters. ``DELETE`` is treated as
+        idempotent, so it retries on the full ``retry_on_status`` set. SignalWire
+        delete endpoints typically answer ``204``, which surfaces here as ``{}``.
+
+        Args:
+            path: Absolute API path of the item to delete.
+            request_options: Per-call transport overrides.
+
+        Returns:
+            The parsed JSON body, or ``{}`` for a ``204`` or an empty body.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response, or an undecodable 2xx body.
+            SignalWireRestTransportError: If no response was received or the request
+                was cancelled via ``abort_signal``.
+        """
         return self._request("DELETE", path, request_options=request_options)
 
 
@@ -345,6 +440,28 @@ class ReadResource(BaseResource, Generic[TList, TItem]):
     def list(
         self, *, request_options: RequestOptions | None = None, **params: Any
     ) -> TList:
+        """Fetch ONE raw page from this resource's collection endpoint.
+
+        ``GET``s the resource's ``base_path`` verbatim (no id segment appended)
+        and returns the server's response as-is — the envelope, not the items.
+        This does NOT follow pagination links: use :meth:`paginate` to iterate
+        every item across all pages.
+
+        Args:
+            request_options: Per-call transport overrides (timeout / retries /
+                backoff / abort signal).
+            **params: Arbitrary filter/paging query parameters, sent as the query
+                string. Passing none sends no query string at all.
+
+        Returns:
+            The decoded list envelope, statically typed as this resource's
+            ``TList`` binding. At runtime it is the raw JSON dict from the server;
+            the type parameter is static only.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response, or an undecodable 2xx body.
+            SignalWireRestTransportError: If no response was received.
+        """
         return cast(
             TList,
             self._http.get(
@@ -382,6 +499,27 @@ class ReadResource(BaseResource, Generic[TList, TItem]):
     def get(
         self, resource_id: str, *, request_options: RequestOptions | None = None
     ) -> TItem:
+        """Fetch a single item of this resource by id.
+
+        ``GET``s ``<base_path>/<resource_id>``. Distinct from
+        :meth:`HttpClient.get`, which takes a caller-built absolute path and no id:
+        here the path is composed from the resource's own ``base_path``, and no
+        query parameters are sent.
+
+        Args:
+            resource_id: Identifier appended as the final path segment. Stringified
+                as-is, so it must already be URL-safe.
+            request_options: Per-call transport overrides.
+
+        Returns:
+            The decoded item, statically typed as this resource's ``TItem``
+            binding; a raw JSON dict at runtime.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response — notably ``404`` for an
+                unknown id — or an undecodable 2xx body.
+            SignalWireRestTransportError: If no response was received.
+        """
         return cast(
             TItem,
             self._http.get(self._path(resource_id), request_options=request_options),
@@ -403,6 +541,28 @@ class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TU
     def create(
         self, *, request_options: RequestOptions | None = None, **kwargs: Any
     ) -> TItem:
+        """Create a new item in this collection.
+
+        ``POST``s ``base_path`` with the keyword arguments serialised **as the JSON
+        request body** — not as a query string, which is how they differ from
+        :meth:`list`'s ``**params``.
+
+        Concrete generated resources override this with a closed, spec-typed
+        signature; this base accepts arbitrary wire fields.
+
+        Args:
+            request_options: Per-call transport overrides.
+            **kwargs: Fields of the create request, sent verbatim as the JSON body.
+
+        Returns:
+            The created item as returned by the server, statically typed as
+            ``TItem``; a raw JSON dict at runtime.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response — notably ``422`` for an
+                invalid body — or an undecodable 2xx body.
+            SignalWireRestTransportError: If no response was received.
+        """
         # Honest fallback: the body accepts arbitrary wire fields and at runtime
         # is a plain dict. Concrete resources override this with a generated
         # CLOSED typed signature (explicit spec fields + an ``extras`` door); the
@@ -425,6 +585,31 @@ class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TU
         request_options: RequestOptions | None = None,
         **kwargs: Any,
     ) -> TItem:
+        """Update an existing item by id, sending only the given fields.
+
+        Dispatches on the class attribute ``_update_method``: ``PATCH`` by default
+        (partial update), or ``PUT`` for resources that bind
+        :class:`FabricResourcePUT`. The keyword arguments become the JSON request
+        body, sent to ``<base_path>/<resource_id>``.
+
+        Concrete generated resources override this with a closed, spec-typed
+        signature; this base accepts arbitrary wire fields.
+
+        Args:
+            resource_id: Identifier of the item to update, appended as the final
+                path segment. Positional-only, so a subclass may rename it.
+            request_options: Per-call transport overrides.
+            **kwargs: Fields to change, sent verbatim as the JSON body.
+
+        Returns:
+            The updated item as returned by the server, statically typed as
+            ``TItem``; a raw JSON dict at runtime.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response — notably ``404`` for an
+                unknown id or ``422`` for an invalid body — or an undecodable 2xx body.
+            SignalWireRestTransportError: If no response was received.
+        """
         # resource_id is positional-only so a subclass may rename it without an LSP
         # override conflict. Same contract as ``create``: honest ``**kwargs: Any``
         # fallback; the concrete generated override carries the closed typed shape, the
@@ -442,6 +627,27 @@ class CrudResource(ReadResource[TList, TItem], Generic[TList, TItem, TCreate, TU
     def delete(
         self, resource_id: str, *, request_options: RequestOptions | None = None
     ) -> TItem:
+        """Delete a single item of this resource by id.
+
+        ``DELETE``s ``<base_path>/<resource_id>``. Distinct from
+        :meth:`HttpClient.delete`, which takes a caller-built absolute path: here
+        the path is composed from the resource's own ``base_path``.
+
+        Args:
+            resource_id: Identifier of the item to delete, appended as the final
+                path segment.
+            request_options: Per-call transport overrides.
+
+        Returns:
+            Statically typed as ``TItem``, but SignalWire delete endpoints
+            typically answer ``204`` with no body, which arrives here as ``{}``.
+            Do not rely on the deleted item being echoed back.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response — notably ``404`` for an
+                unknown id.
+            SignalWireRestTransportError: If no response was received.
+        """
         return cast(
             TItem,
             self._http.delete(self._path(resource_id), request_options=request_options),
@@ -458,6 +664,28 @@ class CrudWithAddresses(CrudResource[TList, TItem, TCreate, TUpdate]):
         request_options: RequestOptions | None = None,
         **params: Any,
     ) -> Any:
+        """List the addresses belonging to one item of this resource.
+
+        ``GET``s the sibling sub-collection ``<base_path>/<resource_id>/addresses``.
+        Unlike :meth:`list`, which pages the resource's OWN collection, this lists a
+        different collection nested under a single item, so it requires an id.
+
+        Args:
+            resource_id: Identifier of the owning item.
+            request_options: Per-call transport overrides.
+            **params: Filter/paging query parameters for the addresses collection.
+                Passing none sends no query string.
+
+        Returns:
+            The decoded addresses list envelope. Untyped (``Any``) — this method
+            carries no ``TList``-style type parameter, so it is the raw server JSON
+            both statically and at runtime.
+
+        Raises:
+            SignalWireRestError: On a non-2xx response — notably ``404`` for an
+                unknown ``resource_id``.
+            SignalWireRestTransportError: If no response was received.
+        """
         return self._http.get(
             self._path(resource_id, "addresses"),
             params=params or None,
