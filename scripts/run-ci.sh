@@ -46,6 +46,14 @@ PORT_NAME="signalwire-python"
 # reads pyproject's per-file-ignores for examples/**, so the SDK ruleset stays intact.
 EXAMPLE_DIRS=("$PORT_ROOT/examples" "$PORT_ROOT/rest/examples" "$PORT_ROOT/relay/examples")
 
+# Non-shipped python: the test suite, the dev/CI scripts, and eng/. Covered by the
+# REPO-LINT / REPO-FMT gates below. Until 2026-07-29 these three dirs were linted and
+# format-checked by NOTHING — FMT/LINT target only signalwire/, EXAMPLES-* only the
+# example dirs — so 1291 findings had accumulated unseen (and an unused `import socket`
+# added that same day went uncaught). ruff reads pyproject's tests/** per-file-ignores
+# (S101/E402/S104/S105/S106), so the SDK ruleset otherwise applies in full.
+REPO_DIRS=("$PORT_ROOT/tests" "$PORT_ROOT/scripts" "$PORT_ROOT/eng")
+
 resolve_porting_sdk() {
     if [ -n "${PORTING_SDK:-}" ] && [ -d "$PORTING_SDK/scripts" ]; then
         echo "$PORTING_SDK"
@@ -104,6 +112,19 @@ fmt_gate() {
             echo "    (FMT auto-applied formatting to your working tree — review & stage)"
         fi
         python3 -m ruff format --check "$PORT_ROOT/signalwire"
+    fi
+}
+
+# REPO-FMT — ruff format over tests/, scripts/, eng/. LOCAL applies; CI --check.
+repo_fmt_gate() {
+    if [ -n "${CI:-}" ]; then
+        python3 -m ruff format --check "${REPO_DIRS[@]}"
+    else
+        python3 -m ruff format "${REPO_DIRS[@]}" >/dev/null
+        if ! (cd "$PORT_ROOT" && git diff --quiet 2>/dev/null); then
+            echo "    (REPO-FMT auto-applied formatting to your working tree — review & stage)"
+        fi
+        python3 -m ruff format --check "${REPO_DIRS[@]}"
     fi
 }
 
@@ -244,6 +265,16 @@ sched_gate EXAMPLES-LINT desc="ruff check zero findings over examples/ rest/exam
 
 sched_gate EXAMPLES-FMT desc="ruff format over the example dirs (local: apply; CI: --check)" \
     --fn examples_fmt_gate
+
+# REPO-LINT / REPO-FMT — tests/, scripts/ and eng/ held to the SDK's own ruleset. Wired
+# 2026-07-29 once the burn reached ZERO (1291 -> 0, commit 4dd2897): burn to zero BEFORE
+# wire, so the gate never lands red. Cheap static checks, no build and no mock, so they
+# belong in the per-PR cheap wave next to EXAMPLES-*.
+sched_gate REPO-LINT desc="ruff check zero findings over tests/ scripts/ eng/" \
+    -- python3 -m ruff check "${REPO_DIRS[@]}"
+
+sched_gate REPO-FMT desc="ruff format over tests/ scripts/ eng/ (local: apply; CI: --check)" \
+    --fn repo_fmt_gate
 
 sched_gate TYPECHECK desc="mypy zero findings" \
     -- python3 -m mypy --config-file "$PORT_ROOT/pyproject.toml"
