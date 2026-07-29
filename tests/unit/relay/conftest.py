@@ -376,16 +376,39 @@ def _resolve_http_port(ws_port: int) -> int:
     return ws_port + 1000
 
 
-def _probe_health(http_url: str) -> bool:
+def _ws_port_accepting(ws_port: int) -> bool:
+    """Whether something is actually listening on the WS port we will connect to."""
+    import socket
+
+    try:
+        with socket.create_connection(("127.0.0.1", ws_port), timeout=_PROBE_TIMEOUT_S):
+            return True
+    except OSError:
+        return False
+
+
+def _probe_health(http_url: str, ws_port: Optional[int] = None) -> bool:
+    """Whether a usable mock_relay is already up.
+
+    Checks BOTH transports. The HTTP health endpoint and the WS endpoint are two
+    DIFFERENT ports (HTTP defaults to WS+1000), so a green HTTP probe alone does
+    not mean the socket the tests connect over is alive: a foreign process — a
+    concurrent lane's mock, a leftover from an earlier run — can own the HTTP
+    port while nothing serves WS, and then the caller skips spawning its own
+    server and every test dies with ConnectionRefusedError on the WS port. That
+    failure was observed live on port 8773 during a parallel docs run.
+    """
     import requests
 
     try:
         resp = requests.get(f"{http_url}/__mock__/health", timeout=_PROBE_TIMEOUT_S)
         if resp.status_code != 200:
             return False
-        return "schemas_loaded" in resp.json()
+        if "schemas_loaded" not in resp.json():
+            return False
     except Exception:
         return False
+    return ws_port is None or _ws_port_accepting(ws_port)
 
 
 class _SharedRelayServer:
@@ -412,7 +435,7 @@ class _SharedRelayServer:
             ws_url = f"ws://127.0.0.1:{ws_port}"
             relay_host = f"127.0.0.1:{ws_port}"
 
-            if _probe_health(http_url):
+            if _probe_health(http_url, ws_port):
                 self.http_url, self.ws_url, self.relay_host = (
                     http_url,
                     ws_url,
@@ -454,7 +477,7 @@ class _SharedRelayServer:
 
             deadline = time.time() + _STARTUP_TIMEOUT_S
             while time.time() < deadline:
-                if _probe_health(http_url):
+                if _probe_health(http_url, ws_port):
                     self.http_url, self.ws_url, self.relay_host = (
                         http_url,
                         ws_url,
