@@ -373,10 +373,12 @@ class TestOffModeNoFdLeak:
     """Off mode should not open /dev/null or any file."""
 
     def test_no_file_handles_opened(self) -> None:
-        with patch.dict(os.environ, {"SIGNALWIRE_LOG_MODE": "off"}):
-            with patch("builtins.open") as mock_open:
-                configure_logging()
-                mock_open.assert_not_called()
+        with (
+            patch.dict(os.environ, {"SIGNALWIRE_LOG_MODE": "off"}),
+            patch("builtins.open") as mock_open,
+        ):
+            configure_logging()
+            mock_open.assert_not_called()
 
 
 # ===========================================================================

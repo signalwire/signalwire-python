@@ -144,11 +144,11 @@ class TestServiceCaptureErrors:
         """ImportError when DEPENDENCIES_AVAILABLE is False."""
         py_file = tmp_path / "service.py"
         py_file.write_text("pass")
-        with patch("signalwire.cli.core.service_loader.DEPENDENCIES_AVAILABLE", False):
-            with pytest.raises(
-                ImportError, match="Required dependencies not available"
-            ):
-                capturer.capture(str(py_file))
+        with (
+            patch("signalwire.cli.core.service_loader.DEPENDENCIES_AVAILABLE", False),
+            pytest.raises(ImportError, match="Required dependencies not available"),
+        ):
+            capturer.capture(str(py_file))
 
     def test_capture_import_error_no_services_captured(
         self, capturer: ServiceCapture, tmp_path: Path
@@ -538,9 +538,11 @@ class TestLoadAgentFromFile:
         """ValueError when no agents found in the file."""
         mock_svc = _make_mock_service()  # Not an AgentBase
 
-        with patch.object(ServiceCapture, "capture", return_value=[mock_svc]):
-            with pytest.raises(ValueError, match="No agents found"):
-                load_agent_from_file("fake.py")
+        with (
+            patch.object(ServiceCapture, "capture", return_value=[mock_svc]),
+            pytest.raises(ValueError, match="No agents found"),
+        ):
+            load_agent_from_file("fake.py")
 
     def test_single_agent_returned(self) -> None:
         """Single agent is returned directly."""
@@ -600,9 +602,11 @@ class TestLoadAgentFromFile:
 
     def test_empty_capture_raises(self) -> None:
         """Empty capture list raises ValueError (no agents)."""
-        with patch.object(ServiceCapture, "capture", return_value=[]):
-            with pytest.raises(ValueError, match="No agents found"):
-                load_agent_from_file("fake.py")
+        with (
+            patch.object(ServiceCapture, "capture", return_value=[]),
+            pytest.raises(ValueError, match="No agents found"),
+        ):
+            load_agent_from_file("fake.py")
 
 
 # =============================================================================

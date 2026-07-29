@@ -1065,32 +1065,34 @@ class TestSearchAndScrapeBest:
         search_results = [
             {"title": "Bad", "url": "https://bad.com", "snippet": "bad snippet text"}
         ]
-        with patch.object(scraper, "search_google", return_value=search_results):
-            with patch.object(
+        with (
+            patch.object(scraper, "search_google", return_value=search_results),
+            patch.object(
                 scraper,
                 "extract_text_from_url",
                 return_value=("", {"quality_score": 0}),
-            ):
-                result = scraper.search_and_scrape_best(
-                    "test query", delay=0, parallel_scrape=False
-                )
-                # Snippet fallback: non-empty, carries the snippet + title.
-                assert "Snippet-only results" in result
-                assert "bad snippet text" in result
-                assert "No quality results found" not in result
+            ),
+        ):
+            result = scraper.search_and_scrape_best(
+                "test query", delay=0, parallel_scrape=False
+            )
+            # Snippet fallback: non-empty, carries the snippet + title.
+            assert "Snippet-only results" in result
+            assert "bad snippet text" in result
+            assert "No quality results found" not in result
 
     def test_snippets_only_skips_scraping(self) -> None:
         # snippets_only short-circuits before any page fetch.
         scraper = GoogleSearchScraper("key", "engine_id")
         search_results = [{"title": "T", "url": "https://x.com", "snippet": "snip"}]
-        with patch.object(scraper, "search_google", return_value=search_results):
-            with patch.object(scraper, "extract_text_from_url") as mock_extract:
-                result = scraper.search_and_scrape_best(
-                    "test query", snippets_only=True
-                )
-                mock_extract.assert_not_called()
-                assert "Snippet-only results" in result
-                assert "snip" in result
+        with (
+            patch.object(scraper, "search_google", return_value=search_results),
+            patch.object(scraper, "extract_text_from_url") as mock_extract,
+        ):
+            result = scraper.search_and_scrape_best("test query", snippets_only=True)
+            mock_extract.assert_not_called()
+            assert "Snippet-only results" in result
+            assert "snip" in result
 
     def test_successful_search_and_scrape(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
@@ -1109,18 +1111,20 @@ class TestSearchAndScrapeBest:
             "query_relevance": 0.9,
             "query_words_found": "2/2",
         }
-        with patch.object(scraper, "search_google", return_value=search_results):
-            with patch.object(
+        with (
+            patch.object(scraper, "search_google", return_value=search_results),
+            patch.object(
                 scraper,
                 "extract_text_from_url",
                 return_value=("Great content here", good_metrics),
-            ):
-                with patch.object(
-                    scraper, "_calculate_content_quality", return_value=good_metrics
-                ):
-                    result = scraper.search_and_scrape_best("test query", delay=0)
-                    assert "RESULT 1" in result
-                    assert "Good Result" in result
+            ),
+            patch.object(
+                scraper, "_calculate_content_quality", return_value=good_metrics
+            ),
+        ):
+            result = scraper.search_and_scrape_best("test query", delay=0)
+            assert "RESULT 1" in result
+            assert "Good Result" in result
 
     def test_domain_diversity(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
@@ -1156,19 +1160,17 @@ class TestSearchAndScrapeBest:
                 return metrics_a
             return metrics_b
 
-        with patch.object(scraper, "search_google", return_value=search_results):
-            with patch.object(
-                scraper, "extract_text_from_url", side_effect=mock_extract
-            ):
-                with patch.object(
-                    scraper, "_calculate_content_quality", side_effect=mock_quality
-                ):
-                    result = scraper.search_and_scrape_best(
-                        "test", num_results=2, delay=0
-                    )
-                    # Should show results from both domains
-                    assert "a.com" in result
-                    assert "b.com" in result
+        with (
+            patch.object(scraper, "search_google", return_value=search_results),
+            patch.object(scraper, "extract_text_from_url", side_effect=mock_extract),
+            patch.object(
+                scraper, "_calculate_content_quality", side_effect=mock_quality
+            ),
+        ):
+            result = scraper.search_and_scrape_best("test", num_results=2, delay=0)
+            # Should show results from both domains
+            assert "a.com" in result
+            assert "b.com" in result
 
     def test_backward_compatible_search_and_scrape(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")

@@ -34,15 +34,15 @@ class TestSchemaUtils:
 
     def test_basic_initialization_with_schema_path(self) -> None:
         """Test basic SchemaUtils initialization with schema path"""
-        with patch.object(SchemaUtils, "load_schema", return_value={}):
-            with patch.object(
-                SchemaUtils, "_extract_verb_definitions", return_value={}
-            ):
-                utils = SchemaUtils(schema_path="/path/to/schema.json")
+        with (
+            patch.object(SchemaUtils, "load_schema", return_value={}),
+            patch.object(SchemaUtils, "_extract_verb_definitions", return_value={}),
+        ):
+            utils = SchemaUtils(schema_path="/path/to/schema.json")
 
-                assert utils.schema_path == "/path/to/schema.json"
-                assert utils.schema == {}
-                assert utils.verbs == {}
+            assert utils.schema_path == "/path/to/schema.json"
+            assert utils.schema == {}
+            assert utils.verbs == {}
 
     def test_initialization_without_schema_path(self) -> None:
         """Test initialization without schema path uses default"""
@@ -84,16 +84,18 @@ class TestSchemaUtils:
         # Windows, which is correct behavior, not a bug.
         resource = Path("/old") / "schema.json"
 
-        with patch("importlib.resources.files", side_effect=AttributeError):
-            with patch("importlib.resources.path") as mock_path:
-                mock_context = Mock()
-                mock_context.__enter__ = Mock(return_value=resource)
-                mock_context.__exit__ = Mock(return_value=None)
-                mock_path.return_value = mock_context
+        with (
+            patch("importlib.resources.files", side_effect=AttributeError),
+            patch("importlib.resources.path") as mock_path,
+        ):
+            mock_context = Mock()
+            mock_context.__enter__ = Mock(return_value=resource)
+            mock_context.__exit__ = Mock(return_value=None)
+            mock_path.return_value = mock_context
 
-                result = utils._get_default_schema_path()
+            result = utils._get_default_schema_path()
 
-                assert result == str(resource)
+            assert result == str(resource)
 
     def test_get_default_schema_path_manual_search(self) -> None:
         """Test default schema path using manual file search when importlib.resources fails"""
@@ -117,15 +119,17 @@ class TestSchemaUtils:
         cwd = os.path.join(os.sep, "current")  # noqa: PTH118
         expected = os.path.join(cwd, "schema.json")  # noqa: PTH118
 
-        with patch("importlib.resources.files", side_effect=failing_files):
-            with patch("os.path.exists") as mock_exists:
-                with patch("os.getcwd", return_value=cwd):
-                    # First path exists
-                    mock_exists.side_effect = lambda path: path == expected
+        with (
+            patch("importlib.resources.files", side_effect=failing_files),
+            patch("os.path.exists") as mock_exists,
+            patch("os.getcwd", return_value=cwd),
+        ):
+            # First path exists
+            mock_exists.side_effect = lambda path: path == expected
 
-                    result = utils._get_default_schema_path()
+            result = utils._get_default_schema_path()
 
-                    assert result == expected
+            assert result == expected
 
     def test_get_default_schema_path_not_found(self) -> None:
         """Test default schema path when file is not found anywhere"""
@@ -141,11 +145,13 @@ class TestSchemaUtils:
                 raise ImportError("mocked")
             return original_files(package)
 
-        with patch("importlib.resources.files", side_effect=failing_files):
-            with patch("os.path.exists", return_value=False):
-                result = utils._get_default_schema_path()
+        with (
+            patch("importlib.resources.files", side_effect=failing_files),
+            patch("os.path.exists", return_value=False),
+        ):
+            result = utils._get_default_schema_path()
 
-                assert result is None
+            assert result is None
 
     def test_load_schema_success(self) -> None:
         """Test successful schema loading"""

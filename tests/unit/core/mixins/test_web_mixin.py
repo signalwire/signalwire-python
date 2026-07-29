@@ -1210,9 +1210,11 @@ class TestAzureModeBehavior:
         agent.handle_serverless_request = MagicMock(
             side_effect=RuntimeError("cgi fail")
         )
-        with pytest.raises(RuntimeError, match="cgi fail"):
-            with patch("builtins.print"):
-                agent.run(force_mode="cgi")
+        with (
+            pytest.raises(RuntimeError, match="cgi fail"),
+            patch("builtins.print"),
+        ):
+            agent.run(force_mode="cgi")
 
     def test_run_auto_detection_defaults_to_server(self) -> None:
         agent = _build_mixin()

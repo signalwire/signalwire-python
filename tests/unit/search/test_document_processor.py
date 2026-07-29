@@ -407,26 +407,30 @@ class TestDocumentProcessorFileExtraction:
     def test_extract_text_from_file_html(self) -> None:
         """Test HTML file extraction"""
         # HTML files with fallback detection go to _extract_text due to 'text' in 'text/html'
-        with patch("signalwire.search.document_processor.magic", None):
-            with patch.object(self.processor, "_extract_text") as mock_extract:
-                mock_extract.return_value = "html content"
+        with (
+            patch("signalwire.search.document_processor.magic", None),
+            patch.object(self.processor, "_extract_text") as mock_extract,
+        ):
+            mock_extract.return_value = "html content"
 
-                result = self.processor._extract_text_from_file("test.html")
+            result = self.processor._extract_text_from_file("test.html")
 
-                mock_extract.assert_called_once_with("test.html")
-                assert result == "html content"
+            mock_extract.assert_called_once_with("test.html")
+            assert result == "html content"
 
     def test_extract_text_from_file_markdown(self) -> None:
         """Test Markdown file extraction"""
         # Markdown files with fallback detection go to _extract_text due to 'text' in 'text/plain'
-        with patch("signalwire.search.document_processor.magic", None):
-            with patch.object(self.processor, "_extract_text") as mock_extract:
-                mock_extract.return_value = "markdown content"
+        with (
+            patch("signalwire.search.document_processor.magic", None),
+            patch.object(self.processor, "_extract_text") as mock_extract,
+        ):
+            mock_extract.return_value = "markdown content"
 
-                result = self.processor._extract_text_from_file("test.md")
+            result = self.processor._extract_text_from_file("test.md")
 
-                mock_extract.assert_called_once_with("test.md")
-                assert result == "markdown content"
+            mock_extract.assert_called_once_with("test.md")
+            assert result == "markdown content"
 
     def test_extract_text_from_file_unsupported(self) -> None:
         """Test unsupported file type"""
@@ -566,15 +570,17 @@ class TestDocumentProcessorSpecificExtractors:
         """Test successful Markdown extraction"""
         mock_markdown.markdown.return_value = "<h1>Header</h1><p>Content</p>"
 
-        with patch("builtins.open", mock_open(read_data="# Header\nContent")):
-            with patch("signalwire.search.document_processor.BeautifulSoup") as mock_bs:
-                mock_soup = Mock()
-                mock_soup.get_text.return_value = "Header Content"
-                mock_bs.return_value = mock_soup
+        with (
+            patch("builtins.open", mock_open(read_data="# Header\nContent")),
+            patch("signalwire.search.document_processor.BeautifulSoup") as mock_bs,
+        ):
+            mock_soup = Mock()
+            mock_soup.get_text.return_value = "Header Content"
+            mock_bs.return_value = mock_soup
 
-                result = self.processor._extract_markdown("test.md")
+            result = self.processor._extract_markdown("test.md")
 
-                assert result == "Header Content"
+            assert result == "Header Content"
 
 
 class TestDocumentProcessorUtilities:

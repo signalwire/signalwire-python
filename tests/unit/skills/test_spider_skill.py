@@ -796,29 +796,33 @@ class TestScrapeUrlHandler:
         self, default_skill: "SpiderSkill"
     ) -> None:
         resp = _make_mock_response()
-        with patch.object(default_skill, "_fetch_url", return_value=resp):
-            with patch.object(
+        with (
+            patch.object(default_skill, "_fetch_url", return_value=resp),
+            patch.object(
                 default_skill,
                 "_fast_text_extract",
                 return_value="Extracted content here",
-            ):
-                result = default_skill._scrape_url_handler(
-                    {"url": "https://example.com"}, {}
-                )
-                assert "Extracted content here" in result.response
-                assert "Content from" in result.response
+            ),
+        ):
+            result = default_skill._scrape_url_handler(
+                {"url": "https://example.com"}, {}
+            )
+            assert "Extracted content here" in result.response
+            assert "Content from" in result.response
 
     def test_successful_markdown_extraction(self, default_skill: "SpiderSkill") -> None:
         default_skill.extract_type = "markdown"
         resp = _make_mock_response()
-        with patch.object(default_skill, "_fetch_url", return_value=resp):
-            with patch.object(
+        with (
+            patch.object(default_skill, "_fetch_url", return_value=resp),
+            patch.object(
                 default_skill, "_markdown_extract", return_value="# Markdown content"
-            ):
-                result = default_skill._scrape_url_handler(
-                    {"url": "https://example.com"}, {}
-                )
-                assert "# Markdown content" in result.response
+            ),
+        ):
+            result = default_skill._scrape_url_handler(
+                {"url": "https://example.com"}, {}
+            )
+            assert "# Markdown content" in result.response
 
     def test_structured_extraction(self, default_skill: "SpiderSkill") -> None:
         default_skill.extract_type = "structured"
@@ -829,66 +833,74 @@ class TestScrapeUrlHandler:
             "status_code": 200,
             "data": {"field": "value"},
         }
-        with patch.object(default_skill, "_fetch_url", return_value=resp):
-            with patch.object(
+        with (
+            patch.object(default_skill, "_fetch_url", return_value=resp),
+            patch.object(
                 default_skill, "_structured_extract", return_value=structured_data
-            ):
-                result = default_skill._scrape_url_handler(
-                    {"url": "https://example.com"}, {}
-                )
-                assert "Extracted structured data" in result.response
+            ),
+        ):
+            result = default_skill._scrape_url_handler(
+                {"url": "https://example.com"}, {}
+            )
+            assert "Extracted structured data" in result.response
 
     def test_empty_content_returns_no_content_message(
         self, default_skill: "SpiderSkill"
     ) -> None:
         resp = _make_mock_response()
-        with patch.object(default_skill, "_fetch_url", return_value=resp):
-            with patch.object(default_skill, "_fast_text_extract", return_value=""):
-                result = default_skill._scrape_url_handler(
-                    {"url": "https://example.com"}, {}
-                )
-                assert "No content extracted" in result.response
+        with (
+            patch.object(default_skill, "_fetch_url", return_value=resp),
+            patch.object(default_skill, "_fast_text_extract", return_value=""),
+        ):
+            result = default_skill._scrape_url_handler(
+                {"url": "https://example.com"}, {}
+            )
+            assert "No content extracted" in result.response
 
     def test_exception_during_extraction_returns_error(
         self, default_skill: "SpiderSkill"
     ) -> None:
         resp = _make_mock_response()
-        with patch.object(default_skill, "_fetch_url", return_value=resp):
-            with patch.object(
+        with (
+            patch.object(default_skill, "_fetch_url", return_value=resp),
+            patch.object(
                 default_skill, "_fast_text_extract", side_effect=RuntimeError("boom")
-            ):
-                result = default_skill._scrape_url_handler(
-                    {"url": "https://example.com"}, {}
-                )
-                assert "Error processing" in result.response
+            ),
+        ):
+            result = default_skill._scrape_url_handler(
+                {"url": "https://example.com"}, {}
+            )
+            assert "Error processing" in result.response
 
     def test_uses_configured_extract_type_not_from_args(
         self, default_skill: "SpiderSkill"
     ) -> None:
         """Verify that extract_type comes from self.extract_type, not args."""
         resp = _make_mock_response()
-        with patch.object(default_skill, "_fetch_url", return_value=resp):
-            with patch.object(
+        with (
+            patch.object(default_skill, "_fetch_url", return_value=resp),
+            patch.object(
                 default_skill, "_fast_text_extract", return_value="content"
-            ) as mock_fast:
-                # Even if args had extract_type, it should be ignored
-                default_skill._scrape_url_handler(
-                    {"url": "https://example.com", "extract_type": "markdown"}, {}
-                )
-                mock_fast.assert_called_once()
+            ) as mock_fast,
+        ):
+            # Even if args had extract_type, it should be ignored
+            default_skill._scrape_url_handler(
+                {"url": "https://example.com", "extract_type": "markdown"}, {}
+            )
+            mock_fast.assert_called_once()
 
     def test_response_includes_character_count(
         self, default_skill: "SpiderSkill"
     ) -> None:
         resp = _make_mock_response()
-        with patch.object(default_skill, "_fetch_url", return_value=resp):
-            with patch.object(
-                default_skill, "_fast_text_extract", return_value="12345"
-            ):
-                result = default_skill._scrape_url_handler(
-                    {"url": "https://example.com"}, {}
-                )
-                assert "5 characters" in result.response
+        with (
+            patch.object(default_skill, "_fetch_url", return_value=resp),
+            patch.object(default_skill, "_fast_text_extract", return_value="12345"),
+        ):
+            result = default_skill._scrape_url_handler(
+                {"url": "https://example.com"}, {}
+            )
+            assert "5 characters" in result.response
 
     def test_whitespace_url_treated_as_empty(
         self, default_skill: "SpiderSkill"
@@ -918,14 +930,16 @@ class TestCrawlSiteHandler:
         resp = _make_mock_response(
             content=b"<html><body><p>Page content</p></body></html>"
         )
-        with patch.object(default_skill, "_fetch_url", return_value=resp):
-            with patch.object(
+        with (
+            patch.object(default_skill, "_fetch_url", return_value=resp),
+            patch.object(
                 default_skill, "_fast_text_extract", return_value="Page content"
-            ):
-                result = default_skill._crawl_site_handler(
-                    {"start_url": "https://example.com"}, {}
-                )
-                assert "Crawled 1 pages" in result.response
+            ),
+        ):
+            result = default_skill._crawl_site_handler(
+                {"start_url": "https://example.com"}, {}
+            )
+            assert "Crawled 1 pages" in result.response
 
     def test_no_pages_crawled_returns_error(self, default_skill: "SpiderSkill") -> None:
         with patch.object(default_skill, "_fetch_url", return_value=None):
@@ -1095,15 +1109,17 @@ class TestCrawlSiteHandler:
         self, default_skill: "SpiderSkill"
     ) -> None:
         resp = _make_mock_response()
-        with patch.object(default_skill, "_fetch_url", return_value=resp):
-            with patch.object(
+        with (
+            patch.object(default_skill, "_fetch_url", return_value=resp),
+            patch.object(
                 default_skill, "_fast_text_extract", return_value="Hello World"
-            ):
-                result = default_skill._crawl_site_handler(
-                    {"start_url": "https://example.com"}, {}
-                )
-                assert "Total content:" in result.response
-                assert "characters" in result.response
+            ),
+        ):
+            result = default_skill._crawl_site_handler(
+                {"start_url": "https://example.com"}, {}
+            )
+            assert "Total content:" in result.response
+            assert "characters" in result.response
 
     def test_crawl_handles_fetch_failure_for_individual_pages(
         self, default_skill: "SpiderSkill"
@@ -1153,27 +1169,31 @@ class TestCrawlSiteHandler:
                 return resp1
             return resp2
 
-        with patch.object(default_skill, "_fetch_url", side_effect=mock_fetch):
-            with patch("time.sleep") as mock_sleep:
-                result = default_skill._crawl_site_handler(
-                    {"start_url": "https://example.com"}, {}
-                )
-                mock_sleep.assert_called_with(0.5)
+        with (
+            patch.object(default_skill, "_fetch_url", side_effect=mock_fetch),
+            patch("time.sleep") as mock_sleep,
+        ):
+            result = default_skill._crawl_site_handler(
+                {"start_url": "https://example.com"}, {}
+            )
+            mock_sleep.assert_called_with(0.5)
 
     def test_content_summary_truncated_at_500(
         self, default_skill: "SpiderSkill"
     ) -> None:
         long_content = "A" * 1000
         resp = _make_mock_response()
-        with patch.object(default_skill, "_fetch_url", return_value=resp):
-            with patch.object(
+        with (
+            patch.object(default_skill, "_fetch_url", return_value=resp),
+            patch.object(
                 default_skill, "_fast_text_extract", return_value=long_content
-            ):
-                result = default_skill._crawl_site_handler(
-                    {"start_url": "https://example.com"}, {}
-                )
-                # The summary field should be truncated at 500 chars
-                assert "..." in result.response
+            ),
+        ):
+            result = default_skill._crawl_site_handler(
+                {"start_url": "https://example.com"}, {}
+            )
+            # The summary field should be truncated at 500 chars
+            assert "..." in result.response
 
 
 # ===================================================================
@@ -1214,29 +1234,33 @@ class TestExtractStructuredHandler:
             "data": {"title": "Extracted Title"},
         }
         resp = _make_mock_response()
-        with patch.object(custom_skill, "_fetch_url", return_value=resp):
-            with patch.object(
+        with (
+            patch.object(custom_skill, "_fetch_url", return_value=resp),
+            patch.object(
                 custom_skill, "_structured_extract", return_value=structured_result
-            ):
-                result = custom_skill._extract_structured_handler(
-                    {"url": "https://example.com"}, {}
-                )
-                assert "Extracted data from" in result.response
-                assert "Test Page" in result.response
-                assert "title: Extracted Title" in result.response
+            ),
+        ):
+            result = custom_skill._extract_structured_handler(
+                {"url": "https://example.com"}, {}
+            )
+            assert "Extracted data from" in result.response
+            assert "Test Page" in result.response
+            assert "title: Extracted Title" in result.response
 
     def test_extraction_error_in_result(self, custom_skill: "SpiderSkill") -> None:
         resp = _make_mock_response()
-        with patch.object(custom_skill, "_fetch_url", return_value=resp):
-            with patch.object(
+        with (
+            patch.object(custom_skill, "_fetch_url", return_value=resp),
+            patch.object(
                 custom_skill,
                 "_structured_extract",
                 return_value={"error": "Something went wrong"},
-            ):
-                result = custom_skill._extract_structured_handler(
-                    {"url": "https://example.com"}, {}
-                )
-                assert "Error extracting data" in result.response
+            ),
+        ):
+            result = custom_skill._extract_structured_handler(
+                {"url": "https://example.com"}, {}
+            )
+            assert "Error extracting data" in result.response
 
     def test_empty_data_says_no_data_extracted(
         self, custom_skill: "SpiderSkill"
@@ -1248,31 +1272,33 @@ class TestExtractStructuredHandler:
             "data": {},
         }
         resp = _make_mock_response()
-        with patch.object(custom_skill, "_fetch_url", return_value=resp):
-            with patch.object(
+        with (
+            patch.object(custom_skill, "_fetch_url", return_value=resp),
+            patch.object(
                 custom_skill, "_structured_extract", return_value=structured_result
-            ):
-                result = custom_skill._extract_structured_handler(
-                    {"url": "https://example.com"}, {}
-                )
-                assert "No data extracted" in result.response
+            ),
+        ):
+            result = custom_skill._extract_structured_handler(
+                {"url": "https://example.com"}, {}
+            )
+            assert "No data extracted" in result.response
 
     def test_uses_selectors_from_params(self, custom_skill: "SpiderSkill") -> None:
         resp = _make_mock_response()
-        with patch.object(custom_skill, "_fetch_url", return_value=resp):
-            with patch.object(
+        with (
+            patch.object(custom_skill, "_fetch_url", return_value=resp),
+            patch.object(
                 custom_skill,
                 "_structured_extract",
                 return_value={"url": "", "title": "", "status_code": 200, "data": {}},
-            ) as mock_extract:
-                custom_skill._extract_structured_handler(
-                    {"url": "https://example.com"}, {}
-                )
-                # Verify selectors from params are passed
-                call_args = mock_extract.call_args
-                assert call_args[1].get("selectors") == {
-                    "title": "//title/text()"
-                } or call_args[0][1] == {"title": "//title/text()"}
+            ) as mock_extract,
+        ):
+            custom_skill._extract_structured_handler({"url": "https://example.com"}, {})
+            # Verify selectors from params are passed
+            call_args = mock_extract.call_args
+            assert call_args[1].get("selectors") == {
+                "title": "//title/text()"
+            } or call_args[0][1] == {"title": "//title/text()"}
 
 
 # ===================================================================
@@ -1370,14 +1396,14 @@ class TestEdgeCases:
     def test_url_with_whitespace_stripped(self, default_skill: "SpiderSkill") -> None:
         """URLs with leading/trailing whitespace should be stripped."""
         resp = _make_mock_response()
-        with patch.object(default_skill, "_fetch_url", return_value=resp):
-            with patch.object(
-                default_skill, "_fast_text_extract", return_value="content"
-            ):
-                result = default_skill._scrape_url_handler(
-                    {"url": "  https://example.com  "}, {}
-                )
-                assert "content" in result.response
+        with (
+            patch.object(default_skill, "_fetch_url", return_value=resp),
+            patch.object(default_skill, "_fast_text_extract", return_value="content"),
+        ):
+            result = default_skill._scrape_url_handler(
+                {"url": "  https://example.com  "}, {}
+            )
+            assert "content" in result.response
 
     def test_cache_prevents_duplicate_fetches(
         self, default_skill: "SpiderSkill"
@@ -1502,18 +1528,18 @@ class TestEdgeCases:
         default_skill.delay = 0
 
         resp = _make_mock_response()
-        with patch.object(default_skill, "_fetch_url", return_value=resp):
-            with patch.object(
-                default_skill, "_fast_text_extract", return_value="content"
-            ):
-                with patch(
-                    "signalwire.skills.spider.skill.html.fromstring",
-                    side_effect=Exception("parse error"),
-                ):
-                    # The crawl handler internally calls html.fromstring for link extraction
-                    # but _fast_text_extract is mocked to succeed
-                    result = default_skill._crawl_site_handler(
-                        {"start_url": "https://example.com"}, {}
-                    )
-                    # Should still return results for the page that was crawled
-                    assert "Crawled 1 pages" in result.response
+        with (
+            patch.object(default_skill, "_fetch_url", return_value=resp),
+            patch.object(default_skill, "_fast_text_extract", return_value="content"),
+            patch(
+                "signalwire.skills.spider.skill.html.fromstring",
+                side_effect=Exception("parse error"),
+            ),
+        ):
+            # The crawl handler internally calls html.fromstring for link extraction
+            # but _fast_text_extract is mocked to succeed
+            result = default_skill._crawl_site_handler(
+                {"start_url": "https://example.com"}, {}
+            )
+            # Should still return results for the page that was crawled
+            assert "Crawled 1 pages" in result.response

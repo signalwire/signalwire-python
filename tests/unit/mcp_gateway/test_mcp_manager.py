@@ -372,19 +372,23 @@ class TestMCPClientCallMethod:
         # _send_message does nothing (no response will arrive)
         client._send_message = Mock()  # type: ignore[method-assign]  # mock
 
-        with pytest.raises(TimeoutError, match="Timeout"):
+        with (
+            pytest.raises(TimeoutError, match="Timeout"),
             # Use a very short timeout by patching the Event.wait
-            with patch.object(threading.Event, "wait", return_value=False):
-                client.call_method("slow_method", {})
+            patch.object(threading.Event, "wait", return_value=False),
+        ):
+            client.call_method("slow_method", {})
 
     def test_call_method_cleans_up_on_timeout(self) -> None:
         """Pending request should be removed on timeout."""
         client = self._make_client()
         client._send_message = Mock()  # type: ignore[method-assign]  # mock
 
-        with patch.object(threading.Event, "wait", return_value=False):
-            with pytest.raises(TimeoutError):
-                client.call_method("slow_method", {})
+        with (
+            patch.object(threading.Event, "wait", return_value=False),
+            pytest.raises(TimeoutError),
+        ):
+            client.call_method("slow_method", {})
 
         # Pending requests should be empty after timeout cleanup
         assert len(client.pending_requests) == 0

@@ -647,10 +647,12 @@ class TestHandleCgiRequest:
     def test_cgi_no_path_returns_404(self) -> None:
         """Test CGI request with no PATH_INFO returns 404"""
         server = AgentServer()
-        with patch.dict(os.environ, {"PATH_INFO": ""}, clear=False):
-            with patch("sys.stdout", new_callable=StringIO):
-                result = server._handle_cgi_request()
-                assert "404 Not Found" in result
+        with (
+            patch.dict(os.environ, {"PATH_INFO": ""}, clear=False),
+            patch("sys.stdout", new_callable=StringIO),
+        ):
+            result = server._handle_cgi_request()
+            assert "404 Not Found" in result
 
     def test_cgi_matching_agent_returns_swml(self) -> None:
         """Test CGI request that matches an agent returns SWML"""
@@ -658,10 +660,12 @@ class TestHandleCgiRequest:
         agent = SimpleTestAgent(name="myagent")
         agent._render_swml = Mock(return_value={"version": "1.0.0"})  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
-        with patch.dict(os.environ, {"PATH_INFO": "/myagent"}, clear=False):
-            with patch("sys.stdout", new_callable=StringIO):
-                result = server._handle_cgi_request()
-                assert "200 OK" in result
+        with (
+            patch.dict(os.environ, {"PATH_INFO": "/myagent"}, clear=False),
+            patch("sys.stdout", new_callable=StringIO),
+        ):
+            result = server._handle_cgi_request()
+            assert "200 OK" in result
 
     def test_cgi_matching_agent_render_error(self) -> None:
         """Test CGI request when agent render fails returns 500"""
@@ -669,19 +673,23 @@ class TestHandleCgiRequest:
         agent = SimpleTestAgent(name="broken")
         agent._render_swml = Mock(side_effect=Exception("render failed"))  # type: ignore[method-assign]  # mock
         server.register(agent, "/broken")
-        with patch.dict(os.environ, {"PATH_INFO": "/broken"}, clear=False):
-            with patch("sys.stdout", new_callable=StringIO):
-                result = server._handle_cgi_request()
-                assert "500 Internal Server Error" in result
+        with (
+            patch.dict(os.environ, {"PATH_INFO": "/broken"}, clear=False),
+            patch("sys.stdout", new_callable=StringIO),
+        ):
+            result = server._handle_cgi_request()
+            assert "500 Internal Server Error" in result
 
     def test_cgi_no_matching_agent_returns_404(self) -> None:
         """Test CGI request with no matching agent returns 404"""
         server = AgentServer()
         server.register(SimpleTestAgent(), "/test")
-        with patch.dict(os.environ, {"PATH_INFO": "/nonexistent"}, clear=False):
-            with patch("sys.stdout", new_callable=StringIO):
-                result = server._handle_cgi_request()
-                assert "404 Not Found" in result
+        with (
+            patch.dict(os.environ, {"PATH_INFO": "/nonexistent"}, clear=False),
+            patch("sys.stdout", new_callable=StringIO),
+        ):
+            result = server._handle_cgi_request()
+            assert "404 Not Found" in result
 
     def test_cgi_swaig_subpath(self) -> None:
         """Test CGI request to swaig subpath with no body"""
@@ -717,10 +725,12 @@ class TestHandleCgiRequest:
         agent._execute_swaig_function = Mock(side_effect=Exception("swaig error"))  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
         env = {"PATH_INFO": "/myagent/swaig", "CONTENT_LENGTH": "0"}
-        with patch.dict(os.environ, env, clear=False):
-            with patch("sys.stdout", new_callable=StringIO):
-                result = server._handle_cgi_request()
-                assert "500 Internal Server Error" in result
+        with (
+            patch.dict(os.environ, env, clear=False),
+            patch("sys.stdout", new_callable=StringIO),
+        ):
+            result = server._handle_cgi_request()
+            assert "500 Internal Server Error" in result
 
     def test_cgi_swaig_function_exception(self) -> None:
         """Test CGI request to swaig/<func> that raises exception"""
@@ -729,10 +739,12 @@ class TestHandleCgiRequest:
         agent._execute_swaig_function = Mock(side_effect=Exception("func error"))  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
         env = {"PATH_INFO": "/myagent/swaig/broken_func", "CONTENT_LENGTH": "0"}
-        with patch.dict(os.environ, env, clear=False):
-            with patch("sys.stdout", new_callable=StringIO):
-                result = server._handle_cgi_request()
-                assert "500 Internal Server Error" in result
+        with (
+            patch.dict(os.environ, env, clear=False),
+            patch("sys.stdout", new_callable=StringIO),
+        ):
+            result = server._handle_cgi_request()
+            assert "500 Internal Server Error" in result
 
 
 class TestFormatCgiResponse:
@@ -823,9 +835,11 @@ class TestServeStaticFiles:
     def test_serve_static_files_file_not_directory(self) -> None:
         """Test serve_static_files with a file path instead of directory"""
         server = AgentServer()
-        with tempfile.NamedTemporaryFile() as tmpfile:
-            with pytest.raises(ValueError, match="not a directory"):
-                server.serve_static_files(tmpfile.name)
+        with (
+            tempfile.NamedTemporaryFile() as tmpfile,
+            pytest.raises(ValueError, match="not a directory"),
+        ):
+            server.serve_static_files(tmpfile.name)
 
     def test_serve_static_files_custom_route(self) -> None:
         """Test serve_static_files with custom route prefix"""
