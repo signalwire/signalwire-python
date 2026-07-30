@@ -870,9 +870,9 @@ class TestServe:
             port=443,
             schema_validation=False,
         )
-        service.security.validate_ssl_config = Mock(
+        service.security.validate_ssl_config = Mock(  # type: ignore[method-assign]  # mock
             return_value=(False, "cert not found")
-        )  # type: ignore[method-assign]  # mock
+        )
         with patch.dict("sys.modules", {"uvicorn": mock_uvicorn_module}):
             service.serve(ssl_enabled=True)
         # SSL should have been disabled due to invalid config
@@ -1054,9 +1054,8 @@ class TestSectionManagement:
         """add_verb_to_section with non-dict non-sleep config should return False."""
         mock_swml_service.reset_document()
         mock_swml_service.add_section("bad_section")
-        result = mock_swml_service.add_verb_to_section(
-            "bad_section", "play", "not_a_dict"
-        )  # type: ignore[arg-type]  # intentional invalid input
+        add_verb = mock_swml_service.add_verb_to_section
+        result = add_verb("bad_section", "play", "not_a_dict")  # type: ignore[arg-type]  # intentional invalid input
         assert result is False
 
     def test_multiple_sections_in_document(
