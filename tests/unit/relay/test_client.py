@@ -18,6 +18,7 @@ from signalwire.relay.client import (
     RelayClient,
     RelayError,
     _active_clients,
+    _max_connections,
     _MAX_QUEUE_SIZE,
     _SUCCESS_CODE_RE,
 )
@@ -386,17 +387,18 @@ class TestConnectionLimits:
         _active_clients.clear()
 
     @pytest.mark.asyncio
-    async def test_limit_of_one_is_enforced(self) -> None:
-        # Pin the limit to 1 for this test rather than relying on the module
-        # default: the real-mock relay conftest raises RELAY_MAX_CONNECTIONS to
-        # 16 (so a single test can hold several live clients), and that env var
-        # is read once at client-module import — making any assertion about the
-        # *default* value order-dependent under pytest-xdist. Patching the
-        # module global makes the limit-enforcement behavior deterministic.
+    async def test_limit_of_one_is_enforced(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # Pin the limit to 1 for this test rather than relying on the ambient
+        # value: the real-mock relay conftest raises RELAY_MAX_CONNECTIONS to 16
+        # (so a single test can hold several live clients). The limit is read
+        # from the environment at connect time, so setting the var here is
+        # enough to make the limit-enforcement behavior deterministic.
+        monkeypatch.setenv("RELAY_MAX_CONNECTIONS", "1")
         ws1 = AutoAuthMockWebSocket()
         ws2 = AutoAuthMockWebSocket()
         with (
-            patch("signalwire.relay.client._MAX_CONNECTIONS", 1),
             patch(
                 "signalwire.relay.client.websockets.connect",
                 new_callable=AsyncMock,
@@ -1291,13 +1293,75 @@ class TestMaxConnectionsEnvVar:
     def test_invalid_env_var_fallback(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Invalid RELAY_MAX_CONNECTIONS should fall back to 1."""
         _active_clients.clear()
-        # We can't easily re-execute module-level code, but we can test
-        # that the regex/parsing logic works by importing the module fresh.
-        # Instead, just verify the current value is sane.
-        import signalwire.relay.client as mod
-
-        assert mod._MAX_CONNECTIONS >= 1
+        monkeypatch.setenv("RELAY_MAX_CONNECTIONS", "not-a-number")
+        assert _max_connections() == 1
         _active_clients.clear()
+
+    def test_valid_env_var_is_honoured(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("RELAY_MAX_CONNECTIONS", "7")
+        assert _max_connections() == 7
+
+    def test_zero_and_negative_clamp_to_one(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setenv("RELAY_MAX_CONNECTIONS", "0")
+        assert _max_connections() == 1
+        monkeypatch.setenv("RELAY_MAX_CONNECTIONS", "-5")
+        assert _max_connections() == 1
+
+    def test_unset_defaults_to_one(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.delenv("RELAY_MAX_CONNECTIONS", raising=False)
+        assert _max_connections() == 1
+
+    @pytest.mark.asyncio
+    async def test_env_var_set_after_import_takes_effect(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """RELAY_MAX_CONNECTIONS is read at CONNECT time, not at import time.
+
+        Regression guard: the limit used to be frozen into a module global at
+        import, so the documented remedy in the refusal message ("set
+        RELAY_MAX_CONNECTIONS env var to allow more") could never work for a
+        process that had already imported the module. Setting the var here —
+        long after import — must raise the effective limit.
+        """
+        _active_clients.clear()
+        try:
+            # Limit 1: the second client must be refused.
+            monkeypatch.setenv("RELAY_MAX_CONNECTIONS", "1")
+            ws1 = AutoAuthMockWebSocket()
+            with patch(
+                "signalwire.relay.client.websockets.connect",
+                new_callable=AsyncMock,
+                return_value=ws1,
+            ):
+                c1 = RelayClient(project="p", token="t")
+                await c1.connect()
+
+            ws2 = AutoAuthMockWebSocket()
+            with patch(
+                "signalwire.relay.client.websockets.connect",
+                new_callable=AsyncMock,
+                return_value=ws2,
+            ):
+                c2 = RelayClient(project="p", token="t")
+                with pytest.raises(RuntimeError, match="connection limit reached"):
+                    await c2.connect()
+
+            # Now raise the limit AFTER import — the same second client must
+            # be accepted.
+            monkeypatch.setenv("RELAY_MAX_CONNECTIONS", "4")
+            ws3 = AutoAuthMockWebSocket()
+            with patch(
+                "signalwire.relay.client.websockets.connect",
+                new_callable=AsyncMock,
+                return_value=ws3,
+            ):
+                c3 = RelayClient(project="p", token="t")
+                await c3.connect()
+                assert id(c3) in _active_clients
+        finally:
+            _active_clients.clear()
 
 
 # ===================================================================

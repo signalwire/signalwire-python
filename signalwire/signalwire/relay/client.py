@@ -93,14 +93,23 @@ _MAX_PING_FAILURES = 3
 _DEFAULT_MAX_ACTIVE_CALLS = 1000
 _MAX_QUEUE_SIZE = 500
 
-# Max concurrent RelayClient connections per process (env: RELAY_MAX_CONNECTIONS)
-try:
-    _MAX_CONNECTIONS = max(1, int(os.environ.get("RELAY_MAX_CONNECTIONS", "1")))
-except ValueError:
-    _MAX_CONNECTIONS = 1
-
 # Process-wide tracking of active RelayClient connections
 _active_clients: set[int] = set()
+
+
+def _max_connections() -> int:
+    """Max concurrent RelayClient connections per process.
+
+    Read from ``RELAY_MAX_CONNECTIONS`` **at connection time**, never cached.
+    ``connect()``'s refusal message tells the operator to set this variable;
+    caching it at import made that advice impossible to follow, because by the
+    time the message is seen the module is already imported. Defaults to 1;
+    a non-integer or sub-1 value falls back to 1.
+    """
+    try:
+        return max(1, int(os.environ.get("RELAY_MAX_CONNECTIONS", "1")))
+    except ValueError:
+        return 1
 
 
 # Credential-bearing JSON keys whose VALUES must never appear in debug logs
@@ -343,9 +352,10 @@ class RelayClient:
         # Guard against connection leaks — enforce per-process limit
         # (don't count ourselves if we're already tracked, i.e. reconnecting)
         other_count = len(_active_clients - {id(self)})
-        if other_count >= _MAX_CONNECTIONS:
+        max_connections = _max_connections()
+        if other_count >= max_connections:
             raise RuntimeError(
-                f"RelayClient connection limit reached ({_MAX_CONNECTIONS}). "
+                f"RelayClient connection limit reached ({max_connections}). "
                 f"There are already {other_count} active connection(s) in this process. "
                 f"Call disconnect() on existing clients first, or set "
                 f"RELAY_MAX_CONNECTIONS env var to allow more."

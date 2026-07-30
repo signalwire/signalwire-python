@@ -342,9 +342,10 @@ def make_call() -> Callable[..., Call]:
 
 
 # Per-process default for parallel RelayClient connections during tests. The
-# SDK's _MAX_CONNECTIONS guard otherwise refuses a 2nd client in the same
-# process; bumping it lets a single test create multiple clients (used by the
-# reconnect-with-protocol-string tests).
+# SDK reads RELAY_MAX_CONNECTIONS at connect time and defaults to 1, which
+# would refuse a 2nd client in the same process; raising the ambient value lets
+# a single test create multiple clients (used by the reconnect-with-protocol-
+# string tests). Tests that need a specific limit override it with monkeypatch.
 os.environ.setdefault("RELAY_MAX_CONNECTIONS", "16")
 
 _DEFAULT_WS_PORT = 8773
