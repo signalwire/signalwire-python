@@ -359,7 +359,7 @@ The SDK exposes operations such as SMS, recording, rooms, conferences, SIP REFER
 
 ### C15. DataMap instead of unnecessary webhook glue
 
-**Solves:** P17. **Use:** `DataMap`, `.parameter()`, `.webhook()`, `.body()`, `.output()`, `.fallback_output()`, `.to_swaig_function()`.
+**Solves:** P17. **Use:** `DataMap`, `.parameter()`, `.webhook()`, `.params()`, `.output()`, `.fallback_output()`, `.to_swaig_function()`.
 
 DataMap tools execute on the platform. They can call APIs, map responses, apply expressions, and return model content or actions. Register with `agent.register_swaig_function(...)`. Do not expect a locally executed Python handler for a DataMap tool. [S09]
 
@@ -1015,7 +1015,7 @@ tool = (DataMap("lookup_public_item")
         "Authorization": "Bearer " + os.environ["CATALOG_API_TOKEN"],
         "Content-Type": "application/json",
     })
-    .body({"sku": "${args.sku}"})
+    .params({"sku": "${args.sku}"})
     .output(FunctionResult(
         tool_result="Availability: ${availability}",
         tool_prompt="Explain only the returned availability. Do not invent inventory quantities."))
