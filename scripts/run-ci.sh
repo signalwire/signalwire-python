@@ -231,8 +231,14 @@ sched_gate SIGNATURES desc="regenerate python_signatures.json (reference oracle)
 sched_gate DRIFT deps=SIGNATURES desc="python_signatures.json unchanged after regen" \
     -- bash -c "cd '$PORTING_SDK_DIR' && git diff --quiet -- python_signatures.json"
 
-sched_gate SEMVER-DIFF deps=SIGNATURES desc="version bump matches surface change vs python_signatures.baseline.json (the reference is not exempt)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/semver_diff.py" --port python --repo "$PORT_ROOT"
+# WAVE-1: report-only in-wave (owner-FINAL, re-anchor at cut, D5). GATE_ENFORCEMENT_PLAN.md
+# D5a defers the version-line decision to the real release — "no bump churn now;
+# perl/rust 4.0.0 declarations stay as-is; unified-vs-per-port decided at cut time" — so
+# an intentional in-wave breaking change must REPORT rather than block. Eight ports get
+# this hold via the SURFACE suite (_surface_commands.py passes semver_report_only=True);
+# python and rust schedule SEMVER-DIFF standalone and so must pass the flag here.
+sched_gate SEMVER-DIFF deps=SIGNATURES desc="reports (does not block in-wave, D5a) whether the version bump matches the surface change vs python_signatures.baseline.json — the reference is not exempt from the check" \
+    -- python3 "$PORTING_SDK_DIR/scripts/semver_diff.py" --port python --repo "$PORT_ROOT" --report-only
 
 sched_gate NO-CHEAT desc="audit_no_cheat_tests" \
     -- python3 "$PORTING_SDK_DIR/scripts/audit_no_cheat_tests.py" --root "$PORT_ROOT"
