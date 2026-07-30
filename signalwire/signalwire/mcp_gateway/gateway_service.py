@@ -74,7 +74,22 @@ class MCPGateway:
         self.security = SecurityConfig(config_file=config_path, service_name="mcp")
         self.security.log_config("MCPGateway")
 
-        self.app = Flask(__name__)
+        # `app`/`limiter` are deliberately typed `Any`, not `Flask`/`Limiter`.
+        #
+        # flask and flask-limiter are the OPTIONAL `mcp-gateway` extra, and they
+        # ship `py.typed`. That makes their decorators' types depend on whether
+        # the extra happens to be INSTALLED, which flips this file's findings
+        # both ways and cannot be settled with `# type: ignore`:
+        #   * extra absent  -> `@self.app.route` is Any, so every decorated
+        #     handler is [untyped-decorator] unless it carries an ignore;
+        #   * extra present -> the decorators are typed, so those same ignores
+        #     become [unused-ignore] under warn_unused_ignores.
+        # Pinning the two attributes to Any resolves the decorators identically
+        # in both worlds, so this file type-checks the same way with or without
+        # the extra — including for SDK CONSUMERS running mypy over their own
+        # code with their own config, who get no say in our mypy settings and
+        # would otherwise inherit whichever error our ignores did not cover.
+        self.app: Any = Flask(__name__)
         self.mcp_manager = MCPManager(self.config)
         self.session_manager = SessionManager(self.config)
         self.server: BaseWSGIServer | None = None
@@ -88,16 +103,19 @@ class MCPGateway:
         )
         storage_uri = self.rate_config.get("storage_uri", "memory://")
 
-        self.limiter = Limiter(
+        self.limiter: Any = Limiter(
             app=self.app,
             key_func=get_remote_address,
             default_limits=default_limits,
             storage_uri=storage_uri,
         )
 
-        # Configure security headers
-        @self.app.after_request  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
-        def set_security_headers(response: Response) -> Response:
+        # Configure security headers.
+        # `response` is annotated Any rather than `Response` for the same reason
+        # `self.app` is: with the extra installed `Response` is a real type and
+        # this decorator resolves as typed, without it everything is Any. Any on
+        # both sides keeps the result identical in both worlds.
+        def set_security_headers(response: Any) -> Any:
             """Attach security headers to every gateway response.
 
             Registered as a Flask ``after_request`` hook, so it applies to
@@ -133,6 +151,14 @@ class MCPGateway:
                     "max-age=31536000; includeSubDomains"
                 )
             return response
+
+        # Registered by CALL rather than with `@self.app.after_request` on
+        # purpose: as a decorator it rewrites the function's type, and mypy then
+        # reports [untyped-decorator] when the optional extra is absent but not
+        # when it is present — the one construct that could not be made to agree
+        # in both worlds. Calling it registers the hook identically at runtime
+        # while leaving the function's own (fully annotated) type alone.
+        self.app.after_request(set_security_headers)
 
         # Configure request size limit (10MB)
         self.app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
@@ -386,7 +412,7 @@ class MCPGateway:
     def _setup_routes(self) -> None:
         """Set up Flask routes"""
 
-        @self.app.route("/health", methods=["GET"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
+        @self.app.route("/health", methods=["GET"])  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
         def health() -> Any:
             """Health check endpoint"""
             return jsonify(
@@ -397,15 +423,15 @@ class MCPGateway:
                 }
             )
 
-        @self.app.route("/services", methods=["GET"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
+        @self.app.route("/services", methods=["GET"])  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
         @self._check_auth
         def list_services() -> Any:
             """List available MCP services"""
             services = self.mcp_manager.list_services()
             return jsonify(services)
 
-        @self.app.route("/services/<service_name>/tools", methods=["GET"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
-        @self.limiter.limit(self.rate_config.get("tools_limit", "30 per minute"))  # type: ignore[untyped-decorator]  # flask-limiter is an optional extra with no stubs installed -> Any decorator
+        @self.app.route("/services/<service_name>/tools", methods=["GET"])  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
+        @self.limiter.limit(self.rate_config.get("tools_limit", "30 per minute"))  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
         @self._check_auth
         def get_service_tools(service_name: str) -> Any:
             """Get tools for a specific service"""
@@ -421,8 +447,8 @@ class MCPGateway:
                 logger.error(f"Error getting tools for {service_name}: {e}")
                 return jsonify({"error": "Service error"}), 500
 
-        @self.app.route("/services/<service_name>/call", methods=["POST"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
-        @self.limiter.limit(self.rate_config.get("call_limit", "10 per minute"))  # type: ignore[untyped-decorator]  # flask-limiter is an optional extra with no stubs installed -> Any decorator
+        @self.app.route("/services/<service_name>/call", methods=["POST"])  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
+        @self.limiter.limit(self.rate_config.get("call_limit", "10 per minute"))  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
         @self._check_auth
         def call_service_tool(service_name: str) -> Any:
             """Call a tool on a service"""
@@ -537,15 +563,15 @@ class MCPGateway:
                 logger.error(f"Error calling tool: {e}")
                 return jsonify({"error": str(e)}), 500
 
-        @self.app.route("/sessions", methods=["GET"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
+        @self.app.route("/sessions", methods=["GET"])  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
         @self._check_auth
         def list_sessions() -> Any:
             """List active sessions"""
             sessions = self.session_manager.list_sessions()
             return jsonify(sessions)
 
-        @self.app.route("/sessions/<session_id>", methods=["DELETE"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
-        @self.limiter.limit(  # type: ignore[untyped-decorator]  # flask-limiter is an optional extra with no stubs installed -> Any decorator
+        @self.app.route("/sessions/<session_id>", methods=["DELETE"])  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
+        @self.limiter.limit(  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
             self.rate_config.get("session_delete_limit", "20 per minute")
         )
         @self._check_auth
@@ -565,7 +591,7 @@ class MCPGateway:
             except ValueError as e:
                 return jsonify({"error": str(e)}), 400
 
-        @self.app.errorhandler(Exception)  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
+        @self.app.errorhandler(Exception)  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
         def handle_error(error: Exception) -> Any:
             """Convert any unhandled exception into a generic 500 JSON error.
 

@@ -278,10 +278,9 @@ ignore_missing_imports = true
 # Response/dict, generated payload types where they exist) — never papered with
 # bare `Any`. `strict` subsumes check_untyped_defs / warn_unused_ignores / etc.
 strict = true
-# `# type: ignore` is reserved for genuinely-unfixable third-party-stub gaps (e.g.
-# flask/flask-limiter optional extras with no stubs) and the documented
-# _HostTyped/AgentBase TYPE_CHECKING-vs-runtime split; each must carry an error
-# code + reason. warn_unused_ignores (via strict) keeps them honest.
+# `# type: ignore` is reserved for genuinely-unfixable third-party-stub gaps and
+# the documented _HostTyped/AgentBase TYPE_CHECKING-vs-runtime split; each must
+# carry an error code + reason. warn_unused_ignores (via strict) keeps them honest.
 show_error_codes = true
 
 # numpy (a search/relay-extra runtime dep we do NOT type — same class as nltk /

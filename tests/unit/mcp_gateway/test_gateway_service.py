@@ -24,7 +24,6 @@ from unittest.mock import patch, MagicMock
 
 if TYPE_CHECKING:
     from signalwire.mcp_gateway.gateway_service import MCPGateway
-    from werkzeug.test import TestResponse
 
 # Skip the entire module when Flask is not installed
 flask = pytest.importorskip("flask", reason="flask is required for MCP Gateway tests")
@@ -847,7 +846,10 @@ class TestCallServiceToolEndpoint:
         service_name: str = "todo",
         payload: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
-    ) -> "TestResponse":
+    ) -> Any:
+        # Any, not "TestResponse": MCPGateway.app is pinned to Any so this file
+        # type-checks identically with and without the optional mcp-gateway
+        # extra installed, which makes the test client (and its responses) Any.
         if payload is None:
             payload = {
                 "tool": "add_todo",
