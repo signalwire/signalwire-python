@@ -615,3 +615,66 @@ class TestSWMLHandlerEdgeCases:
         config = handler.build_config()
         assert config["mock_config"] is True
         assert len(config) == 1
+
+
+class TestPostPromptShapeValidated:
+    """``post_prompt`` must be validated the same way ``prompt`` is.
+
+    THE ENGINE TREATS THEM IDENTICALLY. ``mod_openai/app_config.c`` checks
+    ``!cJSON_IsObject(assistant_prompt)`` at :3193 and
+    ``!cJSON_IsObject(post_prompt)`` at :3219 — same structure, same
+    ``fatal: true`` ``calling.error``, and both error payloads read "must be an
+    object with 'text' or 'pom' field". ``post_prompt``'s even names the array
+    case explicitly ("not an array").
+
+    ``build_config`` has always emitted the right shape (``{"text": ...}``), so
+    no reference code path produced bad wire. The hole was in ``validate_config``,
+    which is PUBLIC surface taking a caller-supplied dict: it checked ``prompt``
+    four ways and ``post_prompt`` zero times, so a hand-assembled config that
+    ABORTS THE CALL was reported valid.
+
+    That blind spot was not theoretical — it is exactly how signalwire-go
+    shipped a bare-string ``post_prompt`` (fixed in go 51934ec): go's validator
+    faithfully mirrored this one, so nothing flagged it.
+    """
+
+    def test_bare_string_post_prompt_is_rejected(self) -> None:
+        handler = AIVerbHandler()
+        is_valid, errors = handler.validate_config(
+            {"prompt": {"text": "You are helpful."}, "post_prompt": "Summarize."}
+        )
+        assert is_valid is False
+        assert "'post_prompt' must be an object" in errors
+
+    def test_array_post_prompt_is_rejected(self) -> None:
+        """The array case the engine names by name in its error payload."""
+        handler = AIVerbHandler()
+        is_valid, errors = handler.validate_config(
+            {"prompt": {"text": "hi"}, "post_prompt": [{"say": "x"}]}
+        )
+        assert is_valid is False
+        assert "'post_prompt' must be an object" in errors
+
+    def test_object_post_prompt_is_accepted(self) -> None:
+        """The shape build_config emits must stay valid."""
+        handler = AIVerbHandler()
+        is_valid, errors = handler.validate_config(
+            {"prompt": {"text": "hi"}, "post_prompt": {"text": "Summarize."}}
+        )
+        assert is_valid is True, errors
+
+    def test_absent_post_prompt_is_accepted(self) -> None:
+        """post_prompt is OPTIONAL — absence must not become an error."""
+        handler = AIVerbHandler()
+        is_valid, errors = handler.validate_config({"prompt": {"text": "hi"}})
+        assert is_valid is True, errors
+
+    def test_build_config_output_validates(self) -> None:
+        """The builder and the validator must agree — round-trip guard."""
+        handler = AIVerbHandler()
+        cfg = handler.build_config(
+            prompt_text="You are helpful.", post_prompt="Summarize."
+        )
+        assert cfg["post_prompt"] == {"text": "Summarize."}
+        is_valid, errors = handler.validate_config(cfg)
+        assert is_valid is True, errors
