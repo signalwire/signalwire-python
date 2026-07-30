@@ -2331,32 +2331,6 @@ data_map.webhook(
 )
 ```
 
-##### `body(data: Dict[str, Any]) -> DataMap`
-Set the JSON body for POST/PUT requests.
-
-**Parameters:**
-- `data` (Dict[str, Any]): JSON body data (supports `${variable}` substitution)
-
-**Usage:**
-```python
-# Static body with parameter substitution
-data_map.body({
-    'query': '${args.search_term}',
-    'limit': 5,
-    'filters': {
-        'category': '${args.category}',
-        'active': True
-    }
-})
-
-# Body with call-related data (NOT sensitive info)
-data_map.body({
-    'customer_id': '${global_data.customer_id}',
-    'request_id': '${meta_data.call_id}',
-    'search': '${args.query}'
-})
-```
-
 ##### `params(data: Dict[str, Any]) -> DataMap`
 Set URL query parameters.
 
@@ -2624,7 +2598,7 @@ search_tool = (DataMap('search_knowledge')
         'https://api.company.com/search',
         headers={'Authorization': 'Bearer TOKEN'}
     )
-    .body({
+    .params({
         'query': '${args.query}',
         'category': '${args.category}',
         'limit': 5

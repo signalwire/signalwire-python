@@ -257,22 +257,6 @@ class DataMap:
         self._webhooks[-1]["expressions"] = expressions
         return self
 
-    def body(self, data: dict[str, Any]) -> "DataMap":
-        """
-        Set request body for the last added webhook (POST/PUT requests)
-
-        Args:
-            data: Request body data (can include ${variable} substitutions)
-
-        Returns:
-            Self for method chaining
-        """
-        if not self._webhooks:
-            raise ValueError("Must add webhook before setting body")
-
-        self._webhooks[-1]["body"] = data
-        return self
-
     def params(self, data: dict[str, Any]) -> "DataMap":
         """
         Set request params for the last added webhook.

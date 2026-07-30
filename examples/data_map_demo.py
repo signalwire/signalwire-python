@@ -115,7 +115,7 @@ class DataMapDemoAgent(AgentBase):
                     "Content-Type": "application/json",
                 },
             )
-            .body({"query": "${query}", "limit": "${limit}"})
+            .params({"query": "${query}", "limit": "${limit}"})
             .foreach(
                 {
                     "input_key": "${response.results}",
@@ -271,7 +271,7 @@ def print_data_map_examples():
             "https://api.docs.com/search",
             headers={"Authorization": "Bearer TOKEN"},
         )
-        .body({"query": "${query}", "limit": 3})
+        .params({"query": "${query}", "limit": 3})
         .foreach(
             {
                 "input_key": "${response.results}",

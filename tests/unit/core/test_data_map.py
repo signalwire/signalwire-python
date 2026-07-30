@@ -145,17 +145,22 @@ class TestDataMapWebhooks:
         assert webhook["input_args_as_params"] is True
         assert webhook["require_args"] == ["location"]
 
-    def test_webhook_body_and_params(self) -> None:
-        """Test adding body and params to webhook"""
+    def test_webhook_params(self) -> None:
+        """params() writes the ``params`` webhook key — the one in the contract.
+
+        Was ``test_webhook_body_and_params``, which called body() AND params() and
+        then asserted only ``len(_webhooks) == 1`` — it never checked either key, so
+        it passed for any shape. It now asserts the emitted key.
+        """
         data_map = DataMap("test_function")
 
         data_map.webhook("POST", "https://api.example.com/data")
-        data_map.body({"query": "${location}", "format": "json"})
-        data_map.params({"api_key": "12345"})
+        data_map.params({"api_key": "12345", "query": "${location}"})
 
-        # Body and params should be stored for the last webhook
-        assert hasattr(data_map, "_webhooks")
         assert len(data_map._webhooks) == 1
+        wh = data_map._webhooks[0]
+        assert wh["params"] == {"api_key": "12345", "query": "${location}"}
+        assert "body" not in wh
 
 
 class TestDataMapOutput:
@@ -259,7 +264,7 @@ class TestDataMapChaining:
             .purpose("Complex test")
             .parameter("input", "string", "Input data", required=True)
             .webhook("POST", "https://api.example.com/process")
-            .body({"data": "${input}"})
+            .params({"data": "${input}"})
             .output(result)
         )
 
@@ -443,7 +448,7 @@ class TestDataMapTemplateVariables:
         data_map = DataMap("test_function")
 
         data_map.webhook("POST", "https://api.example.com/data")
-        data_map.body({"query": "${args.search_term}", "limit": 10})
+        data_map.params({"query": "${args.search_term}", "limit": 10})
 
         # Body should be stored for processing
         assert len(data_map._webhooks) == 1
@@ -506,3 +511,41 @@ class TestDataMapIntegration:
         # Should be deserializable
         parsed = json.loads(json_str)
         assert parsed["function"] == "serialization_test"
+
+
+class TestBodyBuilderRemoved:
+    """``DataMap.body()`` is GONE — the key it wrote is invalid, not merely ignored.
+
+    Owner-ruled 2026-07-29, extending the f171ce3 ruling ("if the server doesn't
+    read them, remove them") from the ``create_simple_api_tool`` PARAMETER to the
+    public BUILDER METHOD. The same three sources condemn both:
+
+    * ``porting-sdk/schema.json`` ``$defs/Webhook`` declares exactly ten properties
+      under ``unevaluatedProperties: {"not": {}}`` — ``body`` is not among them, so
+      emitting it is a SCHEMA VIOLATION.
+    * ``mod_openai/actions.c:735-739`` and ``bedrock.c:4920-4926`` read url, method,
+      form_param, ``params`` and ``headers`` and nothing else; ``grep -n '"body"'``
+      across both returns ZERO matches.
+    * So the method's only possible effect was producing an invalid document while
+      silently discarding the caller's payload.
+
+    ``params()`` is the correct method for POST/PUT request data — it writes the
+    ``params`` key, which IS in the contract and IS read.
+    """
+
+    def test_body_method_is_gone(self) -> None:
+        from signalwire.core.data_map import DataMap
+
+        assert not hasattr(DataMap, "body"), (
+            "DataMap.body() must be removed — it writes a schema-forbidden key "
+            "that no engine reader consumes; use params() instead"
+        )
+
+    def test_params_still_writes_the_contract_key(self) -> None:
+        """The replacement must keep working — this is the positive control."""
+        from signalwire.core.data_map import DataMap
+
+        dm = DataMap("t").webhook("POST", "https://x.test").params({"q": "${query}"})
+        wh = dm.to_swaig_function()["data_map"]["webhooks"][0]
+        assert wh["params"] == {"q": "${query}"}
+        assert "body" not in wh
