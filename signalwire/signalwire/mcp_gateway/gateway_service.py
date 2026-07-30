@@ -27,10 +27,16 @@ from datetime import datetime
 import ssl
 import concurrent.futures
 
-from flask import Flask, request, jsonify, Response
-from werkzeug.serving import make_server, BaseWSGIServer
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+try:
+    from flask import Flask, request, jsonify, Response
+    from werkzeug.serving import make_server, BaseWSGIServer
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+except ImportError:  # pragma: no cover - exercised with the extra simulated absent
+    raise ImportError(
+        "flask and flask-limiter are required for the MCP gateway. "
+        "Install them with: pip install signalwire-sdk[mcp-gateway]"
+    ) from None
 from functools import wraps
 import threading
 
