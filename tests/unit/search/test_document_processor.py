@@ -1113,9 +1113,8 @@ class TestChunkingStrategies:
         proc = DocumentProcessor(
             chunking_strategy="sliding", chunk_size=4, chunk_overlap=1
         )
-        chunks = proc.create_chunks(
-            ["word1 word2", "word3 word4 word5"], "f.txt", "txt"
-        )  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
+        words = ["word1 word2", "word3 word4 word5"]
+        chunks = proc.create_chunks(words, "f.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
         assert len(chunks) >= 1
 
     def test_sliding_window_empty(self) -> None:
@@ -1327,9 +1326,8 @@ class TestChunkingStrategies:
     @patch("signalwire.search.document_processor.sent_tokenize", None)
     def test_qa_optimization_list_input(self) -> None:
         proc = DocumentProcessor(chunking_strategy="qa")
-        chunks = proc.create_chunks(
-            ["Question? Answer.", "More content."], "f.txt", "txt"
-        )  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
+        parts = ["Question? Answer.", "More content."]
+        chunks = proc.create_chunks(parts, "f.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
         assert len(chunks) >= 1
 
     # ── json ─────────────────────────────────────────────────────────

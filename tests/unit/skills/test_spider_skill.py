@@ -428,9 +428,9 @@ class TestFetchUrl:
     def test_timeout_returns_none(self, default_skill: "SpiderSkill") -> None:
         import requests as req_mod
 
-        default_skill.session.get = Mock(
+        default_skill.session.get = Mock(  # type: ignore[method-assign]  # mock
             side_effect=req_mod.exceptions.Timeout("timeout")
-        )  # type: ignore[method-assign]  # mock
+        )
         result = default_skill._fetch_url("https://slow.com")
         assert result is None
 

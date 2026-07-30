@@ -215,9 +215,8 @@ class TestIndexBuilderFileDiscovery:
         file_types = ["txt"]
         exclude_patterns = ["temp/*"]
 
-        result = self.builder._discover_files_from_sources(
-            sources, file_types, exclude_patterns
-        )  # type: ignore[arg-type]  # mock Path objects
+        discover = self.builder._discover_files_from_sources
+        result = discover(sources, file_types, exclude_patterns)  # type: ignore[arg-type]  # mock Path objects
 
         assert len(result) == 1
         assert mock_path1 in result

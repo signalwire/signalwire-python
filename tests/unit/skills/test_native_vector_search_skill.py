@@ -1385,8 +1385,8 @@ class TestSearchHandlerRemoteMode:
     def test_remote_handler_calls_search_remote(self) -> None:
         """Handler in remote mode calls _search_remote."""
         skill = self._setup_remote_skill_for_search()
-        skill._search_remote = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
+        skill._search_remote = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[
                 {
                     "content": "Result",
                     "score": 0.9,

@@ -586,9 +586,9 @@ class TestHandleSearch:
         self, service_with_engine: SearchService
     ) -> None:
         """When search engine raises, should return empty results."""
-        service_with_engine.search_engines["default"].search.side_effect = Exception(
+        service_with_engine.search_engines["default"].search.side_effect = Exception(  # type: ignore[attr-defined]  # mock attr
             "search error"
-        )  # type: ignore[attr-defined]  # mock attr
+        )
 
         with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
             mock_pp.return_value = {

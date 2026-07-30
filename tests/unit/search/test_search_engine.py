@@ -423,8 +423,8 @@ class TestSearchEngineHybridSearch:
         engine = SearchEngine(backend="sqlite", index_path=self.db_path)
 
         # Mock all search methods used in the parallel search approach
-        engine._vector_search = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
+        engine._vector_search = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[
                 {
                     "id": 1,
                     "content": "Vector result",
@@ -436,8 +436,8 @@ class TestSearchEngineHybridSearch:
         )
         engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
-        engine._keyword_search = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
+        engine._keyword_search = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[
                 {
                     "id": 2,
                     "content": "Keyword result",
@@ -447,12 +447,12 @@ class TestSearchEngineHybridSearch:
                 }
             ]
         )
-        engine._calculate_combined_score = Mock(
+        engine._calculate_combined_score = Mock(  # type: ignore[method-assign]  # mock
             side_effect=lambda c, t: c.get("score", 0.0)
-        )  # type: ignore[method-assign]  # mock
-        engine._apply_diversity_penalties = Mock(
+        )
+        engine._apply_diversity_penalties = Mock(  # type: ignore[method-assign]  # mock
             side_effect=lambda results, count: results
-        )  # type: ignore[method-assign]  # mock
+        )
 
         mock_np.array.return_value.reshape.return_value = [[0.1, 0.2, 0.3]]
 
@@ -467,10 +467,8 @@ class TestSearchEngineHybridSearch:
     def test_search_without_numpy(self, mock_logger: MagicMock | None = None) -> None:
         """Test search when numpy is not available"""
         engine = SearchEngine(backend="sqlite", index_path=self.db_path)
-        engine._keyword_search_only = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
-                {"id": 1, "content": "Keyword only result", "score": 0.8}
-            ]
+        engine._keyword_search_only = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[{"id": 1, "content": "Keyword only result", "score": 0.8}]
         )
 
         results = engine.search([0.1, 0.2, 0.3], "test query", count=2)
@@ -485,8 +483,8 @@ class TestSearchEngineHybridSearch:
         engine = SearchEngine(backend="sqlite", index_path=self.db_path)
         # When numpy is not available, search() delegates to _keyword_search_only
         # which handles tag filtering internally
-        engine._keyword_search_only = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
+        engine._keyword_search_only = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[
                 {
                     "id": 1,
                     "content": "Result 1",
@@ -515,8 +513,8 @@ class TestSearchEngineHybridSearch:
         mock_np.array.return_value.reshape.return_value = [[0.1, 0.2, 0.3]]
 
         # Both results come via vector search so the distance threshold filter applies
-        engine._vector_search = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
+        engine._vector_search = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[
                 {
                     "id": 1,
                     "content": "High score result",
@@ -542,9 +540,9 @@ class TestSearchEngineHybridSearch:
             return float(candidate.get("score", 0.0))
 
         engine._calculate_combined_score = Mock(side_effect=mock_combined_score)  # type: ignore[method-assign]  # mock
-        engine._apply_diversity_penalties = Mock(
+        engine._apply_diversity_penalties = Mock(  # type: ignore[method-assign]  # mock
             side_effect=lambda results, count: results
-        )  # type: ignore[method-assign]  # mock
+        )
 
         results = engine.search(
             [0.1, 0.2, 0.3], "test query", count=2, similarity_threshold=0.5
@@ -764,16 +762,14 @@ class TestSearchEngineEdgeCases:
     def test_keyword_search_only_with_tags(self) -> None:
         """Test keyword-only search with tag filtering"""
         engine = SearchEngine(backend="sqlite", index_path="test.db")
-        engine._keyword_search = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
+        engine._keyword_search = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[
                 {"id": 1, "metadata": {"tags": ["python"]}},
                 {"id": 2, "metadata": {"tags": ["javascript"]}},
             ]
         )
-        engine._filter_by_tags = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
-                {"id": 1, "metadata": {"tags": ["python"]}}
-            ]
+        engine._filter_by_tags = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[{"id": 1, "metadata": {"tags": ["python"]}}]
         )
 
         results = engine._keyword_search_only("test", count=2, tags=["python"])
@@ -1057,8 +1053,8 @@ class TestSearch:
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
         engine = SearchEngine(backend="sqlite", index_path=full_db)
         # Stub sub-searches to isolate orchestrator logic
-        engine._vector_search = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
+        engine._vector_search = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[
                 {
                     "id": 1,
                     "content": "Python programming tutorial for beginners",
@@ -1076,9 +1072,9 @@ class TestSearch:
         engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
-        engine._calculate_combined_score = Mock(
+        engine._calculate_combined_score = Mock(  # type: ignore[method-assign]  # mock
             side_effect=lambda c, t: c.get("score", 0.0)
-        )  # type: ignore[method-assign]  # mock
+        )
         engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.9, 0.1, 0.0, 0.0], "python tutorial", count=3)
@@ -1093,8 +1089,8 @@ class TestSearch:
         """search() merges candidates from vector, keyword, filename, metadata."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
         engine = SearchEngine(backend="sqlite", index_path=full_db)
-        engine._vector_search = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
+        engine._vector_search = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[
                 {
                     "id": 1,
                     "content": "A",
@@ -1104,8 +1100,8 @@ class TestSearch:
                 }
             ]
         )
-        engine._filename_search = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
+        engine._filename_search = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[
                 {
                     "id": 2,
                     "content": "B",
@@ -1116,8 +1112,8 @@ class TestSearch:
             ]
         )
         engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
-        engine._keyword_search = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
+        engine._keyword_search = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[
                 {
                     "id": 3,
                     "content": "C",
@@ -1127,9 +1123,9 @@ class TestSearch:
                 }
             ]
         )
-        engine._calculate_combined_score = Mock(
+        engine._calculate_combined_score = Mock(  # type: ignore[method-assign]  # mock
             side_effect=lambda c, t: c.get("score", 0.0)
-        )  # type: ignore[method-assign]  # mock
+        )
         engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.9, 0.1, 0.0, 0.0], "test", count=5)
@@ -1158,9 +1154,9 @@ class TestSearch:
         engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
-        engine._calculate_combined_score = Mock(
+        engine._calculate_combined_score = Mock(  # type: ignore[method-assign]  # mock
             side_effect=lambda c, t: c.get("score", 0.0)
-        )  # type: ignore[method-assign]  # mock
+        )
         engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.9, 0.1, 0.0, 0.0], "test", count=3)
@@ -1174,8 +1170,8 @@ class TestSearch:
         """search() filters results by tags when specified."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
         engine = SearchEngine(backend="sqlite", index_path=full_db)
-        engine._vector_search = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
+        engine._vector_search = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[
                 {
                     "id": 1,
                     "content": "A",
@@ -1203,9 +1199,9 @@ class TestSearch:
         engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
-        engine._calculate_combined_score = Mock(
+        engine._calculate_combined_score = Mock(  # type: ignore[method-assign]  # mock
             side_effect=lambda c, t: c.get("score", 0.0)
-        )  # type: ignore[method-assign]  # mock
+        )
         engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.9, 0.1, 0.0, 0.0], "test", count=5, tags=["python"])
@@ -1219,8 +1215,8 @@ class TestSearch:
         """search() boosts exact query matches when original_query given."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
         engine = SearchEngine(backend="sqlite", index_path=full_db)
-        engine._vector_search = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
+        engine._vector_search = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[
                 {
                     "id": 1,
                     "content": "python tutorial content",
@@ -1240,9 +1236,9 @@ class TestSearch:
         engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
-        engine._calculate_combined_score = Mock(
+        engine._calculate_combined_score = Mock(  # type: ignore[method-assign]  # mock
             side_effect=lambda c, t: c.get("score", 0.0)
-        )  # type: ignore[method-assign]  # mock
+        )
         engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search(
@@ -1259,10 +1255,8 @@ class TestSearch:
     def test_search_falls_back_to_keyword_only(self, full_db: str) -> None:
         """search() uses keyword-only when numpy is unavailable."""
         engine = SearchEngine(backend="sqlite", index_path=full_db)
-        engine._keyword_search_only = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
-                {"id": 1, "content": "result", "score": 0.5}
-            ]
+        engine._keyword_search_only = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[{"id": 1, "content": "result", "score": 0.5}]
         )
         results = engine.search([0.1], "python", count=3)
         engine._keyword_search_only.assert_called_once()
@@ -1288,8 +1282,8 @@ class TestSearch:
         """search() calls _apply_diversity_penalties."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
         engine = SearchEngine(backend="sqlite", index_path=full_db)
-        engine._vector_search = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
+        engine._vector_search = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[
                 {
                     "id": 1,
                     "content": "A",
@@ -1302,9 +1296,9 @@ class TestSearch:
         engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
-        engine._calculate_combined_score = Mock(
+        engine._calculate_combined_score = Mock(  # type: ignore[method-assign]  # mock
             side_effect=lambda c, t: c.get("score", 0.0)
-        )  # type: ignore[method-assign]  # mock
+        )
         diversity_mock = Mock(side_effect=lambda r, c: r)
         engine._apply_diversity_penalties = diversity_mock  # type: ignore[method-assign]  # mock
 
@@ -1319,8 +1313,8 @@ class TestSearch:
         """search() ensures every result has a 'score' field."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
         engine = SearchEngine(backend="sqlite", index_path=full_db)
-        engine._vector_search = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
+        engine._vector_search = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[
                 {
                     "id": 1,
                     "content": "A",
@@ -1348,8 +1342,8 @@ class TestSearch:
         """search() filters by similarity_threshold when > 0."""
         mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
         engine = SearchEngine(backend="sqlite", index_path=full_db)
-        engine._vector_search = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
+        engine._vector_search = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[
                 {
                     "id": 1,
                     "content": "A",
@@ -1369,9 +1363,9 @@ class TestSearch:
         engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
-        engine._calculate_combined_score = Mock(
+        engine._calculate_combined_score = Mock(  # type: ignore[method-assign]  # mock
             side_effect=lambda c, t: c.get("score", 0.0)
-        )  # type: ignore[method-assign]  # mock
+        )
         engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search(
@@ -1541,8 +1535,8 @@ class TestKeywordSearch:
     def test_no_results_triggers_fallback(self, full_db: str) -> None:
         """Falls back to LIKE search when FTS returns nothing."""
         engine = SearchEngine(backend="sqlite", index_path=full_db)
-        engine._fallback_search = Mock(
-            return_value=[  # type: ignore[method-assign]  # mock
+        engine._fallback_search = Mock(  # type: ignore[method-assign]  # mock
+            return_value=[
                 {
                     "id": 99,
                     "content": "fallback",

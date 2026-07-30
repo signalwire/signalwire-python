@@ -1784,9 +1784,8 @@ class TestFindSummary:
 
     def test_find_summary_direct_key(self) -> None:
         agent = self._make()
-        result = agent._find_summary_in_post_data(
-            {"summary": {"text": "hello"}}, agent.log
-        )  # type: ignore[typeddict-unknown-key]  # exercises arbitrary post-data shape
+        find_summary = agent._find_summary_in_post_data
+        result = find_summary({"summary": {"text": "hello"}}, agent.log)  # type: ignore[typeddict-unknown-key]  # exercises arbitrary post-data shape
         assert result == {"text": "hello"}
 
     def test_find_summary_from_post_prompt_data_parsed(self) -> None:
