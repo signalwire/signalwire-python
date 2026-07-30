@@ -814,6 +814,35 @@ class SWMLService(ToolMixin):
         """
         return Response(content=self.render_document(), media_type="application/json")
 
+    def _swaig_validate_token(
+        self,
+        function_name: str,
+        token: str | None,
+        call_id: str | None,
+    ) -> dict[str, Any] | None:
+        """Extension point: transport-agnostic `secure=True` token enforcement.
+
+        This is the SOLE security decision for a SWAIG call, deliberately kept
+        free of any request/transport type so that EVERY transport -- the HTTP
+        endpoint and all four serverless modes (lambda, cgi,
+        google_cloud_function, azure_function) -- reaches the identical check
+        with the identical semantics. Each transport is responsible only for
+        EXTRACTING the credential from its own payload shape; none of them
+        re-implements the decision.
+
+        Args:
+            function_name: The SWAIG function being invoked.
+            token: The `__token` credential, or None when absent.
+            call_id: The call the token must be bound to, or None when absent.
+
+        Returns:
+            None to proceed with dispatch, or a FunctionResult-shaped dict to
+            return INSTEAD of dispatching (the refusal). The refusal is always
+            delivered as a 200 + FunctionResult body, never an HTTP error
+            status -- the engine has no handling for a SWAIG refusal status.
+        """
+        return None
+
     def _swaig_pre_dispatch(
         self,
         request: Request,

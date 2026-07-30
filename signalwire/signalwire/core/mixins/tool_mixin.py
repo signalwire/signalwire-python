@@ -298,6 +298,7 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
         args: dict[str, Any] | None = None,
         call_id: str | None = None,
         raw_data: dict[str, Any] | None = None,
+        token: str | None = None,
     ) -> dict[str, Any]:
         """
         Execute a SWAIG function in serverless context
@@ -307,6 +308,9 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
             args: Function arguments dictionary
             call_id: Optional call ID
             raw_data: Optional raw request data
+            token: Optional `__token` credential extracted from the caller's
+                query string. `secure=True` tools are enforced against it
+                exactly as on the HTTP transport; an absent token is refused.
 
         Returns:
             Function execution result
@@ -329,6 +333,14 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
                     ),
                 )
                 return {"error": f"Function '{function_name}' not found"}
+
+            # Enforce `secure=True` through the same transport-agnostic core
+            # the HTTP path uses, so serverless cannot drift from HTTP.
+            validate = getattr(self, "_swaig_validate_token", None)
+            if validate is not None:
+                refusal = validate(function_name, token, call_id)
+                if refusal is not None:
+                    return dict(refusal)
 
             # Use empty args if not provided
             if args is None:

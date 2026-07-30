@@ -186,6 +186,13 @@ def _build_mixin(**overrides: Any) -> Any:
         agent._swaig_render_get_response = types.MethodType(
             _AgentBase._swaig_render_get_response, agent
         )
+    # _swaig_pre_dispatch delegates the security decision to the
+    # transport-agnostic _swaig_validate_token core (shared with the serverless
+    # modes), so that must be bound too or the delegate resolves to a Mock.
+    if "_swaig_validate_token" not in overrides:
+        agent._swaig_validate_token = types.MethodType(
+            _AgentBase._swaig_validate_token, agent
+        )
     if "_swaig_pre_dispatch" not in overrides:
         agent._swaig_pre_dispatch = types.MethodType(
             _AgentBase._swaig_pre_dispatch, agent
