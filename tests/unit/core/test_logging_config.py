@@ -589,6 +589,119 @@ class TestColorDetection:
 
 
 # ===========================================================================
+# Machine-readable stdout (#66): a CLI whose stdout IS the payload must never
+# have a log line written to it.
+# ===========================================================================
+
+
+class TestMachineReadableStdout:
+    """``--raw`` / ``--dump-swml`` / ``--json`` make stdout a data channel.
+
+    Two independent defects put log text on that channel, and both are covered
+    here because either one alone re-corrupts the output:
+
+    1. **The unconfigured default was stdout.** ``get_logger()`` deliberately
+       does not auto-configure (a library must not hijack the host's logging),
+       but structlog's *own* default factory is ``PrintLoggerFactory()``, which
+       writes to ``sys.stdout``. So "we never configured anything" did not mean
+       "silent" — it meant "print to stdout", and the ``NullHandler`` on the
+       ``signalwire`` stdlib logger never saw the record. A library that is
+       silent-by-default must route through stdlib from import.
+    2. **The configured default was stdout too.** When an app DOES call
+       ``configure_logging()`` while a machine-readable flag is present, the
+       inferred ``default`` mode sent the handler to ``sys.stdout``. The flags
+       were consulted only by ``_detect_colors()`` — so they suppressed ANSI
+       colour but not the stream itself.
+    """
+
+    def test_flag_helper_lists_every_machine_readable_flag(self) -> None:
+        from signalwire.core.logging_config import _machine_readable_stdout
+
+        original_argv = sys.argv[:]
+        for flag in ("--raw", "--dump-swml", "--json"):
+            try:
+                sys.argv[:] = ["prog", flag]
+                assert _machine_readable_stdout() is True, (
+                    f"{flag} must mark stdout as machine-readable"
+                )
+            finally:
+                sys.argv[:] = original_argv
+
+        try:
+            sys.argv[:] = ["prog", "--verbose"]
+            assert _machine_readable_stdout() is False
+        finally:
+            sys.argv[:] = original_argv
+
+    def test_colour_detection_reuses_the_flag_helper(self) -> None:
+        # The bug was flag-list DRIFT: colour consulted the flags, the stream
+        # decision did not. Both must read the same helper so they cannot
+        # disagree again.
+        from signalwire.core.logging_config import _detect_colors
+
+        with patch(
+            "signalwire.core.logging_config._machine_readable_stdout",
+            return_value=True,
+        ):
+            assert _detect_colors() is False
+
+    def test_unconfigured_logger_does_not_write_to_stdout(self) -> None:
+        # Defect 1: the library default. No configure_logging() call at all.
+        # reset_logging_configuration() re-installs the library default, so this
+        # is exactly the state a host app sees on a fresh `import signalwire`.
+        reset_logging_configuration()
+
+        buf = StringIO()
+        with patch.object(sys, "stdout", buf):
+            get_logger("signalwire.test.unconfigured").warning("must_not_appear")
+
+        assert buf.getvalue() == "", (
+            "an unconfigured SDK logger wrote to stdout; the library default "
+            f"must be silent, got: {buf.getvalue()!r}"
+        )
+
+    def test_inferred_mode_under_flag_goes_to_stderr_not_stdout(self) -> None:
+        # Defect 2: the configured default. Flag present, no explicit env mode.
+        original_argv = sys.argv[:]
+        try:
+            sys.argv[:] = ["swaig-test", "agent.py", "--dump-swml", "--raw"]
+            with patch.dict(os.environ, {}, clear=False):
+                os.environ.pop("SIGNALWIRE_LOG_MODE", None)
+                reset_logging_configuration()
+                configure_logging()
+        finally:
+            sys.argv[:] = original_argv
+
+        handlers = logging.getLogger("signalwire").handlers
+        streams = [h.stream for h in handlers if isinstance(h, logging.StreamHandler)]
+        assert streams, "configure_logging() attached no StreamHandler"
+        assert all(s is sys.stderr for s in streams), (
+            f"logs must go to stderr under a machine-readable flag, got {streams}"
+        )
+
+    def test_explicit_env_mode_still_beats_the_flag(self) -> None:
+        # PRECEDENCE: an explicit SIGNALWIRE_LOG_MODE is a deliberate operator
+        # choice and outranks the flag INFERENCE. The flag only overrides the
+        # inferred default, never an explicit request.
+        original_argv = sys.argv[:]
+        try:
+            sys.argv[:] = ["swaig-test", "agent.py", "--dump-swml"]
+            with patch.dict(os.environ, {"SIGNALWIRE_LOG_MODE": "default"}):
+                reset_logging_configuration()
+                configure_logging()
+        finally:
+            sys.argv[:] = original_argv
+
+        handlers = logging.getLogger("signalwire").handlers
+        streams = [h.stream for h in handlers if isinstance(h, logging.StreamHandler)]
+        assert streams, "configure_logging() attached no StreamHandler"
+        assert all(s is sys.stdout for s in streams), (
+            "an explicit SIGNALWIRE_LOG_MODE=default must still win over the "
+            f"flag inference, got {streams}"
+        )
+
+
+# ===========================================================================
 # reset_logging_configuration
 # ===========================================================================
 

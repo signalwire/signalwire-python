@@ -92,8 +92,39 @@ def _install_library_null_handler() -> None:
         sw_logger.addHandler(logging.NullHandler())
 
 
-# Import-time side effect: ONLY the library NullHandler. NOT global configuration.
-_install_library_null_handler()
+def _install_library_defaults() -> None:
+    """Make the SDK's UNCONFIGURED logging genuinely silent.
+
+    The NullHandler above only silences records that reach the *stdlib*. But
+    structlog's own out-of-the-box default is ``PrintLoggerFactory()``, which
+    writes straight to ``sys.stdout`` and never touches stdlib at all — so
+    "the app never called ``configure_logging()``" did not mean "silent", it
+    meant "print every SDK log line to stdout". That is how debug output ended
+    up interleaved with the JSON on ``swaig-test --dump-swml --raw``.
+
+    Binding the stdlib ``LoggerFactory`` here routes every ``get_logger()``
+    record through the ``signalwire`` namespace logger, where the NullHandler
+    is already waiting. Silent by default, exactly as documented, and still no
+    handler/level/propagate change on any host-owned logger.
+
+    Only applied when the host has not configured structlog itself — an app
+    that owns its structlog config keeps it.
+    """
+    if structlog.is_configured():
+        return
+    structlog.configure(
+        processors=[
+            *_get_structlog_processors(),
+            structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
+        ],
+        logger_factory=structlog.stdlib.LoggerFactory(),
+        wrapper_class=structlog.stdlib.BoundLogger,
+        cache_logger_on_first_use=False,
+    )
+
+
+# (the import-time invocation of both installers lives at the END of this module,
+#  where `_get_structlog_processors` is already defined)
 
 
 def get_execution_mode() -> str:
@@ -140,6 +171,22 @@ def reset_logging_configuration() -> None:
     global _logging_configured
     _logging_configured = False
     structlog.reset_defaults()
+    # reset_defaults() restores structlog's OWN default — the stdout PrintLogger.
+    # Re-install the library default so a reset returns us to silent, not loud.
+    _install_library_defaults()
+
+
+# CLI flags that turn stdout into a DATA channel: the caller pipes it into `jq`
+# or `json.loads`, so a single log line on stdout corrupts the payload. Kept in
+# ONE place because the original bug was list DRIFT — `_detect_colors()` knew
+# about `--raw`/`--dump-swml` and the stream decision did not, so the flags
+# suppressed ANSI colour while still writing the logs into the JSON.
+_MACHINE_READABLE_STDOUT_FLAGS = frozenset({"--raw", "--dump-swml", "--json"})
+
+
+def _machine_readable_stdout() -> bool:
+    """True when a CLI flag makes stdout a machine-readable data channel."""
+    return not _MACHINE_READABLE_STDOUT_FLAGS.isdisjoint(sys.argv)
 
 
 def _detect_colors() -> bool:
@@ -153,7 +200,7 @@ def _detect_colors() -> bool:
         return False
     if not stream.isatty():
         return False
-    return not ("--raw" in sys.argv or "--dump-swml" in sys.argv)
+    return not _machine_readable_stdout()
 
 
 def configure_logging() -> None:
@@ -175,10 +222,23 @@ def configure_logging() -> None:
     log_level = os.getenv("SIGNALWIRE_LOG_LEVEL", "info").lower()
     log_format = os.getenv("SIGNALWIRE_LOG_FORMAT", "console").lower()
 
-    # Determine log mode if auto or not specified
+    # Determine log mode if auto or not specified.
+    #
+    # PRECEDENCE, deliberately: an explicit SIGNALWIRE_LOG_MODE always wins — an
+    # operator who asks for `default`, `stderr`, or `off` gets exactly that, even
+    # under `--raw`. The flag inference only ever replaces the mode we would have
+    # GUESSED. Within the inference, a machine-readable stdout outranks the
+    # server default (logs move to stderr, where they stay visible and stop
+    # corrupting the payload) but not CGI's `off`, where stdout is the HTTP
+    # response body and stderr is the server error log.
     if not log_mode or log_mode == "auto":
         execution_mode = get_execution_mode()
-        log_mode = "off" if execution_mode == "cgi" else "default"
+        if execution_mode == "cgi":
+            log_mode = "off"
+        elif _machine_readable_stdout():
+            log_mode = "stderr"
+        else:
+            log_mode = "default"
 
     # Configure based on mode
     if log_mode == "off":
@@ -366,3 +426,12 @@ def get_logger(name: str) -> Any:
     # logger carries a NullHandler (installed at module load) so it's silent by
     # default; the app opts in to SDK output via configure_logging().
     return structlog.get_logger(name)
+
+
+# Import-time side effects, in order. Neither configures OUTPUT — together they
+# are what makes "silent by default" true:
+#   1. the NullHandler on the `signalwire` stdlib namespace, and
+#   2. the stdlib logger factory, so structlog records actually REACH that
+#      namespace instead of structlog's default stdout PrintLogger.
+_install_library_null_handler()
+_install_library_defaults()
