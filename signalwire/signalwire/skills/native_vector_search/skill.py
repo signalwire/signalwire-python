@@ -889,7 +889,7 @@ class NativeVectorSearchSkill(SkillBase):
 
         return global_data
 
-    def get_prompt_sections(self) -> list[dict[str, Any]]:
+    def _get_prompt_sections(self) -> list[dict[str, Any]]:
         """Return prompt sections to add to agent"""
         # We'll handle this in register_tools after the agent is set
         return []
