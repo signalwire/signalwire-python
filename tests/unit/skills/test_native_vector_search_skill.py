@@ -1460,10 +1460,6 @@ class TestMiscMethods:
         data = skill.get_global_data()
         assert data == {}
 
-    def test_get_prompt_sections_returns_empty(self) -> None:
-        skill = _make_skill()
-        assert skill.get_prompt_sections() == []
-
     def test_cleanup_no_temp_dirs(self) -> None:
         """cleanup must early-return when _temp_dirs is unset, and must NOT
         invoke shutil.rmtree at all in that path."""
@@ -1505,43 +1501,37 @@ class TestMiscMethods:
 
 
 # ===========================================================================
-# _add_prompt_section()
+# _get_prompt_sections()
 # ===========================================================================
 
 
-class TestAddPromptSection:
-    """Test _add_prompt_section method."""
+class TestGetPromptSections:
+    """Test the prompt-section hook.
 
-    def test_add_prompt_section_success(self) -> None:
-        skill = _make_skill()
-        skill.tool_name = "my_search"
-        mock_agent = Mock()
+    This skill previously returned ``[]`` from the hook and kept its real
+    content in a push-style ``_add_prompt_section(agent)`` helper that nothing
+    ever called, so the skill contributed no prompt section at all. These tests
+    pin the content to the pull-style hook.
+    """
 
-        skill._add_prompt_section(mock_agent)
+    def test_returns_one_section_naming_the_tool(self) -> None:
+        skill = _make_skill(params={"tool_name": "my_search"})
+        skill.setup()
 
-        mock_agent.prompt_add_section.assert_called_once()
-        call_kwargs = mock_agent.prompt_add_section.call_args[1]
-        assert call_kwargs["title"] == "Local Document Search"
-        assert "my_search" in call_kwargs["body"]
+        sections = skill.get_prompt_sections()
 
-    def test_add_prompt_section_error_handled(self) -> None:
-        """A failure inside agent.prompt_add_section must be caught and
-        logged — the skill must not propagate the exception. We assert the
-        agent method was actually invoked AND the logger captured the
-        failure (proving the except branch ran)."""
-        skill = _make_skill()
-        skill.tool_name = "search"
-        mock_agent = Mock()
-        mock_agent.prompt_add_section.side_effect = Exception("prompt error")
+        assert len(sections) == 1
+        section = sections[0]
+        assert section["title"] == "Local Document Search"
+        assert "my_search" in section["body"]
+        assert any("my_search" in bullet for bullet in section["bullets"])
+        assert len(section["bullets"]) == 4
 
-        with patch.object(skill, "logger") as mock_logger:
-            skill._add_prompt_section(mock_agent)
-        # The agent was invoked exactly once before the exception bubbled.
-        mock_agent.prompt_add_section.assert_called_once()
-        # And the error path logged the failure.
-        assert mock_logger.error.call_count == 1
-        logged = mock_logger.error.call_args[0][0]
-        assert "prompt error" in logged or "prompt section" in logged.lower()
+    def test_skip_prompt_suppresses_the_section(self) -> None:
+        skill = _make_skill(params={"tool_name": "my_search", "skip_prompt": True})
+        skill.setup()
+
+        assert skill.get_prompt_sections() == []
 
 
 # ===========================================================================

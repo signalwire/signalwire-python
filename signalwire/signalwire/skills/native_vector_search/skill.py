@@ -10,10 +10,7 @@ See LICENSE file in the project root for full license information.
 import contextlib
 import os
 import shutil
-from typing import Any, ClassVar, TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from signalwire.core.agent_base import AgentBase
+from typing import Any, ClassVar
 from pathlib import Path
 
 from signalwire.core.skill_base import SkillBase
@@ -891,25 +888,18 @@ class NativeVectorSearchSkill(SkillBase):
 
     def _get_prompt_sections(self) -> list[dict[str, Any]]:
         """Return prompt sections to add to agent"""
-        # We'll handle this in register_tools after the agent is set
-        return []
-
-    def _add_prompt_section(self, agent: "AgentBase") -> None:
-        """Add prompt section to agent (called during skill loading)"""
-        try:
-            agent.prompt_add_section(
-                title="Local Document Search",
-                body=f"You can search local document indexes using the {self.tool_name} tool.",
-                bullets=[
+        return [
+            {
+                "title": "Local Document Search",
+                "body": f"You can search local document indexes using the {self.tool_name} tool.",
+                "bullets": [
                     f"Use the {self.tool_name} tool when users ask questions about topics that might be in the indexed documents",
                     "Search for relevant information using clear, specific queries",
                     "Provide helpful summaries of the search results",
                     "If no results are found, suggest the user try rephrasing their question or ask about different topics",
                 ],
-            )
-        except Exception as e:
-            self.logger.error(f"Failed to add prompt section: {e}")
-            # Continue without the prompt section
+            }
+        ]
 
     def cleanup(self) -> None:
         """Cleanup when skill is removed or agent shuts down"""
