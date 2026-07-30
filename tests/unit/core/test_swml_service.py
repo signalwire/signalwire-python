@@ -13,6 +13,7 @@ Unit tests for SWMLService class
 
 import pytest
 import json
+from pathlib import Path
 from typing import Any
 from unittest.mock import Mock, patch, MagicMock
 
@@ -838,8 +839,14 @@ class TestServe:
         assert call_kwargs[1]["port"] == 9999
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_serve_with_ssl(self, mock_uvicorn_module: MagicMock) -> None:
+    def test_serve_with_ssl(
+        self, mock_uvicorn_module: MagicMock, tmp_path: Path
+    ) -> None:
         """serve() with SSL should pass cert/key to uvicorn.run."""
+        cert = tmp_path / "cert.pem"
+        key = tmp_path / "key.pem"
+        cert.write_text("cert")
+        key.write_text("key")
         service = SWMLService(
             name="serve_ssl",
             route="/",
@@ -847,22 +854,22 @@ class TestServe:
             port=443,
             schema_validation=False,
         )
-        # We need to make validate_ssl_config return success
-        service.security.validate_ssl_config = Mock(return_value=(True, None))  # type: ignore[method-assign]  # mock
         service.domain = "example.com"
         with patch.dict("sys.modules", {"uvicorn": mock_uvicorn_module}):
-            service.serve(
-                ssl_enabled=True, ssl_cert="/path/cert.pem", ssl_key="/path/key.pem"
-            )
+            service.serve(ssl_enabled=True, ssl_cert=str(cert), ssl_key=str(key))
         call_kwargs = mock_uvicorn_module.run.call_args
-        assert call_kwargs[1].get("ssl_certfile") == "/path/cert.pem"
-        assert call_kwargs[1].get("ssl_keyfile") == "/path/key.pem"
+        assert call_kwargs[1].get("ssl_certfile") == str(cert)
+        assert call_kwargs[1].get("ssl_keyfile") == str(key)
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_serve_ssl_invalid_config_disables_ssl(
+    def test_serve_ssl_invalid_config_refuses_to_start(
         self, mock_uvicorn_module: MagicMock
     ) -> None:
-        """serve() should disable SSL when validation fails."""
+        """serve() must FAIL when TLS is requested but unconfigurable.
+
+        Clearing ssl_enabled and running uvicorn plain would hand the operator
+        a cleartext listener they believe is encrypted.
+        """
         service = SWMLService(
             name="serve_ssl_invalid",
             route="/",
@@ -870,15 +877,52 @@ class TestServe:
             port=443,
             schema_validation=False,
         )
-        service.security.validate_ssl_config = Mock(  # type: ignore[method-assign]  # mock
-            return_value=(False, "cert not found")
+        with (
+            patch.dict("sys.modules", {"uvicorn": mock_uvicorn_module}),
+            pytest.raises(RuntimeError, match="TLS configuration is invalid"),
+        ):
+            service.serve(ssl_enabled=True)
+        mock_uvicorn_module.run.assert_not_called()
+
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
+    def test_serve_ssl_missing_cert_file_refuses_to_start(
+        self, mock_uvicorn_module: MagicMock, tmp_path: Path
+    ) -> None:
+        """A cert PATH that does not exist is still a refusal, not a downgrade."""
+        service = SWMLService(
+            name="serve_ssl_absent_cert",
+            route="/",
+            host="0.0.0.0",
+            port=443,
+            schema_validation=False,
+        )
+        with (
+            patch.dict("sys.modules", {"uvicorn": mock_uvicorn_module}),
+            pytest.raises(RuntimeError, match="certificate file not found"),
+        ):
+            service.serve(
+                ssl_enabled=True,
+                ssl_cert=str(tmp_path / "absent.pem"),
+                ssl_key=str(tmp_path / "absent.key"),
+            )
+        mock_uvicorn_module.run.assert_not_called()
+
+    @patch("signalwire.core.swml_service.uvicorn", create=True)
+    def test_serve_without_ssl_still_serves_plain_http(
+        self, mock_uvicorn_module: MagicMock
+    ) -> None:
+        """Scope control: SSL off must keep working, with no ssl kwargs."""
+        service = SWMLService(
+            name="serve_plain",
+            route="/",
+            host="0.0.0.0",
+            port=3000,
+            schema_validation=False,
         )
         with patch.dict("sys.modules", {"uvicorn": mock_uvicorn_module}):
-            service.serve(ssl_enabled=True)
-        # SSL should have been disabled due to invalid config
-        assert service.ssl_enabled is False
-        call_kwargs = mock_uvicorn_module.run.call_args
-        assert "ssl_certfile" not in call_kwargs[1]
+            service.serve(ssl_enabled=False)
+        mock_uvicorn_module.run.assert_called_once()
+        assert "ssl_certfile" not in mock_uvicorn_module.run.call_args[1]
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_serve_creates_fastapi_app(self, mock_uvicorn_module: MagicMock) -> None:
@@ -934,9 +978,13 @@ class TestServe:
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_serve_ssl_without_domain_warns(
-        self, mock_uvicorn_module: MagicMock
+        self, mock_uvicorn_module: MagicMock, tmp_path: Path
     ) -> None:
         """serve() with SSL but no domain should still proceed (with warning)."""
+        cert = tmp_path / "cert.pem"
+        key = tmp_path / "key.pem"
+        cert.write_text("cert")
+        key.write_text("key")
         service = SWMLService(
             name="serve_no_domain",
             route="/",
@@ -944,13 +992,12 @@ class TestServe:
             port=443,
             schema_validation=False,
         )
-        service.security.validate_ssl_config = Mock(return_value=(True, None))  # type: ignore[method-assign]  # mock
         service.domain = None
         with patch.dict("sys.modules", {"uvicorn": mock_uvicorn_module}):
-            service.serve(ssl_enabled=True, ssl_cert="/cert.pem", ssl_key="/key.pem")
+            service.serve(ssl_enabled=True, ssl_cert=str(cert), ssl_key=str(key))
         # Should still call uvicorn.run with SSL params
         call_kwargs = mock_uvicorn_module.run.call_args
-        assert call_kwargs[1].get("ssl_certfile") == "/cert.pem"
+        assert call_kwargs[1].get("ssl_certfile") == str(cert)
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
     def test_serve_with_routing_callbacks(
@@ -2557,8 +2604,14 @@ class TestServeDomainOverride:
     """Test serve() domain override (line 766)."""
 
     @patch("signalwire.core.swml_service.uvicorn", create=True)
-    def test_serve_overrides_domain(self, mock_uvicorn: MagicMock) -> None:
+    def test_serve_overrides_domain(
+        self, mock_uvicorn: MagicMock, tmp_path: Path
+    ) -> None:
         """serve(domain=...) should override the service domain."""
+        cert = tmp_path / "cert.pem"
+        key = tmp_path / "key.pem"
+        cert.write_text("cert")
+        key.write_text("key")
         svc = SWMLService(
             name="srv_domain",
             route="/",
@@ -2567,14 +2620,13 @@ class TestServeDomainOverride:
             schema_validation=False,
         )
         assert svc.domain is None or svc.domain != "new.example.com"
-        svc.security.validate_ssl_config = Mock(return_value=(True, None))  # type: ignore[method-assign]  # mock
         mock_uvicorn.run = Mock()
         with patch.dict("sys.modules", {"uvicorn": mock_uvicorn}):
             svc.serve(
                 ssl_enabled=True,
                 domain="new.example.com",
-                ssl_cert="/cert.pem",
-                ssl_key="/key.pem",
+                ssl_cert=str(cert),
+                ssl_key=str(key),
             )
         assert svc.domain == "new.example.com"
 

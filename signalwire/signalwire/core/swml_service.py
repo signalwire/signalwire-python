@@ -1324,13 +1324,35 @@ class SWMLService(ToolMixin):
         ssl_cert_path = ssl_cert or getattr(self, "ssl_cert_path", None)
         ssl_key_path = ssl_key or getattr(self, "ssl_key_path", None)
 
-        # Validate SSL configuration if enabled
+        # Validate SSL configuration if enabled.
+        #
+        # TLS that cannot be configured is a FATAL misconfiguration, never a
+        # silent downgrade: the operator asked for encryption, and starting a
+        # cleartext listener instead would ship their traffic — including the
+        # credentials carried in Basic auth — in the clear, with no error and
+        # no way to notice. Refuse to start.
         if self.ssl_enabled:
-            is_valid, error = self.security.validate_ssl_config()
-            if not is_valid:
-                self.log.warning("ssl_config_invalid", error=error)
-                self.ssl_enabled = False
-            elif not self.domain:
+            # Validate the paths that will actually reach uvicorn: they may
+            # come from the serve(ssl_cert=/ssl_key=) arguments, which the
+            # security config has never seen.
+            error: str | None = None
+            if not ssl_cert_path:
+                error = "SSL enabled but no certificate path configured"
+            elif not Path(ssl_cert_path).exists():
+                error = f"SSL certificate file not found: {ssl_cert_path}"
+            elif not ssl_key_path:
+                error = "SSL enabled but no private key path configured"
+            elif not Path(ssl_key_path).exists():
+                error = f"SSL key file not found: {ssl_key_path}"
+            if error is not None:
+                self.log.error("ssl_config_invalid", error=error)
+                raise RuntimeError(
+                    f"SSL is enabled but the TLS configuration is invalid: {error}. "
+                    f"Refusing to start a plaintext listener when TLS was "
+                    f"requested — fix SWML_SSL_CERT_PATH / SWML_SSL_KEY_PATH, or "
+                    f"disable SSL to serve plain HTTP deliberately."
+                )
+            if not self.domain:
                 self.log.warning("ssl_domain_not_specified")
                 # We'll continue, but URLs might not be correctly generated
 

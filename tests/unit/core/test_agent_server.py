@@ -494,8 +494,14 @@ class TestRunServer:
             Path(key_path).unlink()
 
     @patch("signalwire.agent_server.uvicorn")
-    def test_run_server_ssl_disabled_bad_cert(self, mock_uvicorn: MagicMock) -> None:
-        """Test _run_server falls back to non-SSL if cert not found"""
+    def test_run_server_missing_cert_refuses_to_start(
+        self, mock_uvicorn: MagicMock
+    ) -> None:
+        """TLS requested but no cert must FAIL, never serve plaintext.
+
+        Silently clearing ssl_enabled would hand the operator a cleartext
+        listener carrying their Basic-auth credentials, with no error.
+        """
         env = {
             "SWML_SSL_ENABLED": "true",
             "SWML_SSL_CERT_PATH": "/nonexistent/cert.pem",
@@ -503,8 +509,27 @@ class TestRunServer:
         }
         with patch.dict(os.environ, env, clear=False):
             server = AgentServer()
+            with pytest.raises(RuntimeError, match="SSL certificate is missing"):
+                server._run_server()
+            mock_uvicorn.run.assert_not_called()
+
+    @patch("signalwire.agent_server.uvicorn")
+    def test_run_server_ssl_disabled_still_serves_plain_http(
+        self, mock_uvicorn: MagicMock
+    ) -> None:
+        """Scope control: with SSL off, plain HTTP must still serve.
+
+        The refusal above must reject only a TLS request it cannot satisfy —
+        not every start.
+        """
+        env = {
+            "SWML_SSL_ENABLED": "false",
+            "SWML_SSL_CERT_PATH": "/nonexistent/cert.pem",
+            "SWML_SSL_KEY_PATH": "/nonexistent/key.pem",
+        }
+        with patch.dict(os.environ, env, clear=False):
+            server = AgentServer()
             server._run_server()
-            # Should call without ssl params
             mock_uvicorn.run.assert_called_once_with(
                 server.app, host="0.0.0.0", port=3000, log_level="info"
             )
@@ -518,8 +543,10 @@ class TestRunServer:
         mock_uvicorn.run.assert_called_once()
 
     @patch("signalwire.agent_server.uvicorn")
-    def test_run_server_ssl_missing_key(self, mock_uvicorn: MagicMock) -> None:
-        """Test _run_server falls back when SSL key path is missing"""
+    def test_run_server_missing_key_refuses_to_start(
+        self, mock_uvicorn: MagicMock
+    ) -> None:
+        """TLS requested with a cert but no key must FAIL, never serve plaintext."""
         with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as cert_f:
             cert_path = cert_f.name
 
@@ -531,11 +558,9 @@ class TestRunServer:
             }
             with patch.dict(os.environ, env, clear=False):
                 server = AgentServer()
-                server._run_server()
-                # Should fall back to non-SSL
-                mock_uvicorn.run.assert_called_once_with(
-                    server.app, host="0.0.0.0", port=3000, log_level="info"
-                )
+                with pytest.raises(RuntimeError, match="SSL private key is missing"):
+                    server._run_server()
+                mock_uvicorn.run.assert_not_called()
         finally:
             Path(cert_path).unlink()
 
