@@ -138,6 +138,19 @@ def reset_logging_configuration() -> None:
     structlog.reset_defaults()
 
 
+# CLI flags that turn stdout into a DATA channel: the caller pipes it into `jq`
+# or `json.loads`, so a single log line on stdout corrupts the payload. Kept in
+# ONE place because the original bug was list DRIFT — `_detect_colors()` knew
+# about `--raw`/`--dump-swml` and the stream decision did not, so the flags
+# suppressed ANSI colour while still writing the logs into the JSON.
+_MACHINE_READABLE_STDOUT_FLAGS = frozenset({"--raw", "--dump-swml", "--json"})
+
+
+def _machine_readable_stdout() -> bool:
+    """True when a CLI flag makes stdout a machine-readable data channel."""
+    return not _MACHINE_READABLE_STDOUT_FLAGS.isdisjoint(sys.argv)
+
+
 def _detect_colors() -> bool:
     """Auto-detect whether the output stream supports colors."""
     stream = (
@@ -149,7 +162,7 @@ def _detect_colors() -> bool:
         return False
     if not stream.isatty():
         return False
-    return not ("--raw" in sys.argv or "--dump-swml" in sys.argv)
+    return not _machine_readable_stdout()
 
 
 def configure_logging() -> None:
@@ -171,10 +184,23 @@ def configure_logging() -> None:
     log_level = os.getenv("SIGNALWIRE_LOG_LEVEL", "info").lower()
     log_format = os.getenv("SIGNALWIRE_LOG_FORMAT", "console").lower()
 
-    # Determine log mode if auto or not specified
+    # Determine log mode if auto or not specified.
+    #
+    # PRECEDENCE, deliberately: an explicit SIGNALWIRE_LOG_MODE always wins — an
+    # operator who asks for `default`, `stderr`, or `off` gets exactly that, even
+    # under `--raw`. The flag inference only ever replaces the mode we would have
+    # GUESSED. Within the inference, a machine-readable stdout outranks the
+    # server default (logs move to stderr, where they stay visible and stop
+    # corrupting the payload) but not CGI's `off`, where stdout is the HTTP
+    # response body and stderr is the server error log.
     if not log_mode or log_mode == "auto":
         execution_mode = get_execution_mode()
-        log_mode = "off" if execution_mode == "cgi" else "default"
+        if execution_mode == "cgi":
+            log_mode = "off"
+        elif _machine_readable_stdout():
+            log_mode = "stderr"
+        else:
+            log_mode = "default"
 
     # Configure based on mode
     if log_mode == "off":
