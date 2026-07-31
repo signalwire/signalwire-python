@@ -31,6 +31,12 @@ _T = TypeVar("_T")
 _FIXTURE_USER = "testuser"
 _FIXTURE_PASSWORD = "testpass"
 
+# Same rationale for the credential-carrier tests: keep the literals out of
+# function signatures, where ruff's S107 reads them as a hardcoded default.
+_CARRIER_USER = "admin"
+_CARRIER_PASSWORD = "secret"
+_CARRIER_TOKEN = "tok"
+
 
 # ---------------------------------------------------------------------------
 # Helpers: build a mock SecurityConfig that behaves like the real one
@@ -1255,3 +1261,134 @@ class TestEdgeCases:
             assert handler.bearer_auth is None
         finally:
             auth_handler.HTTPBearer = original  # type: ignore[attr-defined]  # conditionally-defined module attr
+
+
+# ===========================================================================
+# Credential carriers: the framework-free parameter types
+# ===========================================================================
+
+
+class TestCredentialCarriers:
+    """The credential Protocols accept a real FastAPI object and a duck type.
+
+    ``verify_basic_auth`` / ``verify_bearer_token`` used to annotate their
+    parameter with FastAPI's concrete credentials classes. They are now declared
+    structurally, which is strictly WIDER — so every shape that worked before must
+    still work. These tests pin that.
+    """
+
+    def _handler(
+        self,
+        username: str = _CARRIER_USER,
+        password: str = _CARRIER_PASSWORD,
+        token: str = _CARRIER_TOKEN,
+    ) -> "AuthHandler":
+        from signalwire.core.auth_handler import AuthHandler
+
+        cfg = _make_security_config(
+            username=username, password=password, bearer_token=token
+        )
+        return AuthHandler(cfg)
+
+    def test_real_fastapi_basic_credentials_still_verify(self) -> None:
+        """A genuine FastAPI HTTPBasicCredentials must keep working unchanged."""
+        from fastapi.security import HTTPBasicCredentials
+
+        handler = self._handler()
+        assert (
+            handler.verify_basic_auth(
+                HTTPBasicCredentials(username="admin", password="secret")
+            )
+            is True
+        )
+        assert (
+            handler.verify_basic_auth(
+                HTTPBasicCredentials(username="admin", password="wrong")
+            )
+            is False
+        )
+
+    def test_real_fastapi_bearer_credentials_still_verify(self) -> None:
+        """A genuine FastAPI HTTPAuthorizationCredentials must keep working."""
+        from fastapi.security import HTTPAuthorizationCredentials
+
+        handler = self._handler()
+        assert (
+            handler.verify_bearer_token(
+                HTTPAuthorizationCredentials(scheme="Bearer", credentials="tok")
+            )
+            is True
+        )
+        assert (
+            handler.verify_bearer_token(
+                HTTPAuthorizationCredentials(scheme="Bearer", credentials="nope")
+            )
+            is False
+        )
+
+    def test_duck_typed_object_verifies(self) -> None:
+        """Any object carrying the fields satisfies the structural parameter type."""
+
+        class DuckBasic:
+            username = "admin"
+            password = "secret"
+
+        class DuckBearer:
+            scheme = "Bearer"
+            credentials = "tok"
+
+        handler = self._handler()
+        assert handler.verify_basic_auth(DuckBasic()) is True
+        assert handler.verify_bearer_token(DuckBearer()) is True
+
+    def test_plain_object_carriers_verify(self) -> None:
+        """A minimal framework-free carrier — what a non-FastAPI caller would build."""
+        from dataclasses import dataclass
+
+        @dataclass
+        class Basic:
+            username: str
+            password: str
+
+        @dataclass
+        class Bearer:
+            scheme: str
+            credentials: str
+
+        handler = self._handler()
+        assert handler.verify_basic_auth(Basic("admin", "secret")) is True
+        assert handler.verify_basic_auth(Basic("admin", "no")) is False
+        assert handler.verify_bearer_token(Bearer("Bearer", "tok")) is True
+        assert handler.verify_bearer_token(Bearer("Bearer", "no")) is False
+
+    def test_real_fastapi_objects_satisfy_the_protocols(self) -> None:
+        """The Protocols are wider than the FastAPI classes they replaced."""
+        from fastapi.security import HTTPAuthorizationCredentials, HTTPBasicCredentials
+        from signalwire.core.auth_handler import BasicCredentials, BearerCredentials
+
+        assert isinstance(
+            HTTPBasicCredentials(username="u", password="p"), BasicCredentials
+        )
+        assert isinstance(
+            HTTPAuthorizationCredentials(scheme="Bearer", credentials="t"),
+            BearerCredentials,
+        )
+
+    def test_protocols_declare_the_documented_fields(self) -> None:
+        """scheme is part of the carrier even though only credentials is compared."""
+        from signalwire.core.auth_handler import BasicCredentials, BearerCredentials
+
+        assert set(BasicCredentials.__annotations__) == {"username", "password"}
+        assert set(BearerCredentials.__annotations__) == {"scheme", "credentials"}
+
+    def test_bearer_verification_ignores_the_scheme(self) -> None:
+        """Only `credentials` is compared — scheme is carried, never matched."""
+        from dataclasses import dataclass
+
+        @dataclass
+        class Bearer:
+            scheme: str
+            credentials: str
+
+        handler = self._handler()
+        assert handler.verify_bearer_token(Bearer("Anything", "tok")) is True
