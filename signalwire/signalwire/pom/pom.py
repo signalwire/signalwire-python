@@ -1,4 +1,4 @@
-from typing import Any, cast
+from typing import Any
 import json
 import yaml
 
@@ -514,15 +514,12 @@ class PromptObjectModel:
         Returns:
             A YAML string representation of the model
         """
-        # yaml has no type stubs (ignore_missing_imports) so dump() is Any; with
-        # no stream argument it returns the serialized str.
-        return cast(
-            str,
-            yaml.dump(
-                [s.to_dict() for s in self.sections],
-                default_flow_style=False,
-                sort_keys=False,
-            ),
+        # types-PyYAML (declared in requirements-dev.txt) types the no-stream
+        # overload of dump() as -> str, so no cast is needed.
+        return yaml.dump(
+            [s.to_dict() for s in self.sections],
+            default_flow_style=False,
+            sort_keys=False,
         )
 
     def to_dict(self) -> list[dict[str, Any]]:
