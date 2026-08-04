@@ -40,3 +40,25 @@ mypy==2.3.0           # TYPECHECK gate in scripts/run-ci.sh; PINNED exact for th
                       # code that never changed and no local run reproduces it.
                       # Bump deliberately, with the resulting fixes in the same
                       # commit.
+
+# Type STUBS. A stub package is a real dependency of the TYPECHECK gate: its
+# PRESENCE (not just its version) changes mypy's verdict on unchanged source, so an
+# undeclared stub is the same defect class as an unpinned tool — with a nastier
+# signature, because it is invisible to a version check.
+#
+# Measured 2026-08-04, the reason this pin exists: every repo on a dev box tends to
+# resolve ONE shared venv, so a stub declared by a NEIGHBOURING repo silently lands
+# on this repo's path. types-PyYAML is declared in api-reference-specs'
+# requirements-dev.txt and was in NO signalwire manifest. With it importable, mypy
+# reported 3 `redundant-cast` errors at pom.py:519 and swml_renderer.py:146,197;
+# without it — which is what CI actually had — mypy reported "Success: no issues
+# found in 362 source files". Local and CI were being decided by different type
+# information, and "fixing" the local error by deleting those casts would have
+# BROKEN CI, where yaml.dump() is untyped Any and the casts were load-bearing.
+#
+# Declaring it resolves the split in the direction that types MORE: with the stub,
+# yaml.dump(stream=None) is genuinely `str` (verified: reveal_type -> "str"), so the
+# three casts are truly redundant and were removed in the same commit. Pinned exact
+# like the tools above — typeshed revises stubs continuously, and a stub revision
+# that changes an overload changes this gate's verdict on code that never changed.
+types-PyYAML==6.0.12.20260724
