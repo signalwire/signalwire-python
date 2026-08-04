@@ -17,39 +17,86 @@ _Self = TypeVar("_Self", bound="_SwaigActions")
 class ContextSwitchAction(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    system_prompt: Any
-    user_prompt: Any
-    system_pom: Any
-    user_pom: Any
     consolidate: bool
     full_reset: bool
+    system_pom: dict[str, Any]
+    system_prompt: str
+    user_pom: dict[str, Any]
+    user_prompt: str
 
 
 class HoldAction(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    timeout: int
+    timeout: float | str
 
 
 class PlaybackBgAction(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    file: Any
+    file: str
     wait: bool
 
 
 class TransferAction(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    dest: Any
+    dest: str
     summarize: bool
+
+
+class SwaigAction(TypedDict, total=False):
+    """A response-action object. The keys below are the full vocabulary dispatched by actions.c::process_action; an action object sets one or more of them. Each key's source line is the engine dispatch site.
+
+    Open shape: extra server keys permitted; not validated at runtime.
+    """
+
+    add_dynamic_hints: list[dict[str, Any] | str]
+    back_to_back_functions: bool | Literal["forever"]
+    change_context: str
+    change_step: str
+    clear_dynamic_hints: dict[str, Any]
+    context_switch: str | ContextSwitchAction
+    end_of_speech_timeout: int
+    extensive_data: bool
+    functions_on_speaker_timeout: bool
+    hangup: dict[str, Any]
+    hold: int | str | HoldAction
+    playback_bg: str | PlaybackBgAction
+    replace_in_history: str | Literal[True]
+    say: str
+    set_global_data: dict[str, Any]
+    set_meta_data: dict[str, Any]
+    settings: dict[str, Any]
+    speech_event_timeout: int
+    stop: dict[str, Any]
+    stop_playback_bg: dict[str, Any]
+    toggle_functions: list[dict[str, Any]]
+    transfer: str | TransferAction
+    unset_global_data: str | list[str]
+    unset_meta_data: str | list[str]
+    user_event: dict[str, Any]
+    user_input: str
+    wait_for_user: bool | int | Literal["answer_first"]
+
+
+class SwaigResponse(TypedDict, total=False):
+    """Parsed at actions.c:2228-2276.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    response: str
+    action: SwaigAction | list[SwaigAction]
+    post_process: bool
 
 
 class _SwaigActions:
     """Typed SWAIG response-action builders (one per wire action). The host class
     provides ``self.action`` (the list serialized to the wire)."""
 
-    def add_dynamic_hints(self: _Self, value: list[Any]) -> _Self:
+    def add_dynamic_hints(self: _Self, value: list[dict[str, Any] | str]) -> _Self:
         """Add ASR hints. Strings go to `dynamic_hints`; `{hint, ...}` objects go to `dynamic_hearing_hints` (and the `hint` value is also added to `dynamic_hints`). Restarts speech detection"""  # actions.c:547
         self.action.append({"add_dynamic_hints": value})  # type: ignore[attr-defined]
         return self
@@ -159,12 +206,12 @@ class _SwaigActions:
         self.action.append({"transfer": value})  # type: ignore[attr-defined]
         return self
 
-    def unset_global_data(self: _Self, value: str | list[Any]) -> _Self:
+    def unset_global_data(self: _Self, value: str | list[str]) -> _Self:
         """Remove key(s) from global data, then refresh prompt vars. Gated by `swaig_set_global_data`"""  # actions.c:515
         self.action.append({"unset_global_data": value})  # type: ignore[attr-defined]
         return self
 
-    def unset_meta_data(self: _Self, value: str | list[Any]) -> _Self:
+    def unset_meta_data(self: _Self, value: str | list[str]) -> _Self:
         """Remove key(s) from the calling function's metadata store"""  # actions.c:477
         self.action.append({"unset_meta_data": value})  # type: ignore[attr-defined]
         return self
