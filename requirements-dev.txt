@@ -33,4 +33,10 @@ nltk>=3.8
 numpy>=1.24.0
 scikit-learn>=1.3.0
 sentence-transformers>=2.2.0
-mypy>=1.8
+mypy==2.3.0           # TYPECHECK gate in scripts/run-ci.sh; PINNED exact for the
+                      # same reason as ruff above — an open floor lets CI install a
+                      # NEWER mypy than the dev has, and mypy adds checks and
+                      # narrows inference between releases, so the gate reds on
+                      # code that never changed and no local run reproduces it.
+                      # Bump deliberately, with the resulting fixes in the same
+                      # commit.

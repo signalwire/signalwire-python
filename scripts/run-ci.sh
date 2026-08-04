@@ -282,6 +282,13 @@ sched_gate REPO-LINT desc="ruff check zero findings over tests/ scripts/ eng/" \
 sched_gate REPO-FMT desc="ruff format over tests/ scripts/ eng/ (local: apply; CI: --check)" \
     --fn repo_fmt_gate
 
+# TOOL-PINS — the ruff/mypy that decide the gates above are the versions
+# requirements-dev.txt declares. A linter version that differs between local and CI
+# makes a gate red on code that never changed, and no local run reproduces it. Pure
+# static check (reads the manifest, asks the interpreter its versions) → cheap wave.
+sched_gate TOOL-PINS desc="ruff/mypy pinned exact in requirements-dev.txt AND installed at that version" \
+    -- python3 "$PORT_ROOT/scripts/assert_tool_pins.py"
+
 sched_gate TYPECHECK desc="mypy zero findings" \
     -- python3 -m mypy --config-file "$PORT_ROOT/pyproject.toml"
 
