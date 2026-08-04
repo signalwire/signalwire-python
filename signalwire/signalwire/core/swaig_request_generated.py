@@ -13,7 +13,7 @@ from typing import Any, Literal, TypedDict
 class SwaigArgument(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    parsed: list[Any]
+    parsed: list[dict[str, Any] | list[Any]]
     raw: str
     substituted: str
 
@@ -27,7 +27,7 @@ class SwaigRequest(TypedDict, total=False):
     argument: SwaigArgument
     argument_desc: dict[str, Any]
     call_id: str
-    call_log: list[Any]
+    call_log: list[dict[str, Any]]
     caller_id_name: str
     caller_id_num: str
     channel_active: bool
@@ -45,6 +45,6 @@ class SwaigRequest(TypedDict, total=False):
     meta_data: dict[str, Any]
     meta_data_token: str
     project_id: str
-    raw_call_log: list[Any]
+    raw_call_log: list[dict[str, Any]]
     space_id: str
     version: Literal["2.0"]
