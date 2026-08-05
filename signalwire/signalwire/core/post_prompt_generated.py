@@ -163,6 +163,7 @@ class PostPromptSystemLogEntry(TypedDict, total=False):
     timestamp: int
     action: Literal[
         "attention_timeout",
+        "attention_wait",
         "auto_correct",
         "change_step_failed",
         "check_for_input",
