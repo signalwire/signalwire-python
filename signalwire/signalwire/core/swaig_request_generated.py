@@ -21,6 +21,8 @@ class SwaigArgument(TypedDict, total=False):
 class SwaigRequest(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
+    SWMLCall: dict[str, Any]
+    SWMLVars: dict[str, Any]
     ai_session_id: str
     app_name: str
     args: str

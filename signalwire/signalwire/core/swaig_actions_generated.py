@@ -51,6 +51,7 @@ class SwaigAction(TypedDict, total=False):
     Open shape: extra server keys permitted; not validated at runtime.
     """
 
+    SWML: str | dict[str, Any]
     add_dynamic_hints: list[dict[str, Any] | str]
     back_to_back_functions: bool | Literal["forever"]
     change_context: str
@@ -58,8 +59,8 @@ class SwaigAction(TypedDict, total=False):
     clear_dynamic_hints: bool | str
     context_switch: str | ContextSwitchAction
     end_of_speech_timeout: int
-    extensive_data: bool
-    functions_on_speaker_timeout: bool
+    extensive_data: bool | str
+    functions_on_speaker_timeout: bool | str
     hangup: bool | str
     hold: int | str | HoldAction
     playback_bg: str | PlaybackBgAction
@@ -96,6 +97,11 @@ class _SwaigActions:
     """Typed SWAIG response-action builders (one per wire action). The host class
     provides ``self.action`` (the list serialized to the wire)."""
 
+    def SWML(self: _Self, value: str | dict[str, Any]) -> _Self:
+        """Execute a SWML document inline, or with sibling `transfer:true` transfer the call into it. Gated by `swaig_allow_swml`. **Transfer additionally requires `from_relay`** (`actions.c:142-145`); inline execution captures an optional `ai_response` SWML var back into the conversation"""  # actions.c:129
+        self.action.append({"SWML": value})  # type: ignore[attr-defined]
+        return self
+
     def add_dynamic_hints(self: _Self, value: list[dict[str, Any] | str]) -> _Self:
         """Add ASR hints. Strings go to `dynamic_hints`; `{hint, ...}` objects go to `dynamic_hearing_hints` (and the `hint` value is also added to `dynamic_hints`). Restarts speech detection"""  # actions.c:550
         self.action.append({"add_dynamic_hints": value})  # type: ignore[attr-defined]
@@ -131,12 +137,12 @@ class _SwaigActions:
         self.action.append({"end_of_speech_timeout": value})  # type: ignore[attr-defined]
         return self
 
-    def extensive_data(self: _Self, value: bool) -> _Self:
+    def extensive_data(self: _Self, value: bool | str) -> _Self:
         """Enable extensive data in the function/conversation log"""  # actions.c:376
         self.action.append({"extensive_data": value})  # type: ignore[attr-defined]
         return self
 
-    def functions_on_speaker_timeout(self: _Self, value: bool) -> _Self:
+    def functions_on_speaker_timeout(self: _Self, value: bool | str) -> _Self:
         """Set whether functions may fire on speaker timeout"""  # actions.c:372
         self.action.append({"functions_on_speaker_timeout": value})  # type: ignore[attr-defined]
         return self
@@ -204,7 +210,7 @@ class _SwaigActions:
         return self
 
     def transfer(self: _Self, value: str | TransferAction) -> _Self:
-        """Transfer the call to `dest`. `summarize:true` sets `transfer_summary`. Sets `openai_transfer_check` var, interrupts, stops the loop. Ignored if already interrupted"""  # actions.c:136
+        """Transfer the call to `dest`. `summarize:true` sets `transfer_summary`. Sets `openai_transfer_check` var, interrupts, stops the loop. Ignored if already interrupted"""  # actions.c:343
         self.action.append({"transfer": value})  # type: ignore[attr-defined]
         return self
 
