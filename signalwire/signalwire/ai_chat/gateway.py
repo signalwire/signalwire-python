@@ -67,6 +67,11 @@ if TYPE_CHECKING:  # pragma: no cover - typing only
 # A handle outlives a page refresh but not a session left open overnight.
 DEFAULT_HANDLE_TTL = 24 * 60 * 60
 
+# The chat service's own Config.DEFAULT_CONVERSATION_TIMEOUT. Mirrored so the
+# gateway can report a real number when it has not been given one; the service
+# still owns the behaviour, this is only what we tell the browser to expect.
+SERVICE_DEFAULT_CONVERSATION_TIMEOUT = 3600
+
 # Caps chosen to be invisible to a real conversation and ruinous to a script.
 DEFAULT_MAX_NEW_CONVERSATIONS = 60      # per window, per gateway
 DEFAULT_MAX_TURNS = 200                 # per conversation, ever
@@ -117,6 +122,14 @@ class ChatGateway:
             which invalidates outstanding handles on restart, so set it
             explicitly if you run more than one replica or restart often.
         handle_ttl: Seconds a handle stays valid.
+        conversation_timeout: Seconds of idle before the service ends a
+            conversation, passed on every create. Chosen HERE rather than
+            configured into the page, because the JSON-RPC result exposes
+            neither the deadline nor the server's clock — a browser cannot
+            discover it, and two places holding the same number drift. The
+            gateway reports it back on ``start`` and ``log`` so a widget can
+            warn that the next message would open a new conversation. ``None``
+            leaves it to the service default (3600).
         max_new_conversations: New conversations per ``window_seconds``. The
             cap that matters: a leaked key does not need to hammer one
             conversation, it mints thousands of one-turn ones, and every one
@@ -138,6 +151,7 @@ class ChatGateway:
         client: AIChatClient | None = None,
         secret: bytes | str | None = None,
         handle_ttl: int = DEFAULT_HANDLE_TTL,
+        conversation_timeout: int | None = None,
         max_new_conversations: int = DEFAULT_MAX_NEW_CONVERSATIONS,
         max_turns: int = DEFAULT_MAX_TURNS,
         window_seconds: int = DEFAULT_WINDOW_SECONDS,
@@ -151,6 +165,7 @@ class ChatGateway:
         )
         self.allowed_origins = {o.rstrip("/") for o in allowed_origins}
         self.handle_ttl = handle_ttl
+        self.conversation_timeout = conversation_timeout
         self.max_new_conversations = max_new_conversations
         self.max_turns = max_turns
         self.window_seconds = window_seconds
@@ -164,6 +179,44 @@ class ChatGateway:
 
         self._mints: list[float] = []
         self._turns: dict[str, tuple[int, float]] = {}
+
+    @staticmethod
+    def last_activity(messages: list[dict[str, Any]]) -> float | None:
+        """Epoch SECONDS of the newest message, or None if nothing is dated.
+
+        Bootstraps a browser's idle clock across a reload. Without it a widget
+        restarts the clock at zero on load, so a tab closed for 55 minutes of a
+        60-minute timeout would wait another full hour before warning — while
+        the conversation actually dies in five.
+
+        The service stamps messages in MICROseconds (`timeline.timestamp()`);
+        this converts, because every browser API speaks milliseconds and a
+        1000x unit error here is silent — it reads as "always fresh".
+
+        Every role counts, not just the visible ones: the service's idle clock
+        runs off `updated_at`, which any write moves. Filtering to user and
+        assistant would report an older time than the service is measuring,
+        and warn early for no reason.
+        """
+        newest: int | None = None
+        for msg in messages or []:
+            if not isinstance(msg, dict):
+                continue
+            ts = msg.get("timestamp")
+            if isinstance(ts, int) and ts > 0 and (newest is None or ts > newest):
+                newest = ts
+        return newest / 1_000_000 if newest is not None else None
+
+    @property
+    def effective_timeout(self) -> int:
+        """Idle seconds a conversation actually gets.
+
+        Falls back to the service's documented default when unset, so the
+        number handed to a browser is never null — a widget cannot warn about
+        a deadline it was told nothing about, and guessing in the page is the
+        duplication this exists to remove.
+        """
+        return self.conversation_timeout or SERVICE_DEFAULT_CONVERSATION_TIMEOUT
 
     async def close(self) -> None:
         if self._owns_client:
@@ -235,24 +288,36 @@ class ChatGateway:
             raise GatewayRejection(401, "bad key")
 
     @staticmethod
-    def visible_messages(messages: list[dict[str, Any]]) -> list[dict[str, str]]:
+    def visible_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """The transcript a browser may redraw, and nothing else.
 
         `chat_log` hands back the conversation as the service holds it: the
         substituted system prompt first, then tool calls and their results
         alongside the dialogue. Relaying that verbatim would publish the
         developer's prompt to anyone holding a handle. Only user and assistant
-        turns with actual text survive, reduced to role and content — no
-        timestamps, no tool_calls, no ids.
+        turns with actual text survive, reduced to role, content and when they
+        were said — no tool_calls, no ids, no metadata.
+
+        The timestamp is included because a client that redraws a restored
+        transcript has to date it somehow, and its only other option is "now"
+        — which makes an hour-old conversation claim every message was sent
+        this second. It is the turn's own time, already visible to whoever
+        holds the handle, so it discloses nothing the content does not.
+
+        Emitted in epoch SECONDS; the service stores microseconds.
         """
-        out = []
+        out: list[dict[str, Any]] = []
         for msg in messages or []:
             if not isinstance(msg, dict):
                 continue
             role = msg.get("role")
             content = msg.get("content")
             if role in VISIBLE_ROLES and isinstance(content, str) and content.strip():
-                out.append({"role": role, "content": content})
+                entry: dict[str, Any] = {"role": role, "content": content}
+                ts = msg.get("timestamp")
+                if isinstance(ts, int) and ts > 0:
+                    entry["timestamp"] = ts / 1_000_000
+                out.append(entry)
         return out
 
     def _charge_mint(self) -> None:
@@ -320,10 +385,13 @@ class ChatGateway:
             # first. Separate from `chat` because the auto-create path needs a
             # message to ride on, and a widget wants the greeting before the
             # visitor has typed anything.
-            return "create_conversation", {
+            params: dict[str, Any] = {
                 "id": conversation_id,
                 "config_url": self.config_url,
-            }, minted
+            }
+            if self.conversation_timeout:
+                params["conversation_timeout"] = self.conversation_timeout
+            return "create_conversation", params, minted
 
         message = body.get("message")
         if not isinstance(message, str) or not message.strip():
@@ -333,11 +401,17 @@ class ChatGateway:
         # config_url on every chat so the service auto-creates on the first
         # one and ignores it after — no separate create method on the wire,
         # and nothing for the browser to point somewhere else.
-        return "chat", {
+        chat_params: dict[str, Any] = {
             "id": conversation_id,
             "message": message,
             "config_url": self.config_url,
-        }, minted
+        }
+        # chat auto-creates when the conversation does not exist yet, and that
+        # create path takes the same timeout — otherwise a conversation opened
+        # by a first message would silently get the service default instead.
+        if self.conversation_timeout:
+            chat_params["conversation_timeout"] = self.conversation_timeout
+        return "chat", chat_params, minted
 
     # ── FastAPI surface ──────────────────────────────────────────────
 
@@ -413,14 +487,27 @@ class ChatGateway:
                 if minted:
                     cors["X-Chat-Handle"] = minted
                 return JSONResponse(
-                    {"greeting": info.initial_message, "status": info.status},
+                    {
+                        "greeting": info.initial_message,
+                        "status": info.status,
+                        # So the page can say "your next message starts a new
+                        # conversation" without being told the number twice.
+                        "timeout": self.effective_timeout,
+                    },
                     headers=cors,
                 )
 
             if method == "chat_log":
                 log = await self._client.log(params["id"])
                 return JSONResponse(
-                    {"messages": self.visible_messages(log.messages)}, headers=cors
+                    {
+                        "messages": self.visible_messages(log.messages),
+                        "timeout": self.effective_timeout,
+                        # Computed BEFORE visible_messages strips timestamps —
+                        # it is the only place they still exist.
+                        "last_activity": self.last_activity(log.messages),
+                    },
+                    headers=cors,
                 )
 
             headers = dict(cors)

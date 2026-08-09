@@ -468,12 +468,56 @@ def test_the_transcript_hides_everything_but_the_dialogue(gateway):
     ]
     out = gateway.visible_messages(raw)
 
-    assert out == [{"role": "user", "content": "hi"},
-                   {"role": "assistant", "content": "Hello!"}]
+    # Role, text, and when it was said — the timestamp rides along because a
+    # client redrawing a restored transcript would otherwise have to date it
+    # "now", making an hour-old conversation look like it just happened. It is
+    # the turn's own time, already visible to whoever holds the handle.
+    assert out == [
+        {"role": "user", "content": "hi", "timestamp": 123 / 1_000_000},
+        {"role": "assistant", "content": "Hello!", "timestamp": 124 / 1_000_000},
+    ]
     blob = json.dumps(out)
     assert "Secret instructions" not in blob
     assert "tool_calls" not in blob and "internal" not in blob
-    assert "timestamp" not in blob
+
+
+def test_the_transcript_reports_seconds_not_microseconds(gateway):
+    """A 1000000x unit slip here is SILENT: a browser bootstrapping its idle
+    clock from a microsecond value reads the conversation as fresh forever and
+    never warns that the next message starts a new one."""
+    ts_us = 1_786_258_737_756_596          # microseconds, as the service stores
+    out = gateway.visible_messages([{"role": "user", "content": "hi", "timestamp": ts_us}])
+    assert out[0]["timestamp"] == pytest.approx(1_786_258_737.756596)
+
+    assert gateway.last_activity(
+        [{"role": "user", "content": "hi", "timestamp": ts_us}]
+    ) == pytest.approx(1_786_258_737.756596)
+
+
+def test_last_activity_takes_the_newest_message_of_any_role(gateway):
+    """The service's idle clock runs off updated_at, which ANY write moves.
+    Counting only the visible roles would report an older time than the
+    service is measuring and warn early for no reason."""
+    assert gateway.last_activity([
+        {"role": "user", "content": "first", "timestamp": 1_000_000},
+        {"role": "assistant", "content": "second", "timestamp": 3_000_000},
+        {"role": "tool", "content": "internal", "timestamp": 5_000_000},
+    ]) == 5.0
+
+
+def test_last_activity_is_none_when_nothing_is_dated(gateway):
+    """None, not 0 — a zero would read as 1970 and expire every conversation
+    the instant it was restored."""
+    assert gateway.last_activity([{"role": "user", "content": "hi"}]) is None
+    assert gateway.last_activity([]) is None
+    assert gateway.last_activity(None) is None
+    assert gateway.last_activity([{"role": "user", "timestamp": "not a number"}]) is None
+
+
+def test_effective_timeout_is_always_a_number(gateway):
+    """A browser cannot warn about a deadline it was told nothing about, so an
+    unset timeout still reports the service default rather than null."""
+    assert gateway.effective_timeout == 3600
 
 
 def test_the_transcript_survives_junk(gateway):

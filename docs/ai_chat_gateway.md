@@ -91,7 +91,54 @@ Two notes on the response body:
   in the body, not the status code.
 - **It may begin with whitespace.** See [Streaming](#streaming).
 
-Only `chat` and `end` are accepted. Anything else is a `400`.
+**Opening without speaking** — `start` creates the conversation so the agent
+greets first, which is what a widget wants before the visitor has typed:
+
+```http
+POST /chat/
+{"method": "start"}
+```
+```json
+{"greeting": "Hi! How can I help?", "status": "created", "timeout": 3600}
+```
+
+**Replaying after a reload** — `log` returns the dialogue for the handle's
+conversation, and enough to restart a client-side idle clock:
+
+```http
+POST /chat/
+{"method": "log", "handle": "eyJ...abc.def..."}
+```
+```json
+{
+  "messages": [
+    {"role": "assistant", "content": "Hi! How can I help?", "timestamp": 1786258737.147},
+    {"role": "user", "content": "where is my order?", "timestamp": 1786258812.004}
+  ],
+  "timeout": 3600,
+  "last_activity": 1786258812.004
+}
+```
+
+`messages` is user and assistant turns only — the system prompt and the tool
+traffic never leave the gateway. Three fields exist for one reason, which is
+that **a browser cannot discover when its conversation dies**: the JSON-RPC
+result carries no deadline and no server clock.
+
+- `timeout` — the `conversation_timeout` this gateway sets on create, so the
+  number lives in one place instead of being configured into the page too.
+- `last_activity` — epoch seconds of the newest turn, so a reload resumes the
+  idle clock instead of restarting it. A tab closed for 55 minutes of a
+  60-minute timeout should have five minutes left, not sixty.
+- per-message `timestamp` — so a restored transcript shows when each message
+  was actually sent, rather than stamping all of them with the reload.
+
+All times are epoch **seconds**; the service stores microseconds and the
+gateway converts. A slip here is silent — a microsecond value reads as a date
+in the far future and the conversation never appears to age.
+
+`start`, `chat`, `log` and `end` are the whole surface. Anything else is a
+`400`.
 
 ## What a stolen key can do
 
@@ -181,6 +228,7 @@ ChatGateway(
     client: AIChatClient | None = None,    # built from env if omitted
     secret: bytes | str | None = None,     # SIGNALWIRE_CHAT_GATEWAY_SECRET, else random
     handle_ttl: int = 86400,
+    conversation_timeout: int | None = None,   # idle seconds; None -> service default (3600)
     max_new_conversations: int = 60,
     max_turns: int = 200,
     window_seconds: int = 60,
@@ -194,6 +242,9 @@ ChatGateway(
 | `read_handle(handle)` | conversation id, or raise `GatewayRejection` |
 | `prepare(body, *, origin, key)` | validate and build the upstream call — the framework-agnostic core, if you are not using FastAPI |
 | `close()` | close the client, if the gateway built it |
+| `visible_messages(messages)` | dialogue only — role, content, timestamp |
+| `last_activity(messages)` | epoch seconds of the newest turn, or `None` |
+| `effective_timeout` | the idle timeout reported to clients; never `None` |
 
 `GatewayRejection` carries `.status` and `.reason`. Reasons are deliberately
 coarse: anything finer would let a caller map the caps and the allowlist by
