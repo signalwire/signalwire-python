@@ -1674,6 +1674,28 @@ class DocumentProcessor:
                 return self._chunk_by_sentences(content, filename, file_type)
 
             chunks = []
+            # Heading carried down to the chunks beneath it. A reference doc
+            # splits as "# send_fax" then "## Parameters", "## Returns",
+            # "## Example" - and only the first chunk names the subject. The
+            # rest are titled "**Parameters**" and contain no clue what they
+            # parameterise, so they are unretrievable by name, while the
+            # heading chunk is four words of prose that loses to any fatter
+            # document with the same title.
+            #
+            # Measured on the shipped index, two docs both titled `send_fax`:
+            #   idx 7223  SWML method, properties inline   -> 0.933
+            #   idx 3739  Relay Python, heading + links    -> 0.280
+            # The Relay doc holds the RelayClient example someone asking "how
+            # do I send a fax with the python relay sdk" wants, and it could
+            # not be surfaced by ANY phrasing tried - its distinguishing words
+            # (Relay, Python, RelayClient, the code) all live in the sibling
+            # chunks, which have no subject of their own.
+            #
+            # Prepending the heading makes every chunk self-describing: the
+            # example chunk now carries "send_fax" AND "RelayClient", so it is
+            # reachable by either. Chunk COUNT and order are untouched, so
+            # chunk_index still addresses the same source chunk.
+            current_heading = ""
             for idx, json_chunk in enumerate(data["chunks"]):
                 if not isinstance(json_chunk, dict) or "content" not in json_chunk:
                     logger.warning(f"Skipping invalid chunk {idx} in {filename}")
@@ -1717,8 +1739,20 @@ class DocumentProcessor:
                     )
 
                 # Create chunk with proper structure
+                chunk_text = json_chunk["content"]
+                stripped = chunk_text.lstrip()
+                if stripped.startswith("# ") and not stripped.startswith("## "):
+                    # A new topic: remember its heading, and leave it alone -
+                    # it already names itself.
+                    current_heading = stripped.split("\n", 1)[0].strip()
+                elif current_heading and stripped.startswith("#"):
+                    # A subsection of that topic: give it the subject back.
+                    if current_heading.lower() not in chunk_text.lower():
+                        chunk_text = f"{current_heading}\n\n{chunk_text}"
+                        metadata["heading_context"] = current_heading
+
                 chunk = self._create_chunk(
-                    content=json_chunk["content"],
+                    content=chunk_text,
                     filename=filename,
                     section=section,
                     metadata=metadata,
