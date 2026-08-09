@@ -10,6 +10,7 @@ Async client for the SignalWire AI Chat service — see
 :mod:`signalwire.ai_chat.client` for the full protocol notes.
 """
 
+from .gateway import ChatGateway, GatewayRejection
 from .client import (
     AIChatClient,
     AIChatError,
@@ -25,6 +26,8 @@ from .client import (
 
 __all__ = [
     "AIChatClient",
+    "ChatGateway",
+    "GatewayRejection",
     "AIChatError",
     "AuthenticationError",
     "ChatInProgressError",

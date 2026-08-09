@@ -38,6 +38,8 @@ Credentials come from the constructor or the standard environment variables
 """
 
 import os
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -236,6 +238,34 @@ class AIChatClient:
             raise exc_type(code, error.get("message", ""))
         result = body.get("result")
         return result if isinstance(result, dict) else {}
+
+    @asynccontextmanager
+    async def raw_post(
+        self, method: str, params: dict[str, Any]
+    ) -> AsyncIterator[aiohttp.ClientResponse]:
+        """Yield the response for one JSON-RPC call with its body unread.
+
+        For proxies that must stream the body through rather than buffer it.
+        The service pads a slow response with keepalive whitespace so
+        intermediaries do not sever the connection mid-turn; a proxy that
+        awaits the whole body absorbs that padding and reintroduces the very
+        timeout it exists to prevent. Iterate ``resp.content`` and forward the
+        chunks as they arrive.
+
+        The caller owns interpreting the result — including that a JSON-RPC
+        error arrives under HTTP 200 (see ``_request``). Prefer the typed
+        methods unless you are genuinely relaying bytes.
+        """
+        session = await self._ensure_session()
+        self._request_counter += 1
+        payload = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params,
+            "id": f"req-{self._request_counter}",
+        }
+        async with session.post(self.url, json=payload) as resp:
+            yield resp
 
     # ── API methods ──────────────────────────────────────────────────
 
