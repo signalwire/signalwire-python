@@ -656,7 +656,7 @@ class TestFabricWire:
     def test_freeswitch_connectors_create(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.fabric.freeswitch_connectors.create(name="x", token="x")
+        signalwire_client.fabric.freeswitch_connectors.create(name="x", token="x")  # noqa: S106
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "fabric.create_freeswitch_connector"
@@ -666,7 +666,7 @@ class TestFabricWire:
     ) -> None:
         mock.push_scenario("fabric.create_freeswitch_connector", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.freeswitch_connectors.create(name="x", token="x")
+            signalwire_client.fabric.freeswitch_connectors.create(name="x", token="x")  # noqa: S106
         assert exc.value.status_code == 500
 
     def test_freeswitch_connectors_delete(
@@ -1198,7 +1198,7 @@ class TestFabricWire:
     ) -> None:
         signalwire_client.fabric.subscribers.create_sip_endpoint(
             "test-id", username="x", password="x"
-        )
+        )  # noqa: S106
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "fabric.create_subscriber_sip_endpoint"
@@ -1210,7 +1210,7 @@ class TestFabricWire:
         with pytest.raises(SignalWireRestError) as exc:
             signalwire_client.fabric.subscribers.create_sip_endpoint(
                 "test-id", username="x", password="x"
-            )
+            )  # noqa: S106
         assert exc.value.status_code == 500
 
     def test_subscribers_delete(
@@ -1556,7 +1556,7 @@ class TestFabricWire:
     def test_tokens_create_embed_token(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.fabric.tokens.create_embed_token(token="x")
+        signalwire_client.fabric.tokens.create_embed_token(token="x")  # noqa: S106
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "fabric.create_embeds_token"
@@ -1566,7 +1566,7 @@ class TestFabricWire:
     ) -> None:
         mock.push_scenario("fabric.create_embeds_token", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.tokens.create_embed_token(token="x")
+            signalwire_client.fabric.tokens.create_embed_token(token="x")  # noqa: S106
         assert exc.value.status_code == 500
 
     def test_tokens_create_guest_token(
@@ -1620,7 +1620,7 @@ class TestFabricWire:
     def test_tokens_refresh_subscriber_token(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.fabric.tokens.refresh_subscriber_token(refresh_token="x")
+        signalwire_client.fabric.tokens.refresh_subscriber_token(refresh_token="x")  # noqa: S106
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "fabric.refresh_subscriber_token"
@@ -1630,5 +1630,5 @@ class TestFabricWire:
     ) -> None:
         mock.push_scenario("fabric.refresh_subscriber_token", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.fabric.tokens.refresh_subscriber_token(refresh_token="x")
+            signalwire_client.fabric.tokens.refresh_subscriber_token(refresh_token="x")  # noqa: S106
         assert exc.value.status_code == 500
