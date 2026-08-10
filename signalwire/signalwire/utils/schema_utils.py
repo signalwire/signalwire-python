@@ -389,7 +389,18 @@ class SchemaUtils:
         """
         Perform lightweight validation (verb existence + required fields only).
 
-        This is the fallback when jsonschema-rs is not available.
+        There is NO missing-dependency fallback: ``jsonschema_rs`` is imported
+        unconditionally at module scope, so if it is absent this module fails to
+        import and nothing here runs. This path is reached only for a PARTIAL
+        SCHEMA — one whose top-level ``properties`` has no ``sections`` key, so
+        the verb cannot be wrapped in a full SWML document for deep validation
+        (see ``_validate_verb_full``) — or when ``_full_validator`` was never
+        initialized because ``__init__`` did not run (mocked test instances).
+
+        Note that reaching this path does NOT imply
+        ``full_validation_available`` is False: with a partial schema the
+        validator is still constructed, so that property reports True while
+        every verb is nonetheless validated here.
 
         Args:
             verb_name: The name of the verb
