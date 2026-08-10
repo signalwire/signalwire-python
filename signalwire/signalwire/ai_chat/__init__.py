@@ -26,15 +26,15 @@ from .client import (
 
 __all__ = [
     "AIChatClient",
-    "ChatGateway",
-    "GatewayRejection",
     "AIChatError",
     "AuthenticationError",
+    "ChatGateway",
     "ChatInProgressError",
     "ChatLog",
     "ChatResponse",
     "ConversationInfo",
     "ConversationNotFoundError",
+    "GatewayRejection",
     "RateLimitError",
     "SummaryError",
 ]

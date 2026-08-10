@@ -364,6 +364,7 @@ class TestFunctionResultFactoryMethods:
         """Test creating informational response"""
         result = FunctionResult("Here is the information you requested")
         
+        assert isinstance(result.response, str)
         assert "information" in result.response.lower()
 
 

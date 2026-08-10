@@ -562,14 +562,16 @@ class FunctionResult:
         Returns:
             self for method chaining
         """
-        # Back-compat: hold(120) used to mean hold(timeout=120)
-        if isinstance(prompt, int) and not isinstance(prompt, bool):
+        # Back-compat: hold(120) used to mean hold(timeout=120). `bool` subclasses
+        # `int`, so it is excluded explicitly — a bool is neither a prompt nor a
+        # timeout, and dropping it here keeps the remaining type `str | None`.
+        if isinstance(prompt, bool):
+            prompt = None
+        elif isinstance(prompt, int):
             timeout, prompt = prompt, None
 
         if prompt is not None:
-            self.set_tool_response(
-                tool_result="status: on hold", tool_prompt=prompt
-            )
+            self.set_tool_response(tool_result="status: on hold", tool_prompt=prompt)
             self.post_process = True
 
         # Clamp timeout to valid range
