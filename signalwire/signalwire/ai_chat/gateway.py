@@ -73,8 +73,8 @@ DEFAULT_HANDLE_TTL = 24 * 60 * 60
 SERVICE_DEFAULT_CONVERSATION_TIMEOUT = 3600
 
 # Caps chosen to be invisible to a real conversation and ruinous to a script.
-DEFAULT_MAX_NEW_CONVERSATIONS = 60      # per window, per gateway
-DEFAULT_MAX_TURNS = 200                 # per conversation, ever
+DEFAULT_MAX_NEW_CONVERSATIONS = 60  # per window, per gateway
+DEFAULT_MAX_TURNS = 200  # per conversation, ever
 DEFAULT_WINDOW_SECONDS = 60
 
 # Hosts that never need listing, so `pip install` → run → it works.
@@ -160,8 +160,10 @@ class ChatGateway:
             raise ValueError("config_url is required — it is what a key is scoped to.")
 
         self.config_url = config_url
-        self.key = key or os.environ.get("SIGNALWIRE_CHAT_GATEWAY_KEY") or (
-            "pk_" + secrets.token_urlsafe(24)
+        self.key = (
+            key
+            or os.environ.get("SIGNALWIRE_CHAT_GATEWAY_KEY")
+            or ("pk_" + secrets.token_urlsafe(24))
         )
         self.allowed_origins = {o.rstrip("/") for o in allowed_origins}
         self.handle_ttl = handle_ttl
@@ -174,14 +176,16 @@ class ChatGateway:
         self._owns_client = client is None
 
         if secret is None:
-            secret = os.environ.get("SIGNALWIRE_CHAT_GATEWAY_SECRET") or secrets.token_bytes(32)
+            secret = os.environ.get(
+                "SIGNALWIRE_CHAT_GATEWAY_SECRET"
+            ) or secrets.token_bytes(32)
         self._secret = secret.encode() if isinstance(secret, str) else secret
 
         self._mints: list[float] = []
         self._turns: dict[str, tuple[int, float]] = {}
 
     @staticmethod
-    def last_activity(messages: list[dict[str, Any]]) -> float | None:
+    def last_activity(messages: list[dict[str, Any]] | None) -> float | None:
         """Epoch SECONDS of the newest message, or None if nothing is dated.
 
         Bootstraps a browser's idle clock across a reload. Without it a widget
@@ -288,7 +292,9 @@ class ChatGateway:
             raise GatewayRejection(401, "bad key")
 
     @staticmethod
-    def visible_messages(messages: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    def visible_messages(
+        messages: list[dict[str, Any]] | None,
+    ) -> list[dict[str, Any]]:
         """The transcript a browser may redraw, and nothing else.
 
         `chat_log` hands back the conversation as the service holds it: the
@@ -341,8 +347,9 @@ class ChatGateway:
 
     # ── The proxied call ─────────────────────────────────────────────
 
-    def prepare(self, body: dict[str, Any], *, origin: str | None,
-                key: str | None) -> tuple[str, dict[str, Any], str | None]:
+    def prepare(
+        self, body: dict[str, Any], *, origin: str | None, key: str | None
+    ) -> tuple[str, dict[str, Any], str | None]:
         """Validate a browser request and build the upstream JSON-RPC call.
 
         Returns ``(method, params, minted_handle)`` — ``minted_handle`` is set

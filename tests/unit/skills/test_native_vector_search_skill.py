@@ -648,6 +648,7 @@ class TestSearchHandler:
         result = skill._search_handler({"query": "test"}, {})
 
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "not available" in result.response.lower()
 
     def test_search_engine_missing(self) -> None:
@@ -656,6 +657,7 @@ class TestSearchHandler:
         result = skill._search_handler({"query": "test"}, {})
 
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "not available" in result.response.lower()
 
     def test_empty_query(self) -> None:
@@ -664,6 +666,7 @@ class TestSearchHandler:
         result = skill._search_handler({"query": ""}, {})
 
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "provide a search query" in result.response.lower()
 
     def test_whitespace_only_query(self) -> None:
@@ -672,6 +675,7 @@ class TestSearchHandler:
         result = skill._search_handler({"query": "   "}, {})
 
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "provide a search query" in result.response.lower()
 
     def test_missing_query_key(self) -> None:
@@ -680,6 +684,7 @@ class TestSearchHandler:
         result = skill._search_handler({}, {})
 
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "provide a search query" in result.response.lower()
 
     def test_local_search_no_results(self) -> None:
@@ -710,7 +715,9 @@ class TestSearchHandler:
         }):
             result = skill._search_handler({"query": "test"}, {})
 
+        assert isinstance(result.response, str)
         assert result.response.startswith("[START]")
+        assert isinstance(result.response, str)
         assert result.response.endswith("[END]")
 
     def test_local_search_with_results(self) -> None:
@@ -825,6 +832,7 @@ class TestSearchHandler:
             result = skill._search_handler({"query": "test"}, {})
 
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "sorry" in result.response.lower()
         assert "rephrasing" in result.response.lower()
 
@@ -839,6 +847,7 @@ class TestSearchHandler:
         }):
             result = skill._search_handler({"query": "test"}, {})
 
+        assert isinstance(result.response, str)
         assert "language processing" in result.response.lower()
 
     def test_search_exception_handling_vector(self) -> None:
@@ -852,6 +861,7 @@ class TestSearchHandler:
         }):
             result = skill._search_handler({"query": "test"}, {})
 
+        assert isinstance(result.response, str)
         assert "indexing" in result.response.lower()
 
     def test_search_exception_handling_timeout(self) -> None:
@@ -865,6 +875,7 @@ class TestSearchHandler:
         }):
             result = skill._search_handler({"query": "test"}, {})
 
+        assert isinstance(result.response, str)
         assert "temporarily unavailable" in result.response.lower()
 
     def test_response_format_callback_with_results(self) -> None:
