@@ -370,6 +370,24 @@ sched_gate DOC-AUDIT deps=SURFACE-NATIVE desc="audit_docs vs python_surface.json
         --ignore "$PORT_ROOT/DOC_AUDIT_IGNORE.md" \
         --native-names "$PORT_ROOT/port_surface_native.json"
 
+# SURFACE-NATIVE-FRESH — the committed sidecar must already BE what SURFACE-NATIVE
+# regenerates. This is the DRIFT half of the SIGNATURES/DRIFT pair above: a gate
+# that rewrites a COMMITTED artifact in place needs something that fails when the
+# rewrite changed it, or the regeneration silently leaks into the working tree and
+# from there into a commit. Proven live: adding a native-only member to
+# signalwire/livewire/ made SURFACE-NATIVE rewrite the committed sidecar (42 -> 43
+# members) and every gate still passed — only `git status` showed it, and a lane
+# reading console output alone would have committed the polluted oracle.
+#
+# It runs AFTER DOC-AUDIT on purpose: DOC-AUDIT consumes the freshly-regenerated file
+# (deps=SURFACE-NATIVE), so restoring or diffing it any earlier would either take the
+# fresh bytes away from its consumer or diff a file nothing had written yet. Checking
+# rather than restoring is deliberate — the sidecar is a DOC-AUDIT INPUT that must
+# exist at its real path, so the fix is "fail when it drifted", not "regenerate into
+# a scratch copy". The remedy when this fails is to commit the regenerated sidecar.
+sched_gate SURFACE-NATIVE-FRESH deps=DOC-AUDIT desc="committed port_surface_native.json is what emit_surface_native regenerates (no in-tree drift)" \
+    -- bash -c "cd '$PORT_ROOT' && git diff --quiet -- port_surface_native.json"
+
 # DOC-WIRE (§A1) — the documented REST fixtures are wire-clean against the spec
 # (strict-flag mock journals wire_violations; runner replays the doc calls). Cheap.
 sched_gate DOC-WIRE desc="documented REST doc fixtures put the spec wire shape on the wire (areacode/params:{text})" \
