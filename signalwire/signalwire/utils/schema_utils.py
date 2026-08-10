@@ -21,6 +21,11 @@ import jsonschema_rs
 
 from signalwire.core.logging_config import get_logger
 
+# Bounds $ref / union following in _closed_key_set so a schema with a
+# self-referential $ref cannot spin the resolver. Eight levels is well past
+# anything the SWML schema needs (verb body -> $ref -> union branch -> $ref).
+_MAX_SCHEMA_RESOLVE_DEPTH = 8
+
 
 class SchemaValidationError(Exception):
     """Raised when SWML schema validation fails."""
@@ -409,9 +414,9 @@ class SchemaUtils:
 
     def _verb_top_level_property_names(self, verb_name: str) -> set[str] | None:
         """Resolve the set of KNOWN top-level property names for a verb's config
-        object, following a single ``$ref`` (e.g. AI -> AIObject). Returns None
-        when the verb's config schema is not a closed object-with-properties
-        (i.e. we cannot enumerate a known-key set, so no shallow check applies)."""
+        object, following a single ``$ref`` (e.g. AI -> AIObject) and UNIONING the
+        branches of an ``anyOf``/``oneOf`` union. Returns None only when there is
+        genuinely no enumerable closed key-set, so no shallow check applies."""
         if verb_name not in self.verbs:
             return None
         verb_def = self.verbs[verb_name]["definition"]
@@ -419,12 +424,69 @@ class SchemaUtils:
         body = props.get(verb_name)
         if not isinstance(body, dict):
             return None
-        # Follow a single $ref (AI -> AIObject) to the object that declares the
-        # verb config's own properties.
-        if "$ref" in body:
-            ref_name = body["$ref"].split("/")[-1]
-            body = self.schema.get("$defs", {}).get(ref_name, {})
-        if not isinstance(body, dict) or body.get("type") != "object":
+        return self._closed_key_set(body, 0)
+
+    def _closed_key_set(self, body: Any, depth: int) -> set[str] | None:
+        """Resolve ONE schema node to the set of top-level property names it closes
+        over, returning None when the node has no such enumerable closed key-set.
+
+        Three node shapes are handled, and the union case is the one that matters:
+
+        * ``$ref`` — followed into ``$defs`` and resolved recursively
+          (ai -> AIObject).
+        * ``anyOf`` / ``oneOf`` — resolved BRANCH BY BRANCH and UNIONED. Without
+          this the resolver bailed on the first ``type != "object"`` test, because
+          a union node carries no ``type`` of its own. That bail silently
+          DISENGAGED the closed-key check: ``_validate_verb_top_level_keys`` reads
+          None as "nothing to enforce" and reports valid for any key whatsoever.
+          Five verbs in the shipped schema are union-shaped — connect, play,
+          send_sms, sleep, unset — so the check was doing nothing for all of them.
+          A union's known-key set is the union of its object branches' keys: a
+          config satisfying the union satisfies SOME branch, so a key belonging to
+          no branch belongs to no valid document. Non-object branches (sleep's
+          bare ``integer``, SWMLVar) contribute no keys and are skipped — they
+          constrain the config to not be an object at all, a different question
+          from which keys an object config may carry.
+        * a plain closed object — its own ``properties``.
+
+        ``depth`` bounds ``$ref``/union following so a schema with a
+        self-referential ``$ref`` cannot spin the resolver. Eight levels is well
+        past anything the SWML schema needs (verb body -> $ref -> union branch ->
+        $ref).
+        """
+        if not isinstance(body, dict) or depth > _MAX_SCHEMA_RESOLVE_DEPTH:
+            return None
+
+        # Follow a $ref (AI -> AIObject) to the node that declares the properties.
+        ref = body.get("$ref")
+        if isinstance(ref, str):
+            ref_name = ref.split("/")[-1]
+            resolved = self.schema.get("$defs", {}).get(ref_name)
+            if not isinstance(resolved, dict):
+                return None
+            return self._closed_key_set(resolved, depth + 1)
+
+        # A union node: resolve every branch and union the ones that yield a set.
+        branches = body.get("anyOf")
+        if not isinstance(branches, list):
+            branches = body.get("oneOf")
+        if isinstance(branches, list):
+            union: set[str] = set()
+            found = False
+            for branch in branches:
+                keys = self._closed_key_set(branch, depth + 1)
+                if keys is None:
+                    continue
+                found = True
+                union |= keys
+            if not found:
+                # No branch is a closed object (e.g. unset: string |
+                # array-of-string). There is no key-set to enforce; the deep
+                # validator owns this shape.
+                return None
+            return union
+
+        if body.get("type") != "object":
             return None
         prop_map = body.get("properties")
         if not isinstance(prop_map, dict):
@@ -448,7 +510,9 @@ class SchemaUtils:
         the full deep schema (which would false-reject legitimate deep emissions
         such as the ai verb's empty prompt.pom). Used for handler verbs (the ai
         verb) whose deep shapes the handler owns. A no-op when validation is
-        disabled or when the verb has no enumerable closed key-set."""
+        disabled or when the verb genuinely has no enumerable closed key-set (an
+        open object such as ``set``, or a union with no object branch such as
+        ``unset``)."""
         if not self._validation_enabled:
             return True, []
         if verb_name not in self.verbs:
