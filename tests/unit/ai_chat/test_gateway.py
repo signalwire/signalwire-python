@@ -608,3 +608,40 @@ async def test_start_then_reload_replays_the_same_conversation(
         assert "messages" in replay.json()
         # and it asked the service for the conversation the handle names
         assert service.seen[-1]["params"]["id"] == gateway.read_handle(handle)
+
+
+async def test_start_forwards_the_configured_timeout_upstream(service):
+    """prepare() puts conversation_timeout in the start params, but the HTTP
+    dispatch used to rebuild the create_conversation call and drop it — the
+    browser was told 900 while the service kept its 3600 default. The number
+    the page schedules its idle warning around must be the number the service
+    actually enforces."""
+    gw = make_gateway(
+        service,
+        allowed_origins=["https://shop.example.com"],
+        conversation_timeout=900,
+    )
+    try:
+        async with asgi(gw) as http:
+            started = await http.post(
+                "/chat/", json={"method": "start"}, headers=HEADERS
+            )
+            assert started.status_code == 200
+            assert started.json()["timeout"] == 900
+            sent = service.seen[-1]
+            assert sent["method"] == "create_conversation"
+            assert sent["params"]["conversation_timeout"] == 900
+
+            # The chat path auto-creates too, and takes the same timeout.
+            handle = started.headers["x-chat-handle"]
+            chatted = await http.post(
+                "/chat/",
+                json={"message": "hi", "handle": handle},
+                headers=HEADERS,
+            )
+            assert chatted.status_code == 200
+            sent = service.seen[-1]
+            assert sent["method"] == "chat"
+            assert sent["params"]["conversation_timeout"] == 900
+    finally:
+        await gw._client.close()
