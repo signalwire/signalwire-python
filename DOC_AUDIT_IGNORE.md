@@ -98,6 +98,7 @@ similarity_search: langchain/pinecone Pinecone.similarity_search — search comp
 build_index: real IndexBuilder.build_index (signalwire/search/index_builder.py) — Python-only search skill, absent from the cross-port surface
 build_index_from_sources: real IndexBuilder.build_index_from_sources (signalwire/search/index_builder.py) — Python-only search skill, absent from the cross-port surface
 migrate_sqlite_to_pgvector: real migration helper (signalwire/search/migration.py) — Python-only search skill, absent from the cross-port surface
+get_stats: real SearchEngine.get_stats (signalwire/search/search_engine.py) — Python-only search skill, absent from the cross-port surface
 argsort: numpy.argsort — DIY search example in docs/search_overview.md
 md: filename-extension regex false positive (matches `file.md (…`) in docs/search_overview.md processing listing
 do_search: user-defined method inside a caching example in docs/search_deployment.md

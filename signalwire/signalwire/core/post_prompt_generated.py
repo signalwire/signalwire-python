@@ -9,10 +9,9 @@ from __future__ import annotations
 from typing import Any, Literal, TypeAlias, TypedDict
 from typing import TYPE_CHECKING
 
-# Types owned by sibling swaig specs, imported so the cross-file
-# $ref fields below resolve to the real type rather than a dict.
+# SwaigRequest is generated in swaig_request_generated; aliased here for the
+# swaig_log entry's post_data field.
 if TYPE_CHECKING:
-    from signalwire.core.swaig_actions_generated import SwaigResponse as SwaigResponse
     from signalwire.core.swaig_request_generated import SwaigRequest as SwaigRequest
 
 
@@ -70,7 +69,7 @@ class PostPrompt(TypedDict, total=False):
 class PostPromptData(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    parsed: list[dict[str, Any] | list[Any]]
+    parsed: list[dict[str, Any]]
     raw: str
     substituted: str
 
@@ -161,40 +160,14 @@ class PostPromptSystemLogEntry(TypedDict, total=False):
     role: str
     content: str
     timestamp: int
-    action: Literal[
-        "attention_timeout",
-        "attention_wait",
-        "auto_correct",
-        "change_step_failed",
-        "check_for_input",
-        "context_enter",
-        "double_turn",
-        "filler",
-        "function_call",
-        "function_error",
-        "function_loop",
-        "gather_answer",
-        "gather_complete",
-        "gather_question",
-        "gather_reject",
-        "gather_start",
-        "hangup_hook",
-        "hearing_hint",
-        "inner_dialog",
-        "inner_dialog_scorecard",
-        "manual_say",
-        "reset",
-        "session_end",
-        "session_start",
-        "startup_hook",
-        "step_change",
-        "summarize_start",
-        "swaig_problem",
-    ]
+    action: str
     lang: str
     tokens: int
     content_type: str
     metadata: dict[str, Any]
+    context: str
+    step: str
+    step_index: int
 
 
 class PostPromptSystemEntry(TypedDict, total=False):
@@ -211,16 +184,16 @@ class PostPromptSwaigLogEntry(TypedDict, total=False):
     command_name: str
     command_arg: str
     epoch_time: int
-    native: Literal[True]
+    native: bool
     active_count: int | Literal["endless"]
     url: str
     post_data: SwaigRequest
-    post_response: SwaigResponse
-    delayed_post_response: SwaigResponse
+    post_response: dict[str, Any]
+    delayed_post_response: dict[str, Any]
     mcp_url: str
     mcp_tool: str
-    mcp_response: str
-    mcp_error: Literal[True]
+    mcp_response: dict[str, Any]
+    mcp_error: str
 
 
 class PostPromptTimesEntry(TypedDict, total=False):

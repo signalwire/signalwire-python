@@ -66,6 +66,14 @@ class AIChatError(Exception):
     """Base error for AI Chat service failures."""
 
     def __init__(self, code: int | None, message: str) -> None:
+        """Carry the service's own failure code alongside its message.
+
+        Args:
+            code: JSON-RPC error code from the service (e.g. -32001 unknown
+                conversation, -32009 rejected identity), or None when the
+                failure happened below the JSON-RPC layer (transport, bad HTTP).
+            message: Human-readable description from the service.
+        """
         self.code = code
         self.message = message
         super().__init__(f"[{code}] {message}")
@@ -109,6 +117,16 @@ _ERROR_BY_CODE = {
 
 @dataclass
 class ConversationInfo:
+    """A conversation as the service reports it after create/end.
+
+    Attributes:
+        id: Service-assigned conversation id. This, not anything the caller
+            supplies, is what later turns must reference.
+        status: Lifecycle state reported by the service (e.g. "created",
+            "ended").
+        initial_message: Opening line when the agent speaks first, else None.
+    """
+
     id: str
     status: str
     initial_message: str | None = None
@@ -116,6 +134,17 @@ class ConversationInfo:
 
 @dataclass
 class ChatResponse:
+    """One assistant turn.
+
+    Attributes:
+        text: What the assistant said — the only field a simple client needs.
+        conversation_id: Conversation this turn belongs to, for the next turn.
+        user_event: Structured payload the agent emitted alongside the text
+            (a SWML user_event), or None. This is how an agent asks the client
+            to do something — render a form, show a keypad — rather than only
+            speak.
+    """
+
     text: str
     conversation_id: str
     user_event: dict[str, Any] | None = None
@@ -123,6 +152,16 @@ class ChatResponse:
 
 @dataclass
 class ChatLog:
+    """A conversation transcript as the service stores it.
+
+    Attributes:
+        messages: Every turn, INCLUDING the substituted system prompt and tool
+            traffic. Do not relay this to a browser verbatim — see
+            `ChatGateway.visible_messages`, which reduces it to the dialogue.
+        call_timeline: Timed events for the conversation, when the service
+            reports them.
+    """
+
     messages: list[dict[str, Any]] = field(default_factory=list)
     call_timeline: list[dict[str, Any]] = field(default_factory=list)
 
@@ -141,6 +180,23 @@ class AIChatClient:
         url: str | None = None,
         session: aiohttp.ClientSession | None = None,
     ) -> None:
+        """Build a client for the AI Chat service.
+
+        Each argument falls back to its environment variable, so a configured
+        environment needs no arguments at all.
+
+        Args:
+            project: Project id. Falls back to `SIGNALWIRE_PROJECT_ID`.
+            token: API token. Falls back to `SIGNALWIRE_API_TOKEN`.
+            space: Space name used to build the default URL. Falls back to
+                `SIGNALWIRE_SPACE`.
+            url: Full service URL, overriding the one derived from `space`.
+            session: An existing aiohttp session to reuse. Omit and the client
+                creates (and owns, and closes) its own.
+
+        Raises:
+            ValueError: If no project id is available from either source.
+        """
         self._project = project or os.environ.get("SIGNALWIRE_PROJECT_ID", "")
         self._token = token or os.environ.get("SIGNALWIRE_API_TOKEN", "")
         space = space or os.environ.get("SIGNALWIRE_SPACE", "")
@@ -201,6 +257,11 @@ class AIChatClient:
         return self._session
 
     async def close(self) -> None:
+        """Close the HTTP session, if this client owns it.
+
+        A session passed in via `session=` belongs to the caller and is left
+        open; only one the client created for itself is closed here.
+        """
         if self._owns_session and self._session is not None:
             await self._session.close()
             self._session = None

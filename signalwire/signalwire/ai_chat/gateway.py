@@ -99,6 +99,14 @@ class GatewayRejection(Exception):
     """
 
     def __init__(self, status: int, reason: str) -> None:
+        """Refuse a browser request with the HTTP status the route should return.
+
+        Args:
+            status: HTTP status to send back (401 bad key, 403 origin/handle,
+                400 disallowed method, 429 a cap was hit).
+            reason: Short, non-leaking explanation. It reaches the browser, so
+                it must not disclose why a handle failed to verify.
+        """
         self.status = status
         self.reason = reason
         super().__init__(f"{status}: {reason}")
@@ -156,6 +164,34 @@ class ChatGateway:
         max_turns: int = DEFAULT_MAX_TURNS,
         window_seconds: int = DEFAULT_WINDOW_SECONDS,
     ) -> None:
+        """Build a gateway that fronts one agent for browser traffic.
+
+        Args:
+            config_url: SWML config the gateway always sends upstream. Required,
+                and never taken from the request body — if a browser could name
+                it, whoever holds a key would pick which agent runs and which
+                project pays for it.
+            key: Publishable key the browser presents. Safe to ship in a page:
+                it names no credential and the caps below bound what it can cost.
+            allowed_origins: Origins permitted to call in. localhost is always
+                allowed so `pip install` → run works without shipping
+                open-by-default; every other origin must be listed.
+            client: An `AIChatClient` to reuse. Omit and the gateway builds (and
+                owns) its own from the ambient credentials.
+            secret: HMAC key for signing conversation handles. Omit to generate
+                one per process — handles then stop verifying across a restart
+                or a second worker, so set it in production.
+            handle_ttl: Seconds a signed handle stays valid.
+            conversation_timeout: Idle seconds before the service ends a
+                conversation. Omit to report the service default.
+            max_new_conversations: Cap on conversations minted per window — the
+                control that makes a leaked key a bill rather than a breach.
+            max_turns: Cap on turns per conversation.
+            window_seconds: Length of the rolling window the caps count over.
+
+        Raises:
+            ValueError: If `config_url` is empty.
+        """
         if not config_url:
             raise ValueError("config_url is required — it is what a key is scoped to.")
 
@@ -223,6 +259,11 @@ class ChatGateway:
         return self.conversation_timeout or SERVICE_DEFAULT_CONVERSATION_TIMEOUT
 
     async def close(self) -> None:
+        """Release the upstream HTTP session, if this gateway owns it.
+
+        A client passed in via `client=` belongs to the caller and is left
+        open; only a client the gateway built for itself is closed here.
+        """
         if self._owns_client:
             await self._client.close()
 
@@ -288,6 +329,17 @@ class ChatGateway:
         raise GatewayRejection(403, "origin not allowed")
 
     def check_key(self, presented: str | None) -> None:
+        """Verify the publishable key the browser sent.
+
+        Compared with `hmac.compare_digest` rather than `==` so the check does
+        not leak the key a character at a time through timing.
+
+        Args:
+            presented: Key from the request, or None when the header is absent.
+
+        Raises:
+            GatewayRejection: 401 if the key is missing or does not match.
+        """
         if not presented or not hmac.compare_digest(presented, self.key):
             raise GatewayRejection(401, "bad key")
 
