@@ -481,8 +481,13 @@ class ChatGateway:
                 return JSONResponse({"status": "ended"}, headers=cors)
 
             if method == "create_conversation":
+                # prepare() decides whether a timeout applies; dropping it here
+                # would report one number to the browser below while the
+                # service quietly keeps its own default.
                 info = await self._client.create_conversation(
-                    params["id"], config_url=params["config_url"]
+                    params["id"],
+                    config_url=params["config_url"],
+                    timeout=params.get("conversation_timeout"),
                 )
                 if minted:
                     cors["X-Chat-Handle"] = minted
