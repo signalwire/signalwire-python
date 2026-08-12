@@ -567,9 +567,7 @@ class FunctionResult:
             timeout, prompt = prompt, None
 
         if prompt is not None:
-            self.set_tool_response(
-                tool_result="status: on hold", tool_prompt=prompt
-            )
+            self.set_tool_response(tool_result="status: on hold", tool_prompt=prompt)
             self.post_process = True
 
         # Clamp timeout to valid range

@@ -1745,11 +1745,14 @@ class DocumentProcessor:
                     # A new topic: remember its heading, and leave it alone -
                     # it already names itself.
                     current_heading = stripped.split("\n", 1)[0].strip()
-                elif current_heading and stripped.startswith("#"):
+                elif (
+                    current_heading
+                    and stripped.startswith("#")
+                    and current_heading.lower() not in chunk_text.lower()
+                ):
                     # A subsection of that topic: give it the subject back.
-                    if current_heading.lower() not in chunk_text.lower():
-                        chunk_text = f"{current_heading}\n\n{chunk_text}"
-                        metadata["heading_context"] = current_heading
+                    chunk_text = f"{current_heading}\n\n{chunk_text}"
+                    metadata["heading_context"] = current_heading
 
                 chunk = self._create_chunk(
                     content=chunk_text,
