@@ -995,8 +995,10 @@ class TestTap:
         swml = result.action[0]["SWML"]
         tap_params = swml["sections"]["main"][0]["tap"]
         assert tap_params["uri"] == "rtp://192.168.1.1:5000"
-        # Default params should not be included
-        assert "direction" not in tap_params
+        # direction is always emitted: the SWML verb's own default is "speak",
+        # so leaving it out would silently tap less than the documented "both".
+        assert tap_params["direction"] == "both"
+        # Params whose helper defaults match the verb defaults stay omitted.
         assert "codec" not in tap_params
         assert "rtp_ptime" not in tap_params
 
@@ -1039,11 +1041,18 @@ class TestTap:
         with pytest.raises(ValueError, match="rtp_ptime must be a positive integer"):
             FunctionResult().tap("rtp://1.2.3.4:5000", rtp_ptime=-10)
 
-    def test_tap_direction_hear(self) -> None:
-        """Test tap with direction=hear"""
-        result = FunctionResult().tap("rtp://1.2.3.4:5000", direction="hear")
+    def test_tap_direction_listen(self) -> None:
+        """Test tap with direction=listen (the verb's name for the hear side)"""
+        result = FunctionResult().tap("rtp://1.2.3.4:5000", direction="listen")
         tap_params = result.action[0]["SWML"]["sections"]["main"][0]["tap"]
-        assert tap_params["direction"] == "hear"
+        assert tap_params["direction"] == "listen"
+
+    def test_tap_direction_hear_is_rejected(self) -> None:
+        """"hear" was never a SWML tap direction — the verb's enum is
+        speak/listen/both, so emitting it produced a tap the platform
+        rejects. A loud error beats a silent no-op tap."""
+        with pytest.raises(ValueError, match="direction must be one of"):
+            FunctionResult().tap("rtp://1.2.3.4:5000", direction="hear")  # type: ignore[arg-type]  # intentional invalid input
 
     def test_tap_chaining(self) -> None:
         """Test tap returns self for chaining"""
@@ -1165,7 +1174,7 @@ class TestRecordCall:
         literal_cases = [
             (FunctionResult.record_call, "format", ("wav", "mp3", "mp4")),
             (FunctionResult.record_call, "direction", ("speak", "listen", "both")),
-            (FunctionResult.tap, "direction", ("speak", "hear", "both")),
+            (FunctionResult.tap, "direction", ("speak", "listen", "both")),
             (FunctionResult.tap, "codec", ("PCMU", "PCMA")),
         ]
         for fn, param, expected in literal_cases:
