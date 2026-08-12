@@ -2053,24 +2053,24 @@ result.pay(
 Start call tapping/monitoring.
 
 **Parameters:**
-- `uri` (str): URI to send tapped audio to
+- `uri` (str): URI to send tapped audio to — `rtp://IP:port`, `ws://example.com`, or `wss://example.com`
 - `control_id` (Optional[str]): Unique identifier for this tap
-- `direction` (str): Tap direction: "both", "inbound", "outbound" (default: "both")
-- `codec` (str): Audio codec: "PCMU", "PCMA", "G722" (default: "PCMU")
+- `direction` (str): Tap direction: "speak", "listen", "both" (default: "both")
+- `codec` (str): Audio codec: "PCMU" or "PCMA" (default: "PCMU")
 - `rtp_ptime` (int): RTP packet time in milliseconds (default: 20)
 - `status_url` (Optional[str]): Status webhook URL
 
 **Usage:**
 ```python
 # Basic call tapping
-result.tap("sip:monitor@company.com")
+result.tap("wss://monitor.company.com/tap")
 
 # Tap with specific settings
 result.tap(
-    uri="sip:quality@company.com",
+    uri="rtp://192.168.1.100:5004",
     control_id="quality_monitor_001",
     direction="both",
-    codec="G722"
+    codec="PCMA"
 )
 ```
 
