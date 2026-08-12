@@ -480,7 +480,7 @@ class FunctionResult:
         """
         # Detect input type and normalize to appropriate format
         if isinstance(swml_content, str):
-            # Raw SWML string - parse to dict so we can add transfer key if needed
+            # Raw SWML string - parse to dict so the action carries a document
             try:
                 import json
 
@@ -496,11 +496,15 @@ class FunctionResult:
         else:
             raise TypeError("swml_content must be string, dict, or SWML object")
 
-        action = swml_data
+        # transfer rides BESIDE the SWML document, not inside it — the same
+        # shape connect() and swml_transfer() emit. Inside the document it is
+        # not a SWML key and the call never exits the agent.
+        action: dict[str, Any] = {"SWML": swml_data}
         if transfer:
             action["transfer"] = "true"
 
-        return self.add_action("SWML", action)
+        self.action.append(action)
+        return self
 
     def hangup(self) -> "FunctionResult":
         """

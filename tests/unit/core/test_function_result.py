@@ -543,8 +543,8 @@ class TestExecuteSwml:
 
         # The original dict should NOT have 'transfer' key added
         assert "transfer" not in original
-        # But the action's SWML should have it
-        assert result.action[0]["SWML"]["transfer"] == "true"
+        # The action carries it beside the document
+        assert result.action[0]["transfer"] == "true"
 
     def test_execute_swml_sdk_object_with_to_dict(self) -> None:
         """Test execute_swml with an SDK object that has to_dict()"""
@@ -569,12 +569,18 @@ class TestExecuteSwml:
             FunctionResult().execute_swml([1, 2, 3])
 
     def test_execute_swml_with_transfer_true(self) -> None:
-        """Test execute_swml with transfer=True adds transfer key"""
+        """transfer is a SIBLING of the SWML key — the platform's documented
+        action shape, and the one connect()/swml_transfer() emit. Inside the
+        document it is not a SWML key and the call never exits the agent."""
         swml_dict = {"version": "1.0.0", "sections": {"main": []}}
         result = FunctionResult().execute_swml(swml_dict, transfer=True)
 
         action = result.action[0]
-        assert action["SWML"]["transfer"] == "true"
+        assert action["transfer"] == "true"
+        assert "transfer" not in action["SWML"]
+        # Same action shape as the live-proven connect() helper
+        connect_action = FunctionResult().connect("+15551234567").action[0]
+        assert set(action.keys()) == set(connect_action.keys())
 
     def test_execute_swml_with_transfer_false(self) -> None:
         """Test execute_swml with transfer=False does not add transfer key"""
@@ -582,6 +588,7 @@ class TestExecuteSwml:
         result = FunctionResult().execute_swml(swml_dict, transfer=False)
 
         action = result.action[0]
+        assert "transfer" not in action
         assert "transfer" not in action["SWML"]
 
     def test_execute_swml_chaining(self) -> None:
