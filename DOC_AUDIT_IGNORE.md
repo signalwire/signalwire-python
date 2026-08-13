@@ -81,6 +81,10 @@ LoggerFactory: structlog.stdlib.LoggerFactory — structlog
 include_router: FastAPI.include_router — framework method
 add_middleware: FastAPI.add_middleware — framework method
 
+## pytest (third-party, used in CONTRIBUTING.md examples)
+
+raises: pytest.raises — third-party test helper shown in the contributing guide's assertion examples
+
 ## prometheus_client (third-party)
 
 inc: prometheus_client.Counter.inc — monitoring example in search_deployment.md
