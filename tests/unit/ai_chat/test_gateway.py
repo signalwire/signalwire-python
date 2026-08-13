@@ -610,7 +610,7 @@ async def test_start_then_reload_replays_the_same_conversation(
         assert service.seen[-1]["params"]["id"] == gateway.read_handle(handle)
 
 
-async def test_start_forwards_the_configured_timeout_upstream(service):
+async def test_start_forwards_the_configured_timeout_upstream(service: Any) -> None:
     """prepare() puts conversation_timeout in the start params, but the HTTP
     dispatch used to rebuild the create_conversation call and drop it — the
     browser was told 900 while the service kept its 3600 default. The number
