@@ -94,6 +94,38 @@ python3 -m pip freeze 2>/dev/null \
     | grep -iE '^(fastapi|starlette|pydantic|pydantic-core|anyio|uvicorn|httpx|requests)==' \
     | sed 's/^/    /' || true
 
+# DRIFT — ADVISORY here, and only here.
+#
+# For the nine PORTS, DRIFT is a hard gate: it asks whether the port still matches
+# the reference. That question has a right answer and a port can be wrong.
+#
+# This repo IS the reference. python_signatures.json is DERIVED from this tree, so
+# python cannot drift from itself — a difference after regeneration means only that
+# porting-sdk's committed snapshot has not caught up yet. Failing python's CI for
+# that made adding public API here require a lockstep change in another repo, which
+# inverted the dependency: the source of truth was blocked on its own derivative.
+#
+# So it reports and does not fail. The delta is printed because it is genuinely
+# useful — it is exactly the new surface, and it is what a maintainer regenerates
+# downstream after this merges. Nothing is weakened for the ports: they still check
+# against the reference with a hard gate, and the reference is still enumerated on
+# every run by the SIGNATURES gate above (which SEMVER-DIFF depends on, and which
+# still fails loudly if this tree cannot be enumerated at all).
+drift_gate() {
+    if (cd "$PORTING_SDK_DIR" && git diff --quiet -- python_signatures.json 2>/dev/null); then
+        echo "    oracle snapshot matches this tree."
+        return 0
+    fi
+    local stat
+    stat="$(cd "$PORTING_SDK_DIR" && git diff --shortstat -- python_signatures.json 2>/dev/null)"
+    echo "    ADVISORY: this tree's public surface differs from porting-sdk's committed"
+    echo "    oracle (${stat# }). That is expected when you add or change public API."
+    echo "    Not a failure: python is the reference, the oracle is derived from it."
+    echo "    Say so in your PR ('changes public surface') and a maintainer regenerates"
+    echo "    it downstream — see .github/CONTRIBUTING.md."
+    return 0
+}
+
 # FMT — ruff format. LOCAL applies; CI --check.
 fmt_gate() {
     if [ -n "${CI:-}" ]; then
@@ -207,8 +239,8 @@ sched_gate SIGNATURES desc="regenerate python_signatures.json (reference oracle)
         --signalwire-python "$PORT_ROOT/signalwire" \
         --out "$PORTING_SDK_DIR/python_signatures.json"
 
-sched_gate DRIFT deps=SIGNATURES desc="python_signatures.json unchanged after regen" \
-    -- bash -c "cd '$PORTING_SDK_DIR' && git diff --quiet -- python_signatures.json"
+sched_gate DRIFT deps=SIGNATURES desc="oracle snapshot vs this tree (ADVISORY — python is the reference)" \
+    --fn drift_gate
 
 sched_gate SEMVER-DIFF deps=SIGNATURES desc="version bump matches surface change vs python_signatures.baseline.json (the reference is not exempt)" \
     -- python3 "$PORTING_SDK_DIR/scripts/semver_diff.py" --port python --repo "$PORT_ROOT"
