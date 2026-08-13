@@ -61,6 +61,7 @@ except ImportError:
 
 from signalwire.core.security.session_manager import SessionManager
 from signalwire.core.swml_service import SWMLService
+from signalwire.core.function_result import FunctionResult
 from signalwire.pom.pom import PromptObjectModel
 from signalwire.core.skill_manager import SkillManager
 from signalwire.core.logging_config import get_logger, get_execution_mode
@@ -143,6 +144,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         schema_validation: bool = True,
         signing_key: str | None = None,
         trust_proxy_for_signature: bool = False,
+        swaig_secret: str | None = None,
     ):
         """
         Initialize a new agent
@@ -174,6 +176,16 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
                          enforced on POST /, /swaig, /post_prompt — unsigned or
                          invalidly-signed requests get a 403. Falls back to the
                          SIGNALWIRE_SIGNING_KEY env var if not passed.
+            swaig_secret: Optional secret used to sign this agent's per-call
+                         SWAIG function tokens. Falls back to the
+                         SIGNALWIRE_SWAIG_SECRET env var. When neither is set a
+                         random secret is generated per process, so tokens
+                         issued before a restart stop verifying afterwards and
+                         callers still on those calls see "the security token
+                         for this function is invalid or expired" on their next
+                         tool call. Set it in production, and whenever more
+                         than one replica serves the same agent. Distinct from
+                         `signing_key`, which validates inbound webhooks.
             trust_proxy_for_signature: If True, honor X-Forwarded-Proto /
                          X-Forwarded-Host when reconstructing the URL during
                          signature validation. Default False — proxy headers
@@ -243,8 +255,30 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         # Initialize tool registry (separate from SWMLService verb registry)
 
-        # Initialize session manager
-        self._session_manager = SessionManager(token_expiry_secs=token_expiry_secs)
+        # Initialize session manager.
+        #
+        # The secret signs the per-call SWAIG function tokens this agent mints
+        # and later verifies itself. SessionManager generates a random one when
+        # none is passed, which means a restart invalidates every token already
+        # issued to calls still in progress: the next tool call the caller
+        # triggers comes back "the security token for this function is invalid
+        # or expired", which reads to them like the tool failed rather than
+        # like it was never allowed to run. Restarting an agent mid-call is
+        # ordinary in development and unavoidable in a rolling deploy, so the
+        # secret is settable and, once set, survives both.
+        #
+        # Also required for horizontal scaling: two replicas with different
+        # random secrets cannot verify each other's tokens, so a tool call that
+        # lands on the wrong instance fails the same way.
+        #
+        # NOT `signing_key` (below). That is a SignalWire-issued credential used
+        # to verify INBOUND webhooks are genuinely from SignalWire. This one is
+        # ours, outbound, and never leaves the process.
+        self._swaig_secret = swaig_secret or os.environ.get("SIGNALWIRE_SWAIG_SECRET")
+        self._session_manager = SessionManager(
+            token_expiry_secs=token_expiry_secs,
+            secret_key=self._swaig_secret,
+        )
 
         # Webhook signature validation (porting-sdk/webhooks.md).
         # Resolution order: explicit constructor arg → SIGNALWIRE_SIGNING_KEY env.
@@ -519,6 +553,101 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         """
         # Default implementation does nothing
         pass
+
+    def on_call_end(
+        self, handler: Callable[[list[dict[str, Any]], dict[str, Any]], None]
+    ) -> Callable[[list[dict[str, Any]], dict[str, Any]], None]:
+        """
+        Register a handler that runs when the call ends, with the transcript.
+
+        Usable as a decorator or called directly. Handlers run in registration
+        order and receive:
+
+            call_log (list[dict]): the conversation as the platform recorded
+                it, already resolved from whichever field carried it.
+            raw_data (dict): the complete SWAIG request, including
+                `global_data` and `call_id`.
+
+        This wraps the platform's reserved `hangup_hook` function. That name is
+        internal: it fires on hangup and is never offered to the model as
+        something it could choose, so it cannot be called early or skipped.
+
+        Registering a handler also turns on `swaig_post_conversation`, and that
+        coupling is the reason this method exists rather than leaving callers
+        to define the hook themselves. `call_log` is a CONDITIONAL field on a
+        SWAIG request: without that parameter the hook still fires, still
+        returns 200, and carries no transcript at all -- which is
+        indistinguishable from the hook never having been registered. Nothing
+        errors, nothing logs, and the handler simply receives an empty list
+        forever. If the parameter has been explicitly set to False, it is left
+        alone and a warning is emitted, because silently overriding an explicit
+        choice would be the same class of surprise in the other direction.
+
+        The return value is ignored -- the call is over and there is nobody to
+        speak to. Exceptions are caught and logged rather than raised, since a
+        failing teardown handler must not turn into a failed hangup.
+
+        Args:
+            handler: Callable taking (call_log, raw_data).
+
+        Returns:
+            The handler, so this can be used as a decorator.
+
+        Example:
+            @agent.on_call_end
+            def archive(call_log, raw_data):
+                conversation_id = raw_data.get("global_data", {}).get("conversation_id")
+                store(conversation_id, call_log)
+        """
+        handlers = self.__dict__.get("_call_end_handlers")
+        if handlers is None:
+            # Rebind rather than mutate -- see the ephemeral-copy contract on
+            # _create_ephemeral_copy; this list is not in the copied set.
+            self._call_end_handlers = [handler]
+            self._ensure_call_end_hook()
+        else:
+            self._call_end_handlers = [*handlers, handler]
+        return handler
+
+    def _ensure_call_end_hook(self) -> None:
+        """Register the reserved hangup_hook once, and enable its payload."""
+        if self._params.get("swaig_post_conversation") is False:
+            self.log.warning(
+                "call_end_handler_without_conversation",
+                message=(
+                    "[signalwire] on_call_end handlers are registered but "
+                    "swaig_post_conversation is explicitly False -- they will "
+                    "receive an empty call_log"
+                ),
+            )
+        elif "swaig_post_conversation" not in self._params:
+            self._params["swaig_post_conversation"] = True
+
+        def _hangup_handler(args: Any, raw_data: Any) -> FunctionResult:
+            raw = raw_data or {}
+            # Both spellings are seen in the wild depending on engine.
+            call_log = raw.get("call_log") or raw.get("raw_call_log") or []
+            for callback in self.__dict__.get("_call_end_handlers") or []:
+                # The try/except is inside the loop deliberately: it isolates
+                # each handler so one failure cannot stop the others from
+                # running. This path executes once per call, so the overhead
+                # PERF203 warns about is irrelevant next to that guarantee.
+                try:
+                    callback(call_log, raw)
+                except Exception as exc:  # noqa: PERF203
+                    self.log.error(
+                        "call_end_handler_failed",
+                        error=str(exc),
+                        handler=getattr(callback, "__name__", repr(callback)),
+                    )
+            return FunctionResult("")
+
+        self.define_tool(
+            name="hangup_hook",
+            description="Internal: fires when the call ends.",
+            parameters={},
+            handler=_hangup_handler,
+        )
 
     def on_debug_event(self, handler: Callable[..., Any]) -> Callable[..., Any]:
         """
@@ -1555,6 +1684,44 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         This creates a partial copy that shares most resources but has independent
         configuration for SWML generation. Used when dynamic configuration callbacks
         need to modify the agent without affecting the persistent state.
+
+        THE CALL-SCOPED MUTATION CONTRACT
+        ---------------------------------
+        Every attribute is first copied by *reference* from the master agent.
+        Only the attributes listed below are then replaced with independent
+        copies, and those -- and only those -- are safe to mutate from a
+        per-request callback:
+
+            _params, _hints, _languages, _multilingual, _pronounce,
+            _global_data, _function_includes, _routing_callbacks,
+            _pre_answer_verbs, _answer_config, _post_answer_verbs,
+            _post_ai_verbs, _prompt_llm_params, _post_prompt_llm_params,
+            _internal_fillers, _swaig_query_params, _native_functions,
+            native_functions, pom, _contexts_builder, _contexts_defined,
+            skill_manager, _debug_events_enabled, _debug_events_level,
+            _debug_event_handler,
+            _prompt_manager (fresh instance; its _sections, _prompt_text,
+                _post_prompt_text and _contexts are copied),
+            _tool_registry (fresh instance; its _swaig_functions and
+                _tool_instances are copied)
+
+        Anything NOT in that list is the master's own object, shared with
+        every other request in flight. The distinction that matters is between
+        rebinding and mutating:
+
+            agent.my_thing = {...}        # safe: rebinds on the copy only
+            agent.my_thing["k"] = v       # UNSAFE if my_thing is not listed
+                                          # above -- writes into the master,
+                                          # and therefore into other callers
+
+        Getting this wrong does not raise. It produces one visitor's data
+        appearing in another visitor's prompt, under concurrency, which is why
+        the safe set is enumerated here rather than left to be inferred from
+        the code below.
+
+        Callers who need per-request state of their own should keep it in
+        `_global_data` (copied) or rebind a fresh object onto the ephemeral
+        agent, never mutate a shared one in place.
 
         Returns:
             A lightweight copy of the agent suitable for ephemeral modifications

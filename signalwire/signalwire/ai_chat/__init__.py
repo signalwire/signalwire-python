@@ -11,6 +11,7 @@ Async client for the SignalWire AI Chat service — see
 """
 
 from .gateway import ChatGateway, GatewayRejection
+from .handoff import HandoffRouter, NonceEntry
 from .client import (
     AIChatClient,
     AIChatError,
@@ -35,6 +36,8 @@ __all__ = [
     "ConversationInfo",
     "ConversationNotFoundError",
     "GatewayRejection",
+    "HandoffRouter",
+    "NonceEntry",
     "RateLimitError",
     "SummaryError",
 ]
