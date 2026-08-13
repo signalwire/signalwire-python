@@ -38,6 +38,7 @@ Credentials come from the constructor or the standard environment variables
 """
 
 import os
+import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
@@ -45,7 +46,10 @@ from typing import Any
 
 import aiohttp
 
+from signalwire.core.logging_config import get_logger
 from signalwire.rest._base import _user_agent
+
+logger = get_logger("ai_chat.client")
 
 DEFAULT_PATH = "/api/ai/chat"
 
@@ -167,6 +171,45 @@ class ChatLog:
 
 
 # ── Client ───────────────────────────────────────────────────────────
+
+
+# Characters the chat service keeps in a conversation id. Anything else is
+# stripped on arrival, silently and without error.
+_ID_SAFE = re.compile(r"[^a-zA-Z0-9_\-.:]")
+
+
+def _warn_if_id_will_be_altered(conversation_id: str) -> None:
+    """Warn when the service will not store the id it is being given.
+
+    The service sanitizes conversation ids and drops disallowed characters
+    without reporting it, so a caller that composes ids -- ``root~2`` for a
+    second leg of ``root``, say -- gets back ``root2``, which is a DIFFERENT,
+    valid-looking id. Everything filed under the original is then unreachable,
+    with no error at any layer to indicate the id changed.
+
+    Two of the three characters worth avoiding come from this SDK itself:
+    ``_`` and ``-`` occur inside ``secrets.token_urlsafe`` output, which is
+    what ``ChatGateway.mint_handle`` uses to generate ids, so a suffix built
+    from either cannot be told apart from the id it was appended to. ``:`` is
+    the gateway's own handle delimiter. That leaves ``.`` as the safe
+    separator for composing ids.
+    """
+    if not isinstance(conversation_id, str) or not conversation_id:
+        return
+    cleaned = _ID_SAFE.sub("", conversation_id)
+    if cleaned != conversation_id:
+        removed = "".join(sorted({c for c in conversation_id if _ID_SAFE.match(c)}))
+        logger.warning(
+            "conversation_id_will_be_sanitized",
+            requested=conversation_id,
+            stored_as=cleaned,
+            removed_characters=removed,
+            message=(
+                "[signalwire] the chat service will store this conversation "
+                "under a different id; anything filed under the requested id "
+                "will not be found. Use '.' to compose ids."
+            ),
+        )
 
 
 class AIChatClient:
@@ -340,6 +383,7 @@ class AIChatClient:
         reinit: bool = False,
     ) -> ConversationInfo:
         """Create a conversation (or reinitialize an existing one)."""
+        _warn_if_id_will_be_altered(conversation_id)
         params: dict[str, Any] = {"id": conversation_id, "config_url": config_url}
         if user_message:
             params["user_message"] = user_message
