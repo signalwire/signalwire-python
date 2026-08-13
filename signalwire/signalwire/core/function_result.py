@@ -480,7 +480,7 @@ class FunctionResult:
         """
         # Detect input type and normalize to appropriate format
         if isinstance(swml_content, str):
-            # Raw SWML string - parse to dict so we can add transfer key if needed
+            # Raw SWML string - parse to dict so the action carries a document
             try:
                 import json
 
@@ -496,11 +496,15 @@ class FunctionResult:
         else:
             raise TypeError("swml_content must be string, dict, or SWML object")
 
-        action = swml_data
+        # transfer rides BESIDE the SWML document, not inside it — the same
+        # shape connect() and swml_transfer() emit. Inside the document it is
+        # not a SWML key and the call never exits the agent.
+        action: dict[str, Any] = {"SWML": swml_data}
         if transfer:
             action["transfer"] = "true"
 
-        return self.add_action("SWML", action)
+        self.action.append(action)
+        return self
 
     def hangup(self) -> "FunctionResult":
         """
@@ -1362,7 +1366,7 @@ class FunctionResult:
         self,
         uri: str,
         control_id: str | None = None,
-        direction: Literal["speak", "hear", "both"] = "both",
+        direction: Literal["speak", "listen", "both"] = "both",
         codec: Literal["PCMU", "PCMA"] = "PCMU",
         rtp_ptime: int = 20,
         status_url: str | None = None,
@@ -1380,7 +1384,7 @@ class FunctionResult:
                         Default is generated and stored in tap_control_id variable
             direction: Direction of audio to tap (default: "both")
                       "speak" = what party says
-                      "hear" = what party hears
+                      "listen" = what party hears
                       "both" = what party hears and says
             codec: Codec for tap media stream - "PCMU" or "PCMA" (default: "PCMU")
             rtp_ptime: Packetization time in milliseconds for RTP (default: 20)
@@ -1393,7 +1397,7 @@ class FunctionResult:
             ValueError: If direction or codec values are invalid
         """
         # Validate direction parameter
-        valid_directions = ["speak", "hear", "both"]
+        valid_directions = ["speak", "listen", "both"]
         if direction not in valid_directions:
             raise ValueError(f"direction must be one of {valid_directions}")
 
@@ -1412,8 +1416,9 @@ class FunctionResult:
         # Add optional parameters if they differ from defaults
         if control_id:
             tap_params["control_id"] = control_id
-        if direction != "both":
-            tap_params["direction"] = direction
+        # Always sent: the verb's own default is "speak", not this helper's
+        # "both", so omitting it would tap less than the caller asked for.
+        tap_params["direction"] = direction
         if codec != "PCMU":
             tap_params["codec"] = codec
         if rtp_ptime != 20:

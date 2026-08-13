@@ -208,9 +208,13 @@ client.calling.ai_stop(call_id, control_id="ai-1")
 
 ## Live Transcribe & Translate
 
+`action` is an object keyed by the phase (`start`/`summarize`), with the phase's
+parameters inside it — or the literal string `"stop"`:
+
 ```python
-client.calling.live_transcribe(call_id, action="start", lang="en")
-client.calling.live_translate(call_id, action="start", from_lang="en", to_lang="es")
+client.calling.live_transcribe(call_id, action={"start": {"lang": "en", "webhook": "https://example.com/transcripts"}})
+client.calling.live_transcribe(call_id, action="stop")
+client.calling.live_translate(call_id, action={"start": {"from_lang": "en", "to_lang": "es"}})
 ```
 
 ## Fax
