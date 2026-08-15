@@ -410,18 +410,21 @@ class TestSearchKnowledgeHandler:
         skill, _ = self._setup_skill()
         result = skill._search_knowledge_handler({"query": ""}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "provide a search query" in result.response.lower()
 
     def test_whitespace_query_returns_error(self) -> None:
         skill, _ = self._setup_skill()
         result = skill._search_knowledge_handler({"query": "   "}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "provide a search query" in result.response.lower()
 
     def test_missing_query_key_returns_error(self) -> None:
         skill, _ = self._setup_skill()
         result = skill._search_knowledge_handler({}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "provide a search query" in result.response.lower()
 
     def test_successful_search_single_chunk(self) -> None:
@@ -517,6 +520,7 @@ class TestSearchKnowledgeHandler:
 
         result = skill._search_knowledge_handler({"query": "test"}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "timed out" in result.response.lower()
 
     def test_http_error(self) -> None:
@@ -529,6 +533,7 @@ class TestSearchKnowledgeHandler:
 
         result = skill._search_knowledge_handler({"query": "test"}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "error" in result.response.lower()
 
     def test_generic_exception(self) -> None:
@@ -537,6 +542,7 @@ class TestSearchKnowledgeHandler:
 
         result = skill._search_knowledge_handler({"query": "test"}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "error" in result.response.lower()
 
     def test_request_payload_required_fields(self) -> None:
@@ -1007,4 +1013,5 @@ class TestEdgeCases:
 
         result = skill._search_knowledge_handler({"query": "test"}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "error" in result.response.lower()

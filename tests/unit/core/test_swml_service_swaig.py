@@ -244,17 +244,14 @@ class TestSidecarPatternViaSWMLService:
         svc.add_section("main")
         ok = svc.add_verb_to_section("main", "answer", {})
         assert ok
-        # ai_sidecar isn't in the live SWML schema yet — bypass via raw doc.
-        # Once the schema lands, callers will use add_verb_to_section directly.
-        svc._current_document["sections"]["main"].append(
-            {
-                "ai_sidecar": {
-                    "prompt": "real-time copilot",
-                    "lang": "en-US",
-                    "direction": ["remote-caller", "local-caller"],
-                }
-            }
-        )
+        # ai_sidecar landed in the bundled schema (4645d48), so the supported
+        # path works — and routes the verb through schema validation.
+        ok = svc.add_verb_to_section("main", "ai_sidecar", {
+            "prompt": "real-time copilot",
+            "lang": "en-US",
+            "direction": ["remote-caller", "local-caller"],
+        })
+        assert ok
         rendered = json.loads(svc.render_document())
         verbs = [next(iter(v.keys())) for v in rendered["sections"]["main"]]
         assert "answer" in verbs

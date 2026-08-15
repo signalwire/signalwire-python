@@ -71,6 +71,31 @@ from signalwire.core.mixins.tool_mixin import ToolMixin  # noqa: E402
 MAX_REQUEST_BODY_SIZE = 10 * 1024 * 1024
 
 
+class _NullLog:
+    """No-op stand-in used only when ``log`` cannot be resolved.
+
+    ``__getattr__`` logs, and it can run before ``__init__`` assigns
+    ``self.log`` (line ~136) or after ``__init__`` raised. Falling back to
+    this keeps a diagnostic log line from turning a missing attribute into a
+    second, unrelated failure.
+    """
+
+    def debug(self, *args: Any, **kwargs: Any) -> None:
+        return None
+
+
+_NULL_LOG = _NullLog()
+
+# Attributes ``SWMLService.__getattr__`` needs in order to run. None can be a
+# SWML verb, and resolving any of them *through* ``__getattr__`` would re-enter
+# it -- so they are rejected before the body touches anything. Without this,
+# a partially constructed instance (``self.log`` is assigned in ``__init__``
+# well before ``self.schema_utils``) turns any attribute miss into unbounded
+# recursion whose traceback names the dependency rather than the access that
+# triggered it.
+_GETATTR_INTERNALS = frozenset({"log", "schema_utils", "_verb_methods_cache"})
+
+
 def _as_response(result: "Response | dict[str, Any]") -> "Response":
     """Coerce a handler result into a Response for FastAPI route handlers.
 
@@ -353,26 +378,68 @@ class SWMLService(ToolMixin):
         Raises:
             AttributeError: If name is not a valid SWML verb
         """
-        self.log.debug("getattr_called", attribute=name)
+        # Re-entry guard. This method's own dependencies must never be
+        # resolved through it.
+        #
+        # __getattr__ runs on every failed attribute lookup, and the body
+        # below reaches for `self.log` and `self.schema_utils`. If either is
+        # itself unset -- on a partially constructed instance, during
+        # __init__ before they are assigned, or after __init__ raised --
+        # resolving it re-enters __getattr__, which reaches for it again, and
+        # the recursion ends only when the stack does. The traceback then
+        # names the *dependency*, not the attribute access that started it,
+        # so the symptom points away from the cause.
+        #
+        # Dunders are rejected here too: copy, pickle and inspect probe for
+        # them constantly, none can be a SWML verb, and each one previously
+        # cost a schema lookup and a log line.
+        if name.startswith("__") or name in _GETATTR_INTERNALS:
+            raise AttributeError(
+                f"'{type(self).__name__}' object has no attribute '{name}'"
+            )
+
+        # object.__getattribute__ does not fall back to __getattr__, so this
+        # cannot recurse even if `log` is genuinely absent. Every log call in
+        # this method's own body goes through `_log` for that reason; the
+        # nested verb methods below may use `self.log` freely, since they run
+        # long after construction.
+        try:
+            _log = object.__getattribute__(self, "log")
+        except AttributeError:
+            _log = _NULL_LOG
+
+        _log.debug("getattr_called", attribute=name)
 
         # Simple version to match our test script
-        # First check if this is a valid SWML verb
-        if not self.schema_utils:
+        # First check if this is a valid SWML verb.
+        #
+        # Resolved defensively for the same reason as `log`: on a partially
+        # constructed instance `schema_utils` is absent, and reaching for it
+        # normally would surface an AttributeError naming *it* rather than
+        # the attribute the caller actually asked for -- pointing the reader
+        # at the wrong name. Absent schema means "not a verb", which is the
+        # answer the existing branch below already gives.
+        try:
+            _schema_utils = object.__getattribute__(self, "schema_utils")
+        except AttributeError:
+            _schema_utils = None
+
+        if not _schema_utils:
             msg = f"'{self.__class__.__name__}' object has no attribute '{name}' (no schema available)"
-            self.log.debug("getattr_no_schema", attribute=name)
+            _log.debug("getattr_no_schema", attribute=name)
             raise AttributeError(msg)
 
-        verb_names = self.schema_utils.get_all_verb_names()
+        verb_names = _schema_utils.get_all_verb_names()
 
         if name in verb_names:
-            self.log.debug("getattr_valid_verb", verb=name)
+            _log.debug("getattr_valid_verb", verb=name)
 
             # Check if we already have this method in the cache
             if not hasattr(self, "_verb_methods_cache"):
                 self._verb_methods_cache = {}
 
             if name in self._verb_methods_cache:
-                self.log.debug("getattr_cached_method", verb=name)
+                _log.debug("getattr_cached_method", verb=name)
                 return types.MethodType(self._verb_methods_cache[name], self)
 
             # Handle sleep verb specially since it takes an integer directly
@@ -401,7 +468,7 @@ class SWMLService(ToolMixin):
                     raise TypeError("sleep() missing required argument: 'duration'")
 
                 # Cache the method for future use
-                self.log.debug("caching_sleep_method", verb=name)
+                _log.debug("caching_sleep_method", verb=name)
                 self._verb_methods_cache[name] = sleep_method
 
                 # Return the bound method
@@ -428,7 +495,7 @@ class SWMLService(ToolMixin):
                 verb_method.__doc__ = f"Add the {name} verb to the document."
 
             # Cache the method for future use
-            self.log.debug("caching_verb_method", verb=name)
+            _log.debug("caching_verb_method", verb=name)
             self._verb_methods_cache[name] = verb_method
 
             # Return the bound method
@@ -436,7 +503,7 @@ class SWMLService(ToolMixin):
 
         # Not a valid verb
         msg = f"'{self.__class__.__name__}' object has no attribute '{name}'"
-        self.log.debug("getattr_invalid_attribute", attribute=name, error=msg)
+        _log.debug("getattr_invalid_attribute", attribute=name, error=msg)
         raise AttributeError(msg)
 
     @property

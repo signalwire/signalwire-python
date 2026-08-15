@@ -38,12 +38,18 @@ Credentials come from the constructor or the standard environment variables
 """
 
 import os
+import re
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from dataclasses import dataclass, field
 from typing import Any
 
 import aiohttp
 
+from signalwire.core.logging_config import get_logger
 from signalwire.rest._base import _user_agent
+
+logger = get_logger("ai_chat.client")
 
 DEFAULT_PATH = "/api/ai/chat"
 
@@ -64,6 +70,14 @@ class AIChatError(Exception):
     """Base error for AI Chat service failures."""
 
     def __init__(self, code: int | None, message: str) -> None:
+        """Carry the service's own failure code alongside its message.
+
+        Args:
+            code: JSON-RPC error code from the service (e.g. -32001 unknown
+                conversation, -32009 rejected identity), or None when the
+                failure happened below the JSON-RPC layer (transport, bad HTTP).
+            message: Human-readable description from the service.
+        """
         self.code = code
         self.message = message
         super().__init__(f"[{code}] {message}")
@@ -161,6 +175,45 @@ class ChatLog:
 # ── Client ───────────────────────────────────────────────────────────
 
 
+# Characters the chat service keeps in a conversation id. Anything else is
+# stripped on arrival, silently and without error.
+_ID_SAFE = re.compile(r"[^a-zA-Z0-9_\-.:]")
+
+
+def _warn_if_id_will_be_altered(conversation_id: str) -> None:
+    """Warn when the service will not store the id it is being given.
+
+    The service sanitizes conversation ids and drops disallowed characters
+    without reporting it, so a caller that composes ids -- ``root~2`` for a
+    second leg of ``root``, say -- gets back ``root2``, which is a DIFFERENT,
+    valid-looking id. Everything filed under the original is then unreachable,
+    with no error at any layer to indicate the id changed.
+
+    Two of the three characters worth avoiding come from this SDK itself:
+    ``_`` and ``-`` occur inside ``secrets.token_urlsafe`` output, which is
+    what ``ChatGateway.mint_handle`` uses to generate ids, so a suffix built
+    from either cannot be told apart from the id it was appended to. ``:`` is
+    the gateway's own handle delimiter. That leaves ``.`` as the safe
+    separator for composing ids.
+    """
+    if not isinstance(conversation_id, str) or not conversation_id:
+        return
+    cleaned = _ID_SAFE.sub("", conversation_id)
+    if cleaned != conversation_id:
+        removed = "".join(sorted({c for c in conversation_id if _ID_SAFE.match(c)}))
+        logger.warning(
+            "conversation_id_will_be_sanitized",
+            requested=conversation_id,
+            stored_as=cleaned,
+            removed_characters=removed,
+            message=(
+                "[signalwire] the chat service will store this conversation "
+                "under a different id; anything filed under the requested id "
+                "will not be found. Use '.' to compose ids."
+            ),
+        )
+
+
 class AIChatClient:
     """Async client for the SignalWire AI Chat service."""
 
@@ -172,6 +225,23 @@ class AIChatClient:
         url: str | None = None,
         session: aiohttp.ClientSession | None = None,
     ) -> None:
+        """Build a client for the AI Chat service.
+
+        Each argument falls back to its environment variable, so a configured
+        environment needs no arguments at all.
+
+        Args:
+            project: Project id. Falls back to `SIGNALWIRE_PROJECT_ID`.
+            token: API token. Falls back to `SIGNALWIRE_API_TOKEN`.
+            space: Space name used to build the default URL. Falls back to
+                `SIGNALWIRE_SPACE`.
+            url: Full service URL, overriding the one derived from `space`.
+            session: An existing aiohttp session to reuse. Omit and the client
+                creates (and owns, and closes) its own.
+
+        Raises:
+            ValueError: If no project id is available from either source.
+        """
         self._project = project or os.environ.get("SIGNALWIRE_PROJECT_ID", "")
         self._token = token or os.environ.get("SIGNALWIRE_API_TOKEN", "")
         space = space or os.environ.get("SIGNALWIRE_SPACE", "")
@@ -283,6 +353,34 @@ class AIChatClient:
         result = body.get("result")
         return result if isinstance(result, dict) else {}
 
+    @asynccontextmanager
+    async def raw_post(
+        self, method: str, params: dict[str, Any]
+    ) -> AsyncIterator[aiohttp.ClientResponse]:
+        """Yield the response for one JSON-RPC call with its body unread.
+
+        For proxies that must stream the body through rather than buffer it.
+        The service pads a slow response with keepalive whitespace so
+        intermediaries do not sever the connection mid-turn; a proxy that
+        awaits the whole body absorbs that padding and reintroduces the very
+        timeout it exists to prevent. Iterate ``resp.content`` and forward the
+        chunks as they arrive.
+
+        The caller owns interpreting the result — including that a JSON-RPC
+        error arrives under HTTP 200 (see ``_request``). Prefer the typed
+        methods unless you are genuinely relaying bytes.
+        """
+        session = await self._ensure_session()
+        self._request_counter += 1
+        payload = {
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params,
+            "id": f"req-{self._request_counter}",
+        }
+        async with session.post(self.url, json=payload) as resp:
+            yield resp
+
     # ── API methods ──────────────────────────────────────────────────
 
     async def create_conversation(
@@ -295,6 +393,7 @@ class AIChatClient:
         reinit: bool = False,
     ) -> ConversationInfo:
         """Create a conversation (or reinitialize an existing one)."""
+        _warn_if_id_will_be_altered(conversation_id)
         params: dict[str, Any] = {"id": conversation_id, "config_url": config_url}
         if user_message:
             params["user_message"] = user_message

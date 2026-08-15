@@ -372,6 +372,7 @@ class TestCheckAvailability:
             raw_data={},
         )
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         # The lowered input "room service" matches "room service" in SERVICES
         assert "room service" in result.response.lower()
         assert (
@@ -387,10 +388,8 @@ class TestCheckAvailability:
             raw_data={},
         )
         assert isinstance(result, FunctionResult)
-        assert (
-            "sorry" in result.response.lower()
-            or "don't offer" in result.response.lower()
-        )
+        assert isinstance(result.response, str)
+        assert "sorry" in result.response.lower() or "don't offer" in result.response.lower()
         assert VENUE_NAME in result.response
         # Should list available services
         for svc in SERVICES:

@@ -32,6 +32,20 @@ else:
 
 logger = get_logger(__name__)
 
+# Smallest candidate pool the post-processing pipeline is allowed to work with.
+# Everything in _process_candidates — agreement boost, content dedup, filename
+# diversity, match-type quotas — is computed across the pool, so a pool that
+# shrinks with `count` makes scores and ordering depend on how many results
+# were requested. 30 keeps the pool constant for every count up to 10, which
+# covers real callers (the shipped agents ask for 3-6).
+MIN_CANDIDATE_POOL = 30
+
+# Window the diversity stages rank over, before the caller's `count` truncates.
+# Fixed for the same reason the pool is floored: these stages reorder the head
+# of the list relative to how many slots they are given, so deriving it from
+# `count` made the ranking depend on how many results were asked for.
+DIVERSITY_WINDOW = 10
+
 
 class SearchEngine:
     """Hybrid search engine for vector and keyword search"""
@@ -141,9 +155,30 @@ class SearchEngine:
             )
             return self._keyword_search_only(enhanced_text, count, tags, original_query)
 
-        # Pool size: always over-fetch so diversity has room to work
+        # Pool size: always over-fetch so diversity has room to work.
+        #
+        # FLOORED, because a pool proportional to `count` alone made `count`
+        # reorder results instead of merely truncating them. Every step in
+        # _process_candidates reads the whole pool: the agreement boost (+0.1
+        # per extra source) only fires if BOTH signals surfaced the document,
+        # and filename-diversity decay depends on which chunk of a file ranks
+        # first. Shrink the pool and a document can lose its keyword signal,
+        # lose the boost, and score lower.
+        #
+        # Measured on the shipped docs index, query "record_call":
+        #   count=1 -> 0.600  "To record inbound calls, add the record_call…"
+        #   count=2 -> 0.447  "Section 133"
+        #   count=3 -> 0.447  "Section 133"
+        #   count=4 -> 0.700  "Call Recording"   <- the right doc, at last
+        # Asking for MORE results changed which document came FIRST, and the
+        # caller's quality gate reads that score to decide whether the answer
+        # was found at all.
+        #
+        # A floor makes the candidate set - and therefore the scores - stable
+        # across the counts anyone actually asks for, so `count` truncates a
+        # fixed ranking again.
         search_multiplier = 3
-        pool_size = count * search_multiplier
+        pool_size = max(count * search_multiplier, MIN_CANDIDATE_POOL)
 
         candidates = self._fetch_candidates(
             query_vector=query_vector,
@@ -306,11 +341,23 @@ class SearchEngine:
         # 5. content dedup (sorted best-first, so the kept copy is the winner)
         final_results = self._dedupe_by_content(final_results)
 
-        # 6. filename diversity penalty
-        final_results = self._apply_diversity_penalties(final_results, count)
-
-        # 7. match-type diversity
-        final_results = self._apply_match_type_diversity(final_results, count)
+        # 6/7. Diversity, applied over a FIXED window rather than `count`.
+        #
+        # Both stages reshape the head of the list relative to the number of
+        # slots they are given: the filename penalty swaps entries around
+        # inside the first target_count, and match-type diversity fills 40/40/20
+        # quotas OF target_count. Passing `count` therefore made `count` an
+        # input to the ranking rather than a limit on it — the caller asking
+        # for 3 results and the caller asking for 5 got different documents
+        # first, with different scores.
+        #
+        # Diversifying a fixed window and then truncating keeps the intent
+        # (no single file or match type dominates what we hand back) while
+        # making the ranking stable, so `score` means the same thing however
+        # many results were requested.
+        window = max(count, DIVERSITY_WINDOW)
+        final_results = self._apply_diversity_penalties(final_results, window)
+        final_results = self._apply_match_type_diversity(final_results, window)
 
         # Expose final_score as score for callers. Without this the CLI/skill
         # layer sees whatever per-source raw score the candidate was last tagged

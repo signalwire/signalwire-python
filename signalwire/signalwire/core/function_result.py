@@ -18,20 +18,44 @@ class FunctionResult:
     of response text and actions.
 
     The result object has three main components:
-    1. response: Text the AI should say back to the user
+    1. response: A PROMPT injected into the model's context. NOT speech.
+       May be a plain string, or an object separating outcome from instruction:
+           {"tool_result": "status: on hold",
+            "tool_prompt": "Tell the caller you are placing them on hold."}
+       See set_tool_response().
     2. action: List of structured actions to execute
     3. post_process: Whether to let AI take another turn before executing actions
+
+    IMPORTANT - `response` is a prompt, not a script:
+        The SWML schema defines it as "a static response text or message returned
+        to the AI agent's context". It is instruction the model reads, and the
+        model then decides what to say. It is NOT played to the caller verbatim.
+
+        Write it as an instruction, in the second person:
+
+            FunctionResult("Tell the caller their order shipped Tuesday.")   # right
+            FunctionResult("Your order shipped Tuesday.")                    # wrong
+
+        The wrong form usually still "works" because the model tends to parrot
+        it, but it is being interpreted, not spoken, so it will drift, get
+        rephrased, or be merged with other context.
 
     Post-processing behavior:
     - post_process=False (default): Execute actions immediately after AI response
     - post_process=True: Let AI respond to user one more time, then execute actions
 
-    This is useful for confirmation workflows like:
+    Use post_process=True whenever the caller must HEAR something before the
+    action takes effect, because many actions end or suspend the AI's turn:
+    `hold` pauses speech detection entirely, `connect`/`transfer` replace the
+    leg, `hangup` ends the call. Anything not said before those land is never
+    said at all.
+
+    This is also useful for confirmation workflows like:
     "I'll transfer you to sales. Do you have any other questions first?"
     (AI can handle follow-up, then execute the transfer)
 
     Example:
-        return FunctionResult("Found your order")
+        return FunctionResult("Tell them you found their order")
 
         # With actions
         return (
@@ -67,18 +91,32 @@ class FunctionResult:
         )
     """
 
-    def __init__(self, response: str | None = None, post_process: bool = False):
+    def __init__(
+        self,
+        response: str | dict[str, Any] | None = None,
+        post_process: bool = False,
+        tool_result: str | None = None,
+        tool_prompt: str | None = None,
+    ):
         """
         Initialize a new SWAIG function result
 
         Args:
-            response: Optional natural language response to include
+            response: Optional PROMPT to inject into the model's context. This is
+                     instruction the model reads, not speech played to the caller -
+                     write it in the second person ("Tell them ..."). See the class
+                     docstring.
             post_process: Whether to let AI take another turn before executing actions.
                          Defaults to False (execute actions immediately after response).
+                         Set True when the caller must hear something before the
+                         action lands (hold, connect, transfer, hangup).
         """
-        self.response = response if response is not None else ""
+        self.response: str | dict[str, Any] = response if response is not None else ""
         self.action: list[dict[str, Any]] = []
         self.post_process = post_process
+
+        if tool_result is not None or tool_prompt is not None:
+            self.set_tool_response(tool_result=tool_result, tool_prompt=tool_prompt)
 
     def set_response(self, response: str) -> "FunctionResult":
         """
@@ -91,6 +129,42 @@ class FunctionResult:
             Self for method chaining
         """
         self.response = response
+        return self
+
+    def set_tool_response(
+        self, tool_result: str | None = None, tool_prompt: str | None = None
+    ) -> "FunctionResult":
+        """
+        Set the structured response form, separating outcome from instruction.
+
+        `response` may be a plain string, or an object with two distinct fields:
+
+            {"tool_result": "status: on hold",
+             "tool_prompt": "Tell the caller you are placing them on hold."}
+
+        - tool_result: what the tool DID. A factual status line for the model to
+          reason from ("hold initiated", "payment declined", "3 seats left").
+        - tool_prompt: what the model should now SAY. An instruction, second
+          person, exactly like the string form of `response`.
+
+        Splitting them keeps the model from reading a status line aloud, and
+        keeps the spoken instruction from being mistaken for data.
+
+        Args:
+            tool_result: Factual outcome of the call. Omit if there is nothing
+                to report beyond the instruction.
+            tool_prompt: Instruction for what to say next. Omit for a silent
+                status-only result.
+
+        Returns:
+            Self for method chaining
+        """
+        payload: dict[str, Any] = {}
+        if tool_result is not None:
+            payload["tool_result"] = tool_result
+        if tool_prompt is not None:
+            payload["tool_prompt"] = tool_prompt
+        self.response = payload
         return self
 
     def set_post_process(self, post_process: bool) -> "FunctionResult":
@@ -406,7 +480,7 @@ class FunctionResult:
         """
         # Detect input type and normalize to appropriate format
         if isinstance(swml_content, str):
-            # Raw SWML string - parse to dict so we can add transfer key if needed
+            # Raw SWML string - parse to dict so the action carries a document
             try:
                 import json
 
@@ -422,11 +496,15 @@ class FunctionResult:
         else:
             raise TypeError("swml_content must be string, dict, or SWML object")
 
-        action = swml_data
+        # transfer rides BESIDE the SWML document, not inside it — the same
+        # shape connect() and swml_transfer() emit. Inside the document it is
+        # not a SWML key and the call never exits the agent.
+        action: dict[str, Any] = {"SWML": swml_data}
         if transfer:
             action["transfer"] = "true"
 
-        return self.add_action("SWML", action)
+        self.action.append(action)
+        return self
 
     def hangup(self) -> "FunctionResult":
         """
@@ -437,19 +515,82 @@ class FunctionResult:
         """
         return self.add_action("hangup", True)
 
-    def hold(self, timeout: int = 300) -> "FunctionResult":
+    def hold(
+        self,
+        prompt: str | int | None = None,
+        timeout: int = 300,
+        step: str | None = None,
+        timeout_step: str | None = None,
+    ) -> "FunctionResult":
         """
-        Put the call on hold with optional timeout.
+        Put the call on hold, optionally announcing it and routing what happens next.
+
+        The SWML hold action carries no prompt of its own. And during hold, speech
+        detection is paused and the agent will not respond, so anything the caller
+        needs to hear has to be said BEFORE the action lands.
+
+        Passing `prompt` wires that up for you - it becomes the result's response
+        (a prompt into the model's context, not speech) and switches on
+        post_process, so the model takes one more turn and speaks before the hold
+        executes:
+
+            FunctionResult().hold("Tell the caller you are placing them on hold.", 120)
+
+        `step` and `timeout_step` land the caller in a chosen step when the hold
+        ends, which is how you scope what they can do on the way back. A held call
+        otherwise resumes in the step it left, still holding whatever tool put it
+        on hold. Note this is deferred: the transition fires when the hold actually
+        ends, unlike swml_change_step() which applies immediately - returning both
+        a hold and a change_step in one result moves the caller before the hold
+        even begins.
+
+            FunctionResult().hold(
+                "Tell the caller you are checking if they are available.",
+                300,
+                step="back_with_agent",      # they were released early
+                timeout_step="take_a_message",  # nobody picked up
+            )
+
+        Either may be omitted, and they may name the same step. Omitting both
+        emits the bare integer form and the caller resumes where they were.
 
         Args:
+            prompt: Instruction for the model to deliver before the hold takes
+                effect. Sets `response` and `post_process=True`. Passing an int
+                here is treated as `timeout`, so hold(120) keeps working.
             timeout: Timeout in seconds (max 900, default 300)
+            step: Step to move to when the call is taken off hold.
+            timeout_step: Step to move to when the hold times out. Defaults to
+                the platform's behaviour (resume in place) when omitted.
 
         Returns:
             self for method chaining
         """
+        # Back-compat: hold(120) used to mean hold(timeout=120). `bool` subclasses
+        # `int`, so it is excluded explicitly — a bool is neither a prompt nor a
+        # timeout, and dropping it here keeps the remaining type `str | None`.
+        if isinstance(prompt, bool):
+            prompt = None
+        elif isinstance(prompt, int):
+            timeout, prompt = prompt, None
+
+        if prompt is not None:
+            self.set_tool_response(tool_result="status: on hold", tool_prompt=prompt)
+            self.post_process = True
+
         # Clamp timeout to valid range
         timeout = max(0, min(timeout, 900))
-        return self.add_action("hold", timeout)
+
+        # Bare integer unless routing is requested, so existing output is unchanged
+        if step is None and timeout_step is None:
+            return self.add_action("hold", timeout)
+
+        hold_config: dict[str, Any] = {"timeout": timeout}
+        if step is not None:
+            hold_config["step"] = step
+        if timeout_step is not None:
+            hold_config["timeout_step"] = timeout_step
+        return self.add_action("hold", hold_config)
 
     def wait_for_user(
         self,
@@ -1225,7 +1366,7 @@ class FunctionResult:
         self,
         uri: str,
         control_id: str | None = None,
-        direction: Literal["speak", "hear", "both"] = "both",
+        direction: Literal["speak", "listen", "both"] = "both",
         codec: Literal["PCMU", "PCMA"] = "PCMU",
         rtp_ptime: int = 20,
         status_url: str | None = None,
@@ -1243,7 +1384,7 @@ class FunctionResult:
                         Default is generated and stored in tap_control_id variable
             direction: Direction of audio to tap (default: "both")
                       "speak" = what party says
-                      "hear" = what party hears
+                      "listen" = what party hears
                       "both" = what party hears and says
             codec: Codec for tap media stream - "PCMU" or "PCMA" (default: "PCMU")
             rtp_ptime: Packetization time in milliseconds for RTP (default: 20)
@@ -1256,7 +1397,7 @@ class FunctionResult:
             ValueError: If direction or codec values are invalid
         """
         # Validate direction parameter
-        valid_directions = ["speak", "hear", "both"]
+        valid_directions = ["speak", "listen", "both"]
         if direction not in valid_directions:
             raise ValueError(f"direction must be one of {valid_directions}")
 
@@ -1275,8 +1416,9 @@ class FunctionResult:
         # Add optional parameters if they differ from defaults
         if control_id:
             tap_params["control_id"] = control_id
-        if direction != "both":
-            tap_params["direction"] = direction
+        # Always sent: the verb's own default is "speak", not this helper's
+        # "both", so omitting it would tap less than the caller asked for.
+        tap_params["direction"] = direction
         if codec != "PCMU":
             tap_params["codec"] = codec
         if rtp_ptime != 20:
@@ -1413,37 +1555,72 @@ class FunctionResult:
         )
 
     def rpc_ai_message(
-        self, call_id: str, message_text: str, role: str = "system"
+        self,
+        call_id: str,
+        message_text: str | None = None,
+        role: str = "system",
+        global_data: dict[str, Any] | None = None,
     ) -> "FunctionResult":
         """
-        Inject a message into an AI agent on another call using execute_rpc.
+        Send a message and/or global_data to an AI agent on another call.
 
-        This is useful for cross-call communication, such as notifying a held
-        caller's AI agent about a status change or instructing it to relay
-        a message.
+        Two payloads, either or both:
+
+        - message_text lands as a turn in the other agent's conversation, so it
+          competes for attention with everything else arriving that moment.
+        - global_data is MERGED into the other call's global_data, where it is
+          silent until something expands it. That makes it the better channel
+          for content a later prompt needs to speak, because you can write
+          ``${global_data.your_key}`` directly into the step that will run.
+
+        Setting data and letting the destination step expand it beats injecting a
+        message and hoping the model picks it out of a crowded turn:
+
+            # sender
+            result.rpc_ai_message(call_id, global_data={"decline_message": msg})
+                  .rpc_ai_unhold(call_id)
+
+            # destination step, on the other call
+            step.set_text("Tell the caller: ${global_data.decline_message}")
 
         Args:
             call_id: The call ID of the target call
-            message_text: The message text to inject into the AI conversation
-            role: The role for the message, typically "system" (default: "system")
+            message_text: Optional message to inject into the AI conversation
+            role: Role for the message, typically "system" (default: "system")
+            global_data: Optional object merged into the target call's global_data
 
         Returns:
             self for method chaining
-
-        Example:
-            result = (
-                FunctionResult("I'll let them know.")
-                .rpc_ai_message(
-                    call_id=original_call_id,
-                    message_text="The person you were trying to reach is unavailable. Please take a message."
-                )
-            )
         """
-        return self.execute_rpc(
-            method="ai_message",
-            call_id=call_id,
-            params={"role": role, "message_text": message_text},
-        )
+        params: dict[str, Any] = {}
+        if message_text is not None:
+            params["role"] = role
+            params["message_text"] = message_text
+        if global_data is not None:
+            params["global_data"] = global_data
+        if not params:
+            raise ValueError("rpc_ai_message needs message_text, global_data, or both")
+
+        return self.execute_rpc(method="ai_message", call_id=call_id, params=params)
+
+    def rpc_ai_global_data(
+        self, call_id: str, data: dict[str, Any]
+    ) -> "FunctionResult":
+        """
+        Merge data into another call's global_data, with no conversation turn.
+
+        Thin wrapper over rpc_ai_message(global_data=...). Use it when the other
+        call needs a value rather than an instruction - the destination prompt
+        reads it back with ``${global_data.key}``.
+
+        Args:
+            call_id: The call ID of the target call
+            data: Object merged into that call's global_data
+
+        Returns:
+            self for method chaining
+        """
+        return self.rpc_ai_message(call_id=call_id, global_data=data)
 
     def rpc_ai_unhold(self, call_id: str) -> "FunctionResult":
         """

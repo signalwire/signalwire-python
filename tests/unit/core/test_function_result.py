@@ -358,7 +358,8 @@ class TestFunctionResultFactoryMethods:
     def test_information_response(self) -> None:
         """Test creating informational response"""
         result = FunctionResult("Here is the information you requested")
-
+        
+        assert isinstance(result.response, str)
         assert "information" in result.response.lower()
 
 
@@ -538,8 +539,8 @@ class TestExecuteSwml:
 
         # The original dict should NOT have 'transfer' key added
         assert "transfer" not in original
-        # But the action's SWML should have it
-        assert result.action[0]["SWML"]["transfer"] == "true"
+        # The action carries it beside the document
+        assert result.action[0]["transfer"] == "true"
 
     def test_execute_swml_sdk_object_with_to_dict(self) -> None:
         """Test execute_swml with an SDK object that has to_dict()"""
@@ -566,12 +567,18 @@ class TestExecuteSwml:
             FunctionResult().execute_swml([1, 2, 3])
 
     def test_execute_swml_with_transfer_true(self) -> None:
-        """Test execute_swml with transfer=True adds transfer key"""
+        """transfer is a SIBLING of the SWML key — the platform's documented
+        action shape, and the one connect()/swml_transfer() emit. Inside the
+        document it is not a SWML key and the call never exits the agent."""
         swml_dict = {"version": "1.0.0", "sections": {"main": []}}
         result = FunctionResult().execute_swml(swml_dict, transfer=True)
 
         action = result.action[0]
-        assert action["SWML"]["transfer"] == "true"
+        assert action["transfer"] == "true"
+        assert "transfer" not in action["SWML"]
+        # Same action shape as the live-proven connect() helper
+        connect_action = FunctionResult().connect("+15551234567").action[0]
+        assert set(action.keys()) == set(connect_action.keys())
 
     def test_execute_swml_with_transfer_false(self) -> None:
         """Test execute_swml with transfer=False does not add transfer key"""
@@ -579,6 +586,7 @@ class TestExecuteSwml:
         result = FunctionResult().execute_swml(swml_dict, transfer=False)
 
         action = result.action[0]
+        assert "transfer" not in action
         assert "transfer" not in action["SWML"]
 
     def test_execute_swml_chaining(self) -> None:
@@ -1018,8 +1026,10 @@ class TestTap:
         swml = result.action[0]["SWML"]
         tap_params = swml["sections"]["main"][0]["tap"]
         assert tap_params["uri"] == "rtp://192.168.1.1:5000"
-        # Default params should not be included
-        assert "direction" not in tap_params
+        # direction is always emitted: the SWML verb's own default is "speak",
+        # so leaving it out would silently tap less than the documented "both".
+        assert tap_params["direction"] == "both"
+        # Params whose helper defaults match the verb defaults stay omitted.
         assert "codec" not in tap_params
         assert "rtp_ptime" not in tap_params
 
@@ -1062,11 +1072,18 @@ class TestTap:
         with pytest.raises(ValueError, match="rtp_ptime must be a positive integer"):
             FunctionResult().tap("rtp://1.2.3.4:5000", rtp_ptime=-10)
 
-    def test_tap_direction_hear(self) -> None:
-        """Test tap with direction=hear"""
-        result = FunctionResult().tap("rtp://1.2.3.4:5000", direction="hear")
+    def test_tap_direction_listen(self) -> None:
+        """Test tap with direction=listen (the verb's name for the hear side)"""
+        result = FunctionResult().tap("rtp://1.2.3.4:5000", direction="listen")
         tap_params = result.action[0]["SWML"]["sections"]["main"][0]["tap"]
-        assert tap_params["direction"] == "hear"
+        assert tap_params["direction"] == "listen"
+
+    def test_tap_direction_hear_is_rejected(self) -> None:
+        """"hear" was never a SWML tap direction — the verb's enum is
+        speak/listen/both, so emitting it produced a tap the platform
+        rejects. A loud error beats a silent no-op tap."""
+        with pytest.raises(ValueError, match="direction must be one of"):
+            FunctionResult().tap("rtp://1.2.3.4:5000", direction="hear")  # type: ignore[arg-type]  # intentional invalid input
 
     def test_tap_chaining(self) -> None:
         """Test tap returns self for chaining"""
@@ -1191,7 +1208,7 @@ class TestRecordCall:
         literal_cases = [
             (FunctionResult.record_call, "format", ("wav", "mp3", "mp4")),
             (FunctionResult.record_call, "direction", ("speak", "listen", "both")),
-            (FunctionResult.tap, "direction", ("speak", "hear", "both")),
+            (FunctionResult.tap, "direction", ("speak", "listen", "both")),
             (FunctionResult.tap, "codec", ("PCMU", "PCMA")),
         ]
         for fn, param, expected in literal_cases:

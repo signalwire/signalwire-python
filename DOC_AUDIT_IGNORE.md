@@ -81,6 +81,10 @@ LoggerFactory: structlog.stdlib.LoggerFactory — structlog
 include_router: FastAPI.include_router — framework method
 add_middleware: FastAPI.add_middleware — framework method
 
+## pytest (third-party, used in CONTRIBUTING.md examples)
+
+raises: pytest.raises — third-party test helper shown in the contributing guide's assertion examples
+
 ## prometheus_client (third-party)
 
 inc: prometheus_client.Counter.inc — monitoring example in search_deployment.md
@@ -98,6 +102,7 @@ similarity_search: langchain/pinecone Pinecone.similarity_search — search comp
 build_index: real IndexBuilder.build_index (signalwire/search/index_builder.py) — Python-only search skill, absent from the cross-port surface
 build_index_from_sources: real IndexBuilder.build_index_from_sources (signalwire/search/index_builder.py) — Python-only search skill, absent from the cross-port surface
 migrate_sqlite_to_pgvector: real migration helper (signalwire/search/migration.py) — Python-only search skill, absent from the cross-port surface
+get_stats: real SearchEngine.get_stats (signalwire/search/search_engine.py) — Python-only search skill, absent from the cross-port surface
 argsort: numpy.argsort — DIY search example in docs/search_overview.md
 md: filename-extension regex false positive (matches `file.md (…`) in docs/search_overview.md processing listing
 do_search: user-defined method inside a caching example in docs/search_deployment.md
