@@ -673,14 +673,30 @@ class AgentServer:
         ssl_key_path = os.environ.get("SWML_SSL_KEY_PATH")
         domain = os.environ.get("SWML_DOMAIN")
 
-        # Validate SSL configuration if enabled
+        # Validate SSL configuration if enabled.
+        #
+        # TLS that cannot be configured is a FATAL misconfiguration, never a
+        # silent downgrade: the operator asked for encryption, and starting a
+        # cleartext listener instead would ship their traffic — including the
+        # project id and API token carried in Basic auth — in the clear, with
+        # no error and no way to notice. Refuse to start.
         if ssl_enabled:
             if not ssl_cert_path or not Path(ssl_cert_path).exists():
-                self.logger.warning(f"SSL cert not found: {ssl_cert_path}")
-                ssl_enabled = False
-            elif not ssl_key_path or not Path(ssl_key_path).exists():
-                self.logger.warning(f"SSL key not found: {ssl_key_path}")
-                ssl_enabled = False
+                raise RuntimeError(
+                    f"SWML_SSL_ENABLED is set but the SSL certificate is missing: "
+                    f"SWML_SSL_CERT_PATH={ssl_cert_path!r}. Refusing to start a "
+                    f"plaintext listener when TLS was requested — set "
+                    f"SWML_SSL_CERT_PATH to a readable certificate, or unset "
+                    f"SWML_SSL_ENABLED to serve plain HTTP deliberately."
+                )
+            if not ssl_key_path or not Path(ssl_key_path).exists():
+                raise RuntimeError(
+                    f"SWML_SSL_ENABLED is set but the SSL private key is missing: "
+                    f"SWML_SSL_KEY_PATH={ssl_key_path!r}. Refusing to start a "
+                    f"plaintext listener when TLS was requested — set "
+                    f"SWML_SSL_KEY_PATH to a readable key, or unset "
+                    f"SWML_SSL_ENABLED to serve plain HTTP deliberately."
+                )
 
         # Update server info display with correct protocol
         protocol = "https" if ssl_enabled else "http"

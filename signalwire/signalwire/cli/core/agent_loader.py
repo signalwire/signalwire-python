@@ -512,11 +512,34 @@ def _load_service_impl(
             patches_applied = []
 
             def mock_serve(self: Any, *args: Any, **kwargs: Any) -> Any:
+                """Stand in for ``SWMLService.serve()`` while ``main()`` is called.
+
+                Temporarily patched over the real ``serve()`` on both
+                ``SWMLService`` and ``AgentBase`` so that invoking the module's
+                ``main()`` builds and configures its service without ever
+                starting a web server. The receiver is appended to
+                ``captured_services`` so the caller can recover the configured
+                instance, and all positional/keyword arguments the agent passed
+                to ``serve()`` (host, port, ...) are ignored.
+
+                Returns:
+                    The service instance it was called on.
+                """
                 captured_services.append(self)
                 print("  (Intercepted serve() call, service captured for testing)")
                 return self
 
             def mock_run(self: Any, *args: Any, **kwargs: Any) -> Any:
+                """Stand in for ``SWMLService.run()`` while ``main()`` is called.
+
+                The ``run()`` counterpart of :func:`mock_serve` — patched over
+                ``run()`` on ``SWMLService`` and ``AgentBase`` so an agent whose
+                ``main()`` ends in ``agent.run()`` is captured for inspection
+                instead of blocking in a server loop. Arguments are ignored.
+
+                Returns:
+                    The service instance it was called on.
+                """
                 captured_services.append(self)
                 print("  (Intercepted run() call, service captured for testing)")
                 return self

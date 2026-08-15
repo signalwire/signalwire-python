@@ -10,9 +10,8 @@ Unit tests for ConciergeAgent prefab
 """
 
 import pytest
-import json
 from typing import Any
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import Mock, patch, MagicMock
 
 from signalwire.prefabs.concierge import ConciergeAgent
 
@@ -40,22 +39,25 @@ def _make_concierge(**overrides: Any) -> tuple[ConciergeAgent, MagicMock]:
     """
     # Stub the methods that _setup_concierge_agent calls on `self`
     # so that assertions can be made against them.
-    with patch(
-        "signalwire.prefabs.concierge.AgentBase.__init__", return_value=None
-    ) as mock_init, patch.multiple(
-        ConciergeAgent,
-        prompt_add_section=Mock(),
-        set_post_prompt=Mock(),
-        add_hints=Mock(),
-        set_params=Mock(),
-        set_global_data=Mock(),
-        set_native_functions=Mock(),
+    with (
+        patch(
+            "signalwire.prefabs.concierge.AgentBase.__init__", return_value=None
+        ) as mock_init,
+        patch.multiple(
+            ConciergeAgent,
+            prompt_add_section=Mock(),
+            set_post_prompt=Mock(),
+            add_hints=Mock(),
+            set_params=Mock(),
+            set_global_data=Mock(),
+            set_native_functions=Mock(),
+        ),
     ):
-        kwargs: dict[str, Any] = dict(
-            venue_name=VENUE_NAME,
-            services=SERVICES,
-            amenities=AMENITIES,
-        )
+        kwargs: dict[str, Any] = {
+            "venue_name": VENUE_NAME,
+            "services": SERVICES,
+            "amenities": AMENITIES,
+        }
         kwargs.update(overrides)
         agent = ConciergeAgent(**kwargs)
 
@@ -86,7 +88,7 @@ class TestConciergeInitialization:
 
     def test_super_init_called_with_defaults(self) -> None:
         """super().__init__ receives name, route, and use_pom."""
-        agent, mock_init = _make_concierge()
+        _agent, mock_init = _make_concierge()
 
         mock_init.assert_called_once()
         _, kwargs = mock_init.call_args
@@ -96,7 +98,7 @@ class TestConciergeInitialization:
 
     def test_super_init_custom_name_and_route(self) -> None:
         """Custom name and route are forwarded to AgentBase."""
-        agent, mock_init = _make_concierge(name="lobby", route="/lobby")
+        _agent, mock_init = _make_concierge(name="lobby", route="/lobby")
 
         _, kwargs = mock_init.call_args
         assert kwargs["name"] == "lobby"
@@ -104,7 +106,7 @@ class TestConciergeInitialization:
 
     def test_extra_kwargs_forwarded_to_super(self) -> None:
         """Arbitrary **kwargs are forwarded to AgentBase.__init__."""
-        agent, mock_init = _make_concierge(host="0.0.0.0", port=9090)
+        _agent, mock_init = _make_concierge(host="0.0.0.0", port=9090)
 
         _, kwargs = mock_init.call_args
         assert kwargs["host"] == "0.0.0.0"
@@ -137,7 +139,10 @@ class TestConciergeInitialization:
         assert agent.special_instructions == []
 
     def test_custom_special_instructions(self) -> None:
-        instructions = ["Always upsell the premium package", "Mention the loyalty program"]
+        instructions = [
+            "Always upsell the premium package",
+            "Mention the loyalty program",
+        ]
         agent, _ = _make_concierge(special_instructions=instructions)
         assert agent.special_instructions == instructions
 
@@ -241,7 +246,7 @@ class TestSetupConciergeAgent:
         calls = self.agent.prompt_add_section.call_args_list  # type: ignore[attr-defined]  # mock attr
         amen_calls = [c for c in calls if c[0][0] == "Amenities"]
         subsections = amen_calls[0][1]["subsections"]
-        pool_sub = [s for s in subsections if s["title"] == "Pool"][0]
+        pool_sub = next(s for s in subsections if s["title"] == "Pool")
         assert "7 AM - 10 PM" in pool_sub["body"]
         assert "2nd Floor" in pool_sub["body"]
 
@@ -370,7 +375,10 @@ class TestCheckAvailability:
         assert isinstance(result.response, str)
         # The lowered input "room service" matches "room service" in SERVICES
         assert "room service" in result.response.lower()
-        assert "available" in result.response.lower() or "reservation" in result.response.lower()
+        assert (
+            "available" in result.response.lower()
+            or "reservation" in result.response.lower()
+        )
 
     def test_unknown_service_returns_error(self) -> None:
         from signalwire.core.function_result import FunctionResult
@@ -444,21 +452,30 @@ class TestGetDirections:
 
     def test_unknown_location_returns_fallback(self) -> None:
         result = self.agent.get_directions({"location": "helipad"}, raw_data={})
-        assert "front desk" in result.response.lower() or "don't have" in result.response.lower()
+        assert (
+            "front desk" in result.response.lower()
+            or "don't have" in result.response.lower()
+        )
 
     def test_amenity_without_location_field(self) -> None:
         """If an amenity exists but has no 'location' key, fallback is used."""
         self.agent.amenities["sauna"] = {"hours": "10 AM - 8 PM"}  # no "location"
         result = self.agent.get_directions({"location": "sauna"}, raw_data={})
         # Should hit the else branch because "location" not in details
-        assert "don't have" in result.response.lower() or "front desk" in result.response.lower()
+        assert (
+            "don't have" in result.response.lower()
+            or "front desk" in result.response.lower()
+        )
 
     def test_empty_location_arg(self) -> None:
         result = self.agent.get_directions({}, raw_data={})
         # Empty/missing location must hit the fallback branch — there is
         # no amenity called "", so we expect the same fallback wording as
         # an unknown location.
-        assert "front desk" in result.response.lower() or "don't have" in result.response.lower()
+        assert (
+            "front desk" in result.response.lower()
+            or "don't have" in result.response.lower()
+        )
 
     def test_location_case_sensitivity(self) -> None:
         """Location lookup is lowercased; amenity keys in our fixture are lowercase."""
@@ -507,13 +524,17 @@ class TestOnSummary:
         captured = capsys.readouterr()
         assert captured.out == ""
 
-    def test_empty_string_summary_no_output(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_empty_string_summary_no_output(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         """Empty string is falsy, so no output should be produced."""
         self.agent.on_summary("")  # type: ignore[arg-type]  # intentional: exercises non-dict/str runtime branch
         captured = capsys.readouterr()
         assert captured.out == ""
 
-    def test_empty_dict_summary_treated_as_falsy(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_empty_dict_summary_treated_as_falsy(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         """An empty dict is falsy; no output expected."""
         self.agent.on_summary({})
         captured = capsys.readouterr()
@@ -525,7 +546,9 @@ class TestOnSummary:
         captured = capsys.readouterr()
         assert "test" in captured.out
 
-    def test_exception_during_summary_processing(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_exception_during_summary_processing(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         """If json.dumps raises, the except branch prints the error."""
         bad_summary = Mock()
         bad_summary.__bool__ = Mock(return_value=True)
@@ -533,7 +556,10 @@ class TestOnSummary:
         # to the else branch which calls print(f"... {summary}").  That
         # won't raise, so let's force isinstance to return True and make
         # json.dumps fail.
-        with patch("signalwire.prefabs.concierge.json.dumps", side_effect=TypeError("not serializable")):
+        with patch(
+            "signalwire.prefabs.concierge.json.dumps",
+            side_effect=TypeError("not serializable"),
+        ):
             self.agent.on_summary({"key": "value"})  # type: ignore[arg-type]  # intentional: exercises non-dict/str runtime branch
         captured = capsys.readouterr()
         assert "Error processing summary" in captured.out
@@ -627,14 +653,20 @@ class TestEdgeCases:
             {"service": "anything", "date": "2025-01-01", "time": "10:00"},
             raw_data={},
         )
-        assert "sorry" in result.response.lower() or "don't offer" in result.response.lower()
+        assert (
+            "sorry" in result.response.lower()
+            or "don't offer" in result.response.lower()
+        )
 
     def test_get_directions_with_empty_amenities(self) -> None:
         """When amenities dict is empty, every location is unknown."""
         agent = _make_bare_concierge()
         agent.amenities = {}
         result = agent.get_directions({"location": "pool"}, raw_data={})
-        assert "don't have" in result.response.lower() or "front desk" in result.response.lower()
+        assert (
+            "don't have" in result.response.lower()
+            or "front desk" in result.response.lower()
+        )
 
     def test_hours_of_operation_none_gets_default(self) -> None:
         """Passing None for hours_of_operation uses the default."""

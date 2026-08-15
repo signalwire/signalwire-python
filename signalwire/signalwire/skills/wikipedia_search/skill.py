@@ -190,7 +190,7 @@ class WikipediaSearchSkill(SkillBase):
         except Exception as e:
             return f"Error searching Wikipedia: {e!s}"
 
-    def get_prompt_sections(self) -> list[dict[str, Any]]:
+    def _get_prompt_sections(self) -> list[dict[str, Any]]:
         """
         Return additional context for the agent prompt.
 

@@ -111,8 +111,13 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
     3. Declarative PROMPT_SECTIONS class attribute
     """
 
-    # Subclasses can define this to declaratively set prompt sections
-    PROMPT_SECTIONS = None
+    # Subclasses can define this to declaratively set prompt sections.
+    # ClassVar: this is read off the CLASS (`cls.PROMPT_SECTIONS` in
+    # PromptMixin._process_prompt_sections) and is never assigned per-instance.
+    # Untyped, mypy inferred it as an INSTANCE variable, which made every
+    # subclass that correctly declared `PROMPT_SECTIONS: ClassVar[...]` a
+    # "Cannot override instance variable with class variable" [misc] error.
+    PROMPT_SECTIONS: ClassVar[dict[str, Any] | list[Any] | None] = None
 
     # Attributes set dynamically (on ephemeral copies / when native functions are
     # configured) rather than unconditionally in __init__. Declared here so the
@@ -858,6 +863,33 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         def sip_routing_callback(
             body: dict[str, Any], headers: dict[str, Any]
         ) -> str | None:
+            """
+            Routing callback registered at ``path`` for inbound SIP requests.
+
+            Pulls the SIP username out of the body with
+            ``extract_sip_username`` (the user part of the ``call.to`` SIP/TEL
+            URI) and logs whether it is one of this agent's registered
+            ``_sip_usernames``, compared lower-cased.
+
+            **Always returns None**, on every branch — matched, unmatched, and
+            no-username-found alike. Under the routing contract
+            (``register_routing_callback``) None means "keep processing here",
+            so this endpoint never emits the 307 redirect that a non-None
+            return would produce: an unmatched username is logged and then
+            still handled by this agent rather than being sent elsewhere. The
+            match check is observational only.
+
+            ``headers`` is part of the framework-free ``(body, headers)``
+            callback shape shared with the other ports; this implementation
+            does not read it.
+
+            Args:
+                body: Parsed JSON request body.
+                headers: Request headers (unused here).
+
+            Returns:
+                Always None — continue normal processing at this route.
+            """
             # Extract SIP username from the request body
             sip_username = self.extract_sip_username(body)
 
@@ -1530,6 +1562,75 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         self.log.debug("swml_rendered", swml_size=len(swml))
         return Response(content=swml, media_type="application/json")
 
+    def _swaig_validate_token(
+        self,
+        function_name: str,
+        token: str | None,
+        call_id: str | None,
+    ) -> dict[str, Any] | None:
+        """Enforce `secure=True` for one SWAIG call, independent of transport.
+
+        A tool registered with secure=True REQUIRES a valid __token. An ABSENT
+        token is refused exactly like an invalid one -- omitting the credential
+        must never be weaker than presenting a wrong one, or `secure` would be
+        a flag that permits anonymous calls.
+
+        The refusal shape is a 200 + FunctionResult body, NOT an HTTP error:
+        the engine (mod_openai) has no handling for a SWAIG refusal status, so
+        the tool reports that it cannot execute and the model relays it.
+
+        Returns None to proceed, or the refusal dict to return instead.
+        """
+        req_log = self.log.bind(endpoint="swaig", function=function_name)
+
+        if not (
+            hasattr(self, "_session_manager")
+            and function_name in self._tool_registry._swaig_functions
+        ):
+            return None
+
+        if token:
+            req_log.debug("token_found", token_length=len(token))
+        else:
+            req_log.warning("token_missing")
+
+        # A token can only be validated against a call_id; without one there is
+        # nothing to check it against, so treat it as unvalidated.
+        if token and call_id is not None:
+            is_valid = bool(
+                self._session_manager.validate_tool_token(function_name, token, call_id)
+            )
+        else:
+            is_valid = False
+
+        if is_valid:
+            req_log.debug("token_valid")
+            return None
+
+        if token:
+            req_log.warning("token_invalid")
+            if hasattr(self._session_manager, "debug_token"):
+                debug_info = self._session_manager.debug_token(token)
+                req_log.debug("token_debug", debug=json.dumps(debug_info))
+
+        func_entry = self._tool_registry._swaig_functions.get(function_name)
+        if func_entry and (
+            func_entry.secure
+            if hasattr(func_entry, "secure")
+            else func_entry.get("secure", True)
+        ):
+            req_log.warning("secure_function_refused", token_present=bool(token))
+            from signalwire.core.function_result import FunctionResult
+
+            return FunctionResult(
+                response=(
+                    "I'm sorry, the security token for this function is invalid "
+                    "or expired. I cannot execute this action."
+                )
+            ).to_dict()
+
+        return None
+
     def _swaig_pre_dispatch(
         self,
         request: Request,
@@ -1539,39 +1640,12 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
     ) -> tuple[Any, dict[str, Any] | None]:
         req_log = self.log.bind(endpoint="swaig", function=function_name)
 
-        # Validate security token if present.
+        # Extract the credential from the HTTP query string, then hand the
+        # decision to the transport-agnostic core the serverless modes share.
         token = request.query_params.get("__token") or request.query_params.get("token")
-        if token:
-            req_log.debug("token_found", token_length=len(token))
-            if (
-                hasattr(self, "_session_manager")
-                and function_name in self._tool_registry._swaig_functions
-                and call_id is not None
-            ):
-                is_valid = self._session_manager.validate_tool_token(
-                    function_name, token, call_id
-                )
-                if is_valid:
-                    req_log.debug("token_valid")
-                else:
-                    req_log.warning("token_invalid")
-                    if hasattr(self._session_manager, "debug_token"):
-                        debug_info = self._session_manager.debug_token(token)
-                        req_log.debug("token_debug", debug=json.dumps(debug_info))
-                    func_entry = self._tool_registry._swaig_functions.get(function_name)
-                    if func_entry and (
-                        func_entry.secure
-                        if hasattr(func_entry, "secure")
-                        else func_entry.get("secure", True)
-                    ):
-                        from signalwire.core.function_result import FunctionResult
-
-                        return self, FunctionResult(
-                            response=(
-                                "I'm sorry, the security token for this function is invalid "
-                                "or expired. I cannot execute this action."
-                            )
-                        ).to_dict()
+        refusal = self._swaig_validate_token(function_name, token, call_id)
+        if refusal is not None:
+            return self, refusal
 
         # Dynamic-config ephemeral agent.
         target = self

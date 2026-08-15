@@ -35,6 +35,7 @@ def _make_skill(params: dict[str, Any] | None = None) -> JokeSkill:
 # Class-level attributes
 # ---------------------------------------------------------------------------
 
+
 class TestJokeSkillClassAttributes:
     """Verify class-level constants and metadata."""
 
@@ -60,6 +61,7 @@ class TestJokeSkillClassAttributes:
 # ---------------------------------------------------------------------------
 # Initialization
 # ---------------------------------------------------------------------------
+
 
 class TestJokeSkillInit:
     """Tests for __init__ (inherited from SkillBase)."""
@@ -99,6 +101,7 @@ class TestJokeSkillInit:
 # get_parameter_schema
 # ---------------------------------------------------------------------------
 
+
 class TestGetParameterSchema:
     """Tests for the class method get_parameter_schema."""
 
@@ -132,6 +135,7 @@ class TestGetParameterSchema:
 # ---------------------------------------------------------------------------
 # setup()
 # ---------------------------------------------------------------------------
+
 
 class TestSetup:
     """Tests for the setup method."""
@@ -183,6 +187,7 @@ class TestSetup:
 # ---------------------------------------------------------------------------
 # register_tools()
 # ---------------------------------------------------------------------------
+
 
 class TestRegisterTools:
     """Tests for register_tools method."""
@@ -322,6 +327,7 @@ class TestRegisterTools:
 # get_hints()
 # ---------------------------------------------------------------------------
 
+
 class TestGetHints:
     """Tests for the get_hints method."""
 
@@ -337,6 +343,7 @@ class TestGetHints:
 # ---------------------------------------------------------------------------
 # get_global_data()
 # ---------------------------------------------------------------------------
+
 
 class TestGetGlobalData:
     """Tests for the get_global_data method."""
@@ -357,6 +364,7 @@ class TestGetGlobalData:
 # ---------------------------------------------------------------------------
 # get_prompt_sections()
 # ---------------------------------------------------------------------------
+
 
 class TestGetPromptSections:
     """Tests for the get_prompt_sections method."""
@@ -405,6 +413,7 @@ class TestGetPromptSections:
 # get_instance_key()
 # ---------------------------------------------------------------------------
 
+
 class TestGetInstanceKey:
     """Tests for get_instance_key (single instance skill)."""
 
@@ -416,6 +425,7 @@ class TestGetInstanceKey:
 # ---------------------------------------------------------------------------
 # Edge cases and integration-style tests
 # ---------------------------------------------------------------------------
+
 
 class TestEdgeCases:
     """Edge case and integration-style tests."""
@@ -445,4 +455,7 @@ class TestEdgeCases:
         fallback = swaig_func["data_map"]["output"]
         # The fallback output should have a response field
         assert "response" in fallback
-        assert "sorry" in fallback["response"].lower() or "problem" in fallback["response"].lower()
+        assert (
+            "sorry" in fallback["response"].lower()
+            or "problem" in fallback["response"].lower()
+        )

@@ -31,7 +31,7 @@ import os
 import json
 from pathlib import Path
 from typing import Any
-from unittest.mock import Mock, patch, MagicMock, call
+from unittest.mock import Mock, patch, MagicMock
 from io import StringIO
 
 from fastapi.testclient import TestClient
@@ -43,11 +43,7 @@ class SimpleTestAgent(AgentBase):
     """Simple agent for testing"""
 
     def __init__(self, name: str = "test_agent", route: str = "/test") -> None:
-        super().__init__(
-            name=name,
-            route=route,
-            use_pom=False
-        )
+        super().__init__(name=name, route=route, use_pom=False)
         # Disable auth for testing
         self._auth_enabled = False
 
@@ -76,6 +72,7 @@ class TestAgentServerInitialization:
     def test_app_is_fastapi_instance(self) -> None:
         """Test that self.app is a FastAPI instance"""
         from fastapi import FastAPI
+
         server = AgentServer()
         assert isinstance(server.app, FastAPI)
 
@@ -282,7 +279,10 @@ class TestSipRouting:
         server.register(agent, "/support")
         server.setup_sip_routing(auto_map=True)
         # Should have mapped agent name and route
-        assert "support_bot" in server._sip_username_mapping or "supportbot" in server._sip_username_mapping
+        assert (
+            "support_bot" in server._sip_username_mapping
+            or "supportbot" in server._sip_username_mapping
+        )
         assert "support" in server._sip_username_mapping
 
     def test_setup_sip_routing_no_auto_map(self) -> None:
@@ -347,7 +347,10 @@ class TestSipRouting:
         # Now manually call auto-map
         server._auto_map_agent_sip_usernames(agent, "/sales")
         # "salesbot" (cleaned name) and "sales" (route part) should be mapped
-        assert "salesbot" in server._sip_username_mapping or "sales_bot" in server._sip_username_mapping
+        assert (
+            "salesbot" in server._sip_username_mapping
+            or "sales_bot" in server._sip_username_mapping
+        )
         assert "sales" in server._sip_username_mapping
 
     def test_register_agent_with_sip_routing_enabled(self) -> None:
@@ -397,29 +400,44 @@ class TestRunMethod:
     def test_run_server_mode(self, mock_uvicorn: MagicMock) -> None:
         """Test run() in server mode delegates to _run_server"""
         server = AgentServer()
-        with patch("signalwire.core.logging_config.get_execution_mode", return_value="server"):
+        with patch(
+            "signalwire.core.logging_config.get_execution_mode", return_value="server"
+        ):
             server.run()
         mock_uvicorn.run.assert_called_once()
 
     def test_run_cgi_mode(self) -> None:
         """Test run() in CGI mode delegates to _handle_cgi_request"""
         server = AgentServer()
-        with patch("signalwire.core.logging_config.get_execution_mode", return_value="cgi"):
-            with patch.object(server, '_handle_cgi_request', return_value="cgi_response") as mock_cgi:
-                result = server.run()
-                mock_cgi.assert_called_once()
-                assert result == "cgi_response"
+        with (
+            patch(
+                "signalwire.core.logging_config.get_execution_mode", return_value="cgi"
+            ),
+            patch.object(
+                server, "_handle_cgi_request", return_value="cgi_response"
+            ) as mock_cgi,
+        ):
+            result = server.run()
+            mock_cgi.assert_called_once()
+            assert result == "cgi_response"
 
     def test_run_lambda_mode(self) -> None:
         """Test run() in Lambda mode delegates to _handle_lambda_request"""
         server = AgentServer()
         event = {"path": "/test"}
         context = Mock()
-        with patch("signalwire.core.logging_config.get_execution_mode", return_value="lambda"):
-            with patch.object(server, '_handle_lambda_request', return_value={"statusCode": 200}) as mock_lambda:
-                result = server.run(event=event, context=context)
-                mock_lambda.assert_called_once_with(event, context)
-                assert result["statusCode"] == 200
+        with (
+            patch(
+                "signalwire.core.logging_config.get_execution_mode",
+                return_value="lambda",
+            ),
+            patch.object(
+                server, "_handle_lambda_request", return_value={"statusCode": 200}
+            ) as mock_lambda,
+        ):
+            result = server.run(event=event, context=context)
+            mock_lambda.assert_called_once_with(event, context)
+            assert result["statusCode"] == 200
 
 
 class TestRunServer:
@@ -431,10 +449,7 @@ class TestRunServer:
         server = AgentServer(host="0.0.0.0", port=3000)
         server._run_server()
         mock_uvicorn.run.assert_called_once_with(
-            server.app,
-            host="0.0.0.0",
-            port=3000,
-            log_level="info"
+            server.app, host="0.0.0.0", port=3000, log_level="info"
         )
 
     @patch("signalwire.agent_server.uvicorn")
@@ -443,17 +458,16 @@ class TestRunServer:
         server = AgentServer()
         server._run_server(host="127.0.0.1", port=9999)
         mock_uvicorn.run.assert_called_once_with(
-            server.app,
-            host="127.0.0.1",
-            port=9999,
-            log_level="info"
+            server.app, host="127.0.0.1", port=9999, log_level="info"
         )
 
     @patch("signalwire.agent_server.uvicorn")
     def test_run_server_with_ssl(self, mock_uvicorn: MagicMock) -> None:
         """Test _run_server with SSL enabled via environment variables"""
-        with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as cert_f, \
-             tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as key_f:
+        with (
+            tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as cert_f,
+            tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as key_f,
+        ):
             cert_path = cert_f.name
             key_path = key_f.name
 
@@ -476,12 +490,18 @@ class TestRunServer:
                     ssl_keyfile=key_path,
                 )
         finally:
-            os.unlink(cert_path)
-            os.unlink(key_path)
+            Path(cert_path).unlink()
+            Path(key_path).unlink()
 
     @patch("signalwire.agent_server.uvicorn")
-    def test_run_server_ssl_disabled_bad_cert(self, mock_uvicorn: MagicMock) -> None:
-        """Test _run_server falls back to non-SSL if cert not found"""
+    def test_run_server_missing_cert_refuses_to_start(
+        self, mock_uvicorn: MagicMock
+    ) -> None:
+        """TLS requested but no cert must FAIL, never serve plaintext.
+
+        Silently clearing ssl_enabled would hand the operator a cleartext
+        listener carrying their Basic-auth credentials, with no error.
+        """
         env = {
             "SWML_SSL_ENABLED": "true",
             "SWML_SSL_CERT_PATH": "/nonexistent/cert.pem",
@@ -489,13 +509,29 @@ class TestRunServer:
         }
         with patch.dict(os.environ, env, clear=False):
             server = AgentServer()
+            with pytest.raises(RuntimeError, match="SSL certificate is missing"):
+                server._run_server()
+            mock_uvicorn.run.assert_not_called()
+
+    @patch("signalwire.agent_server.uvicorn")
+    def test_run_server_ssl_disabled_still_serves_plain_http(
+        self, mock_uvicorn: MagicMock
+    ) -> None:
+        """Scope control: with SSL off, plain HTTP must still serve.
+
+        The refusal above must reject only a TLS request it cannot satisfy —
+        not every start.
+        """
+        env = {
+            "SWML_SSL_ENABLED": "false",
+            "SWML_SSL_CERT_PATH": "/nonexistent/cert.pem",
+            "SWML_SSL_KEY_PATH": "/nonexistent/key.pem",
+        }
+        with patch.dict(os.environ, env, clear=False):
+            server = AgentServer()
             server._run_server()
-            # Should call without ssl params
             mock_uvicorn.run.assert_called_once_with(
-                server.app,
-                host="0.0.0.0",
-                port=3000,
-                log_level="info"
+                server.app, host="0.0.0.0", port=3000, log_level="info"
             )
 
     @patch("signalwire.agent_server.uvicorn")
@@ -507,8 +543,10 @@ class TestRunServer:
         mock_uvicorn.run.assert_called_once()
 
     @patch("signalwire.agent_server.uvicorn")
-    def test_run_server_ssl_missing_key(self, mock_uvicorn: MagicMock) -> None:
-        """Test _run_server falls back when SSL key path is missing"""
+    def test_run_server_missing_key_refuses_to_start(
+        self, mock_uvicorn: MagicMock
+    ) -> None:
+        """TLS requested with a cert but no key must FAIL, never serve plaintext."""
         with tempfile.NamedTemporaryFile(suffix=".pem", delete=False) as cert_f:
             cert_path = cert_f.name
 
@@ -520,16 +558,11 @@ class TestRunServer:
             }
             with patch.dict(os.environ, env, clear=False):
                 server = AgentServer()
-                server._run_server()
-                # Should fall back to non-SSL
-                mock_uvicorn.run.assert_called_once_with(
-                    server.app,
-                    host="0.0.0.0",
-                    port=3000,
-                    log_level="info"
-                )
+                with pytest.raises(RuntimeError, match="SSL private key is missing"):
+                    server._run_server()
+                mock_uvicorn.run.assert_not_called()
         finally:
-            os.unlink(cert_path)
+            Path(cert_path).unlink()
 
 
 class TestHandleLambdaRequest:
@@ -639,10 +672,12 @@ class TestHandleCgiRequest:
     def test_cgi_no_path_returns_404(self) -> None:
         """Test CGI request with no PATH_INFO returns 404"""
         server = AgentServer()
-        with patch.dict(os.environ, {"PATH_INFO": ""}, clear=False):
-            with patch("sys.stdout", new_callable=StringIO):
-                result = server._handle_cgi_request()
-                assert "404 Not Found" in result
+        with (
+            patch.dict(os.environ, {"PATH_INFO": ""}, clear=False),
+            patch("sys.stdout", new_callable=StringIO),
+        ):
+            result = server._handle_cgi_request()
+            assert "404 Not Found" in result
 
     def test_cgi_matching_agent_returns_swml(self) -> None:
         """Test CGI request that matches an agent returns SWML"""
@@ -650,10 +685,12 @@ class TestHandleCgiRequest:
         agent = SimpleTestAgent(name="myagent")
         agent._render_swml = Mock(return_value={"version": "1.0.0"})  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
-        with patch.dict(os.environ, {"PATH_INFO": "/myagent"}, clear=False):
-            with patch("sys.stdout", new_callable=StringIO):
-                result = server._handle_cgi_request()
-                assert "200 OK" in result
+        with (
+            patch.dict(os.environ, {"PATH_INFO": "/myagent"}, clear=False),
+            patch("sys.stdout", new_callable=StringIO),
+        ):
+            result = server._handle_cgi_request()
+            assert "200 OK" in result
 
     def test_cgi_matching_agent_render_error(self) -> None:
         """Test CGI request when agent render fails returns 500"""
@@ -661,19 +698,23 @@ class TestHandleCgiRequest:
         agent = SimpleTestAgent(name="broken")
         agent._render_swml = Mock(side_effect=Exception("render failed"))  # type: ignore[method-assign]  # mock
         server.register(agent, "/broken")
-        with patch.dict(os.environ, {"PATH_INFO": "/broken"}, clear=False):
-            with patch("sys.stdout", new_callable=StringIO):
-                result = server._handle_cgi_request()
-                assert "500 Internal Server Error" in result
+        with (
+            patch.dict(os.environ, {"PATH_INFO": "/broken"}, clear=False),
+            patch("sys.stdout", new_callable=StringIO),
+        ):
+            result = server._handle_cgi_request()
+            assert "500 Internal Server Error" in result
 
     def test_cgi_no_matching_agent_returns_404(self) -> None:
         """Test CGI request with no matching agent returns 404"""
         server = AgentServer()
         server.register(SimpleTestAgent(), "/test")
-        with patch.dict(os.environ, {"PATH_INFO": "/nonexistent"}, clear=False):
-            with patch("sys.stdout", new_callable=StringIO):
-                result = server._handle_cgi_request()
-                assert "404 Not Found" in result
+        with (
+            patch.dict(os.environ, {"PATH_INFO": "/nonexistent"}, clear=False),
+            patch("sys.stdout", new_callable=StringIO),
+        ):
+            result = server._handle_cgi_request()
+            assert "404 Not Found" in result
 
     def test_cgi_swaig_subpath(self) -> None:
         """Test CGI request to swaig subpath with no body"""
@@ -709,10 +750,12 @@ class TestHandleCgiRequest:
         agent._execute_swaig_function = Mock(side_effect=Exception("swaig error"))  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
         env = {"PATH_INFO": "/myagent/swaig", "CONTENT_LENGTH": "0"}
-        with patch.dict(os.environ, env, clear=False):
-            with patch("sys.stdout", new_callable=StringIO):
-                result = server._handle_cgi_request()
-                assert "500 Internal Server Error" in result
+        with (
+            patch.dict(os.environ, env, clear=False),
+            patch("sys.stdout", new_callable=StringIO),
+        ):
+            result = server._handle_cgi_request()
+            assert "500 Internal Server Error" in result
 
     def test_cgi_swaig_function_exception(self) -> None:
         """Test CGI request to swaig/<func> that raises exception"""
@@ -721,10 +764,12 @@ class TestHandleCgiRequest:
         agent._execute_swaig_function = Mock(side_effect=Exception("func error"))  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
         env = {"PATH_INFO": "/myagent/swaig/broken_func", "CONTENT_LENGTH": "0"}
-        with patch.dict(os.environ, env, clear=False):
-            with patch("sys.stdout", new_callable=StringIO):
-                result = server._handle_cgi_request()
-                assert "500 Internal Server Error" in result
+        with (
+            patch.dict(os.environ, env, clear=False),
+            patch("sys.stdout", new_callable=StringIO),
+        ):
+            result = server._handle_cgi_request()
+            assert "500 Internal Server Error" in result
 
 
 class TestFormatCgiResponse:
@@ -750,7 +795,9 @@ class TestFormatCgiResponse:
         """Test formatting with custom status"""
         server = AgentServer()
         with patch("sys.stdout", new_callable=StringIO):
-            result = server._format_cgi_response({"error": "nope"}, status="404 Not Found")
+            result = server._format_cgi_response(
+                {"error": "nope"}, status="404 Not Found"
+            )
         assert "Status: 404 Not Found" in result
 
     def test_format_cgi_response_custom_content_type(self) -> None:
@@ -773,8 +820,10 @@ class TestGlobalRoutingCallback:
         server.register(agent2, "/a2")
 
         callback = Mock()
-        with patch.object(agent1, 'register_routing_callback') as mock1, \
-             patch.object(agent2, 'register_routing_callback') as mock2:
+        with (
+            patch.object(agent1, "register_routing_callback") as mock1,
+            patch.object(agent2, "register_routing_callback") as mock2,
+        ):
             server.register_global_routing_callback(callback, path="/sip")
             mock1.assert_called_once_with(callback, path="/sip")
             mock2.assert_called_once_with(callback, path="/sip")
@@ -786,7 +835,7 @@ class TestGlobalRoutingCallback:
         server.register(agent, "/a1")
 
         callback = Mock()
-        with patch.object(agent, 'register_routing_callback') as mock_reg:
+        with patch.object(agent, "register_routing_callback") as mock_reg:
             server.register_global_routing_callback(callback, path="sip/")
             mock_reg.assert_called_once_with(callback, path="/sip")
 
@@ -799,7 +848,7 @@ class TestServeStaticFiles:
         server = AgentServer()
         with tempfile.TemporaryDirectory() as tmpdir:
             server.serve_static_files(tmpdir)
-            assert hasattr(server, '_static_directories')
+            assert hasattr(server, "_static_directories")
             assert "" in server._static_directories or "/" in server._static_directories
 
     def test_serve_static_files_nonexistent_directory(self) -> None:
@@ -811,9 +860,11 @@ class TestServeStaticFiles:
     def test_serve_static_files_file_not_directory(self) -> None:
         """Test serve_static_files with a file path instead of directory"""
         server = AgentServer()
-        with tempfile.NamedTemporaryFile() as tmpfile:
-            with pytest.raises(ValueError, match="not a directory"):
-                server.serve_static_files(tmpfile.name)
+        with (
+            tempfile.NamedTemporaryFile() as tmpfile,
+            pytest.raises(ValueError, match="not a directory"),
+        ):
+            server.serve_static_files(tmpfile.name)
 
     def test_serve_static_files_custom_route(self) -> None:
         """Test serve_static_files with custom route prefix"""
@@ -832,6 +883,7 @@ class TestServeStaticFiles:
         """_serve_static_file returns a FileResponse pointed at the
         requested file, not at some other path."""
         from fastapi.responses import FileResponse
+
         server = AgentServer()
         with tempfile.TemporaryDirectory() as tmpdir:
             resolved_dir = Path(tmpdir).resolve()
@@ -860,6 +912,7 @@ class TestServeStaticFiles:
         returned FileResponse must point at index.html, not at the
         directory or some sibling file."""
         from fastapi.responses import FileResponse
+
         server = AgentServer()
         with tempfile.TemporaryDirectory() as tmpdir:
             resolved_dir = Path(tmpdir).resolve()
@@ -879,6 +932,7 @@ class TestServeStaticFiles:
         specifically — not at the directory itself, and not at any
         sibling file the directory happens to contain."""
         from fastapi.responses import FileResponse
+
         server = AgentServer()
         with tempfile.TemporaryDirectory() as tmpdir:
             resolved_dir = Path(tmpdir).resolve()
@@ -894,10 +948,10 @@ class TestServeStaticFiles:
             assert isinstance(result, FileResponse)
             assert str(result.path) == str(index_file)
 
-    def test_serve_static_file_route_not_found(self) -> None:
+    def test_serve_static_file_route_not_found(self, tmp_path: Path) -> None:
         """Test _serve_static_file returns None for unknown route"""
         server = AgentServer()
-        server._static_directories = {"/assets": Path("/tmp")}
+        server._static_directories = {"/assets": tmp_path}
         result = server._serve_static_file("test.txt", route="/other")
         assert result is None
 
@@ -917,26 +971,28 @@ class TestAgentServerRouting:
         server.register(SimpleTestAgent(), "/agent")
 
         # Add a custom route AFTER server creation (like santa's /get_token)
-        @server.app.get('/get_token')
+        @server.app.get("/get_token")
         def get_token() -> dict[str, Any]:
             return {"token": "test-token-123", "success": True}
 
         # Add another custom route
-        @server.app.get('/health_custom')
+        @server.app.get("/health_custom")
         def health_custom() -> dict[str, Any]:
             return {"status": "healthy"}
 
         client = TestClient(server.app)
 
         # Test custom route works
-        response = client.get('/get_token')
-        assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
+        response = client.get("/get_token")
+        assert response.status_code == 200, (
+            f"Expected 200, got {response.status_code}: {response.text}"
+        )
         data = response.json()
         assert data["token"] == "test-token-123"
         assert data["success"] is True
 
         # Test another custom route
-        response = client.get('/health_custom')
+        response = client.get("/health_custom")
         assert response.status_code == 200
         assert response.json()["status"] == "healthy"
 
@@ -948,15 +1004,14 @@ class TestAgentServerRouting:
         client = TestClient(server.app)
 
         # Health endpoint should work
-        response = client.get('/health')
+        response = client.get("/health")
         assert response.status_code == 200
         assert response.json()["status"] == "ok"
 
         # Ready endpoint should work
-        response = client.get('/ready')
+        response = client.get("/ready")
         assert response.status_code == 200
         assert response.json()["status"] == "ready"
-
 
     def test_multiple_custom_routes(self) -> None:
         """Test multiple custom routes all work correctly"""
@@ -964,29 +1019,29 @@ class TestAgentServerRouting:
         server.register(SimpleTestAgent(), "/agent")
 
         # Add multiple custom routes
-        @server.app.get('/route1')
+        @server.app.get("/route1")
         def route1() -> dict[str, Any]:
             return {"route": 1}
 
-        @server.app.get('/route2')
+        @server.app.get("/route2")
         def route2() -> dict[str, Any]:
             return {"route": 2}
 
-        @server.app.post('/route3')
+        @server.app.post("/route3")
         def route3() -> dict[str, Any]:
             return {"route": 3}
 
-        @server.app.get('/nested/deep/route')
+        @server.app.get("/nested/deep/route")
         def nested() -> dict[str, Any]:
             return {"route": "nested"}
 
         client = TestClient(server.app)
 
         # All routes should work
-        assert client.get('/route1').json()["route"] == 1
-        assert client.get('/route2').json()["route"] == 2
-        assert client.post('/route3').json()["route"] == 3
-        assert client.get('/nested/deep/route').json()["route"] == "nested"
+        assert client.get("/route1").json()["route"] == 1
+        assert client.get("/route2").json()["route"] == 2
+        assert client.post("/route3").json()["route"] == 3
+        assert client.get("/nested/deep/route").json()["route"] == "nested"
 
     def test_nonexistent_route_returns_404(self) -> None:
         """Test that truly nonexistent routes return 404"""
@@ -996,7 +1051,7 @@ class TestAgentServerRouting:
         client = TestClient(server.app)
 
         # Nonexistent route should 404
-        response = client.get('/nonexistent/path')
+        response = client.get("/nonexistent/path")
         assert response.status_code == 404
 
     def test_post_custom_routes_work(self) -> None:
@@ -1004,13 +1059,13 @@ class TestAgentServerRouting:
         server = AgentServer()
         server.register(SimpleTestAgent(), "/agent")
 
-        @server.app.post('/webhook')
+        @server.app.post("/webhook")
         def webhook() -> dict[str, Any]:
             return {"received": True}
 
         client = TestClient(server.app)
 
-        response = client.post('/webhook', json={"data": "test"})
+        response = client.post("/webhook", json={"data": "test"})
         assert response.status_code == 200
         assert response.json()["received"] is True
 
@@ -1032,19 +1087,19 @@ class TestAgentServerGunicornCompatibility:
         app = server.app
 
         # Add routes to the app (like santa does)
-        @app.get('/get_token')
+        @app.get("/get_token")
         def get_token() -> dict[str, Any]:
             return {"token": "gunicorn-test"}
 
         client = TestClient(app)
 
         # Custom route should work
-        response = client.get('/get_token')
+        response = client.get("/get_token")
         assert response.status_code == 200
         assert response.json()["token"] == "gunicorn-test"
 
         # Health should work
-        response = client.get('/health')
+        response = client.get("/health")
         assert response.status_code == 200
 
     def test_custom_routes_work_with_gunicorn_pattern(self) -> None:
@@ -1053,15 +1108,15 @@ class TestAgentServerGunicornCompatibility:
         server.register(SimpleTestAgent(), "/agent")
 
         # Add multiple custom endpoints like a real app would
-        @server.app.get('/get_credentials')
+        @server.app.get("/get_credentials")
         def get_credentials() -> dict[str, Any]:
             return {"user": "test", "pass": "secret"}
 
-        @server.app.get('/get_resource_info')
+        @server.app.get("/get_resource_info")
         def get_resource_info() -> dict[str, Any]:
             return {"resource_id": "123"}
 
-        @server.app.post('/webhook')
+        @server.app.post("/webhook")
         def webhook() -> dict[str, Any]:
             return {"status": "received"}
 
@@ -1069,9 +1124,9 @@ class TestAgentServerGunicornCompatibility:
         client = TestClient(server.app)
 
         # All custom routes should work
-        assert client.get('/get_credentials').status_code == 200
-        assert client.get('/get_resource_info').status_code == 200
-        assert client.post('/webhook').status_code == 200
+        assert client.get("/get_credentials").status_code == 200
+        assert client.get("/get_resource_info").status_code == 200
+        assert client.post("/webhook").status_code == 200
 
         # Health should still work
-        assert client.get('/health').status_code == 200
+        assert client.get("/health").status_code == 200

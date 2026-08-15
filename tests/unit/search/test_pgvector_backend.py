@@ -14,7 +14,7 @@ Unit tests for pgvector backend module
 import pytest
 import json
 import logging
-from unittest.mock import Mock, patch, MagicMock, call, PropertyMock
+from unittest.mock import Mock, patch, MagicMock
 from datetime import datetime
 from collections.abc import Iterable, Iterator
 from typing import Any
@@ -31,37 +31,58 @@ from typing import Any
 # objects whose str() contains the actual SQL text and identifiers.
 # ---------------------------------------------------------------------------
 
+
+class _ConnectFailure(Exception):
+    """Stands in for the driver error psycopg2.connect() raises.
+
+    psycopg2 is not installed in the test environment (the whole module is
+    mocked), so ``psycopg2.OperationalError`` is not importable here. A
+    dedicated type lets the tests assert that ``_connect`` re-raises the
+    driver's own exception unchanged instead of passing on any error at all.
+    """
+
+
 class _FakeIdentifier:
     """Mimics psycopg2.sql.Identifier for testing."""
+
     def __init__(self, name: str) -> None:
         self._name = name
+
     def __repr__(self) -> str:
         return f"Identifier({self._name!r})"
+
     def __str__(self) -> str:
         return str(self._name)
 
 
 class _FakeComposed:
     """Mimics psycopg2.sql.Composed for testing."""
+
     def __init__(self, parts: Iterable[Any]) -> None:
         self._parts = list(parts)
+
     def __str__(self) -> str:
         return "".join(str(p) for p in self._parts)
+
     def as_string(self, conn: Any) -> str:
         return str(self)
 
 
 class _FakeSQL:
     """Mimics psycopg2.sql.SQL for testing."""
+
     def __init__(self, template: str) -> None:
         self._template = template
+
     def format(self, **kwargs: Any) -> "_FakeComposed":
         result = self._template
         for key, val in kwargs.items():
             result = result.replace("{" + key + "}", str(val))
         return _FakeComposed([result])
+
     def join(self, parts: Iterable[Any]) -> "_FakeComposed":
         return _FakeComposed([str(p) for p in parts])
+
     def __str__(self) -> str:
         return str(self._template)
 
@@ -86,23 +107,27 @@ mock_pgvector_psycopg2.register_vector = mock_register_vector
 import sys
 
 # Create a proper module-like object for psycopg2.sql
-_fake_sql_module = type('Module', (), {
-    'SQL': _FakeSQL, 'Identifier': _FakeIdentifier,
-    '__name__': 'psycopg2.sql',
-})()
+_fake_sql_module = type(
+    "Module",
+    (),
+    {
+        "SQL": _FakeSQL,
+        "Identifier": _FakeIdentifier,
+        "__name__": "psycopg2.sql",
+    },
+)()
 mock_psycopg2.sql = _fake_sql_module
 
 # Force-set modules (don't use setdefault for psycopg2 since it may already be set)
-sys.modules['psycopg2'] = mock_psycopg2
-sys.modules['psycopg2.sql'] = _fake_sql_module
-sys.modules['psycopg2.extras'] = mock_psycopg2_extras
-sys.modules.setdefault('pgvector', MagicMock())
-sys.modules.setdefault('pgvector.psycopg2', mock_pgvector_psycopg2)
+sys.modules["psycopg2"] = mock_psycopg2
+sys.modules["psycopg2.sql"] = _fake_sql_module
+sys.modules["psycopg2.extras"] = mock_psycopg2_extras
+sys.modules.setdefault("pgvector", MagicMock())
+sys.modules.setdefault("pgvector.psycopg2", mock_pgvector_psycopg2)
 
 # Force reload the module to pick up the fake SQL classes
-import importlib
-if 'signalwire.search.pgvector_backend' in sys.modules:
-    del sys.modules['signalwire.search.pgvector_backend']
+if "signalwire.search.pgvector_backend" in sys.modules:
+    del sys.modules["signalwire.search.pgvector_backend"]
 
 # Now import the module under test.  Because we injected the mocks above,
 # PGVECTOR_AVAILABLE will be True and psycopg2_sql will be our fake module.
@@ -116,6 +141,7 @@ from signalwire.search.pgvector_backend import (
 # ---------------------------------------------------------------------------
 # Helper: build a mock psycopg2 connection and cursor
 # ---------------------------------------------------------------------------
+
 
 def _make_mock_conn() -> tuple[MagicMock, MagicMock]:
     """Return a mock connection with a context-managed cursor."""
@@ -138,9 +164,9 @@ def _make_mock_conn() -> tuple[MagicMock, MagicMock]:
 class TestPgVectorBackendInit:
     """Test PgVectorBackend initialization"""
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
     def test_init_success(self, mock_reg: MagicMock, mock_pg: MagicMock) -> None:
         """Test successful initialization connects and registers vector"""
         mock_conn = MagicMock()
@@ -153,26 +179,30 @@ class TestPgVectorBackendInit:
         assert backend.connection_string == "postgresql://localhost/testdb"
         assert backend.conn is mock_conn
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', False)
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", False)
     def test_init_pgvector_not_available(self) -> None:
         """Test initialization raises ImportError when pgvector is not installed"""
         with pytest.raises(ImportError, match="pgvector dependencies not available"):
             PgVectorBackend("postgresql://localhost/testdb")
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    def test_init_connection_failure(self, mock_reg: MagicMock, mock_pg: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    def test_init_connection_failure(
+        self, mock_reg: MagicMock, mock_pg: MagicMock
+    ) -> None:
         """Test initialization when connection fails"""
         mock_pg.connect.side_effect = Exception("Connection refused")
 
         with pytest.raises(Exception, match="Connection refused"):
             PgVectorBackend("postgresql://localhost/testdb")
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    def test_init_vector_type_not_found(self, mock_reg: MagicMock, mock_pg: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    def test_init_vector_type_not_found(
+        self, mock_reg: MagicMock, mock_pg: MagicMock
+    ) -> None:
         """Test initialization when vector extension is missing in database"""
         mock_pg.connect.side_effect = Exception("vector type not found in database")
 
@@ -186,7 +216,11 @@ class TestPgVectorBackendConnect:
     @pytest.fixture(autouse=True)
     def _enable_propagation(self) -> Iterator[None]:
         """Ensure logging is configured and propagation is on so caplog works."""
-        from signalwire.core.logging_config import reset_logging_configuration, configure_logging
+        from signalwire.core.logging_config import (
+            reset_logging_configuration,
+            configure_logging,
+        )
+
         reset_logging_configuration()
         configure_logging()
         sw = logging.getLogger("signalwire")
@@ -194,10 +228,12 @@ class TestPgVectorBackendConnect:
         yield
         sw.propagate = False
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    def test_connect_logs_success(self, mock_reg: MagicMock, mock_pg: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    def test_connect_logs_success(
+        self, mock_reg: MagicMock, mock_pg: MagicMock, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Test that successful connection logs info message"""
         mock_conn = MagicMock()
         mock_pg.connect.return_value = mock_conn
@@ -206,30 +242,43 @@ class TestPgVectorBackendConnect:
             backend = PgVectorBackend("postgresql://localhost/testdb")
 
         assert "Connected to PostgreSQL database" in caplog.text
+        # The success log must correspond to a real connection being retained,
+        # not just an info line emitted on the way past.
+        assert backend.conn is mock_conn
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    def test_connect_vector_type_error_logs_specific_message(self, mock_reg: MagicMock, mock_pg: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    def test_connect_vector_type_error_logs_specific_message(
+        self, mock_reg: MagicMock, mock_pg: MagicMock, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Test vector type not found produces specific error log"""
-        mock_pg.connect.side_effect = Exception("vector type not found in the catalog")
+        mock_pg.connect.side_effect = _ConnectFailure(
+            "vector type not found in the catalog"
+        )
 
-        with caplog.at_level(logging.ERROR, logger="signalwire.search.pgvector_backend"):
-            with pytest.raises(Exception):
-                PgVectorBackend("postgresql://localhost/testdb")
+        with (
+            caplog.at_level(logging.ERROR, logger="signalwire.search.pgvector_backend"),
+            pytest.raises(_ConnectFailure, match="vector type not found"),
+        ):
+            PgVectorBackend("postgresql://localhost/testdb")
 
         assert "pgvector extension not installed" in caplog.text
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    def test_connect_generic_error_logs_message(self, mock_reg: MagicMock, mock_pg: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    def test_connect_generic_error_logs_message(
+        self, mock_reg: MagicMock, mock_pg: MagicMock, caplog: pytest.LogCaptureFixture
+    ) -> None:
         """Test generic connection failure produces error log"""
-        mock_pg.connect.side_effect = Exception("host not reachable")
+        mock_pg.connect.side_effect = _ConnectFailure("host not reachable")
 
-        with caplog.at_level(logging.ERROR, logger="signalwire.search.pgvector_backend"):
-            with pytest.raises(Exception):
-                PgVectorBackend("postgresql://localhost/testdb")
+        with (
+            caplog.at_level(logging.ERROR, logger="signalwire.search.pgvector_backend"),
+            pytest.raises(_ConnectFailure, match="host not reachable"),
+        ):
+            PgVectorBackend("postgresql://localhost/testdb")
 
         assert "Failed to connect to database" in caplog.text
 
@@ -237,10 +286,12 @@ class TestPgVectorBackendConnect:
 class TestPgVectorBackendEnsureConnection:
     """Test PgVectorBackend _ensure_connection"""
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    def test_ensure_connection_when_open(self, mock_reg: MagicMock, mock_pg: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    def test_ensure_connection_when_open(
+        self, mock_reg: MagicMock, mock_pg: MagicMock
+    ) -> None:
         """Test _ensure_connection does nothing when connection is alive"""
         mock_conn = MagicMock()
         mock_conn.closed = False
@@ -253,10 +304,12 @@ class TestPgVectorBackendEnsureConnection:
         # Should not reconnect
         assert mock_pg.connect.call_count == 1
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    def test_ensure_connection_reconnects_when_closed(self, mock_reg: MagicMock, mock_pg: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    def test_ensure_connection_reconnects_when_closed(
+        self, mock_reg: MagicMock, mock_pg: MagicMock
+    ) -> None:
         """Test _ensure_connection reconnects when connection is closed"""
         mock_conn = MagicMock()
         mock_conn.closed = False
@@ -270,10 +323,12 @@ class TestPgVectorBackendEnsureConnection:
         backend._ensure_connection()
         assert mock_pg.connect.call_count == 2
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    def test_ensure_connection_reconnects_when_none(self, mock_reg: MagicMock, mock_pg: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    def test_ensure_connection_reconnects_when_none(
+        self, mock_reg: MagicMock, mock_pg: MagicMock
+    ) -> None:
         """Test _ensure_connection reconnects when conn is None"""
         mock_conn = MagicMock()
         mock_conn.closed = False
@@ -292,9 +347,11 @@ class TestPgVectorBackendCreateSchema:
 
     def _make_backend(self) -> tuple[PgVectorBackend, MagicMock, MagicMock]:
         """Create a PgVectorBackend with a mocked connection."""
-        with patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True), \
-             patch('signalwire.search.pgvector_backend.psycopg2') as mock_pg, \
-             patch('signalwire.search.pgvector_backend.register_vector'):
+        with (
+            patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True),
+            patch("signalwire.search.pgvector_backend.psycopg2") as mock_pg,
+            patch("signalwire.search.pgvector_backend.register_vector"),
+        ):
             mock_conn, mock_cursor = _make_mock_conn()
             mock_pg.connect.return_value = mock_conn
             backend = PgVectorBackend("postgresql://localhost/testdb")
@@ -312,33 +369,51 @@ class TestPgVectorBackendCreateSchema:
         ]
 
         # Extensions
-        assert any("CREATE EXTENSION IF NOT EXISTS vector" in sql for sql in executed_sqls)
-        assert any("CREATE EXTENSION IF NOT EXISTS pg_trgm" in sql for sql in executed_sqls)
+        assert any(
+            "CREATE EXTENSION IF NOT EXISTS vector" in sql for sql in executed_sqls
+        )
+        assert any(
+            "CREATE EXTENSION IF NOT EXISTS pg_trgm" in sql for sql in executed_sqls
+        )
 
         # Main table
-        assert any("CREATE TABLE IF NOT EXISTS chunks_my_collection" in sql for sql in executed_sqls)
+        assert any(
+            "CREATE TABLE IF NOT EXISTS chunks_my_collection" in sql
+            for sql in executed_sqls
+        )
         # embedding dimension is passed as a parameter, check it's in the params
-        create_table_calls = [c for c in mock_cursor.execute.call_args_list
-                              if "CREATE TABLE IF NOT EXISTS" in str(c[0][0]) and "chunks_" in str(c[0][0])]
+        create_table_calls = [
+            c
+            for c in mock_cursor.execute.call_args_list
+            if "CREATE TABLE IF NOT EXISTS" in str(c[0][0])
+            and "chunks_" in str(c[0][0])
+        ]
         assert len(create_table_calls) > 0
         # The dimension is passed as a parameter tuple
-        assert any(512 in (c[0][1] if len(c[0]) > 1 else ()) for c in create_table_calls)
+        assert any(
+            512 in (c[0][1] if len(c[0]) > 1 else ()) for c in create_table_calls
+        )
 
         # Indexes (embedding, content, tags, metadata, metadata_text)
         assert any("idx_chunks_my_collection_embedding" in sql for sql in executed_sqls)
         assert any("idx_chunks_my_collection_content" in sql for sql in executed_sqls)
         assert any("idx_chunks_my_collection_tags" in sql for sql in executed_sqls)
         assert any("idx_chunks_my_collection_metadata" in sql for sql in executed_sqls)
-        assert any("idx_chunks_my_collection_metadata_text" in sql for sql in executed_sqls)
+        assert any(
+            "idx_chunks_my_collection_metadata_text" in sql for sql in executed_sqls
+        )
 
         # Config table
-        assert any("CREATE TABLE IF NOT EXISTS collection_config" in sql for sql in executed_sqls)
+        assert any(
+            "CREATE TABLE IF NOT EXISTS collection_config" in sql
+            for sql in executed_sqls
+        )
 
         mock_conn.commit.assert_called_once()
 
     def test_create_schema_sanitizes_collection_name(self) -> None:
         """Test that special characters in collection name are replaced"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
 
         backend.create_schema("my-collection.v2!", embedding_dim=768)
 
@@ -355,21 +430,27 @@ class TestPgVectorBackendCreateSchema:
 
     def test_create_schema_default_embedding_dim(self) -> None:
         """Test create_schema uses default embedding_dim of 768"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
 
         backend.create_schema("test")
 
         # embedding dimension is passed as a parameter, check it's in the params
-        create_table_calls = [c for c in mock_cursor.execute.call_args_list
-                              if "CREATE TABLE IF NOT EXISTS" in str(c[0][0]) and "chunks_" in str(c[0][0])]
+        create_table_calls = [
+            c
+            for c in mock_cursor.execute.call_args_list
+            if "CREATE TABLE IF NOT EXISTS" in str(c[0][0])
+            and "chunks_" in str(c[0][0])
+        ]
         assert len(create_table_calls) > 0
-        assert any(768 in (c[0][1] if len(c[0]) > 1 else ()) for c in create_table_calls)
+        assert any(
+            768 in (c[0][1] if len(c[0]) > 1 else ()) for c in create_table_calls
+        )
 
     def test_create_schema_calls_ensure_connection(self) -> None:
         """Test that create_schema checks connection"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, _mock_cursor = self._make_backend()
 
-        with patch.object(backend, '_ensure_connection') as mock_ensure:
+        with patch.object(backend, "_ensure_connection") as mock_ensure:
             backend.create_schema("test")
             mock_ensure.assert_called_once()
 
@@ -378,9 +459,11 @@ class TestPgVectorBackendExtractMetadata:
     """Test PgVectorBackend _extract_metadata_from_json_content"""
 
     def _make_backend(self) -> PgVectorBackend:
-        with patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True), \
-             patch('signalwire.search.pgvector_backend.psycopg2') as mock_pg, \
-             patch('signalwire.search.pgvector_backend.register_vector'):
+        with (
+            patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True),
+            patch("signalwire.search.pgvector_backend.psycopg2") as mock_pg,
+            patch("signalwire.search.pgvector_backend.register_vector"),
+        ):
             mock_conn = MagicMock()
             mock_conn.closed = False
             mock_pg.connect.return_value = mock_conn
@@ -389,7 +472,9 @@ class TestPgVectorBackendExtractMetadata:
     def test_extract_no_metadata(self) -> None:
         """Test extraction from content with no metadata key"""
         backend = self._make_backend()
-        result = backend._extract_metadata_from_json_content("plain text with no metadata")
+        result = backend._extract_metadata_from_json_content(
+            "plain text with no metadata"
+        )
         assert result == {}
 
     def test_extract_valid_json_metadata(self) -> None:
@@ -404,9 +489,7 @@ class TestPgVectorBackendExtractMetadata:
         """Test extraction merges multiple metadata blocks"""
         backend = self._make_backend()
         content = (
-            '{"metadata": {"key1": "val1"}} '
-            'some text '
-            '{"metadata": {"key2": "val2"}}'
+            '{"metadata": {"key1": "val1"}} some text {"metadata": {"key2": "val2"}}'
         )
         result = backend._extract_metadata_from_json_content(content)
         assert result.get("key1") == "val1"
@@ -431,11 +514,13 @@ class TestPgVectorBackendExtractMetadata:
 class TestPgVectorBackendStoreChunks:
     """Test PgVectorBackend store_chunks"""
 
-    @patch('signalwire.search.pgvector_backend.execute_values')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    def test_store_chunks_basic(self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.execute_values")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    def test_store_chunks_basic(
+        self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock
+    ) -> None:
         """Test storing a single chunk"""
         mock_conn, mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
@@ -468,13 +553,15 @@ class TestPgVectorBackendStoreChunks:
         mock_cursor.execute.assert_called()
         mock_conn.commit.assert_called()
 
-    @patch('signalwire.search.pgvector_backend.execute_values')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    def test_store_chunks_numpy_embedding(self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.execute_values")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    def test_store_chunks_numpy_embedding(
+        self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock
+    ) -> None:
         """Test storing chunks with numpy array embeddings"""
-        mock_conn, mock_cursor = _make_mock_conn()
+        mock_conn, _mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
         backend = PgVectorBackend("postgresql://localhost/testdb")
 
@@ -495,13 +582,15 @@ class TestPgVectorBackendStoreChunks:
         mock_embedding.tolist.assert_called_once()
         mock_ev.assert_called_once()
 
-    @patch('signalwire.search.pgvector_backend.execute_values')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    def test_store_chunks_no_embedding(self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.execute_values")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    def test_store_chunks_no_embedding(
+        self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock
+    ) -> None:
         """Test storing chunks without embeddings"""
-        mock_conn, mock_cursor = _make_mock_conn()
+        mock_conn, _mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
         backend = PgVectorBackend("postgresql://localhost/testdb")
 
@@ -519,13 +608,15 @@ class TestPgVectorBackendStoreChunks:
         data_arg = mock_ev.call_args[0][2]
         assert data_arg[0][2] is None  # embedding position
 
-    @patch('signalwire.search.pgvector_backend.execute_values')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    def test_store_chunks_metadata_from_chunk_keys(self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.execute_values")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    def test_store_chunks_metadata_from_chunk_keys(
+        self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock
+    ) -> None:
         """Test that extra chunk keys become metadata"""
-        mock_conn, mock_cursor = _make_mock_conn()
+        mock_conn, _mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
         backend = PgVectorBackend("postgresql://localhost/testdb")
 
@@ -547,13 +638,15 @@ class TestPgVectorBackendStoreChunks:
         assert metadata_json["custom_field"] == "custom_value"
         assert metadata_json["another_field"] == 42
 
-    @patch('signalwire.search.pgvector_backend.execute_values')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    def test_store_chunks_metadata_text_generation(self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.execute_values")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    def test_store_chunks_metadata_text_generation(
+        self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock
+    ) -> None:
         """Test that searchable metadata text is generated correctly"""
-        mock_conn, mock_cursor = _make_mock_conn()
+        mock_conn, _mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
         backend = PgVectorBackend("postgresql://localhost/testdb")
 
@@ -578,20 +671,19 @@ class TestPgVectorBackendStoreChunks:
         assert "overview" in metadata_text  # section, lowered
         assert "bob" in metadata_text or "author" in metadata_text
 
-    @patch('signalwire.search.pgvector_backend.execute_values')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    def test_store_chunks_multiple(self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.execute_values")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    def test_store_chunks_multiple(
+        self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock
+    ) -> None:
         """Test storing multiple chunks at once"""
-        mock_conn, mock_cursor = _make_mock_conn()
+        mock_conn, _mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
         backend = PgVectorBackend("postgresql://localhost/testdb")
 
-        chunks = [
-            {"content": f"Chunk {i}", "embedding": None}
-            for i in range(5)
-        ]
+        chunks = [{"content": f"Chunk {i}", "embedding": None} for i in range(5)]
         config: dict[str, Any] = {}
 
         backend.store_chunks(chunks, "col", config)
@@ -600,13 +692,15 @@ class TestPgVectorBackendStoreChunks:
         data_arg = mock_ev.call_args[0][2]
         assert len(data_arg) == 5
 
-    @patch('signalwire.search.pgvector_backend.execute_values')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    def test_store_chunks_json_metadata_in_content(self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.execute_values")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    def test_store_chunks_json_metadata_in_content(
+        self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock
+    ) -> None:
         """Test metadata extraction from JSON content during storage"""
-        mock_conn, mock_cursor = _make_mock_conn()
+        mock_conn, _mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
         backend = PgVectorBackend("postgresql://localhost/testdb")
 
@@ -626,25 +720,29 @@ class TestPgVectorBackendStoreChunks:
         # JSON metadata should be merged (but chunk metadata takes precedence)
         assert "source" in metadata_json
 
-    @patch('signalwire.search.pgvector_backend.execute_values')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    def test_store_chunks_calls_ensure_connection(self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.execute_values")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    def test_store_chunks_calls_ensure_connection(
+        self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock
+    ) -> None:
         """Test that store_chunks calls _ensure_connection"""
-        mock_conn, mock_cursor = _make_mock_conn()
+        mock_conn, _mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
         backend = PgVectorBackend("postgresql://localhost/testdb")
 
-        with patch.object(backend, '_ensure_connection') as mock_ensure:
+        with patch.object(backend, "_ensure_connection") as mock_ensure:
             backend.store_chunks([{"content": "test", "embedding": None}], "col", {})
             mock_ensure.assert_called_once()
 
-    @patch('signalwire.search.pgvector_backend.execute_values')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    def test_store_chunks_config_upsert(self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.execute_values")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    def test_store_chunks_config_upsert(
+        self, mock_pg: MagicMock, mock_reg: MagicMock, mock_ev: MagicMock
+    ) -> None:
         """Test that config is upserted with ON CONFLICT"""
         mock_conn, mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
@@ -679,9 +777,11 @@ class TestPgVectorBackendGetStats:
     """Test PgVectorBackend get_stats"""
 
     def _make_backend(self) -> tuple[PgVectorBackend, MagicMock, MagicMock]:
-        with patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True), \
-             patch('signalwire.search.pgvector_backend.psycopg2') as mock_pg, \
-             patch('signalwire.search.pgvector_backend.register_vector'):
+        with (
+            patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True),
+            patch("signalwire.search.pgvector_backend.psycopg2") as mock_pg,
+            patch("signalwire.search.pgvector_backend.register_vector"),
+        ):
             mock_conn, mock_cursor = _make_mock_conn()
             mock_pg.connect.return_value = mock_conn
             backend = PgVectorBackend("postgresql://localhost/testdb")
@@ -689,15 +789,20 @@ class TestPgVectorBackendGetStats:
 
     def test_get_stats_with_config(self) -> None:
         """Test get_stats returns correct statistics with config"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
 
         created_at = datetime(2025, 1, 15, 12, 0, 0)
         mock_cursor.fetchone.side_effect = [
-            (42,),       # total chunks
-            (7,),        # unique files
-            (             # config row
-                "test_col", "model-v1", 768, "sentence",
-                ["en"], created_at, {"version": 1}
+            (42,),  # total chunks
+            (7,),  # unique files
+            (  # config row
+                "test_col",
+                "model-v1",
+                768,
+                "sentence",
+                ["en"],
+                created_at,
+                {"version": 1},
             ),
         ]
 
@@ -714,12 +819,12 @@ class TestPgVectorBackendGetStats:
 
     def test_get_stats_without_config(self) -> None:
         """Test get_stats when no config exists"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
 
         mock_cursor.fetchone.side_effect = [
             (10,),  # total chunks
-            (3,),   # unique files
-            None,   # no config row
+            (3,),  # unique files
+            None,  # no config row
         ]
 
         stats = backend.get_stats("missing_col")
@@ -730,7 +835,7 @@ class TestPgVectorBackendGetStats:
 
     def test_get_stats_with_none_created_at(self) -> None:
         """Test get_stats when created_at is None"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
 
         mock_cursor.fetchone.side_effect = [
             (0,),
@@ -746,9 +851,11 @@ class TestPgVectorBackendListCollections:
     """Test PgVectorBackend list_collections"""
 
     def _make_backend(self) -> tuple[PgVectorBackend, MagicMock, MagicMock]:
-        with patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True), \
-             patch('signalwire.search.pgvector_backend.psycopg2') as mock_pg, \
-             patch('signalwire.search.pgvector_backend.register_vector'):
+        with (
+            patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True),
+            patch("signalwire.search.pgvector_backend.psycopg2") as mock_pg,
+            patch("signalwire.search.pgvector_backend.register_vector"),
+        ):
             mock_conn, mock_cursor = _make_mock_conn()
             mock_pg.connect.return_value = mock_conn
             backend = PgVectorBackend("postgresql://localhost/testdb")
@@ -756,7 +863,7 @@ class TestPgVectorBackendListCollections:
 
     def test_list_collections_returns_names(self) -> None:
         """Test list_collections returns collection names"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
         mock_cursor.fetchall.return_value = [("alpha",), ("beta",), ("gamma",)]
 
         result = backend.list_collections()
@@ -765,7 +872,7 @@ class TestPgVectorBackendListCollections:
 
     def test_list_collections_empty(self) -> None:
         """Test list_collections with no collections"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
         mock_cursor.fetchall.return_value = []
 
         result = backend.list_collections()
@@ -774,10 +881,10 @@ class TestPgVectorBackendListCollections:
 
     def test_list_collections_calls_ensure_connection(self) -> None:
         """Test that list_collections checks connection"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
         mock_cursor.fetchall.return_value = []
 
-        with patch.object(backend, '_ensure_connection') as mock_ensure:
+        with patch.object(backend, "_ensure_connection") as mock_ensure:
             backend.list_collections()
             mock_ensure.assert_called_once()
 
@@ -786,9 +893,11 @@ class TestPgVectorBackendDeleteCollection:
     """Test PgVectorBackend delete_collection"""
 
     def _make_backend(self) -> tuple[PgVectorBackend, MagicMock, MagicMock]:
-        with patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True), \
-             patch('signalwire.search.pgvector_backend.psycopg2') as mock_pg, \
-             patch('signalwire.search.pgvector_backend.register_vector'):
+        with (
+            patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True),
+            patch("signalwire.search.pgvector_backend.psycopg2") as mock_pg,
+            patch("signalwire.search.pgvector_backend.register_vector"),
+        ):
             mock_conn, mock_cursor = _make_mock_conn()
             mock_pg.connect.return_value = mock_conn
             backend = PgVectorBackend("postgresql://localhost/testdb")
@@ -800,28 +909,34 @@ class TestPgVectorBackendDeleteCollection:
 
         backend.delete_collection("my_collection")
 
-        executed_sqls = [str(c[0][0]).strip() for c in mock_cursor.execute.call_args_list]
+        executed_sqls = [
+            str(c[0][0]).strip() for c in mock_cursor.execute.call_args_list
+        ]
 
-        assert any("DROP TABLE IF EXISTS chunks_my_collection" in sql for sql in executed_sqls)
+        assert any(
+            "DROP TABLE IF EXISTS chunks_my_collection" in sql for sql in executed_sqls
+        )
         assert any("DELETE FROM collection_config" in sql for sql in executed_sqls)
         mock_conn.commit.assert_called()
 
     def test_delete_collection_sanitizes_name(self) -> None:
         """Test that delete_collection sanitizes collection name"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, mock_cursor = self._make_backend()
 
         backend.delete_collection("bad-name.here!")
 
-        executed_sqls = [str(c[0][0]).strip() for c in mock_cursor.execute.call_args_list]
+        executed_sqls = [
+            str(c[0][0]).strip() for c in mock_cursor.execute.call_args_list
+        ]
 
         # The DROP should use the sanitized name
         assert any("chunks_bad_name_here_" in sql for sql in executed_sqls)
 
     def test_delete_collection_calls_ensure_connection(self) -> None:
         """Test that delete_collection checks connection"""
-        backend, mock_conn, mock_cursor = self._make_backend()
+        backend, _mock_conn, _mock_cursor = self._make_backend()
 
-        with patch.object(backend, '_ensure_connection') as mock_ensure:
+        with patch.object(backend, "_ensure_connection") as mock_ensure:
             backend.delete_collection("test")
             mock_ensure.assert_called_once()
 
@@ -829,10 +944,12 @@ class TestPgVectorBackendDeleteCollection:
 class TestPgVectorBackendClose:
     """Test PgVectorBackend close"""
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    def test_close_closes_connection(self, mock_reg: MagicMock, mock_pg: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    def test_close_closes_connection(
+        self, mock_reg: MagicMock, mock_pg: MagicMock
+    ) -> None:
         """Test close closes the database connection"""
         mock_conn = MagicMock()
         mock_conn.closed = False
@@ -843,10 +960,12 @@ class TestPgVectorBackendClose:
 
         mock_conn.close.assert_called_once()
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    def test_close_already_closed(self, mock_reg: MagicMock, mock_pg: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    def test_close_already_closed(
+        self, mock_reg: MagicMock, mock_pg: MagicMock
+    ) -> None:
         """Test close does nothing when connection is already closed"""
         mock_conn = MagicMock()
         mock_conn.closed = False
@@ -858,10 +977,12 @@ class TestPgVectorBackendClose:
 
         mock_conn.close.assert_not_called()
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    def test_close_when_conn_is_none(self, mock_reg: MagicMock, mock_pg: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    def test_close_when_conn_is_none(
+        self, mock_reg: MagicMock, mock_pg: MagicMock
+    ) -> None:
         """close() must early-return when conn is None — no connection.close()
         is invoked because there is no connection."""
         mock_conn = MagicMock()
@@ -887,15 +1008,21 @@ class TestPgVectorBackendClose:
 class TestPgVectorSearchBackendInit:
     """Test PgVectorSearchBackend initialization"""
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
     def test_init_success(self, mock_reg: MagicMock, mock_pg: MagicMock) -> None:
         """Test successful initialization"""
         mock_conn, mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
         mock_cursor.fetchone.return_value = (
-            "test_col", "model-v1", 768, "sentence", ["en"], datetime.now(), {}
+            "test_col",
+            "model-v1",
+            768,
+            "sentence",
+            ["en"],
+            datetime.now(),
+            {},
         )
 
         sb = PgVectorSearchBackend("postgresql://localhost/testdb", "test_col")
@@ -906,25 +1033,27 @@ class TestPgVectorSearchBackendInit:
         assert sb.conn is mock_conn
         assert sb.config["model_name"] == "model-v1"
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', False)
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", False)
     def test_init_pgvector_not_available(self) -> None:
         """Test initialization raises ImportError when pgvector not installed"""
         with pytest.raises(ImportError, match="pgvector dependencies not available"):
             PgVectorSearchBackend("postgresql://localhost/testdb", "col")
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    def test_init_connection_failure(self, mock_reg: MagicMock, mock_pg: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    def test_init_connection_failure(
+        self, mock_reg: MagicMock, mock_pg: MagicMock
+    ) -> None:
         """Test initialization when connection fails"""
         mock_pg.connect.side_effect = Exception("Connection refused")
 
         with pytest.raises(Exception, match="Connection refused"):
             PgVectorSearchBackend("postgresql://localhost/testdb", "col")
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
     def test_init_no_config(self, mock_reg: MagicMock, mock_pg: MagicMock) -> None:
         """Test initialization when collection has no config"""
         mock_conn, mock_cursor = _make_mock_conn()
@@ -939,11 +1068,15 @@ class TestPgVectorSearchBackendInit:
 class TestPgVectorSearchBackendLoadConfig:
     """Test PgVectorSearchBackend _load_config"""
 
-    def _make_search_backend(self, config_row: "tuple[Any, ...] | None" = None) -> tuple[PgVectorSearchBackend, MagicMock, MagicMock]:
+    def _make_search_backend(
+        self, config_row: "tuple[Any, ...] | None" = None
+    ) -> tuple[PgVectorSearchBackend, MagicMock, MagicMock]:
         """Create a PgVectorSearchBackend with mocked connection."""
-        with patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True), \
-             patch('signalwire.search.pgvector_backend.psycopg2') as mock_pg, \
-             patch('signalwire.search.pgvector_backend.register_vector'):
+        with (
+            patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True),
+            patch("signalwire.search.pgvector_backend.psycopg2") as mock_pg,
+            patch("signalwire.search.pgvector_backend.register_vector"),
+        ):
             mock_conn, mock_cursor = _make_mock_conn()
             mock_pg.connect.return_value = mock_conn
             mock_cursor.fetchone.return_value = config_row
@@ -952,7 +1085,15 @@ class TestPgVectorSearchBackendLoadConfig:
 
     def test_load_config_with_data(self) -> None:
         """Test _load_config returns config when row exists"""
-        config_row = ("col", "model-v1", 512, "sliding", ["en", "de"], datetime.now(), {"k": "v"})
+        config_row = (
+            "col",
+            "model-v1",
+            512,
+            "sliding",
+            ["en", "de"],
+            datetime.now(),
+            {"k": "v"},
+        )
         sb, _, _ = self._make_search_backend(config_row)
 
         assert sb.config["model_name"] == "model-v1"
@@ -970,10 +1111,14 @@ class TestPgVectorSearchBackendLoadConfig:
 class TestPgVectorSearchBackendVectorSearch:
     """Test PgVectorSearchBackend _vector_search"""
 
-    def _make_search_backend(self) -> tuple[PgVectorSearchBackend, MagicMock, MagicMock]:
-        with patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True), \
-             patch('signalwire.search.pgvector_backend.psycopg2') as mock_pg, \
-             patch('signalwire.search.pgvector_backend.register_vector'):
+    def _make_search_backend(
+        self,
+    ) -> tuple[PgVectorSearchBackend, MagicMock, MagicMock]:
+        with (
+            patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True),
+            patch("signalwire.search.pgvector_backend.psycopg2") as mock_pg,
+            patch("signalwire.search.pgvector_backend.register_vector"),
+        ):
             mock_conn, mock_cursor = _make_mock_conn()
             mock_pg.connect.return_value = mock_conn
             # For _load_config
@@ -1063,10 +1208,14 @@ class TestPgVectorSearchBackendVectorSearch:
 class TestPgVectorSearchBackendKeywordSearch:
     """Test PgVectorSearchBackend _keyword_search"""
 
-    def _make_search_backend(self) -> tuple[PgVectorSearchBackend, MagicMock, MagicMock]:
-        with patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True), \
-             patch('signalwire.search.pgvector_backend.psycopg2') as mock_pg, \
-             patch('signalwire.search.pgvector_backend.register_vector'):
+    def _make_search_backend(
+        self,
+    ) -> tuple[PgVectorSearchBackend, MagicMock, MagicMock]:
+        with (
+            patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True),
+            patch("signalwire.search.pgvector_backend.psycopg2") as mock_pg,
+            patch("signalwire.search.pgvector_backend.register_vector"),
+        ):
             mock_conn, mock_cursor = _make_mock_conn()
             mock_pg.connect.return_value = mock_conn
             mock_cursor.fetchone.return_value = None
@@ -1078,7 +1227,15 @@ class TestPgVectorSearchBackendKeywordSearch:
         """Test _keyword_search returns properly formatted results"""
         sb, _, mock_cursor = self._make_search_backend()
         mock_cursor.fetchall.return_value = [
-            (1, "Python tutorial", "python.md", "intro", ["python"], {"level": "beginner"}, 5.0),
+            (
+                1,
+                "Python tutorial",
+                "python.md",
+                "intro",
+                ["python"],
+                {"level": "beginner"},
+                5.0,
+            ),
         ]
 
         results = sb._keyword_search("Python tutorial", count=5)
@@ -1125,10 +1282,14 @@ class TestPgVectorSearchBackendKeywordSearch:
 class TestPgVectorSearchBackendMetadataSearch:
     """Test PgVectorSearchBackend _metadata_search"""
 
-    def _make_search_backend(self) -> tuple[PgVectorSearchBackend, MagicMock, MagicMock]:
-        with patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True), \
-             patch('signalwire.search.pgvector_backend.psycopg2') as mock_pg, \
-             patch('signalwire.search.pgvector_backend.register_vector'):
+    def _make_search_backend(
+        self,
+    ) -> tuple[PgVectorSearchBackend, MagicMock, MagicMock]:
+        with (
+            patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True),
+            patch("signalwire.search.pgvector_backend.psycopg2") as mock_pg,
+            patch("signalwire.search.pgvector_backend.register_vector"),
+        ):
             mock_conn, mock_cursor = _make_mock_conn()
             mock_pg.connect.return_value = mock_conn
             mock_cursor.fetchone.return_value = None
@@ -1140,7 +1301,15 @@ class TestPgVectorSearchBackendMetadataSearch:
         """Test _metadata_search returns properly formatted results"""
         sb, _, mock_cursor = self._make_search_backend()
         mock_cursor.fetchall.return_value = [
-            (1, "Content A", "file.txt", "intro", ["tag1"], {"author": "alice"}, "author alice tag1 intro"),
+            (
+                1,
+                "Content A",
+                "file.txt",
+                "intro",
+                ["tag1"],
+                {"author": "alice"},
+                "author alice tag1 intro",
+            ),
         ]
 
         results = sb._metadata_search(["alice"], count=5)
@@ -1167,8 +1336,15 @@ class TestPgVectorSearchBackendMetadataSearch:
         """Test that metadata search score is capped at 1.0"""
         sb, _, mock_cursor = self._make_search_backend()
         mock_cursor.fetchall.return_value = [
-            (1, "C", "f", "s", [], {"a": "b", "c": "d", "e": "f"},
-             "a b c d e f g h i j k"),
+            (
+                1,
+                "C",
+                "f",
+                "s",
+                [],
+                {"a": "b", "c": "d", "e": "f"},
+                "a b c d e f g h i j k",
+            ),
         ]
 
         results = sb._metadata_search(["a", "b", "c", "d", "e"], count=5)
@@ -1255,24 +1431,37 @@ class TestPgVectorSearchBackendMergeResults:
     """Test PgVectorSearchBackend _merge_results"""
 
     def _make_search_backend(self) -> PgVectorSearchBackend:
-        with patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True), \
-             patch('signalwire.search.pgvector_backend.psycopg2') as mock_pg, \
-             patch('signalwire.search.pgvector_backend.register_vector'):
+        with (
+            patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True),
+            patch("signalwire.search.pgvector_backend.psycopg2") as mock_pg,
+            patch("signalwire.search.pgvector_backend.register_vector"),
+        ):
             mock_conn, mock_cursor = _make_mock_conn()
             mock_pg.connect.return_value = mock_conn
             mock_cursor.fetchone.return_value = None
-            sb = PgVectorSearchBackend("postgresql://localhost/testdb", "col")
-            return sb
+            return PgVectorSearchBackend("postgresql://localhost/testdb", "col")
 
     def test_merge_results_default_weights(self) -> None:
         """Test _merge_results uses default keyword_weight of 0.3"""
         sb = self._make_search_backend()
 
         vector_results = [
-            {"id": 1, "content": "V1", "score": 1.0, "search_type": "vector", "metadata": {}},
+            {
+                "id": 1,
+                "content": "V1",
+                "score": 1.0,
+                "search_type": "vector",
+                "metadata": {},
+            },
         ]
         keyword_results = [
-            {"id": 1, "content": "K1", "score": 1.0, "search_type": "keyword", "metadata": {}},
+            {
+                "id": 1,
+                "content": "K1",
+                "score": 1.0,
+                "search_type": "keyword",
+                "metadata": {},
+            },
         ]
 
         merged = sb._merge_results(vector_results, keyword_results)
@@ -1286,10 +1475,22 @@ class TestPgVectorSearchBackendMergeResults:
         sb = self._make_search_backend()
 
         vector_results = [
-            {"id": 1, "content": "V1", "score": 1.0, "search_type": "vector", "metadata": {}},
+            {
+                "id": 1,
+                "content": "V1",
+                "score": 1.0,
+                "search_type": "vector",
+                "metadata": {},
+            },
         ]
         keyword_results = [
-            {"id": 1, "content": "K1", "score": 1.0, "search_type": "keyword", "metadata": {}},
+            {
+                "id": 1,
+                "content": "K1",
+                "score": 1.0,
+                "search_type": "keyword",
+                "metadata": {},
+            },
         ]
 
         merged = sb._merge_results(vector_results, keyword_results, keyword_weight=0.5)
@@ -1302,10 +1503,22 @@ class TestPgVectorSearchBackendMergeResults:
         sb = self._make_search_backend()
 
         vector_results = [
-            {"id": 1, "content": "Only vector", "score": 0.9, "search_type": "vector", "metadata": {}},
+            {
+                "id": 1,
+                "content": "Only vector",
+                "score": 0.9,
+                "search_type": "vector",
+                "metadata": {},
+            },
         ]
         keyword_results = [
-            {"id": 2, "content": "Only keyword", "score": 0.8, "search_type": "keyword", "metadata": {}},
+            {
+                "id": 2,
+                "content": "Only keyword",
+                "score": 0.8,
+                "search_type": "keyword",
+                "metadata": {},
+            },
         ]
 
         merged = sb._merge_results(vector_results, keyword_results)
@@ -1317,8 +1530,20 @@ class TestPgVectorSearchBackendMergeResults:
         sb = self._make_search_backend()
 
         vector_results = [
-            {"id": 1, "content": "V1", "score": 0.5, "search_type": "vector", "metadata": {}},
-            {"id": 2, "content": "V2", "score": 0.9, "search_type": "vector", "metadata": {}},
+            {
+                "id": 1,
+                "content": "V1",
+                "score": 0.5,
+                "search_type": "vector",
+                "metadata": {},
+            },
+            {
+                "id": 2,
+                "content": "V2",
+                "score": 0.9,
+                "search_type": "vector",
+                "metadata": {},
+            },
         ]
         keyword_results: list[dict[str, Any]] = []
 
@@ -1338,14 +1563,15 @@ class TestPgVectorSearchBackendMergeAllResults:
     """Test PgVectorSearchBackend _merge_all_results"""
 
     def _make_search_backend(self) -> PgVectorSearchBackend:
-        with patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True), \
-             patch('signalwire.search.pgvector_backend.psycopg2') as mock_pg, \
-             patch('signalwire.search.pgvector_backend.register_vector'):
+        with (
+            patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True),
+            patch("signalwire.search.pgvector_backend.psycopg2") as mock_pg,
+            patch("signalwire.search.pgvector_backend.register_vector"),
+        ):
             mock_conn, mock_cursor = _make_mock_conn()
             mock_pg.connect.return_value = mock_conn
             mock_cursor.fetchone.return_value = None
-            sb = PgVectorSearchBackend("postgresql://localhost/testdb", "col")
-            return sb
+            return PgVectorSearchBackend("postgresql://localhost/testdb", "col")
 
     def test_merge_all_results_three_sources(self) -> None:
         """Max-signal-wins scoring with 0.1 per-additional-source agreement boost.
@@ -1357,9 +1583,33 @@ class TestPgVectorSearchBackendMergeAllResults:
         """
         sb = self._make_search_backend()
 
-        vector = [{"id": 1, "content": "V", "score": 0.9, "search_type": "vector", "metadata": {}}]
-        keyword = [{"id": 1, "content": "K", "score": 0.8, "search_type": "keyword", "metadata": {}}]
-        metadata = [{"id": 1, "content": "M", "score": 0.7, "search_type": "metadata", "metadata": {}}]
+        vector = [
+            {
+                "id": 1,
+                "content": "V",
+                "score": 0.9,
+                "search_type": "vector",
+                "metadata": {},
+            }
+        ]
+        keyword = [
+            {
+                "id": 1,
+                "content": "K",
+                "score": 0.8,
+                "search_type": "keyword",
+                "metadata": {},
+            }
+        ]
+        metadata = [
+            {
+                "id": 1,
+                "content": "M",
+                "score": 0.7,
+                "search_type": "metadata",
+                "metadata": {},
+            }
+        ]
 
         merged = sb._merge_all_results(vector, keyword, metadata)
 
@@ -1372,8 +1622,24 @@ class TestPgVectorSearchBackendMergeAllResults:
         """Test _merge_all_results includes source breakdown"""
         sb = self._make_search_backend()
 
-        vector = [{"id": 1, "content": "V", "score": 0.9, "search_type": "vector", "metadata": {}}]
-        keyword = [{"id": 1, "content": "K", "score": 0.8, "search_type": "keyword", "metadata": {}}]
+        vector = [
+            {
+                "id": 1,
+                "content": "V",
+                "score": 0.9,
+                "search_type": "vector",
+                "metadata": {},
+            }
+        ]
+        keyword = [
+            {
+                "id": 1,
+                "content": "K",
+                "score": 0.8,
+                "search_type": "keyword",
+                "metadata": {},
+            }
+        ]
         metadata: list[dict[str, Any]] = []
 
         merged = sb._merge_all_results(vector, keyword, metadata)
@@ -1386,9 +1652,33 @@ class TestPgVectorSearchBackendMergeAllResults:
         """Test _merge_all_results handles results unique to each source"""
         sb = self._make_search_backend()
 
-        vector = [{"id": 1, "content": "V", "score": 0.9, "search_type": "vector", "metadata": {}}]
-        keyword = [{"id": 2, "content": "K", "score": 0.8, "search_type": "keyword", "metadata": {}}]
-        metadata = [{"id": 3, "content": "M", "score": 0.7, "search_type": "metadata", "metadata": {}}]
+        vector = [
+            {
+                "id": 1,
+                "content": "V",
+                "score": 0.9,
+                "search_type": "vector",
+                "metadata": {},
+            }
+        ]
+        keyword = [
+            {
+                "id": 2,
+                "content": "K",
+                "score": 0.8,
+                "search_type": "keyword",
+                "metadata": {},
+            }
+        ]
+        metadata = [
+            {
+                "id": 3,
+                "content": "M",
+                "score": 0.7,
+                "search_type": "metadata",
+                "metadata": {},
+            }
+        ]
 
         merged = sb._merge_all_results(vector, keyword, metadata)
 
@@ -1401,8 +1691,20 @@ class TestPgVectorSearchBackendMergeAllResults:
         sb = self._make_search_backend()
 
         vector = [
-            {"id": 1, "content": "Low", "score": 0.2, "search_type": "vector", "metadata": {}},
-            {"id": 2, "content": "High", "score": 0.95, "search_type": "vector", "metadata": {}},
+            {
+                "id": 1,
+                "content": "Low",
+                "score": 0.2,
+                "search_type": "vector",
+                "metadata": {},
+            },
+            {
+                "id": 2,
+                "content": "High",
+                "score": 0.95,
+                "search_type": "vector",
+                "metadata": {},
+            },
         ]
 
         merged = sb._merge_all_results(vector, [], [])
@@ -1425,7 +1727,15 @@ class TestPgVectorSearchBackendMergeAllResults:
         """
         sb = self._make_search_backend()
 
-        keyword = [{"id": 1, "content": "K", "score": 1.0, "search_type": "keyword", "metadata": {}}]
+        keyword = [
+            {
+                "id": 1,
+                "content": "K",
+                "score": 1.0,
+                "search_type": "keyword",
+                "metadata": {},
+            }
+        ]
 
         merged_default = sb._merge_all_results([], keyword, [])
         merged_custom = sb._merge_all_results([], keyword, [], keyword_weight=0.8)
@@ -1438,14 +1748,15 @@ class TestPgVectorSearchBackendSearch:
     """Test PgVectorSearchBackend search (main entry point)"""
 
     def _make_search_backend(self) -> PgVectorSearchBackend:
-        with patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True), \
-             patch('signalwire.search.pgvector_backend.psycopg2') as mock_pg, \
-             patch('signalwire.search.pgvector_backend.register_vector'):
+        with (
+            patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True),
+            patch("signalwire.search.pgvector_backend.psycopg2") as mock_pg,
+            patch("signalwire.search.pgvector_backend.register_vector"),
+        ):
             mock_conn, mock_cursor = _make_mock_conn()
             mock_pg.connect.return_value = mock_conn
             mock_cursor.fetchone.return_value = None
-            sb = PgVectorSearchBackend("postgresql://localhost/testdb", "col")
-            return sb
+            return PgVectorSearchBackend("postgresql://localhost/testdb", "col")
 
     def test_search_calls_all_sub_searches(self) -> None:
         """Test search invokes vector, keyword, and metadata searches"""
@@ -1468,7 +1779,13 @@ class TestPgVectorSearchBackendSearch:
         sb = self._make_search_backend()
 
         many_results = [
-            {"id": i, "content": f"Result {i}", "score": 1.0 - i * 0.1, "final_score": 1.0 - i * 0.1, "metadata": {}}
+            {
+                "id": i,
+                "content": f"Result {i}",
+                "score": 1.0 - i * 0.1,
+                "final_score": 1.0 - i * 0.1,
+                "metadata": {},
+            }
             for i in range(10)
         ]
 
@@ -1493,8 +1810,20 @@ class TestPgVectorSearchBackendSearch:
         sb = self._make_search_backend()
 
         merged_output = [
-            {"id": 1, "content": "High", "score": 0.9, "final_score": 0.9, "metadata": {}},
-            {"id": 2, "content": "Low", "score": 0.3, "final_score": 0.3, "metadata": {}},
+            {
+                "id": 1,
+                "content": "High",
+                "score": 0.9,
+                "final_score": 0.9,
+                "metadata": {},
+            },
+            {
+                "id": 2,
+                "content": "Low",
+                "score": 0.3,
+                "final_score": 0.3,
+                "metadata": {},
+            },
         ]
 
         sb._vector_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
@@ -1513,8 +1842,20 @@ class TestPgVectorSearchBackendSearch:
         sb = self._make_search_backend()
 
         vector_results = [
-            {"id": 1, "content": "High", "score": 0.9, "search_type": "vector", "metadata": {}},
-            {"id": 2, "content": "Low", "score": 0.1, "search_type": "vector", "metadata": {}},
+            {
+                "id": 1,
+                "content": "High",
+                "score": 0.9,
+                "search_type": "vector",
+                "metadata": {},
+            },
+            {
+                "id": 2,
+                "content": "Low",
+                "score": 0.1,
+                "search_type": "vector",
+                "metadata": {},
+            },
         ]
 
         sb._vector_search = Mock(return_value=vector_results)  # type: ignore[method-assign]  # mock
@@ -1541,7 +1882,9 @@ class TestPgVectorSearchBackendSearch:
 
         # All sub-searches should receive tags
         _, kwargs = sb._vector_search.call_args
-        assert kwargs.get("tags") == ["python"] or sb._vector_search.call_args[0][2] == ["python"]
+        assert kwargs.get("tags") == ["python"] or sb._vector_search.call_args[0][
+            2
+        ] == ["python"]
 
     def test_search_with_keyword_weight(self) -> None:
         """Test search passes keyword_weight to merge"""
@@ -1579,7 +1922,13 @@ class TestPgVectorSearchBackendSearch:
         sb = self._make_search_backend()
 
         merged = [
-            {"id": 1, "content": "Test", "score": 0.9, "final_score": 0.8, "metadata": {}},
+            {
+                "id": 1,
+                "content": "Test",
+                "score": 0.9,
+                "final_score": 0.8,
+                "metadata": {},
+            },
         ]
 
         sb._vector_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
@@ -1625,10 +1974,12 @@ class TestPgVectorSearchBackendSearch:
 class TestPgVectorSearchBackendGetStats:
     """Test PgVectorSearchBackend get_stats"""
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    def test_get_stats_creates_pgvector_backend(self, mock_reg: MagicMock, mock_pg: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    def test_get_stats_creates_pgvector_backend(
+        self, mock_reg: MagicMock, mock_pg: MagicMock
+    ) -> None:
         """Test get_stats creates a PgVectorBackend internally"""
         mock_conn, mock_cursor = _make_mock_conn()
         mock_pg.connect.return_value = mock_conn
@@ -1636,7 +1987,7 @@ class TestPgVectorSearchBackendGetStats:
 
         sb = PgVectorSearchBackend("postgresql://localhost/testdb", "col")
 
-        with patch('signalwire.search.pgvector_backend.PgVectorBackend') as MockBackend:
+        with patch("signalwire.search.pgvector_backend.PgVectorBackend") as MockBackend:
             mock_inner = MagicMock()
             mock_inner.get_stats.return_value = {"total_chunks": 100}
             MockBackend.return_value = mock_inner
@@ -1652,10 +2003,12 @@ class TestPgVectorSearchBackendGetStats:
 class TestPgVectorSearchBackendClose:
     """Test PgVectorSearchBackend close"""
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    def test_close_closes_connection(self, mock_reg: MagicMock, mock_pg: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    def test_close_closes_connection(
+        self, mock_reg: MagicMock, mock_pg: MagicMock
+    ) -> None:
         """Test close closes the database connection"""
         mock_conn = MagicMock()
         mock_conn.closed = False
@@ -1671,10 +2024,12 @@ class TestPgVectorSearchBackendClose:
 
         mock_conn.close.assert_called_once()
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    def test_close_already_closed(self, mock_reg: MagicMock, mock_pg: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    def test_close_already_closed(
+        self, mock_reg: MagicMock, mock_pg: MagicMock
+    ) -> None:
         """Test close does nothing when already closed"""
         mock_conn = MagicMock()
         mock_conn.closed = False
@@ -1692,10 +2047,12 @@ class TestPgVectorSearchBackendClose:
 
         mock_conn.close.assert_not_called()
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    def test_close_when_conn_is_none(self, mock_reg: MagicMock, mock_pg: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    def test_close_when_conn_is_none(
+        self, mock_reg: MagicMock, mock_pg: MagicMock
+    ) -> None:
         """close() must early-return when conn is None and not invoke
         connection.close() on anything."""
         mock_conn = MagicMock()
@@ -1719,10 +2076,12 @@ class TestPgVectorSearchBackendClose:
 class TestPgVectorSearchBackendEnsureConnection:
     """Test PgVectorSearchBackend _ensure_connection"""
 
-    @patch('signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE', True)
-    @patch('signalwire.search.pgvector_backend.psycopg2')
-    @patch('signalwire.search.pgvector_backend.register_vector')
-    def test_ensure_connection_reconnects_when_closed(self, mock_reg: MagicMock, mock_pg: MagicMock) -> None:
+    @patch("signalwire.search.pgvector_backend.PGVECTOR_AVAILABLE", True)
+    @patch("signalwire.search.pgvector_backend.psycopg2")
+    @patch("signalwire.search.pgvector_backend.register_vector")
+    def test_ensure_connection_reconnects_when_closed(
+        self, mock_reg: MagicMock, mock_pg: MagicMock
+    ) -> None:
         """Test _ensure_connection reconnects when connection is closed"""
         mock_conn = MagicMock()
         mock_conn.closed = False

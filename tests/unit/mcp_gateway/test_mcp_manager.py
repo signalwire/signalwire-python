@@ -13,12 +13,13 @@ in signalwire.mcp_gateway.mcp_manager
 import os
 import json
 import queue
+import tempfile
 import threading
 import subprocess
-import time
+from pathlib import Path
 from typing import Any
 import pytest
-from unittest.mock import Mock, patch, MagicMock, PropertyMock, call
+from unittest.mock import Mock, patch, MagicMock
 
 # Skip the entire module when Flask is not installed (mcp_gateway.__init__ imports flask)
 pytest.importorskip("flask", reason="flask is required for MCP Gateway tests")
@@ -28,6 +29,14 @@ from signalwire.mcp_gateway.mcp_manager import (
     MCPClient,
     MCPManager,
 )
+
+# Sandbox base for the tests below. These tests never actually create the
+# sandbox — Path.mkdir / shutil.rmtree are patched throughout — but the value
+# is threaded through MCPClient and asserted on, so it must be a real,
+# process-unique path rather than a hardcoded shared one. Class helpers
+# (_make_client) need it at import time, where the tmp_path fixture is not
+# reachable.
+_SANDBOX_BASE = tempfile.mkdtemp(prefix="sw_mcp_sandbox_")
 
 
 # ---------------------------------------------------------------------------
@@ -76,9 +85,7 @@ class TestMCPService:
 
     def test_enabled_can_be_false(self) -> None:
         """The enabled flag can be set to False."""
-        service = MCPService(
-            name="s", command=["cmd"], description="d", enabled=False
-        )
+        service = MCPService(name="s", command=["cmd"], description="d", enabled=False)
         assert service.enabled is False
 
     def test_hash_based_on_name(self) -> None:
@@ -132,9 +139,10 @@ class TestMCPClientInit:
     def test_custom_sandbox_base_dir(self) -> None:
         """MCPClient should accept a custom sandbox_base_dir."""
         service = MCPService(name="svc", command=["cmd"], description="desc")
-        client = MCPClient(service, sandbox_base_dir="/tmp/my_sandbox")
+        custom_base = str(Path(_SANDBOX_BASE) / "my_sandbox")
+        client = MCPClient(service, sandbox_base_dir=custom_base)
 
-        assert client.sandbox_base_dir == "/tmp/my_sandbox"
+        assert client.sandbox_base_dir == custom_base
 
 
 class TestMCPClientSetupSandboxEnv:
@@ -147,23 +155,24 @@ class TestMCPClientSetupSandboxEnv:
             description="",
             sandbox_config=sandbox_config,
         )
-        return MCPClient(svc, sandbox_base_dir="/tmp/sandbox_test")
+        return MCPClient(svc, sandbox_base_dir=_SANDBOX_BASE)
 
-    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_sandboxing_disabled_returns_full_env(self, mock_makedirs: MagicMock) -> None:
+    @patch("signalwire.mcp_gateway.mcp_manager.Path.mkdir")
+    def test_sandboxing_disabled_returns_full_env(self, mock_mkdir: MagicMock) -> None:
         """When sandbox is disabled, the full environment is returned."""
         client = self._make_client(sandbox_config={"enabled": False})
 
         env, cwd = client._setup_sandbox_env()
 
         # Should not create sandbox dir
-        mock_makedirs.assert_not_called()
+        mock_mkdir.assert_not_called()
         # Should return roughly the current environment
         assert "PATH" in env
-        assert cwd == os.getcwd()
+        # Production returns a str (``str(Path.cwd())``), so compare as a str.
+        assert cwd == str(Path.cwd())
 
-    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_sandbox_enabled_restricted_env(self, mock_makedirs: MagicMock) -> None:
+    @patch("signalwire.mcp_gateway.mcp_manager.Path.mkdir", autospec=True)
+    def test_sandbox_enabled_restricted_env(self, mock_mkdir: MagicMock) -> None:
         """When sandbox is enabled with restricted_env, a minimal env is created."""
         client = self._make_client(
             sandbox_config={
@@ -175,7 +184,12 @@ class TestMCPClientSetupSandboxEnv:
 
         env, cwd = client._setup_sandbox_env()
 
-        mock_makedirs.assert_called_once()
+        assert client.sandbox_dir is not None
+        mock_mkdir.assert_called_once_with(
+            Path(client.sandbox_dir), parents=True, exist_ok=True
+        )
+        # No working_dir is configured, so the cwd falls back to the process cwd.
+        assert cwd == str(Path.cwd())
         # Restricted env should have limited keys
         assert "PATH" in env
         assert "HOME" in env
@@ -200,6 +214,8 @@ class TestMCPClientSetupSandboxEnv:
         with patch.dict(os.environ, {"LD_PRELOAD": "evil.so"}, clear=False):
             env, cwd = client._setup_sandbox_env()
 
+        # No working_dir is configured, so the cwd falls back to the process cwd.
+        assert cwd == str(Path.cwd())
         # LD_PRELOAD should be stripped even with unrestricted
         assert "LD_PRELOAD" not in env
         # HOME should be overridden to sandbox dir
@@ -232,7 +248,9 @@ class TestMCPClientSetupSandboxEnv:
         assert cwd == "/custom/dir"
 
     @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_sandbox_disabled_working_dir_from_config(self, mock_makedirs: MagicMock) -> None:
+    def test_sandbox_disabled_working_dir_from_config(
+        self, mock_makedirs: MagicMock
+    ) -> None:
         """When sandboxing disabled, working_dir from config is still honoured."""
         client = self._make_client(
             sandbox_config={"enabled": False, "working_dir": "/other/dir"}
@@ -290,8 +308,7 @@ class TestMCPClientCallMethod:
 
     def _make_client(self) -> MCPClient:
         service = MCPService(name="svc", command=["cmd"], description="")
-        client = MCPClient(service)
-        return client
+        return MCPClient(service)
 
     def test_call_method_raises_when_shutting_down(self) -> None:
         """call_method should raise RuntimeError when shutdown is set."""
@@ -372,19 +389,23 @@ class TestMCPClientCallMethod:
         # _send_message does nothing (no response will arrive)
         client._send_message = Mock()  # type: ignore[method-assign]  # mock
 
-        with pytest.raises(TimeoutError, match="Timeout"):
+        with (
+            pytest.raises(TimeoutError, match="Timeout"),
             # Use a very short timeout by patching the Event.wait
-            with patch.object(threading.Event, "wait", return_value=False):
-                client.call_method("slow_method", {})
+            patch.object(threading.Event, "wait", return_value=False),
+        ):
+            client.call_method("slow_method", {})
 
     def test_call_method_cleans_up_on_timeout(self) -> None:
         """Pending request should be removed on timeout."""
         client = self._make_client()
         client._send_message = Mock()  # type: ignore[method-assign]  # mock
 
-        with patch.object(threading.Event, "wait", return_value=False):
-            with pytest.raises(TimeoutError):
-                client.call_method("slow_method", {})
+        with (
+            patch.object(threading.Event, "wait", return_value=False),
+            pytest.raises(TimeoutError),
+        ):
+            client.call_method("slow_method", {})
 
         # Pending requests should be empty after timeout cleanup
         assert len(client.pending_requests) == 0
@@ -434,7 +455,9 @@ class TestMCPClientStart:
 
     @patch("signalwire.mcp_gateway.mcp_manager.subprocess.Popen")
     @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_start_success(self, mock_makedirs: MagicMock, mock_popen: MagicMock) -> None:
+    def test_start_success(
+        self, mock_makedirs: MagicMock, mock_popen: MagicMock
+    ) -> None:
         """start() should return True when initialization and tool listing succeed."""
         service = MCPService(
             name="svc",
@@ -462,7 +485,9 @@ class TestMCPClientStart:
 
     @patch("signalwire.mcp_gateway.mcp_manager.subprocess.Popen")
     @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_start_fails_on_initialize(self, mock_makedirs: MagicMock, mock_popen: MagicMock) -> None:
+    def test_start_fails_on_initialize(
+        self, mock_makedirs: MagicMock, mock_popen: MagicMock
+    ) -> None:
         """start() should return False when _initialize fails."""
         service = MCPService(
             name="svc",
@@ -489,7 +514,9 @@ class TestMCPClientStart:
 
     @patch("signalwire.mcp_gateway.mcp_manager.subprocess.Popen")
     @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_start_fails_on_popen_exception(self, mock_makedirs: MagicMock, mock_popen: MagicMock) -> None:
+    def test_start_fails_on_popen_exception(
+        self, mock_makedirs: MagicMock, mock_popen: MagicMock
+    ) -> None:
         """start() should return False when Popen raises an exception."""
         service = MCPService(
             name="svc",
@@ -506,7 +533,9 @@ class TestMCPClientStart:
 
     @patch("signalwire.mcp_gateway.mcp_manager.subprocess.Popen")
     @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_start_creates_reader_thread(self, mock_makedirs: MagicMock, mock_popen: MagicMock) -> None:
+    def test_start_creates_reader_thread(
+        self, mock_makedirs: MagicMock, mock_popen: MagicMock
+    ) -> None:
         """start() should launch a reader thread."""
         service = MCPService(
             name="svc",
@@ -523,7 +552,9 @@ class TestMCPClientStart:
         client._initialize = Mock(return_value=True)  # type: ignore[method-assign]  # mock
         client._list_tools = Mock(return_value=[])  # type: ignore[method-assign]  # mock
 
-        with patch("signalwire.mcp_gateway.mcp_manager.threading.Thread") as mock_thread_cls:
+        with patch(
+            "signalwire.mcp_gateway.mcp_manager.threading.Thread"
+        ) as mock_thread_cls:
             mock_thread_instance = Mock()
             mock_thread_cls.return_value = mock_thread_instance
 
@@ -556,7 +587,7 @@ class TestMCPClientStop:
         client.stop()
 
         assert client._shutdown.is_set()
-        client.process is None
+        assert client.process is None
 
     def test_stop_force_kills_on_timeout(self) -> None:
         """stop() should force kill if terminate doesn't work in time."""
@@ -586,17 +617,20 @@ class TestMCPClientStop:
     def test_stop_cleans_up_sandbox_dir(self, mock_rmtree: MagicMock) -> None:
         """stop() should remove the sandbox directory if it exists."""
         service = MCPService(
-            name="svc", command=["cmd"], description="",
+            name="svc",
+            command=["cmd"],
+            description="",
             sandbox_config={"enabled": True},
         )
+        sandbox_dir = str(Path(_SANDBOX_BASE) / "mcp_svc_123")
         client = MCPClient(service)
         client.process = None  # already stopped
-        client.sandbox_dir = "/tmp/sandbox_test/mcp_svc_123"
+        client.sandbox_dir = sandbox_dir
 
-        with patch("signalwire.mcp_gateway.mcp_manager.os.path.exists", return_value=True):
+        with patch("signalwire.mcp_gateway.mcp_manager.Path.exists", return_value=True):
             client.stop()
 
-        mock_rmtree.assert_called_once_with("/tmp/sandbox_test/mcp_svc_123")
+        mock_rmtree.assert_called_once_with(sandbox_dir)
 
     def test_stop_when_no_process(self) -> None:
         """stop() should not raise when process is None."""
@@ -827,7 +861,9 @@ class TestMCPClientSandboxPreexec:
         assert mock_setrlimit.call_count == 4
 
     @patch("signalwire.mcp_gateway.mcp_manager.resource.setrlimit")
-    def test_preexec_skips_resource_limits_when_disabled(self, mock_setrlimit: MagicMock) -> None:
+    def test_preexec_skips_resource_limits_when_disabled(
+        self, mock_setrlimit: MagicMock
+    ) -> None:
         """_sandbox_preexec should skip resource limits when disabled."""
         service = MCPService(
             name="svc",
@@ -842,7 +878,9 @@ class TestMCPClientSandboxPreexec:
         mock_setrlimit.assert_not_called()
 
     @patch("signalwire.mcp_gateway.mcp_manager.resource.setrlimit")
-    def test_preexec_handles_resource_limit_errors(self, mock_setrlimit: MagicMock) -> None:
+    def test_preexec_handles_resource_limit_errors(
+        self, mock_setrlimit: MagicMock
+    ) -> None:
         """_sandbox_preexec should not raise on resource limit errors."""
         mock_setrlimit.side_effect = OSError("Not permitted")
 
@@ -866,8 +904,8 @@ class TestMCPClientSandboxPreexec:
 class TestMCPManagerInit:
     """Tests for MCPManager.__init__."""
 
-    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_init_with_empty_config(self, mock_makedirs: MagicMock) -> None:
+    @patch("signalwire.mcp_gateway.mcp_manager.Path.mkdir", autospec=True)
+    def test_init_with_empty_config(self, mock_mkdir: MagicMock) -> None:
         """MCPManager should initialize with an empty config."""
         config: dict[str, Any] = {}
         manager = MCPManager(config)
@@ -876,19 +914,24 @@ class TestMCPManagerInit:
         assert manager.services == {}
         assert manager.clients == {}
         assert manager.sandbox_base_dir == "./sandbox"
-        mock_makedirs.assert_called_once_with("./sandbox", exist_ok=True)
+        # autospec keeps the receiver, so the directory being created is asserted.
+        mock_mkdir.assert_called_once_with(
+            Path("./sandbox"), parents=True, exist_ok=True
+        )
 
-    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_init_with_custom_sandbox_dir(self, mock_makedirs: MagicMock) -> None:
+    @patch("signalwire.mcp_gateway.mcp_manager.Path.mkdir", autospec=True)
+    def test_init_with_custom_sandbox_dir(self, mock_mkdir: MagicMock) -> None:
         """MCPManager should use sandbox_dir from session config."""
         config = {"session": {"sandbox_dir": "/custom/sandbox"}}
         manager = MCPManager(config)
 
         assert manager.sandbox_base_dir == "/custom/sandbox"
-        mock_makedirs.assert_called_once_with("/custom/sandbox", exist_ok=True)
+        mock_mkdir.assert_called_once_with(
+            Path("/custom/sandbox"), parents=True, exist_ok=True
+        )
 
-    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_init_loads_services(self, mock_makedirs: MagicMock) -> None:
+    @patch("signalwire.mcp_gateway.mcp_manager.Path.mkdir")
+    def test_init_loads_services(self, mock_mkdir: MagicMock) -> None:
         """MCPManager should load services from config on init."""
         config = {
             "services": {
@@ -939,7 +982,9 @@ class TestMCPManagerLoadServices:
     """Tests for MCPManager._load_services."""
 
     @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_load_services_creates_mcp_service_objects(self, mock_makedirs: MagicMock) -> None:
+    def test_load_services_creates_mcp_service_objects(
+        self, mock_makedirs: MagicMock
+    ) -> None:
         """Loaded services should be MCPService instances with correct attributes."""
         config = {
             "services": {
@@ -994,9 +1039,7 @@ class TestMCPManagerGetService:
     def test_get_existing_service(self, mock_makedirs: MagicMock) -> None:
         """get_service should return the MCPService for a known name."""
         config = {
-            "services": {
-                "known": {"command": ["cmd"], "description": "known service"}
-            }
+            "services": {"known": {"command": ["cmd"], "description": "known service"}}
         }
         manager = MCPManager(config)
 
@@ -1083,13 +1126,11 @@ class TestMCPManagerCreateClient:
 
     @patch("signalwire.mcp_gateway.mcp_manager.MCPClient")
     @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_create_client_success(self, mock_makedirs: MagicMock, mock_client_cls: MagicMock) -> None:
+    def test_create_client_success(
+        self, mock_makedirs: MagicMock, mock_client_cls: MagicMock
+    ) -> None:
         """create_client should return a started MCPClient and track it."""
-        config = {
-            "services": {
-                "my_svc": {"command": ["echo"], "description": "test"}
-            }
-        }
+        config = {"services": {"my_svc": {"command": ["echo"], "description": "test"}}}
         manager = MCPManager(config)
 
         mock_client_instance = Mock()
@@ -1105,12 +1146,12 @@ class TestMCPManagerCreateClient:
 
     @patch("signalwire.mcp_gateway.mcp_manager.MCPClient")
     @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_create_client_start_failure(self, mock_makedirs: MagicMock, mock_client_cls: MagicMock) -> None:
+    def test_create_client_start_failure(
+        self, mock_makedirs: MagicMock, mock_client_cls: MagicMock
+    ) -> None:
         """create_client should raise RuntimeError when client.start() fails."""
         config = {
-            "services": {
-                "my_svc": {"command": ["bad_cmd"], "description": "test"}
-            }
+            "services": {"my_svc": {"command": ["bad_cmd"], "description": "test"}}
         }
         manager = MCPManager(config)
 
@@ -1123,13 +1164,11 @@ class TestMCPManagerCreateClient:
 
     @patch("signalwire.mcp_gateway.mcp_manager.MCPClient")
     @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_create_client_tracks_with_unique_key(self, mock_makedirs: MagicMock, mock_client_cls: MagicMock) -> None:
+    def test_create_client_tracks_with_unique_key(
+        self, mock_makedirs: MagicMock, mock_client_cls: MagicMock
+    ) -> None:
         """Each created client should get a unique key in the clients dict."""
-        config = {
-            "services": {
-                "svc": {"command": ["cmd"], "description": ""}
-            }
-        }
+        config = {"services": {"svc": {"command": ["cmd"], "description": ""}}}
         manager = MCPManager(config)
 
         client1 = Mock()
@@ -1148,25 +1187,26 @@ class TestMCPManagerGetServiceTools:
     """Tests for MCPManager.get_service_tools."""
 
     @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_get_service_tools_returns_tools_and_cleans_up(self, mock_makedirs: MagicMock) -> None:
+    def test_get_service_tools_returns_tools_and_cleans_up(
+        self, mock_makedirs: MagicMock
+    ) -> None:
         """get_service_tools should return tools and clean up the temp client."""
-        config = {
-            "services": {
-                "svc": {"command": ["cmd"], "description": ""}
-            }
-        }
+        config = {"services": {"svc": {"command": ["cmd"], "description": ""}}}
         manager = MCPManager(config)
 
         mock_client = Mock()
         mock_client.start.return_value = True
         mock_client.get_tools.return_value = [{"name": "tool_a"}]
 
-        with patch.object(manager, "create_client", return_value=mock_client) as mock_create:
+        with patch.object(
+            manager, "create_client", return_value=mock_client
+        ) as mock_create:
             # We need to simulate what create_client does - track the client
             def side_effect(name: str) -> Mock:
                 key = f"{name}_{id(mock_client)}"
                 manager.clients[key] = mock_client
                 return mock_client
+
             mock_create.side_effect = side_effect
 
             tools = manager.get_service_tools("svc")
@@ -1177,24 +1217,26 @@ class TestMCPManagerGetServiceTools:
         assert len(manager.clients) == 0
 
     @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_get_service_tools_cleans_up_on_error(self, mock_makedirs: MagicMock) -> None:
+    def test_get_service_tools_cleans_up_on_error(
+        self, mock_makedirs: MagicMock
+    ) -> None:
         """get_service_tools should clean up even when get_tools raises."""
-        config = {
-            "services": {
-                "svc": {"command": ["cmd"], "description": ""}
-            }
-        }
+        config = {"services": {"svc": {"command": ["cmd"], "description": ""}}}
         manager = MCPManager(config)
 
         mock_client = Mock()
         mock_client.start.return_value = True
         mock_client.get_tools.side_effect = Exception("oops")
 
-        with patch.object(manager, "create_client", return_value=mock_client) as mock_create:
+        with patch.object(
+            manager, "create_client", return_value=mock_client
+        ) as mock_create:
+
             def side_effect(name: str) -> Mock:
                 key = f"{name}_{id(mock_client)}"
                 manager.clients[key] = mock_client
                 return mock_client
+
             mock_create.side_effect = side_effect
 
             with pytest.raises(Exception, match="oops"):
@@ -1220,11 +1262,15 @@ class TestMCPManagerValidateServices:
         mock_client = Mock()
         mock_client.start.return_value = True
 
-        with patch.object(manager, "create_client", return_value=mock_client) as mock_create:
+        with patch.object(
+            manager, "create_client", return_value=mock_client
+        ) as mock_create:
+
             def side_effect(name: str) -> Mock:
                 key = f"{name}_{id(mock_client)}"
                 manager.clients[key] = mock_client
                 return mock_client
+
             mock_create.side_effect = side_effect
 
             results = manager.validate_services()

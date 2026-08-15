@@ -21,6 +21,7 @@ from signalwire.core.skill_base import SkillBase
 
 class MockSkill(SkillBase):
     """Mock skill for testing"""
+
     SKILL_NAME = "mock_skill"
     SKILL_DESCRIPTION = "A mock skill for testing"
     SKILL_VERSION = "1.0.0"
@@ -31,7 +32,11 @@ class MockSkill(SkillBase):
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         schema: dict[str, dict[str, Any]] = super().get_parameter_schema()
-        schema["test_param"] = {"type": "string", "description": "test", "required": False}
+        schema["test_param"] = {
+            "type": "string",
+            "description": "test",
+            "required": False,
+        }
         return schema
 
     def setup(self) -> bool:
@@ -43,6 +48,7 @@ class MockSkill(SkillBase):
 
 class AnotherMockSkill(SkillBase):
     """Another mock skill for testing"""
+
     SKILL_NAME = "another_mock_skill"
     SKILL_DESCRIPTION = "Another mock skill"
     SKILL_VERSION = "2.0.0"
@@ -53,7 +59,11 @@ class AnotherMockSkill(SkillBase):
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         schema: dict[str, dict[str, Any]] = super().get_parameter_schema()
-        schema["test_param"] = {"type": "string", "description": "test", "required": False}
+        schema["test_param"] = {
+            "type": "string",
+            "description": "test",
+            "required": False,
+        }
         return schema
 
     def setup(self) -> bool:
@@ -65,18 +75,19 @@ class AnotherMockSkill(SkillBase):
 
 class InvalidSkill(SkillBase):
     """Invalid skill without SKILL_NAME"""
+
     SKILL_NAME = None
-    
+
     def setup(self) -> bool:
         return True
-    
+
     def register_tools(self) -> None:
         pass
 
 
 class TestSkillRegistry:
     """Test SkillRegistry functionality"""
-    
+
     def test_basic_initialization(self) -> None:
         """Test basic SkillRegistry initialization"""
         registry = SkillRegistry()
@@ -84,41 +95,43 @@ class TestSkillRegistry:
         assert registry._skills == {}
         assert registry._entry_points_loaded is False
         assert registry.logger is not None
-    
+
     def test_register_skill_basic(self) -> None:
         """Test basic skill registration"""
         registry = SkillRegistry()
-        
+
         registry.register_skill(MockSkill)
-        
+
         assert "mock_skill" in registry._skills
         assert registry._skills["mock_skill"] == MockSkill
-    
+
     def test_register_skill_duplicate(self) -> None:
         """Test registering duplicate skill"""
         registry = SkillRegistry()
-        
+
         registry.register_skill(MockSkill)
-        
+
         # Register the same skill again
-        with patch.object(registry.logger, 'warning') as mock_warning:
+        with patch.object(registry.logger, "warning") as mock_warning:
             registry.register_skill(MockSkill)
-            mock_warning.assert_called_once_with("Skill 'mock_skill' already registered")
-        
+            mock_warning.assert_called_once_with(
+                "Skill 'mock_skill' already registered"
+            )
+
         # Should still only have one instance
         assert len(registry._skills) == 1
-    
+
     def test_register_multiple_skills(self) -> None:
         """Test registering multiple skills"""
         registry = SkillRegistry()
-        
+
         registry.register_skill(MockSkill)
         registry.register_skill(AnotherMockSkill)
-        
+
         assert len(registry._skills) == 2
         assert "mock_skill" in registry._skills
         assert "another_mock_skill" in registry._skills
-    
+
     def test_get_skill_class_existing(self) -> None:
         """Test getting existing skill class"""
         registry = SkillRegistry()
@@ -127,26 +140,28 @@ class TestSkillRegistry:
         skill_class = registry.get_skill_class("mock_skill")
 
         assert skill_class == MockSkill
-    
+
     def test_get_skill_class_nonexistent(self) -> None:
         """Test getting nonexistent skill class"""
         registry = SkillRegistry()
 
         # Mock on-demand loading to prevent real filesystem scanning
-        with patch.object(registry, '_load_skill_on_demand', return_value=None):
+        with patch.object(registry, "_load_skill_on_demand", return_value=None):
             skill_class = registry.get_skill_class("nonexistent_skill")
 
         assert skill_class is None
-    
-    @patch.object(SkillRegistry, '_load_skill_on_demand', return_value=None)
-    def test_get_skill_class_triggers_on_demand_loading(self, mock_load: MagicMock) -> None:
+
+    @patch.object(SkillRegistry, "_load_skill_on_demand", return_value=None)
+    def test_get_skill_class_triggers_on_demand_loading(
+        self, mock_load: MagicMock
+    ) -> None:
         """Test that get_skill_class triggers on-demand loading for unknown skills"""
         registry = SkillRegistry()
 
         registry.get_skill_class("some_skill")
 
         mock_load.assert_called_once_with("some_skill")
-    
+
     def test_list_skills_empty(self) -> None:
         """Test listing skills when no skill directories exist"""
         registry = SkillRegistry()
@@ -154,12 +169,12 @@ class TestSkillRegistry:
         # Mock the skills directory to return no subdirectories
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = []
-        with patch('signalwire.skills.registry.Path') as mock_path_cls:
+        with patch("signalwire.skills.registry.Path") as mock_path_cls:
             mock_path_cls.return_value.parent = mock_skills_dir
             skills = registry.list_skills()
 
         assert skills == []
-    
+
     def test_list_skills_with_skills(self) -> None:
         """Test listing skills with registered skills"""
         registry = SkillRegistry()
@@ -184,7 +199,7 @@ class TestSkillRegistry:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = [mock_dir1, mock_dir2]
 
-        with patch('signalwire.skills.registry.Path') as mock_path_cls:
+        with patch("signalwire.skills.registry.Path") as mock_path_cls:
             mock_path_cls.return_value.parent = mock_skills_dir
             skills = registry.list_skills()
 
@@ -199,13 +214,15 @@ class TestSkillRegistry:
         assert mock_skill_info["supports_multiple_instances"] is True
 
         # Check second skill
-        another_skill_info = next(s for s in skills if s["name"] == "another_mock_skill")
+        another_skill_info = next(
+            s for s in skills if s["name"] == "another_mock_skill"
+        )
         assert another_skill_info["description"] == "Another mock skill"
         assert another_skill_info["version"] == "2.0.0"
         assert another_skill_info["required_packages"] == []
         assert another_skill_info["required_env_vars"] == []
         assert another_skill_info["supports_multiple_instances"] is False
-    
+
     def test_list_skills_triggers_on_demand_loading(self) -> None:
         """Test that list_skills triggers on-demand loading for found skill directories"""
         registry = SkillRegistry()
@@ -221,9 +238,11 @@ class TestSkillRegistry:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = [mock_dir]
 
-        with patch('signalwire.skills.registry.Path') as mock_path_cls:
+        with patch("signalwire.skills.registry.Path") as mock_path_cls:
             mock_path_cls.return_value.parent = mock_skills_dir
-            with patch.object(registry, '_load_skill_on_demand', return_value=None) as mock_load:
+            with patch.object(
+                registry, "_load_skill_on_demand", return_value=None
+            ) as mock_load:
                 registry.list_skills()
                 mock_load.assert_called_once_with("some_skill")
 
@@ -246,7 +265,9 @@ class TestSkillDiscovery:
         # loading them on demand populates the registry's _skills cache.
         assert isinstance(discovered, list)
         assert len(discovered) == len(registry._skills)
-        assert registry._skills, "discover_skills() should have registered the scanned skills"
+        assert registry._skills, (
+            "discover_skills() should have registered the scanned skills"
+        )
 
     def test_entry_points_loaded_idempotent(self) -> None:
         """Test that _load_entry_points is idempotent"""
@@ -254,7 +275,7 @@ class TestSkillDiscovery:
 
         mock_eps = MagicMock()
         mock_eps.return_value = MagicMock(select=MagicMock(return_value=[]))
-        with patch('importlib.metadata.entry_points', mock_eps):
+        with patch("importlib.metadata.entry_points", mock_eps):
             registry._load_entry_points()
             registry._load_entry_points()  # Call again
 
@@ -284,11 +305,17 @@ class TestSkillDiscovery:
         mock_file.is_dir.return_value = False
 
         mock_skills_dir = Mock()
-        mock_skills_dir.iterdir.return_value = [mock_skill_dir1, mock_skill_dir2, mock_file]
+        mock_skills_dir.iterdir.return_value = [
+            mock_skill_dir1,
+            mock_skill_dir2,
+            mock_file,
+        ]
 
-        with patch('signalwire.skills.registry.Path') as mock_path_cls:
+        with patch("signalwire.skills.registry.Path") as mock_path_cls:
             mock_path_cls.return_value.parent = mock_skills_dir
-            with patch.object(registry, '_load_skill_on_demand', return_value=None) as mock_load:
+            with patch.object(
+                registry, "_load_skill_on_demand", return_value=None
+            ) as mock_load:
                 registry.list_skills()
 
                 # Should only load from test_skill directory (not __pycache__ or files)
@@ -298,13 +325,17 @@ class TestSkillDiscovery:
         """Test that _load_skill_on_demand searches built-in and external paths"""
         registry = SkillRegistry()
 
-        with patch.object(registry, '_load_entry_points'):
-            with patch.object(registry, '_load_skill_from_path', return_value=None) as mock_load_path:
-                result = registry._load_skill_on_demand("nonexistent_skill")
+        with (
+            patch.object(registry, "_load_entry_points"),
+            patch.object(
+                registry, "_load_skill_from_path", return_value=None
+            ) as mock_load_path,
+        ):
+            result = registry._load_skill_on_demand("nonexistent_skill")
 
-                assert result is None
-                # Should have tried loading from the built-in skills directory
-                assert mock_load_path.call_count >= 1
+            assert result is None
+            # Should have tried loading from the built-in skills directory
+            assert mock_load_path.call_count >= 1
 
 
 class TestSkillLoading:
@@ -326,10 +357,15 @@ class TestSkillLoading:
         assert result is None
         assert len(registry._skills) == 0
 
-    @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
-    @patch('signalwire.skills.registry.importlib.util.module_from_spec')
-    @patch('signalwire.skills.registry.inspect.getmembers')
-    def test_load_skill_from_path_success(self, mock_getmembers: MagicMock, mock_module_from_spec: MagicMock, mock_spec_from_file: MagicMock) -> None:
+    @patch("signalwire.skills.registry.importlib.util.spec_from_file_location")
+    @patch("signalwire.skills.registry.importlib.util.module_from_spec")
+    @patch("signalwire.skills.registry.inspect.getmembers")
+    def test_load_skill_from_path_success(
+        self,
+        mock_getmembers: MagicMock,
+        mock_module_from_spec: MagicMock,
+        mock_spec_from_file: MagicMock,
+    ) -> None:
         """Test successful skill loading from path"""
         registry = SkillRegistry()
 
@@ -358,14 +394,16 @@ class TestSkillLoading:
             ("SomeOtherClass", str),  # Should be ignored
         ]
 
-        with patch.object(registry, 'register_skill') as mock_register:
+        with patch.object(registry, "register_skill") as mock_register:
             result = registry._load_skill_from_path("mock_skill", mock_base_path)  # noqa: F841
 
             # Should register the matching skill
             mock_register.assert_called_once_with(MockSkill)
 
-    @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
-    def test_load_skill_from_path_import_error(self, mock_spec_from_file: MagicMock) -> None:
+    @patch("signalwire.skills.registry.importlib.util.spec_from_file_location")
+    def test_load_skill_from_path_import_error(
+        self, mock_spec_from_file: MagicMock
+    ) -> None:
         """Test skill loading with import error"""
         registry = SkillRegistry()
 
@@ -381,16 +419,18 @@ class TestSkillLoading:
         # Mock import error
         mock_spec_from_file.side_effect = ImportError("Module not found")
 
-        with patch.object(registry.logger, 'error') as mock_error:
+        with patch.object(registry.logger, "error") as mock_error:
             result = registry._load_skill_from_path("test_skill", mock_base_path)
 
             assert result is None
             mock_error.assert_called_once()
             assert "Failed to load skill" in mock_error.call_args[0][0]
 
-    @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
-    @patch('signalwire.skills.registry.importlib.util.module_from_spec')
-    def test_load_skill_from_path_execution_error(self, mock_module_from_spec: MagicMock, mock_spec_from_file: MagicMock) -> None:
+    @patch("signalwire.skills.registry.importlib.util.spec_from_file_location")
+    @patch("signalwire.skills.registry.importlib.util.module_from_spec")
+    def test_load_skill_from_path_execution_error(
+        self, mock_module_from_spec: MagicMock, mock_spec_from_file: MagicMock
+    ) -> None:
         """Test skill loading with module execution error"""
         registry = SkillRegistry()
 
@@ -413,7 +453,7 @@ class TestSkillLoading:
         mock_module = Mock()
         mock_module_from_spec.return_value = mock_module
 
-        with patch.object(registry.logger, 'error') as mock_error:
+        with patch.object(registry.logger, "error") as mock_error:
             result = registry._load_skill_from_path("test_skill", mock_base_path)
 
             assert result is None
@@ -423,23 +463,23 @@ class TestSkillLoading:
 
 class TestGlobalRegistry:
     """Test global registry instance"""
-    
+
     def test_global_registry_exists(self) -> None:
         """Test that global registry instance exists"""
         assert skill_registry is not None
         assert isinstance(skill_registry, SkillRegistry)
-    
+
     def test_global_registry_singleton_behavior(self) -> None:
         """Test that global registry behaves like a singleton"""
         # Import again to get the same instance
         from signalwire.skills.registry import skill_registry as registry2
-        
+
         assert skill_registry is registry2
 
 
 class TestSkillRegistryIntegration:
     """Test integration scenarios"""
-    
+
     def test_complete_skill_workflow(self) -> None:
         """Test complete skill registration and retrieval workflow"""
         registry = SkillRegistry()
@@ -466,7 +506,7 @@ class TestSkillRegistryIntegration:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = [mock_dir1, mock_dir2]
 
-        with patch('signalwire.skills.registry.Path') as mock_path_cls:
+        with patch("signalwire.skills.registry.Path") as mock_path_cls:
             mock_path_cls.return_value.parent = mock_skills_dir
 
             # List all skills
@@ -481,10 +521,10 @@ class TestSkillRegistryIntegration:
         assert another_skill == AnotherMockSkill
 
         # Try to get nonexistent skill
-        with patch.object(registry, '_load_skill_on_demand', return_value=None):
+        with patch.object(registry, "_load_skill_on_demand", return_value=None):
             nonexistent = registry.get_skill_class("nonexistent")
             assert nonexistent is None
-    
+
     def test_skill_metadata_completeness(self) -> None:
         """Test that skill metadata is complete and correct"""
         registry = SkillRegistry()
@@ -501,16 +541,19 @@ class TestSkillRegistryIntegration:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = [mock_dir]
 
-        with patch('signalwire.skills.registry.Path') as mock_path_cls:
+        with patch("signalwire.skills.registry.Path") as mock_path_cls:
             mock_path_cls.return_value.parent = mock_skills_dir
             skills = registry.list_skills()
             skill_info = skills[0]
 
             # Verify all expected fields are present
             expected_fields = [
-                "name", "description", "version",
-                "required_packages", "required_env_vars",
-                "supports_multiple_instances"
+                "name",
+                "description",
+                "version",
+                "required_packages",
+                "required_env_vars",
+                "supports_multiple_instances",
             ]
 
             for field in expected_fields:
@@ -523,26 +566,26 @@ class TestSkillRegistryIntegration:
             assert skill_info["required_packages"] == ["requests"]
             assert skill_info["required_env_vars"] == ["API_KEY"]
             assert skill_info["supports_multiple_instances"] is True
-    
+
     def test_registry_state_isolation(self) -> None:
         """Test that different registry instances are isolated"""
         registry1 = SkillRegistry()
         registry2 = SkillRegistry()
-        
+
         registry1.register_skill(MockSkill)
-        
+
         # registry2 should not have the skill
         assert len(registry1._skills) == 1
         assert len(registry2._skills) == 0
-        
+
         # But both should be able to register skills independently
         registry2.register_skill(AnotherMockSkill)
-        
+
         assert "mock_skill" in registry1._skills
         assert "mock_skill" not in registry2._skills
         assert "another_mock_skill" not in registry1._skills
         assert "another_mock_skill" in registry2._skills
-    
+
     def test_error_recovery(self) -> None:
         """Test that registry can recover from errors"""
         registry = SkillRegistry()
@@ -559,9 +602,14 @@ class TestSkillRegistryIntegration:
         mock_skill_dir.__truediv__ = Mock(return_value=mock_skill_file)
         mock_base_path.__truediv__ = Mock(return_value=mock_skill_dir)
 
-        with patch('signalwire.skills.registry.importlib.util.spec_from_file_location', side_effect=Exception("Bad import")):
-            with patch.object(registry.logger, 'error'):
-                result = registry._load_skill_from_path("bad_skill", mock_base_path)
+        with (
+            patch(
+                "signalwire.skills.registry.importlib.util.spec_from_file_location",
+                side_effect=Exception("Bad import"),
+            ),
+            patch.object(registry.logger, "error"),
+        ):
+            result = registry._load_skill_from_path("bad_skill", mock_base_path)
 
         assert result is None
 
@@ -578,8 +626,10 @@ class TestSkillRegistryIntegration:
 # Helper mock skills used by new test classes
 # ---------------------------------------------------------------------------
 
+
 class _SecondMockSkill(SkillBase):
     """A second mock skill with a different name for multi-match testing"""
+
     SKILL_NAME = "second_mock"
     SKILL_DESCRIPTION = "Second mock"
     SKILL_VERSION = "1.0.0"
@@ -602,6 +652,7 @@ class _SecondMockSkill(SkillBase):
 
 class _NoParamSchemaSkill(SkillBase):
     """Skill that does not override get_parameter_schema (uses base only)"""
+
     SKILL_NAME = "no_param_schema"
     SKILL_DESCRIPTION = "No param schema"
     SUPPORTS_MULTIPLE_INSTANCES = False
@@ -617,10 +668,13 @@ class _NoParamSchemaSkill(SkillBase):
 # TestListAllSkillSources
 # ---------------------------------------------------------------------------
 
+
 class TestListAllSkillSources:
     """Test listing built-in + external skill directories via list_all_skill_sources."""
 
-    def _make_dir_entry(self, name: str, has_skill_py: bool = True, is_dir: bool = True) -> Mock:
+    def _make_dir_entry(
+        self, name: str, has_skill_py: bool = True, is_dir: bool = True
+    ) -> Mock:
         """Helper to create a mock directory entry."""
         entry = Mock()
         entry.is_dir.return_value = is_dir
@@ -635,16 +689,23 @@ class TestListAllSkillSources:
         registry = SkillRegistry()
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = []
-        with patch.object(Path, '__new__', return_value=mock_skills_dir):
+        with (
+            patch.object(Path, "__new__", return_value=mock_skills_dir),
             # Easier: patch the parent property used inside the method
-            with patch('signalwire.skills.registry.Path') as MockPath:
-                # Path(__file__).parent  ->  mock_skills_dir
-                MockPath.return_value.parent = mock_skills_dir
-                sources = registry.list_all_skill_sources()
-        assert set(sources.keys()) == {'built-in', 'external_paths', 'entry_points', 'registered'}
-        assert sources['built-in'] == []
-        assert sources['external_paths'] == []
-        assert sources['registered'] == []
+            patch("signalwire.skills.registry.Path") as MockPath,
+        ):
+            # Path(__file__).parent  ->  mock_skills_dir
+            MockPath.return_value.parent = mock_skills_dir
+            sources = registry.list_all_skill_sources()
+        assert set(sources.keys()) == {
+            "built-in",
+            "external_paths",
+            "entry_points",
+            "registered",
+        }
+        assert sources["built-in"] == []
+        assert sources["external_paths"] == []
+        assert sources["registered"] == []
 
     def test_builtin_skills_listed(self) -> None:
         """Built-in skill directories with skill.py are listed."""
@@ -656,11 +717,11 @@ class TestListAllSkillSources:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = entries
 
-        with patch('signalwire.skills.registry.Path') as MockPath:
+        with patch("signalwire.skills.registry.Path") as MockPath:
             MockPath.return_value.parent = mock_skills_dir
             sources = registry.list_all_skill_sources()
 
-        assert sorted(sources['built-in']) == ['math', 'weather']
+        assert sorted(sources["built-in"]) == ["math", "weather"]
 
     def test_builtin_skips_dunder_dirs(self) -> None:
         """Directories starting with __ are excluded from built-in list."""
@@ -673,11 +734,11 @@ class TestListAllSkillSources:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = entries
 
-        with patch('signalwire.skills.registry.Path') as MockPath:
+        with patch("signalwire.skills.registry.Path") as MockPath:
             MockPath.return_value.parent = mock_skills_dir
             sources = registry.list_all_skill_sources()
 
-        assert sources['built-in'] == ['real_skill']
+        assert sources["built-in"] == ["real_skill"]
 
     def test_builtin_skips_non_dir_items(self) -> None:
         """Non-directory items in the skills folder are ignored."""
@@ -689,11 +750,11 @@ class TestListAllSkillSources:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = entries
 
-        with patch('signalwire.skills.registry.Path') as MockPath:
+        with patch("signalwire.skills.registry.Path") as MockPath:
             MockPath.return_value.parent = mock_skills_dir
             sources = registry.list_all_skill_sources()
 
-        assert sources['built-in'] == ['a_skill']
+        assert sources["built-in"] == ["a_skill"]
 
     def test_builtin_skips_dirs_without_skill_py(self) -> None:
         """Directories that lack skill.py are excluded."""
@@ -705,11 +766,11 @@ class TestListAllSkillSources:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = entries
 
-        with patch('signalwire.skills.registry.Path') as MockPath:
+        with patch("signalwire.skills.registry.Path") as MockPath:
             MockPath.return_value.parent = mock_skills_dir
             sources = registry.list_all_skill_sources()
 
-        assert sources['built-in'] == ['valid_skill']
+        assert sources["built-in"] == ["valid_skill"]
 
     def test_external_paths_listed(self) -> None:
         """Skills from external directories appear under external_paths."""
@@ -724,11 +785,11 @@ class TestListAllSkillSources:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = []
 
-        with patch('signalwire.skills.registry.Path') as MockPath:
+        with patch("signalwire.skills.registry.Path") as MockPath:
             MockPath.return_value.parent = mock_skills_dir
             sources = registry.list_all_skill_sources()
 
-        assert sources['external_paths'] == ['custom_skill']
+        assert sources["external_paths"] == ["custom_skill"]
 
     def test_external_path_not_exists_skipped(self) -> None:
         """External paths that don't exist are silently skipped."""
@@ -741,11 +802,11 @@ class TestListAllSkillSources:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = []
 
-        with patch('signalwire.skills.registry.Path') as MockPath:
+        with patch("signalwire.skills.registry.Path") as MockPath:
             MockPath.return_value.parent = mock_skills_dir
             sources = registry.list_all_skill_sources()
 
-        assert sources['external_paths'] == []
+        assert sources["external_paths"] == []
 
     def test_registered_skills_not_in_builtin(self) -> None:
         """Registered skills that are NOT in the built-in list go under 'registered'."""
@@ -755,11 +816,11 @@ class TestListAllSkillSources:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = []
 
-        with patch('signalwire.skills.registry.Path') as MockPath:
+        with patch("signalwire.skills.registry.Path") as MockPath:
             MockPath.return_value.parent = mock_skills_dir
             sources = registry.list_all_skill_sources()
 
-        assert 'mock_skill' in sources['registered']
+        assert "mock_skill" in sources["registered"]
 
     def test_registered_skill_also_builtin_not_duplicated(self) -> None:
         """A registered skill whose name matches a built-in should NOT appear in 'registered'."""
@@ -771,22 +832,25 @@ class TestListAllSkillSources:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = entries
 
-        with patch('signalwire.skills.registry.Path') as MockPath:
+        with patch("signalwire.skills.registry.Path") as MockPath:
             MockPath.return_value.parent = mock_skills_dir
             sources = registry.list_all_skill_sources()
 
-        assert 'mock_skill' in sources['built-in']
-        assert 'mock_skill' not in sources['registered']
+        assert "mock_skill" in sources["built-in"]
+        assert "mock_skill" not in sources["registered"]
 
 
 # ---------------------------------------------------------------------------
 # TestLoadSkillFromPathVariants
 # ---------------------------------------------------------------------------
 
+
 class TestLoadSkillFromPathVariants:
     """Test loading skills from paths - edge cases and variants."""
 
-    def _make_base_path(self, name: str = "skills", skill_file_exists: bool = True) -> Mock:
+    def _make_base_path(
+        self, name: str = "skills", skill_file_exists: bool = True
+    ) -> Mock:
         """Helper: create mock base_path where base_path/skill_name/skill.py exists."""
         mock_base_path = Mock()
         mock_base_path.name = name
@@ -803,7 +867,10 @@ class TestLoadSkillFromPathVariants:
         base = self._make_base_path(skill_file_exists=False)
         assert registry._load_skill_from_path("anything", base) is None
 
-    @patch('signalwire.skills.registry.importlib.util.spec_from_file_location', return_value=None)
+    @patch(
+        "signalwire.skills.registry.importlib.util.spec_from_file_location",
+        return_value=None,
+    )
     def test_spec_is_none_returns_none(self, _mock_spec: MagicMock) -> None:
         """When spec_from_file_location returns None, exception is caught and None returned."""
         registry = SkillRegistry()
@@ -811,10 +878,12 @@ class TestLoadSkillFromPathVariants:
         result = registry._load_skill_from_path("test_skill", base)
         assert result is None
 
-    @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
-    @patch('signalwire.skills.registry.importlib.util.module_from_spec')
-    @patch('signalwire.skills.registry.inspect.getmembers')
-    def test_no_matching_skillbase_subclass(self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock) -> None:
+    @patch("signalwire.skills.registry.importlib.util.spec_from_file_location")
+    @patch("signalwire.skills.registry.importlib.util.module_from_spec")
+    @patch("signalwire.skills.registry.inspect.getmembers")
+    def test_no_matching_skillbase_subclass(
+        self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock
+    ) -> None:
         """When module has no SkillBase subclass with matching name, logs warning and returns None."""
         registry = SkillRegistry()
         base = self._make_base_path()
@@ -826,16 +895,18 @@ class TestLoadSkillFromPathVariants:
         # Return a regular class, not a SkillBase subclass
         mock_members.return_value = [("Foo", str), ("Bar", int)]
 
-        with patch.object(registry.logger, 'warning') as warn:
+        with patch.object(registry.logger, "warning") as warn:
             result = registry._load_skill_from_path("test_skill", base)
             assert result is None
             warn.assert_called_once()
             assert "No skill class found" in warn.call_args[0][0]
 
-    @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
-    @patch('signalwire.skills.registry.importlib.util.module_from_spec')
-    @patch('signalwire.skills.registry.inspect.getmembers')
-    def test_class_with_wrong_skill_name_skipped(self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock) -> None:
+    @patch("signalwire.skills.registry.importlib.util.spec_from_file_location")
+    @patch("signalwire.skills.registry.importlib.util.module_from_spec")
+    @patch("signalwire.skills.registry.inspect.getmembers")
+    def test_class_with_wrong_skill_name_skipped(
+        self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock
+    ) -> None:
         """A SkillBase subclass with a different SKILL_NAME is not loaded."""
         registry = SkillRegistry()
         base = self._make_base_path()
@@ -850,10 +921,12 @@ class TestLoadSkillFromPathVariants:
         result = registry._load_skill_from_path("other", base)
         assert result is None
 
-    @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
-    @patch('signalwire.skills.registry.importlib.util.module_from_spec')
-    @patch('signalwire.skills.registry.inspect.getmembers')
-    def test_first_matching_class_wins(self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock) -> None:
+    @patch("signalwire.skills.registry.importlib.util.spec_from_file_location")
+    @patch("signalwire.skills.registry.importlib.util.module_from_spec")
+    @patch("signalwire.skills.registry.inspect.getmembers")
+    def test_first_matching_class_wins(
+        self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock
+    ) -> None:
         """When multiple SkillBase subclasses match, the first one found is returned."""
         registry = SkillRegistry()
         base = self._make_base_path()
@@ -868,27 +941,34 @@ class TestLoadSkillFromPathVariants:
             SKILL_NAME = "mock_skill"
             SKILL_DESCRIPTION = "Dup"
             SUPPORTS_MULTIPLE_INSTANCES = False
+
             @classmethod
             def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
                 schema: dict[str, dict[str, Any]] = super().get_parameter_schema()
                 schema["x"] = {"type": "string", "description": "x"}
                 return schema
-            def setup(self) -> bool: return True
-            def register_tools(self) -> None: pass
+
+            def setup(self) -> bool:
+                return True
+
+            def register_tools(self) -> None:
+                pass
 
         mock_members.return_value = [
             ("MockSkill", MockSkill),
             ("DuplicateMockSkill", DuplicateMockSkill),
         ]
 
-        with patch.object(registry, 'register_skill'):
+        with patch.object(registry, "register_skill"):
             result = registry._load_skill_from_path("mock_skill", base)
         assert result is MockSkill
 
-    @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
-    @patch('signalwire.skills.registry.importlib.util.module_from_spec')
-    @patch('signalwire.skills.registry.inspect.getmembers')
-    def test_module_added_to_sys_modules(self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock) -> None:
+    @patch("signalwire.skills.registry.importlib.util.spec_from_file_location")
+    @patch("signalwire.skills.registry.importlib.util.module_from_spec")
+    @patch("signalwire.skills.registry.inspect.getmembers")
+    def test_module_added_to_sys_modules(
+        self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock
+    ) -> None:
         """The loaded module is inserted into sys.modules."""
         registry = SkillRegistry()
         base = self._make_base_path()
@@ -902,16 +982,18 @@ class TestLoadSkillFromPathVariants:
 
         module_name = f"signalwire_agents_external.skills.mock_skill.skill"  # noqa: F541
         try:
-            with patch.object(registry, 'register_skill'):
+            with patch.object(registry, "register_skill"):
                 registry._load_skill_from_path("mock_skill", base)
             assert module_name in sys.modules
             assert sys.modules[module_name] is fake_module
         finally:
             sys.modules.pop(module_name, None)
 
-    @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
-    @patch('signalwire.skills.registry.importlib.util.module_from_spec')
-    def test_exec_module_exception_returns_none(self, mock_mod: MagicMock, mock_spec: MagicMock) -> None:
+    @patch("signalwire.skills.registry.importlib.util.spec_from_file_location")
+    @patch("signalwire.skills.registry.importlib.util.module_from_spec")
+    def test_exec_module_exception_returns_none(
+        self, mock_mod: MagicMock, mock_spec: MagicMock
+    ) -> None:
         """If exec_module raises, the error is caught and None is returned."""
         registry = SkillRegistry()
         base = self._make_base_path()
@@ -924,10 +1006,12 @@ class TestLoadSkillFromPathVariants:
         result = registry._load_skill_from_path("bad_skill", base)
         assert result is None
 
-    @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
-    @patch('signalwire.skills.registry.importlib.util.module_from_spec')
-    @patch('signalwire.skills.registry.inspect.getmembers')
-    def test_skillbase_itself_is_skipped(self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock) -> None:
+    @patch("signalwire.skills.registry.importlib.util.spec_from_file_location")
+    @patch("signalwire.skills.registry.importlib.util.module_from_spec")
+    @patch("signalwire.skills.registry.inspect.getmembers")
+    def test_skillbase_itself_is_skipped(
+        self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock
+    ) -> None:
         """SkillBase class itself (obj == SkillBase) is skipped during scanning."""
         registry = SkillRegistry()
         base = self._make_base_path()
@@ -941,10 +1025,12 @@ class TestLoadSkillFromPathVariants:
         result = registry._load_skill_from_path("SkillBase", base)
         assert result is None
 
-    @patch('signalwire.skills.registry.importlib.util.spec_from_file_location')
-    @patch('signalwire.skills.registry.importlib.util.module_from_spec')
-    @patch('signalwire.skills.registry.inspect.getmembers')
-    def test_class_without_skill_name_attr_skipped(self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock) -> None:
+    @patch("signalwire.skills.registry.importlib.util.spec_from_file_location")
+    @patch("signalwire.skills.registry.importlib.util.module_from_spec")
+    @patch("signalwire.skills.registry.inspect.getmembers")
+    def test_class_without_skill_name_attr_skipped(
+        self, mock_members: MagicMock, mock_mod: MagicMock, mock_spec: MagicMock
+    ) -> None:
         """A class that inherits SkillBase but has no SKILL_NAME attribute is skipped."""
         registry = SkillRegistry()
         base = self._make_base_path()
@@ -955,10 +1041,14 @@ class TestLoadSkillFromPathVariants:
         mock_mod.return_value = Mock()
 
         # Create a mock class that looks like SkillBase subclass but no SKILL_NAME
-        fake_cls = type('FakeSkill', (SkillBase,), {
-            'setup': lambda self: None,
-            'register_tools': lambda self: None,
-        })
+        fake_cls = type(
+            "FakeSkill",
+            (SkillBase,),
+            {
+                "setup": lambda self: None,
+                "register_tools": lambda self: None,
+            },
+        )
         # SkillBase sets SKILL_NAME = None, and the code checks hasattr + obj.SKILL_NAME == skill_name
         mock_members.return_value = [("FakeSkill", fake_cls)]
 
@@ -971,10 +1061,13 @@ class TestLoadSkillFromPathVariants:
 # TestDirectoryScanning
 # ---------------------------------------------------------------------------
 
+
 class TestDirectoryScanning:
     """Test scanning directories for skills - various scenarios."""
 
-    def _make_dir_entry(self, name: str, has_skill_py: bool = True, is_dir: bool = True) -> Mock:
+    def _make_dir_entry(
+        self, name: str, has_skill_py: bool = True, is_dir: bool = True
+    ) -> Mock:
         entry = Mock()
         entry.is_dir.return_value = is_dir
         entry.name = name
@@ -1022,15 +1115,15 @@ class TestDirectoryScanning:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = []
 
-        with patch('signalwire.skills.registry.Path') as MockPath:
+        with patch("signalwire.skills.registry.Path") as MockPath:
             MockPath.return_value.parent = mock_skills_dir
-            with patch.object(registry, '_load_entry_points'):
+            with patch.object(registry, "_load_entry_points"):
                 schema = registry.get_all_skills_schema()
 
-        assert 'mock_skill' in schema
-        assert schema['mock_skill']['source'] == 'registered'
-        assert schema['mock_skill']['name'] == 'mock_skill'
-        assert schema['mock_skill']['description'] == 'A mock skill for testing'
+        assert "mock_skill" in schema
+        assert schema["mock_skill"]["source"] == "registered"
+        assert schema["mock_skill"]["name"] == "mock_skill"
+        assert schema["mock_skill"]["description"] == "A mock skill for testing"
 
     def test_get_all_skills_schema_builtin_scan(self) -> None:
         """Built-in skills are scanned and added with source='built-in'."""
@@ -1040,14 +1133,16 @@ class TestDirectoryScanning:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = entries
 
-        with patch('signalwire.skills.registry.Path') as MockPath:
+        with patch("signalwire.skills.registry.Path") as MockPath:
             MockPath.return_value.parent = mock_skills_dir
-            with patch.object(registry, '_load_entry_points'):
-                with patch.object(registry, '_load_skill_on_demand', return_value=MockSkill):
-                    schema = registry.get_all_skills_schema()
+            with (
+                patch.object(registry, "_load_entry_points"),
+                patch.object(registry, "_load_skill_on_demand", return_value=MockSkill),
+            ):
+                schema = registry.get_all_skills_schema()
 
-        assert 'mock_skill' in schema
-        assert schema['mock_skill']['source'] == 'built-in'
+        assert "mock_skill" in schema
+        assert schema["mock_skill"]["source"] == "built-in"
 
     def test_get_all_skills_schema_external_scan(self, tmp_path: Path) -> None:
         """External path skills appear with source='external'."""
@@ -1062,14 +1157,16 @@ class TestDirectoryScanning:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = []
 
-        with patch('signalwire.skills.registry.Path') as MockPath:
+        with patch("signalwire.skills.registry.Path") as MockPath:
             MockPath.return_value.parent = mock_skills_dir
-            with patch.object(registry, '_load_entry_points'):
-                with patch.object(registry, '_load_skill_on_demand', return_value=MockSkill):
-                    schema = registry.get_all_skills_schema()
+            with (
+                patch.object(registry, "_load_entry_points"),
+                patch.object(registry, "_load_skill_on_demand", return_value=MockSkill),
+            ):
+                schema = registry.get_all_skills_schema()
 
-        assert 'mock_skill' in schema
-        assert schema['mock_skill']['source'] == 'external'
+        assert "mock_skill" in schema
+        assert schema["mock_skill"]["source"] == "external"
 
     def test_get_all_skills_schema_env_paths(self) -> None:
         """Skills from SIGNALWIRE_SKILL_PATHS env var are scanned."""
@@ -1089,20 +1186,22 @@ class TestDirectoryScanning:
         mock_file_path.parent = mock_skills_dir
 
         def path_factory(x: str) -> Mock:
-            if x == '/fake/env/path':
+            if x == "/fake/env/path":
                 return mock_env_path
             # For __file__ and anything else, return something with .parent
             result = Mock()
             result.parent = mock_skills_dir
             return result
 
-        with patch('signalwire.skills.registry.Path', side_effect=path_factory):
-            with patch.object(registry, '_load_entry_points'):
-                with patch.object(registry, '_load_skill_on_demand', return_value=MockSkill):
-                    with patch.dict('os.environ', {'SIGNALWIRE_SKILL_PATHS': '/fake/env/path'}):
-                        schema = registry.get_all_skills_schema()
+        with (
+            patch("signalwire.skills.registry.Path", side_effect=path_factory),
+            patch.object(registry, "_load_entry_points"),
+            patch.object(registry, "_load_skill_on_demand", return_value=MockSkill),
+            patch.dict("os.environ", {"SIGNALWIRE_SKILL_PATHS": "/fake/env/path"}),
+        ):
+            schema = registry.get_all_skills_schema()
 
-        assert 'mock_skill' in schema
+        assert "mock_skill" in schema
 
     def test_get_all_skills_schema_skips_already_in_schema(self) -> None:
         """Skills already present in schema from an earlier source are not overwritten."""
@@ -1114,13 +1213,13 @@ class TestDirectoryScanning:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = entries
 
-        with patch('signalwire.skills.registry.Path') as MockPath:
+        with patch("signalwire.skills.registry.Path") as MockPath:
             MockPath.return_value.parent = mock_skills_dir
-            with patch.object(registry, '_load_entry_points'):
+            with patch.object(registry, "_load_entry_points"):
                 schema = registry.get_all_skills_schema()
 
         # Should be 'registered', not overwritten to 'built-in'
-        assert schema['mock_skill']['source'] == 'registered'
+        assert schema["mock_skill"]["source"] == "registered"
 
     def test_get_all_skills_schema_handles_load_failure(self) -> None:
         """When _load_skill_on_demand raises, error is logged and skill skipped."""
@@ -1130,14 +1229,18 @@ class TestDirectoryScanning:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = entries
 
-        with patch('signalwire.skills.registry.Path') as MockPath:
+        with patch("signalwire.skills.registry.Path") as MockPath:
             MockPath.return_value.parent = mock_skills_dir
-            with patch.object(registry, '_load_entry_points'):
-                with patch.object(registry, '_load_skill_on_demand', side_effect=RuntimeError("boom")):
-                    with patch.object(registry.logger, 'error'):
-                        schema = registry.get_all_skills_schema()
+            with (
+                patch.object(registry, "_load_entry_points"),
+                patch.object(
+                    registry, "_load_skill_on_demand", side_effect=RuntimeError("boom")
+                ),
+                patch.object(registry.logger, "error"),
+            ):
+                schema = registry.get_all_skills_schema()
 
-        assert 'bad_skill' not in schema
+        assert "bad_skill" not in schema
 
     def test_get_all_skills_schema_handles_none_from_load(self) -> None:
         """When _load_skill_on_demand returns None, the skill is simply skipped."""
@@ -1147,13 +1250,15 @@ class TestDirectoryScanning:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = entries
 
-        with patch('signalwire.skills.registry.Path') as MockPath:
+        with patch("signalwire.skills.registry.Path") as MockPath:
             MockPath.return_value.parent = mock_skills_dir
-            with patch.object(registry, '_load_entry_points'):
-                with patch.object(registry, '_load_skill_on_demand', return_value=None):
-                    schema = registry.get_all_skills_schema()
+            with (
+                patch.object(registry, "_load_entry_points"),
+                patch.object(registry, "_load_skill_on_demand", return_value=None),
+            ):
+                schema = registry.get_all_skills_schema()
 
-        assert 'missing_skill' not in schema
+        assert "missing_skill" not in schema
 
     def test_get_all_skills_schema_skill_without_get_parameter_schema(self) -> None:
         """If skill_class lacks get_parameter_schema, empty dict is used for parameters."""
@@ -1173,14 +1278,18 @@ class TestDirectoryScanning:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = entries
 
-        with patch('signalwire.skills.registry.Path') as MockPath:
+        with patch("signalwire.skills.registry.Path") as MockPath:
             MockPath.return_value.parent = mock_skills_dir
-            with patch.object(registry, '_load_entry_points'):
-                with patch.object(registry, '_load_skill_on_demand', return_value=fake_skill):
-                    schema = registry.get_all_skills_schema()
+            with (
+                patch.object(registry, "_load_entry_points"),
+                patch.object(
+                    registry, "_load_skill_on_demand", return_value=fake_skill
+                ),
+            ):
+                schema = registry.get_all_skills_schema()
 
-        assert 'attr_err_skill' in schema
-        assert schema['attr_err_skill']['parameters'] == {}
+        assert "attr_err_skill" in schema
+        assert schema["attr_err_skill"]["parameters"] == {}
 
     def test_get_all_skills_schema_external_path_not_exists(self) -> None:
         """External paths that don't exist are silently skipped in schema scan."""
@@ -1193,9 +1302,9 @@ class TestDirectoryScanning:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = []
 
-        with patch('signalwire.skills.registry.Path') as MockPath:
+        with patch("signalwire.skills.registry.Path") as MockPath:
             MockPath.return_value.parent = mock_skills_dir
-            with patch.object(registry, '_load_entry_points'):
+            with patch.object(registry, "_load_entry_points"):
                 schema = registry.get_all_skills_schema()
 
         assert schema == {}
@@ -1208,7 +1317,7 @@ class TestDirectoryScanning:
         mock_skills_dir = Mock()
         mock_skills_dir.iterdir.return_value = entries
 
-        with patch('signalwire.skills.registry.Path') as MockPath:
+        with patch("signalwire.skills.registry.Path") as MockPath:
             MockPath.return_value.parent = mock_skills_dir
             skills = registry.list_skills()
 
@@ -1225,6 +1334,7 @@ class TestDirectoryScanning:
 # TestEntryPointLoading
 # ---------------------------------------------------------------------------
 
+
 class TestEntryPointLoading:
     """Test loading skills from entry points."""
 
@@ -1240,10 +1350,12 @@ class TestEntryPointLoading:
         mock_all_eps.select.return_value = [mock_ep]
         # hasattr(mock_all_eps, 'select') -> True by default with Mock
 
-        with patch('importlib.metadata.entry_points', return_value=mock_all_eps):
-            with patch.object(registry, 'register_skill') as mock_reg:
-                registry._load_entry_points()
-                mock_reg.assert_called_once_with(MockSkill)
+        with (
+            patch("importlib.metadata.entry_points", return_value=mock_all_eps),
+            patch.object(registry, "register_skill") as mock_reg,
+        ):
+            registry._load_entry_points()
+            mock_reg.assert_called_once_with(MockSkill)
 
         assert registry._entry_points_loaded is True
 
@@ -1256,12 +1368,14 @@ class TestEntryPointLoading:
         mock_ep.load.return_value = MockSkill
 
         # Create object without 'select' attribute
-        mock_all_eps = {'signalwire.skills': [mock_ep]}
+        mock_all_eps = {"signalwire.skills": [mock_ep]}
 
-        with patch('importlib.metadata.entry_points', return_value=mock_all_eps):
-            with patch.object(registry, 'register_skill') as mock_reg:
-                registry._load_entry_points()
-                mock_reg.assert_called_once_with(MockSkill)
+        with (
+            patch("importlib.metadata.entry_points", return_value=mock_all_eps),
+            patch.object(registry, "register_skill") as mock_reg,
+        ):
+            registry._load_entry_points()
+            mock_reg.assert_called_once_with(MockSkill)
 
     def test_broken_entry_point_load_fails(self) -> None:
         """If entry_point.load() raises, error is logged and loading continues."""
@@ -1274,11 +1388,13 @@ class TestEntryPointLoading:
         mock_all_eps = Mock()
         mock_all_eps.select.return_value = [mock_ep]
 
-        with patch('importlib.metadata.entry_points', return_value=mock_all_eps):
-            with patch.object(registry.logger, 'error') as mock_err:
-                registry._load_entry_points()
-                mock_err.assert_called_once()
-                assert "Failed to load skill from entry point" in mock_err.call_args[0][0]
+        with (
+            patch("importlib.metadata.entry_points", return_value=mock_all_eps),
+            patch.object(registry.logger, "error") as mock_err,
+        ):
+            registry._load_entry_points()
+            mock_err.assert_called_once()
+            assert "Failed to load skill from entry point" in mock_err.call_args[0][0]
 
     def test_non_skillbase_entry_point(self) -> None:
         """Entry points that load a non-SkillBase class are warned about."""
@@ -1291,18 +1407,20 @@ class TestEntryPointLoading:
         mock_all_eps = Mock()
         mock_all_eps.select.return_value = [mock_ep]
 
-        with patch('importlib.metadata.entry_points', return_value=mock_all_eps):
-            with patch.object(registry.logger, 'warning') as mock_warn:
-                registry._load_entry_points()
-                mock_warn.assert_called_once()
-                assert "does not provide a SkillBase subclass" in mock_warn.call_args[0][0]
+        with (
+            patch("importlib.metadata.entry_points", return_value=mock_all_eps),
+            patch.object(registry.logger, "warning") as mock_warn,
+        ):
+            registry._load_entry_points()
+            mock_warn.assert_called_once()
+            assert "does not provide a SkillBase subclass" in mock_warn.call_args[0][0]
 
     def test_entry_points_loaded_flag_prevents_reload(self) -> None:
         """Once _entry_points_loaded is True, the method returns immediately."""
         registry = SkillRegistry()
         registry._entry_points_loaded = True
 
-        with patch('importlib.metadata.entry_points') as mock_ep:
+        with patch("importlib.metadata.entry_points") as mock_ep:
             registry._load_entry_points()
             mock_ep.assert_not_called()
 
@@ -1310,11 +1428,16 @@ class TestEntryPointLoading:
         """If entry_points() itself raises, the error is caught gracefully."""
         registry = SkillRegistry()
 
-        with patch('importlib.metadata.entry_points', side_effect=Exception("metadata broke")):
-            with patch.object(registry.logger, 'debug') as mock_debug:
-                registry._load_entry_points()
-                mock_debug.assert_called_once()
-                assert "Entry point loading failed" in mock_debug.call_args[0][0]
+        with (
+            patch(
+                "importlib.metadata.entry_points",
+                side_effect=Exception("metadata broke"),
+            ),
+            patch.object(registry.logger, "debug") as mock_debug,
+        ):
+            registry._load_entry_points()
+            mock_debug.assert_called_once()
+            assert "Entry point loading failed" in mock_debug.call_args[0][0]
 
         # Flag should still be set to prevent retries
         assert registry._entry_points_loaded is True
@@ -1334,10 +1457,12 @@ class TestEntryPointLoading:
         mock_all_eps = Mock()
         mock_all_eps.select.return_value = [ep1, ep2]
 
-        with patch('importlib.metadata.entry_points', return_value=mock_all_eps):
-            with patch.object(registry, 'register_skill') as mock_reg:
-                registry._load_entry_points()
-                assert mock_reg.call_count == 2
+        with (
+            patch("importlib.metadata.entry_points", return_value=mock_all_eps),
+            patch.object(registry, "register_skill") as mock_reg,
+        ):
+            registry._load_entry_points()
+            assert mock_reg.call_count == 2
 
     def test_entry_point_register_skill_failure(self) -> None:
         """If register_skill raises for an entry point, error is logged."""
@@ -1350,11 +1475,15 @@ class TestEntryPointLoading:
         mock_all_eps = Mock()
         mock_all_eps.select.return_value = [mock_ep]
 
-        with patch('importlib.metadata.entry_points', return_value=mock_all_eps):
-            with patch.object(registry, 'register_skill', side_effect=ValueError("bad skill")):
-                with patch.object(registry.logger, 'error') as mock_err:
-                    registry._load_entry_points()
-                    mock_err.assert_called_once()
+        with (
+            patch("importlib.metadata.entry_points", return_value=mock_all_eps),
+            patch.object(
+                registry, "register_skill", side_effect=ValueError("bad skill")
+            ),
+            patch.object(registry.logger, "error") as mock_err,
+        ):
+            registry._load_entry_points()
+            mock_err.assert_called_once()
 
     # -- _load_skill_on_demand integration with entry points --
 
@@ -1374,7 +1503,7 @@ class TestEntryPointLoading:
             registry._entry_points_loaded = True
             registry._skills["dynamic"] = MockSkill
 
-        with patch.object(registry, '_load_entry_points', side_effect=fake_load_eps):
+        with patch.object(registry, "_load_entry_points", side_effect=fake_load_eps):
             result = registry._load_skill_on_demand("dynamic")
 
         assert result is MockSkill
@@ -1393,9 +1522,13 @@ class TestEntryPointLoading:
                 return MockSkill
             return None
 
-        with patch.object(registry, '_load_entry_points'):
-            with patch.object(registry, '_load_skill_from_path', side_effect=fake_load_from_path):
-                result = registry._load_skill_on_demand("mock_skill")
+        with (
+            patch.object(registry, "_load_entry_points"),
+            patch.object(
+                registry, "_load_skill_from_path", side_effect=fake_load_from_path
+            ),
+        ):
+            result = registry._load_skill_on_demand("mock_skill")
 
         assert result is MockSkill
         # Should have tried built-in first, then external
@@ -1408,16 +1541,26 @@ class TestEntryPointLoading:
 
         call_log = []
 
+        # The product turns each entry into Path(path_str), so match on the Path
+        # itself instead of a str() spelling of it: str(Path("/env/skills")) is
+        # "\env\skills" on Windows, so the literal comparison never matched
+        # there and the env-var search looked broken when it was not.
+        env_path = Path("/env/skills")
+
         def fake_load_from_path(name: str, path: Path) -> type[SkillBase] | None:
             call_log.append((name, path))
-            if str(path) == "/env/skills":
+            if path == env_path:
                 return MockSkill
             return None
 
-        with patch.object(registry, '_load_entry_points'):
-            with patch.object(registry, '_load_skill_from_path', side_effect=fake_load_from_path):
-                with patch.dict('os.environ', {'SIGNALWIRE_SKILL_PATHS': '/env/skills'}):
-                    result = registry._load_skill_on_demand("mock_skill")
+        with (
+            patch.object(registry, "_load_entry_points"),
+            patch.object(
+                registry, "_load_skill_from_path", side_effect=fake_load_from_path
+            ),
+            patch.dict("os.environ", {"SIGNALWIRE_SKILL_PATHS": str(env_path)}),
+        ):
+            result = registry._load_skill_on_demand("mock_skill")
 
         assert result is MockSkill
 
@@ -1425,27 +1568,33 @@ class TestEntryPointLoading:
         """Empty strings in SIGNALWIRE_SKILL_PATHS are skipped."""
         registry = SkillRegistry()
 
-        with patch.object(registry, '_load_entry_points'):
-            with patch.object(registry, '_load_skill_from_path', return_value=None) as mock_load:
-                with patch.dict('os.environ', {'SIGNALWIRE_SKILL_PATHS': ''}):
-                    result = registry._load_skill_on_demand("skill_x")
+        with (
+            patch.object(registry, "_load_entry_points"),
+            patch.object(
+                registry, "_load_skill_from_path", return_value=None
+            ) as mock_load,
+            patch.dict("os.environ", {"SIGNALWIRE_SKILL_PATHS": ""}),
+        ):
+            result = registry._load_skill_on_demand("skill_x")
 
         assert result is None
         # _load_skill_from_path should only be called for the built-in dir, not for empty string
         for call in mock_load.call_args_list:
             assert call[0][0] == "skill_x"  # First arg is skill name
             # Second arg should not be Path('')
-            assert str(call[0][1]) != ''
+            assert str(call[0][1]) != ""
 
     def test_load_on_demand_not_found_returns_none(self) -> None:
         """When skill is not found anywhere, None is returned with debug log."""
         registry = SkillRegistry()
 
-        with patch.object(registry, '_load_entry_points'):
-            with patch.object(registry, '_load_skill_from_path', return_value=None):
-                with patch.dict('os.environ', {'SIGNALWIRE_SKILL_PATHS': ''}):
-                    with patch.object(registry.logger, 'debug') as mock_debug:
-                        result = registry._load_skill_on_demand("nowhere_skill")
+        with (
+            patch.object(registry, "_load_entry_points"),
+            patch.object(registry, "_load_skill_from_path", return_value=None),
+            patch.dict("os.environ", {"SIGNALWIRE_SKILL_PATHS": ""}),
+            patch.object(registry.logger, "debug") as mock_debug,
+        ):
+            result = registry._load_skill_on_demand("nowhere_skill")
 
         assert result is None
         mock_debug.assert_called_once()
@@ -1455,6 +1604,7 @@ class TestEntryPointLoading:
 # ---------------------------------------------------------------------------
 # TestRegisterSkillValidation
 # ---------------------------------------------------------------------------
+
 
 class TestRegisterSkillValidation:
     """Test register_skill validation edge cases."""
@@ -1478,15 +1628,25 @@ class TestRegisterSkillValidation:
         class BadSkill(SkillBase):
             SKILL_NAME = "bad"
             SKILL_DESCRIPTION = "bad"
-            def setup(self) -> bool: return True
-            def register_tools(self) -> None: pass
+
+            def setup(self) -> bool:
+                return True
+
+            def register_tools(self) -> None:
+                pass
 
         # Delete get_parameter_schema to simulate missing method
         # Since SkillBase has it, we need to make it not callable
-        with patch.object(BadSkill, 'get_parameter_schema', new_callable=lambda: property(lambda self: None)):
+        with (
+            patch.object(
+                BadSkill,
+                "get_parameter_schema",
+                new_callable=lambda: property(lambda self: None),
+            ),
             # The hasattr check or callable check will fail
-            with pytest.raises(ValueError):
-                registry.register_skill(BadSkill)
+            pytest.raises(ValueError),
+        ):
+            registry.register_skill(BadSkill)
 
     def test_register_skill_schema_returns_non_dict(self) -> None:
         """Skill whose get_parameter_schema returns non-dict raises ValueError."""
@@ -1495,10 +1655,17 @@ class TestRegisterSkillValidation:
         class BadSchemaSkill(SkillBase):
             SKILL_NAME = "bad_schema"
             SKILL_DESCRIPTION = "bad schema"
-            def setup(self) -> bool: return True
-            def register_tools(self) -> None: pass
+
+            def setup(self) -> bool:
+                return True
+
+            def register_tools(self) -> None:
+                pass
+
             @classmethod
-            def get_parameter_schema(cls) -> Any:  # deliberately returns non-dict to test validation
+            def get_parameter_schema(
+                cls,
+            ) -> Any:  # deliberately returns non-dict to test validation
                 return "not a dict"
 
         with pytest.raises(ValueError, match="must return a dictionary"):
@@ -1511,8 +1678,13 @@ class TestRegisterSkillValidation:
         class EmptySchemaSkill(SkillBase):
             SKILL_NAME = "empty_schema"
             SKILL_DESCRIPTION = "empty schema"
-            def setup(self) -> bool: return True
-            def register_tools(self) -> None: pass
+
+            def setup(self) -> bool:
+                return True
+
+            def register_tools(self) -> None:
+                pass
+
             @classmethod
             def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
                 return {}
@@ -1527,8 +1699,13 @@ class TestRegisterSkillValidation:
         class ExcSchemaSkill(SkillBase):
             SKILL_NAME = "exc_schema"
             SKILL_DESCRIPTION = "exc schema"
-            def setup(self) -> bool: return True
-            def register_tools(self) -> None: pass
+
+            def setup(self) -> bool:
+                return True
+
+            def register_tools(self) -> None:
+                pass
+
             @classmethod
             def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
                 raise RuntimeError("boom")

@@ -284,7 +284,7 @@ class WebSearchSkill(SkillBase):
         """Return global data for agent context"""
         return {"web_search_enabled": True, "search_provider": "Google Custom Search"}
 
-    def get_prompt_sections(self) -> list[dict[str, Any]]:
+    def _get_prompt_sections(self) -> list[dict[str, Any]]:
         """Return prompt sections to add to agent"""
         return [
             {

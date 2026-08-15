@@ -17,6 +17,12 @@ factory-boy>=3.3.0    # For test data factories
 faker>=19.0.0         # For generating fake data
 httpx>=0.24.0         # For async HTTP testing
 aiofiles>=23.0.0      # For async file operations in tests
+build>=1.0.0          # PACKAGE-SMOKE gate runs `python -m build --wheel` (see
+                      # porting-sdk/scripts/package_smoke.py plan_python). It was
+                      # never declared, so the gate depended on the runner image
+                      # happening to ship it — and failed on macOS/Windows, where it
+                      # does not (AGENT_RULES §7: a tool a gate needs is DECLARED,
+                      # not assumed present).
 
 # Optional-feature deps required by tests under tests/unit/search/.
 # These mirror the [search-queryonly] extra in pyproject.toml so the
@@ -27,4 +33,32 @@ nltk>=3.8
 numpy>=1.24.0
 scikit-learn>=1.3.0
 sentence-transformers>=2.2.0
-mypy>=1.8
+mypy==2.3.0           # TYPECHECK gate in scripts/run-ci.sh; PINNED exact for the
+                      # same reason as ruff above — an open floor lets CI install a
+                      # NEWER mypy than the dev has, and mypy adds checks and
+                      # narrows inference between releases, so the gate reds on
+                      # code that never changed and no local run reproduces it.
+                      # Bump deliberately, with the resulting fixes in the same
+                      # commit.
+
+# Type STUBS. A stub package is a real dependency of the TYPECHECK gate: its
+# PRESENCE (not just its version) changes mypy's verdict on unchanged source, so an
+# undeclared stub is the same defect class as an unpinned tool — with a nastier
+# signature, because it is invisible to a version check.
+#
+# Measured 2026-08-04, the reason this pin exists: every repo on a dev box tends to
+# resolve ONE shared venv, so a stub declared by a NEIGHBOURING repo silently lands
+# on this repo's path. types-PyYAML is declared in api-reference-specs'
+# requirements-dev.txt and was in NO signalwire manifest. With it importable, mypy
+# reported 3 `redundant-cast` errors at pom.py:519 and swml_renderer.py:146,197;
+# without it — which is what CI actually had — mypy reported "Success: no issues
+# found in 362 source files". Local and CI were being decided by different type
+# information, and "fixing" the local error by deleting those casts would have
+# BROKEN CI, where yaml.dump() is untyped Any and the casts were load-bearing.
+#
+# Declaring it resolves the split in the direction that types MORE: with the stub,
+# yaml.dump(stream=None) is genuinely `str` (verified: reveal_type -> "str"), so the
+# three casts are truly redundant and were removed in the same commit. Pinned exact
+# like the tools above — typeshed revises stubs continuously, and a stub revision
+# that changes an overload changes this gate's verdict on code that never changed.
+types-PyYAML==6.0.12.20260724

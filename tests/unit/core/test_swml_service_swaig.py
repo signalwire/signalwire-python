@@ -15,7 +15,6 @@ that previously lived only on AgentBase.
 """
 
 import asyncio
-import base64
 import json
 from collections.abc import Coroutine
 from typing import Any, TypeVar
@@ -72,6 +71,7 @@ def _service(**kwargs: Any) -> SWMLService:
 # ---------------------------------------------------------------------------
 # SWMLService-only SWAIG hosting
 # ---------------------------------------------------------------------------
+
 
 class TestSWMLServiceHasSWAIGCapability:
     """The lift gives plain SWMLService instances SWAIG-hosting capability."""
@@ -227,6 +227,7 @@ class TestSWMLServiceSWAIGDispatch:
 # Sidecar usage pattern
 # ---------------------------------------------------------------------------
 
+
 class TestSidecarPatternViaSWMLService:
     """Sidecar-flavored SWML services need three things from SWMLService:
     1. arbitrary verb emission (already supported via add_verb / add_section),
@@ -252,11 +253,13 @@ class TestSidecarPatternViaSWMLService:
         })
         assert ok
         rendered = json.loads(svc.render_document())
-        verbs = [list(v.keys())[0] for v in rendered["sections"]["main"]]
+        verbs = [next(iter(v.keys())) for v in rendered["sections"]["main"]]
         assert "answer" in verbs
         assert "ai_sidecar" in verbs
 
-    def test_full_sidecar_pattern_emit_swml_register_tool_register_event_sink(self) -> None:
+    def test_full_sidecar_pattern_emit_swml_register_tool_register_event_sink(
+        self,
+    ) -> None:
         svc = _service()
 
         # 1. Build the SWML doc.
@@ -283,7 +286,7 @@ class TestSidecarPatternViaSWMLService:
 
         def on_event(request: Any, body: dict[str, Any]) -> None:
             events_seen.append(body.get("type"))
-            return None
+            return
 
         svc.register_routing_callback(on_event, path="/events")
 

@@ -507,6 +507,15 @@ class DocumentProcessor:
         current_has_code = False
 
         def flush() -> None:
+            """Emit the accumulated lines as one chunk and reset the accumulator.
+
+            Appends to the enclosing ``chunks`` list, tagging the chunk with the
+            current heading hierarchy (as both a section path and metadata), its
+            source line range, and any fenced-code languages seen. Whitespace-only
+            accumulations are dropped rather than emitted, but the accumulator is
+            cleared either way, so calling this at a heading boundary or a
+            size-driven split is always safe.
+            """
             nonlocal current_lines, current_start_line, current_end_line
             nonlocal \
                 current_size, \

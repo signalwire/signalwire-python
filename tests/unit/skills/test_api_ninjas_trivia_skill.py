@@ -38,6 +38,7 @@ def _make_skill(params: dict[str, Any] | None = None) -> ApiNinjasTriviaSkill:
 # Class-level attributes
 # ---------------------------------------------------------------------------
 
+
 class TestApiNinjasTriviaSkillClassAttributes:
     """Verify class-level constants and metadata."""
 
@@ -45,7 +46,10 @@ class TestApiNinjasTriviaSkillClassAttributes:
         assert ApiNinjasTriviaSkill.SKILL_NAME == "api_ninjas_trivia"
 
     def test_skill_description(self) -> None:
-        assert ApiNinjasTriviaSkill.SKILL_DESCRIPTION == "Get trivia questions from API Ninjas"
+        assert (
+            ApiNinjasTriviaSkill.SKILL_DESCRIPTION
+            == "Get trivia questions from API Ninjas"
+        )
 
     def test_skill_version(self) -> None:
         assert ApiNinjasTriviaSkill.SKILL_VERSION == "1.0.0"
@@ -64,10 +68,20 @@ class TestApiNinjasTriviaSkillClassAttributes:
 
     def test_valid_categories_contains_expected_keys(self) -> None:
         expected = [
-            "artliterature", "language", "sciencenature", "general",
-            "fooddrink", "peopleplaces", "geography", "historyholidays",
-            "entertainment", "toysgames", "music", "mathematics",
-            "religionmythology", "sportsleisure"
+            "artliterature",
+            "language",
+            "sciencenature",
+            "general",
+            "fooddrink",
+            "peopleplaces",
+            "geography",
+            "historyholidays",
+            "entertainment",
+            "toysgames",
+            "music",
+            "mathematics",
+            "religionmythology",
+            "sportsleisure",
         ]
         for key in expected:
             assert key in ApiNinjasTriviaSkill.VALID_CATEGORIES
@@ -76,6 +90,7 @@ class TestApiNinjasTriviaSkillClassAttributes:
 # ---------------------------------------------------------------------------
 # Initialization and Validation
 # ---------------------------------------------------------------------------
+
 
 class TestApiNinjasTriviaSkillInit:
     """Tests for __init__ and _validate_config."""
@@ -135,29 +150,43 @@ class TestApiNinjasTriviaSkillInit:
             ApiNinjasTriviaSkill(agent=mock_agent, params={"api_key": 12345})
 
     def test_empty_categories_list_raises(self) -> None:
-        with pytest.raises(ValueError, match="categories parameter must be a non-empty list"):
+        with pytest.raises(
+            ValueError, match="categories parameter must be a non-empty list"
+        ):
             mock_agent = Mock()
-            ApiNinjasTriviaSkill(agent=mock_agent, params={"api_key": "key", "categories": []})
+            ApiNinjasTriviaSkill(
+                agent=mock_agent, params={"api_key": "key", "categories": []}
+            )
 
     def test_non_list_categories_raises(self) -> None:
-        with pytest.raises(ValueError, match="categories parameter must be a non-empty list"):
+        with pytest.raises(
+            ValueError, match="categories parameter must be a non-empty list"
+        ):
             mock_agent = Mock()
-            ApiNinjasTriviaSkill(agent=mock_agent, params={"api_key": "key", "categories": "music"})
+            ApiNinjasTriviaSkill(
+                agent=mock_agent, params={"api_key": "key", "categories": "music"}
+            )
 
     def test_invalid_category_raises(self) -> None:
         with pytest.raises(ValueError, match="Category 'invalid_cat' is not valid"):
             mock_agent = Mock()
-            ApiNinjasTriviaSkill(agent=mock_agent, params={"api_key": "key", "categories": ["invalid_cat"]})
+            ApiNinjasTriviaSkill(
+                agent=mock_agent,
+                params={"api_key": "key", "categories": ["invalid_cat"]},
+            )
 
     def test_non_string_category_raises(self) -> None:
         with pytest.raises(ValueError, match="Category 0 must be a string"):
             mock_agent = Mock()
-            ApiNinjasTriviaSkill(agent=mock_agent, params={"api_key": "key", "categories": [123]})
+            ApiNinjasTriviaSkill(
+                agent=mock_agent, params={"api_key": "key", "categories": [123]}
+            )
 
 
 # ---------------------------------------------------------------------------
 # setup()
 # ---------------------------------------------------------------------------
+
 
 class TestApiNinjasTriviaSkillSetup:
     """Tests for the setup method."""
@@ -170,6 +199,7 @@ class TestApiNinjasTriviaSkillSetup:
 # ---------------------------------------------------------------------------
 # register_tools()
 # ---------------------------------------------------------------------------
+
 
 class TestApiNinjasTriviaSkillRegisterTools:
     """Tests for register_tools method."""
@@ -195,6 +225,7 @@ class TestApiNinjasTriviaSkillRegisterTools:
 # ---------------------------------------------------------------------------
 # get_tools()
 # ---------------------------------------------------------------------------
+
 
 class TestApiNinjasTriviaSkillGetTools:
     """Tests for the get_tools method."""
@@ -249,7 +280,10 @@ class TestApiNinjasTriviaSkillGetTools:
         skill = _make_skill()
         tool = skill.get_tools()[0]
         webhook = tool["data_map"]["webhooks"][0]
-        assert webhook["url"] == "https://api.api-ninjas.com/v1/trivia?category=%{args.category}"
+        assert (
+            webhook["url"]
+            == "https://api.api-ninjas.com/v1/trivia?category=%{args.category}"
+        )
 
     def test_tool_webhook_method_is_get(self) -> None:
         skill = _make_skill()
@@ -297,6 +331,7 @@ class TestApiNinjasTriviaSkillGetTools:
 # get_instance_key()
 # ---------------------------------------------------------------------------
 
+
 class TestApiNinjasTriviaSkillInstanceKey:
     """Tests for get_instance_key method."""
 
@@ -312,6 +347,7 @@ class TestApiNinjasTriviaSkillInstanceKey:
 # ---------------------------------------------------------------------------
 # get_hints(), get_prompt_sections()
 # ---------------------------------------------------------------------------
+
 
 class TestApiNinjasTriviaSkillPromptMethods:
     """Tests for prompt-related methods inherited from SkillBase."""
@@ -332,6 +368,7 @@ class TestApiNinjasTriviaSkillPromptMethods:
 # ---------------------------------------------------------------------------
 # get_parameter_schema()
 # ---------------------------------------------------------------------------
+
 
 class TestApiNinjasTriviaSkillParameterSchema:
     """Tests for get_parameter_schema class method."""
@@ -366,7 +403,9 @@ class TestApiNinjasTriviaSkillParameterSchema:
 
     def test_categories_default_is_all(self) -> None:
         schema = ApiNinjasTriviaSkill.get_parameter_schema()
-        assert schema["categories"]["default"] == list(ApiNinjasTriviaSkill.VALID_CATEGORIES.keys())
+        assert schema["categories"]["default"] == list(
+            ApiNinjasTriviaSkill.VALID_CATEGORIES.keys()
+        )
 
     def test_categories_items_has_enum(self) -> None:
         schema = ApiNinjasTriviaSkill.get_parameter_schema()

@@ -81,7 +81,9 @@ class TestMisspelledKeyRejected:
             ("prompt", {"txt": "hi"}),  # misspelled text
         ],
     )
-    def test_misspelled_or_unknown_key_raises(self, verb: str, config: dict[str, Any]) -> None:
+    def test_misspelled_or_unknown_key_raises(
+        self, verb: str, config: dict[str, Any]
+    ) -> None:
         svc = _strict_service()
         with pytest.raises(SchemaValidationError):
             svc.add_verb(verb, config)

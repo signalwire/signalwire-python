@@ -298,6 +298,36 @@ class SWMLService(ToolMixin):
 
             # Generate the method implementation for normal verbs
             def make_verb_method(name: str) -> Callable[..., bool]:
+                """
+                Build the service method for one SWML verb.
+
+                The closure binds ``name`` per verb; without it every generated
+                method would close over the shared loop variable and emit the
+                last verb in the schema.
+
+                The returned function takes keyword arguments only, drops every
+                kwarg whose value is None (so unset options never reach the
+                wire), and calls ``add_verb(name, config)`` — returning that
+                call's bool, i.e. **False when the verb fails schema
+                validation** rather than raising. It carries the verb's schema
+                ``description`` as its ``__doc__`` when the schema has one.
+
+                This differs from the ``SWMLBuilder`` method of the same name,
+                which returns the builder for chaining instead of a bool.
+
+                ``sleep`` is NOT built here — it takes a bare integer rather
+                than an object in SWML and is special-cased by the caller.
+
+                Args:
+                    name: The SWML verb name, used as both the emitted key and
+                        the method name.
+
+                Returns:
+                    An unbound function of ``(self_instance, **kwargs) ->
+                    bool``, which the caller binds with ``types.MethodType``
+                    and caches in ``_verb_methods_cache``.
+                """
+
                 def verb_method(self_instance: "SWMLService", **kwargs: Any) -> bool:
                     """
                     Dynamically generated method for SWML verb
@@ -756,6 +786,31 @@ class SWMLService(ToolMixin):
         @router.post("/swaig")
         @router.post("/swaig/")
         async def handle_swaig(request: Request, response: Response) -> Response:
+            """Serve the ``/swaig`` endpoint (all four slash/method variants).
+
+            Delegates to ``_handle_swaig_request`` and coerces its result
+            through ``_as_response`` (that method may hand back a bare dict —
+            its historical contract — which FastAPI route handlers cannot
+            declare, so dicts become a ``JSONResponse``).
+
+            The underlying handler is basic-auth-gated and answers:
+
+            - GET → the SWML document, via ``_swaig_render_get_response``
+              (``call_id`` may be passed as a query param).
+            - POST → dispatch of the named SWAIG function from the JSON body's
+              ``function`` / ``argument`` / ``call_id`` fields, returning the
+              ``FunctionResult``-shaped payload.
+
+            Failure statuses come from that handler: 401 with
+            ``WWW-Authenticate: Basic`` when auth fails, 415 for a non-JSON
+            Content-Type, 413 for an oversized body, and 400 for a missing
+            ``function`` or a name that is not a bare identifier.
+
+            This endpoint is registered by ``SWMLService.as_router()``, so it
+            is available on ANY SWMLService, not just AgentBase — AgentBase
+            layers its extra behaviour on by overriding the handler's
+            extension points rather than by adding the route.
+            """
             return _as_response(await self._handle_swaig_request(request, response))
 
         # Register routing callbacks as needed
@@ -825,6 +880,35 @@ class SWMLService(ToolMixin):
         SWML each request from prompts and dynamic config.
         """
         return Response(content=self.render_document(), media_type="application/json")
+
+    def _swaig_validate_token(
+        self,
+        function_name: str,
+        token: str | None,
+        call_id: str | None,
+    ) -> dict[str, Any] | None:
+        """Extension point: transport-agnostic `secure=True` token enforcement.
+
+        This is the SOLE security decision for a SWAIG call, deliberately kept
+        free of any request/transport type so that EVERY transport -- the HTTP
+        endpoint and all four serverless modes (lambda, cgi,
+        google_cloud_function, azure_function) -- reaches the identical check
+        with the identical semantics. Each transport is responsible only for
+        EXTRACTING the credential from its own payload shape; none of them
+        re-implements the decision.
+
+        Args:
+            function_name: The SWAIG function being invoked.
+            token: The `__token` credential, or None when absent.
+            call_id: The call the token must be bound to, or None when absent.
+
+        Returns:
+            None to proceed with dispatch, or a FunctionResult-shaped dict to
+            return INSTEAD of dispatching (the refusal). The refusal is always
+            delivered as a 200 + FunctionResult body, never an HTTP error
+            status -- the engine has no handling for a SWAIG refusal status.
+        """
+        return None
 
     def _swaig_pre_dispatch(
         self,
@@ -1307,13 +1391,35 @@ class SWMLService(ToolMixin):
         ssl_cert_path = ssl_cert or getattr(self, "ssl_cert_path", None)
         ssl_key_path = ssl_key or getattr(self, "ssl_key_path", None)
 
-        # Validate SSL configuration if enabled
+        # Validate SSL configuration if enabled.
+        #
+        # TLS that cannot be configured is a FATAL misconfiguration, never a
+        # silent downgrade: the operator asked for encryption, and starting a
+        # cleartext listener instead would ship their traffic — including the
+        # credentials carried in Basic auth — in the clear, with no error and
+        # no way to notice. Refuse to start.
         if self.ssl_enabled:
-            is_valid, error = self.security.validate_ssl_config()
-            if not is_valid:
-                self.log.warning("ssl_config_invalid", error=error)
-                self.ssl_enabled = False
-            elif not self.domain:
+            # Validate the paths that will actually reach uvicorn: they may
+            # come from the serve(ssl_cert=/ssl_key=) arguments, which the
+            # security config has never seen.
+            error: str | None = None
+            if not ssl_cert_path:
+                error = "SSL enabled but no certificate path configured"
+            elif not Path(ssl_cert_path).exists():
+                error = f"SSL certificate file not found: {ssl_cert_path}"
+            elif not ssl_key_path:
+                error = "SSL enabled but no private key path configured"
+            elif not Path(ssl_key_path).exists():
+                error = f"SSL key file not found: {ssl_key_path}"
+            if error is not None:
+                self.log.error("ssl_config_invalid", error=error)
+                raise RuntimeError(
+                    f"SSL is enabled but the TLS configuration is invalid: {error}. "
+                    f"Refusing to start a plaintext listener when TLS was "
+                    f"requested — fix SWML_SSL_CERT_PATH / SWML_SSL_KEY_PATH, or "
+                    f"disable SSL to serve plain HTTP deliberately."
+                )
+            if not self.domain:
                 self.log.warning("ssl_domain_not_specified")
                 # We'll continue, but URLs might not be correctly generated
 
@@ -1339,6 +1445,37 @@ class SWMLService(ToolMixin):
             async def handle_all_routes(
                 request: Request, response: Response, full_path: str
             ) -> Response:
+                """Catch-all that accepts this service's route with or without
+                a trailing slash.
+
+                The router is mounted under a prefix normalized to have no
+                trailing slash, and the app is built with
+                ``redirect_slashes=False``, so ``/<route>/`` and its subpaths
+                would otherwise 404. This handler recovers them:
+
+                - ``full_path`` exactly equal to the route → handled as root.
+                - ``full_path`` equal to ``<route>/`` → handled as root.
+                - ``full_path`` under ``<route>/`` whose remainder matches a
+                  registered routing callback (exactly, or as its parent
+                  segment) → that callback path is stashed on
+                  ``request.state.callback_path`` and the request is handled as
+                  root.
+
+                Anything else returns ``JSONResponse({"error": "Path not
+                found"})`` — note this is a **200**, not a 404: the status code
+                is left at FastAPI's default, so a caller must inspect the body
+                to detect a miss.
+
+                Args:
+                    request: The incoming request.
+                    response: FastAPI-injected response object, forwarded to
+                        ``_handle_request``.
+                    full_path: The matched path with no leading slash.
+
+                Returns:
+                    The service's SWML/handler response, or the error body
+                    above.
+                """
                 # Get our route path without leading slash for comparison
                 route_path = normalized_route.lstrip("/")
                 route_with_slash = route_path + "/"
