@@ -1,5 +1,10 @@
 # Changelog
 
+## [Unreleased]
+
+### New Features
+- Relay: added `call.accept(early_media=False)` — signal a provisional (180 Ringing, or 183 Session Progress with `early_media=True`) on an inbound call without answering it. The call stays unanswered and unbilled.
+
 ## [3.2.0] - 2026-07-14
 
 ### New Features

@@ -140,6 +140,14 @@ class TestCallLifecycle:
         )
 
     @pytest.mark.asyncio
+    async def test_accept(self, call: Call, mock_client: MagicMock) -> None:
+        await call.accept(early_media=True)
+        mock_client.execute.assert_called_once_with(
+            "calling.accept",
+            {"node_id": "node-1", "call_id": "call-1", "early_media": True},
+        )
+
+    @pytest.mark.asyncio
     async def test_hangup(self, call: Call, mock_client: MagicMock) -> None:
         await call.hangup(reason="busy")
         mock_client.execute.assert_called_once_with(

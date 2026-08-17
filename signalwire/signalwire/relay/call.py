@@ -539,6 +539,10 @@ class Call:
         """Answer an inbound call."""
         return await self._execute("answer", kwargs or None)
 
+    async def accept(self, early_media: bool = False, **kwargs: Any) -> dict[str, Any]:
+        """Signal a provisional (180 Ringing / 183 Session Progress) on an inbound call without answering it."""
+        return await self._execute("accept", {"early_media": early_media, **kwargs})
+
     async def hangup(self, reason: str = "hangup") -> dict[str, Any]:
         """End/hang up the call."""
         return await self._execute("end", {"reason": reason})
