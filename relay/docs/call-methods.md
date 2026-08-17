@@ -83,6 +83,16 @@ Answer an inbound call.
 await call.answer()
 ```
 
+### `accept(early_media=False, **kwargs) -> dict`
+
+Send a provisional response (180 Ringing, or 183 Session Progress with `early_media=True`) on an inbound call without answering it. The call stays unanswered and unbilled.
+
+<!-- snippet: no-compile await-fragment -->
+```python
+await call.accept()
+await call.accept(early_media=True)
+```
+
 ### `hangup(reason="hangup") -> dict`
 
 End the call.
