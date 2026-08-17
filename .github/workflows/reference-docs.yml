@@ -1,4 +1,4 @@
-# API reference docs (pilot).
+# API reference docs.
 #
 # Builds the SignalWire Python SDK API reference (MkDocs Material + mkdocstrings)
 # and publishes a single, unversioned "latest" site to this repo's OWN GitHub Pages:
