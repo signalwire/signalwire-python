@@ -423,9 +423,9 @@ result.tap(
 - `control_id`: Identifier for this tap to use with stop_tap (optional, auto-generated if not provided)
 
 **Audio Configuration:**
-- `direction`: Audio direction to tap (default: "both")
+- `direction`: Audio direction to tap (default: "both"; always sent — the underlying SWML verb defaults to "speak" when omitted)
   - `"speak"`: What party says
-  - `"hear"`: What party hears
+  - `"listen"`: What party hears
   - `"both"`: What party hears and says
 - `codec`: Codec for tap stream - "PCMU" or "PCMA" (default: "PCMU")
 - `rtp_ptime`: RTP packetization time in milliseconds (default: 20)

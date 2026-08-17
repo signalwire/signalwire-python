@@ -176,18 +176,21 @@ class TestCalculateHandlerEmpty:
         skill = _make_skill()
         result = skill._calculate_handler({"expression": ""}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "provide" in result.response.lower()
 
     def test_whitespace_only(self) -> None:
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "   "}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "provide" in result.response.lower()
 
     def test_missing_expression_key(self) -> None:
         skill = _make_skill()
         result = skill._calculate_handler({}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "provide" in result.response.lower()
 
 
@@ -202,24 +205,28 @@ class TestCalculateHandlerUnsafe:
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "import os"}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "invalid" in result.response.lower()
 
     def test_letters_rejected(self) -> None:
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "abc"}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "invalid" in result.response.lower()
 
     def test_dunder_rejected(self) -> None:
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "__import__('os')"}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "invalid" in result.response.lower()
 
     def test_semicolon_rejected(self) -> None:
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "1;2"}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "invalid" in result.response.lower()
 
 
@@ -234,12 +241,14 @@ class TestCalculateHandlerDivisionByZero:
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "1/0"}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "zero" in result.response.lower()
 
     def test_modulo_by_zero(self) -> None:
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "10%0"}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "zero" in result.response.lower()
 
 
@@ -254,12 +263,14 @@ class TestCalculateHandlerInvalidExpression:
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "2+"}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "error" in result.response.lower()
 
     def test_unmatched_parens(self) -> None:
         skill = _make_skill()
         result = skill._calculate_handler({"expression": "(2+3"}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "error" in result.response.lower()
 
 

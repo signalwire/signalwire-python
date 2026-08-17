@@ -200,6 +200,7 @@ Guides are also available in the [`docs/`](docs/) directory:
 - [DataMap Guide](docs/datamap_guide.md) -- serverless API tools without webhooks
 - [LLM Parameters](docs/llm_parameters.md) -- temperature, top_p, barge confidence tuning
 - [SWML Service Guide](docs/swml_service_guide.md) -- low-level construction of SWML documents
+- [AI Chat Gateway](docs/ai_chat_gateway.md) -- browser chat widgets without a token in the page
 
 ### Skills and Extensions
 

@@ -7,6 +7,8 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
+from __future__ import annotations
+
 import hashlib
 import json
 from collections.abc import Awaitable, Callable

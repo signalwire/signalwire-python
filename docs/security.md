@@ -60,6 +60,8 @@ inspection.
 |----------|---------|-------------|
 | `SWML_BASIC_AUTH_USER` | `signalwire` | Basic auth username |
 | `SWML_BASIC_AUTH_PASSWORD` | *auto-generated* | Basic auth password (32-char token if not set) |
+| `SIGNALWIRE_SIGNING_KEY` | *unset* | Signing Key for **inbound** webhook signature validation. See [Webhook Signature Validation](#webhook-signature-validation). |
+| `SIGNALWIRE_SWAIG_SECRET` | *random per process* | Secret used to sign this agent's **outbound** SWAIG function tokens. See [SWAIG Function Token Signing](#swaig-function-token-signing). |
 
 ### Security Headers and Policies
 
@@ -380,3 +382,48 @@ Before deploying to production:
 - [ ] SSL certificate expiration monitoring in place
 - [ ] `signing_key` (or `SIGNALWIRE_SIGNING_KEY` env) configured on every AgentBase
 - [ ] Regular security updates applied
+
+## SWAIG Function Token Signing
+
+Each SWAIG function call an agent hands to the AI carries a short-lived token
+that the agent signs and later verifies itself, so a function URL cannot be
+replayed or called out of context.
+
+By default that secret is **generated randomly per process**. Tokens therefore
+stop verifying whenever the agent restarts, and every replica of the same agent
+signs with a different key.
+
+The failure is easy to miss and points away from its cause. A call placed
+before a restart keeps running; its next tool call arrives carrying a token the
+new process cannot verify; and the caller is told:
+
+```
+the security token for this function is invalid or expired
+```
+
+which reads as though the tool failed, rather than as though it was never
+allowed to run. Nothing errors server-side and nothing logs a mismatch.
+
+Set the secret explicitly whenever an agent restarts while calls are live —
+which includes every rolling deploy — and always when more than one replica
+serves the same agent:
+
+<!-- snippet: no-run starts a blocking server (covered by SNIPPET-COMPILE) -->
+```python
+from signalwire import AgentBase
+
+agent = AgentBase(
+    name="my-agent",
+    swaig_secret="a-long-random-string",  # or set SIGNALWIRE_SWAIG_SECRET
+)
+agent.serve()
+```
+
+Resolution order is the constructor argument, then `SIGNALWIRE_SWAIG_SECRET`,
+then a fresh random secret.
+
+Treat it like any other signing secret: keep it out of source control, and use
+the same value across every replica of one agent. It is unrelated to
+`signing_key` / `SIGNALWIRE_SIGNING_KEY`, which validates **inbound** webhooks
+and is issued by SignalWire; this one is the agent's own and never leaves the
+process.

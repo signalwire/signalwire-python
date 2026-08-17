@@ -408,18 +408,21 @@ class TestWebSearchHandler:
         skill = self._setup_skill()
         result = skill._web_search_handler({"query": ""}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "provide a search query" in result.response.lower()
 
     def test_whitespace_query_returns_error(self) -> None:
         skill = self._setup_skill()
         result = skill._web_search_handler({"query": "   "}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "provide a search query" in result.response.lower()
 
     def test_missing_query_key_returns_error(self) -> None:
         skill = self._setup_skill()
         result = skill._web_search_handler({}, {})
         assert isinstance(result, FunctionResult)
+        assert isinstance(result.response, str)
         assert "provide a search query" in result.response.lower()
 
     def test_successful_search(self) -> None:
@@ -437,6 +440,7 @@ class TestWebSearchHandler:
                           return_value="No search results found for query: test"):
             result = skill._web_search_handler({"query": "test"}, {})
             assert isinstance(result, FunctionResult)
+            assert isinstance(result.response, str)
             # Should trigger no_results_message
             assert "couldn't find" in result.response.lower() or "quality" in result.response.lower()
 
@@ -459,6 +463,7 @@ class TestWebSearchHandler:
                           side_effect=RuntimeError("connection failed")):
             result = skill._web_search_handler({"query": "test"}, {})
             assert isinstance(result, FunctionResult)
+            assert isinstance(result.response, str)
             assert "error" in result.response.lower()
 
     def test_no_results_custom_message_with_placeholder(self) -> None:

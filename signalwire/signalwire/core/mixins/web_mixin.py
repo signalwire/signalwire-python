@@ -68,9 +68,62 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
     # has-type ordering gap. Runtime is unaffected (no assignment here).
     _app: Any | None
     _proxy_url_base: str | None
-    _dynamic_config_callback: (
-        Callable[[dict[str, Any], dict[str, Any], dict[str, Any], Any], None] | None
-    )
+
+    # Per-request configuration callbacks, run in registration order.
+    #
+    # Stored as a list but read through the `_dynamic_config_callback`
+    # property below, so every existing call site -- the truthiness checks and
+    # the four-argument invocation -- works unchanged whether one callback is
+    # registered or five.
+    #
+    # Populated at setup time on the master agent, never mutated per request.
+    # That matters: an ephemeral copy shares this list by reference, so a
+    # per-request append would leak into every other in-flight caller.
+    _per_call_configs: list[
+        Callable[[dict[str, Any], dict[str, Any], dict[str, Any], Any], None]
+    ]
+
+    @property
+    def _dynamic_config_callback(
+        self,
+    ) -> Callable[[dict[str, Any], dict[str, Any], dict[str, Any], Any], None] | None:
+        """The registered per-call configuration, as one callable or None.
+
+        Composed on read rather than on write so that registration order is
+        the run order and a later registration is always picked up.
+        """
+        callbacks: list[
+            Callable[[dict[str, Any], dict[str, Any], dict[str, Any], Any], None]
+        ] = self.__dict__.get("_per_call_configs") or []
+        if not callbacks:
+            return None
+        if len(callbacks) == 1:
+            return callbacks[0]
+
+        def _run_all(
+            query_params: dict[str, Any],
+            body_params: dict[str, Any],
+            headers: dict[str, Any],
+            agent: Any,
+        ) -> None:
+            for callback in callbacks:
+                callback(query_params, body_params, headers, agent)
+
+        return _run_all
+
+    @_dynamic_config_callback.setter
+    def _dynamic_config_callback(
+        self,
+        callback: (
+            Callable[[dict[str, Any], dict[str, Any], dict[str, Any], Any], None] | None
+        ),
+    ) -> None:
+        """Assigning replaces the whole chain; None clears it.
+
+        Preserves the historical meaning of a direct assignment, including
+        `self._dynamic_config_callback = None` during agent construction.
+        """
+        self._per_call_configs = [] if callback is None else [callback]
 
     def get_app(self) -> FastAPI:
         """
@@ -172,6 +225,91 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             self._app = app
 
         return self._app
+
+    def mount(
+        self,
+        app_or_router: Any,
+        *,
+        prefix: str = "",
+        name: str | None = None,
+    ) -> "AgentBase":
+        """
+        Mount an extra router or ASGI app alongside this agent's own routes.
+
+        Use this instead of reaching for ``get_app()`` and mounting by hand.
+        Three separate details have to be right for an added route to work, all
+        of which fail silently:
+
+        1. ``serve()`` only builds an app when ``self._app`` is None, so
+           anything mounted after ``serve()`` starts is lost. Calling this
+           method materialises the app first, so later ``serve()`` reuses it.
+
+        2. ``get_app()`` registers a ``/{full_path:path}`` catch-all, and
+           FastAPI matches routes in registration order -- so ANY route added
+           afterwards is shadowed by it and never runs. This moves the
+           catch-all back to the end.
+
+        3. ``get_app()`` and ``serve()`` build different apps, and only
+           ``serve()``'s catch-all routes the agent's own bare route (no
+           trailing slash) to the SWML handler. ``get_app()``'s answers 204.
+           Since mounting forces the ``get_app()`` path, the bare route is
+           re-registered here -- without it the SWML endpoint the platform
+           actually fetches returns 204 while the trailing-slash form keeps
+           working, which looks like a platform problem rather than a routing
+           one.
+
+        Args:
+            app_or_router: A FastAPI ``APIRouter`` (included at ``prefix``) or
+                any other ASGI app such as ``StaticFiles`` (mounted at
+                ``prefix``).
+            prefix: Path prefix. No trailing slash.
+            name: Optional mount name, only used for ASGI apps.
+
+        Returns:
+            Self for method chaining
+
+        Example:
+            agent.mount(gateway.router(), prefix="/chat")
+            agent.mount(StaticFiles(directory="web", html=True), prefix="/demo")
+        """
+        from fastapi import APIRouter
+
+        app = self.get_app()
+        clean_prefix = prefix.rstrip("/")
+
+        if isinstance(app_or_router, APIRouter):
+            app.include_router(app_or_router, prefix=clean_prefix)
+        else:
+            app.mount(clean_prefix or "/", app_or_router, name=name)
+
+        self._restore_route_precedence(app)
+        self.log.info("agent_route_mounted", prefix=clean_prefix or "/")
+        return self
+
+    def _restore_route_precedence(self, app: FastAPI) -> None:
+        """Re-register the bare agent route and push catch-alls to the end.
+
+        Idempotent: safe to call after every mount.
+        """
+        catch_all_path = "/{full_path:path}"
+        routes = app.router.routes
+
+        # (3) The bare route, e.g. "/sigmond" with no trailing slash.
+        if self.route and not any(
+            getattr(r, "path", None) == self.route for r in routes
+        ):
+
+            @app.get(self.route)
+            @app.post(self.route)
+            async def _swml_bare_route(request: Request) -> Response:
+                return _as_response(await self._handle_root_request(request))
+
+        # (2) Anything registered before the catch-all wins; move it last so
+        # every route added by mount() -- and the bare route just added -- is
+        # reachable.
+        for route in [r for r in routes if getattr(r, "path", None) == catch_all_path]:
+            routes.remove(route)
+            routes.append(route)
 
     def as_router(self) -> "HostAppRouter":
         """
@@ -1346,8 +1484,57 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                 agent.set_global_data({"tier": query_params.get('tier', 'standard')})
 
             my_agent.set_dynamic_config_callback(my_config)
+
+        Note:
+            This REPLACES any previously registered per-call configuration.
+            Two calls to this method mean the first one never runs, silently:
+            the agent still renders valid SWML and every tool still works, so
+            whatever the discarded callback configured -- a voice, a language
+            set, a hint list -- is simply absent, with nothing to indicate it
+            was dropped. Use `add_per_call_config` when composing, and reserve
+            this method for the single-callback case it was written for.
         """
         self._dynamic_config_callback = callback
+        return self
+
+    def add_per_call_config(
+        self,
+        callback: Callable[[dict[str, Any], dict[str, Any], dict[str, Any], Any], None],
+    ) -> "AgentBase":
+        """
+        Register a per-request configuration callback, keeping any already set
+
+        Same signature and contract as `set_dynamic_config_callback`, except
+        that callbacks accumulate instead of overwriting. They run in
+        registration order against the same ephemeral agent, so a later one
+        sees what an earlier one configured and can build on or override it.
+
+        This is the composable form, and the one to prefer. A base class and a
+        subclass, or an agent and a mixin, can each register what they own
+        without either needing to know the other exists -- which with
+        `set_dynamic_config_callback` requires them to find and manually chain
+        each other's callbacks, and silently drops one when they don't.
+
+        Args:
+            callback: Callable taking (query_params, body_params, headers, agent).
+                      `agent` is the EPHEMERAL per-request copy; configure that,
+                      never `self`, or the configuration leaks across callers.
+
+        Returns:
+            Self for method chaining
+
+        Example:
+            agent.add_per_call_config(configure_voice)
+            agent.add_per_call_config(configure_page_context)
+            # both run, in that order, on every request
+        """
+        callbacks = self.__dict__.get("_per_call_configs")
+        if callbacks is None:
+            # Rebind rather than mutate: an ephemeral copy shares the master's
+            # list by reference, so appending in place would write into it.
+            self._per_call_configs = [callback]
+        else:
+            self._per_call_configs = [*callbacks, callback]
         return self
 
     def manual_set_proxy_url(self, proxy_url: str) -> "AgentBase":
