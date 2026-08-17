@@ -17,6 +17,7 @@ See LICENSE file in the project root for full license information.
 from signalwire import AgentBase
 from signalwire.core.function_result import FunctionResult
 
+
 class MyAgent(AgentBase):
     def __init__(self):
         super().__init__(name="my-agent", route="/agent")
@@ -28,7 +29,9 @@ class MyAgent(AgentBase):
     def get_time(self):
         """Get the current time"""
         from datetime import datetime
+
         return FunctionResult(f"The time is {datetime.now().strftime('%H:%M:%S')}")
+
 
 if __name__ == "__main__":
     agent = MyAgent()

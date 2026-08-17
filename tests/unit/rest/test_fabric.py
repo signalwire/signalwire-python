@@ -14,7 +14,7 @@ class TestFabricResources:
         client.fabric.ai_agents.list()
         mock_session.request.assert_called_with(
             "GET", "https://test.signalwire.com/api/fabric/resources/ai_agents",
-            json=None, params=None,
+            json=None, params=None, timeout=30.0,
         )
 
     def test_ai_agents_create(self, client: RestClient, mock_session: MagicMock) -> None:
@@ -27,7 +27,7 @@ class TestFabricResources:
         mock_session.request.assert_called_with(
             "POST", "https://test.signalwire.com/api/fabric/resources/ai_agents",
             json={"name": "Support", "prompt": "You are helpful", "agent_id": "a1"},
-            params=None,
+            params=None, timeout=30.0,
         )
 
     def test_ai_agents_update_uses_patch(self, client: RestClient, mock_session: MagicMock) -> None:
@@ -35,7 +35,7 @@ class TestFabricResources:
         client.fabric.ai_agents.update("id-1", name="Updated")
         mock_session.request.assert_called_with(
             "PATCH", "https://test.signalwire.com/api/fabric/resources/ai_agents/id-1",
-            json={"name": "Updated"}, params=None,
+            json={"name": "Updated"}, params=None, timeout=30.0,
         )
 
     def test_swml_scripts_update_uses_put(self, client: RestClient, mock_session: MagicMock) -> None:
@@ -43,7 +43,7 @@ class TestFabricResources:
         client.fabric.swml_scripts.update("id-1", contents="{}")
         mock_session.request.assert_called_with(
             "PUT", "https://test.signalwire.com/api/fabric/resources/swml_scripts/id-1",
-            json={"contents": "{}"}, params=None,
+            json={"contents": "{}"}, params=None, timeout=30.0,
         )
 
     def test_list_addresses(self, client: RestClient, mock_session: MagicMock) -> None:
@@ -51,7 +51,7 @@ class TestFabricResources:
         client.fabric.ai_agents.list_addresses("id-1")
         mock_session.request.assert_called_with(
             "GET", "https://test.signalwire.com/api/fabric/resources/ai_agents/id-1/addresses",
-            json=None, params=None,
+            json=None, params=None, timeout=30.0,
         )
 
 
@@ -61,7 +61,7 @@ class TestFabricCallFlows:
         client.fabric.call_flows.list_versions("cf-1")
         mock_session.request.assert_called_with(
             "GET", "https://test.signalwire.com/api/fabric/resources/call_flow/cf-1/versions",
-            json=None, params=None,
+            json=None, params=None, timeout=30.0,
         )
 
     def test_deploy_version(self, client: RestClient, mock_session: MagicMock) -> None:
@@ -69,7 +69,7 @@ class TestFabricCallFlows:
         client.fabric.call_flows.deploy_version("cf-1", {"document_version": 2})
         mock_session.request.assert_called_with(
             "POST", "https://test.signalwire.com/api/fabric/resources/call_flow/cf-1/versions",
-            json={"document_version": 2}, params=None,
+            json={"document_version": 2}, params=None, timeout=30.0,
         )
 
 
@@ -79,7 +79,7 @@ class TestFabricSubscribers:
         client.fabric.subscribers.list_sip_endpoints("sub-1")
         mock_session.request.assert_called_with(
             "GET", "https://test.signalwire.com/api/fabric/resources/subscribers/sub-1/sip_endpoints",
-            json=None, params=None,
+            json=None, params=None, timeout=30.0,
         )
 
     def test_create_sip_endpoint(self, client: RestClient, mock_session: MagicMock) -> None:
@@ -89,7 +89,7 @@ class TestFabricSubscribers:
         )
         mock_session.request.assert_called_with(
             "POST", "https://test.signalwire.com/api/fabric/resources/subscribers/sub-1/sip_endpoints",
-            json={"username": "user1", "password": "s3cret"}, params=None,
+            json={"username": "user1", "password": "s3cret"}, params=None, timeout=30.0,
         )
 
 
@@ -107,7 +107,7 @@ class TestGenericResources:
         )
         mock_session.request.assert_called_with(
             "POST", "https://test.signalwire.com/api/fabric/resources/res-1/phone_routes",
-            json={"phone_route_id": "pr-1", "handler": "calling"}, params=None,
+            json={"phone_route_id": "pr-1", "handler": "calling"}, params=None, timeout=30.0,
         )
 
 
@@ -159,7 +159,7 @@ class TestFabricTokens:
         client.fabric.tokens.create_subscriber_token(reference="user@example.com")
         mock_session.request.assert_called_with(
             "POST", "https://test.signalwire.com/api/fabric/subscribers/tokens",
-            json={"reference": "user@example.com"}, params=None,
+            json={"reference": "user@example.com"}, params=None, timeout=30.0,
         )
 
     def test_create_guest_token(self, client: RestClient, mock_session: MagicMock) -> None:
@@ -167,7 +167,7 @@ class TestFabricTokens:
         client.fabric.tokens.create_guest_token(allowed_addresses=["addr-1"])
         mock_session.request.assert_called_with(
             "POST", "https://test.signalwire.com/api/fabric/guests/tokens",
-            json={"allowed_addresses": ["addr-1"]}, params=None,
+            json={"allowed_addresses": ["addr-1"]}, params=None, timeout=30.0,
         )
 
 

@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.2.0] - 2026-07-14
+
+### New Features
+- REST: added the `client.messages` resource for the native messaging API
+  (`/api/messaging`): `create` sends an SMS/MMS message
+  (`POST /api/messaging/messages`) and `update` redacts a previously sent
+  message's body (`PATCH /api/messaging/messages/{message_id}`). This is the
+  plural send/redact resource, distinct from the singular message *logs*
+  reachable via `client.logs.messages`.
+
+## [3.1.0] - 2026-07-14
+
+### New Features
+- REST: added the `client.projects` CRUD resource for the project-management
+  API (`/api/projects`), including `rotate_signing_key`.
+
 ## [3.0.2] - 2026-07-11
 
 - REST: `ReadResource.paginate()` wires the `PaginatedIterator` into every list

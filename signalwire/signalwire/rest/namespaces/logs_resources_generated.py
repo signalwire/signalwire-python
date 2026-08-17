@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING, Any, cast
 from .._base import BaseResource
 
 if TYPE_CHECKING:
+    from .._request_options import RequestOptions
+
     from .logs_types_generated import (
         ConferencesResponse,
     )
@@ -22,8 +24,12 @@ class ConferenceLogs(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/logs/conferences")
 
-    def list(self, **params: Any) -> ConferencesResponse:
+    def list(
+        self, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> ConferencesResponse:
         return cast(
             "ConferencesResponse",
-            self._http.get(self._base_path, params=params or None),
+            self._http.get(
+                self._base_path, params=params or None, request_options=request_options
+            ),
         )

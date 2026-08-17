@@ -15,7 +15,7 @@ name: reference-docs
 
 env:
   # Match the repo's other workflows (redundant here since this workflow's
-  # actions are pinned to v6, which is already Node 24-native).
+  # actions, checkout v7 and setup-python v6, are already Node 24-native).
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
 
 on:
@@ -31,7 +31,7 @@ jobs:
   build-deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0   # gh-deploy needs the gh-pages branch history
 

@@ -8,7 +8,6 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-
 """
 Custom Path Agent Example
 
@@ -35,76 +34,73 @@ Try these requests:
 
 from signalwire import AgentBase
 
+
 class ChatAgent(AgentBase):
     def __init__(self, route="/chat"):
         super().__init__(
             name="Chat Assistant",
             route=route,  # Custom path for this agent
             auto_answer=True,
-            record_call=True
+            record_call=True,
         )
-        
+
         # Set up dynamic configuration based on query parameters
         self.set_dynamic_config_callback(self.configure_chat_agent)
-        
+
         # Base prompt
         self.prompt_add_section(
             "Role",
-            "You are a friendly chat assistant ready to help with any questions or conversations."
+            "You are a friendly chat assistant ready to help with any questions or conversations.",
         )
 
     def configure_chat_agent(self, query_params, body_params, headers, agent):
         """Configure the agent based on request parameters"""
-        user_name = query_params.get('user_name', 'friend')
-        topic = query_params.get('topic', 'general conversation')
-        mood = query_params.get('mood', 'friendly').lower()
-        
+        user_name = query_params.get("user_name", "friend")
+        topic = query_params.get("topic", "general conversation")
+        mood = query_params.get("mood", "friendly").lower()
+
         # Personalize the greeting
         agent.prompt_add_section(
             "Personalization",
-            f"The user's name is {user_name}. They're interested in discussing {topic}."
+            f"The user's name is {user_name}. They're interested in discussing {topic}.",
         )
-        
+
         # Adjust voice and tone based on mood
         voice_model = "inworld.Mark"
         agent.add_language("English", "en-US", voice_model)
-        
-        if mood == 'professional':
+
+        if mood == "professional":
             agent.prompt_add_section(
                 "Communication Style",
-                "Maintain a professional, business-appropriate tone in all interactions."
+                "Maintain a professional, business-appropriate tone in all interactions.",
             )
-        elif mood == 'casual':
+        elif mood == "casual":
             agent.prompt_add_section(
-                "Communication Style", 
-                "Use a casual, relaxed conversational style. Feel free to use informal language."
+                "Communication Style",
+                "Use a casual, relaxed conversational style. Feel free to use informal language.",
             )
         else:  # friendly (default)
             agent.prompt_add_section(
                 "Communication Style",
-                "Be warm, friendly, and approachable in your responses."
+                "Be warm, friendly, and approachable in your responses.",
             )
-        
+
         # Set global data for the conversation
-        agent.set_global_data({
-            "user_name": user_name,
-            "topic": topic,
-            "mood": mood,
-            "session_type": "chat"
-        })
-        
+        agent.set_global_data(
+            {
+                "user_name": user_name,
+                "topic": topic,
+                "mood": mood,
+                "session_type": "chat",
+            }
+        )
+
         # Add speech recognition hints for common chat terms
-        agent.add_hints([
-            "chat",
-            "assistant",
-            "help", 
-            "conversation",
-            "question"
-        ])
+        agent.add_hints(["chat", "assistant", "help", "conversation", "question"])
 
 
 if __name__ == "__main__":
     # Create and start the agent
     agent = ChatAgent("/chat")
     print("Note: Works in any deployment mode (server/CGI/Lambda)")
-    agent.run() 
+    agent.run()

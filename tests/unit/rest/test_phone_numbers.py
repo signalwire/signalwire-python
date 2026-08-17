@@ -25,14 +25,20 @@ class TestPhoneNumbersCrud:
         mock_session.request.return_value = MockResponse(200, {"data": []})
         client.phone_numbers.list()
         mock_session.request.assert_called_with(
-            "GET", BASE, json=None, params=None,
+            "GET", BASE, json=None, params=None, timeout=30.0,
         )
 
     def test_search(self, client: RestClient, mock_session: MagicMock) -> None:
+        # search(**params) passes params through verbatim, so the CALLER must use the
+        # spec wire key `areacode` (relay-rest/openapi.yaml: `- name: areacode`), NOT
+        # `area_code`. This passthrough-shape test previously enshrined the wrong key
+        # `area_code` (round-4 finding). Wire-TRUTH is proven by the strict-mock
+        # generated test (phone_numbers_generated_test.py::test_phone_numbers_search);
+        # this only documents the passthrough shape.
         mock_session.request.return_value = MockResponse(200, {"data": []})
-        client.phone_numbers.search(area_code="512")
+        client.phone_numbers.search(areacode="512")
         mock_session.request.assert_called_with(
-            "GET", f"{BASE}/search", json=None, params={"area_code": "512"},
+            "GET", f"{BASE}/search", json=None, params={"areacode": "512"}, timeout=30.0,
         )
 
     def test_update_uses_put(self, client: RestClient, mock_session: MagicMock) -> None:
@@ -40,7 +46,7 @@ class TestPhoneNumbersCrud:
         mock_session.request.return_value = MockResponse(200, {})
         client.phone_numbers.update("pn-1", name="Main")
         mock_session.request.assert_called_with(
-            "PUT", f"{BASE}/pn-1", json={"name": "Main"}, params=None,
+            "PUT", f"{BASE}/pn-1", json={"name": "Main"}, params=None, timeout=30.0,
         )
 
 
@@ -90,7 +96,7 @@ class TestSetSwmlWebhook:
                 "call_handler": "relay_script",
                 "call_relay_script_url": "https://example.com/swml",
             },
-            params=None,
+            params=None, timeout=30.0,
         )
 
     def test_extra_kwargs_pass_through(self, client: RestClient, mock_session: MagicMock) -> None:
@@ -116,7 +122,7 @@ class TestSetCxmlWebhook:
                 "call_handler": "laml_webhooks",
                 "call_request_url": "https://example.com/voice.xml",
             },
-            params=None,
+            params=None, timeout=30.0,
         )
 
     def test_with_fallback_and_status(self, client: RestClient, mock_session: MagicMock) -> None:

@@ -28,7 +28,7 @@ from __future__ import annotations
 
 import re
 from importlib.metadata import version as _pkg_version
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from signalwire.rest.client import RestClient
@@ -43,13 +43,20 @@ _DIST_NAME = "signalwire-sdk"
 class TestWirePercentEncodingPin:
     """A request whose query params contain space/&/+/unicode round-trips exactly."""
 
-    # The adversarial value set: a space, an ``&`` (query separator), a ``+`` (space in
+    # The adversarial value: a space, an ``&`` (query separator), a ``+`` (space in
     # form-encoding), a raw ``=``, and a non-ASCII unicode char — every character a naive
     # (no-encoding) client would let leak into the query string and corrupt the parse.
-    HOSTILE = {
-        "q": "a b&c+dé",
-        "tag": "x=y",
-        "emoji": "smile\N{SNOWMAN}",
+    # Carried on ``filter_label`` — a DECLARED query param on relay-rest.list_addresses —
+    # so this stays about VALUE percent-encoding (a real client bug: rust shipped none) and
+    # is not rejected by the wire-truth gate for using an undeclared param NAME (which is a
+    # separate concern the strict-mocks gate owns). One rich value exercises every hostile
+    # character; the server's ``parse_qs`` recovers it exactly iff the client encoded right.
+    # Annotated ``dict[str, Any]`` (not the inferred ``dict[str, str]``) so the
+    # ``list(**HOSTILE)`` splat lands cleanly on ``list``'s ``**params: Any`` query tail:
+    # ``list`` now also declares a keyword-only ``request_options`` param before that tail,
+    # and mypy would otherwise try to satisfy it from the unpacked ``str`` values.
+    HOSTILE: dict[str, Any] = {
+        "filter_label": "a b&c+d=é\N{SNOWMAN}",
     }
 
     def test_query_params_are_percent_encoded_on_the_wire(

@@ -29,8 +29,22 @@
 set -u
 set -o pipefail
 
+# STRICT-MOCKS 400-mode (plan §2.2c): after the clean fleet cycle, strict is the
+# DEFAULT. The REST mock (mock_signalwire) 400s on any wire_violation and the RELAY
+# mock (mock_relay) rejects any unknown-field/duplicate-id frame — so every mock
+# consumer inherits wire-truth directly, not only the gates that read the journal.
+# Exported here so every mock this run spawns (REST-COVERAGE, per-test harness, the
+# doc/example gates) inherits it. Override to 0 to debug in flag-mode.
+export MOCK_SIGNALWIRE_STRICT="${MOCK_SIGNALWIRE_STRICT:-1}"
+export MOCK_RELAY_STRICT="${MOCK_RELAY_STRICT:-1}"
+
 PORT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 PORT_NAME="signalwire-python"
+
+# Shipped example directories (examples/, rest/examples/, relay/examples/). Linted
+# and format-checked as a group by the EXAMPLES-LINT / EXAMPLES-FMT gates. ruff
+# reads pyproject's per-file-ignores for examples/**, so the SDK ruleset stays intact.
+EXAMPLE_DIRS=("$PORT_ROOT/examples" "$PORT_ROOT/rest/examples" "$PORT_ROOT/relay/examples")
 
 resolve_porting_sdk() {
     if [ -n "${PORTING_SDK:-}" ] && [ -d "$PORTING_SDK/scripts" ]; then
@@ -65,7 +79,13 @@ PY
 
 cd "$PORT_ROOT"
 
+# Gate-enforcement plan (Part D): python's red list is burned, so its widened
+# (wave-A) gate findings BLOCK rather than report-only. Default OFF here; a
+# caller may still set SW_WAVE_A_REPORT_ONLY=1 to inspect the report-only view.
+export SW_WAVE_A_REPORT_ONLY="${SW_WAVE_A_REPORT_ONLY:-0}"
+
 echo "==> running CI gates for $PORT_NAME (porting-sdk at $PORTING_SDK_DIR)"
+echo "==> wave-A gate findings are ${SW_WAVE_A_REPORT_ONLY:+BLOCKING (SW_WAVE_A_REPORT_ONLY=$SW_WAVE_A_REPORT_ONLY)}"
 
 # Record the resolved web-stack versions up front (CI-only web-layer failures have
 # been impossible to diagnose without the runner's actual resolution).
@@ -87,19 +107,36 @@ fmt_gate() {
     fi
 }
 
+# EXAMPLES-FMT — ruff format over the shipped example dirs. LOCAL applies; CI --check.
+examples_fmt_gate() {
+    if [ -n "${CI:-}" ]; then
+        python3 -m ruff format --check "${EXAMPLE_DIRS[@]}"
+    else
+        python3 -m ruff format "${EXAMPLE_DIRS[@]}" >/dev/null
+        if ! (cd "$PORT_ROOT" && git diff --quiet 2>/dev/null); then
+            echo "    (EXAMPLES-FMT auto-applied formatting to your working tree — review & stage)"
+        fi
+        python3 -m ruff format --check "${EXAMPLE_DIRS[@]}"
+    fi
+}
+
 # REST-COVERAGE — every implemented REST route covered success+error. Self-
 # contained: spins its own mock on an ephemeral port, runs the rest/ suite serially,
-# then checks the journal.
+# then checks the journal for BOTH coverage AND wire-truth (STRICT-MOCKS §2.2a:
+# any journaled wire_violation reds the gate — respelling-proof, since it reads the
+# mock's own spec-vs-wire judgement).
 rest_coverage_gate() {
     local port
     port="$(pick_free_port)" || {
         echo "FATAL: could not acquire a free port for mock_signalwire" >&2
         return 1
     }
+    mkdir -p "$PORT_ROOT/.sw-tmp"
+    local mocklog="$PORT_ROOT/.sw-tmp/rest_cov_mock.$$.log"
     local mock_pkg_parent="$PORTING_SDK_DIR/test_harness/mock_signalwire"
     export PYTHONPATH="$mock_pkg_parent${PYTHONPATH:+:$PYTHONPATH}"
     python3 -m mock_signalwire --host 127.0.0.1 --port "$port" --log-level error \
-        >/tmp/rest_cov_mock.$$.log 2>&1 &
+        >"$mocklog" 2>&1 &
     local mock_pid=$!
     # shellcheck disable=SC2064
     trap "kill $mock_pid 2>/dev/null" RETURN
@@ -107,7 +144,7 @@ rest_coverage_gate() {
     for i in $(seq 1 30); do
         if ! kill -0 "$mock_pid" 2>/dev/null; then
             echo "FATAL: mock_signalwire (pid $mock_pid) exited before becoming healthy" >&2
-            sed 's/^/    mock: /' "/tmp/rest_cov_mock.$$.log" >&2 || true
+            sed 's/^/    mock: /' "$mocklog" >&2 || true
             return 1
         fi
         if python3 -c "import urllib.request,sys; urllib.request.urlopen('http://127.0.0.1:$port/__mock__/health',timeout=1)" 2>/dev/null; then
@@ -118,7 +155,7 @@ rest_coverage_gate() {
     done
     if [ "$healthy" -ne 1 ]; then
         echo "FATAL: mock_signalwire never became healthy on port $port within ~15s" >&2
-        sed 's/^/    mock: /' "/tmp/rest_cov_mock.$$.log" >&2 || true
+        sed 's/^/    mock: /' "$mocklog" >&2 || true
         return 1
     fi
     python3 -c "import urllib.request; urllib.request.urlopen(urllib.request.Request('http://127.0.0.1:$port/__mock__/journal/reset',method='POST'),timeout=5).read()"
@@ -126,21 +163,43 @@ rest_coverage_gate() {
     # classes) against the mock to populate the coverage journal. These replaced the
     # old hand `*_full_mock` tests (bb2c6cf); the previous `-k full_mock` selector
     # matched nothing after that, so the journal stayed empty and coverage failed.
+    #
+    # EXCLUDE `wire_regression_pins_test.py`: that hand-authored pin DELIBERATELY
+    # sends undeclared query params (q/tag/emoji on addresses) to exercise the
+    # percent-encoding round-trip — a legitimate hostile probe, not a wire bug. It
+    # would otherwise litter the journal with intentional wire_violations that the
+    # STRICT-MOCKS post-pass below would (correctly, for a real fixture) red on. It
+    # still runs in the TEST gate for its actual assertion; it just doesn't belong in
+    # the wire-truth coverage journal. The 438 generated *Wire tests still give full
+    # success+error coverage.
     MOCK_SIGNALWIRE_PORT="$port" python3 -m pytest \
-        "$PORT_ROOT/tests/unit/rest/" -k Wire -p no:xdist -q -o addopts="" || return 1
+        "$PORT_ROOT/tests/unit/rest/" -k "Wire and not wire_regression_pins" \
+        -p no:xdist -q -o addopts="" || return 1
     python3 -m mock_signalwire.rest_coverage \
         --mock-url "http://127.0.0.1:$port" \
         --spec-root "$PORTING_SDK_DIR/rest-apis" \
         --allowlist "$PORTING_SDK_DIR/REST_COVERAGE_BASELINE.md" \
         --allowlist "$PORT_ROOT/REST_COVERAGE_GAPS.md" \
-        --gap-baseline "$PORTING_SDK_DIR/REST_COVERAGE_GAP_BASELINE.md"
+        --gap-baseline "$PORTING_SDK_DIR/REST_COVERAGE_GAP_BASELINE.md" || return 1
+    # STRICT-MOCKS §2.2a — fail the gate on ANY journaled wire_violation. The shared
+    # helper reads the same live mock journal and exits non-zero on any offender
+    # (see porting-sdk/scripts/assert_no_wire_violations.py). WIRE_VIOLATIONS_ALLOW.md
+    # holds ONLY owner-signed spec-gap parks (recordings page_size + fabric cursor,
+    # pending prime-rails confirmation of the server-side param).
+    python3 "$PORTING_SDK_DIR/scripts/assert_no_wire_violations.py" \
+        --rest-mock-url "http://127.0.0.1:$port" \
+        --allowlist "$PORT_ROOT/WIRE_VIOLATIONS_ALLOW.md"
 }
 
 # ---- register gates ----------------------------------------------------------
 sched_init "$@"
 
-sched_gate TEST defer=1 desc="python -m pytest tests/unit/" \
-    -- python -m pytest tests/unit/
+# STRICT-MOCKS §2.2b — run the RELAY unit tests against a strict mock_relay
+# (MOCK_RELAY_STRICT=1): any unknown frame field / duplicate command-id is rejected
+# with an error frame, so a wrong RELAY wire shape fails the test rather than being
+# silently accepted. The reference RELAY suite is already wire-clean under strict.
+sched_gate TEST defer=1 desc="python -m pytest tests/unit/ (STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
+    -- env MOCK_RELAY_STRICT=1 python -m pytest tests/unit/
 
 # SIGNATURES regenerates the porting-sdk oracle → DRIFT git-diffs it. deps=SIGNATURES.
 sched_gate SIGNATURES desc="regenerate python_signatures.json (reference oracle)" \
@@ -157,6 +216,12 @@ sched_gate SEMVER-DIFF deps=SIGNATURES desc="version bump matches surface change
 sched_gate NO-CHEAT desc="audit_no_cheat_tests" \
     -- python3 "$PORTING_SDK_DIR/scripts/audit_no_cheat_tests.py" --root "$PORT_ROOT"
 
+sched_gate COORDINATED-PASS desc="a non-main porting-sdk pin must be declared on the PR (Coordinated-With: line or coordinated-pass label)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/coordinated_pass.py" --porting-sdk "$PORTING_SDK_DIR"
+
+sched_gate COORDINATED-REFS desc="every coordinated-set checkout (porting-sdk + python oracle + matrix ports) uses PORTING_SDK_REF, not a literal ref" \
+    -- python3 "$PORTING_SDK_DIR/scripts/check_coordinated_refs.py" --repo "$PORT_ROOT"
+
 sched_gate REST-COVERAGE defer=1 desc="every implemented REST route covered success+error (parity + allowlist)" \
     --fn rest_coverage_gate
 
@@ -170,6 +235,15 @@ sched_gate FMT defer=1 desc="ruff format (local: apply; CI: --check)" \
 
 sched_gate LINT desc="ruff check zero findings" \
     -- python3 -m ruff check "$PORT_ROOT/signalwire"
+
+# EXAMPLES-LINT / EXAMPLES-FMT — the shipped example dirs are ruff-clean too. Cheap
+# static checks (no build, no mock) → per-PR cheap wave. ruff honors pyproject's
+# examples/** per-file-ignores, so this enforces the same ruleset the SDK uses.
+sched_gate EXAMPLES-LINT desc="ruff check zero findings over examples/ rest/examples/ relay/examples/" \
+    -- python3 -m ruff check "${EXAMPLE_DIRS[@]}"
+
+sched_gate EXAMPLES-FMT desc="ruff format over the example dirs (local: apply; CI: --check)" \
+    --fn examples_fmt_gate
 
 sched_gate TYPECHECK desc="mypy zero findings" \
     -- python3 -m mypy --config-file "$PORT_ROOT/pyproject.toml"
@@ -226,15 +300,90 @@ sched_gate COUNT-CLAIM desc="numeric doc claims (skills/namespaces) match realit
 sched_gate ACCESSOR-TRUTH desc="documented backtick method() refs exist in source" \
     -- python3 "$PORTING_SDK_DIR/scripts/accessor_truth.py" --port python --repo "$PORT_ROOT"
 
+# SURFACE-NATIVE — regenerate the doc-audit resolvable-name sidecar BEFORE DOC-AUDIT
+# consumes it, so a renamed/deleted native-only member stops resolving instead of
+# silently staying excused by a stale file. Cheap (an ast walk of 2 modules).
+sched_gate SURFACE-NATIVE desc="regenerate port_surface_native.json (native-only doc-audit sidecar)" \
+    -- python3 "$PORT_ROOT/scripts/emit_surface_native.py" --out "$PORT_ROOT/port_surface_native.json"
+
+# DOC-AUDIT — every method/class referenced in docs/examples resolves to a real
+# symbol in the python surface oracle (python_surface.json, in porting-sdk). The
+# DOC_AUDIT_IGNORE.md ledger excuses stdlib/third-party/user-tutorial-helper refs.
+#
+# --native-names is LOAD-BEARING, not belt-and-braces. enumerate_python.py excludes
+# signalwire.livewire.* from the oracle by design (user-approved 2026-07-24: shipped by
+# python + typescript only, so oracle-ising it would force ~44 omissions x 8 ports),
+# but livewire/ DOCS are inside this perimeter — so livewire refs were unresolvable BY
+# CONSTRUCTION (7 findings for 5 methods that are all really implemented). The sidecar
+# carries those real native members, which is the mechanism audit_docs documents for
+# exactly this ("the enumerator carrying the port's idiom, not a doc-audit omission").
+# An ignore-ledger entry would have been the wrong fix: real shipped members excused by
+# name is a permanent blind spot that also hides a future typo in those names.
+sched_gate DOC-AUDIT deps=SURFACE-NATIVE desc="audit_docs vs python_surface.json (the reference oracle)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/audit_docs.py" \
+        --root "$PORT_ROOT" \
+        --surface "$PORTING_SDK_DIR/python_surface.json" \
+        --ignore "$PORT_ROOT/DOC_AUDIT_IGNORE.md" \
+        --native-names "$PORT_ROOT/port_surface_native.json"
+
+# DOC-WIRE (§A1) — the documented REST fixtures are wire-clean against the spec
+# (strict-flag mock journals wire_violations; runner replays the doc calls). Cheap.
+sched_gate DOC-WIRE desc="documented REST doc fixtures put the spec wire shape on the wire (areacode/params:{text})" \
+    -- python3 "$PORTING_SDK_DIR/scripts/doc_wire.py" --port python --repo "$PORT_ROOT" \
+        --runner "python3 $PORT_ROOT/scripts/doc_wire_runner.py"
+
+# STATUS-CLAIM (§C2) — no false capability/status claims in docs (e.g. "not
+# implemented" / "transport pending" for surface that exists).
+sched_gate STATUS-CLAIM desc="doc status/capability claims match the shipped surface" \
+    -- python3 "$PORTING_SDK_DIR/scripts/status_claim.py" --port python --repo "$PORT_ROOT" \
+        --surface "$PORTING_SDK_DIR/python_surface.json"
+
+# NOTE: §1.11b (GATE-INVENTORY freshness) is NOT wired here. gen_gate_inventory.py
+# resolves its reference port as a sibling checkout (DEFAULT_REFERENCE=signalwire-
+# typescript), which does not exist in a port's CI layout (porting-sdk is a subdir
+# of the port workspace, so ../signalwire-typescript is absent → exit 2). The check
+# is inherently porting-sdk-side and already runs in porting-sdk's own CI
+# (.github/workflows/test.yml, with --reference ./signalwire-typescript). Wiring it
+# per-port would require each port to also check out the TS reference — not worth it.
+
 # SNIPPET-RUN is BLOCKING: the fragment backlog is burned to zero. Residual
 # non-runnable snippets carry `<!-- snippet: no-run <reason> -->` markers (blocking
 # servers, live REST/network calls, optional-dep imports, prose-context fragments,
 # before/after excerpts); real API-mismatch doc bugs were fixed. ~130s parallelized.
-sched_gate SNIPPET-RUN tier=nightly defer=1 desc="dynamic-port doc snippets run to a zero exit against the mock" \
-    -- python3 "$PORTING_SDK_DIR/scripts/snippet_run.py" --port python --repo "$PORT_ROOT"
+sched_gate SNIPPET-RUN tier=nightly defer=1 desc="dynamic-port doc snippets run to a zero exit against the mock (STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
+    -- env MOCK_RELAY_STRICT=1 python3 "$PORTING_SDK_DIR/scripts/snippet_run.py" --port python --repo "$PORT_ROOT"
 
-sched_gate EXAMPLES-RUN tier=nightly defer=1 desc="shipped examples load/start against the mock (modulo EXAMPLES_RUN_ALLOW.md)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/examples_run.py" --port python --repo "$PORT_ROOT"
+sched_gate EXAMPLES-RUN tier=nightly defer=1 desc="shipped examples load/start against the mock (modulo EXAMPLES_RUN_ALLOW.md; STRICT-MOCKS: MOCK_RELAY_STRICT=1)" \
+    -- env MOCK_RELAY_STRICT=1 python3 "$PORTING_SDK_DIR/scripts/examples_run.py" --port python --repo "$PORT_ROOT"
+
+# WAIT-LIVENESS (§2.4) — the wait_liveness corpus runs against the python
+# reference and produces the golden LIVENESS classification (play/record wait()
+# blocks until the completing event, then returns — never busy-hangs or early-
+# returns). For python (the oracle) proving the corpus runs IS the gate; the
+# ports diff their classification against this golden. Nightly (spawns dump
+# programs). Report-only is NOT used — python is the oracle floor.
+sched_gate WAIT-LIVENESS tier=nightly defer=1 desc="wait() liveness corpus runs on the reference + yields the golden classification" \
+    -- python3 "$PORTING_SDK_DIR/scripts/diff_port_wait_liveness.py" --show-oracle --python-sdk "$PORT_ROOT"
+
+# ---- Day-one deterministic doc/tree-hygiene gates ---------------------------
+sched_gate DOC-LINKS desc="every relative markdown link resolves to a tracked file" \
+    -- python3 "$PORTING_SDK_DIR/scripts/doc_links.py" --port python --repo "$PORT_ROOT"
+
+sched_gate ROOT-HYGIENE desc="no audit/scratch clutter tracked at repo root (allowlist ROOT_HYGIENE_ALLOW.md)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/root_hygiene.py" --port python --repo "$PORT_ROOT"
+
+# WIRED-MODES (Part 1.6, D7): the merge-coherence guard — every load-bearing run-ci mode
+# line declared in WIRED_MODES.md must still be present in this file, so a merge cannot
+# silently drop a strict export / post-pass (the strict-mocks × Part-5 race class).
+# check_wired_modes.py fails the gate if a declared line is ever silently dropped.
+sched_gate WIRED-MODES desc="declared load-bearing run-ci modes present (WIRED_MODES.md)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/check_wired_modes.py" --port python --repo "$PORT_ROOT"
+
+# DOC-SURFACE (§6.3): public docstring-coverage floor with a ratchet
+# (.doc_surface_floor). Report-only semantics: reds only on a REGRESSION below the
+# committed floor; improvements re-pin via --write-floor.
+sched_gate DOC-SURFACE desc="public docstring coverage >= committed floor (.doc_surface_floor)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/doc_surface.py" --port python --repo "$PORT_ROOT"
 
 sched_run
 rc=$?

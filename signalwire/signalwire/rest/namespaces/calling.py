@@ -2,7 +2,7 @@
 
 These symbols moved out of ``namespaces.calling`` when the REST layer was
 regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.calling import CallingNamespace``
+re-export keeps ``from signalwire.rest.namespaces.calling import CallingNamespace``
 working but emits a :class:`DeprecationWarning`. Prefer ``client.calling`` instead
 (no import needed).
 """
@@ -10,7 +10,7 @@ working but emits a :class:`DeprecationWarning`. Prefer ``client.calling`` inste
 import warnings
 
 warnings.warn(
-    "signalwire.signalwire.rest.namespaces.calling is deprecated; use client.calling. "
+    "signalwire.rest.namespaces.calling is deprecated; use client.calling. "
     "This back-compat shim will be removed in a future release.",
     DeprecationWarning,
     stacklevel=2,

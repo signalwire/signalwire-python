@@ -1,5 +1,0 @@
-#!/bin/bash
-# SWAIG Function Testing Tool
-# Simple wrapper for testing SWAIG functions from agent applications
-
-exec python signalwire_agents/cli/test_swaig.py "$@" 

@@ -32,7 +32,7 @@ def main():
 
     # 3. Search for a phone number
     print("\nSearching for available phone numbers...")
-    available = client.phone_numbers.search(area_code="512", max_results=3)
+    available = client.phone_numbers.search(areacode="512", max_results=3)
     for num in available.get("data", []):
         print(f"  - {num.get('e164', num.get('number', 'unknown'))}")
 

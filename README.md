@@ -45,6 +45,7 @@ Each agent is a self-contained microservice that generates [SWML](docs/swml_serv
 from signalwire import AgentBase
 from signalwire.core.function_result import FunctionResult
 
+
 class MyAgent(AgentBase):
     def __init__(self):
         super().__init__(name="my-agent", route="/agent")
@@ -56,7 +57,9 @@ class MyAgent(AgentBase):
     def get_time(self):
         """Get the current time"""
         from datetime import datetime
+
         return FunctionResult(f"The time is {datetime.now().strftime('%H:%M:%S')}")
+
 
 if __name__ == "__main__":
     agent = MyAgent()
@@ -116,7 +119,10 @@ Real-time call control and messaging over WebSocket. The RELAY client connects t
 ```python
 from signalwire.relay import RelayClient
 
-client = RelayClient(project="...", token="...", host="example.signalwire.com", contexts=["default"])
+client = RelayClient(
+    project="...", token="...", host="example.signalwire.com", contexts=["default"]
+)
+
 
 @client.on_call
 async def handle(call):
@@ -124,6 +130,7 @@ async def handle(call):
     action = await call.play([{"type": "tts", "params": {"text": "Welcome!"}}])
     await action.wait()
     await call.hangup()
+
 
 client.run()
 ```
@@ -148,7 +155,7 @@ from signalwire.rest import RestClient
 client = RestClient(project="...", token="...", host="example.signalwire.com")
 
 client.fabric.ai_agents.create(name="Support Bot", prompt={"text": "You are helpful."})
-client.calling.play(call_id, play=[{"type": "tts", "text": "Hello!"}])
+client.calling.play(call_id, play=[{"type": "tts", "params": {"text": "Hello!"}}])
 client.phone_numbers.search(areacode="512")
 client.datasphere.documents.search(query_string="billing policy")
 ```

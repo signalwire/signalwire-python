@@ -21,7 +21,7 @@ agent = client.fabric.ai_agents.create(
 )
 
 # Search for a phone number
-results = client.phone_numbers.search(area_code="512")
+results = client.phone_numbers.search(areacode="512")
 
 # Place a call via REST
 client.calling.dial(

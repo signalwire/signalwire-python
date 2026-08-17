@@ -18,12 +18,12 @@ class TestCalling:
 
     def test_play_with_call_id(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})
-        client.calling.play("call-123", play=[{"type": "tts", "text": "hello"}])
+        client.calling.play("call-123", play=[{"type": "tts", "params": {"text": "hello"}}])
         call_args = mock_session.request.call_args
         body = call_args[1]["json"]
         assert body["command"] == "calling.play"
         assert body["id"] == "call-123"
-        assert body["params"]["play"] == [{"type": "tts", "text": "hello"}]
+        assert body["params"]["play"] == [{"type": "tts", "params": {"text": "hello"}}]
 
     def test_end(self, client: RestClient, mock_session: MagicMock) -> None:
         mock_session.request.return_value = MockResponse(200, {})

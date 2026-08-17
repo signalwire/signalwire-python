@@ -168,9 +168,13 @@ class SwmlRenderer:
         # Use the service to build the document
         service.reset_document()
 
-        # Add a play block for the response if provided
+        # Add a play block for the response if provided. Text is played via the
+        # `say:` URL scheme — the SWML `play` verb has no `text` key (its config is
+        # PlayWithURL/PlayWithURLS, url matching `^...|say: ?.*|...$`). Emitting
+        # `{"text": ...}` produced a document the SWML schema rejects; the canonical
+        # form (mirrors SWMLBuilder.play) is `url: "say:<text>"`.
         if response_text:
-            service.add_verb("play", {"text": response_text})
+            service.add_verb("play", {"url": f"say:{response_text}"})
 
         # Add any actions that were provided
         if actions:

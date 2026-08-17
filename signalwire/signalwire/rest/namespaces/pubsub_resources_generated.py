@@ -12,6 +12,8 @@ from collections.abc import Mapping
 from .._base import BaseResource
 
 if TYPE_CHECKING:
+    from .._request_options import RequestOptions
+
     from .pubsub_types_generated import (
         PubSubChannels,
         PubSubState,
@@ -33,6 +35,7 @@ class PubSub(BaseResource):
         member_id: str | None = None,
         state: PubSubState | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> PubSubToken:
         body: dict[str, Any] = {
@@ -48,4 +51,9 @@ class PubSub(BaseResource):
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("PubSubToken", self._http.post(self._base_path, body=body))
+        return cast(
+            "PubSubToken",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )

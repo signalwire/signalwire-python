@@ -144,7 +144,7 @@ ENV_EXAMPLE_TEMPLATE = """# SignalWire Agent Configuration
 # SignalWire Credentials (required for WebRTC calling)
 SIGNALWIRE_SPACE_NAME=your-space
 SIGNALWIRE_PROJECT_ID=your-project-id
-SIGNALWIRE_TOKEN=your-api-token
+SIGNALWIRE_API_TOKEN=your-api-token
 
 # Public URL for SWML callbacks (required for WebRTC calling)
 # This should be your publicly accessible URL (e.g., ngrok, dokku domain)
@@ -381,7 +381,7 @@ def setup_swml_handler():
     """Set up SWML handler on startup."""
     sw_host = get_signalwire_host()
     project = os.getenv("SIGNALWIRE_PROJECT_ID", "")
-    token = os.getenv("SIGNALWIRE_TOKEN", "")
+    token = os.getenv("SIGNALWIRE_API_TOKEN", "")
     agent_name = os.getenv("AGENT_NAME", "{agent_slug}")
     proxy_url = os.getenv("SWML_PROXY_URL_BASE", os.getenv("APP_URL", ""))
     auth_user = os.getenv("SWML_BASIC_AUTH_USER", "signalwire")
@@ -478,7 +478,7 @@ def get_token():
     """Get a guest token for WebRTC calls."""
     sw_host = get_signalwire_host()
     project = os.getenv("SIGNALWIRE_PROJECT_ID", "")
-    token = os.getenv("SIGNALWIRE_TOKEN", "")
+    token = os.getenv("SIGNALWIRE_API_TOKEN", "")
 
     if not all([sw_host, project, token]):
         return JSONResponse({{"error": "SignalWire credentials not configured"}}, status_code=500)
@@ -1315,7 +1315,7 @@ APP_JSON_TEMPLATE = """{{
       "description": "SignalWire project ID",
       "required": true
     }},
-    "SIGNALWIRE_TOKEN": {{
+    "SIGNALWIRE_API_TOKEN": {{
       "description": "SignalWire API token",
       "required": true
     }},

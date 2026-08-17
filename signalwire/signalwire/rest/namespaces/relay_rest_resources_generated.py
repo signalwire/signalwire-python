@@ -12,6 +12,8 @@ from collections.abc import Mapping
 from .._base import BaseResource, CrudResource
 
 if TYPE_CHECKING:
+    from .._request_options import RequestOptions
+
     from .relay_rest_types_generated import (
         AddressListResponse,
         AddressResponse,
@@ -69,10 +71,14 @@ class Addresses(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/addresses")
 
-    def list(self, **params: Any) -> AddressListResponse:
+    def list(
+        self, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> AddressListResponse:
         return cast(
             "AddressListResponse",
-            self._http.get(self._base_path, params=params or None),
+            self._http.get(
+                self._base_path, params=params or None, request_options=request_options
+            ),
         )
 
     def create(
@@ -90,6 +96,7 @@ class Addresses(BaseResource):
         address_type: AddressType | None = None,
         address_number: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> AddressResponse:
         body: dict[str, Any] = {
@@ -112,15 +119,30 @@ class Addresses(BaseResource):
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("AddressResponse", self._http.post(self._base_path, body=body))
-
-    def get(self, id: str, **params: Any) -> AddressResponse:
         return cast(
-            "AddressResponse", self._http.get(self._path(id), params=params or None)
+            "AddressResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
         )
 
-    def delete(self, id: str) -> dict[str, Any]:
-        return cast("dict[str, Any]", self._http.delete(self._path(id)))
+    def get(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> AddressResponse:
+        return cast(
+            "AddressResponse",
+            self._http.get(
+                self._path(id), params=params or None, request_options=request_options
+            ),
+        )
+
+    def delete(
+        self, id: str, *, request_options: RequestOptions | None = None
+    ) -> dict[str, Any]:
+        return cast(
+            "dict[str, Any]",
+            self._http.delete(self._path(id), request_options=request_options),
+        )
 
 
 class ImportedNumbers(BaseResource):
@@ -136,6 +158,7 @@ class ImportedNumbers(BaseResource):
         number_type: Literal["longcode", "tollfree"],
         capabilities: list[Literal["sms", "voice", "fax", "mms"]] | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> PhoneNumberResponse:
         body: dict[str, Any] = {
@@ -150,7 +173,12 @@ class ImportedNumbers(BaseResource):
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("PhoneNumberResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "PhoneNumberResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
 
 class Lookup(BaseResource):
@@ -160,12 +188,18 @@ class Lookup(BaseResource):
         super().__init__(http, "/api/relay/rest/lookup")
 
     def phone_number(
-        self, e164_number: str, **params: Any
+        self,
+        e164_number: str,
+        *,
+        request_options: RequestOptions | None = None,
+        **params: Any,
     ) -> PhoneNumberLookupResponse:
         return cast(
             "PhoneNumberLookupResponse",
             self._http.get(
-                self._path("phone_number", e164_number), params=params or None
+                self._path("phone_number", e164_number),
+                params=params or None,
+                request_options=request_options,
             ),
         )
 
@@ -187,6 +221,7 @@ class Mfa(BaseResource):
         max_attempts: int | None = None,
         allow_alphas: bool | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> MfaResponse:
         body: dict[str, Any] = {
@@ -205,7 +240,12 @@ class Mfa(BaseResource):
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("MfaResponse", self._http.post(self._path("sms"), body=body))
+        return cast(
+            "MfaResponse",
+            self._http.post(
+                self._path("sms"), body=body, request_options=request_options
+            ),
+        )
 
     def call(
         self,
@@ -218,6 +258,7 @@ class Mfa(BaseResource):
         max_attempts: int | None = None,
         allow_alphas: bool | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> MfaResponse:
         body: dict[str, Any] = {
@@ -236,7 +277,12 @@ class Mfa(BaseResource):
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("MfaResponse", self._http.post(self._path("call"), body=body))
+        return cast(
+            "MfaResponse",
+            self._http.post(
+                self._path("call"), body=body, request_options=request_options
+            ),
+        )
 
     def verify(
         self,
@@ -244,6 +290,7 @@ class Mfa(BaseResource):
         *,
         token: str,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> MfaVerifyResponse:
         body: dict[str, Any] = {
@@ -254,7 +301,11 @@ class Mfa(BaseResource):
         body.update(_reserved_kw)
         return cast(
             "MfaVerifyResponse",
-            self._http.post(self._path(mfa_request_id, "verify"), body=body),
+            self._http.post(
+                self._path(mfa_request_id, "verify"),
+                body=body,
+                request_options=request_options,
+            ),
         )
 
 
@@ -279,6 +330,7 @@ class NumberGroups(
         name: str,
         sticky_sender: bool | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> NumberGroupResponse:
         body: dict[str, Any] = {
@@ -289,7 +341,12 @@ class NumberGroups(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("NumberGroupResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "NumberGroupResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -299,6 +356,7 @@ class NumberGroups(
         name: str | None = None,
         sticky_sender: bool | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> NumberGroupResponse:
         body: dict[str, Any] = {
@@ -309,16 +367,24 @@ class NumberGroups(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("NumberGroupResponse", self._http.put(self._path(id), body=body))
+        return cast(
+            "NumberGroupResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
+        )
 
     def list_memberships(
-        self, number_group_id: str, **params: Any
+        self,
+        number_group_id: str,
+        *,
+        request_options: RequestOptions | None = None,
+        **params: Any,
     ) -> NumberGroupMembershipListResponse:
         return cast(
             "NumberGroupMembershipListResponse",
             self._http.get(
                 self._path(number_group_id, "number_group_memberships"),
                 params=params or None,
+                request_options=request_options,
             ),
         )
 
@@ -328,6 +394,7 @@ class NumberGroups(
         *,
         phone_number_id: uuid,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> NumberGroupMembershipResponse:
         body: dict[str, Any] = {
@@ -341,22 +408,33 @@ class NumberGroups(
         return cast(
             "NumberGroupMembershipResponse",
             self._http.post(
-                self._path(number_group_id, "number_group_memberships"), body=body
+                self._path(number_group_id, "number_group_memberships"),
+                body=body,
+                request_options=request_options,
             ),
         )
 
-    def get_membership(self, id: str, **params: Any) -> NumberGroupMembershipResponse:
+    def get_membership(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> NumberGroupMembershipResponse:
         return cast(
             "NumberGroupMembershipResponse",
             self._http.get(
-                f"/api/relay/rest/number_group_memberships/{id}", params=params or None
+                f"/api/relay/rest/number_group_memberships/{id}",
+                params=params or None,
+                request_options=request_options,
             ),
         )
 
-    def delete_membership(self, id: str) -> dict[str, Any]:
+    def delete_membership(
+        self, id: str, *, request_options: RequestOptions | None = None
+    ) -> dict[str, Any]:
         return cast(
             "dict[str, Any]",
-            self._http.delete(f"/api/relay/rest/number_group_memberships/{id}"),
+            self._http.delete(
+                f"/api/relay/rest/number_group_memberships/{id}",
+                request_options=request_options,
+            ),
         )
 
 
@@ -380,6 +458,7 @@ class PhoneNumbers(
         *,
         number: str,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> PhoneNumberResponse:
         body: dict[str, Any] = {
@@ -388,7 +467,12 @@ class PhoneNumbers(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("PhoneNumberResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "PhoneNumberResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -429,6 +513,7 @@ class PhoneNumbers(
         message_relay_context: str | None = None,
         message_relay_application: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> PhoneNumberResponse:
         body: dict[str, Any] = {
@@ -473,21 +558,35 @@ class PhoneNumbers(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("PhoneNumberResponse", self._http.put(self._path(id), body=body))
+        return cast(
+            "PhoneNumberResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
+        )
 
-    def search(self, **params: Any) -> AvailablePhoneNumbersResponse:
+    def search(
+        self, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> AvailablePhoneNumbersResponse:
         return cast(
             "AvailablePhoneNumbersResponse",
-            self._http.get(self._path("search"), params=params or None),
+            self._http.get(
+                self._path("search"),
+                params=params or None,
+                request_options=request_options,
+            ),
         )
 
     def set_swml_webhook(
-        self, resource_id: str, url: str, **extra: Any
+        self,
+        resource_id: str,
+        url: str,
+        *,
+        request_options: RequestOptions | None = None,
+        **extra: Any,
     ) -> PhoneNumberResponse:
         body: dict[str, Any] = {"call_handler": "relay_script"}
         body["call_relay_script_url"] = url
         body.update(extra)
-        return self.update(resource_id, **body)
+        return self.update(resource_id, request_options=request_options, **body)
 
     def set_cxml_webhook(
         self,
@@ -495,6 +594,8 @@ class PhoneNumbers(
         url: str,
         fallback_url: str | None = None,
         status_callback_url: str | None = None,
+        *,
+        request_options: RequestOptions | None = None,
         **extra: Any,
     ) -> PhoneNumberResponse:
         body: dict[str, Any] = {"call_handler": "laml_webhooks"}
@@ -504,29 +605,41 @@ class PhoneNumbers(
         if status_callback_url is not None:
             body["call_status_callback_url"] = status_callback_url
         body.update(extra)
-        return self.update(resource_id, **body)
+        return self.update(resource_id, request_options=request_options, **body)
 
     def set_cxml_application(
-        self, resource_id: str, application_id: str, **extra: Any
+        self,
+        resource_id: str,
+        application_id: str,
+        *,
+        request_options: RequestOptions | None = None,
+        **extra: Any,
     ) -> PhoneNumberResponse:
         body: dict[str, Any] = {"call_handler": "laml_application"}
         body["call_laml_application_id"] = application_id
         body.update(extra)
-        return self.update(resource_id, **body)
+        return self.update(resource_id, request_options=request_options, **body)
 
     def set_ai_agent(
-        self, resource_id: str, agent_id: uuid, **extra: Any
+        self,
+        resource_id: str,
+        agent_id: uuid,
+        *,
+        request_options: RequestOptions | None = None,
+        **extra: Any,
     ) -> PhoneNumberResponse:
         body: dict[str, Any] = {"call_handler": "ai_agent"}
         body["call_ai_agent_id"] = agent_id
         body.update(extra)
-        return self.update(resource_id, **body)
+        return self.update(resource_id, request_options=request_options, **body)
 
     def set_call_flow(
         self,
         resource_id: str,
         flow_id: uuid,
         version: Literal["working_copy", "current_deployed"] | None = None,
+        *,
+        request_options: RequestOptions | None = None,
         **extra: Any,
     ) -> PhoneNumberResponse:
         body: dict[str, Any] = {"call_handler": "call_flow"}
@@ -534,21 +647,28 @@ class PhoneNumbers(
         if version is not None:
             body["call_flow_version"] = version
         body.update(extra)
-        return self.update(resource_id, **body)
+        return self.update(resource_id, request_options=request_options, **body)
 
     def set_relay_application(
-        self, resource_id: str, name: str, **extra: Any
+        self,
+        resource_id: str,
+        name: str,
+        *,
+        request_options: RequestOptions | None = None,
+        **extra: Any,
     ) -> PhoneNumberResponse:
         body: dict[str, Any] = {"call_handler": "relay_application"}
         body["call_relay_application"] = name
         body.update(extra)
-        return self.update(resource_id, **body)
+        return self.update(resource_id, request_options=request_options, **body)
 
     def set_relay_topic(
         self,
         resource_id: str,
         topic: str,
         status_callback_url: str | None = None,
+        *,
+        request_options: RequestOptions | None = None,
         **extra: Any,
     ) -> PhoneNumberResponse:
         body: dict[str, Any] = {"call_handler": "relay_topic"}
@@ -556,7 +676,7 @@ class PhoneNumbers(
         if status_callback_url is not None:
             body["call_relay_topic_status_callback_url"] = status_callback_url
         body.update(extra)
-        return self.update(resource_id, **body)
+        return self.update(resource_id, request_options=request_options, **body)
 
 
 class Queues(
@@ -577,6 +697,7 @@ class Queues(
         name: str | None = None,
         max_size: int | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> QueueResponse:
         body: dict[str, Any] = {
@@ -587,7 +708,12 @@ class Queues(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("QueueResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "QueueResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -597,6 +723,7 @@ class Queues(
         name: str | None = None,
         max_size: int | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> QueueResponse:
         body: dict[str, Any] = {
@@ -607,26 +734,58 @@ class Queues(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("QueueResponse", self._http.put(self._path(id), body=body))
-
-    def list_members(self, queue_id: str, **params: Any) -> QueueMemberListResponse:
         return cast(
-            "QueueMemberListResponse",
-            self._http.get(self._path(queue_id, "members"), params=params or None),
+            "QueueResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
         )
 
-    def get_next_member(self, queue_id: str, **params: Any) -> QueueMemberResponse:
+    def list_members(
+        self,
+        queue_id: str,
+        *,
+        request_options: RequestOptions | None = None,
+        **params: Any,
+    ) -> QueueMemberListResponse:
         return cast(
-            "QueueMemberResponse",
+            "QueueMemberListResponse",
             self._http.get(
-                self._path(queue_id, "members", "next"), params=params or None
+                self._path(queue_id, "members"),
+                params=params or None,
+                request_options=request_options,
             ),
         )
 
-    def get_member(self, queue_id: str, id: str, **params: Any) -> QueueMemberResponse:
+    def get_next_member(
+        self,
+        queue_id: str,
+        *,
+        request_options: RequestOptions | None = None,
+        **params: Any,
+    ) -> QueueMemberResponse:
         return cast(
             "QueueMemberResponse",
-            self._http.get(self._path(queue_id, "members", id), params=params or None),
+            self._http.get(
+                self._path(queue_id, "members", "next"),
+                params=params or None,
+                request_options=request_options,
+            ),
+        )
+
+    def get_member(
+        self,
+        queue_id: str,
+        id: str,
+        *,
+        request_options: RequestOptions | None = None,
+        **params: Any,
+    ) -> QueueMemberResponse:
+        return cast(
+            "QueueMemberResponse",
+            self._http.get(
+                self._path(queue_id, "members", id),
+                params=params or None,
+                request_options=request_options,
+            ),
         )
 
 
@@ -636,19 +795,33 @@ class Recordings(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/recordings")
 
-    def list(self, **params: Any) -> RecordingListResponse:
+    def list(
+        self, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> RecordingListResponse:
         return cast(
             "RecordingListResponse",
-            self._http.get(self._base_path, params=params or None),
+            self._http.get(
+                self._base_path, params=params or None, request_options=request_options
+            ),
         )
 
-    def get(self, id: str, **params: Any) -> dict[str, Any]:
+    def get(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> dict[str, Any]:
         return cast(
-            "dict[str, Any]", self._http.get(self._path(id), params=params or None)
+            "dict[str, Any]",
+            self._http.get(
+                self._path(id), params=params or None, request_options=request_options
+            ),
         )
 
-    def delete(self, id: str) -> dict[str, Any]:
-        return cast("dict[str, Any]", self._http.delete(self._path(id)))
+    def delete(
+        self, id: str, *, request_options: RequestOptions | None = None
+    ) -> dict[str, Any]:
+        return cast(
+            "dict[str, Any]",
+            self._http.delete(self._path(id), request_options=request_options),
+        )
 
 
 class RegistryBrands(BaseResource):
@@ -657,32 +830,63 @@ class RegistryBrands(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/registry/beta/brands")
 
-    def list(self, **params: Any) -> BrandListResponse:
+    def list(
+        self, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> BrandListResponse:
         return cast(
-            "BrandListResponse", self._http.get(self._base_path, params=params or None)
+            "BrandListResponse",
+            self._http.get(
+                self._base_path, params=params or None, request_options=request_options
+            ),
         )
 
     def create(
-        self, body: CreateManagedBrandRequest | CreateCspBrandRequest
+        self,
+        body: CreateManagedBrandRequest | CreateCspBrandRequest,
+        *,
+        request_options: RequestOptions | None = None,
     ) -> BrandResponse:
-        return cast("BrandResponse", self._http.post(self._base_path, body=body))
-
-    def get(self, id: str, **params: Any) -> BrandResponse:
         return cast(
-            "BrandResponse", self._http.get(self._path(id), params=params or None)
+            "BrandResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
         )
 
-    def list_campaigns(self, id: str, **params: Any) -> CampaignListResponse:
+    def get(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> BrandResponse:
+        return cast(
+            "BrandResponse",
+            self._http.get(
+                self._path(id), params=params or None, request_options=request_options
+            ),
+        )
+
+    def list_campaigns(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> CampaignListResponse:
         return cast(
             "CampaignListResponse",
-            self._http.get(self._path(id, "campaigns"), params=params or None),
+            self._http.get(
+                self._path(id, "campaigns"),
+                params=params or None,
+                request_options=request_options,
+            ),
         )
 
     def create_campaign(
-        self, id: str, body: CreateManagedCampaignRequest | CreatePartnerCampaignRequest
+        self,
+        id: str,
+        body: CreateManagedCampaignRequest | CreatePartnerCampaignRequest,
+        *,
+        request_options: RequestOptions | None = None,
     ) -> CampaignResponse:
         return cast(
-            "CampaignResponse", self._http.post(self._path(id, "campaigns"), body=body)
+            "CampaignResponse",
+            self._http.post(
+                self._path(id, "campaigns"), body=body, request_options=request_options
+            ),
         )
 
 
@@ -692,9 +896,14 @@ class RegistryCampaigns(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/registry/beta/campaigns")
 
-    def get(self, id: str, **params: Any) -> CampaignResponse:
+    def get(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> CampaignResponse:
         return cast(
-            "CampaignResponse", self._http.get(self._path(id), params=params or None)
+            "CampaignResponse",
+            self._http.get(
+                self._path(id), params=params or None, request_options=request_options
+            ),
         )
 
     def update(
@@ -703,6 +912,7 @@ class RegistryCampaigns(BaseResource):
         *,
         name: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> CampaignResponse:
         body: dict[str, Any] = {
@@ -711,18 +921,33 @@ class RegistryCampaigns(BaseResource):
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("CampaignResponse", self._http.put(self._path(id), body=body))
-
-    def list_numbers(self, id: str, **params: Any) -> AssignedNumberListResponse:
         return cast(
-            "AssignedNumberListResponse",
-            self._http.get(self._path(id, "numbers"), params=params or None),
+            "CampaignResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
         )
 
-    def list_orders(self, id: str, **params: Any) -> OrderListResponse:
+    def list_numbers(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> AssignedNumberListResponse:
+        return cast(
+            "AssignedNumberListResponse",
+            self._http.get(
+                self._path(id, "numbers"),
+                params=params or None,
+                request_options=request_options,
+            ),
+        )
+
+    def list_orders(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> OrderListResponse:
         return cast(
             "OrderListResponse",
-            self._http.get(self._path(id, "orders"), params=params or None),
+            self._http.get(
+                self._path(id, "orders"),
+                params=params or None,
+                request_options=request_options,
+            ),
         )
 
     def create_order(
@@ -732,6 +957,7 @@ class RegistryCampaigns(BaseResource):
         phone_numbers: list[str] | None = None,
         status_callback_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> OrderResponse:
         body: dict[str, Any] = {
@@ -746,7 +972,10 @@ class RegistryCampaigns(BaseResource):
             body.update(extras)
         body.update(_reserved_kw)
         return cast(
-            "OrderResponse", self._http.post(self._path(id, "orders"), body=body)
+            "OrderResponse",
+            self._http.post(
+                self._path(id, "orders"), body=body, request_options=request_options
+            ),
         )
 
 
@@ -756,8 +985,13 @@ class RegistryNumbers(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/registry/beta/numbers")
 
-    def delete(self, id: str) -> dict[str, Any]:
-        return cast("dict[str, Any]", self._http.delete(self._path(id)))
+    def delete(
+        self, id: str, *, request_options: RequestOptions | None = None
+    ) -> dict[str, Any]:
+        return cast(
+            "dict[str, Any]",
+            self._http.delete(self._path(id), request_options=request_options),
+        )
 
 
 class RegistryOrders(BaseResource):
@@ -766,9 +1000,14 @@ class RegistryOrders(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/registry/beta/orders")
 
-    def get(self, id: str, **params: Any) -> OrderResponse:
+    def get(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> OrderResponse:
         return cast(
-            "OrderResponse", self._http.get(self._path(id), params=params or None)
+            "OrderResponse",
+            self._http.get(
+                self._path(id), params=params or None, request_options=request_options
+            ),
         )
 
 
@@ -778,15 +1017,24 @@ class ShortCodes(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/short_codes")
 
-    def list(self, **params: Any) -> ShortCodeListResponse:
+    def list(
+        self, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> ShortCodeListResponse:
         return cast(
             "ShortCodeListResponse",
-            self._http.get(self._base_path, params=params or None),
+            self._http.get(
+                self._base_path, params=params or None, request_options=request_options
+            ),
         )
 
-    def get(self, id: str, **params: Any) -> ShortCodeResponse:
+    def get(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> ShortCodeResponse:
         return cast(
-            "ShortCodeResponse", self._http.get(self._path(id), params=params or None)
+            "ShortCodeResponse",
+            self._http.get(
+                self._path(id), params=params or None, request_options=request_options
+            ),
         )
 
     def update(
@@ -802,6 +1050,7 @@ class ShortCodes(BaseResource):
         message_laml_application_id: uuid | None = None,
         message_relay_context: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> ShortCodeResponse:
         body: dict[str, Any] = {
@@ -821,7 +1070,10 @@ class ShortCodes(BaseResource):
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("ShortCodeResponse", self._http.put(self._path(id), body=body))
+        return cast(
+            "ShortCodeResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
+        )
 
 
 class SipProfile(BaseResource):
@@ -830,9 +1082,14 @@ class SipProfile(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/relay/rest/sip_profile")
 
-    def get(self, **params: Any) -> SipProfileResponse:
+    def get(
+        self, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> SipProfileResponse:
         return cast(
-            "SipProfileResponse", self._http.get(self._base_path, params=params or None)
+            "SipProfileResponse",
+            self._http.get(
+                self._base_path, params=params or None, request_options=request_options
+            ),
         )
 
     def update(
@@ -844,6 +1101,7 @@ class SipProfile(BaseResource):
         default_encryption: Literal["required", "optional"] | None = None,
         default_send_as: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SipProfileResponse:
         body: dict[str, Any] = {
@@ -860,7 +1118,10 @@ class SipProfile(BaseResource):
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("SipProfileResponse", self._http.put(self._base_path, body=body))
+        return cast(
+            "SipProfileResponse",
+            self._http.put(self._base_path, body=body, request_options=request_options),
+        )
 
 
 class VerifiedCallers(
@@ -885,6 +1146,7 @@ class VerifiedCallers(
         name: str | None = None,
         extension: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> VerifiedCallerIDResponse:
         body: dict[str, Any] = {
@@ -896,7 +1158,10 @@ class VerifiedCallers(
             body.update(extras)
         body.update(_reserved_kw)
         return cast(
-            "VerifiedCallerIDResponse", self._http.post(self._base_path, body=body)
+            "VerifiedCallerIDResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
         )
 
     def update(
@@ -906,6 +1171,7 @@ class VerifiedCallers(
         *,
         name: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> VerifiedCallerIDResponse:
         body: dict[str, Any] = {
@@ -915,12 +1181,18 @@ class VerifiedCallers(
             body.update(extras)
         body.update(_reserved_kw)
         return cast(
-            "VerifiedCallerIDResponse", self._http.put(self._path(id), body=body)
+            "VerifiedCallerIDResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
         )
 
-    def redial_verification(self, id: str) -> VerifiedCallerIDResponse:
+    def redial_verification(
+        self, id: str, *, request_options: RequestOptions | None = None
+    ) -> VerifiedCallerIDResponse:
         return cast(
-            "VerifiedCallerIDResponse", self._http.post(self._path(id, "verification"))
+            "VerifiedCallerIDResponse",
+            self._http.post(
+                self._path(id, "verification"), request_options=request_options
+            ),
         )
 
     def submit_verification(
@@ -929,6 +1201,7 @@ class VerifiedCallers(
         *,
         verification_code: str,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> VerifiedCallerIDResponse:
         body: dict[str, Any] = {
@@ -941,5 +1214,9 @@ class VerifiedCallers(
         body.update(_reserved_kw)
         return cast(
             "VerifiedCallerIDResponse",
-            self._http.put(self._path(id, "verification"), body=body),
+            self._http.put(
+                self._path(id, "verification"),
+                body=body,
+                request_options=request_options,
+            ),
         )

@@ -1,4 +1,3 @@
-from typing import Any
 """Live integration tests for RELAY client.
 
 Skipped by default — requires real credentials in environment variables:
@@ -9,6 +8,8 @@ Skipped by default — requires real credentials in environment variables:
 """
 
 from __future__ import annotations
+
+from typing import Any
 
 import asyncio
 import os

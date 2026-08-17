@@ -12,6 +12,8 @@ from collections.abc import Mapping
 from .._base import BaseResource
 
 if TYPE_CHECKING:
+    from .._request_options import RequestOptions
+
     from .project_types_generated import (
         TokenPermission,
         TokenResponse,
@@ -31,6 +33,7 @@ class ProjectTokens(BaseResource):
         permissions: list[TokenPermission],
         subproject_id: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> TokenResponse:
         body: dict[str, Any] = {
@@ -45,7 +48,12 @@ class ProjectTokens(BaseResource):
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("TokenResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "TokenResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -54,6 +62,7 @@ class ProjectTokens(BaseResource):
         name: str | None = None,
         permissions: list[TokenPermission] | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> TokenResponse:
         body: dict[str, Any] = {
@@ -64,7 +73,17 @@ class ProjectTokens(BaseResource):
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("TokenResponse", self._http.patch(self._path(token_id), body=body))
+        return cast(
+            "TokenResponse",
+            self._http.patch(
+                self._path(token_id), body=body, request_options=request_options
+            ),
+        )
 
-    def delete(self, token_id: str) -> dict[str, Any]:
-        return cast("dict[str, Any]", self._http.delete(self._path(token_id)))
+    def delete(
+        self, token_id: str, *, request_options: RequestOptions | None = None
+    ) -> dict[str, Any]:
+        return cast(
+            "dict[str, Any]",
+            self._http.delete(self._path(token_id), request_options=request_options),
+        )

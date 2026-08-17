@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING, Any, cast
 from .._base import ReadResource
 
 if TYPE_CHECKING:
+    from .._request_options import RequestOptions
+
     from .fax_types_generated import (
         LogListResponse,
         LogResponse,

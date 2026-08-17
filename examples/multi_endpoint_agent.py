@@ -10,10 +10,9 @@ This agent demonstrates serving multiple endpoints:
 - /static/file.txt - Static file serving
 """
 
-import os
 from pathlib import Path
 from datetime import datetime
-from fastapi import FastAPI, Request, Response, APIRouter
+from fastapi import FastAPI, APIRouter
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
 from signalwire import AgentBase
@@ -22,58 +21,57 @@ from signalwire.core.function_result import FunctionResult
 
 class MultiEndpointAgent(AgentBase):
     """Agent that serves both SWML for voice and web UI endpoints"""
-    
+
     def __init__(self):
         # Initialize with route=/swml for the voice AI endpoint
         super().__init__(
             name="multi-endpoint",
             route="/swml",  # This sets the SWML endpoint at /swml
             host="0.0.0.0",
-            port=8080
+            port=8080,
         )
-        
+
         # Configure the voice AI agent
         self.prompt_add_section("Role", "You are a helpful voice assistant.")
-        self.prompt_add_section("Instructions", bullets=[
-            "Greet callers warmly",
-            "Be concise in your responses",
-            "Use the available functions when appropriate"
-        ])
-        
+        self.prompt_add_section(
+            "Instructions",
+            bullets=[
+                "Greet callers warmly",
+                "Be concise in your responses",
+                "Use the available functions when appropriate",
+            ],
+        )
+
         # Add a simple greeting skill
         self.add_language("English", "en-US", "inworld.Mark")
-        
+
         # Set up static files directory
         self.static_dir = Path(__file__).parent / "static_files"
         self.static_dir.mkdir(exist_ok=True)
-        
+
         # Create a simple text file to serve
         file_txt = self.static_dir / "file.txt"
         file_txt.write_text("Hello World from static file!")
-    
-    @AgentBase.tool(
-        name="get_time",
-        description="Get the current time",
-        parameters={}
-    )
+
+    @AgentBase.tool(name="get_time", description="Get the current time", parameters={})
     def get_time(self, args, raw_data):
         """Simple SWAIG function for voice interactions"""
         now = datetime.now().strftime("%I:%M %p")
         return FunctionResult(f"The current time is {now}")
-    
+
     def _register_routes(self, router: APIRouter):
         """
         Override route registration to add custom endpoints
-        
+
         Note: The parent class already registers /swml routes,
         we're adding additional endpoints here
         """
         # First, register the parent SWML routes
         super()._register_routes(router)
-        
+
         # Now add our custom UI and API endpoints
         # These will be available at the root level when we customize the app
-    
+
     def get_app(self):
         """
         Override get_app to add custom root-level routes
@@ -82,11 +80,12 @@ class MultiEndpointAgent(AgentBase):
             # Create the FastAPI app
             app = FastAPI(
                 title="Multi-Endpoint Agent",
-                description="Agent with SWML, UI, and API endpoints"
+                description="Agent with SWML, UI, and API endpoints",
             )
-            
+
             # Add CORS middleware
             from fastapi.middleware.cors import CORSMiddleware
+
             app.add_middleware(
                 CORSMiddleware,
                 allow_origins=["*"],
@@ -94,12 +93,12 @@ class MultiEndpointAgent(AgentBase):
                 allow_methods=["*"],
                 allow_headers=["*"],
             )
-            
+
             # Register health check endpoints
             @app.get("/health")
             async def health_check():
                 return {"status": "healthy", "agent": self.get_name()}
-            
+
             # Add root UI endpoint
             @app.get("/", response_class=HTMLResponse)
             async def root_ui():
@@ -180,75 +179,81 @@ class MultiEndpointAgent(AgentBase):
                 </html>
                 """
                 return HTMLResponse(content=html_content)
-            
+
             # Add API endpoint
             @app.get("/api")
             async def api_endpoint():
                 """Return JSON response"""
-                return JSONResponse(content={
-                    "status": "ok",
-                    "message": "Hello from API endpoint",
-                    "timestamp": datetime.now().isoformat(),
-                    "agent": self.get_name(),
-                    "endpoints": {
-                        "swml": "/swml",
-                        "swaig": "/swml/swaig",
-                        "ui": "/",
-                        "api": "/api",
-                        "static": "/static/file.txt"
+                return JSONResponse(
+                    content={
+                        "status": "ok",
+                        "message": "Hello from API endpoint",
+                        "timestamp": datetime.now().isoformat(),
+                        "agent": self.get_name(),
+                        "endpoints": {
+                            "swml": "/swml",
+                            "swaig": "/swml/swaig",
+                            "ui": "/",
+                            "api": "/api",
+                            "static": "/static/file.txt",
+                        },
                     }
-                })
-            
+                )
+
             # Add static file serving
             @app.get("/static/{file_path:path}")
             async def serve_static_file(file_path: str):
                 """Serve static files"""
                 file_full_path = self.static_dir / file_path
-                
+
                 # Security: ensure path doesn't escape static directory
                 try:
                     file_full_path = file_full_path.resolve()
-                    if not str(file_full_path).startswith(str(self.static_dir.resolve())):
+                    if not str(file_full_path).startswith(
+                        str(self.static_dir.resolve())
+                    ):
                         return PlainTextResponse("Access denied", status_code=403)
                 except Exception:
                     return PlainTextResponse("Invalid path", status_code=400)
-                
+
                 # Check if file exists
                 if not file_full_path.exists() or not file_full_path.is_file():
                     return PlainTextResponse("File not found", status_code=404)
-                
+
                 # Read and return file content
                 try:
                     content = file_full_path.read_text()
                     return PlainTextResponse(content)
                 except Exception as e:
-                    return PlainTextResponse(f"Error reading file: {e}", status_code=500)
-            
+                    return PlainTextResponse(
+                        f"Error reading file: {e}", status_code=500
+                    )
+
             # Create router for SWML endpoints
             router = self.as_router()
-            
+
             # Mount the SWML router at /swml
             # This gives us /swml and /swml/swaig endpoints
             app.include_router(router, prefix=self.route)
-            
+
             self._app = app
-        
+
         return self._app
-    
+
     def serve(self, host=None, port=None):
         """Override serve to use our custom app"""
         import uvicorn
-        
+
         host = host or self.host or "0.0.0.0"
         port = port or self.port or 8080
-        
+
         # Get our custom app with all endpoints
         app = self.get_app()
-        
+
         # Get auth credentials
         username, password, _ = self.get_basic_auth_credentials(include_source=True)
-        
-        print(f"\nMulti-Endpoint Agent starting...")
+
+        print("\nMulti-Endpoint Agent starting...")
         print(f"Server: http://{host}:{port}")
         print(f"Basic Auth: {username}:{password}")
         print("\nEndpoints:")
@@ -259,7 +264,7 @@ class MultiEndpointAgent(AgentBase):
         print(f"  SWAIG:      http://{host}:{port}/swml/swaig")
         print(f"  Health:     http://{host}:{port}/health")
         print("\nPress Ctrl+C to stop\n")
-        
+
         try:
             uvicorn.run(app, host=host, port=port)
         except KeyboardInterrupt:

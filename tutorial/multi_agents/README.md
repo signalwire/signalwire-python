@@ -179,8 +179,8 @@ python agent.py
 | `SWML_SSL_CERT_PATH` | Path to SSL certificate | None |
 | `SWML_SSL_KEY_PATH` | Path to SSL private key | None |
 | `SWML_DOMAIN` | Domain for SSL | None |
-| `SWML_AUTH_USER` | Basic auth username | Auto-generated |
-| `SWML_AUTH_PASS` | Basic auth password | Auto-generated |
+| `SWML_BASIC_AUTH_USER` | Basic auth username | Auto-generated |
+| `SWML_BASIC_AUTH_PASSWORD` | Basic auth password | Auto-generated |
 | `PYTORCH_DISABLE_AVX512` | Disable AVX512 for compatibility | `0` |
 
 ### Code Examples

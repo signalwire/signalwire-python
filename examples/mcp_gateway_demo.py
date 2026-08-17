@@ -21,10 +21,7 @@ from signalwire import AgentBase
 
 class MCPGatewayAgent(AgentBase):
     def __init__(self):
-        super().__init__(
-            name="MCP Gateway Agent",
-            route="/mcp-gateway"
-        )
+        super().__init__(name="MCP Gateway Agent", route="/mcp-gateway")
 
         self.add_language("English", "en-US", "inworld.Mark")
 
@@ -32,16 +29,23 @@ class MCPGatewayAgent(AgentBase):
             "Role",
             "You are a helpful assistant with access to external tools provided "
             "through MCP servers. Use the available tools to help users accomplish "
-            "their tasks."
+            "their tasks.",
         )
 
         # Connect to MCP gateway - tools are discovered automatically
-        self.add_skill("mcp_gateway", {
-            "gateway_url": os.environ.get("MCP_GATEWAY_URL", "http://localhost:8080"),
-            "auth_user": os.environ.get("MCP_GATEWAY_AUTH_USER", "admin"),
-            "auth_password": os.environ.get("MCP_GATEWAY_AUTH_PASSWORD", "changeme"),
-            "services": [{"name": "todo"}]  # List which MCP services to expose
-        })
+        self.add_skill(
+            "mcp_gateway",
+            {
+                "gateway_url": os.environ.get(
+                    "MCP_GATEWAY_URL", "http://localhost:8080"
+                ),
+                "auth_user": os.environ.get("MCP_GATEWAY_AUTH_USER", "admin"),
+                "auth_password": os.environ.get(
+                    "MCP_GATEWAY_AUTH_PASSWORD", "changeme"
+                ),
+                "services": [{"name": "todo"}],  # List which MCP services to expose
+            },
+        )
 
 
 if __name__ == "__main__":

@@ -1493,6 +1493,38 @@ class ContextBuilder:
                         f"avoid the collision."
                     )
 
+            # Validate step set_functions([...]) whitelists against the known
+            # tool universe. A step that whitelists a function which is neither
+            # a registered SWAIG tool nor a reserved native tool is a DANGLING
+            # reference: it renders a step whose active-function set silently
+            # points at nothing (r5 F3 — get_datetime vs get_current_time).
+            # Only enforce when a real registry is present; a contexts builder
+            # with no agent (or a mock registry) cannot know the tool universe,
+            # so we must not red a valid document there.
+            if isinstance(registered, dict):
+                known_functions = set(registered.keys()) | RESERVED_NATIVE_TOOL_NAMES
+                for context_name, context in self._contexts.items():
+                    for step_name, step in context._steps.items():
+                        funcs = step._functions
+                        # "none" and [] are explicit disable-all — not lists of
+                        # references to resolve.
+                        if not isinstance(funcs, list):
+                            continue
+                        for fn in funcs:
+                            if fn not in known_functions:
+                                available = sorted(known_functions)
+                                raise ValueError(
+                                    f"Step '{step_name}' in context "
+                                    f"'{context_name}' whitelists function "
+                                    f"'{fn}' via set_functions(), but no such "
+                                    f"SWAIG tool is registered on the agent and "
+                                    f"it is not a reserved native tool. This "
+                                    f"would emit a dangling function reference. "
+                                    f"Register the tool (define_tool / a skill) "
+                                    f"or remove it from the step. Available: "
+                                    f"{available}"
+                                )
+
     def to_dict(self) -> dict[str, Any]:
         """Convert all contexts to dictionary for SWML generation"""
         self.validate()

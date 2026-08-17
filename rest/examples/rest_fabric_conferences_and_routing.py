@@ -17,7 +17,9 @@ client = RestClient()
 def main():
     # 1. Create a conference room
     print("Creating conference room...")
-    room = client.fabric.conference_rooms.create(name="team-standup")
+    room = client.fabric.conference_rooms.create(
+        name="team-standup", enable_room_previews=True
+    )
     room_id = room["id"]
     print(f"  Created conference room: {room_id}")
 
@@ -33,7 +35,7 @@ def main():
     # 3. Create a cXML script
     print("\nCreating cXML script...")
     cxml = client.fabric.cxml_scripts.create(
-        name="Hold Music Script",
+        display_name="Hold Music Script",
         contents="<Response><Say>Please hold.</Say><Play>https://example.com/hold.mp3</Play></Response>",
     )
     cxml_id = cxml["id"]
@@ -61,19 +63,25 @@ def main():
     print("\nListing all fabric resources...")
     resources = client.fabric.resources.list()
     for r in resources.get("data", [])[:5]:
-        print(f"  - {r.get('type', 'unknown')}: {r.get('display_name', r.get('id', 'unknown'))}")
+        print(
+            f"  - {r.get('type', 'unknown')}: {r.get('display_name', r.get('id', 'unknown'))}"
+        )
 
     # 7. Get a specific generic resource
     first = (resources.get("data") or [{}])[0]
     if first.get("id"):
         detail = client.fabric.resources.get(first["id"])
-        print(f"  Resource detail: {detail.get('display_name', 'N/A')} ({detail.get('type', 'N/A')})")
+        print(
+            f"  Resource detail: {detail.get('display_name', 'N/A')} ({detail.get('type', 'N/A')})"
+        )
 
     # 8. Assign a phone route to a resource (demo)
     print("\nAssigning phone route (demo)...")
     try:
         client.fabric.resources.assign_phone_route(
-            relay_id, phone_number="+15551234567",
+            relay_id,
+            phone_route_id="00000000-0000-0000-0000-000000000000",
+            handler="calling",
         )
         print("  Phone route assigned")
     except SignalWireRestError as e:
@@ -83,7 +91,8 @@ def main():
     print("\nAssigning domain application (demo)...")
     try:
         client.fabric.resources.assign_domain_application(
-            relay_id, domain="app.example.com",
+            relay_id,
+            domain_application_id="00000000-0000-0000-0000-000000000000",
         )
         print("  Domain application assigned")
     except SignalWireRestError as e:
@@ -92,19 +101,23 @@ def main():
     # 10. Generate tokens
     print("\nGenerating tokens...")
     try:
-        guest = client.fabric.tokens.create_guest_token(resource_id=relay_id)
+        guest = client.fabric.tokens.create_guest_token(
+            allowed_addresses=["00000000-0000-0000-0000-000000000000"]
+        )
         print(f"  Guest token: {str(guest.get('token', ''))[:40]}...")
     except SignalWireRestError as e:
         print(f"  Guest token failed (expected in demo): {e.status_code}")
 
     try:
-        invite = client.fabric.tokens.create_invite_token(resource_id=relay_id)
+        invite = client.fabric.tokens.create_invite_token(
+            address_id="00000000-0000-0000-0000-000000000000"
+        )
         print(f"  Invite token: {str(invite.get('token', ''))[:40]}...")
     except SignalWireRestError as e:
         print(f"  Invite token failed (expected in demo): {e.status_code}")
 
     try:
-        embed = client.fabric.tokens.create_embed_token(resource_id=relay_id)
+        embed = client.fabric.tokens.create_embed_token(token="demo-embed-token")
         print(f"  Embed token: {str(embed.get('token', ''))[:40]}...")
     except SignalWireRestError as e:
         print(f"  Embed token failed (expected in demo): {e.status_code}")

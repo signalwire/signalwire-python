@@ -2,7 +2,7 @@
 
 These symbols moved out of ``namespaces.queues`` when the REST layer was
 regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.queues import QueuesResource``
+re-export keeps ``from signalwire.rest.namespaces.queues import QueuesResource``
 working but emits a :class:`DeprecationWarning`. Prefer ``client.queues`` instead
 (no import needed).
 """
@@ -10,7 +10,7 @@ working but emits a :class:`DeprecationWarning`. Prefer ``client.queues`` instea
 import warnings
 
 warnings.warn(
-    "signalwire.signalwire.rest.namespaces.queues is deprecated; use client.queues. "
+    "signalwire.rest.namespaces.queues is deprecated; use client.queues. "
     "This back-compat shim will be removed in a future release.",
     DeprecationWarning,
     stacklevel=2,

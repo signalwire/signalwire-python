@@ -12,6 +12,8 @@ from collections.abc import Mapping
 from .._base import BaseResource
 
 if TYPE_CHECKING:
+    from .._request_options import RequestOptions
+
     from .calling_types_generated import (
         CallAIMessageResetParams,
         CallResponse,
@@ -51,6 +53,7 @@ class Calling(BaseResource):
         codecs: list[str] | str | None = None,
         swml: SWMLObject | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
@@ -71,7 +74,12 @@ class Calling(BaseResource):
         if extras:
             params.update(extras)
         body: dict[str, Any] = {"command": "dial", "params": params}
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -83,6 +91,7 @@ class Calling(BaseResource):
         url: str | None = None,
         swml: SWMLObject | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
@@ -99,7 +108,12 @@ class Calling(BaseResource):
         if extras:
             params.update(extras)
         body: dict[str, Any] = {"command": "update", "params": params}
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def end(
         self,
@@ -107,6 +121,7 @@ class Calling(BaseResource):
         *,
         reason: HangupReason | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"reason": reason}.items() if v is not None
@@ -118,7 +133,12 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def ai_hold(
         self,
@@ -127,6 +147,7 @@ class Calling(BaseResource):
         timeout: int | None = None,
         prompt: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
@@ -140,7 +161,12 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def ai_unhold(
         self,
@@ -148,6 +174,7 @@ class Calling(BaseResource):
         *,
         prompt: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"prompt": prompt}.items() if v is not None
@@ -159,7 +186,12 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def ai_message(
         self,
@@ -170,6 +202,7 @@ class Calling(BaseResource):
         reset: CallAIMessageResetParams | None = None,
         global_data: dict[str, Any] | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
@@ -188,7 +221,12 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def live_transcribe(
         self,
@@ -198,6 +236,7 @@ class Calling(BaseResource):
         | LiveTranscribeSummarizeAction
         | LiveTranscribeStopAction,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"action": action}.items() if v is not None
@@ -209,7 +248,12 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def live_translate(
         self,
@@ -221,6 +265,7 @@ class Calling(BaseResource):
         | LiveTranslateStopAction,
         status_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
@@ -234,7 +279,12 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def transfer(
         self,
@@ -242,6 +292,7 @@ class Calling(BaseResource):
         *,
         dest: str | SWMLObject,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"dest": dest}.items() if v is not None
@@ -253,7 +304,12 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def user_event(
         self,
@@ -261,6 +317,7 @@ class Calling(BaseResource):
         *,
         event: dict[str, Any],
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"event": event}.items() if v is not None
@@ -272,10 +329,19 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def disconnect(
-        self, call_id: str, *, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {}
         body: dict[str, Any] = {
@@ -283,7 +349,12 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def play(
         self,
@@ -296,6 +367,7 @@ class Calling(BaseResource):
         loop: int | None = None,
         status_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
@@ -316,10 +388,20 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def play_pause(
-        self, call_id: str, *, control_id: str, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        control_id: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
@@ -331,10 +413,20 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def play_resume(
-        self, call_id: str, *, control_id: str, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        control_id: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
@@ -346,10 +438,20 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def play_stop(
-        self, call_id: str, *, control_id: str, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        control_id: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
@@ -361,7 +463,12 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def play_volume(
         self,
@@ -370,6 +477,7 @@ class Calling(BaseResource):
         control_id: str,
         volume: float,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
@@ -383,7 +491,12 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def record(
         self,
@@ -393,6 +506,7 @@ class Calling(BaseResource):
         audio: dict[str, Any] | None = None,
         status_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
@@ -410,10 +524,20 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def record_pause(
-        self, call_id: str, *, control_id: str, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        control_id: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
@@ -425,10 +549,20 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def record_resume(
-        self, call_id: str, *, control_id: str, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        control_id: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
@@ -440,10 +574,20 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def record_stop(
-        self, call_id: str, *, control_id: str, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        control_id: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
@@ -455,7 +599,12 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def collect(
         self,
@@ -468,6 +617,7 @@ class Calling(BaseResource):
         continuous: bool | None = None,
         partial_results: bool | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
@@ -488,10 +638,20 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def collect_stop(
-        self, call_id: str, *, control_id: str, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        control_id: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
@@ -503,10 +663,20 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def collect_start_input_timers(
-        self, call_id: str, *, control_id: str, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        control_id: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
@@ -518,7 +688,12 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def detect(
         self,
@@ -528,6 +703,7 @@ class Calling(BaseResource):
         control_id: str | None = None,
         timeout: float | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
@@ -545,10 +721,20 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def detect_stop(
-        self, call_id: str, *, control_id: str, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        control_id: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
@@ -560,7 +746,12 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def tap(
         self,
@@ -570,6 +761,7 @@ class Calling(BaseResource):
         device: dict[str, Any],
         control_id: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
@@ -583,10 +775,20 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def tap_stop(
-        self, call_id: str, *, control_id: str, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        control_id: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
@@ -598,7 +800,12 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def stream(
         self,
@@ -611,6 +818,7 @@ class Calling(BaseResource):
         authorization_bearer_token: str | None = None,
         custom_parameters: dict[str, Any] | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
@@ -631,10 +839,20 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def stream_stop(
-        self, call_id: str, *, control_id: str, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        control_id: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
@@ -646,10 +864,19 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def denoise(
-        self, call_id: str, *, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {}
         body: dict[str, Any] = {
@@ -657,10 +884,19 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def denoise_stop(
-        self, call_id: str, *, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {}
         body: dict[str, Any] = {
@@ -668,7 +904,12 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def transcribe(
         self,
@@ -677,6 +918,7 @@ class Calling(BaseResource):
         control_id: str | None = None,
         status_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
@@ -690,10 +932,20 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def transcribe_stop(
-        self, call_id: str, *, control_id: str, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        control_id: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
@@ -705,10 +957,20 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def ai_stop(
-        self, call_id: str, *, control_id: str, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        control_id: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
@@ -720,10 +982,20 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def send_fax_stop(
-        self, call_id: str, *, control_id: str, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        control_id: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
@@ -735,10 +1007,20 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def receive_fax_stop(
-        self, call_id: str, *, control_id: str, extras: Mapping[str, Any] | None = None
+        self,
+        call_id: str,
+        *,
+        control_id: str,
+        extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v for k, v in {"control_id": control_id}.items() if v is not None
@@ -750,7 +1032,12 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def refer(
         self,
@@ -759,6 +1046,7 @@ class Calling(BaseResource):
         device: dict[str, Any],
         status_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
     ) -> CallResponse:
         params: dict[str, Any] = {
             k: v
@@ -772,4 +1060,9 @@ class Calling(BaseResource):
             "params": params,
             "id": call_id,
         }
-        return cast("CallResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )

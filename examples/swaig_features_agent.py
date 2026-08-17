@@ -83,12 +83,13 @@ The resulting SWAIG array in SWML will have the following structure:
 ]
 """
 
-import os
 import sys
 from datetime import datetime
+from pathlib import Path
+from typing import ClassVar
 
 # Add the parent directory to the path so we can import the package
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 
 from signalwire import AgentBase
 from signalwire.core.function_result import FunctionResult
@@ -98,18 +99,18 @@ class SwaigFeaturesAgent(AgentBase):
     """
     An agent that demonstrates the enhanced SWAIG features
     """
-    
+
     # Define the prompt sections declaratively
-    PROMPT_SECTIONS = {
+    PROMPT_SECTIONS: ClassVar[dict] = {
         "Personality": "You are a friendly and helpful assistant.",
         "Goal": "Demonstrate advanced SWAIG features.",
         "Instructions": [
             "Be concise and direct in your responses.",
             "Use the get_weather function when asked about weather.",
-            "Use the get_time function when asked about the current time."
-        ]
+            "Use the get_time function when asked about the current time.",
+        ],
     }
-    
+
     def __init__(self):
         # Initialize the agent with a name, route, and default webhook URL
         super().__init__(
@@ -119,9 +120,9 @@ class SwaigFeaturesAgent(AgentBase):
             port=3000,
             # Set a default webhook URL for all functions
             # This will create a defaults object in the SWAIG array
-            default_webhook_url="https://api.example-external-service.com/swaig"
+            default_webhook_url="https://api.example-external-service.com/swaig",
         )
-        
+
         # Add a post-prompt for summary
         self.set_post_prompt("""
         Return a JSON summary of the conversation:
@@ -130,7 +131,7 @@ class SwaigFeaturesAgent(AgentBase):
             "functions_used": ["list", "of", "functions", "used"]
         }
         """)
-    
+
     @AgentBase.tool(
         name="get_time",
         description="Get the current time",
@@ -139,16 +140,16 @@ class SwaigFeaturesAgent(AgentBase):
         fillers={
             "en-US": [
                 "Let me check the time for you",
-                "One moment while I check the current time"
+                "One moment while I check the current time",
             ]
-        }
+        },
     )
     def get_time(self):
         """Get the current time"""
         now = datetime.now()
         formatted_time = now.strftime("%H:%M:%S")
         return FunctionResult(f"The current time is {formatted_time}")
-    
+
     @AgentBase.tool(
         name="get_weather",
         description="Get the current weather for a location (including starwars planets)",
@@ -156,20 +157,20 @@ class SwaigFeaturesAgent(AgentBase):
         parameters={
             "location": {
                 "type": "string",
-                "description": "The city or location to get weather for"
+                "description": "The city or location to get weather for",
             }
         },
         # Add fillers in multiple languages
         fillers={
             "en-US": [
                 "I am checking the weather for you",
-                "Let me look up the weather information"
+                "Let me look up the weather information",
             ],
             "es": [
                 "Estoy consultando el clima para ti",
-                "Permíteme verificar el clima"
-            ]
-        }
+                "Permíteme verificar el clima",
+            ],
+        },
     )
     def get_weather(self, location):
         """Get the current weather for a location"""
@@ -178,27 +179,24 @@ class SwaigFeaturesAgent(AgentBase):
             "tatooine": "Hot and dry, with occasional sandstorms. Twin suns at their peak.",
             "hoth": "Extremely cold with blizzard conditions. High of -20°C.",
             "endor": "Mild forest weather. Partly cloudy with a high of 22°C.",
-            "default": "It's sunny and 72°F"
+            "default": "It's sunny and 72°F",
         }
-        
+
         result = weather_data.get(location.lower(), weather_data["default"])
         return FunctionResult(f"The weather in {location}: {result}")
-    
+
     # This function also uses the default webhook URL
     @AgentBase.tool(
         name="get_forecast",
         description="Get a 3-day weather forecast for a location",
         parameters={
-            "location": {
-                "type": "string", 
-                "description": "The city or location"
-            },
+            "location": {"type": "string", "description": "The city or location"},
             "units": {
                 "type": "string",
                 "description": "Temperature units (celsius or fahrenheit)",
-                "enum": ["celsius", "fahrenheit"]
-            }
-        }
+                "enum": ["celsius", "fahrenheit"],
+            },
+        },
     )
     def get_forecast(self, location, units="fahrenheit"):
         """Get a weather forecast for a location"""
@@ -207,15 +205,20 @@ class SwaigFeaturesAgent(AgentBase):
         forecast = [
             {"day": "Today", "temp": 72, "condition": "Sunny"},
             {"day": "Tomorrow", "temp": 68, "condition": "Partly Cloudy"},
-            {"day": "Day After", "temp": 75, "condition": "Clear"}
+            {"day": "Day After", "temp": 75, "condition": "Clear"},
         ]
-        
+
         # Format the forecast response
         if units == "celsius":
             for day in forecast:
-                day["temp"] = round((day["temp"] - 32) * 5/9)
-        
-        forecast_text = "\n".join([f"{d['day']}: {d['temp']}°{'C' if units == 'celsius' else 'F'}, {d['condition']}" for d in forecast])
+                day["temp"] = round((day["temp"] - 32) * 5 / 9)
+
+        forecast_text = "\n".join(
+            [
+                f"{d['day']}: {d['temp']}°{'C' if units == 'celsius' else 'F'}, {d['condition']}"
+                for d in forecast
+            ]
+        )
         return FunctionResult(f"3-day forecast for {location}:\n{forecast_text}")
 
 
@@ -227,4 +230,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main() 
+    main()

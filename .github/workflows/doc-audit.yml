@@ -28,19 +28,20 @@ jobs:
 
     steps:
       - name: Check out signalwire-python
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: signalwire-python
 
       - name: Check out porting-sdk (provides audit scripts + surface JSON)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: signalwire/porting-sdk
+          # Coordinated-pass pin: `main` normally; set the PORTING_SDK_REF repo variable
+          # to a wave branch to test a coordinated porting-sdk change, declared on the PR
+          # (see porting-sdk/COORDINATED_PASS.md). No revert commit.
+          ref: ${{ vars.PORTING_SDK_REF || 'main' }}
           path: porting-sdk
           token: ${{ secrets.PORTING_SDK_TOKEN }}
-          # porting-sdk is the source of truth for the Python surface — pin to
-          # main so the audit reflects the latest reference.
-          ref: main
 
       - name: Set up Python
         uses: actions/setup-python@v6
@@ -54,12 +55,24 @@ jobs:
           cd signalwire-python
           python -m py_compile examples/*.py rest/examples/*.py relay/examples/*.py
 
+      # Regenerate the native-only sidecar BEFORE the audit reads it, so a renamed or
+      # deleted livewire member stops resolving instead of staying excused by a stale
+      # committed file. Mirrors run-ci.sh's SURFACE-NATIVE gate (DOC-AUDIT deps on it).
+      - name: Regenerate the native-only doc-audit sidecar
+        run: |
+          python3 signalwire-python/scripts/emit_surface_native.py \
+            --out signalwire-python/port_surface_native.json
+
       - name: Run audit_docs.py against the Python surface
+        # --native-names is load-bearing: signalwire.livewire.* is excluded from the
+        # surface oracle by design, but livewire/ docs are in this perimeter, so its
+        # real members only resolve via the sidecar. See scripts/emit_surface_native.py.
         run: |
           python3 porting-sdk/scripts/audit_docs.py \
             --root signalwire-python \
             --surface porting-sdk/python_surface.json \
-            --ignore signalwire-python/DOC_AUDIT_IGNORE.md
+            --ignore signalwire-python/DOC_AUDIT_IGNORE.md \
+            --native-names signalwire-python/port_surface_native.json
 
       - name: Summary
         if: always()

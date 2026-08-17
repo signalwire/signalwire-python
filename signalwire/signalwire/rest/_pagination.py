@@ -11,6 +11,8 @@ Pagination support for list endpoints that return paged results.
 
 from typing import TYPE_CHECKING, Any
 
+from signalwire.rest._request_options import RequestOptions
+
 if TYPE_CHECKING:
     # Type-only import: _base imports this module (ReadResource.paginate), so a
     # runtime `from ._base import HttpClient` would be a circular import. HttpClient
@@ -32,15 +34,24 @@ class PaginatedIterator:
         path: str,
         params: dict[str, Any] | None = None,
         data_key: str = "data",
+        request_options: RequestOptions | None = None,
     ) -> None:
         self._http = http
         self._path = path
         self._params: dict[str, Any] = dict(params or {})
         self._data_key = data_key
+        # Per-call request options (timeout / retry / headers) applied to every
+        # page fetch this iterator performs.
+        self._request_options = request_options
         self._current_page: Any = None
         self._items: list[Any] = []
         self._index = 0
         self._done = False
+        # Cycle guard: next-link cursors already followed. A server that keeps
+        # returning the SAME ``links.next`` would otherwise loop forever (the
+        # empty-page fix terminates only on an ABSENT next link, so a repeating
+        # next became an infinite loop). Seeing a repeat terminates iteration.
+        self._seen_next: set[str] = set()
 
     def __iter__(self) -> "PaginatedIterator":
         return self
@@ -56,13 +67,31 @@ class PaginatedIterator:
         return item
 
     def _fetch_next(self) -> None:
-        resp = self._http.get(self._path, params=self._params or None)
+        resp = self._http.get(
+            self._path,
+            params=self._params or None,
+            request_options=self._request_options,
+        )
         data = resp.get(self._data_key, [])
         self._items.extend(data)
 
         links = resp.get("links", {})
         next_url = links.get("next")
-        if next_url and data:
+        # Termination is driven ONLY by the absence of a next link, NOT by an
+        # empty ``data`` array on this page.  A page can legitimately carry a
+        # ``links.next`` (more pages exist) while returning zero items on THIS
+        # page — e.g. a filtered page that happens to match nothing here.  The
+        # old ``next_url and data`` condition stopped on such a page and
+        # silently dropped every subsequent page; iterate while a next link
+        # exists, empty page or not.
+        if next_url:
+            # Cycle guard: a ``links.next`` we have already followed means the
+            # server is looping (a repeating cursor) — terminate instead of
+            # re-fetching the same page forever.
+            if next_url in self._seen_next:
+                self._done = True
+                return
+            self._seen_next.add(next_url)
             # Parse cursor/page token from next URL if present
             # Most SignalWire APIs use page_token or cursor param
             from urllib.parse import urlparse, parse_qs

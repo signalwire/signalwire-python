@@ -100,7 +100,7 @@ class SalesSidecar(SWMLService):
         # body is a dict like {"type": "transcription", "text": "...", ...}
         event_type = body.get("type", "<unknown>")
         print(f"[sidecar event] type={event_type} body={body}")
-        return None  # any non-redirect response
+        return  # any non-redirect response
 
 
 if __name__ == "__main__":

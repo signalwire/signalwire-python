@@ -117,7 +117,8 @@ def main():
         print("\nCreating stream on conference...")
         try:
             stream = client.video.conferences.create_stream(
-                conf_id, url="rtmp://live.example.com/stream-key",
+                conf_id,
+                url="rtmp://live.example.com/stream-key",
             )
             stream_id = stream["id"]
             print(f"  Created stream: {stream_id}")
@@ -131,7 +132,9 @@ def main():
             s_detail = client.video.streams.get(stream_id)
             print(f"  Stream URL: {s_detail.get('url', 'N/A')}")
 
-            client.video.streams.update(stream_id, url="rtmp://backup.example.com/stream-key")
+            client.video.streams.update(
+                stream_id, url="rtmp://backup.example.com/stream-key"
+            )
             print("  Stream URL updated")
         except SignalWireRestError as e:
             print(f"  Stream ops failed: {e.status_code}")

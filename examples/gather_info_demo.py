@@ -15,17 +15,14 @@ from signalwire import AgentBase
 
 class PatientIntakeAgent(AgentBase):
     def __init__(self):
-        super().__init__(
-            name="Patient Intake Agent",
-            route="/patient-intake"
-        )
+        super().__init__(name="Patient Intake Agent", route="/patient-intake")
 
         self.add_language("English", "en-US", "inworld.Mark")
 
         self.prompt_add_section(
             "Role",
             "You are a friendly medical office intake assistant. "
-            "Collect patient information accurately and professionally."
+            "Collect patient information accurately and professionally.",
         )
 
         # Define a context with gather info steps
@@ -37,11 +34,15 @@ class PatientIntakeAgent(AgentBase):
         step1.set_text("Collect the patient's basic information.")
         step1.set_gather_info(
             output_key="patient_demographics",
-            prompt="Please collect the following patient information."
+            prompt="Please collect the following patient information.",
         )
         step1.add_gather_question("full_name", "What is your full name?", type="string")
-        step1.add_gather_question("date_of_birth", "What is your date of birth?", type="string")
-        step1.add_gather_question("phone_number", "What is your phone number?", type="string", confirm=True)
+        step1.add_gather_question(
+            "date_of_birth", "What is your date of birth?", type="string"
+        )
+        step1.add_gather_question(
+            "phone_number", "What is your phone number?", type="string", confirm=True
+        )
         step1.add_gather_question("email", "What is your email address?", type="string")
         step1.set_valid_steps(["symptoms"])
 
@@ -50,11 +51,23 @@ class PatientIntakeAgent(AgentBase):
         step2.set_text("Ask about the patient's current symptoms and reason for visit.")
         step2.set_gather_info(
             output_key="patient_symptoms",
-            prompt="Now let's talk about why you're visiting today."
+            prompt="Now let's talk about why you're visiting today.",
         )
-        step2.add_gather_question("reason_for_visit", "What is the main reason for your visit today?", type="string")
-        step2.add_gather_question("symptom_duration", "How long have you been experiencing these symptoms?", type="string")
-        step2.add_gather_question("pain_level", "On a scale of 1 to 10, how would you rate your discomfort?", type="string")
+        step2.add_gather_question(
+            "reason_for_visit",
+            "What is the main reason for your visit today?",
+            type="string",
+        )
+        step2.add_gather_question(
+            "symptom_duration",
+            "How long have you been experiencing these symptoms?",
+            type="string",
+        )
+        step2.add_gather_question(
+            "pain_level",
+            "On a scale of 1 to 10, how would you rate your discomfort?",
+            type="string",
+        )
         step2.set_valid_steps(["confirmation"])
 
         # Step 3: Confirmation (normal mode, not gather)

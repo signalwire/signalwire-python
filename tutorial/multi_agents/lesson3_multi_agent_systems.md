@@ -364,8 +364,8 @@ Look for these in the logs:
 **Authentication:**
 ```bash
 # Set custom credentials
-export SWML_AUTH_USER=myuser
-export SWML_AUTH_PASS=mypassword
+export SWML_BASIC_AUTH_USER=myuser
+export SWML_BASIC_AUTH_PASSWORD=mypassword
 
 # Or let the system generate them (check logs)
 ```

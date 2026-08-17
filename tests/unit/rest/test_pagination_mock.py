@@ -76,7 +76,10 @@ class TestPaginatedIterator:
         A fresh per-test client starts with an empty (auth-scoped) journal and
         scenario queue, so we stage the two pages exactly once — no reset dance.
         """
-        # Page 1 — has a next cursor.
+        # Page 1 — has a next page. The server's links.next carries the real wire
+        # param the fabric list endpoint round-trips: ``page_token`` (a cursor token
+        # that starts with PA/PB), NOT a ``cursor`` param (which no SignalWire REST
+        # endpoint accepts — see rest-apis/fabric/openapi.yaml ListFabricAddressesQuery).
         _push_scenario(
             mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
             status=200,
@@ -85,7 +88,7 @@ class TestPaginatedIterator:
                     {"id": "addr-1", "name": "first"},
                     {"id": "addr-2", "name": "second"},
                 ],
-                "links": {"next": "http://example.com/api/fabric/addresses?cursor=page2"},
+                "links": {"next": "http://example.com/api/fabric/addresses?page_token=PA_page2"},
             },
         )
         # Page 2 — terminal (no next).
@@ -114,10 +117,10 @@ class TestPaginatedIterator:
             f"expected 2 paginated GETs, got {len(gets)} entries: "
             f"{[(e.method, e.path, e.query_params) for e in gets]}"
         )
-        # The second fetch carries the ``cursor=page2`` param parsed from
-        # the first response's ``links.next``.
-        assert gets[1].query_params.get("cursor") == ["page2"], (
-            f"second fetch missing cursor=page2: {gets[1].query_params}"
+        # The second fetch carries the ``page_token`` param parsed from the first
+        # response's ``links.next`` — the real wire token the server round-trips.
+        assert gets[1].query_params.get("page_token") == ["PA_page2"], (
+            f"second fetch missing page_token=PA_page2: {gets[1].query_params}"
         )
 
     def test_next_raises_stop_iteration_when_done(self, signalwire_client: RestClient, mock: _MockHarness) -> None:
@@ -148,6 +151,64 @@ class TestPaginatedIterator:
             stopped = False
         assert stopped, "expected StopIteration on second __next__()"
 
+    def test_empty_page_with_next_continues(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        """An EMPTY page that still carries ``links.next`` must NOT stop iteration.
+
+        Regression for the empty-page-with-next bug (gate plan §3.3): a page can
+        legitimately return zero items while more pages exist (e.g. a filtered
+        page matching nothing on this cursor).  The old termination condition
+        ``next_url and data`` stopped on this empty page and silently dropped
+        every subsequent page.  Correct behaviour: keep fetching while there is
+        a next link, so the item on page 2 is still yielded.
+
+        This test FAILS against the old ``if next_url and data:`` code (it
+        collects ``[]`` — page 1 is empty, and the ``and data`` clause marks the
+        iterator done before page 2 is ever fetched) and PASSES after the fix.
+        """
+        # Page 1 — EMPTY data but a next cursor pointing at page 2.
+        _push_scenario(
+            mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
+            status=200,
+            response={
+                "data": [],
+                "links": {"next": f"{_FABRIC_ADDRESSES_PATH}?page_token=PA_page2"},
+            },
+        )
+        # Page 2 — the real item, terminal (no next).
+        _push_scenario(
+            mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
+            status=200,
+            response={
+                "data": [{"id": "addr-late", "name": "found-after-empty-page"}],
+                "links": {},
+            },
+        )
+
+        it = PaginatedIterator(
+            signalwire_client._http,
+            _FABRIC_ADDRESSES_PATH,
+            data_key="data",
+        )
+        collected = list(it)
+        # The iterator did NOT stop on the empty page 1 — it fetched page 2 and
+        # yielded its item.
+        assert [item["id"] for item in collected] == ["addr-late"], (
+            "empty page 1 with links.next must not stop pagination; "
+            f"expected page-2 item, got {collected}"
+        )
+        # Two GETs went out: the empty page, then the page reached via the cursor.
+        gets = [e for e in mock.journal if e.path == _FABRIC_ADDRESSES_PATH]
+        assert len(gets) == 2, (
+            f"expected 2 paginated GETs across the empty page and the next, "
+            f"got {len(gets)}: {[(e.method, e.path, e.query_params) for e in gets]}"
+        )
+        assert gets[1].query_params.get("page_token") == ["PA_page2"], (
+            f"second fetch missing page_token=PA_page2 parsed from the empty page's "
+            f"links.next: {gets[1].query_params}"
+        )
+
     def test_resource_paginate_walks_all_pages(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
@@ -160,7 +221,7 @@ class TestPaginatedIterator:
             mock, _FABRIC_ADDRESSES_ENDPOINT_ID, status=200,
             response={
                 "data": [{"id": "r-1"}, {"id": "r-2"}],
-                "links": {"next": f"{_FABRIC_ADDRESSES_PATH}?cursor=page2"},
+                "links": {"next": f"{_FABRIC_ADDRESSES_PATH}?page_token=PA_page2"},
             },
         )
         _push_scenario(
@@ -175,4 +236,36 @@ class TestPaginatedIterator:
         assert collected == ["r-1", "r-2", "r-3"]
         gets = [e for e in mock.journal if e.path == _FABRIC_ADDRESSES_PATH]
         assert len(gets) == 2, f"expected 2 paginated GETs, got {len(gets)}"
-        assert gets[1].query_params.get("cursor") == ["page2"]
+        assert gets[1].query_params.get("page_token") == ["PA_page2"]
+
+    def test_repeating_next_link_terminates(
+        self, signalwire_client: RestClient, mock: _MockHarness
+    ) -> None:
+        """Cycle guard (3-rust-b's python half): a server that keeps returning the SAME
+        ``links.next`` (with or without items) must TERMINATE, not loop forever making
+        identical requests. Before the guard, the empty-page fix (terminate only on
+        absent next) made a repeating next an infinite loop."""
+        same_next = "http://example.com/api/fabric/addresses?page_token=PA_loop"
+        # Two pages that both point at the same next cursor. The guard fires when the
+        # cursor REPEATS (page 2's next == page 2's own request), so iteration ends
+        # after consuming both pages' items instead of looping on page 3, 4, ….
+        _push_scenario(
+            mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
+            status=200,
+            response={"data": [{"id": "a-1"}], "links": {"next": same_next}},
+        )
+        _push_scenario(
+            mock, _FABRIC_ADDRESSES_ENDPOINT_ID,
+            status=200,
+            response={"data": [{"id": "a-2"}], "links": {"next": same_next}},
+        )
+
+        it = PaginatedIterator(
+            signalwire_client._http,
+            _FABRIC_ADDRESSES_PATH,
+            data_key="data",
+        )
+        items = list(it)  # must not hang
+        assert [i["id"] for i in items] == ["a-1", "a-2"]
+        # exactly 2 requests hit the wire — the repeated cursor was not re-fetched
+        assert len(mock.journal) == 2

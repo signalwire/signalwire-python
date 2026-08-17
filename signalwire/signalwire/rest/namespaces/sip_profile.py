@@ -2,7 +2,7 @@
 
 These symbols moved out of ``namespaces.sip_profile`` when the REST layer was
 regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.sip_profile import SipProfileResource``
+re-export keeps ``from signalwire.rest.namespaces.sip_profile import SipProfileResource``
 working but emits a :class:`DeprecationWarning`. Prefer ``client.sip_profile`` instead
 (no import needed).
 """
@@ -10,7 +10,7 @@ working but emits a :class:`DeprecationWarning`. Prefer ``client.sip_profile`` i
 import warnings
 
 warnings.warn(
-    "signalwire.signalwire.rest.namespaces.sip_profile is deprecated; use client.sip_profile. "
+    "signalwire.rest.namespaces.sip_profile is deprecated; use client.sip_profile. "
     "This back-compat shim will be removed in a future release.",
     DeprecationWarning,
     stacklevel=2,

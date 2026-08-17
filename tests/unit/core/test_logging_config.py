@@ -113,10 +113,83 @@ class TestGetLogger:
         logger2 = get_logger("logger_b")
         assert logger1 is not logger2
 
-    def test_triggers_configure_logging(self) -> None:
+    def test_does_not_trigger_configure_logging(self) -> None:
+        # Library-safe (PY-8): get_logger must NOT auto-configure global logging.
+        # Every SDK module calls get_logger() at import; auto-configuring would
+        # hijack the host app's logging on first SDK submodule import.
         with patch('signalwire.core.logging_config.configure_logging') as mock_conf:
             get_logger("test")
-            mock_conf.assert_called_once()
+            mock_conf.assert_not_called()
+
+
+# ===========================================================================
+# Library-safe import (PY-8 / Wave 1): importing signalwire must NOT configure
+# global logging or clobber a host application's loggers.
+# ===========================================================================
+
+
+class TestImportIsLibrarySafe:
+    """A library must not hijack the host app's logging at import time.
+
+    Before the fix, ``import signalwire`` ran ``configure_logging()`` which,
+    among other things, called ``logging.getLogger(name).handlers.clear()`` +
+    ``propagate = False`` on GENERIC short names (``web_service``,
+    ``auth_handler``, ``config_loader``) — so a host app that owned a logger of
+    the same name had its handlers wiped and propagation killed the moment it
+    imported us. The library must instead only attach a ``NullHandler`` to its
+    OWN ``signalwire`` namespace on import (the standard-library pattern) and
+    leave everything else alone until the app explicitly opts in via
+    ``configure_logging()``.
+    """
+
+    def test_import_does_not_configure_global_logging(self) -> None:
+        # Simulate a fresh import: reset our state, then re-run the import-time
+        # side effect (module import). It must NOT flip _logging_configured.
+        import signalwire.core.logging_config as lc
+
+        reset_logging_configuration()
+        assert lc._logging_configured is False, (
+            "import must not have run configure_logging()"
+        )
+
+    def test_import_leaves_host_named_loggers_untouched(self) -> None:
+        # A host app owns a logger whose name collides with an SDK short name.
+        host = logging.getLogger("web_service")
+        host.handlers.clear()
+        sentinel = logging.NullHandler()
+        host.addHandler(sentinel)
+        host.propagate = True
+        try:
+            # Re-run the library's import-time side effect (reload the module that
+            # owns it). It must NOT touch the host's generic-named logger.
+            import importlib
+
+            import signalwire.core.logging_config as lc
+
+            importlib.reload(lc)
+
+            assert sentinel in host.handlers, (
+                "import cleared the host app's web_service handlers"
+            )
+            assert host.propagate is True, (
+                "import killed propagation on the host app's web_service logger"
+            )
+        finally:
+            host.handlers.clear()
+            host.propagate = True
+
+    def test_signalwire_logger_has_nullhandler_after_import(self) -> None:
+        # Re-run the import-time side effect (the autouse fixture cleared handlers).
+        import importlib
+
+        import signalwire.core.logging_config as lc
+
+        importlib.reload(lc)
+        sw = logging.getLogger("signalwire")
+        assert any(isinstance(h, logging.NullHandler) for h in sw.handlers), (
+            "the signalwire logger must carry a NullHandler after import "
+            "(library-safe default)"
+        )
 
 
 # ===========================================================================

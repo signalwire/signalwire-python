@@ -112,9 +112,15 @@ class Action:
                 )
 
     async def wait(self, timeout: float | None = None) -> RelayEvent:
-        """Wait for the action to complete. Returns the terminal event."""
+        """Wait for the action to complete. Returns the terminal event.
+
+        Raises ``asyncio.TimeoutError`` if ``timeout`` is exceeded. A timed-out
+        wait does NOT poison the action: ``self._done`` is shielded so the
+        ``wait_for`` cancellation stops the wait, not the underlying completion
+        future — the still-pending terminal event resolves the action normally
+        and a subsequent ``wait()`` returns it (mirrors ``Message.wait``)."""
         if timeout is not None:
-            return await asyncio.wait_for(self._done, timeout=timeout)
+            return await asyncio.wait_for(asyncio.shield(self._done), timeout=timeout)
         return await self._done
 
     @property
@@ -377,9 +383,14 @@ class Call:
         The outer JSON-RPC method is ``"calling.<method>"`` (e.g.
         ``"calling.answer"``) with ``node_id`` and ``call_id`` in params.
 
-        All server errors are logged gracefully and return an empty dict
-        rather than raising exceptions.  This is an SDK — stack traces
-        from server-side errors should never bubble up to the developer.
+        A2 contract (the documented behavior — only "call gone" is swallowed):
+        a **404** or **410** server error means the call no longer exists, so the
+        verb is a no-op and returns ``{}`` (the caller's action can't proceed but
+        that isn't an error worth raising). **Every other non-2xx server error
+        RAISES** — the previous code swallowed ALL errors carrying a ``code``,
+        which hid real failures (auth, bad params, server faults) the developer
+        must see. The docstring/contract always promised 404/410-only; the code
+        now matches it.
         """
         rpc_method = f"calling.{method}"
         params: dict[str, Any] = {
@@ -392,11 +403,13 @@ class Call:
             return await self._client.execute(rpc_method, params)
         except Exception as exc:
             code = getattr(exc, "code", None)
-            if code is not None:
+            if code in (404, 410):
+                # Call gone — swallow per the documented contract, return no-op.
                 logger.warning(
-                    f"Call {self.call_id} error during {method} (code={code}): {exc}"
+                    f"Call {self.call_id} gone during {method} (code={code}): {exc}"
                 )
                 return {}
+            # Any other server error (or a non-coded exception) propagates.
             raise
 
     # ------------------------------------------------------------------

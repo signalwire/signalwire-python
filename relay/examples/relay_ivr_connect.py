@@ -40,7 +40,9 @@ async def on_incoming_call(call):
     collect_action = await call.play_and_collect(
         media=[
             tts("Welcome to SignalWire!"),
-            tts("Press 1 for sales. Press 2 for support. Press 0 to speak with an agent."),
+            tts(
+                "Press 1 for sales. Press 2 for support. Press 0 to speak with an agent."
+            ),
         ],
         collect={
             "digits": {
@@ -60,12 +62,20 @@ async def on_incoming_call(call):
 
     if result_type == "digit" and digits == "1":
         # Sales
-        action = await call.play([tts("Thank you for your interest! A sales representative will be with you shortly.")])
+        action = await call.play(
+            [
+                tts(
+                    "Thank you for your interest! A sales representative will be with you shortly."
+                )
+            ]
+        )
         await action.wait()
 
     elif result_type == "digit" and digits == "2":
         # Support
-        action = await call.play([tts("Please hold while we connect you to our support team.")])
+        action = await call.play(
+            [tts("Please hold while we connect you to our support team.")]
+        )
         await action.wait()
 
     elif result_type == "digit" and digits == "0":
@@ -79,16 +89,18 @@ async def on_incoming_call(call):
         print(f"Connecting to {AGENT_NUMBER} from {from_number}")
 
         await call.connect(
-            devices=[[
-                {
-                    "type": "phone",
-                    "params": {
-                        "to_number": AGENT_NUMBER,
-                        "from_number": from_number,
-                        "timeout": 30,
-                    },
-                }
-            ]],
+            devices=[
+                [
+                    {
+                        "type": "phone",
+                        "params": {
+                            "to_number": AGENT_NUMBER,
+                            "from_number": from_number,
+                            "timeout": 30,
+                        },
+                    }
+                ]
+            ],
             ringback=[tts("Please wait while we connect your call.")],
         )
 

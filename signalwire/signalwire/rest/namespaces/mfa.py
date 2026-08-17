@@ -2,7 +2,7 @@
 
 These symbols moved out of ``namespaces.mfa`` when the REST layer was
 regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.mfa import MfaResource``
+re-export keeps ``from signalwire.rest.namespaces.mfa import MfaResource``
 working but emits a :class:`DeprecationWarning`. Prefer ``client.mfa`` instead
 (no import needed).
 """
@@ -10,7 +10,7 @@ working but emits a :class:`DeprecationWarning`. Prefer ``client.mfa`` instead
 import warnings
 
 warnings.warn(
-    "signalwire.signalwire.rest.namespaces.mfa is deprecated; use client.mfa. "
+    "signalwire.rest.namespaces.mfa is deprecated; use client.mfa. "
     "This back-compat shim will be removed in a future release.",
     DeprecationWarning,
     stacklevel=2,

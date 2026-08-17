@@ -2,7 +2,7 @@
 
 These symbols moved out of ``namespaces.chat`` when the REST layer was
 regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.chat import ChatResource``
+re-export keeps ``from signalwire.rest.namespaces.chat import ChatResource``
 working but emits a :class:`DeprecationWarning`. Prefer ``client.chat`` instead
 (no import needed).
 """
@@ -10,7 +10,7 @@ working but emits a :class:`DeprecationWarning`. Prefer ``client.chat`` instead
 import warnings
 
 warnings.warn(
-    "signalwire.signalwire.rest.namespaces.chat is deprecated; use client.chat. "
+    "signalwire.rest.namespaces.chat is deprecated; use client.chat. "
     "This back-compat shim will be removed in a future release.",
     DeprecationWarning,
     stacklevel=2,

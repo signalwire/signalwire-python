@@ -2,7 +2,7 @@
 
 These symbols moved out of ``namespaces.video`` when the REST layer was
 regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.video import VideoRooms``
+re-export keeps ``from signalwire.rest.namespaces.video import VideoRooms``
 working but emits a :class:`DeprecationWarning`. Prefer ``client.video`` instead
 (no import needed).
 """
@@ -10,7 +10,7 @@ working but emits a :class:`DeprecationWarning`. Prefer ``client.video`` instead
 import warnings
 
 warnings.warn(
-    "signalwire.signalwire.rest.namespaces.video is deprecated; use client.video. "
+    "signalwire.rest.namespaces.video is deprecated; use client.video. "
     "This back-compat shim will be removed in a future release.",
     DeprecationWarning,
     stacklevel=2,

@@ -2,7 +2,7 @@
 
 These symbols moved out of ``namespaces.lookup`` when the REST layer was
 regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.lookup import LookupResource``
+re-export keeps ``from signalwire.rest.namespaces.lookup import LookupResource``
 working but emits a :class:`DeprecationWarning`. Prefer ``client.lookup`` instead
 (no import needed).
 """
@@ -10,7 +10,7 @@ working but emits a :class:`DeprecationWarning`. Prefer ``client.lookup`` instea
 import warnings
 
 warnings.warn(
-    "signalwire.signalwire.rest.namespaces.lookup is deprecated; use client.lookup. "
+    "signalwire.rest.namespaces.lookup is deprecated; use client.lookup. "
     "This back-compat shim will be removed in a future release.",
     DeprecationWarning,
     stacklevel=2,

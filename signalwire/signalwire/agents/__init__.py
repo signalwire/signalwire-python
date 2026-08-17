@@ -1,0 +1,16 @@
+"""
+Copyright (c) 2025 SignalWire
+
+This file is part of the SignalWire SDK.
+
+Licensed under the MIT License.
+See LICENSE file in the project root for full license information.
+
+Specialized agent implementations backed by specific inference providers.
+"""
+
+from signalwire.agents.bedrock import BedrockAgent
+
+__all__ = [
+    "BedrockAgent",
+]

@@ -85,64 +85,56 @@ class GatherPerQuestionFunctionsAgent(AgentBase):
         contexts = self.define_contexts()
         ctx = contexts.add_context("default")
 
-        ctx.add_step("onboard") \
-            .set_text(
-                "Onboard a new customer by collecting their details. Use "
-                "gather_info to ask one question at a time. Each question "
-                "may unlock a specific validation tool — only that tool "
-                "and gather_submit are callable while answering it."
-            ) \
-            .set_functions([
+        ctx.add_step("onboard").set_text(
+            "Onboard a new customer by collecting their details. Use "
+            "gather_info to ask one question at a time. Each question "
+            "may unlock a specific validation tool — only that tool "
+            "and gather_submit are callable while answering it."
+        ).set_functions(
+            [
                 # Outside of the gather (which is the entire step here),
                 # these would be available. During the gather they are
                 # forcibly hidden in favor of the per-question whitelists.
                 "escalate_to_human",
                 "lookup_existing_account",
-            ]) \
-            .set_gather_info(
-                output_key="customer",
-                completion_action="next_step",
-                prompt=(
-                    "I'll need to collect a few details to set up your "
-                    "account. I'll ask one question at a time."
-                ),
-            ) \
-            .add_gather_question(
-                key="email",
-                question="What's your email address?",
-                confirm=True,
-                # Only validate_email + gather_submit are callable here.
-                functions=["validate_email"],
-            ) \
-            .add_gather_question(
-                key="zip",
-                question="What's your ZIP code?",
-                # Only geocode_zip + gather_submit are callable here.
-                functions=["geocode_zip"],
-            ) \
-            .add_gather_question(
-                key="age",
-                question="How old are you?",
-                type="integer",
-                # Only check_age_eligibility + gather_submit are callable here.
-                functions=["check_age_eligibility"],
-            ) \
-            .add_gather_question(
-                key="referral_source",
-                question="How did you hear about us?",
-                # No functions arg → only gather_submit is callable.
-                # The model cannot validate, lookup, escalate — nothing.
-                # This is the right pattern when a question needs no tools.
-            )
+            ]
+        ).set_gather_info(
+            output_key="customer",
+            completion_action="next_step",
+            prompt=(
+                "I'll need to collect a few details to set up your "
+                "account. I'll ask one question at a time."
+            ),
+        ).add_gather_question(
+            key="email",
+            question="What's your email address?",
+            confirm=True,
+            # Only validate_email + gather_submit are callable here.
+            functions=["validate_email"],
+        ).add_gather_question(
+            key="zip",
+            question="What's your ZIP code?",
+            # Only geocode_zip + gather_submit are callable here.
+            functions=["geocode_zip"],
+        ).add_gather_question(
+            key="age",
+            question="How old are you?",
+            type="integer",
+            # Only check_age_eligibility + gather_submit are callable here.
+            functions=["check_age_eligibility"],
+        ).add_gather_question(
+            key="referral_source",
+            question="How did you hear about us?",
+            # No functions arg → only gather_submit is callable.
+            # The model cannot validate, lookup, escalate — nothing.
+            # This is the right pattern when a question needs no tools.
+        )
 
         # A simple confirmation step the gather auto-advances into.
-        ctx.add_step("confirm") \
-            .set_text(
-                "Read the collected info back to the customer and "
-                "confirm everything is correct."
-            ) \
-            .set_functions([]) \
-            .set_end(True)
+        ctx.add_step("confirm").set_text(
+            "Read the collected info back to the customer and "
+            "confirm everything is correct."
+        ).set_functions([]).set_end(True)
 
 
 if __name__ == "__main__":

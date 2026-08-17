@@ -23,7 +23,9 @@ async def on_incoming_call(call):
     print(f"Incoming call: {call}")
     await call.answer()
 
-    action = await call.play([{"type": "tts", "params": {"text": "Welcome to SignalWire!"}}])
+    action = await call.play(
+        [{"type": "tts", "params": {"text": "Welcome to SignalWire!"}}]
+    )
     await action.wait()
 
     await call.hangup()

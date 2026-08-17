@@ -207,7 +207,7 @@ class TestGetEnvCredentials:
     @patch.dict(os.environ, {
         'SIGNALWIRE_SPACE_NAME': 'myspace',
         'SIGNALWIRE_PROJECT_ID': 'proj123',
-        'SIGNALWIRE_TOKEN': 'tok456',
+        'SIGNALWIRE_API_TOKEN': 'tok456',
     })
     def test_returns_env_values(self) -> None:
         creds = get_env_credentials()
@@ -218,7 +218,9 @@ class TestGetEnvCredentials:
     @patch.dict(os.environ, {}, clear=True)
     def test_returns_empty_when_unset(self) -> None:
         # Remove any env vars that might be set
-        for key in ['SIGNALWIRE_SPACE_NAME', 'SIGNALWIRE_PROJECT_ID', 'SIGNALWIRE_TOKEN']:
+        for key in [
+            'SIGNALWIRE_SPACE_NAME', 'SIGNALWIRE_PROJECT_ID', 'SIGNALWIRE_API_TOKEN',
+        ]:
             os.environ.pop(key, None)
         creds = get_env_credentials()
         assert creds['space'] == ''

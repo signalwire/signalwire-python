@@ -29,14 +29,18 @@ jobs:
         python: ['3.10', '3.11', '3.12', '3.13']
     steps:
       - name: Checkout signalwire-python
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           path: signalwire-python
 
       - name: Checkout porting-sdk (mock_relay + mock_signalwire test harnesses + audit scripts)
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           repository: signalwire/porting-sdk
+          # Coordinated-pass pin: `main` normally; set the PORTING_SDK_REF repo variable
+          # to a wave branch (e.g. wave/2-aplus) to test a coordinated porting-sdk change,
+          # and declare it on the PR (see porting-sdk/COORDINATED_PASS.md). No revert commit.
+          ref: ${{ vars.PORTING_SDK_REF || 'main' }}
           path: porting-sdk
           token: ${{ secrets.PORTING_SDK_TOKEN }}
 
@@ -86,4 +90,7 @@ jobs:
         env:
           PORTING_SDK: ${{ github.workspace }}/porting-sdk
           SW_CI_TIER: ${{ steps.tier.outputs.tier }}
+          # COORDINATED-PASS reads the live PR body/labels via `gh api` to see a
+          # `Coordinated-With:` declaration edited after the triggering push.
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: bash scripts/run-ci.sh

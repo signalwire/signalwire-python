@@ -12,6 +12,8 @@ from collections.abc import Mapping
 from .._base import BaseResource, FabricResource, ReadResource
 
 if TYPE_CHECKING:
+    from .._request_options import RequestOptions
+
     from .fabric_types_generated import (
         AIAgentCreateRequest,
         AIAgentListResponse,
@@ -116,24 +118,44 @@ class GenericResources(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources")
 
-    def list(self, **params: Any) -> ResourceListResponse:
+    def list(
+        self, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> ResourceListResponse:
         return cast(
             "ResourceListResponse",
-            self._http.get(self._base_path, params=params or None),
+            self._http.get(
+                self._base_path, params=params or None, request_options=request_options
+            ),
         )
 
-    def get(self, id: str, **params: Any) -> ResourceResponse:
+    def get(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> ResourceResponse:
         return cast(
-            "ResourceResponse", self._http.get(self._path(id), params=params or None)
+            "ResourceResponse",
+            self._http.get(
+                self._path(id), params=params or None, request_options=request_options
+            ),
         )
 
-    def delete(self, id: str) -> dict[str, Any]:
-        return cast("dict[str, Any]", self._http.delete(self._path(id)))
+    def delete(
+        self, id: str, *, request_options: RequestOptions | None = None
+    ) -> dict[str, Any]:
+        return cast(
+            "dict[str, Any]",
+            self._http.delete(self._path(id), request_options=request_options),
+        )
 
-    def list_addresses(self, id: str, **params: Any) -> ResourceAddressListResponse:
+    def list_addresses(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> ResourceAddressListResponse:
         return cast(
             "ResourceAddressListResponse",
-            self._http.get(self._path(id, "addresses"), params=params or None),
+            self._http.get(
+                self._path(id, "addresses"),
+                params=params or None,
+                request_options=request_options,
+            ),
         )
 
     def assign_phone_route(
@@ -143,6 +165,7 @@ class GenericResources(BaseResource):
         phone_route_id: uuid,
         handler: UsedForType,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> PhoneRouteResponse:
         body: dict[str, Any] = {
@@ -155,7 +178,11 @@ class GenericResources(BaseResource):
         body.update(_reserved_kw)
         return cast(
             "PhoneRouteResponse",
-            self._http.post(self._path(id, "phone_routes"), body=body),
+            self._http.post(
+                self._path(id, "phone_routes"),
+                body=body,
+                request_options=request_options,
+            ),
         )
 
     def assign_domain_application(
@@ -164,6 +191,7 @@ class GenericResources(BaseResource):
         *,
         domain_application_id: uuid,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> DomainApplicationResponse:
         body: dict[str, Any] = {
@@ -176,7 +204,11 @@ class GenericResources(BaseResource):
         body.update(_reserved_kw)
         return cast(
             "DomainApplicationResponse",
-            self._http.post(self._path(id, "domain_applications"), body=body),
+            self._http.post(
+                self._path(id, "domain_applications"),
+                body=body,
+                request_options=request_options,
+            ),
         )
 
 
@@ -208,6 +240,7 @@ class AiAgents(
         SWAIG: SWAIG | None = None,
         agent_id: uuid | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> AIAgentResponse:
         body: dict[str, Any] = {
@@ -230,7 +263,12 @@ class AiAgents(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("AIAgentResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "AIAgentResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -249,6 +287,7 @@ class AiAgents(
         agent_id: uuid | None = None,
         name: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> AIAgentResponse:
         body: dict[str, Any] = {
@@ -271,7 +310,12 @@ class AiAgents(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("AIAgentResponse", self._http.patch(self._path(id), body=body))
+        return cast(
+            "AIAgentResponse",
+            self._http.patch(
+                self._path(id), body=body, request_options=request_options
+            ),
+        )
 
 
 class CallFlows(
@@ -294,6 +338,7 @@ class CallFlows(
         *,
         title: str,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> CallFlowResponse:
         body: dict[str, Any] = {
@@ -302,7 +347,12 @@ class CallFlows(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("CallFlowResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CallFlowResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -312,6 +362,7 @@ class CallFlows(
         title: str | None = None,
         document_version: int | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> CallFlowResponse:
         body: dict[str, Any] = {
@@ -322,33 +373,48 @@ class CallFlows(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("CallFlowResponse", self._http.put(self._path(id), body=body))
+        return cast(
+            "CallFlowResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
+        )
 
     def list_addresses(  # type: ignore[override]
-        self, id: str, **params: Any
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
     ) -> CallFlowAddressListResponse:
         return cast(
             "CallFlowAddressListResponse",
             self._http.get(
-                f"/api/fabric/resources/call_flow/{id}/addresses", params=params or None
+                f"/api/fabric/resources/call_flow/{id}/addresses",
+                params=params or None,
+                request_options=request_options,
             ),
         )
 
-    def list_versions(self, id: str, **params: Any) -> CallFlowVersionListResponse:
+    def list_versions(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> CallFlowVersionListResponse:
         return cast(
             "CallFlowVersionListResponse",
             self._http.get(
-                f"/api/fabric/resources/call_flow/{id}/versions", params=params or None
+                f"/api/fabric/resources/call_flow/{id}/versions",
+                params=params or None,
+                request_options=request_options,
             ),
         )
 
     def deploy_version(
-        self, id: str, body: CallFlowVersionDeployRequest
+        self,
+        id: str,
+        body: CallFlowVersionDeployRequest,
+        *,
+        request_options: RequestOptions | None = None,
     ) -> CallFlowVersionDeployResponse:
         return cast(
             "CallFlowVersionDeployResponse",
             self._http.post(
-                f"/api/fabric/resources/call_flow/{id}/versions", body=body
+                f"/api/fabric/resources/call_flow/{id}/versions",
+                body=body,
+                request_options=request_options,
             ),
         )
 
@@ -389,6 +455,7 @@ class ConferenceRooms(
         room_join_video_off: bool | None = None,
         user_join_video_off: bool | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> ConferenceRoomResponse:
         body: dict[str, Any] = {
@@ -418,7 +485,10 @@ class ConferenceRooms(
             body.update(extras)
         body.update(_reserved_kw)
         return cast(
-            "ConferenceRoomResponse", self._http.post(self._base_path, body=body)
+            "ConferenceRoomResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
         )
 
     def update(
@@ -444,6 +514,7 @@ class ConferenceRooms(
         room_join_video_off: bool | None = None,
         user_join_video_off: bool | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> ConferenceRoomResponse:
         body: dict[str, Any] = {
@@ -472,16 +543,20 @@ class ConferenceRooms(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("ConferenceRoomResponse", self._http.put(self._path(id), body=body))
+        return cast(
+            "ConferenceRoomResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
+        )
 
     def list_addresses(  # type: ignore[override]
-        self, id: str, **params: Any
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
     ) -> ConferenceRoomAddressListResponse:
         return cast(
             "ConferenceRoomAddressListResponse",
             self._http.get(
                 f"/api/fabric/resources/conference_room/{id}/addresses",
                 params=params or None,
+                request_options=request_options,
             ),
         )
 
@@ -492,16 +567,24 @@ class CxmlApplications(BaseResource):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/fabric/resources/cxml_applications")
 
-    def list(self, **params: Any) -> CxmlApplicationListResponse:
+    def list(
+        self, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> CxmlApplicationListResponse:
         return cast(
             "CxmlApplicationListResponse",
-            self._http.get(self._base_path, params=params or None),
+            self._http.get(
+                self._base_path, params=params or None, request_options=request_options
+            ),
         )
 
-    def get(self, id: str, **params: Any) -> CxmlApplicationResponse:
+    def get(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> CxmlApplicationResponse:
         return cast(
             "CxmlApplicationResponse",
-            self._http.get(self._path(id), params=params or None),
+            self._http.get(
+                self._path(id), params=params or None, request_options=request_options
+            ),
         )
 
     def update(
@@ -523,6 +606,7 @@ class CxmlApplications(BaseResource):
         sms_status_callback: str | None = None,
         sms_status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> CxmlApplicationResponse:
         body: dict[str, Any] = {
@@ -549,18 +633,28 @@ class CxmlApplications(BaseResource):
             body.update(extras)
         body.update(_reserved_kw)
         return cast(
-            "CxmlApplicationResponse", self._http.put(self._path(id), body=body)
+            "CxmlApplicationResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
         )
 
-    def delete(self, id: str) -> dict[str, Any]:
-        return cast("dict[str, Any]", self._http.delete(self._path(id)))
+    def delete(
+        self, id: str, *, request_options: RequestOptions | None = None
+    ) -> dict[str, Any]:
+        return cast(
+            "dict[str, Any]",
+            self._http.delete(self._path(id), request_options=request_options),
+        )
 
     def list_addresses(
-        self, id: str, **params: Any
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
     ) -> CxmlApplicationAddressListResponse:
         return cast(
             "CxmlApplicationAddressListResponse",
-            self._http.get(self._path(id, "addresses"), params=params or None),
+            self._http.get(
+                self._path(id, "addresses"),
+                params=params or None,
+                request_options=request_options,
+            ),
         )
 
 
@@ -587,6 +681,7 @@ class CxmlScripts(
         status_callback_url: str | None = None,
         status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> CXMLScriptResponse:
         body: dict[str, Any] = {
@@ -602,7 +697,12 @@ class CxmlScripts(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("CXMLScriptResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CXMLScriptResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -614,6 +714,7 @@ class CxmlScripts(
         status_callback_url: str | None = None,
         status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> CXMLScriptResponse:
         body: dict[str, Any] = {
@@ -629,7 +730,10 @@ class CxmlScripts(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("CXMLScriptResponse", self._http.put(self._path(id), body=body))
+        return cast(
+            "CXMLScriptResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
+        )
 
 
 class CxmlWebhooks(
@@ -657,6 +761,7 @@ class CxmlWebhooks(
         status_callback_url: str | None = None,
         status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> CXMLWebhookResponse:
         body: dict[str, Any] = {
@@ -676,7 +781,12 @@ class CxmlWebhooks(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("CXMLWebhookResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "CXMLWebhookResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -692,6 +802,7 @@ class CxmlWebhooks(
         status_callback_url: str | None = None,
         status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> CXMLWebhookResponse:
         body: dict[str, Any] = {
@@ -711,7 +822,12 @@ class CxmlWebhooks(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("CXMLWebhookResponse", self._http.patch(self._path(id), body=body))
+        return cast(
+            "CXMLWebhookResponse",
+            self._http.patch(
+                self._path(id), body=body, request_options=request_options
+            ),
+        )
 
 
 class FreeswitchConnectors(
@@ -735,6 +851,7 @@ class FreeswitchConnectors(
         name: str,
         token: uuid,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> FreeswitchConnectorResponse:
         body: dict[str, Any] = {
@@ -744,7 +861,10 @@ class FreeswitchConnectors(
             body.update(extras)
         body.update(_reserved_kw)
         return cast(
-            "FreeswitchConnectorResponse", self._http.post(self._base_path, body=body)
+            "FreeswitchConnectorResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
         )
 
     def update(
@@ -756,6 +876,7 @@ class FreeswitchConnectors(
         caller_id: str | None = None,
         send_as: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> FreeswitchConnectorResponse:
         body: dict[str, Any] = {
@@ -771,7 +892,8 @@ class FreeswitchConnectors(
             body.update(extras)
         body.update(_reserved_kw)
         return cast(
-            "FreeswitchConnectorResponse", self._http.put(self._path(id), body=body)
+            "FreeswitchConnectorResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
         )
 
 
@@ -797,6 +919,7 @@ class RelayApplications(
         topic: str,
         call_status_callback_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> RelayApplicationResponse:
         body: dict[str, Any] = {
@@ -812,7 +935,10 @@ class RelayApplications(
             body.update(extras)
         body.update(_reserved_kw)
         return cast(
-            "RelayApplicationResponse", self._http.post(self._base_path, body=body)
+            "RelayApplicationResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
         )
 
     def update(
@@ -824,6 +950,7 @@ class RelayApplications(
         topic: str | None = None,
         call_status_callback_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> RelayApplicationResponse:
         body: dict[str, Any] = {
@@ -839,7 +966,8 @@ class RelayApplications(
             body.update(extras)
         body.update(_reserved_kw)
         return cast(
-            "RelayApplicationResponse", self._http.put(self._path(id), body=body)
+            "RelayApplicationResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
         )
 
 
@@ -871,6 +999,7 @@ class SipEndpoints(
         calling_handler_resource_id: uuid | None,
         id: uuid | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SipEndpointResponse:
         body: dict[str, Any] = {
@@ -891,7 +1020,12 @@ class SipEndpoints(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("SipEndpointResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "SipEndpointResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -907,6 +1041,7 @@ class SipEndpoints(
         call_handler: CallHandlerType | None = None,
         calling_handler_resource_id: uuid | None | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SipEndpointResponse:
         body: dict[str, Any] = {
@@ -926,7 +1061,10 @@ class SipEndpoints(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("SipEndpointResponse", self._http.put(self._path(id), body=body))
+        return cast(
+            "SipEndpointResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
+        )
 
 
 class SipGateways(
@@ -951,6 +1089,7 @@ class SipGateways(
         ciphers: list[Ciphers],
         codecs: list[Codecs],
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SipGatewayResponse:
         body: dict[str, Any] = {
@@ -967,7 +1106,12 @@ class SipGateways(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("SipGatewayResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "SipGatewayResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -980,6 +1124,7 @@ class SipGateways(
         ciphers: list[Ciphers] | None = None,
         codecs: list[Codecs] | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SipGatewayResponse:
         body: dict[str, Any] = {
@@ -996,7 +1141,12 @@ class SipGateways(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("SipGatewayResponse", self._http.patch(self._path(id), body=body))
+        return cast(
+            "SipGatewayResponse",
+            self._http.patch(
+                self._path(id), body=body, request_options=request_options
+            ),
+        )
 
 
 class Subscribers(
@@ -1028,6 +1178,7 @@ class Subscribers(
         region: str | None = None,
         company_name: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SubscriberResponse:
         body: dict[str, Any] = {
@@ -1049,7 +1200,12 @@ class Subscribers(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("SubscriberResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "SubscriberResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -1067,6 +1223,7 @@ class Subscribers(
         region: str | None = None,
         company_name: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SubscriberResponse:
         body: dict[str, Any] = {
@@ -1088,15 +1245,24 @@ class Subscribers(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("SubscriberResponse", self._http.put(self._path(id), body=body))
+        return cast(
+            "SubscriberResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
+        )
 
     def list_sip_endpoints(
-        self, fabric_subscriber_id: str, **params: Any
+        self,
+        fabric_subscriber_id: str,
+        *,
+        request_options: RequestOptions | None = None,
+        **params: Any,
     ) -> SubscriberSipEndpointListResponse:
         return cast(
             "SubscriberSipEndpointListResponse",
             self._http.get(
-                self._path(fabric_subscriber_id, "sip_endpoints"), params=params or None
+                self._path(fabric_subscriber_id, "sip_endpoints"),
+                params=params or None,
+                request_options=request_options,
             ),
         )
 
@@ -1112,6 +1278,7 @@ class Subscribers(
         codecs: list[Codecs] | None = None,
         encryption: Encryption | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SubscriberSIPEndpoint:
         body: dict[str, Any] = {
@@ -1133,18 +1300,26 @@ class Subscribers(
         return cast(
             "SubscriberSIPEndpoint",
             self._http.post(
-                self._path(fabric_subscriber_id, "sip_endpoints"), body=body
+                self._path(fabric_subscriber_id, "sip_endpoints"),
+                body=body,
+                request_options=request_options,
             ),
         )
 
     def get_sip_endpoint(
-        self, fabric_subscriber_id: str, id: str, **params: Any
+        self,
+        fabric_subscriber_id: str,
+        id: str,
+        *,
+        request_options: RequestOptions | None = None,
+        **params: Any,
     ) -> SubscriberSIPEndpoint:
         return cast(
             "SubscriberSIPEndpoint",
             self._http.get(
                 self._path(fabric_subscriber_id, "sip_endpoints", id),
                 params=params or None,
+                request_options=request_options,
             ),
         )
 
@@ -1161,6 +1336,7 @@ class Subscribers(
         codecs: list[Codecs] | None = None,
         encryption: Encryption | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SubscriberSIPEndpoint:
         body: dict[str, Any] = {
@@ -1182,14 +1358,25 @@ class Subscribers(
         return cast(
             "SubscriberSIPEndpoint",
             self._http.patch(
-                self._path(fabric_subscriber_id, "sip_endpoints", id), body=body
+                self._path(fabric_subscriber_id, "sip_endpoints", id),
+                body=body,
+                request_options=request_options,
             ),
         )
 
-    def delete_sip_endpoint(self, fabric_subscriber_id: str, id: str) -> dict[str, Any]:
+    def delete_sip_endpoint(
+        self,
+        fabric_subscriber_id: str,
+        id: str,
+        *,
+        request_options: RequestOptions | None = None,
+    ) -> dict[str, Any]:
         return cast(
             "dict[str, Any]",
-            self._http.delete(self._path(fabric_subscriber_id, "sip_endpoints", id)),
+            self._http.delete(
+                self._path(fabric_subscriber_id, "sip_endpoints", id),
+                request_options=request_options,
+            ),
         )
 
 
@@ -1215,6 +1402,7 @@ class SwmlScripts(
         contents: str,
         status_callback_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SwmlScriptResponse:
         body: dict[str, Any] = {
@@ -1229,7 +1417,12 @@ class SwmlScripts(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("SwmlScriptResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "SwmlScriptResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -1240,6 +1433,7 @@ class SwmlScripts(
         contents: str | None = None,
         status_callback_url: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SwmlScriptResponse:
         body: dict[str, Any] = {
@@ -1254,7 +1448,10 @@ class SwmlScripts(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("SwmlScriptResponse", self._http.put(self._path(id), body=body))
+        return cast(
+            "SwmlScriptResponse",
+            self._http.put(self._path(id), body=body, request_options=request_options),
+        )
 
 
 class SwmlWebhooks(
@@ -1282,6 +1479,7 @@ class SwmlWebhooks(
         status_callback_url: str | None = None,
         status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SWMLWebhookResponse:
         body: dict[str, Any] = {
@@ -1301,7 +1499,12 @@ class SwmlWebhooks(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("SWMLWebhookResponse", self._http.post(self._base_path, body=body))
+        return cast(
+            "SWMLWebhookResponse",
+            self._http.post(
+                self._base_path, body=body, request_options=request_options
+            ),
+        )
 
     def update(
         self,
@@ -1317,6 +1520,7 @@ class SwmlWebhooks(
         status_callback_url: str | None = None,
         status_callback_method: Literal["GET"] | Literal["POST"] | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SWMLWebhookResponse:
         body: dict[str, Any] = {
@@ -1336,7 +1540,12 @@ class SwmlWebhooks(
         if extras:
             body.update(extras)
         body.update(_reserved_kw)
-        return cast("SWMLWebhookResponse", self._http.patch(self._path(id), body=body))
+        return cast(
+            "SWMLWebhookResponse",
+            self._http.patch(
+                self._path(id), body=body, request_options=request_options
+            ),
+        )
 
 
 class FabricTokens(BaseResource):
@@ -1361,6 +1570,7 @@ class FabricTokens(BaseResource):
         region: str | None = None,
         company_name: str | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SubscriberTokenResponse:
         body: dict[str, Any] = {
@@ -1386,7 +1596,11 @@ class FabricTokens(BaseResource):
         body.update(_reserved_kw)
         return cast(
             "SubscriberTokenResponse",
-            self._http.post(self._path("subscribers", "tokens"), body=body),
+            self._http.post(
+                self._path("subscribers", "tokens"),
+                body=body,
+                request_options=request_options,
+            ),
         )
 
     def refresh_subscriber_token(
@@ -1394,6 +1608,7 @@ class FabricTokens(BaseResource):
         *,
         refresh_token: jwt,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SubscriberRefreshTokenResponse:
         body: dict[str, Any] = {
@@ -1404,7 +1619,11 @@ class FabricTokens(BaseResource):
         body.update(_reserved_kw)
         return cast(
             "SubscriberRefreshTokenResponse",
-            self._http.post(self._path("subscribers", "tokens", "refresh"), body=body),
+            self._http.post(
+                self._path("subscribers", "tokens", "refresh"),
+                body=body,
+                request_options=request_options,
+            ),
         )
 
     def create_invite_token(
@@ -1413,6 +1632,7 @@ class FabricTokens(BaseResource):
         address_id: uuid,
         expires_at: int | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SubscriberInviteTokenCreateResponse:
         body: dict[str, Any] = {
@@ -1425,7 +1645,11 @@ class FabricTokens(BaseResource):
         body.update(_reserved_kw)
         return cast(
             "SubscriberInviteTokenCreateResponse",
-            self._http.post(self._path("subscriber", "invites"), body=body),
+            self._http.post(
+                self._path("subscriber", "invites"),
+                body=body,
+                request_options=request_options,
+            ),
         )
 
     def create_guest_token(
@@ -1434,6 +1658,7 @@ class FabricTokens(BaseResource):
         allowed_addresses: list[uuid],
         expire_at: int | None = None,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> SubscriberGuestTokenCreateResponse:
         body: dict[str, Any] = {
@@ -1449,7 +1674,11 @@ class FabricTokens(BaseResource):
         body.update(_reserved_kw)
         return cast(
             "SubscriberGuestTokenCreateResponse",
-            self._http.post(self._path("guests", "tokens"), body=body),
+            self._http.post(
+                self._path("guests", "tokens"),
+                body=body,
+                request_options=request_options,
+            ),
         )
 
     def create_embed_token(
@@ -1457,6 +1686,7 @@ class FabricTokens(BaseResource):
         *,
         token: str,
         extras: Mapping[str, Any] | None = None,
+        request_options: RequestOptions | None = None,
         **_reserved_kw: Any,
     ) -> EmbedsTokensResponse:
         body: dict[str, Any] = {
@@ -1467,5 +1697,9 @@ class FabricTokens(BaseResource):
         body.update(_reserved_kw)
         return cast(
             "EmbedsTokensResponse",
-            self._http.post(self._path("embeds", "tokens"), body=body),
+            self._http.post(
+                self._path("embeds", "tokens"),
+                body=body,
+                request_options=request_options,
+            ),
         )

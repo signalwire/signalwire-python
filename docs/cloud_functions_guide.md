@@ -62,7 +62,7 @@ Set these environment variables for your function:
 ```bash
 # SignalWire credentials
 export SIGNALWIRE_PROJECT_ID="your-project-id"
-export SIGNALWIRE_TOKEN="your-token"
+export SIGNALWIRE_API_TOKEN="your-token"
 
 # Agent configuration
 export AGENT_USERNAME="your-username"
@@ -172,7 +172,7 @@ Set these in your Azure Function App settings:
 ```bash
 # SignalWire credentials
 SIGNALWIRE_PROJECT_ID="your-project-id"
-SIGNALWIRE_TOKEN="your-token"
+SIGNALWIRE_API_TOKEN="your-token"
 
 # Agent configuration
 AGENT_USERNAME="your-username"

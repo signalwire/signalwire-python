@@ -115,6 +115,14 @@ ROOM_STATE_LEAVE = "leave"
 RECONNECT_MIN_DELAY = 1.0
 RECONNECT_MAX_DELAY = 30.0
 RECONNECT_BACKOFF_FACTOR = 2.0
+# A6 credential-failure contract (bounded reconnect): a transient connection
+# loss reconnects indefinitely (a server blip must self-heal), but a PERMANENT
+# authentication rejection (the server refuses the credentials — a 401-class
+# error frame to signalwire.connect, before we have ever authenticated) must
+# NOT loop forever. After this many consecutive auth rejections with no
+# intervening successful auth, _run_forever re-raises the server's message and
+# stops — never an infinite reconnect on bad creds, never a silent exit-0.
+RECONNECT_MAX_AUTH_ATTEMPTS = 3
 
 # Default host
 DEFAULT_RELAY_HOST = "relay.signalwire.com"

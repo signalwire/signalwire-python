@@ -2,7 +2,7 @@
 
 These symbols moved out of ``namespaces.short_codes`` when the REST layer was
 regenerated (the ``*Resource``/``*Namespace`` suffixes were dropped). This thin
-re-export keeps ``from signalwire.signalwire.rest.namespaces.short_codes import ShortCodesResource``
+re-export keeps ``from signalwire.rest.namespaces.short_codes import ShortCodesResource``
 working but emits a :class:`DeprecationWarning`. Prefer ``client.short_codes`` instead
 (no import needed).
 """
@@ -10,7 +10,7 @@ working but emits a :class:`DeprecationWarning`. Prefer ``client.short_codes`` i
 import warnings
 
 warnings.warn(
-    "signalwire.signalwire.rest.namespaces.short_codes is deprecated; use client.short_codes. "
+    "signalwire.rest.namespaces.short_codes is deprecated; use client.short_codes. "
     "This back-compat shim will be removed in a future release.",
     DeprecationWarning,
     stacklevel=2,

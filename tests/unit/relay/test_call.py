@@ -103,11 +103,22 @@ class TestCallExecute:
         assert result == {}
 
     @pytest.mark.asyncio
-    async def test_execute_swallows_non_gone_relay_errors(self, call: Call, mock_client: MagicMock) -> None:
-        """Non-gone relay errors (e.g. 500) are logged and return {} — not raised."""
+    async def test_execute_raises_non_gone_relay_errors(self, call: Call, mock_client: MagicMock) -> None:
+        """A2 contract (Wave 1): only 404/410 (call gone) are swallowed. Every
+        other server error (e.g. 500) RAISES — the SDK previously swallowed ALL
+        coded errors, hiding real failures the docs promised would surface."""
         mock_client.execute.side_effect = MockRelayError(500, "Server error")
-        result = await call._execute("play", {"control_id": "ctl1"})
-        assert result == {}
+        with pytest.raises(MockRelayError) as exc:
+            await call._execute("play", {"control_id": "ctl1"})
+        assert exc.value.code == 500
+
+    @pytest.mark.asyncio
+    async def test_execute_raises_400_class_relay_errors(self, call: Call, mock_client: MagicMock) -> None:
+        """A2: a 4xx that is NOT 404/410 (e.g. 400 bad params, 401 auth) raises."""
+        mock_client.execute.side_effect = MockRelayError(400, "Bad params")
+        with pytest.raises(MockRelayError) as exc:
+            await call._execute("play", {"control_id": "ctl1"})
+        assert exc.value.code == 400
 
     @pytest.mark.asyncio
     async def test_execute_raises_non_relay_errors(self, call: Call, mock_client: MagicMock) -> None:
@@ -720,12 +731,18 @@ class TestStartAction:
         assert action.is_done is True
 
     @pytest.mark.asyncio
-    async def test_execute_failure_resolves_action(self, call: Call, mock_client: MagicMock) -> None:
-        """Non-gone relay errors are swallowed; action is resolved immediately."""
+    async def test_execute_failure_raises_and_cleans_up_action(self, call: Call, mock_client: MagicMock) -> None:
+        """A2 contract (Wave 1): a non-gone relay error (500) RAISES out of the
+        verb — the developer sees the failure — and the action is removed from
+        _actions + its future rejected (so a concurrent wait() gets the error,
+        not a hang). Previously the SDK swallowed this and faked a resolved
+        action, hiding the server failure."""
         mock_client.execute.side_effect = MockRelayError(500, "Server error")
-        action = await call.play([{"type": "tts", "params": {"text": "Hi"}}])
-        assert action.completed is True
-        assert action.control_id not in call._actions
+        with pytest.raises(MockRelayError) as exc:
+            await call.play([{"type": "tts", "params": {"text": "Hi"}}])
+        assert exc.value.code == 500
+        # The action was cleaned up on failure (no leak / no fake-resolved entry).
+        assert not call._actions
 
     @pytest.mark.asyncio
     async def test_call_gone_resolves_action_immediately(self, call: Call, mock_client: MagicMock) -> None:

@@ -100,7 +100,7 @@ class TestDataSphereServerlessSkillParameterSchema:
         assert schema["token"]["type"] == "string"
         assert schema["token"]["required"] is True
         assert schema["token"]["hidden"] is True
-        assert schema["token"]["env_var"] == "SIGNALWIRE_TOKEN"
+        assert schema["token"]["env_var"] == "SIGNALWIRE_API_TOKEN"
 
     def test_schema_includes_document_id(self) -> None:
         """Test document_id parameter is defined"""

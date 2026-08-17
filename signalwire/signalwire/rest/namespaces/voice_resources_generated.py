@@ -11,6 +11,8 @@ from typing import TYPE_CHECKING, Any, cast
 from .._base import ReadResource
 
 if TYPE_CHECKING:
+    from .._request_options import RequestOptions
+
     from .voice_types_generated import (
         LogEventsListResponse,
         LogListResponse,
@@ -24,8 +26,14 @@ class VoiceLogs(ReadResource["LogListResponse", "VoiceLog"]):
     def __init__(self, http: Any) -> None:
         super().__init__(http, "/api/voice/logs")
 
-    def list_events(self, id: str, **params: Any) -> LogEventsListResponse:
+    def list_events(
+        self, id: str, *, request_options: RequestOptions | None = None, **params: Any
+    ) -> LogEventsListResponse:
         return cast(
             "LogEventsListResponse",
-            self._http.get(self._path(id, "events"), params=params or None),
+            self._http.get(
+                self._path(id, "events"),
+                params=params or None,
+                request_options=request_options,
+            ),
         )
