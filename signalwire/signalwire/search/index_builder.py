@@ -164,7 +164,7 @@ class IndexBuilder:
     def _load_model(self) -> None:
         """Load embedding model (lazy loading)"""
         if self.model is None:
-            if not SentenceTransformer:
+            if SentenceTransformer is None:
                 raise ImportError(
                     "sentence-transformers is required for embedding generation. Install with: pip install sentence-transformers"
                 )

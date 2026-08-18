@@ -283,7 +283,11 @@ def _get_cached_model(model_name: str | None = None) -> Any:
             from sentence_transformers import SentenceTransformer
 
             logger.info(f"Loading sentence transformer model: {model_name}")
-            model = SentenceTransformer(model_name)
+            # `Any` because the tag below is a deliberate side channel:
+            # torch's Module.__setattr__ overloads accept only Tensor/Module, so
+            # a typed local rejects a str attribute. set_global_model() reads it
+            # back with getattr. Matches _model_cache's own dict[str, Any].
+            model: Any = SentenceTransformer(model_name)
             # Store the model name for identification
             model.model_name = model_name
             # Evict oldest entry if cache is full
