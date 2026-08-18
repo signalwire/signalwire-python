@@ -18,11 +18,15 @@ set -euo pipefail
 
 NO_BUILD=0
 NO_INSTALL=0
+usage() {
+  sed -n '13,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+}
 for arg in "$@"; do
   case "$arg" in
     --no-build)   NO_BUILD=1 ;;
     --no-install) NO_INSTALL=1 ;;
-    *) echo "gen.sh: unknown option: $arg" >&2; exit 2 ;;
+    -h|--help)    usage; exit 0 ;;
+    *) echo "gen.sh: unknown option: $arg" >&2; usage >&2; exit 2 ;;
   esac
 done
 
@@ -63,8 +67,10 @@ for name in names:
         fh.write(f"# signalwire.{name}\n\n::: signalwire.{name}\n")
     written.append(name)
 
-# An unresolvable install yields zero modules, and every command below still
-# succeeds, so `set -e` would let a gutted site sail through to deploy. Fail loud.
+# The loop above writes nothing when `signalwire` exposes no subpackages, and
+# every command below still succeeds, so `set -e` would let a gutted site sail
+# through to deploy. (This is NOT an install check: PYTHONPATH points at the
+# source tree, so the import resolves with or without the editable install.)
 if not written:
     sys.exit("gen.sh: no API pages generated (is the signalwire package importable?)")
 
