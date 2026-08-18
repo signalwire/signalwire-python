@@ -1,8 +1,15 @@
 # API reference docs, PR check.
 #
 # Build-only counterpart to reference-docs.yml: no deploy, no write permission.
-# Without this, a broken generator, an unimportable module, or a new unresolved
-# cross-reference is first exercised on release day against the live site.
+# Catches a crashing generator, a root `signalwire` package that will not import
+# (gen.sh imports it to enumerate subpackages), and unresolved cross-references,
+# on the PR rather than on release day against the live site.
+#
+# It does NOT catch a submodule whose runtime dependency is missing: mkdocstrings
+# analyses statically through griffe, so such a module still renders a clean page.
+# Nothing here lints workflow YAML either, so a mistake in reference-docs.yml
+# still surfaces at release time. porting-sdk ships scripts/actionlint_gate.py,
+# which run-ci.sh does not currently call; wiring it up would close that gap.
 name: reference-check
 
 on:
@@ -12,6 +19,9 @@ on:
       - "reference/**"
       - "pyproject.toml"
       - ".github/workflows/reference-check.yml"
+      # Changing the publish workflow at least re-runs this build. It is not
+      # validation OF that workflow; see the note above.
+      - ".github/workflows/reference-docs.yml"
 
 permissions:
   contents: read   # never deploys
