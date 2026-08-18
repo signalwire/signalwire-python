@@ -1,9 +1,9 @@
 /* =============================================================================
    Fern navbar behaviour for the injected header (no iframe).
    Ported and trimmed from the SDK-docs POC (assets/js/app.js):
-     - dropdown open/close + anchored positioning (product / language / support / theme)
-     - theme toggle drives Material's own color scheme (default <-> slate)
-   Out of scope for the pilot (different origin from signalwire.com):
+     - dropdown open/close + anchored positioning (product / support / theme)
+     - theme toggle drives Material's own color scheme (default and slate)
+   Not implemented (different origin from signalwire.com):
      - cross-origin localStorage["theme"] sync with the Fern docs site
      - iframe theme bridging to other generators
    ============================================================================= */
@@ -110,7 +110,7 @@
       themeItems[i].addEventListener("click", function () {
         closeAll();
         var pref = this.getAttribute("data-theme-pref");
-        // System resolves to the OS preference; pilot maps it to light/dark now.
+        // System resolves to the OS preference, mapped onto light/dark here.
         if (pref === "system") {
           pref = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
         }
