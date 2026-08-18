@@ -3,14 +3,20 @@
 POM Tool - Command line utility for working with Prompt Object Model files
 
 Usage:
-    pom_tool <input_file> [--output=<format>] [--outfile=<file>] [--merge_pom="<section name>:<filename>"]
-    pom_tool (-h | --help)
+
+```text
+pom_tool <input_file> [--output=<format>] [--outfile=<file>] [--merge_pom="<section name>:<filename>"]
+pom_tool (-h | --help)
+```
 
 Options:
-    -h --help           Show this help message
-    --output=<format>   Output format: md, xml, json, yaml [default: md]
-    --outfile=<file>    Output file (if not specified, prints to stdout)
-    --merge_pom=<arg>   Merge another POM into a section: "<section name>:<filename>"
+
+```text
+-h --help           Show this help message
+--output=<format>   Output format: md, xml, json, yaml [default: md]
+--outfile=<file>    Output file (if not specified, prints to stdout)
+--merge_pom=<arg>   Merge another POM into a section: "<section name>:<filename>"
+```
 """
 
 import argparse
