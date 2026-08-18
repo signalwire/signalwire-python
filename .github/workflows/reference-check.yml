@@ -1,0 +1,38 @@
+# API reference docs, PR check.
+#
+# Build-only counterpart to reference-docs.yml: no deploy, no write permission.
+# Without this, a broken generator, an unimportable module, or a new unresolved
+# cross-reference is first exercised on release day against the live site.
+name: reference-check
+
+on:
+  pull_request:
+    paths:
+      - "signalwire/**"
+      - "reference/**"
+      - "pyproject.toml"
+      - ".github/workflows/reference-check.yml"
+
+permissions:
+  contents: read   # never deploys
+
+concurrency:
+  group: reference-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install SDK (editable) + doc toolchain
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r reference/requirements.txt
+          pip install -e .
+      # gen.sh without --no-build runs the strict `mkdocs build`.
+      - name: Generate + build (strict)
+        run: bash reference/gen.sh --no-install
