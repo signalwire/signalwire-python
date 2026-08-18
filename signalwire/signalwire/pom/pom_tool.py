@@ -5,8 +5,8 @@ POM Tool - Command line utility for working with Prompt Object Model files
 Usage:
 
 ```text
-pom_tool <input_file> [--output=<format>] [--outfile=<file>] [--merge_pom="<section name>:<filename>"]
-pom_tool (-h | --help)
+pom-tool <input_file> [--output=<format>] [--outfile=<file>] [--merge_pom="<section name>:<filename>"]
+pom-tool (-h | --help)
 ```
 
 Options:
@@ -91,7 +91,7 @@ def main() -> None:
     # §6.2-python: argparse (stdlib) replaced the unmaintained docopt — identical CLI
     # surface (same flags/defaults/usage), one fewer dependency.
     parser = argparse.ArgumentParser(
-        prog="pom_tool",
+        prog="pom-tool",
         description="POM Tool - work with Prompt Object Model files",
     )
     parser.add_argument("input_file", help="POM file to load (JSON or YAML)")
