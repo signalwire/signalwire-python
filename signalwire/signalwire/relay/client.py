@@ -10,7 +10,7 @@ Architecture notes (mirrors the JS SDK):
 - Each Action registers with a ``control_id`` and listens for its own
   event_type (e.g. ``calling.call.play``).  Actions filter events by
   ``control_id`` so multiple concurrent actions on the same call work.
-- Result code checking accepts any 2xx (matching the JS SDK regex /^2[0-9][0-9]$/).
+- Result code checking accepts any 2xx (matching the JS SDK regex ``/^2[0-9][0-9]$/``).
   ``signalwire.connect`` responses skip code checking entirely.
 - Execute has a configurable timeout (default 10s) to detect half-open connections.
 - Requests made while disconnected are queued and flushed after re-auth.

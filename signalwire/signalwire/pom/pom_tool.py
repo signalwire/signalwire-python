@@ -3,14 +3,20 @@
 POM Tool - Command line utility for working with Prompt Object Model files
 
 Usage:
-    pom_tool <input_file> [--output=<format>] [--outfile=<file>] [--merge_pom="<section name>:<filename>"]
-    pom_tool (-h | --help)
+
+```text
+pom-tool <input_file> [--output=<format>] [--outfile=<file>] [--merge_pom="<section name>:<filename>"]
+pom-tool (-h | --help)
+```
 
 Options:
-    -h --help           Show this help message
-    --output=<format>   Output format: md, xml, json, yaml [default: md]
-    --outfile=<file>    Output file (if not specified, prints to stdout)
-    --merge_pom=<arg>   Merge another POM into a section: "<section name>:<filename>"
+
+```text
+-h --help           Show this help message
+--output=<format>   Output format: md, xml, json, yaml [default: md]
+--outfile=<file>    Output file (if not specified, prints to stdout)
+--merge_pom=<arg>   Merge another POM into a section: "<section name>:<filename>"
+```
 """
 
 import argparse
@@ -85,7 +91,7 @@ def main() -> None:
     # §6.2-python: argparse (stdlib) replaced the unmaintained docopt — identical CLI
     # surface (same flags/defaults/usage), one fewer dependency.
     parser = argparse.ArgumentParser(
-        prog="pom_tool",
+        prog="pom-tool",
         description="POM Tool - work with Prompt Object Model files",
     )
     parser.add_argument("input_file", help="POM file to load (JSON or YAML)")
