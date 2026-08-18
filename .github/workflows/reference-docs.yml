@@ -1,31 +1,39 @@
 # API reference docs.
 #
 # Builds the SignalWire Python SDK API reference (MkDocs Material + mkdocstrings)
-# and publishes a single, unversioned "latest" site to this repo's OWN GitHub Pages:
+# and publishes a single, unversioned site to this repo's OWN GitHub Pages:
 #   https://signalwire.github.io/signalwire-python/
 #
-# Triggers on `v*` release tags — each release rebuilds + republishes the site —
-# plus workflow_dispatch for manual/fork-preview runs. (Versioning via mike was
-# intentionally left out of the pilot; it can be added back later.)
+# Publishing is deliberately narrow, because `gh-deploy --force` overwrites the
+# live site with no prior version left to roll back to:
+#   * `release: published` only, downstream of publish-release.yml's validation,
+#     so a rejected tag can never become the public site.
+#   * stable, non-prerelease semver tags only, and only when the tag is newer
+#     than the version the last publish recorded at the site root.
+#   * workflow_dispatch builds a preview by default; it publishes only when the
+#     `deploy` input is ticked, and never from a fork.
 #
 # MANUAL REPO SETTING REQUIRED to go live (one-time, in the GitHub UI):
-#   Settings -> Pages -> Build and deployment -> Source = "Deploy from a branch"
-#   -> Branch = `gh-pages` / `(root)`. `mkdocs gh-deploy` pushes the built site there.
+#   Settings > Pages > Build and deployment > Source = "Deploy from a branch",
+#   Branch = `gh-pages` / `(root)`. `mkdocs gh-deploy` pushes the built site there.
 name: reference-docs
 
-env:
-  # Match the repo's other workflows (redundant here since this workflow's
-  # actions, checkout v7 and setup-python v6, are already Node 24-native).
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
-
 on:
-  workflow_dispatch:        # manual runs (and fork-preview builds)
-  push:
-    tags:
-      - "v*"                # each release rebuilds + republishes the site, alongside publish-release.yml
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: "Publish to gh-pages (leave false for a build-only preview)"
+        type: boolean
+        default: false
+  release:
+    types: [published]
 
 permissions:
   contents: write   # gh-deploy pushes the built site to the gh-pages branch
+
+concurrency:
+  group: reference-docs-production
+  cancel-in-progress: false   # never interrupt a push mid-flight
 
 jobs:
   build-deploy:
@@ -33,7 +41,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          fetch-depth: 0   # gh-deploy needs the gh-pages branch history
+          fetch-depth: 0   # gh-deploy needs gh-pages history
+          ref: ${{ github.event.release.tag_name || github.ref }}
 
       - uses: actions/setup-python@v6
         with:
@@ -45,13 +54,73 @@ jobs:
           pip install -r reference/requirements.txt
           pip install -e .
 
+      # Single decision point for whether this run may force-push the public site.
+      # Do NOT hoist this into a job-level `env:`; job env is evaluated before any
+      # step runs, so it cannot read `steps.*` outputs. One step, all reasons logged.
+      - name: Decide whether to publish
+        id: gate
+        env:
+          EVENT: ${{ github.event_name }}
+          TAG: ${{ github.event.release.tag_name }}
+          PRERELEASE: ${{ github.event.release.prerelease }}
+          DISPATCH_DEPLOY: ${{ inputs.deploy }}
+          IS_UPSTREAM: ${{ github.repository == 'signalwire/signalwire-python' }}
+        run: |
+          publish=false
+          if [ "$IS_UPSTREAM" != "true" ]; then
+            echo "::notice::fork build; not publishing"
+          elif [ "$EVENT" = "workflow_dispatch" ]; then
+            publish="$DISPATCH_DEPLOY"
+          elif [ "$EVENT" = "release" ]; then
+            if [ "$PRERELEASE" = "true" ]; then
+              echo "::warning::$TAG is flagged pre-release; not republishing"
+            # Stable semver only. Actions expressions have no regex, which is why this
+            # check lives in a step. The prerelease flag is only as good as whoever
+            # published remembering to tick it, and nothing infers it from the tag name.
+            elif [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+              echo "::warning::$TAG is not stable semver; not republishing"
+            else
+              # Monotonicity: never replace the live site with an older version.
+              # A release can be cut from any ref, so a backport tag or a release
+              # built against an old commit would otherwise force-push older docs
+              # over newer with nothing left on gh-pages to roll back to. Compare
+              # against the marker the last successful publish left at the site root.
+              # Fetch the branch explicitly rather than trusting checkout's refspec.
+              git fetch --no-tags origin +refs/heads/gh-pages:refs/remotes/origin/gh-pages 2>/dev/null || true
+              prev="$(git show refs/remotes/origin/gh-pages:version.txt 2>/dev/null | tr -d '[:space:]')"
+              if [ -z "$prev" ]; then
+                echo "::notice::no deployed version marker; treating $TAG as the first publish"
+                publish=true
+              elif [ "$(printf '%s\n%s\n' "${prev#v}" "${TAG#v}" | sort -V | tail -1)" = "${TAG#v}" ]; then
+                # Equal versions pass, so re-running a release can republish it.
+                publish=true
+              else
+                echo "::warning::live site is $prev, which is newer than $TAG; not republishing"
+              fi
+            fi
+          fi
+          echo "publish=$publish" >> "$GITHUB_OUTPUT"
+          echo "publish=$publish"
+
+      - name: Generate API pages
+        run: bash reference/gen.sh --no-build --no-install
+
+      # Leaves the marker the monotonicity check reads on the NEXT run. Must run
+      # after gen.sh, which does `rm -rf _docs`. Release runs only: a dispatch has
+      # no tag, and writing a non-version value would corrupt the comparison.
+      - name: Stamp the version marker
+        if: github.event_name == 'release'
+        run: echo "${{ github.event.release.tag_name }}" > reference/_docs/version.txt
+
+      - name: Build (strict), the gate before any push
+        run: python3 -m mkdocs build --strict --config-file reference/mkdocs.yml
+
       - name: Configure git
+        if: steps.gate.outputs.publish == 'true'
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Generate API pages
-        run: bash reference/gen.sh --no-build
-
-      - name: Build + deploy to gh-pages
-        run: python3 -m mkdocs gh-deploy --config-file reference/mkdocs.yml --force
+      - name: Deploy to gh-pages
+        if: steps.gate.outputs.publish == 'true'
+        run: python3 -m mkdocs gh-deploy --strict --config-file reference/mkdocs.yml --force
