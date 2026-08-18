@@ -42,7 +42,7 @@ bash reference/gen.sh
 
 # Live preview: regenerates the pages, then serves with autoreload, bound to
 # 0.0.0.0 so a forwarded port reaches it. PORT defaults to 3001.
-bash reference/dev-server.sh [PORT]
+bash reference/dev-server.sh        # or: bash reference/dev-server.sh 3005
 ```
 
 `gen.sh` also takes `--no-build` (generate the pages only) and `--no-install`
@@ -66,38 +66,66 @@ Two workflows, both plain `actions/setup-python`, no Docker.
 
 `.github/workflows/reference-check.yml` builds on every PR touching `signalwire/`,
 `reference/`, or `pyproject.toml`. It runs `gen.sh --no-install`, whose strict
-`mkdocs build` fails the check on a generator error, an unimportable module, or a
-new unresolved cross-reference. Build only: `contents: read`, never deploys.
+`mkdocs build` fails the check on a generator error, a root `signalwire` package
+that will not import, or a new unresolved cross-reference. It does **not** catch a
+submodule with a missing runtime dependency: mkdocstrings analyses statically
+through griffe, so that module still renders a clean page. Build only:
+`contents: read`, never deploys.
 
 `.github/workflows/reference-docs.yml` builds and publishes. It installs from
 `reference/requirements.txt` plus the SDK editable, runs `gen.sh --no-build
 --no-install`, builds with `--strict`, and only then runs `mkdocs gh-deploy --force`.
 
-- **Triggers:** published releases, plus `workflow_dispatch` for manual and
-  fork-preview runs.
+- **Triggers:** a reusable `workflow_call` from `publish-release.yml`, which
+  invokes it after the CI gates and the PyPI upload have succeeded, plus
+  `workflow_dispatch` for manual and fork-preview runs. There is deliberately no
+  `release: published` trigger: that release is created with `GITHUB_TOKEN`, and
+  GitHub raises no workflow-triggering events for that token, so the trigger
+  would look right and never fire on the normal tag path.
 - **Publishes only when** the run is on `signalwire/signalwire-python` (not a
-  fork), the release is not flagged pre-release, the tag is stable semver
-  (`vX.Y.Z`), and the tag is greater than or equal to the version recorded in
-  `version.txt` at the root of the live site. That last check exists because
-  `gh-deploy --force` leaves no prior version on `gh-pages` to roll back to, so
-  republishing older docs over newer would be unrecoverable.
-- A `workflow_dispatch` run builds a preview and publishes only if you tick the
-  `deploy` input.
+  fork), the tag is stable semver (`vX.Y.Z`) so an rc tag cannot overwrite the
+  stable site, and the tag is at least as new as the version recorded in
+  `version.txt` at the root of the live site. Anything the gate cannot positively
+  determine, such as an unreadable `gh-pages` or a site with no marker, fails
+  closed rather than publishing.
+- A `workflow_dispatch` run builds a preview, and publishes only if you tick the
+  `deploy` input **and** dispatch from the default branch. Without that second
+  condition any branch in the dropdown could publish itself as the official
+  public reference, running its own code under a `contents: write` token.
+- **On rollback:** `gh-deploy` force-pushes but does not discard history. mkdocs
+  passes `no_history=False`, so ghp-import parents each deploy onto the previous
+  one and `--force` forces only the push. A bad publish is recoverable by hand
+  with `git push --force origin gh-pages~1:gh-pages`. The gate exists because
+  that recovery depends on somebody noticing, not because rollback is impossible.
+  This is also why `fetch-depth: 0` must stay: it is what fetches
+  `origin/gh-pages`, and without it the force-push lands a parentless orphan and
+  the history really is gone.
 
-## Manual repo setting required to go live
+## Going live
 
-One-time, in the GitHub UI:
+Two one-time steps, in this order. The Pages dropdown cannot offer `gh-pages`
+until the branch exists, so the dispatch has to come first.
 
-> **Settings > Pages > Build and deployment > Source = "Deploy from a branch",
-> Branch = `gh-pages` / `(root)`.**
+1. Run `reference-docs` manually from the default branch with the `deploy` input
+   ticked. That creates `gh-pages` and stamps `version.txt` with the `v0.0.0`
+   bootstrap floor.
+2. In the GitHub UI: **Settings > Pages > Build and deployment >
+   Source = "Deploy from a branch", Branch = `gh-pages` / `(root)`.**
 
-`mkdocs gh-deploy` pushes the built site to `gh-pages`; Pages then serves it at
-`https://signalwire.github.io/signalwire-python/`.
+Pages then serves the site at `https://signalwire.github.io/signalwire-python/`.
 
-To create the `gh-pages` branch the first time, run `reference-docs` manually with
-the `deploy` input ticked. A dispatch publish writes no `version.txt`, so the next
-release finds an empty marker and publishes unconditionally; the monotonicity
-check takes effect from the release after that.
+### The version marker
+
+`version.txt` at the site root records the version currently published, and the
+monotonicity check reads it. **Every** publish stamps it, dispatches included:
+`gh-deploy` replaces the whole site tree, so a dispatch that did not re-stamp
+would erase the marker and silently disarm the guard for the next release. A
+dispatch preserves whatever is already there.
+
+A site with no readable marker is therefore an anomaly, and the gate refuses to
+publish over it. If the marker ever needs repairing, for instance after a typo
+tag like `v31.0.0` sorts newest and starts blocking real releases, dispatch a
+publish with the `version_marker` input set to the correct `vX.Y.Z`.
 
 ## Scope
 
