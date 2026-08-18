@@ -159,3 +159,19 @@ jobs:
           echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**PyPI:** https://pypi.org/project/signalwire-sdk/${{ steps.tag_version.outputs.tag_version }}/" >> $GITHUB_STEP_SUMMARY
+
+  # Republish the API reference for the version that just shipped.
+  #
+  # Called here rather than triggered by `release: published` inside
+  # reference-docs.yml: the Create GitHub Release step above uses
+  # secrets.GITHUB_TOKEN, and GitHub deliberately does not raise
+  # workflow-triggering events for that token, so a release trigger would never
+  # fire on this path. `needs: publish-release` also gives the ordering we
+  # actually want, with the docs going out only after the PyPI upload succeeded.
+  reference-docs:
+    needs: publish-release
+    permissions:
+      contents: write   # the called workflow force-pushes the built site to gh-pages
+    uses: ./.github/workflows/reference-docs.yml
+    with:
+      tag: ${{ github.ref_name }}   # the `v*` tag that triggered this run
