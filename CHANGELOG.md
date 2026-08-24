@@ -1,5 +1,86 @@
 # Changelog
 
+## [3.4.0] - 2026-08-24
+
+Covers everything landed since 3.2.0. 3.3.0 was never tagged or documented, so
+its contents are folded in here.
+
+### New Features
+- AI Chat: added `signalwire.ai_chat` — `AIChatClient`, an async client for the
+  AI Chat service (`POST https://{space}.signalwire.com/api/ai/chat`). HTTP
+  Basic `project:api_token` with the space in the hostname and a JSON-RPC body
+  carrying pure payload; identity never rides in the body. Methods:
+  `create_conversation`, `chat`, `end`, `delete`, `log`, `summarize`, with
+  JSON-RPC error codes mapped to typed exceptions.
+- AI Chat: added `ChatGateway`, a back-for-frontend so browser widgets never
+  hold a chat-service token. The page talks to your host, your host holds the
+  credential, and the conversation id the page carries is an HMAC-signed handle
+  it cannot forge or repoint at someone else's conversation. Four methods:
+  `start` (creates, and can post the opening turn so the agent greets first),
+  `chat`, `log` (tab-scoped resume replays the transcript), `end`.
+- AI Chat: `ChatGateway` now reports `conversation_timeout` on create, `start`
+  and `log`. A conversation idle past its timeout is ended server-side and the
+  next message quietly opens a different one, with the transcript above it
+  still reading as continuous; the browser cannot see that coming from the
+  JSON-RPC result alone, and the gateway is the only component that knows.
+- AI Chat: added `HandoffRouter` (`ai_chat/handoff.py`) for the `/handoff`,
+  `/escalate` and `/say` routes the SignalWire address widget already targets
+  against a `ChatGateway` URL. Owns the wire contract only — routes, nonce,
+  ordering guarantee, spend guards.
+- Agent: capability declaration and post-prompt normalization.
+- SWML schema: typed `ai_sidecar` verb and `RingbackConfig`, merged to 169
+  `$defs` while preserving the SDK-side `x-sdk-*` annotations.
+
+### FunctionResult
+- `response` may now be an object separating outcome from instruction:
+  `{"tool_result": ..., "tool_prompt": ...}`, via `set_tool_response()` or the
+  new `tool_result=` / `tool_prompt=` constructor arguments. `tool_result` is
+  what the tool DID, for the model to reason from; `tool_prompt` is what the
+  model should SAY. Splitting them stops a status line being read aloud and
+  stops an instruction being mistaken for data. The plain string form is
+  unchanged.
+- `hold()` takes an optional prompt as its first argument and sets `response`
+  and `post_process` itself. The hold action carries no prompt of its own, and
+  during hold speech detection is paused and the agent will not respond, so
+  anything the caller needs to hear has to be said before the action lands.
+  An int in that position is still treated as the timeout, so `hold(120)` and
+  `hold(timeout=120)` are unchanged.
+- `hold()` gained `step` and `timeout_step`, which route the call to a chosen
+  step when the hold ends — `step` when it is released early, `timeout_step`
+  when it expires. These are deferred: they fire when the hold actually ends,
+  unlike `swml_change_step()`, which applies immediately and would move the
+  caller before the hold begins. Omitting both emits the bare integer form.
+- `rpc_ai_message()` accepts `global_data`, merged into the target call's
+  `global_data`, and `message_text` is now optional. Added
+  `rpc_ai_global_data()` for the data-only case. A message competes for
+  attention with everything else arriving on that turn; data is silent until a
+  prompt expands it with `${global_data.key}`, which makes it the better
+  channel for content a later step needs to speak.
+- Docs: corrected the class docstring's description of `response`. It said
+  "Text the AI should say back to the user", which reads as a script; the SWML
+  schema defines it as "a static response text or message returned to the AI
+  agent's context". It is an instruction the model reads and interprets, not
+  speech played to the caller. Documented the second-person form and when
+  `post_process` is required.
+
+### Fixes
+- Search: `count` truncates results instead of reordering them. The candidate
+  pool was `count * 3` and every stage of `_process_candidates` reads the whole
+  pool, so a smaller pool could drop a document's keyword hit, cost it the
+  agreement boost, and sink it — retrieval quality depended on how many results
+  you asked for.
+- Search: subsection chunks are retrievable.
+- REST/docs: corrected the documented `live_transcribe` call shape. The docs
+  showed `live_transcribe(call_id, action="start", lang="en")`, but the
+  generated signature takes `action` as a keyword-only TypedDict union and has
+  no `lang`/`from_lang`/`to_lang` parameters, so copying the documented call
+  raised `TypeError`.
+
+### Notes for upgraders
+- `rpc_ai_message()` raises `ValueError` when given neither `message_text` nor
+  `global_data`. Positional callers are unaffected; a caller previously passing
+  `message_text=None` produced a malformed RPC and now gets an exception.
+
 ## [3.2.0] - 2026-07-14
 
 ### New Features
