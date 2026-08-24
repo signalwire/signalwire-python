@@ -565,11 +565,23 @@
                 },
                 {
                   "type": "string",
+                  "const": "cancel"
+                },
+                {
+                  "type": "string",
                   "const": "busy"
                 },
                 {
                   "type": "string",
+                  "const": "noAnswer"
+                },
+                {
+                  "type": "string",
                   "const": "decline"
+                },
+                {
+                  "type": "string",
+                  "const": "error"
                 }
               ],
               "examples": [
