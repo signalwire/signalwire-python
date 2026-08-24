@@ -383,7 +383,10 @@ class SearchService:
                                 f"Loading model {model_name} for collection {collection_name}"
                             )
                             try:
-                                model = SentenceTransformer(model_name)
+                                # `Any`: see query_processor._get_cached_model.
+                                # torch's Module.__setattr__ rejects a str attr;
+                                # set_global_model() reads this tag via getattr.
+                                model: Any = SentenceTransformer(model_name)
                                 model.model_name = (
                                     model_name  # Store for cache comparison
                                 )
@@ -408,7 +411,7 @@ class SearchService:
         else:
             # SQLite backend - original behavior
             # Load model (shared across all indexes)
-            if self.indexes and SentenceTransformer:
+            if self.indexes and SentenceTransformer is not None:
                 # Get model name from first index
                 sample_index = next(iter(self.indexes.values()))
                 model_name = self._get_model_name(sample_index)
