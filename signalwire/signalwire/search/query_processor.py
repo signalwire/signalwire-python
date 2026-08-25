@@ -284,8 +284,13 @@ def _get_cached_model(model_name: str | None = None) -> Any:
 
             logger.info(f"Loading sentence transformer model: {model_name}")
             model = SentenceTransformer(model_name)
-            # Store the model name for identification
-            model.model_name = model_name
+            # Stash the name for identification. Dynamic: SentenceTransformer
+            # does not declare it, and torch's Module.__setattr__ is typed
+            # Tensor|Module, so a plain assignment only type-checks when torch
+            # is ABSENT — which is why this passed locally and failed in CI.
+            setattr(  # noqa: B010 — see above; plain assignment is env-dependent
+                model, "model_name", model_name
+            )
             # Evict oldest entry if cache is full
             if len(_model_cache) >= _MAX_MODEL_CACHE_SIZE:
                 oldest_key = next(iter(_model_cache))

@@ -384,8 +384,10 @@ class SearchService:
                             )
                             try:
                                 model = SentenceTransformer(model_name)
-                                model.model_name = (
-                                    model_name  # Store for cache comparison
+                                # Stash for cache comparison — see the note in
+                                # query_processor._load_model.
+                                setattr(  # noqa: B010
+                                    model, "model_name", model_name
                                 )
                                 self.models[model_name] = model
                             except Exception as e:
@@ -408,7 +410,7 @@ class SearchService:
         else:
             # SQLite backend - original behavior
             # Load model (shared across all indexes)
-            if self.indexes and SentenceTransformer:
+            if self.indexes and SentenceTransformer is not None:
                 # Get model name from first index
                 sample_index = next(iter(self.indexes.values()))
                 model_name = self._get_model_name(sample_index)
