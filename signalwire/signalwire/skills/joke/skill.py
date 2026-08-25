@@ -73,7 +73,7 @@ class JokeSkill(SkillBase):
         # Create DataMap tool for jokes - uses required enum parameter
         joke_tool = (
             DataMap(self.tool_name)
-            .description("Get a random joke from API Ninjas")
+            .description("Get a joke to tell the caller")
             .parameter(
                 "type",
                 "string",
@@ -86,7 +86,10 @@ class JokeSkill(SkillBase):
                 "https://api.api-ninjas.com/v1/${args.type}",
                 headers={"X-Api-Key": self.api_key},
             )
-            .output(FunctionResult("Here's a joke: ${array[0].joke}"))
+            # A SWAIG result is a prompt the model reasons over, so it has to
+            # direct, not narrate. "Here's a joke: X" reads as the tool telling
+            # the model a joke, and the model answers it instead of relaying it.
+            .output(FunctionResult("Tell this joke to the user: ${array[0].joke}"))
             .error_keys(["error"])
             .fallback_output(
                 FunctionResult(
