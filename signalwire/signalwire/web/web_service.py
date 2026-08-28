@@ -183,6 +183,22 @@ class WebService:
             request: "Request",
             call_next: "Callable[[Request], Awaitable[Response]]",
         ) -> "Response":
+            """Attach security and cache headers to every response.
+
+            Runs after the downstream handler, so it decorates whatever
+            response came back rather than short-circuiting the request.
+
+            Sets the headers from ``SecurityConfig.get_security_headers`` —
+            ``X-Content-Type-Options: nosniff``, ``X-Frame-Options: DENY``,
+            ``X-XSS-Protection: 1; mode=block`` and
+            ``Referrer-Policy: strict-origin-when-cross-origin``, plus
+            ``Strict-Transport-Security`` only when the request scheme is
+            ``https`` AND HSTS is enabled in the security config. Existing
+            values for those header names are overwritten.
+
+            Additionally, a request path starting with any registered static
+            directory prefix gets ``Cache-Control: public, max-age=3600``.
+            """
             response = await call_next(request)
 
             # Add security headers
@@ -204,6 +220,20 @@ class WebService:
             request: "Request",
             call_next: "Callable[[Request], Awaitable[Response]]",
         ) -> "Response":
+            """Reject requests whose Host header is not in the allow-list.
+
+            Host-header/DNS-rebinding guard. Takes the ``Host`` request header,
+            strips any ``:port`` suffix, and passes the bare hostname to
+            ``SecurityConfig.should_allow_host``. A host that is not allowed is
+            answered with ``400 Invalid host`` and the request never reaches
+            the route.
+
+            Two cases pass through unblocked: a request with no ``Host`` header
+            at all (the empty string is not checked), and any host when the
+            allow-list contains the ``"*"`` wildcard, which permits everything.
+            Otherwise the match is exact string membership in
+            ``allowed_hosts`` — no suffix or subdomain matching.
+            """
             host = request.headers.get("host", "").split(":")[0]
             if host and not self.security.should_allow_host(host):
                 return Response(content="Invalid host", status_code=400)
@@ -340,6 +370,23 @@ class WebService:
 
         @self.app.get("/health")
         async def health() -> dict[str, Any]:
+            """Report service health and its effective configuration.
+
+            ``GET /health``. Unauthenticated — it is registered before the
+            basic-auth dependency is applied to the content routes, so a probe
+            can reach it without credentials. Host validation and the security
+            headers still apply, since those are middleware.
+
+            The check is static: it never touches the filesystem or the served
+            directories, so a ``healthy`` status means the process is up and
+            serving, not that any configured directory still exists.
+
+            Returns:
+                A dict with ``status`` (always ``"healthy"``), ``directories``
+                (the configured URL path prefixes), ``ssl_enabled``,
+                ``auth_required`` (whether basic auth is wired up) and
+                ``directory_browsing``.
+            """
             return {
                 "status": "healthy",
                 "directories": list(self.directories.keys()),

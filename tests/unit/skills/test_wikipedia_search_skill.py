@@ -21,6 +21,7 @@ from signalwire.skills.wikipedia_search.skill import WikipediaSearchSkill
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_skill(params: dict[str, Any] | None = None) -> WikipediaSearchSkill:
     """Create a WikipediaSearchSkill instance with a mocked agent."""
     mock_agent = Mock()
@@ -39,39 +40,23 @@ def _setup_skill(params: dict[str, Any] | None = None) -> WikipediaSearchSkill:
 
 def _mock_search_response(titles: list[str]) -> dict[str, Any]:
     """Build a mock JSON response for Wikipedia search API."""
-    return {
-        "query": {
-            "search": [{"title": t} for t in titles]
-        }
-    }
+    return {"query": {"search": [{"title": t} for t in titles]}}
 
 
 def _mock_extract_response(title: str, extract: str) -> dict[str, Any]:
     """Build a mock JSON response for Wikipedia extract API."""
-    return {
-        "query": {
-            "pages": {
-                "12345": {
-                    "title": title,
-                    "extract": extract
-                }
-            }
-        }
-    }
+    return {"query": {"pages": {"12345": {"title": title, "extract": extract}}}}
 
 
 def _mock_extract_response_empty_pages() -> dict[str, Any]:
     """Build a mock JSON response with no pages."""
-    return {
-        "query": {
-            "pages": {}
-        }
-    }
+    return {"query": {"pages": {}}}
 
 
 # ===========================================================================
 # Class-Level Metadata
 # ===========================================================================
+
 
 class TestWikipediaSearchSkillMetadata:
     """Verify class-level attributes and metadata."""
@@ -100,6 +85,7 @@ class TestWikipediaSearchSkillMetadata:
 # ===========================================================================
 # Initialization
 # ===========================================================================
+
 
 class TestWikipediaSearchSkillInit:
     """Test __init__ behaviour inherited from SkillBase."""
@@ -135,6 +121,7 @@ class TestWikipediaSearchSkillInit:
 # get_parameter_schema
 # ===========================================================================
 
+
 class TestParameterSchema:
     """Test the get_parameter_schema class method."""
 
@@ -169,6 +156,7 @@ class TestParameterSchema:
 # ===========================================================================
 # setup()
 # ===========================================================================
+
 
 class TestSetup:
     """Test the setup() method."""
@@ -229,8 +217,10 @@ class TestSetup:
 
     def test_setup_logs_info(self) -> None:
         skill = _make_skill({"num_results": 3})
-        with patch.object(skill, "validate_packages", return_value=True), \
-             patch.object(skill.logger, "info") as mock_info:
+        with (
+            patch.object(skill, "validate_packages", return_value=True),
+            patch.object(skill.logger, "info") as mock_info,
+        ):
             skill.setup()
             mock_info.assert_called_once()
             assert "3" in mock_info.call_args[0][0]
@@ -239,6 +229,7 @@ class TestSetup:
 # ===========================================================================
 # register_tools()
 # ===========================================================================
+
 
 class TestRegisterTools:
     """Test the register_tools() method."""
@@ -252,14 +243,18 @@ class TestRegisterTools:
         skill = _setup_skill()
         skill.register_tools()
         kwargs = skill.agent.define_tool.call_args
-        assert kwargs[1]["name"] == "search_wiki" or kwargs.kwargs["name"] == "search_wiki"
+        assert (
+            kwargs[1]["name"] == "search_wiki" or kwargs.kwargs["name"] == "search_wiki"
+        )
 
     def test_register_tools_tool_has_query_parameter(self) -> None:
         skill = _setup_skill()
         skill.register_tools()
         call_kwargs = skill.agent.define_tool.call_args
         # define_tool is called via self.define_tool which merges swaig_fields
-        params = call_kwargs.kwargs.get("parameters") or call_kwargs[1].get("parameters")
+        params = call_kwargs.kwargs.get("parameters") or call_kwargs[1].get(
+            "parameters"
+        )
         assert "query" in params
         assert params["query"]["type"] == "string"
 
@@ -279,13 +274,15 @@ class TestRegisterTools:
         skill.register_tools()
         call_kwargs = skill.agent.define_tool.call_args
         # The merged kwargs should include the swaig_fields
-        assert call_kwargs.kwargs.get("meta_data") == {"token": "abc"} or \
-               call_kwargs[1].get("meta_data") == {"token": "abc"}
+        assert call_kwargs.kwargs.get("meta_data") == {"token": "abc"} or call_kwargs[
+            1
+        ].get("meta_data") == {"token": "abc"}
 
 
 # ===========================================================================
 # _search_wiki_handler()
 # ===========================================================================
+
 
 class TestSearchWikiHandler:
     """Test the _search_wiki_handler method."""
@@ -312,7 +309,9 @@ class TestSearchWikiHandler:
         mock_get.assert_not_called()
         assert result.response == "Please provide a search query for Wikipedia."
 
-    @patch.object(WikipediaSearchSkill, "search_wiki", return_value="Python is a language.")
+    @patch.object(
+        WikipediaSearchSkill, "search_wiki", return_value="Python is a language."
+    )
     def test_handler_delegates_to_search_wiki(self, mock_search: Mock) -> None:
         skill = _setup_skill()
         result = skill._search_wiki_handler({"query": "Python"}, {})
@@ -322,6 +321,7 @@ class TestSearchWikiHandler:
     @patch.object(WikipediaSearchSkill, "search_wiki", return_value="Some content")
     def test_handler_returns_swaig_function_result(self, mock_search: Mock) -> None:
         from signalwire.core.function_result import FunctionResult
+
         skill = _setup_skill()
         result = skill._search_wiki_handler({"query": "test"}, {})
         assert isinstance(result, FunctionResult)
@@ -337,6 +337,7 @@ class TestSearchWikiHandler:
 # search_wiki()  --  Single Result
 # ===========================================================================
 
+
 class TestSearchWikiSingleResult:
     """Test search_wiki with a single result (default num_results=1)."""
 
@@ -345,13 +346,15 @@ class TestSearchWikiSingleResult:
         skill = _setup_skill()
 
         search_resp = Mock()
-        search_resp.json.return_value = _mock_search_response(["Python (programming language)"])
+        search_resp.json.return_value = _mock_search_response(
+            ["Python (programming language)"]
+        )
         search_resp.raise_for_status = Mock()
 
         extract_resp = Mock()
         extract_resp.json.return_value = _mock_extract_response(
             "Python (programming language)",
-            "Python is a high-level programming language."
+            "Python is a high-level programming language.",
         )
         extract_resp.raise_for_status = Mock()
 
@@ -405,6 +408,7 @@ class TestSearchWikiSingleResult:
 # search_wiki()  --  Multiple Results
 # ===========================================================================
 
+
 class TestSearchWikiMultipleResults:
     """Test search_wiki when num_results > 1."""
 
@@ -413,15 +417,21 @@ class TestSearchWikiMultipleResults:
         skill = _setup_skill({"num_results": 2})
 
         search_resp = Mock()
-        search_resp.json.return_value = _mock_search_response(["Article One", "Article Two"])
+        search_resp.json.return_value = _mock_search_response(
+            ["Article One", "Article Two"]
+        )
         search_resp.raise_for_status = Mock()
 
         extract_resp_1 = Mock()
-        extract_resp_1.json.return_value = _mock_extract_response("Article One", "Content one.")
+        extract_resp_1.json.return_value = _mock_extract_response(
+            "Article One", "Content one."
+        )
         extract_resp_1.raise_for_status = Mock()
 
         extract_resp_2 = Mock()
-        extract_resp_2.json.return_value = _mock_extract_response("Article Two", "Content two.")
+        extract_resp_2.json.return_value = _mock_extract_response(
+            "Article Two", "Content two."
+        )
         extract_resp_2.raise_for_status = Mock()
 
         mock_get.side_effect = [search_resp, extract_resp_1, extract_resp_2]
@@ -437,7 +447,9 @@ class TestSearchWikiMultipleResults:
         skill = _setup_skill({"num_results": 1})
 
         search_resp = Mock()
-        search_resp.json.return_value = _mock_search_response(["Title A", "Title B", "Title C"])
+        search_resp.json.return_value = _mock_search_response(
+            ["Title A", "Title B", "Title C"]
+        )
         search_resp.raise_for_status = Mock()
 
         extract_resp = Mock()
@@ -455,6 +467,7 @@ class TestSearchWikiMultipleResults:
 # ===========================================================================
 # search_wiki()  --  No Results / Empty Content
 # ===========================================================================
+
 
 class TestSearchWikiNoResults:
     """Test search_wiki edge cases for empty or missing data."""
@@ -557,6 +570,7 @@ class TestSearchWikiNoResults:
 # search_wiki()  --  Error Handling
 # ===========================================================================
 
+
 class TestSearchWikiErrorHandling:
     """Test error handling in search_wiki."""
 
@@ -581,7 +595,9 @@ class TestSearchWikiErrorHandling:
     def test_http_error_on_search(self, mock_get: Mock) -> None:
         skill = _setup_skill()
         resp = Mock()
-        resp.raise_for_status.side_effect = requests.exceptions.HTTPError("500 Server Error")
+        resp.raise_for_status.side_effect = requests.exceptions.HTTPError(
+            "500 Server Error"
+        )
         mock_get.return_value = resp
 
         result = skill.search_wiki("test")
@@ -645,6 +661,7 @@ class TestSearchWikiErrorHandling:
 # search_wiki()  --  Response structure edge cases
 # ===========================================================================
 
+
 class TestSearchWikiResponseStructure:
     """Test subtle response structure edge cases."""
 
@@ -658,7 +675,9 @@ class TestSearchWikiResponseStructure:
         search_resp.raise_for_status = Mock()
 
         extract_resp = Mock()
-        extract_resp.json.return_value = _mock_extract_response("Only One", "Content here.")
+        extract_resp.json.return_value = _mock_extract_response(
+            "Only One", "Content here."
+        )
         extract_resp.raise_for_status = Mock()
 
         mock_get.side_effect = [search_resp, extract_resp]
@@ -668,7 +687,9 @@ class TestSearchWikiResponseStructure:
         assert result == "**Only One**\n\nContent here."
 
     @patch("signalwire.skills.wikipedia_search.skill.requests.get")
-    def test_extract_with_leading_trailing_whitespace_stripped(self, mock_get: Mock) -> None:
+    def test_extract_with_leading_trailing_whitespace_stripped(
+        self, mock_get: Mock
+    ) -> None:
         skill = _setup_skill()
 
         search_resp = Mock()
@@ -692,11 +713,15 @@ class TestSearchWikiResponseStructure:
         skill = _setup_skill({"num_results": 2})
 
         search_resp = Mock()
-        search_resp.json.return_value = _mock_search_response(["Full Article", "Empty Article"])
+        search_resp.json.return_value = _mock_search_response(
+            ["Full Article", "Empty Article"]
+        )
         search_resp.raise_for_status = Mock()
 
         extract_resp_1 = Mock()
-        extract_resp_1.json.return_value = _mock_extract_response("Full Article", "Has content.")
+        extract_resp_1.json.return_value = _mock_extract_response(
+            "Full Article", "Has content."
+        )
         extract_resp_1.raise_for_status = Mock()
 
         extract_resp_2 = Mock()
@@ -745,6 +770,7 @@ class TestSearchWikiResponseStructure:
 # get_prompt_sections()
 # ===========================================================================
 
+
 class TestGetPromptSections:
     """Test get_prompt_sections method."""
 
@@ -785,6 +811,7 @@ class TestGetPromptSections:
 # get_hints()
 # ===========================================================================
 
+
 class TestGetHints:
     """Test get_hints method."""
 
@@ -801,6 +828,7 @@ class TestGetHints:
 # ===========================================================================
 # get_instance_key()
 # ===========================================================================
+
 
 class TestGetInstanceKey:
     """Test instance key behaviour for single-instance skill."""
@@ -819,6 +847,7 @@ class TestGetInstanceKey:
 # Integration-style tests (handler -> search_wiki flow)
 # ===========================================================================
 
+
 class TestHandlerToSearchIntegration:
     """Test the full handler -> search_wiki pipeline with mocked HTTP."""
 
@@ -833,7 +862,7 @@ class TestHandlerToSearchIntegration:
         extract_resp = Mock()
         extract_resp.json.return_value = _mock_extract_response(
             "Albert Einstein",
-            "Albert Einstein was a German-born theoretical physicist."
+            "Albert Einstein was a German-born theoretical physicist.",
         )
         extract_resp.raise_for_status = Mock()
 

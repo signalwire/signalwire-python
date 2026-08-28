@@ -33,7 +33,16 @@ class _AbortSignal(Protocol):
     if set, the request raises rather than proceeding.
     """
 
-    def is_set(self) -> bool: ...
+    def is_set(self) -> bool:
+        """Whether cancellation has been requested.
+
+        Polled by the request loop before each attempt; returning ``True`` makes
+        the pending request raise :class:`~signalwire.rest._base.SignalWireRestTransportError`
+        instead of being sent. Cancellation is cooperative and checked only
+        *between* attempts, so an already in-flight blocking read is not
+        interrupted — a request already on the wire completes normally.
+        """
+        ...
 
 
 # The built-in defaults (the contract floor). ``None`` on a RequestOptions field

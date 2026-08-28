@@ -7,12 +7,19 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-import nltk
 import re
 import threading
 from typing import Any
-from nltk.corpus import wordnet as wn
-from nltk.stem import PorterStemmer
+
+try:
+    import nltk
+    from nltk.corpus import wordnet as wn
+    from nltk.stem import PorterStemmer
+except ImportError:  # pragma: no cover - exercised with the extra simulated absent
+    raise ImportError(
+        "nltk is required for search query processing. "
+        "Install it with: pip install signalwire-sdk[search]"
+    ) from None
 
 from signalwire.core.logging_config import get_logger
 

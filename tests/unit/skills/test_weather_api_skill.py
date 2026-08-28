@@ -38,6 +38,7 @@ def _make_skill(params: dict[str, Any] | None = None) -> WeatherApiSkill:
 # Class-level attributes
 # ---------------------------------------------------------------------------
 
+
 class TestWeatherApiSkillClassAttributes:
     """Verify class-level constants and metadata."""
 
@@ -45,7 +46,10 @@ class TestWeatherApiSkillClassAttributes:
         assert WeatherApiSkill.SKILL_NAME == "weather_api"
 
     def test_skill_description(self) -> None:
-        assert WeatherApiSkill.SKILL_DESCRIPTION == "Get current weather information from WeatherAPI.com"
+        assert (
+            WeatherApiSkill.SKILL_DESCRIPTION
+            == "Get current weather information from WeatherAPI.com"
+        )
 
     def test_skill_version(self) -> None:
         assert WeatherApiSkill.SKILL_VERSION == "1.0.0"
@@ -63,6 +67,7 @@ class TestWeatherApiSkillClassAttributes:
 # ---------------------------------------------------------------------------
 # Initialization
 # ---------------------------------------------------------------------------
+
 
 class TestWeatherApiSkillInit:
     """Tests for __init__."""
@@ -112,6 +117,7 @@ class TestWeatherApiSkillInit:
 # _validate_config()
 # ---------------------------------------------------------------------------
 
+
 class TestValidateConfig:
     """Tests for configuration validation."""
 
@@ -133,7 +139,9 @@ class TestValidateConfig:
 
     def test_invalid_temperature_unit_raises(self) -> None:
         with pytest.raises(ValueError, match="temperature_unit"):
-            WeatherApiSkill(agent=Mock(), params={"api_key": "key", "temperature_unit": "kelvin"})
+            WeatherApiSkill(
+                agent=Mock(), params={"api_key": "key", "temperature_unit": "kelvin"}
+            )
 
     def test_valid_config_does_not_raise(self) -> None:
         skill = _make_skill()
@@ -144,6 +152,7 @@ class TestValidateConfig:
 # ---------------------------------------------------------------------------
 # setup()
 # ---------------------------------------------------------------------------
+
 
 class TestSetup:
     """Tests for the setup method."""
@@ -160,6 +169,7 @@ class TestSetup:
 # ---------------------------------------------------------------------------
 # register_tools()
 # ---------------------------------------------------------------------------
+
 
 class TestRegisterTools:
     """Tests for register_tools method."""
@@ -197,6 +207,7 @@ class TestRegisterTools:
 # ---------------------------------------------------------------------------
 # get_tools()
 # ---------------------------------------------------------------------------
+
 
 class TestGetTools:
     """Tests for the get_tools method."""
@@ -328,6 +339,7 @@ class TestGetTools:
 # get_hints()
 # ---------------------------------------------------------------------------
 
+
 class TestGetHints:
     """Tests for the get_hints method."""
 
@@ -340,6 +352,7 @@ class TestGetHints:
 # get_prompt_sections()
 # ---------------------------------------------------------------------------
 
+
 class TestGetPromptSections:
     """Tests for the get_prompt_sections method."""
 
@@ -351,6 +364,7 @@ class TestGetPromptSections:
 # ---------------------------------------------------------------------------
 # get_parameter_schema()
 # ---------------------------------------------------------------------------
+
 
 class TestGetParameterSchema:
     """Tests for the class method get_parameter_schema."""
@@ -402,6 +416,7 @@ class TestGetParameterSchema:
 # get_instance_key()
 # ---------------------------------------------------------------------------
 
+
 class TestGetInstanceKey:
     """Tests for get_instance_key."""
 
@@ -413,6 +428,7 @@ class TestGetInstanceKey:
 # ---------------------------------------------------------------------------
 # Edge cases
 # ---------------------------------------------------------------------------
+
 
 class TestEdgeCases:
     """Edge case tests."""

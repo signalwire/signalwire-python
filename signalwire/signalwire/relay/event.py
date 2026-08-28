@@ -21,6 +21,18 @@ class RelayEvent:
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> RelayEvent:
+        """Build a RelayEvent from a raw ``signalwire.event`` message payload.
+
+        Reads ``event_type`` from the top level and ``call_id``/``timestamp`` out of
+        the nested ``params`` object, keeping the whole ``params`` dict so callers can
+        reach fields this wrapper does not model.
+
+        Args:
+            payload: The raw event payload dict from the RELAY WebSocket message.
+
+        Returns:
+            A RelayEvent carrying the event type, the raw params and the call id.
+        """
         event_type = payload.get("event_type", "")
         params = payload.get("params", {})
         return cls(
@@ -42,6 +54,18 @@ class CallStateEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> CallStateEvent:
+        """Build a CallStateEvent from a ``calling.call.state`` payload.
+
+        Adds the call's lifecycle fields on top of the base event: ``call_state``
+        (created/ringing/answered/ending/ended), ``end_reason``, ``direction`` and the
+        ``device`` object describing the endpoint.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A CallStateEvent with the state fields extracted from ``params``.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -71,6 +95,22 @@ class CallReceiveEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> CallReceiveEvent:
+        """Build a CallReceiveEvent from a ``calling.call.receive`` payload.
+
+        This is the inbound-call notification, so it carries the routing identity a
+        handler needs to decide whether to answer: ``node_id``, ``project_id``,
+        ``context``, ``segment_id`` and ``tag``, alongside the call's ``call_state``,
+        ``direction`` and ``device``.
+
+        ``context`` falls back to the payload's ``protocol`` field when ``context`` is
+        absent, because older RELAY servers name the same value ``protocol``.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A CallReceiveEvent describing the inbound call.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -98,6 +138,18 @@ class PlayEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> PlayEvent:
+        """Build a PlayEvent from a ``calling.call.play`` payload.
+
+        Carries the ``control_id`` identifying the play operation and its ``state``
+        (playing/paused/finished/error), which is how a caller correlates the event
+        with the play it started.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A PlayEvent for the play operation named by ``control_id``.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -123,6 +175,20 @@ class RecordEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> RecordEvent:
+        """Build a RecordEvent from a ``calling.call.record`` payload.
+
+        The recording's ``url``, ``duration`` and ``size`` are read from the nested
+        ``record`` object when present and from the top level of ``params`` otherwise,
+        since RELAY reports them in either position depending on the event stage. The
+        whole ``record`` object is kept on the event so callers can read fields this
+        wrapper does not model.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A RecordEvent with the recording metadata and its ``state``.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         rec = p.get("record", {})
@@ -151,6 +217,18 @@ class CollectEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> CollectEvent:
+        """Build a CollectEvent from a ``calling.call.collect`` payload.
+
+        Carries the ``result`` object holding what was collected (digits or speech)
+        and ``final``, which distinguishes an interim result from the last one. Note
+        ``final`` stays ``None`` when the payload omits it — absent is not False.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A CollectEvent for the collect operation named by ``control_id``.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -174,6 +252,17 @@ class ConnectEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> ConnectEvent:
+        """Build a ConnectEvent from a ``calling.call.connect`` payload.
+
+        Carries ``connect_state`` (connecting/connected/disconnected/failed) and the
+        ``peer`` object identifying the far end of the connection.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A ConnectEvent describing the connection attempt.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -195,6 +284,18 @@ class DetectEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> DetectEvent:
+        """Build a DetectEvent from a ``calling.call.detect`` payload.
+
+        Keeps the whole ``detect`` object, whose shape depends on the detector that
+        produced it (machine, fax or DTMF), rather than flattening one detector's
+        fields onto the event.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A DetectEvent for the detect operation named by ``control_id``.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -216,6 +317,17 @@ class FaxEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> FaxEvent:
+        """Build a FaxEvent from a ``calling.call.fax`` payload.
+
+        Keeps the whole ``fax`` object, which carries the direction-specific result
+        (pages, identity, document URL) for the send or receive operation.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A FaxEvent for the fax operation named by ``control_id``.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -239,6 +351,17 @@ class TapEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> TapEvent:
+        """Build a TapEvent from a ``calling.call.tap`` payload.
+
+        Carries the tap's ``state`` plus two objects: ``tap`` describing the media
+        being tapped and ``device`` describing where it is being sent.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A TapEvent for the tap operation named by ``control_id``.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -264,6 +387,17 @@ class StreamEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> StreamEvent:
+        """Build a StreamEvent from a ``calling.call.stream`` payload.
+
+        Carries the stream's ``state``, the destination ``url`` and the caller-assigned
+        ``name`` used to address the stream in later requests.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A StreamEvent for the stream operation named by ``control_id``.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -287,6 +421,17 @@ class SendDigitsEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> SendDigitsEvent:
+        """Build a SendDigitsEvent from a ``calling.call.send_digits`` payload.
+
+        Carries the ``state`` of the DTMF send, which is how a caller knows the digits
+        have finished playing out.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A SendDigitsEvent for the operation named by ``control_id``.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -309,6 +454,18 @@ class DialEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> DialEvent:
+        """Build a DialEvent from a ``calling.call.dial`` payload.
+
+        A dial is correlated by ``tag`` rather than ``control_id``. Carries
+        ``dial_state`` and, once the dial succeeds, the ``call`` object describing the
+        call that was created.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A DialEvent for the dial identified by ``tag``.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -333,6 +490,19 @@ class ReferEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> ReferEvent:
+        """Build a ReferEvent from a ``calling.call.refer`` payload.
+
+        Carries the SIP REFER outcome: ``sip_refer_to`` (the target), plus the two
+        response codes that report it — ``sip_refer_response_code`` for the REFER
+        itself and ``sip_notify_response_code`` for the NOTIFY that reports the
+        transfer result.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A ReferEvent describing the REFER and its responses.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -355,6 +525,17 @@ class DenoiseEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> DenoiseEvent:
+        """Build a DenoiseEvent from a ``calling.call.denoise`` payload.
+
+        Carries ``denoised``, the boolean reporting whether noise reduction is now
+        active on the call.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A DenoiseEvent reporting the denoise state.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -375,6 +556,17 @@ class PayEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> PayEvent:
+        """Build a PayEvent from a ``calling.call.pay`` payload.
+
+        Carries the ``state`` of the payment session so a caller can follow it through
+        to completion or failure.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A PayEvent for the pay operation named by ``control_id``.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -400,6 +592,18 @@ class QueueEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> QueueEvent:
+        """Build a QueueEvent from a ``calling.call.queue`` payload.
+
+        Carries the queue's identity (``queue_id``, ``queue_name``) and the call's
+        place in it (``position`` within a queue of ``size``), alongside the
+        operation ``status``.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A QueueEvent describing the call's position in the queue.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -424,6 +628,17 @@ class EchoEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> EchoEvent:
+        """Build an EchoEvent from a ``calling.call.echo`` payload.
+
+        Carries the ``state`` of the echo operation, which loops the call's audio
+        back to the caller for connectivity testing.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            An EchoEvent reporting the echo state.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -448,6 +663,18 @@ class TranscribeEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> TranscribeEvent:
+        """Build a TranscribeEvent from a ``calling.call.transcribe`` payload.
+
+        Carries the transcription's ``state`` plus the artifact it produced: ``url``,
+        ``recording_id``, ``duration`` and ``size``. Unlike RecordEvent these are read
+        only from the top level of ``params`` — transcribe has no nested object.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A TranscribeEvent for the operation named by ``control_id``.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -472,6 +699,16 @@ class HoldEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> HoldEvent:
+        """Build a HoldEvent from a ``calling.call.hold`` payload.
+
+        Carries the ``state`` reporting whether the call is now held or resumed.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A HoldEvent reporting the hold state.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -493,6 +730,18 @@ class ConferenceEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> ConferenceEvent:
+        """Build a ConferenceEvent from a ``calling.conference`` payload.
+
+        Carries the conference's identity (``conference_id``, ``name``) and its
+        ``status``. Note this is a conference-scoped event rather than a call-scoped
+        one, so the inherited ``call_id`` may be empty.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A ConferenceEvent describing the conference state change.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -515,6 +764,18 @@ class CallingErrorEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> CallingErrorEvent:
+        """Build a CallingErrorEvent from a ``calling.error`` payload.
+
+        Carries the error ``code`` and human-readable ``message`` reported by the
+        calling service. This is the event a handler inspects when an operation fails
+        rather than transitioning to its next state.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A CallingErrorEvent carrying the error code and message.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -544,6 +805,19 @@ class MessageReceiveEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> MessageReceiveEvent:
+        """Build a MessageReceiveEvent from a ``messaging.receive`` payload.
+
+        This is the inbound-message notification. Carries the message identity
+        (``message_id``, ``context``, ``tags``), its addressing (``from_number``,
+        ``to_number``, ``direction``) and its content (``body``, ``media`` URLs and the
+        ``segments`` count), plus ``message_state``.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A MessageReceiveEvent describing the inbound message.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(
@@ -582,6 +856,18 @@ class MessageStateEvent(RelayEvent):
 
     @classmethod
     def from_payload(cls, payload: dict[str, Any]) -> MessageStateEvent:
+        """Build a MessageStateEvent from a ``messaging.state`` payload.
+
+        Reports a state change on an OUTBOUND message. Carries the same identity,
+        addressing and content fields as MessageReceiveEvent, plus ``reason`` — which
+        is what explains a failed or undelivered ``message_state``.
+
+        Args:
+            payload: The raw event payload dict.
+
+        Returns:
+            A MessageStateEvent describing the outbound message's new state.
+        """
         base = RelayEvent.from_payload(payload)
         p = base.params
         return cls(

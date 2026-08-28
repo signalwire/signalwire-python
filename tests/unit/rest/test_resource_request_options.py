@@ -25,7 +25,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+import pytest
+
 from signalwire.rest import RequestOptions
+from signalwire.rest._base import SignalWireRestError
 
 if TYPE_CHECKING:
     from signalwire.rest.client import RestClient
@@ -65,10 +68,11 @@ class TestListVerbHonorsRequestOptions:
         mock.push_scenario(
             "relay-rest.list_addresses", 503, {"errors": [{"code": "X"}]}
         )
-        try:
+        # Un-retried, the 503 surfaces as the REST error — assert that, so this
+        # control cannot pass by the call unexpectedly SUCCEEDING or by an
+        # unrelated failure.
+        with pytest.raises(SignalWireRestError):
             signalwire_client.addresses.list()
-        except Exception:
-            pass
         assert _attempts(mock, self._PATH, "GET") == 1
 
 
@@ -119,10 +123,8 @@ class TestCreateVerbHonorsRequestOptions:
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
         mock.push_scenario("relay-rest.create_address", 503, {"error": "x"})
-        try:
+        with pytest.raises(SignalWireRestError):
             self._create(signalwire_client)
-        except Exception:
-            pass
         assert _attempts(mock, self._PATH, "POST") == 1
 
 
@@ -145,8 +147,6 @@ class TestGeneratedOperationMethodHonorsRequestOptions:
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
         mock.push_scenario("datasphere.search_documents", 503, {"error": "x"})
-        try:
+        with pytest.raises(SignalWireRestError):
             signalwire_client.datasphere.documents.search(query_string="hello")
-        except Exception:
-            pass
         assert _attempts(mock, self._PATH, "POST") == 1

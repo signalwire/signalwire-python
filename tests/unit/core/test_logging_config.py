@@ -17,6 +17,7 @@ import json
 import os
 import sys
 from collections.abc import Iterator
+from typing import Any
 from unittest.mock import patch
 from io import StringIO
 
@@ -27,12 +28,14 @@ from signalwire.core.logging_config import (
     get_execution_mode,
     configure_logging,
     reset_logging_configuration,
+    strip_control_chars,
 )
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture(autouse=True)
 def _reset_logging(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
@@ -59,36 +62,45 @@ class TestGetExecutionMode:
     """Test execution mode detection"""
 
     def test_cgi_mode_detection(self) -> None:
-        with patch.dict(os.environ, {'GATEWAY_INTERFACE': 'CGI/1.1'}, clear=False):
-            assert get_execution_mode() == 'cgi'
+        with patch.dict(os.environ, {"GATEWAY_INTERFACE": "CGI/1.1"}, clear=False):
+            assert get_execution_mode() == "cgi"
 
     def test_lambda_mode_detection(self) -> None:
-        with patch.dict(os.environ, {'AWS_LAMBDA_FUNCTION_NAME': 'test-function'}, clear=False):
-            assert get_execution_mode() == 'lambda'
+        with patch.dict(
+            os.environ, {"AWS_LAMBDA_FUNCTION_NAME": "test-function"}, clear=False
+        ):
+            assert get_execution_mode() == "lambda"
 
     def test_lambda_mode_detection_with_task_root(self) -> None:
-        with patch.dict(os.environ, {'LAMBDA_TASK_ROOT': '/var/task'}, clear=False):
-            assert get_execution_mode() == 'lambda'
+        with patch.dict(os.environ, {"LAMBDA_TASK_ROOT": "/var/task"}, clear=False):
+            assert get_execution_mode() == "lambda"
 
     def test_google_cloud_function_detection(self) -> None:
-        with patch.dict(os.environ, {'FUNCTION_TARGET': 'my_function'}, clear=False):
-            assert get_execution_mode() == 'google_cloud_function'
+        with patch.dict(os.environ, {"FUNCTION_TARGET": "my_function"}, clear=False):
+            assert get_execution_mode() == "google_cloud_function"
 
     def test_azure_function_detection(self) -> None:
-        with patch.dict(os.environ, {'AZURE_FUNCTIONS_ENVIRONMENT': 'Production'}, clear=False):
-            assert get_execution_mode() == 'azure_function'
+        with patch.dict(
+            os.environ, {"AZURE_FUNCTIONS_ENVIRONMENT": "Production"}, clear=False
+        ):
+            assert get_execution_mode() == "azure_function"
 
     def test_server_mode_default(self) -> None:
         env_vars_to_clear = [
-            'GATEWAY_INTERFACE', 'AWS_LAMBDA_FUNCTION_NAME',
-            'LAMBDA_TASK_ROOT', 'FUNCTION_TARGET', 'K_SERVICE',
-            'GOOGLE_CLOUD_PROJECT', 'AZURE_FUNCTIONS_ENVIRONMENT',
-            'FUNCTIONS_WORKER_RUNTIME', 'AzureWebJobsStorage',
+            "GATEWAY_INTERFACE",
+            "AWS_LAMBDA_FUNCTION_NAME",
+            "LAMBDA_TASK_ROOT",
+            "FUNCTION_TARGET",
+            "K_SERVICE",
+            "GOOGLE_CLOUD_PROJECT",
+            "AZURE_FUNCTIONS_ENVIRONMENT",
+            "FUNCTIONS_WORKER_RUNTIME",
+            "AzureWebJobsStorage",
         ]
         with patch.dict(os.environ, {}, clear=False):
             for var in env_vars_to_clear:
                 os.environ.pop(var, None)
-            assert get_execution_mode() == 'server'
+            assert get_execution_mode() == "server"
 
 
 # ===========================================================================
@@ -102,11 +114,11 @@ class TestGetLogger:
     def test_returns_structlog_bound_logger(self) -> None:
         logger = get_logger("test_logger")
         # structlog BoundLoggers should have bind()
-        assert hasattr(logger, 'bind')
-        assert hasattr(logger, 'info')
-        assert hasattr(logger, 'debug')
-        assert hasattr(logger, 'warning')
-        assert hasattr(logger, 'error')
+        assert hasattr(logger, "bind")
+        assert hasattr(logger, "info")
+        assert hasattr(logger, "debug")
+        assert hasattr(logger, "warning")
+        assert hasattr(logger, "error")
 
     def test_different_names_create_different_loggers(self) -> None:
         logger1 = get_logger("logger_a")
@@ -117,7 +129,7 @@ class TestGetLogger:
         # Library-safe (PY-8): get_logger must NOT auto-configure global logging.
         # Every SDK module calls get_logger() at import; auto-configuring would
         # hijack the host app's logging on first SDK submodule import.
-        with patch('signalwire.core.logging_config.configure_logging') as mock_conf:
+        with patch("signalwire.core.logging_config.configure_logging") as mock_conf:
             get_logger("test")
             mock_conf.assert_not_called()
 
@@ -218,7 +230,7 @@ class TestConfigureLogging:
         assert sw.propagate is False
 
     def test_off_mode(self) -> None:
-        with patch.dict(os.environ, {'SIGNALWIRE_LOG_MODE': 'off'}):
+        with patch.dict(os.environ, {"SIGNALWIRE_LOG_MODE": "off"}):
             configure_logging()
             sw = logging.getLogger("signalwire")
             # Off mode sets level above CRITICAL and no handlers
@@ -226,7 +238,7 @@ class TestConfigureLogging:
             assert len(sw.handlers) == 0
 
     def test_stderr_mode(self) -> None:
-        with patch.dict(os.environ, {'SIGNALWIRE_LOG_MODE': 'stderr'}):
+        with patch.dict(os.environ, {"SIGNALWIRE_LOG_MODE": "stderr"}):
             configure_logging()
             sw = logging.getLogger("signalwire")
             assert len(sw.handlers) == 1
@@ -235,15 +247,17 @@ class TestConfigureLogging:
             assert handler.stream is sys.stderr
 
     def test_auto_mode_cgi(self) -> None:
-        with patch.dict(os.environ, {'SIGNALWIRE_LOG_MODE': 'auto', 'GATEWAY_INTERFACE': 'CGI/1.1'}):
+        with patch.dict(
+            os.environ, {"SIGNALWIRE_LOG_MODE": "auto", "GATEWAY_INTERFACE": "CGI/1.1"}
+        ):
             configure_logging()
             sw = logging.getLogger("signalwire")
             # CGI → off mode
             assert sw.level > logging.CRITICAL
 
     def test_auto_mode_server(self) -> None:
-        env = {'SIGNALWIRE_LOG_MODE': 'auto'}
-        removals = ['GATEWAY_INTERFACE', 'AWS_LAMBDA_FUNCTION_NAME', 'LAMBDA_TASK_ROOT']
+        env = {"SIGNALWIRE_LOG_MODE": "auto"}
+        removals = ["GATEWAY_INTERFACE", "AWS_LAMBDA_FUNCTION_NAME", "LAMBDA_TASK_ROOT"]
         with patch.dict(os.environ, env, clear=False):
             for v in removals:
                 os.environ.pop(v, None)
@@ -252,13 +266,13 @@ class TestConfigureLogging:
             assert len(sw.handlers) == 1
 
     def test_log_level_env(self) -> None:
-        with patch.dict(os.environ, {'SIGNALWIRE_LOG_LEVEL': 'debug'}):
+        with patch.dict(os.environ, {"SIGNALWIRE_LOG_LEVEL": "debug"}):
             configure_logging()
             sw = logging.getLogger("signalwire")
             assert sw.level == logging.DEBUG
 
     def test_json_format(self) -> None:
-        with patch.dict(os.environ, {'SIGNALWIRE_LOG_FORMAT': 'json'}):
+        with patch.dict(os.environ, {"SIGNALWIRE_LOG_FORMAT": "json"}):
             configure_logging()
             sw = logging.getLogger("signalwire")
             assert len(sw.handlers) == 1
@@ -277,7 +291,10 @@ class TestStructuredLogging:
 
     def test_bind_adds_context(self) -> None:
         """bound fields should appear in the log output."""
-        with patch.dict(os.environ, {'SIGNALWIRE_LOG_FORMAT': 'json', 'SIGNALWIRE_LOG_LEVEL': 'debug'}):
+        with patch.dict(
+            os.environ,
+            {"SIGNALWIRE_LOG_FORMAT": "json", "SIGNALWIRE_LOG_LEVEL": "debug"},
+        ):
             configure_logging()
 
             buf = StringIO()
@@ -297,7 +314,10 @@ class TestStructuredLogging:
 
     def test_nested_bind(self) -> None:
         """Multiple bind() calls should stack context."""
-        with patch.dict(os.environ, {'SIGNALWIRE_LOG_FORMAT': 'json', 'SIGNALWIRE_LOG_LEVEL': 'debug'}):
+        with patch.dict(
+            os.environ,
+            {"SIGNALWIRE_LOG_FORMAT": "json", "SIGNALWIRE_LOG_LEVEL": "debug"},
+        ):
             configure_logging()
 
             buf = StringIO()
@@ -318,7 +338,10 @@ class TestStructuredLogging:
 
     def test_exc_info_produces_traceback(self) -> None:
         """exc_info should produce a real traceback, not 'exc_info=True' string."""
-        with patch.dict(os.environ, {'SIGNALWIRE_LOG_FORMAT': 'json', 'SIGNALWIRE_LOG_LEVEL': 'debug'}):
+        with patch.dict(
+            os.environ,
+            {"SIGNALWIRE_LOG_FORMAT": "json", "SIGNALWIRE_LOG_LEVEL": "debug"},
+        ):
             configure_logging()
 
             buf = StringIO()
@@ -350,10 +373,12 @@ class TestOffModeNoFdLeak:
     """Off mode should not open /dev/null or any file."""
 
     def test_no_file_handles_opened(self) -> None:
-        with patch.dict(os.environ, {'SIGNALWIRE_LOG_MODE': 'off'}):
-            with patch('builtins.open') as mock_open:
-                configure_logging()
-                mock_open.assert_not_called()
+        with (
+            patch.dict(os.environ, {"SIGNALWIRE_LOG_MODE": "off"}),
+            patch("builtins.open") as mock_open,
+        ):
+            configure_logging()
+            mock_open.assert_not_called()
 
 
 # ===========================================================================
@@ -384,7 +409,10 @@ class TestJsonMode:
     """Verify JSON mode produces parseable output with structured fields."""
 
     def test_json_output(self) -> None:
-        with patch.dict(os.environ, {'SIGNALWIRE_LOG_FORMAT': 'json', 'SIGNALWIRE_LOG_LEVEL': 'debug'}):
+        with patch.dict(
+            os.environ,
+            {"SIGNALWIRE_LOG_FORMAT": "json", "SIGNALWIRE_LOG_LEVEL": "debug"},
+        ):
             configure_logging()
 
             buf = StringIO()
@@ -406,6 +434,126 @@ class TestJsonMode:
 
 
 # ===========================================================================
+# Control-character stripping (log-injection prevention)
+# ===========================================================================
+
+
+class TestStripControlChars:
+    """`strip_control_chars` is a one-argument public function that scrubs control
+    characters from log event values; the structlog 3-argument processor protocol
+    is supplied by a private adapter at each registration site.
+
+    These tests exercise the REAL configured chain (not the function in isolation)
+    so that a broken adapter at either registration site is caught.
+    """
+
+    def test_public_function_takes_only_the_event_dict(self) -> None:
+        """The public contract is one parameter: the event dict."""
+        import inspect
+
+        params = list(inspect.signature(strip_control_chars).parameters)
+        assert params == ["event_dict"]
+
+    def test_strips_control_chars_from_values(self) -> None:
+        event_dict = {"event": "hello\x00world", "field": "a\x07b\x1fc", "n": 42}
+        result = strip_control_chars(event_dict)
+        assert result["event"] == "helloworld"
+        assert result["field"] == "abc"
+        # Non-string values pass through untouched.
+        assert result["n"] == 42
+
+    def test_registered_in_both_processor_chains(self) -> None:
+        """Both registration sites must carry the adapter, not the bare function."""
+        # Resolve from the live module: other tests in this file call
+        # importlib.reload(), which rebinds these symbols to fresh objects.
+        import signalwire.core.logging_config as lc
+
+        wrapped = lc._as_processor(lc.strip_control_chars)
+        chains = (lc._get_structlog_processors(), lc._get_formatter_processors())
+        for chain in chains:
+            matches = [p for p in chain if p == wrapped]
+            assert matches, f"strip_control_chars adapter missing from {chain!r}"
+
+    def test_adapter_is_callable_with_the_structlog_protocol(self) -> None:
+        """The adapter accepts structlog's (logger, method_name, event_dict) call."""
+        from signalwire.core.logging_config import _as_processor
+
+        processor = _as_processor(strip_control_chars)
+        result = processor(None, "info", {"event": "x\x00y"})
+        assert result["event"] == "xy"
+
+    def test_control_chars_stripped_through_the_real_chain(self) -> None:
+        """End-to-end: a control character in a logged value never reaches output.
+
+        This drives BOTH registration sites: the structlog processor chain
+        (`_get_structlog_processors`) and the ProcessorFormatter chain
+        (`_get_formatter_processors`).
+        """
+        with patch.dict(
+            os.environ,
+            {"SIGNALWIRE_LOG_FORMAT": "json", "SIGNALWIRE_LOG_LEVEL": "debug"},
+        ):
+            configure_logging()
+
+            buf = StringIO()
+            sw = logging.getLogger("signalwire")
+            handler = sw.handlers[0]
+            assert isinstance(handler, logging.StreamHandler)
+            handler.stream = buf
+
+            log = get_logger("signalwire.test_control_chars")
+            # A forged log line: NUL + BEL in the event, ESC control byte in a
+            # bound field.
+            bound = log.bind(user="ali\x07ce", note="x\x1by")
+            bound.info("logged\x00in")
+
+            output = buf.getvalue().strip()
+            assert output, "Expected JSON output"
+            data = json.loads(output)
+
+            assert data["event"] == "loggedin"
+            assert data["user"] == "alice"
+            assert data["note"] == "xy"
+
+            # Nothing in the raw rendered line carries a control character.
+            for ch in ("\x00", "\x07", "\x1b"):
+                assert ch not in output
+
+    def test_both_chains_run_the_processor(self) -> None:
+        """Prove the processor is actually invoked twice per record — once by the
+        structlog chain and once by the ProcessorFormatter chain — so a silently
+        dropped registration site cannot pass."""
+        import signalwire.core.logging_config as lc
+
+        calls: list[dict[str, Any]] = []
+        original = lc.strip_control_chars
+
+        def spy(event_dict: dict[str, Any]) -> dict[str, Any]:
+            calls.append(event_dict)
+            return original(event_dict)
+
+        with (
+            patch.dict(
+                os.environ,
+                {"SIGNALWIRE_LOG_FORMAT": "json", "SIGNALWIRE_LOG_LEVEL": "debug"},
+            ),
+            patch.object(lc, "strip_control_chars", spy),
+        ):
+            configure_logging()
+
+            buf = StringIO()
+            sw = logging.getLogger("signalwire")
+            handler = sw.handlers[0]
+            assert isinstance(handler, logging.StreamHandler)
+            handler.stream = buf
+
+            lc.get_logger("signalwire.test_both_chains").info("evt\x00x")
+
+        assert len(calls) == 2, f"expected both chains to run it, got {len(calls)}"
+        assert buf.getvalue().strip()
+
+
+# ===========================================================================
 # Color detection
 # ===========================================================================
 
@@ -415,26 +563,142 @@ class TestColorDetection:
 
     def test_no_colors_when_not_tty(self) -> None:
         from signalwire.core.logging_config import _detect_colors
-        with patch.object(sys, 'stdout', new_callable=StringIO):
+
+        with patch.object(sys, "stdout", new_callable=StringIO):
             assert _detect_colors() is False
 
     def test_no_colors_when_dump_swml(self) -> None:
         from signalwire.core.logging_config import _detect_colors
+
         original_argv = sys.argv[:]
         try:
-            sys.argv.append('--dump-swml')
+            sys.argv.append("--dump-swml")
             assert _detect_colors() is False
         finally:
             sys.argv[:] = original_argv
 
     def test_no_colors_when_raw(self) -> None:
         from signalwire.core.logging_config import _detect_colors
+
         original_argv = sys.argv[:]
         try:
-            sys.argv.append('--raw')
+            sys.argv.append("--raw")
             assert _detect_colors() is False
         finally:
             sys.argv[:] = original_argv
+
+
+# ===========================================================================
+# Machine-readable stdout (#66): a CLI whose stdout IS the payload must never
+# have a log line written to it.
+# ===========================================================================
+
+
+class TestMachineReadableStdout:
+    """``--raw`` / ``--dump-swml`` / ``--json`` make stdout a data channel.
+
+    Two independent defects put log text on that channel, and both are covered
+    here because either one alone re-corrupts the output:
+
+    1. **The unconfigured default was stdout.** ``get_logger()`` deliberately
+       does not auto-configure (a library must not hijack the host's logging),
+       but structlog's *own* default factory is ``PrintLoggerFactory()``, which
+       writes to ``sys.stdout``. So "we never configured anything" did not mean
+       "silent" — it meant "print to stdout", and the ``NullHandler`` on the
+       ``signalwire`` stdlib logger never saw the record. A library that is
+       silent-by-default must route through stdlib from import.
+    2. **The configured default was stdout too.** When an app DOES call
+       ``configure_logging()`` while a machine-readable flag is present, the
+       inferred ``default`` mode sent the handler to ``sys.stdout``. The flags
+       were consulted only by ``_detect_colors()`` — so they suppressed ANSI
+       colour but not the stream itself.
+    """
+
+    def test_flag_helper_lists_every_machine_readable_flag(self) -> None:
+        from signalwire.core.logging_config import _machine_readable_stdout
+
+        original_argv = sys.argv[:]
+        for flag in ("--raw", "--dump-swml", "--json"):
+            try:
+                sys.argv[:] = ["prog", flag]
+                assert _machine_readable_stdout() is True, (
+                    f"{flag} must mark stdout as machine-readable"
+                )
+            finally:
+                sys.argv[:] = original_argv
+
+        try:
+            sys.argv[:] = ["prog", "--verbose"]
+            assert _machine_readable_stdout() is False
+        finally:
+            sys.argv[:] = original_argv
+
+    def test_colour_detection_reuses_the_flag_helper(self) -> None:
+        # The bug was flag-list DRIFT: colour consulted the flags, the stream
+        # decision did not. Both must read the same helper so they cannot
+        # disagree again.
+        from signalwire.core.logging_config import _detect_colors
+
+        with patch(
+            "signalwire.core.logging_config._machine_readable_stdout",
+            return_value=True,
+        ):
+            assert _detect_colors() is False
+
+    def test_unconfigured_logger_does_not_write_to_stdout(self) -> None:
+        # Defect 1: the library default. No configure_logging() call at all.
+        # reset_logging_configuration() re-installs the library default, so this
+        # is exactly the state a host app sees on a fresh `import signalwire`.
+        reset_logging_configuration()
+
+        buf = StringIO()
+        with patch.object(sys, "stdout", buf):
+            get_logger("signalwire.test.unconfigured").warning("must_not_appear")
+
+        assert buf.getvalue() == "", (
+            "an unconfigured SDK logger wrote to stdout; the library default "
+            f"must be silent, got: {buf.getvalue()!r}"
+        )
+
+    def test_inferred_mode_under_flag_goes_to_stderr_not_stdout(self) -> None:
+        # Defect 2: the configured default. Flag present, no explicit env mode.
+        original_argv = sys.argv[:]
+        try:
+            sys.argv[:] = ["swaig-test", "agent.py", "--dump-swml", "--raw"]
+            with patch.dict(os.environ, {}, clear=False):
+                os.environ.pop("SIGNALWIRE_LOG_MODE", None)
+                reset_logging_configuration()
+                configure_logging()
+        finally:
+            sys.argv[:] = original_argv
+
+        handlers = logging.getLogger("signalwire").handlers
+        streams = [h.stream for h in handlers if isinstance(h, logging.StreamHandler)]
+        assert streams, "configure_logging() attached no StreamHandler"
+        assert all(s is sys.stderr for s in streams), (
+            f"logs must go to stderr under a machine-readable flag, got {streams}"
+        )
+
+    def test_explicit_env_mode_still_beats_the_flag(self) -> None:
+        # PRECEDENCE: an explicit SIGNALWIRE_LOG_MODE is a deliberate operator
+        # choice and outranks the flag INFERENCE. The flag only overrides the
+        # inferred default, never an explicit request.
+        original_argv = sys.argv[:]
+        try:
+            sys.argv[:] = ["swaig-test", "agent.py", "--dump-swml"]
+            with patch.dict(os.environ, {"SIGNALWIRE_LOG_MODE": "default"}):
+                reset_logging_configuration()
+                configure_logging()
+        finally:
+            sys.argv[:] = original_argv
+
+        handlers = logging.getLogger("signalwire").handlers
+        streams = [h.stream for h in handlers if isinstance(h, logging.StreamHandler)]
+        assert streams, "configure_logging() attached no StreamHandler"
+        assert all(s is sys.stdout for s in streams), (
+            "an explicit SIGNALWIRE_LOG_MODE=default must still win over the "
+            f"flag inference, got {streams}"
+        )
 
 
 # ===========================================================================
@@ -454,6 +718,6 @@ class TestResetLogging:
         sw.handlers.clear()
         sw.setLevel(logging.NOTSET)
 
-        with patch.dict(os.environ, {'SIGNALWIRE_LOG_MODE': 'off'}):
+        with patch.dict(os.environ, {"SIGNALWIRE_LOG_MODE": "off"}):
             configure_logging()
             assert sw.level > logging.CRITICAL

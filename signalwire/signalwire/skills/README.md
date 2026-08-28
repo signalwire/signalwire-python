@@ -175,9 +175,13 @@ class YourSkillClass(SkillBase):
 - Return data available to DataMap expressions
 - Access via `${global.key}` in DataMap configurations
 
-#### `get_prompt_sections(self) -> List[Dict[str, Any]]`
+#### `_get_prompt_sections(self) -> List[Dict[str, Any]]`
 - Return prompt sections to add to the agent
 - Structure: `{"title": str, "body": str, "bullets": List[str]}`
+- **Override this protected hook, not the public `get_prompt_sections()`.**
+  The public method is the guard-bearing entry point: it returns `[]` when the
+  skill is configured with `skip_prompt: True` and otherwise delegates here.
+  Overriding the public method disables `skip_prompt` for that skill.
 
 ## DataMap Integration
 

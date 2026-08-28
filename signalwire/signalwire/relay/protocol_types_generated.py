@@ -176,6 +176,9 @@ class CallingCollectStopParams(TypedDict, total=False):
     node_id: str
 
 
+CallingConferenceParams: TypeAlias = "dict[str, Any]"
+
+
 class CallingConnectParams(TypedDict, total=False):
     """Wire schema for the JSON payload of `calling.connect` (params). Extracted from switchblade `PublicCallConnectParams.cs`.
 
@@ -1035,6 +1038,9 @@ class CallingCollectStopResult(TypedDict, total=False):
     control_id: str
     data: Any
     message: str
+
+
+CallingConferenceResult: TypeAlias = "dict[str, Any]"
 
 
 class CallingConnectResult(TypedDict, total=False):

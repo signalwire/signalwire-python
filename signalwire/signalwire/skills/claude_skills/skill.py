@@ -443,6 +443,21 @@ class ClaudeSkillsSkill(SkillBase):
         """
 
         def replace_command(match: re.Match[str]) -> str:
+            """
+            Run one matched ``!`command`` snippet and return its stdout.
+
+            Args:
+                match: A ``_SHELL_INJECTION_RE`` match whose group 1 is the command
+                    text between the backticks.
+
+            Returns:
+                The command's stdout with trailing newlines stripped, or a bracketed
+                placeholder (``[command timed out: ...]`` / ``[command error: ...]``)
+                when the command exceeds ``timeout`` or raises. Failures are logged
+                and never propagate, so a broken command degrades the rendered skill
+                body instead of failing the tool call. The command runs through the
+                shell with the skill directory as its working directory.
+            """
             command = match.group(1)
             try:
                 result = subprocess.run(  # noqa: S602  # intentional feature: runs shell snippets authored in skill body files (developer-controlled, like Claude Skills), gated behind opt-in allow_shell_injection (default False) which logs a warning; shell=True is required to support pipes/redirection in authored commands; not reachable from end-user runtime input
@@ -505,6 +520,18 @@ class ClaudeSkillsSkill(SkillBase):
 
         # Replace $ARGUMENTS[N] with positional args
         def replace_indexed(match: re.Match[str]) -> str:
+            """
+            Expand one ``$ARGUMENTS[N]`` placeholder to positional argument N.
+
+            Args:
+                match: A match of ``\\$ARGUMENTS\\[(\\d+)\\]`` whose group 1 is the
+                    zero-based index.
+
+            Returns:
+                The whitespace-split argument at that index, or an empty string when
+                the index is past the end of the argument list (out-of-range
+                placeholders are erased rather than left literal or raising).
+            """
             index = int(match.group(1))
             if index < len(positional):
                 return positional[index]
@@ -514,6 +541,22 @@ class ClaudeSkillsSkill(SkillBase):
 
         # Replace $N shorthand (must do after $ARGUMENTS to avoid conflicts)
         def replace_shorthand(match: re.Match[str]) -> str:
+            """
+            Expand one ``$N`` shorthand placeholder to positional argument N.
+
+            Same index-to-argument lookup as :func:`replace_indexed`, but driven by
+            the bare ``\\$(\\d+)(?!\\d)`` pattern instead of the bracketed
+            ``$ARGUMENTS[N]`` form. It is applied after the bracketed pass so that
+            the ``N]`` tail of an already-expanded ``$ARGUMENTS[N]`` cannot be
+            mistaken for a shorthand.
+
+            Args:
+                match: A match whose group 1 is the zero-based index.
+
+            Returns:
+                The whitespace-split argument at that index, or an empty string when
+                the index is past the end of the argument list.
+            """
             index = int(match.group(1))
             if index < len(positional):
                 return positional[index]
@@ -577,9 +620,47 @@ class ClaudeSkillsSkill(SkillBase):
             def make_handler(
                 s: dict[str, Any], rprefix: str, rpostfix: str
             ) -> Callable[[dict[str, Any], dict[str, Any]], FunctionResult]:
+                """
+                Build the SWAIG handler for one discovered Claude skill.
+
+                A factory is used so each registered tool closes over its OWN skill
+                dict and response wrappers; without it every handler in the loop
+                would see the last iteration's values.
+
+                Args:
+                    s: The parsed skill record (``body``, ``sections``, ``skill_dir``).
+                    rprefix: Text prepended to the rendered content, or "".
+                    rpostfix: Text appended to the rendered content, or "".
+
+                Returns:
+                    The ``(args, raw_data) -> FunctionResult`` handler to pass to
+                    ``define_tool``.
+                """
+
                 def handler(
                     args: dict[str, Any], raw_data: dict[str, Any]
                 ) -> FunctionResult:
+                    """
+                    Render this skill's content and return it to the agent.
+
+                    Picks the source text — the supporting file named by
+                    ``args["section"]`` when it is one of the skill's known sections,
+                    otherwise the SKILL.md body (an unreadable section file logs the
+                    error and yields an ``Error loading section '<name>'`` string).
+                    That text then goes through shell injection (only when the skill
+                    was configured with ``allow_shell_injection``), ``${...}``
+                    variable substitution, and ``$ARGUMENTS``/``$N`` substitution
+                    using ``args["arguments"]``, before being wrapped in the
+                    configured response prefix/postfix.
+
+                    Args:
+                        args: SWAIG arguments; ``section`` and ``arguments`` are read.
+                        raw_data: The raw SWAIG POST body; supplies ``call_id`` for
+                            the ``${CLAUDE_SESSION_ID}`` substitution.
+
+                    Returns:
+                        FunctionResult carrying the fully rendered skill content.
+                    """
                     section = args.get("section")
                     arguments = args.get("arguments", "")
 

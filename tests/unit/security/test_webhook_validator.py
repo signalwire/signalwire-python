@@ -33,8 +33,7 @@ VECTOR_A = {
     "signing_key": "PSKtest1234567890abcdef",
     "url": "https://example.ngrok.io/webhook",
     "raw_body": (
-        '{"event":"call.state","params":'
-        '{"call_id":"abc-123","state":"answered"}}'
+        '{"event":"call.state","params":{"call_id":"abc-123","state":"answered"}}'
     ),
     "expected": "c3c08c1fefaf9ee198a100d5906765a6f394bf0f",
 }
@@ -79,6 +78,7 @@ def _form_encoded(params: dict[str, Any]) -> str:
 # ---------------------------------------------------------------------------
 # Scheme A — RELAY/JSON (hex)
 # ---------------------------------------------------------------------------
+
 
 class TestSchemeA:
     def test_positive_canonical_vector(self) -> None:
@@ -134,6 +134,7 @@ class TestSchemeA:
 # ---------------------------------------------------------------------------
 # Scheme B — Compat/cXML (base64 form)
 # ---------------------------------------------------------------------------
+
 
 class TestSchemeB:
     def test_positive_canonical_form_vector(self) -> None:
@@ -207,6 +208,7 @@ class TestSchemeB:
 # URL port normalization
 # ---------------------------------------------------------------------------
 
+
 class TestUrlPortNormalization:
     def _b64_sig(self, key: str, url: str, params: dict[str, Any] | None = None) -> str:
         params = params or {}
@@ -224,21 +226,17 @@ class TestUrlPortNormalization:
         url_without_port = "https://example.com/webhook"
         sig = self._b64_sig(key, url_with_port)
         # raw_body is a non-form body; Scheme B falls back to empty params.
-        assert (
-            validate_webhook_signature(key, sig, url_without_port, "{}")
-            is True
-        )
+        assert validate_webhook_signature(key, sig, url_without_port, "{}") is True
 
-    def test_signature_without_port_accepted_when_request_has_standard_port(self) -> None:
+    def test_signature_without_port_accepted_when_request_has_standard_port(
+        self,
+    ) -> None:
         """Backend signed without port — request URL has :443 → accept."""
         key = "test-key"
         url_with_port = "https://example.com:443/webhook"
         url_without_port = "https://example.com/webhook"
         sig = self._b64_sig(key, url_without_port)
-        assert (
-            validate_webhook_signature(key, sig, url_with_port, "{}")
-            is True
-        )
+        assert validate_webhook_signature(key, sig, url_with_port, "{}") is True
 
     def test_http_port_80_normalization(self) -> None:
         """http + :80 mirrors https + :443."""
@@ -246,15 +244,13 @@ class TestUrlPortNormalization:
         url_with_port = "http://example.com:80/path"
         url_without_port = "http://example.com/path"
         sig = self._b64_sig(key, url_with_port)
-        assert (
-            validate_webhook_signature(key, sig, url_without_port, "")
-            is True
-        )
+        assert validate_webhook_signature(key, sig, url_without_port, "") is True
 
 
 # ---------------------------------------------------------------------------
 # Repeated form keys
 # ---------------------------------------------------------------------------
+
 
 class TestRepeatedFormKeys:
     def test_repeated_keys_concat_in_submission_order(self) -> None:
@@ -267,10 +263,7 @@ class TestRepeatedFormKeys:
         sig = base64.b64encode(
             hmac.new(key.encode(), expected_data.encode(), hashlib.sha1).digest()
         ).decode()
-        assert (
-            validate_webhook_signature(key, sig, url, body)
-            is True
-        )
+        assert validate_webhook_signature(key, sig, url, body) is True
 
     def test_repeated_keys_swapped_order_is_a_different_signature(self) -> None:
         """``To=b&To=a`` is a different submission and yields a different digest."""
@@ -291,6 +284,7 @@ class TestRepeatedFormKeys:
 # ---------------------------------------------------------------------------
 # Error modes
 # ---------------------------------------------------------------------------
+
 
 class TestErrorModes:
     def test_missing_signature_returns_false(self) -> None:
@@ -355,6 +349,7 @@ class TestErrorModes:
 # validate_request legacy alias dispatch
 # ---------------------------------------------------------------------------
 
+
 class TestValidateRequestDispatch:
     def test_string_arg_delegates_to_combined_validator(self) -> None:
         """A string 4th arg behaves identically to validate_webhook_signature."""
@@ -394,6 +389,7 @@ class TestValidateRequestDispatch:
 # ---------------------------------------------------------------------------
 # Constant-time compare — read the source, not just the result
 # ---------------------------------------------------------------------------
+
 
 class TestConstantTimeCompare:
     def test_validator_source_uses_hmac_compare_digest(self) -> None:

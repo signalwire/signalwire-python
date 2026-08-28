@@ -16,9 +16,13 @@ class TestCalling:
         assert body["params"]["to"] == "+15551234567"
         assert "id" not in body  # dial has no top-level id
 
-    def test_play_with_call_id(self, client: RestClient, mock_session: MagicMock) -> None:
+    def test_play_with_call_id(
+        self, client: RestClient, mock_session: MagicMock
+    ) -> None:
         mock_session.request.return_value = MockResponse(200, {})
-        client.calling.play("call-123", play=[{"type": "tts", "params": {"text": "hello"}}])
+        client.calling.play(
+            "call-123", play=[{"type": "tts", "params": {"text": "hello"}}]
+        )
         call_args = mock_session.request.call_args
         body = call_args[1]["json"]
         assert body["command"] == "calling.play"
@@ -49,19 +53,43 @@ class TestCalling:
 
     def test_all_methods_exist(self, client: RestClient) -> None:
         methods = [
-            "dial", "update", "end", "transfer", "disconnect",
-            "play", "play_pause", "play_resume", "play_stop", "play_volume",
-            "record", "record_pause", "record_resume", "record_stop",
-            "collect", "collect_stop", "collect_start_input_timers",
-            "detect", "detect_stop",
-            "tap", "tap_stop",
-            "stream", "stream_stop",
-            "denoise", "denoise_stop",
-            "transcribe", "transcribe_stop",
-            "ai_message", "ai_hold", "ai_unhold", "ai_stop",
-            "live_transcribe", "live_translate",
-            "send_fax_stop", "receive_fax_stop",
-            "refer", "user_event",
+            "dial",
+            "update",
+            "end",
+            "transfer",
+            "disconnect",
+            "play",
+            "play_pause",
+            "play_resume",
+            "play_stop",
+            "play_volume",
+            "record",
+            "record_pause",
+            "record_resume",
+            "record_stop",
+            "collect",
+            "collect_stop",
+            "collect_start_input_timers",
+            "detect",
+            "detect_stop",
+            "tap",
+            "tap_stop",
+            "stream",
+            "stream_stop",
+            "denoise",
+            "denoise_stop",
+            "transcribe",
+            "transcribe_stop",
+            "ai_message",
+            "ai_hold",
+            "ai_unhold",
+            "ai_stop",
+            "live_transcribe",
+            "live_translate",
+            "send_fax_stop",
+            "receive_fax_stop",
+            "refer",
+            "user_event",
         ]
         for method in methods:
             assert hasattr(client.calling, method), f"Missing calling method: {method}"

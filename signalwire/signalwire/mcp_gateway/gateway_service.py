@@ -27,10 +27,16 @@ from datetime import datetime
 import ssl
 import concurrent.futures
 
-from flask import Flask, request, jsonify, Response
-from werkzeug.serving import make_server, BaseWSGIServer
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+try:
+    from flask import Flask, request, jsonify, Response
+    from werkzeug.serving import make_server, BaseWSGIServer
+    from flask_limiter import Limiter
+    from flask_limiter.util import get_remote_address
+except ImportError:  # pragma: no cover - exercised with the extra simulated absent
+    raise ImportError(
+        "flask and flask-limiter are required for the MCP gateway. "
+        "Install them with: pip install signalwire-sdk[mcp-gateway]"
+    ) from None
 from functools import wraps
 import threading
 
@@ -68,7 +74,22 @@ class MCPGateway:
         self.security = SecurityConfig(config_file=config_path, service_name="mcp")
         self.security.log_config("MCPGateway")
 
-        self.app = Flask(__name__)
+        # `app`/`limiter` are deliberately typed `Any`, not `Flask`/`Limiter`.
+        #
+        # flask and flask-limiter are the OPTIONAL `mcp-gateway` extra, and they
+        # ship `py.typed`. That makes their decorators' types depend on whether
+        # the extra happens to be INSTALLED, which flips this file's findings
+        # both ways and cannot be settled with `# type: ignore`:
+        #   * extra absent  -> `@self.app.route` is Any, so every decorated
+        #     handler is [untyped-decorator] unless it carries an ignore;
+        #   * extra present -> the decorators are typed, so those same ignores
+        #     become [unused-ignore] under warn_unused_ignores.
+        # Pinning the two attributes to Any resolves the decorators identically
+        # in both worlds, so this file type-checks the same way with or without
+        # the extra — including for SDK CONSUMERS running mypy over their own
+        # code with their own config, who get no say in our mypy settings and
+        # would otherwise inherit whichever error our ignores did not cover.
+        self.app: Any = Flask(__name__)
         self.mcp_manager = MCPManager(self.config)
         self.session_manager = SessionManager(self.config)
         self.server: BaseWSGIServer | None = None
@@ -82,16 +103,43 @@ class MCPGateway:
         )
         storage_uri = self.rate_config.get("storage_uri", "memory://")
 
-        self.limiter = Limiter(
+        self.limiter: Any = Limiter(
             app=self.app,
             key_func=get_remote_address,
             default_limits=default_limits,
             storage_uri=storage_uri,
         )
 
-        # Configure security headers
-        @self.app.after_request  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
-        def set_security_headers(response: Response) -> Response:
+        # Configure security headers.
+        # `response` is annotated Any rather than `Response` for the same reason
+        # `self.app` is: with the extra installed `Response` is a real type and
+        # this decorator resolves as typed, without it everything is Any. Any on
+        # both sides keeps the result identical in both worlds.
+        def set_security_headers(response: Any) -> Any:
+            """Attach security headers to every gateway response.
+
+            Registered as a Flask ``after_request`` hook, so it applies to
+            error responses too.
+
+            Sets ``X-Content-Type-Options: nosniff``,
+            ``X-Frame-Options: DENY``, ``X-XSS-Protection: 1; mode=block`` and
+            a ``Content-Security-Policy`` of
+            ``default-src 'none'; frame-ancestors 'none';`` — the gateway
+            serves JSON only, so the policy blocks every subresource rather
+            than allow-listing any. On a secure request it also sets
+            ``Strict-Transport-Security: max-age=31536000; includeSubDomains``.
+
+            Note this is the gateway's own hardcoded header set, independent of
+            ``SecurityConfig.get_security_headers`` used by the FastAPI
+            services: it adds CSP, omits ``Referrer-Policy``, and its HSTS is
+            not configurable.
+
+            Args:
+                response: The outgoing Flask response.
+
+            Returns:
+                The same response, mutated in place.
+            """
             response.headers["X-Content-Type-Options"] = "nosniff"
             response.headers["X-Frame-Options"] = "DENY"
             response.headers["X-XSS-Protection"] = "1; mode=block"
@@ -103,6 +151,14 @@ class MCPGateway:
                     "max-age=31536000; includeSubDomains"
                 )
             return response
+
+        # Registered by CALL rather than with `@self.app.after_request` on
+        # purpose: as a decorator it rewrites the function's type, and mypy then
+        # reports [untyped-decorator] when the optional extra is absent but not
+        # when it is present — the one construct that could not be made to agree
+        # in both worlds. Calling it registers the hook identically at runtime
+        # while leaving the function's own (fully annotated) type alone.
+        self.app.after_request(set_security_headers)
 
         # Configure request size limit (10MB)
         self.app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024
@@ -286,6 +342,31 @@ class MCPGateway:
 
         @wraps(f)
         def decorated(*args: Any, **kwargs: Any) -> Any:
+            """Authenticate the current request, then call the wrapped view.
+
+            The inner wrapper produced by ``_check_auth``; ``functools.wraps``
+            keeps the view's name so Flask's routing table is unaffected.
+            Args and kwargs are the view's own (e.g. URL path params) and are
+            forwarded untouched — the credentials come from the Flask request
+            context, not the arguments.
+
+            Accepts either scheme, Bearer first: an ``Authorization: Bearer``
+            token compared against ``server.auth_token``, else HTTP Basic
+            compared against ``server.auth_user`` / ``server.auth_password``.
+            Both comparisons use ``hmac.compare_digest`` to avoid leaking the
+            secret through timing. A Bearer header that fails falls through to
+            the Basic check rather than rejecting outright.
+
+            On failure it logs an ``auth_failed`` security event carrying the
+            client IP, method and path, and returns ``401`` with
+            ``WWW-Authenticate: Basic realm="MCP Gateway"`` — the view is never
+            invoked. Note an unconfigured ``auth_token`` disables Bearer
+            (the empty expected value is skipped), so Basic remains the path.
+
+            Returns:
+                The wrapped view's return value on success, otherwise a 401
+                Flask Response.
+            """
             # Try Bearer token first
             auth_header = request.headers.get("Authorization", "")
             server_config = self.config.get("server", {})
@@ -331,7 +412,7 @@ class MCPGateway:
     def _setup_routes(self) -> None:
         """Set up Flask routes"""
 
-        @self.app.route("/health", methods=["GET"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
+        @self.app.route("/health", methods=["GET"])  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
         def health() -> Any:
             """Health check endpoint"""
             return jsonify(
@@ -342,15 +423,15 @@ class MCPGateway:
                 }
             )
 
-        @self.app.route("/services", methods=["GET"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
+        @self.app.route("/services", methods=["GET"])  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
         @self._check_auth
         def list_services() -> Any:
             """List available MCP services"""
             services = self.mcp_manager.list_services()
             return jsonify(services)
 
-        @self.app.route("/services/<service_name>/tools", methods=["GET"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
-        @self.limiter.limit(self.rate_config.get("tools_limit", "30 per minute"))  # type: ignore[untyped-decorator]  # flask-limiter is an optional extra with no stubs installed -> Any decorator
+        @self.app.route("/services/<service_name>/tools", methods=["GET"])  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
+        @self.limiter.limit(self.rate_config.get("tools_limit", "30 per minute"))  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
         @self._check_auth
         def get_service_tools(service_name: str) -> Any:
             """Get tools for a specific service"""
@@ -366,8 +447,8 @@ class MCPGateway:
                 logger.error(f"Error getting tools for {service_name}: {e}")
                 return jsonify({"error": "Service error"}), 500
 
-        @self.app.route("/services/<service_name>/call", methods=["POST"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
-        @self.limiter.limit(self.rate_config.get("call_limit", "10 per minute"))  # type: ignore[untyped-decorator]  # flask-limiter is an optional extra with no stubs installed -> Any decorator
+        @self.app.route("/services/<service_name>/call", methods=["POST"])  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
+        @self.limiter.limit(self.rate_config.get("call_limit", "10 per minute"))  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
         @self._check_auth
         def call_service_tool(service_name: str) -> Any:
             """Call a tool on a service"""
@@ -482,15 +563,15 @@ class MCPGateway:
                 logger.error(f"Error calling tool: {e}")
                 return jsonify({"error": str(e)}), 500
 
-        @self.app.route("/sessions", methods=["GET"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
+        @self.app.route("/sessions", methods=["GET"])  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
         @self._check_auth
         def list_sessions() -> Any:
             """List active sessions"""
             sessions = self.session_manager.list_sessions()
             return jsonify(sessions)
 
-        @self.app.route("/sessions/<session_id>", methods=["DELETE"])  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
-        @self.limiter.limit(  # type: ignore[untyped-decorator]  # flask-limiter is an optional extra with no stubs installed -> Any decorator
+        @self.app.route("/sessions/<session_id>", methods=["DELETE"])  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
+        @self.limiter.limit(  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
             self.rate_config.get("session_delete_limit", "20 per minute")
         )
         @self._check_auth
@@ -510,8 +591,26 @@ class MCPGateway:
             except ValueError as e:
                 return jsonify({"error": str(e)}), 400
 
-        @self.app.errorhandler(Exception)  # type: ignore[untyped-decorator]  # flask is an optional extra with no stubs installed -> Any decorator
+        @self.app.errorhandler(Exception)  # type: ignore[untyped-decorator]  # app/limiter pinned to Any above -> Any decorator
         def handle_error(error: Exception) -> Any:
+            """Convert any unhandled exception into a generic 500 JSON error.
+
+            Registered as the Flask ``errorhandler(Exception)`` catch-all, so
+            it is the last resort for exceptions no route handled itself.
+
+            Deliberately opaque to the client: the exception is logged
+            server-side at ERROR level, but the response body is the fixed
+            ``{"error": "Internal server error"}`` with status 500 — the
+            exception text, type and traceback never reach the caller. Routes
+            that want a specific message must catch and return it themselves
+            (as the session routes do for ``ValueError`` → 400).
+
+            Args:
+                error: The unhandled exception.
+
+            Returns:
+                A ``(JSON response, 500)`` tuple.
+            """
             logger.error(f"Unhandled error: {error}")
             return jsonify({"error": "Internal server error"}), 500
 

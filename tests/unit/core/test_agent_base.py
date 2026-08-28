@@ -15,12 +15,11 @@ import pytest
 import json
 import uuid
 import os
-from unittest.mock import Mock, patch, MagicMock, AsyncMock
-from typing import Dict, Any, List, Optional
+from unittest.mock import Mock, patch
+from typing import Any, ClassVar
 
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.swaig_function import SWAIGFunction
-
 
 
 class TestAgentBaseInitialization:
@@ -30,8 +29,7 @@ class TestAgentBaseInitialization:
         """Helper to create a properly mocked agent"""
         with pytest.MonkeyPatch().context() as m:
             m.setattr("signalwire.core.agent_base.uvicorn", Mock())
-            agent = AgentBase(schema_validation=False, **kwargs)
-        return agent
+            return AgentBase(schema_validation=False, **kwargs)
 
     def test_basic_initialization(self) -> None:
         """Test basic AgentBase initialization"""
@@ -56,7 +54,7 @@ class TestAgentBaseInitialization:
             auto_answer=False,
             record_call=True,
             agent_id="custom-id",
-            native_functions=["func1", "func2"]
+            native_functions=["func1", "func2"],
         )
 
         assert agent.get_name() == "custom_agent"
@@ -66,6 +64,7 @@ class TestAgentBaseInitialization:
         assert agent._use_pom is False
         assert agent.pom is None
         assert agent.native_functions == ["func1", "func2"]
+
 
 class TestAgentBasePromptMethods:
     """Test AgentBase prompt-related methods"""
@@ -261,18 +260,18 @@ class TestAgentBaseToolMethods:
 
     def test_define_tool(self) -> None:
         """Test defining a tool"""
+
         def test_handler(arg1: str, arg2: int) -> str:
             return f"{arg1}_{arg2}"
 
         parameters = {
             "type": "object",
-            "properties": {
-                "arg1": {"type": "string"},
-                "arg2": {"type": "integer"}
-            }
+            "properties": {"arg1": {"type": "string"}, "arg2": {"type": "integer"}},
         }
 
-        result = self.agent.define_tool("test_tool", "Test description", parameters, test_handler)
+        result = self.agent.define_tool(
+            "test_tool", "Test description", parameters, test_handler
+        )
 
         assert result is self.agent
         assert "test_tool" in self.agent._tool_registry._swaig_functions
@@ -323,7 +322,9 @@ class TestAgentBaseAuthMethods:
         """Set up test fixtures"""
         with pytest.MonkeyPatch().context() as m:
             m.setattr("signalwire.core.agent_base.uvicorn", Mock())
-            self.agent = AgentBase("test_agent", basic_auth=("user", "pass"), schema_validation=False)
+            self.agent = AgentBase(
+                "test_agent", basic_auth=("user", "pass"), schema_validation=False
+            )
 
     def test_validate_basic_auth_success(self) -> None:
         """Test successful basic auth validation"""
@@ -357,7 +358,9 @@ class TestAgentBaseAuthMethods:
 
     def test_get_basic_auth_credentials_with_source(self) -> None:
         """Test getting basic auth credentials with source"""
-        username, password, source = self.agent.get_basic_auth_credentials(include_source=True)  # type: ignore[misc]  # include_source=True returns 3-tuple
+        username, password, source = self.agent.get_basic_auth_credentials(
+            include_source=True
+        )  # type: ignore[misc]  # include_source=True returns 3-tuple
 
         assert username == "user"
         assert password == "pass"
@@ -371,7 +374,13 @@ class TestAgentBaseURLMethods:
         """Set up test fixtures"""
         with pytest.MonkeyPatch().context() as m:
             m.setattr("signalwire.core.agent_base.uvicorn", Mock())
-            self.agent = AgentBase("test_agent", host="localhost", port=3000, route="/test", schema_validation=False)
+            self.agent = AgentBase(
+                "test_agent",
+                host="localhost",
+                port=3000,
+                route="/test",
+                schema_validation=False,
+            )
 
     def test_get_full_url_basic(self) -> None:
         """Test getting full URL without auth"""
@@ -383,8 +392,14 @@ class TestAgentBaseURLMethods:
         """Test getting full URL with auth"""
         with pytest.MonkeyPatch().context() as m:
             m.setattr("signalwire.core.agent_base.uvicorn", Mock())
-            agent = AgentBase("test_agent", host="localhost", port=3000, route="/test",
-                            basic_auth=("user", "pass"), schema_validation=False)
+            agent = AgentBase(
+                "test_agent",
+                host="localhost",
+                port=3000,
+                route="/test",
+                basic_auth=("user", "pass"),
+                schema_validation=False,
+            )
 
         url = agent.get_full_url(include_auth=True)
 
@@ -432,18 +447,25 @@ class TestAgentBaseSkillMethods:
         result = self.agent.add_skill("test_skill", {"param": "value"})
 
         assert result is self.agent
-        self.mock_skill_manager_instance.load_skill.assert_called_once_with("test_skill", params={"param": "value"})
+        self.mock_skill_manager_instance.load_skill.assert_called_once_with(
+            "test_skill", params={"param": "value"}
+        )
 
     def test_remove_skill(self) -> None:
         """Test removing a skill"""
         result = self.agent.remove_skill("test_skill")
 
         assert result is self.agent
-        self.mock_skill_manager_instance.unload_skill.assert_called_once_with("test_skill")
+        self.mock_skill_manager_instance.unload_skill.assert_called_once_with(
+            "test_skill"
+        )
 
     def test_list_skills(self) -> None:
         """Test listing skills"""
-        self.mock_skill_manager_instance.list_loaded_skills.return_value = ["skill1", "skill2"]
+        self.mock_skill_manager_instance.list_loaded_skills.return_value = [
+            "skill1",
+            "skill2",
+        ]
 
         result = self.agent.list_skills()
 
@@ -480,7 +502,9 @@ class TestAgentBaseTokenMethods:
         token = self.agent._create_tool_token("test_tool", "call_123")
 
         assert token == "test_token"
-        self.mock_session_manager_instance.create_tool_token.assert_called_once_with("test_tool", "call_123")
+        self.mock_session_manager_instance.create_tool_token.assert_called_once_with(
+            "test_tool", "call_123"
+        )
 
     def test_validate_tool_token(self) -> None:
         """Test validating tool token"""
@@ -494,7 +518,9 @@ class TestAgentBaseTokenMethods:
         result = self.agent.validate_tool_token("test_tool", "test_token", "call_123")
 
         assert result is True
-        self.mock_session_manager_instance.validate_tool_token.assert_called_once_with("test_tool", "test_token", "call_123")
+        self.mock_session_manager_instance.validate_tool_token.assert_called_once_with(
+            "test_tool", "test_token", "call_123"
+        )
 
 
 class TestAgentBaseMiscMethods:
@@ -514,7 +540,10 @@ class TestAgentBaseMiscMethods:
 
     def test_set_dynamic_config_callback(self) -> None:
         """Test setting dynamic config callback"""
-        def callback(request_data: Any, call_data: Any, meta_data: Any, config: Any) -> None:
+
+        def callback(
+            request_data: Any, call_data: Any, meta_data: Any, config: Any
+        ) -> None:
             pass
 
         result = self.agent.set_dynamic_config_callback(callback)
@@ -545,34 +574,36 @@ class TestAgentBaseDeclarativePrompts:
 
     def test_process_prompt_sections_dict(self) -> None:
         """Test processing declarative prompt sections from dict"""
+
         class TestAgent(AgentBase):
-            PROMPT_SECTIONS = {  # type: ignore[assignment]  # base declares None; subclass overrides with dict
+            PROMPT_SECTIONS: ClassVar[dict[str, Any]] = {
                 "Instructions": "Follow these rules",
                 "Rules": ["Rule 1", "Rule 2"],
                 "Complex": {
                     "body": "Complex section",
                     "bullets": ["Bullet 1", "Bullet 2"],
-                    "numbered": True
-                }
+                    "numbered": True,
+                },
             }
 
         with pytest.MonkeyPatch().context() as m:
             m.setattr("signalwire.core.agent_base.uvicorn", Mock())
-            with patch.object(TestAgent, 'prompt_add_section') as mock_add_section:
-                agent = TestAgent("test_agent", schema_validation=False)
+            with patch.object(TestAgent, "prompt_add_section") as mock_add_section:
+                TestAgent("test_agent", schema_validation=False)
 
                 # Should have called prompt_add_section for each section
                 assert mock_add_section.call_count == 3
 
     def test_process_prompt_sections_no_pom(self) -> None:
         """Test processing prompt sections when POM is disabled"""
+
         class TestAgent(AgentBase):
-            PROMPT_SECTIONS = {"Test": "Content"}  # type: ignore[assignment]  # base declares None; subclass overrides with dict
+            PROMPT_SECTIONS: ClassVar[dict[str, Any]] = {"Test": "Content"}
 
         with pytest.MonkeyPatch().context() as m:
             m.setattr("signalwire.core.agent_base.uvicorn", Mock())
-            with patch.object(TestAgent, 'prompt_add_section') as mock_add_section:
-                agent = TestAgent("test_agent", use_pom=False, schema_validation=False)
+            with patch.object(TestAgent, "prompt_add_section") as mock_add_section:
+                TestAgent("test_agent", use_pom=False, schema_validation=False)
 
                 # Should not call prompt_add_section when POM is disabled
                 mock_add_section.assert_not_called()
@@ -587,8 +618,7 @@ def _make_agent(**kwargs: Any) -> AgentBase:
     """Module-level helper to create a properly mocked agent."""
     with pytest.MonkeyPatch().context() as m:
         m.setattr("signalwire.core.agent_base.uvicorn", Mock())
-        agent = AgentBase(schema_validation=False, **kwargs)
-    return agent
+        return AgentBase(schema_validation=False, **kwargs)
 
 
 class TestRenderSwml:
@@ -620,28 +650,28 @@ class TestRenderSwml:
         agent = self._make()
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         assert "answer" in verb_names
 
     def test_render_swml_contains_ai_verb(self) -> None:
         agent = self._make()
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         assert "ai" in verb_names
 
     def test_render_swml_answer_before_ai(self) -> None:
         agent = self._make()
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         assert verb_names.index("answer") < verb_names.index("ai")
 
     def test_render_swml_no_answer_when_auto_answer_false(self) -> None:
         agent = self._make(auto_answer=False)
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         assert "answer" not in verb_names
 
     def test_render_swml_ai_section_has_prompt(self) -> None:
@@ -649,7 +679,7 @@ class TestRenderSwml:
         agent.set_prompt_text("Hello world")
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        ai_verb = [v for v in verbs if isinstance(v, dict) and "ai" in v][0]
+        ai_verb = next(v for v in verbs if isinstance(v, dict) and "ai" in v)
         ai_config = ai_verb["ai"]
         assert "prompt" in ai_config
 
@@ -657,7 +687,9 @@ class TestRenderSwml:
         agent = self._make()
         agent.set_prompt_text("Be a helpful agent")
         doc = json.loads(agent._render_swml())
-        ai_verb = [v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v][0]
+        ai_verb = next(
+            v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
+        )
         prompt = ai_verb["ai"]["prompt"]
         if isinstance(prompt, dict):
             assert "Be a helpful agent" in prompt.get("text", "")
@@ -668,7 +700,9 @@ class TestRenderSwml:
         agent = self._make()
         agent.set_post_prompt("Summarize the conversation")
         doc = json.loads(agent._render_swml())
-        ai_verb = [v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v][0]
+        ai_verb = next(
+            v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
+        )
         ai_config = ai_verb["ai"]
         assert "post_prompt" in ai_config
 
@@ -676,7 +710,9 @@ class TestRenderSwml:
         agent = self._make()
         agent.add_hints(["hint1", "hint2"])
         doc = json.loads(agent._render_swml())
-        ai_verb = [v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v][0]
+        ai_verb = next(
+            v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
+        )
         assert "hints" in ai_verb["ai"]
         assert "hint1" in ai_verb["ai"]["hints"]
         assert "hint2" in ai_verb["ai"]["hints"]
@@ -685,7 +721,9 @@ class TestRenderSwml:
         agent = self._make()
         agent.add_language("English", "en", "alice")
         doc = json.loads(agent._render_swml())
-        ai_verb = [v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v][0]
+        ai_verb = next(
+            v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
+        )
         assert "languages" in ai_verb["ai"]
         assert ai_verb["ai"]["languages"][0]["name"] == "English"
 
@@ -693,7 +731,9 @@ class TestRenderSwml:
         agent = self._make()
         agent.set_params({"temperature": 0.5})
         doc = json.loads(agent._render_swml())
-        ai_verb = [v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v][0]
+        ai_verb = next(
+            v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
+        )
         assert "params" in ai_verb["ai"]
         assert ai_verb["ai"]["params"]["temperature"] == 0.5
 
@@ -701,7 +741,9 @@ class TestRenderSwml:
         agent = self._make()
         agent.set_global_data({"key": "value"})
         doc = json.loads(agent._render_swml())
-        ai_verb = [v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v][0]
+        ai_verb = next(
+            v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
+        )
         assert "global_data" in ai_verb["ai"]
         assert ai_verb["ai"]["global_data"]["key"] == "value"
 
@@ -709,7 +751,9 @@ class TestRenderSwml:
         agent = self._make()
         agent.add_pronunciation("SQL", "sequel")
         doc = json.loads(agent._render_swml())
-        ai_verb = [v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v][0]
+        ai_verb = next(
+            v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
+        )
         assert "pronounce" in ai_verb["ai"]
         assert ai_verb["ai"]["pronounce"][0]["replace"] == "SQL"
 
@@ -717,28 +761,32 @@ class TestRenderSwml:
         agent = self._make(record_call=True)
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         assert "record_call" in verb_names
 
     def test_render_swml_record_call_before_ai(self) -> None:
         agent = self._make(record_call=True)
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         assert verb_names.index("record_call") < verb_names.index("ai")
 
     def test_render_swml_record_call_format(self) -> None:
         agent = self._make(record_call=True, record_format="wav", record_stereo=False)
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        record_verb = [v for v in verbs if isinstance(v, dict) and "record_call" in v][0]
+        record_verb = next(
+            v for v in verbs if isinstance(v, dict) and "record_call" in v
+        )
         assert record_verb["record_call"]["format"] == "wav"
         assert record_verb["record_call"]["stereo"] is False
 
     def test_render_swml_with_native_functions(self) -> None:
         agent = self._make(native_functions=["transfer", "check_time"])
         doc = json.loads(agent._render_swml())
-        ai_verb = [v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v][0]
+        ai_verb = next(
+            v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
+        )
         swaig = ai_verb["ai"].get("SWAIG", {})
         assert "native_functions" in swaig
         assert "transfer" in swaig["native_functions"]
@@ -747,7 +795,9 @@ class TestRenderSwml:
         agent = self._make()
         agent.add_function_include("http://example.com/funcs", ["fn1"])
         doc = json.loads(agent._render_swml())
-        ai_verb = [v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v][0]
+        ai_verb = next(
+            v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
+        )
         swaig = ai_verb["ai"].get("SWAIG", {})
         assert "includes" in swaig
         assert swaig["includes"][0]["url"] == "http://example.com/funcs"
@@ -767,7 +817,7 @@ class TestEphemeralCopy:
     def test_ephemeral_copy_is_marked_ephemeral(self) -> None:
         agent = self._make()
         copy = agent._create_ephemeral_copy()
-        assert getattr(copy, '_is_ephemeral', False) is True
+        assert getattr(copy, "_is_ephemeral", False) is True
 
     def test_ephemeral_copy_has_same_name(self) -> None:
         agent = self._make()
@@ -813,7 +863,9 @@ class TestEphemeralCopy:
         agent = self._make()
         agent.add_function_include("http://example.com", ["fn1"])
         copy = agent._create_ephemeral_copy()
-        copy._function_includes.append({"url": "http://other.com", "functions": ["fn2"]})
+        copy._function_includes.append(
+            {"url": "http://other.com", "functions": ["fn2"]}
+        )
         assert len(agent._function_includes) == 1
 
     def test_ephemeral_pre_answer_verbs_independent(self) -> None:
@@ -926,7 +978,9 @@ class TestVerbInsertion:
 
     def test_add_pre_answer_verb_connect_auto_answer_false(self) -> None:
         agent = self._make()
-        agent.add_pre_answer_verb("connect", {"from": "+15551234567", "auto_answer": False})
+        agent.add_pre_answer_verb(
+            "connect", {"from": "+15551234567", "auto_answer": False}
+        )
         assert agent._pre_answer_verbs[0][0] == "connect"
 
     # -- post-answer verbs --
@@ -955,7 +1009,9 @@ class TestVerbInsertion:
 
     def test_add_post_ai_verb_multiple(self) -> None:
         agent = self._make()
-        agent.add_post_ai_verb("request", {"url": "http://api.com/log", "method": "POST"})
+        agent.add_post_ai_verb(
+            "request", {"url": "http://api.com/log", "method": "POST"}
+        )
         agent.add_post_ai_verb("hangup", {})
         assert len(agent._post_ai_verbs) == 2
 
@@ -989,7 +1045,7 @@ class TestVerbInsertion:
         agent.add_pre_answer_verb("sleep", {"time": 500})
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         assert verb_names.index("sleep") < verb_names.index("answer")
 
     def test_post_answer_verbs_between_answer_and_ai(self) -> None:
@@ -997,7 +1053,7 @@ class TestVerbInsertion:
         agent.add_post_answer_verb("play", {"url": "say:Welcome"})
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         answer_idx = verb_names.index("answer")
         play_idx = verb_names.index("play")
         ai_idx = verb_names.index("ai")
@@ -1008,7 +1064,7 @@ class TestVerbInsertion:
         agent.add_post_ai_verb("hangup", {})
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         assert verb_names.index("ai") < verb_names.index("hangup")
 
     def test_full_verb_ordering(self) -> None:
@@ -1019,7 +1075,7 @@ class TestVerbInsertion:
         agent.add_post_ai_verb("hangup", {})
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        verb_names = [list(v.keys())[0] for v in verbs if isinstance(v, dict)]
+        verb_names = [next(iter(v.keys())) for v in verbs if isinstance(v, dict)]
         # sleep < answer < record_call < play < ai < hangup
         assert verb_names.index("sleep") < verb_names.index("answer")
         assert verb_names.index("answer") < verb_names.index("record_call")
@@ -1043,7 +1099,7 @@ class TestVerbInsertion:
         agent.add_answer_verb({"max_duration": 3600})
         doc = json.loads(agent._render_swml())
         verbs = doc["sections"]["main"]
-        answer_verb = [v for v in verbs if isinstance(v, dict) and "answer" in v][0]
+        answer_verb = next(v for v in verbs if isinstance(v, dict) and "answer" in v)
         assert answer_verb["answer"]["max_duration"] == 3600
 
 
@@ -1104,7 +1160,9 @@ class TestSipRouting:
         agent.auto_map_sip_usernames()
         assert "abc" in agent._sip_usernames
         # Should not have a no-vowels variant for short names
-        assert len([u for u in agent._sip_usernames if u != "abc"]) <= 1  # only route variant
+        assert (
+            len([u for u in agent._sip_usernames if u != "abc"]) <= 1
+        )  # only route variant
 
     def test_enable_sip_routing_returns_self(self) -> None:
         agent = self._make()
@@ -1115,14 +1173,14 @@ class TestSipRouting:
         agent = self._make()
         agent.enable_sip_routing(auto_map=True)
         # Should have registered at least the agent name
-        assert hasattr(agent, '_sip_usernames')
+        assert hasattr(agent, "_sip_usernames")
         assert "sip_test" in agent._sip_usernames
 
     def test_enable_sip_routing_auto_map_false(self) -> None:
         agent = self._make()
         agent.enable_sip_routing(auto_map=False)
         # With auto_map=False, _sip_usernames might not be populated
-        usernames: set[str] = getattr(agent, '_sip_usernames', set())
+        usernames: set[str] = getattr(agent, "_sip_usernames", set())
         # Should NOT have auto-mapped the agent name
         assert "sip_test" not in usernames
 
@@ -1144,16 +1202,24 @@ class TestUrlBuilding:
 
     def test_server_mode_with_auth(self) -> None:
         agent = _make_agent(
-            name="url_test", host="localhost", port=3000,
-            route="/test", basic_auth=("user", "pass"), use_pom=False
+            name="url_test",
+            host="localhost",
+            port=3000,
+            route="/test",
+            basic_auth=("user", "pass"),
+            use_pom=False,
         )
         url = agent.get_full_url(include_auth=True)
         assert "user:pass@" in url
 
     def test_server_mode_without_auth(self) -> None:
         agent = _make_agent(
-            name="url_test", host="localhost", port=3000,
-            route="/test", basic_auth=("user", "pass"), use_pom=False
+            name="url_test",
+            host="localhost",
+            port=3000,
+            route="/test",
+            basic_auth=("user", "pass"),
+            use_pom=False,
         )
         url = agent.get_full_url(include_auth=False)
         assert "user:pass@" not in url
@@ -1168,8 +1234,11 @@ class TestUrlBuilding:
 
     def test_proxy_url_with_auth(self) -> None:
         agent = _make_agent(
-            name="url_test", host="localhost", port=3000,
-            basic_auth=("u", "p"), use_pom=False
+            name="url_test",
+            host="localhost",
+            port=3000,
+            basic_auth=("u", "p"),
+            use_pom=False,
         )
         agent._proxy_url_base = "https://proxy.example.com/agent"
         url = agent.get_full_url(include_auth=True)
@@ -1345,6 +1414,7 @@ class TestToolRegistration:
 
     def test_define_tool_basic(self) -> None:
         agent = self._make()
+
         def handler(args: dict[str, Any], raw: Any) -> dict[str, Any]:
             return {"response": "ok"}
 
@@ -1352,22 +1422,26 @@ class TestToolRegistration:
             "my_tool",
             "A test tool",
             {"type": "object", "properties": {"name": {"type": "string"}}},
-            handler
+            handler,
         )
         assert result is agent
         assert "my_tool" in agent._tool_registry._swaig_functions
 
     def test_define_tool_with_required(self) -> None:
         agent = self._make()
+
         def handler(args: dict[str, Any], raw: Any) -> dict[str, Any]:
             return {"response": "ok"}
 
         agent.define_tool(
             "req_tool",
             "Tool with required params",
-            {"type": "object", "properties": {"name": {"type": "string"}, "age": {"type": "integer"}}},
+            {
+                "type": "object",
+                "properties": {"name": {"type": "string"}, "age": {"type": "integer"}},
+            },
             handler,
-            required=["name"]
+            required=["name"],
         )
         func = agent._tool_registry._swaig_functions["req_tool"]
         assert isinstance(func, SWAIGFunction)
@@ -1375,6 +1449,7 @@ class TestToolRegistration:
 
     def test_define_tool_secure_default(self) -> None:
         agent = self._make()
+
         def handler(args: dict[str, Any], raw: Any) -> dict[str, Any]:
             return {"response": "ok"}
 
@@ -1385,6 +1460,7 @@ class TestToolRegistration:
 
     def test_define_tool_not_secure(self) -> None:
         agent = self._make()
+
         def handler(args: dict[str, Any], raw: Any) -> dict[str, Any]:
             return {"response": "ok"}
 
@@ -1395,6 +1471,7 @@ class TestToolRegistration:
 
     def test_define_tool_duplicate_raises(self) -> None:
         agent = self._make()
+
         def handler(args: dict[str, Any], raw: Any) -> dict[str, Any]:
             return {"response": "ok"}
 
@@ -1404,12 +1481,16 @@ class TestToolRegistration:
 
     def test_define_tool_with_webhook_url(self) -> None:
         agent = self._make()
+
         def handler(args: dict[str, Any], raw: Any) -> dict[str, Any]:
             return {"response": "ok"}
 
         agent.define_tool(
-            "webhook_tool", "External tool", {}, handler,
-            webhook_url="https://external.com/api"
+            "webhook_tool",
+            "External tool",
+            {},
+            handler,
+            webhook_url="https://external.com/api",
         )
         func = agent._tool_registry._swaig_functions["webhook_tool"]
         assert isinstance(func, SWAIGFunction)
@@ -1418,6 +1499,7 @@ class TestToolRegistration:
 
     def test_define_tool_description(self) -> None:
         agent = self._make()
+
         def handler(args: dict[str, Any], raw: Any) -> dict[str, Any]:
             return {"response": "ok"}
 
@@ -1428,6 +1510,7 @@ class TestToolRegistration:
 
     def test_define_tool_complex_parameters(self) -> None:
         agent = self._make()
+
         def handler(args: dict[str, Any], raw: Any) -> dict[str, Any]:
             return {"response": "ok"}
 
@@ -1435,10 +1518,14 @@ class TestToolRegistration:
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "Search query"},
-                "limit": {"type": "integer", "description": "Max results", "default": 10},
+                "limit": {
+                    "type": "integer",
+                    "description": "Max results",
+                    "default": 10,
+                },
                 "tags": {"type": "array", "items": {"type": "string"}},
             },
-            "required": ["query"]
+            "required": ["query"],
         }
         agent.define_tool("complex_tool", "Complex params", params, handler)
         func = agent._tool_registry._swaig_functions["complex_tool"]
@@ -1447,6 +1534,7 @@ class TestToolRegistration:
 
     def test_define_tools_returns_list(self) -> None:
         agent = self._make()
+
         def handler(args: dict[str, Any], raw: Any) -> dict[str, Any]:
             return {"response": "ok"}
 
@@ -1461,7 +1549,7 @@ class TestToolRegistration:
             "function": "data_map_fn",
             "description": "A data map function",
             "parameters": {"type": "object", "properties": {}},
-            "data_map": {"expressions": []}
+            "data_map": {"expressions": []},
         }
         result = agent.register_swaig_function(func_dict)
         assert result is agent
@@ -1485,26 +1573,32 @@ class TestToolRegistration:
 
     def test_on_function_call_data_map_function(self) -> None:
         agent = self._make()
-        agent.register_swaig_function({
-            "function": "dm_fn",
-            "description": "DM",
-            "parameters": {},
-            "data_map": {}
-        })
+        agent.register_swaig_function(
+            {"function": "dm_fn", "description": "DM", "parameters": {}, "data_map": {}}
+        )
         result = agent.on_function_call("dm_fn", {})
-        assert "Data map" in result["response"] or "data_map" in result["response"].lower()
+        assert (
+            "Data map" in result["response"] or "data_map" in result["response"].lower()
+        )
 
     def test_on_function_call_success(self) -> None:
         agent = self._make()
+
         def handler(args: dict[str, Any], raw: Any) -> dict[str, Any]:
             return {"response": f"got {args.get('x')}"}
 
-        agent.define_tool("fn", "test", {"type": "object", "properties": {"x": {"type": "string"}}}, handler)
+        agent.define_tool(
+            "fn",
+            "test",
+            {"type": "object", "properties": {"x": {"type": "string"}}},
+            handler,
+        )
         result = agent.on_function_call("fn", {"x": "hello"})
         assert "got hello" in str(result)
 
     def test_on_function_call_handler_exception(self) -> None:
         agent = self._make()
+
         def bad_handler(args: dict[str, Any], raw: Any) -> dict[str, Any]:
             raise RuntimeError("boom")
 
@@ -1514,16 +1608,20 @@ class TestToolRegistration:
 
     def test_tool_appears_in_rendered_swml(self) -> None:
         agent = self._make()
+
         def handler(args: dict[str, Any], raw: Any) -> dict[str, Any]:
             return {"response": "ok"}
 
         agent.define_tool(
-            "rendered_tool", "A tool for render test",
+            "rendered_tool",
+            "A tool for render test",
             {"type": "object", "properties": {"q": {"type": "string"}}},
-            handler
+            handler,
         )
         doc = json.loads(agent._render_swml())
-        ai_verb = [v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v][0]
+        ai_verb = next(
+            v for v in doc["sections"]["main"] if isinstance(v, dict) and "ai" in v
+        )
         swaig = ai_verb["ai"].get("SWAIG", {})
         assert "functions" in swaig
         tool_names = [f["function"] for f in swaig["functions"]]
@@ -1542,7 +1640,9 @@ class TestSkillIntegration:
         agent.skill_manager.load_skill.return_value = (True, "")
         result = agent.add_skill("test_skill", {"param": "value"})
         assert result is agent
-        agent.skill_manager.load_skill.assert_called_once_with("test_skill", params={"param": "value"})
+        agent.skill_manager.load_skill.assert_called_once_with(
+            "test_skill", params={"param": "value"}
+        )
 
     def test_add_skill_failure_raises(self) -> None:
         agent = self._make()
@@ -1556,7 +1656,9 @@ class TestSkillIntegration:
         agent.skill_manager = Mock()
         agent.skill_manager.load_skill.return_value = (True, "")
         agent.add_skill("simple_skill")
-        agent.skill_manager.load_skill.assert_called_once_with("simple_skill", params=None)
+        agent.skill_manager.load_skill.assert_called_once_with(
+            "simple_skill", params=None
+        )
 
     def test_remove_skill(self) -> None:
         agent = self._make()
@@ -1588,6 +1690,7 @@ class TestSkillIntegration:
         """Verify skill_manager is a SkillManager by default."""
         agent = self._make()
         from signalwire.core.skill_manager import SkillManager
+
         assert isinstance(agent.skill_manager, SkillManager)
 
     def test_skill_manager_agent_reference(self) -> None:
@@ -1645,8 +1748,10 @@ class TestDynamicConfig:
 
     def test_set_dynamic_config_callback(self) -> None:
         agent = self._make()
+
         def callback(qp: Any, bp: Any, h: Any, a: Any) -> None:
             pass
+
         result = agent.set_dynamic_config_callback(callback)
         assert result is agent
         assert agent._dynamic_config_callback is callback
@@ -1679,7 +1784,8 @@ class TestFindSummary:
 
     def test_find_summary_direct_key(self) -> None:
         agent = self._make()
-        result = agent._find_summary_in_post_data({"summary": {"text": "hello"}}, agent.log)  # type: ignore[typeddict-unknown-key]  # exercises arbitrary post-data shape
+        find_summary = agent._find_summary_in_post_data
+        result = find_summary({"summary": {"text": "hello"}}, agent.log)  # type: ignore[typeddict-unknown-key]  # exercises arbitrary post-data shape
         assert result == {"text": "hello"}
 
     def test_find_summary_from_post_prompt_data_parsed(self) -> None:
@@ -1767,8 +1873,9 @@ class TestAgentBaseDecomposedHandleRequest:
         )
 
     @staticmethod
-    def _auth() -> Dict[str, str]:
+    def _auth() -> dict[str, str]:
         import base64
+
         creds = base64.b64encode(b"user:pass").decode()
         return {"Authorization": f"Basic {creds}"}
 
@@ -1797,9 +1904,7 @@ class TestAgentBaseDecomposedHandleRequest:
 
     def test_agent_core_307_routing_redirect(self) -> None:
         agent = self._agent()
-        agent.register_routing_callback(
-            lambda body, headers: "/elsewhere", "/sip"
-        )
+        agent.register_routing_callback(lambda body, headers: "/elsewhere", "/sip")
         status, headers, body_str = agent.handle_request(
             "POST",
             "http://127.0.0.1:3000/sip",

@@ -12,8 +12,7 @@ Unit tests for contexts module
 """
 
 import pytest
-from unittest.mock import Mock, patch, MagicMock
-from typing import Dict, List, Any, Optional
+from unittest.mock import Mock
 
 from signalwire.core.contexts import (
     ContextBuilder,
@@ -21,155 +20,159 @@ from signalwire.core.contexts import (
     Step,
     GatherInfo,
     GatherQuestion,
-    create_simple_context
+    create_simple_context,
 )
 
 
 class TestStep:
     """Test Step functionality"""
-    
+
     def test_basic_initialization(self) -> None:
         """Test basic Step initialization"""
         step = Step("greeting")
-        
+
         assert step.name == "greeting"
         assert step._text is None
         assert step._step_criteria is None
         assert step._functions is None
         assert step._valid_steps is None
         assert step._sections == []
-    
+
     def test_set_text(self) -> None:
         """Test setting step text"""
         step = Step("greeting")
-        
+
         result = step.set_text("Hello, how can I help you today?")
-        
+
         assert result is step  # Should return self for chaining
         assert step._text == "Hello, how can I help you today?"
-    
+
     def test_add_section(self) -> None:
         """Test adding POM sections"""
         step = Step("greeting")
-        
+
         result = step.add_section("Introduction", "Welcome to our service")
-        
+
         assert result is step  # Should return self for chaining
         assert len(step._sections) == 1
         assert step._sections[0]["title"] == "Introduction"
         assert step._sections[0]["body"] == "Welcome to our service"
-    
+
     def test_add_bullets(self) -> None:
         """Test adding bullet sections"""
         step = Step("greeting")
         bullets = ["First point", "Second point", "Third point"]
-        
+
         result = step.add_bullets("Key Points", bullets)
-        
+
         assert result is step  # Should return self for chaining
         assert len(step._sections) == 1
         assert step._sections[0]["title"] == "Key Points"
         assert step._sections[0]["bullets"] == bullets
-    
+
     def test_set_step_criteria(self) -> None:
         """Test setting step criteria"""
         step = Step("greeting")
-        
+
         result = step.set_step_criteria("User has provided their name")
-        
+
         assert result is step  # Should return self for chaining
         assert step._step_criteria == "User has provided their name"
-    
+
     def test_set_functions(self) -> None:
         """Test setting available functions"""
         step = Step("greeting")
-        
+
         # Test with function list
         result = step.set_functions(["get_weather", "search"])
         assert result is step
         assert step._functions == ["get_weather", "search"]
-        
+
         # Test with "none"
         step.set_functions("none")
         assert step._functions == "none"  # type: ignore[comparison-overlap]  # testing "none" sentinel
-    
+
     def test_set_valid_steps(self) -> None:
         """Test setting valid steps"""
         step = Step("greeting")
         valid_steps = ["next", "collect_info", "end"]
-        
+
         result = step.set_valid_steps(valid_steps)
-        
+
         assert result is step  # Should return self for chaining
         assert step._valid_steps == valid_steps
-    
+
     def test_text_and_sections_conflict(self) -> None:
         """Test that text and sections cannot be mixed"""
         step = Step("greeting")
-        
+
         # Set text first
         step.set_text("Hello")
-        
+
         # Adding sections should raise error
         with pytest.raises(ValueError, match="Cannot add POM sections when set_text"):
             step.add_section("Title", "Body")
-        
+
         with pytest.raises(ValueError, match="Cannot add POM sections when set_text"):
             step.add_bullets("Title", ["bullet"])
-    
+
     def test_sections_and_text_conflict(self) -> None:
         """Test that sections and text cannot be mixed"""
         step = Step("greeting")
-        
+
         # Add section first
         step.add_section("Title", "Body")
-        
+
         # Setting text should raise error
-        with pytest.raises(ValueError, match="Cannot use set_text\\(\\) when POM sections"):
+        with pytest.raises(
+            ValueError, match="Cannot use set_text\\(\\) when POM sections"
+        ):
             step.set_text("Hello")
-    
+
     def test_render_text_with_text(self) -> None:
         """Test rendering text when text is set"""
         step = Step("greeting")
         step.set_text("Hello, how can I help you?")
-        
+
         rendered = step._render_text()
-        
+
         assert rendered == "Hello, how can I help you?"
-    
+
     def test_render_text_with_sections(self) -> None:
         """Test rendering text from POM sections"""
         step = Step("greeting")
         step.add_section("Welcome", "Hello there!")
         step.add_bullets("Options", ["Option 1", "Option 2"])
-        
+
         rendered = step._render_text()
-        
+
         assert "## Welcome" in rendered
         assert "Hello there!" in rendered
         assert "## Options" in rendered
         assert "- Option 1" in rendered
         assert "- Option 2" in rendered
-    
+
     def test_render_text_no_content(self) -> None:
         """Test rendering text when no content is set"""
         step = Step("greeting")
-        
-        with pytest.raises(ValueError, match="Step 'greeting' has no text or POM sections"):
+
+        with pytest.raises(
+            ValueError, match="Step 'greeting' has no text or POM sections"
+        ):
             step._render_text()
-    
+
     def test_to_dict_basic(self) -> None:
         """Test converting step to dictionary"""
         step = Step("greeting")
         step.set_text("Hello!")
-        
+
         result = step.to_dict()
-        
+
         assert result["text"] == "Hello!"
         assert "step_criteria" not in result
         assert "functions" not in result
         assert "valid_steps" not in result
-    
+
     def test_to_dict_complete(self) -> None:
         """Test converting step with all fields to dictionary"""
         step = Step("greeting")
@@ -177,9 +180,9 @@ class TestStep:
         step.set_step_criteria("User responds")
         step.set_functions(["search"])
         step.set_valid_steps(["next"])
-        
+
         result = step.to_dict()
-        
+
         assert result["text"] == "Hello!"
         assert result["step_criteria"] == "User responds"
         assert result["functions"] == ["search"]
@@ -188,122 +191,124 @@ class TestStep:
 
 class TestContext:
     """Test Context functionality"""
-    
+
     def test_basic_initialization(self) -> None:
         """Test basic Context initialization"""
         context = Context("customer_service")
-        
+
         assert context.name == "customer_service"
         assert context._steps == {}
         assert context._step_order == []
         assert context._valid_contexts is None
-    
+
     def test_add_step(self) -> None:
         """Test adding steps to context"""
         context = Context("customer_service")
-        
+
         step = context.add_step("greeting")
-        
+
         assert isinstance(step, Step)
         assert step.name == "greeting"
         assert "greeting" in context._steps
         assert context._step_order == ["greeting"]
-    
+
     def test_add_multiple_steps(self) -> None:
         """Test adding multiple steps"""
         context = Context("customer_service")
-        
+
         step1 = context.add_step("greeting")
         step2 = context.add_step("collect_info")
         step3 = context.add_step("provide_solution")
-        
+
         assert len(context._steps) == 3
         assert context._step_order == ["greeting", "collect_info", "provide_solution"]
         assert all(isinstance(step, Step) for step in [step1, step2, step3])
-    
+
     def test_add_duplicate_step(self) -> None:
         """Test adding duplicate step names"""
         context = Context("customer_service")
-        
+
         context.add_step("greeting")
-        
+
         with pytest.raises(ValueError, match="Step 'greeting' already exists"):
             context.add_step("greeting")
-    
+
     def test_set_valid_contexts(self) -> None:
         """Test setting valid contexts"""
         context = Context("customer_service")
         valid_contexts = ["sales", "technical_support"]
-        
+
         result = context.set_valid_contexts(valid_contexts)
-        
+
         assert result is context  # Should return self for chaining
         assert context._valid_contexts == valid_contexts
-    
+
     def test_to_dict_basic(self) -> None:
         """Test converting context to dictionary"""
         context = Context("customer_service")
         step = context.add_step("greeting")
         step.set_text("Hello!")
-        
+
         result = context.to_dict()
-        
+
         assert "steps" in result
         assert len(result["steps"]) == 1
         assert result["steps"][0]["text"] == "Hello!"
         assert "valid_contexts" not in result
-    
+
     def test_to_dict_with_valid_contexts(self) -> None:
         """Test converting context with valid contexts"""
         context = Context("customer_service")
         step = context.add_step("greeting")
         step.set_text("Hello!")
         context.set_valid_contexts(["sales"])
-        
+
         result = context.to_dict()
-        
+
         assert "steps" in result
         assert result["valid_contexts"] == ["sales"]
-    
+
     def test_to_dict_no_steps(self) -> None:
         """Test converting context with no steps"""
         context = Context("customer_service")
-        
+
         with pytest.raises(ValueError, match="Context 'customer_service' has no steps"):
             context.to_dict()
 
 
 class TestContextBuilder:
     """Test ContextBuilder functionality"""
-    
+
     def test_basic_initialization(self) -> None:
         """Test basic ContextBuilder initialization"""
         mock_agent = Mock()
         builder = ContextBuilder(mock_agent)
-        
+
         # ContextBuilder doesn't store agent reference, just uses it during init
         assert builder._contexts == {}
-    
+
     def test_add_context(self) -> None:
         """Test adding a context"""
         mock_agent = Mock()
         builder = ContextBuilder(mock_agent)
-        
+
         context = builder.add_context("customer_service")
         assert isinstance(context, Context)
         assert "customer_service" in builder._contexts
-    
+
     def test_add_duplicate_context(self) -> None:
         """Test adding duplicate context raises error"""
         mock_agent = Mock()
         builder = ContextBuilder(mock_agent)
-        
+
         builder.add_context("customer_service")
-        
+
         # The actual API raises an error for duplicates
-        with pytest.raises(ValueError, match="Context 'customer_service' already exists"):
+        with pytest.raises(
+            ValueError, match="Context 'customer_service' already exists"
+        ):
             builder.add_context("customer_service")
-    
+
     def test_validate_success(self) -> None:
         """Test successful validation with default context — returns None
         and the validated config is reachable via to_dict() with the right
@@ -311,7 +316,9 @@ class TestContextBuilder:
         mock_agent = Mock()
         builder = ContextBuilder(mock_agent)
 
-        context = builder.add_context("default")  # Must be named 'default' for single context
+        context = builder.add_context(
+            "default"
+        )  # Must be named 'default' for single context
         step = context.add_step("greeting")
         step.set_text("Hello!")
 
@@ -325,34 +332,38 @@ class TestContextBuilder:
         # named step survives the round trip.
         step_names = [s["name"] for s in d["default"]["steps"]]
         assert "greeting" in step_names
-    
+
     def test_validate_no_contexts(self) -> None:
         """Test validation with no contexts"""
         mock_agent = Mock()
         builder = ContextBuilder(mock_agent)
-        
+
         with pytest.raises(ValueError, match="At least one context must be defined"):
             builder.validate()
-    
+
     def test_validate_context_no_steps(self) -> None:
         """Test validation with context having no steps"""
         mock_agent = Mock()
         builder = ContextBuilder(mock_agent)
-        
+
         builder.add_context("default")  # Must be named 'default' for single context
-        
-        with pytest.raises(ValueError, match="Context 'default' must have at least one step"):
+
+        with pytest.raises(
+            ValueError, match="Context 'default' must have at least one step"
+        ):
             builder.validate()
-    
+
     def test_to_dict(self) -> None:
         """Test converting builder to dictionary"""
         mock_agent = Mock()
         builder = ContextBuilder(mock_agent)
-        
-        context = builder.add_context("default")  # Must be named 'default' for single context
+
+        context = builder.add_context(
+            "default"
+        )  # Must be named 'default' for single context
         step = context.add_step("greeting")
         step.set_text("Hello!")
-        
+
         result = builder.to_dict()
         assert isinstance(result, dict)
         assert "default" in result
@@ -360,118 +371,128 @@ class TestContextBuilder:
 
 class TestCreateSimpleContext:
     """Test create_simple_context factory function"""
-    
+
     def test_create_simple_context_default(self) -> None:
         """Test creating simple context with default name"""
         context = create_simple_context()
-        
+
         assert isinstance(context, Context)
         assert context.name == "default"
-    
+
     def test_create_simple_context_custom_name(self) -> None:
         """Test creating simple context with custom name"""
         context = create_simple_context("my_context")
-        
+
         assert isinstance(context, Context)
         assert context.name == "my_context"
 
 
 class TestContextIntegration:
     """Test context integration scenarios"""
-    
+
     def test_complete_context_workflow(self) -> None:
         """Test complete context building workflow with multiple contexts"""
         mock_agent = Mock()
         builder = ContextBuilder(mock_agent)
-        
+
         # Create customer service context
         customer_service = builder.add_context("customer_service")
         customer_service.set_valid_contexts(["sales", "technical_support"])
-        
+
         # Add greeting step
         greeting = customer_service.add_step("greeting")
-        greeting.set_text("Hello! Welcome to customer service. How can I help you today?")
+        greeting.set_text(
+            "Hello! Welcome to customer service. How can I help you today?"
+        )
         greeting.set_step_criteria("User has stated their issue")
         greeting.set_functions(["search_knowledge_base", "escalate_to_human"])
         greeting.set_valid_steps(["next", "gather_info"])  # Use valid step names
-        
+
         # Add information gathering step
         gather_info = customer_service.add_step("gather_info")
-        gather_info.add_section("Information Needed", "Please provide the following details:")
-        gather_info.add_bullets("Required Information", [
-            "Account number or phone number",
-            "Description of the issue",
-            "When did the issue start?"
-        ])
+        gather_info.add_section(
+            "Information Needed", "Please provide the following details:"
+        )
+        gather_info.add_bullets(
+            "Required Information",
+            [
+                "Account number or phone number",
+                "Description of the issue",
+                "When did the issue start?",
+            ],
+        )
         gather_info.set_step_criteria("All required information has been collected")
         gather_info.set_valid_steps(["next", "greeting"])
-        
+
         # Add resolution step
         resolution = customer_service.add_step("resolution")
-        resolution.set_text("Based on the information provided, here's how we can resolve your issue:")
+        resolution.set_text(
+            "Based on the information provided, here's how we can resolve your issue:"
+        )
         resolution.set_functions("none")  # No functions needed for final step
-        
+
         # Add the referenced contexts to satisfy validation
         sales = builder.add_context("sales")
         sales_step = sales.add_step("sales_greeting")
         sales_step.set_text("Welcome to sales!")
-        
+
         technical_support = builder.add_context("technical_support")
         tech_step = technical_support.add_step("tech_greeting")
         tech_step.set_text("Welcome to technical support!")
-        
+
         # Validate the complete structure
         builder.validate()
-        
+
         # Convert to dictionary
         result = builder.to_dict()
         assert "customer_service" in result
         assert "sales" in result
         assert "technical_support" in result
         assert len(result["customer_service"]["steps"]) == 3
-    
+
     def test_multiple_contexts(self) -> None:
         """Test building multiple contexts"""
         mock_agent = Mock()
         builder = ContextBuilder(mock_agent)
-        
+
         # Create sales context
         sales = builder.add_context("sales")
         sales_step = sales.add_step("pitch")
         sales_step.set_text("Let me tell you about our amazing products!")
-        
+
         # Create support context
         support = builder.add_context("support")
         support_step = support.add_step("diagnose")
         support_step.set_text("Let's troubleshoot your issue.")
-        
+
         # Validate and convert
         builder.validate()
         result = builder.to_dict()
-        
+
         # Verify both contexts exist
         assert "sales" in result
         assert "support" in result
         assert len(result["sales"]["steps"]) == 1
         assert len(result["support"]["steps"]) == 1
-    
+
     def test_complex_step_configuration(self) -> None:
         """Test complex step configuration with all features"""
         context = Context("complex")
-        
+
         step = context.add_step("complex_step")
-        
+
         # Use method chaining
-        step.add_section("Overview", "This is a complex step with multiple sections") \
-            .add_bullets("Features", ["Feature 1", "Feature 2", "Feature 3"]) \
-            .add_section("Instructions", "Follow these steps carefully") \
-            .set_step_criteria("All features have been demonstrated") \
-            .set_functions(["demo_feature_1", "demo_feature_2", "demo_feature_3"]) \
-            .set_valid_steps(["next", "previous", "help"])
-        
+        step.add_section(
+            "Overview", "This is a complex step with multiple sections"
+        ).add_bullets("Features", ["Feature 1", "Feature 2", "Feature 3"]).add_section(
+            "Instructions", "Follow these steps carefully"
+        ).set_step_criteria("All features have been demonstrated").set_functions(
+            ["demo_feature_1", "demo_feature_2", "demo_feature_3"]
+        ).set_valid_steps(["next", "previous", "help"])
+
         # Convert to dict and verify
         step_dict = step.to_dict()
-        
+
         # Check that all sections are rendered
         text = step_dict["text"]
         assert "## Overview" in text
@@ -480,10 +501,14 @@ class TestContextIntegration:
         assert "- Feature 1" in text
         assert "## Instructions" in text
         assert "Follow these steps" in text
-        
+
         # Check other fields
         assert step_dict["step_criteria"] == "All features have been demonstrated"
-        assert step_dict["functions"] == ["demo_feature_1", "demo_feature_2", "demo_feature_3"]
+        assert step_dict["functions"] == [
+            "demo_feature_1",
+            "demo_feature_2",
+            "demo_feature_3",
+        ]
         assert step_dict["valid_steps"] == ["next", "previous", "help"]
 
 
@@ -636,7 +661,9 @@ class TestContextSystemPromptSections:
         """Test that add_system_section raises when set_system_prompt already used"""
         context = Context("sales")
         context.set_system_prompt("You are a sales agent.")
-        with pytest.raises(ValueError, match="Cannot add POM sections for system prompt"):
+        with pytest.raises(
+            ValueError, match="Cannot add POM sections for system prompt"
+        ):
             context.add_system_section("Role", "You are a sales agent.")
 
     def test_add_system_bullets(self) -> None:
@@ -645,13 +672,18 @@ class TestContextSystemPromptSections:
         result = context.add_system_bullets("Rules", ["Be polite", "Be helpful"])
         assert result is context
         assert len(context._system_prompt_sections) == 1
-        assert context._system_prompt_sections[0]["bullets"] == ["Be polite", "Be helpful"]
+        assert context._system_prompt_sections[0]["bullets"] == [
+            "Be polite",
+            "Be helpful",
+        ]
 
     def test_add_system_bullets_conflict_with_set_system_prompt(self) -> None:
         """Test that add_system_bullets raises when set_system_prompt already used"""
         context = Context("sales")
         context.set_system_prompt("You are a sales agent.")
-        with pytest.raises(ValueError, match="Cannot add POM sections for system prompt"):
+        with pytest.raises(
+            ValueError, match="Cannot add POM sections for system prompt"
+        ):
             context.add_system_bullets("Rules", ["Be polite"])
 
     def test_render_system_prompt_with_text(self) -> None:
@@ -958,7 +990,9 @@ class TestContextBuilderValidation:
         builder = ContextBuilder(mock_agent)
         context = builder.add_context("custom_name")
         context.add_step("greeting").set_text("Hello!")
-        with pytest.raises(ValueError, match="single context, it must be named 'default'"):
+        with pytest.raises(
+            ValueError, match="single context, it must be named 'default'"
+        ):
             builder.validate()
 
     def test_validate_invalid_step_reference(self) -> None:
@@ -969,7 +1003,9 @@ class TestContextBuilderValidation:
         step = context.add_step("greeting")
         step.set_text("Hello!")
         step.set_valid_steps(["nonexistent_step"])
-        with pytest.raises(ValueError, match="references unknown step 'nonexistent_step'"):
+        with pytest.raises(
+            ValueError, match="references unknown step 'nonexistent_step'"
+        ):
             builder.validate()
 
     def test_validate_next_is_allowed_in_valid_steps(self) -> None:
@@ -997,7 +1033,10 @@ class TestContextBuilderValidation:
         ctx1.set_valid_contexts(["nonexistent_context"])
         ctx2 = builder.add_context("ctx2")
         ctx2.add_step("s2").set_text("Hi!")
-        with pytest.raises(ValueError, match="Context 'ctx1' references unknown context 'nonexistent_context'"):
+        with pytest.raises(
+            ValueError,
+            match="Context 'ctx1' references unknown context 'nonexistent_context'",
+        ):
             builder.validate()
 
     def test_validate_invalid_context_reference_at_step_level(self) -> None:
@@ -1010,7 +1049,9 @@ class TestContextBuilderValidation:
         step.set_valid_contexts(["nonexistent_context"])
         ctx2 = builder.add_context("ctx2")
         ctx2.add_step("s2").set_text("Hi!")
-        with pytest.raises(ValueError, match="references unknown context 'nonexistent_context'"):
+        with pytest.raises(
+            ValueError, match="references unknown context 'nonexistent_context'"
+        ):
             builder.validate()
 
     def test_validate_valid_context_references(self) -> None:
@@ -1050,6 +1091,7 @@ class TestContextBuilderValidation:
 # GatherInfo / GatherQuestion
 # ---------------------------------------------------------------------------
 
+
 class TestGatherQuestion:
     """Test GatherQuestion class"""
 
@@ -1060,8 +1102,12 @@ class TestGatherQuestion:
 
     def test_question_with_all_fields(self) -> None:
         q = GatherQuestion(
-            key="email", question="Email?", type="string",
-            confirm=True, prompt="Be precise", functions=["validate_email"]
+            key="email",
+            question="Email?",
+            type="string",
+            confirm=True,
+            prompt="Be precise",
+            functions=["validate_email"],
         )
         d = q.to_dict()
         assert d["key"] == "email"
@@ -1089,8 +1135,9 @@ class TestGatherInfo:
         assert len(d["questions"]) == 1
 
     def test_gather_info_with_all_params(self) -> None:
-        gi = GatherInfo(output_key="profile", completion_action="next_step",
-                        prompt="Welcome!")
+        gi = GatherInfo(
+            output_key="profile", completion_action="next_step", prompt="Welcome!"
+        )
         gi.add_question("name", "Name?")
         d = gi.to_dict()
         assert d["output_key"] == "profile"
@@ -1153,10 +1200,9 @@ class TestGatherInfoValidation:
         following step in the same context, validate() must accept it."""
         builder = self._make_builder()
         ctx = builder.add_context("default")
-        ctx.add_step("gather") \
-            .set_text("Gather") \
-            .set_gather_info(completion_action="next_step") \
-            .add_gather_question("name", "Name?")
+        ctx.add_step("gather").set_text("Gather").set_gather_info(
+            completion_action="next_step"
+        ).add_gather_question("name", "Name?")
         ctx.add_step("process").set_text("Process")
         # validate() returns None and to_dict() preserves the action verbatim.
         assert builder.validate() is None  # type: ignore[func-returns-value]  # validate() returns None; asserting it ran without raising
@@ -1167,10 +1213,9 @@ class TestGatherInfoValidation:
     def test_next_step_invalid_on_last_step(self) -> None:
         builder = self._make_builder()
         ctx = builder.add_context("default")
-        ctx.add_step("only_step") \
-            .set_text("Gather") \
-            .set_gather_info(completion_action="next_step") \
-            .add_gather_question("name", "Name?")
+        ctx.add_step("only_step").set_text("Gather").set_gather_info(
+            completion_action="next_step"
+        ).add_gather_question("name", "Name?")
         with pytest.raises(ValueError, match="last step"):
             builder.validate()
 
@@ -1180,10 +1225,9 @@ class TestGatherInfoValidation:
         accept it."""
         builder = self._make_builder()
         ctx = builder.add_context("default")
-        ctx.add_step("gather") \
-            .set_text("Gather") \
-            .set_gather_info(completion_action="review") \
-            .add_gather_question("name", "Name?")
+        ctx.add_step("gather").set_text("Gather").set_gather_info(
+            completion_action="review"
+        ).add_gather_question("name", "Name?")
         ctx.add_step("middle").set_text("Middle")
         ctx.add_step("review").set_text("Review")
         assert builder.validate() is None  # type: ignore[func-returns-value]  # validate() returns None; asserting it ran without raising
@@ -1197,10 +1241,9 @@ class TestGatherInfoValidation:
     def test_named_step_invalid_when_not_defined(self) -> None:
         builder = self._make_builder()
         ctx = builder.add_context("default")
-        ctx.add_step("gather") \
-            .set_text("Gather") \
-            .set_gather_info(completion_action="nonexistent") \
-            .add_gather_question("name", "Name?")
+        ctx.add_step("gather").set_text("Gather").set_gather_info(
+            completion_action="nonexistent"
+        ).add_gather_question("name", "Name?")
         ctx.add_step("other").set_text("Other")
         with pytest.raises(ValueError, match="is not a step in this context"):
             builder.validate()
@@ -1212,10 +1255,9 @@ class TestGatherInfoValidation:
         completion_action key."""
         builder = self._make_builder()
         ctx = builder.add_context("default")
-        ctx.add_step("only_step") \
-            .set_text("Gather") \
-            .set_gather_info() \
-            .add_gather_question("name", "Name?")
+        ctx.add_step("only_step").set_text(
+            "Gather"
+        ).set_gather_info().add_gather_question("name", "Name?")
         assert builder.validate() is None  # type: ignore[func-returns-value]  # validate() returns None; asserting it ran without raising
         d = builder.to_dict()
         only_step = d["default"]["steps"][0]
@@ -1228,14 +1270,12 @@ class TestGatherInfoValidation:
         because each has a following step."""
         builder = self._make_builder()
         ctx = builder.add_context("default")
-        ctx.add_step("step1") \
-            .set_text("S1") \
-            .set_gather_info(completion_action="next_step") \
-            .add_gather_question("a", "Q?")
-        ctx.add_step("step2") \
-            .set_text("S2") \
-            .set_gather_info(completion_action="next_step") \
-            .add_gather_question("b", "Q?")
+        ctx.add_step("step1").set_text("S1").set_gather_info(
+            completion_action="next_step"
+        ).add_gather_question("a", "Q?")
+        ctx.add_step("step2").set_text("S2").set_gather_info(
+            completion_action="next_step"
+        ).add_gather_question("b", "Q?")
         ctx.add_step("step3").set_text("S3")
         assert builder.validate() is None  # type: ignore[func-returns-value]  # validate() returns None; asserting it ran without raising
         d = builder.to_dict()
@@ -1243,17 +1283,20 @@ class TestGatherInfoValidation:
         # Both gather steps remain present; step3 (the terminal) was
         # what made the next_step refs valid.
         assert names == ["step1", "step2", "step3"]
-        assert d["default"]["steps"][0]["gather_info"]["completion_action"] == "next_step"
-        assert d["default"]["steps"][1]["gather_info"]["completion_action"] == "next_step"
+        assert (
+            d["default"]["steps"][0]["gather_info"]["completion_action"] == "next_step"
+        )
+        assert (
+            d["default"]["steps"][1]["gather_info"]["completion_action"] == "next_step"
+        )
 
     def test_second_to_last_next_step_valid_last_next_step_invalid(self) -> None:
         builder = self._make_builder()
         ctx = builder.add_context("default")
         ctx.add_step("s1").set_text("S1")
-        ctx.add_step("s2") \
-            .set_text("S2") \
-            .set_gather_info(completion_action="next_step") \
-            .add_gather_question("x", "Q?")
+        ctx.add_step("s2").set_text("S2").set_gather_info(
+            completion_action="next_step"
+        ).add_gather_question("x", "Q?")
         # s2 is the last step
         with pytest.raises(ValueError, match="last step"):
             builder.validate()
@@ -1305,7 +1348,7 @@ class TestReservedToolNameValidation:
     """ContextBuilder.validate() must reject user tools that collide
     with reserved native tool names (next_step / change_context / gather_submit)."""
 
-    def _make_agent_with_tools(self, tool_names: List[str]) -> Mock:
+    def _make_agent_with_tools(self, tool_names: list[str]) -> Mock:
         """Build a mock agent that exposes a real dict of registered tools
         at agent._tool_registry._swaig_functions, matching the structure
         the production code reads from."""
@@ -1365,36 +1408,30 @@ class TestImprovedCompletionActionErrorMessage:
     def test_next_step_on_last_step_error_lists_remediations(self) -> None:
         builder = self._make_builder()
         ctx = builder.add_context("default")
-        ctx.add_step("only") \
-            .set_text("Last step") \
-            .set_gather_info(completion_action="next_step") \
-            .add_gather_question("x", "Q?")
-        try:
+        ctx.add_step("only").set_text("Last step").set_gather_info(
+            completion_action="next_step"
+        ).add_gather_question("x", "Q?")
+        with pytest.raises(ValueError) as excinfo:
             builder.validate()
-            assert False, "expected ValueError"
-        except ValueError as e:
-            msg = str(e)
-            # Suggestions an LLM can act on:
-            assert "add another step" in msg
-            assert "completion_action=None" in msg
+        msg = str(excinfo.value)
+        # Suggestions an LLM can act on:
+        assert "add another step" in msg
+        assert "completion_action=None" in msg
 
     def test_unknown_step_error_lists_available_steps(self) -> None:
         builder = self._make_builder()
         ctx = builder.add_context("default")
         ctx.add_step("alpha").set_text("A")
-        ctx.add_step("beta") \
-            .set_text("B") \
-            .set_gather_info(completion_action="gamma") \
-            .add_gather_question("x", "Q?")
-        try:
+        ctx.add_step("beta").set_text("B").set_gather_info(
+            completion_action="gamma"
+        ).add_gather_question("x", "Q?")
+        with pytest.raises(ValueError) as excinfo:
             builder.validate()
-            assert False, "expected ValueError"
-        except ValueError as e:
-            msg = str(e)
-            assert "is not a step in this context" in msg
-            # Should enumerate the legal options
-            assert "alpha" in msg
-            assert "beta" in msg
+        msg = str(excinfo.value)
+        assert "is not a step in this context" in msg
+        # Should enumerate the legal options
+        assert "alpha" in msg
+        assert "beta" in msg
 
 
 class TestInitialStep:
@@ -1473,6 +1510,7 @@ class TestContextBuilderReset:
         builder.reset()  # should not raise
         assert len(builder._contexts) == 0
 
+
 class TestHistoryMode:
     """Step/context `history` visibility mode (keep | default | hide)."""
 
@@ -1485,11 +1523,16 @@ class TestHistoryMode:
         assert "history" not in step.to_dict()
 
     def test_step_history_keep(self) -> None:
-        assert Step("s").set_text("t").set_history("keep").to_dict()["history"] == "keep"
+        assert (
+            Step("s").set_text("t").set_history("keep").to_dict()["history"] == "keep"
+        )
 
     def test_step_history_default_is_emitted_when_explicit(self) -> None:
         # Explicit "default" is still written out — it overrides a context default
-        assert Step("s").set_text("t").set_history("default").to_dict()["history"] == "default"
+        assert (
+            Step("s").set_text("t").set_history("default").to_dict()["history"]
+            == "default"
+        )
 
     def test_step_history_invalid_raises(self) -> None:
         with pytest.raises(ValueError, match="history must be one of"):

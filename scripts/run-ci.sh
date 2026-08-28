@@ -46,6 +46,14 @@ PORT_NAME="signalwire-python"
 # reads pyproject's per-file-ignores for examples/**, so the SDK ruleset stays intact.
 EXAMPLE_DIRS=("$PORT_ROOT/examples" "$PORT_ROOT/rest/examples" "$PORT_ROOT/relay/examples")
 
+# Non-shipped python: the test suite, the dev/CI scripts, and eng/. Covered by the
+# REPO-LINT / REPO-FMT gates below. Until 2026-07-29 these three dirs were linted and
+# format-checked by NOTHING — FMT/LINT target only signalwire/, EXAMPLES-* only the
+# example dirs — so 1291 findings had accumulated unseen (and an unused `import socket`
+# added that same day went uncaught). ruff reads pyproject's tests/** per-file-ignores
+# (S101/E402/S104/S105/S106), so the SDK ruleset otherwise applies in full.
+REPO_DIRS=("$PORT_ROOT/tests" "$PORT_ROOT/scripts" "$PORT_ROOT/eng")
+
 resolve_porting_sdk() {
     if [ -n "${PORTING_SDK:-}" ] && [ -d "$PORTING_SDK/scripts" ]; then
         echo "$PORTING_SDK"
@@ -136,6 +144,19 @@ fmt_gate() {
             echo "    (FMT auto-applied formatting to your working tree — review & stage)"
         fi
         python3 -m ruff format --check "$PORT_ROOT/signalwire"
+    fi
+}
+
+# REPO-FMT — ruff format over tests/, scripts/, eng/. LOCAL applies; CI --check.
+repo_fmt_gate() {
+    if [ -n "${CI:-}" ]; then
+        python3 -m ruff format --check "${REPO_DIRS[@]}"
+    else
+        python3 -m ruff format "${REPO_DIRS[@]}" >/dev/null
+        if ! (cd "$PORT_ROOT" && git diff --quiet 2>/dev/null); then
+            echo "    (REPO-FMT auto-applied formatting to your working tree — review & stage)"
+        fi
+        python3 -m ruff format --check "${REPO_DIRS[@]}"
     fi
 }
 
@@ -242,8 +263,14 @@ sched_gate SIGNATURES desc="regenerate python_signatures.json (reference oracle)
 sched_gate DRIFT deps=SIGNATURES desc="oracle snapshot vs this tree (ADVISORY — python is the reference)" \
     --fn drift_gate
 
-sched_gate SEMVER-DIFF deps=SIGNATURES desc="version bump matches surface change vs python_signatures.baseline.json (the reference is not exempt)" \
-    -- python3 "$PORTING_SDK_DIR/scripts/semver_diff.py" --port python --repo "$PORT_ROOT"
+# WAVE-1: report-only in-wave (owner-FINAL, re-anchor at cut, D5). GATE_ENFORCEMENT_PLAN.md
+# D5a defers the version-line decision to the real release — "no bump churn now;
+# perl/rust 4.0.0 declarations stay as-is; unified-vs-per-port decided at cut time" — so
+# an intentional in-wave breaking change must REPORT rather than block. Eight ports get
+# this hold via the SURFACE suite (_surface_commands.py passes semver_report_only=True);
+# python and rust schedule SEMVER-DIFF standalone and so must pass the flag here.
+sched_gate SEMVER-DIFF deps=SIGNATURES desc="reports (does not block in-wave, D5a) whether the version bump matches the surface change vs python_signatures.baseline.json — the reference is not exempt from the check" \
+    -- python3 "$PORTING_SDK_DIR/scripts/semver_diff.py" --port python --repo "$PORT_ROOT" --report-only
 
 sched_gate NO-CHEAT desc="audit_no_cheat_tests" \
     -- python3 "$PORTING_SDK_DIR/scripts/audit_no_cheat_tests.py" --root "$PORT_ROOT"
@@ -276,6 +303,23 @@ sched_gate EXAMPLES-LINT desc="ruff check zero findings over examples/ rest/exam
 
 sched_gate EXAMPLES-FMT desc="ruff format over the example dirs (local: apply; CI: --check)" \
     --fn examples_fmt_gate
+
+# REPO-LINT / REPO-FMT — tests/, scripts/ and eng/ held to the SDK's own ruleset. Wired
+# 2026-07-29 once the burn reached ZERO (1291 -> 0, commit 4dd2897): burn to zero BEFORE
+# wire, so the gate never lands red. Cheap static checks, no build and no mock, so they
+# belong in the per-PR cheap wave next to EXAMPLES-*.
+sched_gate REPO-LINT desc="ruff check zero findings over tests/ scripts/ eng/" \
+    -- python3 -m ruff check "${REPO_DIRS[@]}"
+
+sched_gate REPO-FMT desc="ruff format over tests/ scripts/ eng/ (local: apply; CI: --check)" \
+    --fn repo_fmt_gate
+
+# TOOL-PINS — the ruff/mypy that decide the gates above are the versions
+# requirements-dev.txt declares. A linter version that differs between local and CI
+# makes a gate red on code that never changed, and no local run reproduces it. Pure
+# static check (reads the manifest, asks the interpreter its versions) → cheap wave.
+sched_gate TOOL-PINS desc="ruff/mypy pinned exact in requirements-dev.txt AND installed at that version" \
+    -- python3 "$PORT_ROOT/scripts/assert_tool_pins.py"
 
 sched_gate TYPECHECK desc="mypy zero findings" \
     -- python3 -m mypy --config-file "$PORT_ROOT/pyproject.toml"
@@ -358,6 +402,24 @@ sched_gate DOC-AUDIT deps=SURFACE-NATIVE desc="audit_docs vs python_surface.json
         --ignore "$PORT_ROOT/DOC_AUDIT_IGNORE.md" \
         --native-names "$PORT_ROOT/port_surface_native.json"
 
+# SURFACE-NATIVE-FRESH — the committed sidecar must already BE what SURFACE-NATIVE
+# regenerates. This is the DRIFT half of the SIGNATURES/DRIFT pair above: a gate
+# that rewrites a COMMITTED artifact in place needs something that fails when the
+# rewrite changed it, or the regeneration silently leaks into the working tree and
+# from there into a commit. Proven live: adding a native-only member to
+# signalwire/livewire/ made SURFACE-NATIVE rewrite the committed sidecar (42 -> 43
+# members) and every gate still passed — only `git status` showed it, and a lane
+# reading console output alone would have committed the polluted oracle.
+#
+# It runs AFTER DOC-AUDIT on purpose: DOC-AUDIT consumes the freshly-regenerated file
+# (deps=SURFACE-NATIVE), so restoring or diffing it any earlier would either take the
+# fresh bytes away from its consumer or diff a file nothing had written yet. Checking
+# rather than restoring is deliberate — the sidecar is a DOC-AUDIT INPUT that must
+# exist at its real path, so the fix is "fail when it drifted", not "regenerate into
+# a scratch copy". The remedy when this fails is to commit the regenerated sidecar.
+sched_gate SURFACE-NATIVE-FRESH deps=DOC-AUDIT desc="committed port_surface_native.json is what emit_surface_native regenerates (no in-tree drift)" \
+    -- bash -c "cd '$PORT_ROOT' && git diff --quiet -- port_surface_native.json"
+
 # DOC-WIRE (§A1) — the documented REST fixtures are wire-clean against the spec
 # (strict-flag mock journals wire_violations; runner replays the doc calls). Cheap.
 sched_gate DOC-WIRE desc="documented REST doc fixtures put the spec wire shape on the wire (areacode/params:{text})" \
@@ -396,6 +458,26 @@ sched_gate EXAMPLES-RUN tier=nightly defer=1 desc="shipped examples load/start a
 # programs). Report-only is NOT used — python is the oracle floor.
 sched_gate WAIT-LIVENESS tier=nightly defer=1 desc="wait() liveness corpus runs on the reference + yields the golden classification" \
     -- python3 "$PORTING_SDK_DIR/scripts/diff_port_wait_liveness.py" --show-oracle --python-sdk "$PORT_ROOT"
+
+# ---- Security-property + suppression gates ----------------------------------
+# These three behavioural rules and the LEDGER suite were DEFINED for python by
+# porting-sdk and never scheduled here, so they had never run against the
+# reference. All four already pass; wiring them adds coverage, not a red.
+# Blocking tier, not nightly: measured at 0s, 0s, 0s and 2s respectively.
+sched_gate CA-VAR desc="REST + RELAY honour the custom-CA env vars" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/behavioral.py" --port python --repo "$PORT_ROOT" \
+        --rules CA-VAR
+
+sched_gate TLS-VERIFY desc="TLS verification is reachable and not silently disabled" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/behavioral.py" --port python --repo "$PORT_ROOT" \
+        --rules TLS-VERIFY
+
+sched_gate SECRET-SCRUB desc="credentials do not reach logs (static leg)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/behavioral.py" --port python --repo "$PORT_ROOT" \
+        --rules SECRET-SCRUB
+
+sched_gate LEDGER desc="ledger suite (SUPPRESSION-LEDGER/IGNORE-LEDGER-VERIFY)" \
+    -- python3 "$PORTING_SDK_DIR/scripts/suites/ledger.py" --port python --repo "$PORT_ROOT"
 
 # ---- Day-one deterministic doc/tree-hygiene gates ---------------------------
 sched_gate DOC-LINKS desc="every relative markdown link resolves to a tracked file" \

@@ -12,6 +12,7 @@ import os
 import json
 import re
 from typing import Any
+from urllib.parse import parse_qs
 
 from signalwire.core.logging_config import get_execution_mode
 from signalwire.core.function_result import FunctionResult
@@ -19,6 +20,38 @@ from signalwire.core.mixins._mixin_host import _HostTyped
 
 # Maximum allowed CGI request body size (10MB)
 MAX_CGI_BODY_SIZE = 10 * 1024 * 1024
+
+
+def _token_from_params(params: Any) -> str | None:
+    """Pick the `__token` credential out of an already-parsed query mapping.
+
+    Mirrors the HTTP path exactly: read `__token`, fall back to the bare
+    `token` spelling. A falsy value is treated as absent.
+    """
+    if not params:
+        return None
+    try:
+        token = params.get("__token") or params.get("token")
+    except AttributeError:
+        return None
+    return str(token) if token else None
+
+
+def _token_from_query_string(query_string: Any) -> str | None:
+    """Pick the `__token` credential out of a RAW `a=b&c=d` query string."""
+    if not query_string:
+        return None
+    if isinstance(query_string, bytes):
+        query_string = query_string.decode("utf-8", errors="replace")
+    if not isinstance(query_string, str):
+        return None
+    # Strip a leading '?' so a full "?a=b" fragment parses the same as "a=b".
+    parsed = parse_qs(query_string.lstrip("?"))
+    for key in ("__token", "token"):
+        values = parsed.get(key)
+        if values and values[0]:
+            return str(values[0])
+    return None
 
 
 class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at runtime; AgentBase under TYPE_CHECKING — intentional split
@@ -55,6 +88,8 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
                 path_info = os.getenv("PATH_INFO", "").strip("/")
                 if not path_info:
                     return self._render_swml()
+                # CGI carries the query string in the QUERY_STRING env var.
+                token = _token_from_query_string(os.getenv("QUERY_STRING"))
                 # Parse CGI request for SWAIG function call
                 args = {}
                 call_id = None
@@ -94,7 +129,9 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
                         # If parsing fails, continue with empty args
                         pass
 
-                return self._execute_swaig_function(path_info, args, call_id, raw_data)
+                return self._execute_swaig_function(
+                    path_info, args, call_id, raw_data, token
+                )
 
             if mode == "lambda":
                 # Check authentication in Lambda mode
@@ -107,6 +144,14 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
                     path = event.get("rawPath", "").strip("/")
                     if not path and event.get("pathParameters"):
                         path = event.get("pathParameters", {}).get("proxy", "")
+
+                    # Both payload shapes are reachable here, and they carry the
+                    # query string differently: REST API v1 (and HTTP API v2)
+                    # provide the parsed `queryStringParameters` mapping, while
+                    # HTTP API v2 may instead provide the raw `rawQueryString`.
+                    token = _token_from_params(
+                        event.get("queryStringParameters")
+                    ) or _token_from_query_string(event.get("rawQueryString"))
 
                     # Parse request body if present
                     args = {}
@@ -157,7 +202,7 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
                     if path in ("swaig", "swaig/") and function_name:
                         # /swaig endpoint with function name in body
                         result = self._execute_swaig_function(
-                            function_name, args, call_id, raw_data
+                            function_name, args, call_id, raw_data, token
                         )
                         return {
                             "statusCode": 200,
@@ -169,7 +214,7 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
                     if path and path not in ("", "swaig", "swaig/"):
                         # Path-based function routing (e.g., /say_hello)
                         result = self._execute_swaig_function(
-                            path, args, call_id, raw_data
+                            path, args, call_id, raw_data, token
                         )
                         return {
                             "statusCode": 200,
@@ -227,6 +272,7 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
         args: dict[str, Any] | None = None,
         call_id: str | None = None,
         raw_data: dict[str, Any] | None = None,
+        token: str | None = None,
     ) -> dict[str, Any]:
         """
         Execute a SWAIG function in serverless context
@@ -236,6 +282,9 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
             args: Function arguments dictionary
             call_id: Optional call ID
             raw_data: Optional raw request data
+            token: Optional `__token` credential extracted from the caller's
+                query string. `secure=True` tools are enforced against it
+                exactly as on the HTTP transport; an absent token is refused.
 
         Returns:
             Function execution result
@@ -262,6 +311,14 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
                     ),
                 )
                 return {"error": f"Function '{function_name}' not found"}
+
+            # Enforce `secure=True` through the same transport-agnostic core
+            # the HTTP path uses, so serverless cannot drift from HTTP.
+            validate = getattr(self, "_swaig_validate_token", None)
+            if validate is not None:
+                refusal = validate(function_name, token, call_id)
+                if refusal is not None:
+                    return dict(refusal)
 
             # Use empty args if not provided
             if args is None:
@@ -328,6 +385,12 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
             # Get the path from the request
             path = request.path.strip("/")
 
+            # Flask exposes the parsed query as `request.args`; fall back to the
+            # raw `request.query_string` when a shim provides only that.
+            token = _token_from_params(
+                getattr(request, "args", None)
+            ) or _token_from_query_string(getattr(request, "query_string", None))
+
             # Try to detect and set the base URL from the request for webhook URLs
             base_url = None
             if hasattr(request, "url") and request.url:
@@ -383,7 +446,7 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
             if path in ("swaig", "swaig/") and function_name:
                 # /swaig endpoint with function name in body
                 result = self._execute_swaig_function(
-                    function_name, args, call_id, raw_data
+                    function_name, args, call_id, raw_data, token
                 )
                 return Response(
                     response=json.dumps(result)
@@ -394,7 +457,9 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
                 )
             if path and path not in ("", "swaig", "swaig/"):
                 # Path-based function routing (e.g., /say_hello)
-                result = self._execute_swaig_function(path, args, call_id, raw_data)
+                result = self._execute_swaig_function(
+                    path, args, call_id, raw_data, token
+                )
                 return Response(
                     response=json.dumps(result)
                     if isinstance(result, dict)
@@ -442,8 +507,11 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
             base_url = None
             if req.url:
                 parsed = urlparse(req.url)
-                # Full path after /api/ e.g. "function_app" or "function_app/swaig"
-                url_parts = req.url.split("/api/")
+                # Full path after /api/ e.g. "function_app" or "function_app/swaig".
+                # Split the PARSED path, not the raw URL: the raw URL still
+                # carries "?__token=..." and would otherwise be baked into the
+                # function name (e.g. "say_hello?__token=abc" -> not found).
+                url_parts = parsed.path.split("/api/")
                 if len(url_parts) > 1:
                     full_path = url_parts[1].strip("/")
                     # Split into function name and sub-path
@@ -462,6 +530,12 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
             # Set the proxy URL base so SWML renders correct webhook URLs
             if base_url and not getattr(self, "_proxy_url_base_from_env", False):
                 self._proxy_url_base = base_url
+
+            # Azure exposes the parsed query as `req.params`; fall back to the
+            # query component of `req.url` when a shim provides only the URL.
+            token = _token_from_params(
+                getattr(req, "params", None)
+            ) or _token_from_query_string(urlparse(req.url).query if req.url else None)
 
             # Parse request body if present
             args = {}
@@ -503,7 +577,7 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
             if path in ("swaig", "swaig/") and function_name:
                 # /swaig endpoint with function name in body
                 result = self._execute_swaig_function(
-                    function_name, args, call_id, raw_data
+                    function_name, args, call_id, raw_data, token
                 )
                 return func.HttpResponse(
                     body=json.dumps(result)
@@ -514,7 +588,9 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
                 )
             if path and path not in ("", "api", "swaig", "swaig/"):
                 # Path-based function routing (e.g., /say_hello)
-                result = self._execute_swaig_function(path, args, call_id, raw_data)
+                result = self._execute_swaig_function(
+                    path, args, call_id, raw_data, token
+                )
                 return func.HttpResponse(
                     body=json.dumps(result)
                     if isinstance(result, dict)

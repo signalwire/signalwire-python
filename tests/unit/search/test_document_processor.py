@@ -12,23 +12,20 @@ Unit tests for search document processor module
 """
 
 import pytest
-import tempfile
-import os
 from typing import Any
 from unittest.mock import Mock, patch, MagicMock, mock_open
-from pathlib import Path
 
 from signalwire.search.document_processor import DocumentProcessor
 
 
 class TestDocumentProcessorInit:
     """Test DocumentProcessor initialization"""
-    
+
     def test_default_initialization(self) -> None:
         """Test default initialization"""
         processor = DocumentProcessor()
-        
-        assert processor.chunking_strategy == 'sentence'
+
+        assert processor.chunking_strategy == "sentence"
         assert processor.max_sentences_per_chunk == 5
         assert processor.chunk_size == 50
         assert processor.chunk_overlap == 10
@@ -36,18 +33,18 @@ class TestDocumentProcessorInit:
         assert processor.chunk_overlap == 10  # Legacy support
         assert processor.semantic_threshold == 0.5
         assert processor.topic_threshold == 0.3
-    
+
     def test_custom_initialization(self) -> None:
         """Test initialization with custom parameters"""
         processor = DocumentProcessor(
-            chunking_strategy='sliding',
+            chunking_strategy="sliding",
             max_sentences_per_chunk=25,
             chunk_size=100,
             chunk_overlap=20,
-            split_newlines=3
+            split_newlines=3,
         )
-        
-        assert processor.chunking_strategy == 'sliding'
+
+        assert processor.chunking_strategy == "sliding"
         assert processor.max_sentences_per_chunk == 25
         assert processor.chunk_size == 100
         assert processor.chunk_overlap == 20
@@ -59,408 +56,444 @@ class TestDocumentProcessorInit:
 
 class TestDocumentProcessorChunking:
     """Test document chunking strategies"""
-    
+
     def setup_method(self) -> None:
         """Set up test fixtures"""
         self.processor = DocumentProcessor()
         self.sample_text = "This is the first sentence. This is the second sentence. This is the third sentence."
         self.filename = "test.txt"
         self.file_type = "txt"
-    
+
     def test_create_chunks_sentence_strategy(self) -> None:
         """Test create_chunks with sentence strategy"""
-        processor = DocumentProcessor(chunking_strategy='sentence', max_sentences_per_chunk=2)
-        
-        chunks = processor.create_chunks(self.sample_text, self.filename, self.file_type)
-        
+        processor = DocumentProcessor(
+            chunking_strategy="sentence", max_sentences_per_chunk=2
+        )
+
+        chunks = processor.create_chunks(
+            self.sample_text, self.filename, self.file_type
+        )
+
         assert len(chunks) > 0
-        assert all('content' in chunk for chunk in chunks)
-        assert all('filename' in chunk for chunk in chunks)
-        assert all('metadata' in chunk for chunk in chunks)
-        assert all(chunk['metadata']['chunk_method'] == 'sentence_based' for chunk in chunks)
-    
+        assert all("content" in chunk for chunk in chunks)
+        assert all("filename" in chunk for chunk in chunks)
+        assert all("metadata" in chunk for chunk in chunks)
+        assert all(
+            chunk["metadata"]["chunk_method"] == "sentence_based" for chunk in chunks
+        )
+
     def test_create_chunks_sliding_strategy(self) -> None:
         """Test create_chunks with sliding window strategy"""
-        processor = DocumentProcessor(chunking_strategy='sliding', chunk_size=5, chunk_overlap=2)
-        
-        chunks = processor.create_chunks(self.sample_text, self.filename, self.file_type)
-        
+        processor = DocumentProcessor(
+            chunking_strategy="sliding", chunk_size=5, chunk_overlap=2
+        )
+
+        chunks = processor.create_chunks(
+            self.sample_text, self.filename, self.file_type
+        )
+
         assert len(chunks) > 0
-        assert all('content' in chunk for chunk in chunks)
-        assert all(chunk['metadata']['chunk_method'] == 'sliding_window' for chunk in chunks)
-        assert all('chunk_size_words' in chunk['metadata'] for chunk in chunks)
-        assert all('overlap_size_words' in chunk['metadata'] for chunk in chunks)
-    
+        assert all("content" in chunk for chunk in chunks)
+        assert all(
+            chunk["metadata"]["chunk_method"] == "sliding_window" for chunk in chunks
+        )
+        assert all("chunk_size_words" in chunk["metadata"] for chunk in chunks)
+        assert all("overlap_size_words" in chunk["metadata"] for chunk in chunks)
+
     def test_create_chunks_paragraph_strategy(self) -> None:
         """Test create_chunks with paragraph strategy"""
-        processor = DocumentProcessor(chunking_strategy='paragraph')
+        processor = DocumentProcessor(chunking_strategy="paragraph")
         paragraph_text = "First paragraph.\n\nSecond paragraph.\n\nThird paragraph."
-        
+
         chunks = processor.create_chunks(paragraph_text, self.filename, self.file_type)
-        
+
         assert len(chunks) == 3
-        assert all(chunk['metadata']['chunk_method'] == 'paragraph_based' for chunk in chunks)
-        assert chunks[0]['content'] == "First paragraph."
-        assert chunks[1]['content'] == "Second paragraph."
-        assert chunks[2]['content'] == "Third paragraph."
-    
+        assert all(
+            chunk["metadata"]["chunk_method"] == "paragraph_based" for chunk in chunks
+        )
+        assert chunks[0]["content"] == "First paragraph."
+        assert chunks[1]["content"] == "Second paragraph."
+        assert chunks[2]["content"] == "Third paragraph."
+
     def test_create_chunks_page_strategy(self) -> None:
         """Test create_chunks with page strategy"""
-        processor = DocumentProcessor(chunking_strategy='page')
-        
+        processor = DocumentProcessor(chunking_strategy="page")
+
         # Test with list input (like PDF pages)
         page_list = ["Page 1 content", "Page 2 content", "Page 3 content"]
         chunks = processor.create_chunks(page_list, self.filename, self.file_type)  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
-        
+
         assert len(chunks) == 3
-        assert all(chunk['metadata']['chunk_method'] == 'page_based' for chunk in chunks)
-        assert chunks[0]['content'] == "Page 1 content"
-        assert chunks[1]['content'] == "Page 2 content"
-        assert chunks[2]['content'] == "Page 3 content"
-    
+        assert all(
+            chunk["metadata"]["chunk_method"] == "page_based" for chunk in chunks
+        )
+        assert chunks[0]["content"] == "Page 1 content"
+        assert chunks[1]["content"] == "Page 2 content"
+        assert chunks[2]["content"] == "Page 3 content"
+
     def test_create_chunks_fallback_strategy(self) -> None:
         """Test create_chunks with unknown strategy falls back to sentence"""
-        processor = DocumentProcessor(chunking_strategy='unknown')
-        
-        chunks = processor.create_chunks(self.sample_text, self.filename, self.file_type)
-        
+        processor = DocumentProcessor(chunking_strategy="unknown")
+
+        chunks = processor.create_chunks(
+            self.sample_text, self.filename, self.file_type
+        )
+
         assert len(chunks) > 0
-        assert all(chunk['metadata']['chunk_method'] == 'sentence_based' for chunk in chunks)
+        assert all(
+            chunk["metadata"]["chunk_method"] == "sentence_based" for chunk in chunks
+        )
 
 
 class TestDocumentProcessorSentenceChunking:
     """Test sentence-based chunking functionality"""
-    
+
     def test_chunk_by_sentences_basic(self) -> None:
         """Test basic sentence chunking"""
         processor = DocumentProcessor(max_sentences_per_chunk=2)
         content = "First sentence. Second sentence. Third sentence. Fourth sentence."
-        
+
         chunks = processor._chunk_by_sentences(content, "test.txt", "txt")
-        
+
         assert len(chunks) >= 1
-        assert all('content' in chunk for chunk in chunks)
-        assert all(chunk['metadata']['chunk_method'] == 'sentence_based' for chunk in chunks)
-        assert all(chunk['metadata']['max_sentences_per_chunk'] == 2 for chunk in chunks)
-    
+        assert all("content" in chunk for chunk in chunks)
+        assert all(
+            chunk["metadata"]["chunk_method"] == "sentence_based" for chunk in chunks
+        )
+        assert all(
+            chunk["metadata"]["max_sentences_per_chunk"] == 2 for chunk in chunks
+        )
+
     def test_chunk_by_sentences_with_list_input(self) -> None:
         """Test sentence chunking with list input"""
         processor = DocumentProcessor(max_sentences_per_chunk=2)
         content = ["First line.", "Second line.", "Third line."]
-        
+
         chunks = processor._chunk_by_sentences(content, "test.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
-        
+
         assert len(chunks) >= 1
-        assert all('content' in chunk for chunk in chunks)
-    
+        assert all("content" in chunk for chunk in chunks)
+
     def test_chunk_by_sentences_with_split_newlines(self) -> None:
         """Test sentence chunking with split_newlines parameter"""
         processor = DocumentProcessor(max_sentences_per_chunk=5, split_newlines=2)
         content = "First sentence. Second sentence.\n\nThird sentence. Fourth sentence."
-        
+
         chunks = processor._chunk_by_sentences(content, "test.txt", "txt")
-        
+
         assert len(chunks) >= 1
-        assert all(chunk['metadata']['split_newlines'] == 2 for chunk in chunks)
+        assert all(chunk["metadata"]["split_newlines"] == 2 for chunk in chunks)
 
 
 class TestDocumentProcessorSlidingWindow:
     """Test sliding window chunking functionality"""
-    
+
     def test_chunk_by_sliding_window_basic(self) -> None:
         """Test basic sliding window chunking"""
         processor = DocumentProcessor(chunk_size=3, chunk_overlap=1)
         content = "one two three four five six seven eight"
-        
+
         chunks = processor._chunk_by_sliding_window(content, "test.txt", "txt")
-        
+
         assert len(chunks) > 1
-        assert all(chunk['metadata']['chunk_method'] == 'sliding_window' for chunk in chunks)
-        assert all(chunk['metadata']['chunk_size_words'] == 3 for chunk in chunks)
-        assert all(chunk['metadata']['overlap_size_words'] == 1 for chunk in chunks)
-        
+        assert all(
+            chunk["metadata"]["chunk_method"] == "sliding_window" for chunk in chunks
+        )
+        assert all(chunk["metadata"]["chunk_size_words"] == 3 for chunk in chunks)
+        assert all(chunk["metadata"]["overlap_size_words"] == 1 for chunk in chunks)
+
         # Check overlap
-        first_chunk_words = chunks[0]['content'].split()
-        second_chunk_words = chunks[1]['content'].split()
+        first_chunk_words = chunks[0]["content"].split()
+        second_chunk_words = chunks[1]["content"].split()
         assert len(first_chunk_words) == 3
         assert len(second_chunk_words) <= 3
-    
+
     def test_chunk_by_sliding_window_with_list_input(self) -> None:
         """Test sliding window chunking with list input"""
         processor = DocumentProcessor(chunk_size=2, chunk_overlap=1)
         content = ["line one", "line two", "line three"]
-        
+
         chunks = processor._chunk_by_sliding_window(content, "test.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
-        
+
         assert len(chunks) >= 1
-        assert all('content' in chunk for chunk in chunks)
-    
+        assert all("content" in chunk for chunk in chunks)
+
     def test_chunk_by_sliding_window_empty_content(self) -> None:
         """Test sliding window chunking with empty content"""
         processor = DocumentProcessor(chunk_size=3, chunk_overlap=1)
         content = ""
-        
+
         chunks = processor._chunk_by_sliding_window(content, "test.txt", "txt")
-        
+
         assert chunks == []
-    
+
     def test_chunk_by_sliding_window_metadata(self) -> None:
         """Test sliding window chunking metadata"""
         processor = DocumentProcessor(chunk_size=2, chunk_overlap=1)
         content = "word1 word2 word3 word4"
-        
+
         chunks = processor._chunk_by_sliding_window(content, "test.txt", "txt")
-        
+
         assert len(chunks) >= 2
-        assert chunks[0]['metadata']['start_word'] == 0
-        assert chunks[0]['metadata']['end_word'] == 2
-        assert chunks[1]['metadata']['start_word'] == 1  # overlap
-        assert chunks[1]['metadata']['end_word'] == 3
+        assert chunks[0]["metadata"]["start_word"] == 0
+        assert chunks[0]["metadata"]["end_word"] == 2
+        assert chunks[1]["metadata"]["start_word"] == 1  # overlap
+        assert chunks[1]["metadata"]["end_word"] == 3
 
 
 class TestDocumentProcessorParagraphChunking:
     """Test paragraph-based chunking functionality"""
-    
+
     def test_chunk_by_paragraphs_basic(self) -> None:
         """Test basic paragraph chunking"""
         processor = DocumentProcessor()
         content = "First paragraph.\n\nSecond paragraph.\n\nThird paragraph."
-        
+
         chunks = processor._chunk_by_paragraphs(content, "test.txt", "txt")
-        
+
         assert len(chunks) == 3
-        assert chunks[0]['content'] == "First paragraph."
-        assert chunks[1]['content'] == "Second paragraph."
-        assert chunks[2]['content'] == "Third paragraph."
-        assert all(chunk['metadata']['chunk_method'] == 'paragraph_based' for chunk in chunks)
-    
+        assert chunks[0]["content"] == "First paragraph."
+        assert chunks[1]["content"] == "Second paragraph."
+        assert chunks[2]["content"] == "Third paragraph."
+        assert all(
+            chunk["metadata"]["chunk_method"] == "paragraph_based" for chunk in chunks
+        )
+
     def test_chunk_by_paragraphs_with_list_input(self) -> None:
         """Test paragraph chunking with list input"""
         processor = DocumentProcessor()
         content = ["First line", "Second line", "", "Third line"]
-        
+
         chunks = processor._chunk_by_paragraphs(content, "test.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
-        
+
         assert len(chunks) >= 1
-        assert all('content' in chunk for chunk in chunks)
-    
+        assert all("content" in chunk for chunk in chunks)
+
     def test_chunk_by_paragraphs_with_whitespace(self) -> None:
         """Test paragraph chunking with various whitespace"""
         processor = DocumentProcessor()
         content = "Para 1.\n  \n  Para 2.  \n\n\n  Para 3."
-        
+
         chunks = processor._chunk_by_paragraphs(content, "test.txt", "txt")
-        
+
         assert len(chunks) == 3
-        assert chunks[0]['content'] == "Para 1."
-        assert chunks[1]['content'] == "Para 2."
-        assert chunks[2]['content'] == "Para 3."
-    
+        assert chunks[0]["content"] == "Para 1."
+        assert chunks[1]["content"] == "Para 2."
+        assert chunks[2]["content"] == "Para 3."
+
     def test_chunk_by_paragraphs_empty_paragraphs(self) -> None:
         """Test paragraph chunking skips empty paragraphs"""
         processor = DocumentProcessor()
         content = "Para 1.\n\n\n\nPara 2.\n\n"
-        
+
         chunks = processor._chunk_by_paragraphs(content, "test.txt", "txt")
-        
+
         assert len(chunks) == 2
-        assert chunks[0]['content'] == "Para 1."
-        assert chunks[1]['content'] == "Para 2."
+        assert chunks[0]["content"] == "Para 1."
+        assert chunks[1]["content"] == "Para 2."
 
 
 class TestDocumentProcessorPageChunking:
     """Test page-based chunking functionality"""
-    
+
     def test_chunk_by_pages_with_list(self) -> None:
         """Test page chunking with list input (like PDF)"""
         processor = DocumentProcessor()
         content = ["Page 1 content", "Page 2 content", "", "Page 3 content"]
-        
+
         chunks = processor._chunk_by_pages(content, "test.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
-        
+
         assert len(chunks) == 3  # Empty page should be skipped
-        assert chunks[0]['content'] == "Page 1 content"
-        assert chunks[1]['content'] == "Page 2 content"
-        assert chunks[2]['content'] == "Page 3 content"
-        assert all(chunk['metadata']['chunk_method'] == 'page_based' for chunk in chunks)
-    
+        assert chunks[0]["content"] == "Page 1 content"
+        assert chunks[1]["content"] == "Page 2 content"
+        assert chunks[2]["content"] == "Page 3 content"
+        assert all(
+            chunk["metadata"]["chunk_method"] == "page_based" for chunk in chunks
+        )
+
     def test_chunk_by_pages_with_form_feeds(self) -> None:
         """Test page chunking with form feed characters"""
         processor = DocumentProcessor()
         content = "Page 1 content\fPage 2 content\fPage 3 content"
-        
+
         chunks = processor._chunk_by_pages(content, "test.txt", "txt")
-        
+
         assert len(chunks) == 3
-        assert chunks[0]['content'] == "Page 1 content"
-        assert chunks[1]['content'] == "Page 2 content"
-        assert chunks[2]['content'] == "Page 3 content"
-    
+        assert chunks[0]["content"] == "Page 1 content"
+        assert chunks[1]["content"] == "Page 2 content"
+        assert chunks[2]["content"] == "Page 3 content"
+
     def test_chunk_by_pages_with_page_markers(self) -> None:
         """Test page chunking with page break markers"""
         processor = DocumentProcessor()
         content = "Page 1 content---PAGE---Page 2 content---PAGE---Page 3 content"
-        
+
         chunks = processor._chunk_by_pages(content, "test.txt", "txt")
-        
+
         assert len(chunks) == 3
-        assert chunks[0]['content'] == "Page 1 content"
-        assert chunks[1]['content'] == "Page 2 content"
-        assert chunks[2]['content'] == "Page 3 content"
-    
+        assert chunks[0]["content"] == "Page 1 content"
+        assert chunks[1]["content"] == "Page 2 content"
+        assert chunks[2]["content"] == "Page 3 content"
+
     def test_chunk_by_pages_fallback_chunking(self) -> None:
         """Test page chunking fallback for plain text"""
         processor = DocumentProcessor()
         # Create content that will trigger fallback chunking
         words = ["word"] * 1000  # 1000 words
         content = " ".join(words)
-        
+
         chunks = processor._chunk_by_pages(content, "test.txt", "txt")
-        
+
         assert len(chunks) > 1  # Should create multiple chunks
-        assert all(chunk['metadata']['chunk_method'] == 'page_based' for chunk in chunks)
-        assert all('page_number' in chunk['metadata'] for chunk in chunks)
+        assert all(
+            chunk["metadata"]["chunk_method"] == "page_based" for chunk in chunks
+        )
+        assert all("page_number" in chunk["metadata"] for chunk in chunks)
 
 
 class TestDocumentProcessorFileExtraction:
     """Test file extraction methods"""
-    
+
     def setup_method(self) -> None:
         """Set up test fixtures"""
         self.processor = DocumentProcessor()
-    
-    @patch('signalwire.search.document_processor.magic', None)
+
+    @patch("signalwire.search.document_processor.magic", None)
     def test_extract_text_from_file_no_magic(self) -> None:
         """Test file extraction without magic library"""
-        with patch.object(self.processor, '_extract_text') as mock_extract:
+        with patch.object(self.processor, "_extract_text") as mock_extract:
             mock_extract.return_value = "test content"
-            
+
             result = self.processor._extract_text_from_file("test.txt")
-            
+
             mock_extract.assert_called_once_with("test.txt")
             assert result == "test content"
-    
-    @patch('signalwire.search.document_processor.magic')
+
+    @patch("signalwire.search.document_processor.magic")
     def test_extract_text_from_file_with_magic(self, mock_magic: MagicMock) -> None:
         """Test file extraction with magic library"""
         mock_mime = Mock()
         mock_mime.from_file.return_value = "text/plain"
         mock_magic.Magic.return_value = mock_mime
-        
-        with patch.object(self.processor, '_extract_text') as mock_extract:
+
+        with patch.object(self.processor, "_extract_text") as mock_extract:
             mock_extract.return_value = "test content"
-            
+
             result = self.processor._extract_text_from_file("test.txt")
-            
+
             mock_extract.assert_called_once_with("test.txt")
             assert result == "test content"
-    
+
     def test_extract_text_from_file_pdf(self) -> None:
         """Test PDF file extraction"""
-        with patch.object(self.processor, '_extract_pdf') as mock_extract:
+        with patch.object(self.processor, "_extract_pdf") as mock_extract:
             mock_extract.return_value = ["page 1", "page 2"]
-            
+
             result = self.processor._extract_text_from_file("test.pdf")
-            
+
             mock_extract.assert_called_once_with("test.pdf")
             assert result == ["page 1", "page 2"]
-    
+
     def test_extract_text_from_file_docx(self) -> None:
         """Test DOCX file extraction"""
-        with patch.object(self.processor, '_extract_docx') as mock_extract:
+        with patch.object(self.processor, "_extract_docx") as mock_extract:
             mock_extract.return_value = ["paragraph 1", "paragraph 2"]
-            
+
             result = self.processor._extract_text_from_file("test.docx")
-            
+
             mock_extract.assert_called_once_with("test.docx")
             assert result == ["paragraph 1", "paragraph 2"]
-    
+
     def test_extract_text_from_file_html(self) -> None:
         """Test HTML file extraction"""
         # HTML files with fallback detection go to _extract_text due to 'text' in 'text/html'
-        with patch('signalwire.search.document_processor.magic', None):
-            with patch.object(self.processor, '_extract_text') as mock_extract:
-                mock_extract.return_value = "html content"
-                
-                result = self.processor._extract_text_from_file("test.html")
-                
-                mock_extract.assert_called_once_with("test.html")
-                assert result == "html content"
-    
+        with (
+            patch("signalwire.search.document_processor.magic", None),
+            patch.object(self.processor, "_extract_text") as mock_extract,
+        ):
+            mock_extract.return_value = "html content"
+
+            result = self.processor._extract_text_from_file("test.html")
+
+            mock_extract.assert_called_once_with("test.html")
+            assert result == "html content"
+
     def test_extract_text_from_file_markdown(self) -> None:
         """Test Markdown file extraction"""
         # Markdown files with fallback detection go to _extract_text due to 'text' in 'text/plain'
-        with patch('signalwire.search.document_processor.magic', None):
-            with patch.object(self.processor, '_extract_text') as mock_extract:
-                mock_extract.return_value = "markdown content"
-                
-                result = self.processor._extract_text_from_file("test.md")
-                
-                mock_extract.assert_called_once_with("test.md")
-                assert result == "markdown content"
-    
+        with (
+            patch("signalwire.search.document_processor.magic", None),
+            patch.object(self.processor, "_extract_text") as mock_extract,
+        ):
+            mock_extract.return_value = "markdown content"
+
+            result = self.processor._extract_text_from_file("test.md")
+
+            mock_extract.assert_called_once_with("test.md")
+            assert result == "markdown content"
+
     def test_extract_text_from_file_unsupported(self) -> None:
         """Test unsupported file type"""
-        with patch('signalwire.search.document_processor.magic') as mock_magic:
+        with patch("signalwire.search.document_processor.magic") as mock_magic:
             mock_mime = Mock()
             mock_mime.from_file.return_value = "application/unknown"
             mock_magic.Magic.return_value = mock_mime
-            
+
             result = self.processor._extract_text_from_file("test.unknown")
-            
+
             assert "Unsupported file type" in result
 
 
 class TestDocumentProcessorSpecificExtractors:
     """Test specific file format extractors"""
-    
+
     def setup_method(self) -> None:
         """Set up test fixtures"""
         self.processor = DocumentProcessor()
-    
-    @patch('signalwire.search.document_processor.pdfplumber', None)
+
+    @patch("signalwire.search.document_processor.pdfplumber", None)
     def test_extract_pdf_no_library(self) -> None:
         """Test PDF extraction without pdfplumber"""
         result = self.processor._extract_pdf("test.pdf")
-        
+
         assert "pdfplumber not available" in result
-    
-    @patch('signalwire.search.document_processor.pdfplumber')
+
+    @patch("signalwire.search.document_processor.pdfplumber")
     def test_extract_pdf_success(self, mock_pdfplumber: MagicMock) -> None:
         """Test successful PDF extraction"""
         mock_page1 = Mock()
         mock_page1.extract_text.return_value = "Page 1 content"
         mock_page2 = Mock()
         mock_page2.extract_text.return_value = "Page 2 content"
-        
+
         mock_pdf = Mock()
         mock_pdf.pages = [mock_page1, mock_page2]
         mock_pdf.__enter__ = Mock(return_value=mock_pdf)
         mock_pdf.__exit__ = Mock(return_value=None)
-        
+
         mock_pdfplumber.open.return_value = mock_pdf
-        
+
         result = self.processor._extract_pdf("test.pdf")
-        
+
         assert result == ["Page 1 content", "Page 2 content"]
-    
-    @patch('signalwire.search.document_processor.pdfplumber')
+
+    @patch("signalwire.search.document_processor.pdfplumber")
     def test_extract_pdf_error(self, mock_pdfplumber: MagicMock) -> None:
         """Test PDF extraction with error"""
         mock_pdfplumber.open.side_effect = Exception("PDF error")
-        
+
         result = self.processor._extract_pdf("test.pdf")
-        
+
         assert "Error processing PDF" in result
-    
-    @patch('signalwire.search.document_processor.DocxDocument', None)
+
+    @patch("signalwire.search.document_processor.DocxDocument", None)
     def test_extract_docx_no_library(self) -> None:
         """Test DOCX extraction without python-docx"""
         result = self.processor._extract_docx("test.docx")
-        
+
         assert "python-docx not available" in result
-    
-    @patch('signalwire.search.document_processor.DocxDocument')
+
+    @patch("signalwire.search.document_processor.DocxDocument")
     def test_extract_docx_success(self, mock_docx: MagicMock) -> None:
         """Test successful DOCX extraction"""
         mock_para1 = Mock()
@@ -469,241 +502,249 @@ class TestDocumentProcessorSpecificExtractors:
         mock_para2.text = "Paragraph 2"
         mock_para3 = Mock()
         mock_para3.text = ""  # Empty paragraph should be filtered
-        
+
         mock_doc = Mock()
         mock_doc.paragraphs = [mock_para1, mock_para2, mock_para3]
         mock_docx.return_value = mock_doc
-        
+
         result = self.processor._extract_docx("test.docx")
-        
+
         assert result == ["Paragraph 1", "Paragraph 2"]
-    
-    @patch('signalwire.search.document_processor.DocxDocument')
+
+    @patch("signalwire.search.document_processor.DocxDocument")
     def test_extract_docx_error(self, mock_docx: MagicMock) -> None:
         """Test DOCX extraction with error"""
         mock_docx.side_effect = Exception("DOCX error")
-        
+
         result = self.processor._extract_docx("test.docx")
-        
+
         assert "Error processing DOCX" in result
-    
+
     def test_extract_text_success(self) -> None:
         """Test successful text file extraction"""
-        with patch('builtins.open', mock_open(read_data="test content")):
+        with patch("builtins.open", mock_open(read_data="test content")):
             result = self.processor._extract_text("test.txt")
-            
+
             assert result == "test content"
-    
+
     def test_extract_text_error(self) -> None:
         """Test text file extraction with error"""
-        with patch('builtins.open', side_effect=Exception("File error")):
+        with patch("builtins.open", side_effect=Exception("File error")):
             result = self.processor._extract_text("test.txt")
-            
+
             assert "Error processing TXT" in result
-    
-    @patch('signalwire.search.document_processor.BeautifulSoup', None)
+
+    @patch("signalwire.search.document_processor.BeautifulSoup", None)
     def test_extract_html_no_library(self) -> None:
         """Test HTML extraction without BeautifulSoup"""
         result = self.processor._extract_html("test.html")
-        
+
         assert "beautifulsoup4 not available" in result
-    
-    @patch('signalwire.search.document_processor.BeautifulSoup')
+
+    @patch("signalwire.search.document_processor.BeautifulSoup")
     def test_extract_html_success(self, mock_bs: MagicMock) -> None:
         """Test successful HTML extraction"""
         mock_soup = Mock()
         mock_soup.get_text.return_value = "HTML content"
         mock_bs.return_value = mock_soup
-        
-        with patch('builtins.open', mock_open(read_data="<html><body>HTML content</body></html>")):
+
+        with patch(
+            "builtins.open",
+            mock_open(read_data="<html><body>HTML content</body></html>"),
+        ):
             result = self.processor._extract_html("test.html")
-            
+
             assert result == "HTML content"
-    
-    @patch('signalwire.search.document_processor.markdown', None)
+
+    @patch("signalwire.search.document_processor.markdown", None)
     def test_extract_markdown_no_library(self) -> None:
         """Test Markdown extraction without markdown library"""
-        with patch('builtins.open', mock_open(read_data="# Header\nContent")):
+        with patch("builtins.open", mock_open(read_data="# Header\nContent")):
             result = self.processor._extract_markdown("test.md")
-            
+
             # Should fallback to plain text
             assert result == "# Header\nContent"
-    
-    @patch('signalwire.search.document_processor.markdown')
+
+    @patch("signalwire.search.document_processor.markdown")
     def test_extract_markdown_success(self, mock_markdown: MagicMock) -> None:
         """Test successful Markdown extraction"""
         mock_markdown.markdown.return_value = "<h1>Header</h1><p>Content</p>"
-        
-        with patch('builtins.open', mock_open(read_data="# Header\nContent")):
-            with patch('signalwire.search.document_processor.BeautifulSoup') as mock_bs:
-                mock_soup = Mock()
-                mock_soup.get_text.return_value = "Header Content"
-                mock_bs.return_value = mock_soup
-                
-                result = self.processor._extract_markdown("test.md")
-                
-                assert result == "Header Content"
+
+        with (
+            patch("builtins.open", mock_open(read_data="# Header\nContent")),
+            patch("signalwire.search.document_processor.BeautifulSoup") as mock_bs,
+        ):
+            mock_soup = Mock()
+            mock_soup.get_text.return_value = "Header Content"
+            mock_bs.return_value = mock_soup
+
+            result = self.processor._extract_markdown("test.md")
+
+            assert result == "Header Content"
 
 
 class TestDocumentProcessorUtilities:
     """Test utility methods"""
-    
+
     def setup_method(self) -> None:
         """Set up test fixtures"""
         self.processor = DocumentProcessor()
-    
+
     def test_create_chunk_basic(self) -> None:
         """Test basic chunk creation"""
         chunk = self.processor._create_chunk(
-            content="Test content",
-            filename="test.txt",
-            section="Section 1"
+            content="Test content", filename="test.txt", section="Section 1"
         )
-        
-        assert chunk['content'] == "Test content"
-        assert chunk['filename'] == "test.txt"
-        assert chunk['section'] == "Section 1"
-        assert 'metadata' in chunk
-        assert chunk['metadata']['file_type'] == 'txt'
-        assert chunk['metadata']['chunk_size'] == len("Test content")
-        assert chunk['metadata']['word_count'] == 2
-    
+
+        assert chunk["content"] == "Test content"
+        assert chunk["filename"] == "test.txt"
+        assert chunk["section"] == "Section 1"
+        assert "metadata" in chunk
+        assert chunk["metadata"]["file_type"] == "txt"
+        assert chunk["metadata"]["chunk_size"] == len("Test content")
+        assert chunk["metadata"]["word_count"] == 2
+
     def test_create_chunk_with_metadata(self) -> None:
         """Test chunk creation with custom metadata"""
         custom_metadata = {"custom_field": "custom_value"}
-        
+
         chunk = self.processor._create_chunk(
-            content="Test content",
-            filename="test.txt",
-            metadata=custom_metadata
+            content="Test content", filename="test.txt", metadata=custom_metadata
         )
-        
-        assert chunk['metadata']['custom_field'] == "custom_value"
-        assert chunk['metadata']['file_type'] == 'txt'  # Base metadata should still be there
-    
-    @patch('signalwire.search.document_processor.sent_tokenize')
-    def test_create_chunk_sentence_count_with_nltk(self, mock_sent_tokenize: MagicMock) -> None:
+
+        assert chunk["metadata"]["custom_field"] == "custom_value"
+        assert (
+            chunk["metadata"]["file_type"] == "txt"
+        )  # Base metadata should still be there
+
+    @patch("signalwire.search.document_processor.sent_tokenize")
+    def test_create_chunk_sentence_count_with_nltk(
+        self, mock_sent_tokenize: MagicMock
+    ) -> None:
         """Test chunk creation with NLTK sentence tokenization"""
         mock_sent_tokenize.return_value = ["Sentence 1.", "Sentence 2."]
-        
+
         chunk = self.processor._create_chunk(
-            content="Sentence 1. Sentence 2.",
-            filename="test.txt"
+            content="Sentence 1. Sentence 2.", filename="test.txt"
         )
-        
-        assert chunk['metadata']['sentence_count'] == 2
+
+        assert chunk["metadata"]["sentence_count"] == 2
         mock_sent_tokenize.assert_called_once_with("Sentence 1. Sentence 2.")
-    
-    @patch('signalwire.search.document_processor.sent_tokenize', None)
+
+    @patch("signalwire.search.document_processor.sent_tokenize", None)
     def test_create_chunk_sentence_count_fallback(self) -> None:
         """Test chunk creation with fallback sentence counting"""
         chunk = self.processor._create_chunk(
-            content="Sentence 1. Sentence 2. Sentence 3.",
-            filename="test.txt"
+            content="Sentence 1. Sentence 2. Sentence 3.", filename="test.txt"
         )
-        
-        assert chunk['metadata']['sentence_count'] == 3
-    
-    @patch('signalwire.search.document_processor.sent_tokenize')
-    def test_create_chunk_sentence_count_error(self, mock_sent_tokenize: MagicMock) -> None:
+
+        assert chunk["metadata"]["sentence_count"] == 3
+
+    @patch("signalwire.search.document_processor.sent_tokenize")
+    def test_create_chunk_sentence_count_error(
+        self, mock_sent_tokenize: MagicMock
+    ) -> None:
         """Test chunk creation with sentence counting error"""
         mock_sent_tokenize.side_effect = Exception("NLTK error")
-        
+
         chunk = self.processor._create_chunk(
-            content="Sentence 1. Sentence 2.",
-            filename="test.txt"
+            content="Sentence 1. Sentence 2.", filename="test.txt"
         )
-        
+
         # Should fallback to period counting
-        assert chunk['metadata']['sentence_count'] == 2
-    
+        assert chunk["metadata"]["sentence_count"] == 2
+
     def test_find_best_split_point_with_empty_lines(self) -> None:
         """Test finding best split point with paragraph boundaries"""
         lines = ["line1", "line2", "", "line4", "line5", "line6"]
-        
+
         split_point = self.processor._find_best_split_point(lines)
-        
+
         # The algorithm searches backwards from the end in the last 25% of the chunk
         # With 6 lines, it starts searching from line 4 (3//4 * 6 = 4) backwards
         # It should find the empty line at index 2, but since it's outside the search range,
         # it will return the 75% point which is max(1, 6 * 3 // 4) = 4
         assert split_point == 4
-    
+
     def test_find_best_split_point_no_empty_lines(self) -> None:
         """Test finding best split point without paragraph boundaries"""
         lines = ["line1", "line2", "line3", "line4", "line5", "line6"]
-        
+
         split_point = self.processor._find_best_split_point(lines)
-        
+
         # Should split at 75% of chunk size
         expected = max(1, len(lines) * 3 // 4)
         assert split_point == expected
-    
+
     def test_get_overlap_lines_basic(self) -> None:
         """Test getting overlap lines"""
-        processor = DocumentProcessor(chunk_overlap=50)  # 50 characters - large enough to capture lines
+        processor = DocumentProcessor(
+            chunk_overlap=50
+        )  # 50 characters - large enough to capture lines
         lines = ["short", "medium line", "longer line here"]
-        
+
         overlap = processor._get_overlap_lines(lines)
-        
+
         # Should include lines that fit within overlap size
         assert len(overlap) > 0
         assert all(isinstance(line, str) for line in overlap)
-    
+
     def test_get_overlap_lines_empty(self) -> None:
         """Test getting overlap lines with empty input"""
         overlap = self.processor._get_overlap_lines([])
-        
+
         assert overlap == []
 
 
 class TestDocumentProcessorEdgeCases:
     """Test edge cases and error handling"""
-    
+
     def test_chunking_with_empty_content(self) -> None:
         """Test chunking with empty content"""
         processor = DocumentProcessor()
-        
+
         chunks = processor.create_chunks("", "test.txt", "txt")
-        
+
         # Should handle empty content gracefully
         assert isinstance(chunks, list)
-    
+
     def test_chunking_with_whitespace_only(self) -> None:
         """Test chunking with whitespace-only content"""
         processor = DocumentProcessor()
-        
+
         chunks = processor.create_chunks("   \n\n   ", "test.txt", "txt")
-        
+
         # Should handle whitespace-only content gracefully
         assert isinstance(chunks, list)
-    
+
     def test_sliding_window_with_small_content(self) -> None:
         """Test sliding window with content smaller than chunk size"""
-        processor = DocumentProcessor(chunking_strategy='sliding', chunk_size=10, chunk_overlap=2)
-        
+        processor = DocumentProcessor(
+            chunking_strategy="sliding", chunk_size=10, chunk_overlap=2
+        )
+
         chunks = processor.create_chunks("small", "test.txt", "txt")
-        
+
         assert len(chunks) == 1
-        assert chunks[0]['content'] == "small"
-    
+        assert chunks[0]["content"] == "small"
+
     def test_paragraph_chunking_no_paragraphs(self) -> None:
         """Test paragraph chunking with no paragraph breaks"""
-        processor = DocumentProcessor(chunking_strategy='paragraph')
-        
+        processor = DocumentProcessor(chunking_strategy="paragraph")
+
         chunks = processor.create_chunks("Single line of text", "test.txt", "txt")
-        
+
         assert len(chunks) == 1
-        assert chunks[0]['content'] == "Single line of text"
-    
+        assert chunks[0]["content"] == "Single line of text"
+
     def test_page_chunking_empty_pages(self) -> None:
         """Test page chunking with empty pages"""
-        processor = DocumentProcessor(chunking_strategy='page')
-        
+        processor = DocumentProcessor(chunking_strategy="page")
+
         chunks = processor.create_chunks(["", "  ", "Content", ""], "test.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
-        
+
         assert len(chunks) == 1
-        assert chunks[0]['content'] == "Content"
+        assert chunks[0]["content"] == "Content"
 
 
 # ────────────────────────────────────────────────────────────────────
@@ -711,7 +752,6 @@ class TestDocumentProcessorEdgeCases:
 # ────────────────────────────────────────────────────────────────────
 
 import json
-import re
 
 
 class TestFileExtraction:
@@ -722,12 +762,15 @@ class TestFileExtraction:
 
     # ── PDF ──────────────────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.pdfplumber')
+    @patch("signalwire.search.document_processor.pdfplumber")
     def test_extract_pdf_with_pages(self, mock_pdfplumber: MagicMock) -> None:
         """Extract text from multiple PDF pages, including one with None text."""
-        page1 = Mock(); page1.extract_text.return_value = "Page one text"
-        page2 = Mock(); page2.extract_text.return_value = None        # empty page
-        page3 = Mock(); page3.extract_text.return_value = "Page three text"
+        page1 = Mock()
+        page1.extract_text.return_value = "Page one text"
+        page2 = Mock()
+        page2.extract_text.return_value = None  # empty page
+        page3 = Mock()
+        page3.extract_text.return_value = "Page three text"
 
         mock_pdf = MagicMock()
         mock_pdf.pages = [page1, page2, page3]
@@ -739,23 +782,27 @@ class TestFileExtraction:
         assert len(result) == 2  # page2 had None text, should be skipped
         assert "Page one text" in result[0]
 
-    @patch('signalwire.search.document_processor.pdfplumber')
-    def test_extract_pdf_strips_leading_page_numbers(self, mock_pdfplumber: MagicMock) -> None:
+    @patch("signalwire.search.document_processor.pdfplumber")
+    def test_extract_pdf_strips_leading_page_numbers(
+        self, mock_pdfplumber: MagicMock
+    ) -> None:
         """Leading page numbers like '1. ' should be stripped."""
-        page = Mock(); page.extract_text.return_value = "1. Introduction paragraph"
-        mock_pdf = MagicMock(); mock_pdf.pages = [page]
+        page = Mock()
+        page.extract_text.return_value = "1. Introduction paragraph"
+        mock_pdf = MagicMock()
+        mock_pdf.pages = [page]
         mock_pdfplumber.open.return_value.__enter__ = Mock(return_value=mock_pdf)
         mock_pdfplumber.open.return_value.__exit__ = Mock(return_value=False)
 
         result = self.processor._extract_pdf("/fake/doc.pdf")
         assert result == ["Introduction paragraph"]
 
-    @patch('signalwire.search.document_processor.pdfplumber', None)
+    @patch("signalwire.search.document_processor.pdfplumber", None)
     def test_extract_pdf_missing_dependency(self) -> None:
         result = self.processor._extract_pdf("/fake/doc.pdf")
         assert "pdfplumber not available" in result
 
-    @patch('signalwire.search.document_processor.pdfplumber')
+    @patch("signalwire.search.document_processor.pdfplumber")
     def test_extract_pdf_exception(self, mock_pdfplumber: MagicMock) -> None:
         mock_pdfplumber.open.side_effect = RuntimeError("corrupt file")
         result = self.processor._extract_pdf("/fake/doc.pdf")
@@ -763,21 +810,26 @@ class TestFileExtraction:
 
     # ── DOCX ─────────────────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.DocxDocument')
-    def test_extract_docx_filters_empty_paragraphs(self, mock_docx_cls: MagicMock) -> None:
-        p1 = Mock(text="Hello"); p2 = Mock(text=""); p3 = Mock(text="World")
-        mock_doc = Mock(); mock_doc.paragraphs = [p1, p2, p3]
+    @patch("signalwire.search.document_processor.DocxDocument")
+    def test_extract_docx_filters_empty_paragraphs(
+        self, mock_docx_cls: MagicMock
+    ) -> None:
+        p1 = Mock(text="Hello")
+        p2 = Mock(text="")
+        p3 = Mock(text="World")
+        mock_doc = Mock()
+        mock_doc.paragraphs = [p1, p2, p3]
         mock_docx_cls.return_value = mock_doc
 
         result = self.processor._extract_docx("/fake/doc.docx")
         assert result == ["Hello", "World"]
 
-    @patch('signalwire.search.document_processor.DocxDocument', None)
+    @patch("signalwire.search.document_processor.DocxDocument", None)
     def test_extract_docx_missing_dependency(self) -> None:
         result = self.processor._extract_docx("/fake/doc.docx")
         assert "python-docx not available" in result
 
-    @patch('signalwire.search.document_processor.DocxDocument')
+    @patch("signalwire.search.document_processor.DocxDocument")
     def test_extract_docx_exception(self, mock_docx_cls: MagicMock) -> None:
         mock_docx_cls.side_effect = ValueError("bad docx")
         result = self.processor._extract_docx("/fake/doc.docx")
@@ -785,7 +837,7 @@ class TestFileExtraction:
 
     # ── XLSX (Excel) ─────────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.load_workbook')
+    @patch("signalwire.search.document_processor.load_workbook")
     def test_extract_excel_success(self, mock_lwb: MagicMock) -> None:
         mock_sheet = Mock()
         mock_sheet.iter_rows.return_value = [
@@ -793,7 +845,8 @@ class TestFileExtraction:
             ("Alice", 30),
             (None, "Bob"),
         ]
-        mock_wb = Mock(); mock_wb.worksheets = [mock_sheet]
+        mock_wb = Mock()
+        mock_wb.worksheets = [mock_sheet]
         mock_lwb.return_value = mock_wb
 
         result = self.processor._extract_excel("/fake/data.xlsx")
@@ -802,12 +855,12 @@ class TestFileExtraction:
         assert "30" in result  # integers become str
         assert "Bob" in result
 
-    @patch('signalwire.search.document_processor.load_workbook', None)
+    @patch("signalwire.search.document_processor.load_workbook", None)
     def test_extract_excel_missing_dependency(self) -> None:
         result = self.processor._extract_excel("/fake/data.xlsx")
         assert "openpyxl not available" in result
 
-    @patch('signalwire.search.document_processor.load_workbook')
+    @patch("signalwire.search.document_processor.load_workbook")
     def test_extract_excel_exception(self, mock_lwb: MagicMock) -> None:
         mock_lwb.side_effect = Exception("xlsx error")
         result = self.processor._extract_excel("/fake/data.xlsx")
@@ -815,14 +868,18 @@ class TestFileExtraction:
 
     # ── PPTX (PowerPoint) ────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.Presentation')
+    @patch("signalwire.search.document_processor.Presentation")
     def test_extract_powerpoint_success(self, mock_pres_cls: MagicMock) -> None:
-        shape1 = Mock(text="Title Slide"); shape1.__class__ = type('S', (), {'text': 'Title Slide'})
+        shape1 = Mock(text="Title Slide")
+        shape1.__class__ = type("S", (), {"text": "Title Slide"})
         shape2 = Mock(text="Bullet 1")
         shape_no_text = Mock(spec=[])  # no 'text' attribute
-        slide1 = Mock(); slide1.shapes = [shape1, shape_no_text]
-        slide2 = Mock(); slide2.shapes = [shape2]
-        mock_pres = Mock(); mock_pres.slides = [slide1, slide2]
+        slide1 = Mock()
+        slide1.shapes = [shape1, shape_no_text]
+        slide2 = Mock()
+        slide2.shapes = [shape2]
+        mock_pres = Mock()
+        mock_pres.slides = [slide1, slide2]
         mock_pres_cls.return_value = mock_pres
 
         result = self.processor._extract_powerpoint("/fake/pres.pptx")
@@ -831,12 +888,12 @@ class TestFileExtraction:
         assert "Title Slide" in result[0]
         assert "Bullet 1" in result[1]
 
-    @patch('signalwire.search.document_processor.Presentation', None)
+    @patch("signalwire.search.document_processor.Presentation", None)
     def test_extract_powerpoint_missing_dependency(self) -> None:
         result = self.processor._extract_powerpoint("/fake/pres.pptx")
         assert "python-pptx not available" in result
 
-    @patch('signalwire.search.document_processor.Presentation')
+    @patch("signalwire.search.document_processor.Presentation")
     def test_extract_powerpoint_exception(self, mock_pres_cls: MagicMock) -> None:
         mock_pres_cls.side_effect = Exception("pptx error")
         result = self.processor._extract_powerpoint("/fake/pres.pptx")
@@ -844,138 +901,153 @@ class TestFileExtraction:
 
     # ── HTML ─────────────────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.BeautifulSoup')
+    @patch("signalwire.search.document_processor.BeautifulSoup")
     def test_extract_html_success(self, mock_bs: MagicMock) -> None:
-        mock_soup = Mock(); mock_soup.get_text.return_value = "Hello World"
+        mock_soup = Mock()
+        mock_soup.get_text.return_value = "Hello World"
         mock_bs.return_value = mock_soup
-        with patch('builtins.open', mock_open(read_data="<p>Hello World</p>")):
+        with patch("builtins.open", mock_open(read_data="<p>Hello World</p>")):
             result = self.processor._extract_html("/fake/page.html")
         assert result == "Hello World"
 
-    @patch('signalwire.search.document_processor.BeautifulSoup', None)
+    @patch("signalwire.search.document_processor.BeautifulSoup", None)
     def test_extract_html_missing_dependency(self) -> None:
         result = self.processor._extract_html("/fake/page.html")
         assert "beautifulsoup4 not available" in result
 
-    @patch('signalwire.search.document_processor.BeautifulSoup')
+    @patch("signalwire.search.document_processor.BeautifulSoup")
     def test_extract_html_exception(self, mock_bs: MagicMock) -> None:
-        with patch('builtins.open', side_effect=IOError("disk")):
+        with patch("builtins.open", side_effect=OSError("disk")):
             result = self.processor._extract_html("/fake/page.html")
         assert "Error processing HTML" in result
 
     # ── Markdown ─────────────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.BeautifulSoup')
-    @patch('signalwire.search.document_processor.markdown')
-    def test_extract_markdown_success(self, mock_md: MagicMock, mock_bs: MagicMock) -> None:
+    @patch("signalwire.search.document_processor.BeautifulSoup")
+    @patch("signalwire.search.document_processor.markdown")
+    def test_extract_markdown_success(
+        self, mock_md: MagicMock, mock_bs: MagicMock
+    ) -> None:
         mock_md.markdown.return_value = "<h1>Title</h1>"
-        mock_soup = Mock(); mock_soup.get_text.return_value = "Title"
+        mock_soup = Mock()
+        mock_soup.get_text.return_value = "Title"
         mock_bs.return_value = mock_soup
-        with patch('builtins.open', mock_open(read_data="# Title")):
+        with patch("builtins.open", mock_open(read_data="# Title")):
             result = self.processor._extract_markdown("/fake/doc.md")
         assert result == "Title"
 
-    @patch('signalwire.search.document_processor.BeautifulSoup', None)
-    @patch('signalwire.search.document_processor.markdown', None)
+    @patch("signalwire.search.document_processor.BeautifulSoup", None)
+    @patch("signalwire.search.document_processor.markdown", None)
     def test_extract_markdown_fallback_raw(self) -> None:
         """Without markdown+BS4, returns raw markdown text."""
-        with patch('builtins.open', mock_open(read_data="# Raw Title\nBody")):
+        with patch("builtins.open", mock_open(read_data="# Raw Title\nBody")):
             result = self.processor._extract_markdown("/fake/doc.md")
         assert result == "# Raw Title\nBody"
 
     def test_extract_markdown_io_error(self) -> None:
-        with patch('builtins.open', side_effect=OSError("nope")):
+        with patch("builtins.open", side_effect=OSError("nope")):
             result = self.processor._extract_markdown("/fake/doc.md")
         assert "Error processing Markdown" in result
 
     # ── RTF ───────────────────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.rtf_to_text')
+    @patch("signalwire.search.document_processor.rtf_to_text")
     def test_extract_rtf_success(self, mock_rtf: MagicMock) -> None:
         mock_rtf.return_value = "Plain text from RTF"
-        with patch('builtins.open', mock_open(read_data=r"{\rtf1 Plain text from RTF}")):
+        with patch(
+            "builtins.open", mock_open(read_data=r"{\rtf1 Plain text from RTF}")
+        ):
             result = self.processor._extract_rtf("/fake/doc.rtf")
         assert result == "Plain text from RTF"
 
-    @patch('signalwire.search.document_processor.rtf_to_text', None)
+    @patch("signalwire.search.document_processor.rtf_to_text", None)
     def test_extract_rtf_missing_dependency(self) -> None:
         result = self.processor._extract_rtf("/fake/doc.rtf")
         assert "striprtf not available" in result
 
-    @patch('signalwire.search.document_processor.rtf_to_text')
+    @patch("signalwire.search.document_processor.rtf_to_text")
     def test_extract_rtf_exception(self, mock_rtf: MagicMock) -> None:
-        with patch('builtins.open', side_effect=IOError("disk")):
+        with patch("builtins.open", side_effect=OSError("disk")):
             result = self.processor._extract_rtf("/fake/doc.rtf")
         assert "Error processing RTF" in result
 
     # ── Plain text ────────────────────────────────────────────────────
 
     def test_extract_text_success(self) -> None:
-        with patch('builtins.open', mock_open(read_data="hello world")):
+        with patch("builtins.open", mock_open(read_data="hello world")):
             result = self.processor._extract_text("/fake/file.txt")
         assert result == "hello world"
 
     def test_extract_text_encoding_error(self) -> None:
-        with patch('builtins.open', side_effect=UnicodeDecodeError('utf-8', b'', 0, 1, 'bad')):
+        with patch(
+            "builtins.open", side_effect=UnicodeDecodeError("utf-8", b"", 0, 1, "bad")
+        ):
             result = self.processor._extract_text("/fake/file.txt")
         assert "Error processing TXT" in result
 
     # ── _extract_text_from_file routing ──────────────────────────────
 
-    @patch('signalwire.search.document_processor.magic', None)
+    @patch("signalwire.search.document_processor.magic", None)
     def test_extract_text_from_file_routes_xlsx(self) -> None:
-        with patch.object(self.processor, '_extract_excel', return_value="cells") as m:
+        with patch.object(self.processor, "_extract_excel", return_value="cells") as m:
             result = self.processor._extract_text_from_file("data.xlsx")
         m.assert_called_once_with("data.xlsx")
         assert result == "cells"
 
-    @patch('signalwire.search.document_processor.magic', None)
+    @patch("signalwire.search.document_processor.magic", None)
     def test_extract_text_from_file_routes_pptx(self) -> None:
-        with patch.object(self.processor, '_extract_powerpoint', return_value=["s1"]) as m:
+        with patch.object(
+            self.processor, "_extract_powerpoint", return_value=["s1"]
+        ) as m:
             result = self.processor._extract_text_from_file("slides.pptx")
         m.assert_called_once_with("slides.pptx")
         assert result == ["s1"]
 
-    @patch('signalwire.search.document_processor.magic', None)
+    @patch("signalwire.search.document_processor.magic", None)
     def test_extract_text_from_file_routes_rtf(self) -> None:
-        with patch.object(self.processor, '_extract_rtf', return_value="rtf text") as m:
+        with patch.object(self.processor, "_extract_rtf", return_value="rtf text") as m:
             result = self.processor._extract_text_from_file("notes.rtf")
         m.assert_called_once_with("notes.rtf")
         assert result == "rtf text"
 
-    @patch('signalwire.search.document_processor.magic', None)
+    @patch("signalwire.search.document_processor.magic", None)
     def test_extract_text_from_file_unknown_extension(self) -> None:
         """Unknown extension falls back to text/plain routing."""
-        with patch.object(self.processor, '_extract_text', return_value="raw") as m:
+        with patch.object(self.processor, "_extract_text", return_value="raw") as m:
             result = self.processor._extract_text_from_file("file.zzz")
         m.assert_called_once_with("file.zzz")
         assert result == "raw"
 
-    @patch('signalwire.search.document_processor.magic')
+    @patch("signalwire.search.document_processor.magic")
     def test_extract_text_from_file_magic_html(self, mock_magic: MagicMock) -> None:
         """When magic reports text/html, route to _extract_html."""
-        mock_mime = Mock(); mock_mime.from_file.return_value = "text/html"
+        mock_mime = Mock()
+        mock_mime.from_file.return_value = "text/html"
         mock_magic.Magic.return_value = mock_mime
         # 'html' in 'text/html' is True, but 'plain' in 'text/html' is False,
         # and 'text' in 'text/html' is True -> goes to _extract_text first
         # Actually 'plain' in 'text/html' is False but 'text' in 'text/html' is True
         # So it hits the 'plain' or 'text' branch -> _extract_text
-        with patch.object(self.processor, '_extract_text', return_value="content") as m:
+        with patch.object(self.processor, "_extract_text", return_value="content"):
             result = self.processor._extract_text_from_file("page.html")
         assert result == "content"
 
-    @patch('signalwire.search.document_processor.magic')
+    @patch("signalwire.search.document_processor.magic")
     def test_extract_text_from_file_magic_rtf(self, mock_magic: MagicMock) -> None:
-        mock_mime = Mock(); mock_mime.from_file.return_value = "application/rtf"
+        mock_mime = Mock()
+        mock_mime.from_file.return_value = "application/rtf"
         mock_magic.Magic.return_value = mock_mime
-        with patch.object(self.processor, '_extract_rtf', return_value="rtf") as m:
+        with patch.object(self.processor, "_extract_rtf", return_value="rtf") as m:
             result = self.processor._extract_text_from_file("doc.rtf")
         m.assert_called_once_with("doc.rtf")
         assert result == "rtf"
 
-    @patch('signalwire.search.document_processor.magic')
-    def test_extract_text_from_file_magic_unsupported(self, mock_magic: MagicMock) -> None:
-        mock_mime = Mock(); mock_mime.from_file.return_value = "application/octet-stream"
+    @patch("signalwire.search.document_processor.magic")
+    def test_extract_text_from_file_magic_unsupported(
+        self, mock_magic: MagicMock
+    ) -> None:
+        mock_mime = Mock()
+        mock_mime.from_file.return_value = "application/octet-stream"
         mock_magic.Magic.return_value = mock_mime
         result = self.processor._extract_text_from_file("binary.bin")
         assert "Unsupported file type" in result
@@ -986,130 +1058,149 @@ class TestChunkingStrategies:
 
     # ── sentence ─────────────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.sent_tokenize', None)
+    @patch("signalwire.search.document_processor.sent_tokenize", None)
     def test_sentence_chunking_no_nltk(self) -> None:
         """Without NLTK, fallback to period-based splitting."""
-        proc = DocumentProcessor(chunking_strategy='sentence', max_sentences_per_chunk=2)
+        proc = DocumentProcessor(
+            chunking_strategy="sentence", max_sentences_per_chunk=2
+        )
         text = "Alpha. Beta. Gamma. Delta."
         chunks = proc.create_chunks(text, "f.txt", "txt")
         assert len(chunks) >= 1
-        assert all(c['metadata']['chunk_method'] == 'sentence_based' for c in chunks)
+        assert all(c["metadata"]["chunk_method"] == "sentence_based" for c in chunks)
 
-    @patch('signalwire.search.document_processor.sent_tokenize')
+    @patch("signalwire.search.document_processor.sent_tokenize")
     def test_sentence_chunking_with_nltk(self, mock_tok: MagicMock) -> None:
-        mock_tok.side_effect = lambda t: [s.strip() for s in t.split('.') if s.strip()]
-        proc = DocumentProcessor(chunking_strategy='sentence', max_sentences_per_chunk=2)
+        mock_tok.side_effect = lambda t: [s.strip() for s in t.split(".") if s.strip()]
+        proc = DocumentProcessor(
+            chunking_strategy="sentence", max_sentences_per_chunk=2
+        )
         text = "One. Two. Three. Four."
         chunks = proc.create_chunks(text, "f.txt", "txt")
         assert len(chunks) >= 1
 
-    @patch('signalwire.search.document_processor.sent_tokenize')
-    def test_sentence_chunking_with_split_newlines_zero(self, mock_tok: MagicMock) -> None:
+    @patch("signalwire.search.document_processor.sent_tokenize")
+    def test_sentence_chunking_with_split_newlines_zero(
+        self, mock_tok: MagicMock
+    ) -> None:
         """split_newlines=0 should use direct tokenization without newline splitting."""
-        mock_tok.side_effect = lambda t: [s.strip() for s in t.split('.') if s.strip()]
-        proc = DocumentProcessor(chunking_strategy='sentence', max_sentences_per_chunk=3, split_newlines=0)
+        mock_tok.side_effect = lambda t: [s.strip() for s in t.split(".") if s.strip()]
+        proc = DocumentProcessor(
+            chunking_strategy="sentence", max_sentences_per_chunk=3, split_newlines=0
+        )
         text = "Hello. World."
         chunks = proc.create_chunks(text, "f.txt", "txt")
         assert len(chunks) >= 1
 
     def test_sentence_chunking_list_input(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='sentence', max_sentences_per_chunk=3)
+        proc = DocumentProcessor(
+            chunking_strategy="sentence", max_sentences_per_chunk=3
+        )
         chunks = proc.create_chunks(["Line A.", "Line B.", "Line C."], "f.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
         assert len(chunks) >= 1
 
     # ── sliding_window ───────────────────────────────────────────────
 
     def test_sliding_window_basic(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='sliding', chunk_size=3, chunk_overlap=1)
+        proc = DocumentProcessor(
+            chunking_strategy="sliding", chunk_size=3, chunk_overlap=1
+        )
         chunks = proc.create_chunks("a b c d e f g h", "f.txt", "txt")
         assert len(chunks) >= 2
-        assert all(c['metadata']['chunk_method'] == 'sliding_window' for c in chunks)
+        assert all(c["metadata"]["chunk_method"] == "sliding_window" for c in chunks)
 
     def test_sliding_window_list_input(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='sliding', chunk_size=4, chunk_overlap=1)
-        chunks = proc.create_chunks(["word1 word2", "word3 word4 word5"], "f.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
+        proc = DocumentProcessor(
+            chunking_strategy="sliding", chunk_size=4, chunk_overlap=1
+        )
+        words = ["word1 word2", "word3 word4 word5"]
+        chunks = proc.create_chunks(words, "f.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
         assert len(chunks) >= 1
 
     def test_sliding_window_empty(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='sliding', chunk_size=5, chunk_overlap=2)
+        proc = DocumentProcessor(
+            chunking_strategy="sliding", chunk_size=5, chunk_overlap=2
+        )
         chunks = proc.create_chunks("", "f.txt", "txt")
         assert chunks == []
 
     def test_sliding_window_overlap_metadata(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='sliding', chunk_size=3, chunk_overlap=1)
+        proc = DocumentProcessor(
+            chunking_strategy="sliding", chunk_size=3, chunk_overlap=1
+        )
         chunks = proc.create_chunks("w1 w2 w3 w4 w5 w6", "f.txt", "txt")
-        assert chunks[0]['metadata']['start_word'] == 0
-        assert chunks[0]['metadata']['end_word'] == 3
+        assert chunks[0]["metadata"]["start_word"] == 0
+        assert chunks[0]["metadata"]["end_word"] == 3
 
     # ── paragraphs ───────────────────────────────────────────────────
 
     def test_paragraphs_basic(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='paragraph')
+        proc = DocumentProcessor(chunking_strategy="paragraph")
         text = "Para one.\n\nPara two.\n\nPara three."
         chunks = proc.create_chunks(text, "f.txt", "txt")
         assert len(chunks) == 3
-        assert chunks[0]['content'] == "Para one."
-        assert all(c['metadata']['chunk_method'] == 'paragraph_based' for c in chunks)
+        assert chunks[0]["content"] == "Para one."
+        assert all(c["metadata"]["chunk_method"] == "paragraph_based" for c in chunks)
 
     def test_paragraphs_single_paragraph(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='paragraph')
+        proc = DocumentProcessor(chunking_strategy="paragraph")
         chunks = proc.create_chunks("Just one paragraph.", "f.txt", "txt")
         assert len(chunks) == 1
 
     def test_paragraphs_list_input(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='paragraph')
+        proc = DocumentProcessor(chunking_strategy="paragraph")
         chunks = proc.create_chunks(["line1", "", "line3"], "f.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
         assert len(chunks) >= 1
 
     def test_paragraphs_metadata(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='paragraph')
+        proc = DocumentProcessor(chunking_strategy="paragraph")
         chunks = proc.create_chunks("A.\n\nB.", "f.txt", "txt")
-        assert chunks[0]['metadata']['paragraph_number'] == 1
-        assert chunks[1]['metadata']['paragraph_number'] == 2
+        assert chunks[0]["metadata"]["paragraph_number"] == 1
+        assert chunks[1]["metadata"]["paragraph_number"] == 2
 
     # ── pages ────────────────────────────────────────────────────────
 
     def test_pages_list_input(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='page')
+        proc = DocumentProcessor(chunking_strategy="page")
         chunks = proc.create_chunks(["P1", "P2"], "f.pdf", "pdf")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
         assert len(chunks) == 2
-        assert chunks[0]['metadata']['page_number'] == 1
+        assert chunks[0]["metadata"]["page_number"] == 1
 
     def test_pages_form_feed(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='page')
+        proc = DocumentProcessor(chunking_strategy="page")
         chunks = proc.create_chunks("A\fB\fC", "f.txt", "txt")
         assert len(chunks) == 3
 
     def test_pages_page_markers(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='page')
+        proc = DocumentProcessor(chunking_strategy="page")
         chunks = proc.create_chunks("X---PAGE---Y", "f.txt", "txt")
         assert len(chunks) == 2
 
     def test_pages_page_number_pattern(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='page')
+        proc = DocumentProcessor(chunking_strategy="page")
         text = "Content A\n Page 1 \nContent B\n Page 2 \nContent C"
         chunks = proc.create_chunks(text, "f.txt", "txt")
         assert len(chunks) >= 2
 
     def test_pages_fallback_large_text(self) -> None:
         """Plain text without markers should fall back to word-based splitting."""
-        proc = DocumentProcessor(chunking_strategy='page')
+        proc = DocumentProcessor(chunking_strategy="page")
         words = " ".join(["word"] * 2000)
         chunks = proc.create_chunks(words, "f.txt", "txt")
         assert len(chunks) >= 2
 
     # ── semantic ─────────────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.sent_tokenize', None)
+    @patch("signalwire.search.document_processor.sent_tokenize", None)
     def test_semantic_single_sentence_fallback(self) -> None:
         """Single sentence should return one chunk without import error."""
-        proc = DocumentProcessor(chunking_strategy='semantic')
+        proc = DocumentProcessor(chunking_strategy="semantic")
         chunks = proc.create_chunks("Only one sentence.", "f.txt", "txt")
         assert len(chunks) == 1
-        assert chunks[0]['metadata']['chunk_method'] == 'semantic'
+        assert chunks[0]["metadata"]["chunk_method"] == "semantic"
 
-    @patch('signalwire.search.query_processor._get_cached_model', return_value=None)
-    @patch('signalwire.search.document_processor.sent_tokenize', None)
+    @patch("signalwire.search.query_processor._get_cached_model", return_value=None)
+    @patch("signalwire.search.document_processor.sent_tokenize", None)
     def test_semantic_import_error_falls_back(self, _mock_model: MagicMock) -> None:
         """When the embedding model is unavailable, fall back to sentence-based.
 
@@ -1120,41 +1211,45 @@ class TestChunkingStrategies:
         model.encode(None); it must now degrade to sentence chunking regardless
         of whether the model is actually installed.
         """
-        proc = DocumentProcessor(chunking_strategy='semantic')
+        proc = DocumentProcessor(chunking_strategy="semantic")
         text = "Hello there. How are you. I am fine. Thanks for asking."
         chunks = proc.create_chunks(text, "f.txt", "txt")
         # Should get chunks (via fallback), not a crash.
         assert len(chunks) >= 1
 
-    @patch('signalwire.search.query_processor._get_cached_model', return_value=None)
-    @patch('signalwire.search.document_processor.sent_tokenize')
-    def test_semantic_with_tokenizer_import_error(self, mock_tok: MagicMock, _mock_model: MagicMock) -> None:
+    @patch("signalwire.search.query_processor._get_cached_model", return_value=None)
+    @patch("signalwire.search.document_processor.sent_tokenize")
+    def test_semantic_with_tokenizer_import_error(
+        self, mock_tok: MagicMock, _mock_model: MagicMock
+    ) -> None:
         """Semantic with NLTK available but the embedding model unavailable.
 
         Same deterministic forcing of model-None as above, with NLTK's
         sent_tokenize mocked in so the sentence-splitting path is exercised too.
         """
-        mock_tok.side_effect = lambda t: [s.strip()+'.' for s in t.split('.') if s.strip()]
-        proc = DocumentProcessor(chunking_strategy='semantic')
+        mock_tok.side_effect = lambda t: [
+            s.strip() + "." for s in t.split(".") if s.strip()
+        ]
+        proc = DocumentProcessor(chunking_strategy="semantic")
         text = "Alpha sentence. Beta sentence. Gamma sentence. Delta sentence."
         chunks = proc.create_chunks(text, "f.txt", "txt")
         assert len(chunks) >= 1
 
     # ── topics ───────────────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.sent_tokenize', None)
+    @patch("signalwire.search.document_processor.sent_tokenize", None)
     def test_topics_short_text_single_chunk(self) -> None:
         """3 or fewer sentences returns a single topic chunk."""
-        proc = DocumentProcessor(chunking_strategy='topic')
+        proc = DocumentProcessor(chunking_strategy="topic")
         text = "Machine learning rocks. Deep learning too."
         chunks = proc.create_chunks(text, "f.txt", "txt")
         assert len(chunks) == 1
-        assert chunks[0]['metadata']['chunk_method'] == 'topic'
+        assert chunks[0]["metadata"]["chunk_method"] == "topic"
 
-    @patch('signalwire.search.document_processor.sent_tokenize', None)
+    @patch("signalwire.search.document_processor.sent_tokenize", None)
     def test_topics_multiple_topics(self) -> None:
         """Multiple distinct topics should produce multiple chunks."""
-        proc = DocumentProcessor(chunking_strategy='topic', topic_threshold=0.9)
+        proc = DocumentProcessor(chunking_strategy="topic", topic_threshold=0.9)
         # Completely different keyword sets per sentence
         text = (
             "Python programming language features are impressive. "
@@ -1165,30 +1260,36 @@ class TestChunkingStrategies:
         )
         chunks = proc.create_chunks(text, "f.txt", "txt")
         assert len(chunks) >= 1
-        assert all(c['metadata']['chunk_method'] == 'topic' for c in chunks)
+        assert all(c["metadata"]["chunk_method"] == "topic" for c in chunks)
 
-    @patch('signalwire.search.document_processor.sent_tokenize')
+    @patch("signalwire.search.document_processor.sent_tokenize")
     def test_topics_with_nltk(self, mock_tok: MagicMock) -> None:
-        mock_tok.side_effect = lambda t: [s.strip() for s in t.split('.') if s.strip()]
-        proc = DocumentProcessor(chunking_strategy='topic', topic_threshold=0.0)
+        mock_tok.side_effect = lambda t: [s.strip() for s in t.split(".") if s.strip()]
+        proc = DocumentProcessor(chunking_strategy="topic", topic_threshold=0.0)
         text = "Alpha beta gamma. Delta epsilon zeta. Eta theta iota. Kappa lambda mu."
         chunks = proc.create_chunks(text, "f.txt", "txt")
         assert len(chunks) >= 1
 
-    @patch('signalwire.search.document_processor.sent_tokenize', None)
+    @patch("signalwire.search.document_processor.sent_tokenize", None)
     def test_topics_list_input(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='topic')
+        proc = DocumentProcessor(chunking_strategy="topic")
         chunks = proc.create_chunks(
-            ["First about dogs.", "Second about cats.", "Third about birds.", "Fourth about fish."],  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
-            "f.txt", "txt"
+            [
+                "First about dogs.",
+                "Second about cats.",
+                "Third about birds.",
+                "Fourth about fish.",
+            ],  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
+            "f.txt",
+            "txt",
         )
         assert len(chunks) >= 1
 
     # ── qa_optimization ──────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.sent_tokenize', None)
+    @patch("signalwire.search.document_processor.sent_tokenize", None)
     def test_qa_optimization_basic(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='qa')
+        proc = DocumentProcessor(chunking_strategy="qa")
         text = (
             "What is Python? Python is a programming language. "
             "How does it work? It interprets code. "
@@ -1196,73 +1297,82 @@ class TestChunkingStrategies:
         )
         chunks = proc.create_chunks(text, "f.txt", "txt")
         assert len(chunks) >= 1
-        assert all(c['metadata']['chunk_method'] == 'qa_optimized' for c in chunks)
+        assert all(c["metadata"]["chunk_method"] == "qa_optimized" for c in chunks)
 
-    @patch('signalwire.search.document_processor.sent_tokenize', None)
+    @patch("signalwire.search.document_processor.sent_tokenize", None)
     def test_qa_optimization_has_question_metadata(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='qa')
+        proc = DocumentProcessor(chunking_strategy="qa")
         text = "What is this? It is a test. Does it work? Yes it does. Final statement here."
         chunks = proc.create_chunks(text, "f.txt", "txt")
         assert len(chunks) >= 1
         # At least one chunk should have 'has_question'
-        has_q_chunks = [c for c in chunks if c['metadata'].get('has_question')]
+        has_q_chunks = [c for c in chunks if c["metadata"].get("has_question")]
         assert len(has_q_chunks) >= 0  # may or may not have, but should not crash
 
-    @patch('signalwire.search.document_processor.sent_tokenize')
+    @patch("signalwire.search.document_processor.sent_tokenize")
     def test_qa_optimization_with_nltk(self, mock_tok: MagicMock) -> None:
-        mock_tok.side_effect = lambda t: [s.strip() for s in t.split('.') if s.strip()]
-        proc = DocumentProcessor(chunking_strategy='qa')
+        mock_tok.side_effect = lambda t: [s.strip() for s in t.split(".") if s.strip()]
+        proc = DocumentProcessor(chunking_strategy="qa")
         text = "What is X? X is Y. How about Z? Z is W. Step one. Step two."
         chunks = proc.create_chunks(text, "f.txt", "txt")
         assert len(chunks) >= 1
 
-    @patch('signalwire.search.document_processor.sent_tokenize', None)
+    @patch("signalwire.search.document_processor.sent_tokenize", None)
     def test_qa_optimization_empty_text(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='qa')
+        proc = DocumentProcessor(chunking_strategy="qa")
         chunks = proc.create_chunks("", "f.txt", "txt")
         assert isinstance(chunks, list)
 
-    @patch('signalwire.search.document_processor.sent_tokenize', None)
+    @patch("signalwire.search.document_processor.sent_tokenize", None)
     def test_qa_optimization_list_input(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='qa')
-        chunks = proc.create_chunks(["Question? Answer.", "More content."], "f.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
+        proc = DocumentProcessor(chunking_strategy="qa")
+        parts = ["Question? Answer.", "More content."]
+        chunks = proc.create_chunks(parts, "f.txt", "txt")  # type: ignore[arg-type]  # list[str] input handled by runtime isinstance branch
         assert len(chunks) >= 1
 
     # ── json ─────────────────────────────────────────────────────────
 
     def test_json_chunking_valid(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='json')
+        proc = DocumentProcessor(chunking_strategy="json")
         data = {
             "chunks": [
-                {"chunk_id": "c1", "type": "content", "content": "Hello world",
-                 "metadata": {"section": "Intro", "tags": ["greeting"]}},
-                {"chunk_id": "c2", "type": "toc", "content": "Table of Contents item",
-                 "metadata": {}},
+                {
+                    "chunk_id": "c1",
+                    "type": "content",
+                    "content": "Hello world",
+                    "metadata": {"section": "Intro", "tags": ["greeting"]},
+                },
+                {
+                    "chunk_id": "c2",
+                    "type": "toc",
+                    "content": "Table of Contents item",
+                    "metadata": {},
+                },
             ]
         }
         chunks = proc.create_chunks(json.dumps(data), "f.json", "json")
         assert len(chunks) == 2
-        assert chunks[0]['metadata']['chunk_method'] == 'json'
-        assert chunks[0]['metadata']['original_chunk_id'] == 'c1'
-        assert chunks[0]['tags'] == ['greeting']
+        assert chunks[0]["metadata"]["chunk_method"] == "json"
+        assert chunks[0]["metadata"]["original_chunk_id"] == "c1"
+        assert chunks[0]["tags"] == ["greeting"]
         # TOC entry should get special tags
-        assert 'toc' in chunks[1]['tags']
+        assert "toc" in chunks[1]["tags"]
 
     def test_json_chunking_invalid_json(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='json')
+        proc = DocumentProcessor(chunking_strategy="json")
         chunks = proc.create_chunks("not valid json {{{", "f.json", "json")
         # Should fall back to sentence-based
         assert len(chunks) >= 1
 
     def test_json_chunking_missing_chunks_key(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='json')
+        proc = DocumentProcessor(chunking_strategy="json")
         data = {"data": [1, 2, 3]}
         chunks = proc.create_chunks(json.dumps(data), "f.json", "json")
         # Should fall back to sentence-based
         assert len(chunks) >= 1
 
     def test_json_chunking_skip_invalid_chunk(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='json')
+        proc = DocumentProcessor(chunking_strategy="json")
         data = {
             "chunks": [
                 {"chunk_id": "ok", "content": "Valid"},
@@ -1272,76 +1382,87 @@ class TestChunkingStrategies:
         }
         chunks = proc.create_chunks(json.dumps(data), "f.json", "json")
         assert len(chunks) == 1
-        assert "Valid" in chunks[0]['content']
+        assert "Valid" in chunks[0]["content"]
 
     def test_json_chunking_empty_chunks_list(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='json')
+        proc = DocumentProcessor(chunking_strategy="json")
         data: dict[str, list[Any]] = {"chunks": []}
         chunks = proc.create_chunks(json.dumps(data), "f.json", "json")
         # Falls back to sentence chunking of empty-ish text
         assert isinstance(chunks, list)
 
     def test_json_chunking_toc_section_naming(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='json')
-        data = {"chunks": [
-            {"type": "toc", "content": "A very long table of contents entry that should be truncated somehow"},
-        ]}
+        proc = DocumentProcessor(chunking_strategy="json")
+        data = {
+            "chunks": [
+                {
+                    "type": "toc",
+                    "content": "A very long table of contents entry that should be truncated somehow",
+                },
+            ]
+        }
         chunks = proc.create_chunks(json.dumps(data), "f.json", "json")
         assert len(chunks) == 1
-        assert chunks[0]['section'].startswith("TOC:")
+        assert chunks[0]["section"].startswith("TOC:")
 
     def test_json_chunking_content_with_section_number(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='json')
-        data = {"chunks": [
-            {"type": "content", "content": "Body text", "metadata": {"section_number": 42}},
-        ]}
+        proc = DocumentProcessor(chunking_strategy="json")
+        data = {
+            "chunks": [
+                {
+                    "type": "content",
+                    "content": "Body text",
+                    "metadata": {"section_number": 42},
+                },
+            ]
+        }
         chunks = proc.create_chunks(json.dumps(data), "f.json", "json")
-        assert chunks[0]['section'] == "Section 42"
+        assert chunks[0]["section"] == "Section 42"
 
     # ── markdown_enhanced ────────────────────────────────────────────
 
     def test_markdown_enhanced_basic_headers(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='markdown')
+        proc = DocumentProcessor(chunking_strategy="markdown")
         md = "# Title\nSome intro.\n## Section A\nContent A.\n## Section B\nContent B."
         chunks = proc.create_chunks(md, "doc.md", "md")
         assert len(chunks) >= 2
         # Check section hierarchy
-        sections = [c['section'] for c in chunks if c['section']]
-        assert any('Title' in s for s in sections)
+        sections = [c["section"] for c in chunks if c["section"]]
+        assert any("Title" in s for s in sections)
 
     def test_markdown_enhanced_code_blocks(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='markdown')
+        proc = DocumentProcessor(chunking_strategy="markdown")
         md = "# Code Example\n```python\nprint('hello')\n```\nSome text."
         chunks = proc.create_chunks(md, "doc.md", "md")
         assert len(chunks) >= 1
         # At least one chunk should have code metadata
-        code_chunks = [c for c in chunks if c['metadata'].get('has_code')]
+        code_chunks = [c for c in chunks if c["metadata"].get("has_code")]
         assert len(code_chunks) >= 1
-        assert 'python' in code_chunks[0]['metadata'].get('code_languages', [])
+        assert "python" in code_chunks[0]["metadata"].get("code_languages", [])
 
     def test_markdown_enhanced_nested_headers(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='markdown')
+        proc = DocumentProcessor(chunking_strategy="markdown")
         md = "# H1\n## H2\n### H3\nDeep content."
         chunks = proc.create_chunks(md, "doc.md", "md")
         assert len(chunks) >= 1
 
     def test_markdown_enhanced_no_headers(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='markdown')
+        proc = DocumentProcessor(chunking_strategy="markdown")
         md = "Just plain text.\nMore text."
         chunks = proc.create_chunks(md, "doc.md", "md")
         assert len(chunks) >= 1
 
     def test_markdown_enhanced_code_without_language(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='markdown')
+        proc = DocumentProcessor(chunking_strategy="markdown")
         md = "# Sec\n```\ngeneric code\n```\nDone."
         chunks = proc.create_chunks(md, "doc.md", "md")
-        code_chunks = [c for c in chunks if c['metadata'].get('has_code')]
+        code_chunks = [c for c in chunks if c["metadata"].get("has_code")]
         assert len(code_chunks) >= 1
         # No language specified -> code_languages should be empty
-        assert code_chunks[0]['metadata'].get('code_languages', []) == []
+        assert code_chunks[0]["metadata"].get("code_languages", []) == []
 
     def test_markdown_enhanced_empty_content(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='markdown')
+        proc = DocumentProcessor(chunking_strategy="markdown")
         chunks = proc.create_chunks("", "doc.md", "md")
         assert isinstance(chunks, list)
 
@@ -1350,93 +1471,111 @@ class TestEdgeCases:
     """Edge cases: empty, unicode, very large, unsupported."""
 
     def test_empty_string_all_strategies(self) -> None:
-        for strategy in ['sentence', 'sliding', 'paragraph', 'page', 'qa', 'json', 'markdown']:
+        for strategy in [
+            "sentence",
+            "sliding",
+            "paragraph",
+            "page",
+            "qa",
+            "json",
+            "markdown",
+        ]:
             proc = DocumentProcessor(chunking_strategy=strategy)
             chunks = proc.create_chunks("", "f.txt", "txt")
-            assert isinstance(chunks, list), f"Strategy {strategy} failed on empty string"
+            assert isinstance(chunks, list), (
+                f"Strategy {strategy} failed on empty string"
+            )
 
     def test_whitespace_only_all_strategies(self) -> None:
-        for strategy in ['sentence', 'sliding', 'paragraph', 'page', 'qa', 'markdown']:
+        for strategy in ["sentence", "sliding", "paragraph", "page", "qa", "markdown"]:
             proc = DocumentProcessor(chunking_strategy=strategy)
             chunks = proc.create_chunks("   \n\t\n  ", "f.txt", "txt")
             assert isinstance(chunks, list), f"Strategy {strategy} failed on whitespace"
 
     def test_unicode_content(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='sentence', max_sentences_per_chunk=2)
+        proc = DocumentProcessor(
+            chunking_strategy="sentence", max_sentences_per_chunk=2
+        )
         text = "日本語のテスト文。これは二番目の文です。三番目の文もあります。"
         chunks = proc.create_chunks(text, "jp.txt", "txt")
         assert len(chunks) >= 1
 
     def test_unicode_emoji_content(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='paragraph')
+        proc = DocumentProcessor(chunking_strategy="paragraph")
         text = "First para with emoji.\n\nSecond para."
         chunks = proc.create_chunks(text, "emoji.txt", "txt")
         assert len(chunks) == 2
 
     def test_very_large_text_sentence(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='sentence', max_sentences_per_chunk=5)
+        proc = DocumentProcessor(
+            chunking_strategy="sentence", max_sentences_per_chunk=5
+        )
         text = ". ".join([f"Sentence number {i}" for i in range(200)]) + "."
         chunks = proc.create_chunks(text, "big.txt", "txt")
         assert len(chunks) > 10
 
     def test_very_large_text_sliding(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='sliding', chunk_size=50, chunk_overlap=10)
+        proc = DocumentProcessor(
+            chunking_strategy="sliding", chunk_size=50, chunk_overlap=10
+        )
         text = " ".join([f"word{i}" for i in range(1000)])
         chunks = proc.create_chunks(text, "big.txt", "txt")
         assert len(chunks) > 10
 
     def test_very_large_text_paragraph(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='paragraph')
+        proc = DocumentProcessor(chunking_strategy="paragraph")
         text = "\n\n".join([f"Paragraph {i} content." for i in range(100)])
         chunks = proc.create_chunks(text, "big.txt", "txt")
         assert len(chunks) == 100
 
     def test_single_word(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='sentence')
+        proc = DocumentProcessor(chunking_strategy="sentence")
         chunks = proc.create_chunks("hello", "f.txt", "txt")
         assert len(chunks) >= 1
-        assert "hello" in chunks[0]['content']
+        assert "hello" in chunks[0]["content"]
 
     def test_single_character(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='sliding', chunk_size=5, chunk_overlap=1)
+        proc = DocumentProcessor(
+            chunking_strategy="sliding", chunk_size=5, chunk_overlap=1
+        )
         chunks = proc.create_chunks("x", "f.txt", "txt")
         assert len(chunks) == 1
 
     def test_newlines_only(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='paragraph')
+        proc = DocumentProcessor(chunking_strategy="paragraph")
         chunks = proc.create_chunks("\n\n\n\n", "f.txt", "txt")
         assert chunks == []
 
     def test_mixed_line_endings(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='paragraph')
+        proc = DocumentProcessor(chunking_strategy="paragraph")
         text = "Para 1.\r\n\r\nPara 2.\r\n\r\nPara 3."
         chunks = proc.create_chunks(text, "f.txt", "txt")
         assert len(chunks) == 3
 
     def test_unsupported_chunking_strategy_fallback(self) -> None:
-        proc = DocumentProcessor(chunking_strategy='nonexistent_strategy')
+        proc = DocumentProcessor(chunking_strategy="nonexistent_strategy")
         chunks = proc.create_chunks("Some text here.", "f.txt", "txt")
         # Fallback to sentence
         assert len(chunks) >= 1
-        assert chunks[0]['metadata']['chunk_method'] == 'sentence_based'
+        assert chunks[0]["metadata"]["chunk_method"] == "sentence_based"
 
     def test_create_chunk_hash_stability(self) -> None:
         """Same content produces same chunk structure."""
         proc = DocumentProcessor()
         c1 = proc._create_chunk("abc", "f.txt", "S1")
         c2 = proc._create_chunk("abc", "f.txt", "S1")
-        assert c1['content'] == c2['content']
-        assert c1['metadata']['word_count'] == c2['metadata']['word_count']
+        assert c1["content"] == c2["content"]
+        assert c1["metadata"]["word_count"] == c2["metadata"]["word_count"]
 
     def test_create_chunk_filename_extension(self) -> None:
         proc = DocumentProcessor()
         chunk = proc._create_chunk("test", "archive.tar.gz")
-        assert chunk['metadata']['file_type'] == 'gz'
+        assert chunk["metadata"]["file_type"] == "gz"
 
     def test_create_chunk_no_extension(self) -> None:
         proc = DocumentProcessor()
         chunk = proc._create_chunk("test", "Makefile")
-        assert chunk['metadata']['file_type'] == ''
+        assert chunk["metadata"]["file_type"] == ""
 
     # ── _build helpers ───────────────────────────────────────────────
 
@@ -1455,24 +1594,24 @@ class TestEdgeCases:
     def test_build_markdown_metadata_no_code(self) -> None:
         proc = DocumentProcessor()
         meta = proc._build_markdown_metadata(["H1"], [], False)
-        assert meta['chunk_type'] == 'markdown'
-        assert meta.get('h1') == 'H1'
-        assert 'has_code' not in meta
+        assert meta["chunk_type"] == "markdown"
+        assert meta.get("h1") == "H1"
+        assert "has_code" not in meta
 
     def test_build_markdown_metadata_with_code(self) -> None:
         proc = DocumentProcessor()
         meta = proc._build_markdown_metadata(["H1", "H2"], ["python", "bash"], True)
-        assert meta['has_code'] is True
-        assert meta['code_languages'] == ["python", "bash"]
-        assert 'code' in meta['tags']
-        assert 'code:python' in meta['tags']
-        assert 'depth:2' in meta['tags']
+        assert meta["has_code"] is True
+        assert meta["code_languages"] == ["python", "bash"]
+        assert "code" in meta["tags"]
+        assert "code:python" in meta["tags"]
+        assert "depth:2" in meta["tags"]
 
     def test_build_markdown_metadata_empty_hierarchy(self) -> None:
         proc = DocumentProcessor()
         meta = proc._build_markdown_metadata([], [], False)
-        assert 'h1' not in meta
-        assert 'tags' not in meta  # no code, no hierarchy -> no tags
+        assert "h1" not in meta
+        assert "tags" not in meta  # no code, no hierarchy -> no tags
 
     def test_build_python_section_class_and_function(self) -> None:
         proc = DocumentProcessor()
@@ -1492,14 +1631,14 @@ class TestEdgeCases:
 
     # ── _calculate_sentences_per_chunk ───────────────────────────────
 
-    @patch('signalwire.search.document_processor.sent_tokenize', None)
+    @patch("signalwire.search.document_processor.sent_tokenize", None)
     def test_calculate_sentences_per_chunk_no_nltk(self) -> None:
         proc = DocumentProcessor(chunk_size=50)
         result = proc._calculate_sentences_per_chunk("Short. Another.")
         assert isinstance(result, int)
         assert result >= 1
 
-    @patch('signalwire.search.document_processor.sent_tokenize', None)
+    @patch("signalwire.search.document_processor.sent_tokenize", None)
     def test_calculate_sentences_per_chunk_empty(self) -> None:
         """Empty string with no nltk causes ZeroDivisionError (source code bug)."""
         proc = DocumentProcessor()
@@ -1531,21 +1670,21 @@ class TestEdgeCases:
         pages = ["Small page one.", "Small page two."]
         chunks = proc._chunk_document_aware(pages, "doc.pdf", "pdf")
         assert len(chunks) == 2
-        assert chunks[0]['section'] == "Page 1"
+        assert chunks[0]["section"] == "Page 1"
 
     def test_chunk_document_aware_list_pptx(self) -> None:
         proc = DocumentProcessor()
         slides = ["Slide text one.", "Slide text two."]
         chunks = proc._chunk_document_aware(slides, "pres.pptx", "pptx")
         assert len(chunks) == 2
-        assert chunks[0]['section'] == "Slide 1"
+        assert chunks[0]["section"] == "Slide 1"
 
     def test_chunk_document_aware_list_generic(self) -> None:
         proc = DocumentProcessor()
         sections = ["Section one.", "Section two."]
         chunks = proc._chunk_document_aware(sections, "doc.docx", "docx")
         assert len(chunks) == 2
-        assert chunks[0]['section'] == "Section 1"
+        assert chunks[0]["section"] == "Section 1"
 
     def test_chunk_document_aware_string(self) -> None:
         proc = DocumentProcessor()

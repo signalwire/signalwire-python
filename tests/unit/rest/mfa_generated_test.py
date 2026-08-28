@@ -54,7 +54,7 @@ class TestMfaWire:
     def test_mfa_verify(
         self, signalwire_client: RestClient, mock: _MockHarness
     ) -> None:
-        signalwire_client.mfa.verify("test-id", token="x")  # noqa: S106
+        signalwire_client.mfa.verify("test-id", token="x")
         last = mock.last_request()
         assert last.method == "POST"
         assert last.matched_route == "relay-rest.verify_mfa_token"
@@ -64,5 +64,5 @@ class TestMfaWire:
     ) -> None:
         mock.push_scenario("relay-rest.verify_mfa_token", 500, {"error": "x"})
         with pytest.raises(SignalWireRestError) as exc:
-            signalwire_client.mfa.verify("test-id", token="x")  # noqa: S106
+            signalwire_client.mfa.verify("test-id", token="x")
         assert exc.value.status_code == 500

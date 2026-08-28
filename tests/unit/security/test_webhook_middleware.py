@@ -9,7 +9,6 @@ test mirrors what SignalWire's backend would send.
 import base64
 import hashlib
 import hmac
-from typing import Optional
 
 import pytest
 from fastapi import Depends, FastAPI, Request
@@ -34,7 +33,7 @@ def _scheme_a_signature(key: str, url: str, raw_body: str) -> str:
 
 
 def _scheme_b_signature(
-    key: str, url: str, params: Optional[dict[str, object]] = None
+    key: str, url: str, params: dict[str, object] | None = None
 ) -> str:
     """Sign url + sortedConcatParams with HMAC-SHA1, base64 encode."""
     params = params or {}
@@ -69,6 +68,7 @@ def signed_app() -> FastAPI:
 # 403 on invalid / missing
 # ---------------------------------------------------------------------------
 
+
 class TestInvalidSignature:
     def test_invalid_signature_returns_403(self, signed_app: FastAPI) -> None:
         client = TestClient(signed_app)
@@ -96,6 +96,7 @@ class TestInvalidSignature:
 # ---------------------------------------------------------------------------
 # 200 on valid + raw body forwarded
 # ---------------------------------------------------------------------------
+
 
 class TestValidSignature:
     def test_valid_scheme_a_signature_passes_through(self, signed_app: FastAPI) -> None:
@@ -139,6 +140,7 @@ class TestValidSignature:
 # Construction errors
 # ---------------------------------------------------------------------------
 
+
 class TestDependencyFactory:
     def test_empty_signing_key_raises(self) -> None:
         """make_webhook_validation_dependency rejects empty signing_key at build time."""
@@ -147,7 +149,9 @@ class TestDependencyFactory:
         with pytest.raises(ValueError):
             make_webhook_validation_dependency(None)  # type: ignore[arg-type]  # intentional invalid input
 
-    def test_proxy_url_base_env_used(self, signed_app: FastAPI, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_proxy_url_base_env_used(
+        self, signed_app: FastAPI, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         """SWML_PROXY_URL_BASE env wins over request.url for URL reconstruction.
 
         We sign against the proxy URL and POST to the test app — if the

@@ -10,6 +10,7 @@ See LICENSE file in the project root for full license information.
 import sqlite3
 import json
 import hashlib
+from contextlib import closing
 from datetime import datetime
 from pathlib import Path
 from typing import Any, TYPE_CHECKING
@@ -779,39 +780,44 @@ class IndexBuilder:
             return {"valid": False, "error": "Index file does not exist"}
 
         try:
-            conn = sqlite3.connect(index_file)
-            cursor = conn.cursor()
+            # `closing` (not `with sqlite3.connect(...)`) — a Connection used as a
+            # context manager commits/rolls back the transaction but does NOT close
+            # the handle. On Windows an unclosed handle makes the file undeletable
+            # (PermissionError/WinError 32), so every exit path must close.
+            with closing(sqlite3.connect(index_file)) as conn:
+                cursor = conn.cursor()
 
-            # Check schema
-            cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-            tables = [row[0] for row in cursor.fetchall()]
+                # Check schema
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                tables = [row[0] for row in cursor.fetchall()]
 
-            required_tables = ["chunks", "chunks_fts", "synonyms", "config"]
-            missing_tables = [t for t in required_tables if t not in tables]
+                required_tables = ["chunks", "chunks_fts", "synonyms", "config"]
+                missing_tables = [t for t in required_tables if t not in tables]
 
-            if missing_tables:
-                return {"valid": False, "error": f"Missing tables: {missing_tables}"}
+                if missing_tables:
+                    return {
+                        "valid": False,
+                        "error": f"Missing tables: {missing_tables}",
+                    }
 
-            # Get config
-            cursor.execute("SELECT key, value FROM config")
-            config = dict(cursor.fetchall())
+                # Get config
+                cursor.execute("SELECT key, value FROM config")
+                config = dict(cursor.fetchall())
 
-            # Get chunk count
-            cursor.execute("SELECT COUNT(*) FROM chunks")
-            chunk_count = cursor.fetchone()[0]
+                # Get chunk count
+                cursor.execute("SELECT COUNT(*) FROM chunks")
+                chunk_count = cursor.fetchone()[0]
 
-            # Get file count
-            cursor.execute("SELECT COUNT(DISTINCT filename) FROM chunks")
-            file_count = cursor.fetchone()[0]
+                # Get file count
+                cursor.execute("SELECT COUNT(DISTINCT filename) FROM chunks")
+                file_count = cursor.fetchone()[0]
 
-            conn.close()
-
-            return {
-                "valid": True,
-                "chunk_count": chunk_count,
-                "file_count": file_count,
-                "config": config,
-            }
+                return {
+                    "valid": True,
+                    "chunk_count": chunk_count,
+                    "file_count": file_count,
+                    "config": config,
+                }
 
         except Exception as e:
             return {"valid": False, "error": str(e)}

@@ -32,13 +32,13 @@ def _make_skill(params: dict[str, Any] | None = None) -> WebSearchSkill:
 
     mock_agent = Mock()
     mock_agent.define_tool = Mock()
-    skill = WebSearchSkill(agent=mock_agent, params=default_params)
-    return skill
+    return WebSearchSkill(agent=mock_agent, params=default_params)
 
 
 # ---------------------------------------------------------------------------
 # Class-level attributes
 # ---------------------------------------------------------------------------
+
 
 class TestWebSearchSkillClassAttributes:
     """Verify class-level constants and metadata."""
@@ -47,7 +47,10 @@ class TestWebSearchSkillClassAttributes:
         assert WebSearchSkill.SKILL_NAME == "web_search"
 
     def test_skill_description(self) -> None:
-        assert WebSearchSkill.SKILL_DESCRIPTION == "Search the web for information using Google Custom Search API"
+        assert (
+            WebSearchSkill.SKILL_DESCRIPTION
+            == "Search the web for information using Google Custom Search API"
+        )
 
     def test_skill_version(self) -> None:
         assert WebSearchSkill.SKILL_VERSION == "2.0.0"
@@ -65,6 +68,7 @@ class TestWebSearchSkillClassAttributes:
 # ---------------------------------------------------------------------------
 # Initialization
 # ---------------------------------------------------------------------------
+
 
 class TestWebSearchSkillInit:
     """Tests for __init__ (inherited from SkillBase)."""
@@ -104,6 +108,7 @@ class TestWebSearchSkillInit:
 # get_parameter_schema
 # ---------------------------------------------------------------------------
 
+
 class TestGetParameterSchema:
     """Tests for the class method get_parameter_schema."""
 
@@ -115,8 +120,14 @@ class TestGetParameterSchema:
 
     def test_contains_optional_params(self) -> None:
         schema = WebSearchSkill.get_parameter_schema()
-        for key in ("num_results", "delay", "max_content_length",
-                     "oversample_factor", "min_quality_score", "no_results_message"):
+        for key in (
+            "num_results",
+            "delay",
+            "max_content_length",
+            "oversample_factor",
+            "min_quality_score",
+            "no_results_message",
+        ):
             assert key in schema, f"Missing optional param: {key}"
             assert schema[key]["required"] is False
 
@@ -204,14 +215,21 @@ class TestGetParameterSchema:
         but forgot the schema entry' drift. Every latency/response param
         read in setup() must appear in the advertised schema."""
         schema = WebSearchSkill.get_parameter_schema()
-        for key in ("response_prefix", "response_postfix", "per_page_timeout",
-                     "overall_deadline", "parallel_scrape", "snippets_only"):
+        for key in (
+            "response_prefix",
+            "response_postfix",
+            "per_page_timeout",
+            "overall_deadline",
+            "parallel_scrape",
+            "snippets_only",
+        ):
             assert key in schema, f"setup() reads {key!r} but schema omits it"
 
 
 # ---------------------------------------------------------------------------
 # get_instance_key
 # ---------------------------------------------------------------------------
+
 
 class TestGetInstanceKey:
     """Tests for get_instance_key."""
@@ -243,6 +261,7 @@ class TestGetInstanceKey:
 # setup()
 # ---------------------------------------------------------------------------
 
+
 class TestSetup:
     """Tests for the setup method."""
 
@@ -272,15 +291,17 @@ class TestSetup:
         assert "{query}" in skill.no_results_message
 
     def test_setup_custom_optional_values(self) -> None:
-        skill = _make_skill({
-            "num_results": 5,
-            "delay": 1.0,
-            "max_content_length": 16384,
-            "oversample_factor": 3.0,
-            "min_quality_score": 0.5,
-            "tool_name": "my_search",
-            "no_results_message": "Nothing found for '{query}'.",
-        })
+        skill = _make_skill(
+            {
+                "num_results": 5,
+                "delay": 1.0,
+                "max_content_length": 16384,
+                "oversample_factor": 3.0,
+                "min_quality_score": 0.5,
+                "tool_name": "my_search",
+                "no_results_message": "Nothing found for '{query}'.",
+            }
+        )
         skill.setup()
         assert skill.default_num_results == 5
         assert skill.default_delay == 1.0
@@ -328,6 +349,7 @@ class TestSetup:
 # ---------------------------------------------------------------------------
 # register_tools()
 # ---------------------------------------------------------------------------
+
 
 class TestRegisterTools:
     """Tests for register_tools method."""
@@ -395,6 +417,7 @@ class TestRegisterTools:
 # _web_search_handler()
 # ---------------------------------------------------------------------------
 
+
 class TestWebSearchHandler:
     """Tests for the _web_search_handler method."""
 
@@ -428,7 +451,9 @@ class TestWebSearchHandler:
     def test_successful_search(self) -> None:
         skill = self._setup_skill()
         mock_results = "Found 2 results meeting quality threshold from 8 searched.\nShowing top 2:\n\n=== RESULT 1 ===\nTitle: Test\nContent: Good content"
-        with patch.object(skill.search_scraper, 'search_and_scrape_best', return_value=mock_results):
+        with patch.object(
+            skill.search_scraper, "search_and_scrape_best", return_value=mock_results
+        ):
             result = skill._web_search_handler({"query": "test query"}, {})
             assert isinstance(result, FunctionResult)
             assert "test query" in result.response
@@ -436,31 +461,45 @@ class TestWebSearchHandler:
 
     def test_no_search_results(self) -> None:
         skill = self._setup_skill()
-        with patch.object(skill.search_scraper, 'search_and_scrape_best',
-                          return_value="No search results found for query: test"):
+        with patch.object(
+            skill.search_scraper,
+            "search_and_scrape_best",
+            return_value="No search results found for query: test",
+        ):
             result = skill._web_search_handler({"query": "test"}, {})
             assert isinstance(result, FunctionResult)
             assert isinstance(result.response, str)
             # Should trigger no_results_message
-            assert "couldn't find" in result.response.lower() or "quality" in result.response.lower()
+            assert (
+                "couldn't find" in result.response.lower()
+                or "quality" in result.response.lower()
+            )
 
     def test_no_quality_results(self) -> None:
         skill = self._setup_skill()
-        with patch.object(skill.search_scraper, 'search_and_scrape_best',
-                          return_value="No quality results found for query: test. All results were below quality threshold."):
+        with patch.object(
+            skill.search_scraper,
+            "search_and_scrape_best",
+            return_value="No quality results found for query: test. All results were below quality threshold.",
+        ):
             result = skill._web_search_handler({"query": "test"}, {})
             assert isinstance(result, FunctionResult)
 
     def test_empty_search_results(self) -> None:
         skill = self._setup_skill()
-        with patch.object(skill.search_scraper, 'search_and_scrape_best', return_value=""):
+        with patch.object(
+            skill.search_scraper, "search_and_scrape_best", return_value=""
+        ):
             result = skill._web_search_handler({"query": "test"}, {})
             assert isinstance(result, FunctionResult)
 
     def test_exception_during_search(self) -> None:
         skill = self._setup_skill()
-        with patch.object(skill.search_scraper, 'search_and_scrape_best',
-                          side_effect=RuntimeError("connection failed")):
+        with patch.object(
+            skill.search_scraper,
+            "search_and_scrape_best",
+            side_effect=RuntimeError("connection failed"),
+        ):
             result = skill._web_search_handler({"query": "test"}, {})
             assert isinstance(result, FunctionResult)
             assert isinstance(result.response, str)
@@ -470,33 +509,40 @@ class TestWebSearchHandler:
         skill = self._setup_skill(
             params={"no_results_message": "Sorry, '{query}' not found."}
         )
-        with patch.object(skill.search_scraper, 'search_and_scrape_best',
-                          return_value="No search results found for query: widgets"):
+        with patch.object(
+            skill.search_scraper,
+            "search_and_scrape_best",
+            return_value="No search results found for query: widgets",
+        ):
             result = skill._web_search_handler({"query": "widgets"}, {})
             assert result.response == "Sorry, 'widgets' not found."
 
     def test_no_results_custom_message_without_placeholder(self) -> None:
-        skill = self._setup_skill(
-            params={"no_results_message": "No data available."}
-        )
-        with patch.object(skill.search_scraper, 'search_and_scrape_best',
-                          return_value="No search results found for query: anything"):
+        skill = self._setup_skill(params={"no_results_message": "No data available."})
+        with patch.object(
+            skill.search_scraper,
+            "search_and_scrape_best",
+            return_value="No search results found for query: anything",
+        ):
             result = skill._web_search_handler({"query": "anything"}, {})
             assert result.response == "No data available."
 
     def test_handler_passes_correct_params_to_scraper(self) -> None:
-        skill = self._setup_skill(params={
-            "num_results": 5,
-            "oversample_factor": 3.0,
-            "delay": 1.0,
-            "min_quality_score": 0.5,
-            "per_page_timeout": 3.5,
-            "overall_deadline": 12.0,
-            "parallel_scrape": False,
-            "snippets_only": True,
-        })
-        with patch.object(skill.search_scraper, 'search_and_scrape_best',
-                          return_value="some results") as mock_search:
+        skill = self._setup_skill(
+            params={
+                "num_results": 5,
+                "oversample_factor": 3.0,
+                "delay": 1.0,
+                "min_quality_score": 0.5,
+                "per_page_timeout": 3.5,
+                "overall_deadline": 12.0,
+                "parallel_scrape": False,
+                "snippets_only": True,
+            }
+        )
+        with patch.object(
+            skill.search_scraper, "search_and_scrape_best", return_value="some results"
+        ) as mock_search:
             skill._web_search_handler({"query": "test"}, {})
             mock_search.assert_called_once_with(
                 query="test",
@@ -512,32 +558,46 @@ class TestWebSearchHandler:
 
     def test_handler_strips_query_whitespace(self) -> None:
         skill = self._setup_skill()
-        with patch.object(skill.search_scraper, 'search_and_scrape_best',
-                          return_value="some results") as mock_search:
+        with patch.object(
+            skill.search_scraper, "search_and_scrape_best", return_value="some results"
+        ) as mock_search:
             skill._web_search_handler({"query": "  padded query  "}, {})
             mock_search.assert_called_once()
-            assert mock_search.call_args[1]["query"] == "padded query" or mock_search.call_args.kwargs["query"] == "padded query"
+            assert (
+                mock_search.call_args[1]["query"] == "padded query"
+                or mock_search.call_args.kwargs["query"] == "padded query"
+            )
 
     def test_handler_logs_search_request(self) -> None:
         skill = self._setup_skill()
-        with patch.object(skill.search_scraper, 'search_and_scrape_best', return_value="results"):
-            with patch.object(skill.logger, "info") as mock_info:
-                skill._web_search_handler({"query": "my search"}, {})
-                mock_info.assert_called_once()
-                assert "my search" in mock_info.call_args[0][0]
+        with (
+            patch.object(
+                skill.search_scraper, "search_and_scrape_best", return_value="results"
+            ),
+            patch.object(skill.logger, "info") as mock_info,
+        ):
+            skill._web_search_handler({"query": "my search"}, {})
+            mock_info.assert_called_once()
+            assert "my search" in mock_info.call_args[0][0]
 
     def test_handler_logs_error_on_exception(self) -> None:
         skill = self._setup_skill()
-        with patch.object(skill.search_scraper, 'search_and_scrape_best',
-                          side_effect=ValueError("bad")):
-            with patch.object(skill.logger, "error") as mock_error:
-                skill._web_search_handler({"query": "test"}, {})
-                mock_error.assert_called_once()
+        with (
+            patch.object(
+                skill.search_scraper,
+                "search_and_scrape_best",
+                side_effect=ValueError("bad"),
+            ),
+            patch.object(skill.logger, "error") as mock_error,
+        ):
+            skill._web_search_handler({"query": "test"}, {})
+            mock_error.assert_called_once()
 
 
 # ---------------------------------------------------------------------------
 # GoogleSearchScraper
 # ---------------------------------------------------------------------------
+
 
 class TestGoogleSearchScraper:
     """Tests for the GoogleSearchScraper class."""
@@ -577,12 +637,20 @@ class TestSearchGoogle:
         mock_response = Mock()
         mock_response.json.return_value = {
             "items": [
-                {"title": "Result 1", "link": "https://example.com/1", "snippet": "Snippet 1"},
-                {"title": "Result 2", "link": "https://example.com/2", "snippet": "Snippet 2"},
+                {
+                    "title": "Result 1",
+                    "link": "https://example.com/1",
+                    "snippet": "Snippet 1",
+                },
+                {
+                    "title": "Result 2",
+                    "link": "https://example.com/2",
+                    "snippet": "Snippet 2",
+                },
             ]
         }
         mock_response.raise_for_status = Mock()
-        with patch.object(scraper.session, 'get', return_value=mock_response):
+        with patch.object(scraper.session, "get", return_value=mock_response):
             results = scraper.search_google("test query", num_results=5)
             assert len(results) == 2
             assert results[0]["title"] == "Result 1"
@@ -594,19 +662,25 @@ class TestSearchGoogle:
         mock_response = Mock()
         mock_response.json.return_value = {"searchInformation": {"totalResults": "0"}}
         mock_response.raise_for_status = Mock()
-        with patch.object(scraper.session, 'get', return_value=mock_response):
+        with patch.object(scraper.session, "get", return_value=mock_response):
             results = scraper.search_google("test query")
             assert results == []
 
     def test_search_api_error(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
-        with patch.object(scraper.session, 'get', side_effect=requests.exceptions.HTTPError("403")):
+        with patch.object(
+            scraper.session, "get", side_effect=requests.exceptions.HTTPError("403")
+        ):
             results = scraper.search_google("test query")
             assert results == []
 
     def test_search_network_error(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
-        with patch.object(scraper.session, 'get', side_effect=requests.exceptions.ConnectionError("failed")):
+        with patch.object(
+            scraper.session,
+            "get",
+            side_effect=requests.exceptions.ConnectionError("failed"),
+        ):
             results = scraper.search_google("test query")
             assert results == []
 
@@ -615,7 +689,9 @@ class TestSearchGoogle:
         mock_response = Mock()
         mock_response.json.return_value = {"items": []}
         mock_response.raise_for_status = Mock()
-        with patch.object(scraper.session, 'get', return_value=mock_response) as mock_get:
+        with patch.object(
+            scraper.session, "get", return_value=mock_response
+        ) as mock_get:
             scraper.search_google("test", num_results=20)
             call_kwargs = mock_get.call_args
             assert call_kwargs[1]["params"]["num"] == 10
@@ -627,7 +703,7 @@ class TestSearchGoogle:
             "items": [{"title": "Only Title"}]  # missing link and snippet
         }
         mock_response.raise_for_status = Mock()
-        with patch.object(scraper.session, 'get', return_value=mock_response):
+        with patch.object(scraper.session, "get", return_value=mock_response):
             results = scraper.search_google("test")
             assert results[0]["title"] == "Only Title"
             assert results[0]["url"] == ""
@@ -639,14 +715,20 @@ class TestExtractTextFromUrl:
 
     def test_routes_reddit_to_extract_reddit_content(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
-        with patch.object(scraper, 'extract_reddit_content', return_value=("reddit content", {})) as mock_reddit:
-            text, _ = scraper.extract_text_from_url("https://www.reddit.com/r/test/comments/123")
+        with patch.object(
+            scraper, "extract_reddit_content", return_value=("reddit content", {})
+        ) as mock_reddit:
+            text, _ = scraper.extract_text_from_url(
+                "https://www.reddit.com/r/test/comments/123"
+            )
             mock_reddit.assert_called_once()
             assert text == "reddit content"
 
     def test_routes_non_reddit_to_extract_html_content(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
-        with patch.object(scraper, 'extract_html_content', return_value=("html content", {})) as mock_html:
+        with patch.object(
+            scraper, "extract_html_content", return_value=("html content", {})
+        ) as mock_html:
             text, _ = scraper.extract_text_from_url("https://example.com/article")
             mock_html.assert_called_once()
             assert text == "html content"
@@ -658,17 +740,23 @@ class TestExtractHtmlContent:
     def test_successful_extraction(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
         mock_response = Mock()
-        mock_response.content = b"<html><body><article>This is quality content with many sentences. " \
-                                b"It has a lot of text. Multiple lines of content here.</article></body></html>"
+        mock_response.content = (
+            b"<html><body><article>This is quality content with many sentences. "
+            b"It has a lot of text. Multiple lines of content here.</article></body></html>"
+        )
         mock_response.raise_for_status = Mock()
-        with patch.object(scraper.session, 'get', return_value=mock_response):
+        with patch.object(scraper.session, "get", return_value=mock_response):
             text, metrics = scraper.extract_html_content("https://example.com/article")
             assert "quality content" in text
             assert "quality_score" in metrics
 
     def test_extraction_error_returns_empty(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
-        with patch.object(scraper.session, 'get', side_effect=requests.exceptions.ConnectionError("failed")):
+        with patch.object(
+            scraper.session,
+            "get",
+            side_effect=requests.exceptions.ConnectionError("failed"),
+        ):
             text, metrics = scraper.extract_html_content("https://example.com")
             assert text == ""
             assert metrics["quality_score"] == 0
@@ -677,10 +765,12 @@ class TestExtractHtmlContent:
         scraper = GoogleSearchScraper("key", "engine_id", max_content_length=50)
         mock_response = Mock()
         long_text = "A" * 200
-        mock_response.content = f"<html><body><article>{long_text}</article></body></html>".encode()
+        mock_response.content = (
+            f"<html><body><article>{long_text}</article></body></html>".encode()
+        )
         mock_response.raise_for_status = Mock()
-        with patch.object(scraper.session, 'get', return_value=mock_response):
-            text, metrics = scraper.extract_html_content("https://example.com")
+        with patch.object(scraper.session, "get", return_value=mock_response):
+            text, _metrics = scraper.extract_html_content("https://example.com")
             assert len(text) <= 50
 
     def test_custom_content_limit(self) -> None:
@@ -689,31 +779,41 @@ class TestExtractHtmlContent:
         long_text = "B" * 200
         mock_response.content = f"<html><body>{long_text}</body></html>".encode()
         mock_response.raise_for_status = Mock()
-        with patch.object(scraper.session, 'get', return_value=mock_response):
-            text, metrics = scraper.extract_html_content("https://example.com", content_limit=30)
+        with patch.object(scraper.session, "get", return_value=mock_response):
+            text, _metrics = scraper.extract_html_content(
+                "https://example.com", content_limit=30
+            )
             assert len(text) <= 30
 
 
 class TestExtractRedditContent:
     """Tests for extract_reddit_content."""
 
-    def _make_reddit_json(self, title: str = "Test Post", author: str = "testuser",
-                          score: int = 100, num_comments: int = 50,
-                          selftext: str = "Post body text", subreddit: str = "test",
-                          comments: list[dict[str, Any]] | None = None) -> list[dict[str, Any]]:
+    def _make_reddit_json(
+        self,
+        title: str = "Test Post",
+        author: str = "testuser",
+        score: int = 100,
+        num_comments: int = 50,
+        selftext: str = "Post body text",
+        subreddit: str = "test",
+        comments: list[dict[str, Any]] | None = None,
+    ) -> list[dict[str, Any]]:
         """Helper to build Reddit JSON structure."""
         post_data = {
             "data": {
-                "children": [{
-                    "data": {
-                        "title": title,
-                        "author": author,
-                        "score": score,
-                        "num_comments": num_comments,
-                        "selftext": selftext,
-                        "subreddit": subreddit,
+                "children": [
+                    {
+                        "data": {
+                            "title": title,
+                            "author": author,
+                            "score": score,
+                            "num_comments": num_comments,
+                            "selftext": selftext,
+                            "subreddit": subreddit,
+                        }
                     }
-                }]
+                ]
             }
         }
         comments_data: dict[str, Any]
@@ -731,7 +831,9 @@ class TestExtractRedditContent:
         mock_response.raise_for_status = Mock()
         mock_get.return_value = mock_response
 
-        text, metrics = scraper.extract_reddit_content("https://reddit.com/r/test/comments/123")
+        text, metrics = scraper.extract_reddit_content(
+            "https://reddit.com/r/test/comments/123"
+        )
         assert "Test Post" in text
         assert "testuser" in text
         assert metrics["is_reddit"] is True
@@ -746,7 +848,7 @@ class TestExtractRedditContent:
                     "body": "This is a very helpful and detailed comment that exceeds the minimum length threshold.",
                     "author": "commenter1",
                     "score": 50,
-                }
+                },
             }
         ]
         mock_response = Mock()
@@ -754,7 +856,9 @@ class TestExtractRedditContent:
         mock_response.raise_for_status = Mock()
         mock_get.return_value = mock_response
 
-        text, metrics = scraper.extract_reddit_content("https://reddit.com/r/test/comments/123")
+        text, _metrics = scraper.extract_reddit_content(
+            "https://reddit.com/r/test/comments/123"
+        )
         assert "commenter1" in text
         assert "helpful" in text
 
@@ -764,7 +868,7 @@ class TestExtractRedditContent:
         comments = [
             {
                 "kind": "t1",
-                "data": {"body": "Short", "author": "short_commenter", "score": 5}
+                "data": {"body": "Short", "author": "short_commenter", "score": 5},
             }
         ]
         mock_response = Mock()
@@ -772,7 +876,9 @@ class TestExtractRedditContent:
         mock_response.raise_for_status = Mock()
         mock_get.return_value = mock_response
 
-        text, _ = scraper.extract_reddit_content("https://reddit.com/r/test/comments/123")
+        text, _ = scraper.extract_reddit_content(
+            "https://reddit.com/r/test/comments/123"
+        )
         # Short comments (< 50 chars) should be filtered
         assert "short_commenter" not in text
 
@@ -786,7 +892,7 @@ class TestExtractRedditContent:
                     "body": "[deleted]",
                     "author": "deleted_user",
                     "score": 100,
-                }
+                },
             }
         ]
         mock_response = Mock()
@@ -794,7 +900,9 @@ class TestExtractRedditContent:
         mock_response.raise_for_status = Mock()
         mock_get.return_value = mock_response
 
-        text, _ = scraper.extract_reddit_content("https://reddit.com/r/test/comments/123")
+        text, _ = scraper.extract_reddit_content(
+            "https://reddit.com/r/test/comments/123"
+        )
         assert "deleted_user" not in text
 
     @patch("signalwire.skills.web_search.skill.requests.get")
@@ -805,7 +913,9 @@ class TestExtractRedditContent:
         mock_response.raise_for_status = Mock()
         mock_get.return_value = mock_response
 
-        text, _ = scraper.extract_reddit_content("https://reddit.com/r/test/comments/123")
+        text, _ = scraper.extract_reddit_content(
+            "https://reddit.com/r/test/comments/123"
+        )
         assert "[removed]" not in text
 
     @patch("signalwire.skills.web_search.skill.requests.get")
@@ -837,7 +947,9 @@ class TestExtractRedditContent:
         scraper = GoogleSearchScraper("key", "engine_id")
         mock_get.side_effect = ValueError("Invalid JSON")
 
-        with patch.object(scraper, 'extract_html_content', return_value=("fallback", {})) as mock_html:
+        with patch.object(
+            scraper, "extract_html_content", return_value=("fallback", {})
+        ) as mock_html:
             text, _ = scraper.extract_reddit_content("https://reddit.com/r/test")
             mock_html.assert_called_once()
             assert text == "fallback"
@@ -850,18 +962,24 @@ class TestExtractRedditContent:
         mock_response.raise_for_status = Mock()
         mock_get.return_value = mock_response
 
-        text, _ = scraper.extract_reddit_content("https://reddit.com/r/test", content_limit=50)
+        text, _ = scraper.extract_reddit_content(
+            "https://reddit.com/r/test", content_limit=50
+        )
         assert len(text) <= 50
 
     @patch("signalwire.skills.web_search.skill.requests.get")
     def test_reddit_quality_metrics(self, mock_get: Mock) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
         mock_response = Mock()
-        mock_response.json.return_value = self._make_reddit_json(score=200, num_comments=100)
+        mock_response.json.return_value = self._make_reddit_json(
+            score=200, num_comments=100
+        )
         mock_response.raise_for_status = Mock()
         mock_get.return_value = mock_response
 
-        _, metrics = scraper.extract_reddit_content("https://reddit.com/r/test/comments/123")
+        _, metrics = scraper.extract_reddit_content(
+            "https://reddit.com/r/test/comments/123"
+        )
         assert "quality_score" in metrics
         assert metrics["is_reddit"] is True
         assert metrics["score"] == 200
@@ -878,14 +996,20 @@ class TestCalculateContentQuality:
 
     def test_short_text_low_quality(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
-        metrics = scraper._calculate_content_quality("Short text", "https://example.com")
+        metrics = scraper._calculate_content_quality(
+            "Short text", "https://example.com"
+        )
         assert metrics["quality_score"] < 0.5
 
     def test_quality_domain_bonus(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
         text = "A " * 2000  # Enough text
-        metrics_quality = scraper._calculate_content_quality(text, "https://wikipedia.org/wiki/test")
-        metrics_generic = scraper._calculate_content_quality(text, "https://randomsite.com/page")
+        metrics_quality = scraper._calculate_content_quality(
+            text, "https://wikipedia.org/wiki/test"
+        )
+        metrics_generic = scraper._calculate_content_quality(
+            text, "https://randomsite.com/page"
+        )
         assert metrics_quality["domain_score"] > metrics_generic["domain_score"]
 
     def test_low_quality_domain_penalty(self) -> None:
@@ -897,21 +1021,34 @@ class TestCalculateContentQuality:
     def test_boilerplate_penalty(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
         text_clean = "This is good content about programming. " * 100
-        text_boilerplate = "cookie privacy policy terms of service subscribe sign up " * 50
-        metrics_clean = scraper._calculate_content_quality(text_clean, "https://example.com")
-        metrics_boilerplate = scraper._calculate_content_quality(text_boilerplate, "https://example.com")
-        assert metrics_clean["boilerplate_penalty"] > metrics_boilerplate["boilerplate_penalty"]
+        text_boilerplate = (
+            "cookie privacy policy terms of service subscribe sign up " * 50
+        )
+        metrics_clean = scraper._calculate_content_quality(
+            text_clean, "https://example.com"
+        )
+        metrics_boilerplate = scraper._calculate_content_quality(
+            text_boilerplate, "https://example.com"
+        )
+        assert (
+            metrics_clean["boilerplate_penalty"]
+            > metrics_boilerplate["boilerplate_penalty"]
+        )
 
     def test_query_relevance_scoring(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
         text = "Python programming language is great for data science and machine learning tasks."
-        metrics = scraper._calculate_content_quality(text, "https://example.com", query="Python programming")
+        metrics = scraper._calculate_content_quality(
+            text, "https://example.com", query="Python programming"
+        )
         assert metrics["query_relevance"] > 0
 
     def test_no_query_neutral_relevance(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
         text = "Some content here."
-        metrics = scraper._calculate_content_quality(text, "https://example.com", query="")
+        metrics = scraper._calculate_content_quality(
+            text, "https://example.com", query=""
+        )
         assert metrics["query_relevance"] == 0.5
 
 
@@ -920,7 +1057,7 @@ class TestSearchAndScrapeBest:
 
     def test_no_search_results(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
-        with patch.object(scraper, 'search_google', return_value=[]):
+        with patch.object(scraper, "search_google", return_value=[]):
             result = scraper.search_and_scrape_best("test query")
             assert "No search results found" in result
 
@@ -933,33 +1070,43 @@ class TestSearchAndScrapeBest:
         search_results = [
             {"title": "Bad", "url": "https://bad.com", "snippet": "bad snippet text"}
         ]
-        with patch.object(scraper, 'search_google', return_value=search_results):
-            with patch.object(scraper, 'extract_text_from_url', return_value=("", {"quality_score": 0})):
-                result = scraper.search_and_scrape_best("test query", delay=0,
-                                                        parallel_scrape=False)
-                # Snippet fallback: non-empty, carries the snippet + title.
-                assert "Snippet-only results" in result
-                assert "bad snippet text" in result
-                assert "No quality results found" not in result
+        with (
+            patch.object(scraper, "search_google", return_value=search_results),
+            patch.object(
+                scraper,
+                "extract_text_from_url",
+                return_value=("", {"quality_score": 0}),
+            ),
+        ):
+            result = scraper.search_and_scrape_best(
+                "test query", delay=0, parallel_scrape=False
+            )
+            # Snippet fallback: non-empty, carries the snippet + title.
+            assert "Snippet-only results" in result
+            assert "bad snippet text" in result
+            assert "No quality results found" not in result
 
     def test_snippets_only_skips_scraping(self) -> None:
         # snippets_only short-circuits before any page fetch.
         scraper = GoogleSearchScraper("key", "engine_id")
-        search_results = [
-            {"title": "T", "url": "https://x.com", "snippet": "snip"}
-        ]
-        with patch.object(scraper, 'search_google', return_value=search_results):
-            with patch.object(scraper, 'extract_text_from_url') as mock_extract:
-                result = scraper.search_and_scrape_best("test query",
-                                                        snippets_only=True)
-                mock_extract.assert_not_called()
-                assert "Snippet-only results" in result
-                assert "snip" in result
+        search_results = [{"title": "T", "url": "https://x.com", "snippet": "snip"}]
+        with (
+            patch.object(scraper, "search_google", return_value=search_results),
+            patch.object(scraper, "extract_text_from_url") as mock_extract,
+        ):
+            result = scraper.search_and_scrape_best("test query", snippets_only=True)
+            mock_extract.assert_not_called()
+            assert "Snippet-only results" in result
+            assert "snip" in result
 
     def test_successful_search_and_scrape(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
         search_results = [
-            {"title": "Good Result", "url": "https://example.com/good", "snippet": "A good result"}
+            {
+                "title": "Good Result",
+                "url": "https://example.com/good",
+                "snippet": "A good result",
+            }
         ]
         good_metrics = {
             "quality_score": 0.8,
@@ -969,13 +1116,20 @@ class TestSearchAndScrapeBest:
             "query_relevance": 0.9,
             "query_words_found": "2/2",
         }
-        with patch.object(scraper, 'search_google', return_value=search_results):
-            with patch.object(scraper, 'extract_text_from_url',
-                              return_value=("Great content here", good_metrics)):
-                with patch.object(scraper, '_calculate_content_quality', return_value=good_metrics):
-                    result = scraper.search_and_scrape_best("test query", delay=0)
-                    assert "RESULT 1" in result
-                    assert "Good Result" in result
+        with (
+            patch.object(scraper, "search_google", return_value=search_results),
+            patch.object(
+                scraper,
+                "extract_text_from_url",
+                return_value=("Great content here", good_metrics),
+            ),
+            patch.object(
+                scraper, "_calculate_content_quality", return_value=good_metrics
+            ),
+        ):
+            result = scraper.search_and_scrape_best("test query", delay=0)
+            assert "RESULT 1" in result
+            assert "Good Result" in result
 
     def test_domain_diversity(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
@@ -984,10 +1138,22 @@ class TestSearchAndScrapeBest:
             {"title": "Result A2", "url": "https://a.com/2", "snippet": "A2"},
             {"title": "Result B1", "url": "https://b.com/1", "snippet": "B1"},
         ]
-        metrics_a = {"quality_score": 0.9, "domain": "a.com", "text_length": 5000,
-                      "sentence_count": 10, "query_relevance": 0.8, "query_words_found": "1/1"}
-        metrics_b = {"quality_score": 0.7, "domain": "b.com", "text_length": 5000,
-                      "sentence_count": 10, "query_relevance": 0.8, "query_words_found": "1/1"}
+        metrics_a = {
+            "quality_score": 0.9,
+            "domain": "a.com",
+            "text_length": 5000,
+            "sentence_count": 10,
+            "query_relevance": 0.8,
+            "query_words_found": "1/1",
+        }
+        metrics_b = {
+            "quality_score": 0.7,
+            "domain": "b.com",
+            "text_length": 5000,
+            "sentence_count": 10,
+            "query_relevance": 0.8,
+            "query_words_found": "1/1",
+        }
 
         def mock_extract(url: str, **kwargs: Any) -> tuple[str, dict[str, Any]]:
             if "a.com" in url:
@@ -999,18 +1165,24 @@ class TestSearchAndScrapeBest:
                 return metrics_a
             return metrics_b
 
-        with patch.object(scraper, 'search_google', return_value=search_results):
-            with patch.object(scraper, 'extract_text_from_url', side_effect=mock_extract):
-                with patch.object(scraper, '_calculate_content_quality', side_effect=mock_quality):
-                    result = scraper.search_and_scrape_best("test", num_results=2, delay=0)
-                    # Should show results from both domains
-                    assert "a.com" in result
-                    assert "b.com" in result
+        with (
+            patch.object(scraper, "search_google", return_value=search_results),
+            patch.object(scraper, "extract_text_from_url", side_effect=mock_extract),
+            patch.object(
+                scraper, "_calculate_content_quality", side_effect=mock_quality
+            ),
+        ):
+            result = scraper.search_and_scrape_best("test", num_results=2, delay=0)
+            # Should show results from both domains
+            assert "a.com" in result
+            assert "b.com" in result
 
     def test_backward_compatible_search_and_scrape(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
-        with patch.object(scraper, 'search_and_scrape_best', return_value="results") as mock_best:
-            result = scraper.search_and_scrape("test query", num_results=2, delay=0.1)
+        with patch.object(
+            scraper, "search_and_scrape_best", return_value="results"
+        ) as mock_best:
+            scraper.search_and_scrape("test query", num_results=2, delay=0.1)
             mock_best.assert_called_once_with(
                 query="test query",
                 num_results=2,
@@ -1024,6 +1196,7 @@ class TestSearchAndScrapeBest:
 # get_hints()
 # ---------------------------------------------------------------------------
 
+
 class TestGetHints:
     """Tests for the get_hints method."""
 
@@ -1035,6 +1208,7 @@ class TestGetHints:
 # ---------------------------------------------------------------------------
 # get_global_data()
 # ---------------------------------------------------------------------------
+
 
 class TestGetGlobalData:
     """Tests for the get_global_data method."""
@@ -1051,6 +1225,7 @@ class TestGetGlobalData:
 # ---------------------------------------------------------------------------
 # get_prompt_sections()
 # ---------------------------------------------------------------------------
+
 
 class TestGetPromptSections:
     """Tests for the get_prompt_sections method."""
@@ -1092,6 +1267,7 @@ class TestGetPromptSections:
 # Edge cases and integration-style tests
 # ---------------------------------------------------------------------------
 
+
 class TestEdgeCases:
     """Edge case and integration-style tests."""
 
@@ -1105,8 +1281,11 @@ class TestEdgeCases:
         _, kw = skill.agent.define_tool.call_args
         handler = kw["handler"]
 
-        with patch.object(skill.search_scraper, 'search_and_scrape_best',
-                          return_value="=== RESULT 1 ===\nTitle: Lifecycle\nContent: Answer"):
+        with patch.object(
+            skill.search_scraper,
+            "search_and_scrape_best",
+            return_value="=== RESULT 1 ===\nTitle: Lifecycle\nContent: Answer",
+        ):
             result = handler({"query": "lifecycle test"}, {})
             assert isinstance(result, FunctionResult)
             assert "Lifecycle" in result.response
@@ -1134,7 +1313,9 @@ class TestEdgeCases:
         """If scraper returns None, handler should handle gracefully."""
         skill = _make_skill()
         skill.setup()
-        with patch.object(skill.search_scraper, 'search_and_scrape_best', return_value=None):
+        with patch.object(
+            skill.search_scraper, "search_and_scrape_best", return_value=None
+        ):
             result = skill._web_search_handler({"query": "test"}, {})
             assert isinstance(result, FunctionResult)
 

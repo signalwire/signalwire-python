@@ -2331,32 +2331,6 @@ data_map.webhook(
 )
 ```
 
-##### `body(data: Dict[str, Any]) -> DataMap`
-Set the JSON body for POST/PUT requests.
-
-**Parameters:**
-- `data` (Dict[str, Any]): JSON body data (supports `${variable}` substitution)
-
-**Usage:**
-```python
-# Static body with parameter substitution
-data_map.body({
-    'query': '${args.search_term}',
-    'limit': 5,
-    'filters': {
-        'category': '${args.category}',
-        'active': True
-    }
-})
-
-# Body with call-related data (NOT sensitive info)
-data_map.body({
-    'customer_id': '${global_data.customer_id}',
-    'request_id': '${meta_data.call_id}',
-    'search': '${args.query}'
-})
-```
-
 ##### `params(data: Dict[str, Any]) -> DataMap`
 Set URL query parameters.
 
@@ -2624,7 +2598,7 @@ search_tool = (DataMap('search_knowledge')
         'https://api.company.com/search',
         headers={'Authorization': 'Bearer TOKEN'}
     )
-    .body({
+    .params({
         'query': '${args.query}',
         'category': '${args.category}',
         'limit': 5
@@ -2695,7 +2669,7 @@ agent.register_swaig_function(swaig_function)
 
 The SDK provides helper functions for common DataMap patterns:
 
-##### `create_simple_api_tool(name: str, url: str, response_template: str, parameters: Optional[Dict[str, Dict]] = None, method: str = "GET", headers: Optional[Dict[str, str]] = None, body: Optional[Dict[str, Any]] = None, error_keys: Optional[List[str]] = None) -> DataMap`
+##### `create_simple_api_tool(name: str, url: str, response_template: str, parameters: Optional[Dict[str, Dict]] = None, method: str = "GET", headers: Optional[Dict[str, str]] = None, error_keys: Optional[List[str]] = None) -> DataMap`
 
 Create a simple API integration tool.
 
@@ -2706,7 +2680,6 @@ Create a simple API integration tool.
 - `parameters` (Optional[Dict[str, Dict]]): Parameter definitions
 - `method` (str): HTTP method (default: "GET")
 - `headers` (Optional[Dict[str, str]]): HTTP headers
-- `body` (Optional[Dict[str, Any]]): Request body
 - `error_keys` (Optional[List[str]]): Error field names
 
 **Usage:**

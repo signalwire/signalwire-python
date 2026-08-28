@@ -11,7 +11,6 @@ must reject (a) non-http(s) schemes, (b) URLs without a hostname,
 import os
 from unittest.mock import patch
 
-import pytest
 
 from signalwire.utils.url_validator import validate_url
 
@@ -42,13 +41,16 @@ class TestValidateUrlHostname:
 
     def test_hostname_unresolvable_rejected(self) -> None:
         import socket as _socket
+
         with patch("socket.getaddrinfo", side_effect=_socket.gaierror):
             assert validate_url("http://nonexistent.invalid") is False
 
 
 class TestValidateUrlBlockedRanges:
     def test_loopback_ipv4_rejected(self) -> None:
-        with patch("socket.getaddrinfo", return_value=[(0, 0, 0, "", ("127.0.0.1", 0))]):
+        with patch(
+            "socket.getaddrinfo", return_value=[(0, 0, 0, "", ("127.0.0.1", 0))]
+        ):
             assert validate_url("http://localhost") is False
 
     def test_rfc1918_10_rejected(self) -> None:
@@ -56,12 +58,16 @@ class TestValidateUrlBlockedRanges:
             assert validate_url("http://internal") is False
 
     def test_rfc1918_192_rejected(self) -> None:
-        with patch("socket.getaddrinfo", return_value=[(0, 0, 0, "", ("192.168.1.1", 0))]):
+        with patch(
+            "socket.getaddrinfo", return_value=[(0, 0, 0, "", ("192.168.1.1", 0))]
+        ):
             assert validate_url("http://router") is False
 
     def test_link_local_metadata_rejected(self) -> None:
         # 169.254.169.254 is the AWS/GCP metadata endpoint
-        with patch("socket.getaddrinfo", return_value=[(0, 0, 0, "", ("169.254.169.254", 0))]):
+        with patch(
+            "socket.getaddrinfo", return_value=[(0, 0, 0, "", ("169.254.169.254", 0))]
+        ):
             assert validate_url("http://metadata") is False
 
     def test_ipv6_loopback_rejected(self) -> None:
@@ -83,6 +89,8 @@ class TestValidateUrlAllowPrivate:
             assert validate_url("http://10.0.0.5") is True
 
     def test_env_var_false_does_not_bypass(self) -> None:
-        with patch.dict(os.environ, {"SWML_ALLOW_PRIVATE_URLS": "false"}, clear=False):
-            with patch("socket.getaddrinfo", return_value=[(0, 0, 0, "", ("10.0.0.5", 0))]):
-                assert validate_url("http://internal") is False
+        with (
+            patch.dict(os.environ, {"SWML_ALLOW_PRIVATE_URLS": "false"}, clear=False),
+            patch("socket.getaddrinfo", return_value=[(0, 0, 0, "", ("10.0.0.5", 0))]),
+        ):
+            assert validate_url("http://internal") is False

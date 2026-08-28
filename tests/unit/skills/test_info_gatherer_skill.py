@@ -47,6 +47,7 @@ def _setup_skill(params: dict[str, Any] | None = None) -> InfoGathererSkill:
 # Class-Level Metadata
 # ===========================================================================
 
+
 class TestInfoGathererSkillMetadata:
     def test_skill_name(self) -> None:
         assert InfoGathererSkill.SKILL_NAME == "info_gatherer"
@@ -67,6 +68,7 @@ class TestInfoGathererSkillMetadata:
 # ===========================================================================
 # Parameter Schema
 # ===========================================================================
+
 
 class TestParameterSchema:
     def test_schema_has_questions(self) -> None:
@@ -91,6 +93,7 @@ class TestParameterSchema:
 # ===========================================================================
 # Setup & Validation
 # ===========================================================================
+
 
 class TestSetup:
     def test_setup_success(self) -> None:
@@ -126,6 +129,7 @@ class TestSetup:
 # Instance Key
 # ===========================================================================
 
+
 class TestInstanceKey:
     def test_instance_key_without_prefix(self) -> None:
         skill = _make_skill({"questions": SAMPLE_QUESTIONS})
@@ -141,6 +145,7 @@ class TestInstanceKey:
 # ===========================================================================
 # Tool Name Derivation
 # ===========================================================================
+
 
 class TestToolNames:
     def test_tool_names_without_prefix(self) -> None:
@@ -165,6 +170,7 @@ class TestToolNames:
 # Namespace Helpers (SkillBase)
 # ===========================================================================
 
+
 class TestNamespaceHelpers:
     def test_namespace_with_prefix(self) -> None:
         skill = _make_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
@@ -181,7 +187,10 @@ class TestNamespaceHelpers:
         skill.setup()
         raw_data = {
             "global_data": {
-                "skill:intake": {"question_index": 2, "answers": [{"key_name": "x", "answer": "y"}]}
+                "skill:intake": {
+                    "question_index": 2,
+                    "answers": [{"key_name": "x", "answer": "y"}],
+                }
             }
         }
         data = skill.get_skill_data(raw_data)
@@ -222,6 +231,7 @@ class TestNamespaceHelpers:
 # Global Data (initial state)
 # ===========================================================================
 
+
 class TestGlobalData:
     def test_global_data_structure(self) -> None:
         skill = _make_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
@@ -244,6 +254,7 @@ class TestGlobalData:
 # Prompt Sections
 # ===========================================================================
 
+
 class TestPromptSections:
     def test_prompt_sections_returned(self) -> None:
         skill = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
@@ -261,6 +272,7 @@ class TestPromptSections:
 # ===========================================================================
 # start_questions handler
 # ===========================================================================
+
 
 class TestStartQuestions:
     def _raw_data(
@@ -315,6 +327,7 @@ class TestStartQuestions:
 # submit_answer handler
 # ===========================================================================
 
+
 class TestSubmitAnswer:
     def _raw_data(
         self,
@@ -360,20 +373,27 @@ class TestSubmitAnswer:
 
     def test_submit_last_answer_returns_completion(self) -> None:
         skill = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
-        raw = self._raw_data("intake", SAMPLE_QUESTIONS, index=2, answers=[
-            {"key_name": "full_name", "answer": "John"},
-            {"key_name": "email", "answer": "john@test.com"},
-        ])
+        raw = self._raw_data(
+            "intake",
+            SAMPLE_QUESTIONS,
+            index=2,
+            answers=[
+                {"key_name": "full_name", "answer": "John"},
+                {"key_name": "email", "answer": "john@test.com"},
+            ],
+        )
         result = skill._handle_submit_answer({"answer": "Need help"}, raw)
         d = result.to_dict()
         assert "All questions have been answered" in d["response"]
 
     def test_submit_custom_completion_message(self) -> None:
-        skill = _setup_skill({
-            "questions": [{"key_name": "name", "question_text": "Name?"}],
-            "prefix": "quick",
-            "completion_message": "Done! Thanks for answering.",
-        })
+        skill = _setup_skill(
+            {
+                "questions": [{"key_name": "name", "question_text": "Name?"}],
+                "prefix": "quick",
+                "completion_message": "Done! Thanks for answering.",
+            }
+        )
         raw = {
             "global_data": {
                 "skill:quick": {
@@ -405,23 +425,28 @@ class TestSubmitAnswer:
 # Multiple Instance Isolation
 # ===========================================================================
 
+
 class TestMultipleInstances:
     def test_two_instances_have_different_namespaces(self) -> None:
         skill_a = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
-        skill_b = _setup_skill({
-            "questions": [{"key_name": "allergy", "question_text": "Allergies?"}],
-            "prefix": "medical",
-        })
+        skill_b = _setup_skill(
+            {
+                "questions": [{"key_name": "allergy", "question_text": "Allergies?"}],
+                "prefix": "medical",
+            }
+        )
         assert skill_a._get_skill_namespace() != skill_b._get_skill_namespace()
         assert skill_a._get_skill_namespace() == "skill:intake"
         assert skill_b._get_skill_namespace() == "skill:medical"
 
     def test_two_instances_have_different_tool_names(self) -> None:
         skill_a = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
-        skill_b = _setup_skill({
-            "questions": [{"key_name": "allergy", "question_text": "Allergies?"}],
-            "prefix": "medical",
-        })
+        skill_b = _setup_skill(
+            {
+                "questions": [{"key_name": "allergy", "question_text": "Allergies?"}],
+                "prefix": "medical",
+            }
+        )
         assert skill_a.start_tool_name == "intake_start_questions"
         assert skill_b.start_tool_name == "medical_start_questions"
         assert skill_a.submit_tool_name == "intake_submit_answer"
@@ -429,21 +454,28 @@ class TestMultipleInstances:
 
     def test_two_instances_have_different_instance_keys(self) -> None:
         skill_a = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
-        skill_b = _setup_skill({
-            "questions": [{"key_name": "allergy", "question_text": "Allergies?"}],
-            "prefix": "medical",
-        })
+        skill_b = _setup_skill(
+            {
+                "questions": [{"key_name": "allergy", "question_text": "Allergies?"}],
+                "prefix": "medical",
+            }
+        )
         assert skill_a.get_instance_key() != skill_b.get_instance_key()
 
     def test_two_instances_read_isolated_state(self) -> None:
         skill_a = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
-        skill_b = _setup_skill({
-            "questions": [{"key_name": "allergy", "question_text": "Allergies?"}],
-            "prefix": "medical",
-        })
+        skill_b = _setup_skill(
+            {
+                "questions": [{"key_name": "allergy", "question_text": "Allergies?"}],
+                "prefix": "medical",
+            }
+        )
         raw = {
             "global_data": {
-                "skill:intake": {"question_index": 1, "answers": [{"key_name": "name", "answer": "John"}]},
+                "skill:intake": {
+                    "question_index": 1,
+                    "answers": [{"key_name": "name", "answer": "John"}],
+                },
                 "skill:medical": {"question_index": 0, "answers": []},
             }
         }
@@ -454,10 +486,12 @@ class TestMultipleInstances:
 
     def test_two_instances_global_data_isolated(self) -> None:
         skill_a = _setup_skill({"questions": SAMPLE_QUESTIONS, "prefix": "intake"})
-        skill_b = _setup_skill({
-            "questions": [{"key_name": "allergy", "question_text": "Allergies?"}],
-            "prefix": "medical",
-        })
+        skill_b = _setup_skill(
+            {
+                "questions": [{"key_name": "allergy", "question_text": "Allergies?"}],
+                "prefix": "medical",
+            }
+        )
         gd_a = skill_a.get_global_data()
         gd_b = skill_b.get_global_data()
         # They should have different namespace keys
@@ -470,10 +504,13 @@ class TestMultipleInstances:
 # Question instruction generation
 # ===========================================================================
 
+
 class TestQuestionInstruction:
     def test_first_question_format(self) -> None:
         text = InfoGathererSkill._generate_question_instruction(
-            "What is your name?", needs_confirmation=False, is_first_question=True,
+            "What is your name?",
+            needs_confirmation=False,
+            is_first_question=True,
         )
         assert "Ask each question one at a time" in text
         assert "What is your name?" in text
@@ -481,33 +518,43 @@ class TestQuestionInstruction:
 
     def test_subsequent_question_format(self) -> None:
         text = InfoGathererSkill._generate_question_instruction(
-            "What is your email?", needs_confirmation=False, is_first_question=False,
+            "What is your email?",
+            needs_confirmation=False,
+            is_first_question=False,
         )
         assert "Previous answer saved" in text
         assert "What is your email?" in text
 
     def test_confirmation_required(self) -> None:
         text = InfoGathererSkill._generate_question_instruction(
-            "SSN?", needs_confirmation=True, is_first_question=True,
+            "SSN?",
+            needs_confirmation=True,
+            is_first_question=True,
         )
         assert "Read the answer back" in text
 
     def test_no_confirmation(self) -> None:
         text = InfoGathererSkill._generate_question_instruction(
-            "Color?", needs_confirmation=False, is_first_question=True,
+            "Color?",
+            needs_confirmation=False,
+            is_first_question=True,
         )
         assert "Read the answer back" not in text
 
     def test_prompt_add_included(self) -> None:
         text = InfoGathererSkill._generate_question_instruction(
-            "DOB?", needs_confirmation=False, is_first_question=True,
+            "DOB?",
+            needs_confirmation=False,
+            is_first_question=True,
             prompt_add="Format in YYYY-MM-DD",
         )
         assert "Note: Format in YYYY-MM-DD" in text
 
     def test_prompt_add_empty(self) -> None:
         text = InfoGathererSkill._generate_question_instruction(
-            "DOB?", needs_confirmation=False, is_first_question=True,
+            "DOB?",
+            needs_confirmation=False,
+            is_first_question=True,
             prompt_add="",
         )
         assert "Note:" not in text

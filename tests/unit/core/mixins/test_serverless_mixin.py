@@ -17,7 +17,7 @@ import base64
 import os
 import sys
 from typing import Any
-from unittest.mock import Mock, MagicMock, patch, PropertyMock
+from unittest.mock import Mock, patch
 
 from signalwire.core.mixins.serverless_mixin import ServerlessMixin
 from signalwire.core.function_result import FunctionResult
@@ -26,6 +26,7 @@ from signalwire.core.function_result import FunctionResult
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 class _MockLogger:
     """Minimal structured logger mock that supports .bind() chaining."""
@@ -91,7 +92,9 @@ class ConcreteServerlessMixin(ServerlessMixin):
     def _render_swml(self, **kwargs: Any) -> str:
         return self._swml_response
 
-    def on_function_call(self, function_name: str, args: Any, raw_data: Any) -> dict[str, Any]:
+    def on_function_call(
+        self, function_name: str, args: Any, raw_data: Any
+    ) -> dict[str, Any]:
         fn = self._tool_registry._swaig_functions.get(function_name)
         if fn:
             result: dict[str, Any] = fn(args, raw_data)
@@ -99,7 +102,9 @@ class ConcreteServerlessMixin(ServerlessMixin):
         return {"error": f"Function '{function_name}' not found"}
 
 
-def _make_flask_request(path: str = "/", method: str = "GET", json_data: Any = None, url: str | None = None) -> Mock:
+def _make_flask_request(
+    path: str = "/", method: str = "GET", json_data: Any = None, url: str | None = None
+) -> Mock:
     """Create a mock Flask request for GCF tests."""
     request = Mock()
     request.path = path
@@ -118,7 +123,9 @@ def _make_flask_request(path: str = "/", method: str = "GET", json_data: Any = N
     return request
 
 
-def _make_azure_request(url: str | None = None, method: str = "GET", body: Any = None) -> Mock:
+def _make_azure_request(
+    url: str | None = None, method: str = "GET", body: Any = None
+) -> Mock:
     """Create a mock Azure Functions HttpRequest for Azure tests."""
     req = Mock()
     req.url = url or "https://myapp.azurewebsites.net/api/myagent"
@@ -130,7 +137,9 @@ def _make_azure_request(url: str | None = None, method: str = "GET", body: Any =
     return req
 
 
-def _swaig_body(function_name: str, args: Any = None, call_id: str | None = None) -> dict[str, Any]:
+def _swaig_body(
+    function_name: str, args: Any = None, call_id: str | None = None
+) -> dict[str, Any]:
     """Build a typical SWAIG request body dict."""
     body = {
         "function": function_name,
@@ -147,6 +156,7 @@ def _swaig_body(function_name: str, args: Any = None, call_id: str | None = None
 # ---------------------------------------------------------------------------
 # Lambda handler tests
 # ---------------------------------------------------------------------------
+
 
 class TestLambdaHandlerRootPath:
     """Lambda handler returns SWML for root path requests."""
@@ -349,6 +359,7 @@ class TestLambdaHandlerErrors:
 # Google Cloud Function handler tests
 # ---------------------------------------------------------------------------
 
+
 class TestGCFHandlerRootPath:
     """GCF handler returns SWML for root path requests."""
 
@@ -364,6 +375,8 @@ class TestGCFHandlerRootPath:
         with patch.dict("sys.modules", {"flask": Mock(Response=mock_response_cls)}):
             result = mixin._handle_google_cloud_function_request(request)
 
+        # The constructed Response must be the one handed back to the caller.
+        assert result is mock_response_instance
         mock_response_cls.assert_called_once()
         call_kwargs = mock_response_cls.call_args[1]
         assert call_kwargs["status"] == 200
@@ -380,8 +393,11 @@ class TestGCFHandlerRootPath:
         with patch.dict("sys.modules", {"flask": Mock(Response=mock_response_cls)}):
             result = mixin._handle_google_cloud_function_request(request)
 
+        assert result is mock_response_cls.return_value
         call_kwargs = mock_response_cls.call_args[1]
         assert call_kwargs["status"] == 200
+        # The test's actual claim: the body really is the SWML document.
+        assert call_kwargs["response"] == mixin._swml_response
 
 
 class TestGCFHandlerFunctionRouting:
@@ -482,14 +498,15 @@ class TestGCFHandlerURLBaseDetection:
         mixin = ConcreteServerlessMixin()
         assert mixin._proxy_url_base is None
         request = _make_flask_request(
-            path="/",
-            url="https://us-central1-myproject.cloudfunctions.net/agent"
+            path="/", url="https://us-central1-myproject.cloudfunctions.net/agent"
         )
 
         with patch.dict("sys.modules", {"flask": Mock(Response=mock_response_cls)}):
             mixin._handle_google_cloud_function_request(request)
 
-        assert mixin._proxy_url_base == "https://us-central1-myproject.cloudfunctions.net"
+        assert (
+            mixin._proxy_url_base == "https://us-central1-myproject.cloudfunctions.net"
+        )
 
     def test_base_url_not_overridden_when_env_set(self) -> None:
         """When _proxy_url_base_from_env is True, URL is not overridden."""
@@ -500,8 +517,7 @@ class TestGCFHandlerURLBaseDetection:
         mixin._proxy_url_base = "https://original.example.com"
         mixin._proxy_url_base_from_env = True
         request = _make_flask_request(
-            path="/",
-            url="https://different.example.com/agent"
+            path="/", url="https://different.example.com/agent"
         )
 
         with patch.dict("sys.modules", {"flask": Mock(Response=mock_response_cls)}):
@@ -520,7 +536,9 @@ class TestGCFHandlerAuth:
         challenge = Mock(status_code=401)
         mixin._send_google_cloud_function_auth_challenge = Mock(return_value=challenge)  # type: ignore[method-assign]  # test monkeypatch
         request = _make_flask_request(path="/")
-        result = mixin.handle_serverless_request(event=request, mode="google_cloud_function")
+        result = mixin.handle_serverless_request(
+            event=request, mode="google_cloud_function"
+        )
         assert result.status_code == 401
 
 
@@ -550,6 +568,7 @@ class TestGCFHandlerErrors:
 # Azure Function handler tests
 # ---------------------------------------------------------------------------
 
+
 class TestAzureHandlerRootPath:
     """Azure handler returns SWML for root path."""
 
@@ -561,18 +580,20 @@ class TestAzureHandlerRootPath:
 
         mixin = ConcreteServerlessMixin()
         req = _make_azure_request(
-            url="https://myapp.azurewebsites.net/api/myagent",
-            method="GET"
+            url="https://myapp.azurewebsites.net/api/myagent", method="GET"
         )
 
         saved = {}
         for mod_name in ["azure", "azure.functions"]:
             saved[mod_name] = sys.modules.pop(mod_name, None)
         try:
-            with patch.dict("sys.modules", {
-                "azure": Mock(functions=mock_func),
-                "azure.functions": mock_func,
-            }):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "azure": Mock(functions=mock_func),
+                    "azure.functions": mock_func,
+                },
+            ):
                 mixin._handle_azure_function_request(req)
         finally:
             for mod_name, original in saved.items():
@@ -610,10 +631,13 @@ class TestAzureHandlerFunctionRouting:
         for mod_name in ["azure", "azure.functions"]:
             saved[mod_name] = sys.modules.pop(mod_name, None)
         try:
-            with patch.dict("sys.modules", {
-                "azure": Mock(functions=mock_func),
-                "azure.functions": mock_func,
-            }):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "azure": Mock(functions=mock_func),
+                    "azure.functions": mock_func,
+                },
+            ):
                 mixin._handle_azure_function_request(req)
         finally:
             for mod_name, original in saved.items():
@@ -647,10 +671,13 @@ class TestAzureHandlerFunctionRouting:
         for mod_name in ["azure", "azure.functions"]:
             saved[mod_name] = sys.modules.pop(mod_name, None)
         try:
-            with patch.dict("sys.modules", {
-                "azure": Mock(functions=mock_func),
-                "azure.functions": mock_func,
-            }):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "azure": Mock(functions=mock_func),
+                    "azure.functions": mock_func,
+                },
+            ):
                 mixin._handle_azure_function_request(req)
         finally:
             for mod_name, original in saved.items():
@@ -683,10 +710,13 @@ class TestAzureHandlerURLParsing:
         for mod_name in ["azure", "azure.functions"]:
             saved[mod_name] = sys.modules.pop(mod_name, None)
         try:
-            with patch.dict("sys.modules", {
-                "azure": Mock(functions=mock_func),
-                "azure.functions": mock_func,
-            }):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "azure": Mock(functions=mock_func),
+                    "azure.functions": mock_func,
+                },
+            ):
                 mixin._handle_azure_function_request(req)
         finally:
             for mod_name, original in saved.items():
@@ -713,10 +743,13 @@ class TestAzureHandlerURLParsing:
         for mod_name in ["azure", "azure.functions"]:
             saved[mod_name] = sys.modules.pop(mod_name, None)
         try:
-            with patch.dict("sys.modules", {
-                "azure": Mock(functions=mock_func),
-                "azure.functions": mock_func,
-            }):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "azure": Mock(functions=mock_func),
+                    "azure.functions": mock_func,
+                },
+            ):
                 mixin._handle_azure_function_request(req)
         finally:
             for mod_name, original in saved.items():
@@ -745,10 +778,13 @@ class TestAzureHandlerURLParsing:
         for mod_name in ["azure", "azure.functions"]:
             saved[mod_name] = sys.modules.pop(mod_name, None)
         try:
-            with patch.dict("sys.modules", {
-                "azure": Mock(functions=mock_func),
-                "azure.functions": mock_func,
-            }):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "azure": Mock(functions=mock_func),
+                    "azure.functions": mock_func,
+                },
+            ):
                 mixin._handle_azure_function_request(req)
         finally:
             for mod_name, original in saved.items():
@@ -794,10 +830,13 @@ class TestAzureHandlerErrors:
         for mod_name in ["azure", "azure.functions"]:
             saved[mod_name] = sys.modules.pop(mod_name, None)
         try:
-            with patch.dict("sys.modules", {
-                "azure": Mock(functions=mock_func),
-                "azure.functions": mock_func,
-            }):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "azure": Mock(functions=mock_func),
+                    "azure.functions": mock_func,
+                },
+            ):
                 mixin._handle_azure_function_request(req)
         finally:
             for mod_name, original in saved.items():
@@ -827,10 +866,13 @@ class TestAzureHandlerErrors:
         for mod_name in ["azure", "azure.functions"]:
             saved[mod_name] = sys.modules.pop(mod_name, None)
         try:
-            with patch.dict("sys.modules", {
-                "azure": Mock(functions=mock_func),
-                "azure.functions": mock_func,
-            }):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "azure": Mock(functions=mock_func),
+                    "azure.functions": mock_func,
+                },
+            ):
                 mixin._handle_azure_function_request(req)
         finally:
             for mod_name, original in saved.items():
@@ -847,6 +889,7 @@ class TestAzureHandlerErrors:
 # ---------------------------------------------------------------------------
 # _execute_swaig_function tests
 # ---------------------------------------------------------------------------
+
 
 class TestExecuteSwaigFunction:
     """Tests for _execute_swaig_function."""
@@ -868,6 +911,7 @@ class TestExecuteSwaigFunction:
 
     def test_successful_swaig_function_result(self) -> None:
         """Function returning FunctionResult is converted to dict."""
+
         def handler(args: Any, raw: Any) -> FunctionResult:
             return FunctionResult("Done")
 
@@ -905,7 +949,9 @@ class TestExecuteSwaigFunction:
             return {"ok": True}
 
         mixin = ConcreteServerlessMixin(swaig_functions={"fn": handler})
-        mixin._execute_swaig_function("fn", {"key": "val"}, call_id="c123", raw_data=None)
+        mixin._execute_swaig_function(
+            "fn", {"key": "val"}, call_id="c123", raw_data=None
+        )
         raw = received["raw"]
         assert raw["function"] == "fn"
         assert raw["call_id"] == "c123"
@@ -913,6 +959,7 @@ class TestExecuteSwaigFunction:
 
     def test_exception_during_execution(self) -> None:
         """Exception in function returns error dict."""
+
         def handler(args: Any, raw: Any) -> dict[str, Any]:
             raise ValueError("function error")
 
@@ -926,6 +973,7 @@ class TestExecuteSwaigFunction:
 # ---------------------------------------------------------------------------
 # Mode detection / dispatch
 # ---------------------------------------------------------------------------
+
 
 class TestModeDetection:
     """handle_serverless_request dispatches based on mode."""
@@ -962,10 +1010,13 @@ class TestModeDetection:
         for mod_name in ["azure", "azure.functions"]:
             saved[mod_name] = sys.modules.pop(mod_name, None)
         try:
-            with patch.dict("sys.modules", {
-                "azure": Mock(functions=mock_func),
-                "azure.functions": mock_func,
-            }):
+            with patch.dict(
+                "sys.modules",
+                {
+                    "azure": Mock(functions=mock_func),
+                    "azure.functions": mock_func,
+                },
+            ):
                 mixin.handle_serverless_request(event=req, mode="azure_function")
         finally:
             for mod_name, original in saved.items():
@@ -994,7 +1045,10 @@ class TestModeDetection:
     def test_mode_auto_detection_lambda(self) -> None:
         """When mode is None, get_execution_mode() is called."""
         mixin = ConcreteServerlessMixin()
-        with patch("signalwire.core.mixins.serverless_mixin.get_execution_mode", return_value="lambda"):
+        with patch(
+            "signalwire.core.mixins.serverless_mixin.get_execution_mode",
+            return_value="lambda",
+        ):
             result = mixin.handle_serverless_request(event=None)
         assert result["statusCode"] == 200
 
@@ -1010,6 +1064,7 @@ class TestModeDetection:
 # CGI mode body parsing
 # ---------------------------------------------------------------------------
 
+
 class TestCGIModeBodyParsing:
     """CGI mode parses POST data from stdin."""
 
@@ -1022,14 +1077,14 @@ class TestCGIModeBodyParsing:
         body_str = json.dumps(body)
 
         import io
+
         mock_stdin = io.StringIO(body_str)
 
         env = {
             "PATH_INFO": "/hello",
             "CONTENT_LENGTH": str(len(body_str)),
         }
-        with patch.dict(os.environ, env, clear=False), \
-             patch("sys.stdin", mock_stdin):
+        with patch.dict(os.environ, env, clear=False), patch("sys.stdin", mock_stdin):
             result = mixin.handle_serverless_request(mode="cgi")
 
         assert result["response"] == "world"
@@ -1046,14 +1101,14 @@ class TestCGIModeBodyParsing:
         body_str = json.dumps(body)
 
         import io
+
         mock_stdin = io.StringIO(body_str)
 
         env = {
             "PATH_INFO": "/hello",
             "CONTENT_LENGTH": str(len(body_str)),
         }
-        with patch.dict(os.environ, env, clear=False), \
-             patch("sys.stdin", mock_stdin):
+        with patch.dict(os.environ, env, clear=False), patch("sys.stdin", mock_stdin):
             result = mixin.handle_serverless_request(mode="cgi")
 
         assert result["got"] == {"from_raw": True}

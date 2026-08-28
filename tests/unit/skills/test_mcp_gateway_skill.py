@@ -71,6 +71,7 @@ def _make_skill(
 # Class-level attributes and parameter schema
 # ---------------------------------------------------------------------------
 
+
 class TestMCPGatewaySkillClassAttributes:
     """Test class-level attributes and metadata."""
 
@@ -80,7 +81,10 @@ class TestMCPGatewaySkillClassAttributes:
 
     def test_skill_description(self) -> None:
         """SKILL_DESCRIPTION should be set."""
-        assert MCPGatewaySkill.SKILL_DESCRIPTION == "Bridge MCP servers with SWAIG functions"
+        assert (
+            MCPGatewaySkill.SKILL_DESCRIPTION
+            == "Bridge MCP servers with SWAIG functions"
+        )
 
     def test_skill_version(self) -> None:
         """SKILL_VERSION should be '1.0.0'."""
@@ -138,6 +142,7 @@ class TestParameterSchema:
 # Initialization
 # ---------------------------------------------------------------------------
 
+
 class TestSkillInitialization:
     """Test MCPGatewaySkill __init__ via SkillBase."""
 
@@ -164,12 +169,15 @@ class TestSkillInitialization:
 # setup() method
 # ---------------------------------------------------------------------------
 
+
 class TestSetup:
     """Test the setup() method."""
 
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
     @patch("signalwire.skills.mcp_gateway.skill.requests.get")
-    def test_setup_success_with_basic_auth(self, mock_get: Mock, mock_validate: Mock) -> None:
+    def test_setup_success_with_basic_auth(
+        self, mock_get: Mock, mock_validate: Mock
+    ) -> None:
         """setup() should succeed when basic auth params are provided and health check passes."""
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
@@ -186,7 +194,9 @@ class TestSetup:
 
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
     @patch("signalwire.skills.mcp_gateway.skill.requests.get")
-    def test_setup_success_with_token_auth(self, mock_get: Mock, mock_validate: Mock) -> None:
+    def test_setup_success_with_token_auth(
+        self, mock_get: Mock, mock_validate: Mock
+    ) -> None:
         """setup() should succeed with auth_token and gateway_url."""
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
@@ -199,7 +209,7 @@ class TestSetup:
         result = skill.setup()
 
         assert result is True
-        assert skill.auth_token == "mytoken"  # noqa: S105
+        assert skill.auth_token == "mytoken"
         assert skill.auth is None
         # trailing slash should be stripped
         assert skill.gateway_url == "https://gw.test"
@@ -217,7 +227,11 @@ class TestSetup:
     def test_setup_fails_missing_basic_auth_params(self) -> None:
         """setup() should fail if no auth_token and basic auth params are missing."""
         skill, _ = _make_skill(
-            params={"gateway_url": "https://gw.test", "auth_user": "", "auth_password": ""},
+            params={
+                "gateway_url": "https://gw.test",
+                "auth_user": "",
+                "auth_password": "",
+            },
             skip_setup=False,
         )
         result = skill.setup()
@@ -234,7 +248,9 @@ class TestSetup:
 
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
     @patch("signalwire.skills.mcp_gateway.skill.requests.get")
-    def test_setup_fails_on_health_check_error(self, mock_get: Mock, mock_validate: Mock) -> None:
+    def test_setup_fails_on_health_check_error(
+        self, mock_get: Mock, mock_validate: Mock
+    ) -> None:
         """setup() should return False when the health check raises an exception."""
         mock_get.side_effect = ConnectionError("unreachable")
 
@@ -245,7 +261,9 @@ class TestSetup:
 
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
     @patch("signalwire.skills.mcp_gateway.skill.requests.get")
-    def test_setup_fails_on_health_check_http_error(self, mock_get: Mock, mock_validate: Mock) -> None:
+    def test_setup_fails_on_health_check_http_error(
+        self, mock_get: Mock, mock_validate: Mock
+    ) -> None:
         """setup() should return False when health check returns non-200."""
         mock_response = Mock()
         mock_response.raise_for_status.side_effect = Exception("500 Server Error")
@@ -258,7 +276,9 @@ class TestSetup:
 
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
     @patch("signalwire.skills.mcp_gateway.skill.requests.get")
-    def test_setup_stores_configuration_defaults(self, mock_get: Mock, mock_validate: Mock) -> None:
+    def test_setup_stores_configuration_defaults(
+        self, mock_get: Mock, mock_validate: Mock
+    ) -> None:
         """setup() should store default values for optional params."""
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
@@ -277,7 +297,9 @@ class TestSetup:
 
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
     @patch("signalwire.skills.mcp_gateway.skill.requests.get")
-    def test_setup_stores_custom_configuration(self, mock_get: Mock, mock_validate: Mock) -> None:
+    def test_setup_stores_custom_configuration(
+        self, mock_get: Mock, mock_validate: Mock
+    ) -> None:
         """setup() should store custom values for optional params."""
         mock_response = Mock()
         mock_response.raise_for_status = Mock()
@@ -327,6 +349,7 @@ class TestSetup:
 # ---------------------------------------------------------------------------
 # _make_request
 # ---------------------------------------------------------------------------
+
 
 class TestMakeRequest:
     """Test the _make_request helper."""
@@ -395,13 +418,16 @@ class TestMakeRequest:
 # register_tools
 # ---------------------------------------------------------------------------
 
+
 class TestRegisterTools:
     """Test the register_tools() method."""
 
     @patch("signalwire.skills.mcp_gateway.skill.requests.request")
-    def test_register_tools_fetches_all_services_when_none_specified(self, mock_request: Mock) -> None:
+    def test_register_tools_fetches_all_services_when_none_specified(
+        self, mock_request: Mock
+    ) -> None:
         """When services list is empty, register_tools should query /services."""
-        skill, agent = _make_skill(params={"services": []})
+        skill, _agent = _make_skill(params={"services": []})
         skill.services = []
 
         services_response = Mock()
@@ -521,7 +547,9 @@ class TestRegisterTools:
         assert hangup_call.kwargs.get("is_hangup_hook") is True
 
     @patch("signalwire.skills.mcp_gateway.skill.requests.request")
-    def test_register_tools_skips_service_without_name(self, mock_request: Mock) -> None:
+    def test_register_tools_skips_service_without_name(
+        self, mock_request: Mock
+    ) -> None:
         """Services without a 'name' key should be skipped."""
         skill, agent = _make_skill()
         skill.services = [{"tools": "*"}]  # no 'name' key
@@ -530,7 +558,8 @@ class TestRegisterTools:
 
         # Only the hangup hook should be registered
         calls_with_hangup = [
-            c for c in agent.define_tool.call_args_list
+            c
+            for c in agent.define_tool.call_args_list
             if c.kwargs.get("name") == "_mcp_gateway_hangup"
         ]
         assert len(calls_with_hangup) == 1
@@ -538,7 +567,9 @@ class TestRegisterTools:
         assert agent.define_tool.call_count == 1
 
     @patch("signalwire.skills.mcp_gateway.skill.requests.request")
-    def test_register_tools_handles_service_list_error(self, mock_request: Mock) -> None:
+    def test_register_tools_handles_service_list_error(
+        self, mock_request: Mock
+    ) -> None:
         """register_tools should log error when fetching service list fails."""
         skill, _agent = _make_skill()
         skill.services = []
@@ -564,6 +595,7 @@ class TestRegisterTools:
 # ---------------------------------------------------------------------------
 # _register_mcp_tool
 # ---------------------------------------------------------------------------
+
 
 class TestRegisterMCPTool:
     """Test _register_mcp_tool method."""
@@ -613,7 +645,11 @@ class TestRegisterMCPTool:
                 "properties": {
                     "name": {"type": "string", "description": "Item name"},
                     "count": {"type": "integer", "description": "Count", "default": 1},
-                    "kind": {"type": "string", "description": "Kind", "enum": ["a", "b"]},
+                    "kind": {
+                        "type": "string",
+                        "description": "Kind",
+                        "enum": ["a", "b"],
+                    },
                 },
                 "required": ["name"],
             },
@@ -692,9 +728,13 @@ class TestRegisterMCPTool:
         call_kwargs = agent.define_tool.call_args.kwargs
         handler = call_kwargs["handler"]
 
-        with patch.object(skill, "_call_mcp_tool", return_value=FunctionResult("ok")) as mock_call:
+        with patch.object(
+            skill, "_call_mcp_tool", return_value=FunctionResult("ok")
+        ) as mock_call:
             handler({"text": "hi"}, {"call_id": "123"})
-            mock_call.assert_called_once_with("svc", "echo", {"text": "hi"}, {"call_id": "123"})
+            mock_call.assert_called_once_with(
+                "svc", "echo", {"text": "hi"}, {"call_id": "123"}
+            )
 
     def test_register_mcp_tool_empty_input_schema(self) -> None:
         """Tools with no properties should register with empty parameters."""
@@ -720,6 +760,7 @@ class TestRegisterMCPTool:
 # ---------------------------------------------------------------------------
 # _call_mcp_tool
 # ---------------------------------------------------------------------------
+
 
 class TestCallMCPTool:
     """Test the _call_mcp_tool method."""
@@ -820,7 +861,9 @@ class TestCallMCPTool:
         raw_data = {"call_id": "c1", "timestamp": "ts1"}
         skill._call_mcp_tool("svc", "search", {"q": "test"}, raw_data)
 
-        request_body = mock_request.call_args.kwargs.get("json") or mock_request.call_args[1].get("json")
+        request_body = mock_request.call_args.kwargs.get(
+            "json"
+        ) or mock_request.call_args[1].get("json")
         assert request_body["tool"] == "search"
         assert request_body["arguments"] == {"q": "test"}
         assert request_body["timeout"] == 300
@@ -872,7 +915,9 @@ class TestCallMCPTool:
 
         error_response = Mock()
         error_response.status_code = 400
-        error_response.json.side_effect = real_requests.exceptions.JSONDecodeError("", "", 0)
+        error_response.json.side_effect = real_requests.exceptions.JSONDecodeError(
+            "", "", 0
+        )
         error_response.text = "Bad Request: invalid payload"
 
         mock_request.return_value = error_response
@@ -944,6 +989,7 @@ class TestCallMCPTool:
 # ---------------------------------------------------------------------------
 # _hangup_handler
 # ---------------------------------------------------------------------------
+
 
 class TestHangupHandler:
     """Test the _hangup_handler method."""
@@ -1024,6 +1070,7 @@ class TestHangupHandler:
 # get_hints
 # ---------------------------------------------------------------------------
 
+
 class TestGetHints:
     """Test the get_hints method."""
 
@@ -1070,6 +1117,7 @@ class TestGetHints:
 # get_global_data
 # ---------------------------------------------------------------------------
 
+
 class TestGetGlobalData:
     """Test the get_global_data method."""
 
@@ -1105,6 +1153,7 @@ class TestGetGlobalData:
 # ---------------------------------------------------------------------------
 # get_prompt_sections
 # ---------------------------------------------------------------------------
+
 
 class TestGetPromptSections:
     """Test the get_prompt_sections method."""
@@ -1169,7 +1218,9 @@ class TestGetPromptSections:
 
         sections = skill.get_prompt_sections()
         assert len(sections) == 1
-        available_line = [b for b in sections[0]["bullets"] if "Available services" in b]
+        available_line = [
+            b for b in sections[0]["bullets"] if "Available services" in b
+        ]
         assert len(available_line) == 1
         assert "svc1" in available_line[0]
         assert "svc2" in available_line[0]
@@ -1178,6 +1229,7 @@ class TestGetPromptSections:
 # ---------------------------------------------------------------------------
 # Integration-style tests (methods interacting together)
 # ---------------------------------------------------------------------------
+
 
 class TestIntegration:
     """Integration-style tests combining multiple methods."""
@@ -1228,7 +1280,8 @@ class TestIntegration:
 
         # Find the tool call that registered the 'add' function
         tool_calls = [
-            c for c in agent.define_tool.call_args_list
+            c
+            for c in agent.define_tool.call_args_list
             if c.kwargs.get("name") == "mcp_math_svc_add"
         ]
         assert len(tool_calls) == 1
@@ -1244,7 +1297,9 @@ class TestIntegration:
     @patch("signalwire.utils.url_validator.validate_url", return_value=True)
     @patch("signalwire.skills.mcp_gateway.skill.requests.request")
     @patch("signalwire.skills.mcp_gateway.skill.requests.get")
-    def test_full_lifecycle(self, mock_get: Mock, mock_request: Mock, mock_validate: Mock) -> None:
+    def test_full_lifecycle(
+        self, mock_get: Mock, mock_request: Mock, mock_validate: Mock
+    ) -> None:
         """Test full skill lifecycle: setup -> register -> call -> hangup."""
         # Health check
         health_response = Mock()

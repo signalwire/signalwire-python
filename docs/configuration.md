@@ -193,6 +193,17 @@ All services share the same security configuration options:
 }
 ```
 
+### TLS misconfiguration fails hard
+
+When SSL is enabled (`ssl_enabled: true` / `SWML_SSL_ENABLED=true`) but the
+certificate or key is missing or unreadable, the server **refuses to start** and
+raises a `RuntimeError`. It does not fall back to plain HTTP.
+
+A silent downgrade would give an operator who asked for encryption a cleartext
+listener — carrying, among other things, the Basic-auth credentials — with no
+error and nothing in the logs to notice. If you want plain HTTP, disable SSL
+explicitly.
+
 ## Migration Guide
 
 ### From Environment Variables Only

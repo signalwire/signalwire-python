@@ -50,8 +50,8 @@ from __future__ import annotations
 import asyncio
 import atexit
 import json
+import logging
 import os
-import socket
 import subprocess
 import sys
 import threading
@@ -59,7 +59,8 @@ import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, AsyncIterator, Callable, Iterable, Iterator, Optional, cast
+from typing import Any, cast
+from collections.abc import AsyncIterator, Callable, Iterable, Iterator
 from unittest.mock import AsyncMock, patch
 from urllib.parse import quote
 
@@ -83,7 +84,7 @@ from signalwire.relay.constants import METHOD_SIGNALWIRE_CONNECT
 # ---------------------------------------------------------------------------
 
 
-def _discover_mock_package(name: str) -> Optional[str]:
+def _discover_mock_package(name: str) -> str | None:
     """Return the ``../porting-sdk/test_harness/<name>/`` package root (prepended
     to ``sys.path``), or ``None`` when no adjacent ``porting-sdk`` is reachable."""
     here = Path(__file__).resolve()
@@ -140,8 +141,8 @@ class MockWebSocket:
     async def __anext__(self) -> str:
         try:
             return await self.recv()
-        except (websockets.exceptions.ConnectionClosed, StopAsyncIteration):
-            raise StopAsyncIteration
+        except (websockets.exceptions.ConnectionClosed, StopAsyncIteration) as err:
+            raise StopAsyncIteration from err
 
     # --- test helpers ---
 
@@ -341,9 +342,10 @@ def make_call() -> Callable[..., Call]:
 
 
 # Per-process default for parallel RelayClient connections during tests. The
-# SDK's _MAX_CONNECTIONS guard otherwise refuses a 2nd client in the same
-# process; bumping it lets a single test create multiple clients (used by the
-# reconnect-with-protocol-string tests).
+# SDK reads RELAY_MAX_CONNECTIONS at connect time and defaults to 1, which
+# would refuse a 2nd client in the same process; raising the ambient value lets
+# a single test create multiple clients (used by the reconnect-with-protocol-
+# string tests). Tests that need a specific limit override it with monkeypatch.
 os.environ.setdefault("RELAY_MAX_CONNECTIONS", "16")
 
 _DEFAULT_WS_PORT = 8773
@@ -376,30 +378,53 @@ def _resolve_http_port(ws_port: int) -> int:
     return ws_port + 1000
 
 
-def _probe_health(http_url: str) -> bool:
+def _ws_port_accepting(ws_port: int) -> bool:
+    """Whether something is actually listening on the WS port we will connect to."""
+    import socket
+
+    try:
+        with socket.create_connection(("127.0.0.1", ws_port), timeout=_PROBE_TIMEOUT_S):
+            return True
+    except OSError:
+        return False
+
+
+def _probe_health(http_url: str, ws_port: int | None = None) -> bool:
+    """Whether a usable mock_relay is already up.
+
+    Checks BOTH transports. The HTTP health endpoint and the WS endpoint are two
+    DIFFERENT ports (HTTP defaults to WS+1000), so a green HTTP probe alone does
+    not mean the socket the tests connect over is alive: a foreign process — a
+    concurrent lane's mock, a leftover from an earlier run — can own the HTTP
+    port while nothing serves WS, and then the caller skips spawning its own
+    server and every test dies with ConnectionRefusedError on the WS port. That
+    failure was observed live on port 8773 during a parallel docs run.
+    """
     import requests
 
     try:
         resp = requests.get(f"{http_url}/__mock__/health", timeout=_PROBE_TIMEOUT_S)
         if resp.status_code != 200:
             return False
-        return "schemas_loaded" in resp.json()
+        if "schemas_loaded" not in resp.json():
+            return False
     except Exception:
         return False
+    return ws_port is None or _ws_port_accepting(ws_port)
 
 
 class _SharedRelayServer:
     """Process-wide handle to the one shared mock_relay server (WS + HTTP)."""
 
     def __init__(self) -> None:
-        self.http_url: Optional[str] = None
-        self.ws_url: Optional[str] = None
-        self.relay_host: Optional[str] = None
-        self._child: Optional[subprocess.Popen[bytes]] = None
+        self.http_url: str | None = None
+        self.ws_url: str | None = None
+        self.relay_host: str | None = None
+        self._child: subprocess.Popen[bytes] | None = None
         self._lock = threading.Lock()
-        self._error: Optional[str] = None
+        self._error: str | None = None
 
-    def ensure(self) -> "_SharedRelayServer":
+    def ensure(self) -> _SharedRelayServer:
         with self._lock:
             if self.http_url is not None:
                 return self
@@ -412,7 +437,7 @@ class _SharedRelayServer:
             ws_url = f"ws://127.0.0.1:{ws_port}"
             relay_host = f"127.0.0.1:{ws_port}"
 
-            if _probe_health(http_url):
+            if _probe_health(http_url, ws_port):
                 self.http_url, self.ws_url, self.relay_host = (
                     http_url,
                     ws_url,
@@ -454,7 +479,7 @@ class _SharedRelayServer:
 
             deadline = time.time() + _STARTUP_TIMEOUT_S
             while time.time() < deadline:
-                if _probe_health(http_url):
+                if _probe_health(http_url, ws_port):
                     self.http_url, self.ws_url, self.relay_host = (
                         http_url,
                         ws_url,
@@ -501,7 +526,7 @@ class _RelayJournalEntry:
     session_id: str
 
     @classmethod
-    def from_dict(cls, d: dict[str, Any]) -> "_RelayJournalEntry":
+    def from_dict(cls, d: dict[str, Any]) -> _RelayJournalEntry:
         return cls(
             timestamp=float(d.get("timestamp", 0.0)),
             direction=str(d.get("direction", "")),
@@ -550,7 +575,7 @@ class _MockRelayHarness:
         resp.raise_for_status()
         return [_RelayJournalEntry.from_dict(d) for d in resp.json()]
 
-    def journal_recv(self, *, method: Optional[str] = None) -> list[_RelayJournalEntry]:
+    def journal_recv(self, *, method: str | None = None) -> list[_RelayJournalEntry]:
         """Return inbound (SDK→server) journal entries, optionally by method."""
         entries = [e for e in self.journal() if e.direction == "recv"]
         if method is not None:
@@ -558,7 +583,7 @@ class _MockRelayHarness:
         return entries
 
     def journal_send(
-        self, *, event_type: Optional[str] = None
+        self, *, event_type: str | None = None
     ) -> list[_RelayJournalEntry]:
         """Return server→SDK frames, optionally filtered by inner event_type."""
         entries = [e for e in self.journal() if e.direction == "send"]
@@ -620,7 +645,7 @@ class _MockRelayHarness:
         self,
         frame: dict[str, Any],
         *,
-        session_id: Optional[str] = None,
+        session_id: str | None = None,
     ) -> dict[str, Any]:
         """Push a single ``signalwire.event`` (or other) frame to the SDK.
 
@@ -639,13 +664,13 @@ class _MockRelayHarness:
     def inbound_call(
         self,
         *,
-        call_id: Optional[str] = None,
+        call_id: str | None = None,
         from_number: str = "+15551234567",
         to_number: str = "+15559876543",
         context: str = "default",
-        auto_states: Optional[list[str]] = None,
+        auto_states: list[str] | None = None,
         delay_ms: int = 50,
-        session_id: Optional[str] = None,
+        session_id: str | None = None,
     ) -> dict[str, Any]:
         """Inject an inbound call announcement.
 
@@ -720,7 +745,7 @@ def mock_relay() -> _MockRelayHarness:
     )
 
 
-def _ws_redirect_to_mock(shared: "_SharedRelayServer") -> Any:
+def _ws_redirect_to_mock(shared: _SharedRelayServer) -> Any:
     """Build the websockets.connect override that points the SDK at the mock.
 
     The SDK builds its URI as ``f"wss://{self.host}"`` — wss://, no port.  We
@@ -773,10 +798,18 @@ async def signalwire_relay_client(
             mock_relay.session_id = client._session_id
             yield client
         finally:
+            # Best-effort teardown. disconnect() awaits ws.close(), which can
+            # fail if the mock already tore the socket down or the test itself
+            # closed it — a teardown error must not mask the test's real
+            # result. Narrow to transport errors and log, so that an unexpected
+            # failure (a bug in disconnect()) still propagates instead of being
+            # silently swallowed.
             try:
                 await client.disconnect()
-            except Exception:
-                pass
+            except (websockets.exceptions.WebSocketException, OSError) as exc:
+                logging.getLogger(__name__).debug(
+                    "relay client teardown failed (ignored): %r", exc
+                )
 
     _active_clients.clear()
 
