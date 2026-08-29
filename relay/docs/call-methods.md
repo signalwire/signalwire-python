@@ -83,14 +83,13 @@ Answer an inbound call.
 await call.answer()
 ```
 
-### `accept(early_media=False, **kwargs) -> dict`
+### `ring(**kwargs) -> dict`
 
-Send a provisional response (180 Ringing, or 183 Session Progress with `early_media=True`) on an inbound call without answering it. The call stays unanswered and unbilled.
+Send **180 Ringing** on an inbound call without answering it, so an upstream carrier's post-dial-delay timer is satisfied. Signalling only: no media, no answer, no billing. Ringing a call takes control of it, so it can no longer be passed to another consumer.
 
 <!-- snippet: no-compile await-fragment -->
 ```python
-await call.accept()
-await call.accept(early_media=True)
+await call.ring()
 ```
 
 ### `hangup(reason="hangup") -> dict`
