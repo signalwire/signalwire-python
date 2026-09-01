@@ -518,3 +518,97 @@ async def test_inbound_without_handler_does_not_crash(
         finally:
             await client.disconnect()
     _active_clients.clear()
+
+
+# ---------------------------------------------------------------------------
+# Redelivered calling.call.receive (porting-sdk#141)
+#
+# RELAY delivers at least once: the same receive frame can arrive twice for one
+# call. Receive must therefore be idempotent per call_id — see the "Event
+# Redelivery" section of porting-sdk's RELAY_IMPLEMENTATION_GUIDE.md.
+# ---------------------------------------------------------------------------
+
+
+async def test_redelivered_receive_keeps_the_live_call(
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
+    """A redelivered receive must not orphan the Call the application holds.
+
+    Without the idempotency guard the second receive builds a second Call and
+    overwrites ``_calls[call_id]``. Routing only ever reads that map, so the
+    first Call — the one handed to the application — silently stops receiving
+    events and never reaches a terminal state: an awaited connect/play/record
+    on it hangs to its timeout instead of returning at hangup.
+    """
+    handler_calls: list[Call] = []
+    first_seen = asyncio.Event()
+
+    @signalwire_relay_client.on_call
+    async def handle(call: Call) -> None:
+        handler_calls.append(call)
+        first_seen.set()
+
+    mock_relay.inbound_call(
+        call_id="c-redeliver",
+        auto_states=["ringing", "answered"],
+        delay_ms=20,
+        redeliver_receive=1,
+    )
+    await asyncio.wait_for(first_seen.wait(), timeout=5)
+
+    # Let the redelivery and the trailing state frame drain.
+    await asyncio.sleep(0.3)
+
+    # 1. One call means one handler invocation.
+    assert len(handler_calls) == 1, (
+        f"on_call handler re-entered for a redelivered receive "
+        f"({len(handler_calls)} invocations for one call)"
+    )
+
+    # 2. The live instance survives — the map still points at what the
+    #    application was handed, not at a replacement.
+    first = handler_calls[0]
+    assert signalwire_relay_client._calls["c-redeliver"] is first
+
+    # 3. And it is still the object events route to.
+    assert first.state == "answered", (
+        f"the Call handed to the application stopped receiving events "
+        f"(state={first.state!r}, expected 'answered')"
+    )
+
+    # The duplicate really was on the wire — otherwise this test proves nothing.
+    receives = mock_relay.journal_send(event_type="calling.call.receive")
+    redelivered = [
+        s for s in receives if s.frame["params"]["params"]["call_id"] == "c-redeliver"
+    ]
+    assert len(redelivered) == 2, (
+        f"mock did not redeliver the receive frame ({len(redelivered)} sent); "
+        "the scenario under test never happened"
+    )
+
+
+async def test_distinct_call_ids_still_create_separate_calls(
+    signalwire_relay_client: RelayClient, mock_relay: _MockRelayHarness
+) -> None:
+    """The dedup is per call_id — it must not swallow a genuinely new call.
+
+    Guards against over-correcting the redelivery fix into "ignore any receive
+    while a call is in flight", which would drop real concurrent inbound calls.
+    """
+    handler_calls: list[Call] = []
+    both_seen = asyncio.Event()
+
+    @signalwire_relay_client.on_call
+    async def handle(call: Call) -> None:
+        handler_calls.append(call)
+        if len(handler_calls) == 2:
+            both_seen.set()
+
+    mock_relay.inbound_call(call_id="c-first", auto_states=["ringing"], delay_ms=0)
+    mock_relay.inbound_call(call_id="c-second", auto_states=["ringing"], delay_ms=0)
+    await asyncio.wait_for(both_seen.wait(), timeout=5)
+
+    assert {c.call_id for c in handler_calls} == {"c-first", "c-second"}
+    assert signalwire_relay_client._calls["c-first"] is not (
+        signalwire_relay_client._calls["c-second"]
+    )

@@ -1049,13 +1049,30 @@ class RelayClient:
 
     async def _handle_inbound_call(self, payload: dict[str, Any]) -> None:
         """Create a Call object for an inbound call and invoke the handler."""
+        params = payload.get("params", {})
+        call_id = params.get("call_id", "")
+
+        # RELAY delivers at least once, so ``calling.call.receive`` can arrive
+        # again for a call already in flight. Receive is idempotent per
+        # call_id: keep the live instance and do not re-enter the handler.
+        # Replacing the map entry would orphan the Call the application is
+        # holding — routing only ever reads ``_calls`` by call_id, so the
+        # original would silently stop receiving events and an awaited
+        # connect/play/record on it would hang to its timeout instead of
+        # returning at hangup. The event is ACKed in the recv loop before this
+        # runs, so returning early still stops the redeliveries.
+        if call_id in self._calls:
+            logger.debug(
+                f"Ignoring redelivered {EVENT_CALL_RECEIVE} for in-flight call {call_id}"
+            )
+            return
+
+        # After the dedup: a redelivery at capacity is not a dropped call.
         if len(self._calls) >= self._max_active_calls:
             logger.error(
                 f"Max active calls ({self._max_active_calls}) reached, dropping inbound call"
             )
             return
-        params = payload.get("params", {})
-        call_id = params.get("call_id", "")
 
         call = Call(
             client=self,

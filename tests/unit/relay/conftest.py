@@ -646,12 +646,17 @@ class _MockRelayHarness:
         auto_states: Optional[list[str]] = None,
         delay_ms: int = 50,
         session_id: Optional[str] = None,
+        redeliver_receive: int = 0,
     ) -> dict[str, Any]:
         """Inject an inbound call announcement.
 
         Targets this harness's session by default so the inbound-call sequence
         reaches only this test's client (an unscoped harness broadcasts, as
         before); an explicit ``session_id`` overrides.
+
+        ``redeliver_receive`` replays the ``calling.call.receive`` frame that
+        many extra times (byte-identical, before the state frames) to drive
+        RELAY's at-least-once delivery.
         """
         body: dict[str, Any] = {
             "from_number": from_number,
@@ -659,6 +664,7 @@ class _MockRelayHarness:
             "context": context,
             "auto_states": auto_states or ["created"],
             "delay_ms": delay_ms,
+            "redeliver_receive": redeliver_receive,
         }
         if call_id is not None:
             body["call_id"] = call_id
