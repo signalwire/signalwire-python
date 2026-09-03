@@ -628,8 +628,18 @@ class PgVectorSearchBackend:
     ) -> list[dict[str, Any]]:
         """Perform vector similarity search"""
         with self.conn.cursor() as cursor:
-            # Set probes for IVFFlat index to ensure we get enough results
-            cursor.execute("SET LOCAL ivfflat.probes = %s", (max(count, 10),))
+            # Set probes for IVFFlat index to ensure we get enough results.
+            #
+            # NOT "SET LOCAL". _connect() enables autocommit - see the docstring
+            # there, it is deliberate, to avoid holding locks that block
+            # DROP TABLE during reindex. Under autocommit every statement is its
+            # own transaction, so a transaction-scoped SET LOCAL is discarded
+            # before the SELECT below ever runs and the index falls back to the
+            # default probes=1. On a lists=100 index that reads 1% of the table:
+            # measured vector recall@5 was 25% at probes=1 against 55% with
+            # probes applied, for ~2ms. Plain SET is session-scoped, survives
+            # autocommit, and opens no transaction of its own.
+            cursor.execute("SET ivfflat.probes = %s", (max(count, 10),))
             # Build query parts
             tbl = psycopg2_sql.Identifier(self.table_name)
             parts = [
