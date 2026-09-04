@@ -135,11 +135,32 @@ class PgVectorBackend:
             )
 
             # Create indexes
+            #
+            # HNSW, not IVFFlat. IVFFlat partitions into `lists` clusters and
+            # visits `probes` of them, which has two costs measured on a 21k-row
+            # SignalWire collection at lists=100:
+            #
+            #   - recall is capped by how many lists you dare probe, and the
+            #     ceiling is a CLIFF, not a curve: at probes=50 the planner
+            #     decides half the index costs more than the table, drops to a
+            #     Seq Scan, and latency goes 10ms -> 113ms for +6 points. There
+            #     is nothing available in between.
+            #   - re-clustering on every rebuild moves which chunks a given
+            #     probes value can reach. Rebuilding the index alone, with no
+            #     corpus change, swung recall@1 on one question class by 15
+            #     points, which makes before/after measurement across a rebuild
+            #     nearly worthless.
+            #
+            # HNSW has neither. Measured through the full hybrid pipeline over a
+            # 360-case golden set, HNSW ef_search=200 against IVFFlat probes=30:
+            # recall@1 64%->67%, recall@5 79%->84%, wrong-answer rate 25%->22%,
+            # end-to-end search latency 72ms->66ms, and no question class worse.
+            # Rebuilding the HNSW index from scratch reproduced every number to
+            # within 2 points, against IVFFlat's 15.
             cursor.execute(
                 psycopg2_sql.SQL("""
                 CREATE INDEX IF NOT EXISTS {idx}
-                ON {tbl} USING ivfflat (embedding vector_cosine_ops)
-                WITH (lists = 100)
+                ON {tbl} USING hnsw (embedding vector_cosine_ops)
             """).format(idx=idx_embedding, tbl=tbl)
             )
 
@@ -639,7 +660,12 @@ class PgVectorSearchBackend:
             # measured vector recall@5 was 25% at probes=1 against 55% with
             # probes applied, for ~2ms. Plain SET is session-scoped, survives
             # autocommit, and opens no transaction of its own.
+            # Both are set because both index types are in the wild: collections
+            # built before the HNSW switch still carry an IVFFlat index and
+            # would silently fall back to probes=1 if only ef_search were set.
+            # Each GUC is inert against the other index type.
             cursor.execute("SET ivfflat.probes = %s", (max(count, 10),))
+            cursor.execute("SET hnsw.ef_search = %s", (max(count * 6, 200),))
             # Build query parts
             tbl = psycopg2_sql.Identifier(self.table_name)
             parts = [
