@@ -325,6 +325,16 @@ class SearchService:
                 if not Path(index_path).exists():
                     raise HTTPException(status_code=400, detail="Index file not found")
 
+            # Results are cached by (query, index, count, tags) with no TTL and
+            # no invalidation. Rebuilding the SearchEngine below leaves that
+            # cache intact, so the fresh engine never gets asked: any query run
+            # before a reindex keeps returning its pre-reindex answer forever,
+            # while a query never run before -- or run at a different count,
+            # since count is in the key -- falls through to the new data. That
+            # split is silent and looks like a scoring difference, not staleness.
+            # Reloading an index means the old answers are wrong by definition.
+            self._query_cache.clear()
+
             if self.backend == "pgvector":
                 # For pgvector, index_path is actually the collection name
                 self.indexes[index_name] = index_path
