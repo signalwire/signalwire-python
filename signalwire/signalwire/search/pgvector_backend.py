@@ -1105,7 +1105,12 @@ class PgVectorSearchBackend:
     # a page that is genuinely closer to the question.
     TIEBREAK_MAX = 0.05
 
-    def _blend(self, all_sources, results_map, agreement_boost):
+    def _blend(
+        self,
+        all_sources: dict[Any, dict[str, float]],
+        results_map: dict[Any, dict[str, Any]],
+        agreement_boost: float,
+    ) -> None:
         # max, not min: vector search returns `count` rows, so the weakest one
         # is the count-th best cosine and a floor built from it would move with
         # `count` -- making the same candidate score differently depending on

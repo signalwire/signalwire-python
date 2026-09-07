@@ -457,6 +457,15 @@ class SearchService:
             from .models import DEFAULT_MODEL
             from .pgvector_backend import PgVectorBackend
 
+            if self.connection_string is None:
+                # No DSN to read the collection config with; the documented
+                # fallback below is the honest answer.
+                logger.warning(
+                    f"No connection string for collection {index_path}; "
+                    f"falling back to {DEFAULT_MODEL}"
+                )
+                return DEFAULT_MODEL
+
             try:
                 backend = PgVectorBackend(self.connection_string)
                 try:

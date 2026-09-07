@@ -447,7 +447,7 @@ class SearchIndexMigrator:
             if sqlite_out is not None:
                 try:
                     sqlite_out.close()
-                except Exception:  # noqa: BLE001  # cleanup must not mask the real error
+                except Exception:  # cleanup must not mask the real error
                     logger.warning("Could not close SQLite output file", exc_info=True)
             pgvector.close()
 

@@ -371,7 +371,7 @@ class DocumentProcessor:
 
     def _extract_powerpoint(self, file_path: str) -> Any:
         """Extract text from PowerPoint files"""
-        if not Presentation:
+        if Presentation is None:
             return json.dumps(
                 {"error": "python-pptx not available for PowerPoint processing"}
             )
@@ -561,9 +561,7 @@ class DocumentProcessor:
                     ]
                     current_lines.extend(block["source_lines"])
                     current_end_line = block["end_line"]
-                    current_size += sum(
-                        len(line) + 1 for line in block["source_lines"]
-                    )
+                    current_size += sum(len(line) + 1 for line in block["source_lines"])
                     continue
                 # Flush whatever preceded this heading under the old hierarchy.
                 flush()

@@ -695,7 +695,9 @@ class TestSqliteHandleLifetime:
 
         return len(os.listdir(f"/proc/{os.getpid()}/fd"))
 
-    def test_validate_index_does_not_leak_on_failure_paths(self, tmp_path) -> None:
+    def test_validate_index_does_not_leak_on_failure_paths(
+        self, tmp_path: Path
+    ) -> None:
         import sqlite3
 
         import pytest
