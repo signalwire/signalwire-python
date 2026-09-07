@@ -1,5 +1,32 @@
 # Changelog
 
+## [3.4.1] - 2026-09-06
+
+Search correctness and retrieval-quality fixes.
+
+### Fixed
+- pgvector: `SET LOCAL ivfflat.probes` was discarded before the query ran, so
+  every search scanned a single list — roughly 1% of the table — and silently
+  returned whatever happened to live there. Recall looked like a model problem
+  and was a transaction-scope bug.
+- Search results are no longer served from a stale cache after an index is
+  reloaded.
+- Non-semantic signals (keyword agreement) now REORDER results rather than
+  choosing them: a chunk vector search never found cannot be promoted into the
+  answer on keyword agreement alone, and agreement earns a bounded tiebreak
+  rather than an unbounded boost.
+- `_get_model_name` falls back to the default model when no connection string
+  is available, instead of constructing a backend with `None`.
+- Optional-dependency shims are tested with `is None` rather than truthiness,
+  and `_blend` is annotated — clearing the findings CI reports when the search
+  extras are installed.
+
+### Changed
+- pgvector indexes build as **HNSW** instead of IVFFlat: better recall at lower
+  latency, and reproducible — IVFFlat's list assignment depends on the data
+  present at build time, so the same corpus indexed twice could answer
+  differently. Existing indexes keep working; rebuild to get the new type.
+
 ## [3.4.0] - 2026-08-24
 
 Covers everything landed since 3.2.0. 3.3.0 was never tagged or documented, so
