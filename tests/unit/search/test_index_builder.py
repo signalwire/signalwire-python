@@ -676,3 +676,49 @@ class TestIndexBuilderEdgeCases:
         finally:
             if os.path.exists(temp_db):
                 os.remove(temp_db) 
+
+class TestSqliteHandleLifetime:
+    """Failure paths must not leak the SQLite handle.
+
+    validate_index has two ways out that are not the happy path -- an early
+    return when required tables are missing, and an except that turns any
+    error into {"valid": False}. Both used to skip the inline conn.close().
+    Measured before the fix: 120 calls over two bad indexes leaked 31
+    descriptors. Validating a directory of indexes is what this function is
+    for, so the leak scaled with the job, and on Windows each unclosed handle
+    keeps its file locked against whatever repair follows.
+    """
+
+    @staticmethod
+    def _open_fd_count() -> int:
+        import os
+
+        return len(os.listdir(f"/proc/{os.getpid()}/fd"))
+
+    def test_validate_index_does_not_leak_on_failure_paths(self, tmp_path) -> None:
+        import sqlite3
+
+        import pytest
+
+        from signalwire.search.index_builder import IndexBuilder
+
+        if not __import__("pathlib").Path("/proc/self/fd").exists():
+            pytest.skip("descriptor counting needs /proc")
+
+        # valid sqlite, but without the tables validate_index requires
+        missing_tables = tmp_path / "missing.swsearch"
+        sqlite3.connect(str(missing_tables)).close()
+        # not a database at all
+        not_a_db = tmp_path / "junk.swsearch"
+        not_a_db.write_text("not a database")
+
+        builder = IndexBuilder()
+        # warm up any lazily-opened descriptors before measuring
+        builder.validate_index(str(missing_tables))
+        builder.validate_index(str(not_a_db))
+
+        before = self._open_fd_count()
+        for _ in range(50):
+            assert builder.validate_index(str(missing_tables))["valid"] is False
+            assert builder.validate_index(str(not_a_db))["valid"] is False
+        assert self._open_fd_count() == before

@@ -1348,12 +1348,21 @@ class TestPgVectorSearchBackendMergeAllResults:
             return sb
 
     def test_merge_all_results_three_sources(self) -> None:
-        """Max-signal-wins scoring with 0.1 per-additional-source agreement boost.
+        """Agreement orders near-ties; it does not manufacture a perfect score.
 
-        Commit f0be3a9 replaced the weighted-sum combination (vector*0.5 +
-        keyword*0.3 + metadata*0.2) with max-signal-wins. The strongest raw
-        score becomes the base; each additional agreeing source adds 0.1.
-        Result is capped at 1.0.
+        This used to be max-signal-wins: strongest raw score as the base, 0.1
+        per additional agreeing source, capped at 1.0 -- so these inputs scored
+        a flat 1.0, indistinguishable from a perfect match.
+
+        The signals are not on one scale. Cosine tops out near 0.62 on a real
+        corpus while metadata coverage maxes at 0.60 by construction and a
+        basename hit is a flat 0.67, so the base could be a constant that no
+        similarity can reach. A page about gathering input took rank 1 for a
+        question about playing audio that way.
+
+        Now a candidate the vector search found keeps its cosine and earns at
+        most TIEBREAK_MAX from agreement: 0.9 + min(0.05, 0.2) = 0.95. Enough to
+        order near-ties, never enough to leapfrog a better match.
         """
         sb = self._make_search_backend()
 
@@ -1364,9 +1373,9 @@ class TestPgVectorSearchBackendMergeAllResults:
         merged = sb._merge_all_results(vector, keyword, metadata)
 
         assert len(merged) == 1
-        # max(0.9, 0.8, 0.7) + 0.1 * (3 - 1) = 1.1, capped at 1.0
-        assert abs(merged[0]["score"] - 1.0) < 1e-9
-        assert abs(merged[0]["final_score"] - 1.0) < 1e-9
+        # vector 0.9 + min(TIEBREAK_MAX, 0.1 * (3 - 1)) = 0.95
+        assert abs(merged[0]["score"] - 0.95) < 1e-9
+        assert abs(merged[0]["final_score"] - 0.95) < 1e-9
 
     def test_merge_all_results_includes_sources(self) -> None:
         """Test _merge_all_results includes source breakdown"""

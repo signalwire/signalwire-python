@@ -411,10 +411,50 @@ class TestLoadResources:
 class TestGetModelName:
     """Tests for _get_model_name method."""
 
-    def test_pgvector_returns_default_model(self) -> None:
+    def test_pgvector_reads_model_from_collection_config(self) -> None:
+        """The collection's recorded model wins; it is not assumed."""
         svc = SearchService(backend="pgvector", connection_string="postgresql://localhost/db")
-        result = svc._get_model_name("/some/path")
-        assert result == "sentence-transformers/all-mpnet-base-v2"
+        with patch(
+            "signalwire.search.pgvector_backend.PgVectorBackend"
+        ) as mock_backend:
+            mock_backend.return_value.get_stats.return_value = {
+                "config": {"model_name": "sentence-transformers/all-mpnet-base-v2"}
+            }
+            assert (
+                svc._get_model_name("some_collection")
+                == "sentence-transformers/all-mpnet-base-v2"
+            )
+
+    def test_pgvector_falls_back_to_default_when_unreadable(self) -> None:
+        """Unreachable database falls back to DEFAULT_MODEL, not to a constant.
+
+        This previously returned a hardcoded all-mpnet-base-v2 regardless of
+        what the collection was built with. That model is 768-dimensional and
+        DEFAULT_MODEL is 384, so trusting it meant embedding queries in the
+        wrong space -- a dimension error at best, meaningless neighbours at
+        worst. The old test asserted the constant while calling itself
+        "returns_default_model", which it never did.
+        """
+        from signalwire.search.models import DEFAULT_MODEL
+
+        svc = SearchService(backend="pgvector", connection_string="postgresql://nope/db")
+        with patch(
+            "signalwire.search.pgvector_backend.PgVectorBackend"
+        ) as mock_backend:
+            mock_backend.return_value.get_stats.side_effect = RuntimeError("no db")
+            assert svc._get_model_name("missing_collection") == DEFAULT_MODEL
+        # A collection with no recorded model falls back the same way, and so
+        # does a non-string value -- psycopg2 is mocked across this module, so
+        # without a type check a MagicMock would be returned as a model id.
+        with patch(
+            "signalwire.search.pgvector_backend.PgVectorBackend"
+        ) as mock_backend:
+            mock_backend.return_value.get_stats.return_value = {"config": {}}
+            assert svc._get_model_name("no_model") == DEFAULT_MODEL
+            mock_backend.return_value.get_stats.return_value = {
+                "config": {"model_name": object()}
+            }
+            assert svc._get_model_name("bad_type") == DEFAULT_MODEL
 
     def test_sqlite_reads_from_database(self) -> None:
         svc = SearchService()

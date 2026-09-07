@@ -185,7 +185,18 @@ def detect_language(text: str) -> str:
     english_count = sum(1 for word in words if word in common_english_words)
     spanish_count = sum(1 for word in words if word in common_spanish_words)
 
-    if spanish_count > english_count:
+    # A single ambiguous token must not decide this. Seven words in the Spanish
+    # list are also ordinary English -- no, me, son, da, la, al, con -- and the
+    # English list is only 32 words, so it often scores zero on a perfectly
+    # English query: "send me a text" is en=0 es=1 and used to come back "es".
+    #
+    # Today that is inert (no spaCy models installed, and the stopword set does
+    # not change the returned text), which is why this is a guard rather than a
+    # rewrite. It stops being inert the moment someone installs es_core_news_sm,
+    # and a lemmatiser running in the wrong language is not a failure that
+    # announces itself. Require real evidence: at least two Spanish hits and a
+    # clear margin over English.
+    if spanish_count >= 2 and spanish_count > english_count + 1:
         return "es"
     return "en"
 
@@ -478,7 +489,38 @@ def preprocess_query(
         vector: Include vector embedding in output
         vectorize_query_param: If True, just vectorize without other processing
         nlp_backend: DEPRECATED - use query_nlp_backend instead
-        query_nlp_backend: NLP backend for query processing ('nltk' for fast, 'spacy' for better quality)
+        query_nlp_backend: NLP backend for query processing. 'nltk' (default)
+            tokenises and stems. 'spacy' additionally POS-tags the query and
+            expands it with WordNet synonyms.
+
+            Whether that expansion helps depends on your corpus, and it is
+            worth measuring rather than assuming. WordNet is a general-English
+            lexicon with no notion of domain, so it contributes every common
+            sense of a word. On a corpus whose vocabulary is ordinary English
+            that can recover phrasing the user did not use; on a corpus where
+            common words carry specialised meanings it adds senses the
+            documents do not have.
+
+            One measurement, so the shape of the risk is concrete -- this index
+            (telecom documentation) with all-MiniLM-L6-v2, four hand-picked
+            queries against known-correct pages:
+
+                play audio to the caller   rank  8 -> 24    0.526 -> 0.490
+                hang up the call           rank  1 ->  2    0.579 -> 0.535
+                record the call            rank  2 -> 13    0.593 -> 0.533
+                send a text message        rank 17 ->  7    0.540 -> 0.334
+
+            The score fell in all four. The one rank that improved did so while
+            its score dropped hardest, meaning the field collapsed around it
+            rather than the target improving. Here "caller" expands to
+            "company" and "play" to "spiel" -- correct WordNet senses, wrong
+            telecom ones.
+
+            Four queries on one corpus with one model is not a general result,
+            and no claim is made about yours. If you enable this, measure it:
+            hold a set of queries with known-correct answers and compare ranks
+            before and after. If it does not help, narrow expand_synonyms_for_pos
+            or supply a domain lexicon instead of trusting WordNet defaults.
 
     Returns:
         Dict containing processed query, language, POS tags, and optionally vector
@@ -679,7 +721,16 @@ def preprocess_document_content(
         content: Document content to process
         language: Language code for processing
         nlp_backend: DEPRECATED - use index_nlp_backend instead
-        index_nlp_backend: NLP backend for document processing ('nltk' for fast, 'spacy' for better quality)
+        index_nlp_backend: NLP backend for document processing. 'nltk'
+            (default) tokenises and stems. 'spacy' also expands NOUN and VERB
+            tokens with up to two WordNet synonyms each.
+
+            See the note on query_nlp_backend in preprocess_query for what that
+            expansion does and one measurement of it. Two differences apply
+            here: it is less aggressive than at query time, and it is harder to
+            reverse, because the synonyms are written into the stored content --
+            changing your mind means rebuilding the index rather than passing a
+            different flag. Measure before choosing it, not after.
 
     Returns:
         Dict containing enhanced text and extracted keywords

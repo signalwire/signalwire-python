@@ -253,6 +253,17 @@ Examples:
     )
 
     parser.add_argument(
+        "--min-chunk-size",
+        type=int,
+        default=0,
+        help=(
+            "Markdown strategy: minimum words before a heading starts a new "
+            "chunk. Sections shorter than this merge into the next one instead "
+            "of being emitted alone (default: 0, split at every heading)"
+        ),
+    )
+
+    parser.add_argument(
         "--overlap-size",
         type=int,
         default=10,
@@ -292,7 +303,12 @@ Examples:
         "--index-nlp-backend",
         choices=["nltk", "spacy"],
         default="nltk",
-        help="NLP backend for document processing: nltk (fast, default) or spacy (better quality, slower)",
+        help=(
+            "NLP backend for document processing: nltk (fast, default) or "
+            "spacy (slower; also expands content with WordNet synonyms, whose "
+            "effect depends on your corpus and is written into the index -- "
+            "measure it before choosing, see preprocess_document_content)"
+        ),
     )
 
     parser.add_argument("--verbose", action="store_true", help="Enable verbose output")
@@ -484,6 +500,7 @@ Examples:
                 chunking_strategy=args.chunking_strategy,
                 max_sentences_per_chunk=args.max_sentences_per_chunk,
                 chunk_size=args.chunk_size,
+                min_chunk_size=args.min_chunk_size,
                 chunk_overlap=args.overlap_size,
                 split_newlines=args.split_newlines,
                 index_nlp_backend=args.index_nlp_backend,
@@ -593,6 +610,7 @@ Examples:
             chunking_strategy=args.chunking_strategy,
             max_sentences_per_chunk=args.max_sentences_per_chunk,
             chunk_size=args.chunk_size,
+            min_chunk_size=args.min_chunk_size,
             chunk_overlap=args.overlap_size,
             split_newlines=args.split_newlines,
             index_nlp_backend=args.index_nlp_backend,
@@ -741,7 +759,11 @@ def search_command() -> None:
         "--query-nlp-backend",
         choices=["nltk", "spacy"],
         default="nltk",
-        help="NLP backend for query processing: nltk (fast, default) or spacy (better quality, slower)",
+        help=(
+            "NLP backend for query processing: nltk (fast, default) or spacy "
+            "(slower; expands the query with WordNet synonyms, whose effect "
+            "depends on your corpus -- measure it, see preprocess_query)"
+        ),
     )
     parser.add_argument(
         "--keyword-weight",
@@ -1417,9 +1439,17 @@ def console_entry_point() -> None:
     """Console script entry point for pip installation"""
     import sys
 
-    # Fast help check - show help without importing heavy modules
+    # Fast help check - show help without importing heavy modules.
+    #
+    # NOTE: this text is hand-maintained and has drifted from the parser three
+    # times over. It omitted the `markdown` and `json` strategies (both real and
+    # in daily use), and it advertised all-mpnet-base-v2 as the default model
+    # when DEFAULT_MODEL is all-MiniLM-L6-v2 -- a 768-dim answer to a 384-dim
+    # question, which is the kind of thing someone builds a mismatched index on.
+    # Anything added to the parser below must be added here too, or it is
+    # undiscoverable.
     if len(sys.argv) > 1 and sys.argv[1] in ["--help", "-h"]:
-        print("""usage: sw-search [-h] [--output OUTPUT] [--chunking-strategy {sentence,sliding,paragraph,page,semantic,topic,qa}]
+        print("""usage: sw-search [-h] [--output OUTPUT] [--chunking-strategy {sentence,sliding,paragraph,page,semantic,topic,qa,json,markdown}]
                  [--max-sentences-per-chunk MAX_SENTENCES_PER_CHUNK] [--chunk-size CHUNK_SIZE]
                  [--overlap-size OVERLAP_SIZE] [--split-newlines SPLIT_NEWLINES] [--file-types FILE_TYPES]
                  [--exclude EXCLUDE] [--languages LANGUAGES] [--model MODEL] [--tags TAGS]
@@ -1435,12 +1465,20 @@ positional arguments:
 options:
   -h, --help            show this help message and exit
   --output OUTPUT       Output .swsearch file (default: sources.swsearch)
-  --chunking-strategy {sentence,sliding,paragraph,page,semantic,topic,qa}
-                        Chunking strategy to use (default: sentence)
+  --chunking-strategy {sentence,sliding,paragraph,page,semantic,topic,qa,json,markdown}
+                        Chunking strategy to use (default: sentence). Use
+                        "markdown" for documentation with code blocks.
   --max-sentences-per-chunk MAX_SENTENCES_PER_CHUNK
                         Maximum sentences per chunk for sentence strategy (default: 5)
   --chunk-size CHUNK_SIZE
-                        Chunk size in words for sliding window strategy (default: 50)
+                        Chunk size in words (default: 50). For the markdown
+                        strategy this is the split threshold, applied as
+                        chunk_size * 6 characters.
+  --min-chunk-size MIN_CHUNK_SIZE
+                        Markdown strategy: minimum words before a heading starts
+                        a new chunk. Shorter sections merge into the next one
+                        instead of being emitted alone (default: 0, split at
+                        every heading).
   --overlap-size OVERLAP_SIZE
                         Overlap size in words for sliding window strategy (default: 10)
   --split-newlines SPLIT_NEWLINES
@@ -1450,10 +1488,11 @@ options:
   --exclude EXCLUDE     Comma-separated glob patterns to exclude (e.g., "**/test/**,**/__pycache__/**")
   --languages LANGUAGES
                         Comma-separated language codes (default: en)
-  --model MODEL         Sentence transformer model name (default: sentence-transformers/all-mpnet-base-v2)
+  --model MODEL         Sentence transformer model name or alias (mini/base/
+                        large). Default: mini (sentence-transformers/all-MiniLM-L6-v2)
   --tags TAGS           Comma-separated tags to add to all chunks
   --index-nlp-backend {nltk,spacy}
-                        NLP backend for document processing: nltk (fast, default) or spacy (better quality, slower)
+                        NLP backend for document processing: nltk (fast, default) or spacy (slower, expands with WordNet synonyms — effect depends on your corpus, measure it)
   --verbose             Enable verbose output
   --validate            Validate the created index after building
   --semantic-threshold SEMANTIC_THRESHOLD

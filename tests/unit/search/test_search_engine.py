@@ -349,7 +349,7 @@ class TestSearchEngineHybridSearch:
         engine._keyword_search = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 2, 'content': 'Keyword result', 'score': 0.8, 'search_type': 'keyword', 'metadata': {}}
         ])
-        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
+        engine._calculate_combined_score = Mock(side_effect=lambda c, t, vf=None: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
         engine._apply_diversity_penalties = Mock(side_effect=lambda results, count: results)  # type: ignore[method-assign]  # mock
 
         mock_np.array.return_value.reshape.return_value = [[0.1, 0.2, 0.3]]
@@ -409,7 +409,9 @@ class TestSearchEngineHybridSearch:
         engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
 
         # Mock scoring: score is passed through
-        def mock_combined_score(candidate: dict[str, Any], threshold: float) -> float:
+        def mock_combined_score(
+            candidate: dict[str, Any], threshold: float, vector_floor: float | None = None
+        ) -> float:
             return float(candidate.get('score', 0.0))
         engine._calculate_combined_score = Mock(side_effect=mock_combined_score)  # type: ignore[method-assign]  # mock
         engine._apply_diversity_penalties = Mock(side_effect=lambda results, count: results)  # type: ignore[method-assign]  # mock
@@ -820,7 +822,7 @@ class TestSearch:
         engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
-        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
+        engine._calculate_combined_score = Mock(side_effect=lambda c, t, vf=None: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
         engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.9, 0.1, 0.0, 0.0], 'python tutorial', count=3)
@@ -843,7 +845,7 @@ class TestSearch:
         engine._keyword_search = Mock(return_value=[  # type: ignore[method-assign]  # mock
             {'id': 3, 'content': 'C', 'score': 0.7, 'search_type': 'keyword', 'metadata': {'filename': 'c.md', 'tags': []}}
         ])
-        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
+        engine._calculate_combined_score = Mock(side_effect=lambda c, t, vf=None: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
         engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.9, 0.1, 0.0, 0.0], 'test', count=5)
@@ -863,7 +865,7 @@ class TestSearch:
         engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
-        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
+        engine._calculate_combined_score = Mock(side_effect=lambda c, t, vf=None: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
         engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.9, 0.1, 0.0, 0.0], 'test', count=3)
@@ -884,7 +886,7 @@ class TestSearch:
         engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
-        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
+        engine._calculate_combined_score = Mock(side_effect=lambda c, t, vf=None: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
         engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.9, 0.1, 0.0, 0.0], 'test', count=5, tags=['python'])
@@ -905,7 +907,7 @@ class TestSearch:
         engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
-        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
+        engine._calculate_combined_score = Mock(side_effect=lambda c, t, vf=None: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
         engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.9, 0.1, 0.0, 0.0], 'python tutorial',
@@ -948,7 +950,7 @@ class TestSearch:
         engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
-        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
+        engine._calculate_combined_score = Mock(side_effect=lambda c, t, vf=None: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
         diversity_mock = Mock(side_effect=lambda r, c: r)
         engine._apply_diversity_penalties = diversity_mock  # type: ignore[method-assign]  # mock
 
@@ -990,7 +992,7 @@ class TestSearch:
         engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
-        engine._calculate_combined_score = Mock(side_effect=lambda c, t: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
+        engine._calculate_combined_score = Mock(side_effect=lambda c, t, vf=None: c.get('score', 0.0))  # type: ignore[method-assign]  # mock
         engine._apply_diversity_penalties = Mock(side_effect=lambda r, c: r)  # type: ignore[method-assign]  # mock
 
         results = engine.search([0.9, 0.1, 0.0, 0.0], 'test', count=5, similarity_threshold=0.5)

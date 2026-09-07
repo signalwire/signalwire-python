@@ -1080,6 +1080,53 @@ class PgVectorSearchBackend:
 
         return list(candidates.values())
 
+    # Non-semantic signals may reorder results; they may not choose them.
+    #
+    # Every source used to feed one pool -- base = max(all signals) + 0.1 per
+    # agreeing source -- but the signals are not measured on the same scale.
+    # Cosine similarity is bounded by what the embedding model can express and
+    # tops out near 0.62 on a real corpus. Metadata term coverage maxes at 0.60
+    # by construction, a basename hit is a flat 0.67, and both collect the same
+    # agreement boost. A constant therefore outranks a similarity by design.
+    #
+    # Measured on "play audio to the caller": call-flow-builder/gather-input,
+    # cosine 0.555, scored 0.800 and took rank 1 over swml/reference/calling/play
+    # at 0.620. A page about GATHERING INPUT answered a question about PLAYING
+    # AUDIO, because term coverage saturated where the vector could not.
+    #
+    # Normalising the constants into the cosine range was the other option and
+    # it is worse: that range moves with the corpus and the embedding model, so
+    # the calibration would rot silently. This fails safe instead. A chunk the
+    # vector search actually found keeps its cosine as the score and earns at
+    # most TIEBREAK_MAX from agreement -- enough to order near-ties, never enough
+    # to leapfrog a materially better match. A chunk the vector search never
+    # returned is mapped into the band below the weakest semantic hit: still
+    # reachable, still ordered among its peers, but it cannot take the top from
+    # a page that is genuinely closer to the question.
+    TIEBREAK_MAX = 0.05
+
+    def _blend(self, all_sources, results_map, agreement_boost):
+        # max, not min: vector search returns `count` rows, so the weakest one
+        # is the count-th best cosine and a floor built from it would move with
+        # `count` -- making the same candidate score differently depending on
+        # how many results were asked for. The best score does not move.
+        vector_scores = [s["vector"] for s in all_sources.values() if "vector" in s]
+        ceiling = max(vector_scores) if vector_scores else None
+        for chunk_id, result in results_map.items():
+            sources = all_sources[chunk_id]
+            if "vector" in sources:
+                boost = agreement_boost * (len(sources) - 1)
+                score = sources["vector"] + min(self.TIEBREAK_MAX, boost)
+            else:
+                base = max(sources.values())
+                # Scale into [0, ceiling) so ordering survives but the top does
+                # not. Without any vector result there is nothing to rank against,
+                # so keep the old behaviour rather than invent a floor.
+                score = base * ceiling * 0.99 if ceiling is not None else base
+            result["score"] = min(1.0, score)
+            result["sources"] = sources
+            result["final_score"] = result["score"]
+
     def _merge_results(
         self,
         vector_results: list[dict[str, Any]],
@@ -1109,13 +1156,7 @@ class PgVectorSearchBackend:
                 results_map[chunk_id] = result.copy()
             all_sources.setdefault(chunk_id, {})["keyword"] = result["score"]
 
-        # Score: max signal wins, boost for agreement
-        for chunk_id, result in results_map.items():
-            sources = all_sources[chunk_id]
-            scores = list(sources.values())
-            base = max(scores)
-            boost = agreement_boost * (len(scores) - 1)
-            result["score"] = min(1.0, base + boost)
+        self._blend(all_sources, results_map, agreement_boost)
 
         merged = list(results_map.values())
         merged.sort(key=lambda x: x["score"], reverse=True)
@@ -1159,15 +1200,7 @@ class PgVectorSearchBackend:
                 results_map[chunk_id] = result.copy()
             all_sources.setdefault(chunk_id, {})["metadata"] = result["score"]
 
-        # Score: max signal wins, boost for each additional agreeing source
-        for chunk_id, result in results_map.items():
-            sources = all_sources[chunk_id]
-            scores = list(sources.values())
-            base = max(scores)
-            boost = agreement_boost * (len(scores) - 1)
-            result["score"] = min(1.0, base + boost)
-            result["sources"] = sources
-            result["final_score"] = result["score"]
+        self._blend(all_sources, results_map, agreement_boost)
 
         merged = list(results_map.values())
         merged.sort(key=lambda x: x["score"], reverse=True)

@@ -47,6 +47,7 @@ class IndexBuilder:
         chunking_strategy: str = "sentence",
         max_sentences_per_chunk: int = 5,
         chunk_size: int = 50,
+        min_chunk_size: int = 0,
         chunk_overlap: int = 10,
         split_newlines: int | None = None,
         index_nlp_backend: str = "nltk",
@@ -64,6 +65,8 @@ class IndexBuilder:
             chunking_strategy: Strategy for chunking documents ('sentence', 'sliding', 'paragraph', 'page', 'semantic', 'topic', 'qa', 'json')
             max_sentences_per_chunk: For sentence strategy (default: 5)
             chunk_size: For sliding strategy - words per chunk (default: 50)
+            min_chunk_size: For markdown strategy - minimum words before a
+                heading starts a new chunk (default: 0, split at every heading)
             chunk_overlap: For sliding strategy - overlap in words (default: 10)
             split_newlines: For sentence strategy - split on multiple newlines (optional)
             index_nlp_backend: NLP backend for indexing (default: 'nltk')
@@ -77,6 +80,7 @@ class IndexBuilder:
         self.chunking_strategy = chunking_strategy
         self.max_sentences_per_chunk = max_sentences_per_chunk
         self.chunk_size = chunk_size
+        self.min_chunk_size = min_chunk_size
         self.chunk_overlap = chunk_overlap
         self.split_newlines = split_newlines
         self.index_nlp_backend = index_nlp_backend
@@ -106,6 +110,7 @@ class IndexBuilder:
             chunking_strategy=chunking_strategy,
             max_sentences_per_chunk=max_sentences_per_chunk,
             chunk_size=chunk_size,
+            min_chunk_size=min_chunk_size,
             chunk_overlap=chunk_overlap,
             split_newlines=split_newlines,
             index_nlp_backend=self.index_nlp_backend,
@@ -679,6 +684,7 @@ class IndexBuilder:
                 "embedding_model": self.model_name,
                 "embedding_dimensions": str(embedding_dimensions),
                 "chunk_size": str(self.chunk_size),
+                "min_chunk_size": str(self.min_chunk_size),
                 "chunk_overlap": str(self.chunk_overlap),
                 "preprocessing_version": "1.0",
                 "languages": json.dumps(languages),
@@ -778,6 +784,7 @@ class IndexBuilder:
         if not Path(index_file).exists():
             return {"valid": False, "error": "Index file does not exist"}
 
+        conn = None
         try:
             conn = sqlite3.connect(index_file)
             cursor = conn.cursor()
@@ -804,8 +811,6 @@ class IndexBuilder:
             cursor.execute("SELECT COUNT(DISTINCT filename) FROM chunks")
             file_count = cursor.fetchone()[0]
 
-            conn.close()
-
             return {
                 "valid": True,
                 "chunk_count": chunk_count,
@@ -815,6 +820,15 @@ class IndexBuilder:
 
         except Exception as e:
             return {"valid": False, "error": str(e)}
+        finally:
+            # Every failure path here used to leak the handle: the early return
+            # for missing tables, and the except that turns any error into
+            # {"valid": False}. Validating a directory of indexes -- which is
+            # what this function is for -- leaked one descriptor per bad index,
+            # and on Windows kept each file locked. Close it once, on the way
+            # out, however we leave.
+            if conn is not None:
+                conn.close()
 
     def _store_chunks_pgvector(
         self,

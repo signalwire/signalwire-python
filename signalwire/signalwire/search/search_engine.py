@@ -309,10 +309,28 @@ class SearchEngine:
           8. truncate to `count`
         """
         # 1. score
+        # The vector floor has to be computed across the whole candidate pool,
+        # not per candidate: a result the vector search never returned is only
+        # meaningfully "below the semantic hits" relative to the weakest one
+        # present in this result set. See _calculate_combined_score.
+        # The ceiling is the BEST vector score, not the worst. Vector search
+        # returns `count` rows, so the worst one IS the count-th best cosine:
+        # a floor built from it moves when the caller changes `count`, and the
+        # same candidate would score differently for a query asking for 5
+        # results than for one asking for 40. That is the count-dependence that
+        # cost two sessions an afternoon in a different guise, and it does not
+        # belong in scoring. The best score is stable however many rows come
+        # back. It also keeps the rule proportionate: a keyword-only hit on an
+        # exact error code or function name that the embedding missed lands
+        # below the top answer without being buried under every weak vector hit.
+        vector_ceiling = max(
+            (c["vector_score"] for c in candidates if "vector_score" in c),
+            default=None,
+        )
         final_results = []
         for candidate in candidates:
             candidate["final_score"] = self._calculate_combined_score(
-                candidate, similarity_threshold
+                candidate, similarity_threshold, vector_ceiling
             )
             final_results.append(candidate)
         final_results.sort(key=lambda x: x["final_score"], reverse=True)
@@ -336,6 +354,18 @@ class SearchEngine:
         # 4. exact-match boost
         if original_query:
             final_results = self._boost_exact_matches(final_results, original_query)
+            # The boosts multiply -- x2.0 for an exact phrase, x1.5 twice more --
+            # and they are applied after scoring, so a candidate the vector search
+            # never returned could be scaled into the band below the semantic hits
+            # and then multiplied straight back over them. Re-apply the ceiling
+            # here so the invariant holds through the whole pipeline rather than
+            # only until a boost fires. Candidates the vector search DID return
+            # keep their boost: an exact phrase in the content is evidence about
+            # the content, which is the kind of signal that is allowed to win.
+            if vector_ceiling is not None:
+                for r in final_results:
+                    if "vector_score" not in r:
+                        r["final_score"] = min(r["final_score"], vector_ceiling * 0.99)
             final_results.sort(key=lambda x: x["final_score"], reverse=True)
 
         # 5. content dedup (sorted best-first, so the kept copy is the winner)
@@ -1408,15 +1438,39 @@ class SearchEngine:
             if conn:
                 conn.close()
 
-    def _calculate_combined_score(
-        self, candidate: dict[str, Any], similarity_threshold: float
-    ) -> float:
-        """Calculate final score using max-signal-wins approach.
+    TIEBREAK_MAX = 0.05
 
-        The strongest signal (vector, keyword, filename, or metadata) becomes
-        the base score. Agreement from additional sources boosts it. This keeps
-        scores in an intuitive 0-1 range where 0.5 means 'decent match'
-        regardless of which source found the result.
+    def _calculate_combined_score(
+        self,
+        candidate: dict[str, Any],
+        similarity_threshold: float,
+        vector_ceiling: float | None = None,
+    ) -> float:
+        """Score a candidate. Non-semantic signals reorder; they do not choose.
+
+        This used to be max-signal-wins: the strongest of vector, keyword,
+        filename or metadata became the base, plus 0.1 per agreeing source. The
+        signals are not on the same scale, though. Cosine similarity is bounded
+        by what the embedding model can express and tops out near 0.62 on a real
+        corpus, while metadata term coverage maxes at 0.60 by construction and a
+        basename hit is a flat 0.67 -- and all of them collect the same boost. A
+        constant therefore outranks a similarity by design.
+
+        Measured on "play audio to the caller": call-flow-builder/gather-input,
+        whose best cosine for that query is 0.555, scored 0.800 and took rank 1
+        over swml/reference/calling/play at 0.620. A page about GATHERING INPUT
+        answered a question about PLAYING AUDIO, because term coverage saturated
+        where the vector could not.
+
+        Normalising the constants into the cosine range was the alternative and
+        it is worse: that range moves with the corpus and the embedding model, so
+        the calibration would rot silently and nothing would say so. This fails
+        safe instead. A candidate the vector search actually found keeps its
+        cosine and earns at most TIEBREAK_MAX from agreement -- enough to order
+        near-ties, never enough to leapfrog a materially better match. A
+        candidate the vector search never returned is mapped into the band below
+        the best semantic hit: still reachable, still ordered among its peers,
+        but unable to take the top from a page genuinely closer to the question.
         """
         agreement_boost = 0.1  # Boost per additional agreeing source
 
@@ -1434,9 +1488,20 @@ class SearchEngine:
         if not scores:
             return 0.0
 
+        if "vector" in scores:
+            boost = agreement_boost * (len(scores) - 1)
+            return min(1.0, scores["vector"] + min(self.TIEBREAK_MAX, boost))
+
         base = max(scores.values())
-        boost = agreement_boost * (len(scores) - 1)
-        return min(1.0, base + boost)
+        if vector_ceiling is None:
+            # Nothing semantic in the pool to rank against, so there is no
+            # ceiling to enforce; keep the previous behaviour rather than
+            # invent a floor out of nothing.
+            boost = agreement_boost * (len(scores) - 1)
+            return min(1.0, base + boost)
+        # Scale into [0, vector_ceiling) so relative order survives but the
+        # ceiling does not.
+        return min(1.0, base * vector_ceiling * 0.99)
 
     def _dedupe_by_content(self, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
         """Collapse exact/near-exact content duplicates, keeping the highest-scoring copy.

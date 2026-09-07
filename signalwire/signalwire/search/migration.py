@@ -73,6 +73,7 @@ class SearchIndexMigrator:
             "config": {},
         }
 
+        sqlite_conn = None
         try:
             # Connect to SQLite
             if self.verbose:
@@ -272,7 +273,14 @@ class SearchIndexMigrator:
             logger.error(f"Migration failed: {e}")
             raise
         finally:
-            sqlite_conn.close()
+            # Guarded because sqlite3.connect itself can raise -- a missing
+            # file, a permissions problem, a corrupt database. The name is then
+            # unbound and this finally raised UnboundLocalError ON TOP of the
+            # real failure, so the caller was told "cannot access local
+            # variable" instead of "unable to open database file". A cleanup
+            # handler must not be able to destroy the diagnosis.
+            if sqlite_conn is not None:
+                sqlite_conn.close()
 
         return stats
 
@@ -314,6 +322,10 @@ class SearchIndexMigrator:
             print(f"Connecting to pgvector collection: {collection_name}")
 
         pgvector = PgVectorBackend(connection_string)
+        # Bound before the try so the finally can never raise NameError over
+        # the top of a real failure -- the same defect this commit fixes for
+        # sqlite_conn in migrate_sqlite_to_pgvector.
+        sqlite_out = None
 
         try:
             # Get collection stats and config
@@ -336,6 +348,7 @@ class SearchIndexMigrator:
 
             conn = sqlite3.connect(output_path)
             cursor = conn.cursor()
+            sqlite_out = conn  # closed in the finally below, not inline
 
             # Create schema (matching index_builder.py)
             cursor.execute("""
@@ -425,9 +438,17 @@ class SearchIndexMigrator:
                 print("This feature is planned for future development.")
 
             conn.commit()
-            conn.close()
 
         finally:
+            # The inline conn.close() above only ran when everything succeeded,
+            # while this finally closed pgvector alone -- so any failure between
+            # opening the file and committing leaked the SQLite handle and left
+            # a half-written .swsearch locked on Windows.
+            if sqlite_out is not None:
+                try:
+                    sqlite_out.close()
+                except Exception:  # noqa: BLE001  # cleanup must not mask the real error
+                    logger.warning("Could not close SQLite output file", exc_info=True)
             pgvector.close()
 
         return stats
@@ -449,21 +470,27 @@ class SearchIndexMigrator:
             info["type"] = "sqlite"
             info["path"] = index_path
 
+            # try/finally rather than a trailing close(): a corrupt or
+            # partially written index makes any of these statements raise, and
+            # the handle would otherwise be held until GC -- which on Windows
+            # keeps the file locked against the very repair the caller is
+            # probably attempting.
             conn = sqlite3.connect(index_path)
-            cursor = conn.cursor()
+            try:
+                cursor = conn.cursor()
 
-            # Get config
-            cursor.execute("SELECT key, value FROM config")
-            info["config"] = dict(cursor.fetchall())
+                # Get config
+                cursor.execute("SELECT key, value FROM config")
+                info["config"] = dict(cursor.fetchall())
 
-            # Get stats
-            cursor.execute("SELECT COUNT(*) FROM chunks")
-            info["total_chunks"] = cursor.fetchone()[0]
+                # Get stats
+                cursor.execute("SELECT COUNT(*) FROM chunks")
+                info["total_chunks"] = cursor.fetchone()[0]
 
-            cursor.execute("SELECT COUNT(DISTINCT filename) FROM chunks")
-            info["total_files"] = cursor.fetchone()[0]
-
-            conn.close()
+                cursor.execute("SELECT COUNT(DISTINCT filename) FROM chunks")
+                info["total_files"] = cursor.fetchone()[0]
+            finally:
+                conn.close()
 
         else:
             info["type"] = "unknown"

@@ -444,9 +444,41 @@ class SearchService:
     def _get_model_name(self, index_path: str) -> str:
         """Get embedding model name from index config"""
         if self.backend == "pgvector":
-            # For pgvector, we might want to store model info in the database
-            # For now, return default model
-            return "sentence-transformers/all-mpnet-base-v2"
+            # collection_config already records the model each collection was
+            # built with -- "we might want to store model info in the database"
+            # was written before that table existed. Returning a constant here
+            # was wrong in a way that does not fail loudly: all-mpnet-base-v2 is
+            # 768-dimensional and the default (all-MiniLM-L6-v2) is 384, so a
+            # caller trusting this would embed queries in the wrong space and
+            # get a dimension error at best, silently meaningless neighbours at
+            # worst. Nothing reaches this branch today -- the pgvector loader
+            # reads the config itself -- but a wrong answer sitting behind a
+            # right-looking signature is a trap for whoever calls it next.
+            from .models import DEFAULT_MODEL
+            from .pgvector_backend import PgVectorBackend
+
+            try:
+                backend = PgVectorBackend(self.connection_string)
+                try:
+                    stats = backend.get_stats(index_path)
+                finally:
+                    backend.close()
+                model_name = (stats.get("config") or {}).get("model_name")
+                # Must be a real string. A truthy non-string here would sail
+                # through str() and return something like a repr, which would
+                # then be handed to SentenceTransformer as a model id.
+                if isinstance(model_name, str) and model_name.strip():
+                    return model_name
+                logger.warning(
+                    f"No model_name recorded for collection {index_path}; "
+                    f"falling back to {DEFAULT_MODEL}"
+                )
+            except Exception as e:
+                logger.warning(
+                    f"Could not read model for collection {index_path} ({e}); "
+                    f"falling back to {DEFAULT_MODEL}"
+                )
+            return DEFAULT_MODEL
         # SQLite backend
         try:
             import sqlite3

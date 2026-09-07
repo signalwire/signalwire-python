@@ -501,18 +501,28 @@ class TestLoadConfig:
     def test_load_config_copies_sample_when_available(self, tmp_path: Path) -> None:
         config_path = str(tmp_path / "config.json")
 
+        # _load_config tests Path(...).exists(), not os.path.exists. Patching
+        # the latter intercepted nothing, so the real filesystem answered: the
+        # tmp_path config genuinely did not exist AND neither did
+        # sample_config.json, so the branch under test was never entered and
+        # shutil.copy was never called. Patch Path.exists, which receives the
+        # Path as self rather than a string argument.
         call_count = [0]
-        def exists_side_effect(path: str) -> bool:
-            if path == config_path:
+
+        def exists_side_effect(self_path: Path) -> bool:
+            name = str(self_path)
+            if name == config_path:
                 # First call: config doesn't exist; after copy it does
                 call_count[0] += 1
                 return call_count[0] > 1
-            if path == "sample_config.json":
+            if name == "sample_config.json":
                 return True
             return False
 
-        with patch("os.path.exists", side_effect=exists_side_effect), \
-             patch("shutil.copy") as mock_copy:
+        with patch(
+            "signalwire.mcp_gateway.gateway_service.Path.exists",
+            new=exists_side_effect,
+        ), patch("shutil.copy") as mock_copy:
             mock_file_content = json.dumps(_minimal_config())
             mock_file = MagicMock()
             mock_file.__enter__ = MagicMock(return_value=MagicMock(
@@ -520,7 +530,13 @@ class TestLoadConfig:
             ))
             mock_file.__exit__ = MagicMock(return_value=False)
 
-            with patch("builtins.open", return_value=mock_file):
+            # _load_config reads through Path.open, not builtins.open, so
+            # patching builtins left the real read to hit a file that the
+            # mocked exists() only claimed was there.
+            with patch(
+                "signalwire.mcp_gateway.gateway_service.Path.open",
+                return_value=mock_file,
+            ):
                 self.gateway._load_config(config_path)
 
             mock_copy.assert_called_once_with("sample_config.json", config_path)
@@ -1228,7 +1244,7 @@ class TestRunMethod:
 
         with patch("signalwire.mcp_gateway.gateway_service.make_server", return_value=mock_server), \
              patch("signalwire.mcp_gateway.gateway_service.signal"), \
-             patch("os.path.exists", return_value=True), \
+             patch("signalwire.mcp_gateway.gateway_service.Path.exists", return_value=True), \
              patch("signalwire.mcp_gateway.gateway_service.ssl") as mock_ssl:
 
             mock_ctx = MagicMock()

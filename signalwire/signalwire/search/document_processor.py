@@ -116,6 +116,7 @@ class DocumentProcessor:
         max_sentences_per_chunk: int = 5,
         chunk_size: int = 50,
         chunk_overlap: int = 10,
+        min_chunk_size: int = 0,
         split_newlines: int | None = None,
         index_nlp_backend: str = "nltk",
         verbose: bool = False,
@@ -137,6 +138,11 @@ class DocumentProcessor:
                 - 'json': JSON structure-aware chunking
                 - 'markdown': Markdown structure-aware chunking with code block detection
             max_sentences_per_chunk: For sentence strategy (default: 5)
+            min_chunk_size: For markdown strategy - minimum words before a
+                heading starts a new chunk. Sections shorter than this are
+                merged forward into the next one instead of being emitted
+                alone. Defaults to 0, which preserves the previous behaviour
+                of splitting at every heading.
             chunk_size: For sliding strategy - words per chunk (default: 50)
             chunk_overlap: For sliding strategy - overlap in words (default: 10)
             split_newlines: For sentence strategy - split on multiple newlines (optional)
@@ -148,6 +154,7 @@ class DocumentProcessor:
         self.chunking_strategy = chunking_strategy
         self.max_sentences_per_chunk = max_sentences_per_chunk
         self.chunk_size = chunk_size
+        self.min_chunk_size = min_chunk_size
         self.chunk_overlap = chunk_overlap
         self.split_newlines = split_newlines
         self.semantic_threshold = semantic_threshold
@@ -461,6 +468,12 @@ class DocumentProcessor:
         tokens = md.parse(content)
         lines = content.split("\n")
         threshold_chars = max(1, self.chunk_size * 6)
+        # Minimum size before a heading is allowed to start a new chunk. Without
+        # this the walker flushes at EVERY heading, so a document with dense
+        # headings yields chunks that are a title plus one sentence -- true to
+        # the structure but too thin to retrieve on, and they crowd out the
+        # substantial chunks around them. 0 keeps the original behaviour.
+        min_chars = max(0, self.min_chunk_size * 6)
 
         # Group top-level tokens into atomic blocks.
         # A "block" here = heading OR one non-heading container whose source
@@ -537,6 +550,21 @@ class DocumentProcessor:
 
         for block in blocks:
             if block["type"] == "heading":
+                # Too small to stand alone: fold this section into the one being
+                # built rather than emitting it. The heading line stays in the
+                # text, so the reader still sees the structure; only the chunk
+                # boundary moves.
+                if min_chars and 0 < current_size < min_chars:
+                    hierarchy = [
+                        *hierarchy[: block["level"] - 1],
+                        block["heading_text"],
+                    ]
+                    current_lines.extend(block["source_lines"])
+                    current_end_line = block["end_line"]
+                    current_size += sum(
+                        len(line) + 1 for line in block["source_lines"]
+                    )
+                    continue
                 # Flush whatever preceded this heading under the old hierarchy.
                 flush()
                 level = block["level"]
@@ -938,7 +966,13 @@ class DocumentProcessor:
         if not sentences:
             return 1
 
+        # `if not sentences` does not catch a list of EMPTY sentences, which is
+        # what a line of dots or an ASCII rule splits into -- ". . . " becomes
+        # ['', '', '', '']. That averages to 0.0 and the division below raises
+        # ZeroDivisionError on a document that is merely ugly, not invalid.
         avg_sentence_length = sum(len(s) for s in sentences) / len(sentences)
+        if avg_sentence_length <= 0:
+            return 1
         # Target chunk size divided by average sentence length
         optimal_sentences = max(1, int(self.chunk_size / avg_sentence_length))
         return min(optimal_sentences, 10)  # Cap at 10 sentences for readability
@@ -1696,6 +1730,7 @@ class DocumentProcessor:
             # reachable by either. Chunk COUNT and order are untouched, so
             # chunk_index still addresses the same source chunk.
             current_heading = ""
+            current_doc = None
             for idx, json_chunk in enumerate(data["chunks"]):
                 if not isinstance(json_chunk, dict) or "content" not in json_chunk:
                     logger.warning(f"Skipping invalid chunk {idx} in {filename}")
@@ -1741,6 +1776,24 @@ class DocumentProcessor:
                 # Create chunk with proper structure
                 chunk_text = json_chunk["content"]
                 stripped = chunk_text.lstrip()
+
+                # One JSON file routinely holds chunks from many source
+                # documents, and current_heading would otherwise carry across
+                # the boundary: the last heading of one document prepended to
+                # the first subsection of the next, asserting a subject the
+                # chunk does not have. It does not fire on the corpus this was
+                # written for -- every chunk there opens with its own h1, so
+                # the heading is reset each time, and a scan of 16,894 chunks
+                # found no instance -- but that is a property of those inputs,
+                # not of this loop. Reset when the document changes.
+                doc_key = (
+                    json_metadata.get("url")
+                    or json_metadata.get("source")
+                    or json_metadata.get("filename")
+                )
+                if doc_key != current_doc:
+                    current_doc = doc_key
+                    current_heading = ""
                 if stripped.startswith("# ") and not stripped.startswith("## "):
                     # A new topic: remember its heading, and leave it alone -
                     # it already names itself.

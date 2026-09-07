@@ -162,7 +162,9 @@ class TestMCPClientSetupSandboxEnv:
         assert "PATH" in env
         assert cwd == os.getcwd()
 
-    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
+    # Path.mkdir, not os.makedirs: the implementation moved to pathlib and this
+    # patch stopped intercepting, so the assertion failed and the real mkdir ran.
+    @patch("signalwire.mcp_gateway.mcp_manager.Path.mkdir")
     def test_sandbox_enabled_restricted_env(self, mock_makedirs: MagicMock) -> None:
         """When sandbox is enabled with restricted_env, a minimal env is created."""
         client = self._make_client(
@@ -593,7 +595,13 @@ class TestMCPClientStop:
         client.process = None  # already stopped
         client.sandbox_dir = "/tmp/sandbox_test/mcp_svc_123"
 
-        with patch("signalwire.mcp_gateway.mcp_manager.os.path.exists", return_value=True):
+        # stop() guards cleanup on Path(...).exists(), not os.path.exists --
+        # patching the latter left the guard reading the real filesystem, where
+        # this path does not exist, so rmtree was correctly never called and
+        # the test failed for a reason unrelated to what it is checking.
+        with patch(
+            "signalwire.mcp_gateway.mcp_manager.Path.exists", return_value=True
+        ):
             client.stop()
 
         mock_rmtree.assert_called_once_with("/tmp/sandbox_test/mcp_svc_123")
@@ -866,8 +874,15 @@ class TestMCPClientSandboxPreexec:
 class TestMCPManagerInit:
     """Tests for MCPManager.__init__."""
 
-    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_init_with_empty_config(self, mock_makedirs: MagicMock) -> None:
+    # These patch Path.mkdir, not os.makedirs. MCPManager.__init__ was migrated
+    # to pathlib and the patch target was never updated, so it silently stopped
+    # intercepting anything: the assertions failed, and -- worse -- the real
+    # mkdir ran, so test_init_with_custom_sandbox_dir genuinely tried to create
+    # /custom/sandbox on the machine running the suite and died on
+    # PermissionError. A mock that no longer matches the code does not just
+    # fail, it stops isolating.
+    @patch("signalwire.mcp_gateway.mcp_manager.Path.mkdir")
+    def test_init_with_empty_config(self, mock_mkdir: MagicMock) -> None:
         """MCPManager should initialize with an empty config."""
         config: dict[str, Any] = {}
         manager = MCPManager(config)
@@ -876,16 +891,16 @@ class TestMCPManagerInit:
         assert manager.services == {}
         assert manager.clients == {}
         assert manager.sandbox_base_dir == "./sandbox"
-        mock_makedirs.assert_called_once_with("./sandbox", exist_ok=True)
+        mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
 
-    @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
-    def test_init_with_custom_sandbox_dir(self, mock_makedirs: MagicMock) -> None:
+    @patch("signalwire.mcp_gateway.mcp_manager.Path.mkdir")
+    def test_init_with_custom_sandbox_dir(self, mock_mkdir: MagicMock) -> None:
         """MCPManager should use sandbox_dir from session config."""
         config = {"session": {"sandbox_dir": "/custom/sandbox"}}
         manager = MCPManager(config)
 
         assert manager.sandbox_base_dir == "/custom/sandbox"
-        mock_makedirs.assert_called_once_with("/custom/sandbox", exist_ok=True)
+        mock_mkdir.assert_called_once_with(parents=True, exist_ok=True)
 
     @patch("signalwire.mcp_gateway.mcp_manager.os.makedirs")
     def test_init_loads_services(self, mock_makedirs: MagicMock) -> None:

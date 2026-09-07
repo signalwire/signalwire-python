@@ -1501,10 +1501,22 @@ class TestEdgeCases:
 
     @patch('signalwire.search.document_processor.sent_tokenize', None)
     def test_calculate_sentences_per_chunk_empty(self) -> None:
-        """Empty string with no nltk causes ZeroDivisionError (source code bug)."""
+        """Text with no actual sentences falls back to 1, it does not raise.
+
+        This test used to assert the ZeroDivisionError and call it a source
+        code bug in its own docstring. Splitting "" or ". . . " yields a list
+        of EMPTY strings, which is truthy, so the `if not sentences` guard
+        misses it and the average comes out 0.0. A line of dots or an ASCII
+        rule is ugly input, not invalid input, and indexing a document should
+        not die on it.
+        """
         proc = DocumentProcessor()
-        with pytest.raises(ZeroDivisionError):
-            proc._calculate_sentences_per_chunk("")
+        assert proc._calculate_sentences_per_chunk("") == 1
+        assert proc._calculate_sentences_per_chunk(". . . ") == 1
+        # Whitespace-only text splits to one short "sentence" rather than to
+        # empty ones, so it returns the cap. Not asserted as 1: that would be
+        # inventing a requirement rather than pinning the crash that was fixed.
+        assert proc._calculate_sentences_per_chunk("   ") >= 1
 
     # ── _get_overlap_lines ───────────────────────────────────────────
 
