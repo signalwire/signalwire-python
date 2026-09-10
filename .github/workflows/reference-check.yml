@@ -1,0 +1,48 @@
+# API reference docs, PR check.
+#
+# Build-only counterpart to reference-docs.yml: no deploy, no write permission.
+# Catches a crashing generator, a root `signalwire` package that will not import
+# (gen.sh imports it to enumerate subpackages), and unresolved cross-references,
+# on the PR rather than on release day against the live site.
+#
+# It does NOT catch a submodule whose runtime dependency is missing: mkdocstrings
+# analyses statically through griffe, so such a module still renders a clean page.
+# Nothing here lints workflow YAML either, so a mistake in reference-docs.yml
+# still surfaces at release time. porting-sdk ships scripts/actionlint_gate.py,
+# which run-ci.sh does not currently call; wiring it up would close that gap.
+name: reference-check
+
+on:
+  pull_request:
+    paths:
+      - "signalwire/**"
+      - "reference/**"
+      - "pyproject.toml"
+      - ".github/workflows/reference-check.yml"
+      # Changing the publish workflow at least re-runs this build. It is not
+      # validation OF that workflow; see the note above.
+      - ".github/workflows/reference-docs.yml"
+
+permissions:
+  contents: read   # never deploys
+
+concurrency:
+  group: reference-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+      - name: Install SDK (editable) + doc toolchain
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r reference/requirements.txt
+          pip install -e .
+      # gen.sh without --no-build runs the strict `mkdocs build`.
+      - name: Generate + build (strict)
+        run: bash reference/gen.sh --no-install

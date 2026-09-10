@@ -3,16 +3,17 @@ site_description: API reference for the SignalWire Python SDK, generated from do
 site_url: https://signalwire.github.io/signalwire-python/
 
 # Generated per-run by gen.sh (one API page per importable subpackage of
-# `signalwire`, plus the SDK README as the landing page). This is NOT the repo's
+# `signalwire`, plus a generated landing page). This is NOT the repo's
 # existing top-level docs/ dir (owned by doc-audit.yml) — keep them separate.
 docs_dir: _docs
 site_dir: _site
 use_directory_urls: false
 
-# Mike serves each version under /<version>/, so links must be relative.
+# Served under the project-pages subpath (/signalwire-python/); links stay relative.
 theme:
   name: material
   custom_dir: overrides
+  favicon: assets/img/signalwire-favicon.png
   features:
     - navigation.sections
     - navigation.indexes
@@ -32,11 +33,6 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Switch to light mode
-
-extra:
-  version:
-    provider: mike
-    default: latest
 
 extra_css:
   - assets/fern/tokens.css

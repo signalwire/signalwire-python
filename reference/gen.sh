@@ -10,9 +10,25 @@
 # The package is nested (signalwire/signalwire/) and mkdocstrings needs the
 # editable install to resolve imports — that is preserved here.
 #
-# Usage:  reference/gen.sh            # generate pages + `mkdocs build`
-#         reference/gen.sh --no-build # generate pages only (mike runs the build)
+# Usage:  reference/gen.sh              # generate pages + strict `mkdocs build`
+#         reference/gen.sh --no-build   # generate pages only (the caller builds/deploys)
+#         reference/gen.sh --no-install # skip the pip installs (the caller installed already)
+#         Both flags are accepted together, in either order.
 set -euo pipefail
+
+NO_BUILD=0
+NO_INSTALL=0
+usage() {
+  sed -n '13,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+}
+for arg in "$@"; do
+  case "$arg" in
+    --no-build)   NO_BUILD=1 ;;
+    --no-install) NO_INSTALL=1 ;;
+    -h|--help)    usage; exit 0 ;;
+    *) echo "gen.sh: unknown option: $arg" >&2; usage >&2; exit 2 ;;
+  esac
+done
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"   # .../reference
 REPO="$(cd "$HERE/.." && pwd)"                          # repo root
@@ -21,8 +37,12 @@ CFG="$HERE/mkdocs.yml"
 
 # Install the doc toolchain + the SDK (editable, so mkdocstrings can import it).
 # Use `python3 -m pip` so this works whether or not a bare `pip` is on PATH.
-python3 -m pip install -q -r "$HERE/requirements.txt"
-python3 -m pip install -q -e "$REPO"
+# CI installs both itself and passes --no-install, so the pinned environment is
+# not re-resolved underneath the build.
+if [ "$NO_INSTALL" -eq 0 ]; then
+  python3 -m pip install -q -r "$HERE/requirements.txt"
+  python3 -m pip install -q -e "$REPO"
+fi
 
 # Build the docs tree: generated landing page + one API page per subpackage.
 rm -rf "$DOCS"
@@ -46,6 +66,13 @@ for name in names:
     with open(os.path.join(api_out, f"{slug}.md"), "w") as fh:
         fh.write(f"# signalwire.{name}\n\n::: signalwire.{name}\n")
     written.append(name)
+
+# The loop above writes nothing when `signalwire` exposes no subpackages, and
+# every command below still succeeds, so `set -e` would let a gutted site sail
+# through to deploy. (This is NOT an install check: PYTHONPATH points at the
+# source tree, so the import resolves with or without the editable install.)
+if not written:
+    sys.exit("gen.sh: no API pages generated (is the signalwire package importable?)")
 
 # API-section landing entry.
 with open(os.path.join(api_out, "index.md"), "w") as fh:
@@ -77,10 +104,11 @@ with open(os.path.join(docs_root, "index.md"), "w") as fh:
 print("api pages:", ", ".join(written))
 PY
 
-if [ "${1:-}" = "--no-build" ]; then
+if [ "$NO_BUILD" -eq 1 ]; then
   echo "pages generated under $DOCS (skipping mkdocs build)"
   exit 0
 fi
 
-python3 -m mkdocs build --config-file "$CFG"
+# --strict so a local run fails on the same warnings CI fails on.
+python3 -m mkdocs build --strict --config-file "$CFG"
 echo "python -> $HERE/_site ($(find "$HERE/_site" -name '*.html' | wc -l) pages)"

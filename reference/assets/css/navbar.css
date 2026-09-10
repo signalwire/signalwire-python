@@ -111,30 +111,8 @@ html { scroll-padding-top: calc(var(--fern-header-height) + var(--md-header-heig
 #fern-header [data-fern-logo] img { height: 28px; width: auto; display: block; }
 #fern-header .fern-logo-text { font-weight: 600; font-size: var(--text-sm); white-space: nowrap; }
 
+/* The center slot is an empty spacer; the language switcher it once held is gone. */
 #fern-header .fern-header-center { flex: 1; display: flex; justify-content: center; min-width: 0; }
-#fern-header .fern-header-center .lang-trigger { max-width: 360px; }
-
-/* --- Language switcher trigger (search-bar slot) --- */
-.lang-trigger {
-  appearance: none; background: transparent; border: 0; font: inherit;
-  flex: 1; display: inline-flex; align-items: center;
-  gap: calc(var(--spacing) * 2);
-  height: calc(var(--spacing) * 9);
-  padding: calc(var(--spacing) * 2);
-  border-radius: calc(var(--radius) * 2);
-  box-shadow: inset 0 0 0 1px var(--grayscale-a5);
-  color: var(--grayscale-a11); font-size: var(--text-sm); font-weight: 500;
-  cursor: pointer; overflow: hidden;
-  transition: background-color 0.15s, box-shadow 0.15s;
-}
-.lang-trigger:hover, .lang-trigger[data-state="open"] { background-color: var(--grayscale-a3); }
-.lang-trigger:focus-visible { outline: none; box-shadow: inset 0 0 0 1px var(--accent); }
-.lang-trigger svg { width: calc(var(--spacing) * 4); height: calc(var(--spacing) * 4); flex-shrink: 0; }
-.lang-trigger .lang-trigger-label { color: var(--grayscale-12); white-space: nowrap; }
-.lang-trigger .lang-trigger-meta {
-  margin-left: auto; color: var(--grayscale-a9); font-weight: 400;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
 
 /* --- Right-side button group --- */
 .fern-button-group { display: inline-flex; align-items: center; gap: calc(var(--spacing) * 2); }
@@ -213,18 +191,10 @@ html { scroll-padding-top: calc(var(--fern-header-height) + var(--md-header-heig
 #product-panel .fern-product-selector-radio-group > a[href*="server-sdks"]::before,
 #product-panel .fern-product-selector-radio-group > a[href$="/docs/apis"]::before { top: -28px; font-size: 11px; }
 
-/* --- Language dropdown items --- */
-#lang-panel { min-width: 320px; }
-#lang-panel .fern-dropdown-item { gap: calc(var(--spacing) * 2); }
-#lang-panel .item-meta { margin-left: auto; padding-left: calc(var(--spacing) * 4); font-size: var(--text-xs); color: var(--grayscale-a9); }
-.lang-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lang-color, var(--grayscale-8)); display: inline-block; flex-shrink: 0; }
-#lang-panel .fern-dropdown-item[aria-current="true"] { background: var(--accent-a3); }
-
 /* --- Responsive: collapse like the Fern header --- */
 @media (max-width: 1023px) {
   #fern-header .fern-header-navbar-links .fern-button-text { display: none; }
   #fern-header .fern-logo-text { display: none; }
-  .lang-trigger .lang-trigger-meta { display: none; }
 }
 @media (max-width: 600px) {
   #product-panel { width: 96vw; }
