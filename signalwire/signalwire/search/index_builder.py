@@ -294,9 +294,18 @@ class IndexBuilder:
                 # Use original content as fallback
                 chunk["processed_content"] = chunk["content"]
                 chunk["keywords"] = []
-                # Create zero embedding as fallback
+                # Create zero embedding as fallback. Match the loaded model's
+                # true dimension -- a hardcoded 768 corrupts indexes built with
+                # a 384-dim model (e.g. the mini/all-MiniLM default), mixing
+                # vector widths that break cosine similarity at query time.
                 if np:
-                    embedding = np.zeros(768, dtype=np.float32)
+                    fallback_dim = 768
+                    try:
+                        if self.model is not None:
+                            fallback_dim = self.model.get_sentence_embedding_dimension()
+                    except Exception:  # noqa: S110  # fall back to 768 if the model cannot report its dimension
+                        pass
+                    embedding = np.zeros(fallback_dim, dtype=np.float32)
                     chunk["embedding"] = embedding.tobytes()
                 else:
                     chunk["embedding"] = b""
@@ -770,6 +779,13 @@ class IndexBuilder:
                         chunk_hash,
                     ),
                 )
+
+            # Populate the external-content FTS5 index from the chunks table.
+            # chunks_fts is declared with content='chunks', so writing to
+            # `chunks` does NOT fill the FTS index. Without this rebuild,
+            # `chunks_fts MATCH` returns nothing on a freshly built index and
+            # keyword search silently degrades to the LIKE fallback.
+            cursor.execute("INSERT INTO chunks_fts(chunks_fts) VALUES('rebuild')")
 
             conn.commit()
 
