@@ -1,5 +1,25 @@
 # Changelog
 
+## [3.4.2] - 2026-09-17
+
+Search-index and webhook-signature fixes.
+
+### Fixed
+- Search: the FTS5 keyword index is now populated at build time. `chunks_fts` is
+  an external-content table, so nothing filled it and `MATCH` returned nothing on
+  a freshly built `.swsearch` — keyword search silently degraded to a LIKE scan.
+  Rebuild existing indexes to gain working keyword search.
+- Search: the zero-embedding fallback for a chunk that fails to embed now matches
+  the loaded model's dimension instead of a hardcoded 768, which corrupted
+  indexes built with a 384-dim model (the mini/all-MiniLM default).
+
+### Added
+- Webhook signature validation now accepts the stronger
+  `X-SignalWire-Sha256-Signature` header (HMAC-SHA256), preferred over the SHA-1
+  `X-SignalWire-Signature` when present and falling back to it so existing
+  deployments keep working. New `validate_webhook_signature_sha256()` and
+  `SIGNALWIRE_SHA256_SIGNATURE_HEADER` are exported from `core/security`.
+
 ## [3.4.1] - 2026-09-06
 
 Search correctness and retrieval-quality fixes.
