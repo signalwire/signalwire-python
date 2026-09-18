@@ -4,14 +4,18 @@ Webhook signature validation for SignalWire-signed HTTP requests.
 Copyright (c) 2025 SignalWire. Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
-Implements both SignalWire webhook signature schemes:
+Implements the SignalWire webhook signature schemes:
 
 - Scheme A (RELAY/SWML/JSON): hex(HMAC-SHA1(key, url + raw_body))
+- Scheme A / SHA-256: hex(HMAC-SHA256(key, url + raw_body)) -- the platform also
+  sends this as the ``X-SignalWire-Sha256-Signature`` header. Identical message
+  construction to Scheme A with a stronger hash; prefer it when present.
 - Scheme B (Compat/cXML form): base64(HMAC-SHA1(key, url + sortedFormParams))
   with optional bodySHA256 query-param fallback for JSON-on-compat-surface.
 
 Public API:
     validate_webhook_signature(signing_key, signature, url, raw_body) -> bool
+    validate_webhook_signature_sha256(signing_key, signature, url, raw_body) -> bool
     validate_request(signing_key, signature, url, params_or_raw_body) -> bool
 
 All comparisons use ``hmac.compare_digest`` (constant-time) so the secret
@@ -39,6 +43,15 @@ def _hex_hmac_sha1(key: str, message: str) -> str:
         key.encode("utf-8"),
         message.encode("utf-8"),
         hashlib.sha1,
+    ).hexdigest()
+
+
+def _hex_hmac_sha256(key: str, message: str) -> str:
+    """Scheme-A/SHA-256 digest: lowercase hex of HMAC-SHA256."""
+    return hmac.new(
+        key.encode("utf-8"),
+        message.encode("utf-8"),
+        hashlib.sha256,
     ).hexdigest()
 
 
@@ -266,6 +279,51 @@ def validate_webhook_signature(
     return False
 
 
+def validate_webhook_signature_sha256(
+    signing_key: str,
+    signature: str,
+    url: str,
+    raw_body: str,
+) -> bool:
+    """Validate the SHA-256 webhook signature (Scheme A with a stronger hash).
+
+    SignalWire sends ``X-SignalWire-Sha256-Signature`` alongside the SHA-1
+    ``X-SignalWire-Signature`` on signed webhooks. Its construction is the same
+    Scheme A message with SHA-256::
+
+        hex(HMAC-SHA256(signing_key, url + raw_body))
+
+    Only Scheme A (RELAY/SWML/JSON) is defined for this header; the legacy
+    cXML/form Scheme B stays on SHA-1 -- see :func:`validate_webhook_signature`.
+
+    Args:
+        signing_key: Customer's Signing Key. ``None`` / empty raises
+            ``ValueError`` (a programming error, not a validation failure).
+        signature: The ``X-SignalWire-Sha256-Signature`` header value (64-char
+            lowercase hex). Missing / empty returns False without raising.
+        url: The full public URL SignalWire POSTed to, exactly as the platform
+            saw it when it computed the signature.
+        raw_body: The raw request body as a UTF-8 string, BEFORE any parsing.
+            Must be a ``str`` -- passing a parsed dict raises ``TypeError``.
+
+    Returns:
+        True if the SHA-256 signature matches, False otherwise.
+
+    Raises:
+        ValueError: when ``signing_key`` is missing.
+        TypeError: when ``raw_body`` is not a string.
+    """
+    if not signing_key:
+        raise ValueError("signing_key is required")
+    if not isinstance(raw_body, str):
+        raise TypeError("raw_body must be a str — did you pass parsed JSON by mistake?")
+    if signature is None or signature == "":
+        return False
+
+    expected = _hex_hmac_sha256(signing_key, url + raw_body)
+    return _safe_eq(expected, signature)
+
+
 def validate_request(
     signing_key: str,
     signature: str,
@@ -326,4 +384,5 @@ def validate_request(
 __all__ = [
     "validate_request",
     "validate_webhook_signature",
+    "validate_webhook_signature_sha256",
 ]

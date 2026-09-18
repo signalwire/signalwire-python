@@ -22,6 +22,7 @@ import pytest
 from signalwire.core.security.webhook_validator import (
     validate_request,
     validate_webhook_signature,
+    validate_webhook_signature_sha256,
 )
 
 
@@ -129,6 +130,84 @@ class TestSchemeA:
             )
             is False
         )
+
+
+# ---------------------------------------------------------------------------
+# Scheme A / SHA-256 — RELAY/JSON with a stronger hash (hex)
+# ---------------------------------------------------------------------------
+
+class TestSchemeASha256:
+    """hex(HMAC-SHA256(key, url + raw_body)) — the X-SignalWire-Sha256-Signature
+    header. Same message construction as Scheme A, stronger hash."""
+
+    def _sign(self, key: str, url: str, raw_body: str) -> str:
+        return hmac.new(
+            key.encode("utf-8"),
+            (url + raw_body).encode("utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
+
+    def test_positive_vector(self) -> None:
+        """A correctly-constructed SHA-256 signature validates."""
+        sig = self._sign(
+            VECTOR_A["signing_key"], VECTOR_A["url"], VECTOR_A["raw_body"]
+        )
+        assert len(sig) == 64  # SHA-256 hex is 64 chars vs SHA-1's 40
+        assert (
+            validate_webhook_signature_sha256(
+                VECTOR_A["signing_key"], sig, VECTOR_A["url"], VECTOR_A["raw_body"]
+            )
+            is True
+        )
+
+    def test_sha1_signature_not_accepted_as_sha256(self) -> None:
+        """The SHA-1 digest must NOT validate through the SHA-256 path."""
+        assert (
+            validate_webhook_signature_sha256(
+                VECTOR_A["signing_key"],
+                VECTOR_A["expected"],  # the SHA-1 hex vector
+                VECTOR_A["url"],
+                VECTOR_A["raw_body"],
+            )
+            is False
+        )
+
+    def test_negative_tampered_body(self) -> None:
+        sig = self._sign(
+            VECTOR_A["signing_key"], VECTOR_A["url"], VECTOR_A["raw_body"]
+        )
+        tampered = VECTOR_A["raw_body"].replace("answered", "ringing")
+        assert (
+            validate_webhook_signature_sha256(
+                VECTOR_A["signing_key"], sig, VECTOR_A["url"], tampered
+            )
+            is False
+        )
+
+    def test_negative_wrong_key(self) -> None:
+        sig = self._sign(
+            VECTOR_A["signing_key"], VECTOR_A["url"], VECTOR_A["raw_body"]
+        )
+        assert (
+            validate_webhook_signature_sha256(
+                "wrong-key", sig, VECTOR_A["url"], VECTOR_A["raw_body"]
+            )
+            is False
+        )
+
+    def test_missing_signature_returns_false(self) -> None:
+        assert (
+            validate_webhook_signature_sha256(
+                VECTOR_A["signing_key"], "", VECTOR_A["url"], VECTOR_A["raw_body"]
+            )
+            is False
+        )
+
+    def test_missing_signing_key_raises(self) -> None:
+        with pytest.raises(ValueError):
+            validate_webhook_signature_sha256(
+                "", "deadbeef", VECTOR_A["url"], VECTOR_A["raw_body"]
+            )
 
 
 # ---------------------------------------------------------------------------

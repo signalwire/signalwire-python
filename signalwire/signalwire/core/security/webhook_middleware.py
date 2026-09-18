@@ -44,10 +44,14 @@ from collections.abc import Awaitable, Callable, Mapping
 
 from fastapi import HTTPException, Request, Response, status
 
-from signalwire.core.security.webhook_validator import validate_webhook_signature
+from signalwire.core.security.webhook_validator import (
+    validate_webhook_signature,
+    validate_webhook_signature_sha256,
+)
 
 
 SIGNALWIRE_SIGNATURE_HEADER = "x-signalwire-signature"
+SIGNALWIRE_SHA256_SIGNATURE_HEADER = "x-signalwire-sha256-signature"
 TWILIO_COMPAT_SIGNATURE_HEADER = "x-twilio-signature"
 
 
@@ -69,8 +73,9 @@ def validate(
     wrapper (:func:`make_webhook_validation_dependency` here) is the only idiom
     on top of it.
 
-    The ``headers`` map is consulted for the signature header
-    (``X-SignalWire-Signature`` or the ``X-Twilio-Signature`` alias); ``method``
+    The ``headers`` map is consulted for the signature header: the stronger
+    ``X-SignalWire-Sha256-Signature`` is preferred when present, falling back to
+    ``X-SignalWire-Signature`` (or the ``X-Twilio-Signature`` alias); ``method``
     is accepted to keep a stable signature but is not part of the HMAC. Returns
     ``(403, {}, "")`` on any failure (missing/bad
     signature, non-UTF-8 body, validator error) — no body detail, to avoid
@@ -91,6 +96,20 @@ def validate(
     """
     if not signing_key:
         raise ValueError("signing_key is required")
+
+    # Prefer the stronger SHA-256 signature when the platform sends it
+    # (X-SignalWire-Sha256-Signature): same Scheme A message, SHA-256 hash. Fall
+    # back to the SHA-1 header below so deployments on older platform builds --
+    # and the cXML/form Scheme B path -- keep validating.
+    sha256_signature = headers.get(SIGNALWIRE_SHA256_SIGNATURE_HEADER)
+    if sha256_signature:
+        try:
+            if validate_webhook_signature_sha256(
+                signing_key, sha256_signature, url, body
+            ):
+                return None
+        except (TypeError, ValueError):
+            pass  # fall back to the SHA-1 header path below
 
     signature = headers.get(SIGNALWIRE_SIGNATURE_HEADER)
     if signature is None:
@@ -146,7 +165,8 @@ def make_webhook_validation_dependency(
 
     1. Reads ``await request.body()`` and stashes the bytes on
        ``request.state.raw_body``.
-    2. Pulls the ``X-SignalWire-Signature`` header (or the Twilio alias).
+    2. Pulls the signature header (``X-SignalWire-Sha256-Signature`` preferred,
+       then ``X-SignalWire-Signature`` or the Twilio alias).
     3. Reconstructs the public URL (proxy headers / env / fallback).
     4. Calls :func:`validate_webhook_signature`.
     5. On invalid signature: raises ``HTTPException(403)`` to short-circuit
@@ -205,6 +225,7 @@ def make_webhook_validation_dependency(
 
 
 __all__ = [
+    "SIGNALWIRE_SHA256_SIGNATURE_HEADER",
     "SIGNALWIRE_SIGNATURE_HEADER",
     "TWILIO_COMPAT_SIGNATURE_HEADER",
     "make_webhook_validation_dependency",
