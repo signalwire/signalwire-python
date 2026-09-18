@@ -394,9 +394,55 @@ class TestIndexBuilderDatabaseCreation:
         row = cursor.fetchone()
         assert row[0] == "Test content"
         assert row[1] == "test.txt"
-        
+
         conn.close()
-    
+
+    def test_create_database_populates_fts_index(self) -> None:
+        """Regression: the external-content FTS5 index must be populated at build
+        time. chunks_fts is declared content='chunks', so it stays empty unless
+        rebuilt -- previously MATCH returned nothing on a fresh index and keyword
+        search silently fell back to a LIKE scan."""
+        with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+            self.temp_db = f.name
+
+        chunks = [
+            {
+                "content": "The quick brown fox",
+                "processed_content": "quick brown fox",
+                "keywords": ["fox", "brown"],
+                "language": "en",
+                "embedding": b"fake_embedding_data",
+                "filename": "animals.txt",
+                "section": "Intro",
+                "start_line": 1,
+                "end_line": 1,
+                "tags": ["animals"],
+                "metadata": {},
+            }
+        ]
+
+        self.builder._create_database(self.temp_db, chunks, ["en"], ["/docs"], ["txt"])
+
+        conn = sqlite3.connect(self.temp_db)
+        cursor = conn.cursor()
+        try:
+            # A MATCH against the external-content FTS index must find the row.
+            # This returned nothing before the fix, because the FTS index was
+            # created but never populated from the chunks table. (COUNT(*) on an
+            # external-content FTS table reflects the content table and so does
+            # NOT distinguish the bug -- the MATCH is the real regression check.)
+            cursor.execute(
+                "SELECT c.content FROM chunks_fts "
+                "JOIN chunks c ON chunks_fts.rowid = c.id "
+                "WHERE chunks_fts MATCH ?",
+                ("brown",),
+            )
+            row = cursor.fetchone()
+            assert row is not None, "chunks_fts MATCH found nothing -- FTS index not populated"
+            assert row[0] == "The quick brown fox"
+        finally:
+            conn.close()
+
     def test_create_database_with_existing_file(self) -> None:
         """Test database creation with existing file"""
         with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
