@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 
 from signalwire.core.security.webhook_middleware import (
     SIGNALWIRE_SIGNATURE_HEADER,
+    SIGNALWIRE_SHA256_SIGNATURE_HEADER,
     TWILIO_COMPAT_SIGNATURE_HEADER,
     make_webhook_validation_dependency,
 )
@@ -30,6 +31,14 @@ def _scheme_a_signature(key: str, url: str, raw_body: str) -> str:
         key.encode("utf-8"),
         (url + raw_body).encode("utf-8"),
         hashlib.sha1,
+    ).hexdigest()
+
+
+def _scheme_a_sha256_signature(key: str, url: str, raw_body: str) -> str:
+    return hmac.new(
+        key.encode("utf-8"),
+        (url + raw_body).encode("utf-8"),
+        hashlib.sha256,
     ).hexdigest()
 
 
@@ -96,6 +105,77 @@ class TestInvalidSignature:
 # ---------------------------------------------------------------------------
 # 200 on valid + raw body forwarded
 # ---------------------------------------------------------------------------
+
+class TestSha256SignaturePreference:
+    """The middleware prefers X-SignalWire-Sha256-Signature and falls back to the
+    SHA-1 header (issue #21067: SHA-256 header was sent but never validated)."""
+
+    def test_valid_sha256_signature_passes(self, signed_app: FastAPI) -> None:
+        client = TestClient(signed_app, base_url="http://testserver")
+        body = '{"event":"call.state","params":{"call_id":"abc-123"}}'
+        url = "http://testserver/webhook"
+        sig256 = _scheme_a_sha256_signature(SIGNING_KEY, url, body)
+
+        resp = client.post(
+            "/webhook",
+            content=body,
+            headers={
+                SIGNALWIRE_SHA256_SIGNATURE_HEADER: sig256,
+                "content-type": "application/json",
+            },
+        )
+        assert resp.status_code == 200
+        assert resp.json()["echo_decoded"] == body
+
+    def test_bad_sha256_falls_back_to_valid_sha1(self, signed_app: FastAPI) -> None:
+        """Platform sends both headers; a mismatched SHA-256 must not reject a
+        request whose SHA-1 signature is valid (backward-compat fallback)."""
+        client = TestClient(signed_app, base_url="http://testserver")
+        body = '{"event":"call.state"}'
+        url = "http://testserver/webhook"
+        sig1 = _scheme_a_signature(SIGNING_KEY, url, body)
+
+        resp = client.post(
+            "/webhook",
+            content=body,
+            headers={
+                SIGNALWIRE_SHA256_SIGNATURE_HEADER: "0" * 64,  # wrong
+                SIGNALWIRE_SIGNATURE_HEADER: sig1,             # right
+                "content-type": "application/json",
+            },
+        )
+        assert resp.status_code == 200
+
+    def test_bad_sha256_with_no_sha1_is_rejected(self, signed_app: FastAPI) -> None:
+        client = TestClient(signed_app, base_url="http://testserver")
+        resp = client.post(
+            "/webhook",
+            content='{"event":"call.state"}',
+            headers={
+                SIGNALWIRE_SHA256_SIGNATURE_HEADER: "0" * 64,
+                "content-type": "application/json",
+            },
+        )
+        assert resp.status_code == 403
+
+    def test_valid_sha256_preferred_over_bad_sha1(self, signed_app: FastAPI) -> None:
+        """Valid SHA-256 accepts even when the SHA-1 header is garbage."""
+        client = TestClient(signed_app, base_url="http://testserver")
+        body = '{"event":"call.state"}'
+        url = "http://testserver/webhook"
+        sig256 = _scheme_a_sha256_signature(SIGNING_KEY, url, body)
+
+        resp = client.post(
+            "/webhook",
+            content=body,
+            headers={
+                SIGNALWIRE_SHA256_SIGNATURE_HEADER: sig256,
+                SIGNALWIRE_SIGNATURE_HEADER: "not-valid",
+                "content-type": "application/json",
+            },
+        )
+        assert resp.status_code == 200
+
 
 class TestValidSignature:
     def test_valid_scheme_a_signature_passes_through(self, signed_app: FastAPI) -> None:

@@ -10,9 +10,11 @@ See LICENSE file in the project root for full license information.
 from signalwire.core.security.webhook_validator import (
     validate_request,
     validate_webhook_signature,
+    validate_webhook_signature_sha256,
 )
 from signalwire.core.security.webhook_middleware import (
     SIGNALWIRE_SIGNATURE_HEADER,
+    SIGNALWIRE_SHA256_SIGNATURE_HEADER,
     TWILIO_COMPAT_SIGNATURE_HEADER,
     make_webhook_validation_dependency,
 )
@@ -25,6 +27,7 @@ from signalwire.core.security.security_utils import (
 
 __all__ = [
     "SENSITIVE_HEADERS",
+    "SIGNALWIRE_SHA256_SIGNATURE_HEADER",
     "SIGNALWIRE_SIGNATURE_HEADER",
     "TWILIO_COMPAT_SIGNATURE_HEADER",
     "filter_sensitive_headers",
@@ -33,4 +36,5 @@ __all__ = [
     "redact_url",
     "validate_request",
     "validate_webhook_signature",
+    "validate_webhook_signature_sha256",
 ]
