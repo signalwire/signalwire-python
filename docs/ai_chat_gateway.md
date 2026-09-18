@@ -140,6 +140,50 @@ in the far future and the conversation never appears to age.
 `start`, `chat`, `log` and `end` are the whole surface. Anything else is a
 `400`.
 
+## Telling the agent about the page
+
+`start` and `chat` accept one optional field the gateway forwards rather than
+overwrites: `user_meta_data`.
+
+```http
+POST /chat/
+{"method": "start",
+ "user_meta_data": {"metadata": {"page": {"title": "Pricing",
+                                          "url": "https://shop.example.com/pricing"}}}}
+```
+
+It arrives at your agent's config endpoint under `params`:
+
+```json
+{
+  "conversation_type": "chat",
+  "conversation_id": "chat-QGw3...",
+  "call_id": "chat-QGw3...",
+  "params": {
+    "id": "chat-QGw3...",
+    "config_url": "https://my-agent.example.com/swml",
+    "user_meta_data": {"metadata": {"page": {"title": "Pricing", "…": "…"}}}
+  }
+}
+```
+
+so a chat agent can tailor its greeting the way a voice agent already does
+from dial-time `userVariables`. Send the same structure on both and one parse
+serves both transports. `@signalwire/address-widget` does exactly that.
+
+**It is read only when the conversation is created.** That is the `start`
+call, or whichever `chat` auto-creates when nothing was started. An open
+conversation does not re-fetch its config, so metadata on later turns is
+accepted and goes nowhere. Send it on every call regardless — that is what
+guarantees the creating one carries it — but design for a snapshot taken at
+the greeting, not a feed of where the visitor is now.
+
+**It is browser-authored.** The gateway bounds it (8 KiB serialized, `413`
+past that; `400` if it is not an object) and keeps it nested under its own
+key, so it cannot displace the conversation id or the `config_url` the gateway
+owns. It cannot vouch for the contents. Treat it as a visitor's claim about
+themselves — including that a page can put text in it aimed at your prompt.
+
 ## What a stolen key can do
 
 Design for this, because a publishable key is public by definition.

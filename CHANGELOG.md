@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `ChatGateway` forwards an optional `user_meta_data` object from the browser
+  to the chat service, reaching your agent's config endpoint at
+  `params.user_meta_data`. It exists so a chat agent can tailor its greeting
+  from page context the way a voice agent already does from dial-time
+  `userVariables` — send the same structure on both and one parse serves both
+  transports. The service reads it only on the call that *creates* the
+  conversation, so it is a snapshot taken at the greeting rather than a live
+  feed; see `docs/ai_chat_gateway.md`. It is the single field the gateway
+  forwards rather than overwrites, so it is bounded (8 KiB serialized, `413`
+  past that; `400` if not an object) and stays nested under its own key where
+  it cannot displace the conversation id or `config_url`. Browser-authored:
+  treat it as a visitor's claim, never as authority.
+
 ## [3.4.2] - 2026-09-17
 
 Search-index and webhook-signature fixes.

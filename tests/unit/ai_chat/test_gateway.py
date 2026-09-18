@@ -15,6 +15,7 @@ from aiohttp import web
 from aiohttp.test_utils import TestServer
 
 from signalwire.ai_chat import AIChatClient, ChatGateway, GatewayRejection
+from signalwire.ai_chat.gateway import MAX_USER_METADATA_BYTES
 
 CONFIG_URL = "https://agent.example.com/swml"
 KEY = "pk_test_key"
@@ -645,3 +646,144 @@ async def test_start_forwards_the_configured_timeout_upstream(service: Any) -> N
             assert sent["params"]["conversation_timeout"] == 900
     finally:
         await gw._client.close()
+
+
+# ── Page context the browser volunteers ──────────────────────────────
+
+PAGE = {
+    "capabilities": {"widget": "signalwire-address", "medium": "chat"},
+    "metadata": {
+        "page": {"url": "https://shop.example.com/pricing", "title": "Pricing"}
+    },
+}
+
+
+def test_page_context_reaches_the_create_params(gateway: ChatGateway) -> None:
+    """The whole point: a chat agent gets the same page context a voice agent
+    gets from dial-time userVariables, at the same path, so one parse works
+    for both transports."""
+    method, params, _ = prep(gateway, {"method": "start", "user_meta_data": PAGE})
+    assert method == "create_conversation"
+    assert params["user_meta_data"]["metadata"]["page"]["title"] == "Pricing"
+
+
+def test_page_context_rides_the_chat_path_too(gateway: ChatGateway) -> None:
+    """`chat` auto-creates when nothing was started, and creation is the only
+    moment the service reads the bag. Putting it on `start` alone would lose it
+    for every visitor whose first act was typing rather than opening.
+
+    That the service then ignores it on turns against a conversation that
+    already exists is its business, not the gateway's — we cannot tell which
+    turn creates, so we forward on all of them."""
+    _, first, handle = prep(gateway, {"method": "start", "user_meta_data": PAGE})
+    assert first["user_meta_data"] == PAGE
+
+    moved = {"metadata": {"page": {"url": "https://shop.example.com/docs"}}}
+    _, later, _ = prep(
+        gateway, {"message": "and now?", "handle": handle, "user_meta_data": moved}
+    )
+    assert later["user_meta_data"] == moved
+
+
+def test_page_context_is_optional(gateway: ChatGateway) -> None:
+    """Every widget predating this sends nothing, and an empty bag upstream is
+    noise. Absent, null and empty must all mean the key simply is not there."""
+    for body in (
+        {"method": "start"},
+        {"method": "start", "user_meta_data": None},
+        {"method": "start", "user_meta_data": {}},
+    ):
+        _, params, _ = prep(gateway, body)
+        assert "user_meta_data" not in params
+
+
+def test_page_context_must_be_an_object(gateway: ChatGateway) -> None:
+    for bad in ("a string", 42, ["a", "list"], True):
+        with pytest.raises(GatewayRejection) as err:
+            prep(gateway, {"method": "start", "user_meta_data": bad})
+        assert err.value.status == 400
+
+
+def test_page_context_is_bounded(gateway: ChatGateway) -> None:
+    """It is browser-authored and rides every turn, so an unbounded field is a
+    way to push arbitrary bytes into a metered service on the project's tab."""
+    fat = {"junk": "x" * (MAX_USER_METADATA_BYTES + 1)}
+    with pytest.raises(GatewayRejection) as err:
+        prep(gateway, {"method": "start", "user_meta_data": fat})
+    assert err.value.status == 413
+
+    # The cap is a cap, not a ban — a realistic bag is nowhere near it.
+    _, params, _ = prep(gateway, {"method": "start", "user_meta_data": PAGE})
+    assert params["user_meta_data"] == PAGE
+
+
+def test_page_context_is_rejected_before_a_conversation_is_charged(
+    service: Any,
+) -> None:
+    """Order matters: validating after mint_handle() would let a page with a
+    broken metadata builder burn the new-conversation allowance on requests
+    that never reach the service."""
+    gw = make_gateway(service, max_new_conversations=1)
+    with pytest.raises(GatewayRejection):
+        gw.prepare({"method": "start", "user_meta_data": "nope"}, origin=None, key=KEY)
+    # The rejected request consumed nothing, so the one allowed conversation is
+    # still available.
+    _, _, minted = gw.prepare({"method": "start"}, origin=None, key=KEY)
+    assert minted is not None
+
+
+def test_page_context_cannot_displace_what_the_gateway_owns(
+    gateway: ChatGateway,
+) -> None:
+    """It is forwarded, which is exactly why it must stay nested. Flattened, a
+    page could name its own conversation or point config_url elsewhere — the
+    two things every other check in this file exists to prevent."""
+    hostile = {"id": "someone-elses-chat", "config_url": "https://evil/swml"}
+    _, params, minted = prep(gateway, {"message": "hi", "user_meta_data": hostile})
+    assert minted is not None
+    assert params["id"] == gateway.read_handle(minted)
+    assert params["config_url"] == CONFIG_URL
+    assert params["user_meta_data"] == hostile
+
+
+async def test_page_context_survives_the_http_dispatch(
+    gateway: ChatGateway, service: Any
+) -> None:
+    """prepare() builds the params, but the create branch rebuilds the call
+    from kwargs — the same shape that silently dropped conversation_timeout
+    once already. This pins that it reaches the wire, not just the dict."""
+    async with asgi(gateway) as http:
+        started = await http.post(
+            "/chat/",
+            json={"method": "start", "user_meta_data": PAGE},
+            headers=HEADERS,
+        )
+        assert started.status_code == 200
+        sent = service.seen[-1]
+        assert sent["method"] == "create_conversation"
+        assert sent["params"]["user_meta_data"] == PAGE
+
+        # And on the streamed chat path, which forwards params verbatim.
+        handle = started.headers["x-chat-handle"]
+        chatted = await http.post(
+            "/chat/",
+            json={"message": "hi", "handle": handle, "user_meta_data": PAGE},
+            headers=HEADERS,
+        )
+        assert chatted.status_code == 200
+        sent = service.seen[-1]
+        assert sent["method"] == "chat"
+        assert sent["params"]["user_meta_data"] == PAGE
+
+
+async def test_a_malformed_bag_is_a_clean_rejection_not_a_500(
+    gateway: ChatGateway,
+) -> None:
+    async with asgi(gateway) as http:
+        r = await http.post(
+            "/chat/",
+            json={"method": "start", "user_meta_data": ["not", "an", "object"]},
+            headers=HEADERS,
+        )
+        assert r.status_code == 400
+        assert r.json()["error"] == "user_meta_data must be an object"

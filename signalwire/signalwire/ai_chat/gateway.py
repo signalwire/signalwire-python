@@ -48,11 +48,35 @@ The origin allowlist is a second layer, and an honest description of it is:
 it stops a key pasted into someone else's page, because a browser will send
 their origin and we refuse it. It does not stop anyone using curl. Treat it
 as leak containment, not access control.
+
+## What the browser may volunteer
+
+Exactly one field is forwarded rather than overwritten: ``user_meta_data``,
+the page context a widget collects about itself (url, title, referrer,
+locale, viewport). It exists so a chat agent can tailor its greeting the way
+a voice agent already does from dial-time ``userVariables`` — same data, same
+shape, different transport — and it reaches the agent's config request as
+``params.user_meta_data``.
+
+The service reads it when it *creates* a conversation, which is the ``start``
+call or whichever ``chat`` auto-creates. An already-open conversation does not
+re-fetch its config, so metadata sent on later turns is accepted and goes
+nowhere. Send it every turn regardless — that is what guarantees the creating
+turn carries it — but do not design as though the agent sees a visitor move
+between pages mid-conversation. It does not.
+
+It is browser-authored, so treat it as a visitor's *claim* about themselves
+and never as authority; a page can put anything in it, including text aimed
+at your prompt. The gateway bounds it (``MAX_USER_METADATA_BYTES``) and keeps
+it nested under its own key, so it cannot collide with the conversation id or
+``config_url`` the gateway owns — but it cannot vouch for the contents, and
+neither can you.
 """
 
 import base64
 import hashlib
 import hmac
+import json
 import os
 import secrets
 import time
@@ -81,6 +105,12 @@ DEFAULT_WINDOW_SECONDS = 60
 _LOCAL_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "[::1]"})
 
 ALLOWED_METHODS = frozenset({"start", "chat", "log", "end"})
+
+# Bound on the browser-volunteered `user_meta_data` bag, serialized. The real
+# payload a widget sends is one to two KB, so this is invisible to anything
+# honest; without it a page rides every turn with unbounded bytes into a
+# metered service on the project's tab.
+MAX_USER_METADATA_BYTES = 8 * 1024
 
 # Roles a browser may see. `chat_log` returns the WHOLE conversation as the
 # service holds it — the substituted system prompt, tool calls, tool results.
@@ -399,6 +429,36 @@ class ChatGateway:
 
     # ── The proxied call ─────────────────────────────────────────────
 
+    def read_user_metadata(self, body: dict[str, Any]) -> dict[str, Any] | None:
+        """Validate the page context a browser volunteered, or None.
+
+        The only field the gateway forwards instead of overwriting, so it is
+        the only one that needs a shape and a size. Absent, null and empty all
+        collapse to None — an empty bag upstream is noise, not information.
+
+        Raises:
+            GatewayRejection: 400 if it is not a JSON object, 413 if it
+                exceeds :data:`MAX_USER_METADATA_BYTES` serialized.
+        """
+        raw = body.get("user_meta_data")
+        if raw is None:
+            return None
+        if not isinstance(raw, dict):
+            raise GatewayRejection(400, "user_meta_data must be an object")
+        if not raw:
+            return None
+        try:
+            encoded = json.dumps(raw, separators=(",", ":")).encode()
+        except (TypeError, ValueError):
+            # prepare() is public, so this can be reached with a dict that
+            # never went through request.json() and holds something unsendable.
+            raise GatewayRejection(
+                400, "user_meta_data must be JSON-serializable"
+            ) from None
+        if len(encoded) > MAX_USER_METADATA_BYTES:
+            raise GatewayRejection(413, "user_meta_data too large")
+        return raw
+
     def prepare(
         self, body: dict[str, Any], *, origin: str | None, key: str | None
     ) -> tuple[str, dict[str, Any], str | None]:
@@ -411,6 +471,9 @@ class ChatGateway:
         Everything the browser could use to widen its own access is either
         rejected or overwritten here: the method must be one of two, the
         conversation comes from a signed handle, and ``config_url`` is ours.
+        The single exception is ``user_meta_data``, which is forwarded — see
+        :meth:`read_user_metadata` and the module docstring for why that is
+        narrow enough to be safe and what it still does not vouch for.
         """
         self.check_key(key)
         self.check_origin(origin)
@@ -418,6 +481,11 @@ class ChatGateway:
         method = body.get("method", "chat")
         if method not in ALLOWED_METHODS:
             raise GatewayRejection(400, "method not allowed")
+
+        # Read before minting so a malformed bag costs the caller nothing —
+        # rejecting after _charge_mint() would burn a conversation slot on a
+        # request that never reaches the service.
+        user_metadata = self.read_user_metadata(body)
 
         handle = body.get("handle")
         minted = None
@@ -450,6 +518,8 @@ class ChatGateway:
             }
             if self.conversation_timeout:
                 params["conversation_timeout"] = self.conversation_timeout
+            if user_metadata:
+                params["user_meta_data"] = user_metadata
             return "create_conversation", params, minted
 
         message = body.get("message")
@@ -470,6 +540,17 @@ class ChatGateway:
         # by a first message would silently get the service default instead.
         if self.conversation_timeout:
             chat_params["conversation_timeout"] = self.conversation_timeout
+        # On every chat, because any chat may be the one that creates: the
+        # service auto-creates from this method when the conversation does not
+        # exist yet, and that is the only moment it reads the bag.
+        #
+        # Verified against the service, because the natural assumption is
+        # wrong: an existing conversation is NOT re-fetched, so metadata sent
+        # on later turns is accepted and discarded. Sending it anyway costs a
+        # bounded field and means the creating turn is never the one that
+        # missed — do not read it as the agent tracking a visitor's movement.
+        if user_metadata:
+            chat_params["user_meta_data"] = user_metadata
         return "chat", chat_params, minted
 
     # ── FastAPI surface ──────────────────────────────────────────────
@@ -477,7 +558,8 @@ class ChatGateway:
     def router(self) -> "APIRouter":
         """An ``APIRouter`` exposing this gateway.
 
-        ``POST /`` takes ``{"method": "chat"|"end", "handle"?, "message"?}``
+        ``POST /`` takes
+        ``{"method": "chat"|"end", "handle"?, "message"?, "user_meta_data"?}``
         with the key in ``Authorization: Bearer``. A chat streams the
         service's JSON-RPC response body through **unbuffered** — the service
         pads slow turns with keepalive whitespace so proxies do not sever the
@@ -547,6 +629,7 @@ class ChatGateway:
                     params["id"],
                     config_url=params["config_url"],
                     timeout=params.get("conversation_timeout"),
+                    user_metadata=params.get("user_meta_data"),
                 )
                 if minted:
                     cors["X-Chat-Handle"] = minted
