@@ -1,6 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## [3.4.3] - 2026-09-17
+
+AI Chat gateway: browser-volunteered page context.
 
 ### Added
 - `ChatGateway` forwards an optional `user_meta_data` object from the browser
