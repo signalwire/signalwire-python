@@ -11,6 +11,7 @@ See LICENSE file in the project root for full license information.
 Unit tests for search index builder module
 """
 
+import os
 import pytest
 import tempfile
 import sqlite3
@@ -907,20 +908,12 @@ class TestSqliteHandleLifetime:
 
     @staticmethod
     def _open_fd_count() -> int:
-        import os
-
-        return len(os.listdir(f"/proc/{os.getpid()}/fd"))
+        return sum(1 for _ in Path(f"/proc/{os.getpid()}/fd").iterdir())
 
     def test_validate_index_does_not_leak_on_failure_paths(
         self, tmp_path: Path
     ) -> None:
-        import sqlite3
-
-        import pytest
-
-        from signalwire.search.index_builder import IndexBuilder
-
-        if not __import__("pathlib").Path("/proc/self/fd").exists():
+        if not Path("/proc/self/fd").exists():
             pytest.skip("descriptor counting needs /proc")
 
         # valid sqlite, but without the tables validate_index requires
