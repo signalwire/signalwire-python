@@ -1,9 +1,9 @@
 # API reference
 
-Language-native API reference for the SignalWire Python SDK, generated from
-docstrings with **MkDocs Material + mkdocstrings**, wrapped in the SignalWire
-**Fern navbar**, and published as a single unversioned site to this repo's own
-GitHub Pages:
+Language-native API reference for the SignalWire Python SDK, 
+generated from docstrings with **MkDocs Material + mkdocstrings**,
+wrapped in the SignalWire **Fern navbar**, 
+and published as a single unversioned site to this repo's own GitHub Pages:
 
 > https://signalwire.github.io/signalwire-python/
 
