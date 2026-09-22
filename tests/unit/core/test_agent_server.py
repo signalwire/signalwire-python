@@ -25,6 +25,7 @@ Note: Static file and agent route tests are separate from the core routing tests
 as they involve additional complexity (auth, startup events, etc.)
 """
 
+import base64
 import pytest
 import tempfile
 import os
@@ -532,6 +533,12 @@ class TestRunServer:
             os.unlink(cert_path)
 
 
+def _basic_auth(agent: AgentBase) -> str:
+    """The Authorization header value for an agent's own credentials."""
+    user, password = agent.get_basic_auth_credentials()[:2]
+    return "Basic " + base64.b64encode(f"{user}:{password}".encode()).decode()
+
+
 class TestHandleLambdaRequest:
     """Test _handle_lambda_request method"""
 
@@ -549,13 +556,24 @@ class TestHandleLambdaRequest:
         result = server._handle_lambda_request(None, None)
         assert result["statusCode"] == 404
 
+    def test_lambda_needs_the_agents_credentials(self) -> None:
+        """The agent's basic auth protects it here as it does on the web server."""
+        server = AgentServer()
+        agent = SimpleTestAgent(name="myagent")
+        agent._execute_swaig_function = Mock(return_value={"response": "ok"})  # type: ignore[method-assign]  # mock
+        server.register(agent, "/myagent")
+        event = {"path": "/myagent/swaig", "body": json.dumps({"function": "test"})}
+        result = server._handle_lambda_request(event, None)
+        assert result["statusCode"] == 401
+        agent._execute_swaig_function.assert_not_called()
+
     def test_lambda_matching_agent_returns_swml(self) -> None:
         """Test Lambda request that matches an agent returns SWML"""
         server = AgentServer()
         agent = SimpleTestAgent(name="myagent")
         agent._render_swml = Mock(return_value={"version": "1.0.0", "sections": {}})  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
-        event = {"path": "/myagent"}
+        event = {"path": "/myagent", "headers": {"Authorization": _basic_auth(agent)}}
         result = server._handle_lambda_request(event, None)
         assert result["statusCode"] == 200
 
@@ -565,7 +583,7 @@ class TestHandleLambdaRequest:
         agent = SimpleTestAgent(name="broken")
         agent._render_swml = Mock(side_effect=Exception("render failed"))  # type: ignore[method-assign]  # mock
         server.register(agent, "/broken")
-        event = {"path": "/broken"}
+        event = {"path": "/broken", "headers": {"Authorization": _basic_auth(agent)}}
         result = server._handle_lambda_request(event, None)
         assert result["statusCode"] == 500
         body = json.loads(result["body"])
@@ -587,7 +605,8 @@ class TestHandleLambdaRequest:
         agent = SimpleTestAgent(name="myagent")
         agent._render_swml = Mock(return_value={"version": "1.0"})  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
-        event = {"pathParameters": {"proxy": "myagent"}}
+        event = {"pathParameters": {"proxy": "myagent"},
+                 "headers": {"Authorization": _basic_auth(agent)}}
         result = server._handle_lambda_request(event, None)
         assert result["statusCode"] == 200
 
@@ -597,9 +616,22 @@ class TestHandleLambdaRequest:
         agent = SimpleTestAgent(name="myagent")
         agent._execute_swaig_function = Mock(return_value={"response": "ok"})  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
-        event = {"path": "/myagent/swaig", "body": json.dumps({"function": "test"})}
+        event = {"path": "/myagent/swaig", "body": json.dumps({"function": "test"}),
+                 "headers": {"Authorization": _basic_auth(agent)}}
         result = server._handle_lambda_request(event, None)
         assert result["statusCode"] == 200
+
+    def test_lambda_swaig_takes_the_function_and_arguments_from_the_body(self) -> None:
+        server = AgentServer()
+        agent = SimpleTestAgent(name="myagent")
+        agent._execute_swaig_function = Mock(return_value={"response": "ok"})  # type: ignore[method-assign]  # mock
+        server.register(agent, "/myagent")
+        body = {"function": "lookup", "argument": {"parsed": [{"q": "x"}]}, "call_id": "c1"}
+        event = {"path": "/myagent/swaig", "body": json.dumps(body),
+                 "headers": {"Authorization": _basic_auth(agent)}}
+        result = server._handle_lambda_request(event, None)
+        assert result["statusCode"] == 200
+        agent._execute_swaig_function.assert_called_once_with("lookup", {"q": "x"}, "c1", body)
 
     def test_lambda_swaig_function_subpath(self) -> None:
         """Test Lambda request to swaig/<function_name> subpath"""
@@ -607,7 +639,8 @@ class TestHandleLambdaRequest:
         agent = SimpleTestAgent(name="myagent")
         agent._execute_swaig_function = Mock(return_value={"response": "ok"})  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
-        event = {"path": "/myagent/swaig/my_func", "body": json.dumps({})}
+        event = {"path": "/myagent/swaig/my_func", "body": json.dumps({}),
+                 "headers": {"Authorization": _basic_auth(agent)}}
         result = server._handle_lambda_request(event, None)
         assert result["statusCode"] == 200
         agent._execute_swaig_function.assert_called_once_with("my_func", {}, None, None)
@@ -618,19 +651,22 @@ class TestHandleLambdaRequest:
         agent = SimpleTestAgent(name="myagent")
         agent._execute_swaig_function = Mock(side_effect=Exception("swaig error"))  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
-        event = {"path": "/myagent/swaig", "body": json.dumps({})}
+        event = {"path": "/myagent/swaig", "body": json.dumps({"function": "test"}),
+                 "headers": {"Authorization": _basic_auth(agent)}}
         result = server._handle_lambda_request(event, None)
         assert result["statusCode"] == 500
 
     def test_lambda_swaig_invalid_body(self) -> None:
-        """Test Lambda request with invalid JSON body"""
+        """A body that isn't JSON names no function, so nothing runs."""
         server = AgentServer()
         agent = SimpleTestAgent(name="myagent")
         agent._execute_swaig_function = Mock(return_value={"response": "ok"})  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
-        event = {"path": "/myagent/swaig", "body": "not valid json"}
+        event = {"path": "/myagent/swaig", "body": "not valid json",
+                 "headers": {"Authorization": _basic_auth(agent)}}
         result = server._handle_lambda_request(event, None)
-        assert result["statusCode"] == 200
+        assert result["statusCode"] == 400
+        agent._execute_swaig_function.assert_not_called()
 
 
 class TestHandleCgiRequest:
@@ -644,13 +680,27 @@ class TestHandleCgiRequest:
                 result = server._handle_cgi_request()
                 assert "404 Not Found" in result
 
+    def test_cgi_needs_the_agents_credentials(self) -> None:
+        """The agent's basic auth protects it here as it does on the web server."""
+        server = AgentServer()
+        agent = SimpleTestAgent(name="myagent")
+        agent._render_swml = Mock(return_value={"version": "1.0.0"})  # type: ignore[method-assign]  # mock
+        server.register(agent, "/myagent")
+        with patch.dict(os.environ, {"PATH_INFO": "/myagent"}, clear=False):
+            os.environ.pop("HTTP_AUTHORIZATION", None)
+            with patch("sys.stdout", new_callable=StringIO):
+                result = server._handle_cgi_request()
+        assert "401" in result
+        agent._render_swml.assert_not_called()
+
     def test_cgi_matching_agent_returns_swml(self) -> None:
         """Test CGI request that matches an agent returns SWML"""
         server = AgentServer()
         agent = SimpleTestAgent(name="myagent")
         agent._render_swml = Mock(return_value={"version": "1.0.0"})  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
-        with patch.dict(os.environ, {"PATH_INFO": "/myagent"}, clear=False):
+        env = {"PATH_INFO": "/myagent", "HTTP_AUTHORIZATION": _basic_auth(agent)}
+        with patch.dict(os.environ, env, clear=False):
             with patch("sys.stdout", new_callable=StringIO):
                 result = server._handle_cgi_request()
                 assert "200 OK" in result
@@ -661,7 +711,8 @@ class TestHandleCgiRequest:
         agent = SimpleTestAgent(name="broken")
         agent._render_swml = Mock(side_effect=Exception("render failed"))  # type: ignore[method-assign]  # mock
         server.register(agent, "/broken")
-        with patch.dict(os.environ, {"PATH_INFO": "/broken"}, clear=False):
+        env = {"PATH_INFO": "/broken", "HTTP_AUTHORIZATION": _basic_auth(agent)}
+        with patch.dict(os.environ, env, clear=False):
             with patch("sys.stdout", new_callable=StringIO):
                 result = server._handle_cgi_request()
                 assert "500 Internal Server Error" in result
@@ -676,18 +727,20 @@ class TestHandleCgiRequest:
                 assert "404 Not Found" in result
 
     def test_cgi_swaig_subpath(self) -> None:
-        """Test CGI request to swaig subpath with no body"""
+        """A POST to the swaig subpath runs the function named in the body."""
         server = AgentServer()
         agent = SimpleTestAgent(name="myagent")
         agent._execute_swaig_function = Mock(return_value={"response": "ok"})  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
-        env = {"PATH_INFO": "/myagent/swaig"}
-        # Remove CONTENT_LENGTH to avoid stdin reading
+        body = json.dumps({"function": "test", "call_id": "c1"})
+        env = {"PATH_INFO": "/myagent/swaig", "CONTENT_LENGTH": str(len(body)),
+               "HTTP_AUTHORIZATION": _basic_auth(agent)}
         with patch.dict(os.environ, env, clear=False):
-            os.environ.pop("CONTENT_LENGTH", None)
-            with patch("sys.stdout", new_callable=StringIO):
+            with patch("sys.stdin", StringIO(body)), patch("sys.stdout", new_callable=StringIO):
                 result = server._handle_cgi_request()
-                assert "200 OK" in result
+        assert "200 OK" in result
+        agent._execute_swaig_function.assert_called_once_with(
+            "test", {}, "c1", {"function": "test", "call_id": "c1"})
 
     def test_cgi_swaig_function_subpath(self) -> None:
         """Test CGI request to swaig/<function_name> subpath with no body"""
@@ -695,7 +748,7 @@ class TestHandleCgiRequest:
         agent = SimpleTestAgent(name="myagent")
         agent._execute_swaig_function = Mock(return_value={"response": "ok"})  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
-        env = {"PATH_INFO": "/myagent/swaig/my_func"}
+        env = {"PATH_INFO": "/myagent/swaig/my_func", "HTTP_AUTHORIZATION": _basic_auth(agent)}
         with patch.dict(os.environ, env, clear=False):
             os.environ.pop("CONTENT_LENGTH", None)
             with patch("sys.stdout", new_callable=StringIO):
@@ -708,9 +761,11 @@ class TestHandleCgiRequest:
         agent = SimpleTestAgent(name="myagent")
         agent._execute_swaig_function = Mock(side_effect=Exception("swaig error"))  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
-        env = {"PATH_INFO": "/myagent/swaig", "CONTENT_LENGTH": "0"}
+        body = json.dumps({"function": "test"})
+        env = {"PATH_INFO": "/myagent/swaig", "CONTENT_LENGTH": str(len(body)),
+               "HTTP_AUTHORIZATION": _basic_auth(agent)}
         with patch.dict(os.environ, env, clear=False):
-            with patch("sys.stdout", new_callable=StringIO):
+            with patch("sys.stdin", StringIO(body)), patch("sys.stdout", new_callable=StringIO):
                 result = server._handle_cgi_request()
                 assert "500 Internal Server Error" in result
 
@@ -720,7 +775,8 @@ class TestHandleCgiRequest:
         agent = SimpleTestAgent(name="myagent")
         agent._execute_swaig_function = Mock(side_effect=Exception("func error"))  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
-        env = {"PATH_INFO": "/myagent/swaig/broken_func", "CONTENT_LENGTH": "0"}
+        env = {"PATH_INFO": "/myagent/swaig/broken_func", "CONTENT_LENGTH": "0",
+               "HTTP_AUTHORIZATION": _basic_auth(agent)}
         with patch.dict(os.environ, env, clear=False):
             with patch("sys.stdout", new_callable=StringIO):
                 result = server._handle_cgi_request()

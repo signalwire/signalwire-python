@@ -24,6 +24,7 @@ import re
 import sys
 
 import structlog
+from collections.abc import MutableMapping
 from typing import Any
 
 _CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]")
@@ -53,13 +54,10 @@ def _install_library_null_handler() -> None:
     host-owned logger — so ``import signalwire`` never hijacks the app's logging.
     The app opts in to SDK log OUTPUT by calling ``configure_logging()`` explicitly
     (the server/CLI entry points do this)."""
-    sw_logger = logging.getLogger("signalwire")
-    if not any(isinstance(h, logging.NullHandler) for h in sw_logger.handlers):
-        sw_logger.addHandler(logging.NullHandler())
-
-
-# Import-time side effect: ONLY the library NullHandler. NOT global configuration.
-_install_library_null_handler()
+    for name in ["signalwire", *_get_sdk_logger_names()]:
+        lgr = logging.getLogger(name)
+        if not any(isinstance(h, logging.NullHandler) for h in lgr.handlers):
+            lgr.addHandler(logging.NullHandler())
 
 
 def get_execution_mode() -> str:
@@ -270,6 +268,11 @@ def _get_sdk_logger_names() -> list[str]:
         "bedrock_agent",
         "relay_client",
         "relay_call",
+        "relay_message",
+        "rest_client",
+        "ai_config_mixin",
+        "ai_chat.client",
+        "ai_chat.handoff",
     ]
 
 
@@ -328,7 +331,49 @@ def get_logger(name: str) -> Any:
     """
     # Library-safe: do NOT auto-configure global logging here. Every SDK module
     # calls get_logger() at import, so auto-configuring would hijack the host
-    # app's logging the moment any SDK submodule is imported. The SDK's own
-    # logger carries a NullHandler (installed at module load) so it's silent by
-    # default; the app opts in to SDK output via configure_logging().
-    return structlog.get_logger(name)
+    # app's logging the moment any SDK submodule is imported.
+    #
+    # Nor return structlog.get_logger(): until someone configures structlog,
+    # its defaults print every level, debug included, straight to stdout. The
+    # SDK's loggers instead carry their own processors and always write through
+    # stdlib logging, so the NullHandlers installed at module load keep them
+    # silent by default, the host app's stdlib logging config applies, and
+    # configure_logging() attaches the SDK's own handler.
+    return structlog.wrap_logger(
+        logging.getLogger(name),
+        processors=[*_get_structlog_processors(), _to_stdlib_record],
+        wrapper_class=structlog.stdlib.BoundLogger,
+    )
+
+
+class _EventDict(dict[str, Any]):
+    """An event dict handed to stdlib logging as the record's message.
+
+    The handler configure_logging() installs formats it through structlog's
+    ProcessorFormatter, which reads it as a dict. Any other formatter, such as
+    a host app's ``logging.basicConfig()``, calls ``str()`` on it, which gives
+    a readable line instead of a dict repr.
+    """
+
+    def __str__(self) -> str:
+        fields = " ".join(
+            f"{key}={value!r}"
+            for key, value in self.items()
+            if key not in ("event", "level", "logger", "timestamp")
+            and not key.startswith("_")
+        )
+        return f"{self.get('event', '')} {fields}".rstrip()
+
+
+def _to_stdlib_record(
+    logger: Any, method_name: str, event_dict: MutableMapping[str, Any]
+) -> tuple[Any, ...]:
+    """Final processor: hand the event to stdlib logging for its handlers to render."""
+    return structlog.stdlib.ProcessorFormatter.wrap_for_formatter(
+        logger, method_name, _EventDict(event_dict)
+    )
+
+
+# Import-time side effect: ONLY the library NullHandlers. NOT global configuration.
+# Last, because it needs every definition above.
+_install_library_null_handler()

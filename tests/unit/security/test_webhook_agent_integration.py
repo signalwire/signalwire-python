@@ -192,15 +192,11 @@ class TestEveryServedPathIsSigned:
                 content=body,
                 headers={**_basic_auth_headers(agent), "content-type": "application/json"},
             )
-        # get_app() answers some variants with 204 without running a handler;
-        # what matters is that no handler runs unsigned.
-        assert resp.status_code in (403, 204), (
+        assert resp.status_code == 403, (
             f"{app_kind}: unsigned POST /agent{path} got {resp.status_code}: {resp.text[:200]}"
         )
-        if app_kind != "get_app":
-            assert resp.status_code == 403
 
-    @pytest.mark.parametrize("app_kind", ["serve", "agent_server"])
+    @pytest.mark.parametrize("app_kind", sorted(APPS))
     @pytest.mark.parametrize("path", ["", "/swaig//"])
     def test_signed_post_reaches_the_handler(self, app_kind: str, path: str) -> None:
         agent = AgentBase(name="signed", route="/agent", signing_key=SIGNING_KEY)
@@ -220,11 +216,22 @@ class TestEveryServedPathIsSigned:
             f"{app_kind}: signed POST /agent{path} got {resp.status_code}: {resp.text[:200]}"
         )
 
-    def test_unsigned_get_still_needs_only_basic_auth(self) -> None:
+    @pytest.mark.parametrize("app_kind", sorted(APPS))
+    def test_the_bare_route_serves_swml(self, app_kind: str) -> None:
+        """A GET needs only basic auth, and the route without a trailing slash
+        (the URL SignalWire is usually given) returns the SWML document."""
+        agent = AgentBase(name="signed", route="/agent", signing_key=SIGNING_KEY)
+        with APPS[app_kind](agent) as client:
+            resp = client.get("/agent", headers=_basic_auth_headers(agent))
+        assert resp.status_code == 200
+        assert "sections" in resp.json()
+
+    def test_a_longer_route_name_is_not_the_agent(self) -> None:
+        """/agentswaig is not /agent/swaig."""
         agent = AgentBase(name="signed", route="/agent", signing_key=SIGNING_KEY)
         client = TestClient(_served_app(agent))
-        resp = client.get("/agent", headers=_basic_auth_headers(agent))
-        assert resp.status_code == 200
+        resp = client.post("/agentswaig", content="{}", headers=_basic_auth_headers(agent))
+        assert resp.json() == {"error": "Invalid route"}
 
 
 # ---------------------------------------------------------------------------

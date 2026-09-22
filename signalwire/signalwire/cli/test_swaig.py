@@ -473,6 +473,15 @@ def main() -> int:
         print("parse OK")
         return 0
 
+    # SDK logs are silent until something configures logging. --verbose turns
+    # them on, at debug level unless SIGNALWIRE_LOG_LEVEL says otherwise, before
+    # the agent file is loaded so its construction is logged too.
+    if args.verbose and not args.raw:
+        from signalwire.core.logging_config import configure_logging
+
+        os.environ.setdefault("SIGNALWIRE_LOG_LEVEL", "debug")
+        configure_logging()
+
     # ===== SERVERLESS SIMULATION SETUP =====
     serverless_simulator = None
 

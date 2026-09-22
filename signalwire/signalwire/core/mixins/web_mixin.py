@@ -26,6 +26,7 @@ from signalwire.core.security.security_utils import (
     redact_url,
 )
 from signalwire.core.security.webhook_middleware import (
+    _SIGNED_POST_PATHS,
     make_webhook_validation_dependency,
 )
 from signalwire.core.mixins._mixin_host import _HostTyped
@@ -40,12 +41,6 @@ _request_proxy_url: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 
 # Maximum request body size (10MB, matches CGI limit)
 MAX_REQUEST_BODY_SIZE = 10 * 1024 * 1024
-
-# The agent endpoints SignalWire POSTs to, relative to the agent's route and
-# without slashes: the SWML fetch, SWAIG dispatch and the post-prompt summary.
-# With a signing_key set, a POST to any of them needs a valid signature,
-# whichever route matched it.
-_SIGNED_POST_PATHS = frozenset({"", "swaig", "post_prompt"})
 
 
 def _as_response(result: "Response | dict[str, Any]") -> "Response":
@@ -206,21 +201,12 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             else:
                 app.include_router(router, prefix=self.route)
 
-            # Register a catch-all route for debugging and troubleshooting
+            # Serve what the router doesn't match exactly, such as the agent's
+            # route without a trailing slash, the same way serve() does.
             @app.get("/{full_path:path}")
             @app.post("/{full_path:path}")
             async def handle_all_routes(request: Request, full_path: str) -> Response:
-                self.log.debug("request_received", path=full_path)
-
-                # Check if the path is meant for this agent
-                if not full_path.startswith(self.route.lstrip("/")):
-                    return JSONResponse(content={"error": "Invalid route"})
-
-                # Extract the path relative to this agent's route
-                relative_path = full_path[len(self.route.lstrip("/")) :]
-                relative_path = relative_path.lstrip("/")
-                self.log.debug("relative_path_extracted", path=relative_path)
-                return Response(status_code=204)
+                return await self._dispatch_unmatched(request, full_path)
 
             # Log all app routes for debugging
             self.log.debug("app_routes_registered")
@@ -421,58 +407,7 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             @app.get("/{full_path:path}")
             @app.post("/{full_path:path}")
             async def handle_all_routes(request: Request, full_path: str) -> Response:
-                self.log.debug("request_received", path=full_path)
-
-                # Check if the path is meant for this agent
-                if not full_path.startswith(self.route.lstrip("/")):
-                    return JSONResponse(content={"error": "Invalid route"})
-
-                # Extract the path relative to this agent's route
-                relative_path = full_path[len(self.route.lstrip("/")) :]
-                relative_path = relative_path.lstrip("/")
-                self.log.debug("path_extracted", relative_path=relative_path)
-
-                rejected = await self._reject_unsigned_post(request, relative_path)
-                if rejected is not None:
-                    return rejected
-
-                # Perform routing based on the relative path
-                if not relative_path or relative_path == "/":
-                    # Root endpoint
-                    return await self._handle_root_request(request)
-
-                # Strip trailing slash for processing
-                clean_path = relative_path.rstrip("/")
-
-                # Check for standard endpoints
-                if clean_path == "debug":
-                    return await self._handle_debug_request(request)
-                if clean_path == "swaig":
-                    return _as_response(
-                        await self._handle_swaig_request(request, Response())
-                    )
-                if clean_path == "post_prompt":
-                    return _as_response(await self._handle_post_prompt_request(request))
-                if clean_path == "check_for_input":
-                    return _as_response(
-                        await self._handle_check_for_input_request(request)
-                    )
-                if clean_path == "debug_events":
-                    return _as_response(
-                        await self._handle_debug_events_request(request)
-                    )
-
-                # Check for custom routing callbacks
-                if hasattr(self, "_routing_callbacks"):
-                    for callback_path in self._routing_callbacks:
-                        cb_path_clean = callback_path.strip("/")
-                        if clean_path == cb_path_clean:
-                            # Found a matching callback
-                            request.state.callback_path = callback_path
-                            return await self._handle_root_request(request)
-
-                # Default: 404
-                return JSONResponse(content={"error": "Path not found"})
+                return await self._dispatch_unmatched(request, full_path)
 
             # Log all app routes for debugging
             self.log.debug("app_routes_registered")
@@ -554,9 +489,11 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         try:
             if mode == "cgi":
                 # CGI handler returns the response body as a string to print.
-                cgi_response: str = self.handle_serverless_request(event, context, mode)
-                print(cgi_response)
-                return cgi_response
+                _cgi_response: str = self.handle_serverless_request(
+                    event, context, mode
+                )
+                print(_cgi_response)
+                return _cgi_response
             if mode == "azure_function":
                 azure_response: dict[str, Any] = self.handle_serverless_request(
                     event, context, mode
@@ -581,6 +518,67 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                     "body": json.dumps({"error": str(e)}),
                 }
             raise
+
+    async def _dispatch_unmatched(self, request: Request, full_path: str) -> Response:
+        """Serve a request the agent's router didn't match exactly.
+
+        The router matches the canonical paths. This serves the rest, such as
+        the agent's route without a trailing slash, or doubled and trailing
+        slashes, by dispatching to the same handlers after the same signature
+        check the router's dependencies run. ``serve()`` and ``get_app()`` both
+        use it for their catch-all route.
+
+        Args:
+            request: The incoming request
+            full_path: The request path without its leading slash
+
+        Returns:
+            The handler's response
+        """
+        self.log.debug("request_received", path=full_path)
+
+        # Check if the path is meant for this agent: its route exactly, or below it
+        route = self.route.strip("/")
+        if route and full_path != route and not full_path.startswith(route + "/"):
+            return JSONResponse(content={"error": "Invalid route"})
+
+        # Extract the path relative to this agent's route
+        relative_path = full_path[len(route) :].lstrip("/")
+        self.log.debug("path_extracted", relative_path=relative_path)
+
+        rejected = await self._reject_unsigned_post(request, relative_path)
+        if rejected is not None:
+            return rejected
+
+        # Perform routing based on the relative path
+        if not relative_path:
+            # Root endpoint
+            return await self._handle_root_request(request)
+
+        # Strip trailing slash for processing
+        clean_path = relative_path.rstrip("/")
+
+        # Check for standard endpoints
+        if clean_path == "debug":
+            return await self._handle_debug_request(request)
+        if clean_path == "swaig":
+            return _as_response(await self._handle_swaig_request(request, Response()))
+        if clean_path == "post_prompt":
+            return _as_response(await self._handle_post_prompt_request(request))
+        if clean_path == "check_for_input":
+            return _as_response(await self._handle_check_for_input_request(request))
+        if clean_path == "debug_events":
+            return _as_response(await self._handle_debug_events_request(request))
+
+        # Check for custom routing callbacks
+        for callback_path in getattr(self, "_routing_callbacks", None) or {}:
+            if clean_path == callback_path.strip("/"):
+                # Found a matching callback
+                request.state.callback_path = callback_path
+                return await self._handle_root_request(request)
+
+        # Default: 404
+        return JSONResponse(content={"error": "Path not found"})
 
     def _webhook_signature_check(
         self,
@@ -1130,20 +1128,30 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             if call_id:
                 req_log = req_log.bind(call_id=call_id)
 
-            # Check token if provided
+            # A POST delivers a call's summary, so like a secure SWAIG function
+            # it needs the token minted into the post-prompt URL for that call.
+            # A missing token is refused like a wrong one. A GET only renders
+            # SWML and needs none.
             token = request.query_params.get("__token") or request.query_params.get(
                 "token"
             )  # Check __token first, fallback to token
-
-            if token:
-                req_log.debug("token_found", token_length=len(token))
-
-                # Try to validate token, but continue processing regardless
-                if call_id and hasattr(self, "_session_manager"):
+            if request.method == "POST":
+                is_valid = False
+                if not token:
+                    req_log.warning("token_missing")
+                elif not call_id or not hasattr(self, "_session_manager"):
+                    req_log.warning("invalid_token")
+                else:
+                    req_log.debug("token_found", token_length=len(token))
                     try:
-                        is_valid = self._session_manager.validate_tool_token(
-                            "post_prompt", token, call_id
+                        is_valid = bool(
+                            self._session_manager.validate_tool_token(
+                                "post_prompt", token, call_id
+                            )
                         )
+                    except Exception as e:
+                        req_log.error("token_validation_error", error=str(e))
+                    else:
                         if is_valid:
                             req_log.debug("token_valid")
                         else:
@@ -1154,8 +1162,12 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                                 req_log.debug(
                                     "token_debug", debug=json.dumps(debug_info)
                                 )
-                    except Exception as e:
-                        req_log.error("token_validation_error", error=str(e))
+                if not is_valid:
+                    return Response(
+                        content=json.dumps({"error": "Invalid or missing token"}),
+                        status_code=403,
+                        media_type="application/json",
+                    )
 
             # For GET requests, return the SWML document
             if request.method == "GET":

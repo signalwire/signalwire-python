@@ -2,7 +2,8 @@
 
 ## [Unreleased]
 
-Webhook signatures and SWAIG tokens are now enforced on every path.
+Webhook signatures and SWAIG tokens are now enforced on every path, including
+serverless.
 
 ### Fixed
 - Security: `serve()` (and so `run()`) registered its catch-all route before the
@@ -16,12 +17,40 @@ Webhook signatures and SWAIG tokens are now enforced on every path.
   token at all, or a token but no `call_id`; only a wrong token was refused.
   Now a secure function runs only with a valid token for that function and
   call.
+- Security: a `POST` to the post-prompt endpoint now needs the token minted
+  into the post-prompt URL. It was validated only when present, and processed
+  either way.
+- Security: serverless requests (Lambda, CGI, Cloud Functions, Azure Functions,
+  and `AgentServer`'s CGI and Lambda modes) never checked signatures or SWAIG
+  tokens, and `AgentServer`'s serverless modes didn't check basic auth. They now
+  share one request path with the web server's rules.
+- Serverless: SWML is rendered for the call the request names, with per-call
+  configuration applied, so its tokens validate when the call's functions run.
+  Tool calls on a route other than `/` now reach the function (they failed with
+  "Function 'agent/swaig' not found"), as do CGI calls to `/swaig` and Azure
+  calls whose URL has a query string. CGI responses now carry a status and
+  headers, and `AgentServer` passes a function its arguments rather than the
+  whole request body.
+- `get_app()` serves the agent's route without a trailing slash (it answered
+  204), and `/agentswaig` is no longer treated as `/agent/swaig`.
+- Logging: until something configures logging, SDK loggers printed every
+  level, debug included, to stdout. They now write through stdlib logging and
+  are silent until `configure_logging()` runs (as `serve()` and `run()` do) or
+  the host app configures logging. `swaig-test --verbose` turns them on, and
+  `swaig-test --dump-swml --raw` prints clean JSON.
+- `wikipedia_search` sends a User-Agent; Wikipedia answered 403 without one.
 
 ### Notes for upgraders
 - Calling a secure function directly, for example with `curl`, now needs the
   token from the function's `web_hook_url` in the SWML, fetched with
   `?call_id=<id>`. `swaig-test` is unaffected. SignalWire's own requests
   already carry the token.
+- A serverless agent with a `signing_key` now validates signatures. If its
+  requests start failing with 403, the platform sees a different URL than the
+  one SignalWire called; set `SWML_PROXY_URL_BASE` to the public URL.
+- An app that embeds an agent (`get_app()`, `as_router()`) no longer gets SDK
+  log output on stdout by default. Configure `logging`, or call
+  `signalwire.configure_logging()`.
 
 ## [3.4.3] - 2026-09-17
 

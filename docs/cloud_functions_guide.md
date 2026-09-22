@@ -397,6 +397,7 @@ curl -u username:password \
 - Implement proper authentication
 - Use environment variables for sensitive data
 - Consider using cloud-native secret management
+- Set `signing_key` (or `SIGNALWIRE_SIGNING_KEY`) so the agent checks that SignalWire signed each request, as it does on a web server. If signed requests are refused with 403, set `SWML_PROXY_URL_BASE` to the function's public URL. See [Webhook Signature Validation](security.md#webhook-signature-validation).
 
 ### Monitoring
 - Enable cloud platform logging

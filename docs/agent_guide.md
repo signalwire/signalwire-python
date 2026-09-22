@@ -166,10 +166,10 @@ The SDK automatically detects the execution environment:
 
 ### Logging Configuration
 
-The SDK includes a central logging system that automatically configures based on the deployment environment:
+The SDK includes a central logging system. Running an agent with `serve()` or `run()` configures it from the environment. An app that embeds an agent with `get_app()` or `as_router()` keeps control of logging: the SDK's loggers write through Python's `logging`, stay silent until the app configures it, and follow the app's configuration. To use the SDK's own output there, call `signalwire.configure_logging()`.
 
 ```python
-# Logging is automatically configured based on environment
+# serve() and run() configure logging from the environment
 # No manual setup required in most cases
 
 # Optional: Override logging mode via environment variable

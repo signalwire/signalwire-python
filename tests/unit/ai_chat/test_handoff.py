@@ -17,6 +17,8 @@ Three properties matter more than the happy path:
 """
 
 import asyncio
+import logging
+from collections.abc import Iterator
 from typing import Any
 
 import pytest
@@ -264,33 +266,53 @@ class TestConversationIdSanitization:
     everything filed under the original becomes unreachable.
     """
 
-    # structlog renders to stdout rather than through the stdlib handlers
-    # `caplog` installs, so the warning is asserted via captured output.
+    # SDK loggers write through stdlib logging. The handler goes on the SDK's
+    # own logger, because configure_logging() (run by other tests) turns off
+    # propagation to the root logger, where caplog listens.
+
+    @pytest.fixture
+    def records(self) -> Iterator[list[logging.LogRecord]]:
+        captured: list[logging.LogRecord] = []
+
+        class Capture(logging.Handler):
+            def emit(self, record: logging.LogRecord) -> None:
+                captured.append(record)
+
+        sdk_logger = logging.getLogger("ai_chat.client")
+        handler, level = Capture(), sdk_logger.level
+        sdk_logger.addHandler(handler)
+        sdk_logger.setLevel(logging.WARNING)
+        try:
+            yield captured
+        finally:
+            sdk_logger.removeHandler(handler)
+            sdk_logger.setLevel(level)
 
     @pytest.mark.parametrize("safe", ["conv-abc", "root.2", "a_b-c.d:e"])
-    def test_safe_ids_are_quiet(self, safe: str, capsys: Any) -> None:
+    def test_safe_ids_are_quiet(self, safe: str, records: list[logging.LogRecord]) -> None:
         _warn_if_id_will_be_altered(safe)
-        assert "conversation_id_will_be_sanitized" not in capsys.readouterr().out
+        assert records == []
 
     @pytest.mark.parametrize(
         ("unsafe", "stored_as"),
         [("root~2", "root2"), ("conv id", "convid"), ("x!", "x")],
     )
     def test_unsafe_ids_warn_with_what_will_actually_be_stored(
-        self, unsafe: str, stored_as: str, capsys: Any
+        self, unsafe: str, stored_as: str, records: list[logging.LogRecord]
     ) -> None:
         _warn_if_id_will_be_altered(unsafe)
-        out = capsys.readouterr().out
-        assert "conversation_id_will_be_sanitized" in out
+        (record,) = records
+        message = record.getMessage()
+        assert "conversation_id_will_be_sanitized" in message
         # The warning must name the id the service will really use -- that is
         # the fact the caller needs, and the one nothing else reports.
-        assert stored_as in out
+        assert stored_as in message
 
     @pytest.mark.parametrize("junk", [None, "", 123, []])
     def test_junk_is_ignored_rather_than_warned_about(
-        self, junk: Any, capsys: Any
+        self, junk: Any, records: list[logging.LogRecord]
     ) -> None:
         """Paired with the warning case above: this asserts the warning is
         absent, so it can fail, rather than merely asserting no exception."""
         _warn_if_id_will_be_altered(junk)
-        assert "conversation_id_will_be_sanitized" not in capsys.readouterr().out
+        assert records == []

@@ -41,6 +41,7 @@ from __future__ import annotations
 import os
 from typing import NoReturn
 from collections.abc import Awaitable, Callable, Mapping
+from urllib.parse import urlsplit
 
 from fastapi import HTTPException, Request, Response, status
 
@@ -53,6 +54,12 @@ from signalwire.core.security.webhook_validator import (
 SIGNALWIRE_SIGNATURE_HEADER = "x-signalwire-signature"
 SIGNALWIRE_SHA256_SIGNATURE_HEADER = "x-signalwire-sha256-signature"
 TWILIO_COMPAT_SIGNATURE_HEADER = "x-twilio-signature"
+
+# The agent endpoints SignalWire POSTs to, relative to the agent's route and
+# without slashes: the SWML fetch, SWAIG dispatch and the post-prompt summary.
+# With a signing_key set, a POST to any of them needs a valid signature,
+# however the agent is served.
+_SIGNED_POST_PATHS = frozenset({"", "swaig", "post_prompt"})
 
 
 def validate(
@@ -127,31 +134,54 @@ def validate(
     return None
 
 
-def _reconstruct_url(request: Request, *, trust_proxy: bool) -> str:
-    """Rebuild the public URL SignalWire POSTed to.
+def _public_url(
+    url: str,
+    headers: Mapping[str, str],
+    *,
+    trust_proxy: bool,
+    path_and_query: str | None = None,
+) -> str:
+    """Rebuild the public URL SignalWire POSTed to, from the URL the server saw.
 
+    Framework-free, so the web server and the serverless adapters share it.
     Resolution order (highest priority first):
 
-    1. ``SWML_PROXY_URL_BASE`` env var (joined with the request path + query).
+    1. ``SWML_PROXY_URL_BASE`` env var, joined with the path and query.
     2. ``X-Forwarded-Proto`` / ``X-Forwarded-Host`` headers, if
-       ``trust_proxy=True`` and both headers are present.
-    3. ``request.url`` (FastAPI's view of the URL).
+       ``trust_proxy=True`` and the host header is present.
+    3. ``url`` as the server saw it.
+
+    Args:
+        url: The full URL the server received the request on.
+        headers: Request headers, looked up by lower-case name.
+        trust_proxy: Whether to honor the forwarded headers.
+        path_and_query: The path and query to join to a proxy base or
+            forwarded host. Defaults to those of ``url``; a serverless
+            platform passes the path below the app's root instead.
+
+    Returns:
+        The URL the signature was computed over.
     """
-    path_and_query = request.url.path
-    if request.url.query:
-        path_and_query = f"{path_and_query}?{request.url.query}"
+    if path_and_query is None:
+        parts = urlsplit(url)
+        path_and_query = parts.path + (f"?{parts.query}" if parts.query else "")
 
     proxy_base = os.environ.get("SWML_PROXY_URL_BASE")
     if proxy_base:
         return f"{proxy_base.rstrip('/')}{path_and_query}"
 
     if trust_proxy:
-        fwd_host = request.headers.get("x-forwarded-host")
-        fwd_proto = request.headers.get("x-forwarded-proto", "https")
+        fwd_host = headers.get("x-forwarded-host")
+        fwd_proto = headers.get("x-forwarded-proto", "https")
         if fwd_host:
             return f"{fwd_proto}://{fwd_host}{path_and_query}"
 
-    return str(request.url)
+    return url
+
+
+def _reconstruct_url(request: Request, *, trust_proxy: bool) -> str:
+    """Rebuild the public URL SignalWire POSTed to. See :func:`_public_url`."""
+    return _public_url(str(request.url), request.headers, trust_proxy=trust_proxy)
 
 
 def make_webhook_validation_dependency(
