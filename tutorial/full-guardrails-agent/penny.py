@@ -34,8 +34,7 @@ GREETING = ("Thanks for calling The Copper Pot. I'm Penny, the restaurant's A I 
 # endregion: greeting
 
 # region: required-env
-REQUIRED_ENV = ("SWML_BASIC_AUTH_USER", "SWML_BASIC_AUTH_PASSWORD",
-                "SIGNALWIRE_SIGNING_KEY", "SIGNALWIRE_SWAIG_SECRET")
+REQUIRED_ENV = ("SWML_BASIC_AUTH_USER", "SWML_BASIC_AUTH_PASSWORD", "SIGNALWIRE_SWAIG_SECRET")
 # endregion: required-env
 
 
@@ -51,7 +50,7 @@ class Penny(AgentBase):
         super().__init__(
             name="penny",
             route="/penny",
-            signing_key=os.environ["SIGNALWIRE_SIGNING_KEY"],   # checks SignalWire signed the request
+            signing_key=os.environ.get("SIGNALWIRE_SIGNING_KEY"),  # optional: checks SignalWire signed the request
             swaig_secret=os.environ["SIGNALWIRE_SWAIG_SECRET"],  # same tool tokens on every replica
         )
         if store is None:

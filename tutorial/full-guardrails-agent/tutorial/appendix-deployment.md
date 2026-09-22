@@ -21,7 +21,7 @@ Penny reads everything from environment variables. `penny.sh` loads them from `.
 |---|---|---|---|
 | `SWML_BASIC_AUTH_USER` | Yes | | The user SignalWire presents to fetch SWML and call tools |
 | `SWML_BASIC_AUTH_PASSWORD` | Yes | | Its password |
-| `SIGNALWIRE_SIGNING_KEY` | Yes | | Your project's signing key, used to check that SignalWire sent each request |
+| `SIGNALWIRE_SIGNING_KEY` | In production | | Your project's signing key. When it's set, the SDK checks that SignalWire sent each request. |
 | `SIGNALWIRE_SWAIG_SECRET` | Yes | | The secret behind the per-call tool tokens |
 | `PENNY_DB_PATH` | No | `penny.sqlite3` | Where the reservation book lives. The Docker image sets `/data/penny.sqlite3`. |
 | `PENNY_DEMO_DATA` | No | off | `1` adds the demo reservation to an empty book. Never in production. |
@@ -161,7 +161,7 @@ One SQLite file suits one restaurant on one server. Don't put it on a network fi
 
 ## Before You Go Live
 
-- [ ] The four secrets are real values, and `PENNY_DEMO_DATA` is `0`
+- [ ] The three required secrets are real values, `SIGNALWIRE_SIGNING_KEY` is set, and `PENNY_DEMO_DATA` is `0`
 - [ ] `SWML_PROXY_URL_BASE` is Penny's public HTTPS address
 - [ ] A SignalWire phone number points at `https://USER:PASSWORD@your-address/penny`
 - [ ] The reservation book is on persistent storage, and backed up

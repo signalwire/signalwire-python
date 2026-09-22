@@ -1229,8 +1229,7 @@ log = logging.getLogger("penny")
 GREETING = ("Thanks for calling The Copper Pot. I'm Penny, the restaurant's A I host. "
             "Are you making a new reservation, or calling about one you already have?")
 
-REQUIRED_ENV = ("SWML_BASIC_AUTH_USER", "SWML_BASIC_AUTH_PASSWORD",
-                "SIGNALWIRE_SIGNING_KEY", "SIGNALWIRE_SWAIG_SECRET")
+REQUIRED_ENV = ("SWML_BASIC_AUTH_USER", "SWML_BASIC_AUTH_PASSWORD", "SIGNALWIRE_SWAIG_SECRET")
 
 
 class Penny(AgentBase):
@@ -1244,7 +1243,7 @@ class Penny(AgentBase):
         super().__init__(
             name="penny",
             route="/penny",
-            signing_key=os.environ["SIGNALWIRE_SIGNING_KEY"],   # checks SignalWire signed the request
+            signing_key=os.environ.get("SIGNALWIRE_SIGNING_KEY"),  # optional: checks SignalWire signed the request
             swaig_secret=os.environ["SIGNALWIRE_SWAIG_SECRET"],  # same tool tokens on every replica
         )
         if store is None:
@@ -1404,11 +1403,14 @@ Copy it to `.env` and fill in real values. `penny.sh` reads `.env`, and `.gitign
 <!-- source: .env.example -->
 ```
 # Copy to .env, put in real values, and never commit .env.
-# Penny refuses to start until these four are set.
+# Penny refuses to start until these three are set.
 SWML_BASIC_AUTH_USER=penny
 SWML_BASIC_AUTH_PASSWORD=replace-with-a-long-random-string
-SIGNALWIRE_SIGNING_KEY=replace-with-your-signalwire-signing-key
 SIGNALWIRE_SWAIG_SECRET=replace-with-a-long-random-string
+
+# Your project's signing key, from the SignalWire dashboard. Optional, but set
+# it in production: with it, the SDK checks that SignalWire sent each request.
+SIGNALWIRE_SIGNING_KEY=
 
 # Where the reservation book lives: penny.sqlite3 by default, and
 # /data/penny.sqlite3 in the Docker image. Set it only to move the book.

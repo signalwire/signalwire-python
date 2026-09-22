@@ -14,12 +14,11 @@ Now the agent itself. `penny.py` wires the rules, the tools and the workflow tog
 
 ## Failing Closed
 
-Penny refuses to start without her secrets:
+Penny refuses to start without her required secrets:
 
 <!-- source: penny.py#required-env --> <!-- snippet: no-run an excerpt of penny.py, checked against the file by test_penny.py -->
 ```python
-REQUIRED_ENV = ("SWML_BASIC_AUTH_USER", "SWML_BASIC_AUTH_PASSWORD",
-                "SIGNALWIRE_SIGNING_KEY", "SIGNALWIRE_SWAIG_SECRET")
+REQUIRED_ENV = ("SWML_BASIC_AUTH_USER", "SWML_BASIC_AUTH_PASSWORD", "SIGNALWIRE_SWAIG_SECRET")
 ```
 
 Here is the constructor that checks them, and the order in which everything is wired together:
@@ -34,7 +33,7 @@ def __init__(self, store: ReservationStore | None = None) -> None:
     super().__init__(
         name="penny",
         route="/penny",
-        signing_key=os.environ["SIGNALWIRE_SIGNING_KEY"],   # checks SignalWire signed the request
+        signing_key=os.environ.get("SIGNALWIRE_SIGNING_KEY"),  # optional: checks SignalWire signed the request
         swaig_secret=os.environ["SIGNALWIRE_SWAIG_SECRET"],  # same tool tokens on every replica
     )
     if store is None:
@@ -71,8 +70,10 @@ The three secrets are easy to confuse:
 | Setting | Protects | Is not |
 |---|---|---|
 | `SWML_BASIC_AUTH_USER` / `SWML_BASIC_AUTH_PASSWORD` | Your endpoints: nobody fetches Penny's SWML or calls her tools without them | Any statement about who the *caller* is |
-| `SIGNALWIRE_SIGNING_KEY` | Incoming requests: the SDK checks that SignalWire signed each `POST` to `/penny`, `/penny/swaig` and `/penny/post_prompt` | A secret you invent. It's your project's signing key from the SignalWire dashboard. |
+| `SIGNALWIRE_SIGNING_KEY` (optional) | Incoming requests: when it's set, the SDK checks that SignalWire signed each `POST` to `/penny`, `/penny/swaig` and `/penny/post_prompt` | A secret you invent. It's your project's signing key from the SignalWire dashboard. |
 | `SIGNALWIRE_SWAIG_SECRET` | The per-call tool tokens the SDK issues: every replica uses the same secret, so a tool call still validates after a restart or on another server | Your project API token |
+
+The signing key is the one optional secret, because not every source signs its requests. SignalWire does in production, so set it there. Leave it unset only while you test against something that doesn't sign, such as a development chat service. The SDK logs a warning at startup so you don't forget.
 
 Lesson 10 includes the tests that check the first two at the HTTP edge.
 
@@ -143,7 +144,7 @@ A small base prompt isn't about saving tokens. Every rule you put in it is one y
 
 ## Try It
 
-Set the four required variables to test values. For a real deployment, use your real signing key and long random strings:
+Set the three required variables, and the optional signing key, to test values. For a real deployment, use long random strings and your real signing key:
 
 ```bash
 export SWML_BASIC_AUTH_USER=penny

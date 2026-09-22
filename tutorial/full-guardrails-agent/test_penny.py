@@ -323,6 +323,10 @@ class TestWorkflow(unittest.TestCase):
         self.assertEqual(self.ai["params"]["static_greeting"], GREETING)
         self.assertTrue(self.ai["params"]["static_greeting_no_barge"])
 
+    def test_the_signing_key_is_optional(self) -> None:
+        with mock.patch.dict(os.environ, {"SIGNALWIRE_SIGNING_KEY": ""}):
+            self.assertFalse(Penny(store=new_store()).signing_key)
+
     def test_the_agent_refuses_to_start_without_its_secrets(self) -> None:
         with mock.patch.dict(os.environ, {"SIGNALWIRE_SWAIG_SECRET": ""}), \
                 self.assertRaises(RuntimeError):

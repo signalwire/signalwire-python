@@ -163,7 +163,7 @@ Copy the example settings and fill them in:
 cp .env.example .env
 ```
 
-- Set the two passwords to long random strings, and `SIGNALWIRE_SIGNING_KEY` to your project's signing key from the SignalWire dashboard
+- Set `SWML_BASIC_AUTH_PASSWORD` and `SIGNALWIRE_SWAIG_SECRET` to long random strings. In production, set `SIGNALWIRE_SIGNING_KEY` to your project's signing key from the SignalWire dashboard.
 - Set `PENNY_DEMO_DATA=1` to add a demo reservation you can look up: code `K7QP4M`, last name Rivera
 
 Then start Penny and look at her:
