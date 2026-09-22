@@ -168,6 +168,8 @@ jobs:
   # workflow-triggering events for that token, so a release trigger would never
   # fire on this path. `needs: publish-release` also gives the ordering we
   # actually want, with the docs going out only after the PyPI upload succeeded.
+  # If this job fails, the release itself is unaffected (PyPI and the GitHub
+  # Release are already done); repair the cause and use "Re-run failed jobs".
   reference-docs:
     needs: publish-release
     permissions:

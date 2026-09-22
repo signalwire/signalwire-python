@@ -1,8 +1,8 @@
 # API reference
 
-Language-native API reference for the SignalWire Python SDK, 
+Language-native API reference for the SignalWire Python SDK,
 generated from docstrings with **MkDocs Material + mkdocstrings**,
-wrapped in the SignalWire **Fern navbar**, 
+wrapped in the SignalWire **Fern navbar**,
 and published as a single unversioned site to this repo's own GitHub Pages:
 
 > https://signalwire.github.io/signalwire-python/
@@ -87,7 +87,9 @@ through griffe, so that module still renders a clean page. Build only:
   stable site, and the tag is at least as new as the version recorded in
   `version.txt` at the root of the live site. Anything the gate cannot positively
   determine, such as an unreadable `gh-pages` or a site with no marker, fails
-  closed rather than publishing.
+  closed rather than publishing, and fails the job so the run goes red. The PyPI
+  upload is already done by then and is not affected; "Re-run failed jobs"
+  republishes once the cause is repaired.
 - A `workflow_dispatch` run builds a preview, and publishes only if you tick the
   `deploy` input **and** dispatch from the default branch. Without that second
   condition any branch in the dropdown could publish itself as the official
@@ -123,7 +125,9 @@ would erase the marker and silently disarm the guard for the next release. A
 dispatch preserves whatever is already there.
 
 A site with no readable marker is therefore an anomaly, and the gate refuses to
-publish over it. If the marker ever needs repairing, for instance after a typo
+publish over it on both paths: a release fails, and a dispatch fails unless the
+`version_marker` input is set. The `v0.0.0` floor applies only when `gh-pages`
+does not exist yet. If the marker ever needs repairing, for instance after a typo
 tag like `v31.0.0` sorts newest and starts blocking real releases, dispatch a
 publish with the `version_marker` input set to the correct `vX.Y.Z`.
 

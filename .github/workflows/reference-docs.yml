@@ -18,7 +18,10 @@
 #   * workflow_dispatch builds a preview by default. It publishes only when the
 #     `deploy` input is ticked, only from the default branch, and never from a
 #     fork.
-#   * anything the gate cannot positively determine fails CLOSED.
+#   * anything the gate cannot positively determine fails CLOSED, and fails the
+#     job, so the release run goes red and "Re-run failed jobs" can republish
+#     once the cause is repaired. The PyPI upload is already done by then and is
+#     not affected.
 #
 # There is deliberately NO `release: published` trigger. publish-release.yml
 # creates the GitHub Release with `secrets.GITHUB_TOKEN`, and GitHub does not
@@ -79,8 +82,13 @@ jobs:
           fetch-depth: 0
           ref: ${{ inputs.tag || github.ref }}
 
-      # Runs BEFORE the toolchain install, so a run that cannot publish does not
+      # Runs BEFORE the toolchain install, so a run the gate rejects does not
       # first pay several minutes of pip. It needs nothing but git.
+      #
+      # Outcomes are graded. `::notice::` and `::warning::` are expected
+      # non-publishes (preview, fork, rc tag, older tag) and the job stays green.
+      # `::error::` is an anomaly that needs a human, and the step exits 1 so the
+      # run goes red instead of quietly leaving the site stale.
       #
       # Single decision point for whether this run may force-push the public
       # site, and the single place that decides what the version marker becomes.
@@ -129,6 +137,7 @@ jobs:
             echo "::notice::fork build; not publishing"
           elif [ "$branch" = "unknown" ]; then
             echo "::error::could not determine the state of gh-pages; refusing to publish"
+            exit 1
           elif [ -n "$TAG" ]; then
             # Release publish, called from publish-release.yml after its gates.
             # publish-release.yml triggers on the `v*` glob, so an rc/beta tag
@@ -145,6 +154,7 @@ jobs:
               # hand-edited or predates this workflow. Fail closed and make the
               # operator repair it deliberately (dispatch with version_marker).
               echo "::error::gh-pages carries no readable version.txt; refusing to publish $TAG. Repair with a manual dispatch using the version_marker input."
+              exit 1
             elif [ "$(printf '%s\n%s\n' "${prev#v}" "${TAG#v}" | sort -V | tail -1)" = "${TAG#v}" ]; then
               # Equal versions pass, so re-running a release can republish it.
               publish=true
@@ -161,6 +171,7 @@ jobs:
               # official public API reference, running its own code under a
               # contents: write token.
               echo "::error::refusing to publish from '$REF_NAME'; dispatch a publish from the default branch ('${DEFAULT_BRANCH:-unknown}')"
+              exit 1
             else
               publish=true
               # gh-deploy replaces the whole site tree (ghp-import emits
@@ -174,10 +185,17 @@ jobs:
                 marker="$DISPATCH_MARKER"
               elif [ -n "$prev" ]; then
                 marker="$prev"
-              else
+              elif [ "$branch" = "absent" ]; then
                 # Bootstrap floor, so the site always carries a readable marker
                 # and "missing" stays meaningful as an anomaly.
                 marker="v0.0.0"
+              else
+                # The same anomaly the release path refuses: the branch exists
+                # but carries no marker. Falling back to the floor here would let
+                # the documented repair path (a dispatch) silently reset the
+                # guard to v0.0.0 instead of repairing it.
+                echo "::error::gh-pages exists but carries no readable version.txt; set the version_marker input to repair it"
+                exit 1
               fi
             fi
           fi
