@@ -46,7 +46,7 @@ Before starting this tutorial, ensure you have:
 
 **Required:**
 
-- Python 3.8 or higher
+- Python 3.10 or higher
 - pip package manager
 - Basic Python programming knowledge
 - A text editor or IDE
@@ -113,8 +113,8 @@ Learn to add custom functionality and create sophisticated conversational flows:
 
 ```bash
 # Clone the repository (if not already done)
-git clone https://github.com/signalwire/signalwire-agents.git
-cd signalwire-agents
+git clone https://github.com/signalwire/signalwire-python.git
+cd signalwire-python
 
 # Install the base SDK
 pip install -e .
@@ -129,7 +129,7 @@ After completing Lesson 1, you can run your first agent:
 
 ```bash
 # Run the simple sales agent
-python tutorial/sales_agent.py
+python tutorial/multi_agents/sales_agent.py
 
 # The agent will be available at http://localhost:3000/
 ```
@@ -220,7 +220,7 @@ All code examples from this tutorial are available in this directory:
 **Resources:**
 
 - [SignalWire Documentation](https://docs.signalwire.com)
-- [GitHub Issues](https://github.com/signalwire/signalwire-agents/issues)
+- [GitHub Issues](https://github.com/signalwire/signalwire-python/issues)
 - [Community Discord](https://discord.gg/signalwire)
 
 **Debugging Tips:**
@@ -262,4 +262,4 @@ All code examples from this tutorial are available in this directory:
 
 Start with [Lesson 1: Creating Your First Agent](lesson1_first_agent.md) to begin your journey into building AI-powered voice agents with SignalWire!
 
-*This tutorial is part of the SignalWire Agents SDK. For the latest updates and more information, visit the [official repository](https://github.com/signalwire/signalwire-agents).*
+*This tutorial is part of the SignalWire Agents SDK. For the latest updates and more information, visit the [official repository](https://github.com/signalwire/signalwire-python).*

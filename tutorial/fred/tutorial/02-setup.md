@@ -18,7 +18,7 @@ Before we begin, ensure you have:
 
 ### Required Software
 
-**Python 3.7+**
+**Python 3.10+**
 
 Check your Python version:
 ```bash
@@ -29,7 +29,7 @@ python --version
 
 You should see something like:
 ```
-Python 3.8.10
+Python 3.11.5
 ```
 
 **pip (Python Package Manager)**
@@ -74,7 +74,7 @@ This installs the core SDK with all required dependencies.
 ### What Gets Installed
 
 The installation includes:
-- `signalwire-agents` - The main SDK
+- `signalwire-sdk` - The main SDK
 - `fastapi` - Web framework for HTTP endpoints
 - `uvicorn` - ASGI server to run your agent
 - `pydantic` - Data validation
@@ -114,7 +114,7 @@ python test_install.py
 Expected output:
 ```
 ✅ SignalWire SDK imported successfully!
-   Version: 1.0.12
+   Version: 3.4.3
 ```
 
 ### Test Basic Agent
@@ -210,7 +210,7 @@ pip freeze > requirements.txt
 Or create a minimal one:
 
 ```txt
-signalwire-agents>=1.0.5
+signalwire-sdk>=3.4.3
 ```
 
 ## Environment Variables
@@ -251,10 +251,10 @@ def check_setup():
     
     # Check Python version
     python_version = sys.version_info
-    if python_version >= (3, 7):
+    if python_version >= (3, 10):
         print(f"✅ Python {python_version.major}.{python_version.minor} - Good!")
     else:
-        print(f"❌ Python {python_version.major}.{python_version.minor} - Need 3.7+")
+        print(f"❌ Python {python_version.major}.{python_version.minor} - Need 3.10+")
         return False
     
     # Check imports
@@ -295,7 +295,7 @@ if __name__ == "__main__":
 
 ```bash
 # Use --user flag
-pip install --user signalwire-agents
+pip install --user signalwire-sdk
 
 # Or use sudo (less recommended)
 sudo pip install signalwire-sdk
@@ -318,7 +318,7 @@ sudo apt-get install python3-pip
 pip install --upgrade certifi
 
 # Or temporarily (not recommended for production)
-pip install --trusted-host pypi.org signalwire-agents
+pip install --trusted-host pypi.org signalwire-sdk
 ```
 
 ## Next Steps
@@ -330,7 +330,7 @@ Great! Your environment is ready. Let's start building Fred!
 ---
 
 **Checklist:**
-- [ ] Python 3.7+ installed
+- [ ] Python 3.10+ installed
 - [ ] SignalWire SDK installed
 - [ ] Basic import test passes
 - [ ] Project directory created

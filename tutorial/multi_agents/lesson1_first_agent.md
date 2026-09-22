@@ -277,11 +277,11 @@ if __name__ == "__main__":
 ### Step 8: Run the Agent
 
 ```bash
-# Make sure you're in the signalwire-agents directory
-cd /path/to/signalwire-agents
+# Make sure you're in the signalwire-python directory
+cd /path/to/signalwire-python
 
 # Run the agent
-python tutorial/sales_agent.py
+python tutorial/multi_agents/sales_agent.py
 ```
 
 You should see:
@@ -314,7 +314,7 @@ curl http://localhost:3000/ | python -m json.tool
 pip install -e .
 
 # Test the agent
-swaig-test tutorial/sales_agent.py --dump-swml
+swaig-test tutorial/multi_agents/sales_agent.py --dump-swml
 ```
 
 ### Understanding the SWML Output
@@ -359,7 +359,7 @@ export SWML_SSL_KEY_PATH=/path/to/your/private-key.pem
 export SWML_DOMAIN=yourdomain.com
 
 # Run the agent with SSL
-python tutorial/sales_agent.py
+python tutorial/multi_agents/sales_agent.py
 ```
 
 ### Method 2: Using a Single Command
@@ -369,7 +369,7 @@ SWML_SSL_ENABLED=true \
 SWML_SSL_CERT_PATH=/path/to/cert.pem \
 SWML_SSL_KEY_PATH=/path/to/key.pem \
 SWML_DOMAIN=yourdomain.com \
-python tutorial/sales_agent.py
+python tutorial/multi_agents/sales_agent.py
 ```
 
 ### Self-Signed Certificates (Development Only)
@@ -385,7 +385,7 @@ openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -node
 SWML_SSL_ENABLED=true \
 SWML_SSL_CERT_PATH=cert.pem \
 SWML_SSL_KEY_PATH=key.pem \
-python tutorial/sales_agent.py
+python tutorial/multi_agents/sales_agent.py
 ```
 
 **Note:** Self-signed certificates will show security warnings. Use proper certificates from a Certificate Authority (CA) for production.

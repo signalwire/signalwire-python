@@ -41,7 +41,7 @@ Deploy Fred using Docker for production-ready containerization.
 ## Prerequisites
 
 **Required:**
-- Python 3.7 or higher
+- Python 3.10 or higher
 - Basic Python knowledge
 - Command line familiarity
 
@@ -64,7 +64,7 @@ Deploy Fred using Docker for production-ready containerization.
 ## Getting Help
 
 - **SignalWire Documentation:** [docs.signalwire.com](https://docs.signalwire.com)
-- **GitHub Issues:** [github.com/signalwire/signalwire-agents](https://github.com/signalwire/signalwire-agents)
+- **GitHub Issues:** [github.com/signalwire/signalwire-python](https://github.com/signalwire/signalwire-python)
 - **Community Support:** SignalWire Discord/Forums
 
 ## Let's Get Started!
@@ -73,4 +73,4 @@ Ready to build Fred? Start with [Lesson 1: Introduction to SignalWire Agents](01
 
 ---
 
-*This tutorial was created for SignalWire SDK v1.0.12*
+*This tutorial was created for SignalWire SDK v3.4.3*

@@ -175,7 +175,7 @@ class SalesAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "search_sales_knowledge",
             "description": "Search sales and product information",
-            "index_file": "sales_knowledge.swsearch",
+            "index_file": "tutorial/multi_agents/sales_knowledge.swsearch",
             "count": 3
         })
         
@@ -331,7 +331,7 @@ class SupportAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "search_support_knowledge", 
             "description": "Search technical support and troubleshooting information",
-            "index_file": "support_knowledge.swsearch",
+            "index_file": "tutorial/multi_agents/support_knowledge.swsearch",
             "count": 3
         })
         

@@ -16,7 +16,7 @@ Fred is curious, helpful, and loves sharing knowledge from Wikipedia.
 """
 
 from signalwire import AgentBase
-from signalwire.core.function_result import FunctionResult
+from signalwire.core.function_result import SwaigFunctionResult
 
 class FredTheWikiBot(AgentBase):
     """Fred - Your friendly Wikipedia assistant"""
@@ -69,20 +69,63 @@ class FredTheWikiBot(AgentBase):
         # Add a fun fact function
         @self.tool(
             name="share_fun_fact",
-            description="Share a fun fact about Wikipedia itself",
-            parameters={}
+            description="Share an interesting fact about Wikipedia itself",
+            parameters={
+                "category": {
+                    "type": "string",
+                    "description": "Type of fact to share",
+                    "enum": ["statistics", "history", "records", "random"]
+                }
+            }
         )
         def share_fun_fact(args, raw_data):
             import random
-            facts = [
-                "Wikipedia has over 6 million articles in English alone!",
-                "Wikipedia is available in more than 300 languages!",
-                "Wikipedia was launched on January 15, 2001!",
-                "The most edited Wikipedia page is about George W. Bush!",
-                "Wikipedia is the 7th most visited website in the world!"
-            ]
-            fact = random.choice(facts)
-            return FunctionResult(f"Here's a fun Wikipedia fact: {fact}")
+
+            # Get the requested category
+            category = args.get("category", "random")
+
+            # Define facts by category
+            facts = {
+                "statistics": [
+                    "Wikipedia has over 6 million articles in English alone!",
+                    "Wikipedia is available in more than 300 languages!",
+                    "Wikipedia receives over 18 billion page views per month!",
+                    "There are over 100,000 active Wikipedia contributors!"
+                ],
+                "history": [
+                    "Wikipedia was launched on January 15, 2001!",
+                    "The first Wikipedia article was about the letter 'U'!",
+                    "Wikipedia's name comes from 'wiki' (Hawaiian for 'quick') and 'encyclopedia'!",
+                    "Jimmy Wales and Larry Sanger founded Wikipedia!"
+                ],
+                "records": [
+                    "The most edited Wikipedia page is about George W. Bush!",
+                    "The longest Wikipedia article is about California Proposition 8!",
+                    "Wikipedia is the 7th most visited website in the world!",
+                    "The Wikipedia article on 'List of Pokemon' is one of the most viewed!"
+                ],
+                "random": []  # Will be filled with all facts
+            }
+
+            # Combine all facts for random selection
+            all_facts = []
+            for fact_list in facts.values():
+                if fact_list:  # Skip empty random list
+                    all_facts.extend(fact_list)
+            facts["random"] = all_facts
+
+            # Select appropriate fact
+            fact_list = facts.get(category, facts["random"])
+            if not fact_list:
+                return SwaigFunctionResult("I don't have any facts in that category.")
+
+            fact = random.choice(fact_list)
+
+            # Add category context to response
+            if category != "random":
+                return SwaigFunctionResult(f"Here's a {category} fact about Wikipedia: {fact}")
+            else:
+                return SwaigFunctionResult(f"Here's a fun Wikipedia fact: {fact}")
         
         # Configure Fred's voice
         self.add_language(

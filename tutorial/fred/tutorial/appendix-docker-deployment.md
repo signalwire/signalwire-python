@@ -40,7 +40,7 @@ This simple Dockerfile gets Fred running quickly:
 
 ```dockerfile
 # Use official Python runtime as base image
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 # Set working directory in container
 WORKDIR /app
@@ -89,7 +89,7 @@ For smaller, more secure images, use a multi-stage build:
 
 ```dockerfile
 # Stage 1: Build environment
-FROM python:3.9-slim as builder
+FROM python:3.11-slim as builder
 
 # Set working directory
 WORKDIR /app
@@ -107,7 +107,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --target=/app/deps -r requirements.txt
 
 # Stage 2: Runtime environment
-FROM python:3.9-slim
+FROM python:3.11-slim
 
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -274,7 +274,7 @@ Create a more secure Dockerfile:
 
 ```dockerfile
 # Use distroless base image for minimal attack surface
-FROM python:3.9-slim as builder
+FROM python:3.11-slim as builder
 # ... build steps ...
 
 FROM gcr.io/distroless/python3-debian11
@@ -457,7 +457,7 @@ docker stats fred
 docker exec -it fred /bin/bash
 
 # Run one-off command
-docker exec fred python -c "import signalwire_agents; print(signalwire_agents.__version__)"
+docker exec fred python -c "import signalwire; print(signalwire.__version__)"
 ```
 
 ### Common Issues

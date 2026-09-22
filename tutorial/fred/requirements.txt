@@ -1,1 +1,1 @@
-signalwire-agents>=0.1.23
+signalwire-sdk>=3.4.3

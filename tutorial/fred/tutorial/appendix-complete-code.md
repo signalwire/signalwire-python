@@ -400,7 +400,7 @@ esac
 Create `requirements.txt`:
 
 ```txt
-signalwire-agents>=1.0.12
+signalwire-sdk>=3.4.3
 ```
 
 Or capture your current environment:

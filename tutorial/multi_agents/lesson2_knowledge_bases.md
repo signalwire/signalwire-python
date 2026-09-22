@@ -168,11 +168,11 @@ Since we already have the knowledge base files, let's verify the indexes:
 
 ```bash
 # The indexes are already built, but here's how they were created:
-PYTORCH_DISABLE_AVX512=1 sw-search tutorial/sales_knowledge.md \
-  --output tutorial/sales_knowledge.swsearch
+PYTORCH_DISABLE_AVX512=1 sw-search tutorial/multi_agents/sales_knowledge.md \
+  --output tutorial/multi_agents/sales_knowledge.swsearch
 
-PYTORCH_DISABLE_AVX512=1 sw-search tutorial/support_knowledge.md \
-  --output tutorial/support_knowledge.swsearch
+PYTORCH_DISABLE_AVX512=1 sw-search tutorial/multi_agents/support_knowledge.md \
+  --output tutorial/multi_agents/support_knowledge.swsearch
 ```
 
 ---
@@ -188,7 +188,7 @@ Now let's enhance Morgan with the ability to search the knowledge base.
 self.add_skill("native_vector_search", {
     "tool_name": "search_sales_knowledge",
     "description": "Search sales and product information",
-    "index_file": "sales_knowledge.swsearch",
+    "index_file": "tutorial/multi_agents/sales_knowledge.swsearch",
     "count": 3  # Return top 3 results
 })
 ```
@@ -334,7 +334,7 @@ class SalesAgentWithSearch(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "search_sales_knowledge",
             "description": "Search sales and product information",
-            "index_file": "tutorial/sales_knowledge.swsearch",
+            "index_file": "tutorial/multi_agents/sales_knowledge.swsearch",
             "count": 3
         })
 
@@ -366,10 +366,10 @@ if __name__ == "__main__":
 
 ```bash
 # List available tools
-swaig-test tutorial/sales_agent_with_search.py --list-tools
+swaig-test tutorial/multi_agents/sales_agent_with_search.py --list-tools
 
 # Test the search function
-swaig-test tutorial/sales_agent_with_search.py \
+swaig-test tutorial/multi_agents/sales_agent_with_search.py \
   --exec search_sales_knowledge \
   --query "gaming PC under $1500"
 ```
@@ -385,7 +385,7 @@ When you call the agent, try these prompts:
 
 ```bash
 # Test the search index directly
-sw-search search tutorial/sales_knowledge.swsearch "RTX 4070"
+sw-search search tutorial/multi_agents/sales_knowledge.swsearch "RTX 4070"
 ```
 
 ### Understanding Search Results

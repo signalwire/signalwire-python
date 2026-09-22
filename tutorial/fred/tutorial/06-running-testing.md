@@ -492,7 +492,7 @@ kill -9 <PID>
 
 **Error:**
 ```
-ModuleNotFoundError: No module named 'signalwire_agents'
+ModuleNotFoundError: No module named 'signalwire'
 ```
 
 **Solution:**
@@ -568,7 +568,7 @@ HTTP/1.1 200 OK
 
 2. **Docker Container**
    ```dockerfile
-   FROM python:3.9-slim
+   FROM python:3.11-slim
    WORKDIR /app
    COPY requirements.txt .
    RUN pip install -r requirements.txt

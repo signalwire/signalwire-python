@@ -319,7 +319,7 @@ def create_pc_builder_app(host="0.0.0.0", port=3001):
 
 ```bash
 # Run the complete system
-python tutorial/pc_builder.py
+python tutorial/multi_agents/pc_builder.py
 
 # You'll see:
 # Triage Agent (Alex): http://localhost:3001/
@@ -375,7 +375,7 @@ export SWML_BASIC_AUTH_PASSWORD=mypassword
 SWML_SSL_ENABLED=true \
 SWML_SSL_CERT_PATH=/path/to/cert.pem \
 SWML_SSL_KEY_PATH=/path/to/key.pem \
-python tutorial/pc_builder.py
+python tutorial/multi_agents/pc_builder.py
 ```
 
 ### Deployment Patterns
