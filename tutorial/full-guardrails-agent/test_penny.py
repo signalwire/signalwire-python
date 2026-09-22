@@ -341,7 +341,6 @@ class TestSecurity(unittest.TestCase):
     def test_the_wrong_password_is_refused(self) -> None:
         self.assertEqual(self.client.get("/penny", auth=("penny", "guess")).status_code, 401)
 
-    @unittest.expectedFailure  # signalwire-sdk 3.4.3's run() skips this check; remove once fixed
     def test_an_unsigned_tool_call_is_refused(self) -> None:
         response = self.client.post("/penny/swaig", json=self.tool_call,
                                     auth=("penny", "test-password"))

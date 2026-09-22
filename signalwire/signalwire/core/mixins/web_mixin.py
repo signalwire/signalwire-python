@@ -16,7 +16,7 @@ import contextvars
 from typing import TYPE_CHECKING, Any
 from collections.abc import Awaitable, Callable
 
-from fastapi import Depends, FastAPI, APIRouter, Request, Response
+from fastapi import Depends, FastAPI, APIRouter, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from signalwire.core.web import HostAppRouter
 
@@ -40,6 +40,12 @@ _request_proxy_url: contextvars.ContextVar[str | None] = contextvars.ContextVar(
 
 # Maximum request body size (10MB, matches CGI limit)
 MAX_REQUEST_BODY_SIZE = 10 * 1024 * 1024
+
+# The agent endpoints SignalWire POSTs to, relative to the agent's route and
+# without slashes: the SWML fetch, SWAIG dispatch and the post-prompt summary.
+# With a signing_key set, a POST to any of them needs a valid signature,
+# whichever route matched it.
+_SIGNED_POST_PATHS = frozenset({"", "swaig", "post_prompt"})
 
 
 def _as_response(result: "Response | dict[str, Any]") -> "Response":
@@ -302,6 +308,9 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             @app.get(self.route)
             @app.post(self.route)
             async def _swml_bare_route(request: Request) -> Response:
+                rejected = await self._reject_unsigned_post(request, "")
+                if rejected is not None:
+                    return rejected
                 return _as_response(await self._handle_root_request(request))
 
         # (2) Anything registered before the catch-all wins; move it last so
@@ -396,10 +405,19 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                     )
                 return response
 
-            # Get router for this agent
+            # Include the agent's router BEFORE the catch-all. FastAPI matches
+            # routes in registration order, and only the router's routes carry
+            # the signature check as a dependency.
             router = self.as_router()
+            if self.route == "/":
+                app.include_router(router)
+            else:
+                app.include_router(router, prefix=self.route)
 
-            # Register a catch-all route for debugging and troubleshooting
+            # The catch-all serves what the router doesn't match exactly: the
+            # bare route without a trailing slash, and doubled or trailing
+            # slashes. It dispatches to the same handlers, so it runs the same
+            # signature check first.
             @app.get("/{full_path:path}")
             @app.post("/{full_path:path}")
             async def handle_all_routes(request: Request, full_path: str) -> Response:
@@ -413,6 +431,10 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                 relative_path = full_path[len(self.route.lstrip("/")) :]
                 relative_path = relative_path.lstrip("/")
                 self.log.debug("path_extracted", relative_path=relative_path)
+
+                rejected = await self._reject_unsigned_post(request, relative_path)
+                if rejected is not None:
+                    return rejected
 
                 # Perform routing based on the relative path
                 if not relative_path or relative_path == "/":
@@ -451,12 +473,6 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
 
                 # Default: 404
                 return JSONResponse(content={"error": "Path not found"})
-
-            # Include router with prefix (handle root route special case)
-            if self.route == "/":
-                app.include_router(router)
-            else:
-                app.include_router(router, prefix=self.route)
 
             # Log all app routes for debugging
             self.log.debug("app_routes_registered")
@@ -566,6 +582,54 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                 }
             raise
 
+    def _webhook_signature_check(
+        self,
+    ) -> Callable[[Request, Response], Awaitable[Response | None]] | None:
+        """The inbound webhook signature check, or None when no signing_key is set.
+
+        Every route that dispatches a POST to /, /swaig or /post_prompt must run
+        it: the router attaches it as a dependency, and catch-all routes call it
+        through ``_reject_unsigned_post``.
+        """
+        signing_key = getattr(self, "signing_key", None)
+        if not signing_key:
+            return None
+        return make_webhook_validation_dependency(
+            signing_key,
+            trust_proxy=getattr(self, "_trust_proxy_for_signature", False),
+        )
+
+    async def _reject_unsigned_post(
+        self, request: Request, relative_path: str
+    ) -> Response | None:
+        """Return a 403 for an unsigned POST to a signed endpoint, else None.
+
+        For routes that dispatch to the handlers directly rather than through
+        the router, such as the catch-alls in ``serve()`` and ``AgentServer``.
+        ``relative_path`` is the request path below the agent's route; slashes
+        around it are ignored, the same way the catch-alls ignore them.
+
+        Args:
+            request: The incoming request
+            relative_path: The path below the agent's route, e.g. "swaig"
+
+        Returns:
+            The 403 response to send, or None when the request may proceed
+        """
+        if (
+            request.method != "POST"
+            or relative_path.strip("/") not in _SIGNED_POST_PATHS
+        ):
+            return None
+        signature_check = self._webhook_signature_check()
+        if signature_check is None:
+            return None
+        try:
+            await signature_check(request, Response())
+        except HTTPException as rejected:
+            return Response(status_code=rejected.status_code)
+        return None
+
     def _register_routes(self, router: APIRouter) -> None:
         """
         Register routes for this agent
@@ -582,12 +646,9 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         # See porting-sdk/webhooks.md and signalwire.core.security.webhook_middleware.
         # When unset, signed_post_deps stays empty and routes register without it.
         signed_post_deps = []
-        if getattr(self, "signing_key", None):
-            sig_dep = make_webhook_validation_dependency(
-                self.signing_key,
-                trust_proxy=getattr(self, "_trust_proxy_for_signature", False),
-            )
-            signed_post_deps = [Depends(sig_dep)]
+        signature_check = self._webhook_signature_check()
+        if signature_check is not None:
+            signed_post_deps = [Depends(signature_check)]
 
         # Root endpoint (handles both with and without trailing slash)
         @router.get("/")

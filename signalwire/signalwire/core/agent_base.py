@@ -1539,39 +1539,46 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
     ) -> tuple[Any, dict[str, Any] | None]:
         req_log = self.log.bind(endpoint="swaig", function=function_name)
 
-        # Validate security token if present.
+        # A secure function runs only with a valid token for this call. The
+        # token is minted into the function's URL when the SWML is rendered, so
+        # a request that arrives without one didn't come from that SWML: a
+        # missing token, or a missing call_id, is refused like a wrong token.
         token = request.query_params.get("__token") or request.query_params.get("token")
-        if token:
-            req_log.debug("token_found", token_length=len(token))
-            if (
-                hasattr(self, "_session_manager")
-                and function_name in self._tool_registry._swaig_functions
+        func_entry = self._tool_registry._swaig_functions.get(function_name)
+        secure = func_entry is not None and (
+            func_entry.secure
+            if hasattr(func_entry, "secure")
+            else func_entry.get("secure", True)
+        )
+        if token or secure:
+            if token:
+                req_log.debug("token_found", token_length=len(token))
+            is_valid = bool(
+                token
                 and call_id is not None
-            ):
-                is_valid = self._session_manager.validate_tool_token(
+                and hasattr(self, "_session_manager")
+                and self._session_manager.validate_tool_token(
                     function_name, token, call_id
                 )
-                if is_valid:
-                    req_log.debug("token_valid")
-                else:
-                    req_log.warning("token_invalid")
-                    if hasattr(self._session_manager, "debug_token"):
-                        debug_info = self._session_manager.debug_token(token)
-                        req_log.debug("token_debug", debug=json.dumps(debug_info))
-                    func_entry = self._tool_registry._swaig_functions.get(function_name)
-                    if func_entry and (
-                        func_entry.secure
-                        if hasattr(func_entry, "secure")
-                        else func_entry.get("secure", True)
-                    ):
-                        from signalwire.core.function_result import FunctionResult
+            )
+            if is_valid:
+                req_log.debug("token_valid")
+            elif not token:
+                req_log.warning("token_missing")
+            else:
+                req_log.warning("token_invalid")
+                if hasattr(self._session_manager, "debug_token"):
+                    debug_info = self._session_manager.debug_token(token)
+                    req_log.debug("token_debug", debug=json.dumps(debug_info))
+            if secure and not is_valid:
+                from signalwire.core.function_result import FunctionResult
 
-                        return self, FunctionResult(
-                            response=(
-                                "I'm sorry, the security token for this function is invalid "
-                                "or expired. I cannot execute this action."
-                            )
-                        ).to_dict()
+                return self, FunctionResult(
+                    response=(
+                        "I'm sorry, the security token for this function is invalid "
+                        "or expired. I cannot execute this action."
+                    )
+                ).to_dict()
 
         # Dynamic-config ephemeral agent.
         target = self

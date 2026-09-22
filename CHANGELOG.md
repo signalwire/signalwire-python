@@ -1,5 +1,28 @@
 # Changelog
 
+## [Unreleased]
+
+Webhook signatures and SWAIG tokens are now enforced on every path.
+
+### Fixed
+- Security: `serve()` (and so `run()`) registered its catch-all route before the
+  agent's router, so every request reached the handlers without the webhook
+  signature check. With a `signing_key` set, an unsigned `POST` to the SWML,
+  SWAIG or post-prompt endpoint was accepted. The router now comes first, and
+  the catch-alls in `serve()`, `mount()` and `AgentServer` run the same check
+  before dispatching, so the agent's bare route and slash variants such as
+  `/agent//swaig` are covered too.
+- Security: a `secure=True` SWAIG function ran when the request carried no
+  token at all, or a token but no `call_id`; only a wrong token was refused.
+  Now a secure function runs only with a valid token for that function and
+  call.
+
+### Notes for upgraders
+- Calling a secure function directly, for example with `curl`, now needs the
+  token from the function's `web_hook_url` in the SWML, fetched with
+  `?call_id=<id>`. `swaig-test` is unaffected. SignalWire's own requests
+  already carry the token.
+
 ## [3.4.3] - 2026-09-17
 
 AI Chat gateway: browser-volunteered page context.

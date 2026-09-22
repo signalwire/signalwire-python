@@ -687,6 +687,56 @@ class TestHandleSwaigRequest:
         # Should proceed since function is not secure
         agent.on_function_call.assert_called()
 
+    def test_missing_token_secure_function_is_refused(self) -> None:
+        """A secure function without a token is refused like a wrong token:
+        the token is minted into the function's URL, so a request without one
+        didn't come from the SWML."""
+        agent = _build_mixin()
+        agent._session_manager.validate_tool_token = MagicMock(return_value=True)
+        agent._tool_registry._swaig_functions = {"secure_fn": {"secure": True}}
+        resp = MagicMock()
+        resp.headers = {}
+        body = {"function": "secure_fn", "call_id": "c1"}
+        request = _make_request("POST", body=body, url_path="/agent/swaig")
+        result = _run(agent._handle_swaig_request(request, resp))
+        assert isinstance(result, dict)
+        assert "invalid" in result["response"].lower()
+        agent._session_manager.validate_tool_token.assert_not_called()
+        agent.on_function_call.assert_not_called()
+
+    def test_token_without_call_id_secure_function_is_refused(self) -> None:
+        """A token is only valid for a call, so a request without a call_id
+        can't be validated and is refused."""
+        agent = _build_mixin()
+        agent._session_manager.validate_tool_token = MagicMock(return_value=True)
+        agent._session_manager.debug_token = MagicMock(return_value={})
+        agent._tool_registry._swaig_functions = {"secure_fn": {"secure": True}}
+        resp = MagicMock()
+        resp.headers = {}
+        body = {"function": "secure_fn"}
+        request = _make_request(
+            "POST", body=body,
+            query_params={"__token": "some-token"},
+            url_path="/agent/swaig"
+        )
+        result = _run(agent._handle_swaig_request(request, resp))
+        assert isinstance(result, dict)
+        assert "invalid" in result["response"].lower()
+        agent.on_function_call.assert_not_called()
+
+    def test_nonsecure_function_runs_without_token(self) -> None:
+        agent = _build_mixin()
+        agent._session_manager.validate_tool_token = MagicMock(return_value=False)
+        agent._tool_registry._swaig_functions = {"open_fn": {"secure": False}}
+        agent.on_function_call = MagicMock(return_value={"response": "allowed"})
+        resp = MagicMock()
+        resp.headers = {}
+        body = {"function": "open_fn", "call_id": "c1"}
+        request = _make_request("POST", body=body, url_path="/agent/swaig")
+        result = _run(agent._handle_swaig_request(request, resp))
+        assert result == {"response": "allowed"}
+        agent._session_manager.validate_tool_token.assert_not_called()
+
     def test_dynamic_config_callback_creates_ephemeral(self) -> None:
         ephemeral = MagicMock()
         ephemeral.on_function_call = MagicMock(return_value={"response": "ephemeral"})

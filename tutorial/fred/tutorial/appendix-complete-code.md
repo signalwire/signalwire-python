@@ -459,17 +459,13 @@ python fred.py
 curl -u username:password http://localhost:3000/fred
 
 # Test Wikipedia search
-curl -X POST -u username:password \
-  -H "Content-Type: application/json" \
-  -d '{"function":"search_wiki","argument":{"parsed":[{"query":"Python programming"}]}}' \
-  http://localhost:3000/fred/swaig/
+swaig-test fred.py --exec search_wiki --query "Python programming"
 
 # Test fun fact
-curl -X POST -u username:password \
-  -H "Content-Type: application/json" \
-  -d '{"function":"share_fun_fact","argument":{"parsed":[{"category":"history"}]}}' \
-  http://localhost:3000/fred/swaig/
+swaig-test fred.py --exec share_fun_fact --category history
 ```
+
+To call a function over HTTP instead, use the URL from Fred's SWML, which carries the function's token. See Lesson 6, Step 3.
 
 ### 5. Environment Variables (Optional)
 

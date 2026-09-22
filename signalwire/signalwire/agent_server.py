@@ -864,14 +864,22 @@ class AgentServer:
             """Handle requests that don't match registered routes (e.g. /matti instead of /matti/)"""
             # Check if this path maps to one of our registered agents
             for route, agent in self.agents.items():
+                # This handler dispatches without the router's signature
+                # dependency, so it runs the agent's signature check itself.
                 # Check for exact match with registered route
                 if full_path == route.lstrip("/"):
                     # This is a request to an agent's root without trailing slash
+                    rejected = await agent._reject_unsigned_post(request, "")
+                    if rejected is not None:
+                        return rejected
                     return await agent._handle_root_request(request)
                 if full_path.startswith(route.lstrip("/") + "/"):
                     # This is a request to an agent's sub-path
                     relative_path = full_path[len(route.lstrip("/")) :]
                     relative_path = relative_path.lstrip("/")
+                    rejected = await agent._reject_unsigned_post(request, relative_path)
+                    if rejected is not None:
+                        return rejected
 
                     # Route to appropriate handler based on path
                     if not relative_path or relative_path == "/":

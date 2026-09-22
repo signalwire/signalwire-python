@@ -78,6 +78,7 @@ SWAIG (SignalWire AI Gateway) handles function execution:
 - **Purpose**: Executes Fred's functions
 - **Method**: POST
 - **Auth**: Required
+- **Token**: Required. Each function's URL in the SWML carries a token that's valid for one call.
 - **Content-Type**: application/json
 
 ## Testing with swaig-test CLI
@@ -257,12 +258,17 @@ curl -u fred_user:a7b9c2d4e6 http://localhost:3000/fred | python -m json.tool
 
 ### Step 3: Test Wikipedia Search
 
-Test Fred's Wikipedia search capability:
+SignalWire calls a function at the URL Fred's SWML gives it, and that URL carries a security token that's valid for one call only. A test does the same: fetch the SWML for a test call, take the function's URL from it, and post to that URL with the same call ID.
 
 ```bash
-# Search for FreeSWITCH
-curl -X POST -u username:password \
-  -H "Content-Type: application/json" \
+# Fetch the SWML for a test call, and take search_wiki's URL from it
+URL=$(curl -s -u username:password "http://localhost:3000/fred?call_id=test-call-123" | python -c '
+import json, sys
+ai = next(v["ai"] for v in json.load(sys.stdin)["sections"]["main"] if "ai" in v)
+print(next(f["web_hook_url"] for f in ai["SWAIG"]["functions"] if f["function"] == "search_wiki"))')
+
+# Call search_wiki the way SignalWire does, with the same call ID
+curl -X POST -H "Content-Type: application/json" \
   -d '{
     "function": "search_wiki",
     "argument": {
@@ -272,12 +278,12 @@ curl -X POST -u username:password \
         }
       ]
     },
-    "call_id": "test-call-123",
-    "project_id": "test-project",
-    "space_id": "test-space"
+    "call_id": "test-call-123"
   }' \
-  http://localhost:3000/fred/swaig/
+  "$URL"
 ```
+
+The URL already includes Fred's credentials, so the second `curl` doesn't need `-u`.
 
 **Expected Response:**
 ```json
@@ -288,27 +294,17 @@ curl -X POST -u username:password \
 
 ### Step 4: Test Fun Fact Function
 
-Test Fred's fun fact feature:
+Each function has its own token, so take `share_fun_fact`'s URL the same way:
 
 ```bash
-# Get a random fun fact
-curl -X POST -u username:password \
-  -H "Content-Type: application/json" \
-  -d '{
-    "function": "share_fun_fact",
-    "argument": {
-      "parsed": [{}]
-    },
-    "call_id": "test-call-456"
-  }' \
-  http://localhost:3000/fred/swaig/
-```
+# Fetch the SWML for a test call, and take share_fun_fact's URL from it
+URL=$(curl -s -u username:password "http://localhost:3000/fred?call_id=test-call-456" | python -c '
+import json, sys
+ai = next(v["ai"] for v in json.load(sys.stdin)["sections"]["main"] if "ai" in v)
+print(next(f["web_hook_url"] for f in ai["SWAIG"]["functions"] if f["function"] == "share_fun_fact"))')
 
-**With category parameter:**
-```bash
 # Get a history fact
-curl -X POST -u username:password \
-  -H "Content-Type: application/json" \
+curl -X POST -H "Content-Type: application/json" \
   -d '{
     "function": "share_fun_fact",
     "argument": {
@@ -318,9 +314,9 @@ curl -X POST -u username:password \
         }
       ]
     },
-    "call_id": "test-call-789"
+    "call_id": "test-call-456"
   }' \
-  http://localhost:3000/fred/swaig/
+  "$URL"
 ```
 
 **Expected Response:**
@@ -525,12 +521,11 @@ logging.basicConfig(level=logging.DEBUG)
 #### Test Minimal SWAIG Call
 
 ```bash
-# Simplest possible function call
-curl -X POST -u username:password \
-  -H "Content-Type: application/json" \
-  -d '{"function":"share_fun_fact","argument":{"parsed":[{}]}}' \
-  http://localhost:3000/fred/swaig/
+# Simplest possible function call: no server, no credentials, no token
+swaig-test fred.py --exec share_fun_fact
 ```
+
+If this works but a call through `/fred/swaig/` answers "the security token for this function is invalid or expired", the request is missing the token from Fred's SWML, or used one from another call. Step 3 shows how to call a function with its token.
 
 #### Check Fred's Health
 
@@ -612,14 +607,10 @@ python fred.py
 curl -u user:pass http://localhost:3000/fred
 
 # Test Wikipedia search
-curl -X POST -u user:pass -H "Content-Type: application/json" \
-  -d '{"function":"search_wiki","argument":{"parsed":[{"query":"Python"}]}}' \
-  http://localhost:3000/fred/swaig/
+swaig-test fred.py --exec search_wiki --query "Python"
 
 # Test fun fact
-curl -X POST -u user:pass -H "Content-Type: application/json" \
-  -d '{"function":"share_fun_fact","argument":{"parsed":[{}]}}' \
-  http://localhost:3000/fred/swaig/
+swaig-test fred.py --exec share_fun_fact
 ```
 
 ---

@@ -12,14 +12,19 @@ test client posts to and assert:
 """
 
 import base64
+import contextlib
 import hashlib
 import hmac
+import io
 import logging
+from collections.abc import Iterator
 from typing import Any
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
 
+from signalwire.agent_server import AgentServer
 from signalwire.core.agent_base import AgentBase
 from signalwire.core.security.webhook_middleware import SIGNALWIRE_SIGNATURE_HEADER
 
@@ -126,6 +131,100 @@ class TestAgentSignedWebhooks:
         # Same logic as the signed-but-no-sig case, EXCEPT the validator
         # was never wired — so we should NOT see 403 from this layer.
         assert resp.status_code != 403
+
+
+# ---------------------------------------------------------------------------
+# Every app that serves an agent checks signatures, on every path to a handler
+# ---------------------------------------------------------------------------
+
+# Paths below the agent's route that reach a signed handler. The router matches
+# the canonical forms; the catch-alls serve the bare route and slash variants,
+# and must not become a way around the check.
+SIGNED_PATHS = ["", "/", "/swaig", "/swaig/", "//swaig", "/swaig//",
+                "/post_prompt", "/post_prompt//"]
+
+
+def _served_app(agent: AgentBase) -> Any:
+    """The app ``agent.serve()`` builds, captured instead of started."""
+    with (
+        patch("uvicorn.run") as run,
+        patch("signalwire.core.logging_config.configure_logging"),
+        contextlib.redirect_stdout(io.StringIO()),
+    ):
+        agent.serve()
+    return run.call_args.args[0]
+
+
+@contextlib.contextmanager
+def _agent_server_client(agent: AgentBase) -> Iterator[TestClient]:
+    """A client for an AgentServer hosting ``agent``, with startup run."""
+    server = AgentServer()
+    server.register(agent)
+    # The catch-all is registered on startup; entering the client runs it.
+    with TestClient(server.app) as client:
+        yield client
+
+
+def _served_client(agent: AgentBase) -> Iterator[TestClient]:
+    yield TestClient(_served_app(agent))
+
+
+def _get_app_client(agent: AgentBase) -> Iterator[TestClient]:
+    yield TestClient(agent.get_app())
+
+
+APPS = {
+    "serve": contextlib.contextmanager(_served_client),
+    "get_app": contextlib.contextmanager(_get_app_client),
+    "agent_server": _agent_server_client,
+}
+
+
+class TestEveryServedPathIsSigned:
+    @pytest.mark.parametrize("app_kind", sorted(APPS))
+    @pytest.mark.parametrize("path", SIGNED_PATHS)
+    def test_unsigned_post_is_refused(self, app_kind: str, path: str) -> None:
+        agent = AgentBase(name="signed", route="/agent", signing_key=SIGNING_KEY)
+        body = '{"function":"nope"}'
+        with APPS[app_kind](agent) as client:
+            resp = client.post(
+                "/agent" + path,
+                content=body,
+                headers={**_basic_auth_headers(agent), "content-type": "application/json"},
+            )
+        # get_app() answers some variants with 204 without running a handler;
+        # what matters is that no handler runs unsigned.
+        assert resp.status_code in (403, 204), (
+            f"{app_kind}: unsigned POST /agent{path} got {resp.status_code}: {resp.text[:200]}"
+        )
+        if app_kind != "get_app":
+            assert resp.status_code == 403
+
+    @pytest.mark.parametrize("app_kind", ["serve", "agent_server"])
+    @pytest.mark.parametrize("path", ["", "/swaig//"])
+    def test_signed_post_reaches_the_handler(self, app_kind: str, path: str) -> None:
+        agent = AgentBase(name="signed", route="/agent", signing_key=SIGNING_KEY)
+        body = '{"function":"nope"}'
+        signature = _scheme_a_sig(SIGNING_KEY, "http://testserver/agent" + path, body)
+        with APPS[app_kind](agent) as client:
+            resp = client.post(
+                "/agent" + path,
+                content=body,
+                headers={
+                    **_basic_auth_headers(agent),
+                    SIGNALWIRE_SIGNATURE_HEADER: signature,
+                    "content-type": "application/json",
+                },
+            )
+        assert resp.status_code == 200, (
+            f"{app_kind}: signed POST /agent{path} got {resp.status_code}: {resp.text[:200]}"
+        )
+
+    def test_unsigned_get_still_needs_only_basic_auth(self) -> None:
+        agent = AgentBase(name="signed", route="/agent", signing_key=SIGNING_KEY)
+        client = TestClient(_served_app(agent))
+        resp = client.get("/agent", headers=_basic_auth_headers(agent))
+        assert resp.status_code == 200
 
 
 # ---------------------------------------------------------------------------

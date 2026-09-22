@@ -318,6 +318,8 @@ agent.serve()
 
 When `signing_key` is set, signature validation is auto-mounted on `POST /`, `POST /swaig`, `POST /post_prompt`. Requests without a valid `X-SignalWire-Signature` header are rejected with HTTP 403 — the handler is never invoked. The `X-Twilio-Signature` header is accepted as an alias for cXML compatibility.
 
+The check applies however the agent is served (`serve()`, `get_app()`, `mount()` or `AgentServer`), and on every path that reaches those handlers, including the agent's route without a trailing slash.
+
 When `signing_key` is unset, AgentBase emits a prominent startup warning:
 
 ```
@@ -388,6 +390,17 @@ Before deploying to production:
 Each SWAIG function call an agent hands to the AI carries a short-lived token
 that the agent signs and later verifies itself, so a function URL cannot be
 replayed or called out of context.
+
+A secure function (the default, `secure=True`) runs only when the request
+carries a valid token for that function and that call. A request with no token
+is refused exactly like one with a wrong token, because the token is part of
+the URL the SWML hands out: a request without it didn't come from that SWML.
+Mark a function `secure=False` only if anyone holding the basic-auth
+credentials may call it.
+
+To call a secure function by hand, fetch the SWML with `?call_id=<id>` and
+POST to that function's `web_hook_url`, with the same `call_id` in the body.
+`swaig-test` calls functions directly and needs no token.
 
 By default that secret is **generated randomly per process**. Tokens therefore
 stop verifying whenever the agent restarts, and every replica of the same agent
