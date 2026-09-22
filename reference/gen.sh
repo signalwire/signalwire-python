@@ -19,7 +19,8 @@ set -euo pipefail
 NO_BUILD=0
 NO_INSTALL=0
 usage() {
-  sed -n '13,16p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  # Print the header's Usage block: from "# Usage:" to the end of that comment.
+  awk '/^# Usage:/{p=1} p&&!/^#/{exit} p{sub(/^# ?/,""); print}' "${BASH_SOURCE[0]}"
 }
 for arg in "$@"; do
   case "$arg" in
@@ -72,7 +73,10 @@ for name in names:
 # through to deploy. (This is NOT an install check: PYTHONPATH points at the
 # source tree, so the import resolves with or without the editable install.)
 if not written:
-    sys.exit("gen.sh: no API pages generated (is the signalwire package importable?)")
+    sys.exit(
+        "gen.sh: no API pages generated: no public top-level modules found in "
+        f"{', '.join(pkg.__path__)} (pkgutil saw: {', '.join(names) or 'nothing'})"
+    )
 
 # API-section landing entry.
 with open(os.path.join(api_out, "index.md"), "w") as fh:
