@@ -1062,7 +1062,7 @@ sw-search search qa.swsearch "how to authenticate"
 
 ## Embedding Models
 
-The embedding model affects both search quality and performance. The SDK uses the sentence-transformers library and provides three model aliases.
+The embedding model affects both search quality and performance. The SDK uses the sentence-transformers library and provides two model aliases, `mini` and `base`, plus a deprecated third, `large`.
 
 ### Available Models (mini, base, large)
 
@@ -1070,14 +1070,14 @@ The embedding model affects both search quality and performance. The SDK uses th
 |-------|-------|----------------|------------|------------|------|-------|
 | Mini | `mini` | `sentence-transformers/all-MiniLM-L6-v2` | 384 | 22.7M | ~90MB | Fast |
 | Base | `base` | `sentence-transformers/all-mpnet-base-v2` | 768 | 109M | ~420MB | Medium |
-| Large | `large` | `sentence-transformers/all-mpnet-base-v2` | 768 | 109M | ~420MB | Medium |
 
-In the current SDK, the `large` alias resolves to the same underlying model as `base`. Choosing `large` does not change dimensions, size, or speed; it behaves identically to `base` until a distinct large model is wired in.
+The `large` alias is deprecated. It loads the same model as `base`, so it changes nothing, and `sw-search` prints a warning when you use it. It can't be pointed at a bigger model, because indexes built with it would stop matching their queries. Use `base` instead.
+
+These commands build an index with each model:
 
 ```bash
 sw-search ./docs --model mini   # Recommended default
 sw-search ./docs --model base   # Higher quality
-sw-search ./docs --model large  # Currently identical to base
 ```
 
 **Mini (all-MiniLM-L6-v2)** is the recommended default:

@@ -151,7 +151,6 @@ When using `build_index: True` for auto-building indexes:
 {
     "model_name": "mini"   # Fast, 5x faster, good for most use cases
     # "model_name": "base"  # Balanced, better quality
-    # "model_name": "large" # Same model as base currently
 }
 ```
 

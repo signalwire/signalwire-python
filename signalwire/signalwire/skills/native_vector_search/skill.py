@@ -217,7 +217,7 @@ class NativeVectorSearchSkill(SkillBase):
                 },
                 "model_name": {
                     "type": "string",
-                    "description": "Embedding model to use. Options: 'mini' (fastest, 384 dims), 'base' (balanced, 768 dims), 'large' (same as base). Or specify full model name like 'sentence-transformers/all-MiniLM-L6-v2'",
+                    "description": "Embedding model to use. Options: 'mini' (fastest, 384 dims), 'base' (balanced, 768 dims), 'large' (deprecated: loads the same model as 'base'). Or specify full model name like 'sentence-transformers/all-MiniLM-L6-v2'",
                     "default": "mini",
                     "required": False,
                 },

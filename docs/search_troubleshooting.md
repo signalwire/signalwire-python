@@ -599,12 +599,12 @@ Search queries take 500ms or more instead of the expected 20-50ms range.
 3. Check which model is being used:
 <!-- snippet: no-compile config-excerpt -->
    ```python
-   {"model_name": "large"}  # Large models are significantly slower
+   {"model_name": "base"}  # base is slower than mini
    ```
 
 **Common Causes and Solutions:**
 
-1. **Using the large model**: Switch to the mini model for 2-3x faster queries with minimal quality loss:
+1. **Using the base model**: Switch to the mini model for 2-3x faster queries with minimal quality loss:
 <!-- snippet: no-compile config-excerpt -->
    ```python
    {"model_name": "mini"}

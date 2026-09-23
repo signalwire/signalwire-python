@@ -14,7 +14,12 @@ from datetime import datetime
 from typing import cast
 from urllib.parse import urlparse, urlunparse
 
-from signalwire.search.models import MODEL_ALIASES, DEFAULT_MODEL, resolve_model_alias
+from signalwire.search.models import (
+    DEFAULT_MODEL,
+    LARGE_ALIAS_DEPRECATION,
+    MODEL_ALIASES,
+    resolve_model_alias,
+)
 
 
 def _mask_connection_string(conn_str: str) -> str:
@@ -100,7 +105,6 @@ Examples:
   # Model selection examples (performance vs quality tradeoff)
   sw-search ./docs --model mini     # Fastest (~5x faster), 384 dims, good for most use cases
   sw-search ./docs --model base     # Balanced speed/quality, 768 dims (previous default)
-  sw-search ./docs --model large    # Best quality (same as base currently)
   # Or use full model names:
   sw-search ./docs --model sentence-transformers/all-MiniLM-L6-v2
   sw-search ./docs --model sentence-transformers/all-mpnet-base-v2
@@ -294,7 +298,7 @@ Examples:
     parser.add_argument(
         "--model",
         default=DEFAULT_MODEL,
-        help=f"Sentence transformer model name or alias (mini/base/large). Default: mini ({DEFAULT_MODEL})",
+        help=f"Sentence transformer model name or alias (mini or base; large is deprecated and loads base). Default: mini ({DEFAULT_MODEL})",
     )
 
     parser.add_argument("--tags", help="Comma-separated tags to add to all chunks")
@@ -336,6 +340,8 @@ Examples:
     args = parser.parse_args()
 
     # Resolve model aliases
+    if args.model == "large":
+        print(f"Warning: {LARGE_ALIAS_DEPRECATION}", file=sys.stderr)
     args.model = resolve_model_alias(args.model)
 
     # Validate sources
@@ -782,7 +788,7 @@ def search_command() -> None:
     )
     parser.add_argument(
         "--model",
-        help="Override embedding model for query (mini/base/large or full model name)",
+        help="Override embedding model for query (mini, base or full model name; large is deprecated and loads base)",
     )
 
     args = parser.parse_args()
@@ -793,6 +799,8 @@ def search_command() -> None:
         sys.exit(1)
 
     # Resolve model aliases
+    if args.model == "large":
+        print(f"Warning: {LARGE_ALIAS_DEPRECATION}", file=sys.stderr)
     if args.model and args.model in MODEL_ALIASES:
         args.model = MODEL_ALIASES[args.model]
 
@@ -1491,8 +1499,9 @@ options:
   --exclude EXCLUDE     Comma-separated glob patterns to exclude (e.g., "**/test/**,**/__pycache__/**")
   --languages LANGUAGES
                         Comma-separated language codes (default: en)
-  --model MODEL         Sentence transformer model name or alias (mini/base/
-                        large). Default: mini (sentence-transformers/all-MiniLM-L6-v2)
+  --model MODEL         Sentence transformer model name or alias (mini or base;
+                        large is deprecated and loads base). Default: mini
+                        (sentence-transformers/all-MiniLM-L6-v2)
   --tags TAGS           Comma-separated tags to add to all chunks
   --index-nlp-backend {nltk,spacy}
                         NLP backend for document processing: nltk (fast, default) or spacy (slower, expands with WordNet synonyms — effect depends on your corpus, measure it)

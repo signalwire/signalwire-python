@@ -1017,19 +1017,21 @@ class TestMainModelAlias:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--model', 'large'])
-    def test_model_alias_large(self, mock_builder_class: MagicMock) -> None:
-        """Model alias 'large' should resolve correctly."""
+    def test_model_alias_large(self, mock_builder_class: MagicMock, capsys: pytest.CaptureFixture[str]) -> None:
+        """The deprecated 'large' alias still loads base's model, with a warning (B11)."""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
 
         with patch('pathlib.Path.exists', return_value=True), \
              patch('pathlib.Path.is_file', return_value=False), \
              patch('pathlib.Path.name', new_callable=lambda: property(lambda self: 'docs')), \
-             patch('os.path.exists', return_value=True):
+             patch('os.path.exists', return_value=True), \
+             pytest.warns(DeprecationWarning, match="'large' model alias is deprecated"):
             main()
 
         call_kw = mock_builder_class.call_args[1]
         assert call_kw['model_name'] == 'sentence-transformers/all-mpnet-base-v2'
+        assert "'large' model alias is deprecated" in capsys.readouterr().err
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--model', 'custom-org/my-model'])

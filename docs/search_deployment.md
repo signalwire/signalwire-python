@@ -613,7 +613,7 @@ class MyAgent(AgentBase):
             "tool_name": "search_docs",
             "description": "Search the documentation database",
 
-            # Model selection (mini/base/large)
+            # Model selection (mini or base)
             "model_name": "mini",
 
             # Search parameters
