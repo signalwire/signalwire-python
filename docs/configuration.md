@@ -9,6 +9,9 @@ All SignalWire services (SWML-based agents, Search, MCP Gateway) now support opt
 ## Quick Start
 
 ### Zero Configuration (Default)
+
+An agent with no configuration file still runs, using its constructor defaults.
+
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 # Works exactly as before - no config needed
@@ -17,6 +20,9 @@ agent.run()
 ```
 
 ### With Configuration File
+
+An agent can also detect a configuration file on its own, or take one explicitly.
+
 <!-- snippet: no-run illustrative fragment (references `MyAgent` established in the surrounding prose) -->
 ```python
 # Automatically detects config.json if present
@@ -32,12 +38,16 @@ agent = MyAgent(config_file="production_config.json")
 
 Services look for configuration files in this order:
 1. Service-specific: `{service_name}_config.json` (e.g., `search_config.json`)
-2. Generic: `config.json`
-3. Hidden: `.swml/config.json`
-4. User home: `~/.swml/config.json`
-5. System: `/etc/swml/config.json`
+2. Service-specific, hidden: `.swml/{service_name}_config.json`
+3. Generic: `config.json`
+4. Generic: `agent_config.json`
+5. Hidden: `.swml/config.json`
+6. User home: `~/.swml/config.json`
+7. System: `/etc/swml/config.json`
 
 ### Configuration Structure
+
+A configuration file is a JSON document with `service` and `security` sections:
 
 ```json
 {
@@ -72,11 +82,13 @@ Services look for configuration files in this order:
 
 The configuration system supports `${VAR|default}` syntax:
 
-- `${VAR}` - Use environment variable VAR (error if not set)
+- `${VAR}` - Use environment variable VAR, or an empty string if not set
 - `${VAR|default}` - Use VAR or "default" if not set
 - `${VAR|}` - Use VAR or empty string if not set
 
 ### Examples
+
+This example substitutes a database section's host, port, and password:
 
 ```json
 {
@@ -101,6 +113,8 @@ Configuration values are applied in this order (highest to lowest):
 
 ### SWML/Agent Configuration
 
+An agent's configuration file sets its service name, route, port, and security options:
+
 ```json
 {
   "service": {
@@ -121,6 +135,8 @@ Configuration values are applied in this order (highest to lowest):
 ```
 
 ### Search Service Configuration
+
+The search service's configuration file sets its port, indexes, and security options:
 
 ```json
 {
@@ -145,6 +161,8 @@ Configuration values are applied in this order (highest to lowest):
 ```
 
 ### MCP Gateway Configuration
+
+The MCP Gateway's configuration file sets its host, port, auth, backing services, and session limits:
 
 ```json
 {
@@ -236,7 +254,9 @@ After (Option 3 - Mix config and env vars):
 
 ## Best Practices
 
-1. **Keep secrets in environment variables**
+Follow these practices when setting up configuration files:
+
+1. **Keep secrets in environment variables:**
    ```json
    {
      "security": {
@@ -250,7 +270,7 @@ After (Option 3 - Mix config and env vars):
    }
    ```
 
-2. **Use defaults for development**
+2. **Use defaults for development:**
    ```json
    {
      "service": {
@@ -260,12 +280,12 @@ After (Option 3 - Mix config and env vars):
    }
    ```
 
-3. **Environment-specific configs**
+3. **Environment-specific configs:**
    - `dev_config.json` - Development settings
    - `prod_config.json` - Production settings
    - Use `${ENV}` to switch between them
 
-4. **Version control**
+4. **Version control:**
    - Commit config files WITHOUT secrets
    - Use `.gitignore` for local overrides
    - Document required environment variables
@@ -273,6 +293,8 @@ After (Option 3 - Mix config and env vars):
 ## Programmatic Usage
 
 ### Loading Configuration
+
+`ConfigLoader` reads a file directly, without a service around it:
 
 ```python
 from signalwire.core.config_loader import ConfigLoader
@@ -290,6 +312,8 @@ if loader.has_config():
 ```
 
 ### Using with Services
+
+Each service accepts a `config_file` or `config_path` argument, so a single call wires it up:
 
 <!-- snippet: no-run requires optional third-party package `flask` -->
 ```python
@@ -316,6 +340,8 @@ gateway = MCPGateway(config_path="mcp_config.json")
 
 ### Config Not Loading
 
+Work through these checks in order:
+
 1. Check file exists and is valid JSON:
    ```bash
    python -m json.tool config.json
@@ -332,6 +358,8 @@ gateway = MCPGateway(config_path="mcp_config.json")
 
 ### Environment Variables Not Substituting
 
+Check these three things:
+
 1. Ensure correct syntax: `${VAR}` or `${VAR|default}`
 2. Check environment variable is exported:
    ```bash
@@ -341,6 +369,8 @@ gateway = MCPGateway(config_path="mcp_config.json")
 3. Remember config file values override env vars
 
 ### Authentication Issues
+
+If authentication fails, check these three things:
 
 1. Config file auth settings override env vars
 2. Check which auth method is enabled
