@@ -190,6 +190,23 @@ class TestImportIsLibrarySafe:
         importlib.reload(lc)
         assert host.handlers == [], "import added a handler to the host app's auth_handler logger"
 
+    def test_off_mode_silences_a_child_with_its_own_level(self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+        # A child set to its own level still finds the namespace's NullHandler,
+        # so nothing reaches Python's last-resort handler on stderr.
+        import signalwire.core.logging_config as lc
+
+        child = logging.getLogger("signalwire.agent_base")
+        child.setLevel(logging.DEBUG)
+        try:
+            monkeypatch.setenv("SIGNALWIRE_LOG_MODE", "off")
+            lc.reset_logging_configuration()
+            lc.configure_logging()
+            lc.get_logger("agent_base").warning("off_mode_must_not_print")
+            assert "off_mode_must_not_print" not in capsys.readouterr().err
+        finally:
+            child.setLevel(logging.NOTSET)
+            lc.reset_logging_configuration()
+
     def test_sdk_loggers_live_under_the_signalwire_namespace(self) -> None:
         from signalwire.core.logging_config import _sdk_logger_name
 
@@ -239,9 +256,10 @@ class TestConfigureLogging:
         with patch.dict(os.environ, {'SIGNALWIRE_LOG_MODE': 'off'}):
             configure_logging()
             sw = logging.getLogger("signalwire")
-            # Off mode sets level above CRITICAL and no handlers
+            # Off mode sets level above CRITICAL and keeps only a NullHandler,
+            # so records reach nothing, not even Python's last-resort handler
             assert sw.level > logging.CRITICAL
-            assert len(sw.handlers) == 0
+            assert [type(h) for h in sw.handlers] == [logging.NullHandler]
 
     def test_stderr_mode(self) -> None:
         with patch.dict(os.environ, {'SIGNALWIRE_LOG_MODE': 'stderr'}):

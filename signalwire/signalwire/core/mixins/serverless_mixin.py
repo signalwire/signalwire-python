@@ -391,9 +391,19 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
         if operation == "swml":
             # The SWML fetch names its call in the body, or a GET in the query
             call_id = _call_id(data) or query.get("call_id") or None
-            modifications = self.on_swml_request(
-                data or None, None, _RequestView(query, headers)
-            )
+            # on_swml_request's contract is a FastAPI request or None, so an
+            # override gets None here, as it always has on serverless. The
+            # per-call config it asks for still sees the query and headers.
+            modifications = self.on_swml_request(data or None, None, None)
+            if (
+                isinstance(modifications, dict)
+                and modifications.get("__use_ephemeral_agent")
+                and modifications.get("__request") is None
+            ):
+                modifications = {
+                    **modifications,
+                    "__request": _RequestView(query, headers),
+                }
             swml = self._render_swml(call_id=call_id, modifications=modifications)
             return 200, swml if isinstance(swml, str) else json.dumps(swml)
 

@@ -320,6 +320,8 @@ When `signing_key` is set, signature validation is auto-mounted on `POST /`, `PO
 
 The check applies however the agent is served (`serve()`, `get_app()`, `mount()`, `AgentServer`, or a serverless platform), and on every path that reaches those handlers, including the agent's route without a trailing slash and any routing-callback path, which renders SWML like the root. On a serverless platform every POST is checked, whatever its path. On a serverless platform the URL is rebuilt the same way: `SWML_PROXY_URL_BASE` if it's set, then the forwarded headers if you opted in with `trust_proxy_for_signature`, then the URL the platform reports. If signed requests are refused, set `SWML_PROXY_URL_BASE` to the public URL.
 
+API Gateway REST APIs (payload version 1.0) hand Lambda the query parameters decoded, and not always in their original order. The SDK tries the two common encodings, but a URL with several query parameters may not be rebuilt exactly, and its signature is then refused. To validate signatures on Lambda, serve the agent from a Lambda function URL or an HTTP API (payload version 2.0), which pass the raw query string.
+
 When `signing_key` is unset, AgentBase emits a prominent startup warning:
 
 ```

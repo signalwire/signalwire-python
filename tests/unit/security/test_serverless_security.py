@@ -429,6 +429,22 @@ class TestPerCallConfiguration:
                 headers={"X-Tenant": "one"})
         assert seen == {"query": {"tenant": "one"}, "tenant": "one"}
 
+    def test_an_on_swml_request_override_still_gets_a_request_or_none(self) -> None:
+        """The hook's contract is a FastAPI request or None; serverless passes None."""
+        seen: list[Any] = []
+
+        class Custom(AgentBase):
+            def on_swml_request(self, request_data: Any = None, callback_path: Any = None,
+                                request: Any = None) -> Any:
+                if request is not None:
+                    seen.append(request.method)
+                return super().on_swml_request(request_data, callback_path, request)
+
+        agent = Custom(name="serverless", route="/agent")
+        result = _lambda(agent, "/agent", json.dumps({"call": {"call_id": "call-1"}}))
+        assert result["statusCode"] == 200
+        assert seen == []
+
     def test_a_tool_added_per_call_runs_with_its_token(self) -> None:
         agent = _agent()
         agent.add_per_call_config(lambda query, body, headers, copy: copy.define_tool(

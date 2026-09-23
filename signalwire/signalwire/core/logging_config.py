@@ -243,9 +243,12 @@ def _configure_off_mode() -> None:
     """Suppress all logging output without leaking file descriptors."""
     off_level = logging.CRITICAL + 10
 
-    # Silence the signalwire namespace
+    # Silence the signalwire namespace. The NullHandler stays: a child logger
+    # someone set to its own level would otherwise find no handler at all and
+    # fall through to Python's last-resort handler on stderr.
     sw_logger = logging.getLogger("signalwire")
     sw_logger.handlers.clear()
+    sw_logger.addHandler(logging.NullHandler())
     sw_logger.setLevel(off_level)
     sw_logger.propagate = False
 
