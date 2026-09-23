@@ -528,10 +528,14 @@ class TestSetupAutoBuild:
 
         mock_query_processor = Mock()
 
+        mock_pgvector = Mock()
+        mock_pgvector.PgVectorBackend.return_value.list_collections.return_value = []
+
         with patch.dict("sys.modules", {
             "signalwire.search": mock_search_mod,
             "signalwire.search.models": mock_models,
             "signalwire.search.query_processor": mock_query_processor,
+            "signalwire.search.pgvector_backend": mock_pgvector,
         }):
             skill = _make_skill({
                 "build_index": True,

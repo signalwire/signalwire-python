@@ -78,16 +78,16 @@ class NativeVectorSearchSkill(SkillBase):
                     "description": "Number of search results to return",
                     "default": 5,
                     "required": False,
-                    "minimum": 1,
-                    "maximum": 20,
+                    "min": 1,
+                    "max": 20,
                 },
                 "similarity_threshold": {
                     "type": "number",
                     "description": "Minimum similarity score for results (0.0 = no limit, 1.0 = exact match)",
                     "default": 0.0,
                     "required": False,
-                    "minimum": 0.0,
-                    "maximum": 1.0,
+                    "min": 0.0,
+                    "max": 1.0,
                 },
                 "tags": {
                     "type": "array",
@@ -145,7 +145,7 @@ class NativeVectorSearchSkill(SkillBase):
                     "description": "Maximum total response size in characters (distributed across all results)",
                     "default": 32768,
                     "required": False,
-                    "minimum": 1000,
+                    "min": 1000,
                 },
                 "response_format_callback": {
                     "type": "callable",
@@ -212,8 +212,8 @@ class NativeVectorSearchSkill(SkillBase):
                     "description": "Deprecated, and has no effect on ranking: results are scored by their strongest signal. Accepted so existing configurations keep working",
                     "default": None,
                     "required": False,
-                    "minimum": 0.0,
-                    "maximum": 1.0,
+                    "min": 0.0,
+                    "max": 1.0,
                 },
                 "model_name": {
                     "type": "string",
@@ -600,7 +600,12 @@ class NativeVectorSearchSkill(SkillBase):
             name = name[: -len(".swsearch")]
         # The same sanitizing IndexBuilder applies when it stores a collection
         name = re.sub(r"[^a-zA-Z0-9_]", "_", name)
-        backend = PgVectorBackend(self.connection_string or "")
+        # If the check itself fails, report "doesn't exist": the build that
+        # follows then runs, and reports the real connection error.
+        try:
+            backend = PgVectorBackend(self.connection_string or "")
+        except Exception:
+            return False
         try:
             return name in backend.list_collections()
         except Exception:
