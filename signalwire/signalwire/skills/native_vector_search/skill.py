@@ -286,9 +286,13 @@ class NativeVectorSearchSkill(SkillBase):
             from urllib.parse import urlparse
 
             parsed = urlparse(self.remote_url)
-            if parsed.username and parsed.password:
-                self.remote_auth = (parsed.username, parsed.password)
             if "@" in parsed.netloc:
+                # Decode the credentials exactly as Requests would have from
+                # the URL, including an empty user or password.
+                from requests.utils import get_auth_from_url
+
+                url_auth = get_auth_from_url(self.remote_url)
+                self.remote_auth = url_auth if any(url_auth) else None
                 host_and_port = parsed.netloc.rsplit("@", 1)[1]
                 self.remote_base_url = parsed._replace(netloc=host_and_port).geturl()
 
@@ -459,10 +463,21 @@ class NativeVectorSearchSkill(SkillBase):
                         # SQLite index file, build only when the collection
                         # doesn't exist yet, unless overwrite asks to rebuild.
                         overwrite = bool(self.params.get("overwrite", False))
-                        if not overwrite and self._pgvector_collection_exists():
+                        exists = (
+                            False if overwrite else self._pgvector_collection_exists()
+                        )
+                        if exists:
                             self.logger.info(
                                 "pgvector collection %s already exists; set "
                                 "overwrite to rebuild it",
+                                self.collection_name,
+                            )
+                        elif exists is None:
+                            # Building now could append a second copy to a
+                            # collection that does exist
+                            self.logger.error(
+                                "Couldn't check whether pgvector collection %s "
+                                "exists, so it wasn't built",
                                 self.collection_name,
                             )
                         else:
@@ -478,7 +493,11 @@ class NativeVectorSearchSkill(SkillBase):
                                 f"pgvector collection created: {self.collection_name}"
                             )
                     except Exception as e:
-                        self.logger.error(f"Failed to build pgvector index: {e}")
+                        from signalwire.core.security.security_utils import redact_url
+
+                        self.logger.error(
+                            "Failed to build pgvector index: %s", redact_url(str(e))
+                        )
                         # Don't set search_available to False - we might be connecting to existing collection
                 else:
                     self.logger.warning(
@@ -503,7 +522,11 @@ class NativeVectorSearchSkill(SkillBase):
                             f"Connected to pgvector collection: {self.collection_name}"
                         )
                     except Exception as e:
-                        self.logger.error(f"Failed to connect to pgvector: {e}")
+                        from signalwire.core.security.security_utils import redact_url
+
+                        self.logger.error(
+                            "Failed to connect to pgvector: %s", redact_url(str(e))
+                        )
                         self.search_available = False
                 else:
                     self.logger.error(
@@ -589,8 +612,11 @@ class NativeVectorSearchSkill(SkillBase):
                 ],
             )
 
-    def _pgvector_collection_exists(self) -> bool:
-        """True if the configured pgvector collection already exists."""
+    def _pgvector_collection_exists(self) -> bool | None:
+        """Whether the configured pgvector collection already exists.
+
+        None means the check itself failed, so the answer is unknown.
+        """
         import re
 
         from signalwire.search.pgvector_backend import PgVectorBackend
@@ -600,17 +626,17 @@ class NativeVectorSearchSkill(SkillBase):
             name = name[: -len(".swsearch")]
         # The same sanitizing IndexBuilder applies when it stores a collection
         name = re.sub(r"[^a-zA-Z0-9_]", "_", name)
-        # If the check itself fails, report "doesn't exist": the build that
-        # follows then runs, and reports the real connection error.
         try:
             backend = PgVectorBackend(self.connection_string or "")
         except Exception:
-            return False
+            return None
         try:
             return name in backend.list_collections()
-        except Exception:
-            # A new database has no collection_config table yet.
-            return False
+        except Exception as e:
+            # A new database has no collection_config table yet
+            if type(e).__name__ == "UndefinedTable":
+                return False
+            return None
         finally:
             backend.close()
 
@@ -719,10 +745,12 @@ class NativeVectorSearchSkill(SkillBase):
                         if isinstance(formatted_response, str):
                             no_results_msg = formatted_response
                     except Exception as e:
+                        # The callback sees the query; its error can echo it
                         self.logger.error(
-                            f"Error in response_format_callback (no results): {e}",
-                            exc_info=True,
+                            "Error in response_format_callback (no results): %s",
+                            type(e).__name__,
                         )
+                        self.logger.debug("Callback error details", exc_info=True)
 
                 return FunctionResult(no_results_msg)
 
@@ -825,16 +853,20 @@ class NativeVectorSearchSkill(SkillBase):
                         )
 
                 except Exception as e:
+                    # The callback sees the query; its error can echo it
                     self.logger.error(
-                        f"Error in response_format_callback: {e}", exc_info=True
+                        "Error in response_format_callback: %s", type(e).__name__
                     )
+                    self.logger.debug("Callback error details", exc_info=True)
                     # Continue with original response if callback fails
 
             return FunctionResult(response)
 
         except Exception as e:
-            # Log the full error details for debugging
-            self.logger.error("Search error: %s", e, exc_info=True)
+            # The exception's message and traceback can include the caller's
+            # query, so they're DEBUG only
+            self.logger.error("Search error: %s", type(e).__name__)
+            self.logger.debug("Search error details", exc_info=True)
 
             # Return user-friendly error message
             user_msg = "I'm sorry, I encountered an issue while searching. "
@@ -890,13 +922,16 @@ class NativeVectorSearchSkill(SkillBase):
                     }
                     for result in data.get("results", [])
                 ]
+            # The body can echo the caller's query, so it's DEBUG only
             self.logger.error(
-                f"Remote search failed with status {response.status_code}: {response.text}"
+                "Remote search failed with status %s", response.status_code
             )
+            self.logger.debug("Remote search error body: %.500s", response.text)
             return []
 
         except Exception as e:
-            self.logger.error(f"Remote search error: {e}")
+            self.logger.error("Remote search error: %s", type(e).__name__)
+            self.logger.debug("Remote search error details", exc_info=True)
             return []
 
     def get_hints(self) -> list[str]:

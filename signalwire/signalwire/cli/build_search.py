@@ -1491,7 +1491,7 @@ def remote_command() -> None:
         if args.verbose:
             import traceback
 
-            traceback.print_exc()
+            print(redact_url(traceback.format_exc()), file=sys.stderr)
         sys.exit(1)
 
 

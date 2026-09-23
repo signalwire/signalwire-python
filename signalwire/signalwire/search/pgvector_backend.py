@@ -463,10 +463,15 @@ class PgVectorBackend:
             cursor.execute(
                 psycopg2_sql.SQL("DROP TABLE IF EXISTS {tbl}").format(tbl=tbl)
             )
-            cursor.execute(
-                "DELETE FROM collection_config WHERE collection_name = %s",
-                (collection_name,),
-            )
+            # A new database has no collection_config table until the first
+            # collection is created, and overwrite deletes before creating.
+            cursor.execute("SELECT to_regclass('collection_config')")
+            row = cursor.fetchone()
+            if row is not None and row[0] is not None:
+                cursor.execute(
+                    "DELETE FROM collection_config WHERE collection_name = %s",
+                    (collection_name,),
+                )
             self.conn.commit()
             logger.info(f"Deleted collection '{collection_name}'")
 

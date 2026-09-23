@@ -2008,6 +2008,18 @@ class TestRemoteCredentialsAndThreshold:
         assert 's3cret' not in out
         assert 'localhost:8001' in out
 
+    def test_verbose_endpoint_with_empty_user_is_redacted(self) -> None:
+        _, out = self._run(['http://:s3cret@localhost:8001', 'q', '--index-name', 'docs', '--verbose'])
+        assert 's3cret' not in out
+        assert 'localhost:8001' in out
+
+    def test_verbose_traceback_is_redacted(self) -> None:
+        error = RuntimeError("failed at http://u:s3cret@localhost:8001/search")
+        _, out = self._run(['http://u:s3cret@localhost:8001', 'q', '--index-name', 'docs', '--verbose'],
+                           post_side_effect=error)
+        assert 'Traceback' in out
+        assert 's3cret' not in out
+
     def test_connection_error_is_redacted(self) -> None:
         import requests as real_requests
         _, out = self._run(['http://u:s3cret@localhost:8001', 'q', '--index-name', 'docs'],

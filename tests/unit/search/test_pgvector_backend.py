@@ -806,6 +806,18 @@ class TestPgVectorBackendDeleteCollection:
         assert any("DELETE FROM collection_config" in sql for sql in executed_sqls)
         mock_conn.commit.assert_called()
 
+    def test_delete_collection_on_a_new_database(self) -> None:
+        """Without a collection_config table, delete skips the config row (B8)."""
+        backend, mock_conn, mock_cursor = self._make_backend()
+        mock_cursor.fetchone.return_value = (None,)  # to_regclass: no such table
+
+        backend.delete_collection("my_collection")
+
+        executed_sqls = [str(c[0][0]).strip() for c in mock_cursor.execute.call_args_list]
+        assert any("DROP TABLE IF EXISTS chunks_my_collection" in sql for sql in executed_sqls)
+        assert not any("DELETE FROM collection_config" in sql for sql in executed_sqls)
+        mock_conn.commit.assert_called()
+
     def test_delete_collection_sanitizes_name(self) -> None:
         """Test that delete_collection sanitizes collection name"""
         backend, mock_conn, mock_cursor = self._make_backend()
