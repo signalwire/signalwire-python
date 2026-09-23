@@ -477,13 +477,38 @@ result.hangup()
 
 ### Call Flow Control
 
-#### `hold(timeout=300)`
-Put call on hold with timeout (max 900 seconds).
+#### `hold(prompt=None, timeout=300, step=None, timeout_step=None)`
+Put the call on hold. Speech detection pauses for the duration of the hold, so the agent neither hears nor responds to the caller until the hold ends.
+
+A bare timeout still works the same way it always has:
 
 ```python
 result.hold(60)    # Hold for 1 minute
 result.hold(600)   # Hold for 10 minutes
 ```
+
+`hold()` carries no announcement of its own, so pass `prompt` to have the agent say something before the hold takes effect. Setting `prompt` also turns on `post_process`, which gives the model one more turn to speak before the `hold` action runs:
+
+```python
+result.hold(prompt="Tell the caller you are placing them on hold.", timeout=120)
+```
+
+Pass `step` and `timeout_step` to route the call once the hold ends. `step` applies when someone takes the call off hold; `timeout_step` applies when the `timeout` elapses with nobody releasing it. Both transitions are deferred, firing only when the hold actually ends, unlike `swml_change_step()`, which applies immediately. Leave either one out and a call that ends that way resumes in the step it was already in.
+
+```python
+result.hold(
+    prompt="Tell the caller you are checking if someone is available.",
+    timeout=300,
+    step="back_with_agent",        # released before the timeout
+    timeout_step="take_a_message", # nobody picked up
+)
+```
+
+**Parameters:**
+- `prompt` (str, optional): Instruction the model speaks before the hold takes effect. A single positional `int` is read as `timeout` instead, so existing `hold(120)` calls are unaffected.
+- `timeout` (int): Seconds to hold, clamped to 900. Default 300.
+- `step` (str, optional): Step to enter when the call comes off hold normally.
+- `timeout_step` (str, optional): Step to enter when the hold times out.
 
 #### `wait_for_user(enabled=None, timeout=None, answer_first=False)`
 Control how agent waits for user input with flexible parameters.

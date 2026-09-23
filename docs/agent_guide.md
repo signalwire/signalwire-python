@@ -2495,11 +2495,7 @@ agent = SurveyAgent(
             "id": "satisfaction",
             "text": "How satisfied are you with our product?",
             "type": "rating",
-            "scale": 5,
-            "labels": {
-                "1": "Very dissatisfied",
-                "5": "Very satisfied"
-            }
+            "scale": 5
         },
         {
             "id": "feedback",
@@ -2738,7 +2734,10 @@ my-prefab-agents/
 - `auto_answer`: Auto-answer calls (default: True)
 - `record_call`: Record calls (default: False)
 - `schema_path`: Optional path to schema.json file
-- `suppress_logs`: Whether to suppress structured logs (default: False)
+- `suppress_logs`: Silences a few legacy debug and error log lines, not the SDK's logging generally. Use `configure_logging()` and the environment variables in [Logging Configuration](#logging-configuration) to control log output. (default: False)
+- `signing_key`: SignalWire Signing Key from the Dashboard (API Credentials), or the `SIGNALWIRE_SIGNING_KEY` environment variable. When set, the SDK requires a valid signature on every `POST /`, `/swaig` and `/post_prompt` request and rejects the rest with 403. Unset, inbound requests aren't checked for a genuine SignalWire origin. (default: None)
+- `swaig_secret`: Secret that signs this agent's own per-call SWAIG function tokens, or the `SIGNALWIRE_SWAIG_SECRET` environment variable. Unset, a random secret is generated per process. A restart then invalidates tokens already issued to calls in progress, and two replicas can't verify each other's tokens. (default: None)
+- `trust_proxy_for_signature`: Whether signature validation honors `X-Forwarded-Proto`/`X-Forwarded-Host` when reconstructing the request URL. Enable it only when you control the proxy chain, since these headers are otherwise spoofable. (default: False)
 
 ### Prompt Methods
 

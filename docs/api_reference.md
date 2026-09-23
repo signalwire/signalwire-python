@@ -73,7 +73,7 @@ AgentBase(
 - `agent_id` (Optional[str]): Unique identifier for the agent
 - `native_functions` (Optional[List[str]]): List of native function names to enable
 - `schema_path` (Optional[str]): Path to custom SWML schema file
-- `suppress_logs` (bool): Suppress logging output (default: False)
+- `suppress_logs` (bool): Silences a few legacy debug and error log lines, not the SDK's logging generally (default: False). See [Suppressing Logs](swml_service_guide.md#suppressing-logs) for how to control log output.
 - `enable_post_prompt_override` (bool): Allow post-prompt URL override (default: False)
 - `check_for_input_override` (bool): Allow check-for-input URL override (default: False)
 - `config_file` (Optional[str]): Path to JSON configuration file with environment variable substitution support. See [Configuration Guide](configuration.md) for details.
@@ -1660,16 +1660,32 @@ result = FunctionResult("Thank you for calling. Goodbye!")
 result.hangup()
 ```
 
-##### `hold(timeout: int = 300) -> FunctionResult`
-Put the call on hold.
+##### `hold(prompt: Optional[Union[str, int]] = None, timeout: int = 300, step: Optional[str] = None, timeout_step: Optional[str] = None) -> FunctionResult`
+Put the call on hold. Speech detection pauses for the duration of the hold, so say anything the caller needs to hear before it takes effect. Pass `prompt` to have the agent say it for you automatically.
 
 **Parameters:**
-- `timeout` (int): Hold timeout in seconds (default: 300)
+- `prompt` (Optional[str]): Instruction the model speaks before the hold takes effect. Setting it also turns on `post_process`, so the model gets one more turn to speak before the `hold` action runs. A single positional `int` here is read as `timeout` instead, so `hold(120)` still means `hold(timeout=120)`.
+- `timeout` (int): Seconds to hold, clamped to a maximum of 900 (default: 300)
+- `step` (Optional[str]): Step to enter when the call comes off hold normally, before the timeout
+- `timeout_step` (Optional[str]): Step to enter when the hold reaches its `timeout` with nobody releasing it. Without it, a timed-out hold resumes in the step it left.
+
+Both transitions are deferred: they fire only when the hold actually ends. Returning `swml_change_step()` alongside `hold()` moves the caller immediately, before the hold even begins, which is a separate, earlier transition.
 
 **Usage:**
 ```python
 result = FunctionResult("Please hold while I look that up")
 result.hold(timeout=60)
+```
+
+Announce the hold and route the caller when it ends:
+
+```python
+result = FunctionResult().hold(
+    prompt="Tell the caller you are checking whether someone is available.",
+    timeout=60,
+    step="human_available",
+    timeout_step="take_message",
+)
 ```
 
 ##### `stop() -> FunctionResult`
@@ -2602,30 +2618,25 @@ data_map.global_error_keys(['error', 'message', 'code'])
 ### Advanced Configuration
 
 ##### `webhook_expressions(expressions: List[Dict[str, Any]]) -> DataMap`
-Add expression-based webhook selection.
+Attach expressions to the most recently added webhook, storing them under its `expressions` field. Call `webhook()` first; calling this before any webhook has been added raises `ValueError`.
 
 **Parameters:**
-- `expressions` (List[Dict[str, Any]]): List of expression configurations
+- `expressions` (List[Dict[str, Any]]): Expression objects to store as given, each needing the same `string`, `pattern` and `output` keys as `expression()`
 
 **Usage:**
 ```python
-# Different APIs based on input
+# Evaluate the webhook's response and pick a reply based on its status field
+data_map.webhook('GET', 'https://api.example.com/status?id=${args.id}')
 data_map.webhook_expressions([
     {
-        'test': '${args.type}',
-        'pattern': 'weather',
-        'webhook': {
-            'method': 'GET',
-            'url': 'https://weather-api.com/current?q=${args.location}'
-        }
+        'string': '${response.status}',
+        'pattern': 'complete',
+        'output': FunctionResult('The task is complete.').to_dict()
     },
     {
-        'test': '${args.type}',
-        'pattern': 'news',
-        'webhook': {
-            'method': 'GET', 
-            'url': 'https://news-api.com/search?q=${args.query}'
-        }
+        'string': '${response.status}',
+        'pattern': 'pending',
+        'output': FunctionResult('The task is still in progress.').to_dict()
     }
 ])
 ```

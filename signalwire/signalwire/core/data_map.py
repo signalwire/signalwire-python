@@ -58,7 +58,12 @@ class DataMap:
             .webhook('POST', 'https://api.docs.com/search', headers={'Authorization': 'Bearer TOKEN'})
             .body({'query': '${query}', 'limit': 3})
             .output(FunctionResult('Found: ${response.results[0].title} - ${response.results[0].summary}'))
-            .foreach('${response.results}')
+            .foreach({
+                'input_key': 'results',
+                'output_key': 'formatted_results',
+                'max': 3,
+                'append': 'Result: ${this.title} - ${this.summary}\n'
+            })
         )
     """
 

@@ -92,7 +92,7 @@ class CustomerServiceAgent(AgentBase):
         self.set_prompt_llm_params(
             temperature=0.3,        # Low randomness for consistency
             top_p=0.9,             # Focused token selection
-            barge_confidence=0.6,  # Moderate interruption threshold (default 0.0 is too easy)
+            barge_confidence=0.6,  # Moderate interruption threshold
             presence_penalty=0.1,  # Slight penalty to avoid repetition
             frequency_penalty=0.1  # Encourage varied language
         )
@@ -113,7 +113,7 @@ class CreativeWritingAgent(AgentBase):
         self.set_prompt_llm_params(
             temperature=0.8,        # High randomness for creativity
             top_p=0.95,            # Wide token selection
-            barge_confidence=0.3,  # Easy to interrupt for collaboration (but not default 0.0)
+            barge_confidence=0.3,  # Easy to interrupt, for collaboration
             presence_penalty=-0.1, # Allow topic revisiting
             frequency_penalty=0.3  # Encourage vocabulary diversity
         )

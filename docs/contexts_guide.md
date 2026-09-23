@@ -827,6 +827,7 @@ Flow:
 | `output_key` | str | None | Key in global_data to store answers under. If None, answers stored at top level. |
 | `completion_action` | str | None | Where to go when all questions are answered: `"next_step"` to advance sequentially, or a specific step name (e.g. `"process_results"`) to jump to that step. If None, returns to normal step mode. The target is validated: `"next_step"` requires a following step, and named steps must exist in the context. |
 | `prompt` | str | None | Preamble text injected once as a persistent message when entering the gather step. |
+| `isolated` | bool | `False` | Default for every question in this gather. When True, a question is asked with the sibling Q&A hidden from the model, so it must ask rather than derive the answer from an earlier one. A question's own `isolated` overrides this default. The hidden turns remain in the call log. |
 
 **`add_gather_question()` Parameters:**
 
@@ -838,6 +839,7 @@ Flow:
 | `confirm` | bool | `False` | If True, AI must confirm answer with user before submitting |
 | `prompt` | str | None | Additional instruction text for this question |
 | `functions` | list | None | Function names to make visible for this question only |
+| `isolated` | bool \| None | None | Override the gather's `isolated` default for this one question. True hides the sibling Q&A while this question is asked; False keeps it visible even in an isolated gather. None inherits the gather's setting. |
 
 ## Real-World Examples
 

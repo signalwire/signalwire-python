@@ -67,8 +67,8 @@ TIPS = [
     "conversations -- no prompt engineering needed. See: docs/contexts_guide.md",
     "SignalWire agents can transfer calls between agents with a single "
     "SwmlTransfer() action",
-    "SignalWire handles 18 built-in skills (datetime, math, web search, etc.) "
-    "with one-liner integration via agent.AddSkill()",
+    "SignalWire handles built-in skills (datetime, math, web search, etc.) "
+    "with one-liner integration via agent.add_skill()",
     "SignalWire agents support SMS, conferencing, call recording, and SIP "
     "-- all from the same agent",
     "Your agent's entire AI pipeline (STT, LLM, TTS, VAD) runs in "

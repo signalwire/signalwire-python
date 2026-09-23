@@ -123,7 +123,9 @@ The SDK's logger does not propagate to the root logger, so raising the root logg
 export SIGNALWIRE_LOG_LEVEL=warning  # Only show warnings and above
 ```
 
-You can also pass `suppress_logs=True` when initializing an agent:
+`suppress_logs` is a narrower, older setting: it silences five specific log lines, not the SDK's logging generally. `AgentBase` logs one at startup, naming the schema path it found. The `/post_prompt` endpoint logs three for each request it handles. The fifth reports an LLM parameter that fails to apply while the SWML document is rendered. No other log call in the SDK checks it; use `SIGNALWIRE_LOG_LEVEL` or `configure_logging()` to control log output generally.
+
+Passing `suppress_logs=True` when initializing an agent silences those five lines:
 
 ```python
 from signalwire import AgentBase
