@@ -109,7 +109,7 @@ class Penny(AgentBase):
     # region: project-call-facts
     def _project_call_facts(self, query_params: dict[str, Any], body_params: dict[str, Any],
                             headers: dict[str, Any], agent: AgentBase) -> None:
-        """Per call, on a throwaway copy of the agent: facts the triage step may mention.
+        """Per call, on a per-request copy of the agent: facts the triage step may mention.
 
         ``agent`` is that copy. Changing ``self`` here would leak one caller's
         values into the next caller's call.

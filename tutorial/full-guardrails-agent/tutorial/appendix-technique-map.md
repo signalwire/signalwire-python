@@ -50,7 +50,7 @@ What the model can ask for. A tool that isn't offered can't be called.
 | Register every tool once, and offer a few per step | `_register_tools`, then `scoped` | [5](05-steps-and-scoping.md) |
 | Write `[]` for no tools, never leave the list out | `scoped` in `workflow.py` | [5](05-steps-and-scoping.md) |
 | Each consequential tool in exactly one step | `confirm_booking` only in `review`, and so on | [5](05-steps-and-scoping.md) |
-| Gather mode, with escape tools on each question | `collect` and `take_message` | [7](07-gather-and-projection.md) |
+| Gather mode, with the tools each question allows | `collect` and `take_message` | [7](07-gather-and-projection.md) |
 | A gate built from missing tools | The `verify` step | [8](08-the-verification-gate.md) |
 | Destinations the model can't name | `request_human` and `send_confirmation_text` take no parameters | [9](09-people-and-endings.md) |
 
@@ -78,10 +78,11 @@ What actually happens. The model can ask, and code decides.
 | Holds that expire and keep other callers out | `hold_option` and `_table_free` | [3](03-rules-first.md) |
 | Commits bound to the revision the caller heard, and safe to repeat | `confirm`, `confirm_cancel` | [3](03-rules-first.md), [8](08-the-verification-gate.md) |
 | State keyed by call ID in a database, not in the conversation | `ReservationStore` | [3](03-rules-first.md) |
+| Corrections kept in a per-call draft, even after a refused search | `update_draft` | [6](06-tools-that-decide.md) |
 | Verification bound to this call, and checked by every operation | `verify` and `_verified` | [8](08-the-verification-gate.md) |
 | Misses that don't say which half was wrong, counted after commit | `verify` | [8](08-the-verification-gate.md) |
 | Two steps for anything destructive | `request_cancel`, then `confirm_cancel` | [8](08-the-verification-gate.md) |
-| One side effect per event, and a cap on repeats | `request_sms`, one message per call | [9](09-people-and-endings.md) |
+| Repeats that change nothing, and a cap on side effects | `request_sms` for texts, and one message per call in `save_message` | [9](09-people-and-endings.md) |
 | Live facts checked when the tool runs | `host_stand_open` in `request_human` | [9](09-people-and-endings.md) |
 | A crash is never reported as success | `guarded` in `handlers.py` | [6](06-tools-that-decide.md) |
 | Records written from the system of record | `capture_call` | [9](09-people-and-endings.md) |
@@ -96,11 +97,13 @@ What actually happens. The model can ask, and code decides.
 | UI events for a screen, alongside speech | `swml_user_event` in the handlers | [6](06-tools-that-decide.md) |
 | Debug events to see which step the model was in | `PENNY_DEBUG_EVENTS` | [9](09-people-and-endings.md) |
 | Tests in layers, with a clock the tests control | `test_penny.py` | [10](10-testing-and-running.md) |
-| Tests against the app you actually serve | `served_app` in `test_penny.py` | [10](10-testing-and-running.md) |
+| Tests against the app you serve | `served_app` in `test_penny.py` | [10](10-testing-and-running.md) |
 | Breaking each guardrail on purpose once | The table in Lesson 10 | [10](10-testing-and-running.md) |
 | Lessons checked against the code | `check_docs.py` and `TestDocs` | [10](10-testing-and-running.md) |
 
 ## Further Reading
+
+The SDK's guides cover each technique in more depth:
 
 - [Contexts guide](../../../docs/contexts_guide.md): contexts, steps, gather mode and navigation
 - [SWAIG reference](../../../docs/swaig_reference.md): tools, `FunctionResult` and its actions
@@ -110,4 +113,4 @@ What actually happens. The model can ask, and code decides.
 
 ---
 
-[← Previous: Deployment](appendix-deployment.md) | [Back to Overview](README.md)
+[Previous: Deployment](appendix-deployment.md) | [Overview](README.md)

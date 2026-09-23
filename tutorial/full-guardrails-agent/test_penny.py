@@ -85,7 +85,9 @@ def served_app(store: ReservationStore | None = None) -> Any:
 # endregion: served-app
 
 
-# ── Layer 1: the rules, with no agent ───────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Layer 1: the rules, with no agent
+# -----------------------------------------------------------------------------
 
 class TestRules(unittest.TestCase):
     def setUp(self) -> None:
@@ -135,6 +137,10 @@ class TestRules(unittest.TestCase):
         self.clock.now = TUESDAY_3PM.replace(hour=18, minute=50)
         _request, options = self.store.find_options("call-1", 2, "tonight", "7pm", "Rivera")
         self.assertEqual(min(o.start for o in options), 19 * 60 + 30)
+        # Seconds count: at 4:30:59, a 5 PM seating is under 30 minutes away
+        self.clock.now = TUESDAY_3PM.replace(hour=16, minute=30, second=59)
+        _request, options = self.store.find_options("call-2", 2, "today", "5 PM", "Rivera")
+        self.assertNotIn(17 * 60, [o.start for o in options])
 
     def test_a_hold_keeps_the_table_from_other_callers(self) -> None:
         # Only two tables seat six, so two holds at 7 PM leave nothing near 7 PM.
@@ -268,7 +274,9 @@ class TestRules(unittest.TestCase):
         self.assertEqual(self.store.record_call_end("call-9", 3), "no_change")
 
 
-# ── Layer 2: the workflow contract, read from the rendered SWML ─────────────
+# -----------------------------------------------------------------------------
+# Layer 2: the workflow contract, read from the rendered SWML
+# -----------------------------------------------------------------------------
 
 class TestWorkflow(unittest.TestCase):
     ai: dict[str, Any]
@@ -370,7 +378,9 @@ class TestSecurity(unittest.TestCase):
 # endregion: test-security
 
 
-# ── Layer 3: what each tool tells the model and the platform ────────────────
+# -----------------------------------------------------------------------------
+# Layer 3: what each tool tells the model and the platform
+# -----------------------------------------------------------------------------
 
 def actions(result: dict[str, Any]) -> list[dict[str, Any]]:
     return result.get("action", [])
@@ -439,6 +449,13 @@ class TestHandlers(unittest.TestCase):
     def test_corrections_override_what_was_gathered(self) -> None:
         found = self.call("find_tables", {"time": "5 PM"}, global_data=self.gathered())
         self.assertIn("option 1, 5 PM", found["response"]["tool_result"])
+
+    def test_a_correction_to_a_refused_search_is_kept(self) -> None:
+        gathered = self.gathered(party_size=8, date="Monday")
+        refused = self.call("find_tables", {"party_size": 4}, global_data=gathered)
+        self.assertIn("closed on Mondays", refused["response"]["tool_result"])
+        found = self.call("find_tables", {"date": "Friday"}, global_data=gathered)
+        self.assertIn("Open for 4", found["response"]["tool_result"])  # not back to 8
 
     def test_each_correction_keeps_the_ones_before_it(self) -> None:
         self.call("find_tables", {"time": "8 PM"}, global_data=self.gathered())
@@ -557,7 +574,9 @@ class TestHandlers(unittest.TestCase):
         self.assertEqual(count(self.store, "call_records"), 1)
 
 
-# ── The docs ────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# The docs
+# -----------------------------------------------------------------------------
 
 class TestDocs(unittest.TestCase):
     def test_every_quoted_block_is_the_real_code(self) -> None:

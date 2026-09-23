@@ -1,6 +1,6 @@
 # Appendix A: Complete Code
 
-Every file Penny needs to run, in full. These blocks are generated from the files in `tutorial/full-guardrails-agent/` and checked by `TestDocs`, so they are the real code. The only thing left out is the `# region:` comments the lessons use to quote the code.
+This appendix lists every file Penny needs to run, in full. These blocks are generated from the files in `tutorial/full-guardrails-agent/` and checked by `TestDocs`, so they are the real code. The only thing left out is the `# region:` comments the lessons use to quote the code.
 
 ## Table of Contents
 
@@ -42,7 +42,7 @@ import sqlite3
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -108,7 +108,9 @@ class LockedOutError(PolicyError):
     """Too many failed verification attempts on this call."""
 
 
-# ── Speaking and hearing dates, times and codes ─────────────────────────────
+# -----------------------------------------------------------------------------
+# Speaking and hearing dates, times and codes
+# -----------------------------------------------------------------------------
 
 def resolve_date(text: str, today: date) -> date | None:
     """Turn the caller's own words for a date into a date, or None.
@@ -224,7 +226,9 @@ def normalize_code(text: str) -> str:
     return re.sub(r"[^A-Z0-9]", "", str(text or "").upper())
 
 
-# ── Values handed to the agent ──────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Values handed to the agent
+# -----------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class Option:
@@ -276,11 +280,14 @@ class Reservation:
                 f"at {spoken_time(self.start)}, under {self.name}")
 
 
-# ── The store ───────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# The store
+# -----------------------------------------------------------------------------
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS sessions (
     call_id TEXT PRIMARY KEY,
+    draft TEXT NOT NULL DEFAULT '{}',
     request TEXT NOT NULL DEFAULT '{}',
     offers TEXT NOT NULL DEFAULT '[]',
     proposal_counter INTEGER NOT NULL DEFAULT 0,
@@ -374,7 +381,9 @@ class ReservationStore:
     def _now(self) -> datetime:
         return self.clock()
 
-    # ── Availability ────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
+    # Availability
+    # -------------------------------------------------------------------------
 
     def _table_free(self, db: sqlite3.Connection, table_id: str, day: date,
                     start: int, call_id: str) -> bool:
@@ -389,11 +398,14 @@ class ReservationStore:
              start, DINING_MINUTES)).fetchone()
         return busy is None and held is None
 
+    def _too_soon(self, day: date, start: int) -> bool:
+        """Whether a seating starts less than SAME_DAY_LEAD_MINUTES from now."""
+        starts_at = datetime.combine(day, time(start // 60, start % 60), tzinfo=RESTAURANT_TZ)
+        return starts_at < self._now() + timedelta(minutes=SAME_DAY_LEAD_MINUTES)
+
     def _check_notice(self, day: date, start: int) -> None:
-        """A seating must still be bookable now: not past, and far enough ahead."""
-        now = self._now()
-        too_soon = day == now.date() and start < now.hour * 60 + now.minute + SAME_DAY_LEAD_MINUTES
-        if day < now.date() or too_soon:
+        """Refuse a seating that is no longer far enough ahead to book."""
+        if self._too_soon(day, start):
             raise PolicyError("That seating is too soon to book now.",
                               "Apologize and check availability again.")
 
@@ -440,16 +452,14 @@ class ReservationStore:
         """
         party, day, wanted, clean_name = self._validate_request(
             party_size, date_text, time_text, name)
-        now = self._now()
-        earliest = (now.hour * 60 + now.minute + SAME_DAY_LEAD_MINUTES
-                    if day == now.date() else 0)
         with self._tx() as db:
             self._session(db, call_id)
             # A new search supersedes this call's old proposal.
             db.execute("UPDATE holds SET status='released' WHERE call_id=? AND status='live'",
                        (call_id,))
             options: list[Option] = []
-            nearby = sorted((s for s in SEATINGS if abs(s - wanted) <= 60 and s >= earliest),
+            nearby = sorted((s for s in SEATINGS
+                             if abs(s - wanted) <= 60 and not self._too_soon(day, s)),
                             key=lambda s: (abs(s - wanted), s))
             for seating in nearby:
                 fits = sorted((cap, tid) for tid, cap in TABLES.items()
@@ -470,23 +480,29 @@ class ReservationStore:
                  call_id))
         return Request(party, day, wanted, clean_name), options
 
-    def current_request(self, call_id: str) -> dict[str, Any]:
-        """This call's last successful search, in words the search accepts.
+    def update_draft(self, call_id: str, changes: dict[str, Any],
+                     gathered: dict[str, Any]) -> dict[str, Any]:
+        """Apply a correction to what this call has asked for, and return the result.
 
-        A correction changes one detail of it, and the others stay as they were.
+        The draft is kept whether or not a search passes the rules, so a correction
+        to a refused search isn't lost. The first search starts from ``gathered``.
         """
+        keys = ("party_size", "date", "time", "name")
         with self._tx() as db:
-            request = json.loads(self._session(db, call_id)["request"])
-        if not request:
-            return {}
-        return {"party_size": request["party_size"], "date": request["day"],
-                "time": spoken_time(request["start"]), "name": request["name"]}
+            draft = json.loads(self._session(db, call_id)["draft"])
+            if not draft:
+                draft = {key: gathered.get(key) for key in keys}
+            draft.update({key: changes[key] for key in keys
+                          if changes.get(key) not in (None, "")})
+            db.execute("UPDATE sessions SET draft=? WHERE call_id=?", (json.dumps(draft), call_id))
+        return draft
 
     def reset_request(self, call_id: str) -> None:
-        """Forget this call's search, so a new booking starts from gathered answers."""
+        """Forget this call's booking in progress, so a new one starts from gathered answers."""
         with self._tx() as db:
             self._session(db, call_id)
-            db.execute("UPDATE sessions SET request='{}', offers='[]' WHERE call_id=?", (call_id,))
+            db.execute("UPDATE sessions SET draft='{}', request='{}', offers='[]' "
+                       "WHERE call_id=?", (call_id,))
             db.execute("UPDATE holds SET status='released' WHERE call_id=? AND status='live'",
                        (call_id,))
 
@@ -611,7 +627,9 @@ class ReservationStore:
                        "sms_requested_at = ? WHERE code=?", (now, code))
             return "send"
 
-    # ── Managing an existing reservation ────────────────────────────────────
+    # -------------------------------------------------------------------------
+    # Managing an existing reservation
+    # -------------------------------------------------------------------------
 
     def verify(self, call_id: str, code_text: str, last_name: str) -> Reservation:
         """Bind a reservation to this call if the caller knows its code and name.
@@ -689,7 +707,9 @@ class ReservationStore:
             db.execute("UPDATE sessions SET cancel_revision=NULL WHERE call_id=?", (call_id,))
             return self._reservation(row)
 
-    # ── Messages, the host stand, and call records ──────────────────────────
+    # -------------------------------------------------------------------------
+    # Messages, the host stand, and call records
+    # -------------------------------------------------------------------------
 
     def save_message(self, call_id: str, name: str, callback: str, body: str) -> dict[str, str]:
         """Store one message per call; saving again returns the first one."""
@@ -776,8 +796,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from signalwire.core.contexts import ContextBuilder, Step
 
-# Tools that may be offered in almost any step. Reading house facts or asking
-# for a person can never change a booking, so they are safe to keep close by.
+# Tools most steps offer. Reading house facts or asking for a person can never
+# change a booking, so offering them widely is safe.
 LOOKUPS = ["house_info", "request_human"]
 
 
@@ -818,7 +838,7 @@ def _booking(builder: ContextBuilder) -> None:
 
     # Gather mode asks one question at a time and stores the answers under
     # global_data.booking_request. While it runs, the only tools are
-    # gather_submit and the escape hatches each question lists.
+    # gather_submit and the tools each question lists.
     collect = scoped(ctx.add_step("collect"), "Take the reservation details.", [])
     collect.set_gather_info(
         output_key="booking_request",
@@ -1023,7 +1043,9 @@ class PennyHandlers:
         value = (raw_data.get("global_data") or {}).get(key)
         return value if isinstance(value, dict) else {}
 
-    # ── Routing: code, not the model, moves the conversation ────────────────
+    # -------------------------------------------------------------------------
+    # Routing: code, not the model, moves the conversation
+    # -------------------------------------------------------------------------
 
     @guarded
     def start_booking(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
@@ -1050,22 +1072,20 @@ class PennyHandlers:
         return FunctionResult(tool_result=fact,
                               tool_prompt="Answer with this fact in your own words, then carry on.")
 
-    # ── Booking ─────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
+    # Booking
+    # -------------------------------------------------------------------------
 
     @guarded
     def find_tables(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
         call_id = self._call_id(raw_data)
-        # The request so far: the last search on this call, or, for the first
-        # search, the answers gather mode collected
-        current = self.store.current_request(call_id) or self._gathered(raw_data, "booking_request")
-
-        def detail(key: str) -> Any:
-            # A correction passed as an argument changes only that detail.
-            return args[key] if args.get(key) not in (None, "") else current.get(key)
-
+        # What the caller has asked for: gather's answers, changed by every
+        # correction since. A correction passed as an argument changes only
+        # that detail, even if the last search was refused.
+        draft = self.store.update_draft(call_id, args, self._gathered(raw_data, "booking_request"))
         try:
             request, options = self.store.find_options(
-                call_id, detail("party_size"), detail("date"), detail("time"), detail("name"))
+                call_id, draft["party_size"], draft["date"], draft["time"], draft["name"])
         except LargePartyError as refusal:
             return FunctionResult(tool_result=refusal.fact, tool_prompt=refusal.ask)
 
@@ -1138,26 +1158,30 @@ class PennyHandlers:
         if not re.fullmatch(r"\+[1-9]\d{9,14}", caller):
             raise PolicyError("The number this call comes from can't receive a text.",
                               "Say you can't text this number, and make sure they have the code.")
-        # The platform sends the text after this returns, so "requested" is all
-        # that can be said. Repeats within a short window are duplicates.
+        # The platform sends the text after this returns, so Penny can only say
+        # a text was requested, never that it was sent or arrived.
         decision = self.store.request_sms(booking.code)
         if decision == "duplicate":
             return FunctionResult(
                 tool_result="A text for this booking was requested moments ago.",
-                tool_prompt="Tell the caller it's on its way. If it hasn't arrived in a couple "
-                            "of minutes, you can send it again.")
+                tool_prompt="Tell the caller a text was requested a moment ago. If it hasn't "
+                            "arrived in a couple of minutes, you can request it again.")
         if decision == "limit":
-            raise PolicyError("This booking has been texted as many times as allowed.",
-                              "Say you can't text it again, and make sure they have the code.")
+            raise PolicyError("A text for this booking has been requested as many times "
+                              "as allowed.",
+                              "Say you can't request another text, and make sure they have "
+                              "the confirmation code.")
         body = (f"The Copper Pot: {booking.spoken()}. Confirmation code {booking.code}. "
                 "Call us to change or cancel.")
         return (FunctionResult(
-                    tool_result=f"Asked for the details to be texted to the number ending in "
+                    tool_result=f"Requested a text of the details to the number ending in "
                                 f"{caller[-4:]}.",
-                    tool_prompt="Tell the caller the text is on its way.")
+                    tool_prompt="Tell the caller you've requested the text.")
                 .send_sms(to_number=caller, from_number=self.settings.sms_from, body=body))
 
-    # ── An existing reservation ─────────────────────────────────────────────
+    # -------------------------------------------------------------------------
+    # An existing reservation
+    # -------------------------------------------------------------------------
 
     @guarded
     def verify_reservation(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
@@ -1205,7 +1229,9 @@ class PennyHandlers:
                                tool_prompt="Tell the caller their reservation is unchanged.")
                 .swml_change_step("details"))
 
-    # ── People, messages and endings ────────────────────────────────────────
+    # -------------------------------------------------------------------------
+    # People, messages and endings
+    # -------------------------------------------------------------------------
 
     @guarded
     def request_human(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
@@ -1365,7 +1391,7 @@ class Penny(AgentBase):
 
     def _project_call_facts(self, query_params: dict[str, Any], body_params: dict[str, Any],
                             headers: dict[str, Any], agent: AgentBase) -> None:
-        """Per call, on a throwaway copy of the agent: facts the triage step may mention.
+        """Per call, on a per-request copy of the agent: facts the triage step may mention.
 
         ``agent`` is that copy. Changing ``self`` here would leak one caller's
         values into the next caller's call.
@@ -1458,6 +1484,8 @@ if __name__ == "__main__":
 
 ## requirements.txt
 
+Penny needs the SDK and time zone data:
+
 <!-- source: requirements.txt -->
 ```
 # 3.4.4 is the first release that enforces webhook signatures and tool tokens
@@ -1505,12 +1533,14 @@ SWML_PROXY_URL_BASE=
 
 ## The Tests and the Docs Checker
 
-Two more files live next to Penny. You don't need them to run her, but you need them to change her safely:
+Two more files live next to Penny. You don't need them to run Penny, but you need them to change it safely:
 
 - [`test_penny.py`](../test_penny.py): the tests from Lesson 10
 - [`check_docs.py`](../check_docs.py): checks, and with `--write` updates, every code block in these lessons
 
 ## Quick Start
+
+To run Penny locally, install the requirements, run the tests, and start it with your settings:
 
 ```bash
 cd tutorial/full-guardrails-agent
@@ -1524,4 +1554,4 @@ Appendix B covers running Penny in production.
 
 ---
 
-[← Previous: Testing and Running](10-testing-and-running.md) | [Back to Overview](README.md) | [Next: Deployment →](appendix-deployment.md)
+[Previous: Testing and Running](10-testing-and-running.md) | [Overview](README.md) | [Next: Deployment](appendix-deployment.md)

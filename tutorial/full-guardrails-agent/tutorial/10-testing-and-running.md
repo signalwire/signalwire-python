@@ -1,12 +1,12 @@
 # Lesson 10: Testing and Running
 
-Penny's guardrails are only claims until something checks them. This lesson checks them three ways: tests that prove the rules and the configuration, deliberate mistakes that prove the tests notice, and a real conversation with a live model working inside the guardrails. Then you'll run Penny, and see what's still unproven.
+Penny's guardrails are only claims until something checks them. This lesson checks them three ways. Tests prove the rules and the configuration, deliberate mistakes prove the tests notice, and a real conversation shows a live model working inside the guardrails. Then you'll run Penny, and see what's still unproven.
 
 ## Table of Contents
 
 1. [Three Layers of Tests](#three-layers-of-tests)
 2. [Controlling Time](#controlling-time)
-3. [Testing What You Actually Serve](#testing-what-you-actually-serve)
+3. [Testing the App You Serve](#testing-the-app-you-serve)
 4. [Running the Tests](#running-the-tests)
 5. [Break It on Purpose](#break-it-on-purpose)
 6. [Testing Under Attack](#testing-under-attack)
@@ -57,7 +57,7 @@ def new_store(clock: Clock | None = None) -> ReservationStore:
 
 A test that needs time to pass moves the clock. `test_a_hold_expires` moves it 301 seconds forward, and `test_a_person_only_when_someone_is_there` moves it from 3 PM to 6 PM. Nothing sleeps, and the tests give the same answers whatever day you run them.
 
-## Testing What You Actually Serve
+## Testing the App You Serve
 
 The configuration tests don't inspect Penny's Python objects. They ask the web app for what SignalWire would get:
 
@@ -75,6 +75,8 @@ def served_app(store: ReservationStore | None = None) -> Any:
 A test only proves something about the app it ran against, so test the app you serve.
 
 ## Running the Tests
+
+Run the whole suite from the tutorial directory:
 
 ```bash
 cd tutorial/full-guardrails-agent
@@ -104,7 +106,7 @@ A test that has never failed hasn't proved anything. For each guardrail, make th
 | Remove `static_greeting` | `penny.py` | `test_the_greeting_is_spoken_by_the_platform` |
 | Write the per-call facts to `self` | `penny.py` | `test_each_call_gets_its_own_facts` |
 
-Every break in this table was tried while writing this tutorial, and each one failed the test listed.
+Each break in this table was tried while writing this tutorial, and each one made the listed test fail.
 
 While you experiment, leave out the docs test:
 
@@ -131,7 +133,7 @@ The handler tests play the caller who pushes and the model that gets confused:
 | Malformed arguments, or no call ID | Nothing happens | `test_malformed_arguments_do_nothing`, `test_no_call_context_means_nothing_happens` |
 | The database fails during a booking | "Outcome unknown", never success | `test_a_crash_never_sounds_like_success` |
 
-The last one is worth reading, because it checks both halves of the failure rule from Lesson 6, what the model is told and what the platform does:
+The last test checks both halves of the failure rule from Lesson 6: what the model is told, and that the platform does nothing:
 
 <!-- source: test_penny.py#test-crash --> <!-- snippet: no-run an excerpt of test_penny.py, checked against the file by test_penny.py -->
 ```python
@@ -146,14 +148,16 @@ def test_a_crash_never_sounds_like_success(self) -> None:
 
 ## The Test That Guards These Lessons
 
-`TestDocs` runs `check_docs.py`. The code blocks in these lessons are marked with a hidden `source` comment naming a file and a region, and the region is marked in the code with `# region:` and `# endregion:` comments. `check_docs.py` compares each block with the code it names.
+`TestDocs` runs `check_docs.py`. Each quoted code block in these lessons carries a hidden `source` comment that names a file and a region. The region is marked in the code with `# region:` and `# endregion:` comments, and `check_docs.py` compares each block with the code it names.
+
+You can also run the checker directly:
 
 ```bash
 python check_docs.py          # check that every quoted block matches the code
 python check_docs.py --write  # update the lessons from the code
 ```
 
-Change the code and forget the lessons, and `TestDocs` fails. It's the same idea as the rest of Penny: don't rely on remembering, make the mistake impossible to miss.
+Change the code and forget the lessons, and `TestDocs` fails. It's the same idea as the rest of Penny: instead of relying on memory, make the mistake impossible to miss.
 
 ## Running Penny
 
@@ -163,10 +167,12 @@ Copy the example settings and fill them in:
 cp .env.example .env
 ```
 
+Then edit `.env`:
+
 - Set `SWML_BASIC_AUTH_PASSWORD` and `SIGNALWIRE_SWAIG_SECRET` to long random strings. In production, set `SIGNALWIRE_SIGNING_KEY` to your project's signing key from the SignalWire dashboard.
 - Set `PENNY_DEMO_DATA=1` to add a demo reservation you can look up: code `K7QP4M`, last name Rivera
 
-Then start Penny and look at her:
+Then start Penny and check that it responds:
 
 ```bash
 ./penny.sh start
@@ -176,9 +182,9 @@ curl -u penny:YOUR_PASSWORD http://localhost:3000/penny
 ./penny.sh logs
 ```
 
-The health check answers `{"status":"healthy","agent":"penny"}`. The second `curl` returns the SWML document SignalWire will get. Look for `global_data` in it: whether the host stand is open, worked out for this request. `./penny.sh stop` stops her.
+The health check answers `{"status":"healthy","agent":"penny"}`. The second `curl` returns the SWML document SignalWire will get. Look for `global_data` in it: whether the host stand is open, worked out for this request. `./penny.sh stop` stops it.
 
-To take calls, SignalWire has to reach Penny. Give her a public HTTPS address (a deployment, or a tunnel while developing), set `SWML_PROXY_URL_BASE` to it, restart, and point a SignalWire phone number at `https://penny:YOUR_PASSWORD@your-address/penny`. Appendix B covers deployment.
+To take calls, SignalWire has to reach Penny. Give Penny a public HTTPS address (a deployment, or a tunnel while developing), set `SWML_PROXY_URL_BASE` to it, restart, and point a SignalWire phone number at `https://penny:YOUR_PASSWORD@your-address/penny`. Appendix B covers deployment.
 
 ## A Real Conversation
 
@@ -219,21 +225,21 @@ What it showed working:
 
 It also showed the model not following its guidance, twice:
 
-- Triage asked "new or existing?" even though the caller had just said. This conversation ran against the first triage wording, which Lesson 5 changed because of it.
+- Triage asked "new or existing?" even though the caller had already said. This conversation ran against the first triage wording, which Lesson 5 changed because of it.
 - The model passed all four details to `find_tables`, although the tool's description says to pass only what changed. That was harmless: arguments are validated exactly like gathered answers, and these matched.
 
 Neither slip could book the wrong table. That's what the guardrails are for: guidance shapes what the model does, and code makes sure a slip stays small.
 
 ## What Is Still Unproven
 
-The tests and the conversation above prove a lot, but not everything:
+The tests and the live conversation leave four things unproven:
 
 - **Speech.** Recognizing names and codes over a phone line, barge-in, and timing all need a real call.
 - **The manage and message flows with a live model.** The tests prove the logic. They don't show how a live model phrases a verification or a lockout.
 - **A live transfer and a live text.** Both need `PENNY_HOST_NUMBER`, `PENNY_SMS_FROM` and a real call.
 - **Scale.** One SQLite file suits one restaurant on one server. Appendix B explains what changes beyond that.
 
-Before Penny answers real guests, call her yourself, and try the attacks from the table above in your own voice.
+Before Penny answers real guests, call it yourself, and try the attacks from [Testing Under Attack](#testing-under-attack) in your own voice.
 
 ## Key Takeaways
 
@@ -250,18 +256,8 @@ Before Penny answers real guests, call her yourself, and try the attacks from th
 
 ## Next Steps
 
-You've built an agent that keeps its rules when the model misunderstands, when a caller pushes, and when a tool fires twice. The appendices have the complete code, deployment notes, and a map of every technique back to the lesson that teaches it.
-
-➡️ Continue to [Appendix A: Complete Code](appendix-complete-code.md)
+You've built an agent that keeps its rules when the model misunderstands, when a caller pushes, and when a tool fires twice. The appendices have the complete code, deployment notes, and a map from every technique to the lesson that teaches it. Start with [Appendix A: Complete Code](appendix-complete-code.md).
 
 ---
 
-**Progress Check:**
-- [x] Built the rules, shell, steps, handlers and gather
-- [x] Added the verification gate
-- [x] Added people, messages and endings
-- [x] Tested and ran Penny
-
----
-
-[← Previous: People, Messages and Endings](09-people-and-endings.md) | [Back to Overview](README.md) | [Appendix A: Complete Code →](appendix-complete-code.md)
+[Previous: People, Messages and Endings](09-people-and-endings.md) | [Overview](README.md) | [Next: Appendix A: Complete Code](appendix-complete-code.md)

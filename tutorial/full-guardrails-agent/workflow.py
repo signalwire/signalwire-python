@@ -21,8 +21,8 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from signalwire.core.contexts import ContextBuilder, Step
 
-# Tools that may be offered in almost any step. Reading house facts or asking
-# for a person can never change a booking, so they are safe to keep close by.
+# Tools most steps offer. Reading house facts or asking for a person can never
+# change a booking, so offering them widely is safe.
 LOOKUPS = ["house_info", "request_human"]
 
 
@@ -69,7 +69,7 @@ def _booking(builder: ContextBuilder) -> None:
     # region: collect
     # Gather mode asks one question at a time and stores the answers under
     # global_data.booking_request. While it runs, the only tools are
-    # gather_submit and the escape hatches each question lists.
+    # gather_submit and the tools each question lists.
     collect = scoped(ctx.add_step("collect"), "Take the reservation details.", [])
     collect.set_gather_info(
         output_key="booking_request",

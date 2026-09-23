@@ -107,7 +107,7 @@ def resolve_date(text: str, today: date) -> date | None:
     return None
 ```
 
-"Next Friday" is genuinely ambiguous, even between people. Code picks one reading, and the ambiguity is settled the same way a human host would settle it: Penny reads the resulting date back ("Friday, September 25") and the caller confirms or corrects it. Code produces the canonical answer, and the caller checks it.
+"Next Friday" is ambiguous even between people. Code picks one reading, and the ambiguity is settled the way a human host would settle it. Penny reads the resulting date back ("Friday, September 25"), and the caller confirms or corrects it. Code produces the canonical answer, and the caller checks it.
 
 ## Finding Tables Without Revealing Them
 
@@ -124,16 +124,14 @@ def find_options(self, call_id: str, party_size: Any, date_text: str,
     """
     party, day, wanted, clean_name = self._validate_request(
         party_size, date_text, time_text, name)
-    now = self._now()
-    earliest = (now.hour * 60 + now.minute + SAME_DAY_LEAD_MINUTES
-                if day == now.date() else 0)
     with self._tx() as db:
         self._session(db, call_id)
         # A new search supersedes this call's old proposal.
         db.execute("UPDATE holds SET status='released' WHERE call_id=? AND status='live'",
                    (call_id,))
         options: list[Option] = []
-        nearby = sorted((s for s in SEATINGS if abs(s - wanted) <= 60 and s >= earliest),
+        nearby = sorted((s for s in SEATINGS
+                         if abs(s - wanted) <= 60 and not self._too_soon(day, s)),
                         key=lambda s: (abs(s - wanted), s))
         for seating in nearby:
             fits = sorted((cap, tid) for tid, cap in TABLES.items()
@@ -212,7 +210,7 @@ Four properties matter here:
 
 ## Confirming Exactly Once
 
-This is where a booking actually happens:
+`confirm` is where a booking happens:
 
 <!-- source: reservations.py#confirm --> <!-- snippet: no-run an excerpt of reservations.py, checked against the file by test_penny.py -->
 ```python
@@ -254,7 +252,7 @@ def confirm(self, call_id: str, revision: Any) -> Reservation:
         return self._reservation(row)
 ```
 
-The `revision` ties the booking to the exact proposal the caller heard. A confirm with a stale revision is refused. A confirm that repeats one already done returns the same booking instead of making a second, and the database's `UNIQUE` constraint on `hold_id` backs that up even if two confirms race.
+The `revision` ties the booking to the exact proposal the caller heard. A confirm with a stale revision is refused. A repeated confirm returns the same booking instead of making a second. The database's `UNIQUE` constraint on `hold_id` backs that up, even if two confirms race.
 
 ## Try It
 
@@ -274,7 +272,7 @@ print(booking.code, store.confirm("call-1", proposal.revision).code)  # the same
 
 ## Testing the Rules
 
-`test_penny.py` has a `TestRules` class that exercises the reservation book with a clock the tests control. Run just that layer:
+`test_penny.py` has a `TestRules` class that exercises the reservation book with a clock the tests control. Run only that layer:
 
 ```bash
 python -m unittest -v test_penny.TestRules
@@ -317,18 +315,8 @@ These tests never load a model. That's the substitution test from Lesson 1, pass
 
 ## Next Steps
 
-The rules are done and tested. Now build the agent around them, starting with the parts that must never depend on the model.
-
-➡️ Continue to [Lesson 4: The Agent Shell](04-the-shell.md)
+The rules are done and tested. Next, build the agent around them, starting with the parts that must never depend on the model. Continue with [Lesson 4: The Agent Shell](04-the-shell.md).
 
 ---
 
-**Progress Check:**
-- [x] Built the reservation book with every rule in code
-- [x] Tested the rules with no agent
-- [ ] Build the agent shell
-- [ ] Add steps and tools
-
----
-
-[← Previous: Design Before Code](02-design-first.md) | [Back to Overview](README.md) | [Next: The Agent Shell →](04-the-shell.md)
+[Previous: Design Before Code](02-design-first.md) | [Overview](README.md) | [Next: The Agent Shell](04-the-shell.md)

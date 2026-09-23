@@ -23,15 +23,15 @@ List the things that must hold even if the model misunderstands everything. Then
 | Nobody learns or changes a reservation they can't prove is theirs | Every lookup and cancel re-checks a verification recorded for this call |
 | Parties over six aren't booked by phone | The reservation book refuses, and the caller is offered a person |
 | The AI disclosure is always heard | The platform speaks a fixed greeting before the model says a word |
-| Transfers go only to our number, and only when someone is there | The number comes from server config, and code checks the host stand's hours |
+| Transfers go only to the restaurant's number, and only when someone is there | The number comes from server config, and code checks the host stand's hours |
 | Texts go only to the number that called | The destination comes from the call, never from the model |
 | A failure never sounds like success | Every handler turns an unexpected error into "the outcome is unknown" |
 
-Notice that the right-hand column never says "the prompt tells the model to…". Each rule is enforced somewhere the model can't reach.
+The right-hand column never says "the prompt tells the model to". Each rule is enforced where the model can't reach it.
 
 ## Four Kinds of State
 
-A voice agent juggles four kinds of state. Mixing them up is the root of many bugs:
+A voice agent handles four kinds of state, and confusing them causes many bugs:
 
 | Kind | In Penny | Treat it as |
 |---|---|---|
@@ -40,7 +40,7 @@ A voice agent juggles four kinds of state. Mixing them up is the root of many bu
 | **The system of record** | The SQLite reservation book: reservations, holds, per-call sessions | The truth |
 | **Call identifiers** | `call_id` | Links requests from the same call. It isn't proof of who is calling. |
 
-A lesson from the drive-thru demo applies directly. The platform sends `global_data` with each tool request as a snapshot taken at the start of the model's turn. If the model calls two tools in one turn, both get the same snapshot, and if both write it back, the second silently overwrites the first. So Penny keeps the truth in the reservation book, keyed by `call_id`, and uses `global_data` only to show the model small, finished facts.
+The platform sends `global_data` with each tool request as a snapshot taken at the start of the model's turn. If the model calls two tools in one turn, both get the same snapshot. If both write it back, the second silently overwrites the first. So Penny keeps the truth in the reservation book, keyed by `call_id`, and uses `global_data` only to show the model small, finished facts.
 
 ## The Workflow Contract
 
@@ -71,7 +71,7 @@ everywhere_useful: [house_info, request_human]   # read-only, or hands off to a 
 model_navigation: none   # every move between steps is made by a tool handler
 ```
 
-Here is the same contract as a picture:
+Here is the same contract as a diagram:
 
 ```
 default/triage ─start_booking──► booking/collect ─(gather done)─► search ─find_tables─► choose
@@ -90,7 +90,7 @@ most steps ─request_human─► someone at the host stand? ─yes─► announ
 
 ## What the Model Sees, Step by Step
 
-This table is the heart of the design. For each step it lists the only instructions and tools the model has:
+Lessons 5 through 9 build this table. For each step, it lists the only instructions and tools the model has:
 
 | Step | The model's whole task | Its tools | How the step ends |
 |---|---|---|---|
@@ -109,7 +109,7 @@ This table is the heart of the design. For each step it lists the only instructi
 | save_message | Save it | save_message | save_message moves to message_saved |
 | message_saved | Wrap up | house_info, finish | finish |
 
-Look down the tools column. `confirm_booking` exists in exactly one step, the one where a proposal has been read back. `confirm_cancel` exists only after a cancellation was staged. There's no step where the model can "just book it" or "just cancel it".
+Look down the tools column. `confirm_booking` exists in exactly one step, the one where a proposal has been read back. `confirm_cancel` exists only after a cancellation was staged. No step lets the model skip straight to booking or cancelling.
 
 ## Two Rules for Every Step
 
@@ -132,18 +132,8 @@ Two rules apply to every step, and Lesson 5 enforces them in code so no step can
 
 ## Next Steps
 
-With the design settled, build the part everything else depends on: the rules.
-
-➡️ Continue to [Lesson 3: The Rules First](03-rules-first.md)
+With the design settled, build the part everything else depends on: the rules. Continue with [Lesson 3: The Rules First](03-rules-first.md).
 
 ---
 
-**Progress Check:**
-- [x] Written the invariants and their owners
-- [x] Separated the four kinds of state
-- [x] Mapped what the model sees at every step
-- [ ] Build and test the rules
-
----
-
-[← Previous: Why Guardrails](01-why-guardrails.md) | [Back to Overview](README.md) | [Next: The Rules First →](03-rules-first.md)
+[Previous: Why Guardrails](01-why-guardrails.md) | [Overview](README.md) | [Next: The Rules First](03-rules-first.md)

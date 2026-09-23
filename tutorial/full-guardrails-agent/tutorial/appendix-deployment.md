@@ -1,6 +1,6 @@
 # Appendix B: Deployment
 
-In production, Penny needs four things: her secrets, a public HTTPS address, somewhere safe to keep the reservation book, and a process manager to keep her running.
+In production, Penny needs four things: its secrets, a public HTTPS address, somewhere safe to keep the reservation book, and a process manager to keep it running.
 
 ## Table of Contents
 
@@ -43,11 +43,15 @@ Generate the password and the tool-token secret, rather than inventing them:
 python -c "import secrets; print(secrets.token_urlsafe(32))"
 ```
 
+Three more rules apply to secrets:
+
 - `SIGNALWIRE_SIGNING_KEY` isn't something you generate. It's your project's signing key from the SignalWire dashboard.
 - Use the same `SIGNALWIRE_SWAIG_SECRET` on every server, so a tool call is accepted by whichever server receives it
 - Keep `.env` out of version control. The tutorial's `.gitignore` already does.
 
 ## Running in Docker
+
+The tutorial's `Dockerfile` builds an image for Penny:
 
 <!-- source: Dockerfile -->
 ```dockerfile
@@ -70,7 +74,7 @@ HEALTHCHECK --interval=30s --timeout=5s \
 CMD ["python", "penny.py"]
 ```
 
-The image runs Penny as an unprivileged user, keeps the reservation book on a volume at `/data`, and checks her health every 30 seconds. Build and run it:
+The image runs Penny as an unprivileged user, keeps the reservation book on a volume at `/data`, and checks its health every 30 seconds. Build and run it:
 
 ```bash
 docker build -t penny .
@@ -80,6 +84,8 @@ docker run -d --name penny --env-file .env -p 3000:3000 -v penny-data:/data penn
 If you change `PORT`, change the `-p` mapping to match.
 
 ## The Management Script
+
+`penny.sh` starts, stops and checks Penny on your own machine:
 
 <!-- source: penny.sh -->
 ```bash
@@ -146,11 +152,11 @@ case "${1:-}" in
 esac
 ```
 
-`penny.sh` is for your own machine. It doesn't restart Penny if she crashes or the server reboots, so in production use Docker, systemd, or your platform's process manager instead.
+The script doesn't restart Penny after a crash or a reboot. In production, use Docker, systemd, or your platform's process manager instead.
 
 ## One Reservation Book
 
-Penny keeps all her state in one SQLite file:
+Penny keeps all its state in one SQLite file:
 
 - Every write is a short transaction that starts with `BEGIN IMMEDIATE`, so requests arriving together are handled one at a time. `test_parallel_confirms_book_once` checks that four confirms racing on threads book one table.
 - The state is keyed by call, not held in memory, so restarting Penny between two turns of a call loses nothing.
@@ -160,6 +166,8 @@ Penny keeps all her state in one SQLite file:
 One SQLite file suits one restaurant on one server. Don't put it on a network file system, where SQLite's locking can't be trusted. To run Penny on more than one server, move `ReservationStore` to a shared database such as PostgreSQL. Every rule lives in that one class, so nothing outside `reservations.py` needs to change.
 
 ## Before You Go Live
+
+Check each item before Penny takes real calls:
 
 - [ ] The three required secrets are real values, `SIGNALWIRE_SIGNING_KEY` is set, and `PENNY_DEMO_DATA` is `0`
 - [ ] `SWML_PROXY_URL_BASE` is Penny's public HTTPS address
@@ -173,4 +181,4 @@ One SQLite file suits one restaurant on one server. Don't put it on a network fi
 
 ---
 
-[← Previous: Complete Code](appendix-complete-code.md) | [Back to Overview](README.md) | [Next: Technique Map →](appendix-technique-map.md)
+[Previous: Complete Code](appendix-complete-code.md) | [Overview](README.md) | [Next: Technique Map](appendix-technique-map.md)

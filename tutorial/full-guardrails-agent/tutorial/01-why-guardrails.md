@@ -1,6 +1,6 @@
 # Lesson 1: Why Guardrails
 
-Before building Penny properly, let's build her the obvious way and watch what goes wrong. Every guardrail in this tutorial exists because one of these failures is real.
+This lesson starts with the obvious version of Penny and shows what goes wrong. Every guardrail in this tutorial exists because one of these failures happens in practice.
 
 ## Table of Contents
 
@@ -43,7 +43,7 @@ class NaivePenny(AgentBase):
         return FunctionResult(f"Cancelled the reservation for {name}.")
 ```
 
-It demos beautifully. It answers, it's polite, it books things. It is also wrong in ways a demo never shows.
+It works in a demo: it answers, it's polite, and it books tables. It also fails in ways a demo rarely shows.
 
 ## How It Fails
 
@@ -57,7 +57,7 @@ It demos beautifully. It answers, it's polite, it books things. It is also wrong
 | The AI disclosure gets skipped when the caller opens with a question | The model decided when to say it |
 | "You're all set!" is said and nothing is written anywhere | The tool returned a sentence. The model believed it, and so did the caller. |
 
-Every rule lived in the prompt, and a prompt is a request, not an enforcement. The model will usually comply. "Usually" is fine for chit-chat and not fine for someone's anniversary dinner.
+Every rule lived in the prompt, and a prompt is a request, not a guarantee. The model usually complies. "Usually" is acceptable for small talk, and not for someone's anniversary dinner.
 
 ## The Idea: Program What the Model Can See
 
@@ -84,12 +84,12 @@ Guardrails come in four layers. Only the first is a suggestion:
 
 ## Tell the Model Less
 
-Two SignalWire demo agents show the most useful habit in PGI: take information *away* from the model.
+The most useful habit in PGI is taking information *away* from the model. Two SignalWire examples show it:
 
-- The **blackjack dealer** never sees the deck or its own hole card. Python deals, scores and pays; the model only announces what the tools report.
-- The **drive-thru agent** is never told the menu. It can only learn what exists by calling the tool that adds an item, so it can't promise a dish that isn't sold.
+- A **blackjack dealer** agent never sees the deck or its own hole card. Python deals, scores and pays, and the model announces what the tools report.
+- In a **payment flow**, the platform's `pay` verb collects the card number from the caller's keypad and sends it to your payment connector. The model never receives the digits, so it can't repeat or leak them.
 
-Penny follows the same rule. Her model never sees:
+Penny applies the same habit. Its model never sees:
 
 - **The reservation book.** `find_tables` returns up to three numbered options. Table numbers never leave the code.
 - **The house rules.** Seating hours, party-size limits and the booking window are enforced in code. The model hears only the result: "We're closed on Mondays."
@@ -97,7 +97,7 @@ Penny follows the same rule. Her model never sees:
 - **Today's date, for arithmetic.** The model passes along the caller's own words ("next Friday") and code works out the date.
 - **Confirmation codes, until one exists.** Code generates the code and hands it back with the booking.
 
-You can't break a rule you can't see, with a tool you don't have.
+A rule the model never sees can't be argued away, and a tool it doesn't have can't be misused.
 
 ## The Substitution Test
 
@@ -109,7 +109,7 @@ For `NaivePenny` the answer is no. The web form would book 9 PM, double-book on 
 
 ## What Guardrails Don't Do
 
-It's worth being precise about the limits:
+Guardrails have three limits:
 
 - The model can still **say** something wrong. What PGI removes is its authority to **do** something wrong.
 - Guardrails don't make recognition, speech or timing correct. Those still need real calls.
@@ -129,18 +129,8 @@ It's worth being precise about the limits:
 
 ## Next Steps
 
-You know what failure looks like. Next, decide what must stay true before writing any code.
-
-➡️ Continue to [Lesson 2: Design Before Code](02-design-first.md)
+The next step is deciding what must stay true, before writing any code. Continue with [Lesson 2: Design Before Code](02-design-first.md).
 
 ---
 
-**Progress Check:**
-- [x] Seen how a prompt-only agent fails
-- [x] Learned the three owners and the four layers
-- [ ] Design the invariants and the workflow
-- [ ] Build and test the rules
-
----
-
-[Back to Overview](README.md) | [Next: Design Before Code →](02-design-first.md)
+[Overview](README.md) | [Next: Design Before Code](02-design-first.md)

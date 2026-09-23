@@ -19,7 +19,7 @@ import sqlite3
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -87,7 +87,9 @@ class LockedOutError(PolicyError):
     """Too many failed verification attempts on this call."""
 
 
-# ── Speaking and hearing dates, times and codes ─────────────────────────────
+# -----------------------------------------------------------------------------
+# Speaking and hearing dates, times and codes
+# -----------------------------------------------------------------------------
 
 # region: resolve-date
 def resolve_date(text: str, today: date) -> date | None:
@@ -205,7 +207,9 @@ def normalize_code(text: str) -> str:
     return re.sub(r"[^A-Z0-9]", "", str(text or "").upper())
 
 
-# ── Values handed to the agent ──────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Values handed to the agent
+# -----------------------------------------------------------------------------
 
 @dataclass(frozen=True)
 class Option:
@@ -257,11 +261,14 @@ class Reservation:
                 f"at {spoken_time(self.start)}, under {self.name}")
 
 
-# ── The store ───────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# The store
+# -----------------------------------------------------------------------------
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS sessions (
     call_id TEXT PRIMARY KEY,
+    draft TEXT NOT NULL DEFAULT '{}',
     request TEXT NOT NULL DEFAULT '{}',
     offers TEXT NOT NULL DEFAULT '[]',
     proposal_counter INTEGER NOT NULL DEFAULT 0,
@@ -355,7 +362,9 @@ class ReservationStore:
     def _now(self) -> datetime:
         return self.clock()
 
-    # ── Availability ────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
+    # Availability
+    # -------------------------------------------------------------------------
 
     def _table_free(self, db: sqlite3.Connection, table_id: str, day: date,
                     start: int, call_id: str) -> bool:
@@ -370,11 +379,14 @@ class ReservationStore:
              start, DINING_MINUTES)).fetchone()
         return busy is None and held is None
 
+    def _too_soon(self, day: date, start: int) -> bool:
+        """Whether a seating starts less than SAME_DAY_LEAD_MINUTES from now."""
+        starts_at = datetime.combine(day, time(start // 60, start % 60), tzinfo=RESTAURANT_TZ)
+        return starts_at < self._now() + timedelta(minutes=SAME_DAY_LEAD_MINUTES)
+
     def _check_notice(self, day: date, start: int) -> None:
-        """A seating must still be bookable now: not past, and far enough ahead."""
-        now = self._now()
-        too_soon = day == now.date() and start < now.hour * 60 + now.minute + SAME_DAY_LEAD_MINUTES
-        if day < now.date() or too_soon:
+        """Refuse a seating that is no longer far enough ahead to book."""
+        if self._too_soon(day, start):
             raise PolicyError("That seating is too soon to book now.",
                               "Apologize and check availability again.")
 
@@ -422,16 +434,14 @@ class ReservationStore:
         """
         party, day, wanted, clean_name = self._validate_request(
             party_size, date_text, time_text, name)
-        now = self._now()
-        earliest = (now.hour * 60 + now.minute + SAME_DAY_LEAD_MINUTES
-                    if day == now.date() else 0)
         with self._tx() as db:
             self._session(db, call_id)
             # A new search supersedes this call's old proposal.
             db.execute("UPDATE holds SET status='released' WHERE call_id=? AND status='live'",
                        (call_id,))
             options: list[Option] = []
-            nearby = sorted((s for s in SEATINGS if abs(s - wanted) <= 60 and s >= earliest),
+            nearby = sorted((s for s in SEATINGS
+                             if abs(s - wanted) <= 60 and not self._too_soon(day, s)),
                             key=lambda s: (abs(s - wanted), s))
             for seating in nearby:
                 fits = sorted((cap, tid) for tid, cap in TABLES.items()
@@ -453,23 +463,31 @@ class ReservationStore:
         return Request(party, day, wanted, clean_name), options
     # endregion: find-options
 
-    def current_request(self, call_id: str) -> dict[str, Any]:
-        """This call's last successful search, in words the search accepts.
+    # region: update-draft
+    def update_draft(self, call_id: str, changes: dict[str, Any],
+                     gathered: dict[str, Any]) -> dict[str, Any]:
+        """Apply a correction to what this call has asked for, and return the result.
 
-        A correction changes one detail of it, and the others stay as they were.
+        The draft is kept whether or not a search passes the rules, so a correction
+        to a refused search isn't lost. The first search starts from ``gathered``.
         """
+        keys = ("party_size", "date", "time", "name")
         with self._tx() as db:
-            request = json.loads(self._session(db, call_id)["request"])
-        if not request:
-            return {}
-        return {"party_size": request["party_size"], "date": request["day"],
-                "time": spoken_time(request["start"]), "name": request["name"]}
+            draft = json.loads(self._session(db, call_id)["draft"])
+            if not draft:
+                draft = {key: gathered.get(key) for key in keys}
+            draft.update({key: changes[key] for key in keys
+                          if changes.get(key) not in (None, "")})
+            db.execute("UPDATE sessions SET draft=? WHERE call_id=?", (json.dumps(draft), call_id))
+        return draft
+    # endregion: update-draft
 
     def reset_request(self, call_id: str) -> None:
-        """Forget this call's search, so a new booking starts from gathered answers."""
+        """Forget this call's booking in progress, so a new one starts from gathered answers."""
         with self._tx() as db:
             self._session(db, call_id)
-            db.execute("UPDATE sessions SET request='{}', offers='[]' WHERE call_id=?", (call_id,))
+            db.execute("UPDATE sessions SET draft='{}', request='{}', offers='[]' "
+                       "WHERE call_id=?", (call_id,))
             db.execute("UPDATE holds SET status='released' WHERE call_id=? AND status='live'",
                        (call_id,))
 
@@ -600,7 +618,9 @@ class ReservationStore:
             return "send"
     # endregion: request-sms
 
-    # ── Managing an existing reservation ────────────────────────────────────
+    # -------------------------------------------------------------------------
+    # Managing an existing reservation
+    # -------------------------------------------------------------------------
 
     # region: verify
     def verify(self, call_id: str, code_text: str, last_name: str) -> Reservation:
@@ -684,7 +704,9 @@ class ReservationStore:
             db.execute("UPDATE sessions SET cancel_revision=NULL WHERE call_id=?", (call_id,))
             return self._reservation(row)
 
-    # ── Messages, the host stand, and call records ──────────────────────────
+    # -------------------------------------------------------------------------
+    # Messages, the host stand, and call records
+    # -------------------------------------------------------------------------
 
     def save_message(self, call_id: str, name: str, callback: str, body: str) -> dict[str, str]:
         """Store one message per call; saving again returns the first one."""

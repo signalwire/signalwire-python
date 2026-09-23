@@ -42,11 +42,15 @@ def scoped(step: Step, text: str, tools: list[str], history: str = "default") ->
             .set_history(history))
 ```
 
+Besides the step's text, the helper sets three things on every step:
+
 - `set_functions(tools)` names the step's tools, and `[]` means none
 - `set_valid_steps([])` and `set_valid_contexts([])` give the model nowhere to go. The only way out of a step is a tool handler returning `swml_change_step` or `swml_change_context` after it has checked the real state.
-- `set_history` chooses how much of the earlier conversation the model still sees. More in Lesson 8.
+- `set_history` chooses how much of the earlier conversation the model still sees. Lesson 7 explains the options.
 
 ## Triage: Where Every Call Starts
+
+Every call starts in the `default` context, whose only step is `triage`:
 
 <!-- source: workflow.py#triage --> <!-- snippet: no-run an excerpt of workflow.py, checked against the file by test_penny.py -->
 ```python
@@ -63,13 +67,13 @@ def _triage(builder: ContextBuilder) -> None:
     ctx.set_initial_step("triage")
 ```
 
-`start_booking` and `manage_booking` are **router tools**. They don't do business, they just move the conversation, but because they're tools, code performs the move and can reset state on the way (Lesson 6). The model can't wander into the manage context by being chatty.
+`start_booking` and `manage_booking` are **router tools**. They don't book or cancel anything. They move the conversation, and because they're tools, code performs the move and can reset state on the way (Lesson 6). The model can't drift into the manage context on its own.
 
 `${global_data.host_stand}` is filled in by the platform when the step runs. Lesson 7 shows where the value comes from.
 
-> **What a real conversation taught us.** The first version of this text said "Find out whether the caller wants a new reservation or…". In a live test, a caller opened with "I'd like to book a table", and Penny still asked "new or existing?". The wording now says to act as soon as the caller has said what they want.
+> **A wording fix from a live test.** The first version of this text told the model to find out whether the caller wanted a new reservation or an existing one. In a live test, a caller opened with "I'd like to book a table", and Penny still asked "new or existing?". The wording now says to act as soon as the caller has said what they want.
 >
-> PGI doesn't make prompt wording irrelevant; it makes it low-stakes. A clumsy instruction here costs one extra question. It can't book the wrong table, because triage has no tool that books anything.
+> PGI doesn't make prompt wording irrelevant. It makes wording low-stakes. A clumsy instruction here costs one extra question. It can't book the wrong table, because triage has no tool that books anything.
 
 ## The Booking Steps
 
@@ -106,17 +110,17 @@ ctx.set_initial_step("collect")
 Read the tools on each step against the design table from Lesson 2:
 
 - `search` can only look up availability. It can't hold anything.
-- `choose` can hold one of the options just offered.
+- `choose` can hold one of the options the search offered.
 - `review` is the **only** step with `confirm_booking`, and it's only reached after `hold_table` has created a proposal.
 - `booked` has no booking tools at all, so a confused model can't book twice.
 
-Every step has at most five tools. A tool list that stays short and specific is easier for the model to choose from correctly.
+Every step has at most five tools. The model chooses more reliably from a short, specific list.
 
 `set_initial_step("collect")` names the entry step. The step is also listed first, and each context is built the same way, so the entry point is unambiguous however the context is entered.
 
 ## The Inheritance Trap
 
-This is the single most common bug in multi-step agents, so it gets its own test:
+Tool inheritance is a common bug in multi-step agents, so it gets its own test:
 
 <!-- source: test_penny.py#test-trap --> <!-- snippet: no-run an excerpt of test_penny.py, checked against the file by test_penny.py -->
 ```python
@@ -129,14 +133,14 @@ A step with no `functions` key doesn't mean "no tools". It means "keep whatever 
 
 ## Why No Step Criteria, and No `set_end`
 
-Two tools from the contexts API are deliberately unused here.
+Penny deliberately doesn't use two methods from the contexts API:
 
 - **`set_step_criteria`** tells the model when a step is done, so the model can decide to move on. Penny's model never decides to move on. Code moves it, after checking. Criteria would be guidance on a decision the model doesn't make.
-- **`set_end(True)`** leaves step mode after the step. It does **not** hang up. It would leave the model outside step mode, with no step limiting its tools, which is the opposite of a locked-down ending. Penny's final steps keep explicit, tiny tool lists, and `finish` hangs up with a real action (Lesson 9).
+- **`set_end(True)`** leaves step mode after the step. It does **not** hang up. It would leave the model outside step mode, with no step limiting its tools, which is the opposite of a locked-down ending. Penny's final steps keep explicit, short tool lists, and `finish` hangs up with a real action (Lesson 9).
 
 ## Checking the Contract
 
-The tests fetch the SWML from the app Penny actually serves, the way SignalWire fetches it, and check the design holds there rather than in the Python that built it:
+The tests fetch the SWML from the app Penny serves, the way SignalWire fetches it. They check the design there, rather than in the Python that built it:
 
 <!-- source: test_penny.py#test-scoping --> <!-- snippet: no-run an excerpt of test_penny.py, checked against the file by test_penny.py -->
 ```python
@@ -192,18 +196,8 @@ Find the `contexts` section inside the `ai` verb. Every step has a `functions` l
 
 ## Next Steps
 
-The steps decide what the model can ask for. Next, write the handlers that decide what actually happens.
-
-➡️ Continue to [Lesson 6: Tools That Decide](06-tools-that-decide.md)
+The steps decide what the model can ask for. Next, write the handlers that decide what actually happens. Continue with [Lesson 6: Tools That Decide](06-tools-that-decide.md).
 
 ---
 
-**Progress Check:**
-- [x] Built the rules and the agent shell
-- [x] Built contexts and steps where every step names its tools
-- [ ] Add tools that decide
-- [ ] Add gather mode and projection
-
----
-
-[← Previous: The Agent Shell](04-the-shell.md) | [Back to Overview](README.md) | [Next: Tools That Decide →](06-tools-that-decide.md)
+[Previous: The Agent Shell](04-the-shell.md) | [Overview](README.md) | [Next: Tools That Decide](06-tools-that-decide.md)

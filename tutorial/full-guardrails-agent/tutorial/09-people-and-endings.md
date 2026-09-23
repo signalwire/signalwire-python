@@ -1,6 +1,6 @@
 # Lesson 9: People, Messages and Endings
 
-The last tools reach past the conversation. They transfer the call, keep a message, send a text or hang up, and none of that can be taken back. So each one follows the same rule as booking: the model can ask for it, and code decides where it goes, what it says and when it happens.
+The last tools reach past the conversation. They transfer the call, take a message, send a text or hang up, and none of that can be taken back. Each one follows the same rule as booking. The model can ask for it, and code decides where it goes, what it says and when it happens.
 
 ## Table of Contents
 
@@ -14,6 +14,8 @@ The last tools reach past the conversation. They transfer the call, keep a messa
 ---
 
 ## Handing Off to a Person
+
+`request_human` connects the caller with the host stand, or starts taking a message when nobody is there:
 
 <!-- source: handlers.py#request-human --> <!-- snippet: no-run an excerpt of handlers.py, checked against the file by test_penny.py -->
 ```python
@@ -41,9 +43,11 @@ Three decisions are made here, and the model makes none of them:
 - **Whether anyone is there.** The handler checks the clock when the tool runs. The `host_stand` fact in the triage step only lets the model set expectations. It was worked out when the call started, and a call that starts at 3:58 may ask for a person at 4:02.
 - **What the caller hears first.** The notice is a `say()` action. Actions run in order, so the whole notice plays before `connect()` transfers the call. The model's reply is spoken on its own schedule, and a transfer could start before it finished. `final=True` makes the transfer permanent: the call leaves Penny for good.
 
-When nobody is at the host stand, or no host number is configured, the handler moves the call to the `help` context instead, and clears any earlier message on the way.
+When nobody is at the host stand, or no host number is configured, the handler moves the call to the `help` context instead. It clears any earlier message on the way.
 
 ## Taking a Message
+
+The `help` context takes a message with gather mode:
 
 <!-- source: workflow.py#help --> <!-- snippet: no-run an excerpt of workflow.py, checked against the file by test_penny.py -->
 ```python
@@ -74,9 +78,13 @@ def _help(builder: ContextBuilder) -> None:
 
 This is the booking pattern again, only smaller. Gather mode asks the questions, `completion_action` moves to a step whose only tool is `save_message`, and `save_message` moves on once the message is stored.
 
+Three details keep messages useful and private:
+
 - The callback number uses `confirm=True`. One misheard digit makes a message useless, so the model reads it back first.
 - Every question offers `finish`, for a caller who changes their mind.
 - No tool reads messages. The model can leave one for the host stand, and can never read what anyone else left.
+
+`save_message` stores the message:
 
 <!-- source: handlers.py#save-message --> <!-- snippet: no-run an excerpt of handlers.py, checked against the file by test_penny.py -->
 ```python
@@ -97,9 +105,11 @@ def save_message(self, args: dict[str, Any], raw_data: dict[str, Any]) -> Functi
             .swml_user_event({"type": "message_taken"}))
 ```
 
-`save_message` combines gathered answers and corrections exactly like `find_tables` in Lesson 6. The reservation book insists on a callback number with 10 to 15 digits, a name and a few words, and keeps one message per call, so a re-fired tool doesn't leave two. The model is told only the last four digits of the callback number, which is enough to reassure the caller.
+`save_message` uses the gathered answers, and a detail passed as an argument replaces the gathered one. The reservation book requires a callback number with 10 to 15 digits, a name and a few words. It keeps one message per call, so a re-fired tool doesn't leave two. The model is told only the last four digits of the callback number, which is enough to reassure the caller.
 
 ## Texting the Confirmation
+
+`send_confirmation_text` texts the booking this call made to the number the call comes from:
 
 <!-- source: handlers.py#send-text --> <!-- snippet: no-run an excerpt of handlers.py, checked against the file by test_penny.py -->
 ```python
@@ -117,31 +127,35 @@ def send_confirmation_text(self, args: dict[str, Any], raw_data: dict[str, Any])
     if not re.fullmatch(r"\+[1-9]\d{9,14}", caller):
         raise PolicyError("The number this call comes from can't receive a text.",
                           "Say you can't text this number, and make sure they have the code.")
-    # The platform sends the text after this returns, so "requested" is all
-    # that can be said. Repeats within a short window are duplicates.
+    # The platform sends the text after this returns, so Penny can only say
+    # a text was requested, never that it was sent or arrived.
     decision = self.store.request_sms(booking.code)
     if decision == "duplicate":
         return FunctionResult(
             tool_result="A text for this booking was requested moments ago.",
-            tool_prompt="Tell the caller it's on its way. If it hasn't arrived in a couple "
-                        "of minutes, you can send it again.")
+            tool_prompt="Tell the caller a text was requested a moment ago. If it hasn't "
+                        "arrived in a couple of minutes, you can request it again.")
     if decision == "limit":
-        raise PolicyError("This booking has been texted as many times as allowed.",
-                          "Say you can't text it again, and make sure they have the code.")
+        raise PolicyError("A text for this booking has been requested as many times "
+                          "as allowed.",
+                          "Say you can't request another text, and make sure they have "
+                          "the confirmation code.")
     body = (f"The Copper Pot: {booking.spoken()}. Confirmation code {booking.code}. "
             "Call us to change or cancel.")
     return (FunctionResult(
-                tool_result=f"Asked for the details to be texted to the number ending in "
+                tool_result=f"Requested a text of the details to the number ending in "
                             f"{caller[-4:]}.",
-                tool_prompt="Tell the caller the text is on its way.")
+                tool_prompt="Tell the caller you've requested the text.")
             .send_sms(to_number=caller, from_number=self.settings.sms_from, body=body))
 ```
 
+Three rules keep the text safe:
+
 - **The tool has no parameters.** The destination is `caller_id_num` from the platform's tool request: the number the call comes from. If the model passes a `to_number` anyway, the handler never reads it. A test checks exactly that.
 - **The content comes from the reservation book**: the booking this call made, and nothing from the conversation.
-- **Every refusal is a fact.** No booking on this call, no texting number configured, or a caller ID that can't receive texts each come back with what to tell the caller.
+- **Every refusal is a fact.** The tool refuses when this call has no booking, when texting isn't configured, or when the caller ID can't receive texts. Each refusal says what to tell the caller.
 
-The text is requested, not sent. The platform sends it after the tool returns, so Penny can't know it arrived, and tells the model only that it was requested. The reservation book counts the requests:
+The handler requests the text, and the platform sends it after the tool returns. Penny can't know whether the text arrived, so the model is told only that it was requested. The reservation book counts the requests:
 
 <!-- source: reservations.py#request-sms --> <!-- snippet: no-run an excerpt of reservations.py, checked against the file by test_penny.py -->
 ```python
@@ -166,11 +180,13 @@ def request_sms(self, code: str) -> str:
         return "send"
 ```
 
-A repeat within two minutes is a duplicate, the usual shape of a tool fired twice, and isn't sent. After that, a caller who didn't get the text can ask again, up to three times.
+A repeat within two minutes is treated as a tool fired twice, and isn't sent. After two minutes, a caller who didn't get the text can ask again, up to three requests in all.
 
 Caller ID can be faked. The worst case is that a stranger receives a few texts about a booking they didn't make. That's why the text carries only this call's booking, and why the number of texts is capped.
 
 ## Ending the Call
+
+`finish` plays a fixed goodbye, then hangs up:
 
 <!-- source: handlers.py#finish --> <!-- snippet: no-run an excerpt of handlers.py, checked against the file by test_penny.py -->
 ```python
@@ -184,9 +200,9 @@ def finish(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResu
             .hangup())
 ```
 
-The goodbye is a fixed sentence played by an action, and `hangup()` runs after it, so the caller always hears all of it. A goodbye left to the model's reply races the hangup, and on real calls it gets cut off. The `tool_prompt` tells the model to say nothing more, so it doesn't talk over the goodbye.
+The goodbye is a fixed sentence played by an action, and `hangup()` runs after it, so the caller always hears all of it. A goodbye left to the model's reply races the hangup, and on real calls the goodbye gets cut off. The `tool_prompt` tells the model to say nothing more, so it doesn't talk over the goodbye.
 
-`finish` is offered where a call can reasonably end: triage, `booked`, `details`, `cancelled`, `locked`, `message_saved`, and the message questions. It isn't offered in the middle of a booking. A caller who wants to leave then simply hangs up, and any table they had on hold is released when the hold expires five minutes later.
+`finish` is offered where a call can reasonably end: triage, `booked`, `details`, `cancelled`, `locked`, `message_saved`, and the message questions. It isn't offered in the middle of a booking. A caller who wants to leave mid-booking hangs up, and any table they had on hold is released when the hold expires five minutes later.
 
 As Lesson 5 explained, `set_end(True)` is not a hangup. Ending a call is an action.
 
@@ -208,7 +224,7 @@ def capture_call(self, call_log: list[dict[str, Any]], raw_data: dict[str, Any])
 
 The outcome, `booked`, `cancelled`, `message` or `no_change`, comes from the reservation book. The call log only says how long the conversation was. A transcript records what was *said*, and a conversation can sound finished when nothing was saved.
 
-Penny also asks the model for a two-sentence summary with `set_post_prompt`, and logs it for what it is:
+Penny also asks the model for a two-sentence summary with `set_post_prompt`, and logs it:
 
 <!-- source: penny.py#summary --> <!-- snippet: no-run an excerpt of penny.py, checked against the file by test_penny.py -->
 ```python
@@ -217,7 +233,7 @@ def on_summary(self, summary: Any, raw_data: Any = None) -> None:
     log.info("call summary (model-written, not authoritative): %s", summary)
 ```
 
-A summary is handy for a person skimming calls. Nothing in Penny uses it to decide anything.
+A summary helps a person skimming calls. Nothing in Penny uses it to decide anything.
 
 ## Watching a Call
 
@@ -239,18 +255,8 @@ Set `PENNY_DEBUG_EVENTS=1` and the platform sends Penny debug events while a cal
 
 ## Next Steps
 
-Penny is complete. Last, prove it: the tests that show the guardrails hold, the command-line checks, and real conversations.
-
-➡️ Continue to [Lesson 10: Testing and Running](10-testing-and-running.md)
+Penny is complete. The last lesson proves it, with tests that show the guardrails hold, command-line checks, and a real conversation. Continue with [Lesson 10: Testing and Running](10-testing-and-running.md).
 
 ---
 
-**Progress Check:**
-- [x] Built the rules, shell, steps, handlers and gather
-- [x] Added the verification gate
-- [x] Added people, messages and endings
-- [ ] Test and run Penny
-
----
-
-[← Previous: The Verification Gate](08-the-verification-gate.md) | [Back to Overview](README.md) | [Next: Testing and Running →](10-testing-and-running.md)
+[Previous: The Verification Gate](08-the-verification-gate.md) | [Overview](README.md) | [Next: Testing and Running](10-testing-and-running.md)

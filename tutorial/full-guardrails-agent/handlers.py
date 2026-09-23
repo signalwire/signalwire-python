@@ -97,7 +97,9 @@ class PennyHandlers:
         value = (raw_data.get("global_data") or {}).get(key)
         return value if isinstance(value, dict) else {}
 
-    # ── Routing: code, not the model, moves the conversation ────────────────
+    # -------------------------------------------------------------------------
+    # Routing: code, not the model, moves the conversation
+    # -------------------------------------------------------------------------
 
     # region: start-booking
     @guarded
@@ -126,23 +128,21 @@ class PennyHandlers:
         return FunctionResult(tool_result=fact,
                               tool_prompt="Answer with this fact in your own words, then carry on.")
 
-    # ── Booking ─────────────────────────────────────────────────────────────
+    # -------------------------------------------------------------------------
+    # Booking
+    # -------------------------------------------------------------------------
 
     # region: find-tables
     @guarded
     def find_tables(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
         call_id = self._call_id(raw_data)
-        # The request so far: the last search on this call, or, for the first
-        # search, the answers gather mode collected
-        current = self.store.current_request(call_id) or self._gathered(raw_data, "booking_request")
-
-        def detail(key: str) -> Any:
-            # A correction passed as an argument changes only that detail.
-            return args[key] if args.get(key) not in (None, "") else current.get(key)
-
+        # What the caller has asked for: gather's answers, changed by every
+        # correction since. A correction passed as an argument changes only
+        # that detail, even if the last search was refused.
+        draft = self.store.update_draft(call_id, args, self._gathered(raw_data, "booking_request"))
         try:
             request, options = self.store.find_options(
-                call_id, detail("party_size"), detail("date"), detail("time"), detail("name"))
+                call_id, draft["party_size"], draft["date"], draft["time"], draft["name"])
         except LargePartyError as refusal:
             return FunctionResult(tool_result=refusal.fact, tool_prompt=refusal.ask)
 
@@ -221,27 +221,31 @@ class PennyHandlers:
         if not re.fullmatch(r"\+[1-9]\d{9,14}", caller):
             raise PolicyError("The number this call comes from can't receive a text.",
                               "Say you can't text this number, and make sure they have the code.")
-        # The platform sends the text after this returns, so "requested" is all
-        # that can be said. Repeats within a short window are duplicates.
+        # The platform sends the text after this returns, so Penny can only say
+        # a text was requested, never that it was sent or arrived.
         decision = self.store.request_sms(booking.code)
         if decision == "duplicate":
             return FunctionResult(
                 tool_result="A text for this booking was requested moments ago.",
-                tool_prompt="Tell the caller it's on its way. If it hasn't arrived in a couple "
-                            "of minutes, you can send it again.")
+                tool_prompt="Tell the caller a text was requested a moment ago. If it hasn't "
+                            "arrived in a couple of minutes, you can request it again.")
         if decision == "limit":
-            raise PolicyError("This booking has been texted as many times as allowed.",
-                              "Say you can't text it again, and make sure they have the code.")
+            raise PolicyError("A text for this booking has been requested as many times "
+                              "as allowed.",
+                              "Say you can't request another text, and make sure they have "
+                              "the confirmation code.")
         body = (f"The Copper Pot: {booking.spoken()}. Confirmation code {booking.code}. "
                 "Call us to change or cancel.")
         return (FunctionResult(
-                    tool_result=f"Asked for the details to be texted to the number ending in "
+                    tool_result=f"Requested a text of the details to the number ending in "
                                 f"{caller[-4:]}.",
-                    tool_prompt="Tell the caller the text is on its way.")
+                    tool_prompt="Tell the caller you've requested the text.")
                 .send_sms(to_number=caller, from_number=self.settings.sms_from, body=body))
     # endregion: send-text
 
-    # ── An existing reservation ─────────────────────────────────────────────
+    # -------------------------------------------------------------------------
+    # An existing reservation
+    # -------------------------------------------------------------------------
 
     # region: verify-reservation
     @guarded
@@ -293,7 +297,9 @@ class PennyHandlers:
                                tool_prompt="Tell the caller their reservation is unchanged.")
                 .swml_change_step("details"))
 
-    # ── People, messages and endings ────────────────────────────────────────
+    # -------------------------------------------------------------------------
+    # People, messages and endings
+    # -------------------------------------------------------------------------
 
     # region: request-human
     @guarded
