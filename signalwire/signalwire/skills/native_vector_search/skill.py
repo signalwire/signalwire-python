@@ -273,7 +273,8 @@ class NativeVectorSearchSkill(SkillBase):
             "index_name", "default"
         )  # For remote searches
 
-        # Parse auth from URL if present
+        # Parse auth from URL if present. remote_base_url never carries the
+        # credentials, so it's the form to log and to build request URLs from.
         self.remote_auth = None
         self.remote_base_url = self.remote_url
         if self.remote_url:
@@ -282,12 +283,9 @@ class NativeVectorSearchSkill(SkillBase):
             parsed = urlparse(self.remote_url)
             if parsed.username and parsed.password:
                 self.remote_auth = (parsed.username, parsed.password)
-                # Reconstruct URL without auth for display
-                self.remote_base_url = f"{parsed.scheme}://{parsed.hostname}"
-                if parsed.port:
-                    self.remote_base_url += f":{parsed.port}"
-                if parsed.path:
-                    self.remote_base_url += parsed.path
+            if "@" in parsed.netloc:
+                host_and_port = parsed.netloc.rsplit("@", 1)[1]
+                self.remote_base_url = parsed._replace(netloc=host_and_port).geturl()
 
         # SWAIG fields are already extracted by SkillBase.__init__()
         # No need to re-fetch from params - use self.swaig_fields inherited from parent
@@ -300,13 +298,13 @@ class NativeVectorSearchSkill(SkillBase):
 
             if not validate_url(self.remote_url):
                 self.logger.error(
-                    "Remote URL rejected by SSRF protection: %s", self.remote_url
+                    "Remote URL rejected by SSRF protection: %s", self.remote_base_url
                 )
                 return False
 
             self.use_remote = True
             self.search_engine = None  # No local search engine needed
-            self.logger.info(f"Using remote search server: {self.remote_url}")
+            self.logger.info("Using remote search server: %s", self.remote_base_url)
 
             # Test remote connection (lightweight check)
             try:
@@ -334,7 +332,11 @@ class NativeVectorSearchSkill(SkillBase):
                 self.search_available = False
                 return False
             except Exception as e:
-                self.logger.error(f"Failed to connect to remote search server: {e}")
+                from signalwire.core.security.security_utils import redact_url
+
+                self.logger.error(
+                    "Failed to connect to remote search server: %s", redact_url(str(e))
+                )
                 self.search_available = False
                 return False
 
@@ -578,10 +580,9 @@ class NativeVectorSearchSkill(SkillBase):
     ) -> FunctionResult:
         """Handle search requests"""
 
-        # Debug logging to see what arguments are being passed
-        self.logger.info(f"Search handler called with args: {args}")
-        self.logger.info(f"Args type: {type(args)}")
-        self.logger.info(f"Raw data: {raw_data}")
+        # The arguments carry the caller's query, so they're logged at DEBUG
+        # only. raw_data (the whole SWAIG request) isn't logged at all.
+        self.logger.debug("Search handler called with args: %s", args)
 
         if not self.search_available:
             return FunctionResult(
@@ -597,30 +598,24 @@ class NativeVectorSearchSkill(SkillBase):
 
         # Get arguments - the framework handles parsing correctly
         query = args.get("query", "").strip()
-        self.logger.error(f"DEBUG: Extracted query: '{query}' (length: {len(query)})")
-        self.logger.info(f"Query bool value: {bool(query)}")
+        self.logger.debug("Extracted query: %r (length: %d)", query, len(query))
 
         if not query:
-            self.logger.error("Query validation failed - returning error message")
+            self.logger.debug("Search called without a query")
             return FunctionResult("Please provide a search query.")
-
-        self.logger.info("Query validation passed - proceeding with search")
         count = args.get("count", self.count)
 
         try:
             # Perform search (local or remote)
-            self.logger.info(
-                f"DEBUG: use_remote={self.use_remote}, remote_base_url={self.remote_base_url}"
+            self.logger.debug(
+                "use_remote=%s, remote_base_url=%s",
+                self.use_remote,
+                self.remote_base_url,
             )
             if self.use_remote:
                 # For remote searches, let the server handle query preprocessing
-                self.logger.info(
-                    f"DEBUG: Calling _search_remote with query='{query}', count={count}"
-                )
                 results = self._search_remote(query, None, count)
-                self.logger.info(
-                    f"DEBUG: _search_remote returned {len(results)} results"
-                )
+                self.logger.debug("Remote search returned %d results", len(results))
             else:
                 # For local searches, preprocess the query locally
                 from signalwire.search.query_processor import preprocess_query
@@ -801,7 +796,7 @@ class NativeVectorSearchSkill(SkillBase):
 
         except Exception as e:
             # Log the full error details for debugging
-            self.logger.error(f"Search error for query '{query}': {e!s}", exc_info=True)
+            self.logger.error("Search error: %s", e, exc_info=True)
 
             # Return user-friendly error message
             user_msg = "I'm sorry, I encountered an issue while searching. "
@@ -835,8 +830,8 @@ class NativeVectorSearchSkill(SkillBase):
             }
 
             url = f"{self.remote_base_url}/search"
-            self.logger.info(
-                f"DEBUG: Sending POST to {url} with request: {search_request}"
+            self.logger.debug(
+                "Sending POST to %s with request: %s", url, search_request
             )
 
             response = requests.post(
@@ -845,8 +840,8 @@ class NativeVectorSearchSkill(SkillBase):
 
             if response.status_code == 200:
                 data = response.json()
-                self.logger.info(
-                    f"DEBUG: Got response with {len(data.get('results', []))} results"
+                self.logger.debug(
+                    "Remote search server sent %d results", len(data.get("results", []))
                 )
                 # Convert remote response format to local format
                 return [

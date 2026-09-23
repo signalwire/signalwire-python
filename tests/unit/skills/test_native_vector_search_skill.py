@@ -9,6 +9,7 @@ See LICENSE file in the project root for full license information.
 Unit tests for NativeVectorSearchSkill
 """
 
+import pytest
 from typing import Any
 from collections.abc import Callable
 
@@ -1307,3 +1308,126 @@ def _import_raiser(blocked_module: str) -> Callable[..., Any]:
         return real_import(name, *args, **kwargs)
 
     return _custom_import
+
+
+# ===========================================================================
+# Logging: no credentials anywhere, no caller queries above DEBUG
+# ===========================================================================
+
+def _logged(mock_logger: Mock, levels: tuple[str, ...]) -> str:
+    """Every call made to the given logger levels, rendered as one string."""
+    return " ".join(
+        repr(call) for level in levels for call in getattr(mock_logger, level).call_args_list
+    )
+
+
+ALL_LEVELS = ("debug", "info", "warning", "error", "exception", "critical")
+ABOVE_DEBUG = ("info", "warning", "error", "exception", "critical")
+REMOTE_URL = "http://searchuser:s3cret-pw@search.internal:8001"
+
+
+class TestRemoteUrlCredentialsNotLogged:
+    """A remote_url's password must never reach the log."""
+
+    def _setup_with(self, validate: bool, get: Any) -> Mock:
+        skill = _make_skill({"remote_url": REMOTE_URL})
+        mock_requests_mod = Mock()
+        mock_requests_mod.get = get
+        with patch("signalwire.utils.url_validator.validate_url", return_value=validate), \
+             patch.dict("sys.modules", {"requests": mock_requests_mod}), \
+             patch.object(skill, "logger") as mock_logger:
+            skill.setup()
+        return mock_logger
+
+    def test_rejected_url(self) -> None:
+        mock_logger = self._setup_with(False, Mock())
+        assert mock_logger.error.called
+        assert "s3cret-pw" not in _logged(mock_logger, ALL_LEVELS)
+
+    def test_available_server(self) -> None:
+        mock_logger = self._setup_with(True, Mock(return_value=Mock(status_code=200)))
+        assert mock_logger.info.called
+        assert "s3cret-pw" not in _logged(mock_logger, ALL_LEVELS)
+
+    def test_connection_error_that_quotes_the_url(self) -> None:
+        error = ConnectionError(f"Max retries exceeded for {REMOTE_URL}/health")
+        mock_logger = self._setup_with(True, Mock(side_effect=error))
+        assert mock_logger.error.called
+        assert "s3cret-pw" not in _logged(mock_logger, ALL_LEVELS)
+
+
+class TestRemoteBaseUrl:
+    """remote_base_url drops the credentials and keeps everything else."""
+
+    @pytest.mark.parametrize(
+        ("remote_url", "base_url", "auth"),
+        [
+            ("http://user:pass@localhost:8001/api", "http://localhost:8001/api", ("user", "pass")),
+            ("http://user:pass@[::1]:8001/api", "http://[::1]:8001/api", ("user", "pass")),
+            ("https://user:pass@Search.Example.com", "https://Search.Example.com", ("user", "pass")),
+            ("http://[::1]:8001", "http://[::1]:8001", None),
+        ],
+    )
+    def test_base_url(self, remote_url: str, base_url: str, auth: tuple[str, str] | None) -> None:
+        skill = _make_skill({"remote_url": remote_url})
+        with patch("signalwire.utils.url_validator.validate_url", return_value=False):
+            skill.setup()
+        assert skill.remote_base_url == base_url
+        assert skill.remote_auth == auth
+
+
+class TestCallerQueryNotLoggedAboveDebug:
+    """The caller's query and the SWAIG request stay out of INFO and above."""
+
+    QUERY = "what is my account balance"
+    RAW_DATA = {"caller_id_number": "+15551234567", "global_data": {"pin": "8642"}}
+
+    def _skill(self, **overrides: Any) -> NativeVectorSearchSkill:
+        return TestSearchHandler()._setup_skill_for_search(**overrides)
+
+    def _search(self, skill: NativeVectorSearchSkill) -> Mock:
+        preprocess = Mock(return_value={"enhanced_text": self.QUERY, "vector": [0.1]})
+        with patch.dict("sys.modules", {
+            "signalwire.search.query_processor": Mock(preprocess_query=preprocess),
+        }), patch.object(skill, "logger") as mock_logger:
+            skill._search_handler({"query": self.QUERY}, self.RAW_DATA)
+        return mock_logger
+
+    def _assert_clean(self, mock_logger: Mock) -> None:
+        above_debug = _logged(mock_logger, ABOVE_DEBUG)
+        assert self.QUERY not in above_debug
+        everything = _logged(mock_logger, ALL_LEVELS)
+        assert "+15551234567" not in everything
+        assert "8642" not in everything
+
+    def test_local_search(self) -> None:
+        skill = self._skill()
+        skill.search_engine.search.return_value = [  # type: ignore[union-attr]  # mock search_engine
+            {"content": "Balances are shown in the app.", "score": 0.9, "metadata": {}}
+        ]
+        mock_logger = self._search(skill)
+        assert mock_logger.debug.called
+        self._assert_clean(mock_logger)
+
+    def test_local_search_error(self) -> None:
+        skill = self._skill()
+        skill.search_engine.search.side_effect = RuntimeError("index unavailable")  # type: ignore[union-attr]  # mock search_engine
+        mock_logger = self._search(skill)
+        assert mock_logger.error.called
+        self._assert_clean(mock_logger)
+
+    def test_remote_search(self) -> None:
+        skill = self._skill(use_remote=True, search_engine=None,
+                            remote_base_url="http://search.internal:8001", remote_auth=None,
+                            index_name="default")
+        response = Mock(status_code=200)
+        response.json.return_value = {"results": []}
+        with patch("requests.post", return_value=response):
+            mock_logger = self._search(skill)
+        self._assert_clean(mock_logger)
+
+    def test_missing_query_is_not_an_error(self) -> None:
+        skill = self._skill()
+        with patch.object(skill, "logger") as mock_logger:
+            skill._search_handler({"query": ""}, self.RAW_DATA)
+        assert not mock_logger.error.called
