@@ -249,6 +249,21 @@ class TestCacheKey:
         assert "sensitive" not in key
         assert "query" not in key
 
+    def test_cache_key_different_thresholds_differ(self) -> None:
+        k1 = _cache_key("q", "idx", 3, None, similarity_threshold=0.0)
+        k2 = _cache_key("q", "idx", 3, None, similarity_threshold=0.9)
+        assert k1 != k2
+
+    def test_cache_key_different_languages_differ(self) -> None:
+        k1 = _cache_key("q", "idx", 3, None, language="en")
+        k2 = _cache_key("q", "idx", 3, None, language="es")
+        assert k1 != k2
+
+    def test_cache_key_no_language_means_auto(self) -> None:
+        k1 = _cache_key("q", "idx", 3, None, language=None)
+        k2 = _cache_key("q", "idx", 3, None, language="auto")
+        assert k1 == k2
+
 
 # ===================================================================
 # Tests for SearchService initialization
@@ -593,6 +608,75 @@ class TestHandleSearch:
             # preprocess_query should only be called once -- second was cached
             assert mock_pp.call_count == 1
             assert resp1 is resp2
+
+    def test_handle_search_stricter_threshold_is_not_served_from_cache(
+        self, service_with_engine: SearchService
+    ) -> None:
+        """A stricter threshold must run its own search, not reuse the looser one's results."""
+        engine = service_with_engine.search_engines["default"]
+        engine.search.side_effect = [  # type: ignore[attr-defined]  # mock attr
+            [{"content": "weak match", "score": 0.4, "metadata": {}}],
+            [],
+        ]
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
+            mock_pp.return_value = {"enhanced_text": "test", "vector": [0.1], "language": "en"}
+
+            loose = _run_async(service_with_engine._handle_search(
+                _make_search_request(similarity_threshold=0.0)))
+            strict = _run_async(service_with_engine._handle_search(
+                _make_search_request(similarity_threshold=0.9)))
+
+        assert [r.content for r in loose.results] == ["weak match"]
+        assert strict.results == []
+        thresholds = [c.kwargs["similarity_threshold"] for c in engine.search.call_args_list]  # type: ignore[attr-defined]  # mock attr
+        assert thresholds == [0.0, 0.9]
+
+    def test_handle_search_other_language_is_not_served_from_cache(
+        self, service_with_engine: SearchService
+    ) -> None:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
+            mock_pp.return_value = {"enhanced_text": "test", "vector": [0.1], "language": "en"}
+
+            _run_async(service_with_engine._handle_search(_make_search_request(language="en")))
+            _run_async(service_with_engine._handle_search(_make_search_request(language="es")))
+
+        languages = [c.kwargs["language"] for c in mock_pp.call_args_list]
+        assert languages == ["en", "es"]
+
+    def test_handle_search_engine_failure_is_not_cached(
+        self, service_with_engine: SearchService
+    ) -> None:
+        """A transient search error must not keep returning empty results."""
+        engine = service_with_engine.search_engines["default"]
+        engine.search.side_effect = [  # type: ignore[attr-defined]  # mock attr
+            RuntimeError("connection reset"),
+            [{"content": "Result content", "score": 0.95, "metadata": {}}],
+        ]
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp:
+            mock_pp.return_value = {"enhanced_text": "test", "vector": [0.1], "language": "en"}
+
+            failed = _run_async(service_with_engine._handle_search(_make_search_request()))
+            retried = _run_async(service_with_engine._handle_search(_make_search_request()))
+
+        assert failed.results == []
+        assert [r.content for r in retried.results] == ["Result content"]
+        assert engine.search.call_count == 2  # type: ignore[attr-defined]  # mock attr
+
+    def test_handle_search_preprocessing_failure_is_not_cached(
+        self, service_with_engine: SearchService
+    ) -> None:
+        """A search that ran without its query vector must not be cached either."""
+        good = {"enhanced_text": "test", "vector": [0.1], "language": "en"}
+        with patch(
+            "signalwire.search.search_service.preprocess_query",
+            side_effect=[RuntimeError("model not loaded"), good],
+        ) as mock_pp:
+            _run_async(service_with_engine._handle_search(_make_search_request()))
+            _run_async(service_with_engine._handle_search(_make_search_request()))
+
+        assert mock_pp.call_count == 2
+        vectors = [c.kwargs["query_vector"] for c in service_with_engine.search_engines["default"].search.call_args_list]  # type: ignore[attr-defined]  # mock attr
+        assert vectors == [[], [0.1]]
 
     def test_handle_search_cache_eviction(self, service_with_engine: SearchService) -> None:
         """When cache is full, oldest entry should be evicted."""
