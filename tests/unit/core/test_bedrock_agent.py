@@ -20,7 +20,8 @@ REPO = Path(__file__).resolve().parents[3]
 
 
 def _render(agent: BedrockAgent) -> dict[str, Any]:
-    return json.loads(agent._render_swml())
+    document: dict[str, Any] = json.loads(agent._render_swml())
+    return document
 
 
 def _bedrock_verb(document: dict[str, Any]) -> dict[str, Any]:

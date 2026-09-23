@@ -109,12 +109,12 @@ class TestServerless:
     """Both serverless implementations run an async handler to completion."""
 
     @pytest.mark.parametrize("mixin", [ToolMixin, ServerlessMixin])
-    def test_async_handler_result(self, mixin: type) -> None:
+    def test_async_handler_result(self, mixin: Any) -> None:
         result = mixin._execute_swaig_function(_agent(), "lookup", {"city": "Lima"}, "call-1")
         assert result["response"] == "Weather in Lima: sunny"
 
     @pytest.mark.parametrize("mixin", [ToolMixin, ServerlessMixin])
-    def test_async_handler_error(self, mixin: type) -> None:
+    def test_async_handler_error(self, mixin: Any) -> None:
         result = mixin._execute_swaig_function(_agent(), "fails", {}, "call-1")
         assert result["response"] == "Error executing function 'fails': upstream timeout"
 

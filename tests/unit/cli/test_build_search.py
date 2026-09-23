@@ -1972,7 +1972,7 @@ class TestRemoteCredentialsAndThreshold:
              patch('builtins.print', side_effect=lambda *a, **k: printed.append(" ".join(map(str, a)))), \
              pytest.raises(SystemExit):
             remote_command()
-        return mock_requests.post, "\n".join(printed)  # type: ignore[attr-defined]
+        return mock_requests.post, "\n".join(printed)
 
     def test_user_and_password(self) -> None:
         post, _ = self._run(['http://localhost:8001', 'q', '--index-name', 'docs', '--user', 'u', '--password', 'p'])

@@ -9,6 +9,13 @@ from signalwire.core.function_result import FunctionResult
 from signalwire.core.mixins.mcp_server_mixin import MCPServerMixin
 
 
+def _sync_response(agent: "AgentBase", body: dict[str, Any]) -> dict[str, Any]:
+    """Call the MCP handler, whose tools here are all synchronous."""
+    response = agent._handle_mcp_request(body)
+    assert isinstance(response, dict)
+    return response
+
+
 class TestMCPServerMixin:
     """Test the MCP server mixin directly"""
 
@@ -53,7 +60,7 @@ class TestMCPServerMixin:
     def test_initialize_handshake(self) -> None:
         """Initialize returns protocol version and capabilities"""
         agent = self._make_agent()
-        resp = agent._handle_mcp_request({
+        resp = _sync_response(agent, {
             "jsonrpc": "2.0",
             "id": 1,
             "method": "initialize",
@@ -73,7 +80,7 @@ class TestMCPServerMixin:
     def test_initialized_notification(self) -> None:
         """notifications/initialized returns empty result"""
         agent = self._make_agent()
-        resp = agent._handle_mcp_request({
+        resp = _sync_response(agent, {
             "jsonrpc": "2.0",
             "method": "notifications/initialized"
         })
@@ -83,7 +90,7 @@ class TestMCPServerMixin:
     def test_tools_list(self) -> None:
         """tools/list returns registered tools in MCP format"""
         agent = self._make_agent()
-        resp = agent._handle_mcp_request({
+        resp = _sync_response(agent, {
             "jsonrpc": "2.0",
             "id": 2,
             "method": "tools/list",
@@ -98,7 +105,7 @@ class TestMCPServerMixin:
     def test_tools_call(self) -> None:
         """tools/call invokes the handler and returns content"""
         agent = self._make_agent()
-        resp = agent._handle_mcp_request({
+        resp = _sync_response(agent, {
             "jsonrpc": "2.0",
             "id": 3,
             "method": "tools/call",
@@ -118,7 +125,7 @@ class TestMCPServerMixin:
     def test_tools_call_unknown(self) -> None:
         """tools/call with unknown tool returns error"""
         agent = self._make_agent()
-        resp = agent._handle_mcp_request({
+        resp = _sync_response(agent, {
             "jsonrpc": "2.0",
             "id": 4,
             "method": "tools/call",
@@ -132,7 +139,7 @@ class TestMCPServerMixin:
     def test_unknown_method(self) -> None:
         """Unknown method returns method not found error"""
         agent = self._make_agent()
-        resp = agent._handle_mcp_request({
+        resp = _sync_response(agent, {
             "jsonrpc": "2.0",
             "id": 5,
             "method": "resources/list",
@@ -145,7 +152,7 @@ class TestMCPServerMixin:
     def test_ping(self) -> None:
         """ping returns empty result"""
         agent = self._make_agent()
-        resp = agent._handle_mcp_request({
+        resp = _sync_response(agent, {
             "jsonrpc": "2.0",
             "id": 6,
             "method": "ping"
@@ -156,7 +163,7 @@ class TestMCPServerMixin:
     def test_invalid_jsonrpc_version(self) -> None:
         """Non-2.0 version returns error"""
         agent = self._make_agent()
-        resp = agent._handle_mcp_request({
+        resp = _sync_response(agent, {
             "jsonrpc": "1.0",
             "id": 7,
             "method": "initialize"
