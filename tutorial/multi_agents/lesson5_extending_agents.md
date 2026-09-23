@@ -21,6 +21,8 @@ Skills are reusable modules that add capabilities to agents. They encapsulate fu
 
 ### Basic Skill Structure
 
+A skill is a class with a name, a `setup()` method, and a `register_tools()` method:
+
 ```python
 # my_custom_skill.py
 from signalwire.skills import SkillBase
@@ -62,7 +64,7 @@ class WeatherSkill(SkillBase):
                 "location": {"type": "string", "description": "City or location name"}
             }
         )
-        async def get_weather(self, args, raw_data):
+        async def get_weather(args, raw_data):
             location = args.get("location")
             import aiohttp
             
@@ -79,8 +81,7 @@ class WeatherSkill(SkillBase):
                         )
                     else:
                         return SwaigFunctionResult(
-                            f"Could not get weather for {location}",
-                            error=True
+                            f"Could not get weather for {location}"
                         )
         
         @self.agent.tool(
@@ -91,7 +92,7 @@ class WeatherSkill(SkillBase):
                 "days": {"type": "integer", "description": "Number of days to forecast (default 3)"}
             }
         )
-        async def get_forecast(self, args, raw_data):
+        async def get_forecast(args, raw_data):
             location = args.get("location")
             days = args.get("days", 3)
             # Implementation...
@@ -99,6 +100,8 @@ class WeatherSkill(SkillBase):
 ```
 
 ### Using Custom Skills
+
+Add a custom skill the same way you add a built-in one, either by name or by file path:
 
 ```python
 from signalwire import AgentBase
@@ -149,16 +152,16 @@ Managing state allows agents to remember information across conversations and in
 
 ### Session-Based State
 
-```python
-from signalwire.core.security.session_manager import SessionManager
+The SDK's `SessionManager` handles SWAIG security tokens, not general-purpose state. For preferences keyed by session, store them in a plain dictionary on the agent instance:
 
+```python
 class StatefulAgent(AgentBase):
     def __init__(self):
         super().__init__(name="Stateful Agent", route="/")
-        
-        # Initialize session manager
-        self.session_manager = SessionManager()
-        
+
+        # Preferences keyed by session ID
+        self.preferences = {}
+
         @self.tool(
             "remember_preference",
             description="Remember user preference",
@@ -168,16 +171,15 @@ class StatefulAgent(AgentBase):
                 "value": {"type": "string", "description": "Preference value"}
             }
         )
-        async def remember_preference(self, args, raw_data):
+        def remember_preference(args, raw_data):
             session_id = args.get("session_id")
             key = args.get("key")
             value = args.get("value")
-            # Store in session
-            session = self.session_manager.get_or_create(session_id)
-            session[key] = value
+            # Store in this agent's preferences dict
+            self.preferences.setdefault(session_id, {})[key] = value
 
             return SwaigFunctionResult(f"I'll remember that your {key} is {value}")
-        
+
         @self.tool(
             "recall_preference",
             description="Recall user preference",
@@ -186,10 +188,10 @@ class StatefulAgent(AgentBase):
                 "key": {"type": "string", "description": "Preference key to recall"}
             }
         )
-        async def recall_preference(self, args, raw_data):
+        def recall_preference(args, raw_data):
             session_id = args.get("session_id")
             key = args.get("key")
-            session = self.session_manager.get(session_id)
+            session = self.preferences.get(session_id)
 
             if session and key in session:
                 value = session[key]
@@ -199,6 +201,8 @@ class StatefulAgent(AgentBase):
 ```
 
 ### Persistent State with Database
+
+State that must survive a restart belongs in a real database instead of a dictionary. This example uses `asyncpg` for PostgreSQL:
 
 <!-- snippet: no-run requires optional third-party package `asyncpg` -->
 ```python
@@ -227,7 +231,7 @@ class PersistentAgent(AgentBase):
                 "details": {"type": "string", "description": "Interaction details"}
             }
         )
-        async def save_interaction(self, args, raw_data):
+        async def save_interaction(args, raw_data):
             customer_id = args.get("customer_id")
             interaction_type = args.get("interaction_type")
             details = args.get("details")
@@ -248,7 +252,7 @@ class PersistentAgent(AgentBase):
                 "limit": {"type": "integer", "description": "Max number of records (default 5)"}
             }
         )
-        async def get_history(self, args, raw_data):
+        async def get_history(args, raw_data):
             customer_id = args.get("customer_id")
             limit = args.get("limit", 5)
             async with self.db_pool.acquire() as conn:
@@ -272,6 +276,8 @@ class PersistentAgent(AgentBase):
 
 ### Global Data Between Contexts
 
+Global data set from a function call is available in prompts and in later function calls, for the rest of the session:
+
 ```python
 # Setting global data that persists across contexts
 @self.tool(
@@ -282,7 +288,7 @@ class PersistentAgent(AgentBase):
         "value": {"type": "string", "description": "Data value to store"}
     }
 )
-async def set_customer_data(self, args, raw_data):
+async def set_customer_data(args, raw_data):
     key = args.get("key")
     value = args.get("value")
     result = SwaigFunctionResult(f"Stored {key}")
@@ -304,6 +310,8 @@ self.prompt_add_section(
 
 ### Multi-Step Workflows
 
+An order flow moves through several function calls, so the agent tracks each session's progress in a dictionary:
+
 ```python
 class WorkflowAgent(AgentBase):
     def __init__(self):
@@ -319,7 +327,7 @@ class WorkflowAgent(AgentBase):
                 "session_id": {"type": "string", "description": "Session identifier"}
             }
         )
-        async def start_order(self, args, raw_data):
+        async def start_order(args, raw_data):
             session_id = args.get("session_id")
             # Initialize workflow
             self.workflows[session_id] = {
@@ -341,14 +349,13 @@ class WorkflowAgent(AgentBase):
                 "quantity": {"type": "integer", "description": "Quantity (default 1)"}
             }
         )
-        async def add_item(self, args, raw_data):
+        async def add_item(args, raw_data):
             session_id = args.get("session_id")
             item = args.get("item")
             quantity = args.get("quantity", 1)
             if session_id not in self.workflows:
                 return SwaigFunctionResult(
-                    "No active order. Please start a new order first.",
-                    error=True
+                    "No active order. Please start a new order first."
                 )
 
             workflow = self.workflows[session_id]
@@ -381,17 +388,16 @@ class WorkflowAgent(AgentBase):
                 "session_id": {"type": "string", "description": "Session identifier"}
             }
         )
-        async def confirm_order(self, args, raw_data):
+        async def confirm_order(args, raw_data):
             session_id = args.get("session_id")
             if session_id not in self.workflows:
-                return SwaigFunctionResult("No active order", error=True)
+                return SwaigFunctionResult("No active order")
 
             workflow = self.workflows[session_id]
 
             if workflow["state"] != "ready_to_confirm":
                 return SwaigFunctionResult(
-                    "Please add items before confirming",
-                    error=True
+                    "Please add items before confirming"
                 )
 
             # Calculate total
@@ -409,6 +415,8 @@ class WorkflowAgent(AgentBase):
 ```
 
 ### Conditional Flows
+
+A function result can add global data and extra prompt content in the same response, so the model adapts on the next turn:
 
 ```python
 class ConditionalAgent(AgentBase):
@@ -434,7 +442,7 @@ class ConditionalAgent(AgentBase):
                 "customer_id": {"type": "string", "description": "Customer identifier"}
             }
         )
-        async def check_customer_status(self, args, raw_data):
+        async def check_customer_status(args, raw_data):
             customer_id = args.get("customer_id")
             # Check database or API
             status = await self.get_customer_status(customer_id)
@@ -463,6 +471,8 @@ class ConditionalAgent(AgentBase):
 
 ### REST API Integration
 
+A tool function can call any external API and turn the response into a result the model can use:
+
 <!-- snippet: no-run requires optional third-party package `aiohttp` -->
 ```python
 import aiohttp
@@ -486,7 +496,7 @@ class APIIntegrationAgent(AgentBase):
                 "product_sku": {"type": "string", "description": "Product SKU to check"}
             }
         )
-        async def check_availability(self, args, raw_data):
+        async def check_availability(args, raw_data):
             product_sku = args.get("product_sku")
             async with aiohttp.ClientSession() as session:
                 headers = {"Authorization": f"Bearer {os.environ['API_KEY']}"}
@@ -510,12 +520,13 @@ class APIIntegrationAgent(AgentBase):
                             )
                     else:
                         return SwaigFunctionResult(
-                            "Unable to check availability",
-                            error=True
+                            "Unable to check availability"
                         )
 ```
 
 ### Webhook Integration
+
+An agent is a FastAPI app, so it can accept webhooks from other services on its own routes:
 
 ```python
 from fastapi import BackgroundTasks
@@ -554,9 +565,12 @@ class WebhookAgent(AgentBase):
 
 ### Message Queue Integration
 
+For work that should happen outside the call, queue a task from a function and process it in a background loop:
+
 <!-- snippet: no-run requires optional third-party package `aioredis` -->
 ```python
 import asyncio
+import json
 import aioredis
 
 class QueueAgent(AgentBase):
@@ -582,7 +596,7 @@ class QueueAgent(AgentBase):
                 "data": {"type": "string", "description": "Task data payload"}
             }
         )
-        async def queue_task(self, args, raw_data):
+        async def queue_task(args, raw_data):
             task_type = args.get("task_type")
             data = args.get("data")
             # Add to queue
@@ -621,6 +635,8 @@ class QueueAgent(AgentBase):
 ## Custom Voice Personas
 
 ### Creating Dynamic Personas
+
+Switching a persona means updating the voice and adding a prompt section, together, in one method:
 
 ```python
 class PersonaAgent(AgentBase):
@@ -672,6 +688,8 @@ class PersonaAgent(AgentBase):
 
 ### Multilingual Support
 
+Call `add_language()` once per language the agent should support:
+
 ```python
 class MultilingualAgent(AgentBase):
     def __init__(self):
@@ -714,6 +732,8 @@ class MultilingualAgent(AgentBase):
 
 ### Structured Reasoning
 
+A prompt section can lay out an explicit sequence of steps for the model to follow on a complex request:
+
 ```python
 class ReasoningAgent(AgentBase):
     def __init__(self):
@@ -748,6 +768,8 @@ class ReasoningAgent(AgentBase):
 
 ### Dynamic Prompt Injection
 
+A function can add a prompt section on the fly, so later turns see instructions that were not present at the start of the call:
+
 ```python
 @self.tool(
     "inject_context",
@@ -756,7 +778,7 @@ class ReasoningAgent(AgentBase):
         "context_type": {"type": "string", "description": "Context type: technical, simple, or sales"}
     }
 )
-async def inject_context(self, args, raw_data):
+async def inject_context(args, raw_data):
     context_type = args.get("context_type")
     contexts = {
         "technical": {
@@ -778,7 +800,7 @@ async def inject_context(self, args, raw_data):
         result.add_action("append_prompt", contexts[context_type])
         return result
     else:
-        return SwaigFunctionResult("Unknown context type", error=True)
+        return SwaigFunctionResult("Unknown context type")
 ```
 
 ---
@@ -786,6 +808,8 @@ async def inject_context(self, args, raw_data):
 ## Common Patterns
 
 ### Retry Pattern
+
+A transient failure in an external call is often worth a retry, with a growing delay between attempts:
 
 ```python
 import asyncio
@@ -815,6 +839,8 @@ async def retry_with_backoff(
 ```
 
 ### Circuit Breaker Pattern
+
+When a dependency keeps failing, stop calling it for a cooldown period instead of retrying every time:
 
 ```python
 class CircuitBreaker:
@@ -849,6 +875,8 @@ class CircuitBreaker:
 ```
 
 ### Factory Pattern for Agents
+
+A factory function centralizes how an agent class is chosen and configured from a plain dictionary:
 
 <!-- snippet: no-run illustrative factory over hypothetical SalesAgent/SupportAgent/TriageAgent subclasses (not real SDK symbols; pedagogical pattern only) -->
 ```python
@@ -886,16 +914,15 @@ class AgentFactory:
 
 ## Summary
 
-Congratulations! You've completed the SignalWire Agents SDK tutorial. You've learned:
+This tutorial covered the full SignalWire Agents SDK, from a single agent to a multi-agent system with search, custom functions, and now custom skills and state. This lesson covered:
 
-**Core Skills Mastered:**
-- ✅ Creating custom skills with dependencies and configuration
-- ✅ Managing state across conversations
-- ✅ Building complex multi-step workflows
-- ✅ Integrating with external APIs and services
-- ✅ Creating dynamic voice personas
-- ✅ Advanced prompt engineering techniques
-- ✅ Common patterns for robust agents
+- Creating custom skills with dependencies and configuration
+- Managing state across conversations
+- Building complex multi-step workflows
+- Integrating with external APIs and services
+- Creating dynamic voice personas
+- Advanced prompt engineering techniques
+- Common patterns for robust agents
 
 **You're Now Ready To:**
 - Build production-ready AI voice agents
@@ -906,6 +933,8 @@ Congratulations! You've completed the SignalWire Agents SDK tutorial. You've lea
 
 ### Next Steps
 
+From here:
+
 1. **Build Your Own Agent**: Start with a simple use case and expand
 2. **Contribute**: Share your custom skills with the community
 3. **Optimize**: Profile and improve your agent's performance
@@ -914,7 +943,9 @@ Congratulations! You've completed the SignalWire Agents SDK tutorial. You've lea
 
 ### Resources for Continued Learning
 
-- **Documentation**: [SignalWire Docs](https://docs.signalwire.com)
+These resources cover the SDK and the platform:
+
+- **Documentation**: [SignalWire Docs](https://signalwire.com/docs)
 - **Community**: Join the SignalWire Discord
 - **Examples**: Explore the examples directory
 - **Support**: Open issues on GitHub
@@ -929,8 +960,8 @@ Congratulations! You've completed the SignalWire Agents SDK tutorial. You've lea
 - Document your custom skills
 - Share your learnings with others
 
-Thank you for completing this tutorial! We can't wait to see what you build with the SignalWire Agents SDK.
+This completes the tutorial. Build on Morgan, Alex, and Sam, or start a new agent from what you've learned here.
 
 ---
 
-[← Lesson 4: Advanced Features](lesson4_advanced_features.md) | [Tutorial Overview](README.md)
+[Previous: Lesson 4 - Advanced Features](lesson4_advanced_features.md) | [Tutorial Overview](README.md)

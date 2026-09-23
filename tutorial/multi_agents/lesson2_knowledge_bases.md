@@ -1,6 +1,6 @@
 # Lesson 2: Adding Intelligence with Knowledge Bases
 
-In this lesson, you'll learn how to enhance your agent with searchable knowledge using SignalWire's vector search capabilities. We'll take Morgan from Lesson 1 and give them access to a comprehensive product knowledge base.
+This lesson adds a searchable knowledge base to Morgan, the sales agent from Lesson 1. It uses SignalWire's vector search, so Morgan can look up product details instead of relying only on the prompt.
 
 ## Table of Contents
 
@@ -41,6 +41,8 @@ The search functionality requires additional packages for document processing an
 
 ### Option 1: Basic Search (Recommended)
 
+Install the SDK with the `search` extra for embeddings and basic document processing:
+
 ```bash
 # Install with basic search support (~500MB)
 pip install -e .[search]
@@ -52,6 +54,8 @@ This includes:
 - SQLite for index storage
 
 ### Option 2: Full Document Processing
+
+Install the `search-full` extra to index PDF and Office documents, not only Markdown and text:
 
 ```bash
 # Install with full document support (~600MB)
@@ -65,6 +69,8 @@ Additional features:
 
 ### Option 3: Query-Only (Production)
 
+Install the `search-queryonly` extra where the agent only queries indexes built elsewhere:
+
 ```bash
 # Minimal installation for querying existing indexes (~400MB)
 pip install -e .[search-queryonly]
@@ -77,23 +83,22 @@ Use this when:
 
 ### Dealing with PyTorch Compatibility
 
-Some systems may have issues with PyTorch's CPU optimizations:
+If building an index crashes with an "illegal instruction" error, the installed PyTorch build doesn't match your CPU. Reinstall it as the CPU build:
 
 ```bash
-# Disable AVX512 if you encounter illegal instruction errors
-export PYTORCH_DISABLE_AVX512=1
-
-# Disable AVX2 on older CPUs
-export PYTORCH_DISABLE_AVX2=1
+pip uninstall torch
+pip install torch --index-url https://download.pytorch.org/whl/cpu
 ```
 
 ---
 
 ## Creating Knowledge Bases
 
-Knowledge bases are markdown files containing information your agent can search. Let's examine the existing sales knowledge base:
+Knowledge bases are markdown files containing information your agent can search.
 
 ### sales_knowledge.md Structure
+
+The existing sales knowledge base follows a consistent heading structure:
 
 ```markdown
 # PC Builder Pro Sales Knowledge Base
@@ -128,18 +133,19 @@ The `sw-search` CLI tool converts markdown documents into searchable indexes.
 
 ### Basic Usage
 
+Point `sw-search` at a directory to build an index from every matching file in it:
+
 ```bash
 # Build a search index from markdown files
 sw-search ./tutorial --output sales_knowledge.swsearch
 
 # Specify file types to include
 sw-search ./tutorial --file-types md --output sales_knowledge.swsearch
-
-# Build with PyTorch compatibility flags
-PYTORCH_DISABLE_AVX512=1 sw-search ./tutorial --output sales_knowledge.swsearch
 ```
 
 ### Advanced Options
+
+Combine sources, chunk size, and tags to control how an index is built:
 
 ```bash
 # Include multiple directories
@@ -154,6 +160,8 @@ sw-search ./tutorial --tags "product,sales" --output sales_knowledge.swsearch
 
 ### Validating Indexes
 
+Check that an index file is well formed, or search it directly from the command line:
+
 ```bash
 # Validate an existing index
 sw-search validate ./sales_knowledge.swsearch
@@ -162,16 +170,16 @@ sw-search validate ./sales_knowledge.swsearch
 sw-search search ./sales_knowledge.swsearch "gaming PC under $1000"
 ```
 
-### Building Our Tutorial Indexes
+### Building the Tutorial Indexes
 
-Since we already have the knowledge base files, let's verify the indexes:
+The knowledge base files for this tutorial are already indexed. Here's how those indexes were built:
 
 ```bash
 # The indexes are already built, but here's how they were created:
-PYTORCH_DISABLE_AVX512=1 sw-search tutorial/multi_agents/sales_knowledge.md \
+sw-search tutorial/multi_agents/sales_knowledge.md \
   --output tutorial/multi_agents/sales_knowledge.swsearch
 
-PYTORCH_DISABLE_AVX512=1 sw-search tutorial/multi_agents/support_knowledge.md \
+sw-search tutorial/multi_agents/support_knowledge.md \
   --output tutorial/multi_agents/support_knowledge.swsearch
 ```
 
@@ -179,9 +187,11 @@ PYTORCH_DISABLE_AVX512=1 sw-search tutorial/multi_agents/support_knowledge.md \
 
 ## Adding Search to Your Agent
 
-Now let's enhance Morgan with the ability to search the knowledge base.
+This section gives Morgan the ability to search the knowledge base.
 
 ### Step 1: Add the Search Skill
+
+Add the `native_vector_search` skill after the language configuration:
 
 ```python
 # In the __init__ method, after language configuration:
@@ -214,6 +224,8 @@ self.prompt_add_section(
 ```
 
 ### Step 3: Add Tool Usage Section
+
+Add a section that tells Morgan when to use the new tool:
 
 ```python
 self.prompt_add_section(
@@ -364,6 +376,8 @@ if __name__ == "__main__":
 
 ### Method 1: Using swaig-test
 
+List the agent's tools, then call the search tool directly with a query:
+
 ```bash
 # List available tools
 swaig-test tutorial/multi_agents/sales_agent_with_search.py --list-tools
@@ -371,7 +385,7 @@ swaig-test tutorial/multi_agents/sales_agent_with_search.py --list-tools
 # Test the search function
 swaig-test tutorial/multi_agents/sales_agent_with_search.py \
   --exec search_sales_knowledge \
-  --query "gaming PC under $1500"
+  --query "gaming PC under \$1500"
 ```
 
 ### Method 2: Interactive Testing
@@ -383,6 +397,8 @@ When you call the agent, try these prompts:
 
 ### Method 3: Direct Search Testing
 
+Query the `.swsearch` index directly, without going through the agent:
+
 ```bash
 # Test the search index directly
 sw-search search tutorial/multi_agents/sales_knowledge.swsearch "RTX 4070"
@@ -390,27 +406,33 @@ sw-search search tutorial/multi_agents/sales_knowledge.swsearch "RTX 4070"
 
 ### Understanding Search Results
 
-The search returns structured data:
+`sw-search search --json` shows the structure behind both the CLI output and the `search_sales_knowledge` tool's results:
 
 ```json
 {
+  "query": "gaming PC under $1500",
+  "count": 1,
   "results": [
     {
-      "content": "### Mid-Range Gaming Build ($1500-$2000)\n- **CPU**: AMD Ryzen 7 7700X...",
-      "score": 0.892,
+      "rank": 1,
+      "score": 0.71,
       "metadata": {
-        "source": "sales_knowledge.md",
-        "chunk_index": 2
-      }
+        "filename": "sales_knowledge.md",
+        "section": "Section 1",
+        "metadata": {
+          "chunk_index": 3
+        }
+      },
+      "content": "### Mid-Range Gaming Build ($1500-$2000)\n- **CPU**: AMD Ryzen 7 7700X..."
     }
   ]
 }
 ```
 
 **Fields:**
-- `content`: The relevant text passage
-- `score`: Relevance score (0-1, higher is better)
-- `metadata`: Source information
+- `content`: the matching text passage
+- `score`: the relevance score, higher is better. There's no fixed upper bound, so scores above 1 are normal.
+- `metadata.filename` and `metadata.section`: where the passage came from
 
 ---
 
@@ -419,17 +441,17 @@ The search returns structured data:
 ### Knowledge Base Design
 
 **DO:**
-- ✅ Keep information current and accurate
-- ✅ Use consistent formatting
-- ✅ Include specific model numbers and prices
-- ✅ Organize with clear hierarchies
-- ✅ Update regularly as products change
+- Keep information current and accurate
+- Use consistent formatting
+- Include specific model numbers and prices
+- Organize with clear hierarchies
+- Update regularly as products change
 
 **DON'T:**
-- ❌ Include outdated information
-- ❌ Use inconsistent terminology
-- ❌ Create overly long sections
-- ❌ Mix different types of information
+- Include outdated information
+- Use inconsistent terminology
+- Create overly long sections
+- Mix different types of information
 
 ### Search Integration
 
@@ -453,6 +475,8 @@ The search returns structured data:
 
 ### Performance Tips
 
+Four habits keep a knowledge base fast to search and cheap to serve:
+
 1. **Index Size**: Keep indexes focused on specific domains
 2. **Result Count**: 3-5 results is usually optimal
 3. **Caching**: Indexes are loaded once and cached in memory
@@ -462,20 +486,22 @@ The search returns structured data:
 
 ## Summary
 
-You've successfully enhanced Morgan with intelligent knowledge search! You've learned:
+This lesson gave Morgan a searchable product knowledge base. It covered:
 
 **Key Skills:**
-- ✅ Installing search dependencies with different feature sets
-- ✅ Understanding vector search and embeddings
-- ✅ Building search indexes with sw-search
-- ✅ Integrating the native_vector_search skill
-- ✅ Testing search functionality
+- Installing search dependencies with different feature sets
+- Understanding vector search and embeddings
+- Building search indexes with sw-search
+- Integrating the native_vector_search skill
+- Testing search functionality
 
 **What's Next?**
 
 In the next lesson, you'll learn how to build multi-agent systems where different specialists work together. You'll create a complete customer service system with triage, sales, and support agents.
 
 ### Practice Exercises
+
+Before moving on, try these exercises:
 
 1. **Create a Custom Knowledge Base**: Write a markdown file about PC accessories (monitors, keyboards, mice) and build an index
 2. **Adjust Search Parameters**: Try different `count` values to see how it affects responses
@@ -488,9 +514,9 @@ In the next lesson, you'll learn how to build multi-agent systems where differen
 
 - **Module not found**: Ensure you installed with `pip install -e .[search]`
 - **Index file not found**: Check the path is relative to where you run the agent
-- **PyTorch errors**: Set `PYTORCH_DISABLE_AVX512=1` environment variable
+- **PyTorch "illegal instruction" errors**: Reinstall PyTorch as the CPU build, as described in [Dealing with PyTorch Compatibility](#dealing-with-pytorch-compatibility)
 - **Empty results**: Verify the index was built from the correct files
 
 ---
 
-[← Lesson 1: Creating Your First Agent](lesson1_first_agent.md) | [Tutorial Overview](README.md) | [Lesson 3: Building Multi-Agent Systems →](lesson3_multi_agent_systems.md)
+[Previous: Lesson 1 - Creating Your First Agent](lesson1_first_agent.md) | [Tutorial Overview](README.md) | [Next: Lesson 3 - Building Multi-Agent Systems](lesson3_multi_agent_systems.md)

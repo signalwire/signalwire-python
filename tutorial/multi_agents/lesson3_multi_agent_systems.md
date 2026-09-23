@@ -1,6 +1,6 @@
 # Lesson 3: Building Multi-Agent Systems
 
-In this lesson, you'll learn how to create sophisticated multi-agent systems where specialized agents work together. We'll build the complete PC Builder Pro system with three agents: Alex (triage), Morgan (sales), and Sam (support).
+This lesson builds multi-agent systems where specialized agents work together. The complete PC Builder Pro system has three agents: Alex (triage), Morgan (sales), and Sam (support).
 
 ## Table of Contents
 
@@ -26,7 +26,7 @@ Multi-agent systems allow you to create specialized agents that handle different
 - **Scalability**: Can add new agents without affecting others
 - **Clear Workflows**: Natural handoffs between specialists
 
-**Our System Architecture:**
+**System Architecture:**
 
 ```
 Customer → Triage Agent (Alex) → ┬→ Sales Agent (Morgan)
@@ -47,6 +47,8 @@ Customer → Triage Agent (Alex) → ┬→ Sales Agent (Morgan)
 The `AgentServer` class allows you to host multiple agents on a single port, each with its own route.
 
 ### Basic Usage
+
+Create a server, register each agent on its route, then run it:
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -102,6 +104,8 @@ Dynamic configuration allows agents to adapt their behavior based on request par
 
 ### How It Works
 
+Register a callback that receives the request data and the agent instance, and configures it before SWML is rendered:
+
 ```python
 def configure_transfer_tools(self, query_params, body_params, headers, agent):
     """
@@ -124,11 +128,13 @@ def configure_transfer_tools(self, query_params, body_params, headers, agent):
 
 ### Key Method: get_full_url()
 
-This method intelligently builds URLs that work with:
+This method builds URLs that work with:
 - Direct connections
 - Reverse proxies
 - SignalWire's proxy tunnels
 - Custom domains
+
+Call it with `include_auth=True` to get a URL with basic auth credentials embedded, ready to use as a transfer target:
 
 ```python
 # Returns the correct URL for the current environment
@@ -145,6 +151,8 @@ url = agent.get_full_url(include_auth=True)
 The `swml_transfer` skill enables handoffs between agents while preserving context.
 
 ### Understanding swml_transfer
+
+Configure the skill with the fields to collect before a transfer, and a URL per destination:
 
 ```python
 agent.add_skill("swml_transfer", {
@@ -191,9 +199,11 @@ In the receiving agent:
 
 ## Building the Complete System
 
-Let's examine the complete PC Builder Pro system in `pc_builder.py`:
+The complete PC Builder Pro system lives in `pc_builder.py`:
 
 ### 1. Triage Agent (Alex)
+
+Alex greets the caller and routes them to sales or support:
 
 ```python
 class TriageAgent(AgentBase):
@@ -220,6 +230,8 @@ class TriageAgent(AgentBase):
 ```
 
 ### 2. Dynamic Transfer Configuration
+
+Alex's callback builds each destination URL, then configures `swml_transfer` with them:
 
 ```python
 def configure_transfer_tools(self, query_params, body_params, headers, agent):
@@ -251,6 +263,8 @@ def configure_transfer_tools(self, query_params, body_params, headers, agent):
 
 ### 3. Sales Agent with Transfer Detection
 
+Morgan's dynamic configuration checks the `transfer` query parameter to tell a transferred call from a direct one:
+
 ```python
 class SalesAgent(AgentBase):
     def __init__(self):
@@ -281,6 +295,8 @@ class SalesAgent(AgentBase):
 ```
 
 ### 4. Creating the Server
+
+A factory function creates the three agents and registers them on one `AgentServer`:
 
 ```python
 def create_pc_builder_app(host="0.0.0.0", port=3001):
@@ -317,8 +333,11 @@ def create_pc_builder_app(host="0.0.0.0", port=3001):
 
 ### Starting the System
 
+Every route needs basic auth, so set credentials before starting the system:
+
 ```bash
-# Run the complete system
+export SWML_BASIC_AUTH_USER=devuser
+export SWML_BASIC_AUTH_PASSWORD=devpassword
 python tutorial/multi_agents/pc_builder.py
 
 # You'll see:
@@ -329,18 +348,22 @@ python tutorial/multi_agents/pc_builder.py
 
 ### Testing Individual Agents
 
+Request each route directly to check its SWML, and add the transfer flag to see the transferred-call prompt:
+
 ```bash
 # Test triage agent
-curl http://localhost:3001/
+curl -u devuser:devpassword http://localhost:3001/
 
 # Test sales agent directly
-curl http://localhost:3001/sales
+curl -u devuser:devpassword http://localhost:3001/sales
 
 # Test with transfer flag
-curl "http://localhost:3001/sales?transfer=true"
+curl -u devuser:devpassword "http://localhost:3001/sales?transfer=true"
 ```
 
 ### Testing Transfer Flow
+
+A full transfer, from a real call, moves through four stages:
 
 1. **Call Triage Agent**: Start with Alex
 2. **Provide Information**: Give name and describe needs
@@ -367,7 +390,7 @@ Look for these in the logs:
 export SWML_BASIC_AUTH_USER=myuser
 export SWML_BASIC_AUTH_PASSWORD=mypassword
 
-# Or let the system generate them (check logs)
+# Without these, the system generates a password, but keeps it out of the logs
 ```
 
 **SSL/HTTPS:**
@@ -421,26 +444,28 @@ server = AgentServer(log_level="info")  # or "debug" for more detail
 
 ## Summary
 
-You've built a complete multi-agent system! You've mastered:
+This lesson built a complete multi-agent system. It covered:
 
 **Core Concepts:**
-- ✅ Using AgentServer to host multiple agents
-- ✅ Dynamic configuration for request-time adaptation
-- ✅ Proxy-aware URL building with get_full_url()
-- ✅ Agent transfers with context preservation
-- ✅ Handling both direct calls and transfers
+- Using AgentServer to host multiple agents
+- Dynamic configuration for request-time adaptation
+- Proxy-aware URL building with get_full_url()
+- Agent transfers with context preservation
+- Handling both direct calls and transfers
 
 **Architecture Patterns:**
-- ✅ Specialized agents for different roles
-- ✅ Agent-to-agent handoffs with context
-- ✅ Context flowing through the system
-- ✅ Production-ready security and monitoring
+- Specialized agents for different roles
+- Agent-to-agent handoffs with context
+- Context flowing through the system
+- Production-ready security and monitoring
 
 **What's Next?**
 
 In the next lesson, you'll learn advanced features including custom SWAIG functions, error handling, and production deployment strategies.
 
 ### Practice Exercises
+
+Before moving on, try these exercises:
 
 1. **Add a Fourth Agent**: Create a billing agent and add transfer routes
 2. **Custom Transfer Messages**: Personalize transfer messages based on context
@@ -454,8 +479,8 @@ In the next lesson, you'll learn advanced features including custom SWAIG functi
 - **Transfer URLs Wrong**: Check get_full_url() is being used
 - **Context Not Passing**: Verify required_fields are defined
 - **Port Conflicts**: Ensure only one server runs on each port
-- **Auth Issues**: Check credentials in logs or set custom ones
+- **Auth Issues**: Set `SWML_BASIC_AUTH_USER` and `SWML_BASIC_AUTH_PASSWORD` explicitly rather than relying on the generated password, which the logs don't show
 
 ---
 
-[← Lesson 2: Adding Intelligence with Knowledge Bases](lesson2_knowledge_bases.md) | [Tutorial Overview](README.md) | [Lesson 4: Advanced Features →](lesson4_advanced_features.md)
+[Previous: Lesson 2 - Adding Intelligence with Knowledge Bases](lesson2_knowledge_bases.md) | [Tutorial Overview](README.md) | [Next: Lesson 4 - Advanced Features](lesson4_advanced_features.md)
