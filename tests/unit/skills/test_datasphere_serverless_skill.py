@@ -120,8 +120,8 @@ class TestDataSphereServerlessSkillParameterSchema:
         assert schema["count"]["type"] == "integer"
         assert schema["count"]["default"] == 1
         assert schema["count"]["required"] is False
-        assert schema["count"]["minimum"] == 1
-        assert schema["count"]["maximum"] == 10
+        assert schema["count"]["min"] == 1
+        assert schema["count"]["max"] == 10
 
     def test_schema_includes_distance(self) -> None:
         """Test distance parameter is defined with defaults and bounds"""
@@ -132,8 +132,8 @@ class TestDataSphereServerlessSkillParameterSchema:
         assert schema["distance"]["type"] == "number"
         assert schema["distance"]["default"] == 3.0
         assert schema["distance"]["required"] is False
-        assert schema["distance"]["minimum"] == 0.0
-        assert schema["distance"]["maximum"] == 10.0
+        assert schema["distance"]["min"] == 0.0
+        assert schema["distance"]["max"] == 10.0
 
     def test_schema_includes_tags(self) -> None:
         """Test tags parameter is defined as array of strings"""
@@ -172,8 +172,8 @@ class TestDataSphereServerlessSkillParameterSchema:
         assert "max_synonyms" in schema
         assert schema["max_synonyms"]["type"] == "integer"
         assert schema["max_synonyms"]["required"] is False
-        assert schema["max_synonyms"]["minimum"] == 1
-        assert schema["max_synonyms"]["maximum"] == 10
+        assert schema["max_synonyms"]["min"] == 1
+        assert schema["max_synonyms"]["max"] == 10
 
     def test_schema_includes_no_results_message(self) -> None:
         """Test no_results_message parameter is defined with default"""

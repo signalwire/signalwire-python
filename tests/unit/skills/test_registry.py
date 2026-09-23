@@ -1535,3 +1535,16 @@ class TestRegisterSkillValidation:
 
         with pytest.raises(ValueError, match="failed"):
             registry.register_skill(ExcSchemaSkill)
+
+def test_builtin_skill_schemas_use_min_and_max() -> None:
+    """Every built-in skill declares numeric ranges as min/max, the documented
+    contract, never JSON Schema's minimum/maximum (B27)."""
+    schemas = SkillRegistry().get_all_skills_schema()
+    assert len(schemas) >= 17
+    offenders = [
+        f"{skill}.{param}"
+        for skill, info in schemas.items()
+        for param, spec in info["parameters"].items()
+        if isinstance(spec, dict) and ({"minimum", "maximum"} & spec.keys())
+    ]
+    assert offenders == []

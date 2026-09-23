@@ -59,8 +59,8 @@ class WikipediaSearchSkill(SkillBase):
                     "description": "Maximum number of Wikipedia articles to return",
                     "default": 1,
                     "required": False,
-                    "minimum": 1,
-                    "maximum": 5,
+                    "min": 1,
+                    "max": 5,
                 },
                 "no_results_message": {
                     "type": "string",

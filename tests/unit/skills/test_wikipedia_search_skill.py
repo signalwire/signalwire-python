@@ -147,8 +147,8 @@ class TestParameterSchema:
         assert "num_results" in schema
         assert schema["num_results"]["type"] == "integer"
         assert schema["num_results"]["default"] == 1
-        assert schema["num_results"]["minimum"] == 1
-        assert schema["num_results"]["maximum"] == 5
+        assert schema["num_results"]["min"] == 1
+        assert schema["num_results"]["max"] == 5
 
     def test_contains_no_results_message(self) -> None:
         schema = WikipediaSearchSkill.get_parameter_schema()

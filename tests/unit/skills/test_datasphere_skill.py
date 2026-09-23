@@ -137,14 +137,14 @@ class TestGetParameterSchema:
     def test_count_defaults(self) -> None:
         schema = DataSphereSkill.get_parameter_schema()
         assert schema["count"]["default"] == 1
-        assert schema["count"]["minimum"] == 1
-        assert schema["count"]["maximum"] == 10
+        assert schema["count"]["min"] == 1
+        assert schema["count"]["max"] == 10
 
     def test_distance_defaults(self) -> None:
         schema = DataSphereSkill.get_parameter_schema()
         assert schema["distance"]["default"] == 3.0
-        assert schema["distance"]["minimum"] == 0.0
-        assert schema["distance"]["maximum"] == 10.0
+        assert schema["distance"]["min"] == 0.0
+        assert schema["distance"]["max"] == 10.0
 
     def test_includes_base_class_swaig_fields(self) -> None:
         schema = DataSphereSkill.get_parameter_schema()
