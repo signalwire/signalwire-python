@@ -3,7 +3,9 @@
 ## [Unreleased]
 
 Webhook signatures and SWAIG tokens are now enforced on every path, including
-serverless.
+serverless. Skills that fetch URLs no longer reach internal addresses through
+redirects, the agent's `/mcp` endpoint requires basic auth, and `async def`
+tool handlers run.
 
 ### Fixed
 - Security: `serve()` (and so `run()`) registered its catch-all route before the
@@ -60,6 +62,94 @@ serverless.
   so the SDK no longer shares, or reconfigures, a host app's logger that
   happens to have the same name.
 - `wikipedia_search` sends a User-Agent; Wikipedia answered 403 without one.
+- Security: the spider and web_search skills checked a URL before fetching it,
+  then followed redirects, so a public page that redirected to an internal
+  address, such as a cloud metadata service, was fetched and returned. A
+  hostname whose DNS answer changed between the check and the connection had
+  the same effect. They now check every request, redirects included, and
+  refuse a connection to a private or internal address. `validate_url()` also
+  blocks IPv4-mapped IPv6 addresses such as `::ffff:169.254.169.254`, and the
+  unspecified address.
+- Security: the agent's `/mcp` endpoint (`enable_mcp_server()`) had no
+  authentication, and found none of the agent's tools: `tools/list` was empty
+  and `tools/call` answered "Unknown tool". It now requires the agent's basic
+  auth credentials, lists and calls the tools the agent runs itself (not
+  DataMap or external webhook tools), and awaits `async def` handlers.
+- Security: the MCP gateway's sample and generated configurations listen on
+  `0.0.0.0` with the published password `changeme`. While that password is in
+  use, the gateway now listens on `127.0.0.1` only, and logs a warning.
+- Tool handlers defined with `async def` never ran. The SDK returned their
+  coroutine, and `/swaig` answered with its repr. `/swaig` now awaits them on
+  the request's event loop, and serverless, `swaig-test` and
+  `SWAIGFunction.execute()` run them to completion.
+- Constructor arguments take precedence over an agent's config file, as
+  documented. The file's `service.name` always replaced the `name` passed to
+  `AgentBase`, and its route and host replaced a `route="/"` or
+  `host="0.0.0.0"` passed on purpose.
+- `get_basic_auth_credentials(include_source=True)` reports where the
+  credentials came from, recorded when they were resolved. It guessed from
+  their values, and credentials passed to the constructor could show as
+  generated.
+- native_vector_search: logs no longer include the password in `remote_url`,
+  and log the caller's query, the tool arguments, and error details that can
+  echo the query at DEBUG only. The SWAIG request isn't logged.
+- native_vector_search: the pgvector auto-build appended another full copy of
+  every chunk on each start, and ignored `overwrite`. It now builds a
+  collection only when it doesn't exist, or rebuilds it when `overwrite` is
+  set. If it can't tell whether the collection exists, it logs an error and
+  doesn't build. `IndexBuilder.build_index()` accepts `overwrite`.
+- pgvector: `overwrite` failed on a database with no collections yet.
+- Search service: the query cache ignored `similarity_threshold` and
+  `language`, so a repeated query with a stricter threshold got the earlier
+  results, and it cached the empty results of a failed search. It no longer
+  logs the caller's query at INFO on a cache hit.
+- Search: both markdown chunkers recorded sibling headings as parent and
+  child in a document that starts at `##` or skips a level. Section paths now
+  follow each heading's real level. This changes the `section`, `h1`/`h2`,
+  `depth:N` tags and `metadata_text` of affected chunks in indexes built from
+  now on.
+- Search: `SearchIndexMigrator.migrate_pgvector_to_sqlite()` deleted the
+  output index, wrote one with no chunks, and reported success. Chunk export
+  was never implemented, so it now raises `NotImplementedError` before it
+  connects or touches the output path.
+- Search: importing `signalwire.search` no longer imports the model stack, so
+  `sw-search` starts in about a second instead of 15. `openpyxl` is imported
+  only to read an Excel file.
+- `sw-search --help` lists every option; it omitted `--backend`,
+  `--connection-string`, `--overwrite`, `--output-dir` and `--output-format`.
+- `sw-search remote` accepts `--user` and `--password`, and no longer prints
+  the endpoint's password in verbose output or errors. Its threshold option is
+  `--similarity-threshold`, since higher is stricter; `--distance-threshold`
+  still works.
+- `swaig-test`: the DataMap simulator accepts a webhook that returns a JSON
+  array, arguments the function doesn't declare get a warning, and
+  `--aws-api-gateway-id` and `--aws-stage` now simulate an API Gateway URL.
+- `BedrockAgent` renders `max_tokens`, `presence_penalty` and
+  `frequency_penalty`, and `set_prompt_llm_params()` accepts the settings the
+  Bedrock prompt defines. The examples use voices Bedrock offers.
+- spider: `follow_robots_txt` is enforced, redirects included. The parameter
+  schema's defaults and `extract_type` values now match what the skill does.
+- Five skills declared parameter ranges as `minimum`/`maximum`; every built-in
+  skill now uses `min`/`max`.
+- The SWML schema search MCP server in `mcp/swml-schema-search/` finds
+  `schema.json` without `SWML_SCHEMA_PATH`.
+- The MCP gateway's Docker image builds and runs, and Compose passes its
+  defaults instead of empty strings for unset variables.
+
+### Deprecated
+- `keyword_weight` (`SearchEngine.search()`, the pgvector backend,
+  native_vector_search and `sw-search --keyword-weight`). It never changed
+  ranking, and passing it now warns.
+- The `large` model alias, which loads the same model as `base`. Use `base`.
+- spider's `concurrent_requests`, which was never used, and the `extract_type`
+  values `clean_text`, `full_text`, `html` and `custom`, which work as
+  `fast_text` with a warning.
+
+### Removed
+- The standalone copies of the MCP gateway service in `mcp_gateway/`
+  (`gateway_service.py`, `mcp_manager.py`, `session_manager.py` and
+  `requirements.txt`). The Docker image runs the packaged `mcp-gateway`
+  command.
 
 ### Notes for upgraders
 - Calling a secure function directly, for example with `curl`, now needs the
@@ -76,6 +166,36 @@ serverless.
   name such as `logging.getLogger("agent_base")` should use
   `signalwire.agent_base`, or the `signalwire` namespace.
 - A serverless function call must be a POST; other methods get 405.
+- An MCP client that calls an agent's `/mcp` endpoint must send the agent's
+  basic auth credentials.
+- The MCP gateway, with the published password, listens on `127.0.0.1` only.
+  Set `auth_password` (or `MCP_AUTH_PASSWORD`) to accept other connections.
+  Compose now requires `MCP_AUTH_PASSWORD`, and the sample configuration,
+  Compose file and scripts use port 8080, the code's default, instead of 8100.
+- The MCP gateway's Docker image installs `signalwire-sdk` from PyPI (pin one
+  with `--build-arg SDK_VERSION=x.y.z`), so it gets these fixes only from a
+  release that includes them.
+- The spider and web_search skills fetch pages directly, ignoring
+  `HTTP_PROXY` and `HTTPS_PROXY`, because through a proxy the address check
+  can't apply. To fetch through a proxy that blocks private destinations
+  itself, set `SWML_URL_FETCH_USE_PROXY=true`. web_search's Google API request
+  still uses the proxy.
+- With `follow_robots_txt` on, the spider skips pages the site's robots.txt
+  disallows. It was ignored before.
+- A pgvector collection that the auto-build appended to on each start holds
+  duplicate chunks. Rebuild it once with `overwrite` set.
+- Rebuild markdown indexes to get the corrected section paths; existing
+  indexes don't change.
+- `migrate_pgvector_to_sqlite()` raises `NotImplementedError`. Rebuild the
+  SQLite index from the source documents instead.
+- A subclass that passes its own `route="/"` default to `AgentBase` now
+  overrides a route set in the config file, even when its caller didn't pass a
+  route. Forward only the arguments the caller gave.
+- Code that reads `minimum`/`maximum` from a skill's parameter schema should
+  read `min`/`max`.
+- The credential source is `provided`, `environment`, `config file` or
+  `generated`. `SWMLService` returned `auto-generated`, and `config file` is
+  new.
 
 ## [3.4.3] - 2026-09-17
 
