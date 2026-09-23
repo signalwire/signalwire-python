@@ -524,6 +524,25 @@ def main() -> int:
                 env_overrides["AWS_LAMBDA_FUNCTION_URL"] = args.aws_function_url
             if args.aws_region:
                 env_overrides["AWS_REGION"] = args.aws_region
+            # Behind API Gateway, the agent's URL is the gateway's. The SDK
+            # reads it from AWS_LAMBDA_FUNCTION_URL, so simulate that.
+            if args.aws_api_gateway_id and args.aws_function_url:
+                print(
+                    "Warning: --aws-api-gateway-id is ignored when --aws-function-url is set",
+                    file=sys.stderr,
+                )
+            elif args.aws_api_gateway_id:
+                region = args.aws_region or "us-east-1"
+                stage = args.aws_stage or "prod"
+                env_overrides["AWS_LAMBDA_FUNCTION_URL"] = (
+                    f"https://{args.aws_api_gateway_id}.execute-api."
+                    f"{region}.amazonaws.com/{stage}"
+                )
+            elif args.aws_stage:
+                print(
+                    "Warning: --aws-stage only applies with --aws-api-gateway-id",
+                    file=sys.stderr,
+                )
         elif args.simulate_serverless == "cgi":
             if args.cgi_host:
                 env_overrides["HTTP_HOST"] = args.cgi_host

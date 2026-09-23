@@ -277,6 +277,8 @@ swaig-test examples/my_agent.py --simulate-serverless lambda \
 - `AWS_REGION`
 - `_HANDLER`
 
+With `--aws-api-gateway-id`, the simulated `AWS_LAMBDA_FUNCTION_URL` is the API Gateway URL, `https://ID.execute-api.REGION.amazonaws.com/STAGE`. The region defaults to `us-east-1` and the stage to `prod`. `--aws-function-url` takes precedence over it.
+
 #### CGI Simulation
 
 `--cgi-host` is required; the other CGI flags are optional:
