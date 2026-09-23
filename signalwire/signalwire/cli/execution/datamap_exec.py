@@ -304,8 +304,12 @@ def execute_datamap_function(
                             f"Webhook failed: HTTP status {response.status_code} outside 200-299 range"
                         )
 
+                # Error keys only apply to a JSON object. A top-level array,
+                # the shape ${array[0].field} templates read, has none.
+                is_object = isinstance(response_data, dict)
+
                 # 2. Check for explicit error keys (parse_error, protocol_error)
-                if not webhook_failed:
+                if not webhook_failed and is_object:
                     explicit_error_keys = ["parse_error", "protocol_error"]
                     for error_key in explicit_error_keys:
                         if response_data.get(error_key):
@@ -317,7 +321,7 @@ def execute_datamap_function(
                             break
 
                 # 3. Check for custom error_keys from webhook config
-                if not webhook_failed and "error_keys" in webhook:
+                if not webhook_failed and is_object and "error_keys" in webhook:
                     error_keys = webhook["error_keys"]
                     if isinstance(error_keys, str):
                         error_keys = [error_keys]  # Convert single string to list
