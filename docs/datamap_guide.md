@@ -18,7 +18,7 @@ from signalwire.core.data_map import create_expression_tool
 
 ### 2. DataMap Architecture and Processing Pipeline
 - [2.1 Server-Side Processing Flow](#21-server-side-processing-flow)
-- [2.2 Processing Order: Expressions → Webhooks → Foreach → Output](#22-processing-order-expressions--webhooks--foreach--output)
+- [2.2 Processing Order: Expressions, Webhooks, Foreach, Output](#22-processing-order-expressions-webhooks-foreach-output)
 - [2.3 Context and Variable Scope](#23-context-and-variable-scope)
 - [2.4 Serverless Execution Model](#24-serverless-execution-model)
 
@@ -117,7 +117,7 @@ from signalwire.core.data_map import create_expression_tool
 
 ### 1.1 What is DataMap
 
-DataMap is a serverless function execution system within SignalWire AI Agents that enables integration with external APIs without the need for custom webhook endpoints. Unlike traditional webhook-based SWAIG (SignalWire AI Gateway) functions that require you to host and maintain HTTP endpoints, DataMap functions are executed entirely within the SignalWire infrastructure. SWAIG is the platform's AI tool-calling system with native access to the media stack -- DataMap is one way to define SWAIG functions without running your own server.
+DataMap is a serverless function execution system within SignalWire AI Agents that enables integration with external APIs without the need for custom webhook endpoints. Unlike traditional webhook-based SWAIG (SignalWire AI Gateway) functions that require you to host and maintain HTTP endpoints, DataMap functions are executed entirely within the SignalWire infrastructure. SWAIG is the platform's AI tool-calling system with native access to the media stack. DataMap is one way to define SWAIG functions without running your own server.
 
 **Key Characteristics:**
 - **Serverless Architecture**: No need to host webhook endpoints
@@ -239,7 +239,7 @@ Many applications benefit from using both DataMap and traditional webhooks:
 
 ### 2.1 Server-Side Processing Flow
 
-DataMap execution occurs entirely within the SignalWire infrastructure, following a deterministic processing pipeline implemented in the server-side `mod_openai.c` module. Understanding this flow is crucial for effective DataMap configuration.
+DataMap execution occurs entirely within the SignalWire infrastructure, following a deterministic processing pipeline implemented in the server-side `mod_openai.c` module. This flow determines how you configure DataMap functions.
 
 **Server-Side Architecture:**
 ```
@@ -264,11 +264,11 @@ DataMap execution occurs entirely within the SignalWire infrastructure, followin
 - **Foreach Engine**: Processes array data with template expansion
 - **Output Generator**: Formats final results for SWML consumption
 
-### 2.2 Processing Order: Expressions → Webhooks → Foreach → Output
+### 2.2 Processing Order: Expressions, Webhooks, Foreach, Output
 
 DataMap processing follows a strict sequential order that ensures deterministic execution and proper error handling:
 
-**1. Expression Processing (Optional)**
+**1. Expression Processing (Optional)**:
 ```json
 {
   "expressions": [
@@ -283,7 +283,7 @@ DataMap processing follows a strict sequential order that ensures deterministic 
 - Early exit if pattern matches
 - Bypasses HTTP requests for known cases
 
-**2. Webhook Sequential Processing**
+**2. Webhook Sequential Processing**:
 ```json
 {
   "webhooks": [
@@ -296,7 +296,7 @@ DataMap processing follows a strict sequential order that ensures deterministic 
 - Stop at first successful webhook
 - Each webhook has independent configuration
 
-**3. Foreach Processing (Per Successful Webhook)**
+**3. Foreach Processing (Per Successful Webhook)**:
 ```json
 {
   "foreach": {
@@ -311,7 +311,7 @@ DataMap processing follows a strict sequential order that ensures deterministic 
 - Builds concatenated strings using template expansion
 - Stores result in context for output templates
 
-**4. Output Generation**
+**4. Output Generation**:
 ```json
 {
   "output": {
@@ -2297,6 +2297,8 @@ For common patterns, convenience functions simplify DataMap creation:
 
 #### Simple API Tool
 
+`create_simple_api_tool` builds a one-webhook DataMap from a URL and a response template:
+
 ```python
 from signalwire.core.data_map import create_simple_api_tool
 
@@ -2317,6 +2319,8 @@ weather = create_simple_api_tool(
 ```
 
 #### Expression Tool
+
+`create_expression_tool` builds a pattern-matching DataMap that returns a result without calling a webhook:
 
 ```python
 from signalwire.core.data_map import create_expression_tool
@@ -4017,6 +4021,8 @@ DataMap functions can implement gradual migration strategies:
 *This guide provides comprehensive coverage of DataMap functionality within the SignalWire AI Agents framework, from basic concepts to advanced implementation patterns.*
 
 ## Related Documentation
+
+For related topics, see:
 
 - **[API Reference](api_reference.md)** - Complete DataMap class API reference
 - **[SWAIG Reference](swaig_reference.md)** - SWAIG function results and actions
