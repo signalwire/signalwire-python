@@ -1,75 +1,55 @@
-# Fred Bot Tutorial - Building a Wikipedia AI Assistant
+# Fred Bot Tutorial: Building a Wikipedia AI Assistant
 
-Welcome to the Fred Bot tutorial! This step-by-step guide will teach you how to build Fred, a friendly Wikipedia-powered AI assistant using the SignalWire SDK.
+This tutorial builds Fred, a voice agent that answers questions from Wikipedia, using the SignalWire SDK. Each lesson adds one part of the agent, and by the end you run Fred locally and test it from the command line.
 
 ## What You'll Build
 
-Fred is an AI voice agent that can:
-- Search Wikipedia for information on any topic
-- Share fun facts about Wikipedia itself
-- Engage in friendly, educational conversations
-- Handle voice calls through the SignalWire platform
+Fred is an AI voice agent with a friendly persona. It can:
 
-## Tutorial Structure
+- Search Wikipedia for information on a topic
+- Share facts about Wikipedia itself
+- Hold a conversation about what it finds
+- Answer voice calls through the SignalWire platform
 
-This tutorial is divided into 6 progressive lessons:
+## Lessons
 
-### 📚 [Lesson 1: Introduction to SignalWire Agents](01-introduction.md)
-Learn the basics of the SignalWire SDK and understand the core concepts.
+Each lesson builds on the one before it, so work through them in order:
 
-### 🛠️ [Lesson 2: Setting Up Your Environment](02-setup.md)
-Install the SDK and prepare your development environment.
+1. [Introduction to SignalWire Agents](01-introduction.md): the SDK's core concepts and how an agent handles a call
+2. [Setting Up Your Environment](02-setup.md): install the SDK and check that it works
+3. [Creating Fred's Basic Structure](03-basic-agent.md): the agent class, its prompt, and its voice
+4. [Adding the Wikipedia Search Skill](04-wikipedia-skill.md): add Wikipedia search with the skills system
+5. [Creating Custom Functions](05-custom-functions.md): write a SWAIG function that shares facts about Wikipedia
+6. [Running and Testing Fred](06-running-testing.md): run Fred, and test it with `swaig-test` and `curl`
 
-### 🤖 [Lesson 3: Creating Fred's Basic Structure](03-basic-agent.md)
-Build the foundation of Fred with personality and voice configuration.
+The appendices are for reference:
 
-### 🔍 [Lesson 4: Adding the Wikipedia Search Skill](04-wikipedia-skill.md)
-Integrate Wikipedia search capabilities using the skills system.
-
-### 🎯 [Lesson 5: Creating Custom Functions](05-custom-functions.md)
-Add Fred's fun fact feature and learn about SWAIG functions.
-
-### 🚀 [Lesson 6: Running and Testing Fred](06-running-testing.md)
-Deploy Fred locally and test his capabilities with curl commands.
-
-### 📝 [Appendix A: Complete Code & Management Script](appendix-complete-code.md)
-The complete Fred implementation and bash management script.
-
-### 🐳 [Appendix B: Docker Deployment](appendix-docker-deployment.md)
-Deploy Fred using Docker for production-ready containerization.
+- [Appendix A: Complete Code and Management Script](appendix-complete-code.md): `fred.py`, `fred.sh` and a quick start
+- [Appendix B: Docker Deployment](appendix-docker-deployment.md): run Fred in a container
 
 ## Prerequisites
 
-**Required:**
-- Python 3.10 or higher
+You need:
+
+- Python 3.10 or later
 - Basic Python knowledge
-- Command line familiarity
+- Familiarity with the command line
 
-**Optional but Helpful:**
-- Understanding of REST APIs
-- Experience with voice/telephony applications
+Knowing how REST APIs or telephony applications work helps, but isn't required.
 
-## Time to Complete
-
-- **Total Time:** 45-60 minutes
-- **Each Lesson:** 5-10 minutes
-
-## What Makes This Tutorial Special
-
-1. **Beginner-Friendly:** Every concept is explained clearly
-2. **Practical Example:** Build a real, working AI agent
-3. **Best Practices:** Learn proper SDK usage patterns
-4. **Complete Solution:** Includes deployment and management scripts
+The tutorial takes 45 to 60 minutes in total, 5 to 10 minutes per lesson.
 
 ## Getting Help
 
-- **SignalWire Documentation:** [docs.signalwire.com](https://docs.signalwire.com)
+These resources cover the SDK and the platform:
+
+- **SignalWire documentation:** [signalwire.com/docs](https://signalwire.com/docs)
+- **SDK documentation:** the [docs](../../../docs/) folder in this repository
 - **GitHub Issues:** [github.com/signalwire/signalwire-python](https://github.com/signalwire/signalwire-python)
-- **Community Support:** SignalWire Discord/Forums
 
-## Let's Get Started!
+When you've built Fred, the [Full-Guardrails Agent tutorial](../../full-guardrails-agent/tutorial/README.md) goes further: an agent whose actions have consequences, kept correct by code instead of by the prompt.
 
-Ready to build Fred? Start with [Lesson 1: Introduction to SignalWire Agents](01-introduction.md) →
+Start with [Lesson 1: Introduction to SignalWire Agents](01-introduction.md).
 
 ---
 

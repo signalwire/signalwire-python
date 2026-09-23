@@ -1,53 +1,54 @@
 # Lesson 6: Running and Testing Fred
 
-Time to bring Fred to life! This lesson covers running Fred locally and testing his capabilities using curl commands.
+Fred is complete. This lesson runs it, tests its functions with `swaig-test` and `curl`, adds a script to manage it, and covers the problems you're most likely to hit.
 
 ## Table of Contents
 
 1. [Running Fred](#running-fred)
 2. [Understanding the Endpoints](#understanding-the-endpoints)
-3. [Testing with Curl](#testing-with-curl)
-4. [Managing Fred with Scripts](#managing-fred-with-scripts)
-5. [Troubleshooting](#troubleshooting)
+3. [Testing with swaig-test](#testing-with-swaig-test)
+4. [Testing with curl](#testing-with-curl)
+5. [Managing Fred with Scripts](#managing-fred-with-scripts)
+6. [Troubleshooting](#troubleshooting)
+7. [Production Considerations](#production-considerations)
 
 ---
 
 ## Running Fred
 
-Let's start Fred and see him in action!
+Running `fred.py` starts a web server that SignalWire can call.
 
 ### Step 1: Run Fred Directly
+
+Start Fred from the project directory:
 
 ```bash
 python fred.py
 ```
 
-You'll see output like this:
+The output looks like this. Your password will differ:
 
 ```
 ============================================================
-🤖 Fred - The Wikipedia Knowledge Bot
+Fred: a Wikipedia knowledge bot
 ============================================================
 
-Fred is a friendly assistant who loves searching Wikipedia!
-He can help you learn about almost any topic.
+Fred searches Wikipedia and shares facts about Wikipedia itself.
 
-Example questions you can ask Fred:
-  • 'Tell me about Albert Einstein'
-  • 'What is quantum physics?'
-  • 'Who was Marie Curie?'
-  • 'Search for information about the solar system'
-  • 'Can you share a fun fact?'
+Questions to try:
+  - Tell me about Albert Einstein
+  - What is quantum physics?
+  - Who was Marie Curie?
+  - Search for information about the solar system
+  - Can you share a fun fact?
 
 Fred is available at: http://localhost:3000/fred
-Basic Auth: fred_user:a7b9c2d4e6
+Basic Auth: signalwire:Xk2vQ9mR7tLp4WzN8bJc5HdF3sGy6AeU1oKi0nY
 
-Fred's capabilities:
-  ✓ Wikipedia search (via skill)
-  ✓ Fun facts about Wikipedia (custom function)
-
-Starting Fred... Press Ctrl+C to stop.
+Starting Fred. Press Ctrl+C to stop.
 ============================================================
+... [warning  ] webhook_signature_validation_disabled ...
+... [info     ] agent_starting ...
 INFO:     Started server process [12345]
 INFO:     Waiting for application startup.
 INFO:     Application startup complete.
@@ -56,87 +57,65 @@ INFO:     Uvicorn running on http://0.0.0.0:3000 (Press CTRL+C to quit)
 
 ### Important Information
 
-**Note these details:**
+Note three details from the output:
+
 - **URL**: `http://localhost:3000/fred`
-- **Auth**: Username and password (randomly generated each time)
-- **Process ID**: Shows in the server output
+- **Credentials**: the username and password for basic authentication. Without `SWML_BASIC_AUTH_USER` and `SWML_BASIC_AUTH_PASSWORD` set, the SDK generates new ones each time Fred starts.
+- **The signature warning**: webhook signature validation is off until you set `SIGNALWIRE_SIGNING_KEY`. That's fine on your own machine. [Production Considerations](#production-considerations) covers when to set it.
 
 ## Understanding the Endpoints
 
-Fred exposes two main HTTP endpoints:
+Fred answers on three HTTP endpoints.
 
-### 1. SWML Endpoint (GET /fred)
+### 1. SWML Endpoint (/fred)
 
-Returns Fred's configuration as a SWML (SignalWire Markup Language) document:
-- **Purpose**: Tells SignalWire how Fred should behave
-- **Method**: GET
-- **Auth**: Required
+Returns Fred's configuration as a SWML document:
+
+- **Purpose**: tells SignalWire how Fred behaves
+- **Method**: SignalWire requests it with a `POST`. You can fetch it with `GET` to inspect it.
+- **Auth**: required
 
 ### 2. SWAIG Endpoint (POST /fred/swaig/)
 
-SWAIG (SignalWire AI Gateway) handles function execution:
-- **Purpose**: Executes Fred's functions
-- **Method**: POST
-- **Auth**: Required
-- **Token**: Required. Each function's URL in the SWML carries a token that's valid for one call.
-- **Content-Type**: application/json
+Runs Fred's functions:
 
-## Testing with swaig-test CLI
+- **Purpose**: executes a function the model called
+- **Method**: `POST`
+- **Auth**: required
+- **Token**: required. Each function's URL in the SWML carries a token that's valid for one call.
+- **Content-Type**: `application/json`
 
-The SignalWire SDK includes a CLI testing tool called `swaig-test`. Let's use it to explore and test Fred without running the server!
+### 3. Health Endpoint (GET /health)
 
-### Using swaig-test to Explore Fred
+Reports whether Fred is running. It needs no credentials, so load balancers and container health checks can use it.
 
-#### Discover Fred in the File
+## Testing with swaig-test
 
-```bash
-# Discover agents in fred.py
-swaig-test fred.py
-```
+The SDK includes a command-line tool, `swaig-test`, that loads an agent from its file and runs its functions without starting a server.
 
-Output:
-```
-Available agents in fred.py:
+### List Fred's Functions
 
-  FredTheWikiBot
-    Type: Ready instance
-    Name: Fred
-    Route: /fred
-    Functions: 2 (search_wiki, share_fun_fact)
-
-To use this agent:
-  swaig-test fred.py --list-tools
-  swaig-test fred.py --dump-swml
-```
-
-#### List Fred's Functions
+List the functions Fred registers:
 
 ```bash
-# List all available functions
 swaig-test fred.py --list-tools
 ```
 
-Output:
+`fred.py` creates the agent in `main()`, so `swaig-test` runs `main()` to find it, and Fred's banner prints first. The function list follows it:
+
 ```
 Available SWAIG functions:
-  search_wiki - Search Wikipedia for information about a topic and get article summaries
+  search_wiki - Search Wikipedia for information about a topic and get article summaries (LOCAL webhook)
     Parameters:
-      query (string) (required): The search term or topic to look up on Wikipedia
-      
-  share_fun_fact - Share an interesting fact about Wikipedia itself
+      query (string): The search term or topic to look up on Wikipedia
+  share_fun_fact - Share an interesting fact about Wikipedia itself (LOCAL webhook)
     Parameters:
-      category (string): Type of fact to share
-        Allowed values: statistics, history, records, random
+      category (string [options: statistics, history, records, random]): Type of fact to share
 ```
 
-#### Get Detailed Function Info
+### Test Functions Without Running the Server
 
-```bash
-# Verbose listing shows full schemas
-swaig-test fred.py --list-tools --verbose
-```
-
-#### Test Functions Without Running the Server
+Run a function with `--exec`, followed by its arguments:
 
 ```bash
 # Test Wikipedia search
@@ -149,32 +128,37 @@ swaig-test fred.py --exec share_fun_fact --category history
 swaig-test fred.py --exec share_fun_fact
 ```
 
-#### Generate and Inspect SWML
+Everything after `--exec` and the function name is passed to the function as an argument. Put `swaig-test`'s own options, such as `--verbose` or `--call-id`, before `--exec`.
+
+### Generate and Inspect SWML
+
+`--dump-swml` prints the SWML document SignalWire would receive:
 
 ```bash
 # Generate SWML document
 swaig-test fred.py --dump-swml
 
 # Get raw JSON for processing
-swaig-test fred.py --dump-swml --raw | jq '.sections.main[0].ai.SWAIG.functions'
-
-# See what call data is generated
-swaig-test fred.py --dump-swml --verbose
+swaig-test fred.py --dump-swml --raw | jq '.sections.main[] | select(.ai) | .ai.SWAIG.functions'
 ```
 
-### Advanced swaig-test Features
+The `ai` verb isn't the first entry in `main`. An `answer` verb comes before it, so the `jq` filter selects the entry that has `ai`.
 
-#### Test with Different Call Scenarios
+### Test Different Call Scenarios
+
+Options that describe the call change the request `swaig-test` simulates:
 
 ```bash
-# Simulate inbound SIP call
+# Simulate an inbound SIP call
 swaig-test fred.py --dump-swml --call-type sip --call-direction inbound
 
 # Custom caller info
 swaig-test fred.py --dump-swml --from-number "+15551234567" --to-extension "+15559876543"
 ```
 
-#### Test Serverless Deployment
+### Test Serverless Deployment
+
+`--simulate-serverless` renders the agent as it would run on a serverless platform:
 
 ```bash
 # Test Lambda deployment
@@ -187,46 +171,51 @@ swaig-test fred.py --simulate-serverless lambda --exec search_wiki --query "Sign
 swaig-test fred.py --simulate-serverless cgi --cgi-host example.com --dump-swml
 ```
 
-#### Debug Mode
+### Debug Mode
+
+`--verbose` shows the SDK's logs while a function runs. Like every `swaig-test` option, it goes before `--exec`:
 
 ```bash
-# See detailed execution trace
-swaig-test fred.py --exec search_wiki --query "Albert Einstein" --verbose
+# See the SDK's logs during the call
+swaig-test fred.py --verbose --exec search_wiki --query "Albert Einstein"
 
-# Test with custom post data
-swaig-test fred.py --exec share_fun_fact --post-data '{"call_id": "custom-123"}'
+# Run a function as part of a specific call
+swaig-test fred.py --call-id custom-123 --exec share_fun_fact
 ```
 
 ### Benefits of swaig-test
 
-1. **No Server Required**: Test functions without running Fred
-2. **Quick Validation**: Verify functions work before deployment
-3. **SWML Inspection**: See exactly what SignalWire receives
-4. **Serverless Testing**: Validate Lambda/CGI deployments
-5. **Debugging**: Detailed traces for troubleshooting
+`swaig-test` is the fastest way to check an agent:
 
-## Testing with Curl
+1. **No server required**: functions run without starting Fred
+2. **Quick validation**: check a function before you deploy
+3. **SWML inspection**: see exactly what SignalWire receives
+4. **Serverless testing**: check Lambda and CGI configurations
+5. **Debugging**: see the SDK's logs for one function call
 
-Once Fred is running, you can also test with curl commands. Replace `username:password` with your actual credentials from the output.
+## Testing with curl
+
+With Fred running, you can also test it over HTTP. Replace `username:password` with the credentials from Fred's output.
 
 ### Step 2: Fetch Fred's SWML Configuration
+
+Fetch the SWML document, and format it:
 
 ```bash
 # Get Fred's SWML document
 curl -u username:password http://localhost:3000/fred | python -m json.tool
 ```
 
-**Example with real credentials:**
-```bash
-curl -u fred_user:a7b9c2d4e6 http://localhost:3000/fred | python -m json.tool
-```
+The response is Fred's SWML document. This excerpt is shortened:
 
-**Expected Response (shortened):**
 ```json
 {
   "version": "1.0.0",
   "sections": {
     "main": [
+      {
+        "answer": {}
+      },
       {
         "ai": {
           "prompt": {
@@ -241,7 +230,7 @@ curl -u fred_user:a7b9c2d4e6 http://localhost:3000/fred | python -m json.tool
             "functions": [
               {
                 "function": "search_wiki",
-                "description": "Search Wikipedia for information about a topic"
+                "description": "Search Wikipedia for information about a topic and get article summaries"
               },
               {
                 "function": "share_fun_fact",
@@ -258,7 +247,7 @@ curl -u fred_user:a7b9c2d4e6 http://localhost:3000/fred | python -m json.tool
 
 ### Step 3: Test Wikipedia Search
 
-SignalWire calls a function at the URL Fred's SWML gives it, and that URL carries a security token that's valid for one call only. A test does the same: fetch the SWML for a test call, take the function's URL from it, and post to that URL with the same call ID.
+SignalWire calls a function at the URL Fred's SWML gives it, and that URL carries a security token that's valid for one call only. A test does the same. It fetches the SWML for a test call, takes the function's URL from it, and posts to that URL with the same call ID.
 
 ```bash
 # Fetch the SWML for a test call, and take search_wiki's URL from it
@@ -285,10 +274,11 @@ curl -X POST -H "Content-Type: application/json" \
 
 The URL already includes Fred's credentials, so the second `curl` doesn't need `-u`.
 
-**Expected Response:**
+The response holds up to two article summaries, separated by a line of `=` characters. This one is shortened:
+
 ```json
 {
-  "response": "==================================================**FreeSWITCH**\n\nFreeSWITCH is a free and open-source telephony software for real-time communication protocols..."
+  "response": "**FreeSWITCH**\n\nFreeSWITCH is a free and open-source application server for real-time communication...\n\n==================================================\n\n**...**\n\n..."
 }
 ```
 
@@ -319,7 +309,8 @@ curl -X POST -H "Content-Type: application/json" \
   "$URL"
 ```
 
-**Expected Response:**
+The response is one fact from the category:
+
 ```json
 {
   "response": "Here's a history fact about Wikipedia: Wikipedia was launched on January 15, 2001!"
@@ -328,15 +319,15 @@ curl -X POST -H "Content-Type: application/json" \
 
 ## Managing Fred with Scripts
 
-For easier management, let's create a simple bash script to start/stop Fred:
+A small shell script can start Fred in the background, stop it, and report its status.
 
 ### Step 5: Create Management Script
 
-Create `fred.sh`:
+Create `fred.sh` with this minimal version. [Appendix A](appendix-complete-code.md) has the complete script, which adds a `logs` command:
 
 ```bash
 #!/bin/bash
-# Fred Bot Manager - Start/Stop Fred the Wikipedia Bot
+# Start, stop and check Fred
 
 PID_FILE="fred.pid"
 LOG_FILE="fred.log"
@@ -373,17 +364,17 @@ start_fred() {
     sleep 2
     
     if is_running; then
-        echo -e "${GREEN}✅ Fred started successfully!${NC}"
+        echo -e "${GREEN}Fred started${NC}"
         echo "   PID: $PID"
         echo "   Logs: $LOG_FILE"
         
         # Extract auth from log
-        AUTH=$(grep "Basic Auth:" "$LOG_FILE" | tail -1)
+        AUTH=$(grep "Basic Auth:" "$LOG_FILE" | head -1)
         if [ ! -z "$AUTH" ]; then
             echo "   $AUTH"
         fi
     else
-        echo -e "${RED}❌ Failed to start Fred${NC}"
+        echo -e "${RED}Fred failed to start${NC}"
         return 1
     fi
 }
@@ -399,7 +390,7 @@ stop_fred() {
     echo -e "${GREEN}Stopping Fred...${NC}"
     kill $PID
     rm -f "$PID_FILE"
-    echo -e "${GREEN}✅ Fred stopped${NC}"
+    echo -e "${GREEN}Fred stopped${NC}"
 }
 
 # Main script
@@ -417,11 +408,11 @@ case "$1" in
         ;;
     status)
         if is_running; then
-            echo -e "${GREEN}● Fred is running${NC}"
+            echo -e "${GREEN}Fred is running${NC}"
             PID=$(cat "$PID_FILE")
             echo "   PID: $PID"
         else
-            echo -e "${RED}● Fred is not running${NC}"
+            echo -e "${RED}Fred is not running${NC}"
         fi
         ;;
     *)
@@ -432,11 +423,14 @@ esac
 ```
 
 Make it executable:
+
 ```bash
 chmod +x fred.sh
 ```
 
 ### Using the Management Script
+
+The script's commands start, check and stop Fred:
 
 ```bash
 # Start Fred in background
@@ -454,150 +448,176 @@ tail -f fred.log
 
 ## Troubleshooting
 
+Most problems when running Fred fall into a few groups.
+
 ### Common Issues and Solutions
 
 #### Port Already in Use
 
-**Error:**
+Another program is using port 3000. The error is `[Errno 98]` on Linux and `[Errno 48]` on macOS:
+
 ```
-ERROR: [Errno 48] Address already in use
+ERROR: [Errno 98] Address already in use
 ```
 
-**Solution:**
+Find the program that holds the port, and stop it:
+
 ```bash
 # Find process using port 3000
 lsof -i :3000
+```
 
-# Kill the process
-kill -9 <PID>
+Or run Fred on another port:
+
+```bash
+PORT=3001 python fred.py
 ```
 
 #### Authentication Failed
 
-**Error:**
+A request with missing or wrong credentials gets `401` and this body:
+
 ```json
 {"error": "Unauthorized"}
 ```
 
-**Solution:**
-- Check username and password from Fred's output
-- Ensure you're using the correct credentials
-- Don't forget the `-u` flag in curl
+To fix it, check three things:
+
+- The username and password match the ones in Fred's output
+- The credentials are current. Generated credentials change each time Fred restarts.
+- The `curl` command includes `-u username:password`
 
 #### Module Not Found
 
-**Error:**
+The SDK isn't installed in the Python that runs Fred:
+
 ```
 ModuleNotFoundError: No module named 'signalwire'
 ```
 
-**Solution:**
-```bash
-# Install the SDK
-pip install signalwire-sdk
+Activate the virtual environment, then install the SDK:
 
-# Or if using virtual environment
+```bash
 source fred-env/bin/activate
 pip install signalwire-sdk
 ```
 
+#### Invalid or Expired Token
+
+A function call through `/fred/swaig/` can answer "the security token for this function is invalid or expired". The request either lacks the token from Fred's SWML, or carries a token from another call. [Step 3](#step-3-test-wikipedia-search) shows how to call a function with its token.
+
 #### No Response from Functions
 
-**Check:**
-1. Function name matches exactly (`search_wiki`, not `search_wikipedia`)
-2. JSON structure is correct (note the `parsed` array)
-3. Content-Type header is set
+If a function call returns nothing useful, check three things:
+
+1. The function name matches exactly (`search_wiki`, not `search_wikipedia`)
+2. The JSON has the right structure, including the `parsed` array
+3. The `Content-Type: application/json` header is set
 
 ### Debug Tips
 
-#### Enable Verbose Logging
+These checks narrow down most problems.
 
-Add to Fred's `__init__`:
-```python
-import logging
-logging.basicConfig(level=logging.DEBUG)
+#### Enable Debug Logging
+
+`SIGNALWIRE_LOG_LEVEL` sets how much the SDK logs. Run Fred with debug logging:
+
+```bash
+SIGNALWIRE_LOG_LEVEL=debug python fred.py
 ```
 
-#### Test Minimal SWAIG Call
+#### Test a Function Without the Server
+
+`swaig-test` runs a function without a server, credentials or a token:
 
 ```bash
 # Simplest possible function call: no server, no credentials, no token
 swaig-test fred.py --exec share_fun_fact
 ```
 
-If this works but a call through `/fred/swaig/` answers "the security token for this function is invalid or expired", the request is missing the token from Fred's SWML, or used one from another call. Step 3 shows how to call a function with its token.
+If this works but a call over HTTP doesn't, the problem is in the request, not in Fred's code.
 
 #### Check Fred's Health
 
+The health endpoint needs no credentials:
+
 ```bash
-# Simple auth check
-curl -I -u username:password http://localhost:3000/fred
+curl http://localhost:3000/health
 ```
 
-Should return:
-```
-HTTP/1.1 200 OK
+A running Fred answers:
+
+```json
+{"status":"healthy","agent":"Fred"}
 ```
 
 ## Production Considerations
 
+Running Fred for real callers needs fixed secrets, HTTPS, and a process manager.
+
 ### Security
 
-1. **Use Environment Variables for Auth**
+Set these environment variables before Fred takes real calls:
+
+1. **Fixed credentials**, so they don't change on restart:
+
    ```bash
-   export SWML_BASIC_AUTH_USER="fred_prod"
-   export SWML_BASIC_AUTH_PASSWORD="strong_password_here"
+   export SWML_BASIC_AUTH_USER="fred"
+   export SWML_BASIC_AUTH_PASSWORD="a-long-random-password"
    ```
 
-2. **Use HTTPS in Production**
-   - Deploy behind a reverse proxy (nginx, Apache)
-   - Or use SignalWire's SSL support
+2. **Your project's signing key**, from the SignalWire dashboard. With it set, the SDK rejects requests that SignalWire didn't sign.
+
+   ```bash
+   export SIGNALWIRE_SIGNING_KEY="your-signing-key"
+   ```
+
+3. **A fixed secret for tool tokens.** Without one, the SDK generates a new secret each time Fred starts, so calls in progress during a restart lose their tokens. Every copy of Fred must use the same secret.
+
+   ```bash
+   export SIGNALWIRE_SWAIG_SECRET="another-long-random-string"
+   ```
+
+Serve Fred over HTTPS, either behind a reverse proxy such as nginx, or with the SDK's own TLS support (`SWML_SSL_ENABLED`, `SWML_SSL_CERT_PATH` and `SWML_SSL_KEY_PATH`).
 
 ### Deployment Options
 
-1. **Direct Deployment**
+Three common ways to keep Fred running:
+
+1. **Direct**, choosing the port with `PORT`:
+
    ```bash
-   # Run with specific host/port
-   python fred.py --host 0.0.0.0 --port 8080
+   PORT=8080 python fred.py
    ```
 
-2. **Docker Container**
-   ```dockerfile
-   FROM python:3.11-slim
-   WORKDIR /app
-   COPY requirements.txt .
-   RUN pip install -r requirements.txt
-   COPY fred.py .
-   CMD ["python", "fred.py"]
-   ```
+2. **Docker**: [Appendix B](appendix-docker-deployment.md) has a Dockerfile and a Compose file.
 
-3. **Process Manager (PM2)**
-   ```bash
-   pm2 start fred.py --name fred-bot
-   ```
+3. **systemd**: [Appendix A](appendix-complete-code.md) has a service file.
 
 ## Summary
 
-Congratulations! You've successfully:
-- ✅ Built Fred from scratch
-- ✅ Run Fred locally
-- ✅ Tested both Wikipedia search and fun facts
-- ✅ Created management scripts
-- ✅ Learned troubleshooting techniques
+In this tutorial you:
 
-Fred is now ready to handle voice calls through SignalWire!
+- Built Fred from scratch
+- Ran Fred locally
+- Tested Wikipedia search and fun facts with `swaig-test` and `curl`
+- Created a management script
+- Learned how to troubleshoot common problems
 
 ## Next Steps
 
-To use Fred with actual phone calls:
+To take real phone calls with Fred:
+
 1. Sign up for a SignalWire account
-2. Configure a phone number
-3. Point it to your Fred instance
-4. Make Fred accessible via public URL (ngrok, deployment, etc.)
+2. Make Fred reachable at a public HTTPS address, with a deployment or a tunnel such as ngrok
+3. Set `SWML_PROXY_URL_BASE` to that address
+4. Buy or configure a phone number, and point it at `https://username:password@your-address/fred`
+
+The appendices have the complete code and deployment files. Continue with [Appendix A: Complete Code and Management Script](appendix-complete-code.md).
 
 ---
 
-**Quick Reference:**
+The commands from this lesson, for quick reference:
 
 ```bash
 # Start Fred
@@ -615,4 +635,4 @@ swaig-test fred.py --exec share_fun_fact
 
 ---
 
-[← Previous: Custom Functions](05-custom-functions.md) | [Back to Overview](README.md) | [Complete Code →](appendix-complete-code.md)
+[Previous: Custom Functions](05-custom-functions.md) | [Overview](README.md) | [Next: Complete Code](appendix-complete-code.md)

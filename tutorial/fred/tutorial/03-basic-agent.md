@@ -1,6 +1,6 @@
 # Lesson 3: Creating Fred's Basic Structure
 
-Time to bring Fred to life! In this lesson, we'll create Fred's foundation - his personality, voice, and basic configuration.
+This lesson builds Fred's foundation: the agent class, the prompt that sets its persona, its voice, and its conversation settings. Fred can't search anything yet. Lesson 4 adds that.
 
 ## Table of Contents
 
@@ -9,29 +9,32 @@ Time to bring Fred to life! In this lesson, we'll create Fred's foundation - his
 3. [Configuring Voice and Language](#configuring-voice-and-language)
 4. [Setting Conversation Parameters](#setting-conversation-parameters)
 5. [Adding Speech Recognition Hints](#adding-speech-recognition-hints)
+6. [Testing the Basic Structure](#testing-the-basic-structure)
 
 ---
 
 ## Creating the Agent Class
 
-Let's start by creating Fred's basic structure. Create a new file called `fred.py`:
+Every agent is a class that inherits from `AgentBase`. Create a new file called `fred.py`.
 
 ### Step 1: Import and Class Definition
+
+Start with the imports and the class:
 
 ```python
 #!/usr/bin/env python3
 """
-Fred - The Wikipedia Knowledge Bot
+Fred: a Wikipedia knowledge bot
 
-A friendly agent that can search Wikipedia for factual information.
-Fred is curious, helpful, and loves sharing knowledge from Wikipedia.
+An agent that searches Wikipedia and shares facts about Wikipedia itself,
+with a friendly, curious persona.
 """
 
 from signalwire import AgentBase
 from signalwire.core.function_result import SwaigFunctionResult
 
 class FredTheWikiBot(AgentBase):
-    """Fred - Your friendly Wikipedia assistant"""
+    """Fred, a Wikipedia assistant with a friendly persona"""
     
     def __init__(self):
         super().__init__(
@@ -40,19 +43,21 @@ class FredTheWikiBot(AgentBase):
         )
 ```
 
-**What's happening here:**
+Each line has a job:
 
-- `#!/usr/bin/env python3` - Makes the script executable on Unix systems
-- We import `AgentBase` - the foundation class for all agents
-- We import `SwaigFunctionResult` - used for returning function results
-- `name="Fred"` - The agent's identifier
-- `route="/fred"` - The HTTP endpoint (accessible at http://localhost:3000/fred)
+- `#!/usr/bin/env python3` lets you run the file directly on Linux and macOS once it's executable
+- `AgentBase` is the class every agent inherits from
+- `SwaigFunctionResult` is what a function returns to the model (Lesson 5)
+- `name="Fred"` is the agent's name
+- `route="/fred"` is the agent's HTTP path, so Fred answers at `http://localhost:3000/fred`
 
 ## Defining Fred's Personality
 
-Now let's give Fred his friendly personality using the Prompt Object Model (POM):
+The prompt tells the model who Fred is and how to behave. The SDK builds it from named sections, using the Prompt Object Model (POM).
 
 ### Step 2: Add Personality Section
+
+The first section sets the persona:
 
 ```python
 def __init__(self):
@@ -69,6 +74,8 @@ def __init__(self):
 ```
 
 ### Step 3: Add Goal and Instructions
+
+Two more sections give Fred a goal and specific instructions:
 
 ```python
     # Define Fred's primary goal
@@ -91,17 +98,19 @@ def __init__(self):
     )
 ```
 
-**POM Sections Explained:**
+Each section has a purpose:
 
-- **Personality**: Defines Fred's character and tone
-- **Goal**: His primary purpose
-- **Instructions**: Specific behavioral guidelines (as bullet points)
+- **Personality**: Fred's character and tone
+- **Goal**: what Fred is for
+- **Instructions**: specific behavior, as bullet points
 
 ## Configuring Voice and Language
 
-Let's give Fred a voice! SignalWire supports multiple Text-to-Speech providers:
+A language entry sets the voice Fred speaks with, and the phrases it can say while it thinks.
 
 ### Step 4: Add Language Configuration
+
+Add the language after the prompt sections:
 
 ```python
     # Configure Fred's voice
@@ -118,30 +127,22 @@ Let's give Fred a voice! SignalWire supports multiple Text-to-Speech providers:
     )
 ```
 
-**Voice Configuration:**
+The settings work like this:
 
-- `name`: Display name for the language
-- `code`: Language code (en-US for US English)
-- `voice`: TTS voice selection
-  - Format: `provider.voice_name`
-  - Example: `rime.bolt` uses Rime provider with the "bolt" voice
-- `speech_fillers`: Phrases used while the AI is "thinking"
+- `name`: a display name for the language
+- `code`: the language code, `en-US` for US English
+- `voice`: the text-to-speech voice, written as `provider.voice_name`. `rime.bolt` is the Rime provider's "bolt" voice.
+- `speech_fillers`: phrases the platform can say while the model prepares a reply
 
-### Available Voice Options
-
-```python
-# Other voice examples:
-# "rime.spore" - Professional, clear
-# "rime.marsh" - Deep, authoritative  
-# "rime.cove" - Warm, friendly
-# "elevenlabs.rachel" - Natural, conversational
-```
+The [SignalWire documentation](https://signalwire.com/docs) lists the voices each provider offers.
 
 ## Setting Conversation Parameters
 
-Now let's configure how Fred interacts during conversations:
+Parameters control how the conversation runs: which model, who speaks first, and how long a pause ends a turn.
 
 ### Step 5: Set AI Parameters
+
+Set the parameters with `set_params`:
 
 ```python
     # Set conversation parameters
@@ -149,22 +150,22 @@ Now let's configure how Fred interacts during conversations:
         "ai_model": "gpt-4.1-nano",       # The AI model to use
         "wait_for_user": True,            # Wait for user to speak first
         "end_of_speech_timeout": 1000,    # Milliseconds of silence before assuming speech ended
-        "ai_volume": 7,                   # Voice volume level (1-10)
+        "ai_volume": 7,                   # Voice volume adjustment (-50 to 50, default 0)
         "local_tz": "America/New_York"    # Timezone for time-related functions
     })
 ```
 
-**Parameter Breakdown:**
+Each parameter has a range the platform accepts:
 
-- `ai_model`: Which OpenAI model to use
-  - `gpt-4.1-nano` - Fast, efficient
-  - `gpt-4-turbo` - More capable
-- `wait_for_user`: Whether to wait for user input or speak first
-- `end_of_speech_timeout`: How long to wait during pauses
-- `ai_volume`: Speech volume (1=quiet, 10=loud)
-- `local_tz`: Default timezone for the agent
+- `ai_model`: the model that runs the conversation. The SWML schema lists `gpt-4o-mini` (the default), `gpt-4.1-mini` and `gpt-4.1-nano`. Fred uses `gpt-4.1-nano`, the smallest of the three.
+- `wait_for_user`: when `True`, the caller speaks first. When `False`, the agent opens the conversation.
+- `end_of_speech_timeout`: how many milliseconds of silence end the caller's turn, from 250 to 10,000. The default is 700.
+- `ai_volume`: raises or lowers the agent's voice, from -50 to 50. The default is 0.
+- `local_tz`: the agent's time zone, as an IANA name
 
-### Step 6: Add Global Context
+### Step 6: Add Global Data
+
+Global data is session data that travels with the call:
 
 ```python
     # Add some context about Fred
@@ -175,13 +176,15 @@ Now let's configure how Fred interacts during conversations:
     })
 ```
 
-This data is available to the AI during conversations, helping maintain consistency.
+The model doesn't see global data unless a prompt refers to a key, such as `${global_data.specialty}`. Functions receive it with every request, so it's a place for facts your code needs during the call.
 
 ## Adding Speech Recognition Hints
 
-Help the speech recognition system understand domain-specific terms:
+Hints tell speech recognition which words and phrases to expect.
 
 ### Step 7: Add Recognition Hints
+
+Add the words callers are likely to say to Fred:
 
 ```python
     # Add hints for better speech recognition
@@ -196,26 +199,26 @@ Help the speech recognition system understand domain-specific terms:
     ])
 ```
 
-These hints improve accuracy when users say these phrases.
+Hints improve recognition accuracy when callers say these words.
 
 ## Complete Basic Structure
 
-Here's Fred's complete basic structure so far:
+Here's Fred's structure so far:
 
 ```python
 #!/usr/bin/env python3
 """
-Fred - The Wikipedia Knowledge Bot
+Fred: a Wikipedia knowledge bot
 
-A friendly agent that can search Wikipedia for factual information.
-Fred is curious, helpful, and loves sharing knowledge from Wikipedia.
+An agent that searches Wikipedia and shares facts about Wikipedia itself,
+with a friendly, curious persona.
 """
 
 from signalwire import AgentBase
 from signalwire.core.function_result import SwaigFunctionResult
 
 class FredTheWikiBot(AgentBase):
-    """Fred - Your friendly Wikipedia assistant"""
+    """Fred, a Wikipedia assistant with a friendly persona"""
     
     def __init__(self):
         super().__init__(
@@ -289,72 +292,67 @@ class FredTheWikiBot(AgentBase):
 
 ## Testing the Basic Structure
 
-Add a simple main function to test:
+A short `main` function confirms the class builds without starting a server:
 
 <!-- snippet: no-run illustrative fragment (references `FredTheWikiBot` established in the surrounding prose) -->
 ```python
 def main():
     """Test Fred's basic structure"""
     fred = FredTheWikiBot()
-    print(f"✅ Fred created successfully!")
+    print("Fred created.")
     print(f"   Name: {fred.get_name()}")
     print(f"   Route: /fred")
-    print(f"   Ready to add capabilities!")
 
 if __name__ == "__main__":
     main()
 ```
 
-Run it:
+Run the file to build the agent and print its name:
+
 ```bash
 python fred.py
 ```
 
-Expected output:
+The output confirms the agent's name and route:
+
 ```
-✅ Fred created successfully!
+Fred created.
    Name: Fred
    Route: /fred
-   Ready to add capabilities!
 ```
 
 ## Key Concepts Review
 
+This lesson used three of the SDK's building blocks.
+
 ### Prompt Object Model (POM)
 
-POM organizes your agent's instructions into logical sections:
-- More maintainable than one long prompt
-- Easier to update specific behaviors
-- Clear structure for complex agents
+POM organizes the prompt into named sections:
+
+- Easier to maintain than one long prompt
+- Each behavior can be updated in its own section
+- A clear structure as the agent grows
 
 ### Voice Configuration
 
-- Multiple TTS providers available
-- Each voice has different characteristics
-- Speech fillers make conversations feel natural
+The language entry controls how Fred sounds:
+
+- Several text-to-speech providers are available
+- Each voice has its own character
+- Speech fillers cover the pause while the model prepares a reply
 
 ### Global Data
 
-- Provides context throughout the conversation
-- Helps maintain consistency
-- Can include any JSON-serializable data
+Global data holds session facts:
+
+- Functions receive it with every request
+- The model sees a value only when a prompt refers to it
+- It can hold any JSON-serializable data
 
 ## Next Steps
 
-Fred now has personality and voice, but he can't search Wikipedia yet. Let's add that capability!
-
-➡️ Continue to [Lesson 4: Adding the Wikipedia Search Skill](04-wikipedia-skill.md)
+Fred has a persona and a voice, but it can't search Wikipedia yet. Continue with [Lesson 4: Adding the Wikipedia Search Skill](04-wikipedia-skill.md).
 
 ---
 
-**Progress Check:**
-- [x] Created FredTheWikiBot class
-- [x] Defined personality with POM
-- [x] Configured voice settings
-- [x] Set conversation parameters
-- [ ] Add Wikipedia search capability
-- [ ] Add custom functions
-
----
-
-[← Previous: Environment Setup](02-setup.md) | [Back to Overview](README.md) | [Next: Wikipedia Skill →](04-wikipedia-skill.md)
+[Previous: Environment Setup](02-setup.md) | [Overview](README.md) | [Next: Wikipedia Skill](04-wikipedia-skill.md)

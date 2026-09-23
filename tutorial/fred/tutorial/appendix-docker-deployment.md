@@ -1,6 +1,6 @@
-# Appendix: Docker Deployment Guide
+# Appendix B: Docker Deployment
 
-This guide covers deploying Fred using Docker for production-ready containerization.
+A container packages Fred with its Python version and dependencies, so it runs the same way on your machine and on a server. This appendix covers the Docker files in `tutorial/fred/`, how to build and run them, and what changes in production.
 
 ## Table of Contents
 
@@ -11,32 +11,36 @@ This guide covers deploying Fred using Docker for production-ready containerizat
 5. [Docker Compose Setup](#docker-compose-setup)
 6. [Building and Running](#building-and-running)
 7. [Production Best Practices](#production-best-practices)
+8. [Container Registry Deployment](#container-registry-deployment)
+9. [Kubernetes Deployment](#kubernetes-deployment)
+10. [Troubleshooting Docker Deployments](#troubleshooting-docker-deployments)
 
 ---
 
 ## Why Docker?
 
-Docker provides several benefits for deploying Fred:
+Running Fred in a container has five benefits:
 
-- **Consistency**: Same environment everywhere
-- **Isolation**: No dependency conflicts
-- **Scalability**: Easy to deploy multiple instances
-- **Portability**: Runs on any Docker-enabled host
-- **Security**: Contained environment with limited access
+- **Consistency**: the same environment everywhere
+- **Isolation**: Fred's dependencies can't conflict with other software
+- **Scalability**: more copies of Fred start from the same image
+- **Portability**: the image runs on any host with Docker
+- **Security**: the process runs as an unprivileged user, with limited access to the host
 
 ## Docker Files Overview
 
-We'll create three Docker-related files:
+The tutorial directory includes four Docker-related files:
 
-1. **Dockerfile** - Basic single-stage build
-2. **Dockerfile.multi** - Optimized multi-stage build
-3. **docker-compose.yml** - Orchestration configuration
+1. **`Dockerfile`**: a single-stage build
+2. **`Dockerfile.multi`**: a multi-stage build that produces a smaller image
+3. **`docker-compose.yml`**: settings for running Fred with Docker Compose
+4. **`.env.example`**: the settings Compose reads, to copy to `.env`
 
 ## Basic Dockerfile
 
-This simple Dockerfile gets Fred running quickly:
-
 ### File: `Dockerfile`
+
+The single-stage `Dockerfile` installs the requirements and runs Fred as an unprivileged user:
 
 ```dockerfile
 # Use official Python runtime as base image
@@ -73,23 +77,25 @@ USER freduser
 # Expose the port Fred runs on
 EXPOSE 3000
 
-# Health check
+# Health check: /health needs no credentials, and urlopen fails on an error status
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:3000/health', auth=('${SWML_BASIC_AUTH_USER}', '${SWML_BASIC_AUTH_PASSWORD}'))"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:3000/health')"
 
 # Run Fred
 CMD ["python", "fred.py"]
 ```
 
-## Multi-Stage Build
+The health check calls `/health`, which needs no credentials. `urlopen` raises an error for a failed request, so Docker marks the container unhealthy when Fred stops answering.
 
-For smaller, more secure images, use a multi-stage build:
+## Multi-Stage Build
 
 ### File: `Dockerfile.multi`
 
+A multi-stage build installs the dependencies in one image and copies only the result into the final one, which leaves the build tools out:
+
 ```dockerfile
 # Stage 1: Build environment
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Set working directory
 WORKDIR /app
@@ -112,7 +118,7 @@ FROM python:3.11-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app/deps:$PYTHONPATH
+    PYTHONPATH=/app/deps
 
 # Set working directory
 WORKDIR /app
@@ -142,13 +148,11 @@ CMD ["python", "fred.py"]
 
 ## Docker Compose Setup
 
-For easier management and configuration:
-
 ### File: `docker-compose.yml`
 
-```yaml
-version: '3.8'
+Compose keeps the settings for running Fred in one file:
 
+```yaml
 services:
   fred:
     # Build from local Dockerfile
@@ -168,9 +172,13 @@ services:
     
     # Environment variables
     environment:
-      # Authentication
-      - SWML_BASIC_AUTH_USER=${FRED_AUTH_USER:-fred_user}
-      - SWML_BASIC_AUTH_PASSWORD=${FRED_AUTH_PASSWORD:-secure_password_123}
+      # Authentication: Compose refuses to start without a password
+      - SWML_BASIC_AUTH_USER=${FRED_AUTH_USER:-fred}
+      - SWML_BASIC_AUTH_PASSWORD=${FRED_AUTH_PASSWORD:?Set FRED_AUTH_PASSWORD in .env}
+      
+      # Request signatures, and one tool-token secret for every copy of Fred
+      - SIGNALWIRE_SIGNING_KEY=${SIGNALWIRE_SIGNING_KEY:-}
+      - SIGNALWIRE_SWAIG_SECRET=${SIGNALWIRE_SWAIG_SECRET:-}
       
       # SignalWire configuration
       - SWML_PROXY_URL_BASE=${PROXY_URL:-}
@@ -183,7 +191,7 @@ services:
     
     # Health check
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:3000/health', auth=('${SWML_BASIC_AUTH_USER:-fred_user}', '${SWML_BASIC_AUTH_PASSWORD:-secure_password_123}'))"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -207,12 +215,27 @@ services:
           memory: 128M
 ```
 
-### File: `.env` (Environment Configuration)
+Compose refuses to start until `FRED_AUTH_PASSWORD` has a value, so Fred never runs with a password someone could guess.
+
+### File: `.env`
+
+Compose reads `.env` from the same directory. Copy `.env.example` to `.env` and fill in the values:
 
 ```bash
+# Fred Bot Docker Environment Configuration
+# Copy this file to .env and update with your values
+
 # Authentication
-FRED_AUTH_USER=fred_prod
-FRED_AUTH_PASSWORD=your_secure_password_here
+FRED_AUTH_USER=fred
+FRED_AUTH_PASSWORD=a-long-random-password
+
+# Your project's signing key, from the SignalWire dashboard. With it set,
+# Fred rejects requests SignalWire didn't sign.
+SIGNALWIRE_SIGNING_KEY=
+
+# The secret behind Fred's tool tokens. Set it so calls in progress survive
+# a restart, and use the same value for every copy of Fred.
+SIGNALWIRE_SWAIG_SECRET=
 
 # Proxy configuration (if needed)
 # PROXY_URL=https://your-domain.com
@@ -221,9 +244,15 @@ FRED_AUTH_PASSWORD=your_secure_password_here
 TZ=America/New_York
 ```
 
+Keep `.env` out of version control.
+
 ## Building and Running
 
+You can run Fred with Docker directly, or with Compose.
+
 ### Using Docker Directly
+
+Build the image, then run it with the credentials as environment variables:
 
 ```bash
 # Build the image
@@ -233,8 +262,8 @@ docker build -t fred-bot:latest .
 docker run -d \
   --name fred \
   -p 3000:3000 \
-  -e SWML_BASIC_AUTH_USER=fred_user \
-  -e SWML_BASIC_AUTH_PASSWORD=secure_password \
+  -e SWML_BASIC_AUTH_USER=fred \
+  -e SWML_BASIC_AUTH_PASSWORD=a-long-random-password \
   fred-bot:latest
 
 # View logs
@@ -249,74 +278,61 @@ docker rm fred
 
 ### Using Docker Compose
 
+Compose builds the image when it needs to:
+
 ```bash
 # Start Fred (builds if needed)
-docker-compose up -d
+docker compose up -d
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Stop Fred
-docker-compose down
+docker compose down
 
 # Rebuild and restart
-docker-compose up -d --build
-
-# Scale to multiple instances
-docker-compose up -d --scale fred=3
+docker compose up -d --build
 ```
 
 ## Production Best Practices
 
+A production deployment adds five things to these files.
+
 ### 1. Security Hardening
 
-Create a more secure Dockerfile:
-
-```dockerfile
-# Use distroless base image for minimal attack surface
-FROM python:3.11-slim as builder
-# ... build steps ...
-
-FROM gcr.io/distroless/python3-debian11
-COPY --from=builder /app /app
-WORKDIR /app
-EXPOSE 3000
-ENTRYPOINT ["python", "fred.py"]
-```
+The images already run Fred as the unprivileged `freduser`, and copy only `requirements.txt` and `fred.py`, so no secrets end up in the image. Build production images from `Dockerfile.multi`, which leaves the compiler out of the final image.
 
 ### 2. Secrets Management
 
-Never hardcode credentials. Keep them out of the compose file by loading an
-environment file that is not committed to source control:
+Keep secrets out of the Compose file and the image. Load them from an environment file that isn't committed to source control:
 
 ```yaml
 # docker-compose using an env file for secrets
-version: '3.8'
-
 services:
   fred:
     # ... other config ...
     env_file:
-      - ./secrets/fred.env   # not committed; holds SWML_BASIC_AUTH_PASSWORD=...
+      - ./secrets/fred.env   # not committed
 ```
+
+The file sets the variables the SDK reads:
 
 ```bash
 # ./secrets/fred.env
 SWML_BASIC_AUTH_USER=fred
-SWML_BASIC_AUTH_PASSWORD=your-secure-password
+SWML_BASIC_AUTH_PASSWORD=a-long-random-password
+SIGNALWIRE_SIGNING_KEY=your-signing-key
+SIGNALWIRE_SWAIG_SECRET=another-long-random-string
 ```
 
-The SDK reads `SWML_BASIC_AUTH_USER` / `SWML_BASIC_AUTH_PASSWORD` directly from
-the process environment.
+The SDK reads these variables from the process environment. [Lesson 6](06-running-testing.md#production-considerations) explains what each one protects.
 
 ### 3. Reverse Proxy Setup
 
-Add nginx for SSL termination:
+A reverse proxy such as nginx terminates HTTPS in front of Fred:
 
 ```yaml
 # docker-compose with nginx
-version: '3.8'
-
 services:
   nginx:
     image: nginx:alpine
@@ -336,45 +352,21 @@ services:
     # ... rest of config ...
 ```
 
-### 4. Monitoring and Logging
+Set `SWML_PROXY_URL_BASE` to Fred's public HTTPS address, so the function URLs in its SWML point at the proxy.
 
-Add Prometheus metrics and centralized logging:
+### 4. Logging
 
-```yaml
-# Enhanced docker-compose
-version: '3.8'
+Fred logs to standard output, so `docker logs` and your platform's log collector see everything. The Compose file's `json-file` driver keeps three files of up to 10 MB each.
 
-services:
-  fred:
-    # ... fred config ...
-    labels:
-      - "prometheus.io/scrape=true"
-      - "prometheus.io/port=3000"
-      - "prometheus.io/path=/metrics"
-  
-  promtail:
-    image: grafana/promtail:latest
-    volumes:
-      - /var/log:/var/log
-      - ./promtail-config.yml:/etc/promtail/config.yml
-    command: -config.file=/etc/promtail/config.yml
-```
+### 5. Running More Than One Copy
 
-### 5. Auto-restart and Updates
+Every copy of Fred must use the same `SIGNALWIRE_SWAIG_SECRET`. A function's token is signed with that secret, and SignalWire may send the call's next request to a different copy. With different secrets, those requests are refused.
 
-Use Watchtower for automatic updates:
-
-```yaml
-watchtower:
-  image: containrrr/watchtower
-  volumes:
-    - /var/run/docker.sock:/var/run/docker.sock
-  command: --interval 300 fred-bot
-```
+To run several copies with Compose, remove `container_name` and the fixed port mapping, and put a load balancer in front of them.
 
 ## Container Registry Deployment
 
-Push to a registry for cloud deployment:
+To deploy from a registry, tag and push the image, then run it on the server with the secrets file:
 
 ```bash
 # Tag for registry
@@ -387,13 +379,13 @@ docker push myregistry.com/fred-bot:latest
 docker run -d \
   --name fred \
   -p 3000:3000 \
-  --env-file .env \
+  --env-file ./secrets/fred.env \
   myregistry.com/fred-bot:latest
 ```
 
 ## Kubernetes Deployment
 
-For Kubernetes, create a deployment manifest:
+On Kubernetes, a Deployment runs the copies and reads the secrets from a Secret named `fred-secrets`:
 
 ```yaml
 apiVersion: apps/v1
@@ -426,6 +418,20 @@ spec:
             secretKeyRef:
               name: fred-secrets
               key: password
+        - name: SIGNALWIRE_SIGNING_KEY
+          valueFrom:
+            secretKeyRef:
+              name: fred-secrets
+              key: signing-key
+        - name: SIGNALWIRE_SWAIG_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: fred-secrets
+              key: swaig-secret
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 3000
         resources:
           requests:
             memory: "128Mi"
@@ -435,9 +441,15 @@ spec:
             cpu: "1000m"
 ```
 
+All three replicas read `SIGNALWIRE_SWAIG_SECRET` from the same Secret, so any replica can check a token another one issued.
+
 ## Troubleshooting Docker Deployments
 
+These commands show what a container is doing.
+
 ### Check Container Status
+
+List, inspect and measure the container:
 
 ```bash
 # List containers
@@ -452,6 +464,8 @@ docker stats fred
 
 ### Debug Inside Container
 
+Open a shell in the container, or run one command in it:
+
 ```bash
 # Execute shell in running container
 docker exec -it fred /bin/bash
@@ -462,15 +476,17 @@ docker exec fred python -c "import signalwire; print(signalwire.__version__)"
 
 ### Common Issues
 
-1. **Port conflicts**: Change host port in mapping
-2. **Permission errors**: Ensure fred.py is executable
-3. **Memory issues**: Increase limits in docker-compose
-4. **Network issues**: Check Docker network configuration
+Four problems come up most often:
 
-## Summary
+1. **Port conflicts**: another program uses port 3000. Change the host side of the port mapping, for example `-p 3001:3000`.
+2. **Permission errors**: Fred runs as `freduser`, which can only write to directories it owns, such as `/app`.
+3. **Memory limits**: if the container is killed for using too much memory, raise the limit in `docker-compose.yml`.
+4. **Refused tool calls**: with more than one copy, check that every copy has the same `SIGNALWIRE_SWAIG_SECRET`.
 
-Docker deployment provides a robust, scalable way to run Fred in production. Start with the basic Dockerfile for development, then move to multi-stage builds and orchestration for production deployments.
+## Next Steps
+
+Start with the single-stage `Dockerfile` while you develop, and move to `Dockerfile.multi` and a secrets file for production. To build an agent whose actions have consequences, continue with the [Full-Guardrails Agent tutorial](../../full-guardrails-agent/tutorial/README.md).
 
 ---
 
-[← Back to Overview](README.md) | [← Previous: Complete Code](appendix-complete-code.md)
+[Previous: Complete Code](appendix-complete-code.md) | [Overview](README.md)

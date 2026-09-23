@@ -1,6 +1,6 @@
 # Lesson 5: Creating Custom Functions
 
-Let's make Fred more engaging by adding a custom function that shares fun facts about Wikipedia itself! This lesson teaches you how to create SWAIG functions.
+Skills cover common capabilities, and your own functions cover the rest. This lesson writes `share_fun_fact`, a SWAIG function that shares facts about Wikipedia, and explains how the model calls it and what it returns.
 
 ## Table of Contents
 
@@ -9,30 +9,34 @@ Let's make Fred more engaging by adding a custom function that shares fun facts 
 3. [The @tool Decorator](#the-tool-decorator)
 4. [Function Implementation](#function-implementation)
 5. [Returning Results](#returning-results)
+6. [Testing Custom Functions](#testing-custom-functions)
 
 ---
 
 ## Understanding SWAIG Functions
 
-SWAIG (SignalWire AI Gateway) functions are tools that your AI agent can call during conversations. They enable your agent to perform actions beyond just talking.
+SWAIG (SignalWire AI Gateway) functions are tools the model can call during a conversation. They let an agent act, not only talk.
 
-### What is a SWAIG Function?
+### What Is a SWAIG Function?
 
-**A SWAIG function:**
-- Is callable by the AI during conversations
-- Receives parameters from the AI
-- Performs an action (API call, calculation, etc.)
-- Returns a result the AI can use
+A SWAIG function:
+
+- Can be called by the model during a conversation
+- Receives arguments the model chooses
+- Runs your code, such as an API call or a calculation
+- Returns a result the model uses in its reply
 
 ### Function Flow
 
+A function call moves through five stages:
+
 ```
-User asks question → AI decides to call function → Function executes → Result returned to AI → AI responds to user
+Caller asks a question → Model calls the function → Your code runs → Result returns to the model → Model answers the caller
 ```
 
 ## Creating the Fun Fact Function
 
-Let's add a function that shares random Wikipedia facts. This will make Fred more entertaining!
+The first version of the function picks a random fact from a list.
 
 ### Step 1: Add the Function Decorator
 
@@ -60,9 +64,10 @@ Add this inside Fred's `__init__` method, after the skill configuration:
 
 ### Understanding the Code
 
-Let's break down each part:
+The function has three parts.
 
-**The Decorator:**
+**The decorator** registers the function with the agent:
+
 <!-- snippet: no-compile decorator-fragment (decorator with no function below it) -->
 ```python
 @self.tool(
@@ -72,7 +77,8 @@ Let's break down each part:
 )
 ```
 
-**The Function Signature:**
+**The signature** receives the model's arguments and the request:
+
 <!-- snippet: no-compile signature-only (function signature with commented-out body) -->
 ```python
 def share_fun_fact(args, raw_data):
@@ -80,7 +86,8 @@ def share_fun_fact(args, raw_data):
     # raw_data: Full request data (call_id, metadata, etc.)
 ```
 
-**The Implementation:**
+**The body** does the work and returns a result:
+
 <!-- snippet: no-compile method-body-excerpt (statements lifted from inside the function, incl. bare return) -->
 ```python
 import random                       # Import inside function is fine
@@ -91,18 +98,20 @@ return SwaigFunctionResult(f"...")  # Return formatted result
 
 ## The @tool Decorator
 
-The `@self.tool()` decorator is Fred's way of registering SWAIG functions. Let's explore its parameters:
+`@self.tool()` registers a function as a SWAIG tool. It takes a name, a description and a parameter schema.
 
 ### Decorator Parameters
+
+Each parameter of the decorator has a role:
 
 <!-- snippet: no-compile decorator-fragment (decorator with no function below it) -->
 ```python
 @self.tool(
     name="function_name",           # Required: Unique function identifier
     description="What it does",     # Required: AI uses this to decide when to call
-    parameters={                    # Required: Parameter definitions
+    parameters={                    # Parameter definitions (JSON Schema)
         "param_name": {
-            "type": "string",       # Data type: string, number, boolean
+            "type": "string",       # JSON Schema type: string, integer, number, boolean
             "description": "...",   # What the parameter is for
             "enum": ["opt1", "opt2"] # Optional: Allowed values
         }
@@ -110,9 +119,11 @@ The `@self.tool()` decorator is Fred's way of registering SWAIG functions. Let's
 )
 ```
 
+The description matters more than it looks. The model reads it on every turn to decide when to call the function.
+
 ### Example with Parameters
 
-Here's an example function that takes parameters:
+This example function takes two parameters:
 
 ```python
 @self.tool(
@@ -140,11 +151,11 @@ def search_by_category(args, raw_data):
 
 ## Function Implementation
 
-Let's create a more sophisticated version of our fun fact function:
+The final version groups facts by category, and lets the model ask for one.
 
-### Step 2: Enhanced Fun Fact Function
+### Step 2: Fun Fact Function With Categories
 
-Replace the simple version with this enhanced one:
+Replace the first version with this one:
 
 ```python
         # Enhanced fun fact function with categories
@@ -209,22 +220,27 @@ Replace the simple version with this enhanced one:
                 return SwaigFunctionResult(f"Here's a fun Wikipedia fact: {fact}")
 ```
 
-### Best Practices for Function Implementation
+### Practices for Function Implementation
 
-1. **Parameter Validation**
+Three habits keep functions reliable.
+
+1. **Give every argument a default.** The model may leave an optional argument out.
+
    <!-- snippet: no-compile method-body-excerpt (indented statement lifted from inside the function) -->
    ```python
    category = args.get("category", "random")  # Always provide defaults
    ```
 
-2. **Error Handling**
+2. **Handle the empty case.** Return a message the model can pass on, instead of raising an error.
+
    <!-- snippet: no-compile method-body-excerpt (indented statement lifted from inside the function) -->
    ```python
    if not fact_list:
        return SwaigFunctionResult("I don't have any facts in that category.")
    ```
 
-3. **Clear Responses**
+3. **Say what the result is.** Context in the response helps the model use it.
+
    ```python
    # Include context in response
    return SwaigFunctionResult(f"Here's a {category} fact: {fact}")
@@ -232,9 +248,11 @@ Replace the simple version with this enhanced one:
 
 ## Returning Results
 
-SWAIG functions must return a `SwaigFunctionResult` object. This class provides several useful features:
+A SWAIG function returns a `SwaigFunctionResult`. It carries text for the model, and can also carry actions for the platform to carry out.
 
 ### Basic Result
+
+The simplest result is text for the model:
 
 <!-- snippet: no-compile method-body-excerpt (bare return outside a function) -->
 ```python
@@ -243,55 +261,57 @@ return SwaigFunctionResult("Simple text response")
 
 ### Result with Actions
 
+Helper methods add actions. This one plays an audio file in the background while the conversation continues:
+
 <!-- snippet: no-compile method-body-excerpt (bare return outside a function) -->
 ```python
 result = SwaigFunctionResult("Playing background music")
-result.add_action("play_audio", {"url": "https://example.com/music.mp3"})
+result.play_background_file("https://example.com/music.mp3")
 return result
 ```
 
 ### Multiple Actions
 
+The helpers return the result, so you can chain them. Actions run in order, so here the caller hears the sentence before the transfer starts:
+
 <!-- snippet: no-compile method-body-excerpt (bare return outside a function) -->
 ```python
-result = SwaigFunctionResult("Setting up the call")
-result.add_actions([
-    {"play_audio": {"url": "https://example.com/intro.mp3"}},
-    {"set_var": {"name": "call_started", "value": True}}
-])
-return result
+return (SwaigFunctionResult("Transferring the caller")
+        .say("One moment while I connect you.")
+        .connect("+15555550100"))
 ```
 
-### Available Actions
+### Common Actions
 
-Common SWAIG actions include:
-- `play_audio` - Play background audio
-- `stop_audio` - Stop background audio
-- `transfer` - Transfer the call
-- `hangup` - End the call
-- `set_var` - Set a variable
-- `play_tts` - Play text-to-speech
+These helper methods cover the most common actions:
+
+- `say(text)`: speak a fixed sentence
+- `connect(destination)`: transfer the call
+- `hangup()`: end the call
+- `play_background_file(url)`: play audio in the background
+- `stop_background_file()`: stop the background audio
+- `update_global_data(data)`: change the call's global data
+- `send_sms(to_number, from_number, body)`: send a text message
 
 ## Testing Custom Functions
 
-Let's update our main function to highlight both capabilities:
+The final `main` function starts Fred and lists both capabilities:
 
 ```python
 def main():
-    """Run Fred the Wiki Bot"""
+    """Run Fred"""
     print("=" * 60)
-    print("🤖 Fred - The Wikipedia Knowledge Bot")
+    print("Fred: a Wikipedia knowledge bot")
     print("=" * 60)
     print()
-    print("Fred is a friendly assistant who loves searching Wikipedia!")
-    print("He can help you learn about almost any topic.")
+    print("Fred searches Wikipedia and shares facts about Wikipedia itself.")
     print()
-    print("Example questions you can ask Fred:")
-    print("  • 'Tell me about Albert Einstein'")
-    print("  • 'What is quantum physics?'")
-    print("  • 'Who was Marie Curie?'")
-    print("  • 'Search for information about the solar system'")
-    print("  • 'Can you share a fun fact?'")
+    print("Questions to try:")
+    print("  - Tell me about Albert Einstein")
+    print("  - What is quantum physics?")
+    print("  - Who was Marie Curie?")
+    print("  - Search for information about the solar system")
+    print("  - Can you share a fun fact?")
     print()
     
     # Create and run Fred
@@ -300,25 +320,23 @@ def main():
     # Get auth credentials for display
     username, password = fred.get_basic_auth_credentials()
     
-    print(f"Fred is available at: http://localhost:3000/fred")
+    print(f"Fred is available at: http://localhost:{fred.port}/fred")
     print(f"Basic Auth: {username}:{password}")
     print()
-    print("Fred's capabilities:")
-    print("  ✓ Wikipedia search (via skill)")
-    print("  ✓ Fun facts about Wikipedia (custom function)")
-    print()
-    print("Starting Fred... Press Ctrl+C to stop.")
+    print("Starting Fred. Press Ctrl+C to stop.")
     print("=" * 60)
     
     try:
         fred.run()
     except KeyboardInterrupt:
-        print("\n👋 Fred says goodbye! Thanks for learning with me!")
+        print("\nFred stopped.")
 ```
+
+Lesson 6 runs it.
 
 ## Complete Function Reference
 
-Here's the complete fun fact function with all features:
+Here's the outline of the finished function, with a docstring:
 
 ```python
 # Inside __init__ method:
@@ -348,31 +366,13 @@ def share_fun_fact(args, raw_data):
     """
     import random
     
-    # Implementation as shown above...
-    # (Full implementation already provided)
+    # Implementation as shown in Step 2
 ```
 
 ## Next Steps
 
-Fred is now complete! He can search Wikipedia and share fun facts. Let's learn how to run and test him.
-
-➡️ Continue to [Lesson 6: Running and Testing Fred](06-running-testing.md)
+Fred can search Wikipedia and share facts about it. Next, run Fred and test both functions. Continue with [Lesson 6: Running and Testing Fred](06-running-testing.md).
 
 ---
 
-**Function Development Checklist:**
-- [x] Understood SWAIG function structure
-- [x] Created fun fact function
-- [x] Added parameter handling
-- [x] Implemented proper result returns
-- [x] Enhanced with categories
-
-**Fred's Complete Capabilities:**
-- ✅ Search Wikipedia (skill-based)
-- ✅ Share Wikipedia facts (custom function)
-- ✅ Natural conversation flow
-- ✅ Friendly personality
-
----
-
-[← Previous: Wikipedia Skill](04-wikipedia-skill.md) | [Back to Overview](README.md) | [Next: Running & Testing →](06-running-testing.md)
+[Previous: Wikipedia Skill](04-wikipedia-skill.md) | [Overview](README.md) | [Next: Running and Testing](06-running-testing.md)

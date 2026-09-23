@@ -1,6 +1,6 @@
-# Appendix: Complete Code & Management Script
+# Appendix A: Complete Code and Management Script
 
-Here's the complete implementation of Fred and the management script for your reference.
+This appendix has the complete `fred.py`, the complete management script, and a quick start that puts them together. The code here is the same as the files in `tutorial/fred/`.
 
 ## Table of Contents
 
@@ -8,26 +8,39 @@ Here's the complete implementation of Fred and the management script for your re
 2. [Management Script (fred.sh)](#management-script-fredsh)
 3. [Requirements File](#requirements-file)
 4. [Quick Start Guide](#quick-start-guide)
+5. [Directory Structure](#directory-structure)
+6. [Deployment Tips](#deployment-tips)
 
 ---
 
 ## Complete fred.py
 
+The agent, with the Wikipedia skill, the fun fact function, and the `main` function that runs it:
+
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 #!/usr/bin/env python3
 """
-Fred - The Wikipedia Knowledge Bot
+Copyright (c) 2025 SignalWire
 
-A friendly agent that can search Wikipedia for factual information.
-Fred is curious, helpful, and loves sharing knowledge from Wikipedia.
+This file is part of the SignalWire SDK.
+
+Licensed under the MIT License.
+See LICENSE file in the project root for full license information.
+"""
+
+"""
+Fred: a Wikipedia knowledge bot
+
+An agent that searches Wikipedia and shares facts about Wikipedia itself,
+with a friendly, curious persona.
 """
 
 from signalwire import AgentBase
 from signalwire.core.function_result import SwaigFunctionResult
 
 class FredTheWikiBot(AgentBase):
-    """Fred - Your friendly Wikipedia assistant"""
+    """Fred, a Wikipedia assistant with a friendly persona"""
     
     def __init__(self):
         super().__init__(
@@ -88,10 +101,10 @@ class FredTheWikiBot(AgentBase):
         )
         def share_fun_fact(args, raw_data):
             import random
-            
+
             # Get the requested category
             category = args.get("category", "random")
-            
+
             # Define facts by category
             facts = {
                 "statistics": [
@@ -114,21 +127,21 @@ class FredTheWikiBot(AgentBase):
                 ],
                 "random": []  # Will be filled with all facts
             }
-            
+
             # Combine all facts for random selection
             all_facts = []
             for fact_list in facts.values():
                 if fact_list:  # Skip empty random list
                     all_facts.extend(fact_list)
             facts["random"] = all_facts
-            
+
             # Select appropriate fact
             fact_list = facts.get(category, facts["random"])
             if not fact_list:
                 return SwaigFunctionResult("I don't have any facts in that category.")
-            
+
             fact = random.choice(fact_list)
-            
+
             # Add category context to response
             if category != "random":
                 return SwaigFunctionResult(f"Here's a {category} fact about Wikipedia: {fact}")
@@ -177,20 +190,19 @@ class FredTheWikiBot(AgentBase):
 
 
 def main():
-    """Run Fred the Wiki Bot"""
+    """Run Fred"""
     print("=" * 60)
-    print("🤖 Fred - The Wikipedia Knowledge Bot")
+    print("Fred: a Wikipedia knowledge bot")
     print("=" * 60)
     print()
-    print("Fred is a friendly assistant who loves searching Wikipedia!")
-    print("He can help you learn about almost any topic.")
+    print("Fred searches Wikipedia and shares facts about Wikipedia itself.")
     print()
-    print("Example questions you can ask Fred:")
-    print("  • 'Tell me about Albert Einstein'")
-    print("  • 'What is quantum physics?'")
-    print("  • 'Who was Marie Curie?'")
-    print("  • 'Search for information about the solar system'")
-    print("  • 'Can you share a fun fact?'")
+    print("Questions to try:")
+    print("  - Tell me about Albert Einstein")
+    print("  - What is quantum physics?")
+    print("  - Who was Marie Curie?")
+    print("  - Search for information about the solar system")
+    print("  - Can you share a fun fact?")
     print()
     
     # Create and run Fred
@@ -199,16 +211,16 @@ def main():
     # Get auth credentials for display
     username, password = fred.get_basic_auth_credentials()
     
-    print(f"Fred is available at: http://localhost:3000/fred")
+    print(f"Fred is available at: http://localhost:{fred.port}/fred")
     print(f"Basic Auth: {username}:{password}")
     print()
-    print("Starting Fred... Press Ctrl+C to stop.")
+    print("Starting Fred. Press Ctrl+C to stop.")
     print("=" * 60)
     
     try:
         fred.run()
     except KeyboardInterrupt:
-        print("\n👋 Fred says goodbye! Thanks for learning with me!")
+        print("\nFred stopped.")
 
 
 if __name__ == "__main__":
@@ -217,9 +229,11 @@ if __name__ == "__main__":
 
 ## Management Script (fred.sh)
 
+The complete script starts Fred in the background, stops it, reports its status, and follows its log:
+
 ```bash
 #!/bin/bash
-# Fred Bot Manager - Start/Stop Fred the Wikipedia Bot
+# Start, stop and check Fred, the Wikipedia bot
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PID_FILE="fred.pid"
@@ -254,9 +268,9 @@ start_fred() {
         return 1
     fi
     
-    echo -e "${GREEN}Starting Fred the Wikipedia Bot...${NC}"
+    echo -e "${GREEN}Starting Fred...${NC}"
     
-    # Check if fred.py exists
+    # Check that fred.py exists
     if [ ! -f "$FRED_SCRIPT" ]; then
         echo -e "${RED}Error: $FRED_SCRIPT not found!${NC}"
         return 1
@@ -273,20 +287,20 @@ start_fred() {
     sleep 2
     
     if is_running; then
-        echo -e "${GREEN}✅ Fred started successfully!${NC}"
+        echo -e "${GREEN}Fred started${NC}"
         echo -e "   PID: $PID"
         echo -e "   Log: $LOG_FILE"
-        echo -e "   URL: http://localhost:3000/fred"
+        echo -e "   URL: http://localhost:${PORT:-3000}/fred"
         
         # Try to extract auth credentials from log
         if [ -f "$LOG_FILE" ]; then
-            AUTH=$(grep "Basic Auth:" "$LOG_FILE" | tail -1)
+            AUTH=$(grep "Basic Auth:" "$LOG_FILE" | head -1)
             if [ ! -z "$AUTH" ]; then
                 echo -e "   $AUTH"
             fi
         fi
     else
-        echo -e "${RED}❌ Failed to start Fred${NC}"
+        echo -e "${RED}Fred failed to start${NC}"
         echo -e "   Check $LOG_FILE for errors"
         return 1
     fi
@@ -322,16 +336,16 @@ stop_fred() {
     # Clean up PID file
     rm -f "$PID_FILE"
     
-    echo -e "${GREEN}✅ Fred has been stopped${NC}"
+    echo -e "${GREEN}Fred stopped${NC}"
 }
 
 # Check Fred's status
 status_fred() {
     if is_running; then
         PID=$(cat "$PID_FILE")
-        echo -e "${GREEN}● Fred is running${NC}"
+        echo -e "${GREEN}Fred is running${NC}"
         echo -e "   PID: $PID"
-        echo -e "   URL: http://localhost:3000/fred"
+        echo -e "   URL: http://localhost:${PORT:-3000}/fred"
         
         # Show process info
         ps -p "$PID" -o pid,vsz,rss,comm
@@ -342,7 +356,7 @@ status_fred() {
             tail -5 "$LOG_FILE"
         fi
     else
-        echo -e "${RED}● Fred is not running${NC}"
+        echo -e "${RED}Fred is not running${NC}"
     fi
 }
 
@@ -376,7 +390,7 @@ case "$1" in
         show_logs
         ;;
     *)
-        echo "🤖 Fred Bot Manager"
+        echo "Fred manager"
         echo ""
         echo "Usage: $0 {start|stop|restart|status|logs}"
         echo ""
@@ -397,13 +411,13 @@ esac
 
 ## Requirements File
 
-Create `requirements.txt`:
+Fred needs only the SDK. Create `requirements.txt`:
 
 ```txt
 signalwire-sdk>=3.4.3
 ```
 
-Or capture your current environment:
+Or record everything installed in your virtual environment:
 
 ```bash
 pip freeze > requirements.txt
@@ -411,14 +425,18 @@ pip freeze > requirements.txt
 
 ## Quick Start Guide
 
+These steps take you from an empty directory to a running Fred.
+
 ### 1. Setup
+
+Create the project and install the SDK:
 
 ```bash
 # Create project directory
 mkdir fred-bot
 cd fred-bot
 
-# Create virtual environment (optional but recommended)
+# Create a virtual environment
 python3 -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 
@@ -428,17 +446,21 @@ pip install signalwire-sdk
 
 ### 2. Create Files
 
-Save the complete code above as:
-- `fred.py` - The main agent code
-- `fred.sh` - The management script
-- `requirements.txt` - Dependencies
+Save the code in this appendix as three files:
+
+- `fred.py`: the agent
+- `fred.sh`: the management script
+- `requirements.txt`: the dependencies
+
+Then make the script executable:
 
 ```bash
-# Make script executable
 chmod +x fred.sh
 ```
 
 ### 3. Run Fred
+
+Run Fred directly, or with the management script:
 
 ```bash
 # Direct method
@@ -452,9 +474,9 @@ python fred.py
 
 ### 4. Test Fred
 
-```bash
-# Get credentials from output, then test:
+Take the credentials from Fred's output, then test it:
 
+```bash
 # Test SWML endpoint
 curl -u username:password http://localhost:3000/fred
 
@@ -465,14 +487,16 @@ swaig-test fred.py --exec search_wiki --query "Python programming"
 swaig-test fred.py --exec share_fun_fact --category history
 ```
 
-To call a function over HTTP instead, use the URL from Fred's SWML, which carries the function's token. See Lesson 6, Step 3.
+To call a function over HTTP instead, use the URL from Fred's SWML, which carries the function's token. [Lesson 6, Step 3](06-running-testing.md#step-3-test-wikipedia-search) shows how.
 
 ### 5. Environment Variables (Optional)
 
+Fixed credentials stay the same across restarts:
+
 ```bash
 # Set fixed credentials
-export SWML_BASIC_AUTH_USER="fred_user"
-export SWML_BASIC_AUTH_PASSWORD="secure_password_123"
+export SWML_BASIC_AUTH_USER="fred"
+export SWML_BASIC_AUTH_PASSWORD="a-long-random-password"
 
 # Run Fred with fixed auth
 python fred.py
@@ -480,37 +504,34 @@ python fred.py
 
 ## Directory Structure
 
-Your complete Fred project should look like this:
+A complete Fred project looks like this. `fred.pid` and `fred.log` appear when the management script runs Fred:
 
 ```
 fred-bot/
-├── fred.py           # Main agent code
+├── fred.py           # The agent
 ├── fred.sh           # Management script
 ├── requirements.txt  # Python dependencies
-├── fred.pid         # Process ID (created when running)
-├── fred.log         # Log file (created when running)
-└── tutorial/        # Tutorial documentation
-    ├── README.md
-    ├── 01-introduction.md
-    ├── 02-setup.md
-    ├── 03-basic-agent.md
-    ├── 04-wikipedia-skill.md
-    ├── 05-custom-functions.md
-    ├── 06-running-testing.md
-    └── appendix-complete-code.md
+├── fred.pid          # Process ID (created by fred.sh)
+└── fred.log          # Log file (created by fred.sh)
 ```
 
 ## Deployment Tips
 
+A production deployment needs more than a running process.
+
 ### For Production
 
-1. **Use environment variables for authentication**
-2. **Deploy behind HTTPS** (reverse proxy or cloud provider)
-3. **Use a process manager** (PM2, systemd, supervisor)
-4. **Set up logging rotation**
-5. **Monitor health and uptime**
+Five practices cover most deployments:
+
+1. **Set secrets in environment variables**: the credentials, `SIGNALWIRE_SIGNING_KEY` and `SIGNALWIRE_SWAIG_SECRET` ([Lesson 6](06-running-testing.md#production-considerations) explains each)
+2. **Serve Fred over HTTPS**, behind a reverse proxy or with the SDK's TLS support
+3. **Run Fred under a process manager**, such as systemd or Docker, so it restarts after a crash or a reboot
+4. **Rotate the logs**
+5. **Monitor health and uptime**, for example with the `/health` endpoint
 
 ### Example systemd Service
+
+This unit runs Fred from a virtual environment in `/opt/fred-bot`, and restarts it if it stops:
 
 ```ini
 [Unit]
@@ -521,19 +542,27 @@ After=network.target
 Type=simple
 User=fredbot
 WorkingDirectory=/opt/fred-bot
-ExecStart=/usr/bin/python3 /opt/fred-bot/fred.py
+ExecStart=/opt/fred-bot/venv/bin/python /opt/fred-bot/fred.py
 Restart=always
-Environment="SWML_BASIC_AUTH_USER=fred_prod"
-Environment="SWML_BASIC_AUTH_PASSWORD=strong_password_here"
+EnvironmentFile=/opt/fred-bot/fred.env
 
 [Install]
 WantedBy=multi-user.target
 ```
 
+Keep the secrets in `/opt/fred-bot/fred.env`, readable only by the `fredbot` user, rather than in the unit file:
+
+```bash
+SWML_BASIC_AUTH_USER=fred
+SWML_BASIC_AUTH_PASSWORD=a-long-random-password
+SIGNALWIRE_SIGNING_KEY=your-signing-key
+SIGNALWIRE_SWAIG_SECRET=another-long-random-string
+```
+
+## Next Steps
+
+To run Fred in a container, continue with [Appendix B: Docker Deployment](appendix-docker-deployment.md).
+
 ---
 
-Congratulations! You now have a complete, working Wikipedia assistant bot built with the SignalWire SDK. Fred is ready to help users learn and discover new information!
-
----
-
-[← Previous: Running & Testing](06-running-testing.md) | [Back to Overview](README.md) | [Next: Docker Deployment →](appendix-docker-deployment.md)
+[Previous: Running and Testing](06-running-testing.md) | [Overview](README.md) | [Next: Docker Deployment](appendix-docker-deployment.md)

@@ -1,6 +1,6 @@
 # Lesson 4: Adding the Wikipedia Search Skill
 
-Now we'll give Fred the ability to search Wikipedia! The SignalWire SDK's skills system makes this incredibly easy.
+Fred's job is answering questions from Wikipedia. Instead of writing the search code, this lesson adds the SDK's `wikipedia_search` skill, configures it, and looks at what the skill does inside the agent.
 
 ## Table of Contents
 
@@ -9,33 +9,37 @@ Now we'll give Fred the ability to search Wikipedia! The SignalWire SDK's skills
 3. [Configuring the Skill](#configuring-the-skill)
 4. [How Skills Work Internally](#how-skills-work-internally)
 5. [Testing Wikipedia Search](#testing-wikipedia-search)
+6. [How Fred Uses Wikipedia Search](#how-fred-uses-wikipedia-search)
+7. [Skill Benefits](#skill-benefits)
 
 ---
 
 ## Understanding Skills
 
-Skills are modular capabilities that extend your agent's functionality. Think of them as plugins that add specific features.
+Skills are modules that add a capability to an agent, much like plugins.
 
-### What is a Skill?
+### What Is a Skill?
 
-**A skill is:**
-- A self-contained module with specific functionality
-- Automatically integrated into your agent
-- Configured with simple parameters
-- Reusable across different agents
+A skill has four properties:
+
+- It's a self-contained module with one capability
+- It registers its own functions and prompt text with the agent
+- It's configured with a dictionary of parameters
+- It can be reused across agents
 
 ### Available Built-in Skills
 
-The SDK includes several pre-built skills:
-- `wikipedia_search` - Search Wikipedia articles
-- `datetime` - Get current date/time
-- `math` - Perform calculations
-- `web_search` - Search Google (requires API key)
-- `weather_api` - Get weather information
+The SDK includes several ready-made skills, including:
+
+- `wikipedia_search`: search Wikipedia articles
+- `datetime`: get the current date and time
+- `math`: perform calculations
+- `web_search`: search the web with the Google Custom Search API (needs an API key)
+- `weather_api`: get weather from WeatherAPI.com (needs an API key)
 
 ## Adding the Wikipedia Skill
 
-Let's add Wikipedia search to Fred with just one line of code!
+Adding a skill takes one line in the agent's constructor.
 
 ### Step 1: Basic Skill Addition
 
@@ -46,11 +50,11 @@ Add this to Fred's `__init__` method, after the global data:
         self.add_skill("wikipedia_search")
 ```
 
-That's it! Fred can now search Wikipedia. But let's customize it for better results.
+With that line, Fred can search Wikipedia. The next step tunes the skill for Fred.
 
 ### Step 2: Customized Configuration
 
-Replace the basic addition with this enhanced version:
+Replace the basic line with a configured version:
 
 ```python
         # Add the Wikipedia search skill with custom configuration
@@ -72,26 +76,21 @@ Replace the basic addition with this enhanced version:
 
 ## Configuring the Skill
 
-Let's understand each configuration option:
+The configuration dictionary has three options.
 
 ### Configuration Parameters
 
-**`num_results`** (default: 1)
-- Number of Wikipedia articles to return
-- More results = broader coverage but longer responses
-- Fred uses 2 for balance
+Each option changes one part of how the skill behaves:
 
-**`no_results_message`**
-- Custom message when no articles are found
-- Use `{query}` as a placeholder for the search term
-- Should match your agent's personality
-
-**`swaig_fields`**
-- Additional SWAIG function configuration
-- `fillers`: Phrases spoken while searching
-- Enhances conversation flow
+| Option | Default | What it does |
+|---|---|---|
+| `num_results` | `1` | The number of Wikipedia articles to return. More results cover more ground, and make longer responses. Fred uses 2. |
+| `no_results_message` | A generic "couldn't find" message | What the function returns when no article matches. `{query}` is replaced with the search term. Write it in the agent's voice, because the model relays it to the caller. |
+| `swaig_fields` | None | Extra settings for the function the skill registers. `fillers` are phrases the platform says while the search runs. |
 
 ### Example Configurations
+
+Different agents need different settings:
 
 ```python
 # Minimal configuration
@@ -100,7 +99,7 @@ self.add_skill("wikipedia_search")
 # Academic assistant
 self.add_skill("wikipedia_search", {
     "num_results": 3,
-    "no_results_message": "No Wikipedia entries found for '{query}'. Please verify the spelling or try related terms."
+    "no_results_message": "No Wikipedia entries found for '{query}'. Check the spelling or try related terms."
 })
 
 # Casual helper
@@ -117,75 +116,87 @@ self.add_skill("wikipedia_search", {
 
 ## How Skills Work Internally
 
-Understanding the magic behind `add_skill()`:
+`add_skill()` does three things when it runs.
 
 ### What Happens When You Add a Skill
 
-1. **Skill Loading**
+1. **Skill loading.** The SDK imports the skill's module:
+
    ```python
    # The SDK dynamically imports the skill module
    from signalwire.skills.wikipedia_search.skill import WikipediaSearchSkill
    ```
 
-2. **Skill Initialization**
+2. **Skill initialization.** It creates the skill with your configuration:
+
    ```python
    # Creates skill instance with your configuration
    skill = WikipediaSearchSkill(agent=self, params=config)
    ```
 
-3. **Tool Registration**
+3. **Tool registration.** The skill registers its function with the agent. This is the skill's own code:
+
    ```python
-   # The skill registers its functions with your agent
+   # Inside WikipediaSearchSkill.register_tools()
    self.define_tool(
        name="search_wiki",
-       description="Search Wikipedia for information",
-       parameters={"query": {"type": "string", "description": "Search term"}},
-       handler=skill._search_wiki_handler
+       description="Search Wikipedia for information about a topic and get article summaries",
+       parameters={
+           "query": {
+               "type": "string",
+               "description": "The search term or topic to look up on Wikipedia",
+           }
+       },
+       handler=self._search_wiki_handler,
    )
    ```
 
+The skill also adds a "Wikipedia Search" section to the prompt, which tells the model when to use the function.
+
 ### The search_wiki Function
 
-After adding the skill, Fred gains the `search_wiki` function:
+After adding the skill, Fred has a `search_wiki` function with this signature:
 
-**Function Signature:**
 <!-- snippet: no-compile signature-illustration (pseudo-signature; `string` is not a Python type) -->
 ```python
 search_wiki(query: string) -> string
 ```
 
-**What it does:**
-1. Searches Wikipedia for articles matching the query
-2. Retrieves article summaries
-3. Returns formatted results
+When the model calls it, the function:
 
-**Example calls (by the AI):**
+1. Searches Wikipedia for articles that match the query
+2. Retrieves each article's summary
+3. Returns the summaries as text
+
+The model calls it with the caller's topic, for example:
+
 - `search_wiki("Albert Einstein")`
 - `search_wiki("quantum physics")`
 - `search_wiki("Great Wall of China")`
 
 ## Testing Wikipedia Search
 
-Let's add some test code to verify the skill works:
+A `main` function can confirm the skill loaded, without starting a server.
 
 ### Step 3: Update Main Function
+
+Replace `main` with this version:
 
 <!-- snippet: no-run illustrative fragment (references `FredTheWikiBot` established in the surrounding prose) -->
 ```python
 def main():
-    """Run Fred the Wiki Bot"""
+    """Run Fred"""
     print("=" * 60)
-    print("🤖 Fred - The Wikipedia Knowledge Bot")
+    print("Fred: a Wikipedia knowledge bot")
     print("=" * 60)
     print()
-    print("Fred is a friendly assistant who loves searching Wikipedia!")
-    print("He can help you learn about almost any topic.")
+    print("Fred searches Wikipedia and shares facts about Wikipedia itself.")
     print()
-    print("Example questions you can ask Fred:")
-    print("  • 'Tell me about Albert Einstein'")
-    print("  • 'What is quantum physics?'")
-    print("  • 'Who was Marie Curie?'")
-    print("  • 'Search for information about the solar system'")
+    print("Questions to try:")
+    print("  - Tell me about Albert Einstein")
+    print("  - What is quantum physics?")
+    print("  - Who was Marie Curie?")
+    print("  - Search for information about the solar system")
     print()
     
     # Create Fred
@@ -193,123 +204,110 @@ def main():
     
     # Show loaded skills
     loaded_skills = fred.list_skills()
-    print(f"Fred's capabilities: {', '.join(loaded_skills)}")
+    print(f"Fred's skills: {', '.join(loaded_skills)}")
     print()
     
     # The skill automatically adds tools to the agent
     # You can verify this by checking registered functions
-    print("Wikipedia search is ready!")
-    print("Fred can now search Wikipedia for any topic.")
+    print("Wikipedia search is ready.")
     
 if __name__ == "__main__":
     main()
 ```
 
-Run it:
+Run the file to build Fred and list its skills:
+
 ```bash
 python fred.py
 ```
 
-Expected output:
+The output lists the loaded skill:
+
 ```
 ============================================================
-🤖 Fred - The Wikipedia Knowledge Bot
+Fred: a Wikipedia knowledge bot
 ============================================================
 
-Fred is a friendly assistant who loves searching Wikipedia!
-He can help you learn about almost any topic.
+Fred searches Wikipedia and shares facts about Wikipedia itself.
 
-Example questions you can ask Fred:
-  • 'Tell me about Albert Einstein'
-  • 'What is quantum physics?'
-  • 'Who was Marie Curie?'
-  • 'Search for information about the solar system'
+Questions to try:
+  - Tell me about Albert Einstein
+  - What is quantum physics?
+  - Who was Marie Curie?
+  - Search for information about the solar system
 
-Fred's capabilities: wikipedia_search
-Wikipedia search is ready!
-Fred can now search Wikipedia for any topic.
+Fred's skills: wikipedia_search
+
+Wikipedia search is ready.
 ```
 
 ## How Fred Uses Wikipedia Search
 
-When a user asks Fred about a topic:
+When a caller asks about a topic, five things happen:
 
-1. **User says:** "Tell me about Albert Einstein"
-
-2. **Fred's AI recognizes** the request needs Wikipedia
-
-3. **Fred calls:** `search_wiki("Albert Einstein")`
-
-4. **Wikipedia returns** article summary
-
-5. **Fred responds** with the information conversationally
+1. **The caller says:** "Tell me about Albert Einstein"
+2. **The model decides** the question needs Wikipedia
+3. **The model calls** `search_wiki("Albert Einstein")`
+4. **The skill returns** the article summaries
+5. **The model answers** the caller, in Fred's voice
 
 ### Example Conversation Flow
 
+A conversation with Fred might go like this:
+
 ```
-User: "Hi there!"
-Fred: "Hello! I'm Fred, your friendly Wikipedia assistant! I love helping people learn new things. What would you like to know about today?"
+Caller: "Hi there!"
+Fred:   "Hello! I'm Fred, your friendly Wikipedia assistant! What would you like to know about today?"
 
-User: "Tell me about black holes"
-Fred: [filler] "Let me look that up on Wikipedia for you..."
-Fred: "Fascinating topic! According to Wikipedia, a black hole is a region of spacetime where gravity is so strong that nothing—no particles or even electromagnetic radiation such as light—can escape from it..."
+Caller: "Tell me about black holes"
+Fred:   [filler] "Let me look that up on Wikipedia for you..."
+Fred:   "Fascinating topic! According to Wikipedia, a black hole is a region of spacetime where gravity is so strong that nothing, not even light, can escape from it..."
 
-User: "That's interesting! Who discovered them?"
-Fred: [filler] "Searching Wikipedia for that information..."
-Fred: "Great question! The concept of black holes has a rich history..."
+Caller: "That's interesting! Who discovered them?"
+Fred:   [filler] "Searching Wikipedia for that information..."
+Fred:   "Great question! The idea of black holes has a long history..."
 ```
 
 ## Skill Benefits
 
-### Why Use Skills vs Custom Implementation?
+A skill saves you from writing and maintaining the integration yourself.
 
-**With Skills:**
+### Why Use Skills Instead of Custom Code?
+
+With the skill, Wikipedia search is one line:
+
 ```python
-# One line!
+# One line
 self.add_skill("wikipedia_search")
 ```
 
-**Without Skills:**
+Without it, you'd write every part yourself:
+
 ```python
 # You'd need to:
-# 1. Import Wikipedia API library
-# 2. Handle API calls
-# 3. Parse responses
-# 4. Format results
+# 1. Choose a Wikipedia API
+# 2. Make the API calls
+# 3. Parse the responses
+# 4. Format the results
 # 5. Handle errors
-# 6. Register SWAIG function
-# 7. Implement handler
-# ... 50+ lines of code
+# 6. Register a SWAIG function
+# 7. Write its handler
 ```
 
-### Skills Provide
+### What Skills Provide
 
-1. **Tested functionality** - Pre-built and debugged
-2. **Consistent interface** - Standard configuration pattern
-3. **Error handling** - Graceful failure modes
-4. **Documentation** - Clear usage instructions
-5. **Maintenance** - Updates with SDK
+Using a skill gives you:
+
+1. **Tested functionality**: built and tested with the SDK
+2. **A consistent interface**: every skill is configured the same way
+3. **Error handling**: failures return a message instead of crashing the call
+4. **Documentation**: each skill has a README in the SDK
+5. **Maintenance**: fixes arrive with SDK updates
 
 ## Next Steps
 
-Fred can now search Wikipedia! But let's make him more fun by adding a custom function for sharing Wikipedia facts.
-
-➡️ Continue to [Lesson 5: Creating Custom Functions](05-custom-functions.md)
+Fred can search Wikipedia. Next, add a function of your own that shares facts about Wikipedia. Continue with [Lesson 5: Creating Custom Functions](05-custom-functions.md).
 
 ---
 
-**Skill Checklist:**
-- [x] Added wikipedia_search skill
-- [x] Configured custom messages
-- [x] Added search fillers
-- [x] Tested skill loading
-
-**What Fred Can Do Now:**
-- ✅ Search Wikipedia for any topic
-- ✅ Return up to 2 article summaries
-- ✅ Handle searches with no results gracefully
-- ✅ Provide natural conversation flow with fillers
-
----
-
-[← Previous: Basic Agent](03-basic-agent.md) | [Back to Overview](README.md) | [Next: Custom Functions →](05-custom-functions.md)
+[Previous: Basic Agent](03-basic-agent.md) | [Overview](README.md) | [Next: Custom Functions](05-custom-functions.md)
