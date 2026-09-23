@@ -13,7 +13,6 @@ from typing import Any, TYPE_CHECKING
 
 from signalwire.core.logging_config import get_logger
 from pathlib import Path
-from datetime import datetime
 
 if TYPE_CHECKING:
     import numpy as np
@@ -292,7 +291,11 @@ class SearchIndexMigrator:
         batch_size: int = 100,
     ) -> dict[str, Any]:
         """
-        Migrate a pgvector collection to SQLite .swsearch format
+        Migrate a pgvector collection to SQLite .swsearch format (not implemented)
+
+        The pgvector backend can't export chunks yet, so this method raises
+        before it connects to the database or touches ``output_path``. An
+        index that already exists at that path is left as it is.
 
         Args:
             connection_string: PostgreSQL connection string
@@ -300,158 +303,14 @@ class SearchIndexMigrator:
             output_path: Output .swsearch file path
             batch_size: Number of chunks to fetch at once
 
-        Returns:
-            Migration statistics
+        Raises:
+            NotImplementedError: always
         """
-        from .pgvector_backend import PgVectorBackend
-
-        # Ensure output has .swsearch extension
-        if not output_path.endswith(".swsearch"):
-            output_path += ".swsearch"
-
-        stats: dict[str, Any] = {
-            "source": f"{collection_name} (pgvector)",
-            "target": output_path,
-            "chunks_migrated": 0,
-            "errors": 0,
-            "config": {},
-        }
-
-        # Connect to pgvector
-        if self.verbose:
-            print(f"Connecting to pgvector collection: {collection_name}")
-
-        pgvector = PgVectorBackend(connection_string)
-        # Bound before the try so the finally can never raise NameError over
-        # the top of a real failure -- the same defect this commit fixes for
-        # sqlite_conn in migrate_sqlite_to_pgvector.
-        sqlite_out = None
-
-        try:
-            # Get collection stats and config
-            pg_stats = pgvector.get_stats(collection_name)
-            config = pg_stats.get("config", {})
-            stats["config"] = config
-
-            total_chunks = pg_stats.get("total_chunks", 0)
-
-            if self.verbose:
-                print("Source configuration:")
-                print(f"  Model: {config.get('model_name', 'Unknown')}")
-                print(f"  Dimensions: {config.get('embedding_dimensions', 'Unknown')}")
-                print(f"  Total chunks: {total_chunks}")
-
-            # Create SQLite database structure
-            # We'll manually create it to match the expected format
-            if Path(output_path).exists():
-                Path(output_path).unlink()
-
-            conn = sqlite3.connect(output_path)
-            cursor = conn.cursor()
-            sqlite_out = conn  # closed in the finally below, not inline
-
-            # Create schema (matching index_builder.py)
-            cursor.execute("""
-                CREATE TABLE chunks (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    content TEXT NOT NULL,
-                    processed_content TEXT NOT NULL,
-                    keywords TEXT,
-                    language TEXT DEFAULT 'en',
-                    embedding BLOB NOT NULL,
-                    filename TEXT NOT NULL,
-                    section TEXT,
-                    start_line INTEGER,
-                    end_line INTEGER,
-                    tags TEXT,
-                    metadata TEXT,
-                    chunk_hash TEXT UNIQUE,
-                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
-                )
-            """)
-
-            cursor.execute("""
-                CREATE VIRTUAL TABLE chunks_fts USING fts5(
-                    processed_content,
-                    keywords,
-                    content='chunks',
-                    content_rowid='id'
-                )
-            """)
-
-            cursor.execute("""
-                CREATE TABLE synonyms (
-                    word TEXT,
-                    pos_tag TEXT,
-                    synonyms TEXT,
-                    language TEXT DEFAULT 'en',
-                    PRIMARY KEY (word, pos_tag, language)
-                )
-            """)
-
-            cursor.execute("""
-                CREATE TABLE config (
-                    key TEXT PRIMARY KEY,
-                    value TEXT
-                )
-            """)
-
-            # Create indexes
-            cursor.execute("CREATE INDEX idx_chunks_filename ON chunks(filename)")
-            cursor.execute("CREATE INDEX idx_chunks_language ON chunks(language)")
-            cursor.execute("CREATE INDEX idx_chunks_tags ON chunks(tags)")
-
-            # Insert config
-            config_data = {
-                "embedding_model": config.get(
-                    "model_name", "sentence-transformers/all-mpnet-base-v2"
-                ),
-                "embedding_dimensions": str(config.get("embedding_dimensions", 768)),
-                "chunk_size": str(config.get("metadata", {}).get("chunk_size", 50)),
-                "chunk_overlap": str(
-                    config.get("metadata", {}).get("chunk_overlap", 10)
-                ),
-                "preprocessing_version": "1.0",
-                "languages": json.dumps(config.get("languages", ["en"])),
-                "created_at": datetime.now().isoformat(),
-                "source_dir": config.get("metadata", {}).get(
-                    "source_dir", "pgvector_migration"
-                ),
-                "file_types": json.dumps(
-                    config.get("metadata", {}).get("file_types", [])
-                ),
-            }
-
-            for key, value in config_data.items():
-                cursor.execute(
-                    "INSERT INTO config (key, value) VALUES (?, ?)", (key, value)
-                )
-
-            # TODO: Implement chunk fetching from pgvector
-            # This would require adding a method to PgVectorBackend to fetch chunks
-            # For now, we'll note this as a limitation
-
-            if self.verbose:
-                print(
-                    "\nNote: pgvector to SQLite migration requires implementing chunk fetching in PgVectorBackend"
-                )
-                print("This feature is planned for future development.")
-
-            conn.commit()
-
-        finally:
-            # The inline conn.close() above only ran when everything succeeded,
-            # while this finally closed pgvector alone -- so any failure between
-            # opening the file and committing leaked the SQLite handle and left
-            # a half-written .swsearch locked on Windows.
-            if sqlite_out is not None:
-                try:
-                    sqlite_out.close()
-                except Exception:  # cleanup must not mask the real error
-                    logger.warning("Could not close SQLite output file", exc_info=True)
-            pgvector.close()
-
-        return stats
+        raise NotImplementedError(
+            "Migrating a pgvector collection to SQLite isn't implemented yet. "
+            f"Nothing was read from {collection_name!r}, and {output_path!r} "
+            "wasn't changed."
+        )
 
     def get_index_info(self, index_path: str) -> dict[str, Any]:
         """
