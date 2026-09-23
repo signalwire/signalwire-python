@@ -1,6 +1,6 @@
 # Search Agent Integration Guide
 
-This document covers how to integrate the search system into your agents, configure search behavior, use metadata and tags for filtering, tune search quality, customize response formatting, and deploy multi-collection search architectures. For background on building search indexes, see [search_indexing.md](search_indexing.md). For deployment patterns, see [search_deployment.md](search_deployment.md). For general search system architecture, see [search_overview.md](search_overview.md).
+This document covers how to integrate the search system into your agents. It explains how to configure search behavior, use metadata and tags for filtering, tune search quality, customize response formatting, and deploy multi-collection search architectures. For background on building search indexes, see [search_indexing.md](search_indexing.md). For deployment patterns, see [search_deployment.md](search_deployment.md). For general search system architecture, see [search_overview.md](search_overview.md).
 
 ---
 
@@ -8,7 +8,7 @@ This document covers how to integrate the search system into your agents, config
 
 ### Adding the native_vector_search Skill
 
-The `native_vector_search` skill provides search functionality to agents. The simplest integration requires only a tool name, description, and index path:
+The `native_vector_search` skill provides search functionality to agents. The simplest integration requires only a tool name, description, and index file:
 
 ```python
 from signalwire import AgentBase
@@ -24,7 +24,7 @@ class DocsAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "search_docs",
             "description": "Search the documentation for information",
-            "index_path": "./knowledge.swsearch"
+            "index_file": "./knowledge.swsearch"
         })
 ```
 
@@ -54,13 +54,13 @@ The agent automatically exposes this as a SWAIG (SignalWire AI Gateway) function
 }
 ```
 
-**distance_threshold** (float, default: 0.5)
+**similarity_threshold** (float, default: 0.0)
 - Minimum similarity score (0.0 to 1.0).
-- Lower values produce stricter matching; higher values are more permissive.
+- Higher values produce stricter matching. Lower values are more permissive.
 
 ```python
 {
-    "distance_threshold": 0.4  # Only results with similarity > 0.4
+    "similarity_threshold": 0.4  # Only results with similarity > 0.4
 }
 ```
 
@@ -129,17 +129,17 @@ The agent automatically exposes this as a SWAIG (SignalWire AI Gateway) function
 
 #### NLP Backend Selection
 
-Choose between NLTK (fast) and spaCy (better quality) for query processing:
+Choose between NLTK (fast) and spaCy (better quality) for query processing with the `query_nlp_backend` parameter. A separate `index_nlp_backend` parameter controls the backend used while building an index. Both default to NLTK.
 
 ```python
 # Fast NLTK processing (default)
 {
-    "nlp_backend": "nltk"  # ~50-100ms query processing
+    "query_nlp_backend": "nltk"  # ~50-100ms query processing
 }
 
 # Better quality spaCy processing
 {
-    "nlp_backend": "spacy"  # ~150-300ms query processing, requires model download
+    "query_nlp_backend": "spacy"  # ~150-300ms query processing, requires model download
 }
 ```
 
@@ -151,7 +151,7 @@ When using `build_index: True` for auto-building indexes:
 {
     "model_name": "mini"   # Fast, 5x faster, good for most use cases
     # "model_name": "base"  # Balanced, better quality
-    # "model_name": "large" # Best quality
+    # "model_name": "large" # Same model as base currently
 }
 ```
 
@@ -161,17 +161,17 @@ See [Search Indexing](search_indexing.md) for detailed model comparisons.
 
 The search system supports multiple storage backends. Choose one per skill instance.
 
-**Option 1: Local .swsearch file (SQLite)**
+**Option 1: Local .swsearch file (SQLite):**
 
 ```python
 {
-    "index_path": "./knowledge.swsearch"
+    "index_file": "./knowledge.swsearch"
 }
 ```
 
 Best for single-agent deployments, development, and small to medium datasets. Portable single-file storage.
 
-**Option 2: Remote search server**
+**Option 2: Remote search server:**
 
 ```python
 {
@@ -182,7 +182,7 @@ Best for single-agent deployments, development, and small to medium datasets. Po
 
 Best for centralized index management and lower per-agent memory usage.
 
-**Option 3: pgvector database**
+**Option 3: pgvector database:**
 
 ```python
 {
@@ -234,7 +234,7 @@ class ProductAgent(AgentBase):
 
             # Search behavior
             "count": 5,
-            "distance_threshold": 0.4,
+            "similarity_threshold": 0.4,
 
             # User experience
             "no_results_message": "I couldn't find information about '{query}' in our documentation. Could you rephrase or ask about a different topic?",
@@ -264,24 +264,25 @@ When the LLM invokes a search function, the system performs these steps internal
 
 1. The query is preprocessed using the selected NLP backend (synonym expansion, keyword extraction, optional POS tagging).
 2. A vector embedding is generated for the query.
-3. Vector search retrieves `3x` the requested `count` as candidates.
+3. Vector search retrieves at least 30 candidates internally (more for a `count` above 10).
 4. Hybrid scoring combines vector similarity with keyword matching and metadata signals.
 5. The top `count` results are selected and formatted.
 6. Results are returned to the LLM as the function response, which the LLM uses to formulate its answer to the user.
 
 ### Content Length Budgeting
 
-The `max_content_length` parameter controls the total response size. The budget is distributed evenly across results with room for per-result overhead:
+The `max_content_length` parameter controls the total response size. The budget is distributed evenly across results, with room for per-result overhead and a 500-character floor per result:
 
 ```
-overhead_per_result = 300 chars  # Metadata, formatting
-total_overhead = count * 300
+overhead_per_result = 300 chars      # metadata and formatting
+fixed_overhead = len(response_prefix) + len(response_postfix) + 100
+total_overhead = (count * overhead_per_result) + fixed_overhead
 available_for_content = max_content_length - total_overhead
-per_result_limit = available_for_content / count
+per_result_limit = max(500, available_for_content // count)
 ```
 
-For example, with `count=5` and `max_content_length=32768`:
-- Each result gets approximately 6,253 characters of content.
+For example, with `count=5`, `max_content_length=32768`, and no `response_prefix` or `response_postfix`:
+- Each result gets about 6,233 characters of content.
 
 This budgeting prevents LLM context exhaustion. If a result exceeds its budget, it is truncated. To detect this, use a format callback (see [Custom Response Formatting](#custom-response-formatting)).
 
@@ -306,7 +307,7 @@ Use the `response_format_callback` parameter (see [Custom Response Formatting](#
 
 ## Metadata and Tags
 
-Every chunk stored in a search index includes metadata -- structured information beyond the text content itself. Metadata enables filtering, boosting, organization, and provenance tracking.
+Every chunk stored in a search index includes metadata: structured information beyond the text content itself. Metadata enables filtering, boosting, organization, and provenance tracking.
 
 ### Automatic Metadata
 
@@ -441,7 +442,7 @@ Tags enable precise filtering during search. Specify tags in the skill configura
 self.add_skill("native_vector_search", {
     "tool_name": "search_api",
     "description": "Search API documentation",
-    "index_path": "./docs.swsearch",
+    "index_file": "./docs.swsearch",
     "tags": ["api", "reference"]
 })
 ```
@@ -457,7 +458,7 @@ class DocumentationAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "search_getting_started",
             "description": "Search beginner guides and tutorials",
-            "index_path": "./docs.swsearch",
+            "index_file": "./docs.swsearch",
             "tags": ["beginner", "tutorial", "getting-started"]
         })
 
@@ -465,7 +466,7 @@ class DocumentationAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "search_advanced",
             "description": "Search advanced documentation and technical details",
-            "index_path": "./docs.swsearch",
+            "index_file": "./docs.swsearch",
             "tags": ["advanced", "technical"]
         })
 
@@ -473,7 +474,7 @@ class DocumentationAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "search_api_reference",
             "description": "Search API documentation for classes, methods, and parameters",
-            "index_path": "./docs.swsearch",
+            "index_file": "./docs.swsearch",
             "tags": ["api", "reference", "code"]
         })
 ```
@@ -482,9 +483,9 @@ The LLM selects the appropriate search function based on the user's question.
 
 ### Metadata Boosting in Hybrid Search
 
-In hybrid search mode, metadata matching provides confirmation signals that boost relevance scores. The boost is applied multiplicatively on top of the vector similarity score.
+In hybrid search, more than one retrieval signal can agree on the same chunk, such as vector similarity together with a keyword or metadata match. When that happens, a small amount is added to its vector similarity score. That addition is capped at 0.05, no matter how many extra signals agree, so it settles close ties. It cannot outweigh a large gap in vector similarity.
 
-**Example scenario:** User searches for "python authentication example"
+**Example scenario:** A user searches for "python authentication example."
 
 **Chunk A:**
 ```python
@@ -497,24 +498,22 @@ In hybrid search mode, metadata matching provides confirmation signals that boos
 }
 ```
 - Vector similarity: 0.75
-- Metadata matches: "python", "authentication", "example" (3 matches) -- boost +30%
-- Has "code" tag with keywords matched -- boost +20%
-- Final score: 0.75 x 1.30 x 1.20 = 1.17
+- Also matched by the keyword search and the metadata search, which adds the maximum tiebreak of 0.05
+- Final score: 0.75 + 0.05 = 0.80
 
 **Chunk B:**
 ```python
 {
-    "content": "Authentication is important for security...",
+    "content": "Setting up authentication for your API...",
     "metadata": {
         "tags": ["security", "authentication"]
     }
 }
 ```
-- Vector similarity: 0.82 (higher raw score)
-- Metadata matches: "authentication" (1 match) -- boost +15%
-- Final score: 0.82 x 1.15 = 0.94
+- Vector similarity: 0.78 (a close second, not matched by the keyword or metadata search)
+- Final score: 0.78 (no tiebreak added)
 
-**Result:** Chunk A ranks higher despite lower vector similarity because metadata confirmed it matches the user's intent more precisely.
+**Result:** Chunk A ranks first even though its vector similarity is lower, because the gap between the two chunks falls inside the 0.05 tiebreak margin. A larger gap would still be decided by vector similarity alone: at 0.85, Chunk B would beat Chunk A's boosted 0.80.
 
 ### Organizing by Category, Priority, and Audience
 
@@ -559,7 +558,7 @@ Then create category-specific search tools:
 self.add_skill("native_vector_search", {
     "tool_name": "search_troubleshooting",
     "description": "Search troubleshooting guides for error solutions",
-    "index_path": "./docs.swsearch",
+    "index_file": "./docs.swsearch",
     "tags": ["troubleshooting", "errors"]
 })
 ```
@@ -667,7 +666,7 @@ Filter by language in the skill configuration:
 self.add_skill("native_vector_search", {
     "tool_name": "search_french_docs",
     "description": "Rechercher la documentation en francais",
-    "index_path": "./docs.swsearch",
+    "index_file": "./docs.swsearch",
     "tags": ["french"]
 })
 ```
@@ -690,7 +689,7 @@ self.add_skill("native_vector_search", {
    }
    ```
 
-4. **Structure hierarchically.**
+4. **Structure hierarchically.** Nest categories and subcategories to organize a large knowledge base:
    ```json
    {
      "category": "development",
@@ -699,7 +698,7 @@ self.add_skill("native_vector_search", {
    }
    ```
 
-5. **Track provenance.**
+5. **Track provenance.** Record where content came from and who verified it:
    ```json
    {
      "source": "official-docs",
@@ -713,11 +712,11 @@ self.add_skill("native_vector_search", {
 
 ## Tuning Search Quality
 
-### Key Parameters (distance_threshold, count, max_content_length)
+### Key Parameters (similarity_threshold, count, max_content_length)
 
 Three parameters have the most significant impact on search quality.
 
-#### distance_threshold
+#### similarity_threshold
 
 Controls how similar results must be to the query. Values range from 0.0 to 1.0, where higher means more similar:
 
@@ -741,9 +740,9 @@ Controls how similar results must be to the query. Values range from 0.0 to 1.0,
 **Testing threshold values with the CLI:**
 
 ```bash
-sw-search search ./docs.swsearch "your query" --threshold 0.3 --verbose
-sw-search search ./docs.swsearch "your query" --threshold 0.4 --verbose
-sw-search search ./docs.swsearch "your query" --threshold 0.5 --verbose
+sw-search search ./docs.swsearch "your query" --distance-threshold 0.3 --verbose
+sw-search search ./docs.swsearch "your query" --distance-threshold 0.4 --verbose
+sw-search search ./docs.swsearch "your query" --distance-threshold 0.5 --verbose
 ```
 
 The verbose output displays similarity scores for each result. If the threshold excludes results that appear relevant, lower it. If irrelevant results appear, raise it.
@@ -756,22 +755,22 @@ For agents that need reliability across diverse queries, implement fallback logi
 def search_with_fallback(self, query):
     """Search with fallback to lower threshold"""
     # Try strict first
-    results = self.search(query, threshold=0.5)
+    results = self.search(query, similarity_threshold=0.5)
 
     if len(results) < 2:
         # Not enough results, try more permissive
-        results = self.search(query, threshold=0.4)
+        results = self.search(query, similarity_threshold=0.4)
 
     if len(results) < 1:
         # Still nothing, try very permissive
-        results = self.search(query, threshold=0.3)
+        results = self.search(query, similarity_threshold=0.3)
 
     return results
 ```
 
 #### count
 
-Determines how many results to return. The hybrid search engine internally retrieves `3x` the requested count, scores all candidates, and returns the top results.
+Determines how many results to return. The hybrid search engine retrieves at least 30 candidates internally (more for counts above 10), scores them, and returns the top results.
 
 **Trade-offs by count range:**
 
@@ -793,39 +792,13 @@ Controls total response size. See [Content Length Budgeting](#content-length-bud
 
 ### Debug Mode
 
-Enable verbose logging to see hybrid scoring details:
+The `sw-search search` command prints a similarity score for each result. Add `--verbose` to also see the chunk and file counts, the query NLP backend, and the model in use:
 
-```python
-import os
-os.environ['SEARCH_DEBUG'] = '1'
+```bash
+sw-search search ./docs.swsearch "python authentication examples" --verbose
 ```
 
-Debug output shows the scoring breakdown for each candidate:
-
-```
-Query: "python authentication examples"
-
-Candidate pool: 15 chunks
-
-Chunk 1:
-  Vector score: 0.82
-  Keyword matches: ["python", "authentication", "examples"]
-  Keyword boost: +0.45 (3 matches x 0.15)
-  Has 'code' tag: +0.20
-  Final score: 0.82 x 1.45 x 1.20 = 1.43
-
-Chunk 2:
-  Vector score: 0.75
-  Keyword matches: ["authentication"]
-  Keyword boost: +0.15 (1 match x 0.15)
-  Final score: 0.75 x 1.15 = 0.86
-
-Returning top 5 results...
-```
-
-This reveals why certain results rank higher or lower than expected.
-
-Additionally, enable general verbose logging for the agent:
+To see the agent's own logging at debug level, set the SDK's log level before starting it:
 
 ```python
 import os
@@ -839,7 +812,7 @@ os.environ['SIGNALWIRE_LOG_LEVEL'] = 'DEBUG'
 **Symptoms:** Search returns empty results for queries that should match content.
 
 **Possible causes and fixes:**
-1. **Threshold too strict.** Lower `distance_threshold`: 0.5 to 0.4 to 0.3.
+1. **Threshold too strict.** Lower `similarity_threshold`: 0.5 to 0.4 to 0.3.
 2. **Query phrasing mismatch.** Test variations: "authentication setup", "configuring auth", "setting up authentication".
 3. **Content gap.** Verify the topic exists in the index: `sw-search search ./docs.swsearch "test query"`.
 4. **Index not loaded.** Check agent logs for errors during skill initialization.
@@ -849,7 +822,7 @@ os.environ['SIGNALWIRE_LOG_LEVEL'] = 'DEBUG'
 **Symptoms:** Results do not match the query intent.
 
 **Possible causes and fixes:**
-1. **Threshold too permissive.** Raise `distance_threshold`: 0.4 to 0.5.
+1. **Threshold too permissive.** Raise `similarity_threshold`: 0.4 to 0.5.
 2. **Poor metadata tagging.** Add tags for filtering: `tags=["python", "code"]`.
 3. **Chunking mixed unrelated content.** Use the markdown chunking strategy for code documentation.
 
@@ -891,7 +864,7 @@ class ABTestAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "search_docs",
             "description": "Search documentation",
-            "index_path": "./docs.swsearch",
+            "index_file": "./docs.swsearch",
             **config
         })
 
@@ -901,7 +874,7 @@ class ABTestAgent(AgentBase):
 
 **Metrics to track:**
 - User satisfaction ratings
-- Follow-up question rate (lower is better -- the first answer sufficed)
+- Follow-up question rate (lower is better: the first answer sufficed)
 - Query success rate (non-empty, relevant results)
 - Search latency
 
@@ -955,7 +928,7 @@ class CustomAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "search_docs",
             "description": "Search documentation",
-            "index_path": "./docs.swsearch",
+            "index_file": "./docs.swsearch",
             "response_format_callback": self._format_search_results
         })
 
@@ -985,8 +958,8 @@ class CustomAgent(AgentBase):
 | `response` | string | The default formatted response |
 | `agent` | AgentBase | The agent instance |
 | `query` | string | The search query |
-| `results` | list[dict] | List of result dictionaries with `content` and `metadata` keys |
-| `**kwargs` | dict | Additional metadata (may include `truncated`, `start_time`, etc.) |
+| `results` | list[dict] | List of result dictionaries with `content`, `score`, and `metadata` keys |
+| `**kwargs` | dict | Additional metadata, including `args` (the raw tool call arguments), `count`, and `skill` (the skill instance) |
 
 ### Voice-Optimized Formatting
 
@@ -1000,7 +973,7 @@ class MultiModalAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "search_docs",
             "description": "Search documentation",
-            "index_path": "./docs.swsearch",
+            "index_file": "./docs.swsearch",
             "response_format_callback": self._adaptive_format
         })
 
@@ -1033,11 +1006,9 @@ class MultiModalAgent(AgentBase):
 
 ### Monitoring with Format Callbacks
 
-Use the callback to log search performance metrics:
+Use the callback to log search activity. It runs after the search completes, so it does not see the query's own latency. It does see the requested result count and the other tool call arguments through `kwargs`:
 
 ```python
-import time
-
 class MonitoredAgent(AgentBase):
     def __init__(self):
         super().__init__(name="MonitoredAgent")
@@ -1045,18 +1016,15 @@ class MonitoredAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "search_docs",
             "description": "Search documentation",
-            "index_path": "./docs.swsearch",
+            "index_file": "./docs.swsearch",
             "response_format_callback": self._monitored_format
         })
 
     def _monitored_format(self, response, agent, query, results, **kwargs):
-        """Monitor search performance"""
-        start_time = kwargs.get('start_time', time.time())
-        search_time = time.time() - start_time
-
+        """Log search activity"""
         logger.info(f"Search query: {query}")
         logger.info(f"Results: {len(results)}")
-        logger.info(f"Search time: {search_time:.3f}s")
+        logger.info(f"Requested count: {kwargs.get('count')}")
 
         return response
 ```
@@ -1078,7 +1046,7 @@ class SupportAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "search_docs",
             "description": "Search general product documentation",
-            "index_path": "./docs.swsearch",
+            "index_file": "./docs.swsearch",
             "count": 5
         })
 
@@ -1086,7 +1054,7 @@ class SupportAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "search_api",
             "description": "Search API documentation for endpoints, parameters, and examples",
-            "index_path": "./api.swsearch",
+            "index_file": "./api.swsearch",
             "tags": ["api"],
             "count": 3
         })
@@ -1095,7 +1063,7 @@ class SupportAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "search_troubleshooting",
             "description": "Search troubleshooting guides for error messages and solutions",
-            "index_path": "./troubleshooting.swsearch",
+            "index_file": "./troubleshooting.swsearch",
             "tags": ["troubleshooting", "errors"],
             "count": 3
         })
@@ -1114,7 +1082,7 @@ class SpecializedAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "find_code_examples",
             "description": "Find code examples and implementation samples",
-            "index_path": "./docs.swsearch",
+            "index_file": "./docs.swsearch",
             "tags": ["code", "example"],
             "response_format_callback": self._format_code_examples
         })
@@ -1123,7 +1091,7 @@ class SpecializedAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "find_error_solutions",
             "description": "Find solutions to error messages and problems",
-            "index_path": "./docs.swsearch",
+            "index_file": "./docs.swsearch",
             "tags": ["troubleshooting", "errors", "solutions"]
         })
 
@@ -1131,7 +1099,7 @@ class SpecializedAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "find_tutorials",
             "description": "Find beginner-friendly tutorials and guides",
-            "index_path": "./docs.swsearch",
+            "index_file": "./docs.swsearch",
             "tags": ["tutorial", "beginner", "guide"]
         })
 
@@ -1160,7 +1128,7 @@ class SmartAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "search_knowledge",
             "description": "Search our knowledge base",
-            "index_path": "./knowledge.swsearch"
+            "index_file": "./knowledge.swsearch"
         })
 
         # Instruct agent on search usage
@@ -1182,7 +1150,7 @@ class SmartAgent(AgentBase):
 
 ### Multi-Collection Agent (Sigmond Case Study)
 
-Sigmond is SignalWire's production demo agent -- a multi-collection AI assistant that answers questions about SignalWire products, pricing, and FreeSWITCH telephony. It demonstrates how the search system scales from single-agent development to production multi-agent deployment.
+Sigmond is SignalWire's production demo agent, a multi-collection AI assistant that answers questions about SignalWire products, pricing, and FreeSWITCH telephony. It demonstrates how the search system scales from single-agent development to production multi-agent deployment.
 
 ### Architecture
 
@@ -1207,7 +1175,7 @@ PostgreSQL (pgvector)
 
 Each collection uses a chunking strategy optimized for its content type:
 
-**SignalWire unified documentation** -- built with the markdown strategy to preserve code blocks and header hierarchy:
+**SignalWire unified documentation** is built with the markdown strategy to preserve code blocks and header hierarchy:
 
 ```bash
 sw-search \
@@ -1218,11 +1186,11 @@ sw-search \
   --model mini \
   --backend pgvector \
   --connection-string "$PGVECTOR_CONNECTION" \
-  --collection-name signalwire_unified \
+  --output signalwire_unified \
   --tags documentation,signalwire,api,sdk
 ```
 
-**Pricing collection** -- built with the JSON strategy for precise control over chunk boundaries (each plan, feature, or price point as its own chunk):
+**Pricing collection** is built with the JSON strategy for precise control over chunk boundaries, with each plan, feature, or price point as its own chunk:
 
 ```bash
 sw-search \
@@ -1231,11 +1199,11 @@ sw-search \
   --model mini \
   --backend pgvector \
   --connection-string "$PGVECTOR_CONNECTION" \
-  --collection-name pricing \
+  --output pricing \
   --tags pricing,plans,costs
 ```
 
-**FreeSWITCH documentation** -- built with markdown strategy for technical content:
+**FreeSWITCH documentation** is built with the markdown strategy for technical content:
 
 ```bash
 sw-search \
@@ -1244,7 +1212,7 @@ sw-search \
   --model mini \
   --backend pgvector \
   --connection-string "$PGVECTOR_CONNECTION" \
-  --collection-name freeswitch \
+  --output freeswitch \
   --tags freeswitch,telephony,sip
 ```
 
@@ -1282,7 +1250,7 @@ class SigmondAgent(AgentBase):
             "collection_name": "signalwire_unified",
             "model_name": "mini",
             "count": 5,
-            "distance_threshold": 0.4,
+            "similarity_threshold": 0.4,
             "response_format_callback": self._format_search_results,
             "no_results_message": "I couldn't find information about '{query}' in the SignalWire knowledge base.",
             "swaig_fields": {
@@ -1306,7 +1274,7 @@ class SigmondAgent(AgentBase):
             "collection_name": "pricing",
             "model_name": "mini",
             "count": 3,
-            "distance_threshold": 0.4,
+            "similarity_threshold": 0.4,
             "response_format_callback": self._format_search_results,
             "no_results_message": "I couldn't find specific pricing information for '{query}'. Please check signalwire.com/pricing or contact sales@signalwire.com.",
             "swaig_fields": {
@@ -1329,7 +1297,7 @@ class SigmondAgent(AgentBase):
             "collection_name": "freeswitch",
             "model_name": "mini",
             "count": 3,
-            "distance_threshold": 0.4,
+            "similarity_threshold": 0.4,
             "response_format_callback": self._format_search_results,
             "no_results_message": "I couldn't find information about '{query}' in the FreeSWITCH documentation.",
             "swaig_fields": {
@@ -1435,7 +1403,7 @@ Kubernetes Deployment
 +-- sigmond-pod-4 --+
 ```
 
-Production Dockerfile using the lightweight `search-queryonly` installation (pods do not need ML models -- they query pre-built indexes):
+Production Dockerfile using the lightweight `search-queryonly` installation (pods do not need ML models: they query pre-built indexes):
 
 ```dockerfile
 FROM python:3.11-slim
@@ -1466,7 +1434,7 @@ export PGVECTOR_PORT=5432
 
 5. **The mini embedding model is sufficient for most use cases.** Testing mini vs base showed approximately 2% quality difference but 2x speed improvement and 50% smaller index size.
 
-6. **A distance_threshold of 0.4 is the production sweet spot for technical documentation.** Testing across 0.3 to 0.6 showed 0.3 was too strict (frequent zero results), 0.5 included some irrelevant results, and 0.6 was too permissive.
+6. **A similarity_threshold of 0.4 is the production sweet spot for technical documentation.** Testing across 0.3 to 0.6 showed 0.3 was too strict (frequent zero results), 0.5 included some irrelevant results, and 0.6 was too permissive.
 
 7. **Rolling updates enable zero-downtime collection changes.** Build the new collection under a new name, test it, switch agents via environment variable, then delete the old collection.
 
@@ -1505,6 +1473,8 @@ sw-search search ./knowledge.swsearch "test query"
 For comprehensive testing approaches including A/B testing, see the [Tuning Search Quality](#tuning-search-quality) section.
 
 ## Examples
+
+These scripts in the repository's `examples/` directory demonstrate the integration patterns this document covers:
 
 - `examples/search_with_custom_formatter.py` - Custom response formatter callback for search results
 - `examples/sigmond_simple.py` - Simple agent with local `.swsearch` file-based knowledge search
