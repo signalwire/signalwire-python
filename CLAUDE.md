@@ -112,7 +112,7 @@ mcp-gateway          # MCP Gateway service
 - `AuthMixin` → basic auth, security headers
 - `AIConfigMixin` → LLM parameter tuning (temperature, top_p, etc.)
 - `ServerlessMixin` → cloud function environment detection
-- `StateMixin` → per-session state management
+- `StateMixin` → creates and validates the per-call security tokens for SWAIG functions
 
 ### Agent Server
 

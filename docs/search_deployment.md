@@ -91,7 +91,7 @@ docker exec -it pgvector psql -U postgres -c "CREATE DATABASE knowledge;"
 docker exec -it pgvector psql -U postgres -d knowledge -c "CREATE EXTENSION vector;"
 ```
 
-For systems without Docker:
+For systems without Docker, the pgvector project's [installation instructions](https://github.com/pgvector/pgvector#installation) cover each platform and PostgreSQL version. On common systems, the commands are:
 
 ```bash
 # Ubuntu/Debian
@@ -1081,14 +1081,7 @@ VACUUM ANALYZE chunks_collection_name;
 
 ### pgvector to SQLite
 
-**When to migrate:**
-
-- Simplifying deployment
-- Moving to serverless/Lambda
-- Reducing to single-agent use case
-- Reducing infrastructure
-
-This direction is not implemented in this SDK version. `sw-search migrate --to-sqlite` prints "pgvector to SQLite migration not yet implemented" and exits without writing anything. The migration code behind it creates the `.swsearch` file's tables and copies the collection's configuration, but it doesn't yet copy the chunk rows themselves. No `sw-search export` command exists either. `sw-search` recognizes only `search`, `validate`, `remote`, and `migrate` as subcommands, so `export` is treated as a source path to index, like any other unrecognized first argument.
+The SDK can't migrate a pgvector collection to a `.swsearch` file. `sw-search migrate --to-sqlite` prints "pgvector to SQLite migration not yet implemented" and exits without writing anything, and the same migration in the Python API raises `NotImplementedError` before it connects to the database. No `sw-search export` command exists either. `sw-search` recognizes only `search`, `validate`, `remote`, and `migrate` as subcommands, so `export` is treated as a source path to index, like any other unrecognized first argument.
 
 To end up with a `.swsearch` file today, rebuild the index from the original source documents (see [Building Indexes with pgvector](#building-indexes-with-pgvector)). This recomputes the embeddings rather than reusing pgvector's copies. The collection's `chunks_<collection_name>` table is an ordinary PostgreSQL table, so reading it directly and writing the rows into a new `.swsearch` file is possible. The SDK does not provide a tool for it.
 

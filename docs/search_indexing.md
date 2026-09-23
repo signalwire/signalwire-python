@@ -1717,7 +1717,7 @@ sw-search migrate ./knowledge.swsearch \
 sw-search migrate --info ./knowledge.swsearch
 ```
 
-The reverse direction, `--to-sqlite` (migrating a pgvector collection back to a `.swsearch` file), is accepted by the CLI but not yet implemented.
+The reverse direction, from a pgvector collection back to a `.swsearch` file, isn't implemented: `--to-sqlite` exits with an error without writing anything. To get a `.swsearch` file, build one from the source documents.
 
 **Performance tuning:**
 

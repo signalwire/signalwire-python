@@ -141,7 +141,7 @@ client.run()
 
 The RELAY client provides:
 
-- 57+ calling methods (play, record, collect, detect, tap, stream, AI, conferencing, and more)
+- Calling methods for play, record, collect, detect, tap, stream, AI, conferencing, and more
 - SMS/MMS messaging with delivery tracking
 - Action objects with `wait()`, `stop()`, `pause()`, `resume()`
 - Auto-reconnect with exponential backoff

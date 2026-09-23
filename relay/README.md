@@ -32,7 +32,7 @@ client.run()
 The RELAY client provides:
 
 - Asyncio-native with auto-reconnect and exponential backoff
-- All 57+ calling methods: play, record, collect, connect, detect, fax, tap, stream, AI, conferencing, queues, and more
+- Calling methods for play, record, collect, connect, detect, fax, tap, stream, AI, conferencing, queues, and more
 - SMS/MMS messaging: send outbound messages, receive inbound messages, track delivery state
 - Action objects with `wait()`, `stop()`, `pause()`, `resume()` for controllable operations
 - Typed event classes for all call events
