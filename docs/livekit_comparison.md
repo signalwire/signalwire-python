@@ -10,7 +10,7 @@
 
 This document provides a technical comparison between the **SignalWire SDK** and **LiveKit Agents** (by LiveKit Inc.), two open-source Python frameworks for building voice AI agents. SignalWire and LiveKit take different architectural approaches. SignalWire uses declarative SWML (SignalWire Markup Language) document generation, executed by a full-featured telecom platform. LiveKit uses an imperative, room-based model, where agents join WebRTC rooms as participants. Both solve the same core problem: enabling developers to build conversational AI agents that interact via voice.
 
-LiveKit is the better-funded and higher-profile competitor, with $182.5M in funding, a $1B valuation, and OpenAI as a customer (powering ChatGPT Voice Mode). Its agent framework has 9,300+ GitHub stars and 1M+ monthly downloads. The core server has 17,100+ stars. LiveKit Cloud offers a managed deployment path with phone numbers, SIP trunking, and an inference API.
+LiveKit is the better-funded and higher-profile competitor. It reached a $1 billion valuation with a $100M Series C in January 2026 (see [LiveKit, "LiveKit's Series C"](https://livekit.com/blog/livekit-series-c)). OpenAI uses LiveKit to deliver voice for ChatGPT (see [LiveKit customers](https://livekit.com/customers), checked September 2026). Its agent framework has 1M+ monthly downloads. LiveKit Cloud offers a managed deployment path with phone numbers, SIP trunking, and an inference API.
 
 The analysis identifies strengths and gaps in both frameworks, and proposes improvements for the SignalWire solution. This analysis considers the **full SignalWire platform capabilities**, not only the Python SDK surface. The SDK generates documents, and the platform executes them with a richer feature set than the SDK alone exposes. That includes SWML verbs and SWAIG (SignalWire AI Gateway, the platform's tool-calling system) actions. It also includes built-in functions, post-prompt analytics, debug webhooks, relay events, video avatars, PGI methodology, and the enriched call_log.
 
@@ -20,22 +20,19 @@ The analysis identifies strengths and gaps in both frameworks, and proposes impr
 
 | Metric | SignalWire Agents SDK | LiveKit Agents |
 |--------|----------------------|----------------|
-| **GitHub Stars (agents)** | ~39 | ~9,300 |
-| **GitHub Stars (platform)** | N/A (platform is proprietary C) | ~17,100 (core server) |
-| **GitHub Forks (agents)** | ~7 | ~2,800 |
-| **Contributors (agents)** | Internal team | ~91 |
-| **PyPI Monthly Downloads** | ~3,100 | ~1,000,000+ |
-| **Backing Company** | SignalWire ($41.8M funded) | LiveKit Inc. ($182.5M funded, $1B valuation) |
-| **Company Heritage** | FreeSWITCH creators (10K+ active devs, 300M+ daily users) | WebRTC infrastructure |
-| **Notable Customers** | Enterprise telecom, contact centers | OpenAI (ChatGPT Voice), xAI, Meta, Spotify, Microsoft, Salesforce, Tesla |
-| **Paying Customers** | Not disclosed | 500+ |
+| **Contributors (agents)** | Internal team | 459 |
+| **PyPI Downloads, Last 30 Days** | ~3,500 (`signalwire-sdk`) | ~3,328,000 (`livekit-agents`) |
+| **Backing Company** | SignalWire ($41.6M raised, as of June 2021; see [SignalWire](https://signalwire.com/blogs/press/signalwire-secures-30-million-series-b-led-by-prosperity7-ventures-to-build-infrastructure-for-telecom-2-0)) | LiveKit Inc. ($1B valuation, $100M Series C, January 2026; see [LiveKit](https://livekit.com/blog/livekit-series-c)) |
+| **Company Heritage** | FreeSWITCH creators | WebRTC infrastructure |
+| **Notable Customers** | Enterprise telecom, contact centers | OpenAI, Tesla, Salesforce, Spotify (see [LiveKit customers](https://livekit.com/customers), checked September 2026) |
 | **Community** | Discord (shared with FreeSWITCH) | Slack community, community forum |
 | **Client SDKs** | Call Fabric SDK (JS, React Native) | JS, Swift, Kotlin, Flutter, React Native, Unity, Rust, ESP32 |
-| **Open GitHub Issues (agents)** | Low single digits | 288 |
 | **License** | MIT | Apache-2.0 |
-| **Pricing Model** | Per-minute ($0.16/min base for AI voice) | Tiered plans (Free, then $50, then $500, then Enterprise) + per-minute overages |
+| **Pricing Model** | Per-minute ([$0.16/min](https://signalwire.com/pricing/ai-agent-pricing) for the AI runtime, as of September 2026) | Tiered plans (Free, then $50, then $500, then Enterprise) + per-minute overages ([LiveKit pricing](https://livekit.com/pricing), as of September 2026) |
 
-**Assessment:** LiveKit has ~238x more GitHub stars on the agents repo, ~322x more PyPI downloads, 4.4x more funding, and marquee customers including OpenAI. This is the largest competitive gap SignalWire faces in the voice AI agent space. However, LiveKit's strength is WebRTC infrastructure and real-time media, not telecom. SignalWire's strength lies in its integrated telecom infrastructure, the FreeSWITCH ecosystem, and Programmatically Governed Inference (PGI). It also comes from a platform that executes far more than what the SDK surface suggests. LiveKit Agents has 288 open GitHub issues documenting problems with agent unresponsiveness, telephony latency doubling, scaling difficulties, and breaking API changes.
+Contributor counts are from GitHub, and download counts from [pypistats.org](https://pypistats.org/), both on September 23, 2026.
+
+**Assessment:** LiveKit has far higher PyPI download volume than the SignalWire Agents SDK, more funding, and marquee customers including OpenAI. This is the largest competitive gap SignalWire faces in the voice AI agent space. However, LiveKit's strength is WebRTC infrastructure and real-time media, not telecom. SignalWire's strength lies in its integrated telecom infrastructure, the FreeSWITCH ecosystem, and Programmatically Governed Inference (PGI). It also comes from a platform that executes far more than what the SDK surface suggests. A GitHub star or issue count is not a reliability measure; section 5.2 describes specific, sourced LiveKit production issues instead.
 
 ---
 
@@ -165,7 +162,7 @@ if __name__ == "__main__":
 | **Noise Reduction** | Built-in `denoise`/`stop_denoise` SWML verbs | Krisp BVC plugin | Both have denoise |
 | **Background Audio** | Built-in `background_file` with `loops` and `volume` params; `playback_bg` action | No equivalent | SW advantage |
 | **Audio Volume** | `ai_volume` (-50 to 50 dB) | No per-agent volume control | SW advantage |
-| **Video Avatars** | Built-in state-machine: `video_idle_file`, `video_talking_file`, `video_listening_file` at 20fps in C media engine | 11 third-party integrations: Tavus, Hedra, Bithuman, SimLi, LemonSlice, LiveAvatar, Avatario, Trugen, AvatarTalk, Anam, Bey | LK advantage: far more avatar options; SW: native, latency-optimized |
+| **Video Avatars** | Built-in state-machine: `video_idle_file`, `video_talking_file`, `video_listening_file` in C media engine | 11 third-party integrations: Tavus, Hedra, Bithuman, SimLi, LemonSlice, LiveAvatar, Avatario, Trugen, AvatarTalk, Anam, Bey | LK advantage: far more avatar options; SW: native, latency-optimized |
 | **Preemptive Generation** | N/A | LLM generates while waiting for end-of-turn using preflight transcripts | LK advantage: reduces perceived latency |
 | **Image Generation** | None | Via LLM vision capabilities | Minimal difference |
 | **Word-Level Timestamps** | N/A | STT and TTS provide word-level timing for avatar lip-sync | LK advantage |
@@ -178,7 +175,7 @@ if __name__ == "__main__":
 | **SIP** | Native with headers, auth, encryption, codecs, SIP REFER | SIP integration via LiveKit server; inbound/outbound trunks | Both capable; SW: more SIP features |
 | **Call Transfer** | Built-in with summary generation (`transfer` action + `transfer_summary`) | WarmTransferTask (beta) with chat history sharing; MoveParticipant API | Both capable; SW: simpler, production-ready |
 | **Call Hold** | Built-in (`hold` action with timeout, time strings) | No equivalent | SW advantage |
-| **Conferencing** | Full featured: mute, coach, recording, start_on_enter, max_participants (250), status callbacks | Room-based (multiple participants in a room), no dedicated conferencing features | SW advantage: full conference management |
+| **Conferencing** | Full featured: mute, coach, recording, start_on_enter, configurable participant limit, status callbacks | Room-based (multiple participants in a room), no dedicated conferencing features | SW advantage: full conference management |
 | **Queuing** | Built-in with position tracking, wait music, status callbacks, average wait time | No equivalent | SW advantage |
 | **Call Recording** | Foreground (voicemail) + background, stereo, wav/mp3, direction control, status URLs | Egress service for room/track recording; agent-level recording options (audio, traces, logs, transcript) | SW advantage: more recording modes; LK: separate egress service |
 | **Machine Detection** | Built-in AMD with human/machine/fax classification, beep detection, message-end detection | No equivalent | SW advantage |
@@ -290,11 +287,11 @@ LiveKit tools return data to the LLM but cannot directly control call behavior, 
 
 2. **Zero Infrastructure AI:** STT, LLM, TTS, VAD, barge-in, turn detection, noise reduction, and context management are all platform-managed. Developers never manage API keys for these services, handle streaming connections, or worry about audio encoding. LiveKit requires developers to select and configure each provider explicitly.
 
-3. **500ms AI Response Time:** Because AI runs inside the media transport layer rather than over external API calls, latency is inherently lower. This is a structural advantage. LiveKit measures latency at the Python framework layer, and developers report telephony latency doubling (adding 1-2.5 seconds) when calls go through SIP.
+3. **Lower AI Response Latency:** Because AI runs inside the media transport layer rather than over external API calls, latency is inherently lower. This is a structural advantage. LiveKit measures latency at the Python framework layer, and its telephony calls bridge WebRTC to PSTN through an additional SIP hop that SignalWire's architecture avoids.
 
 4. **Native Telecom (Comprehensive):** SignalWire is a telecom company. The platform provides an extensive set of telecom capabilities:
    - **Calling:** SIP, PSTN (inbound/outbound), WebRTC with serial/parallel/serial_parallel dialing
-   - **Call Control:** Transfer (with summary), hold (with timeout), conferencing (250 participants, coach, mute, recording), queuing (position tracking, wait music)
+   - **Call Control:** Transfer (with summary), hold (with timeout), conferencing (coach, mute, recording), queuing (position tracking, wait music)
    - **Recording:** Foreground (voicemail) and background, stereo, wav/mp3, direction control
    - **Detection:** Answering machine detection (human/machine/fax, beep detection, message-end detection)
    - **Messaging:** SMS/MMS with media attachments
@@ -364,7 +361,7 @@ LiveKit tools return data to the LLM but cannot directly control call behavior, 
 
 25. **Programmatically Governed Inference (PGI):** Four layers of structural constraint (semantic, schema, transition, execution authority) ensure correctness architecturally rather than via prompts. The model never has authority. LiveKit has no equivalent governance system. Tools are always available once registered, and LLM behavior is constrained only by instructions.
 
-26. **Native Video Avatars:** State-machine video avatar at 20fps in the C media engine. LiveKit relies on 11 third-party avatar services.
+26. **Native Video Avatars:** State-machine video avatar in the C media engine. LiveKit relies on 11 third-party avatar services.
 
 27. **AI Economic Insulation:** C kernel abstracts LLM providers, unified per-minute pricing converts token volatility into predictable unit economics.
 
@@ -374,7 +371,7 @@ LiveKit tools return data to the LLM but cannot directly control call behavior, 
 
 ### 4.2 LiveKit Agents Strengths
 
-1. **Market Position & Adoption:** $182.5M funded, $1B valuation, 500+ paying customers, OpenAI (ChatGPT Voice), xAI, Meta, Spotify, Tesla, Salesforce. 17K+ GitHub stars on the server, 9.3K+ on agents, 1M+ monthly downloads. This is the strongest market position in open-source voice AI.
+1. **Market Position & Adoption:** A $1B valuation on a $100M Series C (January 2026). Named customers include OpenAI, Tesla, Salesforce, and Spotify (see [LiveKit customers](https://livekit.com/customers), checked September 2026), and the framework had more than 3 million PyPI downloads in the 30 days to September 23, 2026. This is the strongest market position in open-source voice AI.
 
 2. **Provider Diversity:** 60+ plugins: 25+ STT, 20+ LLM, 24+ TTS, 6 realtime/S2S, 11 avatar providers, plus VAD, turn detection, noise cancellation. The plugin ecosystem is the largest in the space.
 
@@ -410,7 +407,7 @@ LiveKit tools return data to the LLM but cannot directly control call behavior, 
 
 18. **Word-Level Timestamps:** Both STT and TTS provide word-level timing information, enabling precise avatar lip-sync and transcript alignment.
 
-19. **Community & Ecosystem:** 17K+ stars (server) + 9.3K+ stars (agents), active Slack community, community forum, extensive documentation, NVIDIA partnership. Starter apps for every platform.
+19. **Community & Ecosystem:** An active Slack community, a community forum, extensive documentation, and an NVIDIA partnership. Starter apps for every platform.
 
 ---
 
@@ -418,7 +415,7 @@ LiveKit tools return data to the LLM but cannot directly control call behavior, 
 
 ### 5.1 SignalWire SDK Weaknesses
 
-1. **Low Open-Source Visibility:** 39 GitHub stars vs. LiveKit's combined 26K+. PyPI downloads are ~322x lower. This is an even larger gap than with Pipecat. LiveKit's OpenAI partnership and $1B valuation create a perception of industry leadership.
+1. **Low Open-Source Visibility:** GitHub stars and PyPI downloads are both far lower than LiveKit's, an even larger gap than with Pipecat. LiveKit's OpenAI partnership and $1B valuation create a perception of industry leadership.
 
 2. **SDK Does Not Expose Platform Capabilities Well:** The platform delivers comprehensive analytics, debug webhooks, and relay events, but the SDK doesn't surface these with a developer-friendly API. No `on_metrics()` callback, no observer pattern, no structured metrics models.
 
@@ -448,17 +445,15 @@ LiveKit tools return data to the LLM but cannot directly control call behavior, 
 
 ### 5.2 LiveKit Agents Weaknesses
 
-1. **Infrastructure Coupling:** Agents require a running LiveKit server to function. Self-hosting means running a Go binary + Redis + agent workers. This is a fundamental architectural difference: SignalWire agents are standalone HTTP endpoints; LiveKit agents are tightly coupled to LiveKit infrastructure. F22 Labs: "Self-Hosting Complexity -- intricate deployment challenges." LiveKit's own blog: "Agents are resource-heavy; you can't run hundreds of active voice calls on a single machine. It's on the order of tens."
+1. **Infrastructure Coupling:** Agents require a running LiveKit server to function. Self-hosting means running a Go binary + Redis + agent workers. This is a fundamental architectural difference: SignalWire agents are standalone HTTP endpoints; LiveKit agents are tightly coupled to LiveKit infrastructure. F22 Labs lists self-hosting complexity as a drawback of LiveKit (see [F22 Labs](https://www.f22labs.com/blogs/difference-between-livekit-vs-pipecat-voice-ai-platforms/)). LiveKit's own blog: "Agents are resource-heavy; you can't run hundreds of active voice calls on a single machine. It's on the order of tens." (see [LiveKit, "Deploy and scale agents on LiveKit Cloud"](https://livekit.com/blog/deploy-and-scale-agents-on-livekit-cloud), August 2025).
 
-2. **Agent Unresponsiveness (Critical):** The most severe production issue. GitHub #3637 (13+ reactions, 47+ comments): after TTS finishes, audio becomes distorted, then complete silence with no interrupt capability; the process is killed after 59-60 seconds (ping-pong timeout). ~1% of calls affected. GitHub #3418: agent stuck in "speaking" state without producing audio after rapid interruptions. GitHub #3295: agent fails to speak after executing MCP tool (regression in v1.2.7). GitHub #4331: agent stops after 2-3 concurrent sessions on self-hosted Docker. GitHub #3841: prewarmed worker processes die silently, causing cascading DuplexClosed errors.
+2. **Agent Unresponsiveness:** GitHub #4331 (open, filed December 2025) reports an agent that stops responding. It affects some users after 2-3 concurrent sessions on a self-hosted LiveKit server running in Docker.
 
-3. **Telephony Latency Doubles:** GitHub #3685: latency approximately doubles in telephony (SIP) contexts. Measurements from multiple users: Asia +doubled, Twilio SIP +doubled, India/US 2000-3000ms, Telnyx/Twilio +1-2.5 seconds added. Developer: "quite unbearable." This is a structural issue: audio must traverse WebRTC, then a SIP bridge, then PSTN, adding latency at each hop. SignalWire's AI runs inside the media layer, avoiding these hops entirely.
+3. **Telephony Latency:** LiveKit's telephony calls bridge WebRTC to PSTN through an additional SIP hop. SignalWire's AI runs inside the media layer, avoiding that hop entirely.
 
-4. **Scaling Problems:** LiveKit Community Forum: at ~50 concurrent users on the Scale plan ($500/mo), p50 latency was 13,498ms, p90 was 245,331ms, p99 was 276,611ms. First welcome messages dropped entirely. GitHub #3202: 15-50 second delays between room creation and agent job receipt (100-300x longer than documented 150ms). LiveKit's response: "burst load testing doesn't reflect realistic patterns."
-
-5. **No Telecom Integration:** LiveKit has SIP trunking and phone numbers, but no native:
+4. **No Telecom Integration:** LiveKit has SIP trunking and phone numbers, but no native:
    - Call hold
-   - Conferencing (250-person, coaching, recording)
+   - Conferencing (coaching, recording)
    - Queue management with position tracking
    - Call recording (foreground/background, stereo, direction control)
    - Answering machine detection
@@ -470,37 +465,29 @@ LiveKit tools return data to the LLM but cannot directly control call behavior, 
 
    LiveKit is a WebRTC company adding telephony. SignalWire is a telecom company adding AI.
 
-6. **Duplicate LLM Requests Doubling Costs:** GitHub #4219: when `preemptive_generation=True`, the system makes two complete LLM API calls per user turn, effectively doubling API costs. Real production example: two identical 14,858-token requests both completing successfully.
+5. **Breaking Changes Across Releases:** Two published PyPI releases of `livekit-agents` were yanked after shipping regressions (see [PyPI release history](https://pypi.org/project/livekit-agents/#history)). Version 1.3.4 had a wrong connection URL, and 1.2.7 carried a regression that caused stuck agents. Each upgrade carries some risk of a regression reaching production before it's caught.
 
-7. **Breaking API Changes:** The v1.0 release (April 2025) deprecated `VoicePipelineAgent` and `MultimodalAgent`, replaced `@llm.ai_callable` with `@function_tool`, removed `ChatManager` entirely, removed OpenAI Assistants API support, and deprecated multiple event types. Two PyPI versions yanked (v1.3.4 for wrong connection URL, v1.2.7 for regression causing stuck agents). GitHub #1328: timeouts after upgrading; #3785: agent start timing out with version mismatches.
+6. **No Declarative Workflows:** No contexts, steps, or gather systems. Complex workflows require manual state management. Beta workflows (WarmTransferTask, DTMFInputs) are limited compared to SignalWire's contexts/steps/gather.
 
-8. **Memory Leaks:** GitHub #2166: memory leak in livekit FFI library after `set_subscribed`. GitHub #4847: `Chan.recv` fails to handle `asyncio.CancelledError`, leaking waiters indefinitely. GitHub #2228: high memory usage with GPU-based speech-to-speech models.
+7. **No Skills System:** No modular capability registry. Every tool must be manually implemented.
 
-9. **Turn Detection Inflexibility:** GitHub #3427: interruption logic shared across agent's `thinking` and `speaking` states, can't be tuned independently. Developer tested multiple parameter combinations; none were satisfactory. Workaround: manually changing configuration via event handlers. GitHub #3373: agents interrupt users who are thinking or speaking slowly. GitHub #4183: user interruptions registered late or dropped when blocking logic (>20ms) occurs during TTS. SignalWire's interruption system is more granular (regex match, per-function control, confidence thresholds, multiple modes).
+8. **No Prefab Agents:** No reusable agent patterns for common use cases.
 
-10. **No Declarative Workflows:** No contexts, steps, or gather systems. Complex workflows require manual state management. Beta workflows (WarmTransferTask, DTMFInputs) are limited compared to SignalWire's contexts/steps/gather.
+9. **No SWAIG-Equivalent Actions:** Tools return data to the LLM but cannot directly control call behavior, toggle other tools, switch contexts, modify settings, play background audio, or execute platform-level actions. All side effects must be handled in Python code.
 
-11. **No Skills System:** No modular capability registry. Every tool must be manually implemented.
+10. **No Knowledge/RAG System:** LlamaIndex integration available, but no built-in search, vector indexing, or RAG pipeline.
 
-12. **No Prefab Agents:** No reusable agent patterns for common use cases.
+11. **No Multi-Language System:** No built-in per-language voice/engine/model/filler configuration. Multilingual support depends on individual provider capabilities.
 
-13. **No SWAIG-Equivalent Actions:** Tools return data to the LLM but cannot directly control call behavior, toggle other tools, switch contexts, modify settings, play background audio, or execute platform-level actions. All side effects must be handled in Python code.
+12. **Higher Complexity:** The room-based model requires understanding rooms, participants, tracks, workers, jobs, sessions, and async Python. Developers must manage API keys for each provider separately.
 
-14. **No Knowledge/RAG System:** LlamaIndex integration available, but no built-in search, vector indexing, or RAG pipeline.
+13. **No Serverless Support:** Cannot deploy to Lambda, Cloud Functions, or Azure Functions. Requires persistent AgentServer process connected to LiveKit server.
 
-15. **No Multi-Language System:** No built-in per-language voice/engine/model/filler configuration. Multilingual support depends on individual provider capabilities.
+14. **Testing Is Text Mode by Default:** LiveKit's docs say unit tests "run in text mode, using an LLM through LiveKit Inference or a model plugin."
 
-16. **Higher Complexity:** The room-based model requires understanding rooms, participants, tracks, workers, jobs, sessions, and async Python. F22 Labs: "Technical Expertise Required -- demands substantial developer knowledge." Developers must manage API keys for each provider separately.
+    They recommend developers "reserve audio runs for turn-taking and speech-specific issues" (see [LiveKit, "Testing and evaluation"](https://docs.livekit.io/agents/start/testing/)). The default test path validates logic, not the audio pipeline.
 
-17. **No Serverless Support:** Cannot deploy to Lambda, Cloud Functions, or Azure Functions. Requires persistent AgentServer process connected to LiveKit server.
-
-18. **Testing is Text-Only:** LiveKit's built-in testing operates in text-only mode. Hamming AI: "Real-time audio processing, LLM response variability, and WebRTC complexity create failure modes that standard unit tests miss." The test framework validates logic but does not exercise the audio pipeline.
-
-19. **No Structural Governance (Prompt-and-Pray):** No equivalent to PGI's four-layer constraint system. Tools are always available once registered. No per-step function restriction, no declarative state machine, no mechanism to mechanically prevent the model from taking unauthorized actions. LLM behavior is constrained only by `instructions` text.
-
-20. **Room Connection Failures:** GitHub #2160 (11+ reactions): room connection not established within 10 seconds, sometimes requiring several minutes. System creates dual sessions. Reporter resolved by migrating away from LiveKit Cloud to self-hosted.
-
-21. **SDK Interoperability:** HN discussions say that LiveKit and Pipecat Python SDKs cannot coexist in the same process.
+15. **No Structural Governance (Prompt-and-Pray):** No equivalent to PGI's four-layer constraint system. Tools are always available once registered. No per-step function restriction, no declarative state machine, no mechanism to mechanically prevent the model from taking unauthorized actions. LLM behavior is constrained only by `instructions` text.
 
 ---
 
@@ -569,8 +556,8 @@ Things that could be done, roughly ordered by impact. Each is a self-contained p
 1. **Auto-extract tool schemas from type hints** (6.1): Enhance `@AgentBase.tool()`. Pure SDK, backward compatible.
 2. **SDK metrics/observer API** (6.2): Wrap post-prompt data in Pydantic models, add `on_summary()` callback, observer pattern. Pure SDK.
 3. **OpenTelemetry integration** (6.3): Add OTel spans for tool execution, webhook handling. Prometheus endpoint option. Pure SDK.
-4. **Increase open-source visibility:** More examples, blog posts, conference talks, community engagement. The 39-star presence vs. LiveKit's 26K+ combined is a significant strategic gap. The PGI methodology, platform capabilities, and Taco Bell analysis need amplification.
-5. **Document the full platform story:** SDK README and docs should cover the full platform: 20+ SWAIG actions, telecom features, enriched call_log, state machine reconstruction, debug webhooks, PGI, video avatars, per-minute pricing, 500ms response time.
+4. **Increase open-source visibility:** More examples, blog posts, conference talks, community engagement. Low GitHub star and download counts are a significant strategic gap next to LiveKit's. The PGI methodology and platform capabilities need amplification.
+5. **Document the full platform story:** SDK README and docs should cover the full platform: 20+ SWAIG actions, telecom features, enriched call_log, state machine reconstruction, debug webhooks, PGI, video avatars, per-minute pricing, response latency.
 6. **Per-service TTFB labels** (6.4): Add explicit STT/LLM/TTS labels to post-prompt callback. Platform-side, C engine knows boundaries.
 7. **`swaig-monitor` TUI** (6.5): Terminal dashboard consuming debug webhook and relay events. Pure tooling.
 8. **Evaluate preemptive generation** (6.6): Begin LLM inference on partial ASR. Platform-side evaluation.
@@ -585,7 +572,7 @@ Things that could be done, roughly ordered by impact. Each is a self-contained p
 
 ### The Competitive Landscape
 
-LiveKit is SignalWire's most formidable competitor in the voice AI agent space, not because of technical superiority, but because of market position. LiveKit has $182.5M in funding, a $1B valuation, OpenAI as a customer, 26K+ combined GitHub stars, and 1M+ monthly downloads. That has given it industry mindshare that SignalWire's 39-star SDK cannot match through technical merit alone.
+LiveKit is SignalWire's most formidable competitor in the voice AI agent space, not because of technical superiority, but because of market position. LiveKit has a $1B valuation, OpenAI as a customer, and 1M+ monthly downloads. That has given it industry mindshare that the SignalWire SDK's smaller open-source footprint cannot match through technical merit alone.
 
 ### The Architectural Divide
 
@@ -595,7 +582,7 @@ The fundamental architectural difference is where AI execution happens:
 
 - **LiveKit:** The agent is a participant in a WebRTC room. Audio flows through the room, gets processed by the agent's Python pipeline (VAD, then STT, then LLM, then TTS), and audio is published back. The agent code orchestrates each service. For telephony, audio must traverse an additional SIP bridge, adding latency at each hop.
 
-This architectural difference has several consequences. SignalWire achieves 500ms response times, while LiveKit developers report telephony latency doubling (GitHub #3685). SignalWire agents deploy to Lambda in 6 lines, while LiveKit requires a running server. SignalWire can offer 30+ SWML verbs and 20+ SWAIG actions, while LiveKit tools can only return data to the LLM.
+This architectural difference has several consequences. SignalWire runs AI inside the media layer instead of over external API calls. LiveKit's telephony calls add a SIP bridge between the WebRTC room and the PSTN. SignalWire agents deploy to Lambda in 6 lines, while LiveKit requires a running server. SignalWire can offer 30+ SWML verbs and 20+ SWAIG actions, while LiveKit tools can only return data to the LLM.
 
 ### What SignalWire Is
 
@@ -612,13 +599,13 @@ SignalWire's platform is far more capable than a surface-level SDK comparison re
 - **Real-time monitoring** via debug webhooks and 11+ relay event types
 - **Declarative workflows** with contexts, steps, gather, navigation rules, and 4-mode reset system
 - **Serverless deployment** across 5 platforms with auto-detection
-- **500ms response time** from running AI inside the media layer
+- **Lower response latency** from running AI inside the media layer, instead of over external API calls
 
 ...represents a deeper set of platform capabilities for the enterprise voice AI market. LiveKit is a WebRTC company that added telephony. SignalWire is a telecom company that added AI, building it into the media engine rather than bolting it on as a room participant.
 
 ### LiveKit's Real Weaknesses
 
-Despite the market position, LiveKit Agents has significant production issues. Agents go silent mid-call (GitHub #3637, #3418, #4331), and telephony latency doubles through the SIP bridge (#3685). Scaling is a problem too: one report found catastrophic scaling at 50 users (p90 latency 245 seconds) and 15-50 second job dispatch delays (#3202). Other reports describe duplicate LLM requests that double costs (#4219), memory leaks (#2166, #4847), and breaking API changes with yanked versions. Turn detection is another gap: it can't be tuned independently for thinking vs speaking states (#3427). These issues are documented across 288 open GitHub issues.
+Despite the market position, LiveKit Agents has real production costs. Self-hosting requires running a Go binary plus Redis plus agent workers. LiveKit's own blog cautions that a single machine handles only "on the order of tens" of active calls. Telephony calls add a SIP bridge that SignalWire's architecture avoids. Two published `livekit-agents` releases have been yanked from PyPI after shipping regressions. GitHub #4331, open since December 2025, reports an agent that stops responding after a few concurrent sessions on a self-hosted server. Section 5.2 has the sourced detail.
 
 ### Genuine Remaining Gaps
 
@@ -630,8 +617,8 @@ Despite the market position, LiveKit Agents has significant production issues. A
 6. **No real-time visual debugging tool:** Post-call viewer is comprehensive; live monitoring tool needed.
 7. **Fewer client SDK platforms:** LiveKit's 8+ platform coverage is the broadest.
 8. **Fewer realtime/S2S models:** 1 vs. 6 speech-to-speech providers.
-9. **Open-source visibility:** 39 stars vs. 26K+ combined. This is a significant strategic issue.
+9. **Open-source visibility:** LiveKit's combined GitHub presence and download volume dwarf SignalWire's. This is a significant strategic issue.
 
 ### The Core Insight
 
-LiveKit wins on market position, provider ecosystem, realtime model support, and client SDKs. SignalWire wins on architecture, telecom depth, governance, analytics, latency, simplicity, and serverless deployment. The strategic imperative is the same as with Pipecat but more urgent: **close the perception gap**. SignalWire's platform capabilities surpass LiveKit's in most dimensions that matter for enterprise voice AI. PGI provides a structural answer to reliability that LiveKit's prompt-and-pray approach cannot match. But with a 667x GitHub star gap and LiveKit powering ChatGPT Voice, the technical story needs to be told louder.
+LiveKit wins on market position, provider ecosystem, realtime model support, and client SDKs. SignalWire wins on architecture, telecom depth, governance, analytics, latency, simplicity, and serverless deployment. The strategic imperative is the same as with Pipecat but more urgent: **close the perception gap**. SignalWire's platform capabilities surpass LiveKit's in most dimensions that matter for enterprise voice AI. PGI provides a structural answer to reliability that LiveKit's prompt-and-pray approach cannot match. But with LiveKit's far larger GitHub presence and its role delivering voice for ChatGPT, the technical story needs to be told louder.

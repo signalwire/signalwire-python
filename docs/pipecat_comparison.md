@@ -18,19 +18,17 @@ The analysis identifies strengths and gaps in both frameworks. It proposes impro
 
 | Metric | SignalWire Agents SDK | Pipecat |
 |--------|----------------------|---------|
-| **GitHub Stars** | ~39 | ~10,300 |
-| **GitHub Forks** | ~7 | ~1,700 |
-| **Contributors** | Internal team | 208 |
-| **PyPI Monthly Downloads** | ~3,100 | ~445,000 |
-| **Total PyPI Downloads** | Low thousands | ~3.1 million |
-| **Backing Company** | SignalWire ($41.8M funded) | Daily.co ($62.1M funded) |
-| **Company Heritage** | FreeSWITCH creators (10K+ active devs, 300M+ daily users) | WebRTC infrastructure |
-| **Community** | Discord (shared with FreeSWITCH) | Discord (6,379 members) |
+| **Contributors** | Internal team | 321 |
+| **PyPI Downloads, Last 30 Days** | ~3,500 (`signalwire-sdk`) | ~1,043,000 (`pipecat-ai`) |
+| **Backing Company** | SignalWire ($41.6M raised, as of June 2021; see [SignalWire](https://signalwire.com/blogs/press/signalwire-secures-30-million-series-b-led-by-prosperity7-ventures-to-build-infrastructure-for-telecom-2-0)) | Daily.co ($60M raised, as of November 2021; see [Daily](https://www.daily.co/blog/announcing-our-40m-series-b/)) |
+| **Company Heritage** | FreeSWITCH creators | WebRTC infrastructure |
+| **Community** | Discord (shared with FreeSWITCH) | Discord |
 | **Client SDKs** | Call Fabric SDK (JS, React Native) | JS, React, React Native, Swift, Kotlin, C++, ESP32 |
-| **Open GitHub Issues** | Low single digits | 306 |
 | **License** | MIT | BSD 2-Clause |
 
-**Assessment:** Pipecat has ~143x more mindshare on GitHub and ~143x more PyPI downloads. However, SignalWire's strength lies in its integrated telecom infrastructure, the massive FreeSWITCH ecosystem, and a platform that executes far more than what the SDK surface suggests. Pipecat's community advantage is significant but comes with 306 open GitHub issues documenting systemic problems with interruption handling, memory leaks, latency, and telephony integration. The high star count reflects developer interest; the high issue count reflects production pain.
+Contributor counts are from GitHub, and download counts from [pypistats.org](https://pypistats.org/), both on September 23, 2026.
+
+**Assessment:** Pipecat has far higher PyPI download volume than the SignalWire Agents SDK. However, SignalWire's strength lies in its integrated telecom infrastructure, the massive FreeSWITCH ecosystem, and a platform that executes far more than what the SDK surface suggests. A GitHub star or issue count is not a reliability measure; section 5.2 describes specific, sourced Pipecat production issues instead.
 
 ---
 
@@ -150,7 +148,7 @@ await runner.run(task)
 | **Noise Reduction** | Built-in `denoise`/`stop_denoise` SWML verbs | Krisp, Koala, AIC, RNNoise, NoiseReduce | Both have denoise; Pipecat: more options |
 | **Background Audio** | Built-in `background_file` with `loops` and `volume` params; `playback_bg` action | SoundFile mixer | Both capable |
 | **Audio Volume** | `ai_volume` (-50 to 50 dB) | Per-processor configuration | Both have volume control |
-| **Video Avatars** | Built-in state-machine video avatar: `video_idle_file`, `video_talking_file`, `video_listening_file` switch automatically at 20fps based on agent state (idle/speaking/listening); rendered in C media engine | HeyGen, Tavus, Simli third-party integrations | Both have video avatars; SW: native state-machine driven; Pipecat: third-party AI avatar services |
+| **Video Avatars** | Built-in state-machine video avatar: `video_idle_file`, `video_talking_file`, `video_listening_file` switch automatically based on agent state (idle/speaking/listening); rendered in C media engine | HeyGen, Tavus, Simli third-party integrations | Both have video avatars; SW: native state-machine driven; Pipecat: third-party AI avatar services |
 | **Image Generation** | None | fal, Google Imagen | Pipecat advantage |
 
 ### 3.3 Telecom & Call Control
@@ -161,7 +159,7 @@ await runner.run(task)
 | **SIP** | Native with headers, auth, encryption, codecs, SIP REFER | Via Daily SIP | SW advantage |
 | **Call Transfer** | Built-in with summary generation (`transfer` action + `transfer_summary`) | N/A | SW advantage |
 | **Call Hold** | Built-in (`hold` action with timeout, time strings) | N/A | SW advantage |
-| **Conferencing** | Full featured: mute, coach, recording, start_on_enter, max_participants (250), status callbacks | N/A | SW advantage |
+| **Conferencing** | Full featured: mute, coach, recording, start_on_enter, configurable participant limit, status callbacks | N/A | SW advantage |
 | **Queuing** | Built-in with position tracking, wait music, status callbacks, average wait time | N/A | SW advantage |
 | **Call Recording** | Foreground (voicemail) + background, stereo, wav/mp3, direction control, status URLs | N/A | SW advantage |
 | **Machine Detection** | Built-in AMD with human/machine/fax classification, beep detection, message-end detection | Parallel LLM classification | SW advantage: native, more reliable |
@@ -264,11 +262,11 @@ SignalWire's SWAIG provides 20+ actions that tools can return to control call be
 
 2. **Zero Infrastructure AI:** STT, LLM, TTS, VAD, barge-in, turn detection, noise reduction, and context management are all platform-managed. Developers never manage API keys for these services, handle streaming connections, or worry about audio encoding. The platform optimizes the entire pipeline.
 
-3. **500ms AI Response Time:** Because AI runs inside the media transport layer rather than over external API calls, latency is inherently lower. This is a structural advantage that Pipecat cannot replicate by design.
+3. **Lower AI Response Latency:** Because AI runs inside the media transport layer rather than over external API calls, latency is inherently lower. This is a structural advantage that Pipecat cannot replicate by design.
 
 4. **Native Telecom (Comprehensive):** SignalWire is a telecom company. The platform provides an extensive set of telecom capabilities:
    - **Calling:** SIP, PSTN (inbound/outbound), WebRTC with serial/parallel/serial_parallel dialing
-   - **Call Control:** Transfer (with summary), hold (with timeout), conferencing (250 participants, coach, mute, recording), queuing (position tracking, wait music)
+   - **Call Control:** Transfer (with summary), hold (with timeout), conferencing (coach, mute, recording), queuing (position tracking, wait music)
    - **Recording:** Foreground (voicemail) and background, stereo, wav/mp3, direction control
    - **Detection:** Answering machine detection (human/machine/fax, beep detection, message-end detection)
    - **Messaging:** SMS/MMS with media attachments
@@ -354,11 +352,11 @@ SignalWire's SWAIG provides 20+ actions that tools can return to control call be
     - **Transition layer:** Navigation between contexts/steps is mechanically enforced. Removing a tool or transition means the model cannot take that action. That's not because it was told not to, but because the mechanism doesn't exist in its world.
     - **Execution authority layer:** All side effects (payments, state changes, transfers) happen in deterministic code. The model communicates results; it doesn't produce them.
 
-    This is fundamentally different from guardrails, which react to bad outputs after the fact. PGI is structural: the model never has authority to begin with. The blackjack "you_lost" step, with zero tools and zero transitions, is the canonical example. A user can beg the AI for another hand, but nothing happens, because the mechanism to continue doesn't exist. This principle applies to real business problems: payment declined, account suspended, compliance hold. The model communicates empathetically. It cannot override the decision. This is why Taco Bell's drive-thru AI failed: the LLM had authority over business logic. It's why SignalWire's drive-thru demo doesn't: the AI is the interface, and deterministic code is the brain.
+    This is fundamentally different from guardrails, which react to bad outputs after the fact. PGI is structural: the model never has authority to begin with. The blackjack "you_lost" step, with zero tools and zero transitions, is the canonical example. A user can beg the AI for another hand, but nothing happens, because the mechanism to continue doesn't exist. This principle applies to real business problems: payment declined, account suspended, compliance hold. The model communicates empathetically. It cannot override the decision.
 
-26. **Native Video Avatars:** Built-in video avatar system with `video_idle_file`, `video_talking_file`, and `video_listening_file` parameters. The C media engine implements a state machine that switches between video files at 20fps based on whether the agent is idle, speaking, or listening. This runs in the media engine alongside audio, not as a third-party API call, so video state transitions are synchronized with actual speech output.
+26. **Native Video Avatars:** Built-in video avatar system with `video_idle_file`, `video_talking_file`, and `video_listening_file` parameters. The C media engine implements a state machine that switches between video files based on whether the agent is idle, speaking, or listening. This runs in the media engine alongside audio, not as a third-party API call, so video state transitions are synchronized with actual speech output.
 
-27. **AI Economic Insulation:** The C AI kernel abstracts the LLM interface, allowing the platform to select, swap, or blend providers (OpenAI, Anthropic, open-source models) without customer-facing changes. Combined with unified per-minute pricing ($0.16/min base for AI voice including STT+LLM+TTS), this converts volatile token-based costs into predictable unit economics. Customers don't track tokens or context windows. Competitors built on top of Twilio + upstream LLM providers inherit both transport limitations and pricing volatility from providers they don't control.
+27. **AI Economic Insulation:** The C AI kernel abstracts the LLM interface, allowing the platform to select, swap, or blend providers (OpenAI, Anthropic, open-source models) without customer-facing changes. SignalWire prices AI voice at $0.16/min for the runtime (real-time STT, LLM inference and standard TTS), as of September 2026 (see [SignalWire's AI agent pricing](https://signalwire.com/pricing/ai-agent-pricing)). That unified rate converts volatile token-based costs into predictable unit economics. Customers don't track tokens or context windows. Competitors built on top of Twilio + upstream LLM providers inherit both transport limitations and pricing volatility from providers they don't control.
 
 28. **Enriched, Self-Describing Call Log:** The `call_log` entries are self-describing with typed `action` fields and structured `metadata` objects. Every meaningful event is machine-parseable without content-string parsing:
     - **Navigation:** `step_change` (with `from_step`/`to_step`/`from_index`/`to_index`/`trigger`), `context_enter` (with `from_context`/`to_context`/`trigger`/`isolated`), `reset` (consolidate/full_reset)
@@ -379,7 +377,7 @@ SignalWire's SWAIG provides 20+ actions that tools can return to control call be
 
 2. **Provider Diversity:** 60+ service integrations (19 STT, 18 LLM, 26 TTS, 5 S2S, 3 video). Developers can mix and match providers and switch at runtime. SignalWire abstracts this away, which is usually good but limits choice.
 
-3. **Multimodal Support:** Image generation (fal, Imagen) and vision models (Moondream) are first-class pipeline capabilities. Pipecat integrates with third-party AI avatar services (HeyGen, Tavus, Simli) for photorealistic talking-head video. SignalWire has native video avatars (state-machine switching between idle/talking/listening video files at 20fps in the media engine) and vision input. Pipecat's third-party avatar integrations offer more photorealistic output; SignalWire's are native and latency-optimized.
+3. **Multimodal Support:** Image generation (fal, Imagen) and vision models (Moondream) are first-class pipeline capabilities. Pipecat integrates with third-party AI avatar services (HeyGen, Tavus, Simli) for photorealistic talking-head video. SignalWire has native video avatars (state-machine switching between idle/talking/listening video files in the media engine) and vision input. Pipecat's third-party avatar integrations offer more photorealistic output; SignalWire's are native and latency-optimized.
 
 4. **Developer-Side Observability:** The observer system (turn tracking, latency measurement), per-service TTFB metrics, and debugging tools (Whisker real-time debugger, Tail terminal dashboard) provide deep developer-side visibility. While SignalWire delivers comprehensive analytics via callbacks, Pipecat's SDK-level observer pattern is more accessible for debugging during development.
 
@@ -391,7 +389,7 @@ SignalWire's SWAIG provides 20+ actions that tools can return to control call be
 
 8. **Client SDK Ecosystem:** Native SDKs for 7 platforms (JS, React, React Native, Swift, Kotlin, C++, ESP32). SignalWire's Call Fabric SDK is newer and covers fewer platforms.
 
-9. **Community & Ecosystem:** 10K GitHub stars, 208 contributors, 6K Discord members, NVIDIA partnership, and extensive third-party blog coverage create a strong network effect. The ecosystem includes a CLI tool, real-time debugger, terminal dashboard, and structured conversation library.
+9. **Community & Ecosystem:** More than 300 contributors, an NVIDIA partnership, and extensive third-party blog coverage create a strong network effect. The ecosystem includes a CLI tool, real-time debugger, terminal dashboard, and structured conversation library.
 
 10. **Adapter/Schema Abstraction:** The `ToolsSchema` and `BaseLLMAdapter` system provides a clean abstraction for cross-provider tool/function definitions with automatic Python-to-JSON-schema conversion from type hints and docstrings.
 
@@ -401,7 +399,7 @@ SignalWire's SWAIG provides 20+ actions that tools can return to control call be
 
 ### 5.1 SignalWire SDK Weaknesses
 
-1. **Low Open-Source Visibility:** 39 GitHub stars vs. 10,300 is a 264x gap. PyPI downloads are 143x lower. Regardless of technical merit, this affects hiring, contributor recruitment, and enterprise adoption decisions.
+1. **Low Open-Source Visibility:** GitHub stars and PyPI downloads are both far lower than Pipecat's. Regardless of technical merit, this affects hiring, contributor recruitment, and enterprise adoption decisions.
 
 2. **SDK Does Not Expose Platform Capabilities Well:** The platform delivers comprehensive analytics (tokens, TTS, ASR, per-response timing with `answer_time`/`token_time`/`tps`, SWAIG logs, state machine transitions), debug webhooks, and relay events, but the SDK doesn't surface these with a developer-friendly API. There's no `on_metrics()` callback, no observer pattern, no structured metrics models. Developers have to parse raw post-prompt callback payloads themselves.
 
@@ -426,14 +424,16 @@ SignalWire's SWAIG provides 20+ actions that tools can return to control call be
 
 ### 5.2 Pipecat Weaknesses
 
-1. **Deployment Complexity:** The most common developer complaint. Softcery's analysis: "When you use a framework like Pipecat, you are responsible for everything -- provisioning servers, managing GPU infrastructure for AI models, handling security patches, and ensuring the entire system is reliable and scalable, which is a full-time job in itself." Hacker News user ldenoue (Feb 2026): "The problem with PipeCat and LiveKit (the 2 major stacks for building voice ai) is the deployment at scale." Another HN user asked: "Is there a simple, serverless version of deploying Pipecat stack, without me having to self host on my infra?" Thom Leigh on Medium titled his review: "Pipecat: The Hardest Way to Deploy Voice and Multimodal Conversational AI."
+1. **Deployment Complexity:** A common developer complaint. "The problem with PipeCat and LiveKit (the 2 major stacks for building voice ai) is the deployment at scale," ldenoue wrote on Hacker News, December 2025.
 
-2. **Systemic Interruption Handling Failures:** The most frequently reported technical issue, with 10+ GitHub issues filed. GitHub #1323 (open, March 2025): frames get reordered in the pipeline, causing "TranscriptionFrames being moved to AFTER StopInterruptionFrame" which "creates an unimaginably bad experience as the bot repeats itself over and over again." Affects ~10% of scenarios in testing, 100% reproducible. GitHub #3191 (Dec 2025): "Upon interrupting the bot, the bot still keeps on speaking." GitHub #2791 (Oct 2025): partial spoken text during interruptions not added to LLM context, happening "very frequently with our users whenever the bot has long responses." GitHub #2043: sequential function calls break after interruption with CancelledError, causing deadlocked state. Hamming AI's assessment: "you'll spend a lot of time getting turn-taking right" and "your users will complain about being 'cut off' more than anything else."
+   Another user in the same thread asked: "Is there a simple, serverless version of deploying Pipecat stack, without me having to self host on my infra?"
+
+2. **Interruption and Turn-Taking Tuning:** Hamming AI: "Pipecat gives you more control but you'll spend a lot of time getting turn-taking right" (August 2025). The same piece notes that users often complain about being "cut off" more than anything else.
 
 3. **No Telecom Integration:** Pipecat has no native SIP, PSTN, SMS, conferencing, queuing, recording, faxing, or payment processing capabilities. All telephony requires third-party services. For enterprise voice AI, this is a massive gap:
    - No call transfer with summary
    - No call hold
-   - No conferencing (250-person, coaching, recording)
+   - No conferencing (coaching, recording)
    - No queue management with position tracking
    - No call recording (foreground or background)
    - No answering machine detection (must use parallel LLM classification)
@@ -444,43 +444,37 @@ SignalWire's SWAIG provides 20+ actions that tools can return to control call be
    - No SIP REFER, no DTMF digit binding
    - No serial/parallel/serial_parallel dialing strategies
 
-4. **Critical Race Conditions and Silent Failures:** GitHub #3273 (Dec 2025, open): parallel function calls silently fail because `_run_parallel_function_calls()` creates tasks but never awaits them. The reporter notes: "The bug is particularly severe because: It's enabled by default. It silently fails (tools execute but results are ignored). It breaks the core agentic loop pattern." GitHub #721: audio input queue randomly stops receiving frames, making the bot "deaf" mid-conversation: "The gap between frame #3170 and frame #7344 represents over a minute of lost audio processing." GitHub #925: random crashes with OpenAI Realtime: "When it happens, the code completely stops working."
+4. **Latency Variability:** GitHub #3218 (open, Dec 2025): "massive latency and a queueing effect where the agent answers the previous question rather than the current one."
 
-5. **Memory Leaks:** GitHub #3116: approximately 3GB/minute memory leak introduced in v0.0.85 due to unbounded video queue buffer. Affected versions 0.0.85, 0.0.86, and 0.0.92 (0.0.80-0.0.84 were fine). GitHub #1003 (open): single Pipecat worker consuming ~400MB vs expected ~90MB baseline. Reporter: "I don't think it's livekit because I've made an alternative with their full stack and its memory usage is nowhere near this much." GitHub #740: audio mixer causing RAM out of memory.
+   Pipecat Cloud's own docs put a cold start at "around 10 seconds" in the best case. They also say scale-to-zero "is not recommended for production deployments where immediate response is required" (see [Pipecat Cloud's scaling docs](https://docs.pipecat.ai/pipecat-cloud/fundamentals/scaling)).
 
-6. **Latency Problems:** GitHub #2957: 4-5 second initial greeting latency (frame queue: 347ms, TTS: 2.5s, transport delay: 1.8s). GitHub #1694: 2-5 second response latency, with the bot starting playback only after TTS is called twice. GitHub #1319: undocumented `aggregation_timeout` introduced 1 second of extra latency in v0.0.57. GitHub #3218 (Dec 2025, open): "massive latency and a queueing effect where the agent answers the previous question rather than the current one." GitHub #904: sequential component initialization causes ~3.8s startup before user can interact. GitHub #1052: 10+ second pipeline init from non-US regions due to Daily.co APIs in us-west-2, closed as "attributed to infrastructure limitations rather than application code defects." Pipecat Cloud's own docs acknowledge "cold starts take around 10 seconds. Scale-to-zero is not recommended for production."
+5. **Breaking Changes Across Releases:** Pipecat's own changelog documents breaking changes between versions (see [Pipecat's changelog](https://github.com/pipecat-ai/pipecat/blob/main/CHANGELOG.md)). Examples include the default `VADParams.stop_secs` changing from 0.8s to 0.2s, and repeated changes to `UserImageRequestFrame` handling. Each upgrade risks breaking production deployments.
 
-7. **Broken Twilio/Telephony Integration:** Multiple critical issues with Pipecat's telephony serializers. GitHub #2550 (open): random WebSocket disconnections with Twilio: "Connection reset by peer," calls terminate mid-conversation with no reproduction pattern. Regression introduced in v0.0.78. GitHub #728: ending Twilio calls doesn't work; EndTaskFrame closes the WebSocket but the call remains connected. GitHub #826: broken audio chunks with Twilio output context. GitHub #2145: Pipecat tries to hang up calls users already terminated, causing 404 errors. GitHub #3179: pipeline gets stuck when trying to cancel after user disconnection.
+6. **Higher Complexity:** The imperative pipeline model requires understanding frames, processors, directions, aggregators, and async Python. The learning curve is steeper than "generate a SWML document."
 
-8. **Frequent Breaking API Changes:** The changelog shows continuous breaking changes: RTVIClient renamed to PipecatClient (breaking all existing client code), default VADParams stop_secs changed from 0.8s to 0.2s (silently alters all existing agents), UserImageRequestFrame handling changed, multiple deprecated callback signatures removed without migration paths. Each upgrade risks breaking production deployments.
+   A Hacker News developer reviewing open-source voice AI stacks in December 2025 found "no standard way to extract variables from conversations" for Pipecat or LiveKit.
 
-9. **Dependency Breakages Render Versions Unusable:** GitHub #2650: Pipecat 0.0.84+ completely unusable with Anthropic Claude: it imported a type (`tool_union_param`) that didn't exist in any version of the Anthropic SDK (0.36.0-0.40.0). GitHub #1092: LMNT integration "completely unusable, it has some sort of timeout for the live session which if you don't interact for 30sec or so the entire agent workflow freezes completely," a silent failure with no error messages. GitHub #2878: Claude Sonnet 4.5 on AWS Bedrock broken.
+   "Some parts required digging into Pipecat's codebase -- for example, updating the LLM context on-demand wasn't documented very well," Daniel Ostapenko wrote in August 2025.
 
-10. **VAD False Activations and Missed Utterances:** GitHub #3036 (Nov 2025): "causing interruptions even when the user isn't speaking, picking up background conversations that aren't even that loud," with random words like "okay" and "yes" injected as input. Maintainer's response: the STT is "hallucinating these inputs." GitHub #984: short utterances like "OK," "Yes," "No" not detected by VAD. Lowering sensitivity "may result in unintended consequences like interruptions triggering unexpectedly." GitHub #1391: STT triggers interruptions despite VAD settings being configured to ignore them.
+   F22 Labs (Jul 2026) rates Pipecat's scalability as "Moderate" and its setup as "Complex."
 
-11. **Audio Quality Issues:** GitHub #640: WebSocket transport "interruption handling is bad compared to exactly the same code but using daily as transport" and "voice quality is inferior." Maintainer closed as "not planned." GitHub #188: bot hears its own output and interrupts itself when using speakers. GitHub #1653: ticking noise in user audio. GitHub #1929: noise added at start of audio output. GitHub #2624: "pop" noise between audio chunks.
+7. **No Serverless Support:** Cannot deploy to Lambda, Cloud Functions, or Azure Functions. Requires a persistent server process. Pipecat Cloud is the only managed option. Its own docs put a cold start at around 10 seconds in the best case, and advise against scale-to-zero for production.
 
-12. **Multi-Session Concurrency Bug:** GitHub #1602: "There is no problem in a single session when using FastAPIWebsocketTransport. However, when two or more sessions are opened simultaneously, it will result in no response at all." Total failure under concurrent load.
+8. **No Built-In Skills:** No modular capability system. Every tool/function must be manually implemented and wired. No equivalent to `agent.add_skill("datetime")`.
 
-13. **Higher Complexity:** The imperative pipeline model requires understanding frames, processors, directions, aggregators, and async Python. The learning curve is steeper than "generate a SWML document." HN developers report "spent more time building infrastructure than building the actual agents" and "no standard way to extract variables from conversations." Gustavo Garcia: "Pipecat requires to configure many things (i.e. credentials) in the code so it tends to be much more verbose than LiveKit." Daniel Ostapenko: "some parts required digging into Pipecat's codebase -- for example, updating the LLM context on-demand wasn't documented very well." F22 Labs rates Pipecat's scalability as "Moderate" and setup as "Complex."
+9. **No Prefab Agents:** No reusable agent patterns for common use cases. Developers start from scratch for every agent type.
 
-14. **No Serverless Support:** Cannot deploy to Lambda, Cloud Functions, or Azure Functions. Requires a persistent server process. Pipecat Cloud is the only managed option, and its own docs warn against scale-to-zero due to 10-second cold starts.
+10. **No Knowledge/RAG System:** Only mem0 for memory. No built-in document search, vector indexing, or RAG pipeline. SignalWire has SearchEngine, Datasphere, and native vector search.
 
-15. **No Built-In Skills:** No modular capability system. Every tool/function must be manually implemented and wired. No equivalent to `agent.add_skill("datetime")`.
+11. **No Declarative Workflows:** No equivalent to contexts, steps, or gather systems. Complex workflows require manual state management. Pipecat Flows exists as a separate library but is less integrated.
 
-16. **No Prefab Agents:** No reusable agent patterns for common use cases. Developers start from scratch for every agent type.
+12. **No Dynamic Tool Control:** No equivalent to SignalWire's `toggle_functions` (enable/disable tools dynamically), `back_to_back_functions`, or per-step function restrictions. Pipecat tools are always available once registered.
 
-17. **No Knowledge/RAG System:** Only mem0 for memory. No built-in document search, vector indexing, or RAG pipeline. SignalWire has SearchEngine, Datasphere, and native vector search.
+13. **No Multi-Language System:** No built-in support for automatic language detection with per-language voice/engine/model selection, pronunciation rules, or per-language fillers.
 
-18. **No Declarative Workflows:** No equivalent to contexts, steps, or gather systems. Complex workflows require manual state management. Pipecat Flows exists as a separate library but is less integrated. HN developers: "no fast workflow iteration -- and every change meant another redeploy."
+14. **Python GIL Limitation:** The Python GIL limits true parallel execution, which is particularly problematic for CPU-intensive audio processing. Pipecat is Python-only with no native iOS/Android support. Async Python and multi-threaded I/O conflict with mobile app event loops.
 
-19. **No Dynamic Tool Control:** No equivalent to SignalWire's `toggle_functions` (enable/disable tools dynamically), `back_to_back_functions`, or per-step function restrictions. Pipecat tools are always available once registered.
-
-20. **No Multi-Language System:** No built-in support for automatic language detection with per-language voice/engine/model selection, pronunciation rules, or per-language fillers.
-
-21. **Python GIL Limitation:** The Python GIL limits true parallel execution, which is particularly problematic for CPU-intensive audio processing. Pipecat is Python-only with no native iOS/Android support. Async Python and multi-threaded I/O conflict with mobile app event loops. Pipecat and LiveKit Python SDKs can't coexist in the same process.
-
-22. **No Structural Governance (Prompt-and-Pray):** Pipecat provides no built-in mechanism for structurally constraining what the LLM can do. Developers rely on prompt instructions to enforce business rules, which are probabilistic. There is no equivalent to PGI's four-layer constraint system (semantic, schema, transition, execution authority). Tools are always available once registered. There's no per-step function restriction, no declarative state machine, and no mechanism to mechanically prevent the model from taking actions it shouldn't. This is the architectural pattern that failed at Taco Bell and McDonald's.
+15. **No Structural Governance (Prompt-and-Pray):** Pipecat provides no built-in mechanism for structurally constraining what the LLM can do. Developers rely on prompt instructions to enforce business rules, which are probabilistic. There is no equivalent to PGI's four-layer constraint system (semantic, schema, transition, execution authority). Tools are always available once registered. There's no per-step function restriction, no declarative state machine, and no mechanism to mechanically prevent the model from taking actions it shouldn't.
 
 ---
 
@@ -547,7 +541,7 @@ Things that could be done, roughly ordered by impact. Each is a self-contained p
 1. **SDK metrics/observer API** (6.1): Wrap existing post-prompt data in Pydantic models, add `on_summary()` callback, observer pattern. Pure SDK.
 2. **Auto-extract tool schemas from type hints** (6.2): Enhance `@AgentBase.tool()`. Pure SDK, backward compatible.
 3. **State flow reconstructor** (6.3, SDK side): Parse enriched `call_log`/`call_timeline` into structured timeline. Data is fully structured with typed actions and metadata, so no content-string parsing is needed. Pure SDK.
-4. **Increase open-source visibility:** More examples, blog posts, conference talks, community engagement. The 39-star GitHub presence undersells the platform's capabilities. The gap between actual capabilities and perceived capabilities is a strategic issue.
+4. **Increase open-source visibility:** More examples, blog posts, conference talks, community engagement. Low GitHub star and download counts undersell the platform's capabilities. The gap between actual capabilities and perceived capabilities is a strategic issue.
 5. **Document the full platform story:** SDK README and docs should cover: 20+ SWAIG actions, telecom features, analytics, per-response timing, state machine reconstruction, debug webhooks, PGI methodology, video avatars, per-minute pricing model. Developers comparing SDK surfaces miss the platform depth.
 6. **Per-service TTFB in post-prompt** (6.4): Break down `answer_time`/`token_time` into STT/LLM/TTS. Platform-side, C engine already knows boundaries.
 7. **State machine telemetry gaps** (6.3, platform side): Per-step start/end timestamps and relay events for navigation. The enriched call_log covers triggers, gather audit trail, function duration_ms, and call_timeline; the gaps are per-step timing and real-time relay events.
@@ -562,7 +556,7 @@ Things that could be done, roughly ordered by impact. Each is a self-contained p
 
 ### The Industry Context
 
-Roughly half of AI projects never reach production. 75% of builders struggle with reliability. Delays above 800ms increase user abandonment by 40%. The dominant architecture (bolt an LLM onto existing infrastructure and hope the prompt covers edge cases) is the root cause. This is the architecture that failed publicly at Taco Bell (18,000 cups of water) and McDonald's (bacon in ice cream). It's quietly failing inside enterprise contact centers everywhere.
+AssemblyAI surveyed 455 voice-agent builders in 2026 and found that 75% struggle with technical reliability barriers such as accuracy issues, integration problems and cost overruns. For more information, see [AssemblyAI's voice agent report](https://www.assemblyai.com/voice-agent-report). The dominant architecture (bolt an LLM onto existing infrastructure and hope the prompt covers edge cases) is the root cause. It's quietly failing inside enterprise contact centers everywhere.
 
 ### What SignalWire Is
 
@@ -579,9 +573,9 @@ SignalWire's platform is far more capable than a surface-level SDK comparison re
 - **Real-time monitoring** via debug webhooks and 11+ relay event types
 - **Declarative workflows** with contexts, steps, gather, navigation rules, and 4-mode reset system
 - **Serverless deployment** across 5 platforms with auto-detection
-- **500ms response time** from the structural advantage of running AI inside the media layer
+- **Lower response latency** from the structural advantage of running AI inside the media layer, instead of over external API calls
 
-...represents a deeper set of platform capabilities than Pipecat offers for the enterprise voice AI market. Pipecat offers more raw flexibility, third-party provider choice, and photorealistic AI avatar integrations. But developer complaints paint a consistent picture of the cost. Systemic interruption handling failures affect 10+ GitHub issues, including frame reordering that causes bots to "repeat itself over and over." Critical race conditions let parallel tool calls silently fail. Other reports describe 3GB/minute memory leaks, 2-5 second response latencies, and broken Twilio integration with random mid-call disconnections. Developers also report frequent breaking API changes and dependency breakages that render entire versions unusable; the Anthropic SDK was completely broken in 0.0.84+. Multiple developers report spending "more time building infrastructure than building the actual agents." These are not edge cases. They are systemic issues documented across 306 open GitHub issues, multiple Hacker News threads, and independent developer blog posts.
+...represents a deeper set of platform capabilities than Pipecat offers for the enterprise voice AI market. Pipecat offers more raw flexibility, third-party provider choice, and photorealistic AI avatar integrations. Section 5.2 describes the real costs of that flexibility. Turn-taking and interruption behavior need careful tuning, deployment at scale is a common complaint, and each release can carry breaking changes. Neither GitHub star counts nor open-issue totals measure reliability. The sourced detail in section 5.2 is a better guide.
 
 ### Genuine Remaining Gaps
 
@@ -590,7 +584,7 @@ SignalWire's platform is far more capable than a surface-level SDK comparison re
 3. **Per-service TTFB not explicitly labeled:** A 3-stage latency decomposition exists (`latency`/`utterance_latency`/`audio_latency`) and the post-call viewer charts stacked segments, but these aren't explicitly labeled as STT vs LLM vs TTS. The C engine knows these boundaries; it only needs to expose them with clear per-service labels.
 4. **No real-time visual debugging tool:** The post-call observability viewer provides comprehensive analysis (9-tab SPA with recording overlay, timeline, state flow diagrams, latency decomposition), and debug webhooks and relay events stream live data, but there's no real-time TUI for monitoring live calls during development.
 5. **Manual tool schema specification:** Auto-extraction from type hints would reduce boilerplate.
-6. **Open-source visibility:** 39 stars for a platform this capable is a marketing and community engagement problem, not a technical one. The PGI methodology, Taco Bell analysis, and full platform capabilities story need to be told.
+6. **Open-source visibility:** low GitHub star and fork counts for a platform this capable point to a marketing and community engagement problem, not a technical one. The PGI methodology and full platform capabilities story need to be told.
 
 ### The Core Insight
 
