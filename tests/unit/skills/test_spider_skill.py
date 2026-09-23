@@ -57,7 +57,7 @@ def mock_agent() -> Mock:
 @pytest.fixture
 def default_skill(mock_agent: Mock) -> "SpiderSkill":
     """SpiderSkill with default parameters."""
-    with patch("signalwire.skills.spider.skill.requests.Session") as MockSession:
+    with patch("signalwire.skills.spider.skill._PublicSession") as MockSession:
         mock_session = Mock()
         mock_session.headers = {}
         MockSession.return_value = mock_session
@@ -87,7 +87,7 @@ def custom_skill(mock_agent: Mock) -> "SpiderSkill":
         "selectors": {"title": "//title/text()"},
         "follow_patterns": [r"/blog/.*"],
     }
-    with patch("signalwire.skills.spider.skill.requests.Session") as MockSession:
+    with patch("signalwire.skills.spider.skill._PublicSession") as MockSession:
         mock_session = Mock()
         mock_session.headers = {}
         MockSession.return_value = mock_session
@@ -1202,7 +1202,7 @@ class TestEdgeCases:
 
     def test_init_with_empty_params(self, mock_agent: Mock) -> None:
         """Skill should initialize fine with no params at all."""
-        with patch("signalwire.skills.spider.skill.requests.Session") as MockSession:
+        with patch("signalwire.skills.spider.skill._PublicSession") as MockSession:
             mock_session = Mock()
             mock_session.headers = {}
             MockSession.return_value = mock_session
@@ -1214,7 +1214,7 @@ class TestEdgeCases:
 
     def test_init_with_none_params(self, mock_agent: Mock) -> None:
         """Skill should handle None params gracefully (via SkillBase default)."""
-        with patch("signalwire.skills.spider.skill.requests.Session") as MockSession:
+        with patch("signalwire.skills.spider.skill._PublicSession") as MockSession:
             mock_session = Mock()
             mock_session.headers = {}
             MockSession.return_value = mock_session
@@ -1224,7 +1224,7 @@ class TestEdgeCases:
             assert skill.delay == 0.1
 
     def test_register_tools_no_prefix_when_tool_name_empty(self, mock_agent: Mock) -> None:
-        with patch("signalwire.skills.spider.skill.requests.Session") as MockSession:
+        with patch("signalwire.skills.spider.skill._PublicSession") as MockSession:
             mock_session = Mock()
             mock_session.headers = {}
             MockSession.return_value = mock_session
@@ -1297,3 +1297,48 @@ class TestEdgeCases:
                         {"start_url": "https://example.com"}, {})
                     # Should still return results for the page that was crawled
                     assert "Crawled 1 pages" in result.response
+
+
+# ===================================================================
+# Redirects to internal addresses
+# ===================================================================
+
+METADATA_URL = "http://169.254.169.254/latest/meta-data/"
+
+
+@pytest.fixture
+def redirecting_skill(scripted_adapter: type, monkeypatch: pytest.MonkeyPatch) -> "SpiderSkill":
+    """A SpiderSkill whose public page redirects to the cloud metadata address."""
+    from signalwire.skills.spider.skill import SpiderSkill
+
+    monkeypatch.delenv("SWML_ALLOW_PRIVATE_URLS", raising=False)
+    skill = SpiderSkill(_make_mock_agent(), {"delay": 0, "max_depth": 1, "max_pages": 3})
+    adapter = scripted_adapter(
+        {
+            "http://public.test/page": (302, {"Location": METADATA_URL}, b""),
+            METADATA_URL: (200, {}, b"<html><body><p>internal-secret</p></body></html>"),
+        }
+    )
+    skill.session.mount("http://public.test", adapter)
+    skill.session.mount("http://169.254.169.254", adapter)
+    return skill
+
+
+@pytest.mark.usefixtures("public_test_dns")
+class TestRedirectToInternalAddress:
+    """A public page that redirects to an internal address must not be fetched."""
+
+    def test_scrape_refuses_the_redirect(self, redirecting_skill: "SpiderSkill") -> None:
+        result = redirecting_skill._scrape_url_handler({"url": "http://public.test/page"}, {})
+        assert "internal-secret" not in result.response
+        assert result.response == "Failed to fetch http://public.test/page"
+
+    def test_crawl_refuses_the_redirect(self, redirecting_skill: "SpiderSkill") -> None:
+        result = redirecting_skill._crawl_site_handler({"start_url": "http://public.test/page"}, {})
+        assert "internal-secret" not in result.response
+
+    def test_session_refuses_private_addresses(self) -> None:
+        from signalwire.skills.spider.skill import SpiderSkill
+        from signalwire.utils.url_validator import _PublicSession
+
+        assert isinstance(SpiderSkill(_make_mock_agent(), {}).session, _PublicSession)

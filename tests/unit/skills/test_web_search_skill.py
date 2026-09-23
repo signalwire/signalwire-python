@@ -723,7 +723,7 @@ class TestExtractRedditContent:
             comments_data = {"data": {"children": comments}}
         return [post_data, comments_data]
 
-    @patch("signalwire.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill._PublicSession.get")
     def test_successful_reddit_extraction(self, mock_get: Mock) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
         mock_response = Mock()
@@ -736,7 +736,7 @@ class TestExtractRedditContent:
         assert "testuser" in text
         assert metrics["is_reddit"] is True
 
-    @patch("signalwire.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill._PublicSession.get")
     def test_reddit_with_comments(self, mock_get: Mock) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
         comments = [
@@ -758,7 +758,7 @@ class TestExtractRedditContent:
         assert "commenter1" in text
         assert "helpful" in text
 
-    @patch("signalwire.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill._PublicSession.get")
     def test_reddit_filters_short_comments(self, mock_get: Mock) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
         comments = [
@@ -776,7 +776,7 @@ class TestExtractRedditContent:
         # Short comments (< 50 chars) should be filtered
         assert "short_commenter" not in text
 
-    @patch("signalwire.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill._PublicSession.get")
     def test_reddit_filters_deleted_comments(self, mock_get: Mock) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
         comments = [
@@ -797,7 +797,7 @@ class TestExtractRedditContent:
         text, _ = scraper.extract_reddit_content("https://reddit.com/r/test/comments/123")
         assert "deleted_user" not in text
 
-    @patch("signalwire.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill._PublicSession.get")
     def test_reddit_filters_removed_selftext(self, mock_get: Mock) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
         mock_response = Mock()
@@ -808,7 +808,7 @@ class TestExtractRedditContent:
         text, _ = scraper.extract_reddit_content("https://reddit.com/r/test/comments/123")
         assert "[removed]" not in text
 
-    @patch("signalwire.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill._PublicSession.get")
     def test_reddit_appends_json_suffix(self, mock_get: Mock) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
         mock_response = Mock()
@@ -820,7 +820,7 @@ class TestExtractRedditContent:
         called_url = mock_get.call_args[0][0]
         assert called_url.endswith(".json")
 
-    @patch("signalwire.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill._PublicSession.get")
     def test_reddit_already_json_url(self, mock_get: Mock) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
         mock_response = Mock()
@@ -832,7 +832,7 @@ class TestExtractRedditContent:
         called_url = mock_get.call_args[0][0]
         assert called_url == "https://reddit.com/r/test/comments/123.json"
 
-    @patch("signalwire.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill._PublicSession.get")
     def test_reddit_invalid_json_falls_back_to_html(self, mock_get: Mock) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
         mock_get.side_effect = ValueError("Invalid JSON")
@@ -842,7 +842,7 @@ class TestExtractRedditContent:
             mock_html.assert_called_once()
             assert text == "fallback"
 
-    @patch("signalwire.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill._PublicSession.get")
     def test_reddit_content_limit(self, mock_get: Mock) -> None:
         scraper = GoogleSearchScraper("key", "engine_id", max_content_length=100000)
         mock_response = Mock()
@@ -853,7 +853,7 @@ class TestExtractRedditContent:
         text, _ = scraper.extract_reddit_content("https://reddit.com/r/test", content_limit=50)
         assert len(text) <= 50
 
-    @patch("signalwire.skills.web_search.skill.requests.get")
+    @patch("signalwire.skills.web_search.skill._PublicSession.get")
     def test_reddit_quality_metrics(self, mock_get: Mock) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
         mock_response = Mock()
@@ -1152,3 +1152,33 @@ class TestEdgeCases:
         metrics = scraper._calculate_content_quality(text, "https://example.com")
         assert metrics["length_score"] < 1.0
         assert metrics["length_score"] >= 0.8
+
+
+class TestRedirectToInternalAddress:
+    """A search result that redirects to an internal address must not be fetched."""
+
+    METADATA_URL = "http://169.254.169.254/latest/meta-data/"
+
+    def test_page_fetch_refuses_the_redirect(
+        self, scripted_adapter: type, public_test_dns: None, monkeypatch: Any
+    ) -> None:
+        monkeypatch.delenv("SWML_ALLOW_PRIVATE_URLS", raising=False)
+        scraper = GoogleSearchScraper("key", "engine_id")
+        adapter = scripted_adapter(
+            {
+                "http://public.test/page": (302, {"Location": self.METADATA_URL}, b""),
+                self.METADATA_URL: (200, {}, b"<html><body><p>internal-secret</p></body></html>"),
+            }
+        )
+        scraper.session.mount("http://public.test", adapter)
+        scraper.session.mount("http://169.254.169.254", adapter)
+
+        text, metrics = scraper.extract_html_content("http://public.test/page")
+        assert "internal-secret" not in text
+        assert adapter.sent == ["http://public.test/page"]
+        assert "error" in metrics
+
+    def test_session_refuses_private_addresses(self) -> None:
+        from signalwire.utils.url_validator import _PublicSession
+
+        assert isinstance(GoogleSearchScraper("key", "engine_id").session, _PublicSession)

@@ -260,7 +260,7 @@ The skill does not cover these cases:
 The skill handles these cases:
 - **Missing URL**: Prompts for a URL instead of failing
 - **Invalid URLs**: Returns "Invalid URL: {url}" without making a request
-- **Blocked URLs**: SSRF protection rejects private or internal addresses
+- **Blocked URLs**: SSRF protection rejects a URL that resolves to a private or internal address. It also checks each redirect and each connection, so a public page that redirects to an internal address returns "Failed to fetch {url}". To allow private addresses, for example to crawl an internal site, set `SWML_ALLOW_PRIVATE_URLS=true`.
 - **Fetch failures**: Timeouts, HTTP errors (including 429), and connection errors all return "Failed to fetch {url}"; the specific error is logged, not returned to the caller
 
 ## Contributing

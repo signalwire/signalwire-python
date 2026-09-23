@@ -19,6 +19,7 @@ from lxml.etree import XPathEvalError
 
 from signalwire.core.skill_base import SkillBase
 from signalwire.core.function_result import FunctionResult
+from signalwire.utils.url_validator import _PublicSession
 
 if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase
@@ -177,8 +178,10 @@ class SpiderSkill(SkillBase):
         self.headers = self.params.get("headers", {})
         self.headers["User-Agent"] = self.user_agent
 
-        # Session for connection pooling
-        self.session = requests.Session()
+        # Session for connection pooling. It refuses redirects and connections
+        # to private or internal addresses, which a check before the fetch
+        # can't catch.
+        self.session = _PublicSession()
         self.session.headers.update(self.headers)
 
         # Cache for responses (bounded OrderedDict for LRU-style eviction)

@@ -388,3 +388,51 @@ class TestUtils:
 def test_utils() -> type:
     """Provide test utilities"""
     return TestUtils 
+
+class ScriptedHTTPAdapter:
+    """A Requests adapter that answers each URL with a scripted response.
+
+    ``routes`` maps a full URL to ``(status, headers, body)``. ``sent`` records
+    every URL the adapter was asked for, in order.
+    """
+
+    def __init__(self, routes: dict[str, tuple[int, dict[str, str], bytes]]) -> None:
+        self.routes = routes
+        self.sent: list[str] = []
+
+    def send(self, request: Any, **kwargs: Any) -> Any:
+        import requests
+
+        url = request.url or ""
+        self.sent.append(url)
+        status, headers, body = self.routes[url]
+        response = requests.Response()
+        response.status_code = status
+        response.headers.update(headers)
+        response.url = url
+        response.request = request
+        response._content = body
+        return response
+
+    def close(self) -> None:
+        pass
+
+
+@pytest.fixture
+def scripted_adapter() -> type:
+    """The ScriptedHTTPAdapter class, for mounting on a Requests session."""
+    return ScriptedHTTPAdapter
+
+
+@pytest.fixture
+def public_test_dns() -> Iterator[None]:
+    """Resolve ``public.test`` to a public address, and an IP literal to itself."""
+    import socket
+
+    def resolve(host: str, *args: Any, **kwargs: Any) -> list[tuple[Any, ...]]:
+        ip = "93.184.216.34" if host == "public.test" else host
+        family = socket.AF_INET6 if ":" in ip else socket.AF_INET
+        return [(family, socket.SOCK_STREAM, 6, "", (ip, 0))]
+
+    with patch("socket.getaddrinfo", side_effect=resolve):
+        yield
