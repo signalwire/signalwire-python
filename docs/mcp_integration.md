@@ -63,7 +63,7 @@ Tools from all servers are merged into one list. If an MCP tool has the same nam
 
 ## Exposing Tools as MCP Server
 
-Use `enable_mcp_server()` to add an MCP endpoint at `/mcp` on your agent's server. Any MCP client can connect and use your `@tool` functions.
+Use `enable_mcp_server()` to add an MCP endpoint at `/mcp` on your agent's server. An MCP client that has the agent's basic auth credentials can connect and use your `@tool` functions.
 
 ```python
 from signalwire import AgentBase
@@ -83,25 +83,20 @@ class MyAgent(AgentBase):
 The `/mcp` endpoint handles the full MCP protocol:
 - `initialize`: protocol version and capability negotiation
 - `notifications/initialized`: ready signal
-- `tools/list`: returns all `@tool` functions in MCP format
+- `tools/list`: returns the agent's tools in MCP format, except DataMap and external webhook tools, which don't run in the agent
 - `tools/call`: invokes the handler and returns the result
 - `ping`: keepalive
 
-### Connecting from Claude Desktop
+### Connecting a Client
 
-Add your agent as an MCP server in Claude Desktop's config:
+The endpoint uses the agent's basic auth credentials, like the agent's other endpoints, and answers 401 without them. Give your MCP client the endpoint's URL and an `Authorization: Basic` header built from those credentials. For example, this command adds the agent to Claude Code:
 
-```json
-{
-    "mcpServers": {
-        "my-agent": {
-            "url": "https://your-server.com/agent/mcp"
-        }
-    }
-}
+```bash
+claude mcp add --transport http my-agent https://your-server.com/agent/mcp \
+  --header "Authorization: Basic $(printf '%s' 'user:password' | base64)"
 ```
 
-Your `@tool` functions are now available in Claude Desktop conversations.
+Your `@tool` functions are then available to the client.
 
 ## Using Both Together
 

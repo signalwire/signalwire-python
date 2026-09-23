@@ -13,6 +13,7 @@ import json
 import signal
 import sys
 import contextvars
+import inspect
 from typing import TYPE_CHECKING, Any
 from collections.abc import Awaitable, Callable
 
@@ -731,9 +732,20 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             @router.post("/mcp/")
             async def handle_mcp(request: Request) -> Response:
                 """Handle MCP JSON-RPC 2.0 requests"""
+                # tools/call runs the agent's tools, so this endpoint needs
+                # the same credentials as the agent's other endpoints.
+                if not self._check_basic_auth(request):
+                    return Response(
+                        content=json.dumps({"error": "Unauthorized"}),
+                        status_code=401,
+                        headers={"WWW-Authenticate": "Basic"},
+                        media_type="application/json",
+                    )
                 try:
                     body = await request.json()
                     result = self._handle_mcp_request(body)
+                    if inspect.isawaitable(result):
+                        result = await result
                     from starlette.responses import JSONResponse
 
                     return JSONResponse(content=result)
