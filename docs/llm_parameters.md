@@ -44,40 +44,43 @@ Note: barge_confidence is not applicable to post-prompt as interruption doesn't 
 These are commonly used parameters, but any parameter accepted by your model can be used. The actual ranges and defaults are model-specific and handled by the server.
 
 ### temperature
-Controls the randomness of the AI's responses.
+Controls the randomness of the AI's responses. The SWML schema allows 0.0 to 1.5, with a default of 1.0.
 - **Lower values (e.g., 0.0-0.3)**: More deterministic, focused, and consistent responses
 - **Medium values (e.g., 0.4-0.7)**: Balanced creativity and consistency
 - **Higher values (e.g., 0.8+)**: More creative, diverse, and unpredictable responses
 
 ### top_p
-Nucleus sampling parameter that controls the cumulative probability of token selection.
+Nucleus sampling parameter that controls the cumulative probability of token selection. The SWML schema allows 0.0 to 1.0, with a default of 1.0.
 - **Lower values (e.g., 0.1-0.5)**: Only considers the most likely tokens
 - **Medium values (e.g., 0.6-0.9)**: Balanced token selection
 - **Higher values (e.g., 0.95-1.0)**: Considers a wider range of tokens
 
 ### barge_confidence
-ASR (Automatic Speech Recognition) confidence threshold to interrupt the AI while it's speaking (main prompt only).
+ASR (Automatic Speech Recognition) confidence threshold to interrupt the AI while it's speaking (main prompt only). This parameter isn't in the SWML schema; it passes through to the model unvalidated, so its range and default depend on the model in use.
 - **Lower values (e.g., 0.0-0.4)**: Easier to interrupt, more sensitive to user speech
 - **Medium values (e.g., 0.5-0.7)**: Balanced interruption sensitivity
 - **Higher values (e.g., 0.8-1.0)**: Harder to interrupt, requires clear user speech
 
 ### presence_penalty
-Topic diversity control. Penalizes tokens based on whether they appear in the conversation so far.
+Topic diversity control. Penalizes tokens based on whether they appear in the conversation so far. The SWML schema allows -2.0 to 2.0, with a default of 0.
 - **Negative values**: Encourages repetition of topics
 - **Zero**: No penalty
 - **Positive values**: Discourages repetition, encourages new topics
 
 ### frequency_penalty
-Repetition control. Penalizes tokens based on their frequency in the conversation.
+Repetition control. Penalizes tokens based on their frequency in the conversation. The SWML schema allows -2.0 to 2.0, with a default of 0.
 - **Negative values**: Encourages repetition of specific words
 - **Zero**: No penalty
 - **Positive values**: Discourages word repetition, encourages vocabulary variety
 
-**Note:** No default values are sent unless explicitly set using the methods above. The server will apply model-appropriate defaults if parameters are not specified.
+**Note:** No default values are sent unless explicitly set using `set_prompt_llm_params()` or `set_post_prompt_llm_params()`. The server will apply model-appropriate defaults if parameters are not specified.
 
 ## Use Case Examples
 
 ### Customer Service Agent
+
+Low temperature and a moderate interruption threshold keep responses consistent.
+
 ```python
 class CustomerServiceAgent(AgentBase):
     def __init__(self):
@@ -96,6 +99,9 @@ class CustomerServiceAgent(AgentBase):
 ```
 
 ### Creative Writing Assistant
+
+Higher temperature and an easier interruption threshold suit a collaborative, creative agent.
+
 ```python
 class CreativeWritingAgent(AgentBase):
     def __init__(self):
@@ -114,6 +120,9 @@ class CreativeWritingAgent(AgentBase):
 ```
 
 ### Technical Documentation Bot
+
+Very low temperature and a stricter post-prompt setting keep answers precise.
+
 ```python
 class TechnicalDocsAgent(AgentBase):
     def __init__(self):
@@ -137,6 +146,9 @@ class TechnicalDocsAgent(AgentBase):
 ```
 
 ### Legal Advisor Bot
+
+A high interruption threshold and low temperature favor accuracy over speed.
+
 ```python
 class LegalAdvisorAgent(AgentBase):
     def __init__(self):
@@ -174,7 +186,7 @@ Post-prompt parameters should typically be lower temperature than main prompt fo
 
 ### 5. Monitor Barge Confidence Levels
 - Too high: Users have difficulty interrupting the AI
-- Too low: AI gets interrupted too easily by background noise
+- Too low: Background noise interrupts the AI
 
 ## Parameter Interactions
 
@@ -202,7 +214,7 @@ Presence and frequency penalties can be used together:
 - Decrease `temperature` (try 0.2-0.4)
 - Decrease `top_p` (try 0.7-0.85)
 
-### AI gets interrupted too easily
+### AI gets interrupted by background noise
 - Increase `barge_confidence` threshold
 - Check for background noise in the environment
 - Consider the user's speaking clarity
@@ -234,6 +246,8 @@ agent.set_prompt_llm_params(
 ```
 
 ## Examples
+
+The repository includes these working examples:
 
 - `examples/llm_params_demo.py` - Three agent personas (customer service, creative, technical) demonstrating different LLM parameter configurations
 - `examples/simple_agent.py` - Basic LLM parameter tuning with `set_prompt_llm_params()`

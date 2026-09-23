@@ -1,5 +1,7 @@
 # SignalWire SDK: Why the SDK, Not Raw SWML
 
+The examples in this guide assume the following imports.
+
 <!-- snippet-setup: shared imports the examples on this page assume -->
 ```python
 from signalwire import AgentBase, AgentServer, DataMap, FunctionResult, SwaigFunctionResult, SWMLService
@@ -9,29 +11,23 @@ from signalwire.core.skill_base import SkillBase
 
 ## The Problem with Raw SWML
 
-SWML (SignalWire Markup Language) is a JSON document format that defines how an agent behaves during a call -- 30+ verbs, an AI verb with dozens of parameters, SWAIG (SignalWire AI Gateway) function definitions with JSON Schema, post-prompt URLs, webhook authentication, language arrays, pronunciation rules, hints, global data, contexts, steps, gather configs. Writing it by hand means constructing deeply nested JSON, manually building authenticated webhook URLs, hand-coding parameter schemas, and deploying separate webhook servers for your tools. Every agent becomes a bespoke JSON engineering project.
+SWML (SignalWire Markup Language) is a JSON document format that defines how an agent behaves during a call. It has 30+ verbs and an AI verb with dozens of parameters. Other pieces include SWAIG (SignalWire AI Gateway) function definitions with JSON Schema, post-prompt URLs, webhook authentication, and language arrays. It also covers pronunciation rules, hints, global data, contexts, steps, and gather configs. Writing it by hand means constructing deeply nested JSON, manually building authenticated webhook URLs, hand-coding parameter schemas, and deploying separate webhook servers for your tools. Every agent becomes a bespoke JSON engineering project.
 
-The SDK eliminates all of this. You write Python. The SDK generates correct SWML, serves it over HTTP, and handles its own webhook callbacks -- all in one process, deployable to any platform.
+The SDK eliminates all of this. You write Python. The SDK generates correct SWML, serves it over HTTP, and handles its own webhook callbacks, all in one process, deployable to any platform.
 
 ---
 
 ## The Self-Referencing Pipeline
 
-The SDK's core architectural insight is that the agent is both the **SWML generator** and the **SWAIG webhook handler** in a single stateless microservice.
+The SDK's core architectural insight is that the agent is both the **SWML generator** and the **SWAIG webhook handler** in a single stateless microservice. A call moves through the pipeline in five steps:
 
-```
-SignalWire requests SWML → Agent generates document
-  ↓
-SWML contains webhook URLs → URLs point back to the agent itself
-  ↓
-AI calls a function → SignalWire POSTs to agent's /swaig/ endpoint
-  ↓
-Agent executes function locally → Returns result to AI
-  ↓
-Call ends → SignalWire POSTs analytics to agent's /post_prompt/ endpoint
-```
+1. SignalWire requests SWML, and the agent generates the document.
+2. The document's webhook URLs point back to the agent itself.
+3. When the AI calls a function, SignalWire posts to the agent's `/swaig/` endpoint.
+4. The agent executes the function locally and returns the result to the AI.
+5. When the call ends, SignalWire posts analytics to the agent's `/post_prompt/` endpoint.
 
-The agent auto-detects its own public URL -- including behind ngrok, load balancers, API Gateway, or any reverse proxy (via `X-Forwarded-Host`, `Forwarded` header, or `SWML_PROXY_URL_BASE` env var). It embeds Basic Auth credentials directly into the webhook URLs. It generates per-call security tokens for each function. The developer writes none of this:
+The agent auto-detects its own public URL, including behind ngrok, load balancers, or API Gateway. It reads any reverse proxy's `X-Forwarded-Host` or `Forwarded` header, or the `SWML_PROXY_URL_BASE` env var. It embeds Basic Auth credentials directly into the webhook URLs. It generates per-call security tokens for each function. The developer writes none of this:
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -55,7 +51,7 @@ agent = WeatherAgent()
 agent.run()
 ```
 
-That's a complete agent: HTTP server, SWML generation, authenticated webhook routing, function execution, and response formatting. The generated SWML contains the full AI configuration, function schemas, and webhook URLs pointing back to the running process -- all computed automatically.
+That's a complete agent: HTTP server, SWML generation, authenticated webhook routing, function execution, and response formatting. The generated SWML contains the full AI configuration, function schemas, and webhook URLs pointing back to the running process, all computed automatically.
 
 ---
 
@@ -72,13 +68,15 @@ agent.prompt_add_section("Rules",
 agent.prompt_add_section("Personality", body="Friendly but professional.")
 ```
 
-POM sections are rendered by the platform into a format the LLM understands with proper hierarchy. You can add subsections, append to existing sections, check if sections exist, and compose prompts programmatically -- including from skills that inject their own sections.
+POM sections are rendered by the platform into a format the LLM understands with proper hierarchy. You can add subsections, append to existing sections, check if sections exist, and compose prompts programmatically, including from skills that inject their own sections.
 
 ---
 
 ## Tools: Three Ways
 
 ### 1. Decorated Functions (Local Execution)
+
+Decorate a method, and the SDK turns it into a SWAIG function.
 
 ```python
 @AgentBase.tool(name="lookup_order", description="Look up an order",
@@ -92,9 +90,9 @@ def lookup_order(self, args, raw_data):
     return result
 ```
 
-The SDK converts this into a SWAIG function definition with JSON Schema parameters, creates a secure webhook URL, routes inbound POST requests to the handler, parses arguments, and formats the response -- including the 20+ SWAIG actions (transfer, hold, context_switch, toggle_functions, etc.) that tools can return.
+The SDK converts this into a SWAIG function definition with JSON Schema parameters. It creates a secure webhook URL, routes inbound POST requests to the handler, parses arguments, and formats the response. Tools can return any of the 20+ SWAIG actions, such as transfer, hold, context_switch, and toggle_functions.
 
-Decorated functions also support **type-hinted parameters** -- skip the JSON Schema and let the SDK infer it from Python type hints:
+Decorated functions also support **type-hinted parameters**. Skip the JSON Schema, and let the SDK infer it from Python type hints:
 
 ```python
 @AgentBase.tool(name="lookup_order")
@@ -112,6 +110,8 @@ The SDK infers the parameter schema, required fields, and description from the f
 
 ### 2. DataMap (Server-Side Execution)
 
+A DataMap tool declares an API call, and SignalWire's servers execute it directly.
+
 ```python
 data_map = (DataMap("check_stock")
     .purpose("Check product stock levels")
@@ -123,9 +123,11 @@ data_map = (DataMap("check_stock")
 agent.register_swaig_function(data_map.to_swaig_function())
 ```
 
-DataMap tools execute on SignalWire's servers -- no webhook needed. The SDK generates the `data_map` structure in the SWML with variable expansion (`${args.*}`, `${response.*}`, `${global_data.*}`), foreach iteration, expression matching, and error handling. Your agent never receives the callback; SignalWire handles the entire API call.
+DataMap tools execute on SignalWire's servers. No webhook is needed. The SDK generates the `data_map` structure in the SWML with variable expansion (`${args.*}`, `${response.*}`, `${global_data.*}`), foreach iteration, expression matching, and error handling. Your agent never receives the callback; SignalWire handles the entire API call.
 
 ### 3. Skills (Packaged Integrations)
+
+A skill packages tools, prompts, and hints behind one `add_skill()` call.
 
 ```python
 agent.add_skill("web_search", {"api_key": "...", "engine_id": "..."})
@@ -151,7 +153,7 @@ Skills are self-contained modules that package tools, prompts, hints, and config
 
 **Built-in skills:** `datetime`, `math`, `web_search`, `wikipedia_search`, `weather_api`, `google_maps`, `datasphere`, `datasphere_serverless`, `native_vector_search`, `spider`, `mcp_gateway`, `swml_transfer`, `play_background_file`, `info_gatherer`, `api_ninjas_trivia`, `joke`, `claude_skills`.
 
-The elegance is composability: skills don't know about each other, but they all register cleanly into the same agent. A single agent can combine web search, datetime, a custom booking tool, and a DataMap stock checker -- all declared in `__init__`, all generating correct SWML with proper function definitions, all routed to the right handler.
+Skills are composable: they don't know about each other, but they all register cleanly into the same agent. A single agent can combine web search, datetime, a custom booking tool, and a DataMap stock checker, all declared in `__init__`. Each generates correct SWML with proper function definitions, and each routes to the right handler.
 
 ---
 
@@ -181,7 +183,7 @@ step3.set_text("Confirm the information and say goodbye.")
 step3.set_functions("none")  # No tools -- just confirm and end
 ```
 
-This generates SWML with a complete contexts/steps structure. The platform enforces navigation rules, restricts which functions are available at each step, collects structured data with typed questions and confirmation, and tracks transitions with trigger attribution in the enriched call_log. The LLM can't skip steps, can't call restricted tools, and can't navigate to disallowed contexts -- not because it was told not to, but because the mechanisms don't exist in its world. This is PGI (Programmatically Governed Inference) in practice.
+This generates SWML with a complete contexts/steps structure. The platform enforces navigation rules, restricts which functions are available at each step, and collects structured data with typed questions and confirmation. It also tracks transitions with trigger attribution in the enriched call_log. The LLM can't skip steps, call restricted tools, or navigate to disallowed contexts. It isn't that it was told not to; the mechanisms don't exist in its world. This is PGI (Programmatically Governed Inference) in practice.
 
 **Multi-context** agents can define separate conversation modes (e.g., "sales" and "support") with isolated function sets, and use `set_valid_contexts()` to control switching. Context transitions support 4-mode reset (consolidate x full_reset) with conversation history summarization or archival.
 
@@ -191,21 +193,23 @@ This generates SWML with a complete contexts/steps structure. The platform enfor
 
 The contexts/steps system is the SDK's implementation of a broader architectural discipline: **Programmatically Governed Inference**. PGI starts from a single design rule: *do not tell the AI anything it does not need to know.*
 
-Current AI models are extraordinarily good at language -- understanding loosely phrased human input, mapping intent onto structured actions, and rendering system decisions back into natural speech. They are also inconsistent, non-deterministic, and prone to confident error. These are not bugs that will be fixed in the next model generation. They are properties of probabilistic inference itself. The industry's dominant response -- prompt harder and hope ("prompt and pray") -- treats the model as the brain of the system. PGI rejects this entirely. The model is not the brain. It is a controlled participant inside a deterministic system that was always in charge.
+Current AI models are extraordinarily good at language. They understand loosely phrased human input, map intent onto structured actions, and render system decisions back into natural speech. They are also inconsistent, non-deterministic, and prone to confident error. These are not bugs that will be fixed in the next model generation. They are properties of probabilistic inference itself. The industry's dominant response (prompt harder and hope, or "prompt and pray") treats the model as the brain of the system. PGI rejects this entirely. The model is not the brain. It is a controlled participant inside a deterministic system that was always in charge.
 
 ### The Four Layers
 
 PGI is enforced through four layers of constraint, each operating independently. Only the first depends on the model's cooperation. The remaining three are mechanical.
 
-**Layer 1: Semantic Constraints** -- The model receives a prompt describing its role and instructions for how to behave. This is the weakest layer; it depends on probabilistic compliance. PGI treats it as guidance, not enforcement. The remaining layers are the law.
+**Layer 1: Semantic Constraints**. The model receives a prompt describing its role and instructions for how to behave. This is the weakest layer; it depends on probabilistic compliance. PGI treats it as guidance, not enforcement. The remaining layers are the law.
 
-**Layer 2: Schema Constraints** -- At each step, the model sees only the tools registered for that step. Tools belonging to other steps do not exist in its function schema. The model cannot call them, reference them, or reason about them. This is the difference between telling someone not to open a door and removing the door from the building.
+**Layer 2: Schema Constraints**. At each step, the model sees only the tools registered for that step. Tools belonging to other steps do not exist in its function schema. The model cannot call them, reference them, or reason about them. This is the difference between telling someone not to open a door and removing the door from the building.
 
-**Layer 3: Transition Constraints** -- Each step defines which steps it can transition to. The platform validates every transition against this whitelist. The model cannot skip phases, loop back to completed steps, or jump to unreachable states. The conversational flow is governed by the same deterministic logic as any well-designed state machine.
+**Layer 3: Transition Constraints**. Each step defines which steps it can transition to. The platform validates every transition against this whitelist. The model cannot skip phases, loop back to completed steps, or jump to unreachable states. The conversational flow is governed by the same deterministic logic as any well-designed state machine.
 
-**Layer 4: Execution Authority** -- When the model calls a tool, it is making a request, not issuing a command. The tool handler accesses authoritative state, applies business logic, and returns both a response for the model to speak and a set of actions for the platform to execute. The model does not update state. The model does not decide what happens next. The platform does.
+**Layer 4: Execution Authority**. When the model calls a tool, it is making a request, not issuing a command. The tool handler accesses authoritative state and applies business logic. It returns both a response for the model to speak and a set of actions for the platform to execute. The model does not update state. The model does not decide what happens next. The platform does.
 
 ### PGI in Practice: Blackjack
+
+A blackjack dealer agent shows the pattern directly: each phase of the game gets its own step and its own tools.
 
 ```python
 betting = ctx.add_step("betting")
@@ -225,7 +229,7 @@ During the betting step, the model can only call `place_bet`. It cannot deal car
 
 The `you_lost` step has zero functions and zero valid transitions. The game is over. A user can beg, negotiate, or attempt social engineering. None of it works, because the mechanism for continuing does not exist. There is nothing for the model to comply with or resist. The interaction is structurally complete.
 
-The tool handler demonstrates execution authority -- the model has no idea a step change is about to happen:
+The tool handler demonstrates execution authority. The model has no idea a step change is about to happen:
 
 ```python
 def handle_hit(args, raw_data):
@@ -255,15 +259,17 @@ The model cannot hallucinate a price it has never seen. It cannot promise availa
 
 ### Why PGI, Not Guardrails
 
-PGI produces a property that makes it fundamentally different from guardrails, output filtering, or any other containment strategy: **the model does not know it is being governed.** It does not know that other tools exist elsewhere in the system. It does not know that a state machine is managing the interaction. It sees its current world -- a prompt, a set of functions, a conversation history -- and operates within it. There is nothing to reason around, nothing to game, nothing to circumvent.
+PGI produces a property that makes it fundamentally different from guardrails, output filtering, or any other containment strategy. **The model does not know it is being governed.** It does not know that other tools exist elsewhere in the system. It does not know that a state machine is managing the interaction. It sees its current world (a prompt, a set of functions, a conversation history) and operates within it. There is nothing to reason around, nothing to game, nothing to circumvent.
 
-The strongest test of any PGI system: replace the model with a rigid scripted menu ("press 1 for tacos, press 2 for drinks") and the system would still produce correct outcomes. The tool handlers would still validate input, enforce business rules, and manage state. The experience would be worse, but every order would be accurate and every transition would follow the rules. The model makes the interaction natural. The software makes it correct. In a PGI system, those are independent properties.
+The strongest test of any PGI system: replace the model with a rigid scripted menu ("press 1 for tacos, press 2 for drinks"). The system would still produce correct outcomes. The tool handlers would still validate input, enforce business rules, and manage state. The experience would be worse, but every order would be accurate and every transition would follow the rules. The model makes the interaction natural. The software makes it correct. In a PGI system, those are independent properties.
 
 The SDK's contexts/steps/function restrictions are the primitives that make PGI mechanical rather than aspirational. The developer defines steps, scopes tools to steps, declares transitions, and writes tool handlers that return structured results with platform actions. The platform enforces all of it. The developer brings domain expertise. The SDK provides the governance infrastructure.
 
 ---
 
 ## Deployment: One `run()` Call
+
+Every deployment mode starts the same way.
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -276,12 +282,12 @@ That single call auto-detects the environment and does the right thing:
 | Environment | Detection | What Happens |
 |-------------|-----------|--------------|
 | **Standalone** | Default | Starts uvicorn HTTP server with FastAPI |
-| **AWS Lambda** | Lambda context object | Returns Lambda-formatted response |
+| **AWS Lambda** | `AWS_LAMBDA_FUNCTION_NAME` or `LAMBDA_TASK_ROOT` env var | Returns Lambda-formatted response |
 | **Google Cloud Functions** | GCF environment markers | Returns Flask-compatible response |
-| **Azure Functions** | Azure context object | Returns Azure HttpResponse |
+| **Azure Functions** | Azure Functions env vars | Returns Azure HttpResponse |
 | **CGI** | CGI environment variables | Reads stdin, writes stdout |
 
-Each mode handles authentication differently (HTTP Basic Auth, API Gateway authorizers, function-level auth), constructs webhook URLs using the correct public endpoint (Lambda function URL, GCF URL, Azure app URL), and formats request/response bodies per platform. You write one agent, deploy it anywhere.
+Each mode handles authentication differently (HTTP Basic Auth, API Gateway authorizers, function-level auth). It also constructs webhook URLs using the correct public endpoint (Lambda function URL, GCF URL, Azure app URL), and formats request/response bodies per platform. You write one agent, deploy it anywhere.
 
 For standalone mode, the SDK provides:
 - Kubernetes health (`/health`) and readiness (`/ready`) probes
@@ -292,6 +298,8 @@ For standalone mode, the SDK provides:
 ---
 
 ## Multi-Agent Hosting
+
+`AgentServer` hosts several agents behind one process, each at its own route.
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -310,6 +318,8 @@ One process, multiple agents, route-based dispatch. Each agent gets its own SWML
 
 ## Dynamic Configuration and Multi-Tenancy
 
+A dynamic config callback customizes the agent for each tenant, per request.
+
 ```python
 def tenant_config(query_params, body_params, headers, agent):
     tenant = headers.get("X-Tenant-ID", "default")
@@ -322,7 +332,7 @@ def tenant_config(query_params, body_params, headers, agent):
 agent.set_dynamic_config_callback(tenant_config)
 ```
 
-Each inbound request creates an **ephemeral copy** of the agent. The callback customizes it per-request -- different prompts, skills, global data, languages, tools. The original agent is unchanged. This enables multi-tenancy from a single deployment: one agent instance serves hundreds of tenants with tailored behavior.
+Each inbound request creates an **ephemeral copy** of the agent. The callback customizes it per-request: different prompts, skills, global data, languages, tools. The original agent is unchanged. This enables multi-tenancy from a single deployment: one agent instance serves hundreds of tenants with tailored behavior.
 
 ---
 
@@ -355,7 +365,7 @@ The search system supports:
 - **Backends:** SQLite (`.swsearch` files for local/serverless) or PostgreSQL (pgvector for production)
 - **Installation tiers:** `search-queryonly` (~400MB, query only), `search` (~500MB, basic), `search-full` (~600MB, document processing), `search-all` (~700MB, everything)
 
-The `.swsearch` format is a self-contained SQLite database with embeddings, chunks, and metadata -- deploy it alongside your agent to Lambda or any serverless platform.
+The `.swsearch` format is a self-contained SQLite database with embeddings, chunks, and metadata. Deploy it alongside your agent to Lambda or any serverless platform.
 
 ---
 
@@ -415,10 +425,10 @@ agent.set_native_functions(["check_time", "wait_for_user"])
 agent.add_internal_filler("check_time", "en", ["Let me check the time..."])
 
 # Call recording (background, non-blocking)
-agent.add_pre_answer_verb("record_call", {"format": "wav", "stereo": True})
+agent.add_post_answer_verb("record_call", {"format": "wav", "stereo": True})
 
 # Call flow verbs
-agent.add_pre_answer_verb("play", {"url": "ringback.wav"})
+agent.add_pre_answer_verb("play", {"url": "ringback.wav", "auto_answer": False})
 agent.add_post_ai_verb("hangup", {})
 ```
 

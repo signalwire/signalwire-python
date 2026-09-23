@@ -1,5 +1,7 @@
 # Contexts and Steps Guide
 
+The examples in this guide assume the following imports.
+
 <!-- snippet-setup: shared imports the examples on this page assume -->
 ```python
 from signalwire import AgentBase, AgentServer, DataMap, FunctionResult, SwaigFunctionResult, SWMLService
@@ -22,7 +24,7 @@ from signalwire.core.skill_base import SkillBase
 
 ## Overview
 
-The **Contexts and Steps** system enhances traditional Prompt Object Model (POM) prompts in SignalWire AI agents by adding structured workflows on top of your base prompt. Instead of just defining a single prompt, you create workflows with explicit steps, navigation rules, and completion criteria. Steps can restrict which SWAIG (SignalWire AI Gateway) functions are available at each stage of the conversation.
+The **Contexts and Steps** system enhances traditional Prompt Object Model (POM) prompts in SignalWire AI agents by adding structured workflows on top of your base prompt. Instead of defining a single prompt, you create workflows with explicit steps, navigation rules, and completion criteria. Steps can restrict which SWAIG (SignalWire AI Gateway) functions are available at each stage of the conversation.
 
 ### Key Benefits
 
@@ -90,7 +92,7 @@ context.add_section("Department", "Billing Department")
 context.add_bullets("Services", ["Payments", "Refunds", "Account inquiries"])
 ```
 
-Context prompts provide guidance that applies to all steps within that context, creating a prompt hierarchy: Base Agent Prompt → Context Prompt → Step Prompt.
+Context prompts provide guidance that applies to all steps within that context. Together they create a prompt hierarchy: the base agent prompt, then the context prompt, then the step prompt.
 
 ### Steps
 
@@ -113,6 +115,8 @@ The system provides fine-grained control over conversation flow:
 ## Getting Started
 
 ### Basic Single-Context Workflow
+
+This onboarding agent moves a caller through four fixed steps, one at a time.
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -159,6 +163,8 @@ if __name__ == "__main__":
 ```
 
 ### Multi-Context Workflow
+
+This customer service agent triages the caller, then routes to one of three specialized contexts.
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -291,6 +297,8 @@ class Context:
 
 #### Methods
 
+In prose, the `Context` methods do the following:
+
 - `add_step(name)`: Create and return a new Step
 - `set_valid_contexts(contexts)`: Allow navigation to specified contexts
 - `set_post_prompt(prompt)`: Override agent's post prompt for this context
@@ -318,11 +326,11 @@ class Step:
     def set_text(self, text: str) -> Step
         """Set direct text prompt (mutually exclusive with POM sections)"""
     
-    def add_section(self, title: str, body: str = "") -> Step
+    def add_section(self, title: str, body: str) -> Step
         """Add a POM-style section (mutually exclusive with set_text)"""
     
-    def add_bullets(self, bullets: List[str], numbered: bool = False) -> Step
-        """Add bullets to the current or most recent section"""
+    def add_bullets(self, title: str, bullets: List[str]) -> Step
+        """Add a POM-style bullet section (mutually exclusive with set_text)"""
     
     # Flow control
     def set_step_criteria(self, criteria: str) -> Step
@@ -354,21 +362,23 @@ class Step:
 
 #### Content Methods
 
-**Option 1: Direct Text**
+**Option 1: Direct Text**: set the step's prompt directly, as a string.
 ```python
 step.set_text("Direct prompt text for the AI")
 ```
 
-**Option 2: POM-Style Sections**
+**Option 2: POM-Style Sections**: build the step's prompt from titled sections, the same way you build the agent's main prompt.
 ```python
 step.add_section("Role", "You are a helpful assistant") \
     .add_section("Instructions", "Help users with their questions") \
-    .add_bullets(["Be friendly", "Ask clarifying questions"])
+    .add_bullets("Guidelines", ["Be friendly", "Ask clarifying questions"])
 ```
 
 **Note**: You cannot mix `set_text()` with `add_section()` in the same step.
 
 #### Navigation Methods
+
+These calls control where the conversation can go next.
 
 ```python
 # Control step progression within context
@@ -384,6 +394,8 @@ step.set_valid_contexts([])                         # Trapped in current context
 
 #### Function Restriction Methods
 
+These calls control which functions a step allows.
+
 ```python
 # Allow specific functions only
 step.set_functions(["datetime", "math"])
@@ -391,8 +403,8 @@ step.set_functions(["datetime", "math"])
 # Block all functions
 step.set_functions("none")
 
-# No restriction (default - all agent functions available)
-# step.set_functions()  # Don't call this method
+# No set_functions() call: the step inherits the previous step's function
+# set (or every registered function, on a context's first step)
 ```
 
 ## Navigation and Flow Control
@@ -442,6 +454,8 @@ step.set_valid_contexts(["main"])  # Override - only main allowed
 
 ### Complete Navigation Example
 
+This example combines context-level and step-level navigation settings.
+
 ```python
 contexts = self.define_contexts()
 
@@ -478,9 +492,12 @@ Control which AI tools/functions are available in each step for enhanced securit
 
 ### Function Restriction Levels
 
+A step's functions fall into three levels.
+
 ```python
-# No restrictions (default) - all agent functions available
-step  # Don't call set_functions()
+# Not calling set_functions() inherits the previous step's function set
+# (or every registered function, on a context's first step)
+step
 
 # Allow specific functions only
 step.set_functions(["datetime", "math", "web_search"])
@@ -490,6 +507,8 @@ step.set_functions("none")
 ```
 
 ### Security-Focused Example
+
+This banking agent limits functions to safe ones before authentication, then blocks all functions afterward.
 
 ```python
 class SecureBankingAgent(AgentBase):
@@ -519,6 +538,8 @@ class SecureBankingAgent(AgentBase):
 
 ### Function Access Patterns
 
+Grant more functions as the caller's trust level increases.
+
 ```python
 # Progressive function access based on trust level
 contexts = self.define_contexts()
@@ -533,10 +554,10 @@ verified = contexts.add_context("verified")
 verified.add_step("verified_user") \
     .set_functions(["datetime", "web_search"])  # Add search capability
 
-# High trust - full access
+# High trust - inherits whichever functions were active in the previous step
 authenticated = contexts.add_context("authenticated")
 authenticated.add_step("full_access") \
-    # No set_functions() call = all functions available
+    # No set_functions() call: inherits the previous step's function set
 ```
 
 ## Step Modes
@@ -578,16 +599,16 @@ ctx.add_step("verify") \
 
 ### Gather Info Mode
 
-When an AI agent needs to collect structured information (name, address, account number, etc.), the traditional approach uses SWAIG functions -- the AI calls a function for each piece of data, which creates `tool_call` and `tool_result` entries in the conversation history. These tool artifacts confuse some models (especially reasoning models at low effort settings), waste tokens, and can cause the model to lose track of where it is in the collection flow.
+When an AI agent needs to collect structured information (name, address, account number, etc.), the traditional approach uses SWAIG functions. The AI calls a function for each piece of data, which creates `tool_call` and `tool_result` entries in the conversation history. These tool artifacts confuse some models, especially reasoning models at low effort settings. They also waste tokens, and can cause the model to lose track of where it is in the collection flow.
 
-Gather info mode solves this by using **dynamic step instruction re-injection**. Questions are presented one at a time by swapping out the system instruction, and answers are recorded via an internal function that routes through the system-log path -- producing **zero** tool_call/tool_result entries in the LLM-visible conversation history.
+Gather info mode solves this by using **dynamic step instruction re-injection**. Questions are presented one at a time by swapping out the system instruction. Answers are recorded via an internal function that routes through the system-log path, producing **zero** tool_call/tool_result entries in the LLM-visible conversation history.
 
 #### How It Works Internally
 
 1. **Step entry**: When the AI enters a step with `gather_info`, the system switches to gather questioning mode.
 2. **Preamble injection** (first question only): If the gather has a `prompt`, it's injected as a **persistent** system message for the entire gather sequence.
 3. **Question injection**: A minimal system instruction is injected as a **clearable** message containing the question text, type hint, confirmation instructions, and any per-question prompt text.
-4. **Tool lockdown**: During gather mode, **all normal functions are hidden** -- only `gather_submit` (an internal function) and any per-question `functions` are visible.
+4. **Tool lockdown**: During gather mode, **all normal functions are hidden**. Only `gather_submit` (an internal function) and any per-question `functions` are visible.
 5. **Answer submission**: When the AI calls `gather_submit`, the answer is written to `global_data` and the next question's instruction is re-injected. The `gather_submit` call routes through the system-log path, so the LLM never sees tool_call/tool_result for it.
 6. **Completion**: When all questions are answered, either:
    - The step auto-advances to the next sequential step (`completion_action="next_step"`)
@@ -616,6 +637,8 @@ No tool_call/tool_result entries anywhere. Clean conversation history.
 
 #### Basic Gather Example
 
+This step asks three questions in sequence, with no gather `prompt` or `completion_action` set.
+
 ```python
 ctx.add_step("collect_info") \
     .set_text("Help the caller with their request.") \
@@ -625,7 +648,7 @@ ctx.add_step("collect_info") \
     .add_gather_question("email", "What is your email address?")
 ```
 
-This collects three pieces of information, stores them under `caller_info` in global_data, then returns to normal step mode with the step text "Help the caller with their request."
+This collects three pieces of information and stores them under `caller_info` in global_data. It then returns to normal step mode with the step text "Help the caller with their request."
 
 #### The Gather Prompt (Preamble)
 
@@ -802,7 +825,7 @@ Flow:
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `output_key` | str | None | Key in global_data to store answers under. If None, answers stored at top level. |
-| `completion_action` | str | None | Where to go when all questions are answered: `"next_step"` to advance sequentially, or a specific step name (e.g. `"process_results"`) to jump to that step. If None, returns to normal step mode. The target is validated — `"next_step"` requires a following step, and named steps must exist in the context. |
+| `completion_action` | str | None | Where to go when all questions are answered: `"next_step"` to advance sequentially, or a specific step name (e.g. `"process_results"`) to jump to that step. If None, returns to normal step mode. The target is validated: `"next_step"` requires a following step, and named steps must exist in the context. |
 | `prompt` | str | None | Preamble text injected once as a persistent message when entering the gather step. |
 
 **`add_gather_question()` Parameters:**
@@ -819,6 +842,8 @@ Flow:
 ## Real-World Examples
 
 ### Example 1: Technical Support Troubleshooting
+
+This agent triages an issue, then routes to a hardware, software, or network context.
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -906,6 +931,8 @@ if __name__ == "__main__":
 
 ### Example 2: Multi-Step Application Process
 
+This loan application walks the caller through six sequential steps, with backward navigation for review.
+
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 class LoanApplicationAgent(AgentBase):
@@ -934,7 +961,7 @@ class LoanApplicationAgent(AgentBase):
         # Step 2: Personal information
         application.add_step("personal_info") \
             .add_section("Instructions", "Collect personal information") \
-            .add_bullets([
+            .add_bullets("Required Fields", [
                 "Full legal name",
                 "Date of birth",
                 "Social Security Number",
@@ -959,7 +986,7 @@ class LoanApplicationAgent(AgentBase):
         # Step 5: Review all information
         application.add_step("review") \
             .add_section("Instructions", "Review all collected information") \
-            .add_bullets([
+            .add_bullets("Review Checklist", [
                 "Confirm personal details",
                 "Verify employment information", 
                 "Review financial data",
@@ -983,6 +1010,8 @@ if __name__ == "__main__":
 ```
 
 ### Example 3: E-commerce Customer Service
+
+This agent routes a caller from a main menu into one of four service contexts.
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -1163,7 +1192,7 @@ step.set_text("Please provide your email address")
 step.add_section("Role", "You are a technical specialist") \
     .add_section("Context", "Customer is experiencing network issues") \
     .add_section("Instructions", "Follow diagnostic protocol") \
-    .add_bullets(["Check connectivity", "Test speed", "Verify settings"])
+    .add_bullets("Diagnostic Steps", ["Check connectivity", "Test speed", "Verify settings"])
 ```
 
 ## Troubleshooting
@@ -1172,7 +1201,7 @@ step.add_section("Role", "You are a technical specialist") \
 
 #### 1. "Single context must be named 'default'"
 
-**Error**: When using a single context with a name other than "default"
+**Error**: When using a single context with a name other than "default".
 
 <!-- snippet: no-run illustrative fragment (references `contexts` established in the surrounding prose) -->
 ```python
@@ -1185,7 +1214,7 @@ context = contexts.add_context("default")
 
 #### 2. "Cannot mix set_text with add_section"
 
-**Error**: Using both direct text and POM sections in the same step
+**Error**: Using both direct text and POM sections in the same step.
 
 ```python
 # Wrong
@@ -1201,7 +1230,7 @@ step.add_section("Role", "Assistant") \
 
 #### 3. Navigation Issues
 
-**Problem**: Users getting stuck or unable to navigate
+**Problem**: Users getting stuck or unable to navigate.
 
 ```python
 # Check your navigation rules
@@ -1215,7 +1244,7 @@ step.set_valid_contexts(["main", "help"])
 
 #### 4. Function Access Problems
 
-**Problem**: Functions not available when expected
+**Problem**: Functions not available when expected.
 
 ```python
 # Check function restrictions
@@ -1257,8 +1286,8 @@ Check that all referenced steps/contexts exist:
 Verify functions are properly restricted:
 
 ```python
-# Test with all functions
-# step  # No set_functions() call
+# Test with the previous step's functions (no set_functions() call)
+# step
 
 # Test with restrictions
 step.set_functions(["datetime"])
@@ -1339,7 +1368,7 @@ class HybridAgent(AgentBase):
 
 ## Conclusion
 
-The Contexts and Steps system provides structured workflow control for building sophisticated AI agents. By combining structured navigation, function restrictions, and clear completion criteria, you can create predictable, user-friendly agent experiences that guide users through complex processes while maintaining security and control.
+The Contexts and Steps system provides structured workflow control for building sophisticated AI agents. By combining structured navigation, function restrictions, and clear completion criteria, you can create predictable, user-friendly agent experiences. These guide users through complex processes while maintaining security and control.
 
 Start with simple single-context workflows and gradually build more complex multi-context systems as your requirements grow. The system is designed to be flexible and scalable, supporting both simple linear workflows and complex branching conversation trees.
 
@@ -1486,12 +1515,16 @@ Note: This example uses gather **without** `completion_action`. After all questi
 
 ## Related Documentation
 
+For more on the surrounding APIs, see:
+
 - **[API Reference](api_reference.md)** - Complete AgentBase class reference
 - **[SWAIG Reference](swaig_reference.md)** - All available result methods including `swml_change_context()` and `swml_change_step()`
 - **[Agent Guide](agent_guide.md)** - General agent development guide
 - **[DataMap Guide](datamap_guide.md)** - Serverless function integration
 
 ### Example Files
+
+The repository includes these working examples:
 
 - `examples/contexts_demo.py` - Multi-context agent with personas (Franklin, Rachael, Dwight)
 - `examples/gather_info_demo.py` - Structured data collection using `set_gather_info()` and `add_gather_question()`
