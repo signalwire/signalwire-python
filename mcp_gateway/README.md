@@ -70,8 +70,8 @@ vim .env
 # Run the gateway (Docker Compose automatically reads .env)
 ./mcp-docker.sh start
 
-# Or without Docker
-source .env
+# Or without Docker: export the variables, then start the gateway
+set -a; source .env; set +a
 mcp-gateway
 ```
 
@@ -295,13 +295,18 @@ docker build -t mcp-gateway .
 
 # Run with environment variables
 docker run -p ${MCP_PORT:-8080}:${MCP_PORT:-8080} \
-  -v $(pwd)/config.json:/app/config.json \
-  -e MCP_PORT=8080 \
+  -v $(pwd)/config.json:/app/config.json:ro \
+  -e MCP_PORT=${MCP_PORT:-8080} \
+  -e MCP_AUTH_PASSWORD=your-password \
   mcp-gateway
 
 # Or use docker-compose (reads .env automatically)
 docker-compose up
 ```
+
+The image installs the SDK from PyPI and runs its `mcp-gateway` command. To pin a release, build with `--build-arg SDK_VERSION=x.y.z`.
+
+Set `MCP_AUTH_PASSWORD`; Compose refuses to start without it. With the published default password, the gateway listens on 127.0.0.1 only, which can't be reached from outside the container.
 
 **Note**: The Docker port mapping uses `${MCP_PORT:-8080}`, so ensure your MCP_PORT environment variable matches the port in your config.json.
 

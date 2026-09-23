@@ -81,9 +81,6 @@ shift || true
 case "$COMMAND" in
     build)
         echo -e "${BLUE}Building MCP Gateway Docker image...${NC}"
-        if [ -f "config.json" ]; then
-            echo -e "${YELLOW}Including config.json in image${NC}"
-        fi
         docker-compose build
         echo -e "${GREEN}✓ Build complete${NC}"
         ;;
@@ -104,7 +101,7 @@ case "$COMMAND" in
             docker-compose up -d
             echo -e "${GREEN}✓ MCP Gateway started in background${NC}"
             echo -e "${BLUE}View logs with: $0 logs -f${NC}"
-            echo -e "${BLUE}Access at: http://localhost:${MCP_PORT:-8100}${NC}"
+            echo -e "${BLUE}Access at: http://localhost:${MCP_PORT:-8080}${NC}"
         else
             docker-compose up
         fi
@@ -135,8 +132,8 @@ case "$COMMAND" in
             echo -e "${GREEN}✓ MCP Gateway is running${NC}"
             
             # Try to get health status
-            echo -e "${BLUE}Checking health at http://localhost:${MCP_PORT:-8100}/health...${NC}"
-            if curl -s -f "http://localhost:${MCP_PORT:-8100}/health" > /dev/null 2>&1; then
+            echo -e "${BLUE}Checking health at http://localhost:${MCP_PORT:-8080}/health...${NC}"
+            if curl -s -f "http://localhost:${MCP_PORT:-8080}/health" > /dev/null 2>&1; then
                 echo -e "${GREEN}✓ Health check passed${NC}"
             else
                 echo -e "${YELLOW}⚠ Health check failed${NC}"

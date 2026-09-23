@@ -1520,3 +1520,36 @@ class TestEdgeCases:
             headers=headers,
         )
         assert resp.status_code == 200
+
+
+class TestCheckServerConfig:
+    """An empty or invalid host or port stops the gateway with a clear message (B18)."""
+
+    @pytest.mark.parametrize("server", [
+        {"host": "", "port": 8080},
+        {"host": "0.0.0.0", "port": ""},
+        {"host": "0.0.0.0", "port": "8080"},
+        {"host": "0.0.0.0", "port": 0},
+        {"host": "0.0.0.0", "port": 70000},
+        {"host": "0.0.0.0", "port": True},
+    ])
+    def test_rejects(self, server: dict[str, Any]) -> None:
+        from signalwire.mcp_gateway.gateway_service import _check_server_config
+
+        with pytest.raises(SystemExit, match="MCP gateway configuration error"):
+            _check_server_config(server)
+
+    @pytest.mark.parametrize("server", [{}, {"host": "127.0.0.1", "port": 9000}])
+    def test_accepts(self, server: dict[str, Any]) -> None:
+        from signalwire.mcp_gateway.gateway_service import _check_server_config
+
+        _check_server_config(server)
+
+    def test_run_stops_before_binding_an_empty_port(self) -> None:
+        config = _minimal_config()
+        config["server"]["port"] = ""
+        gateway, _ = _create_gateway(config)
+        with patch("signalwire.mcp_gateway.gateway_service.make_server") as mock_make, \
+             pytest.raises(SystemExit):
+            gateway.run()
+        mock_make.assert_not_called()

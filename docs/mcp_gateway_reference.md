@@ -197,8 +197,8 @@ vim .env
 # Run - Docker Compose automatically reads .env
 ./mcp-docker.sh start
 
-# Or for non-Docker
-source .env
+# Or for non-Docker: export the variables, then start the gateway
+set -a; source .env; set +a
 mcp-gateway
 ```
 
@@ -462,7 +462,7 @@ mcp-gateway
 ```
 
 With no `config.json` present, the gateway creates one from `sample_config.json`
-and listens on port 8100.
+and listens on port 8080.
 
 ### 2. Testing with SWAIG CLI
 
@@ -497,7 +497,7 @@ class TestMCPAgent(AgentBase):
         super().__init__(name="MCP Test Agent")
         
         self.add_skill("mcp_gateway", {
-            "gateway_url": "http://localhost:8100",
+            "gateway_url": "http://localhost:8080",
             "auth_user": "admin",
             "auth_password": "changeme",
             "services": [{"name": "todo"}]
@@ -522,31 +522,19 @@ mcp-gateway
 ### Docker Deployment
 
 #### Configuration Options
-The Docker setup supports three configuration scenarios:
+The image installs the SDK from PyPI and runs its `mcp-gateway` command. To pin a release, build with `--build-arg SDK_VERSION=x.y.z`.
 
-1. **Runtime Config** (highest priority): Mount config.json at runtime
-2. **Build-time Config**: Include config.json when building the image
-3. **Default Config**: Falls back to sample_config.json
+The container takes its configuration from one of two places:
 
-To pre-configure the image at build time:
+1. **Your config.json**: Compose mounts the `mcp_gateway` directory and copies `config.json` into the container when it starts
+2. **The sample**: without a `config.json`, the gateway starts from `sample_config.json`
+
+**Password**: set `MCP_AUTH_PASSWORD`, in `.env` or the environment. Compose refuses to start without it. With the published default password, the gateway listens on 127.0.0.1 only, which can't be reached from outside the container.
+
+**Port Configuration**: Compose publishes `MCP_PORT`, 8080 by default, and passes it to the container, where the sample configuration listens on it. If your `config.json` sets a fixed port, set `MCP_PORT` to the same value:
 ```bash
-# Edit your config.json
-cp sample_config.json config.json
-vim config.json
-
-# Build with config included
-./mcp-docker.sh build  # Will include config.json in image
+MCP_PORT=9000 ./mcp-docker.sh start
 ```
-
-**Port Configuration**: The Docker setup automatically reads the port from your config.json file. If your config specifies port 8100, Docker will expose the service on port 8100.
-
-The mcp-docker.sh script automatically detects the port from config.json. You can also override it using an environment variable:
-```bash
-# Override port at runtime (must match what's in config.json)
-MCP_PORT=8100 ./mcp-docker.sh start
-```
-
-Note: The port in the MCP_PORT environment variable should match the port configured in your config.json file, as the container internally listens on the configured port.
 
 #### Using mcp-docker.sh Helper Script
 The easiest way to manage the Docker deployment is using the provided helper script:
@@ -593,7 +581,8 @@ Build and run the image by hand:
 ```bash
 cd mcp_gateway
 docker build -t mcp-gateway .
-docker run -p 8080:8080 -v $(pwd)/config.json:/app/config.json mcp-gateway
+docker run -p 8080:8080 -e MCP_AUTH_PASSWORD=your-password \
+  -v $(pwd)/config.json:/app/config.json:ro mcp-gateway
 ```
 
 #### Docker Compose

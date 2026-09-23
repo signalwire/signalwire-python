@@ -63,6 +63,26 @@ def _is_loopback_host(host: str) -> bool:
         return False
 
 
+def _check_server_config(server_config: dict[str, Any]) -> None:
+    """Exit with a clear message if the host or port can't be used.
+
+    An environment variable that's set but empty, such as MCP_PORT passed
+    through by a Compose file, replaces the configuration's default with an
+    empty string.
+    """
+    host = server_config.get("host", "0.0.0.0")  # noqa: S104  # intended server default: listen on all interfaces (overridable)
+    port = server_config.get("port", 8080)
+    problems = []
+    if not isinstance(host, str) or not host.strip():
+        problems.append(f"server.host is {host!r}: set server.host or MCP_HOST")
+    if isinstance(port, bool) or not isinstance(port, int) or not 1 <= port <= 65535:
+        problems.append(
+            f"server.port is {port!r}: set server.port or MCP_PORT to a port number"
+        )
+    if problems:
+        raise SystemExit("MCP gateway configuration error: " + "; ".join(problems))
+
+
 def _resolve_bind_host(server_config: dict[str, Any]) -> str:
     """Return the address to listen on, given the ``server`` configuration.
 
@@ -557,6 +577,7 @@ class MCPGateway:
     def run(self) -> None:
         """Run the gateway service"""
         server_config = self.config.get("server", {})
+        _check_server_config(server_config)
         host = _resolve_bind_host(server_config)
         port = server_config.get("port", 8080)
 

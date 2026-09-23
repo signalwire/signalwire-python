@@ -1,4 +1,0 @@
-flask>=2.0.0
-flask-limiter>=3.5.0
-requests>=2.25.0
-werkzeug>=2.0.0

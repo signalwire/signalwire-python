@@ -51,7 +51,7 @@ class TestMCPAgent(AgentBase):
         
         # Add the MCP Gateway skill
         # Configure based on environment or use defaults
-        gateway_url = os.getenv("MCP_GATEWAY_URL", "http://localhost:8100")
+        gateway_url = os.getenv("MCP_GATEWAY_URL", "http://localhost:8080")
         auth_user = os.getenv("MCP_GATEWAY_USER", "admin")
         auth_password = os.getenv("MCP_GATEWAY_PASSWORD", "changeme")
         
@@ -94,7 +94,7 @@ def main():
     print("It connects to MCP services through a gateway.")
     print()
     print("Make sure the MCP Gateway is running at:")
-    print(f"  {os.getenv('MCP_GATEWAY_URL', 'http://localhost:8100')}")
+    print(f"  {os.getenv('MCP_GATEWAY_URL', 'http://localhost:8080')}")
     print()
     print("Test with swaig-test:")
     print("  swaig-test test/test_agent.py --list-tools")
