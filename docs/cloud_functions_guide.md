@@ -330,6 +330,8 @@ swaig-test examples/my_agent.py --simulate-serverless azure_function \
 
 #### Complete Testing Workflow
 
+This sequence runs each check in order, from listing tools to verifying authentication:
+
 ```bash
 # 1. List available agents and tools
 swaig-test examples/my_agent.py --list-agents
@@ -370,6 +372,8 @@ func start
 ```
 
 ### Testing Authentication
+
+Confirm the deployed function rejects an unauthenticated request and accepts a valid one:
 
 ```bash
 # Test without auth (should return 401)
@@ -480,7 +484,7 @@ See `examples/lambda_agent.py` for a complete AWS Lambda deployment example.
 ## Support
 
 For issues specific to cloud function deployment:
-1. Check the troubleshooting section above
+1. Check the [Troubleshooting](#troubleshooting) section
 2. Verify environment variables are set correctly
 3. Test authentication flow manually
 4. Check cloud platform logs for detailed error messages

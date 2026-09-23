@@ -105,6 +105,8 @@ client.calling.play_volume(call_id, control_id="ctrl-1", volume=-3.0)
 
 ### `record(call_id, **params)` / `record_pause` / `record_resume` / `record_stop`
 
+Start, pause, resume, or stop call recording:
+
 ```python
 client.calling.record(call_id,
     control_id="rec-1",
@@ -118,6 +120,8 @@ client.calling.record_stop(call_id, control_id="rec-1")
 ## Input Collection
 
 ### `collect(call_id, **params)` / `collect_stop` / `collect_start_input_timers`
+
+Collect DTMF or speech input, stop collection, or start the input timers:
 
 ```python
 client.calling.collect(call_id,
@@ -133,6 +137,8 @@ client.calling.collect_start_input_timers(call_id, control_id="coll-1")
 
 ### `detect(call_id, **params)` / `detect_stop`
 
+Detect an answering machine, fax tone, or digits, or stop detection:
+
 ```python
 client.calling.detect(call_id,
     control_id="det-1",
@@ -145,6 +151,8 @@ client.calling.detect_stop(call_id, control_id="det-1")
 
 ### `tap(call_id, **params)` / `tap_stop`
 
+Start or stop streaming call media to an RTP or WebSocket endpoint:
+
 ```python
 client.calling.tap(call_id,
     control_id="tap-1",
@@ -155,6 +163,8 @@ client.calling.tap_stop(call_id, control_id="tap-1")
 ```
 
 ### `stream(call_id, **params)` / `stream_stop`
+
+Start or stop streaming call audio to a WebSocket endpoint:
 
 ```python
 client.calling.stream(call_id,
@@ -169,6 +179,8 @@ client.calling.stream_stop(call_id, control_id="str-1")
 
 ### `denoise(call_id)` / `denoise_stop(call_id)`
 
+Start or stop noise reduction on the call:
+
 ```python
 client.calling.denoise(call_id)
 client.calling.denoise_stop(call_id)
@@ -177,6 +189,8 @@ client.calling.denoise_stop(call_id)
 ## Transcription
 
 ### `transcribe(call_id, **params)` / `transcribe_stop`
+
+Start or stop live transcription of the call:
 
 ```python
 client.calling.transcribe(call_id, control_id="tx-1", status_url="https://example.com/hook")
@@ -195,12 +209,16 @@ client.calling.ai_message(call_id, role="user", message_text="Transfer me to bil
 
 ### `ai_hold(call_id, **params)` / `ai_unhold(call_id, **params)`
 
+Put an AI session on hold, or take it off hold:
+
 ```python
 client.calling.ai_hold(call_id, timeout=60, prompt="Please wait while I transfer you.")
 client.calling.ai_unhold(call_id, prompt="I'm back, how can I help?")
 ```
 
 ### `ai_stop(call_id, **params)`
+
+Stop an active AI session:
 
 ```python
 client.calling.ai_stop(call_id, control_id="ai-1")
@@ -209,7 +227,7 @@ client.calling.ai_stop(call_id, control_id="ai-1")
 ## Live Transcribe & Translate
 
 `action` is an object keyed by the phase (`start`/`summarize`), with the phase's
-parameters inside it — or the literal string `"stop"`:
+parameters inside it, or the literal string `"stop"`:
 
 ```python
 client.calling.live_transcribe(call_id, action={"start": {"lang": "en", "webhook": "https://example.com/transcripts"}})
@@ -219,12 +237,16 @@ client.calling.live_translate(call_id, action={"start": {"from_lang": "en", "to_
 
 ## Fax
 
+Stop an in-progress fax send or receive:
+
 ```python
 client.calling.send_fax_stop(call_id, control_id="fax-1")
 client.calling.receive_fax_stop(call_id, control_id="fax-1")
 ```
 
 ## SIP & Custom Events
+
+Transfer via SIP REFER, or send a custom event to the call:
 
 ```python
 # SIP REFER transfer

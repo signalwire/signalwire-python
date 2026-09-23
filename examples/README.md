@@ -4,6 +4,8 @@ This directory contains working examples demonstrating the features of the Signa
 
 ## Setup
 
+Install the SDK from the repository root, adding search extras if you need them:
+
 ```bash
 # Install the SDK in development mode (from the repository root)
 pip install -e .
@@ -13,6 +15,8 @@ pip install -e .[search-all]
 ```
 
 ## Running Examples
+
+Run an example as a server, or test it without one:
 
 ```bash
 # Run any example directly
@@ -118,7 +122,7 @@ swaig-test examples/simple_agent.py --exec get_weather --location "New York"
 |------|-------------|
 | [llm_params_demo.py](llm_params_demo.py) | LLM parameter tuning with three persona examples (customer service, creative, technical) |
 
-### SWAIG Features (SignalWire AI Gateway -- AI Tool Calling)
+### SWAIG Features (SignalWire AI Gateway: AI Tool Calling)
 
 | File | Description |
 |------|-------------|
@@ -129,7 +133,7 @@ swaig-test examples/simple_agent.py --exec get_weather --location "New York"
 | [room_and_sip_example.py](room_and_sip_example.py) | Room management and SIP integration |
 | [tap_example.py](tap_example.py) | Call tap/monitoring setup |
 
-### SWML Services (SignalWire Markup Language -- Call Behavior Documents)
+### SWML Services (SignalWire Markup Language: Call Behavior Documents)
 
 | File | Description |
 |------|-------------|

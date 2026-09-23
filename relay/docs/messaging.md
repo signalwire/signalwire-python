@@ -17,6 +17,8 @@ message = await client.send_message(
 
 ### Wait for delivery
 
+Await `message.wait()` to block until the message reaches a terminal state:
+
 <!-- snippet: no-compile await-fragment -->
 ```python
 message = await client.send_message(
@@ -32,6 +34,8 @@ if message.reason:
 
 ### Fire and forget
 
+Skip `wait()` to send without blocking on delivery:
+
 <!-- snippet: no-compile await-fragment -->
 ```python
 message = await client.send_message(
@@ -43,6 +47,8 @@ message = await client.send_message(
 ```
 
 ### Callback on completion
+
+Pass `on_completed` to run a function when the message reaches a terminal state:
 
 <!-- snippet: no-compile await-fragment -->
 ```python
@@ -56,6 +62,8 @@ message = await client.send_message(
 
 ### MMS (media messages)
 
+Pass `media` with one or more URLs to send an MMS:
+
 <!-- snippet: no-compile await-fragment -->
 ```python
 message = await client.send_message(
@@ -67,6 +75,8 @@ message = await client.send_message(
 ```
 
 ### All parameters
+
+`send_message()` accepts these parameters:
 
 <!-- snippet: no-compile await-fragment -->
 ```python
@@ -152,8 +162,8 @@ Outbound messages progress through these states:
 | `initiated` | Sending has started |
 | `sent` | Message sent to carrier |
 | `delivered` | Message delivered to recipient (terminal) |
-| `undelivered` | Delivery failed (terminal) — check `reason` |
-| `failed` | Message failed to send (terminal) — check `reason` |
+| `undelivered` | Delivery failed (terminal), check `reason` |
+| `failed` | Message failed to send (terminal), check `reason` |
 
 Inbound messages always arrive with state `received`.
 
@@ -163,6 +173,8 @@ Inbound messages always arrive with state `received`.
 |-------|-------------|
 | `MessageReceiveEvent` | Inbound message received |
 | `MessageStateEvent` | Outbound message state change |
+
+Import the typed classes directly:
 
 ```python
 from signalwire.relay import MessageReceiveEvent, MessageStateEvent

@@ -2,6 +2,8 @@
 
 ## Constructor
 
+The constructor accepts these parameters, all of which are optional:
+
 <!-- snippet: no-compile signature-illustration (constructor signature; annotations shown in call form, not a def) -->
 ```python
 RestClient(
@@ -44,7 +46,7 @@ Every API surface is available as a namespace attribute on the client:
 
 | Attribute | Description |
 |-----------|-------------|
-| `client.calling` | REST call control -- 37 commands via POST |
+| `client.calling` | REST call control: 37 commands via POST |
 
 ### Relay REST Resources
 
@@ -76,13 +78,13 @@ Every API surface is available as a namespace attribute on the client:
 
 ## Request Options (timeout / retries / abort)
 
-`RequestOptions` tunes the HTTP transport — per-request `timeout`, `retries`
+`RequestOptions` tunes the HTTP transport: per-request `timeout`, `retries`
 (with `retry_backoff`), the retryable-status set, an `abort_signal`, and extra
 `headers`. It can be set at **two levels**:
 
-- **Client default** — pass `request_options=` to the `RestClient` constructor to
+- **Client default**: pass `request_options=` to the `RestClient` constructor to
   apply it to every call the client makes.
-- **Per call** — pass `request_options=` to any resource verb (`list`, `get`,
+- **Per call**: pass `request_options=` to any resource verb (`list`, `get`,
   `create`, `update`, `delete`, `list_addresses`, and the generated operation /
   command methods) to override the client default for that single call. It is a
   keyword-only argument, extracted by the SDK and never sent in the request body
@@ -117,6 +119,8 @@ never on `500`/`502`/`504`, so a non-idempotent write is not silently duplicated
 
 ## Error Handling
 
+Catch `SignalWireRestError` around any resource call:
+
 ```python
 from signalwire.rest import SignalWireRestError
 
@@ -142,7 +146,9 @@ except SignalWireRestError as e:
 
 ## Session Behavior
 
+The client makes these choices for every request:
+
 - A single `requests.Session` is shared across all namespaces for connection pooling.
 - Content-Type is always `application/json`.
-- User-Agent is `signalwire-agents-python-rest/1.0`.
+- User-Agent is `signalwire-python/<installed version>`, read from the installed `signalwire-sdk` package.
 - DELETE requests returning 204 return an empty dict.

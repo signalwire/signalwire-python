@@ -1,10 +1,12 @@
-# LiveWire -- LiveKit-compatible agents powered by SignalWire
+# LiveWire: LiveKit-compatible agents powered by SignalWire
 
 LiveWire lets [LiveKit Python](https://docs.livekit.io/agents/) developers use their
-familiar API symbols -- same class names, same function names -- but run on
-SignalWire infrastructure.  Just change your import path.
+familiar API symbols (same class names, same function names), but run on
+SignalWire infrastructure. Change the import path to switch.
 
 ## Quick start
+
+Swap the import, and a LiveKit agent runs on SignalWire:
 
 ```python
 # Before (livekit-agents)
@@ -47,21 +49,21 @@ if __name__ == "__main__":
 | `Agent(instructions=...)` | Mapped to SignalWire prompt |
 | `@function_tool` | Mapped to `define_tool()` on `AgentBase` |
 | `AgentSession(llm=...)` | LLM model mapped to SignalWire AI params |
-| `AgentSession(stt=...)` | No-op -- SignalWire handles STT |
-| `AgentSession(tts=...)` | No-op -- SignalWire handles TTS |
-| `AgentSession(vad=...)` | No-op -- SignalWire handles VAD |
+| `AgentSession(stt=...)` | No-op: SignalWire handles STT |
+| `AgentSession(tts=...)` | No-op: SignalWire handles TTS |
+| `AgentSession(vad=...)` | No-op: SignalWire handles VAD |
 | `session.say(text)` | Queued as initial greeting section |
-| `session.interrupt()` | No-op -- SignalWire handles barge-in |
-| `ctx.connect()` | No-op -- SignalWire auto-connects |
+| `session.interrupt()` | No-op: SignalWire handles barge-in |
+| `ctx.connect()` | No-op: SignalWire auto-connects |
 | Plugin classes (`DeepgramSTT`, etc.) | Constructable stubs, no-op |
 
 ## Examples
 
 See the `examples/` directory:
 
-- `livewire_basic_agent.py` -- minimal weather agent
-- `livewire_multi_tool.py` -- agent with multiple tools
-- `livewire_handoff.py` -- multi-agent handoff
+- `livewire_basic_agent.py`: minimal weather agent
+- `livewire_multi_tool.py`: agent with multiple tools
+- `livewire_handoff.py`: multi-agent handoff
 
 ## Migration guide
 

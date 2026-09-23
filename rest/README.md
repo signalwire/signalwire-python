@@ -1,8 +1,10 @@
 # SignalWire REST Client
 
-Synchronous REST client for managing SignalWire resources, controlling live calls, and interacting with every SignalWire API surface from Python. No WebSocket required -- just standard HTTP requests with automatic connection pooling.
+Synchronous REST client for managing SignalWire resources, controlling live calls, and interacting with every SignalWire API surface from Python. It needs no WebSocket connection, only standard HTTP requests with automatic connection pooling.
 
 ## Quick Start
+
+Create a client and call any SignalWire API surface directly:
 
 <!-- snippet: no-run live REST/HTTP call to a real host (needs credentials/network) -->
 ```python
@@ -33,6 +35,8 @@ client.calling.dial(
 
 ## Features
 
+The REST client provides:
+
 - Single `RestClient` with namespaced sub-objects for every API
 - All 37 calling commands: dial, play, record, collect, detect, tap, stream, AI, transcribe, and more
 - Full Fabric API: 13 resource types with CRUD + addresses, tokens, and generic resources
@@ -40,20 +44,24 @@ client.calling.dial(
 - Video: rooms, sessions, recordings, conferences, tokens, streams
 - Phone number management, 10DLC registry, MFA, logs, and more
 - Shared `requests.Session` for connection pooling across all calls
-- Dict returns -- raw JSON, no wrapper objects to learn
+- Dict returns: raw JSON, no wrapper objects to learn
 
 ## Documentation
 
-- [Getting Started](docs/getting-started.md) -- installation, configuration, first API call
-- [Client Reference](docs/client-reference.md) -- RestClient constructor, namespaces, error handling
-- [Fabric Resources](docs/fabric.md) -- managing AI agents, SWML scripts, subscribers, call flows, and more
-- [Calling Commands](docs/calling.md) -- REST-based call control (dial, play, record, collect, AI, etc.)
-- [All Namespaces](docs/namespaces.md) -- phone numbers, video, datasphere, logs, registry, and more
+These pages cover the client in depth:
+
+- [Getting Started](docs/getting-started.md): installation, configuration, first API call
+- [Client Reference](docs/client-reference.md): RestClient constructor, namespaces, error handling
+- [Fabric Resources](docs/fabric.md): managing AI agents, SWML scripts, subscribers, call flows, and more
+- [Calling Commands](docs/calling.md): REST-based call control (dial, play, record, collect, AI, etc.)
+- [All Namespaces](docs/namespaces.md): phone numbers, video, datasphere, logs, registry, and more
 
 ## Examples
 
-- [rest_manage_resources.py](examples/rest_manage_resources.py) -- create an AI agent, assign a phone number, and place a test call
-- [rest_datasphere_search.py](examples/rest_datasphere_search.py) -- upload a document and run a semantic search
+These examples are in the repository:
+
+- [rest_manage_resources.py](examples/rest_manage_resources.py): create an AI agent, search for a phone number, and place a test call
+- [rest_datasphere_search.py](examples/rest_datasphere_search.py): upload a document and run a semantic search
 
 ## Environment Variables
 
@@ -66,8 +74,10 @@ client.calling.dial(
 
 ## Module Structure
 
+The client's code lives under the installed package:
+
 ```
-signalwire/rest/
+signalwire/signalwire/rest/
     __init__.py          # Public exports: RestClient, SignalWireRestError
     client.py            # RestClient -- namespace wiring, env var resolution
     _base.py             # HttpClient, BaseResource, CrudResource, CrudWithAddresses

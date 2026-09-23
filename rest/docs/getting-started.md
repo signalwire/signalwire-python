@@ -4,7 +4,7 @@ The REST client provides synchronous access to all SignalWire APIs using standar
 
 ## Installation
 
-The REST client is included in the `signalwire-agents` package:
+The REST client is included in the `signalwire-sdk` package:
 
 ```bash
 pip install signalwire-sdk
@@ -23,6 +23,8 @@ You need three things to connect:
 | `host` | `SIGNALWIRE_SPACE` | Your space hostname (e.g. `example.signalwire.com`) |
 
 ## Minimal Example
+
+Create a client and list your AI agents:
 
 <!-- snippet: no-run live REST/HTTP call to a real host (needs credentials/network) -->
 ```python
@@ -46,6 +48,8 @@ export SIGNALWIRE_PROJECT_ID=your-project-id
 export SIGNALWIRE_API_TOKEN=your-api-token
 export SIGNALWIRE_SPACE=example.signalwire.com
 ```
+
+With those set, the constructor needs no arguments:
 
 <!-- snippet: no-run live REST/HTTP call to a real host (needs credentials/network) -->
 ```python
@@ -84,6 +88,8 @@ addresses = client.fabric.ai_agents.list_addresses("agent-uuid")
 
 ## Error Handling
 
+Catch `SignalWireRestError` around any call that might fail:
+
 ```python
 from signalwire.rest import RestClient, SignalWireRestError
 
@@ -106,7 +112,9 @@ export SIGNALWIRE_LOG_LEVEL=debug
 
 ## Next Steps
 
-- [Client Reference](client-reference.md) -- all namespaces and constructor options
-- [Fabric Resources](fabric.md) -- managing AI agents, SWML scripts, and more
-- [Calling Commands](calling.md) -- REST-based call control
-- [All Namespaces](namespaces.md) -- phone numbers, video, datasphere, and more
+Continue with these pages:
+
+- [Client Reference](client-reference.md): all namespaces and constructor options
+- [Fabric Resources](fabric.md): managing AI agents, SWML scripts, and more
+- [Calling Commands](calling.md): REST-based call control
+- [All Namespaces](namespaces.md): phone numbers, video, datasphere, and more

@@ -2,8 +2,8 @@
 
 The SDK supports the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) in two ways:
 
-1. **MCP Client** — Connect to external MCP servers and use their tools in your agent
-2. **MCP Server** — Expose your agent's `@tool` functions as an MCP endpoint for other clients
+1. **MCP Client**: connect to external MCP servers and use their tools in your agent
+2. **MCP Server**: expose your agent's `@tool` functions as an MCP endpoint for other clients
 
 These features are independent and can be used separately or together.
 
@@ -50,6 +50,8 @@ Resource data is available in prompts via `${global_data.key}` and included in e
 
 ### Multiple Servers
 
+Add more than one server, and the agent merges their tools into one list:
+
 ```python
 self.add_mcp_server("https://mcp-search.example.com/tools",
     headers={"Authorization": "Bearer search-key"})
@@ -79,11 +81,11 @@ class MyAgent(AgentBase):
 ```
 
 The `/mcp` endpoint handles the full MCP protocol:
-- `initialize` — protocol version and capability negotiation
-- `notifications/initialized` — ready signal
-- `tools/list` — returns all `@tool` functions in MCP format
-- `tools/call` — invokes the handler and returns the result
-- `ping` — keepalive
+- `initialize`: protocol version and capability negotiation
+- `notifications/initialized`: ready signal
+- `tools/list`: returns all `@tool` functions in MCP format
+- `tools/call`: invokes the handler and returns the result
+- `ping`: keepalive
 
 ### Connecting from Claude Desktop
 
@@ -138,7 +140,7 @@ self.enable_mcp_server()
 self.add_mcp_server("https://your-server.com/agent/mcp")
 ```
 
-This is optional — by default, `enable_mcp_server()` only adds the endpoint without affecting the agent's own SWML output.
+This is optional. By default, `enable_mcp_server()` only adds the endpoint, and doesn't affect the agent's own SWML output.
 
 ## MCP vs SWAIG Webhooks
 

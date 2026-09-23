@@ -4,7 +4,7 @@ The RELAY client connects to SignalWire via WebSocket and gives you real-time, i
 
 ## Installation
 
-The RELAY client is included in the `signalwire-agents` package:
+The RELAY client is included in the `signalwire-sdk` package:
 
 ```bash
 pip install signalwire-sdk
@@ -29,6 +29,8 @@ Alternatively, you can authenticate with a JWT token:
 | `jwt_token` | `SIGNALWIRE_JWT_TOKEN` | A SignalWire JWT auth token |
 
 ## Minimal Example
+
+Connect with explicit credentials and answer every inbound call:
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -59,6 +61,8 @@ export SIGNALWIRE_API_TOKEN=your-api-token
 export SIGNALWIRE_SPACE=example.signalwire.com
 ```
 
+With those set, the constructor needs only the contexts:
+
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire.relay import RelayClient
@@ -76,6 +80,8 @@ client.run()
 ## Contexts
 
 Contexts are topics your client subscribes to for receiving inbound calls. When a call arrives on a context you're subscribed to, your `@client.on_call` handler is invoked.
+
+Set contexts at construction time, or change them after connecting:
 
 ```python
 # Subscribe at connect time
@@ -134,6 +140,8 @@ async with RelayClient(contexts=["default"]) as client:
 
 ## Next Steps
 
-- [Call Methods Reference](call-methods.md) -- all methods available on a Call object
-- [Events](events.md) -- handling real-time call events
-- [Client Reference](client-reference.md) -- RelayClient configuration and methods
+Continue with these pages:
+
+- [Call Methods Reference](call-methods.md): all methods available on a Call object
+- [Events](events.md): handling real-time call events
+- [Client Reference](client-reference.md): RelayClient configuration and methods

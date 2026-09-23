@@ -28,7 +28,7 @@ mcp-gateway -c config.json
    - Handles session lifecycle per SignalWire call
    - Translates between SWAIG and MCP protocols
 
-2. **MCP Gateway Skill** (`signalwire/skills/mcp_gateway/`)
+2. **MCP Gateway Skill** (`signalwire/signalwire/skills/mcp_gateway/`)
    - SignalWire skill that connects agents to the gateway
    - Dynamically creates SWAIG functions from MCP tools
    - Manages session lifecycle using call_id
@@ -38,6 +38,8 @@ mcp-gateway -c config.json
    - Demonstrates stateful MCP server implementation
 
 ## Protocol Flow
+
+A tool call passes through eleven steps between the agent, the gateway, and the MCP server:
 
 ```
 SignalWire Agent                 Gateway Service              MCP Server
@@ -58,12 +60,11 @@ SignalWire Agent                 Gateway Service              MCP Server
 
 ## Message Envelope Format
 
-The gateway uses a custom envelope format for routing and session management:
+A call to `POST /services/{service_name}/call` carries this JSON body. The service name itself is part of the URL, not the body:
 
 ```json
 {
     "session_id": "call_xyz123",  // From SWAIG call_id
-    "service": "todo",             // MCP service name
     "tool": "add_todo",           // Tool name
     "arguments": {                 // Tool arguments
         "text": "Buy milk"
@@ -78,8 +79,10 @@ The gateway uses a custom envelope format for routing and session management:
 
 ## Directory Structure
 
+The gateway's code is split between the installed package and a top-level directory of deployment files:
+
 ```
-signalwire/mcp_gateway/    # Core gateway package (installed with SDK)
+signalwire/signalwire/mcp_gateway/    # Core gateway package (installed with SDK)
 ├── __init__.py                   # Package exports
 ├── gateway_service.py            # Main HTTP/HTTPS server
 ├── mcp_manager.py                # MCP server lifecycle management
@@ -101,7 +104,7 @@ mcp_gateway/                      # Configuration and deployment files
 └── examples/
     └── generate_cert.sh          # Generate self-signed certificate
 
-signalwire/skills/mcp_gateway/
+signalwire/signalwire/skills/mcp_gateway/
 ├── __init__.py
 ├── skill.py                      # MCP gateway skill
 └── README.md                     # Skill documentation
@@ -181,6 +184,9 @@ The gateway supports environment variable substitution in config.json using the 
 Example usage:
 
 **Method 1: Using .env file (recommended)**
+
+Copy the example file, fill in your values, then start the gateway so it reads them:
+
 ```bash
 # Copy the example
 cp .env.example .env
@@ -193,20 +199,26 @@ vim .env
 
 # Or for non-Docker
 source .env
-python3 gateway_service.py
+mcp-gateway
 ```
 
 **Method 2: Export environment variables**
+
+Export the variables directly, then start the gateway:
+
 ```bash
 # Set environment variables
 export MCP_PORT=9000
 export MCP_AUTH_PASSWORD=mysecret
 
 # Run the gateway
-python3 gateway_service.py
+mcp-gateway
 ```
 
 **Method 3: Inline variables**
+
+Set the variables for a single command:
+
 ```bash
 # Set variables for just this command
 MCP_PORT=9000 MCP_AUTH_PASSWORD=mysecret ./mcp-docker.sh start
@@ -238,7 +250,10 @@ Each service can have its own sandbox configuration:
 
 #### Sandbox Profiles
 
-1. **High Security** (Default)
+Three profiles cover most cases:
+
+1. **High Security** (Default):
+
 ```json
 "sandbox": {
     "enabled": true,
@@ -247,7 +262,8 @@ Each service can have its own sandbox configuration:
 }
 ```
 
-2. **Medium Security** (For services needing env vars)
+2. **Medium Security** (For services needing env vars):
+
 ```json
 "sandbox": {
     "enabled": true,
@@ -256,7 +272,8 @@ Each service can have its own sandbox configuration:
 }
 ```
 
-3. **No Sandbox** (For trusted services needing full access)
+3. **No Sandbox** (For trusted services needing full access):
+
 ```json
 "sandbox": {
     "enabled": false
@@ -264,6 +281,8 @@ Each service can have its own sandbox configuration:
 ```
 
 ### Skill Configuration
+
+Add the skill to an agent to connect it to a running gateway:
 
 ```python
 agent.add_skill("mcp_gateway", {
@@ -293,25 +312,32 @@ agent.add_skill("mcp_gateway", {
 ### Gateway Service Endpoints
 
 #### GET /health
-Health check endpoint
+
+Check whether the gateway is running:
+
 ```bash
 curl http://localhost:8080/health
 ```
 
 #### GET /services
-List available MCP services
+
+List the MCP services the gateway knows about:
+
 ```bash
 curl -u admin:changeme http://localhost:8080/services
 ```
 
 #### GET /services/{service_name}/tools
-Get tools for a specific service
+
+Get the tools a specific service exposes:
+
 ```bash
 curl -u admin:changeme http://localhost:8080/services/todo/tools
 ```
 
 #### POST /services/{service_name}/call
-Call a tool on a service
+
+Call a tool on a service.
 
 Using Basic Auth:
 ```bash
@@ -338,13 +364,17 @@ curl -X POST http://localhost:8080/services/todo/call \
 ```
 
 #### GET /sessions
-List active sessions
+
+List active sessions:
+
 ```bash
 curl -u admin:changeme http://localhost:8080/sessions
 ```
 
 #### DELETE /sessions/{session_id}
-Close a specific session
+
+Close a specific session:
+
 ```bash
 curl -u admin:changeme -X DELETE http://localhost:8080/sessions/test-123
 ```
@@ -374,6 +404,8 @@ Fully configurable through the `rate_limiting` section in config.json:
     "storage_uri": "memory://"
 }
 ```
+
+Each key controls a different part of the gateway:
 
 - `default_limits`: Global rate limits per IP address
 - `tools_limit`: Rate limit for `/services/*/tools` endpoints
@@ -417,16 +449,23 @@ Configurable per MCP service with three security levels:
 
 ### 1. Unit Testing the Gateway
 
+Start the gateway from the `mcp_gateway/` directory, then exercise it with the bundled curl script:
+
 ```bash
 # Start the gateway
 cd mcp_gateway
-python3 gateway_service.py
+mcp-gateway
 
 # Test with curl
 ./test/test_gateway.sh
 ```
 
+With no `config.json` present, the gateway creates one from `sample_config.json`
+and listens on port 8100.
+
 ### 2. Testing with SWAIG CLI
+
+Test the same gateway through the `mcp_gateway` skill using `swaig-test`:
 
 ```bash
 # Test the agent with MCP skill
@@ -445,6 +484,8 @@ swaig-test test/test_agent.py --dump-swml
 
 ### 3. End-to-End Testing
 
+This is the agent that `test/test_agent.py` defines, pointed at the gateway started in step 1:
+
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 # test/test_agent.py
@@ -455,7 +496,7 @@ class TestMCPAgent(AgentBase):
         super().__init__(name="MCP Test Agent")
         
         self.add_skill("mcp_gateway", {
-            "gateway_url": "http://localhost:8080",
+            "gateway_url": "http://localhost:8100",
             "auth_user": "admin",
             "auth_password": "changeme",
             "services": [{"name": "todo"}]
@@ -469,9 +510,12 @@ if __name__ == "__main__":
 ## Deployment
 
 ### Local Development
+
+Run the installed CLI from the `mcp_gateway/` directory:
+
 ```bash
 cd mcp_gateway
-python3 gateway_service.py
+mcp-gateway
 ```
 
 ### Docker Deployment
@@ -542,6 +586,9 @@ cd mcp_gateway
 ```
 
 #### Manual Docker Commands
+
+Build and run the image by hand:
+
 ```bash
 cd mcp_gateway
 docker build -t mcp-gateway .
@@ -549,6 +596,9 @@ docker run -p 8080:8080 -v $(pwd)/config.json:/app/config.json mcp-gateway
 ```
 
 #### Docker Compose
+
+Or use Compose, which reads `.env` automatically:
+
 ```bash
 cd mcp_gateway
 docker-compose up
@@ -558,13 +608,16 @@ docker-compose down  # Stop and remove
 ```
 
 ### Production with HTTPS
+
+Place a certificate at `certs/server.pem` before starting the gateway, and it serves HTTPS automatically:
+
 ```bash
 # Generate or place certificates
 mkdir -p certs
 # Place server.pem in certs/
 
 # Run with HTTPS
-python3 gateway_service.py
+mcp-gateway
 ```
 
 ## Implementation Details
@@ -637,6 +690,8 @@ Enable debug logging:
 ```
 
 ## Examples
+
+This example is in the repository:
 
 - `examples/mcp_gateway_demo.py` - Agent connecting to MCP servers through the `mcp_gateway` skill
 

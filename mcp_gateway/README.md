@@ -9,7 +9,7 @@ A gateway service that bridges Model Context Protocol (MCP) servers with SignalW
 The MCP Gateway is included in the SignalWire Agents SDK. Install with the gateway dependencies:
 
 ```bash
-pip install "signalwire-agents[mcp-gateway]"
+pip install "signalwire-sdk[mcp-gateway]"
 ```
 
 Or if you have the SDK installed, add the gateway dependencies:
@@ -25,9 +25,9 @@ pip install flask flask-limiter
    # Using the installed CLI command
    mcp-gateway -c config.json
 
-   # Or run directly (for development)
+   # Or run directly from the mcp_gateway/ directory (for development)
    cd mcp_gateway
-   python3 gateway_service.py
+   mcp-gateway
    ```
 
 2. **Test with curl**:
@@ -43,6 +43,8 @@ pip install flask flask-limiter
 
 ## Features
 
+The gateway provides:
+
 - **Multi-Service Support**: Manage multiple MCP servers from one gateway
 - **Session Management**: Automatic session lifecycle tied to SignalWire calls
 - **HTTP/HTTPS**: Automatic HTTPS when SSL certificate is present
@@ -56,6 +58,8 @@ The gateway uses a `config.json` file with support for environment variable subs
 
 ### Method 1: Using Environment Variables (Recommended)
 
+Copy the example file, fill in your values, then start the gateway so it reads them:
+
 ```bash
 # Copy the example .env file
 cp .env.example .env
@@ -68,10 +72,12 @@ vim .env
 
 # Or without Docker
 source .env
-python3 gateway_service.py
+mcp-gateway
 ```
 
 ### Method 2: Direct Configuration
+
+Copy the sample file and edit it directly:
 
 ```bash
 cp sample_config.json config.json
@@ -112,6 +118,8 @@ The configuration supports environment variable substitution using `${VAR_NAME|d
 
 ### Supported Environment Variables
 
+These variables fill in the `${VAR_NAME|default}` tokens in `config.json`:
+
 - `MCP_HOST`: Server bind address (default: 0.0.0.0)
 - `MCP_PORT`: Server port (default: 8080)
 - `MCP_AUTH_USER`: Basic auth username (default: admin)
@@ -141,7 +149,10 @@ rm certs/cert.pem certs/key.pem
 ## API Documentation
 
 ### Health Check
-```
+
+Check whether the gateway is running:
+
+```http
 GET /health
 ```
 
@@ -150,29 +161,38 @@ GET /health
 The gateway supports two authentication methods:
 
 1. **Basic Auth** (default):
-   ```
+   ```http
    Authorization: Basic <base64(username:password)>
    ```
 
 2. **Bearer Token** (when MCP_AUTH_TOKEN is set):
-   ```
+   ```http
    Authorization: Bearer <token>
    ```
 
 ### List Services
-```
+
+List the MCP services the gateway knows about:
+
+```http
 GET /services
 Authorization: Basic <credentials> OR Bearer <token>
 ```
 
 ### Get Service Tools
-```
+
+Get the tools a specific service exposes:
+
+```http
 GET /services/{service_name}/tools
 Authorization: Basic <credentials> OR Bearer <token>
 ```
 
 ### Call Tool
-```
+
+Call a tool on a service:
+
+```http
 POST /services/{service_name}/call
 Authorization: Basic <credentials> OR Bearer <token>
 Content-Type: application/json
@@ -186,13 +206,19 @@ Content-Type: application/json
 ```
 
 ### List Sessions
-```
+
+List active sessions:
+
+```http
 GET /sessions
 Authorization: Basic <credentials> OR Bearer <token>
 ```
 
 ### Close Session
-```
+
+Close a specific session:
+
+```http
 DELETE /sessions/{session_id}
 Authorization: Basic <credentials> OR Bearer <token>
 ```
@@ -241,6 +267,8 @@ agent.run()
 
 ### Using the Helper Script (Recommended)
 
+`mcp-docker.sh` wraps these commands:
+
 ```bash
 # Using .env file for configuration
 ./mcp-docker.sh start
@@ -256,6 +284,8 @@ MCP_PORT=9000 ./mcp-docker.sh start
 ```
 
 ### Manual Docker Commands
+
+Build and run the image by hand:
 
 ```bash
 # Build
