@@ -1966,14 +1966,13 @@ class TestGetBasicAuthEnvironmentSource:
     """Test get_basic_auth_credentials environment source detection (line 940)."""
 
     def test_env_source_detected(self) -> None:
-        """When credentials match env vars, source should be 'environment'."""
+        """Credentials read from the environment are labeled 'environment'."""
         with patch.dict("os.environ", {
             "SWML_BASIC_AUTH_USER": "envuser",
             "SWML_BASIC_AUTH_PASSWORD": "envpass",
         }):
             svc = SWMLService(
                 name="auth_env_src", route="/", host="127.0.0.1", port=3001,
-                basic_auth=("envuser", "envpass"),
                 schema_validation=False,
             )
             u, p, source = svc.get_basic_auth_credentials(include_source=True)  # type: ignore[misc]  # include_source=True returns 3-tuple
@@ -1981,15 +1980,24 @@ class TestGetBasicAuthEnvironmentSource:
             assert p == "envpass"
             assert source == "environment"
 
-    def test_auto_generated_source(self) -> None:
-        """When credentials don't match env vars, source should be 'auto-generated'."""
+    def test_provided_source(self) -> None:
+        """Constructor credentials are labeled 'provided', never 'auto-generated' (B26)."""
         svc = SWMLService(
             name="auth_auto_src", route="/", host="127.0.0.1", port=3001,
             basic_auth=("myuser", "mypass"),
             schema_validation=False,
         )
         u, p, source = svc.get_basic_auth_credentials(include_source=True)  # type: ignore[misc]  # include_source=True returns 3-tuple
-        assert source == "auto-generated"
+        assert source == "provided"
+
+    def test_generated_source(self) -> None:
+        with patch.dict("os.environ", {}, clear=True):
+            svc = SWMLService(
+                name="auth_gen_src", route="/", host="127.0.0.1", port=3001,
+                schema_validation=False,
+            )
+            _, _, source = svc.get_basic_auth_credentials(include_source=True)  # type: ignore[misc]  # include_source=True returns 3-tuple
+        assert source == "generated"
 
 
 class TestGetBaseUrlDomainHttp80:

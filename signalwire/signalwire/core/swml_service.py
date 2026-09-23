@@ -190,13 +190,16 @@ class SWMLService(ToolMixin):
             "service_initializing", route=self.route, host=self.host, port=self.port
         )
 
-        # Set basic auth credentials
+        # Set basic auth credentials, and record where they came from for
+        # the startup message
         if basic_auth is not None:
             # Use provided credentials
             self._basic_auth = basic_auth
+            self._basic_auth_source = "provided"
         else:
             # Use unified security config for auth credentials
             self._basic_auth = self.security.get_basic_auth()
+            self._basic_auth_source = self.security.basic_auth_source or "provided"
 
         # Find the schema file if not provided
         if schema_path is None:
@@ -1508,15 +1511,7 @@ class SWMLService(ToolMixin):
         username, password = self._basic_auth
 
         if include_source:
-            # Determine source
-            env_user = os.environ.get("SWML_BASIC_AUTH_USER")
-            env_pass = os.environ.get("SWML_BASIC_AUTH_PASSWORD")
-
-            if env_user and env_pass and env_user == username and env_pass == password:
-                source = "environment"
-            else:
-                source = "auto-generated"
-
+            source = getattr(self, "_basic_auth_source", "provided")
             return username, password, source
 
         return username, password

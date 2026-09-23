@@ -58,27 +58,15 @@ class AuthMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
                 (username, password) tuple
             If include_source is True:
                 (username, password, source) tuple, where source is one of:
-                "provided", "environment", or "generated"
+                "provided", "environment", "config file", or "generated"
         """
         username, password = self._basic_auth
 
         if not include_source:
             return (username, password)
 
-        # Determine source of credentials
-        env_user = os.environ.get("SWML_BASIC_AUTH_USER")
-        env_pass = os.environ.get("SWML_BASIC_AUTH_PASSWORD")
-
-        # More robust source detection
-        if env_user and env_pass and username == env_user and password == env_pass:
-            source = "environment"
-        elif (
-            username.startswith("user_") and len(password) > 20
-        ):  # Format of generated credentials
-            source = "generated"
-        else:
-            source = "provided"
-
+        # Recorded when the credentials were resolved, in SWMLService.__init__
+        source = getattr(self, "_basic_auth_source", "provided")
         return (username, password, source)
 
     def _check_basic_auth(self, request: Request) -> bool:
