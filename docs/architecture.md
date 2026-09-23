@@ -1194,6 +1194,10 @@ Proxy / request-trust knobs (all default OFF, enable only behind a trusted proxy
 - `SWML_TRUST_REMOTE_USER`: trust the `REMOTE_USER` CGI header for auth
 - `SWML_ALLOW_PRIVATE_URLS`: allow webhook/target URLs that resolve to private IPs
   (off by default to block SSRF)
+- `SWML_URL_FETCH_USE_PROXY`: let the spider and web_search skills fetch pages
+  through `HTTP_PROXY` and `HTTPS_PROXY` (`1`/`true`/`yes`). They ignore those by
+  default, because the private-address check can't see where a proxy connects.
+  Set it only for a proxy that blocks private destinations itself.
 - `SWML_PROXY_DEBUG`: verbose proxy-header resolution logging
 
 Other knobs:

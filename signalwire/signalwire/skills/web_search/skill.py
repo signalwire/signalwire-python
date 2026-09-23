@@ -10,6 +10,7 @@ See LICENSE file in the project root for full license information.
 import time
 import re
 from urllib.parse import urlparse
+import requests
 from bs4 import BeautifulSoup
 from typing import Any, ClassVar
 
@@ -27,14 +28,18 @@ class GoogleSearchScraper:
         self.api_key = api_key
         self.search_engine_id = search_engine_id
         self.max_content_length = max_content_length
-        # Refuses redirects and connections to private or internal addresses,
-        # which the check before each page fetch can't catch.
+        user_agent = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        # For the pages that results link to. Refuses redirects and
+        # connections to private or internal addresses, which the check
+        # before each page fetch can't catch.
         self.session = _PublicSession()
-        self.session.headers.update(
-            {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
-            }
-        )
+        self.session.headers.update(user_agent)
+        # For the Google API itself, a fixed public endpoint. An ordinary
+        # session, so it still uses HTTP_PROXY and HTTPS_PROXY.
+        self._api_session = requests.Session()
+        self._api_session.headers.update(user_agent)
 
     def search_google(self, query: str, num_results: int = 5) -> list[dict[str, Any]]:
         """Search Google using Custom Search JSON API"""
@@ -48,7 +53,7 @@ class GoogleSearchScraper:
         }
 
         try:
-            response = self.session.get(url, params=params, timeout=15)
+            response = self._api_session.get(url, params=params, timeout=15)
             response.raise_for_status()
             data = response.json()
 

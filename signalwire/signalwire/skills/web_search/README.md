@@ -191,11 +191,12 @@ Each instance is uniquely identified by its `search_engine_id` and `tool_name` c
 
 ## Error Handling
 
-The skill covers four failure cases:
+The skill covers five failure cases:
 
 - **No Results**: Returns custom `no_results_message` with query placeholder
 - **Network Issues**: Returns friendly error message for timeouts/connectivity issues
 - **Invalid Pages**: Gracefully handles pages that can't be scraped
+- **Blocked Pages**: Skips a result page that resolves or redirects to a private or internal address. Page fetches connect directly, ignoring `HTTP_PROXY` and `HTTPS_PROXY`, so that the check applies to each connection; the Google API request still uses them. To fetch pages through a proxy that blocks private destinations itself, set `SWML_URL_FETCH_USE_PROXY=true`.
 - **Rate Limiting**: Built-in delay support to respect API limits
 
 ## Best Practices

@@ -97,6 +97,16 @@ def _private_urls_allowed(allow_private: bool) -> bool:
     )
 
 
+def _proxy_allowed() -> bool:
+    """True when ``SWML_URL_FETCH_USE_PROXY`` lets these fetches use a proxy.
+
+    A proxy connects on the session's behalf, so the connection check can't
+    see the address it reaches, and the proxy resolves the hostname itself.
+    Only a proxy that restricts destinations on its own keeps the protection.
+    """
+    return os.getenv("SWML_URL_FETCH_USE_PROXY", "").lower() in ("1", "true", "yes")
+
+
 def _address_is_blocked(ip_str: str) -> bool:
     """True if ``ip_str`` is an address that a user-supplied URL must not reach."""
     try:
@@ -163,8 +173,8 @@ class _PublicAdapter(HTTPAdapter):
     """Refuses direct connections to private and internal addresses.
 
     Requests sent through a proxy use Requests' own proxy managers, so this
-    check doesn't apply to them. Their URLs are still checked by
-    ``_PublicSession.send()``.
+    check doesn't apply to them. ``_PublicSession`` sends directly unless
+    ``SWML_URL_FETCH_USE_PROXY`` is set.
     """
 
     def init_poolmanager(self, *args: Any, **kwargs: Any) -> None:
@@ -184,6 +194,10 @@ class _PublicSession(requests.Session):
     the URL of every request it sends, redirects included, and refuses a
     direct connection to a blocked address. ``SWML_ALLOW_PRIVATE_URLS`` turns
     both checks off, as it does for ``validate_url()``.
+
+    It ignores HTTP_PROXY and HTTPS_PROXY, because through a proxy the
+    connection check can't apply. Set ``SWML_URL_FETCH_USE_PROXY`` to use
+    them, with a proxy that restricts destinations itself.
     """
 
     def __init__(self, allow_private: bool = False) -> None:
@@ -206,4 +220,24 @@ class _PublicSession(requests.Session):
             raise _BlockedURLError(
                 f"URL rejected: {redact_url(url)} is private, internal or invalid"
             )
+        if self._direct_only():
+            # Connect directly, so the peer address check applies
+            kwargs["proxies"] = {}
         return super().send(request, **kwargs)
+
+    def rebuild_proxies(
+        self,
+        prepared_request: requests.PreparedRequest,
+        proxies: dict[str, str] | None,
+    ) -> dict[str, str]:
+        # Requests calls this for each redirect. For a plain-HTTP target it
+        # would add the environment proxy's credentials as a header, which a
+        # direct request would then send to the target itself.
+        if self._direct_only():
+            prepared_request.headers.pop("Proxy-Authorization", None)
+            return {}
+        return super().rebuild_proxies(prepared_request, proxies)
+
+    def _direct_only(self) -> bool:
+        """True when requests must bypass proxies, so the peer check applies."""
+        return not (_private_urls_allowed(self._allow_private) or _proxy_allowed())

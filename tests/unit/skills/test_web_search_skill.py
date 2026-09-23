@@ -582,7 +582,7 @@ class TestSearchGoogle:
             ]
         }
         mock_response.raise_for_status = Mock()
-        with patch.object(scraper.session, 'get', return_value=mock_response):
+        with patch.object(scraper._api_session, 'get', return_value=mock_response):
             results = scraper.search_google("test query", num_results=5)
             assert len(results) == 2
             assert results[0]["title"] == "Result 1"
@@ -594,19 +594,19 @@ class TestSearchGoogle:
         mock_response = Mock()
         mock_response.json.return_value = {"searchInformation": {"totalResults": "0"}}
         mock_response.raise_for_status = Mock()
-        with patch.object(scraper.session, 'get', return_value=mock_response):
+        with patch.object(scraper._api_session, 'get', return_value=mock_response):
             results = scraper.search_google("test query")
             assert results == []
 
     def test_search_api_error(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
-        with patch.object(scraper.session, 'get', side_effect=requests.exceptions.HTTPError("403")):
+        with patch.object(scraper._api_session, 'get', side_effect=requests.exceptions.HTTPError("403")):
             results = scraper.search_google("test query")
             assert results == []
 
     def test_search_network_error(self) -> None:
         scraper = GoogleSearchScraper("key", "engine_id")
-        with patch.object(scraper.session, 'get', side_effect=requests.exceptions.ConnectionError("failed")):
+        with patch.object(scraper._api_session, 'get', side_effect=requests.exceptions.ConnectionError("failed")):
             results = scraper.search_google("test query")
             assert results == []
 
@@ -615,7 +615,7 @@ class TestSearchGoogle:
         mock_response = Mock()
         mock_response.json.return_value = {"items": []}
         mock_response.raise_for_status = Mock()
-        with patch.object(scraper.session, 'get', return_value=mock_response) as mock_get:
+        with patch.object(scraper._api_session, 'get', return_value=mock_response) as mock_get:
             scraper.search_google("test", num_results=20)
             call_kwargs = mock_get.call_args
             assert call_kwargs[1]["params"]["num"] == 10
@@ -627,7 +627,7 @@ class TestSearchGoogle:
             "items": [{"title": "Only Title"}]  # missing link and snippet
         }
         mock_response.raise_for_status = Mock()
-        with patch.object(scraper.session, 'get', return_value=mock_response):
+        with patch.object(scraper._api_session, 'get', return_value=mock_response):
             results = scraper.search_google("test")
             assert results[0]["title"] == "Only Title"
             assert results[0]["url"] == ""
@@ -1182,3 +1182,10 @@ class TestRedirectToInternalAddress:
         from signalwire.utils.url_validator import _PublicSession
 
         assert isinstance(GoogleSearchScraper("key", "engine_id").session, _PublicSession)
+
+    def test_google_api_uses_an_ordinary_session(self) -> None:
+        # The API endpoint is fixed, so it keeps using any configured proxy
+        from signalwire.utils.url_validator import _PublicSession
+
+        scraper = GoogleSearchScraper("key", "engine_id")
+        assert not isinstance(scraper._api_session, _PublicSession)

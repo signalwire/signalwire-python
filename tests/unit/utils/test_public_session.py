@@ -62,6 +62,37 @@ def loopback_server() -> Iterator[tuple[int, list[str]]]:
         server.server_close()
 
 
+@pytest.fixture
+def proxy_server() -> Iterator[tuple[int, list[str]]]:
+    """A permissive HTTP proxy on 127.0.0.1 that records the URLs it's asked for.
+
+    It answers every request itself, standing in for a proxy that would fetch
+    an internal address on the caller's behalf.
+    """
+    requested: list[str] = []
+
+    class Handler(http.server.BaseHTTPRequestHandler):
+        def do_GET(self) -> None:
+            requested.append(self.path)  # a proxy request's path is the full URL
+            body = b"via-proxy"
+            self.send_response(200)
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, format: str, *args: Any) -> None:
+            pass
+
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    thread = threading.Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        yield server.server_address[1], requested
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
 @pytest.mark.usefixtures("public_test_dns")
 class TestRedirects:
     def test_redirect_to_metadata_address_is_refused(self, scripted_adapter: type) -> None:
@@ -153,3 +184,80 @@ class TestConnectionCheck:
         with patch.object(HTTPConnection, "_new_conn", return_value=sock):
             assert cls("public.test", 443)._new_conn() is sock
         sock.close.assert_not_called()
+
+
+class TestProxies:
+    """Environment proxies are ignored unless SWML_URL_FETCH_USE_PROXY is set.
+
+    A proxy resolves the hostname and connects on the session's behalf, so the
+    connection check can't see the address it reaches.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _no_proxy_settings(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        for name in ("no_proxy", "NO_PROXY", "all_proxy", "ALL_PROXY", "SWML_URL_FETCH_USE_PROXY"):
+            monkeypatch.delenv(name, raising=False)
+
+    @staticmethod
+    def _set_proxy(monkeypatch: pytest.MonkeyPatch, proxy_url: str) -> None:
+        for name in ("http_proxy", "HTTP_PROXY", "https_proxy", "HTTPS_PROXY"):
+            monkeypatch.setenv(name, proxy_url)
+
+    def test_environment_proxy_is_not_used(
+        self,
+        loopback_server: tuple[int, list[str]],
+        proxy_server: tuple[int, list[str]],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        port, hits = loopback_server
+        proxy_port, requested = proxy_server
+        self._set_proxy(monkeypatch, f"http://127.0.0.1:{proxy_port}")
+        # The URL check passes, as it does for a hostname that resolves
+        # publicly here and privately at the proxy
+        with patch("signalwire.utils.url_validator.validate_url", return_value=True):
+            with pytest.raises(requests.exceptions.ConnectionError) as info:
+                _PublicSession().get(f"http://127.0.0.1:{port}/", timeout=5)
+        assert "private or internal address" in str(info.value)
+        assert requested == []
+        assert hits == []
+
+    def test_environment_proxy_is_used_when_allowed(
+        self,
+        loopback_server: tuple[int, list[str]],
+        proxy_server: tuple[int, list[str]],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        port, _ = loopback_server
+        proxy_port, requested = proxy_server
+        self._set_proxy(monkeypatch, f"http://127.0.0.1:{proxy_port}")
+        monkeypatch.setenv("SWML_URL_FETCH_USE_PROXY", "true")
+        with patch("signalwire.utils.url_validator.validate_url", return_value=True):
+            response = _PublicSession().get(f"http://127.0.0.1:{port}/", timeout=5)
+        assert response.text == "via-proxy"
+        assert requested == [f"http://127.0.0.1:{port}/"]
+
+    @pytest.mark.usefixtures("public_test_dns")
+    def test_redirect_does_not_carry_proxy_credentials(
+        self, scripted_adapter: type, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        # For a plain-HTTP redirect, Requests adds the proxy's credentials as
+        # a header, which a direct request would send to the target
+        self._set_proxy(monkeypatch, "http://user:proxy-secret@proxy.test:3128")
+        session = _PublicSession()
+        adapter = scripted_adapter(
+            {
+                "http://public.test/start": (302, {"Location": "/final"}, b""),
+                "http://public.test/final": (200, {}, b"ok"),
+            }
+        )
+        seen: list[tuple[str | bytes | None, Any]] = []
+        send = adapter.send
+
+        def record(request: requests.PreparedRequest, **kwargs: Any) -> Any:
+            seen.append((request.headers.get("Proxy-Authorization"), kwargs.get("proxies")))
+            return send(request, **kwargs)
+
+        adapter.send = record
+        session.mount("http://public.test", adapter)
+        assert session.get("http://public.test/start", timeout=5).text == "ok"
+        assert seen == [(None, {}), (None, {})]
