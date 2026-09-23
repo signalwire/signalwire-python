@@ -769,7 +769,7 @@ def search_command() -> None:
         "--keyword-weight",
         type=float,
         default=None,
-        help="Manual keyword weight (0.0-1.0). Overrides automatic weight detection.",
+        help="Deprecated, and has no effect on ranking. Accepted so existing scripts keep working.",
     )
     parser.add_argument(
         "--verbose", action="store_true", help="Show detailed information"
@@ -802,6 +802,11 @@ def search_command() -> None:
     ):
         print("Error: --keyword-weight must be between 0.0 and 1.0")
         sys.exit(1)
+    if args.keyword_weight is not None:
+        print(
+            "Warning: --keyword-weight is deprecated and has no effect on ranking",
+            file=sys.stderr,
+        )
 
     # Validate backend configuration
     if args.backend == "pgvector" and not args.connection_string:
@@ -953,7 +958,6 @@ def search_command() -> None:
                         count=args.count,
                         similarity_threshold=args.distance_threshold,
                         tags=tags,
-                        keyword_weight=args.keyword_weight,
                         original_query=query,
                     )
 
@@ -1038,7 +1042,6 @@ def search_command() -> None:
             count=args.count,
             similarity_threshold=args.distance_threshold,
             tags=tags,
-            keyword_weight=args.keyword_weight,
             original_query=args.query,  # Pass original for exact match boosting
         )
 

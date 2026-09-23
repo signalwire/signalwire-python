@@ -209,7 +209,7 @@ class NativeVectorSearchSkill(SkillBase):
                 },
                 "keyword_weight": {
                     "type": "number",
-                    "description": "Manual keyword weight (0.0-1.0). Overrides automatic weight detection",
+                    "description": "Deprecated, and has no effect on ranking: results are scored by their strongest signal. Accepted so existing configurations keep working",
                     "default": None,
                     "required": False,
                     "minimum": 0.0,
@@ -263,6 +263,11 @@ class NativeVectorSearchSkill(SkillBase):
         self.max_content_length = self.params.get("max_content_length", 32768)
         self.response_format_callback = self.params.get("response_format_callback")
         self.keyword_weight = self.params.get("keyword_weight")
+        if self.keyword_weight is not None:
+            self.logger.warning(
+                "keyword_weight is deprecated and has no effect on ranking; "
+                "remove it from the skill's configuration"
+            )
         self.model_name = self.params.get("model_name", "mini")
 
         # Remote search server configuration
@@ -679,7 +684,6 @@ class NativeVectorSearchSkill(SkillBase):
                     count=count,
                     similarity_threshold=self.similarity_threshold,
                     tags=self.tags,
-                    keyword_weight=self.keyword_weight,
                     original_query=query,  # Pass original for exact match boosting
                 )
 

@@ -1923,3 +1923,31 @@ class TestAddVectorScoresToCandidates:
         assert 'vector_score' not in candidates[1]
         assert 'vector_distance' not in candidates[1]
         assert 'vector_rerank' not in candidates[1]['sources']
+
+
+class TestKeywordWeightDeprecated:
+    """keyword_weight has no effect on ranking, so passing it warns (B10)."""
+
+    @patch('signalwire.search.search_engine.np')
+    @patch('signalwire.search.search_engine.cosine_similarity')
+    def test_warns_and_ranks_the_same(self, mock_cosine: MagicMock, mock_np: MagicMock, full_db: str) -> None:
+        import warnings
+
+        mock_np.array.return_value.reshape.return_value = [[0.9, 0.1, 0.0, 0.0]]
+        engine = SearchEngine(backend='sqlite', index_path=full_db)
+        engine._vector_search = Mock(return_value=[  # type: ignore[method-assign]  # mock
+            {'id': 1, 'content': 'Python programming tutorial for beginners',
+             'score': 0.95, 'search_type': 'vector',
+             'metadata': {'filename': 'docs/python_tutorial.md', 'section': 'introduction', 'tags': ['python'], 'metadata': {}}}
+        ])
+        engine._filename_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+        engine._keyword_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
+
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", DeprecationWarning)
+            baseline = engine.search([0.9, 0.1, 0.0, 0.0], 'python tutorial', count=3)
+        with pytest.warns(DeprecationWarning, match="keyword_weight"):
+            weighted = engine.search([0.9, 0.1, 0.0, 0.0], 'python tutorial', count=3, keyword_weight=0.9)
+
+        assert [(r['id'], r['score']) for r in weighted] == [(r['id'], r['score']) for r in baseline]

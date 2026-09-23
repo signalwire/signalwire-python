@@ -1316,6 +1316,18 @@ class TestSearchCommandExtended:
         assert exc_info.value.code == 1
         mock_print.assert_any_call("Error: --keyword-weight must be between 0.0 and 1.0")
 
+    @patch('sys.argv', ['search', 'test.swsearch', 'q', '--keyword-weight', '0.5'])
+    def test_search_keyword_weight_is_deprecated(self) -> None:
+        """A valid --keyword-weight still runs, with a deprecation warning."""
+        with patch('pathlib.Path.exists', return_value=False), \
+             patch('builtins.print') as mock_print, \
+             pytest.raises(SystemExit):
+            search_command()
+        mock_print.assert_any_call(
+            "Warning: --keyword-weight is deprecated and has no effect on ranking",
+            file=sys.stderr,
+        )
+
     @patch('sys.argv', ['search', 'test.swsearch', 'q', '--keyword-weight', '-0.1'])
     def test_search_keyword_weight_negative(self) -> None:
         """keyword-weight < 0.0 should exit."""

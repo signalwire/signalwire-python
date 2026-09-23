@@ -1418,7 +1418,7 @@ sw-search search [INDEX_PATH] [QUERY] [OPTIONS]
 | `--distance-threshold FLOAT` | Minimum similarity score. Higher is stricter | `0.0` |
 | `--tags TAG1,TAG2,...` | Filter by tags | -- |
 | `--query-nlp-backend {nltk,spacy}` | NLP backend for query preprocessing | `nltk` |
-| `--keyword-weight FLOAT` | Manual keyword weight (0.0-1.0), overriding automatic weight detection | -- |
+| `--keyword-weight FLOAT` | Deprecated: accepted, but has no effect on ranking | -- |
 | `--verbose` | Show similarity scores and metadata | -- |
 | `--json` | Output results as JSON for scripting | -- |
 | `--no-content` | Hide content in results (show only metadata) | -- |

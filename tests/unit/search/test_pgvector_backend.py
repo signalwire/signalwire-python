@@ -1561,7 +1561,8 @@ class TestPgVectorSearchBackendSearch:
         sb._metadata_search = Mock(return_value=[])  # type: ignore[method-assign]  # mock
         sb._merge_all_results = Mock(return_value=[])  # type: ignore[method-assign]  # mock
 
-        sb.search([0.1], "query", count=5, keyword_weight=0.7)
+        with pytest.warns(DeprecationWarning, match="keyword_weight"):
+            sb.search([0.1], "query", count=5, keyword_weight=0.7)
 
         merge_call = sb._merge_all_results.call_args
         assert merge_call[0][3] == 0.7 or merge_call[1].get("keyword_weight") == 0.7

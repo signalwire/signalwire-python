@@ -9,6 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import json
 import re
+import warnings
 from typing import Any, TYPE_CHECKING
 
 from signalwire.core.logging_config import get_logger
@@ -571,11 +572,20 @@ class PgVectorSearchBackend:
             count: Number of results to return
             similarity_threshold: Minimum similarity score
             tags: Filter by tags
-            keyword_weight: Manual keyword weight (0.0-1.0). If None, uses default weighting
+            keyword_weight: Deprecated, and has no effect. Scoring is
+                max-signal-wins with an agreement boost. Passing a value emits
+                a DeprecationWarning.
 
         Returns:
             List of search results with scores and metadata
         """
+        if keyword_weight is not None:
+            warnings.warn(
+                "keyword_weight has no effect and is deprecated: results are scored by "
+                "their strongest signal, with a boost when signals agree.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         self._ensure_connection()
 
         # Extract query terms for metadata search

@@ -1472,3 +1472,26 @@ class TestCallerQueryNotLoggedAboveDebug:
         with patch.object(skill, "logger") as mock_logger:
             skill._search_handler({"query": ""}, self.RAW_DATA)
         assert not mock_logger.error.called
+
+
+
+class TestKeywordWeightDeprecated:
+    """keyword_weight is deprecated: the skill warns once and stops passing it (B10)."""
+
+    def test_setup_warns(self) -> None:
+        skill = _make_skill({"keyword_weight": 0.5, "remote_url": "http://search.example.com"})
+        with patch("signalwire.utils.url_validator.validate_url", return_value=False), \
+             patch.object(skill, "logger") as mock_logger:
+            skill.setup()
+        warnings_logged = " ".join(repr(c) for c in mock_logger.warning.call_args_list)
+        assert "keyword_weight is deprecated" in warnings_logged
+
+    def test_search_does_not_pass_it(self) -> None:
+        skill = TestSearchHandler()._setup_skill_for_search(keyword_weight=0.5)
+        skill.search_engine.search.return_value = []  # type: ignore[union-attr]  # mock search_engine
+        preprocess = Mock(return_value={"enhanced_text": "q", "vector": [0.1]})
+        with patch.dict("sys.modules", {
+            "signalwire.search.query_processor": Mock(preprocess_query=preprocess),
+        }):
+            skill._search_handler({"query": "q"}, {})
+        assert "keyword_weight" not in skill.search_engine.search.call_args.kwargs  # type: ignore[union-attr]  # mock search_engine

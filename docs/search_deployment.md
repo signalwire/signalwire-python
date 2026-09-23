@@ -580,12 +580,6 @@ sw-search search docs_collection "API reference" \
   --count 10 \
   --verbose
 
-# Override automatic keyword weighting
-sw-search search docs_collection "specific function name" \
-  --backend pgvector \
-  --connection-string "postgresql://signalwire:signalwire123@localhost:5432/knowledge" \
-  --keyword-weight 0.8
-
 # JSON output for scripting
 sw-search search docs_collection "configuration" \
   --backend pgvector \
@@ -625,7 +619,6 @@ class MyAgent(AgentBase):
             # Search parameters
             "count": 5,
             "similarity_threshold": 0.1,
-            "keyword_weight": 0.3,
 
             # Auto-build from source (optional)
             "build_index": True,
@@ -722,7 +715,7 @@ curl -X POST "http://localhost:8001/search" \
      }'
 ```
 
-The request body accepts `query`, `index_name`, `count`, `similarity_threshold`, `tags`, and `language`. It has no `keyword_weight` field; that parameter is only available through the Python API and the `sw-search search` CLI command.
+The request body accepts `query`, `index_name`, `count`, `similarity_threshold`, `tags`, and `language`. It has no `keyword_weight` field. `keyword_weight` is deprecated in the Python API, the skill and the CLI too, because it has no effect on ranking.
 
 **Response format:**
 
