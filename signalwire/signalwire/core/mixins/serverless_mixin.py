@@ -21,6 +21,7 @@ from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlsplit
 from signalwire.core.logging_config import get_execution_mode
 from signalwire.core.function_result import FunctionResult
 from signalwire.core.mixins._mixin_host import _HostTyped
+from signalwire.core.swaig_function import _resolve_awaitable
 from signalwire.core.security.webhook_middleware import (
     _public_url,
     validate,
@@ -535,8 +536,11 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
 
             req_log.debug("executing_function", args=json.dumps(args))
 
-            # Call the function using the existing on_function_call method
-            result = self.on_function_call(function_name, args, raw_data)
+            # Call the function using the existing on_function_call method,
+            # running an async handler to completion
+            result = _resolve_awaitable(
+                self.on_function_call(function_name, args, raw_data)
+            )
 
             # Convert result to dict if needed (same logic as in _handle_swaig_request)
             if isinstance(result, FunctionResult):

@@ -853,9 +853,16 @@ def main() -> int:
                             args.verbose,
                         )
                     else:
-                        # For local webhook functions, call the agent's handler
-                        result = agent.on_function_call(
-                            args.tool_name, function_args, post_data
+                        # For local webhook functions, call the agent's handler,
+                        # running an async handler to completion
+                        from signalwire.core.swaig_function import (
+                            _resolve_awaitable,
+                        )
+
+                        result = _resolve_awaitable(
+                            agent.on_function_call(
+                                args.tool_name, function_args, post_data
+                            )
                         )
 
                     print("RESULT:")

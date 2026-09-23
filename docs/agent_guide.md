@@ -329,6 +329,8 @@ def get_weather(self, args, raw_data):
     return FunctionResult(weather_data)
 ```
 
+A handler can also be an `async def` function, so it can await other asynchronous calls. When the agent serves `/swaig`, the SDK awaits the handler on the request's event loop. In serverless deployments and in `swaig-test`, it runs the handler to completion.
+
 ### 2. External Webhook Functions
 
 External webhook functions allow you to delegate function execution to external services instead of handling them locally. This is useful when you want to:

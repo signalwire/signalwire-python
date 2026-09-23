@@ -8,11 +8,12 @@ See LICENSE file in the project root for full license information.
 """
 
 from typing import TYPE_CHECKING, Any
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
+import inspect
 import json
 import logging
 
-from signalwire.core.swaig_function import SWAIGFunction
+from signalwire.core.swaig_function import SWAIGFunction, _resolve_awaitable
 from signalwire.core.function_result import FunctionResult
 from signalwire.core.agent.tools.decorator import ToolDecorator
 from signalwire.core.mixins._mixin_host import _HostTyped
@@ -21,6 +22,17 @@ if TYPE_CHECKING:
     from signalwire.core.agent_base import AgentBase  # type: ignore[attr-defined]  # cycle: agent_base imports the mixins; the name resolves at type-check time but mypy flags the back-reference
 
 _tool_mixin_logger = logging.getLogger(__name__)
+
+
+async def _complete_async_call(name: str, pending: Awaitable[Any]) -> Any:
+    """Await an async handler, and shape its outcome like a synchronous call's."""
+    try:
+        result = await pending
+    except Exception as e:
+        return {"response": f"Error executing function '{name}': {e!s}"}
+    if result is None:
+        return FunctionResult("Function executed successfully")
+    return result
 
 
 class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at runtime; AgentBase under TYPE_CHECKING — intentional split
@@ -284,6 +296,11 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
         # Call the handler for regular SWAIG functions
         try:
             result = func.handler(args, raw_data)
+            if inspect.isawaitable(result):
+                # An async def handler. Return an awaitable, so the caller can
+                # run it on its own event loop: the /swaig endpoint awaits it,
+                # and synchronous callers pass it to _resolve_awaitable().
+                return _complete_async_call(name, result)
             if result is None:
                 # If the handler returns None, create a default response
                 result = FunctionResult("Function executed successfully")
@@ -348,8 +365,11 @@ class ToolMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at ru
 
             req_log.debug("executing_function", args=json.dumps(args))
 
-            # Call the function using the existing on_function_call method
-            result = self.on_function_call(function_name, args, raw_data)
+            # Call the function using the existing on_function_call method,
+            # running an async handler to completion
+            result = _resolve_awaitable(
+                self.on_function_call(function_name, args, raw_data)
+            )
 
             # Convert result to dict if needed (same logic as in _handle_swaig_request)
             if isinstance(result, FunctionResult):

@@ -953,6 +953,9 @@ class SWMLService(ToolMixin):
 
             try:
                 result = target.on_function_call(function_name, args, body)
+                if inspect.isawaitable(result):
+                    # An async def handler runs on this request's event loop.
+                    result = await result
                 if isinstance(result, FunctionResult):
                     result_dict = result.to_dict()
                 elif isinstance(result, dict):
