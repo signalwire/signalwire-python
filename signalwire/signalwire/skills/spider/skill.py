@@ -356,9 +356,9 @@ class SpiderSkill(SkillBase):
             except requests.exceptions.RequestException:
                 status = 599
             if status in (401, 403) or status >= 500:
-                parser.disallow_all = True
+                parser.parse(["User-agent: *", "Disallow: /"])
             elif status >= 400:
-                parser.allow_all = True
+                parser.parse([])  # no rules: everything is allowed
             else:
                 parser.parse(response.text.splitlines())
             self._robots[origin] = parser

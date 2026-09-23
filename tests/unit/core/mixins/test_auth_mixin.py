@@ -120,7 +120,7 @@ class TestGetBasicAuthCredentials:
     def test_returns_the_recorded_source(self, source: str) -> None:
         """The source is the one recorded when the credentials were resolved (B26)."""
         mixin = ConcreteAuthMixin(("myuser", "mypass"))
-        mixin._basic_auth_source = source  # type: ignore[attr-defined]  # set by SWMLService.__init__ in a real agent
+        mixin._basic_auth_source = source  # set by SWMLService.__init__ in a real agent
         assert mixin.get_basic_auth_credentials(include_source=True) == ("myuser", "mypass", source)
 
     def test_source_is_not_guessed_from_the_credentials(self) -> None:
@@ -128,8 +128,8 @@ class TestGetBasicAuthCredentials:
         mixin = ConcreteAuthMixin(("user_abc123", "a" * 25))
         env = {"SWML_BASIC_AUTH_USER": "user_abc123", "SWML_BASIC_AUTH_PASSWORD": "a" * 25}
         with patch.dict(os.environ, env, clear=True):
-            result = mixin.get_basic_auth_credentials(include_source=True)
-        assert result[2] == "provided"
+            _, _, source = mixin.get_basic_auth_credentials(include_source=True)  # type: ignore[misc]  # include_source=True returns 3-tuple
+        assert source == "provided"
 
     def test_include_source_false_explicit(self) -> None:
         """Explicitly passing include_source=False returns 2-tuple."""
@@ -828,8 +828,8 @@ class TestSecurityConfigIntegration:
 
         with patch.dict(os.environ, {}, clear=True):
             agent = AgentBase(name="generated-creds", route="/g")
-            creds = agent.get_basic_auth_credentials(include_source=True)
-        assert creds[2] == "generated"
+            _, _, source = agent.get_basic_auth_credentials(include_source=True)  # type: ignore[misc]  # include_source=True returns 3-tuple
+        assert source == "generated"
 
     def test_environment_credentials_are_labeled_environment(self) -> None:
         from signalwire import AgentBase
@@ -846,8 +846,8 @@ class TestSecurityConfigIntegration:
         env = {"SWML_BASIC_AUTH_USER": "user_x", "SWML_BASIC_AUTH_PASSWORD": "a" * 25}
         with patch.dict(os.environ, env, clear=True):
             agent = AgentBase(name="ctor-creds", route="/c", basic_auth=("user_x", "a" * 25))
-            creds = agent.get_basic_auth_credentials(include_source=True)
-        assert creds[2] == "provided"
+            _, _, source = agent.get_basic_auth_credentials(include_source=True)  # type: ignore[misc]  # include_source=True returns 3-tuple
+        assert source == "provided"
 
     def test_config_file_credentials_are_labeled_config_file(self, tmp_path: Path) -> None:
         import json

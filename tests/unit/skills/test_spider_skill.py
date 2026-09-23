@@ -1371,7 +1371,7 @@ class TestRobotsTxt:
         from signalwire.skills.spider.skill import SpiderSkill
 
         skill = SpiderSkill(_make_mock_agent(), {"delay": 0, **params})
-        page = (200, {}, b"<html><body><p>page text</p></body></html>")
+        page: tuple[int, dict[str, str], bytes] = (200, {}, b"<html><body><p>page text</p></body></html>")
         adapter = scripted_adapter({
             "http://public.test/robots.txt": robots,
             "http://public.test/private/page": page,
