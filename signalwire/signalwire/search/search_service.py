@@ -533,7 +533,9 @@ class SearchService:
             request.language,
         )
         if cache_key in self._query_cache:
-            logger.info(f"Cache hit for query: {request.query[:50]}...")
+            # The query is the caller's words, so it's logged at DEBUG only.
+            logger.info("Cache hit for index %s", request.index_name)
+            logger.debug("Cached query: %.50s", request.query)
             return self._query_cache[cache_key]
 
         search_engine = self.search_engines[request.index_name]

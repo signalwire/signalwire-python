@@ -609,6 +609,24 @@ class TestHandleSearch:
             assert mock_pp.call_count == 1
             assert resp1 is resp2
 
+    def test_handle_search_cache_hit_logs_no_query_above_debug(
+        self, service_with_engine: SearchService
+    ) -> None:
+        with patch("signalwire.search.search_service.preprocess_query") as mock_pp, \
+             patch("signalwire.search.search_service.logger") as mock_logger:
+            mock_pp.return_value = {"enhanced_text": "test", "vector": [0.1], "language": "en"}
+            request = _make_search_request(query="my account number is 4417")
+            _run_async(service_with_engine._handle_search(request))
+            _run_async(service_with_engine._handle_search(request))
+
+        above_debug = " ".join(
+            repr(call)
+            for level in ("info", "warning", "error")
+            for call in getattr(mock_logger, level).call_args_list
+        )
+        assert "4417" not in above_debug
+        assert mock_logger.info.called
+
     def test_handle_search_stricter_threshold_is_not_served_from_cache(
         self, service_with_engine: SearchService
     ) -> None:
