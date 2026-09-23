@@ -70,6 +70,8 @@ With pgvector, `--output` specifies the collection name, not a filename.
 
 ### Python API (IndexBuilder)
 
+Build an index directly from Python instead of the CLI when an agent needs to construct its own index at startup:
+
 <!-- snippet: no-run blocking/long-running call (server or live connection) -->
 ```python
 from signalwire.search import IndexBuilder
@@ -141,7 +143,7 @@ Splits at paragraph boundaries (double newlines).
 sw-search ./docs --chunking-strategy paragraph
 ```
 
-Best for content with clear paragraph structure and markdown files with distinct sections. Avoid for dense text with very long paragraphs.
+Best for content with clear paragraph structure and markdown files with distinct sections. Avoid for dense text with long paragraphs.
 
 **3. Page**
 
@@ -243,7 +245,7 @@ Chunk metadata: {has_question: true, has_process: true}
 
 **8. Markdown-Aware**
 
-Chunks at header boundaries, detects code blocks, preserves document structure. See the [Markdown Strategy (Deep Dive)](#markdown-strategy-deep-dive) section below for full details.
+Chunks at header boundaries, detects code blocks, preserves document structure. See [Markdown Strategy (Deep Dive)](#markdown-strategy-deep-dive) for full details.
 
 ```bash
 sw-search ./docs \
@@ -263,7 +265,7 @@ Best for technical documentation with code examples, GitHub README files, API do
 
 **9. JSON (Pre-chunked Content)**
 
-Reads pre-chunked content from JSON files. See the [JSON Manual Curation Workflow](#json-manual-curation-workflow) section below for full details.
+Reads pre-chunked content from JSON files. See [JSON Manual Curation Workflow](#json-manual-curation-workflow) for full details.
 
 ```bash
 sw-search ./chunks/ \
@@ -300,7 +302,7 @@ Do you need code examples to be findable?
 | sentence | General text | Small | Fast, simple | May split context |
 | paragraph | Articles, blogs | Medium | Natural boundaries | Variable size |
 | page | Books, papers | Large | Preserves context | May be too large |
-| sliding_window | Dense content | Medium | Overlapping context | Duplication |
+| sliding | Dense content | Medium | Overlapping context | Duplication |
 | semantic | Narrative text | Variable | Topic coherence | Slower |
 | topic | Long documents | Variable | Topic-based | Requires NLP |
 | qa | FAQ content | Medium | Keeps Q&A together | Needs structure |
@@ -347,6 +349,8 @@ Problem: Code is split from its context.
 Code is intact, hierarchical context is preserved, and chunks are searchable by code tag.
 
 ### Chunk Size Recommendations
+
+Starting points by strategy:
 
 - **Sentence strategy:** 5-8 sentences per chunk
 - **Paragraph strategy:** Let natural paragraphs define size
@@ -402,7 +406,7 @@ Avoid skipping levels (e.g., going from `##` directly to `####`).
 
 #### Code Block Preservation
 
-Code blocks are detected and treated as atomic units -- they are never split across chunks.
+Code blocks are detected and treated as atomic units: they are never split across chunks.
 
 ```markdown
 ## Example
@@ -446,7 +450,7 @@ Each chunk automatically receives rich metadata:
 }
 ```
 
-Code chunks receive special treatment in hybrid search: chunks with code tags receive a 20% boost when keywords match, causing actual code examples to rank higher than prose about code.
+Code and non-code chunks are scored by the same vector, keyword, and metadata signals described in [Search Overview](search_overview.md#hybrid-search-algorithm). The `code` and `code:<language>` tags do not add a separate ranking boost. They make code chunks reachable through tag filtering and keyword search on the language name.
 
 **Building with the markdown strategy:**
 
@@ -639,7 +643,7 @@ sw-search ./critical_chunks.json ./docs/other/ \
 - `chunks` (array): Top-level array containing all chunk objects.
 - `content` (string, per chunk): The actual text content. Minimum length: 1 character. Can include markdown formatting.
 
-**All metadata fields are optional.** Custom metadata fields are allowed (`additionalProperties: true`) and are stored and preserved but not used by search unless custom logic is implemented.
+**All metadata fields are optional.** Custom metadata fields are allowed (`additionalProperties: true`) and are stored and preserved. They are not used by search unless custom logic is implemented.
 
 **Minimal valid JSON:**
 
@@ -1066,15 +1070,17 @@ The embedding model affects both search quality and performance. The SDK uses th
 |-------|-------|----------------|------------|------------|------|-------|
 | Mini | `mini` | `sentence-transformers/all-MiniLM-L6-v2` | 384 | 22.7M | ~90MB | Fast |
 | Base | `base` | `sentence-transformers/all-mpnet-base-v2` | 768 | 109M | ~420MB | Medium |
-| Large | `large` | `sentence-transformers/all-roberta-large-v1` | 1024 | 355M | ~1.4GB | Slow |
+| Large | `large` | `sentence-transformers/all-mpnet-base-v2` | 768 | 109M | ~420MB | Medium |
+
+In the current SDK, the `large` alias resolves to the same underlying model as `base`. Choosing `large` does not change dimensions, size, or speed; it behaves identically to `base` until a distinct large model is wired in.
 
 ```bash
 sw-search ./docs --model mini   # Recommended default
 sw-search ./docs --model base   # Higher quality
-sw-search ./docs --model large  # Highest quality
+sw-search ./docs --model large  # Currently identical to base
 ```
 
-**Mini (all-MiniLM-L6-v2)** -- Recommended default
+**Mini (all-MiniLM-L6-v2)** is the recommended default:
 
 - 6-layer transformer based on Microsoft's MiniLM
 - 384-dimensional embeddings
@@ -1083,7 +1089,7 @@ sw-search ./docs --model large  # Highest quality
 - Runtime memory: ~1GB total (with overhead), ~1.5GB peak
 - Best for: production deployments, voice agents (latency-sensitive), large knowledge bases (>50K chunks), FAQ systems, general documentation
 
-**Base (all-mpnet-base-v2)**
+**Base (all-mpnet-base-v2)**:
 
 - 12-layer transformer based on Microsoft's MPNet
 - 768-dimensional embeddings
@@ -1092,14 +1098,9 @@ sw-search ./docs --model large  # Highest quality
 - Runtime memory: ~2.5GB total (with overhead)
 - Best for: quality-critical applications, complex semantic searches, legal/medical documentation, nuanced language understanding
 
-**Large (all-roberta-large-v1)**
+**Large**
 
-- 24-layer transformer based on Facebook's RoBERTa
-- 1024-dimensional embeddings
-- Embedding speed: ~200 chunks/second (CPU), ~1,000 chunks/second (GPU)
-- Query embedding: 20-30ms (CPU)
-- Runtime memory: ~4GB total (with overhead)
-- Best for: research projects, specialized domains, offline batch processing. Not recommended for production due to resource requirements.
+The `large` alias currently points at the same `all-mpnet-base-v2` model as `base`, so it has the same specifications and behavior described earlier. Selecting `large` today does not give access to a bigger model.
 
 ### Speed vs Quality Tradeoffs
 
@@ -1109,7 +1110,7 @@ sw-search ./docs --model large  # Highest quality
 |-------|-------------|----------|-----|----------------|
 | Mini | 0.847 | 0.923 | 0.782 | 0.654 |
 | Base | 0.891 | 0.951 | 0.823 | 0.687 |
-| Large | 0.903 | 0.959 | 0.841 | 0.701 |
+| Large | Same as Base | Same as Base | Same as Base | Same as Base |
 
 Mini achieves 94% of base model accuracy with 2-3x speed improvement.
 
@@ -1119,7 +1120,7 @@ Mini achieves 94% of base model accuracy with 2-3x speed improvement.
 |-------|------------|---------------|------------|
 | Mini | 10 minutes | 1,000 | 40MB |
 | Base | 20 minutes | 500 | 80MB |
-| Large | 50 minutes | 200 | 120MB |
+| Large | Same as Base | Same as Base | Same as Base |
 
 **Benchmark performance (Semantic Textual Similarity):**
 
@@ -1127,7 +1128,7 @@ Mini achieves 94% of base model accuracy with 2-3x speed improvement.
 |-------|---------------|--------|--------------------|-----------------------|
 | Mini | 82.41 | 78.23 | 32.3 | 63.2 |
 | Base | 86.99 | 84.57 | 35.8 | 69.4 |
-| Large | 88.45 | 86.32 | 37.2 | 71.8 |
+| Large | Same as Base | Same as Base | Same as Base | Same as Base |
 
 **Query performance scaling:**
 
@@ -1161,7 +1162,7 @@ Mini achieves 94% of base model accuracy with 2-3x speed improvement.
 |-------|-----------|-------------|--------------------------|
 | Mini | 90MB | 1.5GB | 16 |
 | Base | 420MB | 2.5GB | 10 |
-| Large | 1.4GB | 4GB | 6 |
+| Large | Same as Base | Same as Base | Same as Base |
 
 **Cost comparison** (estimated monthly for 1M queries):
 
@@ -1169,7 +1170,7 @@ Mini achieves 94% of base model accuracy with 2-3x speed improvement.
 |-------|---------|--------|-------|
 | Mini | $50 | $20 | $70 |
 | Base | $100 | $40 | $140 |
-| Large | $250 | $80 | $330 |
+| Large | Same as Base | Same as Base | Same as Base |
 
 **When mini is sufficient (most cases):**
 
@@ -1184,7 +1185,7 @@ Mini achieves 94% of base model accuracy with 2-3x speed improvement.
 - Subtle semantic distinctions (e.g., "latency" vs "lag" vs "delay", "authenticate" vs "authorize" vs "validate")
 - Domain-specific technical jargon
 - Multi-language content requiring cross-lingual similarity
-- Very small indexes where speed is not a concern
+- Small indexes where speed is not a concern
 
 **Model selection by use case:**
 
@@ -1192,15 +1193,15 @@ Mini achieves 94% of base model accuracy with 2-3x speed improvement.
 |----------|---------------|--------|
 | Voice agents | Mini | Latency critical, 5-8ms query time |
 | Chat agents | Mini or Base | Latency less critical |
-| FAQ systems | Mini | Queries are straightforward |
+| FAQ systems | Mini | Queries are short and specific |
 | Technical documentation | Mini | Good with structured text + markdown strategy |
 | Legal/Medical | Base | Nuance and accuracy critical |
-| Research/Academic | Base or Large | Complex language, subtle distinctions |
+| Research/Academic | Base | Complex language, subtle distinctions |
 | Multi-lingual | Base | Better cross-lingual transfer |
 
 ### Embedding Dimensions and Storage
 
-Embeddings are vectors -- lists of floating-point numbers representing meaning. Higher dimensions capture more subtle semantic nuances but require more computation and storage.
+Embeddings are vectors: lists of floating-point numbers representing meaning. Higher dimensions capture more subtle semantic nuances but require more computation and storage.
 
 **Storage requirements per chunk:**
 
@@ -1208,13 +1209,13 @@ Embeddings are vectors -- lists of floating-point numbers representing meaning. 
 |-------|------------|-----------------|
 | Mini | 384 floats x 4 bytes | 1,536 bytes |
 | Base | 768 floats x 4 bytes | 3,072 bytes |
-| Large | 1024 floats x 4 bytes | 4,096 bytes |
+| Large | Same as Base | Same as Base |
 
 **For 10,000 chunks (vectors only):**
 
 - Mini: ~15MB
 - Base: ~30MB
-- Large: ~40MB
+- Large: same as Base, ~30MB
 
 Total index size is approximately 2-3x the vector storage due to content, metadata, and indexes.
 
@@ -1224,11 +1225,8 @@ Total index size is approximately 2-3x the vector storage due to content, metada
 -- Mini model (384 dimensions)
 embedding vector(384)   -- 1,536 bytes per row
 
--- Base model (768 dimensions)
+-- Base model, and large, which currently uses the same model (768 dimensions)
 embedding vector(768)   -- 3,072 bytes per row
-
--- Large model (1024 dimensions)
-embedding vector(1024)  -- 4,096 bytes per row
 ```
 
 ### Custom Models
@@ -1258,10 +1256,10 @@ Requirements for custom models:
 
 Models are downloaded automatically on first use and cached locally:
 
-- Linux/Mac: `~/.cache/torch/sentence_transformers/`
-- Windows: `C:\Users\<user>\.cache\torch\sentence_transformers\`
+- Linux/Mac: `~/.cache/huggingface/hub/`
+- Windows: `C:\Users\<user>\.cache\huggingface\hub\`
 
-Use `TRANSFORMERS_CACHE` environment variable to customize the cache directory. Set `TRANSFORMERS_OFFLINE=1` to prevent model downloads (offline mode).
+Use the `TRANSFORMERS_CACHE` environment variable to customize the cache directory. Set `TRANSFORMERS_OFFLINE=1` to prevent model downloads (offline mode).
 
 **GPU acceleration:**
 
@@ -1277,7 +1275,7 @@ else:
     model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
 ```
 
-GPU VRAM requirements: Mini: 2GB, Base: 4GB, Large: 8GB.
+GPU VRAM requirements: Mini: 2GB, Base: 4GB, Large: same as Base, since `large` currently resolves to the same model.
 
 **Hardware recommendations:**
 
@@ -1298,7 +1296,7 @@ sw-search ./docs --model base --output docs_base.swsearch
 sw-search ./docs --model mini --output docs_mini.swsearch
 ```
 
-Do not mix models in a single index. Indexes built with one model cannot be searched with a different model due to dimension mismatches (384 vs 768 vs 1024). When searching an existing index, the system automatically detects and uses the model that was used to build it.
+Do not mix models in a single index. Indexes built with one model cannot be searched with a different model due to dimension mismatches (384 for mini vs. 768 for base and large). When searching an existing index, the system automatically detects and uses the model that was used to build it.
 
 ---
 
@@ -1306,47 +1304,44 @@ Do not mix models in a single index. Indexes built with one model cannot be sear
 
 ### Building Indexes (Options, File Types, Exclusions)
 
+The build command takes one or more source paths followed by options:
+
 ```bash
 sw-search [SOURCE_PATHS...] [OPTIONS]
 ```
 
 **Arguments:**
 
-- `SOURCE_PATHS` -- One or more paths to directories or files to index
+- `SOURCE_PATHS`: One or more paths to directories or files to index
 
 **Build options:**
 
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--output PATH` | Output path for .swsearch file (or collection name for pgvector) | `<source_dir>.swsearch` |
-| `--chunking-strategy STRATEGY` | Chunking method: `sentence`, `paragraph`, `page`, `sliding_window`, `semantic`, `topic`, `qa`, `markdown`, `json` | `sentence` |
+| `--output-dir DIR` | Output directory for JSON export (one file per source), or for auto-named index files | -- |
+| `--output-format {index,json}` | Output format: `index` (build a `.swsearch` index) or `json` (export chunks as JSON) | `index` |
+| `--chunking-strategy STRATEGY` | Chunking method: `sentence`, `sliding`, `paragraph`, `page`, `semantic`, `topic`, `qa`, `json`, `markdown` | `sentence` |
 | `--model MODEL` | Embedding model: `mini`, `base`, `large`, or full model name | `mini` |
 | `--backend BACKEND` | Storage backend: `sqlite`, `pgvector` | `sqlite` |
 | `--connection-string STRING` | PostgreSQL connection string (required for pgvector) | -- |
-| `--collection-name NAME` | Collection name in pgvector database | `default` |
-| `--tags TAG1,TAG2,...` | Comma-separated tags to add to all chunks | -- |
-| `--file-types EXT1,EXT2,...` | Comma-separated file extensions to include | `md,txt,pdf,docx,html` |
-| `--exclude-patterns PATTERN1,...` | Glob patterns for files to exclude | -- |
-| `--max-chunk-size SIZE` | Maximum chunk size in characters | Varies by strategy |
-| `--min-chunk-size SIZE` | Minimum chunk size in characters (smaller chunks are merged) | `100` |
-| `--overlap SIZE` | Overlap between chunks (for sliding_window strategy) | `200` |
-| `--max-sentences-per-chunk N` | Sentences per chunk (for sentence strategy) | `5` |
-| `--split-newlines N` | Minimum newlines to force a split (for sentence strategy) | `2` |
-| `--chunk-size N` | Words per chunk (for sliding strategy) | -- |
-| `--overlap-size N` | Words of overlap (for sliding strategy) | -- |
-| `--semantic-threshold FLOAT` | Similarity threshold for grouping (for semantic strategy) | `0.6` |
-| `--topic-threshold FLOAT` | Topic change sensitivity (for topic strategy) | `0.2` |
-| `--languages LANGS` | Comma-separated language codes | `en` |
-| `--recursive / --no-recursive` | Search directories recursively | `--recursive` |
 | `--overwrite` | Overwrite existing collection (pgvector only) | -- |
-| `--batch-size N` | Batch size for embedding generation (lower = less memory) | `32` |
-| `--workers N` | Number of CPU cores for processing | -- |
-| `--verbose / -v` | Enable verbose output with progress and statistics | -- |
-| `--debug` | Enable maximum verbosity for debugging | -- |
-| `--dry-run` | List files that would be processed without building | -- |
+| `--tags TAG1,TAG2,...` | Comma-separated tags to add to all chunks | -- |
+| `--file-types EXT1,EXT2,...` | Comma-separated file extensions to include for directories | `md,txt,rst` |
+| `--exclude PATTERN1,...` | Glob patterns for files to exclude | -- |
+| `--max-sentences-per-chunk N` | Sentences per chunk (for sentence strategy) | `5` |
+| `--chunk-size N` | Words per chunk (for sliding strategy) | `50` |
+| `--min-chunk-size N` | Markdown strategy: minimum words before a heading starts a new chunk. Shorter sections merge into the next one instead of standing alone | `0` (split at every heading) |
+| `--overlap-size N` | Words of overlap between chunks (for sliding strategy) | `10` |
+| `--split-newlines N` | Minimum newlines to force a split (for sentence strategy) | `2` |
+| `--semantic-threshold FLOAT` | Similarity threshold for grouping (for semantic strategy) | `0.5` |
+| `--topic-threshold FLOAT` | Topic change sensitivity (for topic strategy) | `0.3` |
+| `--languages LANGS` | Comma-separated language codes | `en` |
+| `--index-nlp-backend {nltk,spacy}` | NLP backend for document processing during indexing | `nltk` |
+| `--verbose` | Enable verbose output | -- |
 | `--validate` | Validate the created index after building | -- |
-| `--output-format FORMAT` | Output format: `swsearch` (default), `json` | `swsearch` |
-| `--output-dir DIR` | Output directory for JSON export (one file per source) | -- |
+
+The top-level `sw-search --help` shortcut is hand-maintained and sometimes omits real flags, including `--backend` and `--connection-string`. Run `sw-search build --help` (any unrecognized first argument falls through to the build command) for the full, generated list.
 
 **Supported file types:**
 
@@ -1371,32 +1366,36 @@ sw-search ./project \
 **Verbose output example:**
 
 ```
-Scanning files...
-Found 42 files (15 md, 12 py, 15 txt)
+Building search index:
+  Backend: sqlite
+  Sources: ['docs']
+  Output file: docs.swsearch
+  File types (for directories): ['md', 'txt', 'rst']
+  Languages: ['en']
+  Model: sentence-transformers/all-MiniLM-L6-v2
+  Chunking strategy: sentence
+  Index NLP backend: nltk
 
-Processing files...
-docs/getting-started.md (3 chunks)
-docs/api-reference.md (12 chunks)
-examples/agent.py (5 chunks)
-...
+Added 42 files from directory: docs
+Found 42 files to process
+Processing 42 files...
+  docs/getting-started.md: 3 chunks
+  docs/api-reference.md: 12 chunks
+  examples/agent.py: 5 chunks
+  ...
+Created 150 total chunks
+Loading embedding model: sentence-transformers/all-MiniLM-L6-v2
+Generating embeddings for 150 chunks...
+  Progress: 150/150 chunks (100.0%)
+Index created: docs.swsearch
+Total chunks: 150
 
-Generating embeddings...
-[====================] 100% (150/150 chunks)
-
-Building index...
-Created vector index
-Created metadata tables
-Created text search index
-
-Complete!
-Index saved to docs.swsearch
-  Total chunks: 150
-  Index size: 2.3 MB
-  Avg chunk size: 245 words
-  Model: mini (384 dims)
+Search index created successfully: docs.swsearch
 ```
 
 ### Searching Indexes
+
+The search command takes an index path, a query, and options:
 
 ```bash
 sw-search search [INDEX_PATH] [QUERY] [OPTIONS]
@@ -1404,25 +1403,27 @@ sw-search search [INDEX_PATH] [QUERY] [OPTIONS]
 
 **Arguments:**
 
-- `INDEX_PATH` -- Path to `.swsearch` file (or collection name for pgvector)
-- `QUERY` -- Search query string
+- `INDEX_PATH`: Path to `.swsearch` file (or collection name for pgvector)
+- `QUERY`: Search query string
 
 **Options:**
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--backend BACKEND` | Backend to search (`sqlite`, `pgvector`) | Detected from path |
+| `--backend BACKEND` | Backend to search (`sqlite`, `pgvector`) | `sqlite` |
 | `--connection-string STRING` | PostgreSQL connection string (for pgvector) | -- |
-| `--collection-name NAME` | Collection to search (for pgvector) | -- |
-| `--model MODEL` | Model for query embedding (must match indexing model) | -- |
+| `--shell` | Interactive shell mode: load the index once and run multiple searches | -- |
+| `--model MODEL` | Override the embedding model for the query (must match the indexing model) | -- |
 | `--count N` | Number of results to return | `5` |
-| `--threshold FLOAT` | Minimum similarity threshold (0.0 to 1.0) | `0.5` |
-| `--distance-threshold FLOAT` | Minimum similarity score | `0.0` |
+| `--distance-threshold FLOAT` | Minimum similarity score. Higher is stricter | `0.0` |
 | `--tags TAG1,TAG2,...` | Filter by tags | -- |
-| `--nlp-backend {nltk,spacy}` | NLP backend for query preprocessing | `nltk` |
+| `--query-nlp-backend {nltk,spacy}` | NLP backend for query preprocessing | `nltk` |
+| `--keyword-weight FLOAT` | Manual keyword weight (0.0-1.0), overriding automatic weight detection | -- |
 | `--verbose` | Show similarity scores and metadata | -- |
 | `--json` | Output results as JSON for scripting | -- |
 | `--no-content` | Hide content in results (show only metadata) | -- |
+
+`INDEX_PATH` doubles as the pgvector collection name; there is no separate `--collection-name` option for search.
 
 **Basic search:**
 
@@ -1433,39 +1434,52 @@ sw-search search ./knowledge.swsearch "how to create an agent"
 Output:
 
 ```
-Results for: "how to create an agent"
+Found 3 result(s) for 'how to create an agent':
+================================================================================
 
-1. [Score: 0.87] docs/getting-started.md
-   Creating Your First Agent
+[1] Score: 0.8700
+File: getting-started.md
+Section: Creating Your First Agent
 
-   To create an agent, inherit from AgentBase and define your configuration...
+Content:
+To create an agent, inherit from AgentBase and define your configuration...
+--------------------------------------------------------------------------------
 
-2. [Score: 0.82] docs/api-reference.md
-   AgentBase Class
+[2] Score: 0.8200
+File: api-reference.md
+Section: AgentBase Class
 
-   The AgentBase class is the foundation for all agents...
+Content:
+The AgentBase class is the foundation for all agents...
+--------------------------------------------------------------------------------
 
-3. [Score: 0.78] examples/simple_agent.py
-   class MyAgent(AgentBase):
-       def __init__(self):
-           super().__init__(name="MyAgent")...
+[3] Score: 0.7800
+File: simple_agent.py
+
+Content:
+class MyAgent(AgentBase):
+    def __init__(self):
+        super().__init__(name="MyAgent")...
 ```
 
-**Verbose output (with scoring breakdown):**
+**Verbose output:**
 
 ```bash
 sw-search search ./knowledge.swsearch "query" --verbose
 ```
 
-```
-Result 1:
-  Vector score: 0.82
-  Keyword matches: ["agent", "create"]
-  Keyword boost: +0.15 (15%)
-  Metadata boost: +0.10 (10%)
-  Final score: 0.87
+The `--verbose` flag adds a preamble before the same result list. It states how many chunks and files the index contains, and which NLP backend and embedding model answered the query. It does not print a hybrid-scoring breakdown, and `--json` does not include one either.
 
-  Content: To create an agent...
+```
+Loading search index: knowledge.swsearch
+Index contains 150 chunks from 42 files
+Searching for: 'query'
+Query NLP Backend: nltk
+Using index model: sentence-transformers/all-MiniLM-L6-v2
+
+Found 5 result(s) for 'query':
+================================================================================
+...
 ```
 
 **JSON output (for scripting):**
@@ -1474,17 +1488,26 @@ Result 1:
 sw-search search ./knowledge.swsearch "query" --json
 ```
 
+Output:
+
 ```json
 {
   "query": "how to create an agent",
+  "enhanced_query": "how to create an agent",
+  "count": 1,
   "results": [
     {
+      "rank": 1,
       "score": 0.87,
-      "content": "To create an agent...",
       "metadata": {
         "filename": "getting-started.md",
-        "section": "Creating Your First Agent"
-      }
+        "section": "Creating Your First Agent",
+        "tags": [],
+        "metadata": {
+          "file_type": "md"
+        }
+      },
+      "content": "To create an agent, inherit from AgentBase and define your configuration..."
     }
   ]
 }
@@ -1512,6 +1535,8 @@ sw-search search docs_collection "how to create an agent" \
 
 ### Validating Indexes
 
+The validate command takes a single index path:
+
 ```bash
 sw-search validate [INDEX_PATH]
 ```
@@ -1525,53 +1550,37 @@ sw-search validate ./knowledge.swsearch
 Output:
 
 ```
-Validating index...
-File format valid
-Metadata complete
-Embeddings present (150 chunks)
-Text content present
-Tags indexed
-Vector dimensions consistent (384)
+Index is valid: knowledge.swsearch
+  Chunks: 150
+  Files: 42
 
-Index statistics:
-  Total chunks: 150
-  Avg embedding norm: 1.00
-  Text coverage: 100%
-  Model: sentence-transformers/all-MiniLM-L6-v2
-  Created: 2025-01-15 10:30:00
-
-Index is valid
+Configuration:
+  embedding_model: sentence-transformers/all-MiniLM-L6-v2
+  embedding_dimensions: 384
+  chunk_size: 50
+  min_chunk_size: 0
+  chunk_overlap: 10
+  preprocessing_version: 1.0
+  languages: ["en"]
+  created_at: 2025-01-15T10:30:00
+  sources: ["docs"]
+  file_types: ["md", "txt", "rst"]
 ```
 
-**Validate pgvector collection:**
-
-```bash
-sw-search validate \
-  --backend pgvector \
-  --connection-string "postgresql://localhost/db" \
-  --collection-name docs
-```
+Add `--verbose` to include the `Configuration:` block; without it, `sw-search validate` prints only the chunk and file counts. `validate` takes an `index_file` path and `--verbose`; it has no `--backend` or `--connection-string` option, so it cannot check a pgvector collection directly.
 
 **Validate using Python API:**
 
 <!-- snippet: no-run constructs SearchEngine with an index file that must exist first -->
 ```python
 from signalwire.search import SearchEngine
-engine = SearchEngine('docs.swsearch')
+engine = SearchEngine(index_path='docs.swsearch')
 print(f'Index stats: {engine.get_stats()}')
 ```
 
 ### Exporting to JSON
 
-```bash
-sw-search export [INDEX_PATH] [OUTPUT_PATH]
-```
-
-**Options:**
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--format FORMAT` | Export format: `json`, `jsonl` | `json` |
+There is no separate export subcommand. JSON export uses the same build command as indexing, with `--output-format json` in place of the default `--output-format index`. It re-chunks the source documents; it does not read an existing `.swsearch` file. To inspect the chunks already in a built index, query the SQLite database directly: `sqlite3 knowledge.swsearch "SELECT filename, section, content FROM chunks"`.
 
 **Export all chunks to single file:**
 
@@ -1600,24 +1609,29 @@ chunks/
 
 ### Remote Search
 
+The remote command queries a search server over HTTP instead of a local file:
+
 ```bash
 sw-search remote [ENDPOINT] [QUERY] [OPTIONS]
 ```
 
 **Arguments:**
 
-- `ENDPOINT` -- Search server URL
-- `QUERY` -- Search query
+- `ENDPOINT`: Search server URL
+- `QUERY`: Search query
 
 **Options:**
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `--index-name NAME` | Index to search on remote server | -- |
+| `--index-name NAME` | Index to search on remote server (required) | -- |
 | `--count N` | Number of results | `5` |
-| `--threshold FLOAT` | Similarity threshold | `0.5` |
-| `--auth-user USER` | Authentication username | -- |
-| `--auth-pass PASS` | Authentication password | -- |
+| `--distance-threshold FLOAT` | Minimum similarity score. Higher is stricter | `0.0` |
+| `--tags TAG1,TAG2,...` | Filter by tags | -- |
+| `--verbose` | Show detailed information | -- |
+| `--json` | Output results as JSON | -- |
+| `--no-content` | Hide content in results (show only metadata) | -- |
+| `--timeout SECONDS` | Request timeout | `30` |
 
 **Basic remote search:**
 
@@ -1625,14 +1639,7 @@ sw-search remote [ENDPOINT] [QUERY] [OPTIONS]
 sw-search remote http://localhost:8001 "query" --index-name docs
 ```
 
-**With authentication:**
-
-```bash
-sw-search remote http://localhost:8001 "query" \
-  --index-name docs \
-  --auth-user admin \
-  --auth-pass secret
-```
+`sw-search remote` sends the request with a plain `Content-Type: application/json` header only. It has no `--auth-user` or `--auth-pass` option, so a remote search server behind authentication needs a proxy or gateway that handles it.
 
 Remote search is useful for centralized search services, multiple agents querying the same index, and separating search from agent infrastructure.
 
@@ -1640,27 +1647,17 @@ Remote search is useful for centralized search services, multiple agents queryin
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `SW_SEARCH_MODEL` | Default embedding model | `mini` |
-| `SW_SEARCH_OUTPUT` | Default output directory | Current directory |
-| `SW_SEARCH_VERBOSE` | Enable verbose output by default (set to `1`) | -- |
-| `TRANSFORMERS_CACHE` | Directory for cached models | `~/.cache/huggingface/transformers` |
+| `TRANSFORMERS_CACHE` | Directory for cached models | `~/.cache/huggingface/hub` |
 | `TRANSFORMERS_OFFLINE` | Use offline mode, do not download models (set to `1`) | -- |
-| `SEARCH_DEBUG` | Enable debug logging for search operations (set to `1`) | -- |
-| `PGVECTOR_CONNECTION` | Default PostgreSQL connection string | -- |
-| `PGVECTOR_DB_USER` | PostgreSQL username | -- |
-| `PGVECTOR_DB_PASSWORD` | PostgreSQL password | -- |
-| `PGVECTOR_HOST` | PostgreSQL host | `localhost` |
-| `PGVECTOR_PORT` | PostgreSQL port | `5432` |
-| `PGVECTOR_DB_NAME` | PostgreSQL database name | -- |
+
+`sw-search` and the search module read no other environment variables: there is no `SW_SEARCH_MODEL`, `SW_SEARCH_VERBOSE`, or `PGVECTOR_CONNECTION` that the CLI picks up automatically. Model, output path, verbosity, and the pgvector connection string are always passed as explicit flags (`--model`, `--output`, `--verbose`, `--connection-string`).
 
 Example:
 
 ```bash
-export SW_SEARCH_MODEL=mini
-export PGVECTOR_CONNECTION="postgresql://user:pass@localhost:5432/knowledge"
-export SW_SEARCH_VERBOSE=1
+export TRANSFORMERS_OFFLINE=1
 
-sw-search ./docs --backend pgvector --output docs
+sw-search ./docs --backend pgvector --connection-string "postgresql://user:pass@localhost:5432/knowledge" --output docs
 ```
 
 ### Batch Processing
@@ -1684,30 +1681,26 @@ wait
 
 **Multi-collection pgvector build:**
 
+With pgvector, `--output` names the collection; there is no separate `--collection-name` option for the build command.
+
 ```bash
 sw-search ./docs/api \
   --backend pgvector \
   --connection-string "$DATABASE_URL" \
-  --collection-name api_docs
+  --output api_docs
 
 sw-search ./docs/guides \
   --backend pgvector \
   --connection-string "$DATABASE_URL" \
-  --collection-name guides
+  --output guides
 
 sw-search ./docs/examples \
   --backend pgvector \
   --connection-string "$DATABASE_URL" \
-  --collection-name examples
-
-# Validate each
-for collection in api_docs guides examples; do
-  sw-search validate \
-    --backend pgvector \
-    --connection-string "$DATABASE_URL" \
-    --collection-name $collection
-done
+  --output examples
 ```
+
+`sw-search validate` has no `--backend` option, so it cannot check a pgvector collection. Query the collection's table directly with `psql`, or search it instead: `sw-search search <collection> "<query>" --backend pgvector --connection-string "$DATABASE_URL"`.
 
 **Migration commands:**
 
@@ -1718,41 +1711,26 @@ sw-search migrate ./knowledge.swsearch \
   --connection-string "postgresql://localhost/db" \
   --collection-name docs
 
-# pgvector to SQLite
-sw-search migrate \
-  --from-pgvector \
-  --connection-string "postgresql://localhost/db" \
-  --collection-name docs \
-  --output exported.swsearch
-
 # Get migration info
 sw-search migrate --info ./knowledge.swsearch
 ```
 
+The reverse direction, `--to-sqlite` (migrating a pgvector collection back to a `.swsearch` file), is accepted by the CLI but not yet implemented.
+
 **Performance tuning:**
 
+The build command has no `--batch-size` or `--workers` option; `--batch-size` only applies to `sw-search migrate`. To manage build-time memory and speed, choose a smaller embedding model instead:
+
 ```bash
-# Adjust batch size (lower = less memory, higher = faster)
-sw-search ./docs --batch-size 100
-
-# Use multiple CPU cores
-sw-search ./docs --workers 4
-
-# Memory-constrained environments
-sw-search ./docs \
-  --batch-size 16 \
-  --workers 1 \
-  --model mini
+# Memory-constrained environments: the mini model uses the least memory
+sw-search ./docs --model mini
 ```
 
 **Debugging build issues:**
 
 ```bash
 # Maximum verbosity
-sw-search ./docs --verbose --debug
-
-# Check file discovery without building
-sw-search ./docs --verbose --dry-run
+sw-search ./docs --verbose
 
 # Test on single file
 sw-search ./docs/problematic.md --output test.swsearch --verbose
@@ -1781,7 +1759,7 @@ The `native_vector_search` skill accepts the following parameters. For full skil
 
 | Parameter | Type | Description |
 |-----------|------|-------------|
-| `index_path` | string | Path to local `.swsearch` file |
+| `index_file` | string | Path to local `.swsearch` file |
 | `remote_url` + `index_name` | string | Remote search server URL and index name |
 | `backend` + `connection_string` + `collection_name` + `model_name` | string | pgvector database configuration |
 
@@ -1790,7 +1768,7 @@ The `native_vector_search` skill accepts the following parameters. For full skil
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `count` | int | `5` | Number of results to return |
-| `distance_threshold` | float | `0.5` | Similarity threshold (0.0 to 1.0) |
+| `similarity_threshold` | float | `0.0` | Minimum similarity score (0.0 to 1.0). Higher is stricter |
 | `tags` | list[str] | -- | Filter results by tags |
 | `max_content_length` | int | `32768` | Maximum total response characters |
 
@@ -1836,7 +1814,7 @@ self.add_skill("native_vector_search", {
 
     # Search behavior
     "count": 5,
-    "distance_threshold": 0.4,
+    "similarity_threshold": 0.4,
     "tags": ["documentation", "api"],
     "max_content_length": 32768,
 
@@ -1858,18 +1836,18 @@ self.add_skill("native_vector_search", {
 })
 ```
 
-### Distance Threshold Guidelines
+### Similarity Threshold Guidelines
 
-The `distance_threshold` parameter controls how similar a chunk must be to the query to be included in results. Lower values are stricter; higher values are more permissive.
+The `similarity_threshold` parameter controls how similar a chunk must be to the query to be included in results. Higher values are stricter; lower values are more permissive.
 
 | Content Type | Recommended Threshold | Notes |
 |--------------|----------------------|-------|
-| Technical documentation | 0.4 | Balanced precision/recall |
-| FAQ content | 0.5 | Moderate matching |
-| Creative content | 0.6 | Broader matching |
-| Exact lookups | 0.3 | Strict matching |
-| Code examples | 0.4 | With markdown strategy |
-| General knowledge | 0.5 | Permissive |
+| Technical documentation | 0.5 | Balanced precision/recall |
+| FAQ content | 0.4 | Moderate matching |
+| Creative content | 0.3 | Broader matching |
+| Exact lookups | 0.7 | Strict matching |
+| Code examples | 0.5 | With markdown strategy |
+| General knowledge | 0.4 | Permissive |
 
 ### Result Count Guidelines
 
