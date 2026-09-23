@@ -11,6 +11,8 @@ Base class for all SignalWire AI Agents
 """
 
 import contextlib
+import functools
+import inspect
 import logging
 import os
 import json
@@ -19,6 +21,7 @@ import re
 from typing import (
     Any,
     ClassVar,
+    ParamSpec,
     TYPE_CHECKING,
     cast,
 )
@@ -84,6 +87,28 @@ from signalwire.core.mixins.mcp_server_mixin import MCPServerMixin
 # Create a logger using centralized system
 logger = get_logger("agent_base")
 
+_P = ParamSpec("_P")
+
+
+def _record_explicit_args(init: Callable[_P, None]) -> Callable[_P, None]:
+    """Record which __init__ arguments the caller passed, by name.
+
+    A config file supplies values only for the arguments the caller left
+    out. Comparing an argument with its default can't tell route="/" passed
+    on purpose from route left out, so this records the names as
+    _explicit_init_args. The signature stays as it is.
+    """
+    signature = inspect.signature(init)
+
+    @functools.wraps(init)
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> None:
+        bound = signature.bind_partial(*args, **kwargs)
+        self = args[0]
+        self._explicit_init_args = frozenset(bound.arguments) - {"self"}  # type: ignore[attr-defined]  # set before __init__ runs, read in it
+        init(*args, **kwargs)
+
+    return wrapper
+
 
 class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/_proxy_url_base override SWMLService/ServerlessMixin's by MRO order; mypy flags the base-vs-base shape diff but the resolution is deliberate
     AuthMixin,
@@ -121,6 +146,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
     _native_functions: list[Any]
     _is_ephemeral: bool
 
+    @_record_explicit_args
     def __init__(
         self,
         name: str,
@@ -201,12 +227,17 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         # Load service configuration from config file before initializing SWMLService
         service_config = self._load_service_config(config_file, name)
 
-        # Apply service config values, with constructor parameters taking precedence
-        final_route = route if route != "/" else service_config.get("route", route)
-        final_host = host if host != "0.0.0.0" else service_config.get("host", host)  # noqa: S104  # literal compared against the bind-all default, not a new bind
+        # Apply service config values, with constructor parameters taking
+        # precedence: a config value fills in only an argument the caller left
+        # out. name is required, so the caller's name always wins.
+        explicit: frozenset[str] = getattr(self, "_explicit_init_args", frozenset())
+        final_route = (
+            route if "route" in explicit else service_config.get("route", route)
+        )
+        final_host = host if "host" in explicit else service_config.get("host", host)
         # For port: use explicit param if provided, else config file, else let SWMLService use PORT env var
         final_port = port if port is not None else service_config.get("port", None)
-        final_name = service_config.get("name", name)
+        final_name = name
 
         # Initialize the SWMLService base class
         super().__init__(
