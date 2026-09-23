@@ -4,6 +4,8 @@ The math skill provides safe mathematical calculation capabilities for agents. I
 
 ## Features
 
+The skill covers these capabilities:
+
 - Safe mathematical expression evaluation
 - Support for basic arithmetic operations
 - Parentheses support for complex expressions
@@ -13,6 +15,8 @@ The math skill provides safe mathematical calculation capabilities for agents. I
 
 ## Requirements
 
+The skill needs no packages and no external API:
+
 - **Packages**: None (uses built-in Python functionality)
 - **No external APIs required**
 
@@ -20,14 +24,18 @@ The math skill provides safe mathematical calculation capabilities for agents. I
 
 ### Optional Parameters
 
+The skill accepts one optional parameter, for SWAIG function configuration:
+
 - `swaig_fields` (dict): Additional SWAIG function configuration
   - `secure` (boolean): Override security settings for the calculation function
   - `fillers` (dict): Language-specific filler phrases while calculating
   - Any other SWAIG function parameters
 
-**Note**: This skill does not require any configuration parameters beyond the optional swaig_fields. It works out-of-the-box with no setup.
+This skill needs no configuration parameters beyond the optional `swaig_fields`, and it works with no setup.
 
 ## Tools Created
+
+The skill registers one tool:
 
 - `calculate` - Perform a mathematical calculation with basic operations
 
@@ -35,12 +43,16 @@ The math skill provides safe mathematical calculation capabilities for agents. I
 
 ### Basic Usage
 
+Add the skill with no parameters, and the `calculate` tool is available immediately:
+
 ```python
 # No configuration needed - works immediately
 agent.add_skill("math")
 ```
 
 ### With Custom Fillers
+
+Add language-specific filler phrases the agent speaks while it calculates:
 
 ```python
 agent.add_skill("math", {
@@ -64,6 +76,8 @@ agent.add_skill("math", {
 
 ### Disabling Security (if needed)
 
+Set `secure` to `False` to allow the tool to run without authentication:
+
 ```python
 agent.add_skill("math", {
     "swaig_fields": {
@@ -75,12 +89,17 @@ agent.add_skill("math", {
 ## How It Works
 
 ### Calculation Function
+
+The `calculate` tool takes a string and returns the expression alongside its result:
+
 - **Input**: Mathematical expression as a string
 - **Processing**: Validates expression for safety, then evaluates it
 - **Output**: Shows the original expression and the calculated result
 - **Example**: "2 + 3 * 4 = 14"
 
 ### Supported Operations
+
+The tool supports these operators:
 
 - **Addition**: `+` (e.g., "5 + 3")
 - **Subtraction**: `-` (e.g., "10 - 7")
@@ -92,11 +111,13 @@ agent.add_skill("math", {
 
 ### Expression Examples
 
-- Simple: `"2 + 3"` → "2 + 3 = 5"
-- Complex: `"(10 + 5) * 2 / 3"` → "(10 + 5) * 2 / 3 = 10.0"
-- With decimals: `"3.14 * 2"` → "3.14 * 2 = 6.28"
-- Powers: `"2 ** 8"` → "2 ** 8 = 256"
-- Modulo: `"17 % 5"` → "17 % 5 = 2"
+These examples show the exact response the tool returns:
+
+- Simple: `"2 + 3"` produces "2 + 3 = 5"
+- Complex: `"(10 + 5) * 2 / 3"` produces "(10 + 5) * 2 / 3 = 10.0"
+- With decimals: `"3.14 * 2"` produces "3.14 * 2 = 6.28"
+- Powers: `"2 ** 8"` produces "2 ** 8 = 256"
+- Modulo: `"17 % 5"` produces "17 % 5 = 2"
 
 ## Function Parameters
 
@@ -110,18 +131,20 @@ The calculate tool accepts one parameter:
 
 ## Security Features
 
-### Input Validation
-- Only allows safe mathematical characters: numbers, operators, parentheses, spaces, decimal points
-- Blocks any potentially dangerous code or function calls
-- Uses regex pattern matching for character validation
-
 ### Safe Evaluation
-- Parses the expression to an AST (`ast.parse(..., mode="eval")`) and walks it with a restricted evaluator that only permits numeric constants and a fixed set of arithmetic operators (`+`, `-`, `*`, `/`, `%`, `**`, unary `+`/`-`)
+
+The skill never calls Python's `eval`. Instead, it parses and walks the expression itself:
+
+- Parses the expression to an AST (`ast.parse(..., mode="eval")`) and walks it with a restricted evaluator
+- The evaluator only permits numeric constants and a fixed set of arithmetic operators (`+`, `-`, `*`, `/`, `%`, `**`, unary `+`/`-`)
 - Never calls Python's built-in `eval`, so there is no access to names, attributes, calls, system functions, or imports
 - Caps the exponent to prevent resource exhaustion
 - Cannot execute arbitrary code
 
 ### Error Handling
+
+The tool catches these cases and returns a message instead of raising an exception:
+
 - **Division by Zero**: Returns friendly error message
 - **Invalid Syntax**: Returns error for malformed expressions
 - **Illegal Characters**: Rejects expressions with non-math characters
@@ -129,26 +152,32 @@ The calculate tool accepts one parameter:
 
 ## Error Examples
 
+These are the exact messages the tool returns:
+
 - **Division by zero**: "Error: Division by zero is not allowed."
-- **Invalid characters**: "Invalid expression. Only numbers and basic math operators are allowed."
-- **Syntax error**: "Error calculating '2 + + 3': Invalid expression"
+- **Invalid characters**: "Error: Invalid expression. Only numbers and basic math operators (+, -, *, /, %, **, parentheses) are allowed."
+- **Calculation error**: "Error calculating '10.0 ** 1000': Invalid expression" (for example, an expression whose result overflows)
 - **Empty input**: "Please provide a mathematical expression to calculate."
 
 ## Common Use Cases
 
+The tool handles questions phrased in natural language, not only bare expressions:
+
 1. **Basic Arithmetic**: "What's 15 + 27?"
-2. **Percentage Calculations**: "What's 15% of 200?" → "200 * 0.15"
+2. **Percentage Calculations**: "What's 15% of 200?" becomes "200 * 0.15"
 3. **Complex Expressions**: "Calculate (100 + 50) * 0.08"
 4. **Powers and Roots**: "What's 2 to the power of 10?"
 5. **Financial Calculations**: "If I have $500 and spend $125, how much is left?"
 
 ## Best Practices
 
+Keep these points in mind when you add this skill to an agent:
+
 1. **Default Behavior**: The skill works immediately without configuration
 2. **User Education**: Help users understand they can use parentheses for complex calculations
 3. **Expression Formatting**: The skill is forgiving with spaces and formatting
 4. **Error Recovery**: Provide helpful guidance when users make syntax errors
-5. **Security**: The skill is designed to be safe even with malicious input
+5. **Security**: Malicious input cannot execute code; the evaluator only accepts numbers and arithmetic operators
 
 ## Agent Integration
 
@@ -159,4 +188,4 @@ When added to an agent, this skill automatically:
 - Enables the agent to respond to mathematical questions
 - Shows both the original expression and result for transparency
 
-The skill is designed to be completely self-contained and secure, making it safe for any agent to use for mathematical calculations. 
+It is self-contained and safe for any agent to use for mathematical calculations.

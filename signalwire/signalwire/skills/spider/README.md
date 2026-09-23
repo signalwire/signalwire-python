@@ -4,6 +4,8 @@ Fast web scraping and crawling capabilities for SignalWire AI Agents. Optimized 
 
 ## Features
 
+The skill covers these capabilities:
+
 - **Single page scraping** - Extract content from any web page in under 500ms
 - **Multi-page crawling** - Follow links and crawl entire sections of websites
 - **Structured data extraction** - Extract specific data using CSS/XPath selectors
@@ -13,6 +15,8 @@ Fast web scraping and crawling capabilities for SignalWire AI Agents. Optimized 
 - **Configurable crawling** - Control depth, page limits, and URL patterns
 
 ## Installation
+
+Add the skill with no parameters for single-page scraping, or configure crawling limits directly:
 
 ```python
 # Basic usage with defaults (single page scraping)
@@ -28,14 +32,18 @@ agent.add_skill("spider", {
 
 ## Configuration Parameters
 
+These parameters are set once with `add_skill()`; the tools themselves take only a URL, listed in [Available Tools](#available-tools).
+
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `delay` | float | 0.1 | Seconds between requests |
-| `concurrent_requests` | int | 5 | Number of parallel requests |
+| `concurrent_requests` | int | 5 | Accepted and validated (1-20); requests are currently made sequentially |
 | `timeout` | int | 5 | Request timeout in seconds |
 | `max_pages` | int | 1 | Maximum pages to crawl |
 | `max_depth` | int | 0 | How many links deep to crawl |
-| `extract_type` | string | "fast_text" | Default extraction method |
+| `extract_type` | string | "fast_text" | Extraction method: "fast_text", "markdown", or "structured" |
+| `selectors` | dict | {} | CSS/XPath selectors, used by `extract_structured_data` and by `scrape_url` when `extract_type` is "structured" |
+| `follow_patterns` | list | [] | Regex patterns limiting which links `crawl_site` follows |
 | `max_text_length` | int | 3000 | Maximum characters per page |
 | `clean_text` | bool | True | Remove extra whitespace |
 | `cache_enabled` | bool | True | Enable response caching |
@@ -51,11 +59,12 @@ Extract text content from a single web page.
 
 **Parameters:**
 - `url` (required): The URL to scrape
-- `extract_type` (optional): "fast_text", "markdown", or "structured"
-- `selectors` (optional): CSS/XPath selectors for specific elements
 
-**Examples:**
-```
+The extraction method and any selectors come from the skill's `extract_type` and `selectors` configuration, not from the call.
+
+These are example requests a caller might make:
+
+```text
 "Please get the content from https://example.com/article"
 "Scrape the main text from https://docs.example.com in markdown format"
 "Extract the product price from this page using the .price selector"
@@ -67,12 +76,12 @@ Crawl multiple pages starting from a URL.
 
 **Parameters:**
 - `start_url` (required): Starting URL for the crawl
-- `max_depth` (optional): How many links deep to crawl
-- `follow_patterns` (optional): List of regex patterns for URLs to follow
-- `max_pages` (optional): Maximum pages to crawl
 
-**Examples:**
-```
+The crawl depth, page limit, and link patterns come from the skill's `max_depth`, `max_pages`, and `follow_patterns` configuration, not from the call.
+
+These are example requests a caller might make:
+
+```text
 "Crawl the documentation starting from /docs with depth 2"
 "Get all blog posts from the site, following only /blog/ URLs"
 "Crawl up to 20 pages from their support section"
@@ -84,10 +93,12 @@ Extract specific data from a web page using selectors.
 
 **Parameters:**
 - `url` (required): The URL to scrape
-- `selectors` (required): Dictionary mapping field names to CSS/XPath selectors
 
-**Examples:**
-```
+The selectors come from the skill's `selectors` configuration, set with `add_skill()`. The tool returns a message instead of data if none are configured.
+
+These are example requests a caller might make:
+
+```text
 "Extract the title, price, and description from this product page"
 "Get all the email addresses and phone numbers from the contact page"
 ```
@@ -95,12 +106,18 @@ Extract specific data from a web page using selectors.
 ## Usage Examples
 
 ### Basic Single Page Scraping (Default)
+
+With no parameters, the skill scrapes a single page per call:
+
 ```python
 agent.add_skill("spider")
 # AI can now: "Get the content from https://example.com"
 ```
 
 ### Documentation Crawling
+
+This configuration crawls deeper and formats pages as markdown:
+
 ```python
 agent.add_skill("spider", {
     "max_pages": 50,
@@ -112,6 +129,9 @@ agent.add_skill("spider", {
 ```
 
 ### Fast News Aggregation
+
+This configuration favors more pages and shorter per-page content over a low delay:
+
 ```python
 agent.add_skill("spider", {
     "concurrent_requests": 10,
@@ -124,6 +144,9 @@ agent.add_skill("spider", {
 ```
 
 ### Respectful External Scraping
+
+This configuration adds a longer delay and honors `robots.txt`:
+
 ```python
 agent.add_skill("spider", {
     "delay": 2.0,
@@ -135,6 +158,9 @@ agent.add_skill("spider", {
 ```
 
 ### Multiple Spider Instances
+
+Each call to `add_skill` with a distinct `tool_name` registers a separate set of tools:
+
 ```python
 # Fast spider for internal sites
 agent.add_skill("spider", {
@@ -156,7 +182,10 @@ agent.add_skill("spider", {
 ## Output Examples
 
 ### Fast Text Output (Default)
-```
+
+`scrape_url` returns a character count and the extracted text:
+
+```text
 Content from https://example.com/article (2,456 characters):
 
 How to Build Better Web Applications
@@ -177,7 +206,10 @@ For more information, visit our documentation portal.
 ```
 
 ### Crawl Summary Output
-```
+
+`crawl_site` returns a numbered list of pages with a running total:
+
+```text
 Crawled 5 pages from docs.example.com:
 
 1. https://docs.example.com/ (depth: 0, 3,456 chars)
@@ -194,12 +226,16 @@ Total content: 15,234 characters across 5 pages
 
 ## Performance Characteristics
 
+Typical timings on a local network, for reference:
+
 - **Single page scrape**: ~300-500ms
 - **10-page crawl**: ~2-3 seconds
 - **Text extraction**: <50ms per page
 - **Caching**: Subsequent requests ~10ms
 
 ## Best Practices
+
+Keep these points in mind when you configure the skill:
 
 1. **Start with defaults** - The skill is optimized for single page scraping out of the box
 2. **Use caching** - Enabled by default, saves time on repeated requests
@@ -210,6 +246,8 @@ Total content: 15,234 characters across 5 pages
 
 ## Limitations
 
+The skill does not cover these cases:
+
 - No JavaScript rendering (for speed)
 - Basic text extraction only
 - No authentication support
@@ -219,12 +257,11 @@ Total content: 15,234 characters across 5 pages
 
 ## Error Handling
 
-The skill handles common errors gracefully:
-- **Timeouts**: Returns partial content with timeout notice
-- **HTTP errors**: Reports status code and error message
-- **Invalid URLs**: Clear error message
-- **Rate limiting**: Respects 429 status codes
-- **Network errors**: Returns descriptive error message
+The skill handles these cases:
+- **Missing URL**: Prompts for a URL instead of failing
+- **Invalid URLs**: Returns "Invalid URL: {url}" without making a request
+- **Blocked URLs**: SSRF protection rejects private or internal addresses
+- **Fetch failures**: Timeouts, HTTP errors (including 429), and connection errors all return "Failed to fetch {url}"; the specific error is logged, not returned to the caller
 
 ## Contributing
 

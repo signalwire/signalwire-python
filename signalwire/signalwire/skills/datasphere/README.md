@@ -4,6 +4,8 @@ The datasphere skill provides knowledge search capabilities using SignalWire Dat
 
 ## Features
 
+The skill covers these capabilities:
+
 - SignalWire DataSphere integration for knowledge search
 - Vector-based similarity search with configurable distance thresholds
 - Multi-language support and synonym expansion
@@ -13,6 +15,8 @@ The datasphere skill provides knowledge search capabilities using SignalWire Dat
 
 ## Requirements
 
+The skill needs one package and a DataSphere-enabled account:
+
 - **Packages**: `requests`
 - **SignalWire Account**: DataSphere-enabled space with uploaded documents
 
@@ -20,12 +24,16 @@ The datasphere skill provides knowledge search capabilities using SignalWire Dat
 
 ### Required Parameters
 
+The skill needs four parameters to connect to your DataSphere document:
+
 - `space_name` (string): SignalWire space name
 - `project_id` (string): SignalWire project ID
 - `token` (string): SignalWire authentication token
 - `document_id` (string): DataSphere document ID to search
 
 ### Optional Parameters
+
+The rest of the parameters tune search behavior and have defaults:
 
 - `count` (integer, default: 1): Number of search results to return
 - `distance` (float, default: 3.0): Distance threshold for search matching (lower = more similar)
@@ -40,6 +48,8 @@ The datasphere skill provides knowledge search capabilities using SignalWire Dat
 
 ### Advanced Parameters
 
+The skill accepts one advanced parameter, for SWAIG function configuration:
+
 - `swaig_fields` (dict): Additional SWAIG function configuration
   - `secure` (boolean): Override security settings
   - `fillers` (dict): Language-specific filler phrases during search
@@ -47,12 +57,16 @@ The datasphere skill provides knowledge search capabilities using SignalWire Dat
 
 ## Tools Created
 
+The skill registers one tool, under a default or custom name:
+
 - **Default**: `search_knowledge` - Search the knowledge base for information
 - **Custom**: Uses the `tool_name` parameter value
 
 ## Usage Examples
 
 ### Basic Usage
+
+The minimal configuration needs only the four required parameters:
 
 ```python
 # Minimal configuration
@@ -65,6 +79,8 @@ agent.add_skill("datasphere", {
 ```
 
 ### Advanced Configuration
+
+This configuration adds filtering, synonym expansion, and a custom no-results message:
 
 ```python
 # Comprehensive search with filtering
@@ -84,6 +100,8 @@ agent.add_skill("datasphere", {
 ```
 
 ### Multiple Instances
+
+Each call to `add_skill` with a distinct `tool_name` registers a separate search tool:
 
 ```python
 # Product documentation search
@@ -124,6 +142,8 @@ agent.add_skill("datasphere", {
 
 ### With Custom Fillers
 
+Add language-specific filler phrases the agent speaks while it searches:
+
 ```python
 agent.add_skill("datasphere", {
     "space_name": "my-space",
@@ -148,6 +168,8 @@ agent.add_skill("datasphere", {
 
 ## How It Works
 
+A search moves through five stages:
+
 1. **Vector Search**: Uses semantic similarity to find relevant content chunks
 2. **Distance Filtering**: Only returns results within the specified distance threshold
 3. **Tag Filtering**: Optionally filters results by document tags
@@ -164,28 +186,42 @@ The datasphere skill supports multiple instances, allowing you to:
 - Apply different tag filtering per instance
 - Customize distance thresholds based on content type
 
-Each instance is uniquely identified by its `search_engine_id` (derived from space/project/document) and `tool_name` combination.
+Each instance is uniquely identified by its `tool_name`.
 
 ## Parameters Explained
 
 ### Distance Threshold
-- **Lower values** (1.0-2.0): Very strict matching, only highly similar content
+
+The `distance` parameter controls how strict a match must be:
+
+- **Lower values** (1.0-2.0): Strict matching, only highly similar content
 - **Medium values** (3.0-4.0): Balanced matching, good for most use cases
 - **Higher values** (5.0+): More permissive matching, broader results
 
 ### Count vs Distance
+
+`count` and `distance` work together to shape the result set:
+
 - Use higher `count` with lower `distance` for precise, multiple results
 - Use lower `count` with higher `distance` for broader, fewer results
 
 ### Tags Usage
+
+Tags narrow a search to a subset of a document's content:
+
 - Pre-tag your documents in DataSphere with categories
 - Use tags to create domain-specific searches (e.g., ["FAQ"], ["Legal"], ["Technical"])
 
 ### Language Support
+
+The `language` parameter improves matching for non-English content:
+
 - Specify language codes for multilingual knowledge bases
 - Helps improve search accuracy for non-English content
 
 ## Error Handling
+
+The skill covers four failure cases:
 
 - **No Results**: Returns custom `no_results_message` with query placeholder
 - **API Issues**: Returns friendly error message for authentication/connectivity issues
@@ -194,6 +230,8 @@ Each instance is uniquely identified by its `search_engine_id` (derived from spa
 
 ## Best Practices
 
+Keep these points in mind when you add this skill to an agent:
+
 1. **Document Organization**: Use meaningful tags when uploading to DataSphere
 2. **Distance Tuning**: Start with default 3.0, adjust based on result quality
 3. **Multiple Instances**: Separate different knowledge domains for better results
@@ -201,6 +239,8 @@ Each instance is uniquely identified by its `search_engine_id` (derived from spa
 5. **Result Count**: Balance between comprehensive answers (higher count) and response speed (lower count)
 
 ## Setting Up DataSphere
+
+Configure DataSphere before you add this skill to an agent:
 
 1. Access your SignalWire space
 2. Enable DataSphere in your space settings

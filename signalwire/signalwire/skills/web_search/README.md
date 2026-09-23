@@ -4,6 +4,8 @@ The web_search skill provides web search capabilities using Google Custom Search
 
 ## Features
 
+The skill covers these capabilities:
+
 - Google Custom Search API integration
 - Web page content scraping and extraction
 - Configurable number of search results
@@ -13,6 +15,8 @@ The web_search skill provides web search capabilities using Google Custom Search
 
 ## Requirements
 
+The skill needs two packages and a Google Custom Search account:
+
 - **Packages**: `beautifulsoup4`, `requests`
 - **API Access**: Google Custom Search API key and Search Engine ID
 
@@ -20,19 +24,25 @@ The web_search skill provides web search capabilities using Google Custom Search
 
 ### Required Parameters
 
+The skill needs two parameters to query Google Custom Search:
+
 - `api_key` (string): Google Custom Search API key
 - `search_engine_id` (string): Google Custom Search Engine ID
 
 ### Optional Parameters
 
-- `num_results` (integer, default: 1): Number of search results to return (max: 10)
-- `delay` (float, default: 0): Delay in seconds between web page requests
+The rest of the parameters tune search behavior and have defaults:
+
+- `num_results` (integer, default: 3): Number of search results to return (1 to 10)
+- `delay` (float, default: 0.5): Delay in seconds between web page requests
 - `tool_name` (string, default: "web_search"): Custom name for the search tool (enables multiple instances)
 - `no_results_message` (string): Custom message when no results are found
-  - Default: "I couldn't find any results for '{query}'. This might be due to a very specific query or temporary issues. Try rephrasing your search or asking about a different topic."
+  - Default: "I couldn't find quality results for '{query}'. The search returned only low-quality or inaccessible pages. Try rephrasing your search or asking about a different topic."
   - Use `{query}` as placeholder for the search query
 
 ### Advanced Parameters
+
+The skill accepts one advanced parameter, for SWAIG function configuration:
 
 - `swaig_fields` (dict): Additional SWAIG function configuration
   - `secure` (boolean): Override security settings
@@ -41,12 +51,16 @@ The web_search skill provides web search capabilities using Google Custom Search
 
 ## Tools Created
 
+The skill registers one tool, under a default or custom name:
+
 - **Default**: `web_search` - Search the web for information
 - **Custom**: Uses the `tool_name` parameter value
 
 ## Usage Examples
 
 ### Basic Usage
+
+The minimal configuration needs only the two required parameters:
 
 ```python
 # Minimal configuration
@@ -57,6 +71,8 @@ agent.add_skill("web_search", {
 ```
 
 ### Advanced Configuration
+
+This configuration returns more results and adds a delay between requests:
 
 ```python
 # Comprehensive results with delay
@@ -70,6 +86,8 @@ agent.add_skill("web_search", {
 ```
 
 ### Multiple Instances
+
+Each call to `add_skill` with a distinct `tool_name` registers a separate search tool:
 
 ```python
 # General web search
@@ -101,6 +119,8 @@ agent.add_skill("web_search", {
 
 ### With Custom Fillers
 
+Add language-specific filler phrases the agent speaks while it searches:
+
 ```python
 agent.add_skill("web_search", {
     "api_key": "your-api-key",
@@ -123,6 +143,8 @@ agent.add_skill("web_search", {
 
 ## How It Works
 
+A search moves through four stages:
+
 1. **Search**: Uses Google Custom Search API to find relevant web pages
 2. **Scrape**: Downloads and extracts readable content from each result page
 3. **Format**: Presents results with titles, URLs, snippets, and extracted content
@@ -141,12 +163,16 @@ Each instance is uniquely identified by its `search_engine_id` and `tool_name` c
 
 ## Error Handling
 
+The skill covers four failure cases:
+
 - **No Results**: Returns custom `no_results_message` with query placeholder
 - **Network Issues**: Returns friendly error message for timeouts/connectivity issues
 - **Invalid Pages**: Gracefully handles pages that can't be scraped
 - **Rate Limiting**: Built-in delay support to respect API limits
 
 ## Best Practices
+
+Match the configuration to the agent's purpose:
 
 1. **For Speed**: Use `num_results: 1` and `delay: 0` for customer service
 2. **For Research**: Use `num_results: 3-5` and `delay: 0.5-1.0` for comprehensive results  
@@ -155,6 +181,8 @@ Each instance is uniquely identified by its `search_engine_id` and `tool_name` c
 5. **Custom Messages**: Tailor `no_results_message` to your agent's personality and use case
 
 ## Getting Google Custom Search Setup
+
+Set up Google Custom Search before you add this skill:
 
 1. Create a Google Cloud Project
 2. Enable the Custom Search JSON API

@@ -8,6 +8,8 @@ The Joke skill provides joke-telling capabilities to your SignalWire AI agents u
 
 ## Features
 
+The skill covers these capabilities:
+
 - **Random Jokes**: Get random jokes from API Ninjas
 - **Dad Jokes**: Specifically request dad jokes
 - **DataMap Integration**: Uses DataMap for serverless API execution
@@ -16,6 +18,8 @@ The Joke skill provides joke-telling capabilities to your SignalWire AI agents u
 
 ## Requirements
 
+The skill needs an API key and no additional packages:
+
 - API Ninjas API key
 - No additional Python packages required (DataMap handles API calls)
 
@@ -23,15 +27,21 @@ The Joke skill provides joke-telling capabilities to your SignalWire AI agents u
 
 ### Required Parameters
 
+The skill needs one required parameter:
+
 - `api_key`: Your API Ninjas API key
 
 ### Optional Parameters
+
+One parameter is optional:
 
 - `tool_name`: Custom name for the joke function (default: "get_joke")
 
 ## Usage
 
 ### Basic Usage
+
+Add the skill with an API key to register the joke tool:
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -51,6 +61,8 @@ agent.serve()
 ```
 
 ### Advanced Usage
+
+Set `tool_name` to change the registered function's name:
 
 ```python
 # Custom tool name
@@ -86,12 +98,16 @@ This skill integrates with the API Ninjas Jokes API:
 
 ## Getting an API Key
 
+Get an API key from API Ninjas before you add this skill:
+
 1. Visit [API Ninjas](https://api.api-ninjas.com/)
 2. Sign up for a free account
 3. Get your API key from the dashboard
 4. Use the key in your skill configuration
 
 ## Error Handling
+
+The skill handles these cases:
 
 - Missing API key: Skill setup will fail with clear error message
 - Invalid joke type: Parameter validation ensures only valid types are accepted
@@ -110,6 +126,8 @@ This skill demonstrates DataMap usage with:
 ## Troubleshooting
 
 ### Common Issues
+
+These messages point to specific causes:
 
 1. **"Missing required parameters: ['api_key']"**
    - Ensure you provide a valid API Ninjas API key
@@ -136,10 +154,14 @@ logging.basicConfig(level=logging.DEBUG)
 
 ### API Ninjas Endpoints
 
+The `type` parameter selects one of two endpoints:
+
 - `GET /v1/jokes` - Random jokes
 - `GET /v1/dadjokes` - Dad jokes
 
 ### Response Format
+
+API Ninjas returns a one-element array with the joke text:
 
 ```json
 [

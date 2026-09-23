@@ -4,6 +4,8 @@ A configurable skill for getting current weather information from WeatherAPI.com
 
 ## Features
 
+The skill covers these capabilities:
+
 - **Configurable Temperature Units**: Choose between Fahrenheit and Celsius
 - **TTS-Friendly Responses**: Natural language numbers without abbreviations or symbols
 - **Real-time Weather Data**: Current conditions via WeatherAPI.com
@@ -15,6 +17,8 @@ A configurable skill for getting current weather information from WeatherAPI.com
 
 ### Basic Structure
 
+Configure the skill with a tool name, an API key, and a temperature unit:
+
 ```python
 agent.add_skill("weather_api", {
     "tool_name": "get_weather",
@@ -25,6 +29,8 @@ agent.add_skill("weather_api", {
 
 ### Parameters
 
+The skill accepts three parameters:
+
 - **tool_name** (string, optional): Custom name for the generated SWAIG function (default: "get_weather")
 - **api_key** (string, required): Your WeatherAPI.com API key
 - **temperature_unit** (string, optional): "fahrenheit" or "celsius" (default: "fahrenheit")
@@ -32,6 +38,8 @@ agent.add_skill("weather_api", {
 ## Usage Examples
 
 ### Fahrenheit Weather (Default)
+
+Leave out `temperature_unit` to get Fahrenheit readings:
 
 ```python
 agent.add_skill("weather_api", {
@@ -44,6 +52,8 @@ agent.add_skill("weather_api", {
 **Temperature Format**: "seventy two degrees Fahrenheit"
 
 ### Celsius Weather
+
+Set `temperature_unit` to "celsius" to switch the units:
 
 ```python
 agent.add_skill("weather_api", {
@@ -58,6 +68,8 @@ agent.add_skill("weather_api", {
 
 ### Custom Tool Name
 
+The generated function takes the name you assign to `tool_name`:
+
 ```python
 agent.add_skill("weather_api", {
     "tool_name": "check_current_weather",
@@ -70,7 +82,7 @@ agent.add_skill("weather_api", {
 
 ## Generated SWAIG Function
 
-For the Fahrenheit example above, the skill generates:
+For the Fahrenheit Weather (Default) example, the skill generates:
 
 ```json
 {
@@ -87,15 +99,17 @@ For the Fahrenheit example above, the skill generates:
         "required": ["location"]
     },
     "data_map": {
-        "webhook": {
-            "url": "https://api.weatherapi.com/v1/current.json?key=your_api_key&q=%{enc:args.location}&aqi=no",
-            "method": "GET"
-        },
-        "output": {
-            "response": "Tell the user the current weather conditions. Express all temperatures in Fahrenheit using natural language numbers without abbreviations or symbols for clear text-to-speech pronunciation. For example, say 'seventy two degrees Fahrenheit' instead of '72F' or '72°F'. Include the condition, current temperature, wind direction and speed, cloud coverage percentage, and what the temperature feels like. Current conditions: ${current.condition.text}. Temperature: ${current.temp_f} degrees Fahrenheit. Wind: ${current.wind_dir} at ${current.wind_mph} miles per hour. Cloud coverage: ${current.cloud} percent. Feels like: ${current.feelslike_f} degrees Fahrenheit."
-        },
+        "webhooks": [
+            {
+                "url": "https://api.weatherapi.com/v1/current.json?key=your_api_key&q=${lc:enc:args.location}&aqi=no",
+                "method": "GET",
+                "output": {
+                    "response": "Tell the user the current weather conditions. Express all temperatures in Fahrenheit using natural language numbers without abbreviations or symbols for clear text-to-speech pronunciation. For example, say 'seventy two degrees Fahrenheit' instead of '72F' or '72°F'. Include the condition, current temperature, wind direction and speed, cloud coverage percentage, and what the temperature feels like. Current conditions: ${current.condition.text}. Temperature: ${current.temp_f} degrees Fahrenheit. Wind: ${current.wind_dir} at ${current.wind_mph} miles per hour. Cloud coverage: ${current.cloud} percent. Feels like: ${current.feelslike_f} degrees Fahrenheit."
+                }
+            }
+        ],
         "error_keys": ["error"],
-        "fallback_output": {
+        "output": {
             "response": "Sorry, I cannot get weather information right now. Please try again later or check if the location name is correct."
         }
     }
@@ -104,17 +118,26 @@ For the Fahrenheit example above, the skill generates:
 
 ## TTS Optimization
 
-The skill is specifically designed for text-to-speech systems:
+The skill targets text-to-speech systems:
 
 ### Natural Language Numbers
-- ✅ "seventy two degrees Fahrenheit"
-- ❌ "72F" or "72°F"
+
+The prompt instructs the model to speak numbers out, not read symbols:
+
+- Correct: "seventy two degrees Fahrenheit"
+- Incorrect: "72F" or "72°F"
 
 ### Full Pronunciation
-- ✅ "twenty two degrees Celsius" 
-- ❌ "22C" or "22°C"
+
+The same rule applies in Celsius:
+
+- Correct: "twenty two degrees Celsius" 
+- Incorrect: "22C" or "22°C"
 
 ### Complete Weather Description
+
+Each response covers five details:
+
 - Current conditions description
 - Temperature in natural language
 - Wind direction and speed
@@ -122,6 +145,8 @@ The skill is specifically designed for text-to-speech systems:
 - Feels-like temperature
 
 ## Execution Flow
+
+A single call moves through four steps:
 
 1. **AI calls function**: `get_weather(location: "New York")`
 2. **DataMap webhook**: `GET https://api.weatherapi.com/v1/current.json?key=...&q=New%20York&aqi=no`
@@ -140,6 +165,9 @@ The skill integrates with WeatherAPI.com's current weather endpoint:
 ## Temperature Unit Support
 
 ### Fahrenheit Configuration
+
+Set `temperature_unit` to "fahrenheit", or leave it out, since it's the default:
+
 <!-- snippet: no-compile config-key-fragment (single dict entry, not a module) -->
 ```python
 "temperature_unit": "fahrenheit"
@@ -147,7 +175,10 @@ The skill integrates with WeatherAPI.com's current weather endpoint:
 - Uses `temp_f` and `feelslike_f` fields
 - Displays as "degrees Fahrenheit"
 
-### Celsius Configuration  
+### Celsius Configuration
+
+Set `temperature_unit` to "celsius" to switch every field and unit label:
+
 <!-- snippet: no-compile config-key-fragment (single dict entry, not a module) -->
 ```python
 "temperature_unit": "celsius"
@@ -157,6 +188,8 @@ The skill integrates with WeatherAPI.com's current weather endpoint:
 
 ## Error Handling
 
+The skill covers four failure cases:
+
 - **Invalid API Key**: Validation during skill initialization
 - **Invalid Temperature Unit**: Must be "fahrenheit" or "celsius"
 - **API Failures**: Graceful fallback response for network/API issues
@@ -164,14 +197,18 @@ The skill integrates with WeatherAPI.com's current weather endpoint:
 
 ## Benefits
 
+The DataMap approach gives the skill these properties:
+
 - **TTS Optimized**: Natural language responses perfect for voice agents
-- **Configurable**: Easy temperature unit switching without code changes
+- **Configurable**: Temperature unit switching without code changes
 - **Efficient**: DataMap webhook execution, no agent processing load
 - **Reliable**: Real-time data from established weather service
 - **User Friendly**: Clear error messages and location flexibility
-- **Professional**: Production-ready with comprehensive error handling
+- **Tested Failure Paths**: A fallback message for API errors and unrecognized locations
 
 ## Implementation Notes
+
+A few details affect how the skill behaves:
 
 - Temperature unit determines which API fields to use (`temp_f`/`temp_c`, `feelslike_f`/`feelslike_c`)
 - Response includes detailed TTS instructions for natural pronunciation

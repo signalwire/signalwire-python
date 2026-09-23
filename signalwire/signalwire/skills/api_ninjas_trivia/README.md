@@ -4,6 +4,8 @@ A configurable skill for getting trivia questions from API Ninjas with customiza
 
 ## Features
 
+The skill covers these capabilities:
+
 - **Multiple Instances**: Create different tools with unique names and category sets
 - **Configurable Categories**: Choose from 14 trivia categories
 - **Dynamic Enum Generation**: Function parameters built from selected categories
@@ -15,6 +17,8 @@ A configurable skill for getting trivia questions from API Ninjas with customiza
 
 ### Basic Structure
 
+Configure the skill with a tool name, an API key, and an optional list of categories:
+
 ```python
 agent.add_skill("api_ninjas_trivia", {
     "tool_name": "your_custom_tool_name",
@@ -25,11 +29,15 @@ agent.add_skill("api_ninjas_trivia", {
 
 ### Parameters
 
+The skill accepts three parameters:
+
 - **tool_name** (string): Custom name for the generated SWAIG function (default: "get_trivia")
 - **api_key** (string, required): Your API Ninjas API key
 - **categories** (array, optional): List of category strings to enable (default: all categories)
 
 ### Available Categories
+
+API Ninjas groups trivia questions into 14 categories:
 
 | Category | Description |
 |----------|-------------|
@@ -52,6 +60,8 @@ agent.add_skill("api_ninjas_trivia", {
 
 ### All Categories (Default)
 
+Leave out `categories` to enable all 14:
+
 ```python
 agent.add_skill("api_ninjas_trivia", {
     "tool_name": "get_trivia",
@@ -63,6 +73,8 @@ agent.add_skill("api_ninjas_trivia", {
 **Actions**: All 14 categories available
 
 ### Science & Math Only
+
+Restrict `categories` to limit the tool to two subjects:
 
 ```python
 agent.add_skill("api_ninjas_trivia", {
@@ -77,6 +89,8 @@ agent.add_skill("api_ninjas_trivia", {
 
 ### Entertainment Trivia
 
+Combine categories to cover a broader theme:
+
 ```python
 agent.add_skill("api_ninjas_trivia", {
     "tool_name": "get_entertainment_trivia", 
@@ -89,6 +103,8 @@ agent.add_skill("api_ninjas_trivia", {
 **Actions**: `["entertainment", "music", "toysgames"]`
 
 ### Geography & History
+
+This configuration groups three related categories under one tool:
 
 ```python
 agent.add_skill("api_ninjas_trivia", {
@@ -103,7 +119,7 @@ agent.add_skill("api_ninjas_trivia", {
 
 ## Generated SWAIG Function
 
-For the science & math example above, the skill generates:
+For the Science & Math Only example, the skill generates:
 
 ```json
 {
@@ -121,18 +137,20 @@ For the science & math example above, the skill generates:
         "required": ["category"]
     },
     "data_map": {
-        "webhook": {
-            "url": "https://api.api-ninjas.com/v1/trivia?category=%{args.category}",
-            "method": "GET",
-            "headers": {
-                "X-Api-Key": "your_api_key"
+        "webhooks": [
+            {
+                "url": "https://api.api-ninjas.com/v1/trivia?category=%{args.category}",
+                "method": "GET",
+                "headers": {
+                    "X-Api-Key": "your_api_key"
+                },
+                "output": {
+                    "response": "Category %{array[0].category} question: %{array[0].question} Answer: %{array[0].answer}, be sure to give the user time to answer before saying the answer."
+                }
             }
-        },
-        "output": {
-            "response": "Category %{array[0].category} question: %{array[0].question} Answer: %{array[0].answer}, be sure to give the user time to answer before saying the answer."
-        },
+        ],
         "error_keys": ["error"],
-        "fallback_output": {
+        "output": {
             "response": "Sorry, I cannot get trivia questions right now. Please try again later."
         }
     }
@@ -140,6 +158,8 @@ For the science & math example above, the skill generates:
 ```
 
 ## Execution Flow
+
+A single call moves through four steps:
 
 1. **AI calls function**: `get_science_trivia(category: "mathematics")`
 2. **DataMap webhook**: `GET https://api.api-ninjas.com/v1/trivia?category=mathematics`
@@ -193,8 +213,10 @@ The skill integrates directly with API Ninjas trivia endpoint:
 
 ## Benefits
 
+The DataMap approach gives the skill these properties:
+
 - **Reusable**: Same skill supports different category combinations
-- **Configurable**: Easy to add/remove categories without code changes
+- **Configurable**: Add or remove categories without code changes
 - **Efficient**: DataMap webhook execution, no agent load
 - **Type Safe**: Enum parameters prevent invalid categories
 - **Error Handling**: Graceful fallback for API failures
@@ -202,11 +224,15 @@ The skill integrates directly with API Ninjas trivia endpoint:
 
 ## Error Handling
 
+The skill covers three failure cases:
+
 - **Invalid Categories**: Validation at skill initialization
 - **API Failures**: Fallback response for network/API issues
 - **Missing API Key**: Clear error message during setup
 
 ## Implementation Notes
+
+A few details affect how the skill behaves:
 
 - Categories are validated against the official API Ninjas list
 - Enum values use exact API category names

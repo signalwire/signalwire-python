@@ -4,6 +4,8 @@ The datasphere_serverless skill provides knowledge search capabilities using Sig
 
 ## Features
 
+The skill covers these capabilities:
+
 - **Serverless Execution**: Runs on SignalWire infrastructure via DataMap
 - **SignalWire DataSphere Integration**: Vector-based knowledge search
 - **Identical API**: Same parameters and functionality as the standard datasphere skill
@@ -15,6 +17,8 @@ The datasphere_serverless skill provides knowledge search capabilities using Sig
 
 ## Requirements
 
+The skill needs no packages and a DataSphere-enabled account:
+
 - **Packages**: None (DataMap handles API calls serverlessly)
 - **SignalWire Account**: DataSphere-enabled space with uploaded documents
 
@@ -22,12 +26,16 @@ The datasphere_serverless skill provides knowledge search capabilities using Sig
 
 ### Required Parameters
 
+The skill needs four parameters to connect to your DataSphere document:
+
 - `space_name` (string): SignalWire space name
 - `project_id` (string): SignalWire project ID  
 - `token` (string): SignalWire authentication token
 - `document_id` (string): DataSphere document ID to search
 
 ### Optional Parameters
+
+The rest of the parameters tune search behavior and have defaults:
 
 - `count` (integer, default: 1): Number of search results to return
 - `distance` (float, default: 3.0): Distance threshold for search matching (lower = more similar)
@@ -42,6 +50,8 @@ The datasphere_serverless skill provides knowledge search capabilities using Sig
 
 ### Advanced Parameters
 
+The skill accepts one advanced parameter, for SWAIG function configuration:
+
 - `swaig_fields` (dict): Additional SWAIG function configuration
   - `secure` (boolean): Override security settings
   - `fillers` (dict): Language-specific filler phrases during search
@@ -49,12 +59,16 @@ The datasphere_serverless skill provides knowledge search capabilities using Sig
 
 ## Tools Created
 
+The skill registers one tool, under a default or custom name:
+
 - **Default**: `search_knowledge` - Search the knowledge base for information
 - **Custom**: Uses the `tool_name` parameter value
 
 ## Usage Examples
 
 ### Basic Usage
+
+The minimal configuration needs only the four required parameters:
 
 ```python
 # Minimal configuration - same as standard datasphere skill
@@ -67,6 +81,8 @@ agent.add_skill("datasphere_serverless", {
 ```
 
 ### Advanced Configuration
+
+This configuration adds filtering, synonym expansion, and a custom no-results message:
 
 ```python
 # Comprehensive search with filtering - identical to standard skill
@@ -86,6 +102,8 @@ agent.add_skill("datasphere_serverless", {
 ```
 
 ### Multiple Instances
+
+Each call to `add_skill` with a distinct `tool_name` registers a separate search tool:
 
 ```python
 # Product documentation search
@@ -117,60 +135,76 @@ agent.add_skill("datasphere_serverless", {
 This skill demonstrates advanced DataMap usage patterns:
 
 ### 1. **Serverless API Integration**
+
+The `.webhook()` call runs entirely on SignalWire's infrastructure:
+
 - API calls execute on SignalWire servers, not your agent server
 - No webhook endpoints required
 - Built-in authentication and error handling
 
 ### 2. **Dynamic Request Building**
+
+Only the query text comes from the caller. Everything else comes from skill configuration:
+
 ```python
-webhook_body = {
+webhook_params = {
     "document_id": self.document_id,
-    "query_string": "${args.query}",  # Dynamic from user input
-    "distance": self.distance,         # Static from configuration
-    "count": self.count               # Static from configuration
+    "query_string": "${args.query}",  # Only this is dynamic from user input
+    "count": self.count,
+    "distance": self.distance,
 }
 
 # Optional parameters added conditionally
 if self.tags is not None:
-    webhook_body["tags"] = self.tags
+    webhook_params["tags"] = self.tags
 ```
 
 ### 3. **Response Processing with Foreach**
+
+The `.foreach()` call turns the API's result array into one formatted string:
+
 <!-- snippet: no-compile fluent-chain-excerpt (leading-dot method call lifted from a builder chain) -->
 ```python
 .foreach({
-    "input_key": "results",           # API response key containing array
-    "output_key": "formatted_results", # Name for built string
-    "max": self.count,                # Limit processing
-    "append": "=== RESULT ${this.index} ===\n${this.content}\n========\n\n"
+    "input_key": "chunks",              # DataSphere API response key containing the array
+    "output_key": "formatted_results",  # Name for built string
+    "max": self.count,                  # Limit processing
+    "append": "=== RESULT ===\n${this.text}\n" + "=" * 50 + "\n\n"
 })
 ```
 
 The `foreach` mechanism:
-- Iterates over the `results` array from DataSphere API response
-- For each result, expands `${this.content}` with the result's content field
+- Iterates over the `chunks` array from DataSphere API response
+- For each result, expands `${this.text}` with the result's text field
 - Builds a concatenated string stored as `formatted_results`
 - Limits processing to `max` items
 
 ### 4. **Variable Expansion in Output**
+
+The final response combines the query and the formatted results:
+
 <!-- snippet: no-compile fluent-chain-excerpt (leading-dot method call lifted from a builder chain) -->
 ```python
-.output(SwaigFunctionResult('I found ${results.length} result(s) for "${args.query}":\n\n${formatted_results}'))
+.output(FunctionResult('I found results for "${args.query}":\n\n${formatted_results}'))
 ```
 
 References:
-- `${results.length}`: Number of results from API
 - `${args.query}`: User's search query
 - `${formatted_results}`: String built by foreach
 
 ### 5. **Error Handling**
+
+The tool falls back to a custom message when the API reports an error or returns nothing to format:
+
 <!-- snippet: no-compile fluent-chain-excerpt (leading-dot method calls lifted from a builder chain) -->
 ```python
-.error_keys(['error', 'message'])
-.fallback_output(SwaigFunctionResult(self.no_results_message.replace('{query}', '${args.query}')))
+.error_keys(["error"])
+.fallback_output(FunctionResult(self.no_results_message.replace("{query}", "${args.query}")))
 ```
 
 ## Comparison: Standard vs Serverless
+
+The two skills trade Python flexibility for serverless execution:
 
 | Feature | Standard DataSphere | DataSphere Serverless |
 |---------|-------------------|---------------------|
@@ -185,19 +219,27 @@ References:
 
 ## When to Use Serverless vs Standard
 
-### **Use DataSphere Serverless When:**
+### Use DataSphere Serverless When:
+
+These four conditions favor the serverless skill:
+
 - You want simple deployment without webhook infrastructure
 - Performance on agent server is a concern
 - Standard response formatting is sufficient
 - You prefer serverless execution model
 
-### **Use Standard DataSphere When:**
+### Use Standard DataSphere When:
+
+These four conditions favor the standard skill instead:
+
 - You need complex custom response formatting
 - You want granular error handling with different messages per error type
 - You need runtime decision-making logic
 - You want full control over the search process
 
 ## Benefits of DataMap Implementation
+
+Running the search as a DataMap tool has five effects:
 
 1. **Simplified Deployment**: No HTTP endpoints to expose or manage
 2. **Better Performance**: Executes on SignalWire infrastructure
@@ -206,6 +248,8 @@ References:
 5. **Built-in Reliability**: Server-side execution with built-in retry logic
 
 ## How It Works
+
+A search moves through four stages:
 
 1. **Configuration**: Skill parameters are validated and stored during setup
 2. **Tool Registration**: DataMap configuration is built with static values from setup
@@ -227,6 +271,8 @@ Like the standard datasphere skill, this supports multiple instances:
 
 ## Error Handling
 
+The skill covers four failure cases:
+
 - **API Errors**: Handled by `error_keys` configuration
 - **No Results**: Uses `fallback_output` with custom message
 - **Invalid Parameters**: Validated during skill setup
@@ -235,6 +281,8 @@ Like the standard datasphere skill, this supports multiple instances:
 ## Troubleshooting
 
 ### Common Issues
+
+These messages point to specific causes:
 
 1. **"Missing required parameters"**
    - Ensure all required parameters are provided

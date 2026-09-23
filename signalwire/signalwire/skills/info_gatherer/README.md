@@ -6,19 +6,22 @@ Guides an AI agent through a configurable series of questions, collecting answer
 
 | Parameter | Type | Required | Description |
 |-----------|------|----------|-------------|
-| `questions` | list | Yes | List of question objects (see below) |
+| `questions` | list | Yes | List of question objects, described in the next table |
 | `prefix` | str | No | Prefix for tool names and state namespace |
 | `completion_message` | str | No | Message shown after all questions are answered |
 
-Each question object:
+Each question object has these fields:
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `key_name` | str | Yes | Key used to store the answer |
 | `question_text` | str | Yes | The question to ask the user |
 | `confirm` | bool | No | Whether to require confirmation |
+| `prompt_add` | str | No | Extra note appended to the instruction for this question |
 
 ## Single Instance Usage
+
+Add the skill with a list of questions to register `start_questions` and `submit_answer`:
 
 ```python
 from signalwire import AgentBase
@@ -61,6 +64,8 @@ agent.add_skill("info_gatherer", {
 This registers four tools (`intake_start_questions`, `intake_submit_answer`, `medical_start_questions`, `medical_submit_answer`) with isolated state namespaces (`skill:intake`, `skill:medical`).
 
 ## How It Works
+
+Each turn follows the same cycle:
 
 1. The agent prompt instructs the AI to call `start_questions` when the user is ready.
 2. `start_questions` reads the current question from namespaced `global_data` and returns an instruction for the AI.

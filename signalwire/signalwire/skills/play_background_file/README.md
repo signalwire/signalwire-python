@@ -4,6 +4,8 @@ A configurable skill for managing background file playback with custom tool name
 
 ## Features
 
+The skill covers these capabilities:
+
 - **Multiple Instances**: Create different tools with unique names and file sets
 - **Dynamic Enum Generation**: Function parameters built from your file configuration
 - **Audio & Video Support**: Works with any background file type
@@ -14,6 +16,8 @@ A configurable skill for managing background file playback with custom tool name
 ## Configuration
 
 ### Basic Structure
+
+Configure the skill with a tool name and a list of files to manage:
 
 ```python
 agent.add_skill("play_background_file", {
@@ -31,10 +35,14 @@ agent.add_skill("play_background_file", {
 
 ### Parameters
 
+The skill accepts two parameters:
+
 - **tool_name** (string): Custom name for the generated SWAIG function (default: "play_background_file")
 - **files** (array): List of file objects to manage
 
 ### File Object Properties
+
+Each entry in `files` has four fields:
 
 - **key** (string, required): Unique identifier for the file (alphanumeric, underscores, hyphens only)
 - **description** (string, required): Human-readable description used in AI responses
@@ -44,6 +52,8 @@ agent.add_skill("play_background_file", {
 ## Usage Examples
 
 ### Single File Testimonial
+
+A single file registers a tool with two actions, start and stop:
 
 ```python
 agent.add_skill("play_background_file", {
@@ -63,6 +73,8 @@ agent.add_skill("play_background_file", {
 **Actions**: `["start_massey_success", "stop"]`
 
 ### Multiple Demo Videos
+
+Each file in the list adds one more `start_` action to the same tool:
 
 ```python
 agent.add_skill("play_background_file", {
@@ -89,6 +101,8 @@ agent.add_skill("play_background_file", {
 
 ### Music Playlist
 
+Audio files work the same way as video, and `wait` defaults to false when omitted:
+
 ```python
 agent.add_skill("play_background_file", {
     "tool_name": "play_music",
@@ -109,7 +123,7 @@ agent.add_skill("play_background_file", {
 
 ## Generated SWAIG Function
 
-For the testimonial example above, the skill generates:
+For the Single File Testimonial example, the skill generates:
 
 ```json
 {
@@ -126,6 +140,8 @@ For the testimonial example above, the skill generates:
         },
         "required": ["action"]
     },
+    "wait_for_fillers": true,
+    "skip_fillers": true,
     "data_map": {
         "expressions": [
             {
@@ -153,8 +169,7 @@ For the testimonial example above, the skill generates:
                         {
                             "stop_playback_bg": true
                         }
-                    ],
-                    "post_process": true
+                    ]
                 }
             }
         ]
@@ -163,6 +178,8 @@ For the testimonial example above, the skill generates:
 ```
 
 ## Execution Flow
+
+A single call moves through six steps:
 
 1. **AI calls function**: `play_testimonial(action: "start_massey_success")`
 2. **DataMap matches pattern**: `/start_massey_success/i`
@@ -202,8 +219,10 @@ This creates three separate tools: `play_testimonial`, `play_demo`, and `play_mu
 
 ## Benefits
 
+The DataMap approach gives the skill these properties:
+
 - **Reusable**: Same skill manages different file collections
-- **Configurable**: Easy to add/remove files without code changes  
+- **Configurable**: Add or remove files without code changes  
 - **Efficient**: DataMap serverless execution
 - **Type Safe**: Enum parameters prevent invalid file references
 - **Natural**: AI speaks before actions with post-processing
@@ -211,8 +230,10 @@ This creates three separate tools: `play_testimonial`, `play_demo`, and `play_mu
 
 ## Implementation Notes
 
+A few details affect how the skill behaves:
+
 - File keys are converted to `start_{key}` enum values
 - All tools include a "stop" action to halt playback
-- Post-processing is enabled by default for natural conversation flow
+- Each start action enables post-processing, so the AI speaks before the file plays; the stop action responds immediately
 - The skill validates all configuration parameters at initialization
 - Instance keys combine skill name and tool name for uniqueness 
