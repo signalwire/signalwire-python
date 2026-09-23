@@ -35,7 +35,11 @@ from .config import (
     HELP_DESCRIPTION,
     HELP_EPILOG_SHORT,
 )
-from .core.argparse_helpers import CustomArgumentParser, parse_function_arguments
+from .core.argparse_helpers import (
+    CustomArgumentParser,
+    parse_function_arguments,
+    undeclared_argument_warnings,
+)
 from .core.agent_loader import (
     discover_agents_in_file,
     load_agent_from_file,
@@ -772,6 +776,12 @@ def main() -> int:
             except ValueError as e:
                 print(f"Error parsing arguments: {e}")
                 return 1
+
+            cli_options = {o for a in parser._actions for o in a.option_strings}
+            for warning in undeclared_argument_warnings(
+                function_args, func, cli_options
+            ):
+                print(warning, file=sys.stderr)
 
             # Check if this is a DataMap function
             is_datamap = isinstance(func, dict) and "data_map" in func

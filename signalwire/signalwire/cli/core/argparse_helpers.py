@@ -81,6 +81,59 @@ class CustomArgumentParser(argparse.ArgumentParser):
         return super().parse_args(args, namespace)
 
 
+def _schema_properties(func_schema: Any) -> dict[str, Any]:
+    """The parameter definitions in a function's schema, by name."""
+    if isinstance(func_schema, dict):
+        # DataMap function
+        if "parameters" in func_schema:
+            params = func_schema["parameters"]
+            return dict(params.get("properties", params))
+        return func_schema
+    # Regular SWAIG function
+    if hasattr(func_schema, "parameters") and func_schema.parameters:
+        params = func_schema.parameters
+        return dict(params.get("properties", params))
+    return {}
+
+
+def undeclared_argument_warnings(
+    parsed_args: dict[str, Any], func_schema: Any, cli_options: set[str]
+) -> list[str]:
+    """Warnings for function arguments the function doesn't declare.
+
+    Everything after --exec <function> goes to the function, which is
+    right: a function parameter can share a swaig-test option's name. But
+    it means a misplaced or mistyped option reaches the function silently,
+    so this names the likely mistake rather than rejecting the argument.
+
+    Args:
+        parsed_args: Arguments from parse_function_arguments()
+        func_schema: The function's schema
+        cli_options: swaig-test's own option strings, such as "--verbose"
+
+    Returns:
+        One warning per undeclared argument
+    """
+    declared = _schema_properties(func_schema)
+    warnings = []
+    for key in parsed_args:
+        if key in declared:
+            continue
+        option = "--" + key.replace("_", "-")
+        if option in cli_options:
+            warnings.append(
+                f"Warning: {option} isn't a parameter of this function, so it was "
+                f"passed to the function. To use swaig-test's {option} option, put "
+                f"it before --exec."
+            )
+        else:
+            warnings.append(
+                f"Warning: {option} isn't a parameter of this function; it was "
+                f"passed to the function anyway."
+            )
+    return warnings
+
+
 def parse_function_arguments(
     function_args_list: list[str], func_schema: Any
 ) -> dict[str, Any]:
@@ -98,20 +151,7 @@ def parse_function_arguments(
     i = 0
 
     # Get parameter schema
-    parameters = {}
-
-    if isinstance(func_schema, dict):
-        # DataMap function
-        if "parameters" in func_schema:
-            params = func_schema["parameters"]
-            parameters = params.get("properties", params)
-        else:
-            parameters = func_schema
-    else:
-        # Regular SWAIG function
-        if hasattr(func_schema, "parameters") and func_schema.parameters:
-            params = func_schema.parameters
-            parameters = params.get("properties", params)
+    parameters = _schema_properties(func_schema)
 
     # Parse arguments
     while i < len(function_args_list):
