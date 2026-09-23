@@ -1346,6 +1346,72 @@ class TestChunkingStrategies:
         assert isinstance(chunks, list)
 
 
+class TestMarkdownHeadingHierarchy:
+    """Section paths follow each heading's real level (B9).
+
+    The chunkers used to take the first ``level - 1`` entries of the path,
+    which assumes a heading at every level from 1. In a document that starts
+    at ``##``, or skips a level, siblings were recorded as parent and child.
+    """
+
+    DOC = (
+        "## Install\n\nRun the installer.\n\n"
+        "## Configure\n\nSet the project ID.\n\n"
+        "### Environment Variables\n\nThe SDK reads three variables.\n\n"
+        "## Run\n\nStart the agent.\n\n"
+        "# Reference\n\nEvery class.\n\n"
+        "### Deep Heading\n\nThis skips level two.\n\n"
+        "### Sibling Heading\n\nAlso level three.\n\n"
+        "## Classes\n\nAgentBase is the main class.\n"
+    )
+    EXPECTED = [
+        "Install",
+        "Configure",
+        "Configure > Environment Variables",
+        "Run",
+        "Reference",
+        "Reference > Deep Heading",
+        "Reference > Sibling Heading",
+        "Reference > Classes",
+    ]
+
+    @pytest.mark.parametrize("chunker", ["_chunk_markdown_ast", "_chunk_markdown_line_walker"])
+    def test_sections_follow_heading_levels(self, chunker: str) -> None:
+        proc = DocumentProcessor(chunking_strategy="markdown")
+        chunks = getattr(proc, chunker)(self.DOC, "doc.md")
+        assert [c["section"] for c in chunks] == self.EXPECTED
+
+    @pytest.mark.parametrize("chunker", ["_chunk_markdown_ast", "_chunk_markdown_line_walker"])
+    def test_heading_metadata_and_depth_tags(self, chunker: str) -> None:
+        proc = DocumentProcessor(chunking_strategy="markdown")
+        chunks = getattr(proc, chunker)(self.DOC, "doc.md")
+        run = next(c for c in chunks if c["section"] == "Run")
+        assert run["metadata"]["h1"] == "Run"
+        assert "h2" not in run["metadata"]
+        assert "depth:1" in run["metadata"]["tags"]
+
+    def test_folded_small_section_keeps_later_paths_right(self) -> None:
+        """A section too small to stand alone folds into the next one."""
+        proc = DocumentProcessor(chunking_strategy="markdown", min_chunk_size=10)
+        doc = (
+            "## A\n\nx\n\n"
+            "## B\n\n" + "Section B has enough text to stand on its own. " * 3 + "\n\n"
+            "## C\n\n" + "Section C has enough text to stand on its own. " * 3 + "\n"
+        )
+        chunks = proc._chunk_markdown_ast(doc, "doc.md")
+        assert [c["section"] for c in chunks] == ["A", "C"]
+
+    def test_push_heading(self) -> None:
+        push = DocumentProcessor._push_heading
+        path = push([], 2, "A")
+        assert path == [(2, "A")]
+        path = push(path, 4, "B")
+        assert path == [(2, "A"), (4, "B")]
+        assert push(path, 4, "C") == [(2, "A"), (4, "C")]
+        assert push(path, 3, "D") == [(2, "A"), (3, "D")]
+        assert push(path, 1, "E") == [(1, "E")]
+
+
 class TestEdgeCases:
     """Edge cases: empty, unicode, very large, unsupported."""
 

@@ -510,6 +510,7 @@ class DocumentProcessor:
 
         # Walk blocks, maintain heading hierarchy, emit chunks.
         chunks: list[dict[str, Any]] = []
+        headings: list[tuple[int, str]] = []  # (level, text) from the top down
         hierarchy: list[str] = []
         current_lines: list[str] = []
         current_hierarchy: list[str] = []
@@ -555,18 +556,20 @@ class DocumentProcessor:
                 # text, so the reader still sees the structure; only the chunk
                 # boundary moves.
                 if min_chars and 0 < current_size < min_chars:
-                    hierarchy = [
-                        *hierarchy[: block["level"] - 1],
-                        block["heading_text"],
-                    ]
+                    headings = self._push_heading(
+                        headings, block["level"], block["heading_text"]
+                    )
+                    hierarchy = [text for _, text in headings]
                     current_lines.extend(block["source_lines"])
                     current_end_line = block["end_line"]
                     current_size += sum(len(line) + 1 for line in block["source_lines"])
                     continue
                 # Flush whatever preceded this heading under the old hierarchy.
                 flush()
-                level = block["level"]
-                hierarchy = [*hierarchy[: level - 1], block["heading_text"]]
+                headings = self._push_heading(
+                    headings, block["level"], block["heading_text"]
+                )
+                hierarchy = [text for _, text in headings]
                 # Seed the new chunk with the heading line(s) themselves.
                 current_hierarchy = list(hierarchy)
                 current_lines = list(block["source_lines"])
@@ -667,6 +670,7 @@ class DocumentProcessor:
         chunks = []
         lines = content.split("\n")
 
+        headings: list[tuple[int, str]] = []  # (level, text) from the top down
         current_hierarchy: list[str] = []  # Track header hierarchy
         current_chunk: list[str] = []
         current_size = 0
@@ -712,10 +716,8 @@ class DocumentProcessor:
                     )
 
                 # Update hierarchy
-                current_hierarchy = [
-                    *current_hierarchy[: header_level - 1],
-                    header_text,
-                ]
+                headings = self._push_heading(headings, header_level, header_text)
+                current_hierarchy = [text for _, text in headings]
                 current_chunk = [line]
                 current_size = len(line)
                 line_start = line_num
@@ -974,6 +976,20 @@ class DocumentProcessor:
         # Target chunk size divided by average sentence length
         optimal_sentences = max(1, int(self.chunk_size / avg_sentence_length))
         return min(optimal_sentences, 10)  # Cap at 10 sentences for readability
+
+    @staticmethod
+    def _push_heading(
+        headings: list[tuple[int, str]], level: int, text: str
+    ) -> list[tuple[int, str]]:
+        """Return the heading path after a heading at ``level``.
+
+        A heading closes every open heading at its own level or deeper, and
+        nests under the nearest shallower one. The path can't assume a
+        heading at every level: a document that starts at ``##``, or skips
+        from ``#`` to ``###``, would otherwise nest siblings as parent and
+        child.
+        """
+        return [*(entry for entry in headings if entry[0] < level), (level, text)]
 
     def _build_section_path(self, hierarchy: list[str]) -> str | None:
         """Build hierarchical section path from header hierarchy"""
