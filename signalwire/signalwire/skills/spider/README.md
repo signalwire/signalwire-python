@@ -47,7 +47,7 @@ These parameters are set once with `add_skill()`; the tools themselves take only
 | `max_text_length` | int | 3000 | Maximum characters per page |
 | `clean_text` | bool | True | Remove extra whitespace |
 | `cache_enabled` | bool | True | Enable response caching |
-| `follow_robots_txt` | bool | False | Skip pages that the site's robots.txt disallows for `user_agent` |
+| `follow_robots_txt` | bool | False | Skip pages, and redirects to pages, that the site's robots.txt disallows for `user_agent`. Rules are kept for 24 hours. If robots.txt can't be fetched, the page is skipped and the next request tries again |
 | `user_agent` | string | "Spider/1.0 (SignalWire AI Agent)" | User agent string |
 | `headers` | dict | {} | Additional HTTP headers |
 

@@ -11,6 +11,7 @@ Spider skill for fast web scraping with SignalWire AI Agents.
 
 import re
 import collections
+import time
 import urllib.robotparser
 from typing import Any, ClassVar, TYPE_CHECKING, cast
 from urllib.parse import urljoin, urlparse
@@ -206,8 +207,9 @@ class SpiderSkill(SkillBase):
         )
         self.user_agent = self.params.get("user_agent", defaults["user_agent"])
 
-        # robots.txt rules, per origin, when follow_robots_txt is on
-        self._robots: dict[str, urllib.robotparser.RobotFileParser] = {}
+        # robots.txt rules, per origin, with the time they expire, when
+        # follow_robots_txt is on
+        self._robots: dict[str, tuple[urllib.robotparser.RobotFileParser, float]] = {}
 
         # Optional headers
         self.headers = self.params.get("headers", {})
@@ -334,35 +336,62 @@ class SpiderSkill(SkillBase):
             handler=self._extract_structured_handler,
         )
 
+    # How long to keep a site's robots.txt rules. RFC 9309 allows caching
+    # them for up to 24 hours. A failed fetch isn't cached at all.
+    _ROBOTS_TTL = 24 * 60 * 60
+
     def _allowed_by_robots(self, url: str) -> bool:
         """False if follow_robots_txt is on and the site's robots.txt disallows url.
 
         As in urllib.robotparser, a robots.txt answered with 401 or 403
         disallows everything, any other 4xx allows everything, and a
-        server error or failed request disallows everything.
+        server error or failed request disallows everything until the next
+        request retries it.
         """
         if not self.follow_robots_txt:
             return True
         parsed = urlparse(url)
         origin = f"{parsed.scheme}://{parsed.netloc}"
-        parser = self._robots.get(origin)
-        if parser is None:
-            parser = urllib.robotparser.RobotFileParser()
-            try:
-                response = self.session.get(
-                    f"{origin}/robots.txt", timeout=self.timeout
-                )
-                status = response.status_code
-            except requests.exceptions.RequestException:
-                status = 599
-            if status in (401, 403) or status >= 500:
-                parser.parse(["User-agent: *", "Disallow: /"])
-            elif status >= 400:
-                parser.parse([])  # no rules: everything is allowed
-            else:
-                parser.parse(response.text.splitlines())
-            self._robots[origin] = parser
+        cached = self._robots.get(origin)
+        if cached is not None and cached[1] > time.monotonic():
+            return cached[0].can_fetch(self.user_agent, url)
+
+        parser = urllib.robotparser.RobotFileParser()
+        try:
+            response = self.session.get(f"{origin}/robots.txt", timeout=self.timeout)
+            status = response.status_code
+        except requests.exceptions.RequestException:
+            status = 599
+        if status >= 500:
+            # Unavailable for now: disallow this request, and retry next time
+            return False
+        if status in (401, 403):
+            parser.parse(["User-agent: *", "Disallow: /"])
+        elif status >= 400:
+            parser.parse([])  # no rules: everything is allowed
+        else:
+            parser.parse(response.text.splitlines())
+        self._robots[origin] = (parser, time.monotonic() + self._ROBOTS_TTL)
         return parser.can_fetch(self.user_agent, url)
+
+    # Redirects to follow in one fetch while checking robots.txt
+    _MAX_REDIRECTS = 10
+
+    def _get_following_robots(self, url: str) -> requests.Response | None:
+        """GET url, following each redirect only if robots.txt allows its target."""
+        response = self.session.get(url, timeout=self.timeout, allow_redirects=False)
+        for _ in range(self._MAX_REDIRECTS):
+            if not response.is_redirect:
+                return response
+            target = urljoin(response.url, response.headers["location"])
+            if not self._allowed_by_robots(target):
+                self.logger.info(f"robots.txt disallows the redirect to {target}")
+                return None
+            response = self.session.get(
+                target, timeout=self.timeout, allow_redirects=False
+            )
+        self.logger.error(f"Too many redirects fetching {url}")
+        return None
 
     def _fetch_url(self, url: str) -> requests.Response | None:
         """Fetch a URL with caching and error handling."""
@@ -372,7 +401,14 @@ class SpiderSkill(SkillBase):
             return self._cache[url]
 
         try:
-            response = self.session.get(url, timeout=self.timeout)
+            if self.follow_robots_txt:
+                # Each redirect's target needs its own robots.txt check
+                fetched = self._get_following_robots(url)
+                if fetched is None:
+                    return None
+                response = fetched
+            else:
+                response = self.session.get(url, timeout=self.timeout)
             response.raise_for_status()
 
             # Cache successful responses (with size limit)

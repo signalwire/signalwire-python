@@ -41,6 +41,7 @@ def _make_mock_response(content: bytes = b"<html><body><p>Hello world</p></body>
     resp.url = url
     resp.status_code = status_code
     resp.text = text or content.decode("utf-8", errors="replace")
+    resp.is_redirect = False
     resp.raise_for_status = Mock()
     return resp
 
@@ -1376,6 +1377,8 @@ class TestRobotsTxt:
             "http://public.test/robots.txt": robots,
             "http://public.test/private/page": page,
             "http://public.test/public/page": page,
+            "http://public.test/public/to-private": (302, {"Location": "/private/page"}, b""),
+            "http://public.test/public/to-public": (301, {"Location": "/public/page"}, b""),
         })
         skill.session.mount("http://public.test", adapter)
         skill.adapter = adapter  # type: ignore[attr-defined]  # test handle
@@ -1403,6 +1406,37 @@ class TestRobotsTxt:
         skill = self._skill(scripted_adapter, (status, {}, b""), follow_robots_txt=True)
         result = skill._scrape_url_handler({"url": "http://public.test/public/page"}, {})
         assert ("page text" in result.response) is allowed
+
+    def test_redirect_to_disallowed_page_is_not_followed(self, scripted_adapter: type) -> None:
+        skill = self._skill(scripted_adapter, (200, {}, self.ROBOTS), follow_robots_txt=True)
+        result = skill._scrape_url_handler({"url": "http://public.test/public/to-private"}, {})
+        assert "page text" not in result.response
+        assert "http://public.test/private/page" not in skill.adapter.sent  # type: ignore[attr-defined]  # test handle
+
+    def test_redirect_to_allowed_page_is_followed(self, scripted_adapter: type) -> None:
+        skill = self._skill(scripted_adapter, (200, {}, self.ROBOTS), follow_robots_txt=True)
+        result = skill._scrape_url_handler({"url": "http://public.test/public/to-public"}, {})
+        assert "page text" in result.response
+
+    def test_unavailable_robots_txt_is_retried(self, scripted_adapter: type) -> None:
+        skill = self._skill(scripted_adapter, (503, {}, b""), follow_robots_txt=True)
+        first = skill._scrape_url_handler({"url": "http://public.test/public/page"}, {})
+        assert "page text" not in first.response
+        skill.adapter.routes["http://public.test/robots.txt"] = (200, {}, self.ROBOTS)  # type: ignore[attr-defined]  # test handle
+        second = skill._scrape_url_handler({"url": "http://public.test/public/page"}, {})
+        assert "page text" in second.response
+
+    def test_robots_txt_is_cached_until_it_expires(self, scripted_adapter: type) -> None:
+        skill = self._skill(scripted_adapter, (200, {}, self.ROBOTS), follow_robots_txt=True)
+        robots = "http://public.test/robots.txt"
+        clock = "signalwire.skills.spider.skill.time.monotonic"
+        with patch(clock, return_value=1000.0):
+            skill._scrape_url_handler({"url": "http://public.test/public/page"}, {})
+            skill._scrape_url_handler({"url": "http://public.test/private/page"}, {})
+        assert skill.adapter.sent.count(robots) == 1  # type: ignore[attr-defined]  # test handle
+        with patch(clock, return_value=1000.0 + skill._ROBOTS_TTL + 1):
+            skill._scrape_url_handler({"url": "http://public.test/public/page"}, {})
+        assert skill.adapter.sent.count(robots) == 2  # type: ignore[attr-defined]  # test handle
 
 
 class TestExtractTypeAndConcurrency:
