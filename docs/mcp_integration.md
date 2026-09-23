@@ -89,12 +89,23 @@ The `/mcp` endpoint handles the full MCP protocol:
 
 ### Connecting a Client
 
-The endpoint uses the agent's basic auth credentials, like the agent's other endpoints, and answers 401 without them. Give your MCP client the endpoint's URL and an `Authorization: Basic` header built from those credentials. For example, this command adds the agent to Claude Code:
+The endpoint uses the agent's basic auth credentials, like the agent's other endpoints, and answers 401 without them. Give your MCP client the endpoint's URL and an `Authorization: Basic` header built from those credentials. Many clients accept a configuration like this one; your client's documentation gives its file and exact format:
 
-```bash
-claude mcp add --transport http my-agent https://your-server.com/agent/mcp \
-  --header "Authorization: Basic $(printf '%s' 'user:password' | base64)"
+```json
+{
+    "mcpServers": {
+        "my-agent": {
+            "type": "http",
+            "url": "https://your-server.com/agent/mcp",
+            "headers": {
+                "Authorization": "Basic dXNlcjpwYXNzd29yZA=="
+            }
+        }
+    }
+}
 ```
+
+The header value is `Basic` followed by the Base64 encoding of `user:password`, which `printf '%s' 'user:password' | base64` prints.
 
 Your `@tool` functions are then available to the client.
 
