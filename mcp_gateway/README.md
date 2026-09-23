@@ -123,7 +123,7 @@ These variables fill in the `${VAR_NAME|default}` tokens in `config.json`:
 - `MCP_HOST`: Server bind address (default: 0.0.0.0)
 - `MCP_PORT`: Server port (default: 8080)
 - `MCP_AUTH_USER`: Basic auth username (default: admin)
-- `MCP_AUTH_PASSWORD`: Basic auth password (default: changeme)
+- `MCP_AUTH_PASSWORD`: Basic auth password (default: changeme). While it's the default, the gateway listens on 127.0.0.1 only.
 - `MCP_AUTH_TOKEN`: Bearer token for API access (optional)
 - `MCP_SESSION_TIMEOUT`: Session timeout in seconds (default: 300)
 - `MCP_MAX_SESSIONS`: Max sessions per service (default: 100)
@@ -169,6 +169,8 @@ The gateway supports two authentication methods:
    ```http
    Authorization: Bearer <token>
    ```
+
+While `auth_password` is the published default, `changeme`, the gateway listens on 127.0.0.1 only, whatever `host` says, and logs a warning. Set your own password to accept connections from other machines.
 
 ### List Services
 

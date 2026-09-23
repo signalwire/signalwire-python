@@ -228,7 +228,7 @@ Supported variables:
 - `MCP_HOST`: Server bind address (default: 0.0.0.0)
 - `MCP_PORT`: Server port (default: 8080)
 - `MCP_AUTH_USER`: Basic auth username (default: admin)
-- `MCP_AUTH_PASSWORD`: Basic auth password (default: changeme)
+- `MCP_AUTH_PASSWORD`: Basic auth password (default: changeme). While it's the default, the gateway listens on 127.0.0.1 only.
 - `MCP_AUTH_TOKEN`: Bearer token for API access (default: empty)
 - `MCP_SESSION_TIMEOUT`: Session timeout in seconds (default: 300)
 - `MCP_MAX_SESSIONS`: Max sessions per service (default: 100)
@@ -385,6 +385,7 @@ curl -u admin:changeme -X DELETE http://localhost:8080/sessions/test-123
 - **Basic Auth**: Username/password authentication
 - **Bearer Token**: Alternative token-based authentication
 - **Dual Support**: Can use either Basic Auth or Bearer tokens
+- **Default password**: While `auth_password` is the published default, `changeme`, the gateway listens on 127.0.0.1 only, whatever `host` says, and logs a warning. Set your own password to accept connections from other machines.
 
 ### Input Validation
 - Service name validation (alphanumeric + dash/underscore, max 64 chars)

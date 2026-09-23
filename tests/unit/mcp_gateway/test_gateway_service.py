@@ -1300,6 +1300,62 @@ class TestRunMethod:
             assert mock_make.call_args[0][1] == 9999
 
 
+    def test_run_listens_on_loopback_with_published_default_password(self) -> None:
+        config = _minimal_config()
+        config["server"]["auth_password"] = "changeme"
+        gateway, _ = _create_gateway(config)
+
+        mock_server = MagicMock()
+        mock_server.serve_forever.side_effect = KeyboardInterrupt()
+
+        with patch("signalwire.mcp_gateway.gateway_service.make_server", return_value=mock_server) as mock_make, \
+             patch("signalwire.mcp_gateway.gateway_service.signal"), \
+             patch("os.path.exists", return_value=False):
+
+            gateway.run()
+            assert mock_make.call_args[0][0] == "127.0.0.1"
+
+
+class TestResolveBindHost:
+    """The published default password keeps the gateway on the loopback interface."""
+
+    @pytest.mark.parametrize("host", ["0.0.0.0", "", "::", "192.168.1.10", "gateway.example.com"])
+    def test_default_password_restricts_non_loopback_hosts(
+        self, host: str, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        from signalwire.mcp_gateway.gateway_service import _resolve_bind_host
+
+        with caplog.at_level(logging.WARNING, logger="gateway_service"):
+            assert _resolve_bind_host({"host": host, "auth_password": "changeme"}) == "127.0.0.1"
+        assert "published default" in caplog.text
+
+    def test_default_password_restricts_the_default_host(self) -> None:
+        from signalwire.mcp_gateway.gateway_service import _resolve_bind_host
+
+        assert _resolve_bind_host({"auth_password": "changeme"}) == "127.0.0.1"
+
+    @pytest.mark.parametrize("host", ["127.0.0.1", "127.0.0.2", "::1", "localhost"])
+    def test_default_password_keeps_loopback_hosts(
+        self, host: str, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        from signalwire.mcp_gateway.gateway_service import _resolve_bind_host
+
+        with caplog.at_level(logging.WARNING, logger="gateway_service"):
+            assert _resolve_bind_host({"host": host, "auth_password": "changeme"}) == host
+        assert caplog.text == ""
+
+    @pytest.mark.parametrize("host", ["0.0.0.0", "::", "192.168.1.10"])
+    def test_other_passwords_keep_the_configured_host(self, host: str) -> None:
+        from signalwire.mcp_gateway.gateway_service import _resolve_bind_host
+
+        assert _resolve_bind_host({"host": host, "auth_password": "s3cret-value"}) == host
+
+    def test_other_passwords_keep_the_default_host(self) -> None:
+        from signalwire.mcp_gateway.gateway_service import _resolve_bind_host
+
+        assert _resolve_bind_host({"auth_password": "s3cret-value"}) == "0.0.0.0"
+
+
 # ===================================================================
 # Tests: Error Handler
 # ===================================================================

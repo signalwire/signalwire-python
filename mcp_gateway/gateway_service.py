@@ -23,6 +23,7 @@ import argparse
 import signal
 import re
 import hashlib
+import ipaddress
 from typing import Dict, Any, Optional
 from datetime import datetime
 import base64
@@ -53,6 +54,42 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger('gateway_service')
+
+# The password in the sample configuration and in the configuration the gateway
+# writes when it finds none. It's public, so a gateway that accepts it must not
+# listen beyond the local machine.
+PUBLISHED_DEFAULT_PASSWORD = 'changeme'
+LOCAL_ONLY_HOST = '127.0.0.1'
+
+
+def is_loopback_host(host: str) -> bool:
+    """True if binding to host accepts connections from this machine only."""
+    if host == 'localhost':
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def resolve_bind_host(server_config: Dict[str, Any]) -> str:
+    """Return the address to listen on, given the server configuration.
+
+    While auth_password is the published default, anyone who knows it can use
+    the gateway, so it listens on the loopback interface only, whatever host
+    says.
+    """
+    host = str(server_config.get('host', '0.0.0.0'))
+    if server_config.get('auth_password') == PUBLISHED_DEFAULT_PASSWORD and not is_loopback_host(host):
+        logger.warning(
+            "auth_password is the published default, so the gateway will listen "
+            "on %s only, not %s. Set a different password to accept connections "
+            "from other machines.",
+            LOCAL_ONLY_HOST,
+            host or 'all interfaces',
+        )
+        return LOCAL_ONLY_HOST
+    return host
 
 
 class MCPGateway:
@@ -478,7 +515,7 @@ class MCPGateway:
     def run(self):
         """Run the gateway service"""
         server_config = self.config.get('server', {})
-        host = server_config.get('host', '0.0.0.0')
+        host = resolve_bind_host(server_config)
         port = server_config.get('port', 8080)
         
         # Check for SSL certificate
