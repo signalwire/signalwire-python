@@ -81,7 +81,7 @@ What actually happens. The model can ask, and code decides.
 | Verification bound to this call, and checked by every operation | `verify` and `_verified` | [8](08-the-verification-gate.md) |
 | Misses that don't say which half was wrong, counted after commit | `verify` | [8](08-the-verification-gate.md) |
 | Two steps for anything destructive | `request_cancel`, then `confirm_cancel` | [8](08-the-verification-gate.md) |
-| One side effect per event | `mark_sms_sent`, one message per call | [9](09-people-and-endings.md) |
+| One side effect per event, and a cap on repeats | `request_sms`, one message per call | [9](09-people-and-endings.md) |
 | Live facts checked when the tool runs | `host_stand_open` in `request_human` | [9](09-people-and-endings.md) |
 | A crash is never reported as success | `guarded` in `handlers.py` | [6](06-tools-that-decide.md) |
 | Records written from the system of record | `capture_call` | [9](09-people-and-endings.md) |

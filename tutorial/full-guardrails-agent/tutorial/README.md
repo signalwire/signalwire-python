@@ -106,4 +106,4 @@ Ready? Start with [Lesson 1: Why Guardrails](01-why-guardrails.md).
 
 ---
 
-*This tutorial was created for SignalWire SDK v3.4.3*
+*This tutorial was created for SignalWire SDK v3.4.4*

@@ -102,7 +102,7 @@ class PennyHandlers:
     # region: start-booking
     @guarded
     def start_booking(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
-        self._call_id(raw_data)
+        self.store.reset_request(self._call_id(raw_data))
         return (FunctionResult(tool_result="A new reservation has been started.",
                                tool_prompt="Tell the caller you'll take a few details.")
                 .update_global_data({"booking": {}, "booking_request": {}})
@@ -132,11 +132,13 @@ class PennyHandlers:
     @guarded
     def find_tables(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
         call_id = self._call_id(raw_data)
-        asked = self._gathered(raw_data, "booking_request")
+        # The request so far: the last search on this call, or, for the first
+        # search, the answers gather mode collected
+        current = self.store.current_request(call_id) or self._gathered(raw_data, "booking_request")
 
         def detail(key: str) -> Any:
-            # A correction passed as an argument wins over the gathered answer.
-            return args[key] if args.get(key) not in (None, "") else asked.get(key)
+            # A correction passed as an argument changes only that detail.
+            return args[key] if args.get(key) not in (None, "") else current.get(key)
 
         try:
             request, options = self.store.find_options(
@@ -219,13 +221,23 @@ class PennyHandlers:
         if not re.fullmatch(r"\+[1-9]\d{9,14}", caller):
             raise PolicyError("The number this call comes from can't receive a text.",
                               "Say you can't text this number, and make sure they have the code.")
-        if not self.store.mark_sms_sent(booking.code):
-            return FunctionResult(tool_result="The confirmation was already texted.",
-                                  tool_prompt="Tell the caller it's already on its way.")
+        # The platform sends the text after this returns, so "requested" is all
+        # that can be said. Repeats within a short window are duplicates.
+        decision = self.store.request_sms(booking.code)
+        if decision == "duplicate":
+            return FunctionResult(
+                tool_result="A text for this booking was requested moments ago.",
+                tool_prompt="Tell the caller it's on its way. If it hasn't arrived in a couple "
+                            "of minutes, you can send it again.")
+        if decision == "limit":
+            raise PolicyError("This booking has been texted as many times as allowed.",
+                              "Say you can't text it again, and make sure they have the code.")
         body = (f"The Copper Pot: {booking.spoken()}. Confirmation code {booking.code}. "
                 "Call us to change or cancel.")
-        return (FunctionResult(tool_result=f"Texted the details to the number ending in {caller[-4:]}.",
-                               tool_prompt="Tell the caller the text is on its way.")
+        return (FunctionResult(
+                    tool_result=f"Asked for the details to be texted to the number ending in "
+                                f"{caller[-4:]}.",
+                    tool_prompt="Tell the caller the text is on its way.")
                 .send_sms(to_number=caller, from_number=self.settings.sms_from, body=body))
     # endregion: send-text
 

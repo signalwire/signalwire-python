@@ -103,6 +103,8 @@ class TestRules(unittest.TestCase):
         self.assertEqual(resolve_date("Friday", today).isoformat(), "2026-09-25")
         self.assertEqual(resolve_date("tomorrow night", today).isoformat(), "2026-09-23")
         self.assertEqual(resolve_date("the 26th", today).isoformat(), "2026-09-26")
+        self.assertEqual(resolve_date("the 21st", today).isoformat(), "2026-10-21")  # next month's
+        self.assertEqual(resolve_date("the 31st", today).isoformat(), "2026-10-31")  # skips September
         self.assertEqual(resolve_date("Sept. 26th", today).isoformat(), "2026-09-26")
         self.assertEqual(resolve_date("9/26", today).isoformat(), "2026-09-26")
         self.assertEqual(resolve_date("next Tuesday", today).isoformat(), "2026-09-29")
@@ -141,6 +143,22 @@ class TestRules(unittest.TestCase):
             self.store.hold_option(call_id, 1)
         _request, options = self.store.find_options("call-3", 6, "friday", "7pm", "Group")
         self.assertEqual(options, [])
+
+    def test_a_seating_too_close_to_book_cant_be_held_or_booked(self) -> None:
+        self.clock.now = TUESDAY_3PM.replace(hour=16, minute=29)
+        _request, options = self.store.find_options("call-1", 2, "today", "5 PM", "Rivera")
+        five = next(o for o in options if o.start == 17 * 60)  # 31 minutes away when offered
+        self.clock.now = TUESDAY_3PM.replace(hour=16, minute=32)
+        with self.assertRaises(PolicyError):
+            self.store.hold_option("call-1", five.number)
+        # Held in time, but confirmed too late
+        self.clock.now = TUESDAY_3PM.replace(hour=16, minute=29)
+        self.store.find_options("call-2", 2, "today", "5 PM", "Rivera")
+        proposal = self.store.hold_option("call-2", 1)
+        self.clock.now = TUESDAY_3PM.replace(hour=16, minute=31)
+        with self.assertRaises(PolicyError):
+            self.store.confirm("call-2", proposal.revision)
+        self.assertEqual(count(self.store, "reservations"), 0)
 
     def test_a_hold_expires(self) -> None:
         self.store.find_options("call-1", 6, "friday", "7pm", "Group")
@@ -422,6 +440,12 @@ class TestHandlers(unittest.TestCase):
         found = self.call("find_tables", {"time": "5 PM"}, global_data=self.gathered())
         self.assertIn("option 1, 5 PM", found["response"]["tool_result"])
 
+    def test_each_correction_keeps_the_ones_before_it(self) -> None:
+        self.call("find_tables", {"time": "8 PM"}, global_data=self.gathered())
+        found = self.call("find_tables", {"party_size": 2}, global_data=self.gathered())
+        self.assertIn("Open for 2", found["response"]["tool_result"])
+        self.assertIn("option 1, 8 PM", found["response"]["tool_result"])  # not back to 7:30
+
     def test_refusals_carry_facts_and_no_actions(self) -> None:
         self.call("find_tables", global_data=self.gathered())
         refused = self.call("hold_table", {"option": 9})
@@ -492,6 +516,17 @@ class TestHandlers(unittest.TestCase):
         self.assertEqual(actions(open_)[0]["say"], TRANSFER_NOTICE)
         self.assertEqual(actions(open_)[1]["SWML"]["sections"]["main"][0]["connect"]["to"],
                          "+15555550100")
+
+    def test_a_text_can_be_asked_for_again_later_up_to_a_limit(self) -> None:
+        self.call("find_tables", global_data=self.gathered())
+        self.call("hold_table", {"option": 1})
+        self.call("confirm_booking", {"revision": 1})
+        sent = []
+        for _ in range(4):
+            result = self.call("send_confirmation_text", caller_id_num="+15555551234")
+            sent.append(action_keys(result) == ["send_sms"])
+            self.clock.now += timedelta(seconds=121)  # later than a duplicate
+        self.assertEqual(sent, [True, True, True, False])
 
     def test_the_text_goes_only_to_the_calling_number(self) -> None:
         self.call("find_tables", global_data=self.gathered())

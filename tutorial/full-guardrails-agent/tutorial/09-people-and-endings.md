@@ -117,22 +117,58 @@ def send_confirmation_text(self, args: dict[str, Any], raw_data: dict[str, Any])
     if not re.fullmatch(r"\+[1-9]\d{9,14}", caller):
         raise PolicyError("The number this call comes from can't receive a text.",
                           "Say you can't text this number, and make sure they have the code.")
-    if not self.store.mark_sms_sent(booking.code):
-        return FunctionResult(tool_result="The confirmation was already texted.",
-                              tool_prompt="Tell the caller it's already on its way.")
+    # The platform sends the text after this returns, so "requested" is all
+    # that can be said. Repeats within a short window are duplicates.
+    decision = self.store.request_sms(booking.code)
+    if decision == "duplicate":
+        return FunctionResult(
+            tool_result="A text for this booking was requested moments ago.",
+            tool_prompt="Tell the caller it's on its way. If it hasn't arrived in a couple "
+                        "of minutes, you can send it again.")
+    if decision == "limit":
+        raise PolicyError("This booking has been texted as many times as allowed.",
+                          "Say you can't text it again, and make sure they have the code.")
     body = (f"The Copper Pot: {booking.spoken()}. Confirmation code {booking.code}. "
             "Call us to change or cancel.")
-    return (FunctionResult(tool_result=f"Texted the details to the number ending in {caller[-4:]}.",
-                           tool_prompt="Tell the caller the text is on its way.")
+    return (FunctionResult(
+                tool_result=f"Asked for the details to be texted to the number ending in "
+                            f"{caller[-4:]}.",
+                tool_prompt="Tell the caller the text is on its way.")
             .send_sms(to_number=caller, from_number=self.settings.sms_from, body=body))
 ```
 
 - **The tool has no parameters.** The destination is `caller_id_num` from the platform's tool request: the number the call comes from. If the model passes a `to_number` anyway, the handler never reads it. A test checks exactly that.
 - **The content comes from the reservation book**: the booking this call made, and nothing from the conversation.
-- **One text per reservation.** `mark_sms_sent` sets a flag in the same database, and only the first attempt succeeds.
 - **Every refusal is a fact.** No booking on this call, no texting number configured, or a caller ID that can't receive texts each come back with what to tell the caller.
 
-Caller ID can be faked. The worst case is that a stranger receives one text about a booking they didn't make. That's why the text carries only this call's booking, and is sent at most once.
+The text is requested, not sent. The platform sends it after the tool returns, so Penny can't know it arrived, and tells the model only that it was requested. The reservation book counts the requests:
+
+<!-- source: reservations.py#request-sms --> <!-- snippet: no-run an excerpt of reservations.py, checked against the file by test_penny.py -->
+```python
+def request_sms(self, code: str) -> str:
+    """Record a request to text a booking, and say whether to send it.
+
+    The platform sends the text after the tool returns, so nothing here can
+    know it arrived. A repeat within SMS_RESEND_SECONDS is a duplicate and
+    isn't sent. After that, a caller who didn't get it may ask again, up to
+    MAX_SMS_PER_BOOKING times. Returns "send", "duplicate" or "limit".
+    """
+    now = self._now().timestamp()
+    with self._tx() as db:
+        row = db.execute("SELECT sms_requests, sms_requested_at FROM reservations "
+                         "WHERE code=?", (code,)).fetchone()
+        if row["sms_requests"] >= MAX_SMS_PER_BOOKING:
+            return "limit"
+        if row["sms_requests"] and now - row["sms_requested_at"] < SMS_RESEND_SECONDS:
+            return "duplicate"
+        db.execute("UPDATE reservations SET sms_requests = sms_requests + 1, "
+                   "sms_requested_at = ? WHERE code=?", (now, code))
+        return "send"
+```
+
+A repeat within two minutes is a duplicate, the usual shape of a tool fired twice, and isn't sent. After that, a caller who didn't get the text can ask again, up to three times.
+
+Caller ID can be faked. The worst case is that a stranger receives a few texts about a booking they didn't make. That's why the text carries only this call's booking, and why the number of texts is capped.
 
 ## Ending the Call
 

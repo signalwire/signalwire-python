@@ -1,3 +1,5 @@
-signalwire-sdk>=3.4.3
+# 3.4.4 is the first release that enforces webhook signatures and tool tokens
+# on every path, which Penny's security tests check.
+signalwire-sdk>=3.4.4
 # Time zone data for slim containers that ship without /usr/share/zoneinfo
 tzdata>=2024.1

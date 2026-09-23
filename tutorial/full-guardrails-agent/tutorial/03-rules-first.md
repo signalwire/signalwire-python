@@ -26,7 +26,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-`requirements.txt` asks for `signalwire-sdk>=3.4.3` and `tzdata`. `tzdata` supplies time zone data to containers that don't ship it, since Penny works in the restaurant's time zone.
+`requirements.txt` asks for `signalwire-sdk>=3.4.4`, the first release that enforces webhook signatures and tool tokens on every path, and `tzdata`. `tzdata` supplies time zone data to containers that don't ship it, since Penny works in the restaurant's time zone.
 
 ## The House Policy
 
@@ -46,6 +46,8 @@ SAME_DAY_LEAD_MINUTES = 30   # no seating sooner than 30 minutes from now
 HOLD_SECONDS = 300           # a proposal holds its table for 5 minutes
 MAX_VERIFY_ATTEMPTS = 3
 HOST_STAND_HOURS = (16 * 60, 22 * 60)  # a person answers 4 PM to 10 PM, Tuesday to Sunday
+SMS_RESEND_SECONDS = 120     # a repeat request sooner than this is a duplicate
+MAX_SMS_PER_BOOKING = 3
 ```
 
 Changing a rule means changing one line here. It never means editing a prompt and hoping.
@@ -101,7 +103,7 @@ def resolve_date(text: str, today: date) -> date | None:
         return _upcoming(month, day, today)
     if day is not None and len(words) == 1:
         # "the 26th" alone means the next 26th.
-        return _upcoming(today.month, day, today) or _upcoming(today.month % 12 + 1, day, today)
+        return _next_day_of_month(day, today)
     return None
 ```
 
@@ -186,6 +188,7 @@ def hold_option(self, call_id: str, number: Any) -> Proposal:
             return self._proposal(live)
         db.execute("UPDATE holds SET status='released' WHERE call_id=? AND status='live'",
                    (call_id,))
+        self._check_notice(day, offer["start"])
         if not self._table_free(db, offer["table_id"], day, offer["start"], call_id):
             raise PolicyError("That seating was just taken by another guest.",
                               "Apologize and check availability again.")
@@ -200,11 +203,12 @@ def hold_option(self, call_id: str, number: Any) -> Proposal:
         return self._proposal(row)
 ```
 
-Three properties matter here:
+Four properties matter here:
 
 - **Holds are exclusive.** Another call can't be offered or hold a table this call is holding.
 - **Holding the same option twice changes nothing.** Models sometimes fire a tool twice, and a repeat returns the same proposal.
 - **Every new hold gets a new revision number.** If the caller changes their mind, the old proposal can no longer be confirmed.
+- **The notice rule is checked again.** An option offered at 4:29 for a 5 PM seating can't be held at 4:32, because it's no longer 30 minutes away. `confirm` checks it once more. A rule checked only when something is offered can be dodged by waiting.
 
 ## Confirming Exactly Once
 
@@ -238,6 +242,7 @@ def confirm(self, call_id: str, revision: Any) -> Reservation:
         if hold["expires_at"] <= self._now().timestamp():
             db.execute("UPDATE holds SET status='released' WHERE id=?", (hold["id"],))
             raise PolicyError("The hold on that table expired.", "Check availability again.")
+        self._check_notice(date.fromisoformat(hold["day"]), hold["start"])
         code = self._new_code(db)
         db.execute(
             "INSERT INTO reservations (code, hold_id, call_id, table_id, day, start, "

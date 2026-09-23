@@ -147,7 +147,7 @@ It enforces three failure rules:
 ```python
 @guarded
 def start_booking(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
-    self._call_id(raw_data)
+    self.store.reset_request(self._call_id(raw_data))
     return (FunctionResult(tool_result="A new reservation has been started.",
                            tool_prompt="Tell the caller you'll take a few details.")
             .update_global_data({"booking": {}, "booking_request": {}})
@@ -165,11 +165,13 @@ A router tool moves the conversation and resets what the next context depends on
 @guarded
 def find_tables(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
     call_id = self._call_id(raw_data)
-    asked = self._gathered(raw_data, "booking_request")
+    # The request so far: the last search on this call, or, for the first
+    # search, the answers gather mode collected
+    current = self.store.current_request(call_id) or self._gathered(raw_data, "booking_request")
 
     def detail(key: str) -> Any:
-        # A correction passed as an argument wins over the gathered answer.
-        return args[key] if args.get(key) not in (None, "") else asked.get(key)
+        # A correction passed as an argument changes only that detail.
+        return args[key] if args.get(key) not in (None, "") else current.get(key)
 
     try:
         request, options = self.store.find_options(
@@ -200,7 +202,7 @@ def find_tables(self, args: dict[str, Any], raw_data: dict[str, Any]) -> Functio
 
 Details worth noticing:
 
-- **Corrections win over gathered answers.** If the caller says "actually, make it 8", the model passes `time` only, and everything else comes from what was already gathered.
+- **A correction changes one detail.** If the caller says "actually, make it 8", the model passes `time` only, and everything else stays as the last search left it. Gathered answers only start the first search, so a second correction ("and make it two people") keeps the first.
 - **The large-party refusal carries no step change.** The model stays put and offers a person, which is the refusal's `ask`.
 - **The model sees option numbers and times, never tables.** The UI event carries the same.
 

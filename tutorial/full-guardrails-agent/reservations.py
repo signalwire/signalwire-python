@@ -39,6 +39,8 @@ SAME_DAY_LEAD_MINUTES = 30   # no seating sooner than 30 minutes from now
 HOLD_SECONDS = 300           # a proposal holds its table for 5 minutes
 MAX_VERIFY_ATTEMPTS = 3
 HOST_STAND_HOURS = (16 * 60, 22 * 60)  # a person answers 4 PM to 10 PM, Tuesday to Sunday
+SMS_RESEND_SECONDS = 120     # a repeat request sooner than this is a duplicate
+MAX_SMS_PER_BOOKING = 3
 # endregion: policy
 
 # Short, speakable facts the agent may look up. Nothing here is a promise the
@@ -131,7 +133,7 @@ def resolve_date(text: str, today: date) -> date | None:
         return _upcoming(month, day, today)
     if day is not None and len(words) == 1:
         # "the 26th" alone means the next 26th.
-        return _upcoming(today.month, day, today) or _upcoming(today.month % 12 + 1, day, today)
+        return _next_day_of_month(day, today)
     return None
 # endregion: resolve-date
 
@@ -141,6 +143,17 @@ def _safe_date(year: int, month: int, day: int) -> date | None:
         return date(year, month, day)
     except ValueError:
         return None
+
+
+def _next_day_of_month(day: int, today: date) -> date | None:
+    """The first date on or after today that falls on ``day`` of its month."""
+    year, month = today.year, today.month
+    for _ in range(13):
+        candidate = _safe_date(year, month, day)
+        if candidate is not None and candidate >= today:
+            return candidate
+        year, month = (year + 1, 1) if month == 12 else (year, month + 1)
+    return None
 
 
 def _upcoming(month: int, day: int, today: date) -> date | None:
@@ -279,7 +292,8 @@ CREATE TABLE IF NOT EXISTS reservations (
     party_size INTEGER NOT NULL,
     name TEXT NOT NULL,
     status TEXT NOT NULL,
-    sms_sent INTEGER NOT NULL DEFAULT 0
+    sms_requests INTEGER NOT NULL DEFAULT 0,
+    sms_requested_at REAL NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS messages (
     call_id TEXT PRIMARY KEY,
@@ -356,6 +370,14 @@ class ReservationStore:
              start, DINING_MINUTES)).fetchone()
         return busy is None and held is None
 
+    def _check_notice(self, day: date, start: int) -> None:
+        """A seating must still be bookable now: not past, and far enough ahead."""
+        now = self._now()
+        too_soon = day == now.date() and start < now.hour * 60 + now.minute + SAME_DAY_LEAD_MINUTES
+        if day < now.date() or too_soon:
+            raise PolicyError("That seating is too soon to book now.",
+                              "Apologize and check availability again.")
+
     def _validate_request(self, party_size: Any, date_text: str, time_text: str,
                           name: str) -> tuple[int, date, int, str]:
         if isinstance(party_size, str) and party_size.strip().isdigit():
@@ -431,6 +453,26 @@ class ReservationStore:
         return Request(party, day, wanted, clean_name), options
     # endregion: find-options
 
+    def current_request(self, call_id: str) -> dict[str, Any]:
+        """This call's last successful search, in words the search accepts.
+
+        A correction changes one detail of it, and the others stay as they were.
+        """
+        with self._tx() as db:
+            request = json.loads(self._session(db, call_id)["request"])
+        if not request:
+            return {}
+        return {"party_size": request["party_size"], "date": request["day"],
+                "time": spoken_time(request["start"]), "name": request["name"]}
+
+    def reset_request(self, call_id: str) -> None:
+        """Forget this call's search, so a new booking starts from gathered answers."""
+        with self._tx() as db:
+            self._session(db, call_id)
+            db.execute("UPDATE sessions SET request='{}', offers='[]' WHERE call_id=?", (call_id,))
+            db.execute("UPDATE holds SET status='released' WHERE call_id=? AND status='live'",
+                       (call_id,))
+
     # region: hold-option
     def hold_option(self, call_id: str, number: Any) -> Proposal:
         """Reserve one offered option for HOLD_SECONDS and return a numbered proposal.
@@ -457,6 +499,7 @@ class ReservationStore:
                 return self._proposal(live)
             db.execute("UPDATE holds SET status='released' WHERE call_id=? AND status='live'",
                        (call_id,))
+            self._check_notice(day, offer["start"])
             if not self._table_free(db, offer["table_id"], day, offer["start"], call_id):
                 raise PolicyError("That seating was just taken by another guest.",
                                   "Apologize and check availability again.")
@@ -508,6 +551,7 @@ class ReservationStore:
             if hold["expires_at"] <= self._now().timestamp():
                 db.execute("UPDATE holds SET status='released' WHERE id=?", (hold["id"],))
                 raise PolicyError("The hold on that table expired.", "Check availability again.")
+            self._check_notice(date.fromisoformat(hold["day"]), hold["start"])
             code = self._new_code(db)
             db.execute(
                 "INSERT INTO reservations (code, hold_id, call_id, table_id, day, start, "
@@ -534,12 +578,27 @@ class ReservationStore:
                              "ORDER BY rowid DESC LIMIT 1", (call_id,)).fetchone()
             return self._reservation(row) if row else None
 
-    def mark_sms_sent(self, code: str) -> bool:
-        """True the first time only, so a re-fired tool sends one text."""
+    # region: request-sms
+    def request_sms(self, code: str) -> str:
+        """Record a request to text a booking, and say whether to send it.
+
+        The platform sends the text after the tool returns, so nothing here can
+        know it arrived. A repeat within SMS_RESEND_SECONDS is a duplicate and
+        isn't sent. After that, a caller who didn't get it may ask again, up to
+        MAX_SMS_PER_BOOKING times. Returns "send", "duplicate" or "limit".
+        """
+        now = self._now().timestamp()
         with self._tx() as db:
-            cur = db.execute("UPDATE reservations SET sms_sent=1 WHERE code=? AND sms_sent=0",
-                             (code,))
-            return cur.rowcount == 1
+            row = db.execute("SELECT sms_requests, sms_requested_at FROM reservations "
+                             "WHERE code=?", (code,)).fetchone()
+            if row["sms_requests"] >= MAX_SMS_PER_BOOKING:
+                return "limit"
+            if row["sms_requests"] and now - row["sms_requested_at"] < SMS_RESEND_SECONDS:
+                return "duplicate"
+            db.execute("UPDATE reservations SET sms_requests = sms_requests + 1, "
+                       "sms_requested_at = ? WHERE code=?", (now, code))
+            return "send"
+    # endregion: request-sms
 
     # ── Managing an existing reservation ────────────────────────────────────
 

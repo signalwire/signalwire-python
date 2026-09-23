@@ -61,6 +61,8 @@ SAME_DAY_LEAD_MINUTES = 30   # no seating sooner than 30 minutes from now
 HOLD_SECONDS = 300           # a proposal holds its table for 5 minutes
 MAX_VERIFY_ATTEMPTS = 3
 HOST_STAND_HOURS = (16 * 60, 22 * 60)  # a person answers 4 PM to 10 PM, Tuesday to Sunday
+SMS_RESEND_SECONDS = 120     # a repeat request sooner than this is a duplicate
+MAX_SMS_PER_BOOKING = 3
 
 # Short, speakable facts the agent may look up. Nothing here is a promise the
 # kitchen or the host stand has to keep, so it is safe to say verbatim.
@@ -151,7 +153,7 @@ def resolve_date(text: str, today: date) -> date | None:
         return _upcoming(month, day, today)
     if day is not None and len(words) == 1:
         # "the 26th" alone means the next 26th.
-        return _upcoming(today.month, day, today) or _upcoming(today.month % 12 + 1, day, today)
+        return _next_day_of_month(day, today)
     return None
 
 
@@ -160,6 +162,17 @@ def _safe_date(year: int, month: int, day: int) -> date | None:
         return date(year, month, day)
     except ValueError:
         return None
+
+
+def _next_day_of_month(day: int, today: date) -> date | None:
+    """The first date on or after today that falls on ``day`` of its month."""
+    year, month = today.year, today.month
+    for _ in range(13):
+        candidate = _safe_date(year, month, day)
+        if candidate is not None and candidate >= today:
+            return candidate
+        year, month = (year + 1, 1) if month == 12 else (year, month + 1)
+    return None
 
 
 def _upcoming(month: int, day: int, today: date) -> date | None:
@@ -298,7 +311,8 @@ CREATE TABLE IF NOT EXISTS reservations (
     party_size INTEGER NOT NULL,
     name TEXT NOT NULL,
     status TEXT NOT NULL,
-    sms_sent INTEGER NOT NULL DEFAULT 0
+    sms_requests INTEGER NOT NULL DEFAULT 0,
+    sms_requested_at REAL NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS messages (
     call_id TEXT PRIMARY KEY,
@@ -375,6 +389,14 @@ class ReservationStore:
              start, DINING_MINUTES)).fetchone()
         return busy is None and held is None
 
+    def _check_notice(self, day: date, start: int) -> None:
+        """A seating must still be bookable now: not past, and far enough ahead."""
+        now = self._now()
+        too_soon = day == now.date() and start < now.hour * 60 + now.minute + SAME_DAY_LEAD_MINUTES
+        if day < now.date() or too_soon:
+            raise PolicyError("That seating is too soon to book now.",
+                              "Apologize and check availability again.")
+
     def _validate_request(self, party_size: Any, date_text: str, time_text: str,
                           name: str) -> tuple[int, date, int, str]:
         if isinstance(party_size, str) and party_size.strip().isdigit():
@@ -448,6 +470,26 @@ class ReservationStore:
                  call_id))
         return Request(party, day, wanted, clean_name), options
 
+    def current_request(self, call_id: str) -> dict[str, Any]:
+        """This call's last successful search, in words the search accepts.
+
+        A correction changes one detail of it, and the others stay as they were.
+        """
+        with self._tx() as db:
+            request = json.loads(self._session(db, call_id)["request"])
+        if not request:
+            return {}
+        return {"party_size": request["party_size"], "date": request["day"],
+                "time": spoken_time(request["start"]), "name": request["name"]}
+
+    def reset_request(self, call_id: str) -> None:
+        """Forget this call's search, so a new booking starts from gathered answers."""
+        with self._tx() as db:
+            self._session(db, call_id)
+            db.execute("UPDATE sessions SET request='{}', offers='[]' WHERE call_id=?", (call_id,))
+            db.execute("UPDATE holds SET status='released' WHERE call_id=? AND status='live'",
+                       (call_id,))
+
     def hold_option(self, call_id: str, number: Any) -> Proposal:
         """Reserve one offered option for HOLD_SECONDS and return a numbered proposal.
 
@@ -473,6 +515,7 @@ class ReservationStore:
                 return self._proposal(live)
             db.execute("UPDATE holds SET status='released' WHERE call_id=? AND status='live'",
                        (call_id,))
+            self._check_notice(day, offer["start"])
             if not self._table_free(db, offer["table_id"], day, offer["start"], call_id):
                 raise PolicyError("That seating was just taken by another guest.",
                                   "Apologize and check availability again.")
@@ -522,6 +565,7 @@ class ReservationStore:
             if hold["expires_at"] <= self._now().timestamp():
                 db.execute("UPDATE holds SET status='released' WHERE id=?", (hold["id"],))
                 raise PolicyError("The hold on that table expired.", "Check availability again.")
+            self._check_notice(date.fromisoformat(hold["day"]), hold["start"])
             code = self._new_code(db)
             db.execute(
                 "INSERT INTO reservations (code, hold_id, call_id, table_id, day, start, "
@@ -547,12 +591,25 @@ class ReservationStore:
                              "ORDER BY rowid DESC LIMIT 1", (call_id,)).fetchone()
             return self._reservation(row) if row else None
 
-    def mark_sms_sent(self, code: str) -> bool:
-        """True the first time only, so a re-fired tool sends one text."""
+    def request_sms(self, code: str) -> str:
+        """Record a request to text a booking, and say whether to send it.
+
+        The platform sends the text after the tool returns, so nothing here can
+        know it arrived. A repeat within SMS_RESEND_SECONDS is a duplicate and
+        isn't sent. After that, a caller who didn't get it may ask again, up to
+        MAX_SMS_PER_BOOKING times. Returns "send", "duplicate" or "limit".
+        """
+        now = self._now().timestamp()
         with self._tx() as db:
-            cur = db.execute("UPDATE reservations SET sms_sent=1 WHERE code=? AND sms_sent=0",
-                             (code,))
-            return cur.rowcount == 1
+            row = db.execute("SELECT sms_requests, sms_requested_at FROM reservations "
+                             "WHERE code=?", (code,)).fetchone()
+            if row["sms_requests"] >= MAX_SMS_PER_BOOKING:
+                return "limit"
+            if row["sms_requests"] and now - row["sms_requested_at"] < SMS_RESEND_SECONDS:
+                return "duplicate"
+            db.execute("UPDATE reservations SET sms_requests = sms_requests + 1, "
+                       "sms_requested_at = ? WHERE code=?", (now, code))
+            return "send"
 
     # ── Managing an existing reservation ────────────────────────────────────
 
@@ -970,7 +1027,7 @@ class PennyHandlers:
 
     @guarded
     def start_booking(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
-        self._call_id(raw_data)
+        self.store.reset_request(self._call_id(raw_data))
         return (FunctionResult(tool_result="A new reservation has been started.",
                                tool_prompt="Tell the caller you'll take a few details.")
                 .update_global_data({"booking": {}, "booking_request": {}})
@@ -998,11 +1055,13 @@ class PennyHandlers:
     @guarded
     def find_tables(self, args: dict[str, Any], raw_data: dict[str, Any]) -> FunctionResult:
         call_id = self._call_id(raw_data)
-        asked = self._gathered(raw_data, "booking_request")
+        # The request so far: the last search on this call, or, for the first
+        # search, the answers gather mode collected
+        current = self.store.current_request(call_id) or self._gathered(raw_data, "booking_request")
 
         def detail(key: str) -> Any:
-            # A correction passed as an argument wins over the gathered answer.
-            return args[key] if args.get(key) not in (None, "") else asked.get(key)
+            # A correction passed as an argument changes only that detail.
+            return args[key] if args.get(key) not in (None, "") else current.get(key)
 
         try:
             request, options = self.store.find_options(
@@ -1079,13 +1138,23 @@ class PennyHandlers:
         if not re.fullmatch(r"\+[1-9]\d{9,14}", caller):
             raise PolicyError("The number this call comes from can't receive a text.",
                               "Say you can't text this number, and make sure they have the code.")
-        if not self.store.mark_sms_sent(booking.code):
-            return FunctionResult(tool_result="The confirmation was already texted.",
-                                  tool_prompt="Tell the caller it's already on its way.")
+        # The platform sends the text after this returns, so "requested" is all
+        # that can be said. Repeats within a short window are duplicates.
+        decision = self.store.request_sms(booking.code)
+        if decision == "duplicate":
+            return FunctionResult(
+                tool_result="A text for this booking was requested moments ago.",
+                tool_prompt="Tell the caller it's on its way. If it hasn't arrived in a couple "
+                            "of minutes, you can send it again.")
+        if decision == "limit":
+            raise PolicyError("This booking has been texted as many times as allowed.",
+                              "Say you can't text it again, and make sure they have the code.")
         body = (f"The Copper Pot: {booking.spoken()}. Confirmation code {booking.code}. "
                 "Call us to change or cancel.")
-        return (FunctionResult(tool_result=f"Texted the details to the number ending in {caller[-4:]}.",
-                               tool_prompt="Tell the caller the text is on its way.")
+        return (FunctionResult(
+                    tool_result=f"Asked for the details to be texted to the number ending in "
+                                f"{caller[-4:]}.",
+                    tool_prompt="Tell the caller the text is on its way.")
                 .send_sms(to_number=caller, from_number=self.settings.sms_from, body=body))
 
     # ── An existing reservation ─────────────────────────────────────────────
@@ -1391,7 +1460,9 @@ if __name__ == "__main__":
 
 <!-- source: requirements.txt -->
 ```
-signalwire-sdk>=3.4.3
+# 3.4.4 is the first release that enforces webhook signatures and tool tokens
+# on every path, which Penny's security tests check.
+signalwire-sdk>=3.4.4
 # Time zone data for slim containers that ship without /usr/share/zoneinfo
 tzdata>=2024.1
 ```

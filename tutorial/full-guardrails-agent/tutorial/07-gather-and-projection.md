@@ -76,7 +76,7 @@ Gather mode structures the conversation, but what gets submitted is still what t
 - The time must parse and land near a real seating
 - The name is cleaned and length-limited
 
-If an answer fails, the refusal's `ask` tells the model what to ask again, and the correction comes back as an argument to `find_tables`. Lesson 6 showed corrections overriding gathered answers. Gather mode has already finished, so a correction never needs to restart it.
+If an answer fails, the refusal's `ask` tells the model what to ask again, and the correction comes back as an argument to `find_tables`. Lesson 6 showed how a correction changes one detail of the search. Gather mode has already finished, so a correction never needs to restart it.
 
 ## Projecting Facts Per Call
 
