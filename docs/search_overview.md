@@ -112,10 +112,10 @@ Adds spaCy for advanced text processing, improved POS tagging, named entity reco
 python -m spacy download en_core_web_sm
 ```
 
-**Performance note:** Advanced NLP features provide significantly better query understanding and synonym expansion, but are 2-3x slower than basic search. Two NLP backends are available:
+**Performance note:** Advanced NLP features improve query understanding and synonym expansion, but they're slower than basic search. Two NLP backends are available:
 
-- **NLTK (default):** ~50-100ms query processing, good for most use cases.
-- **spaCy:** ~150-300ms query processing, better POS tagging and entity recognition, requires model download.
+- **NLTK (default):** faster query processing, good for most use cases.
+- **spaCy:** slower query processing, better POS tagging and entity recognition, requires model download.
 
 Configure via the `index_nlp_backend` and `query_nlp_backend` parameters, which both default to `nltk`:
 
@@ -245,8 +245,8 @@ During indexing, the model reads each chunk of text and processes it through the
 
 | Model | Dimensions | Speed | Quality | Notes |
 |-------|-----------|-------|---------|-------|
-| MiniLM ("mini", default) | 384 | ~5x faster than base | Good for most use cases | Lower memory usage |
-| MPNet ("base") | 768 | Baseline | Better for complex queries | Previous default |
+| MiniLM ("mini", default) | 384 | Faster | Good for most use cases | Lower memory usage |
+| MPNet ("base") | 768 | Slower | Better for complex queries | Previous default |
 
 For detailed model comparisons and embedding strategies, see [Search Indexing](search_indexing.md).
 
@@ -521,15 +521,7 @@ assistant = client.beta.assistants.create(
 
 **Advantages of OpenAI Assistants:** Zero setup, managed infrastructure, automatic improvements.
 
-**Disadvantages:** Vendor lock-in (OpenAI models only), no control over chunking or search tuning, and data privacy concerns, since documents reside on OpenAI servers. Latency is higher (multiple API round-trips), and the cost for search infrastructure is significantly higher too.
-
-**Cost comparison (10,000 queries/month):**
-
-- OpenAI Assistants: ~$1,400-1,500/month (vector storage + inference)
-- SignalWire SDK with pgvector: ~$100/month for search infrastructure
-- SignalWire SDK with .swsearch: $0/month for search infrastructure
-
-Note: LLM inference costs apply to all approaches and are not included in these figures.
+**Disadvantages:** Vendor lock-in (OpenAI models only), no control over chunking or search tuning, and data privacy concerns, since documents reside on OpenAI servers. Latency is higher (multiple API round-trips), and the cost for search infrastructure is higher too, since it includes OpenAI's vector storage and inference charges. `.swsearch` files need no separate database server, and pgvector costs only what your own PostgreSQL hosting costs.
 
 ### vs LangChain + External Vector DB
 
@@ -565,7 +557,7 @@ agent.add_skill("native_vector_search", {
 
 **Advantages of LangChain + VectorDB:** Highly flexible, large community, many integrations.
 
-**Disadvantages:** Complex setup with many moving parts, and it requires a managed vector DB subscription ($70+/month for Pinecone). Network calls to external services add latency, and retrieval and the agent need manual integration code between them.
+**Disadvantages:** Complex setup with many moving parts, and it requires a paid subscription to a managed vector database such as Pinecone. Network calls to external services add latency, and retrieval and the agent need manual integration code between them.
 
 ### vs DIY Approach
 
@@ -590,39 +582,24 @@ top_k = np.argsort(similarities)[-5:][::-1]
 
 **Advantages of DIY:** Full control over every aspect, minimal dependencies, good for learning.
 
-**Disadvantages:** Significant development time (estimated 36-72 hours vs 20 minutes for the SDK approach), and an ongoing maintenance burden. Embeddings carry a per-call API cost, and optimizations like hybrid search and metadata boosting are missing.
+**Disadvantages:** A longer development time than using the SDK, and an ongoing maintenance burden. Embeddings carry a per-call API cost, and optimizations like hybrid search and metadata boosting are missing.
 
-**Development time comparison:**
-
-| Task | DIY | SignalWire SDK |
-|------|-----|----------------|
-| Document loading | 2-4 hours | Included |
-| Chunking strategies | 4-8 hours | Included (9 strategies) |
-| Embedding generation | 2-4 hours | Included |
-| Storage layer | 4-8 hours | Included |
-| Search implementation | 4-8 hours | Included |
-| Hybrid search | 8-16 hours | Included |
-| Metadata filtering | 4-8 hours | Included |
-| Testing and optimization | 8-16 hours | Included |
-| **Total** | **36-72 hours** | **~20 minutes** |
+Building a DIY solution means writing and testing your own document loading, chunking, embedding generation, storage layer, search implementation, hybrid search, and metadata filtering. The SignalWire SDK includes all of these, with nine chunking strategies built in, configured through the `add_skill` call shown earlier.
 
 ### Feature Matrix
 
 | Feature | OpenAI Assistants | LangChain + VectorDB | DIY | SignalWire SDK |
 |---------|-------------------|----------------------|-----|----------------|
-| **Setup Time** | 30 min | 2-4 hours | 8-16 hours | 20 min |
 | **Chunking Control** | No | Yes | Yes | Yes (9 strategies) |
 | **Hybrid Search** | Unknown | Manual | Manual | Built-in |
 | **Metadata Filtering** | Limited | Yes | Manual | Yes |
-| **Cost (10K queries)** | ~$1,400/mo | $100-200/mo | $50-150/mo | $0-100/mo |
 | **Vendor Lock-in** | High | Moderate | None | None |
 | **Offline Operation** | No | No | Possible | Yes (.swsearch) |
 | **Voice Optimized** | No | No | No | Yes |
 | **Agent Integration** | Manual | Manual | Manual | Automatic |
 | **Deployment Size** | N/A | Large | Medium | Small (query-only) |
-| **Latency** | 100-200ms | 50-130ms | 50-100ms | 5-30ms |
 | **LLM Choice** | OpenAI only | Any | Any | Any |
 | **Data Privacy** | OpenAI servers | 3rd party | Your infra | Your infra |
 | **Scalability** | Auto | Managed | DIY | pgvector |
 
-Note: Cost figures represent search infrastructure only. All approaches have additional LLM inference costs.
+Setup time, cost, and query latency all depend on your query volume, hosting choices, and hardware. See the sections earlier on this page for what each approach involves, and measure the ones that matter to you in your own environment.

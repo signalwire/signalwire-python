@@ -1,12 +1,12 @@
 # Spider Skill
 
-Fast web scraping and crawling capabilities for SignalWire AI Agents. Optimized for speed and token efficiency with sub-second response times.
+Fast web scraping and crawling capabilities for SignalWire AI Agents. Optimized for speed and token efficiency.
 
 ## Features
 
 The skill covers these capabilities:
 
-- **Single page scraping** - Extract content from any web page in under 500ms
+- **Single page scraping** - Extract content from any web page
 - **Multi-page crawling** - Follow links and crawl entire sections of websites
 - **Structured data extraction** - Extract specific data using CSS/XPath selectors
 - **Multiple output formats** - Plain text, markdown, or structured JSON
@@ -222,12 +222,9 @@ Total content: 15,234 characters across 5 pages
 
 ## Performance Characteristics
 
-Typical timings on a local network, for reference:
+A scrape takes about as long as the target site takes to respond, since fetching the page dominates the total time. Text extraction and formatting add comparatively little on top of that.
 
-- **Single page scrape**: ~300-500ms
-- **10-page crawl**: ~2-3 seconds
-- **Text extraction**: <50ms per page
-- **Caching**: Subsequent requests ~10ms
+A cached page returns without a new request, since the skill serves it from its cache instead of fetching it again. A multi-page crawl takes longer as the page count and the configured delay increase.
 
 ## Best Practices
 

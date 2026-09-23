@@ -182,7 +182,7 @@ The `metadata_text` field contains a searchable text representation of all metad
 **Limitations:**
 
 - **Infrastructure required**: Requires running and maintaining a PostgreSQL instance.
-- **Network latency**: A remote database adds 1-5ms of network overhead per query.
+- **Network latency**: A remote database adds a network round trip to each query.
 - **Operational complexity**: Needs connection pooling, monitoring, and backup procedures.
 
 ### When to Use Which
@@ -1067,7 +1067,7 @@ Migrating to pgvector creates the collection with `CREATE INDEX IF NOT EXISTS`, 
 **Performance tips for migration:**
 
 - **Batch size:** Default 100. Increase up to 500-1000 for faster migration.
-- **Large indexes:** Migration speed is approximately 5-10K chunks per minute.
+- **Large indexes:** Larger collections take longer to migrate. Batch size and network latency to PostgreSQL are the main factors.
 - **Network latency:** Run migration from a server close to PostgreSQL.
 - **PostgreSQL tuning for migration:**
 
@@ -1419,34 +1419,30 @@ Test both, compare results, then remove the old one.
 
 | Factor | Impact |
 |--------|--------|
-| Content volume: 100 docs (~1MB) | 30-60 seconds |
-| Content volume: 1,000 docs (~10MB) | 5-10 minutes |
-| Content volume: 10,000 docs (~100MB) | 30-60 minutes |
+| Content volume | Larger corpora take longer to build |
 | Chunking: sentence/paragraph | Fastest |
 | Chunking: markdown | Moderate (needs parsing) |
 | Chunking: semantic/topic | Slowest (requires inference) |
-| Model: mini (384 dims) | ~1,000 chunks/second |
-| Model: base or large (768 dims) | ~500 chunks/second |
+| Model: mini (384 dims) | Faster to embed than base or large |
+| Model: base or large (768 dims) | Slower to embed |
 | Hardware: CPU | Significant impact (embedding generation) |
-| Hardware: Memory | Need ~2GB + index size |
+| Hardware: Memory | Scales with index size |
 | Hardware: Disk | I/O speed matters for pgvector |
 
-**Build time benchmarks:**
+**Build time examples:**
+
+Build time depends on the corpus, the chunking strategy, the embedding model, and the host's hardware. Measure it on your own corpus rather than planning around a fixed duration. These commands show the shape of a build at three corpus sizes:
 
 Small knowledge base (100 docs, 2,000 chunks):
 
 ```bash
 sw-search ./docs --model mini --chunking-strategy sentence --output docs.swsearch
-# Time: 45 seconds
-# Size: 8MB
 ```
 
 Medium knowledge base (1,000 docs, 20,000 chunks):
 
 ```bash
 sw-search ./docs --model mini --chunking-strategy markdown --output docs.swsearch
-# Time: 8 minutes
-# Size: 80MB
 ```
 
 Large knowledge base (10,000 docs, 200,000 chunks):
@@ -1455,13 +1451,11 @@ Large knowledge base (10,000 docs, 200,000 chunks):
 sw-search ./docs --model base --chunking-strategy markdown \
   --backend pgvector --connection-string "$PG_CONN" \
   --output docs
-# Time: 45 minutes
-# Database size: 500MB
 ```
 
 **Optimizing build performance:**
 
-1. Use mini model when quality allows (2-3x faster than base).
+1. Use the mini model when quality allows; it embeds chunks faster than base or large.
 2. Choose efficient chunking (sentence is fastest; markdown slightly slower but better for tech docs).
 3. Process multiple directories in parallel:
    ```bash
@@ -1473,43 +1467,11 @@ sw-search ./docs --model base --chunking-strategy markdown \
 
 ### Query Performance
 
-**Query time breakdown (SQLite):**
+Query embedding is the largest single step in a search. Vector search itself is fast: an HNSW index answers a similarity query in single-digit milliseconds at a scale of around 20,000 chunks.
 
-```
-Total query time: 15-30ms
-  Embedding generation: 5-10ms (depends on model)
-  Vector search: 3-8ms (SQLite)
-  Hybrid scoring: 2-5ms
-  Result formatting: 1-2ms
-```
+Keyword and metadata retrieval, which hybrid search merges with the vector result, typically takes somewhat longer than the vector search step. A remote pgvector database adds a network round trip on top of all of this. When a client calls the search service over HTTP, request and response overhead can add as much again on top of the search itself. These figures depend on your hardware, corpus, and embedding model, so measure them in your own deployment rather than relying on numbers collected elsewhere.
 
-**Query time breakdown (pgvector):**
-
-```
-Total query time: 20-50ms
-  Embedding generation: 5-10ms (depends on model)
-  Network latency: 1-5ms (if remote)
-  Vector search: 10-25ms (PostgreSQL)
-  Hybrid scoring: 2-5ms
-  Result formatting: 1-2ms
-```
-
-**Performance by index size:**
-
-| Index Size | SQLite | pgvector |
-|------------|--------|----------|
-| Small (< 5,000 chunks) | 10-20ms | 15-30ms |
-| Medium (5,000-50,000 chunks) | 20-40ms | 25-50ms |
-| Large (50,000+ chunks) | 40-80ms | 30-60ms |
-
-pgvector scales better with size due to optimized indexing.
-
-**Embedding model impact on query time:**
-
-- Mini model: 5-8ms
-- Base or large model: 10-15ms
-
-Embedding generation accounts for 30-50% of total query time. The mini model provides a significant speedup.
+pgvector scales better than SQLite as an index grows larger.
 
 **Optimizing query performance:**
 
@@ -1538,36 +1500,14 @@ Embedding generation accounts for 30-50% of total query time. The mini model pro
 
 ### Memory Usage
 
-**Index build memory (peak):**
+Peak memory during an index build depends mainly on the embedding model. The mini model needs less memory than base or large, on both SQLite and pgvector.
 
-| Model | SQLite | pgvector |
-|-------|--------|----------|
-| Mini | ~2GB | ~2GB |
-| Base or large | ~3GB | ~3GB |
-
-**Query runtime memory:**
-
-SQLite:
-```
-Runtime memory: ~1.5GB
-  Embedding model: 1GB (mini), 2GB (base)
-  SQLite index: Loaded on-demand (~50-100MB)
-  Query processing: ~50MB
-```
-
-pgvector:
-```
-Runtime memory: ~1.5GB
-  Embedding model: 1GB (mini), 2GB (base)
-  Query processing: ~50MB
-```
-
-pgvector is more memory-efficient for queries because the index stays in the database.
+At query time, most of a search process's memory holds the loaded embedding model. SQLite also loads part of the index on demand, while pgvector keeps the index in the database instead of the agent's process. This makes pgvector more memory-efficient at query time.
 
 **Optimizing memory:**
 
-1. Use `search-queryonly` in production (saves ~400MB runtime memory).
-2. Use mini model (1GB vs 2GB for base model).
+1. Use `search-queryonly` in production to reduce memory use.
+2. Use the mini model; it needs less memory than the base model.
 3. In multi-agent deployments using `AgentServer`, the model instance is shared automatically.
 4. Models use lazy loading: they load on first query, not at startup.
 
@@ -1830,20 +1770,16 @@ LIMIT 5;
 curl -f http://localhost:8001/health || exit 1
 ```
 
-**Production performance reference (Sigmond agent):**
+**Production deployment example (Sigmond agent):**
 
-| Metric | Value |
-|--------|-------|
+| Aspect | Detail |
+|--------|--------|
 | Collections | 3 (7,500 total chunks) |
 | Agent instances | 4 (Kubernetes) |
 | Backend | pgvector (single database) |
 | Model | Mini |
-| Queries/day | 1,000+ |
-| Average query time | 25ms |
-| P95 query time | 45ms |
-| Memory per agent | 1.5GB |
-| Cache hit rate | 35% |
-| Error rate | < 0.1% |
+
+Track query latency, cache hit rate, and error rate in your own deployment using the monitoring approaches described earlier. These numbers depend on your traffic, hardware, and corpus.
 
 ### Optimization Checklist
 
@@ -1859,7 +1795,7 @@ curl -f http://localhost:8001/health || exit 1
 **Memory efficiency:**
 
 - [ ] Use `search-queryonly` in production
-- [ ] Use mini model (1GB vs 2GB)
+- [ ] Use the mini model to reduce memory use
 - [ ] Use pgvector (index not in memory)
 - [ ] Lazy load search models
 

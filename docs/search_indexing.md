@@ -1084,18 +1084,16 @@ sw-search ./docs --model base   # Higher quality
 
 - 6-layer transformer based on Microsoft's MiniLM
 - 384-dimensional embeddings
-- Embedding speed: ~1,000 chunks/second (CPU), ~5,000 chunks/second (GPU)
-- Query embedding: 5-8ms (CPU)
-- Runtime memory: ~1GB total (with overhead), ~1.5GB peak
+- Embeds chunks and queries faster than base, on both CPU and GPU
+- Uses less runtime memory than base
 - Best for: production deployments, voice agents (latency-sensitive), large knowledge bases (>50K chunks), FAQ systems, general documentation
 
 **Base (all-mpnet-base-v2)**:
 
 - 12-layer transformer based on Microsoft's MPNet
 - 768-dimensional embeddings
-- Embedding speed: ~500 chunks/second (CPU), ~2,500 chunks/second (GPU)
-- Query embedding: 10-15ms (CPU)
-- Runtime memory: ~2.5GB total (with overhead)
+- Embeds chunks and queries more slowly than mini, on both CPU and GPU
+- Uses more runtime memory than mini
 - Best for: quality-critical applications, complex semantic searches, legal/medical documentation, nuanced language understanding
 
 **Large**
@@ -1104,73 +1102,9 @@ The `large` alias currently points at the same `all-mpnet-base-v2` model as `bas
 
 ### Speed vs Quality Tradeoffs
 
-**Accuracy comparison** (1,000 technical documentation queries):
+Mini and base sit on a tradeoff. Mini embeds faster and uses less memory. Base tends to retrieve more relevant results on tasks that need finer semantic distinctions, at the cost of speed and memory. Evaluate both models against your own documents and queries before choosing one for production.
 
-| Model | Precision@5 | Recall@5 | MRR | Avg Similarity |
-|-------|-------------|----------|-----|----------------|
-| Mini | 0.847 | 0.923 | 0.782 | 0.654 |
-| Base | 0.891 | 0.951 | 0.823 | 0.687 |
-| Large | Same as Base | Same as Base | Same as Base | Same as Base |
-
-Mini achieves 94% of base model accuracy with 2-3x speed improvement.
-
-**Speed comparison** (building 10,000 chunks on CPU):
-
-| Model | Build Time | Chunks/Second | Index Size |
-|-------|------------|---------------|------------|
-| Mini | 10 minutes | 1,000 | 40MB |
-| Base | 20 minutes | 500 | 80MB |
-| Large | Same as Base | Same as Base | Same as Base |
-
-**Benchmark performance (Semantic Textual Similarity):**
-
-| Model | STS Benchmark | SICK-R | MS MARCO (MRR@10) | TREC-COVID (NDCG@10) |
-|-------|---------------|--------|--------------------|-----------------------|
-| Mini | 82.41 | 78.23 | 32.3 | 63.2 |
-| Base | 86.99 | 84.57 | 35.8 | 69.4 |
-| Large | Same as Base | Same as Base | Same as Base | Same as Base |
-
-**Query performance scaling:**
-
-| Chunk Count | Mini | Base |
-|-------------|------|------|
-| 10,000 | ~8ms | ~18ms |
-| 100,000 | ~80ms | ~180ms |
-| 1,000,000 | ~800ms | ~1.8s |
-
-**Index build time benchmarks** (1,000 documents, ~20,000 chunks):
-
-| Configuration | Build Time | Index Size |
-|--------------|------------|------------|
-| mini + sentence | 3 minutes | 30MB |
-| mini + markdown | 8 minutes | 80MB |
-| base + sentence | 7 minutes | 120MB |
-| base + markdown | 15 minutes | 160MB |
-
-**Query latency by backend:**
-
-| Configuration | Latency |
-|--------------|---------|
-| SQLite + mini | 15-25ms |
-| SQLite + base | 25-40ms |
-| pgvector + mini | 20-35ms |
-| pgvector + base | 35-50ms |
-
-**Memory comparison (runtime):**
-
-| Model | Model Size | Peak Memory | Concurrent Agents (32GB) |
-|-------|-----------|-------------|--------------------------|
-| Mini | 90MB | 1.5GB | 16 |
-| Base | 420MB | 2.5GB | 10 |
-| Large | Same as Base | Same as Base | Same as Base |
-
-**Cost comparison** (estimated monthly for 1M queries):
-
-| Model | Compute | Memory | Total |
-|-------|---------|--------|-------|
-| Mini | $50 | $20 | $70 |
-| Base | $100 | $40 | $140 |
-| Large | Same as Base | Same as Base | Same as Base |
+Build time, query latency, and memory use all scale with the embedding model, the chunking strategy, the storage backend, and the host's hardware. Measure a representative build and a representative set of queries on your own corpus and hardware rather than relying on a generic table.
 
 **When mini is sufficient (most cases):**
 
@@ -1191,7 +1125,7 @@ Mini achieves 94% of base model accuracy with 2-3x speed improvement.
 
 | Use Case | Recommendation | Reason |
 |----------|---------------|--------|
-| Voice agents | Mini | Latency critical, 5-8ms query time |
+| Voice agents | Mini | Latency critical |
 | Chat agents | Mini or Base | Latency less critical |
 | FAQ systems | Mini | Queries are short and specific |
 | Technical documentation | Mini | Good with structured text + markdown strategy |
@@ -1217,7 +1151,7 @@ Embeddings are vectors: lists of floating-point numbers representing meaning. Hi
 - Base: ~30MB
 - Large: same as Base, ~30MB
 
-Total index size is approximately 2-3x the vector storage due to content, metadata, and indexes.
+Total index size is larger than the vector storage alone, since it also holds the chunk content, metadata, and search indexes.
 
 **pgvector column definitions:**
 
@@ -1263,7 +1197,7 @@ Use the `TRANSFORMERS_CACHE` environment variable to customize the cache directo
 
 **GPU acceleration:**
 
-All models support GPU acceleration with approximately 5x speedup:
+All models embed faster on a GPU than on a CPU:
 
 ```python
 import torch
@@ -1275,14 +1209,11 @@ else:
     model = SentenceTransformer('all-MiniLM-L6-v2', device='cpu')
 ```
 
-GPU VRAM requirements: Mini: 2GB, Base: 4GB, Large: same as Base, since `large` currently resolves to the same model.
+Base needs more GPU VRAM than mini, and `large` needs the same amount as base, since it currently resolves to the same model.
 
 **Hardware recommendations:**
 
-| Model | Development (CPU/RAM/Disk) | Production Single Agent | Production Multiple Agents |
-|-------|---------------------------|------------------------|---------------------------|
-| Mini | 4+ cores / 8GB / 10GB | 2-4 cores / 4GB / 5GB | 8+ cores / 16GB / 10GB |
-| Base | 8+ cores / 16GB / 15GB | 4-8 cores / 8GB / 10GB | 16+ cores / 32GB / 20GB |
+Base needs more CPU, memory, and disk than mini at every stage, from local development through production with multiple agents. Provision your infrastructure by testing your own workload rather than a generic sizing table.
 
 ### Migrating Between Models
 

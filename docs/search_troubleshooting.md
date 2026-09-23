@@ -579,7 +579,7 @@ See [search_deployment.md](search_deployment.md) for full pgvector deployment gu
 
 **Symptoms:**
 
-Search queries take 500ms or more instead of the expected 20-50ms range.
+Search queries take much longer than expected.
 
 **Diagnosis:**
 
@@ -604,7 +604,7 @@ Search queries take 500ms or more instead of the expected 20-50ms range.
 
 **Common Causes and Solutions:**
 
-1. **Using the base model**: Switch to the mini model for 2-3x faster queries with minimal quality loss:
+1. **Using the base model**: Switch to the mini model for faster queries with minimal quality loss:
 <!-- snippet: no-compile config-excerpt -->
    ```python
    {"model_name": "mini"}

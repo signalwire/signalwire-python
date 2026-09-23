@@ -230,7 +230,7 @@ sw-search ./docs \
 
 The SQLite backend suits smaller collections:
 
-- Fast for small to medium datasets (<100k documents)
+- Fast for small to medium datasets
 - Linear search for vector similarity
 - Single-file deployment
 
@@ -239,7 +239,7 @@ The SQLite backend suits smaller collections:
 The pgvector backend suits larger, shared collections:
 
 - Efficient for large datasets
-- Uses IVFFlat or HNSW indexes
+- New collections use an HNSW index; collections built earlier with IVFFlat still work
 - Handles concurrent access well
 - Requires PostgreSQL server
 
@@ -247,8 +247,8 @@ The pgvector backend suits larger, shared collections:
 
 The two NLP backends trade speed for quality:
 
-- `nltk`: Fast, good for most use cases (~50-100ms)
-- `spacy`: Better quality, slower (~150-300ms)
+- `nltk`: Fast, good for most use cases
+- `spacy`: Better quality, slower
 
 ## Environment Variables
 
