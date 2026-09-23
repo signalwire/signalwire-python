@@ -416,7 +416,7 @@ class WorkflowAgent(AgentBase):
 
 ### Conditional Flows
 
-A function result can add global data and extra prompt content in the same response, so the model adapts on the next turn:
+A function result can report a customer's status and store it in global data, so the model adapts on the next turn:
 
 ```python
 class ConditionalAgent(AgentBase):
@@ -449,18 +449,14 @@ class ConditionalAgent(AgentBase):
 
             result = SwaigFunctionResult(f"Customer status: {status}")
 
-            # Set context for agent
+            # The response tells the model the status, and the "Conditional
+            # Responses" section already says how to treat VIP customers, so
+            # no extra prompt content is needed. Global data keeps the status
+            # for later tools.
             result.add_action("set_global_data", {
                 "customer_status": status,
                 "is_vip": status == "platinum"
             })
-
-            # Add specific instructions based on status
-            if status == "platinum":
-                result.add_action("append_prompt", {
-                    "section": "VIP Instructions",
-                    "content": "This is a VIP customer - provide white glove service"
-                })
 
             return result
 ```
@@ -768,7 +764,7 @@ class ReasoningAgent(AgentBase):
 
 ### Dynamic Prompt Injection
 
-A function can add a prompt section on the fly, so later turns see instructions that were not present at the start of the call:
+A function can call `switch_context()` to change the agent's instructions partway through the call. It replaces the system prompt rather than adding to it, so pass the complete prompt for the new mode:
 
 ```python
 @self.tool(
@@ -780,24 +776,16 @@ A function can add a prompt section on the fly, so later turns see instructions 
 )
 async def inject_context(args, raw_data):
     context_type = args.get("context_type")
-    contexts = {
-        "technical": {
-            "section": "Technical Mode",
-            "content": "Provide detailed technical explanations"
-        },
-        "simple": {
-            "section": "Simple Mode",
-            "content": "Explain everything in simple, non-technical terms"
-        },
-        "sales": {
-            "section": "Sales Mode",
-            "content": "Focus on benefits and value proposition"
-        }
+    base = "You are a helpful assistant for our PC products."
+    modes = {
+        "technical": "Provide detailed technical explanations.",
+        "simple": "Explain everything in simple, non-technical terms.",
+        "sales": "Focus on benefits and value proposition."
     }
 
-    if context_type in contexts:
+    if context_type in modes:
         result = SwaigFunctionResult(f"Switching to {context_type} mode")
-        result.add_action("append_prompt", contexts[context_type])
+        result.switch_context(system_prompt=f"{base} {modes[context_type]}")
         return result
     else:
         return SwaigFunctionResult("Unknown context type")

@@ -40,6 +40,20 @@ The rest of the parameters tune search behavior and have defaults:
   - Default: "I couldn't find quality results for '{query}'. The search returned only low-quality or inaccessible pages. Try rephrasing your search or asking about a different topic."
   - Use `{query}` as placeholder for the search query
 
+### Quality and Performance Parameters
+
+These parameters tune the quality scoring and scraping performance described in [Quality Filtering](#quality-filtering):
+
+- `max_content_length` (integer, default: 32768, minimum: 1000): Maximum characters across all returned results, combined. Each result still keeps at least 2000 characters of content even if that pushes the total over this budget.
+- `oversample_factor` (number, default: 2.5, range: 1.0 to 3.5): How many extra candidate pages to fetch and score before keeping the best `num_results` of them. For example, `num_results: 3` with the default factor fetches up to 7 candidates (fetching is always capped at 10).
+- `min_quality_score` (number, default: 0.3, range: 0.0 to 1.0): Minimum quality score a scraped page needs to count as a result. See [Quality Filtering](#quality-filtering) for how the score is calculated.
+- `per_page_timeout` (number, default: 2.0, minimum: 0.1): Maximum seconds to wait for a single page to load before giving up on it.
+- `overall_deadline` (number, default: 10.0, minimum: 1.0): Total seconds allowed for the whole search, across every candidate page. Scrapes still running past this deadline are abandoned, and the skill falls back to Google's own result snippets instead of returning an error.
+- `parallel_scrape` (boolean, default: true): Scrape candidate pages at the same time in a thread pool instead of one after another. `delay` has no effect while this is on, since there are no sequential requests left to space out.
+- `snippets_only` (boolean, default: false): Skip page scraping and return Google's search snippets directly. This is the fastest mode, and it is also what the skill falls back to when no page meets `min_quality_score` before `overall_deadline`.
+- `response_prefix` (string, default: ""): Text added before every non-empty search response.
+- `response_postfix` (string, default: ""): Text added after every non-empty search response.
+
 ### Advanced Parameters
 
 The skill accepts one advanced parameter, for SWAIG function configuration:
@@ -143,12 +157,26 @@ agent.add_skill("web_search", {
 
 ## How It Works
 
-A search moves through four stages:
+A search moves through five stages:
 
-1. **Search**: Uses Google Custom Search API to find relevant web pages
-2. **Scrape**: Downloads and extracts readable content from each result page
-3. **Format**: Presents results with titles, URLs, snippets, and extracted content
-4. **Filter**: Removes unwanted elements (scripts, styles, navigation) for clean text
+1. **Search**: Uses Google Custom Search API to find candidate web pages
+2. **Scrape**: Downloads each candidate page and extracts its readable text
+3. **Score and filter**: Scores each page as described in [Quality Filtering](#quality-filtering), and drops any page below `min_quality_score`
+4. **Select**: Sorts the remaining pages by score and keeps the best `num_results`, preferring one page per domain
+5. **Format**: Presents the results with titles, URLs, snippets, and extracted content, truncated to fit `max_content_length`
+
+## Quality Filtering
+
+Each scraped page gets a quality score that combines six weighted factors, and the skill drops any page scoring below `min_quality_score`:
+
+- **Content length (25%)**: pages with roughly 2,000 to 10,000 characters of text score highest.
+- **Query relevance (25%)**: how many of the query's significant words, and consecutive word pairs, appear in the page.
+- **Sentence structure (15%)**: how many sentences of at least 30 characters the page has, up to a target of 10.
+- **Domain reputation (15%)**: a bonus for domains such as Wikipedia, Stack Overflow, and arXiv. A penalty applies to social media domains such as Reddit, YouTube, and X.
+- **Word diversity (10%)**: how varied the page's vocabulary is. A page needs roughly 30% unique words to score well, guarding against repetitive or templated text.
+- **Freedom from boilerplate (10%)**: a penalty for phrases common in cookie notices, navigation menus, subscription prompts and ads.
+
+If every candidate page is dropped, or scraping runs past `overall_deadline`, the skill falls back to Google's own result snippets instead of returning an error. Setting `snippets_only` skips scraping and quality scoring entirely.
 
 ## Multiple Instance Support
 

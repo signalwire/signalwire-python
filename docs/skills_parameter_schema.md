@@ -398,13 +398,3 @@ Keep these seven points in mind when you design a schema:
 5. **Document environment variables** - Show alternative configuration methods
 6. **Validate in setup()** - Ensure all required parameters are present
 7. **Support backward compatibility** - Handle deprecated parameters gracefully
-
-## Future Enhancements
-
-The parameter schema system is designed to be extensible. Future enhancements may include:
-
-- **Conditional parameters** - Show/hide based on other parameter values
-- **Complex validation** - Cross-parameter validation rules
-- **Nested schemas** - Support for complex object parameters
-- **Internationalization** - Localized descriptions and error messages
-- **Runtime parameter updates** - Modify configuration without restart

@@ -11,6 +11,17 @@ The `swaig-test` CLI tool provides a complete testing environment for:
 
 The tool automatically detects function types, provides appropriate execution environments, and simulates the SignalWire platform locally while making real HTTP requests for DataMap functions.
 
+## Installed Commands
+
+Installing the SDK adds six command-line tools:
+
+- **`swaig-test`**: tests SWAIG functions and SWML generation locally, and simulates serverless environments. Documented in this guide.
+- **[`sw-search`](search_overview.md)**: builds and queries local `.swsearch` vector search indexes. Also documented in this guide, under [sw-search - Build and Query Search Indexes](#sw-search---build-and-query-search-indexes).
+- **`sw-agent-init`**: creates a new SignalWire agent project, for a local or cloud-function target.
+- **`sw-agent-dokku`**: initializes, deploys, and manages a SignalWire agent project on Dokku.
+- **[`mcp-gateway`](mcp_gateway_reference.md)**: bridges Model Context Protocol servers to SWAIG functions.
+- **`pom-tool`**: converts a Prompt Object Model (POM) file between JSON, YAML, Markdown, and XML.
+
 ## Key Features
 
 The tool provides these capabilities:
@@ -1823,31 +1834,32 @@ swaig-test examples/upload_agent.py --dump-swml \
 
 | Issue | Symptoms | Solution |
 |-------|----------|----------|
+| **Multiple Agents** | "Multiple agents found" | Use `--agent-class ClassName` to specify which agent |
 | **Agent Loading** | "Warning: No agent instance found" | Ensure file has `agent` variable or AgentBase subclass |
 | **Function Missing** | "Function 'X' not found" | Use `--list-tools` to verify function registration |
 | **DataMap HTTP Error** | "Webhook request failed" | Check network connectivity and API credentials |
-| **Template Expansion** | "MISSING:variable" in output | Verify template variable names match data structure |
-| **JSON Parsing** | "Invalid JSON in args" | Check JSON syntax in function arguments |
 | **SWML Generation** | "Error generating SWML" | Check agent initialization and SWML template syntax |
 | **Dynamic Agent** | "Dynamic agent callback failed" | Verify on_swml_request method signature and mock request handling |
 | **Override Syntax** | "Override path not found" | Use `--verbose` to see generated data structure and verify paths |
 | **Wrong Argument Order** | CLI flags not working | Put all CLI flags BEFORE `--exec` |
 | **Template Expansion** | "MISSING:variable" in output | Verify template variable names match data structure |
-| **JSON Parsing** | "Invalid JSON in args" | Check JSON syntax or use `--exec` syntax |
+| **JSON Parsing** | "Invalid JSON in args" | Check JSON syntax in function arguments, or use `--exec` syntax |
 | **Serverless URL Issues** | Wrong webhook URLs in SWML | Verify platform-specific configuration and environment variables |
 | **Environment Conflicts** | Unexpected behavior in serverless mode | Clear conflicting environment variables or restart shell |
 | **Platform Detection** | Wrong platform detected | Use `--simulate-serverless` explicitly instead of relying on auto-detection |
 
 ### Debug Strategies
 
-1. **Use `--verbose`**: Shows complete execution flow including fake data generation
-2. **Check function list**: Use `--list-tools --verbose` to see configurations  
-3. **Test connectivity**: For DataMap functions, ensure API endpoints are reachable
-4. **Validate JSON**: Use online JSON validators for complex arguments
-5. **Check logs**: Agent initialization logs show skill loading status
-6. **Test SWML incrementally**: Start with `--dump-swml` then add overrides gradually
-7. **Verify mock requests**: Use `--verbose` to see mock request object details
-8. **Pipeline with jq**: Use `--raw | jq '.'` to validate JSON structure
+1. **Use `--verbose`**: Shows complete execution flow, including agent selection and fake data generation
+2. **Check agent discovery**: Use `--list-agents` to see available agents
+3. **Check function list**: Use `--list-tools --verbose` to see configurations
+4. **Test connectivity**: For DataMap functions, ensure API endpoints are reachable
+5. **Check argument order**: CLI flags before `--exec`, function arguments after the function name
+6. **Validate syntax**: Use `--exec` syntax to avoid JSON parsing issues
+7. **Check logs**: Agent initialization logs show skill loading status
+8. **Test SWML incrementally**: Start with `--dump-swml`, then add overrides gradually
+9. **Verify mock requests**: Use `--verbose` to see mock request object details
+10. **Pipeline with jq**: Use `--raw | jq '.'` to validate JSON structure
 
 ### SWML-Specific Debugging
 
@@ -1946,122 +1958,25 @@ This shows the complete processing pipeline:
 
 ### DataMap-Specific Debugging
 
-For DataMap function issues:
+For DataMap function issues, `--verbose` traces template expansion, the HTTP request it produces, and fallback handling:
 
 ```bash
 # Enable verbose to see HTTP details
 swaig-test my_agent.py --verbose --exec my_datamap_func --input test
+
+# Check URL template expansion
+swaig-test my_agent.py --verbose --exec my_func --location "New York"
 
 # Check the complete configuration
 swaig-test my_agent.py --list-tools --verbose | grep -A 20 my_datamap
 ```
 
 Look for:
-- Template expansion in request data
-- HTTP response status and content
+- Template expansion in the request data and URL
+- HTTP request and response details
 - Foreach processing details
+- Fallback processing when APIs fail
 - Output template expansion
-
-## Integration with Development
-
-### Pre-Deployment Testing
-
-This loop runs every listed function once, with comprehensive fake data:
-
-```bash
-# Test all functions systematically
-functions=$(swaig-test my_agent.py --list-tools | grep "  " | cut -d' ' -f3)
-for func in $functions; do
-    echo "Testing $func..."
-    swaig-test my_agent.py $func '{"test":"data"}' --fake-full-data
-done
-```
-
-### CI/CD Integration
-
-The tool returns appropriate exit codes:
-- `0`: Success
-- `1`: Error (function failed, invalid arguments, network issues, etc.)
-
-A CI step can check that exit code directly:
-
-```yaml
-# GitHub Actions example
-- name: Test SWAIG Functions
-  run: |
-    swaig-test my_agent.py --fake-full-data --exec critical_function
-    if [ $? -ne 0 ]; then
-      echo "Critical function test failed"
-      exit 1
-    fi
-```
-
-## Performance and Limitations
-
-### Performance Considerations
-
-Testing has these performance characteristics:
-
-- **DataMap HTTP Requests**: Real network latency applies
-- **Large Responses**: Processing large API responses takes time
-- **Verbose Output**: Can generate substantial debugging information
-- **Memory Usage**: Comprehensive post_data mode uses more memory
-
-### Current Limitations
-
-1. **SignalWire Infrastructure**: Cannot perfectly replicate the serverless environment
-2. **Network Dependencies**: DataMap testing requires internet connectivity
-3. **Authentication**: Uses real API credentials (ensure proper security)
-4. **State Isolation**: No persistence between separate test runs
-5. **Concurrency**: Single-threaded execution only
-
-### Best Practices
-
-1. **Use minimal data mode** for basic function validation
-2. **Enable verbose mode** when debugging issues
-3. **Test DataMap functions** with real API credentials in secure environments
-4. **Validate JSON arguments** before testing
-5. **Check network connectivity** before testing DataMap functions
-
-### Webhook Failure Detection
-
-DataMap webhooks are considered failed when any of these conditions occur:
-
-1. **HTTP Status Codes**: Status outside 200-299 range
-2. **Explicit Error Keys**: `parse_error` or `protocol_error` in response
-3. **Custom Error Keys**: Any keys specified in webhook `error_keys` configuration
-4. **Network Errors**: Connection timeouts, DNS failures, etc.
-
-When a webhook fails, the tool:
-- Tries the next webhook in sequence (if any)
-- Uses fallback output if all webhooks fail
-- Provides detailed error information in verbose mode
-
-## Troubleshooting
-
-### Common Issues
-
-| Issue | Symptoms | Solution |
-|-------|----------|----------|
-| **Multiple Agents** | "Multiple agents found" | Use `--agent-class ClassName` to specify which agent |
-| **Agent Loading** | "Warning: No agent instance found" | Ensure file has agent instance or AgentBase subclass |
-| **Function Missing** | "Function 'X' not found" | Use `--list-tools` to verify function registration |
-| **DataMap HTTP Error** | "Webhook request failed" | Check network connectivity and API credentials |
-| **Wrong Argument Order** | CLI flags not working | Put all CLI flags BEFORE `--exec` |
-| **Template Expansion** | "MISSING:variable" in output | Verify template variable names match data structure |
-| **JSON Parsing** | "Invalid JSON in args" | Check JSON syntax or use `--exec` syntax |
-| **Serverless URL Issues** | Wrong webhook URLs in SWML | Verify platform-specific configuration and environment variables |
-| **Environment Conflicts** | Unexpected behavior in serverless mode | Clear conflicting environment variables or restart shell |
-| **Platform Detection** | Wrong platform detected | Use `--simulate-serverless` explicitly instead of relying on auto-detection |
-
-### Debug Strategies
-
-1. **Use `--verbose`**: Shows complete execution flow including agent selection and fake data generation
-2. **Check agent discovery**: Use `--list-agents` to see available agents
-3. **Check function list**: Use `--list-tools --verbose` to see configurations
-4. **Test connectivity**: For DataMap functions, ensure API endpoints are reachable
-5. **Check argument order**: CLI flags before `--exec`, function args after function name
-6. **Validate syntax**: Use `--exec` syntax to avoid JSON parsing issues
 
 ### Serverless Debugging
 
@@ -2137,24 +2052,6 @@ swaig-test my_file.py --verbose --exec my_function --param value
 swaig-test my_file.py --agent-class MyAgent --verbose --exec my_function --param value
 ```
 
-### DataMap Debugging
-
-`--verbose` traces template expansion and the HTTP request it produces:
-
-```bash
-# Enable verbose to see complete DataMap processing
-swaig-test my_agent.py --verbose --exec my_datamap_func --input test
-
-# Check URL template expansion
-swaig-test my_agent.py --verbose --exec my_func --location "New York"
-```
-
-Look for:
-- URL template expansion details
-- HTTP request/response information
-- Fallback processing when APIs fail
-- Output template processing
-
 ### Joke Agent Examples
 
 #### Working Joke API (Success Case)
@@ -2212,7 +2109,82 @@ Response: Tell the user that the joke service is not working right now and just 
 
 This demonstrates both:
 - **Successful webhook processing** with array response handling
-- **Failure detection and fallback** when APIs return errors 
+- **Failure detection and fallback** when APIs return errors
+
+## Integration with Development
+
+### Pre-Deployment Testing
+
+This loop runs every listed function once, with comprehensive fake data:
+
+```bash
+# Test all functions systematically
+functions=$(swaig-test my_agent.py --list-tools | grep "  " | cut -d' ' -f3)
+for func in $functions; do
+    echo "Testing $func..."
+    swaig-test my_agent.py $func '{"test":"data"}' --fake-full-data
+done
+```
+
+### CI/CD Integration
+
+The tool returns appropriate exit codes:
+- `0`: Success
+- `1`: Error (function failed, invalid arguments, network issues, etc.)
+
+A CI step can check that exit code directly:
+
+```yaml
+# GitHub Actions example
+- name: Test SWAIG Functions
+  run: |
+    swaig-test my_agent.py --fake-full-data --exec critical_function
+    if [ $? -ne 0 ]; then
+      echo "Critical function test failed"
+      exit 1
+    fi
+```
+
+## Performance and Limitations
+
+### Performance Considerations
+
+Testing has these performance characteristics:
+
+- **DataMap HTTP Requests**: Real network latency applies
+- **Large Responses**: Processing large API responses takes time
+- **Verbose Output**: Can generate substantial debugging information
+- **Memory Usage**: Comprehensive post_data mode uses more memory
+
+### Current Limitations
+
+1. **SignalWire Infrastructure**: Cannot perfectly replicate the serverless environment
+2. **Network Dependencies**: DataMap testing requires internet connectivity
+3. **Authentication**: Uses real API credentials (ensure proper security)
+4. **State Isolation**: No persistence between separate test runs
+5. **Concurrency**: Single-threaded execution only
+
+### Best Practices
+
+1. **Use minimal data mode** for basic function validation
+2. **Enable verbose mode** when debugging issues
+3. **Test DataMap functions** with real API credentials in secure environments
+4. **Validate JSON arguments** before testing
+5. **Check network connectivity** before testing DataMap functions
+
+### Webhook Failure Detection
+
+DataMap webhooks are considered failed when any of these conditions occur:
+
+1. **HTTP Status Codes**: Status outside 200-299 range
+2. **Explicit Error Keys**: `parse_error` or `protocol_error` in response
+3. **Custom Error Keys**: Any keys specified in webhook `error_keys` configuration
+4. **Network Errors**: Connection timeouts, DNS failures, etc.
+
+When a webhook fails, the tool:
+- Tries the next webhook in sequence (if any)
+- Uses fallback output if all webhooks fail
+- Provides detailed error information in verbose mode
 
 ## Best Practices
 
