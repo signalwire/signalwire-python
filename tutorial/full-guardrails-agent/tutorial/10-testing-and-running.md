@@ -70,7 +70,7 @@ def served_app(store: ReservationStore | None = None) -> Any:
     return run.call_args.args[0]
 ```
 
-`penny.run()` builds a web app and hands it to uvicorn. This helper patches uvicorn's `run`, so nothing starts, and keeps the app that would have been served. `TestWorkflow` fetches Penny's SWML from it with a `GET` and the basic auth credentials, the way SignalWire does, then checks every step. `TestSecurity` sends the same app a request with the wrong password and a tool call without SignalWire's signature.
+`penny.run()` builds a web app and hands it to uvicorn. This helper patches uvicorn's `run`, so nothing starts, and keeps the app that would have been served. `TestWorkflow` fetches Penny's SWML from it over HTTP with the basic auth credentials, then checks every step. SignalWire sends a signed `POST` for the same document, and the test uses a `GET`, which needs no signature. `TestSecurity` sends the same app a request with the wrong password and a tool call without SignalWire's signature.
 
 A test only proves something about the app it ran against, so test the app you serve.
 

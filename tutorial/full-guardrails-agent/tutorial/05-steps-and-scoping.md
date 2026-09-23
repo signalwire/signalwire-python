@@ -140,7 +140,7 @@ Penny deliberately doesn't use two methods from the contexts API:
 
 ## Checking the Contract
 
-The tests fetch the SWML from the app Penny serves, the way SignalWire fetches it. They check the design there, rather than in the Python that built it:
+The tests fetch the SWML over HTTP from the app Penny serves, as SignalWire does. They check the design there, rather than in the Python that built it:
 
 <!-- source: test_penny.py#test-scoping --> <!-- snippet: no-run an excerpt of test_penny.py, checked against the file by test_penny.py -->
 ```python

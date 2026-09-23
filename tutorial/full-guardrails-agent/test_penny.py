@@ -285,7 +285,8 @@ class TestWorkflow(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         from fastapi.testclient import TestClient
-        # Fetch the SWML the way SignalWire does, from the app Penny serves.
+        # Fetch the SWML over HTTP from the app Penny serves. SignalWire sends a
+        # signed POST; a GET with the password returns the same document.
         client = TestClient(served_app())
         document = client.get("/penny", auth=("penny", "test-password")).json()
         cls.ai = next(verb["ai"] for verb in document["sections"]["main"] if "ai" in verb)
