@@ -12,6 +12,7 @@ Unit tests for CLI build_search module
 """
 
 import pytest
+import os
 import sys
 import types
 import json
@@ -1949,3 +1950,72 @@ class TestRemoteCommand:
 
         assert exc_info.value.code == 1
         mock_print.assert_any_call("Error: HTTP 500: Internal Server Error")
+
+class TestRemoteCredentialsAndThreshold:
+    """sw-search remote: explicit credentials, redacted URLs (B23), and the
+    --similarity-threshold name with its older alias (B24)."""
+
+    @staticmethod
+    def _ok_response() -> Mock:
+        response = Mock(status_code=200)
+        response.json.return_value = {"results": []}
+        return response
+
+    def _run(self, argv: list[str], env: dict[str, str] | None = None, post_side_effect: object | None = None) -> tuple[Mock, str]:
+        mock_requests = _make_mock_requests_module(
+            post_return=self._ok_response(), post_side_effect=post_side_effect
+        )
+        printed: list[str] = []
+        with patch('sys.argv', ['remote', *argv]), \
+             patch.dict('sys.modules', {'requests': mock_requests}), \
+             patch.dict('os.environ', env or {}, clear=False), \
+             patch('builtins.print', side_effect=lambda *a, **k: printed.append(" ".join(map(str, a)))), \
+             pytest.raises(SystemExit):
+            remote_command()
+        return mock_requests.post, "\n".join(printed)  # type: ignore[attr-defined]
+
+    def test_user_and_password(self) -> None:
+        post, _ = self._run(['http://localhost:8001', 'q', '--index-name', 'docs', '--user', 'u', '--password', 'p'])
+        assert post.call_args.kwargs['auth'] == ('u', 'p')
+
+    def test_user_with_password_from_environment(self) -> None:
+        post, _ = self._run(['http://localhost:8001', 'q', '--index-name', 'docs', '--user', 'u'],
+                            env={'SWML_BASIC_AUTH_PASSWORD': 'from-env'})
+        assert post.call_args.kwargs['auth'] == ('u', 'from-env')
+
+    def test_user_prompts_for_a_missing_password(self) -> None:
+        with patch.dict('os.environ', {}, clear=False):
+            os.environ.pop('SWML_BASIC_AUTH_PASSWORD', None)
+            with patch('getpass.getpass', return_value='typed') as prompt:
+                post, _ = self._run(['http://localhost:8001', 'q', '--index-name', 'docs', '--user', 'u'])
+        prompt.assert_called_once()
+        assert post.call_args.kwargs['auth'] == ('u', 'typed')
+
+    def test_no_credentials_sends_no_auth(self) -> None:
+        post, _ = self._run(['http://localhost:8001', 'q', '--index-name', 'docs'])
+        assert post.call_args.kwargs['auth'] is None
+
+    def test_password_without_user_is_an_error(self) -> None:
+        with patch('sys.argv', ['remote', 'http://localhost:8001', 'q', '--index-name', 'docs', '--password', 'p']), \
+             patch('builtins.print') as mock_print, \
+             pytest.raises(SystemExit) as exc_info:
+            remote_command()
+        assert exc_info.value.code == 1
+        mock_print.assert_any_call("Error: --password needs --user")
+
+    def test_verbose_endpoint_is_redacted(self) -> None:
+        _, out = self._run(['http://u:s3cret@localhost:8001', 'q', '--index-name', 'docs', '--verbose'])
+        assert 's3cret' not in out
+        assert 'localhost:8001' in out
+
+    def test_connection_error_is_redacted(self) -> None:
+        import requests as real_requests
+        _, out = self._run(['http://u:s3cret@localhost:8001', 'q', '--index-name', 'docs'],
+                           post_side_effect=real_requests.ConnectionError("refused"))
+        assert 'Could not connect' in out
+        assert 's3cret' not in out
+
+    @pytest.mark.parametrize("flag", ["--similarity-threshold", "--distance-threshold"])
+    def test_threshold_under_either_name(self, flag: str) -> None:
+        post, _ = self._run(['http://localhost:8001', 'q', '--index-name', 'docs', flag, '0.7'])
+        assert post.call_args.kwargs['json']['similarity_threshold'] == 0.7

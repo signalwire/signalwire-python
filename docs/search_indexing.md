@@ -1415,7 +1415,7 @@ sw-search search [INDEX_PATH] [QUERY] [OPTIONS]
 | `--shell` | Interactive shell mode: load the index once and run multiple searches | -- |
 | `--model MODEL` | Override the embedding model for the query (must match the indexing model) | -- |
 | `--count N` | Number of results to return | `5` |
-| `--distance-threshold FLOAT` | Minimum similarity score. Higher is stricter | `0.0` |
+| `--similarity-threshold FLOAT` | Minimum similarity score. Higher is stricter. `--distance-threshold` is the older name | `0.0` |
 | `--tags TAG1,TAG2,...` | Filter by tags | -- |
 | `--query-nlp-backend {nltk,spacy}` | NLP backend for query preprocessing | `nltk` |
 | `--keyword-weight FLOAT` | Deprecated: accepted, but has no effect on ranking | -- |
@@ -1626,12 +1626,14 @@ sw-search remote [ENDPOINT] [QUERY] [OPTIONS]
 |--------|-------------|---------|
 | `--index-name NAME` | Index to search on remote server (required) | -- |
 | `--count N` | Number of results | `5` |
-| `--distance-threshold FLOAT` | Minimum similarity score. Higher is stricter | `0.0` |
+| `--similarity-threshold FLOAT` | Minimum similarity score. Higher is stricter. `--distance-threshold` is the older name | `0.0` |
 | `--tags TAG1,TAG2,...` | Filter by tags | -- |
 | `--verbose` | Show detailed information | -- |
 | `--json` | Output results as JSON | -- |
 | `--no-content` | Hide content in results (show only metadata) | -- |
 | `--timeout SECONDS` | Request timeout | `30` |
+| `--user USER` | Basic auth user for the search server | -- |
+| `--password PASSWORD` | Basic auth password. Without it, `sw-search` reads `SWML_BASIC_AUTH_PASSWORD`, or asks for it | -- |
 
 **Basic remote search:**
 

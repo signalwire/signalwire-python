@@ -279,7 +279,7 @@ Chunk A: "error handling guide"     -> similarity: 0.87 (very similar)
 Chunk B: "installation instructions" -> similarity: 0.23 (not similar)
 ```
 
-The `similarity_threshold` parameter (`--distance-threshold` on the `sw-search` command line) filters out low-similarity results. Only chunks with a score at or above the threshold are returned, so a higher threshold is stricter and a lower threshold is more permissive:
+The `similarity_threshold` parameter (`--similarity-threshold` on the `sw-search` command line, or its older name, `--distance-threshold`) filters out low-similarity results. Only chunks with a score at or above the threshold are returned, so a higher threshold is stricter and a lower threshold is more permissive:
 
 <!-- snippet: no-compile config-excerpt -->
 ```python

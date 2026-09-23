@@ -739,9 +739,9 @@ Controls how similar results must be to the query. Values range from 0.0 to 1.0,
 **Testing threshold values with the CLI:**
 
 ```bash
-sw-search search ./docs.swsearch "your query" --distance-threshold 0.3 --verbose
-sw-search search ./docs.swsearch "your query" --distance-threshold 0.4 --verbose
-sw-search search ./docs.swsearch "your query" --distance-threshold 0.5 --verbose
+sw-search search ./docs.swsearch "your query" --similarity-threshold 0.3 --verbose
+sw-search search ./docs.swsearch "your query" --similarity-threshold 0.4 --verbose
+sw-search search ./docs.swsearch "your query" --similarity-threshold 0.5 --verbose
 ```
 
 The verbose output displays similarity scores for each result. If the threshold excludes results that appear relevant, lower it. If irrelevant results appear, raise it.

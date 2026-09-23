@@ -2277,7 +2277,7 @@ sw-search search <index_file> <query> [options]
 
 **Options:**
 - `--count COUNT` - Number of results to return (default: 5)
-- `--distance-threshold FLOAT` - Minimum similarity score (default: 0.0)
+- `--similarity-threshold FLOAT` - Minimum similarity score, from 0.0 to 1.0. Higher is stricter (default: 0.0). `--distance-threshold` is the older name
 - `--tags TAGS` - Comma-separated tags to filter by
 - `--verbose` - Show detailed information
 - `--json` - Output results as JSON
@@ -2295,10 +2295,12 @@ sw-search remote <endpoint> <query> [options]
 **Options:**
 - `--index-name NAME` - Name of the index to search (required)
 - `--count COUNT` - Number of results to return (default: 5)
-- `--distance-threshold FLOAT` - Minimum similarity score (default: 0.0)
+- `--similarity-threshold FLOAT` - Minimum similarity score, from 0.0 to 1.0. Higher is stricter (default: 0.0). `--distance-threshold` is the older name
 - `--tags TAGS` - Comma-separated tags to filter by
 - `--json` - Output results as JSON
 - `--timeout SECONDS` - Request timeout in seconds (default: 30)
+- `--user USER` - Basic auth user for the search server
+- `--password PASSWORD` - Basic auth password. Without it, `sw-search` reads `SWML_BASIC_AUTH_PASSWORD`, or asks for it
 
 ### Examples
 

@@ -8,12 +8,14 @@ See LICENSE file in the project root for full license information.
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 from datetime import datetime
 from typing import cast
 from urllib.parse import urlparse, urlunparse
 
+from signalwire.core.security.security_utils import redact_url
 from signalwire.search.models import (
     DEFAULT_MODEL,
     LARGE_ALIAS_DEPRECATION,
@@ -760,10 +762,15 @@ def search_command() -> None:
         "--count", type=int, default=5, help="Number of results to return (default: 5)"
     )
     parser.add_argument(
+        "--similarity-threshold",
         "--distance-threshold",
+        dest="similarity_threshold",
         type=float,
         default=0.0,
-        help="Minimum similarity score (default: 0.0)",
+        help=(
+            "Minimum similarity score, from 0.0 to 1.0. Higher is stricter "
+            "(default: 0.0). --distance-threshold is the older name."
+        ),
     )
     parser.add_argument("--tags", help="Comma-separated tags to filter by")
     parser.add_argument(
@@ -969,7 +976,7 @@ def search_command() -> None:
                         ),  # vector is None for keyword-only search; search() tolerates it at runtime
                         enhanced_text=enhanced.get("enhanced_text", query),
                         count=args.count,
-                        similarity_threshold=args.distance_threshold,
+                        similarity_threshold=args.similarity_threshold,
                         tags=tags,
                         original_query=query,
                     )
@@ -1053,7 +1060,7 @@ def search_command() -> None:
             ),  # vector is None for keyword-only search; search() tolerates it at runtime
             enhanced_text=enhanced.get("enhanced_text", args.query),
             count=args.count,
-            similarity_threshold=args.distance_threshold,
+            similarity_threshold=args.similarity_threshold,
             tags=tags,
             original_query=args.query,  # Pass original for exact match boosting
         )
@@ -1294,10 +1301,15 @@ def remote_command() -> None:
         "--count", type=int, default=5, help="Number of results to return (default: 5)"
     )
     parser.add_argument(
+        "--similarity-threshold",
         "--distance-threshold",
+        dest="similarity_threshold",
         type=float,
         default=0.0,
-        help="Minimum similarity score (default: 0.0)",
+        help=(
+            "Minimum similarity score, from 0.0 to 1.0. Higher is stricter "
+            "(default: 0.0). --distance-threshold is the older name."
+        ),
     )
     parser.add_argument("--tags", help="Comma-separated tags to filter by")
     parser.add_argument(
@@ -1315,8 +1327,36 @@ def remote_command() -> None:
         default=30,
         help="Request timeout in seconds (default: 30)",
     )
+    parser.add_argument(
+        "--user",
+        help=(
+            "Basic auth user for the search server. Credentials in the "
+            "endpoint URL also work."
+        ),
+    )
+    parser.add_argument(
+        "--password",
+        help=(
+            "Basic auth password, with --user. Without it, sw-search reads "
+            "SWML_BASIC_AUTH_PASSWORD, or asks for it."
+        ),
+    )
 
     args = parser.parse_args()
+
+    # Credentials: --user, with --password, SWML_BASIC_AUTH_PASSWORD or a
+    # prompt. Without --user, Requests uses any credentials in the URL.
+    auth: tuple[str, str] | None = None
+    if args.user:
+        password = args.password or os.environ.get("SWML_BASIC_AUTH_PASSWORD")
+        if password is None:
+            import getpass
+
+            password = getpass.getpass(f"Password for {args.user}: ")
+        auth = (args.user, password)
+    elif args.password:
+        print("Error: --password needs --user")
+        sys.exit(1)
 
     # Ensure endpoint starts with http:// or https://
     endpoint = args.endpoint
@@ -1343,14 +1383,17 @@ def remote_command() -> None:
         "query": args.query,
         "index_name": args.index_name,
         "count": args.count,
-        "similarity_threshold": args.distance_threshold,
+        "similarity_threshold": args.similarity_threshold,
     }
 
     if args.tags:
         payload["tags"] = [tag.strip() for tag in args.tags.split(",")]
 
+    # The endpoint as printed: never with the password it may carry
+    shown_endpoint = redact_url(endpoint)
+
     if args.verbose:
-        print(f"Searching remote endpoint: {endpoint}")
+        print(f"Searching remote endpoint: {shown_endpoint}")
         print(f"Payload: {payload}")
         print()
 
@@ -1361,6 +1404,7 @@ def remote_command() -> None:
             json=payload,
             headers={"Content-Type": "application/json"},
             timeout=args.timeout,
+            auth=auth,
         )
 
         if response.status_code == 200:
@@ -1433,17 +1477,17 @@ def remote_command() -> None:
             sys.exit(1)
 
     except requests.ConnectionError:
-        print(f"Error: Could not connect to {endpoint}")
+        print(f"Error: Could not connect to {shown_endpoint}")
         print("Make sure the search server is running")
         sys.exit(1)
     except requests.Timeout:
         print(f"Error: Request timed out after {args.timeout} seconds")
         sys.exit(1)
     except requests.RequestException as e:
-        print(f"Error making request: {e}")
+        print(f"Error making request: {redact_url(str(e))}")
         sys.exit(1)
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error: {redact_url(str(e))}")
         if args.verbose:
             import traceback
 

@@ -719,7 +719,7 @@ Interpret the scores:
 - **0.3 to 0.5**: Weak match, may or may not be relevant
 - **Below 0.3**: Poor match, likely irrelevant
 
-A typical `--distance-threshold` of 0.4 provides a good balance between recall and precision.
+A typical `--similarity-threshold` of 0.4 provides a good balance between recall and precision.
 
 ### Verbose CLI Output
 
