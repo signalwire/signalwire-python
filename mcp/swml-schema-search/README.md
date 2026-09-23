@@ -27,16 +27,13 @@ No additional dependencies required beyond Python 3.7+. The server uses only sta
 
 ### Schema Path
 
-By default, the server looks for the schema two directories up from its own
-location, at `signalwire/schema.json`. That path is wrong: the schema ships at
-`signalwire/signalwire/schema.json`, one level deeper, so the server exits
-with an error unless you set `SWML_SCHEMA_PATH`:
+By default, the server uses the `schema.json` that ships in the `signalwire`
+package when the SDK is installed. Otherwise, it uses this repository's copy,
+at `signalwire/signalwire/schema.json`. To use a different schema, set
+`SWML_SCHEMA_PATH`:
 
 ```bash
 export SWML_SCHEMA_PATH=/path/to/your/swml-schema.json
-
-# From a checkout of this repository:
-export SWML_SCHEMA_PATH=signalwire/signalwire/schema.json
 ```
 
 ### Debug Logging
