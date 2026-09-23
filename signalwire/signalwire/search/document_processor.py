@@ -62,14 +62,6 @@ else:
         rtf_to_text = None
 
 if TYPE_CHECKING:
-    from openpyxl import load_workbook
-else:
-    try:
-        from openpyxl import load_workbook
-    except ImportError:
-        load_workbook = None
-
-if TYPE_CHECKING:
     from pptx import Presentation
 else:
     try:
@@ -355,7 +347,11 @@ class DocumentProcessor:
 
     def _extract_excel(self, file_path: str) -> str:
         """Extract text from Excel files"""
-        if not load_workbook:
+        # Imported here rather than with the module: only Excel files need
+        # openpyxl, and importing it loads numpy.
+        try:
+            from openpyxl import load_workbook
+        except ImportError:
             return json.dumps({"error": "openpyxl not available for Excel processing"})
 
         try:

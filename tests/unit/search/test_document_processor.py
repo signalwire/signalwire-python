@@ -12,6 +12,7 @@ Unit tests for search document processor module
 """
 
 import pytest
+import sys
 import tempfile
 import os
 from typing import Any
@@ -785,8 +786,8 @@ class TestFileExtraction:
 
     # ── XLSX (Excel) ─────────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.load_workbook')
-    def test_extract_excel_success(self, mock_lwb: MagicMock) -> None:
+    def test_extract_excel_success(self) -> None:
+        mock_lwb = MagicMock()
         mock_sheet = Mock()
         mock_sheet.iter_rows.return_value = [
             ("Name", "Age"),
@@ -796,22 +797,34 @@ class TestFileExtraction:
         mock_wb = Mock(); mock_wb.worksheets = [mock_sheet]
         mock_lwb.return_value = mock_wb
 
-        result = self.processor._extract_excel("/fake/data.xlsx")
+        with patch.dict(sys.modules, {"openpyxl": Mock(load_workbook=mock_lwb)}):
+            result = self.processor._extract_excel("/fake/data.xlsx")
         assert "Name" in result
         assert "Alice" in result
         assert "30" in result  # integers become str
         assert "Bob" in result
 
-    @patch('signalwire.search.document_processor.load_workbook', None)
     def test_extract_excel_missing_dependency(self) -> None:
-        result = self.processor._extract_excel("/fake/data.xlsx")
+        with patch.dict(sys.modules, {"openpyxl": None}):
+            result = self.processor._extract_excel("/fake/data.xlsx")
         assert "openpyxl not available" in result
 
-    @patch('signalwire.search.document_processor.load_workbook')
-    def test_extract_excel_exception(self, mock_lwb: MagicMock) -> None:
-        mock_lwb.side_effect = Exception("xlsx error")
-        result = self.processor._extract_excel("/fake/data.xlsx")
+    def test_extract_excel_exception(self) -> None:
+        mock_lwb = MagicMock(side_effect=Exception("xlsx error"))
+        with patch.dict(sys.modules, {"openpyxl": Mock(load_workbook=mock_lwb)}):
+            result = self.processor._extract_excel("/fake/data.xlsx")
         assert "Error processing Excel" in result
+
+    def test_importing_the_module_does_not_load_openpyxl(self) -> None:
+        """openpyxl (and the numpy it imports) loads only for Excel files."""
+        import subprocess
+
+        code = (
+            "import sys; import signalwire.search.document_processor; "
+            "print('openpyxl' in sys.modules)"
+        )
+        out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=120)
+        assert out.stdout.strip().splitlines()[-1] == "False", out.stdout + out.stderr
 
     # ── PPTX (PowerPoint) ────────────────────────────────────────────
 
