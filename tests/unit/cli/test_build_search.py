@@ -744,21 +744,31 @@ from signalwire.cli.build_search import (
 class TestConsoleEntryPointExtended:
     """Additional tests for console_entry_point subcommand routing."""
 
-    @patch('builtins.print')
     @patch('sys.argv', ['sw-search', '--help'])
-    def test_console_entry_help_flag(self, mock_print: MagicMock) -> None:
-        """Test --help flag shows help text without importing heavy modules."""
+    def test_console_entry_help_flag(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Test --help flag shows help text."""
         console_entry_point()
-        printed = ''.join(str(c.args[0]) for c in mock_print.call_args_list if c.args)
-        assert 'Build local search index from documents' in printed
+        assert 'Build local search index from documents' in capsys.readouterr().out
 
-    @patch('builtins.print')
     @patch('sys.argv', ['sw-search', '-h'])
-    def test_console_entry_help_short_flag(self, mock_print: MagicMock) -> None:
+    def test_console_entry_help_short_flag(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test -h flag shows help text."""
         console_entry_point()
-        printed = ''.join(str(c.args[0]) for c in mock_print.call_args_list if c.args)
-        assert 'positional arguments' in printed
+        assert 'positional arguments' in capsys.readouterr().out
+
+    @patch('sys.argv', ['sw-search', '--help'])
+    def test_help_lists_every_option(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """The help is the parser's own, so no option can go missing from it (B22)."""
+        from signalwire.cli.build_search import _build_parser
+
+        console_entry_point()
+        out = capsys.readouterr().out
+        options = [o for a in _build_parser()._actions for o in a.option_strings]
+        assert options, "parser defines no options"
+        missing = [o for o in options if o not in out]
+        assert missing == []
+        for flag in ("--backend", "--connection-string", "--overwrite", "--output-dir", "--output-format"):
+            assert flag in out
 
     @patch('signalwire.cli.build_search.remote_command')
     @patch('sys.argv', ['sw-search', 'remote', 'http://localhost:8001', 'query'])

@@ -37,8 +37,8 @@ def _mask_connection_string(conn_str: str) -> str:
     return "****"
 
 
-def main() -> None:
-    """Main entry point for the build-search command"""
+def _build_parser() -> argparse.ArgumentParser:
+    """The argument parser for building an index, which is also sw-search's help."""
     parser = argparse.ArgumentParser(
         description="Build local search index from documents",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -337,7 +337,12 @@ Examples:
         help="Similarity threshold for topic chunking (default: 0.3)",
     )
 
-    args = parser.parse_args()
+    return parser
+
+
+def main() -> None:
+    """Main entry point for the build-search command"""
+    args = _build_parser().parse_args()
 
     # Resolve model aliases
     if args.model == "large":
@@ -1450,141 +1455,11 @@ def console_entry_point() -> None:
     """Console script entry point for pip installation"""
     import sys
 
-    # Fast help check - show help without importing heavy modules.
-    #
-    # NOTE: this text is hand-maintained and has drifted from the parser three
-    # times over. It omitted the `markdown` and `json` strategies (both real and
-    # in daily use), and it advertised all-mpnet-base-v2 as the default model
-    # when DEFAULT_MODEL is all-MiniLM-L6-v2 -- a 768-dim answer to a 384-dim
-    # question, which is the kind of thing someone builds a mismatched index on.
-    # Anything added to the parser below must be added here too, or it is
-    # undiscoverable.
+    # Help comes from the parser itself. A hand-maintained copy used to live
+    # here, and it drifted from the parser repeatedly: it omitted real
+    # strategies and flags, and once advertised the wrong default model.
     if len(sys.argv) > 1 and sys.argv[1] in ["--help", "-h"]:
-        print("""usage: sw-search [-h] [--output OUTPUT] [--chunking-strategy {sentence,sliding,paragraph,page,semantic,topic,qa,json,markdown}]
-                 [--max-sentences-per-chunk MAX_SENTENCES_PER_CHUNK] [--chunk-size CHUNK_SIZE]
-                 [--overlap-size OVERLAP_SIZE] [--split-newlines SPLIT_NEWLINES] [--file-types FILE_TYPES]
-                 [--exclude EXCLUDE] [--languages LANGUAGES] [--model MODEL] [--tags TAGS]
-                 [--index-nlp-backend {nltk,spacy}] [--verbose] [--validate]
-                 [--semantic-threshold SEMANTIC_THRESHOLD] [--topic-threshold TOPIC_THRESHOLD]
-                 sources [sources ...]
-
-Build local search index from documents
-
-positional arguments:
-  sources               Source files and/or directories to index
-
-options:
-  -h, --help            show this help message and exit
-  --output OUTPUT       Output .swsearch file (default: sources.swsearch)
-  --chunking-strategy {sentence,sliding,paragraph,page,semantic,topic,qa,json,markdown}
-                        Chunking strategy to use (default: sentence). Use
-                        "markdown" for documentation with code blocks.
-  --max-sentences-per-chunk MAX_SENTENCES_PER_CHUNK
-                        Maximum sentences per chunk for sentence strategy (default: 5)
-  --chunk-size CHUNK_SIZE
-                        Chunk size in words (default: 50). For the markdown
-                        strategy this is the split threshold, applied as
-                        chunk_size * 6 characters.
-  --min-chunk-size MIN_CHUNK_SIZE
-                        Markdown strategy: minimum words before a heading starts
-                        a new chunk. Shorter sections merge into the next one
-                        instead of being emitted alone (default: 0, split at
-                        every heading).
-  --overlap-size OVERLAP_SIZE
-                        Overlap size in words for sliding window strategy (default: 10)
-  --split-newlines SPLIT_NEWLINES
-                        Split on multiple newlines (for sentence strategy)
-  --file-types FILE_TYPES
-                        Comma-separated file extensions to include for directories (default: md,txt,rst)
-  --exclude EXCLUDE     Comma-separated glob patterns to exclude (e.g., "**/test/**,**/__pycache__/**")
-  --languages LANGUAGES
-                        Comma-separated language codes (default: en)
-  --model MODEL         Sentence transformer model name or alias (mini or base;
-                        large is deprecated and loads base). Default: mini
-                        (sentence-transformers/all-MiniLM-L6-v2)
-  --tags TAGS           Comma-separated tags to add to all chunks
-  --index-nlp-backend {nltk,spacy}
-                        NLP backend for document processing: nltk (fast, default) or spacy (slower, expands with WordNet synonyms — effect depends on your corpus, measure it)
-  --verbose             Enable verbose output
-  --validate            Validate the created index after building
-  --semantic-threshold SEMANTIC_THRESHOLD
-                        Similarity threshold for semantic chunking (default: 0.5)
-  --topic-threshold TOPIC_THRESHOLD
-                        Similarity threshold for topic chunking (default: 0.3)
-
-Examples:
-  # Basic usage with directory (defaults to sentence chunking with 5 sentences per chunk)
-  sw-search ./docs
-
-  # Multiple directories
-  sw-search ./docs ./examples --file-types md,txt,py
-
-  # Individual files
-  sw-search README.md ./docs/guide.md ./src/main.py
-
-  # Mixed sources (directories and files)
-  sw-search ./docs README.md ./examples specific_file.txt --file-types md,txt,py
-
-  # Sentence-based chunking with custom parameters
-  sw-search ./docs \\
-    --chunking-strategy sentence \\
-    --max-sentences-per-chunk 10 \\
-    --split-newlines 2
-
-  # Sliding window chunking
-  sw-search ./docs \\
-    --chunking-strategy sliding \\
-    --chunk-size 100 \\
-    --overlap-size 20
-
-  # Paragraph-based chunking
-  sw-search ./docs \\
-    --chunking-strategy paragraph \\
-    --file-types md,txt,rst
-
-  # Page-based chunking (good for PDFs)
-  sw-search ./docs \\
-    --chunking-strategy page \\
-    --file-types pdf
-
-  # Semantic chunking (groups semantically similar sentences)
-  sw-search ./docs \\
-    --chunking-strategy semantic \\
-    --semantic-threshold 0.6
-
-  # Topic-based chunking (groups by topic changes)
-  sw-search ./docs \\
-    --chunking-strategy topic \\
-    --topic-threshold 0.2
-
-  # QA-optimized chunking (optimized for question-answering)
-  sw-search ./docs \\
-    --chunking-strategy qa
-
-  # Full configuration example
-  sw-search ./docs ./examples README.md \\
-    --output ./knowledge.swsearch \\
-    --chunking-strategy sentence \\
-    --max-sentences-per-chunk 8 \\
-    --file-types md,txt,rst,py \\
-    --exclude "**/test/**,**/__pycache__/**" \\
-    --languages en,es,fr \\
-    --model sentence-transformers/all-mpnet-base-v2 \\
-    --tags documentation,api \\
-    --verbose
-
-  # Validate an existing index
-  sw-search validate ./docs.swsearch
-
-  # Search within an index
-  sw-search search ./docs.swsearch "how to create an agent"
-  sw-search search ./docs.swsearch "API reference" --count 3 --verbose
-  sw-search search ./docs.swsearch "configuration" --tags documentation --json
-
-  # Search via remote API
-  sw-search remote http://localhost:8001 "how to create an agent" --index-name docs
-  sw-search remote localhost:8001 "API reference" --index-name docs --count 3 --verbose
-""")
+        _build_parser().print_help()
         return
 
     # Check for subcommands
