@@ -316,6 +316,28 @@ def _sdk_logger_name(name: str) -> str:
     return f"signalwire.{name}"
 
 
+def _would_emit(name: str, level: int) -> bool:
+    """Whether a record at ``level`` on SDK logger ``name`` would reach a real handler.
+
+    Until configure_logging() runs or the host app sets up logging, the only
+    handler an SDK record meets is the NullHandler on "signalwire", so it goes
+    nowhere.
+    """
+    logger: logging.Logger | None = logging.getLogger(_sdk_logger_name(name))
+    if logger is None or not logger.isEnabledFor(level):
+        return False
+    while logger is not None:
+        if any(
+            not isinstance(handler, logging.NullHandler) and level >= handler.level
+            for handler in logger.handlers
+        ):
+            return True
+        if not logger.propagate:
+            return False
+        logger = logger.parent
+    return False
+
+
 class _EventDict(dict[str, Any]):
     """An event dict handed to stdlib logging as the record's message.
 

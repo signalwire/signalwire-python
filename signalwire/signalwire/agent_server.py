@@ -381,6 +381,9 @@ class AgentServer:
         # library-safe / silent; running is where the app wants logs). This also
         # applies the CGI-off / auto detection that configure_logging performs.
         configure_logging()
+        # Logging is on now, so warnings the agents' constructors couldn't show are seen.
+        for agent in self.agents.values():
+            agent._warn_unsigned_webhooks()
 
         # Detect execution mode
         mode = get_execution_mode()

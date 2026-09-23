@@ -321,6 +321,83 @@ class TestAgentNoKeyWarning:
             f"unexpected disabled-warning when key is set: {[r.getMessage() for r in warning_records]}"
         )
 
+    def test_warning_waits_until_the_agent_serves(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """An agent built before logging is on logs the warning when serve() turns it on."""
+        monkeypatch.delenv("SIGNALWIRE_SIGNING_KEY", raising=False)
+        with _logging_not_set_up():
+            agent = AgentBase(name="warnlater")
+            with _captured("signalwire.agent_base") as capture, _not_serving():
+                agent.serve()
+                agent.serve()
+        assert len(_disabled_warnings(capture)) == 1
+
+    def test_agent_server_logs_the_warning_when_it_runs(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """AgentServer.run() turns logging on, then logs each unsigned agent's warning."""
+        monkeypatch.delenv("SIGNALWIRE_SIGNING_KEY", raising=False)
+        with _logging_not_set_up():
+            server = AgentServer()
+            server.register(AgentBase(name="warnserver", route="/warnserver"))
+            with _captured("signalwire.agent_base") as capture, _not_serving():
+                server.run()
+        assert len(_disabled_warnings(capture)) == 1
+
+    def test_warning_is_not_repeated_when_logging_was_already_on(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Logged by the constructor, the warning isn't logged again at serve()."""
+        monkeypatch.delenv("SIGNALWIRE_SIGNING_KEY", raising=False)
+        with _logging_not_set_up(), _captured("signalwire.agent_base") as capture:
+            agent = AgentBase(name="warnonce")
+            with _not_serving():
+                agent.serve()
+        assert len(_disabled_warnings(capture)) == 1
+
+
+@contextlib.contextmanager
+def _logging_not_set_up() -> Iterator[None]:
+    """The SDK's logging as an app that hasn't configured any leaves it: a
+    NullHandler on "signalwire" and nothing to propagate to."""
+    sdk, agent_base = logging.getLogger("signalwire"), logging.getLogger("signalwire.agent_base")
+    handlers, level, propagate = sdk.handlers[:], sdk.level, sdk.propagate
+    agent_base_level = agent_base.level
+    sdk.handlers = [logging.NullHandler()]
+    sdk.propagate = False
+    sdk.setLevel(logging.INFO)
+    agent_base.setLevel(logging.NOTSET)
+    try:
+        yield
+    finally:
+        sdk.handlers = handlers
+        sdk.propagate = propagate
+        sdk.setLevel(level)
+        agent_base.setLevel(agent_base_level)
+
+
+@contextlib.contextmanager
+def _captured(name: str) -> Iterator[_CaptureHandler]:
+    capture = _CaptureHandler()
+    logger = logging.getLogger(name)
+    logger.addHandler(capture)
+    try:
+        yield capture
+    finally:
+        logger.removeHandler(capture)
+
+
+@contextlib.contextmanager
+def _not_serving() -> Iterator[None]:
+    """serve() and AgentServer.run() without starting uvicorn or reconfiguring logging."""
+    with patch("uvicorn.run"), patch("signalwire.core.logging_config.configure_logging"):
+        yield
+
+
+def _disabled_warnings(capture: _CaptureHandler) -> list[logging.LogRecord]:
+    return [
+        r for r in capture.records
+        if r.levelno >= logging.WARNING
+        and "webhook_signature_validation_disabled" in r.getMessage()
+    ]
+
 
 # ---------------------------------------------------------------------------
 # Env var fallback

@@ -11,6 +11,7 @@ Base class for all SignalWire AI Agents
 """
 
 import contextlib
+import logging
 import os
 import json
 import uuid
@@ -64,7 +65,7 @@ from signalwire.core.swml_service import SWMLService
 from signalwire.core.function_result import FunctionResult
 from signalwire.pom.pom import PromptObjectModel
 from signalwire.core.skill_manager import SkillManager
-from signalwire.core.logging_config import get_logger, get_execution_mode
+from signalwire.core.logging_config import get_logger, get_execution_mode, _would_emit
 
 # Import refactored components
 from signalwire.core.agent.prompt.manager import PromptManager
@@ -286,16 +287,11 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         # and the SDK logs a one-time WARNING so users notice in production.
         self.signing_key = signing_key or os.environ.get("SIGNALWIRE_SIGNING_KEY")
         self._trust_proxy_for_signature = trust_proxy_for_signature
+        self._unsigned_warning_logged = False
         if self.signing_key:
             self.log.info("webhook_signature_validation_enabled")
         else:
-            self.log.warning(
-                "webhook_signature_validation_disabled",
-                message=(
-                    "[signalwire] webhook signature validation is disabled — "
-                    "set signing_key or SIGNALWIRE_SIGNING_KEY to enable"
-                ),
-            )
+            self._warn_unsigned_webhooks()
 
         # URL override variables
         self._web_hook_url_override: str | None = None
@@ -1516,6 +1512,29 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         # Return the rendered document as a string
         return agent_to_use.render_document()
+
+    def _warn_unsigned_webhooks(self) -> None:
+        """Log, once, that webhook signatures aren't checked, where it will be seen.
+
+        An agent is usually built before run() or serve() turns the SDK's logging
+        on, so a warning logged by the constructor would go nowhere. It's logged
+        as soon as something would show it: in the constructor when logging is
+        already set up, and otherwise when the agent starts serving.
+        """
+        if (
+            self.signing_key
+            or self._unsigned_warning_logged
+            or not _would_emit("agent_base", logging.WARNING)
+        ):
+            return
+        self._unsigned_warning_logged = True
+        self.log.warning(
+            "webhook_signature_validation_disabled",
+            message=(
+                "[signalwire] webhook signature validation is disabled — "
+                "set signing_key or SIGNALWIRE_SIGNING_KEY to enable"
+            ),
+        )
 
     # -- SWAIG extension-point overrides ------------------------------------
     # SWMLService now owns the /swaig handler (lifted down so non-agent

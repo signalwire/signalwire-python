@@ -177,6 +177,8 @@ def _build_mixin(**overrides: Any) -> Any:
         agent._tool_token_rejection = types.MethodType(_AgentBase._tool_token_rejection, agent)
     if "_per_call_agent" not in overrides:
         agent._per_call_agent = types.MethodType(_AgentBase._per_call_agent, agent)
+    if "_warn_unsigned_webhooks" not in overrides:
+        agent._warn_unsigned_webhooks = MagicMock(return_value=None)
 
     return agent
 

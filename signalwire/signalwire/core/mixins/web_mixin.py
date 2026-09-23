@@ -216,6 +216,8 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
 
             self._app = app
 
+        # An embedding app has set up logging by now, so the warning is seen.
+        self._warn_unsigned_webhooks()
         return self._app
 
     def mount(
@@ -325,6 +327,8 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         for route in router.routes:
             self.log.debug("route_registered", path=getattr(route, "path", None))
 
+        # An embedding app has set up logging by now, so the warning is seen.
+        self._warn_unsigned_webhooks()
         return router
 
     def serve(self, host: str | None = None, port: int | None = None) -> None:
@@ -342,6 +346,8 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         from signalwire.core.logging_config import configure_logging
 
         configure_logging()
+        # Logging is on now, so a warning the constructor couldn't show is seen.
+        self._warn_unsigned_webhooks()
 
         if self._app is None:
             # Create a FastAPI app with explicit redirect_slashes=False
