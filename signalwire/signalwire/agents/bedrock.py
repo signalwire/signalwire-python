@@ -55,7 +55,8 @@ class BedrockAgent(AgentBase):
             name: Agent name
             route: HTTP route for the agent
             system_prompt: Initial system prompt (can be overridden with set_prompt)
-            voice_id: Bedrock voice ID (default: matthew)
+            voice_id: Bedrock voice: tiffany, matthew, amy, lupe or carlos
+                (default: matthew)
             temperature: Generation temperature (0-1)
             top_p: Nucleus sampling parameter (0-1)
             max_tokens: Maximum tokens to generate
@@ -156,16 +157,14 @@ class BedrockAgent(AgentBase):
         Returns:
             Updated prompt configuration with voice
         """
-        # Create a clean copy, filtering out text-model-specific parameters
-        # that don't apply to Bedrock's voice-to-voice model
-        filtered_config = {}
-
-        # Copy over only the relevant fields
-        for key, value in prompt_config.items():
-            # Skip text-model-specific parameters
-            if key in ["barge_confidence", "presence_penalty", "frequency_penalty"]:
-                continue
-            filtered_config[key] = value
+        # Copy the prompt, leaving out barge_confidence, which the Bedrock
+        # prompt object doesn't define. Everything else it defines passes
+        # through, including presence_penalty and frequency_penalty.
+        filtered_config = {
+            key: value
+            for key, value in prompt_config.items()
+            if key != "barge_confidence"
+        }
 
         # Add voice_id to the prompt configuration
         filtered_config["voice_id"] = self._voice_id
@@ -173,41 +172,16 @@ class BedrockAgent(AgentBase):
         # Add/override inference parameters (where C code expects them)
         filtered_config["temperature"] = self._temperature
         filtered_config["top_p"] = self._top_p
+        filtered_config["max_tokens"] = self._max_tokens
 
         return filtered_config
-
-    def _build_bedrock_params(self, base_params: dict[str, Any]) -> dict[str, Any]:
-        """
-        Build Bedrock-specific parameters
-
-        Merges base parameters with Bedrock-specific inference settings.
-
-        Args:
-            base_params: Base parameters from AgentBase
-
-        Returns:
-            Combined parameters for Bedrock
-        """
-        # Start with base params
-        params = base_params.copy()
-
-        # Add Bedrock inference parameters
-        params.update(
-            {
-                "temperature": self._temperature,
-                "top_p": self._top_p,
-                "max_tokens": self._max_tokens,
-            }
-        )
-
-        return params
 
     def set_voice(self, voice_id: str) -> None:
         """
         Set the Bedrock voice ID
 
         Args:
-            voice_id: Bedrock voice identifier (e.g., 'matthew', 'joanna')
+            voice_id: Bedrock voice: 'tiffany', 'matthew', 'amy', 'lupe' or 'carlos'
         """
         self._voice_id = voice_id
         logger.debug(f"Voice set to: {voice_id}")
@@ -278,19 +252,40 @@ class BedrockAgent(AgentBase):
             "set_post_prompt_llm_params() called but Bedrock post-prompt uses OpenAI configured in C code"
         )
 
-    def set_prompt_llm_params(self, **params: Any) -> None:
-        """
-        Set prompt LLM parameters - use set_inference_params instead
+    # Prompt settings the Bedrock prompt object defines, besides the
+    # inference settings that set_inference_params() owns
+    _BEDROCK_PROMPT_PARAMS = ("confidence", "presence_penalty", "frequency_penalty")
 
-        For Bedrock, use set_inference_params() to configure temperature,
-        top_p, and max_tokens.
+    def set_prompt_llm_params(self, **params: Any) -> "BedrockAgent":
+        """
+        Set the prompt settings that Bedrock's prompt object defines
+
+        temperature, top_p and max_tokens update the inference settings, as
+        set_inference_params() does. confidence, presence_penalty and
+        frequency_penalty go into the prompt object. Anything else, such as
+        barge_confidence, isn't part of the Bedrock prompt, so it's ignored
+        with a warning.
 
         Args:
-            **params: Parameters (ignored, use set_inference_params)
+            **params: Prompt settings
+
+        Returns:
+            self for method chaining
         """
-        logger.warning(
-            "set_prompt_llm_params() called - use set_inference_params() for Bedrock"
+        self.set_inference_params(
+            temperature=params.pop("temperature", None),
+            top_p=params.pop("top_p", None),
+            max_tokens=params.pop("max_tokens", None),
         )
+        for key in self._BEDROCK_PROMPT_PARAMS:
+            if key in params:
+                self._prompt_llm_params[key] = params.pop(key)
+        if params:
+            logger.warning(
+                f"set_prompt_llm_params(): Bedrock's prompt doesn't define "
+                f"{', '.join(sorted(params))}, so they're ignored"
+            )
+        return self
 
     # Note: We don't override prompt methods like set_prompt_text, set_prompt_pom
     # because those work fine - they just build the prompt structure that we

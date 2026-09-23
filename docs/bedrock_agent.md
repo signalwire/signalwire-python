@@ -35,7 +35,7 @@ from signalwire import BedrockAgent
 agent = BedrockAgent(
     name="my_bedrock_agent",
     system_prompt="You are a helpful AI assistant.",
-    voice_id="joanna",
+    voice_id="tiffany",
     temperature=0.7
 )
 
@@ -94,7 +94,7 @@ BedrockAgent(
     name: str = "bedrock_agent",      # Agent name
     route: str = "/bedrock",          # HTTP route for the agent
     system_prompt: Optional[str] = None,  # Initial system prompt
-    voice_id: str = "matthew",        # Bedrock voice ID
+    voice_id: str = "matthew",        # tiffany, matthew, amy, lupe or carlos
     temperature: float = 0.7,         # Generation temperature (0-1)
     top_p: float = 0.9,              # Nucleus sampling parameter (0-1)
     max_tokens: int = 1024,          # Maximum tokens to generate
@@ -176,7 +176,7 @@ The following methods have modified behavior in BedrockAgent:
 1. **`set_llm_model(model)`** - Logs warning and does nothing (Bedrock uses fixed model)
 2. **`set_llm_temperature(temperature)`** - Redirects to `set_inference_params()`
 3. **`set_post_prompt_llm_params(**params)`** - Logs warning (post-prompt uses OpenAI)
-4. **`set_prompt_llm_params(**params)`** - Logs warning, use `set_inference_params()` instead
+4. **`set_prompt_llm_params(**params)`** - Accepts the settings the Bedrock `prompt` object defines. `temperature`, `top_p` and `max_tokens` update the inference settings, as `set_inference_params()` does. `confidence`, `presence_penalty` and `frequency_penalty` go into the prompt. Other settings, such as `barge_confidence`, log a warning and are ignored
 
 ## SWML Output Structure
 
@@ -196,7 +196,8 @@ BedrockAgent generates SWML with the `amazon_bedrock` verb:
             "text": "Your system prompt here",
             "voice_id": "matthew",
             "temperature": 0.3,
-            "top_p": 1.0
+            "top_p": 1.0,
+            "max_tokens": 1024
           },
           "SWAIG": {
             "functions": [...],
@@ -344,7 +345,7 @@ Most code will work without modification. Only adjust:
 These issues come up most often:
 
 1. **Voice not changing**: Ensure you're using valid Bedrock voice IDs
-2. **Parameters not applying**: Use `set_inference_params()` instead of `set_prompt_llm_params()`
+2. **Parameters not applying**: Bedrock's prompt defines `temperature`, `top_p`, `max_tokens`, `confidence`, `presence_penalty` and `frequency_penalty`. Other settings, such as `barge_confidence`, are ignored with a warning
 3. **Skills not loading**: Check API keys are properly configured
 4. **SWML not generating**: Verify the agent is running and accessible
 
@@ -411,4 +412,4 @@ The `amazon_bedrock` verb in SWML supports the following keys:
 - `hints` - AI hints (voice models process audio directly without text hints)
 - `pronounce` - Pronunciation rules (not needed as voice input preserves pronunciation)
 
-These features are designed for text-based AI models and don't apply to Bedrock's voice-to-voice architecture. The Bedrock `prompt` object also defines its own `confidence`, `presence_penalty`, and `frequency_penalty` fields; `BedrockAgent` doesn't currently set them.
+These features are designed for text-based AI models and don't apply to Bedrock's voice-to-voice architecture. `BedrockAgent` passes `confidence`, `presence_penalty` and `frequency_penalty` through from `set_prompt_llm_params()`, and leaves out `barge_confidence`, which the Bedrock `prompt` object doesn't define.
