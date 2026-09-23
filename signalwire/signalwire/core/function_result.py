@@ -28,17 +28,21 @@ class FunctionResult:
 
     IMPORTANT - `response` is a prompt, not a script:
         The SWML schema defines it as "a static response text or message returned
-        to the AI agent's context". It is instruction the model reads, and the
-        model then decides what to say. It is NOT played to the caller verbatim.
+        to the AI agent's context". The model reads it and then decides what to
+        say. It is NOT played to the caller verbatim.
 
-        Write it as an instruction, in the second person:
+        It can carry facts, an instruction, or both. The clearest form keeps them
+        apart, with the facts in tool_result and the instruction in tool_prompt:
 
-            FunctionResult("Tell the caller their order shipped Tuesday.")   # right
-            FunctionResult("Your order shipped Tuesday.")                    # wrong
+            FunctionResult(tool_result="Order 1234 shipped Tuesday.",
+                           tool_prompt="Tell the caller when their order shipped.")
+            FunctionResult("Order 1234 shipped Tuesday.")                    # facts
+            FunctionResult("Tell the caller their order shipped Tuesday.")   # instruction
+            FunctionResult("Your order shipped Tuesday.")                    # avoid
 
-        The wrong form usually still "works" because the model tends to parrot
-        it, but it is being interpreted, not spoken, so it will drift, get
-        rephrased, or be merged with other context.
+        Avoid the last form, a line written for the caller. It usually still
+        "works" because the model tends to parrot it, but it's interpreted, not
+        spoken, so it will drift, get rephrased, or be merged with other context.
 
     Post-processing behavior:
     - post_process=False (default): Execute actions immediately after AI response
@@ -102,10 +106,9 @@ class FunctionResult:
         Initialize a new SWAIG function result
 
         Args:
-            response: Optional PROMPT to inject into the model's context. This is
-                     instruction the model reads, not speech played to the caller -
-                     write it in the second person ("Tell them ..."). See the class
-                     docstring.
+            response: Optional PROMPT to inject into the model's context: facts
+                     or an instruction the model reads, not speech played to the
+                     caller. See the class docstring.
             post_process: Whether to let AI take another turn before executing actions.
                          Defaults to False (execute actions immediately after response).
                          Set True when the caller must hear something before the

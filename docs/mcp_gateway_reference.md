@@ -684,11 +684,3 @@ Enable debug logging:
 This example is in the repository:
 
 - `examples/mcp_gateway_demo.py` - Agent connecting to MCP servers through the `mcp_gateway` skill
-
-## Future Enhancements
-
-1. **WebSocket Support**: Real-time bidirectional communication
-2. **Multi-tenant**: Separate auth/permissions per tenant
-3. **Metrics/Monitoring**: Prometheus endpoints
-4. **Load Balancing**: Multiple gateway instances
-5. **Plugin System**: Custom transformations/middleware
