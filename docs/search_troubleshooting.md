@@ -431,14 +431,18 @@ This occurs when PyTorch was compiled with newer CPU instruction sets (such as A
 
 **Solution:**
 
-Once PyTorch is compiled, no environment variable turns off the instruction sets its binaries already use, so the fix has to change which binary loads. Install a PyTorch build compiled for the host CPU:
+PyTorch chooses many of its CPU kernels at runtime, based on what the processor supports. First, force the most basic kernels with `ATEN_CPU_CAPABILITY` and run the build again:
+
+```bash
+ATEN_CPU_CAPABILITY=default sw-search ./docs --output index.swsearch
+```
+
+If it still crashes, the installed binary itself uses instructions the CPU lacks. Install a PyTorch build that supports this CPU and operating system, using the options on the PyTorch installation page. The CPU-only wheels are a common choice, but they don't support every older processor:
 
 ```bash
 pip uninstall torch
 pip install torch --index-url https://download.pytorch.org/whl/cpu
 ```
-
-Check the PyTorch download page for a build appropriate to the host CPU and OS, since the correct package varies by platform.
 
 **Alternative:**
 

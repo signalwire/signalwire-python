@@ -267,14 +267,11 @@ If authentication fails:
    echo "Pass length: ${#SWML_BASIC_AUTH_PASSWORD}"
    ```
 
-2. Look for auto-generated credentials in startup logs:
-   ```
-   Basic Auth: signalwire:generated_password_here
-   ```
+2. Don't look for the password in the startup log. The log shows the username and `(credentials configured)` in place of the password, even when the SDK generated it. To use a password you know, set `SWML_BASIC_AUTH_USER` and `SWML_BASIC_AUTH_PASSWORD` before you start the service. In code, `get_basic_auth_credentials()` returns the credentials in use.
 
-3. Test with curl:
+3. Test with curl against a route that requires authentication. The `/health` endpoint doesn't require it, so a successful request there doesn't confirm your credentials:
    ```bash
-   curl -u username:password https://localhost:8000/health
+   curl -u "$SWML_BASIC_AUTH_USER:$SWML_BASIC_AUTH_PASSWORD" https://localhost:3000/your-agent-route
    ```
 
 ### CORS Issues

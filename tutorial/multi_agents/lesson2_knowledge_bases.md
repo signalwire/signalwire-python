@@ -83,12 +83,13 @@ Use this when:
 
 ### Dealing with PyTorch Compatibility
 
-If building an index crashes with an "illegal instruction" error, the installed PyTorch build doesn't match your CPU. Reinstall it as the CPU build:
+If building an index crashes with an "illegal instruction" error, the installed PyTorch uses CPU instructions your processor lacks. First, force PyTorch's most basic CPU kernels:
 
 ```bash
-pip uninstall torch
-pip install torch --index-url https://download.pytorch.org/whl/cpu
+ATEN_CPU_CAPABILITY=default sw-search tutorial/multi_agents/sales_knowledge.md --output sales_knowledge.swsearch
 ```
+
+If it still crashes, install a PyTorch build that supports your CPU, as the [search troubleshooting guide](../../docs/search_troubleshooting.md#illegal-instruction-error-cpu-compatibility) describes.
 
 ---
 
@@ -514,7 +515,7 @@ Before moving on, try these exercises:
 
 - **Module not found**: Ensure you installed with `pip install -e .[search]`
 - **Index file not found**: Check the path is relative to where you run the agent
-- **PyTorch "illegal instruction" errors**: Reinstall PyTorch as the CPU build, as described in [Dealing with PyTorch Compatibility](#dealing-with-pytorch-compatibility)
+- **PyTorch "illegal instruction" errors**: See [Dealing with PyTorch Compatibility](#dealing-with-pytorch-compatibility)
 - **Empty results**: Verify the index was built from the correct files
 
 ---

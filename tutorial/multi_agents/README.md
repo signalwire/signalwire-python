@@ -211,10 +211,9 @@ All code examples from this tutorial are available in this directory:
    pip install -e .[search]
    ```
 
-3. **PyTorch crashes with an "illegal instruction" error:** reinstall PyTorch as the CPU build:
+3. **PyTorch crashes with an "illegal instruction" error:** first force PyTorch's most basic CPU kernels. If it still crashes, install a PyTorch build that supports your CPU, as the [search troubleshooting guide](../../docs/search_troubleshooting.md#illegal-instruction-error-cpu-compatibility) describes:
    ```bash
-   pip uninstall torch
-   pip install torch --index-url https://download.pytorch.org/whl/cpu
+   ATEN_CPU_CAPABILITY=default sw-search tutorial/multi_agents/sales_knowledge.md --output sales_knowledge.swsearch
    ```
 
 ### Getting Help
