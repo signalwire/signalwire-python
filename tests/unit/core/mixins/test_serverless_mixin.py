@@ -98,6 +98,10 @@ class ConcreteServerlessMixin(ServerlessMixin):
         # Token enforcement is AgentBase's; it has its own tests. Here every call may run.
         return None
 
+    def _per_call_agent(self, *args: Any) -> "ConcreteServerlessMixin":
+        # Per-call configuration is AgentBase's; without a callback it is the agent itself.
+        return self
+
     def on_function_call(self, function_name: str, args: Any, raw_data: Any) -> dict[str, Any]:
         fn = self._tool_registry._swaig_functions.get(function_name)
         if fn:
@@ -1073,13 +1077,25 @@ class TestCGIModeBodyParsing:
 
         assert json.loads(_cgi_body(result))["got"] == {"from_raw": True}
 
+    def test_cgi_function_needs_a_post(self) -> None:
+        """Running a function takes a POST; a GET of its path is refused."""
+        mixin = ConcreteServerlessMixin(
+            swaig_functions={"hello": lambda args, raw: {"response": "ok"}}
+        )
+        env = {"PATH_INFO": "/hello", "REQUEST_METHOD": "GET"}
+        with patch.dict(os.environ, env, clear=False):
+            os.environ.pop("CONTENT_LENGTH", None)
+            result = mixin.handle_serverless_request(mode="cgi")
+        assert result.startswith("Status: 405 Method Not Allowed\r\n")
+
     def test_cgi_missing_content_length(self) -> None:
         """CGI mode with no CONTENT_LENGTH still works (no body parsed)."""
         mixin = ConcreteServerlessMixin(
             swaig_functions={"hello": lambda args, raw: {"response": "ok"}}
         )
-        env = {"PATH_INFO": "/hello"}
+        env = {"PATH_INFO": "/hello", "REQUEST_METHOD": "POST"}
         with patch.dict(os.environ, env, clear=False):
+            os.environ.pop("CONTENT_LENGTH", None)
             result = mixin.handle_serverless_request(mode="cgi")
 
         # Function called with empty args

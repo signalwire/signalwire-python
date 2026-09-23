@@ -84,3 +84,55 @@ def test_a_token_for_another_function_is_refused(client: TestClient, agent: Agen
 
 def test_a_function_marked_not_secure_needs_no_token(client: TestClient, agent: AgentBase) -> None:
     assert _call(client, agent, "open", "call-1") == "ran open"
+
+
+def test_a_tool_added_per_call_needs_its_token_too() -> None:
+    """The token is checked by the agent that runs the function, so a secure
+    tool registered by per-call configuration gets no pass."""
+    agent = AgentBase(name="tokens", route="/agent")
+    agent.add_per_call_config(
+        lambda query, body, headers, copy: copy.define_tool(
+            "dynamic", "Added per call.", {}, _handler("ran dynamic")))
+    client = TestClient(agent.get_app())
+    assert REFUSED in _call(client, agent, "dynamic", "call-1")
+    token = _token(client, agent, "dynamic", "call-1")
+    assert _call(client, agent, "dynamic", "call-1", token) == "ran dynamic"
+
+
+def test_a_dotted_call_id_keeps_its_token(client: TestClient, agent: AgentBase) -> None:
+    """Composed conversation ids such as "root.2" contain dots."""
+    token = _token(client, agent, "secret", "chat-abc.1")
+    assert _call(client, agent, "secret", "chat-abc.1", token) == "ran secret"
+
+
+def _summary_agent() -> tuple[AgentBase, TestClient, list[Any]]:
+    agent = AgentBase(name="summaries", route="/agent")
+    agent.set_post_prompt("Summarize the call.")
+    received: list[Any] = []
+    agent.on_summary = lambda summary, raw_data=None: received.append(summary)  # type: ignore[method-assign]  # capture
+    return agent, TestClient(agent.get_app()), received
+
+
+def _post_prompt_query(client: TestClient, agent: AgentBase, call_id: str) -> str:
+    swml = client.get(f"/agent/?call_id={call_id}", headers=_auth(agent)).json()
+    ai = next(verb["ai"] for verb in swml["sections"]["main"] if "ai" in verb)
+    url: str = ai["post_prompt_url"]
+    return urlparse(url).query
+
+
+def test_a_summary_for_a_dotted_call_id_is_delivered() -> None:
+    agent, client, received = _summary_agent()
+    query = _post_prompt_query(client, agent, "chat-abc.1")
+    resp = client.post(f"/agent/post_prompt?{query}", headers=_auth(agent),
+                       json={"call_id": "chat-abc.1", "summary": "Booked."})
+    assert resp.status_code == 200
+    assert received == ["Booked."]
+
+
+def test_a_token_for_one_call_cant_deliver_another_calls_summary() -> None:
+    agent, client, received = _summary_agent()
+    query = _post_prompt_query(client, agent, "call-a")
+    resp = client.post(f"/agent/post_prompt?call_id=call-a&{query}", headers=_auth(agent),
+                       json={"call_id": "call-b", "summary": "Forged."})
+    assert resp.status_code == 400
+    assert received == []

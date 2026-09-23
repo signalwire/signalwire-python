@@ -92,13 +92,14 @@ def _post_prompt_query(swml: str) -> str:
 # ---------------------------------------------------------------------------
 
 def _lambda(agent: AgentBase, path: str, body: str = "", query: str = "",
-            signature: str | None = None) -> dict[str, Any]:
-    headers = {"authorization": _auth(agent)}
+            signature: str | None = None, method: str | None = None,
+            headers: dict[str, str] | None = None) -> dict[str, Any]:
+    headers = {"authorization": _auth(agent), **(headers or {})}
     if signature:
         headers["x-signalwire-signature"] = signature
     event = {"rawPath": path, "rawQueryString": query, "headers": headers, "body": body,
              "requestContext": {"domainName": LAMBDA_HOST,
-                                "http": {"method": "POST" if body else "GET"}}}
+                                "http": {"method": method or ("POST" if body else "GET")}}}
     response: dict[str, Any] = agent.handle_serverless_request(event, None, mode="lambda")
     return response
 
@@ -372,3 +373,113 @@ class TestAgentServerLambda:
              "headers": {"Authorization": _auth(agent)}, "body": SUMMARY}, None)
         assert json.loads(result["body"]) == {"success": True}
         assert received == ["The caller booked a table."]
+
+
+# ---------------------------------------------------------------------------
+# Every path and method, per-call configuration, and URL reconstruction
+# ---------------------------------------------------------------------------
+
+def _swml_token(agent: AgentBase, function: str = "secret") -> str:
+    swml = _lambda(agent, "/agent", json.dumps({"call": {"call_id": "call-1"}}))["body"]
+    return _tool_query(swml, function)
+
+
+class TestEveryPathAndMethod:
+    @pytest.mark.parametrize("path", ["/agent/secret", "/agent/swaig/secret", "/agent/swaig",
+                                      "/agent/post_prompt", "/agent/"])
+    def test_an_unsigned_post_is_refused_on_every_path(self, path: str) -> None:
+        agent = _agent(signing_key=SIGNING_KEY)
+        assert _lambda(agent, path, _tool_call("call-1"))["statusCode"] == 403
+
+    @pytest.mark.parametrize("method", ["GET", "PUT", "DELETE"])
+    @pytest.mark.parametrize("path", ["/agent/secret", "/agent/swaig/secret"])
+    def test_a_function_runs_only_on_a_post(self, method: str, path: str) -> None:
+        agent = _agent()
+        result = _lambda(agent, path, _tool_call("call-1"), _swml_token(agent), method=method)
+        assert result["statusCode"] == 405
+
+    def test_a_get_of_swaig_renders_swml_and_runs_nothing(self) -> None:
+        agent = _agent()
+        result = _lambda(agent, "/agent/swaig", _tool_call("call-1"), _swml_token(agent),
+                         method="GET")
+        assert result["statusCode"] == 200
+        assert "sections" in json.loads(result["body"])
+        assert "ran secret" not in result["body"]
+
+    def test_a_summary_for_another_call_is_refused(self) -> None:
+        agent, received = _summarizing_agent()
+        swml = _lambda(agent, "/agent", json.dumps({"call": {"call_id": "call-a"}}))["body"]
+        body = json.dumps({"call_id": "call-b", "summary": "Forged."})
+        result = _lambda(agent, "/agent/post_prompt/", body,
+                         f"call_id=call-a&{_post_prompt_query(swml)}")
+        assert result["statusCode"] == 400
+        assert received == []
+
+
+class TestPerCallConfiguration:
+    def test_the_callback_sees_the_query_and_headers(self) -> None:
+        seen: dict[str, Any] = {}
+
+        def configure(query: Any, body: Any, headers: Any, copy: Any) -> None:
+            seen.update(query=dict(query), tenant=dict(headers).get("x-tenant"))
+
+        agent = _agent()
+        agent.add_per_call_config(configure)
+        _lambda(agent, "/agent", json.dumps({"call": {"call_id": "c"}}), "tenant=one",
+                headers={"X-Tenant": "one"})
+        assert seen == {"query": {"tenant": "one"}, "tenant": "one"}
+
+    def test_a_tool_added_per_call_runs_with_its_token(self) -> None:
+        agent = _agent()
+        agent.add_per_call_config(lambda query, body, headers, copy: copy.define_tool(
+            "dynamic", "Added per call.", {}, lambda args, raw_data: FunctionResult("ran dynamic")))
+        call = json.dumps({"function": "dynamic", "call_id": "call-1",
+                           "argument": {"parsed": [{}]}})
+        refused = _lambda(agent, "/agent/swaig/", call)
+        assert REFUSED in json.loads(refused["body"])["response"]
+        result = _lambda(agent, "/agent/swaig/", call, _swml_token(agent, "dynamic"))
+        assert json.loads(result["body"]) == {"response": "ran dynamic"}
+
+
+class TestSignatureURLs:
+    def test_a_trusted_forwarded_host_keeps_the_cgi_script_path(self) -> None:
+        agent = AgentBase(name="serverless", route="/agent", signing_key=SIGNING_KEY,
+                          trust_proxy_for_signature=True)
+        body = json.dumps({"call": {"call_id": "call-1"}})
+        signature = _sign("https://public.example.com/cgi-bin/agent.cgi/agent", body)
+        with patch.dict(os.environ, {"HTTP_X_FORWARDED_HOST": "public.example.com",
+                                     "HTTP_X_FORWARDED_PROTO": "https"}):
+            result = _cgi(agent, "/agent", body, signature=signature)
+        assert result.startswith("Status: 200 OK\r\n")
+
+    @pytest.mark.parametrize("signed_query", ["tenant=A%20B", "tenant=A+B"])
+    def test_api_gateway_rest_accepts_either_query_encoding(self, signed_query: str) -> None:
+        agent = _agent(signing_key=SIGNING_KEY)
+        body = json.dumps({"call": {"call_id": "call-1"}})
+        signature = _sign(f"https://api.example.com/prod/agent?{signed_query}", body)
+        event = {"httpMethod": "POST", "path": "/agent", "body": body,
+                 "queryStringParameters": {"tenant": "A B"},
+                 "requestContext": {"domainName": "api.example.com", "path": "/prod/agent"},
+                 "headers": {"Authorization": _auth(agent), "X-SignalWire-Signature": signature}}
+        result = agent.handle_serverless_request(event, None, mode="lambda")
+        assert result["statusCode"] == 200
+
+
+class TestAgentServerRootAgent:
+    def test_an_agent_at_the_root_is_served_after_more_specific_routes(self) -> None:
+        root, other = _agent(route="/"), _agent(route="/")
+        server = AgentServer()
+        server.register(root, "/")
+        server.register(other, "/other")
+        swml = server._handle_lambda_request(
+            {"path": "/", "headers": {"Authorization": _auth(root)},
+             "body": json.dumps({"call": {"call_id": "call-1"}})}, None)
+        assert swml["statusCode"] == 200
+        result = server._handle_lambda_request(
+            {"rawPath": "/swaig/", "rawQueryString": _tool_query(swml["body"], "secret"),
+             "headers": {"Authorization": _auth(root)}, "body": _tool_call("call-1")}, None)
+        assert json.loads(result["body"]) == {"response": "ran secret with {'topic': 'hours'}"}
+        # A more specific route still reaches its own agent, which checks its own credentials
+        other_swml = server._handle_lambda_request(
+            {"path": "/other", "headers": {"Authorization": _auth(other)}}, None)
+        assert other_swml["statusCode"] == 200

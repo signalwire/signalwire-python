@@ -178,6 +178,24 @@ class TestImportIsLibrarySafe:
             host.handlers.clear()
             host.propagate = True
 
+    def test_import_leaves_unconfigured_host_loggers_alone(self) -> None:
+        # A host logger with no handlers at all, and a name the SDK used to
+        # share, must reach Python's last-resort handler after the import too.
+        host = logging.getLogger("auth_handler")
+        host.handlers.clear()
+        import importlib
+
+        import signalwire.core.logging_config as lc
+
+        importlib.reload(lc)
+        assert host.handlers == [], "import added a handler to the host app's auth_handler logger"
+
+    def test_sdk_loggers_live_under_the_signalwire_namespace(self) -> None:
+        from signalwire.core.logging_config import _sdk_logger_name
+
+        assert _sdk_logger_name("agent_base") == "signalwire.agent_base"
+        assert _sdk_logger_name("signalwire.search") == "signalwire.search"
+
     def test_signalwire_logger_has_nullhandler_after_import(self) -> None:
         # Re-run the import-time side effect (the autouse fixture cleared handlers).
         import importlib

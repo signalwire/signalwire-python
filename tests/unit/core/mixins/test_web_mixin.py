@@ -175,6 +175,8 @@ def _build_mixin(**overrides: Any) -> Any:
         agent._swaig_pre_dispatch = types.MethodType(_AgentBase._swaig_pre_dispatch, agent)
     if "_tool_token_rejection" not in overrides:
         agent._tool_token_rejection = types.MethodType(_AgentBase._tool_token_rejection, agent)
+    if "_per_call_agent" not in overrides:
+        agent._per_call_agent = types.MethodType(_AgentBase._per_call_agent, agent)
 
     return agent
 
@@ -742,6 +744,7 @@ class TestHandleSwaigRequest:
     def test_dynamic_config_callback_creates_ephemeral(self) -> None:
         ephemeral = MagicMock()
         ephemeral.on_function_call = MagicMock(return_value={"response": "ephemeral"})
+        ephemeral._tool_token_rejection = MagicMock(return_value=None)
         config_cb = MagicMock()
         agent = _build_mixin(_dynamic_config_callback=config_cb)
         agent._create_ephemeral_copy = MagicMock(return_value=ephemeral)
@@ -752,6 +755,8 @@ class TestHandleSwaigRequest:
         result = _run(agent._handle_swaig_request(request, resp))
         agent._create_ephemeral_copy.assert_called_once()
         config_cb.assert_called_once()
+        # The token is checked by the per-call copy, the agent that runs the function
+        ephemeral._tool_token_rejection.assert_called_once_with("f1", None, "c1")
         ephemeral.on_function_call.assert_called_once()
 
     def test_function_execution_error_returns_error_dict(self) -> None:
@@ -1369,6 +1374,7 @@ class TestHandleSwaigRequestMalformedBody:
         config_cb = MagicMock(side_effect=RuntimeError("config boom"))
         ephemeral = MagicMock()
         ephemeral.on_function_call = MagicMock(return_value={"response": "ok"})
+        ephemeral._tool_token_rejection = MagicMock(return_value=None)
         agent = _build_mixin(_dynamic_config_callback=config_cb)
         agent._create_ephemeral_copy = MagicMock(return_value=ephemeral)
         resp = MagicMock()

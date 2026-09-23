@@ -278,7 +278,7 @@ class TestConversationIdSanitization:
             def emit(self, record: logging.LogRecord) -> None:
                 captured.append(record)
 
-        sdk_logger = logging.getLogger("ai_chat.client")
+        sdk_logger = logging.getLogger("signalwire.ai_chat.client")
         handler, level = Capture(), sdk_logger.level
         sdk_logger.addHandler(handler)
         sdk_logger.setLevel(logging.WARNING)

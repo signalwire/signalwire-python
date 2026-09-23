@@ -604,6 +604,8 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
 
         For routes that dispatch to the handlers directly rather than through
         the router, such as the catch-alls in ``serve()`` and ``AgentServer``.
+        The signed endpoints are the root, /swaig, /post_prompt and any
+        routing-callback path, which renders SWML like the root.
         ``relative_path`` is the request path below the agent's route; slashes
         around it are ignored, the same way the catch-alls ignore them.
 
@@ -614,9 +616,13 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         Returns:
             The 403 response to send, or None when the request may proceed
         """
-        if (
-            request.method != "POST"
-            or relative_path.strip("/") not in _SIGNED_POST_PATHS
+        path = relative_path.strip("/")
+        callback_paths = {
+            callback.strip("/")
+            for callback in getattr(self, "_routing_callbacks", None) or {}
+        }
+        if request.method != "POST" or (
+            path not in _SIGNED_POST_PATHS and path not in callback_paths
         ):
             return None
         signature_check = self._webhook_signature_check()
@@ -750,17 +756,28 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                 path = callback_path.rstrip("/")
                 path_with_slash = f"{path}/"
 
+                # A callback path renders SWML like the root, so its POSTs
+                # carry the same signature check.
                 @router.get(path)
                 @router.get(path_with_slash)
-                @router.post(path)
-                @router.post(path_with_slash)
                 async def handle_callback(
                     request: Request,
                     response: Response,
                     cb_path: str | None = callback_path,
                 ) -> Response:
-                    """Handle GET/POST requests to a registered callback path"""
+                    """Handle GET requests to a registered callback path"""
                     # Store the callback path in request state for _handle_request to use
+                    request.state.callback_path = cb_path
+                    return await self._handle_root_request(request)
+
+                @router.post(path, dependencies=signed_post_deps)
+                @router.post(path_with_slash, dependencies=signed_post_deps)
+                async def handle_callback_post(
+                    request: Request,
+                    response: Response,
+                    cb_path: str | None = callback_path,
+                ) -> Response:
+                    """Handle POST requests to a registered callback path (signature-validated when signing_key is set)"""
                     request.state.callback_path = cb_path
                     return await self._handle_root_request(request)
 
@@ -1158,7 +1175,7 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
 
             status, payload = self._post_prompt_response(
                 body,
-                call_id,
+                request.query_params.get("call_id"),
                 token,
                 dict(request.query_params),
                 dict(request.headers),
@@ -1181,8 +1198,8 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
 
     def _post_prompt_response(
         self,
-        body: dict[str, Any],
-        call_id: str | None,
+        body: Any,
+        query_call_id: str | None,
         token: str | None,
         query_params: dict[str, str],
         headers: dict[str, str],
@@ -1193,12 +1210,15 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         Shared by the web server and the serverless platforms. A POST delivers
         a call's summary, so like a secure SWAIG function it needs the token
         minted into the post-prompt URL for that call; a missing token is
-        refused like a wrong one. Then the summary goes to ``on_summary``, on a
-        per-call copy of the agent when dynamic configuration is set.
+        refused like a wrong one. The call is the one the body names, or the
+        URL's ``call_id`` when the body names none; when they disagree, the
+        request is refused, so a token for one call can't deliver another's
+        summary. Then the summary goes to ``on_summary``, on a per-call copy
+        of the agent when dynamic configuration is set.
 
         Args:
             body: The parsed request body
-            call_id: The call the summary belongs to, if known
+            query_call_id: The ``call_id`` from the URL, if any
             token: The token from the request's query string, if any
             query_params: The request's query parameters, for dynamic config
             headers: The request's headers, for dynamic config
@@ -1207,23 +1227,25 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         Returns:
             The HTTP status and the JSON payload to send
         """
+        if not isinstance(body, dict):
+            body = {}
+        body_call_id = body.get("call_id")
+        if not isinstance(body_call_id, str) or not body_call_id:
+            body_call_id = None
+        if query_call_id and body_call_id and query_call_id != body_call_id:
+            req_log.warning("call_id_mismatch")
+            return 400, {"error": "The call_id in the URL and the body differ"}
+        call_id = body_call_id or query_call_id
+
         if not self._post_prompt_token_valid(token, call_id, req_log):
             return 403, {"error": "Invalid or missing token"}
 
-        # Check if we need to use an ephemeral agent for dynamic configuration
-        agent_to_use = self
-        if self._dynamic_config_callback is not None:
-            # Create ephemeral copy and apply dynamic config
-            agent_to_use = self._create_ephemeral_copy()
-
-            try:
-                # Strip credential-bearing headers before handing them to
-                # the user callback (matches the TS SDK's filtering).
-                self._dynamic_config_callback(
-                    query_params, body, filter_sensitive_headers(headers), agent_to_use
-                )
-            except Exception as e:
-                req_log.error("dynamic_config_error", error=str(e))
+        # A per-call copy of the agent when dynamic configuration is set.
+        # Credential-bearing headers are stripped before the user callback sees
+        # them (matches the TS SDK's filtering).
+        agent_to_use = self._per_call_agent(
+            query_params, body, filter_sensitive_headers(headers)
+        )
 
         # Extract summary from the correct location in the request
         summary = agent_to_use._find_summary_in_post_data(body, req_log)

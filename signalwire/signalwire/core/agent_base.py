@@ -1537,25 +1537,46 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         call_id: str | None,
         function_name: str,
     ) -> tuple[Any, dict[str, Any] | None]:
-        req_log = self.log.bind(endpoint="swaig", function=function_name)
+        # Apply per-call configuration first, then check the token against the
+        # agent that will run the function: a tool that configuration adds must
+        # meet the same rule as one registered up front.
+        target = self
+        if request:
+            target = self._per_call_agent(
+                dict(request.query_params), body, dict(request.headers)
+            )
 
         token = request.query_params.get("__token") or request.query_params.get("token")
-        rejection = self._tool_token_rejection(function_name, token, call_id)
+        rejection = target._tool_token_rejection(function_name, token, call_id)
         if rejection is not None:
             return self, rejection
-
-        # Dynamic-config ephemeral agent.
-        target = self
-        if self._dynamic_config_callback and request:
-            target = self._create_ephemeral_copy()
-            try:
-                query_params = dict(request.query_params)
-                headers = dict(request.headers)
-                self._dynamic_config_callback(query_params, body, headers, target)
-            except Exception as e:
-                req_log.error("dynamic_config_error", error=str(e))
-
         return target, None
+
+    def _per_call_agent(
+        self,
+        query_params: dict[str, Any],
+        body: dict[str, Any],
+        headers: dict[str, Any],
+    ) -> Any:
+        """The agent to handle one request: a per-call copy when configuration is set.
+
+        Args:
+            query_params: The request's query parameters
+            body: The parsed request body
+            headers: The request's headers
+
+        Returns:
+            A copy with the dynamic config callback applied, or this agent
+            when there is no callback
+        """
+        if not self._dynamic_config_callback:
+            return self
+        target = self._create_ephemeral_copy()
+        try:
+            self._dynamic_config_callback(query_params, body, headers, target)
+        except Exception as e:
+            self.log.error("dynamic_config_error", error=str(e))
+        return target
 
     def _tool_token_rejection(
         self, function_name: str, token: str | None, call_id: str | None

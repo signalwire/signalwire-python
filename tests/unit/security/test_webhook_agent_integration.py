@@ -226,6 +226,23 @@ class TestEveryServedPathIsSigned:
         assert resp.status_code == 200
         assert "sections" in resp.json()
 
+    @pytest.mark.parametrize("app_kind", sorted(APPS))
+    @pytest.mark.parametrize("path", ["/sip", "/sip/", "/sip//"])
+    def test_a_routing_callback_path_needs_a_signature(self, app_kind: str, path: str) -> None:
+        """A callback path renders SWML like the root, so it is signed like the root."""
+        agent = AgentBase(name="signed", route="/agent", signing_key=SIGNING_KEY)
+        agent.register_routing_callback(lambda body, headers: None, path="/sip")
+        body = '{"call": {"call_id": "c1"}}'
+        headers = {**_basic_auth_headers(agent), "content-type": "application/json"}
+        signature = _scheme_a_sig(SIGNING_KEY, f"http://testserver/agent{path}", body)
+        with APPS[app_kind](agent) as client:
+            unsigned = client.post(f"/agent{path}", content=body, headers=headers)
+            signed = client.post(f"/agent{path}", content=body,
+                                 headers={**headers, SIGNALWIRE_SIGNATURE_HEADER: signature})
+        assert unsigned.status_code == 403
+        assert signed.status_code == 200
+        assert "sections" in signed.json()
+
     def test_a_longer_route_name_is_not_the_agent(self) -> None:
         """/agentswaig is not /agent/swaig."""
         agent = AgentBase(name="signed", route="/agent", signing_key=SIGNING_KEY)
@@ -241,10 +258,10 @@ class TestEveryServedPathIsSigned:
 class _CaptureHandler(logging.Handler):
     """Minimal handler used to harvest LogRecords from the SDK's namespaced logger.
 
-    The SDK installs handlers on the ``agent_base`` logger directly with
+    configure_logging() gives the ``signalwire`` namespace its own handler with
     ``propagate=False`` (see ``signalwire.core.logging_config``), so pytest's
-    ``caplog`` (which attaches to root) doesn't see them. We attach our own
-    handler to the same named logger.
+    ``caplog`` (which attaches to root) may not see SDK records. We attach our
+    own handler to the SDK's ``signalwire.agent_base`` logger.
     """
 
     def __init__(self) -> None:
@@ -261,7 +278,7 @@ class TestAgentNoKeyWarning:
         monkeypatch.delenv("SIGNALWIRE_SIGNING_KEY", raising=False)
 
         capture = _CaptureHandler()
-        agent_logger = logging.getLogger("agent_base")
+        agent_logger = logging.getLogger("signalwire.agent_base")
         agent_logger.addHandler(capture)
         try:
             AgentBase(name="warntest")
@@ -285,7 +302,7 @@ class TestAgentNoKeyWarning:
         monkeypatch.delenv("SIGNALWIRE_SIGNING_KEY", raising=False)
 
         capture = _CaptureHandler()
-        agent_logger = logging.getLogger("agent_base")
+        agent_logger = logging.getLogger("signalwire.agent_base")
         agent_logger.addHandler(capture)
         try:
             AgentBase(name="warntest2", signing_key=SIGNING_KEY)

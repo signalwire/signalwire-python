@@ -16,13 +16,12 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from http import HTTPStatus
 from typing import Any
-from urllib.parse import parse_qsl, urlencode, urlparse, urlsplit
+from urllib.parse import parse_qsl, quote, urlencode, urlparse, urlsplit
 
 from signalwire.core.logging_config import get_execution_mode
 from signalwire.core.function_result import FunctionResult
 from signalwire.core.mixins._mixin_host import _HostTyped
 from signalwire.core.security.webhook_middleware import (
-    _SIGNED_POST_PATHS,
     _public_url,
     validate,
 )
@@ -47,6 +46,8 @@ class _ServerlessRequest:
         url: The full URL the platform received the request on.
         headers: Request headers, with lower-case names.
         body: The raw request body.
+        signature_queries: Other raw encodings of the query string to try when
+            checking a signature, for platforms that decode the query.
     """
 
     method: str = "GET"
@@ -55,6 +56,7 @@ class _ServerlessRequest:
     url: str = ""
     headers: Mapping[str, str] = field(default_factory=dict)
     body: str = ""
+    signature_queries: tuple[str, ...] = ()
 
     @property
     def query(self) -> dict[str, str]:
@@ -64,6 +66,14 @@ class _ServerlessRequest:
 
 class _RequestTooLarge(ValueError):
     """The request body is larger than MAX_CGI_BODY_SIZE."""
+
+
+@dataclass(frozen=True)
+class _RequestView:
+    """What per-call configuration reads from a request: its query and headers."""
+
+    query_params: Mapping[str, str]
+    headers: Mapping[str, str]
 
 
 def _lower_headers(headers: Any) -> dict[str, str]:
@@ -138,10 +148,19 @@ def _lambda_request(event: Any) -> _ServerlessRequest:
     if not path:
         path = event.get("path") or "/"
 
+    signature_queries: tuple[str, ...] = ()
     if "rawQueryString" in event:
         query_string = str(event.get("rawQueryString") or "")
     else:
-        query_string = urlencode(event.get("queryStringParameters") or {})
+        # REST (v1) events carry decoded parameters, so the original encoding
+        # is lost: build the "+" form and keep the "%20" form for signatures
+        multi = event.get("multiValueQueryStringParameters") or {}
+        single = event.get("queryStringParameters") or {}
+        pairs = [(k, v) for k, values in multi.items() for v in values] or list(
+            single.items()
+        )
+        query_string = urlencode(pairs)
+        signature_queries = (urlencode(pairs, quote_via=quote),)
 
     body: Any = event.get("body") or ""
     if isinstance(body, str) and event.get("isBase64Encoded"):
@@ -170,6 +189,7 @@ def _lambda_request(event: Any) -> _ServerlessRequest:
         url=url,
         headers=_lower_headers(event.get("headers")),
         body=body,
+        signature_queries=signature_queries,
     )
 
 
@@ -312,11 +332,14 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
         """Handle one authenticated serverless request.
 
         Every serverless platform, and AgentServer's serverless modes, come
-        through here, so they follow the web server's rules: a POST to the
-        SWML, SWAIG or post-prompt path needs a valid signature when a
-        signing_key is set, a secure function needs its token, a post-prompt
-        summary needs its token before it reaches ``on_summary``, and the SWML
-        is rendered for the call the request names, so the tokens it hands out
+        through here, so they follow the web server's rules. The request is
+        first resolved to what it asks for: the SWML document, a function, or
+        a post-prompt summary. Running a function or delivering a summary
+        takes a POST, and every POST needs a valid signature when a
+        signing_key is set, whatever its path. A secure function needs its
+        token, and so does a summary. Per-call configuration applies to all
+        three, with the request's query, headers and body, and the SWML is
+        rendered for the call the request names, so the tokens it hands out
         validate later in that call.
 
         Args:
@@ -331,56 +354,68 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
         if relative_path is None:
             relative_path = self._path_below_route(request.path)
         relative_path = relative_path.strip("/")
+        method = request.method
 
-        if (
-            request.method == "POST"
-            and relative_path in _SIGNED_POST_PATHS
-            and self._serverless_signature_rejected(request)
-        ):
+        # What the request asks for: /swaig names a function in the body,
+        # /swaig/<name> and /<name> in the path
+        if relative_path == "post_prompt":
+            operation = "summary" if method == "POST" else "swml"
+        elif relative_path == "swaig":
+            operation = "function" if method == "POST" else "swml"
+        elif relative_path:
+            operation = "function"
+        else:
+            operation = "swml"
+
+        if method not in ("GET", "POST") or (operation != "swml" and method != "POST"):
+            return 405, json.dumps({"error": "Method not allowed"})
+        if method == "POST" and self._serverless_signature_rejected(request):
             return 403, json.dumps({"error": "Forbidden"})
 
         data = _json_object(request.body)
-        call_id = _call_id(data) or request.query.get("call_id") or None
-        token = request.query.get("__token") or request.query.get("token")
+        query = request.query
+        headers = dict(request.headers)
+        token = query.get("__token") or query.get("token")
 
-        # A summary goes to on_summary, by the web server's rules; a GET of
-        # the post-prompt path renders SWML, as it does there
-        if relative_path == "post_prompt":
-            if request.method == "POST":
-                status, payload = self._post_prompt_response(
-                    data,
-                    call_id,
-                    token,
-                    request.query,
-                    dict(request.headers),
-                    self.log.bind(endpoint="post_prompt", call_id=call_id),
-                )
-                return status, json.dumps(payload)
-            relative_path = ""
+        if operation == "summary":
+            status, payload = self._post_prompt_response(
+                data,
+                query.get("call_id"),
+                token,
+                query,
+                headers,
+                self.log.bind(endpoint="post_prompt"),
+            )
+            return status, json.dumps(payload)
 
-        # /swaig names the function in the body, /swaig/<name> and /<name> in the path
+        if operation == "swml":
+            # The SWML fetch names its call in the body, or a GET in the query
+            call_id = _call_id(data) or query.get("call_id") or None
+            modifications = self.on_swml_request(
+                data or None, None, _RequestView(query, headers)
+            )
+            swml = self._render_swml(call_id=call_id, modifications=modifications)
+            return 200, swml if isinstance(swml, str) else json.dumps(swml)
+
         if relative_path == "swaig":
             function_name = data.get("function")
-            if not function_name and request.method == "POST":
+            if not isinstance(function_name, str) or not function_name:
                 return 400, json.dumps({"error": "Missing function name"})
         elif relative_path.startswith("swaig/"):
             function_name = relative_path[len("swaig/") :]
         else:
             function_name = relative_path
 
-        if not function_name:
-            # The root path, or a GET of /swaig or /post_prompt: the SWML document
-            # for this call
-            modifications = self.on_swml_request(data or None, None, None)
-            swml = self._render_swml(call_id=call_id, modifications=modifications)
-            return 200, swml if isinstance(swml, str) else json.dumps(swml)
-
-        rejection = self._tool_token_rejection(str(function_name), token, call_id)
+        # As on the web server, a function call names its call in the body,
+        # and the token is checked against the agent that will run it
+        call_id = _call_id(data)
+        target = self._per_call_agent(query, data, headers)
+        rejection = target._tool_token_rejection(function_name, token, call_id)
         if rejection is not None:
             return 200, json.dumps(rejection)
 
-        result = self._execute_swaig_function(
-            str(function_name), _function_args(data), call_id, data or None
+        result = target._execute_swaig_function(
+            function_name, _function_args(data), call_id, data or None
         )
         return 200, json.dumps(result) if isinstance(result, dict) else str(result)
 
@@ -402,25 +437,33 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
         signing_key = getattr(self, "signing_key", None)
         if not signing_key:
             return False
-        path_and_query = request.path + (
-            f"?{request.query_string}" if request.query_string else ""
-        )
-        url = _public_url(
-            request.url,
-            request.headers,
-            trust_proxy=getattr(self, "_trust_proxy_for_signature", False),
-            path_and_query=path_and_query,
-        )
-        return (
-            validate(
-                request.method,
-                url,
-                request.headers,
-                request.body,
-                signing_key=signing_key,
+        # A platform that hands over decoded query parameters (API Gateway
+        # REST) loses the original encoding, so each plausible one is tried.
+        for query in dict.fromkeys((request.query_string, *request.signature_queries)):
+            platform_url = (
+                urlsplit(request.url)._replace(query=query).geturl()
+                if request.url
+                else ""
             )
-            is not None
-        )
+            path_and_query = request.path + (f"?{query}" if query else "")
+            url = _public_url(
+                platform_url,
+                request.headers,
+                trust_proxy=getattr(self, "_trust_proxy_for_signature", False),
+                path_and_query=path_and_query,
+            )
+            if (
+                validate(
+                    request.method,
+                    url,
+                    request.headers,
+                    request.body,
+                    signing_key=signing_key,
+                )
+                is None
+            ):
+                return False
+        return True
 
     def _execute_swaig_function(
         self,

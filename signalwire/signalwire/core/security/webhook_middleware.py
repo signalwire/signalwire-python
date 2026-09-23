@@ -155,26 +155,29 @@ def _public_url(
         url: The full URL the server received the request on.
         headers: Request headers, looked up by lower-case name.
         trust_proxy: Whether to honor the forwarded headers.
-        path_and_query: The path and query to join to a proxy base or
-            forwarded host. Defaults to those of ``url``; a serverless
-            platform passes the path below the app's root instead.
+        path_and_query: The path and query to join to a proxy base.
+            Defaults to those of ``url``; a serverless platform passes the
+            path below the app's root instead. A forwarded host always keeps
+            the path of ``url``.
 
     Returns:
         The URL the signature was computed over.
     """
-    if path_and_query is None:
-        parts = urlsplit(url)
-        path_and_query = parts.path + (f"?{parts.query}" if parts.query else "")
+    parts = urlsplit(url)
+    url_path_and_query = parts.path + (f"?{parts.query}" if parts.query else "")
 
     proxy_base = os.environ.get("SWML_PROXY_URL_BASE")
     if proxy_base:
-        return f"{proxy_base.rstrip('/')}{path_and_query}"
+        joined = url_path_and_query if path_and_query is None else path_and_query
+        return f"{proxy_base.rstrip('/')}{joined}"
 
     if trust_proxy:
+        # A forwarded host replaces only the host: the path is the one the
+        # platform saw, prefixes such as a CGI script or an Azure app included
         fwd_host = headers.get("x-forwarded-host")
         fwd_proto = headers.get("x-forwarded-proto", "https")
         if fwd_host:
-            return f"{fwd_proto}://{fwd_host}{path_and_query}"
+            return f"{fwd_proto}://{fwd_host}{url_path_and_query}"
 
     return url
 

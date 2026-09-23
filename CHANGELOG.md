@@ -16,31 +16,49 @@ serverless.
 - Security: a `secure=True` SWAIG function ran when the request carried no
   token at all, or a token but no `call_id`; only a wrong token was refused.
   Now a secure function runs only with a valid token for that function and
-  call.
+  call. The token is checked against the agent that runs the function, so a
+  secure tool registered by per-call configuration needs its token too.
+- Security: routing-callback paths (`register_routing_callback`) render SWML
+  like the root, and now need a signature like the root when a `signing_key`
+  is set.
+- Tokens for a call whose id contains a dot (composed conversation ids such as
+  `root.2`) never validated, so that call's secure functions were refused.
 - Security: a `POST` to the post-prompt endpoint now needs the token minted
   into the post-prompt URL. It was validated only when present, and processed
-  either way.
+  either way. A request whose URL and body name different calls is refused,
+  so one call's token can't deliver another call's summary.
 - Security: serverless requests (Lambda, CGI, Cloud Functions, Azure Functions,
   and `AgentServer`'s CGI and Lambda modes) never checked signatures or SWAIG
   tokens, and `AgentServer`'s serverless modes didn't check basic auth. They now
-  share one request path with the web server's rules.
+  share one request path with the web server's rules: running a function or
+  delivering a summary takes a POST, and every POST needs a valid signature
+  when a `signing_key` is set, whatever its path.
 - Serverless: post-prompt summaries reach `on_summary`, with the same token
   check as on the web server; before, the post-prompt URL was treated as a
   function name and the summary was lost.
 - Serverless: SWML is rendered for the call the request names, with per-call
-  configuration applied, so its tokens validate when the call's functions run.
+  configuration applied (it sees the request's query and headers), so its
+  tokens validate when the call's functions run. Function calls get the same
+  per-call configuration, so a tool it registers can run.
   Tool calls on a route other than `/` now reach the function (they failed with
   "Function 'agent/swaig' not found"), as do CGI calls to `/swaig` and Azure
   calls whose URL has a query string. CGI responses now carry a status and
-  headers, and `AgentServer` passes a function its arguments rather than the
-  whole request body.
+  headers, `AgentServer` passes a function its arguments rather than the whole
+  request body, and `AgentServer` serves an agent registered at `/`.
+- Serverless signature checks rebuild the public URL the way the web server
+  does. Behind trusted forwarded headers the platform's path prefix (a CGI
+  script, an Azure function app) is kept, and for API Gateway REST events,
+  which lose the query's original encoding, both encodings are tried.
 - `get_app()` serves the agent's route without a trailing slash (it answered
   204), and `/agentswaig` is no longer treated as `/agent/swaig`.
 - Logging: until something configures logging, SDK loggers printed every
   level, debug included, to stdout. They now write through stdlib logging and
   are silent until `configure_logging()` runs (as `serve()` and `run()` do) or
   the host app configures logging. `swaig-test --verbose` turns them on, and
-  `swaig-test --dump-swml --raw` prints clean JSON.
+  `swaig-test --dump-swml --raw` prints clean JSON. Every SDK logger now lives
+  under the `signalwire` namespace (`agent_base` is `signalwire.agent_base`),
+  so the SDK no longer shares, or reconfigures, a host app's logger that
+  happens to have the same name.
 - `wikipedia_search` sends a User-Agent; Wikipedia answered 403 without one.
 
 ### Notes for upgraders
@@ -54,6 +72,10 @@ serverless.
 - An app that embeds an agent (`get_app()`, `as_router()`) no longer gets SDK
   log output on stdout by default. Configure `logging`, or call
   `signalwire.configure_logging()`.
+- SDK logger names gained a `signalwire.` prefix. Code that configured a short
+  name such as `logging.getLogger("agent_base")` should use
+  `signalwire.agent_base`, or the `signalwire` namespace.
+- A serverless function call must be a POST; other methods get 405.
 
 ## [3.4.3] - 2026-09-17
 

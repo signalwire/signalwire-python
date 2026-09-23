@@ -54,10 +54,9 @@ def _install_library_null_handler() -> None:
     host-owned logger — so ``import signalwire`` never hijacks the app's logging.
     The app opts in to SDK log OUTPUT by calling ``configure_logging()`` explicitly
     (the server/CLI entry points do this)."""
-    for name in ["signalwire", *_get_sdk_logger_names()]:
-        lgr = logging.getLogger(name)
-        if not any(isinstance(h, logging.NullHandler) for h in lgr.handlers):
-            lgr.addHandler(logging.NullHandler())
+    sw_logger = logging.getLogger("signalwire")
+    if not any(isinstance(h, logging.NullHandler) for h in sw_logger.handlers):
+        sw_logger.addHandler(logging.NullHandler())
 
 
 def get_execution_mode() -> str:
@@ -239,42 +238,6 @@ def _configure_structlog(level_num: int, log_format: str, stream: Any) -> None:
     sw_logger.propagate = False  # Don't bubble up to root
     sw_logger.addHandler(handler)
 
-    # Also attach to known SDK short-name loggers
-    for name in _get_sdk_logger_names():
-        lgr = logging.getLogger(name)
-        lgr.handlers.clear()
-        lgr.setLevel(level_num)
-        lgr.propagate = False
-        lgr.addHandler(handler)
-
-
-def _get_sdk_logger_names() -> list[str]:
-    """Known SDK logger names that don't use the signalwire. prefix.
-
-    These are used by the 11 files that call get_logger() with short names.
-    They need to be handled alongside the signalwire namespace logger.
-    """
-    return [
-        "swml_service",
-        "agent_base",
-        "AgentServer",
-        "skill_registry",
-        "skill_manager",
-        "security_config",
-        "config_loader",
-        "auth_handler",
-        "web_service",
-        "search_service",
-        "bedrock_agent",
-        "relay_client",
-        "relay_call",
-        "relay_message",
-        "rest_client",
-        "ai_config_mixin",
-        "ai_chat.client",
-        "ai_chat.handoff",
-    ]
-
 
 def _configure_off_mode() -> None:
     """Suppress all logging output without leaking file descriptors."""
@@ -285,13 +248,6 @@ def _configure_off_mode() -> None:
     sw_logger.handlers.clear()
     sw_logger.setLevel(off_level)
     sw_logger.propagate = False
-
-    # Silence known SDK short-name loggers
-    for name in _get_sdk_logger_names():
-        lgr = logging.getLogger(name)
-        lgr.handlers.clear()
-        lgr.setLevel(off_level)
-        lgr.propagate = False
 
     # Configure structlog with a filtering bound logger that suppresses everything
     structlog.configure(
@@ -340,10 +296,21 @@ def get_logger(name: str) -> Any:
     # silent by default, the host app's stdlib logging config applies, and
     # configure_logging() attaches the SDK's own handler.
     return structlog.wrap_logger(
-        logging.getLogger(name),
+        logging.getLogger(_sdk_logger_name(name)),
         processors=[*_get_structlog_processors(), _to_stdlib_record],
         wrapper_class=structlog.stdlib.BoundLogger,
     )
+
+
+def _sdk_logger_name(name: str) -> str:
+    """The stdlib logger name for an SDK logger: always under ``signalwire``.
+
+    A short name such as "agent_base" becomes "signalwire.agent_base", so the
+    SDK never shares a logger with a host app that happens to use the name.
+    """
+    if name == "signalwire" or name.startswith("signalwire."):
+        return name
+    return f"signalwire.{name}"
 
 
 class _EventDict(dict[str, Any]):

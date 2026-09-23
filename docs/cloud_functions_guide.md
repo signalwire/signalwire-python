@@ -378,12 +378,20 @@ curl https://your-function-url/
 # Test with valid auth
 curl -u username:password https://your-function-url/
 
-# Test SWAIG function call
-curl -u username:password \
-  -H "Content-Type: application/json" \
-  -d '{"call_id": "test", "argument": {"parsed": [{"param": "value"}]}}' \
-  https://your-function-url/your_function_name
+# Test a SWAIG function call. A function's URL carries a token for one call,
+# so fetch the SWML for a test call and take the function's URL from it.
+URL=$(curl -s -u username:password "https://your-function-url/?call_id=test" | python -c '
+import json, sys
+ai = next(v["ai"] for v in json.load(sys.stdin)["sections"]["main"] if "ai" in v)
+print(next(f["web_hook_url"] for f in ai["SWAIG"]["functions"] if f["function"] == "your_function_name"))')
+
+# The URL includes the credentials; send the same call_id
+curl -H "Content-Type: application/json" \
+  -d '{"function": "your_function_name", "call_id": "test", "argument": {"parsed": [{"param": "value"}]}}' \
+  "$URL"
 ```
+
+With a `signing_key` set, every POST also needs SignalWire's signature, so a call made by hand is refused. Test functions with `swaig-test`, or through SignalWire.
 
 ## Best Practices
 

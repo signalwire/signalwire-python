@@ -318,7 +318,7 @@ agent.serve()
 
 When `signing_key` is set, signature validation is auto-mounted on `POST /`, `POST /swaig`, `POST /post_prompt`. Requests without a valid `X-SignalWire-Signature` header are rejected with HTTP 403 — the handler is never invoked. The `X-Twilio-Signature` header is accepted as an alias for cXML compatibility.
 
-The check applies however the agent is served (`serve()`, `get_app()`, `mount()`, `AgentServer`, or a serverless platform), and on every path that reaches those handlers, including the agent's route without a trailing slash. On a serverless platform the URL is rebuilt the same way: `SWML_PROXY_URL_BASE` if it's set, then the forwarded headers if you opted in with `trust_proxy_for_signature`, then the URL the platform reports. If signed requests are refused, set `SWML_PROXY_URL_BASE` to the public URL.
+The check applies however the agent is served (`serve()`, `get_app()`, `mount()`, `AgentServer`, or a serverless platform), and on every path that reaches those handlers, including the agent's route without a trailing slash and any routing-callback path, which renders SWML like the root. On a serverless platform every POST is checked, whatever its path. On a serverless platform the URL is rebuilt the same way: `SWML_PROXY_URL_BASE` if it's set, then the forwarded headers if you opted in with `trust_proxy_for_signature`, then the URL the platform reports. If signed requests are refused, set `SWML_PROXY_URL_BASE` to the public URL.
 
 When `signing_key` is unset, AgentBase emits a prominent startup warning:
 
@@ -399,7 +399,10 @@ Mark a function `secure=False` only if anyone holding the basic-auth
 credentials may call it.
 
 The post-prompt URL carries a token for its call too, and a summary POSTed
-without it is refused. The same rules hold on serverless platforms.
+without it is refused, as is one whose URL and body name different calls. The
+token is checked against the agent that runs the function, including a copy
+made by per-call configuration, so a secure tool that configuration registers
+needs its token too. The same rules hold on serverless platforms.
 
 To call a secure function by hand, fetch the SWML with `?call_id=<id>` and
 POST to that function's `web_hook_url`, with the same `call_id` in the body.

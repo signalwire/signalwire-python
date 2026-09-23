@@ -748,7 +748,8 @@ class TestHandleCgiRequest:
         agent = SimpleTestAgent(name="myagent")
         agent._execute_swaig_function = Mock(return_value={"response": "ok"})  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
-        env = {"PATH_INFO": "/myagent/swaig/my_func", "HTTP_AUTHORIZATION": _basic_auth(agent)}
+        env = {"PATH_INFO": "/myagent/swaig/my_func", "REQUEST_METHOD": "POST",
+               "HTTP_AUTHORIZATION": _basic_auth(agent)}
         with patch.dict(os.environ, env, clear=False):
             os.environ.pop("CONTENT_LENGTH", None)
             with patch("sys.stdout", new_callable=StringIO):
@@ -776,7 +777,7 @@ class TestHandleCgiRequest:
         agent._execute_swaig_function = Mock(side_effect=Exception("func error"))  # type: ignore[method-assign]  # mock
         server.register(agent, "/myagent")
         env = {"PATH_INFO": "/myagent/swaig/broken_func", "CONTENT_LENGTH": "0",
-               "HTTP_AUTHORIZATION": _basic_auth(agent)}
+               "REQUEST_METHOD": "POST", "HTTP_AUTHORIZATION": _basic_auth(agent)}
         with patch.dict(os.environ, env, clear=False):
             with patch("sys.stdout", new_callable=StringIO):
                 result = server._handle_cgi_request()

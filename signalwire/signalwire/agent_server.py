@@ -393,10 +393,17 @@ class AgentServer:
         return self._run_server(host, port)
 
     def _match_agent(self, path: str) -> tuple[AgentBase, str] | None:
-        """The agent registered at the start of ``path``, and the path below its route."""
+        """The agent registered at the start of ``path``, and the path below its route.
+
+        The most specific route wins, so an agent registered at "/" serves
+        whatever no other agent's route matches.
+        """
         path = path.strip("/")
-        for route, agent in self.agents.items():
+        routes = sorted(self.agents.items(), key=lambda item: -len(item[0].strip("/")))
+        for route, agent in routes:
             route_clean = route.strip("/")
+            if not route_clean:
+                return agent, path
             if path == route_clean or path.startswith(route_clean + "/"):
                 return agent, path[len(route_clean) :].strip("/")
         return None
@@ -413,16 +420,10 @@ class AgentServer:
 
         # Get PATH_INFO to determine routing
         path_info = os.getenv("PATH_INFO", "").strip("/")
-        if not path_info:
-            # Root request - return basic info or 404
-            response = {"error": "No agent specified in path"}
-            return self._format_cgi_response(response, status="404 Not Found")
-
         match = self._match_agent(path_info)
         if match is None:
-            return self._format_cgi_response(
-                {"error": "Not Found"}, status="404 Not Found"
-            )
+            error = "No agent specified in path" if not path_info else "Not Found"
+            return self._format_cgi_response({"error": error}, status="404 Not Found")
         agent, relative_path = match
 
         # The agent's own credentials protect it, as they do on the web server
@@ -459,19 +460,14 @@ class AgentServer:
         from signalwire.core.mixins.serverless_mixin import _lambda_request
 
         request = _lambda_request(event)
-        if not request.path.strip("/"):
-            return {
-                "statusCode": 404,
-                "headers": {"Content-Type": "application/json"},
-                "body": json.dumps({"error": "No agent specified in path"}),
-            }
-
         match = self._match_agent(request.path)
         if match is None:
+            no_path = not request.path.strip("/")
+            error = "No agent specified in path" if no_path else "Not Found"
             return {
                 "statusCode": 404,
                 "headers": {"Content-Type": "application/json"},
-                "body": json.dumps({"error": "Not Found"}),
+                "body": json.dumps({"error": error}),
             }
         agent, relative_path = match
 
