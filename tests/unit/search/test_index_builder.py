@@ -691,7 +691,9 @@ class TestIndexBuilderBuildMethods:
             self.builder.build_index(source_dir, self.temp_db, file_types)
             
             # Should call new method with converted parameters
-            mock_build.assert_called_once_with([Path(source_dir)], self.temp_db, file_types, None, None, None)
+            mock_build.assert_called_once_with(
+                [Path(source_dir)], self.temp_db, file_types, None, None, None, overwrite=False
+            )
 
 
 class TestIndexBuilderEdgeCases:
@@ -770,3 +772,18 @@ class TestSqliteHandleLifetime:
             assert builder.validate_index(str(missing_tables))["valid"] is False
             assert builder.validate_index(str(not_a_db))["valid"] is False
         assert self._open_fd_count() == before
+
+
+
+class TestBuildIndexOverwrite:
+    """build_index() forwards overwrite, which the pgvector path needs (B8)."""
+
+    @pytest.mark.parametrize("overwrite", [False, True])
+    def test_forwards_overwrite(self, overwrite: bool) -> None:
+        from unittest.mock import Mock
+
+        from signalwire.search.index_builder import IndexBuilder
+
+        builder = Mock()
+        IndexBuilder.build_index(builder, "/data/docs", "my_col", ["md"], overwrite=overwrite)
+        assert builder.build_index_from_sources.call_args.kwargs["overwrite"] is overwrite

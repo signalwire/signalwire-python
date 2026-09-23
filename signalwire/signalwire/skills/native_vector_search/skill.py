@@ -449,20 +449,29 @@ class NativeVectorSearchSkill(SkillBase):
                             index_nlp_backend=self.index_nlp_backend,
                         )
 
-                        # NOTE: IndexBuilder.build_index() does not accept an
-                        # "overwrite" parameter; passing it raised TypeError at
-                        # runtime (silently swallowed by the except below), so
-                        # pgvector auto-build never actually succeeded. Removed.
-                        builder.build_index(
-                            source_dir=self.source_dir,
-                            output_file=self.collection_name,  # pgvector uses this as collection name
-                            file_types=self.params.get("file_types", ["md", "txt"]),
-                            exclude_patterns=self.params.get("exclude_patterns"),
-                            tags=self.params.get("global_tags"),
-                        )
-                        self.logger.info(
-                            f"pgvector collection created: {self.collection_name}"
-                        )
+                        # A pgvector collection only grows: storing chunks into
+                        # an existing one appends a second copy. So, as for a
+                        # SQLite index file, build only when the collection
+                        # doesn't exist yet, unless overwrite asks to rebuild.
+                        overwrite = bool(self.params.get("overwrite", False))
+                        if not overwrite and self._pgvector_collection_exists():
+                            self.logger.info(
+                                "pgvector collection %s already exists; set "
+                                "overwrite to rebuild it",
+                                self.collection_name,
+                            )
+                        else:
+                            builder.build_index(
+                                source_dir=self.source_dir,
+                                output_file=self.collection_name,  # pgvector uses this as collection name
+                                file_types=self.params.get("file_types", ["md", "txt"]),
+                                exclude_patterns=self.params.get("exclude_patterns"),
+                                tags=self.params.get("global_tags"),
+                                overwrite=overwrite,
+                            )
+                            self.logger.info(
+                                f"pgvector collection created: {self.collection_name}"
+                            )
                     except Exception as e:
                         self.logger.error(f"Failed to build pgvector index: {e}")
                         # Don't set search_available to False - we might be connecting to existing collection
@@ -574,6 +583,26 @@ class NativeVectorSearchSkill(SkillBase):
                     "If no results are found, suggest the user try rephrasing their question or try another knowledge source",
                 ],
             )
+
+    def _pgvector_collection_exists(self) -> bool:
+        """True if the configured pgvector collection already exists."""
+        import re
+
+        from signalwire.search.pgvector_backend import PgVectorBackend
+
+        name = self.collection_name or ""
+        if name.endswith(".swsearch"):
+            name = name[: -len(".swsearch")]
+        # The same sanitizing IndexBuilder applies when it stores a collection
+        name = re.sub(r"[^a-zA-Z0-9_]", "_", name)
+        backend = PgVectorBackend(self.connection_string or "")
+        try:
+            return name in backend.list_collections()
+        except Exception:
+            # A new database has no collection_config table yet.
+            return False
+        finally:
+            backend.close()
 
     def _search_handler(
         self, args: dict[str, Any], raw_data: dict[str, Any]

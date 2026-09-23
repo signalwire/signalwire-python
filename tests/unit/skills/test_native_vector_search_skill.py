@@ -552,6 +552,47 @@ class TestSetupAutoBuild:
         mock_builder.build_index.assert_called_once()
 
 
+class TestPgvectorAutoBuildOverwrite:
+    """pgvector auto-build honors overwrite, and never appends a second copy (B8)."""
+
+    def _setup(self, existing: list[str], **params: Any) -> tuple[Mock, Mock]:
+        mock_builder = Mock()
+        mock_backend = Mock()
+        mock_backend.list_collections.return_value = existing
+        with patch.dict("sys.modules", {
+            "signalwire.search": Mock(IndexBuilder=Mock(return_value=mock_builder), SearchEngine=Mock()),
+            "signalwire.search.models": Mock(resolve_model_alias=Mock(return_value="base-model")),
+            "signalwire.search.query_processor": Mock(),
+            "signalwire.search.pgvector_backend": Mock(PgVectorBackend=Mock(return_value=mock_backend)),
+        }):
+            skill = _make_skill({
+                "build_index": True,
+                "source_dir": "/data/docs",
+                "backend": "pgvector",
+                "connection_string": "postgresql://localhost/db",
+                "collection_name": "my-col",
+                **params,
+            })
+            skill.setup()
+        return mock_builder, mock_backend
+
+    def test_existing_collection_is_not_built_again(self) -> None:
+        mock_builder, mock_backend = self._setup(existing=["my_col"])
+        mock_builder.build_index.assert_not_called()
+        mock_backend.close.assert_called_once()
+
+    def test_new_collection_is_built(self) -> None:
+        mock_builder, _ = self._setup(existing=[])
+        mock_builder.build_index.assert_called_once()
+        assert mock_builder.build_index.call_args.kwargs["overwrite"] is False
+
+    def test_overwrite_rebuilds_an_existing_collection(self) -> None:
+        mock_builder, mock_backend = self._setup(existing=["my_col"], overwrite=True)
+        mock_builder.build_index.assert_called_once()
+        assert mock_builder.build_index.call_args.kwargs["overwrite"] is True
+        mock_backend.list_collections.assert_not_called()
+
+
 # ===========================================================================
 # register_tools()
 # ===========================================================================

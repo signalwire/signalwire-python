@@ -203,6 +203,8 @@ class IndexBuilder:
             exclude_patterns: Glob patterns to exclude
             languages: List of languages to support
             tags: Global tags to add to all chunks
+            overwrite: For the pgvector backend, drop an existing collection
+                of the same name before storing the chunks
         """
 
         # Discover files from all sources
@@ -335,6 +337,7 @@ class IndexBuilder:
         exclude_patterns: list[str] | None = None,
         languages: list[str] | None = None,
         tags: list[str] | None = None,
+        overwrite: bool = False,
     ) -> None:
         """
         Build complete search index from a single directory
@@ -346,12 +349,20 @@ class IndexBuilder:
             exclude_patterns: Glob patterns to exclude
             languages: List of languages to support
             tags: Global tags to add to all chunks
+            overwrite: For the pgvector backend, drop an existing collection
+                of the same name before storing the chunks
         """
 
         # Convert to new multi-source method
         sources = [Path(source_dir)]
         self.build_index_from_sources(
-            sources, output_file, file_types, exclude_patterns, languages, tags
+            sources,
+            output_file,
+            file_types,
+            exclude_patterns,
+            languages,
+            tags,
+            overwrite=overwrite,
         )
 
     def _get_base_directory_for_file(self, file_path: Path, sources: list[Path]) -> str:
