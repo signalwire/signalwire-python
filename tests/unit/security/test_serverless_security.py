@@ -4,7 +4,8 @@ Integration tests: serverless requests follow the web server's security rules.
 A real AgentBase answers Lambda, CGI, Cloud Functions and Azure Functions
 requests. On every platform it must render SWML for the call the request
 names, so that call's tokens validate later; run a secure function only with
-its token; and, with a signing_key set, refuse unsigned POSTs.
+its token; deliver a post-prompt summary to on_summary only with its token;
+and, with a signing_key set, refuse unsigned POSTs.
 """
 
 import base64
@@ -67,6 +68,25 @@ def _tool_call(call_id: str) -> str:
                        "argument": {"parsed": [{"topic": "hours"}]}})
 
 
+SUMMARY = json.dumps({"call_id": "call-1", "summary": "The caller booked a table."})
+
+
+def _summarizing_agent(route: str = "/agent") -> tuple[AgentBase, list[Any]]:
+    """An agent with a post-prompt, and the summaries its on_summary receives."""
+    agent = _agent(route)
+    agent.set_post_prompt("Summarize the call.")
+    received: list[Any] = []
+    agent.on_summary = lambda summary, raw_data=None: received.append(summary)  # type: ignore[method-assign]  # capture
+    return agent, received
+
+
+def _post_prompt_query(swml: str) -> str:
+    """The raw query string of the SWML's post-prompt URL: its token."""
+    ai = next(verb["ai"] for verb in json.loads(swml)["sections"]["main"] if "ai" in verb)
+    url: str = ai["post_prompt_url"]
+    return urlparse(url).query
+
+
 # ---------------------------------------------------------------------------
 # Lambda
 # ---------------------------------------------------------------------------
@@ -110,6 +130,29 @@ class TestLambda:
         result = _lambda(_agent(signing_key=SIGNING_KEY), "/agent", body, signature=signature)
         assert result["statusCode"] == 200
         assert "sections" in json.loads(result["body"])
+
+    def test_a_summary_with_its_token_reaches_on_summary(self) -> None:
+        agent, received = _summarizing_agent()
+        swml = _lambda(agent, "/agent", json.dumps({"call": {"call_id": "call-1"}}))["body"]
+        result = _lambda(agent, "/agent/post_prompt/", SUMMARY, _post_prompt_query(swml))
+        assert json.loads(result["body"]) == {"success": True}
+        assert received == ["The caller booked a table."]
+
+    def test_a_summary_without_its_token_is_refused(self) -> None:
+        agent, received = _summarizing_agent()
+        result = _lambda(agent, "/agent/post_prompt/", SUMMARY)
+        assert result["statusCode"] == 403
+        assert received == []
+
+    def test_fetch_conversation_returns_what_on_summary_returns(self) -> None:
+        agent, _received = _summarizing_agent()
+        # fetch_conversation replies with on_summary's return value, which the
+        # base method's "-> None" annotation doesn't allow for
+        agent.on_summary = lambda summary, raw_data=None: {"conversation_summary": "Earlier: a booking."}  # type: ignore[method-assign,assignment]  # see above
+        swml = _lambda(agent, "/agent", json.dumps({"call": {"call_id": "call-1"}}))["body"]
+        body = json.dumps({"call_id": "call-1", "action": "fetch_conversation"})
+        result = _lambda(agent, "/agent/post_prompt/", body, _post_prompt_query(swml))
+        assert json.loads(result["body"]) == {"conversation_summary": "Earlier: a booking."}
 
     def test_per_call_config_applies(self) -> None:
         agent = _agent()
@@ -157,6 +200,19 @@ class TestCGI:
         result = _cgi(_agent(signing_key=SIGNING_KEY), "/agent/swaig/", _tool_call("call-1"))
         assert result.startswith("Status: 403 Forbidden\r\n")
 
+    def test_a_summary_with_its_token_reaches_on_summary(self) -> None:
+        agent, received = _summarizing_agent()
+        swml = _cgi_body(_cgi(agent, "/agent", json.dumps({"call": {"call_id": "call-1"}})))
+        result = _cgi(agent, "/agent/post_prompt/", SUMMARY, _post_prompt_query(swml))
+        assert json.loads(_cgi_body(result)) == {"success": True}
+        assert received == ["The caller booked a table."]
+
+    def test_a_summary_without_its_token_is_refused(self) -> None:
+        agent, received = _summarizing_agent()
+        result = _cgi(agent, "/agent/post_prompt/", SUMMARY)
+        assert result.startswith("Status: 403 Forbidden\r\n")
+        assert received == []
+
     def test_a_signed_post_is_answered(self) -> None:
         body = json.dumps({"call": {"call_id": "call-1"}})
         signature = _sign("https://example.com/cgi-bin/agent.cgi/agent", body)
@@ -198,6 +254,13 @@ class TestCloudFunctions:
 
     def test_an_unsigned_post_is_refused(self) -> None:
         assert _gcf(_agent(signing_key=SIGNING_KEY), "/agent", "{}").status_code == 403
+
+    def test_a_summary_with_its_token_reaches_on_summary(self) -> None:
+        agent, received = _summarizing_agent()
+        swml = _gcf(agent, "/agent", json.dumps({"call": {"call_id": "call-1"}})).get_data(as_text=True)
+        result = _gcf(agent, "/agent/post_prompt/", SUMMARY, _post_prompt_query(swml))
+        assert json.loads(result.get_data(as_text=True)) == {"success": True}
+        assert received == ["The caller booked a table."]
 
     def test_a_signed_post_is_answered(self) -> None:
         body = json.dumps({"call": {"call_id": "call-1"}})
@@ -257,6 +320,13 @@ class TestAzureFunctions:
     def test_an_unsigned_post_is_refused(self) -> None:
         assert _azure(_agent(signing_key=SIGNING_KEY), "/agent", "{}").status_code == 403
 
+    def test_a_summary_with_its_token_reaches_on_summary(self) -> None:
+        agent, received = _summarizing_agent()
+        swml = _azure(agent, "/agent", json.dumps({"call": {"call_id": "call-1"}})).body
+        result = _azure(agent, "/agent/post_prompt/", SUMMARY, _post_prompt_query(swml))
+        assert json.loads(result.body) == {"success": True}
+        assert received == ["The caller booked a table."]
+
     def test_a_signed_post_is_answered(self) -> None:
         body = json.dumps({"call": {"call_id": "call-1"}})
         signature = _sign(f"{AZURE_BASE}/agent", body)
@@ -289,3 +359,16 @@ class TestAgentServerLambda:
             {"path": "/myagent/swaig", "headers": {"Authorization": _auth(agent)},
              "body": _tool_call("call-1")}, None)
         assert REFUSED in json.loads(result["body"])["response"]
+
+    def test_a_summary_with_its_token_reaches_on_summary(self) -> None:
+        agent, received = _summarizing_agent(route="/")
+        server = AgentServer()
+        server.register(agent, "/myagent")
+        swml = server._handle_lambda_request(
+            {"path": "/myagent", "headers": {"Authorization": _auth(agent)},
+             "body": json.dumps({"call": {"call_id": "call-1"}})}, None)["body"]
+        result = server._handle_lambda_request(
+            {"rawPath": "/myagent/post_prompt/", "rawQueryString": _post_prompt_query(swml),
+             "headers": {"Authorization": _auth(agent)}, "body": SUMMARY}, None)
+        assert json.loads(result["body"]) == {"success": True}
+        assert received == ["The caller booked a table."]

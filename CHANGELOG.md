@@ -24,6 +24,9 @@ serverless.
   and `AgentServer`'s CGI and Lambda modes) never checked signatures or SWAIG
   tokens, and `AgentServer`'s serverless modes didn't check basic auth. They now
   share one request path with the web server's rules.
+- Serverless: post-prompt summaries reach `on_summary`, with the same token
+  check as on the web server; before, the post-prompt URL was treated as a
+  function name and the summary was lost.
 - Serverless: SWML is rendered for the call the request names, with per-call
   configuration applied, so its tokens validate when the call's functions run.
   Tool calls on a route other than `/` now reach the function (they failed with

@@ -314,9 +314,10 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
         Every serverless platform, and AgentServer's serverless modes, come
         through here, so they follow the web server's rules: a POST to the
         SWML, SWAIG or post-prompt path needs a valid signature when a
-        signing_key is set, a secure function needs its token, and the SWML is
-        rendered for the call the request names, so the tokens it hands out
-        validate when that call's functions run.
+        signing_key is set, a secure function needs its token, a post-prompt
+        summary needs its token before it reaches ``on_summary``, and the SWML
+        is rendered for the call the request names, so the tokens it hands out
+        validate later in that call.
 
         Args:
             request: The platform's request
@@ -340,6 +341,22 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
 
         data = _json_object(request.body)
         call_id = _call_id(data) or request.query.get("call_id") or None
+        token = request.query.get("__token") or request.query.get("token")
+
+        # A summary goes to on_summary, by the web server's rules; a GET of
+        # the post-prompt path renders SWML, as it does there
+        if relative_path == "post_prompt":
+            if request.method == "POST":
+                status, payload = self._post_prompt_response(
+                    data,
+                    call_id,
+                    token,
+                    request.query,
+                    dict(request.headers),
+                    self.log.bind(endpoint="post_prompt", call_id=call_id),
+                )
+                return status, json.dumps(payload)
+            relative_path = ""
 
         # /swaig names the function in the body, /swaig/<name> and /<name> in the path
         if relative_path == "swaig":
@@ -352,12 +369,12 @@ class ServerlessMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object
             function_name = relative_path
 
         if not function_name:
-            # The root path, or a GET of /swaig: the SWML document for this call
+            # The root path, or a GET of /swaig or /post_prompt: the SWML document
+            # for this call
             modifications = self.on_swml_request(data or None, None, None)
             swml = self._render_swml(call_id=call_id, modifications=modifications)
             return 200, swml if isinstance(swml, str) else json.dumps(swml)
 
-        token = request.query.get("__token") or request.query.get("token")
         rejection = self._tool_token_rejection(str(function_name), token, call_id)
         if rejection is not None:
             return 200, json.dumps(rejection)

@@ -1128,46 +1128,9 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             if call_id:
                 req_log = req_log.bind(call_id=call_id)
 
-            # A POST delivers a call's summary, so like a secure SWAIG function
-            # it needs the token minted into the post-prompt URL for that call.
-            # A missing token is refused like a wrong one. A GET only renders
-            # SWML and needs none.
             token = request.query_params.get("__token") or request.query_params.get(
                 "token"
             )  # Check __token first, fallback to token
-            if request.method == "POST":
-                is_valid = False
-                if not token:
-                    req_log.warning("token_missing")
-                elif not call_id or not hasattr(self, "_session_manager"):
-                    req_log.warning("invalid_token")
-                else:
-                    req_log.debug("token_found", token_length=len(token))
-                    try:
-                        is_valid = bool(
-                            self._session_manager.validate_tool_token(
-                                "post_prompt", token, call_id
-                            )
-                        )
-                    except Exception as e:
-                        req_log.error("token_validation_error", error=str(e))
-                    else:
-                        if is_valid:
-                            req_log.debug("token_valid")
-                        else:
-                            req_log.warning("invalid_token")
-                            # Debug information for token validation issues
-                            if hasattr(self._session_manager, "debug_token"):
-                                debug_info = self._session_manager.debug_token(token)
-                                req_log.debug(
-                                    "token_debug", debug=json.dumps(debug_info)
-                                )
-                if not is_valid:
-                    return Response(
-                        content=json.dumps({"error": "Invalid or missing token"}),
-                        status_code=403,
-                        media_type="application/json",
-                    )
 
             # For GET requests, return the SWML document
             if request.method == "GET":
@@ -1193,53 +1156,21 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                 req_log.error("error_parsing_request_body", error=str(e))
                 body = {}
 
-            # Check if we need to use an ephemeral agent for dynamic configuration
-            agent_to_use = self
-            if self._dynamic_config_callback is not None and request:
-                # Create ephemeral copy and apply dynamic config
-                agent_to_use = self._create_ephemeral_copy()
-
-                try:
-                    # Extract request data
-                    query_params = dict(request.query_params)
-                    # Strip credential-bearing headers before handing them to
-                    # the user callback (matches the TS SDK's filtering).
-                    headers = filter_sensitive_headers(dict(request.headers))
-
-                    # Call the dynamic config callback with the ephemeral agent
-                    self._dynamic_config_callback(
-                        query_params, body, headers, agent_to_use
-                    )
-
-                except Exception as e:
-                    req_log.error("dynamic_config_error", error=str(e))
-
-            # Extract summary from the correct location in the request
-            summary = agent_to_use._find_summary_in_post_data(body, req_log)
-
-            # Call the summary handler with the summary and the full body
-            result: dict[str, Any] | None = None
-            try:
-                if summary:
-                    result = agent_to_use.on_summary(summary, body)
-                    req_log.debug("summary_handler_called_successfully")
-                else:
-                    # If no summary found but still want to process the data
-                    result = agent_to_use.on_summary(None, body)
-                    req_log.debug("summary_handler_called_with_null_summary")
-            except Exception as e:
-                req_log.error("error_in_summary_handler", error=str(e))
-
-            # For fetch_conversation, return the result from on_summary
-            # SignalWire expects conversation_summary in the response
-            action = body.get("action", "")
-            if action == "fetch_conversation" and result is not None:
-                req_log.info("request_successful", action=action, returning_result=True)
-                return result
-
-            # Return success for save/post actions
-            req_log.info("request_successful")
-            return {"success": True}
+            status, payload = self._post_prompt_response(
+                body,
+                call_id,
+                token,
+                dict(request.query_params),
+                dict(request.headers),
+                req_log,
+            )
+            if status != 200:
+                return Response(
+                    content=json.dumps(payload),
+                    status_code=status,
+                    media_type="application/json",
+                )
+            return payload
         except Exception as e:
             req_log.error("request_failed", error=str(e))
             return Response(
@@ -1247,6 +1178,107 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                 status_code=500,
                 media_type="application/json",
             )
+
+    def _post_prompt_response(
+        self,
+        body: dict[str, Any],
+        call_id: str | None,
+        token: str | None,
+        query_params: dict[str, str],
+        headers: dict[str, str],
+        req_log: Any,
+    ) -> tuple[int, dict[str, Any]]:
+        """Deliver a post-prompt POST to ``on_summary``.
+
+        Shared by the web server and the serverless platforms. A POST delivers
+        a call's summary, so like a secure SWAIG function it needs the token
+        minted into the post-prompt URL for that call; a missing token is
+        refused like a wrong one. Then the summary goes to ``on_summary``, on a
+        per-call copy of the agent when dynamic configuration is set.
+
+        Args:
+            body: The parsed request body
+            call_id: The call the summary belongs to, if known
+            token: The token from the request's query string, if any
+            query_params: The request's query parameters, for dynamic config
+            headers: The request's headers, for dynamic config
+            req_log: The logger bound to this request
+
+        Returns:
+            The HTTP status and the JSON payload to send
+        """
+        if not self._post_prompt_token_valid(token, call_id, req_log):
+            return 403, {"error": "Invalid or missing token"}
+
+        # Check if we need to use an ephemeral agent for dynamic configuration
+        agent_to_use = self
+        if self._dynamic_config_callback is not None:
+            # Create ephemeral copy and apply dynamic config
+            agent_to_use = self._create_ephemeral_copy()
+
+            try:
+                # Strip credential-bearing headers before handing them to
+                # the user callback (matches the TS SDK's filtering).
+                self._dynamic_config_callback(
+                    query_params, body, filter_sensitive_headers(headers), agent_to_use
+                )
+            except Exception as e:
+                req_log.error("dynamic_config_error", error=str(e))
+
+        # Extract summary from the correct location in the request
+        summary = agent_to_use._find_summary_in_post_data(body, req_log)
+
+        # Call the summary handler with the summary and the full body
+        result: dict[str, Any] | None = None
+        try:
+            if summary:
+                result = agent_to_use.on_summary(summary, body)
+                req_log.debug("summary_handler_called_successfully")
+            else:
+                # If no summary found but still want to process the data
+                result = agent_to_use.on_summary(None, body)
+                req_log.debug("summary_handler_called_with_null_summary")
+        except Exception as e:
+            req_log.error("error_in_summary_handler", error=str(e))
+
+        # For fetch_conversation, return the result from on_summary
+        # SignalWire expects conversation_summary in the response
+        action = body.get("action", "")
+        if action == "fetch_conversation" and result is not None:
+            req_log.info("request_successful", action=action, returning_result=True)
+            return 200, result
+
+        # Return success for save/post actions
+        req_log.info("request_successful")
+        return 200, {"success": True}
+
+    def _post_prompt_token_valid(
+        self, token: str | None, call_id: str | None, req_log: Any
+    ) -> bool:
+        """True when ``token`` is the post-prompt token minted for ``call_id``."""
+        if not token:
+            req_log.warning("token_missing")
+            return False
+        if not call_id or not hasattr(self, "_session_manager"):
+            req_log.warning("invalid_token")
+            return False
+        req_log.debug("token_found", token_length=len(token))
+        try:
+            is_valid = bool(
+                self._session_manager.validate_tool_token("post_prompt", token, call_id)
+            )
+        except Exception as e:
+            req_log.error("token_validation_error", error=str(e))
+            return False
+        if is_valid:
+            req_log.debug("token_valid")
+        else:
+            req_log.warning("invalid_token")
+            # Debug information for token validation issues
+            if hasattr(self._session_manager, "debug_token"):
+                debug_info = self._session_manager.debug_token(token)
+                req_log.debug("token_debug", debug=json.dumps(debug_info))
+        return is_valid
 
     async def _handle_check_for_input_request(
         self, request: Request
