@@ -11,6 +11,7 @@ Spider skill for fast web scraping with SignalWire AI Agents.
 
 import re
 import collections
+import urllib.robotparser
 from typing import Any, ClassVar, TYPE_CHECKING, cast
 from urllib.parse import urljoin, urlparse
 import requests
@@ -40,6 +41,31 @@ class SpiderSkill(SkillBase):
     # Compiled regex for performance
     WHITESPACE_REGEX = re.compile(r"\s+")
 
+    # Each setting's default. get_parameter_schema() and __init__ both read
+    # this, so the schema can't advertise a default the skill doesn't use.
+    _DEFAULTS: ClassVar[dict[str, Any]] = {
+        "delay": 0.1,
+        "concurrent_requests": 5,
+        "timeout": 5,
+        "max_pages": 1,
+        "max_depth": 0,
+        "extract_type": "fast_text",
+        "max_text_length": 3000,
+        "clean_text": True,
+        "cache_enabled": True,
+        "follow_robots_txt": False,
+        "user_agent": "Spider/1.0 (SignalWire AI Agent)",
+    }
+
+    # The extraction methods scrape_url implements
+    _EXTRACT_TYPES: ClassVar[tuple[str, ...]] = ("fast_text", "markdown", "structured")
+
+    # Values the schema once advertised but that were never implemented. They
+    # have always worked as fast_text, so they still do, with a warning.
+    _LEGACY_EXTRACT_TYPES: ClassVar[frozenset[str]] = frozenset(
+        {"clean_text", "full_text", "html", "custom"}
+    )
+
     @classmethod
     def get_parameter_schema(cls) -> dict[str, dict[str, Any]]:
         """Get parameter schema for Spider skill"""
@@ -49,14 +75,14 @@ class SpiderSkill(SkillBase):
                 "delay": {
                     "type": "number",
                     "description": "Delay between requests in seconds",
-                    "default": 0.1,
+                    "default": cls._DEFAULTS["delay"],
                     "required": False,
                     "min": 0.0,
                 },
                 "concurrent_requests": {
                     "type": "integer",
-                    "description": "Number of concurrent requests allowed",
-                    "default": 5,
+                    "description": "Deprecated, and has no effect: the spider fetches one page at a time",
+                    "default": cls._DEFAULTS["concurrent_requests"],
                     "required": False,
                     "min": 1,
                     "max": 20,
@@ -64,7 +90,7 @@ class SpiderSkill(SkillBase):
                 "timeout": {
                     "type": "integer",
                     "description": "Request timeout in seconds",
-                    "default": 5,
+                    "default": cls._DEFAULTS["timeout"],
                     "required": False,
                     "min": 1,
                     "max": 60,
@@ -72,7 +98,7 @@ class SpiderSkill(SkillBase):
                 "max_pages": {
                     "type": "integer",
                     "description": "Maximum number of pages to scrape",
-                    "default": 1,
+                    "default": cls._DEFAULTS["max_pages"],
                     "required": False,
                     "min": 1,
                     "max": 100,
@@ -80,7 +106,7 @@ class SpiderSkill(SkillBase):
                 "max_depth": {
                     "type": "integer",
                     "description": "Maximum crawl depth (0 = single page only)",
-                    "default": 0,
+                    "default": cls._DEFAULTS["max_depth"],
                     "required": False,
                     "min": 0,
                     "max": 5,
@@ -88,14 +114,14 @@ class SpiderSkill(SkillBase):
                 "extract_type": {
                     "type": "string",
                     "description": "Content extraction method",
-                    "default": "fast_text",
+                    "default": cls._DEFAULTS["extract_type"],
                     "required": False,
-                    "enum": ["fast_text", "clean_text", "full_text", "html", "custom"],
+                    "enum": list(cls._EXTRACT_TYPES),
                 },
                 "max_text_length": {
                     "type": "integer",
                     "description": "Maximum text length to return",
-                    "default": 10000,
+                    "default": cls._DEFAULTS["max_text_length"],
                     "required": False,
                     "min": 100,
                     "max": 100000,
@@ -103,7 +129,7 @@ class SpiderSkill(SkillBase):
                 "clean_text": {
                     "type": "boolean",
                     "description": "Whether to clean extracted text",
-                    "default": True,
+                    "default": cls._DEFAULTS["clean_text"],
                     "required": False,
                 },
                 "selectors": {
@@ -123,7 +149,7 @@ class SpiderSkill(SkillBase):
                 "user_agent": {
                     "type": "string",
                     "description": "User agent string for requests",
-                    "default": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+                    "default": cls._DEFAULTS["user_agent"],
                     "required": False,
                 },
                 "headers": {
@@ -135,14 +161,14 @@ class SpiderSkill(SkillBase):
                 },
                 "follow_robots_txt": {
                     "type": "boolean",
-                    "description": "Whether to respect robots.txt",
-                    "default": True,
+                    "description": "Skip pages that the site's robots.txt disallows for user_agent",
+                    "default": cls._DEFAULTS["follow_robots_txt"],
                     "required": False,
                 },
                 "cache_enabled": {
                     "type": "boolean",
                     "description": "Whether to cache scraped pages",
-                    "default": True,
+                    "default": cls._DEFAULTS["cache_enabled"],
                     "required": False,
                 },
             }
@@ -153,26 +179,35 @@ class SpiderSkill(SkillBase):
         """Initialize the spider skill with configuration parameters."""
         super().__init__(agent, params)
 
+        defaults = self._DEFAULTS
+
         # Performance settings
-        self.delay = self.params.get("delay", 0.1)
-        self.concurrent_requests = self.params.get("concurrent_requests", 5)
-        self.timeout = self.params.get("timeout", 5)
+        self.delay = self.params.get("delay", defaults["delay"])
+        self.concurrent_requests = self.params.get(
+            "concurrent_requests", defaults["concurrent_requests"]
+        )
+        self.timeout = self.params.get("timeout", defaults["timeout"])
 
         # Crawling limits
-        self.max_pages = self.params.get("max_pages", 1)
-        self.max_depth = self.params.get("max_depth", 0)
+        self.max_pages = self.params.get("max_pages", defaults["max_pages"])
+        self.max_depth = self.params.get("max_depth", defaults["max_depth"])
 
         # Content processing
-        self.extract_type = self.params.get("extract_type", "fast_text")
-        self.max_text_length = self.params.get("max_text_length", 3000)
-        self.clean_text = self.params.get("clean_text", True)
+        self.extract_type = self.params.get("extract_type", defaults["extract_type"])
+        self.max_text_length = self.params.get(
+            "max_text_length", defaults["max_text_length"]
+        )
+        self.clean_text = self.params.get("clean_text", defaults["clean_text"])
 
         # Features
-        self.cache_enabled = self.params.get("cache_enabled", True)
-        self.follow_robots_txt = self.params.get("follow_robots_txt", False)
-        self.user_agent = self.params.get(
-            "user_agent", "Spider/1.0 (SignalWire AI Agent)"
+        self.cache_enabled = self.params.get("cache_enabled", defaults["cache_enabled"])
+        self.follow_robots_txt = self.params.get(
+            "follow_robots_txt", defaults["follow_robots_txt"]
         )
+        self.user_agent = self.params.get("user_agent", defaults["user_agent"])
+
+        # robots.txt rules, per origin, when follow_robots_txt is on
+        self._robots: dict[str, urllib.robotparser.RobotFileParser] = {}
 
         # Optional headers
         self.headers = self.params.get("headers", {})
@@ -216,6 +251,25 @@ class SpiderSkill(SkillBase):
         # Validate concurrent requests
         if not 1 <= self.concurrent_requests <= 20:
             self.logger.error("Concurrent requests must be between 1 and 20")
+            return False
+        if "concurrent_requests" in self.params:
+            self.logger.warning(
+                "concurrent_requests is deprecated and has no effect: the spider "
+                "fetches one page at a time"
+            )
+
+        # Validate the extraction method
+        if self.extract_type in self._LEGACY_EXTRACT_TYPES:
+            self.logger.warning(
+                f"extract_type '{self.extract_type}' was never implemented and works "
+                f"as fast_text; use one of {', '.join(self._EXTRACT_TYPES)}"
+            )
+            self.extract_type = "fast_text"
+        elif self.extract_type not in self._EXTRACT_TYPES:
+            self.logger.error(
+                f"Unknown extract_type '{self.extract_type}'; use one of "
+                f"{', '.join(self._EXTRACT_TYPES)}"
+            )
             return False
 
         # Validate max pages and depth
@@ -279,6 +333,36 @@ class SpiderSkill(SkillBase):
             required=["url"],
             handler=self._extract_structured_handler,
         )
+
+    def _allowed_by_robots(self, url: str) -> bool:
+        """False if follow_robots_txt is on and the site's robots.txt disallows url.
+
+        As in urllib.robotparser, a robots.txt answered with 401 or 403
+        disallows everything, any other 4xx allows everything, and a
+        server error or failed request disallows everything.
+        """
+        if not self.follow_robots_txt:
+            return True
+        parsed = urlparse(url)
+        origin = f"{parsed.scheme}://{parsed.netloc}"
+        parser = self._robots.get(origin)
+        if parser is None:
+            parser = urllib.robotparser.RobotFileParser()
+            try:
+                response = self.session.get(
+                    f"{origin}/robots.txt", timeout=self.timeout
+                )
+                status = response.status_code
+            except requests.exceptions.RequestException:
+                status = 599
+            if status in (401, 403) or status >= 500:
+                parser.disallow_all = True
+            elif status >= 400:
+                parser.allow_all = True
+            else:
+                parser.parse(response.text.splitlines())
+            self._robots[origin] = parser
+        return parser.can_fetch(self.user_agent, url)
 
     def _fetch_url(self, url: str) -> requests.Response | None:
         """Fetch a URL with caching and error handling."""
@@ -461,6 +545,9 @@ class SpiderSkill(SkillBase):
                 "URL rejected: cannot access private or internal URLs"
             )
 
+        if not self._allowed_by_robots(url):
+            return FunctionResult(f"The site's robots.txt disallows fetching {url}")
+
         # Fetch the page
         response = self._fetch_url(url)
         if not response:
@@ -526,6 +613,7 @@ class SpiderSkill(SkillBase):
 
         # Simple breadth-first crawl
         visited: set[Any] = set[Any]()
+        disallowed: set[str] = set()
         to_visit = [(start_url, 0)]  # (url, depth)
         results = []
 
@@ -535,8 +623,13 @@ class SpiderSkill(SkillBase):
 
             url, depth = to_visit.pop(0)
 
-            # Skip if already visited or depth exceeded
-            if url in visited or depth > max_depth:
+            # Skip if already visited, disallowed, or depth exceeded
+            if url in visited or url in disallowed or depth > max_depth:
+                continue
+
+            if not self._allowed_by_robots(url):
+                self.logger.info(f"robots.txt disallows {url}; skipping it")
+                disallowed.add(url)
                 continue
 
             # Fetch and process page
@@ -631,6 +724,9 @@ class SpiderSkill(SkillBase):
             return FunctionResult(
                 "No selectors configured for structured data extraction"
             )
+
+        if not self._allowed_by_robots(url):
+            return FunctionResult(f"The site's robots.txt disallows fetching {url}")
 
         # Fetch the page
         response = self._fetch_url(url)

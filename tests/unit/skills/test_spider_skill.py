@@ -172,11 +172,17 @@ class TestGetParameterSchema:
         assert schema["delay"]["type"] == "number"
 
     def test_extract_type_enum(self) -> None:
+        """The schema lists the extraction methods the skill implements (B19)."""
         from signalwire.skills.spider.skill import SpiderSkill
         schema = SpiderSkill.get_parameter_schema()
-        assert set(schema["extract_type"]["enum"]) == {
-            "fast_text", "clean_text", "full_text", "html", "custom"
-        }
+        assert set(schema["extract_type"]["enum"]) == {"fast_text", "markdown", "structured"}
+
+    def test_schema_defaults_match_the_skill(self, default_skill: "SpiderSkill") -> None:
+        """Every default the schema advertises is the one the skill uses (B19)."""
+        from signalwire.skills.spider.skill import SpiderSkill
+        schema = SpiderSkill.get_parameter_schema()
+        for key in SpiderSkill._DEFAULTS:
+            assert schema[key]["default"] == getattr(default_skill, key), key
 
 
 # ===================================================================
@@ -1011,6 +1017,12 @@ class TestCrawlSiteHandler:
 
 class TestExtractStructuredHandler:
 
+    @pytest.fixture(autouse=True)
+    def _robots_allow(self, custom_skill: "SpiderSkill") -> None:
+        # custom_skill turns follow_robots_txt on; these tests are about
+        # extraction, not robots.txt, which TestRobotsTxt covers.
+        custom_skill._allowed_by_robots = Mock(return_value=True)  # type: ignore[method-assign]  # mock
+
     def test_empty_url_returns_error(self, default_skill: "SpiderSkill") -> None:
         result = default_skill._extract_structured_handler({"url": ""}, {})
         assert "provide a URL" in result.response
@@ -1342,3 +1354,78 @@ class TestRedirectToInternalAddress:
         from signalwire.utils.url_validator import _PublicSession
 
         assert isinstance(SpiderSkill(_make_mock_agent(), {}).session, _PublicSession)
+
+
+
+# ===================================================================
+# Settings the skill used to advertise without enforcing (B19)
+# ===================================================================
+
+@pytest.mark.usefixtures("public_test_dns")
+class TestRobotsTxt:
+    """follow_robots_txt skips pages the site's robots.txt disallows."""
+
+    ROBOTS = b"User-agent: *\nDisallow: /private\n"
+
+    def _skill(self, scripted_adapter: type, robots: tuple[int, dict[str, str], bytes], **params: Any) -> "SpiderSkill":
+        from signalwire.skills.spider.skill import SpiderSkill
+
+        skill = SpiderSkill(_make_mock_agent(), {"delay": 0, **params})
+        page = (200, {}, b"<html><body><p>page text</p></body></html>")
+        adapter = scripted_adapter({
+            "http://public.test/robots.txt": robots,
+            "http://public.test/private/page": page,
+            "http://public.test/public/page": page,
+        })
+        skill.session.mount("http://public.test", adapter)
+        skill.adapter = adapter  # type: ignore[attr-defined]  # test handle
+        return skill
+
+    def test_disallowed_page_is_not_fetched(self, scripted_adapter: type) -> None:
+        skill = self._skill(scripted_adapter, (200, {}, self.ROBOTS), follow_robots_txt=True)
+        result = skill._scrape_url_handler({"url": "http://public.test/private/page"}, {})
+        assert "robots.txt disallows" in result.response
+        assert "http://public.test/private/page" not in skill.adapter.sent  # type: ignore[attr-defined]  # test handle
+
+    def test_allowed_page_is_fetched(self, scripted_adapter: type) -> None:
+        skill = self._skill(scripted_adapter, (200, {}, self.ROBOTS), follow_robots_txt=True)
+        result = skill._scrape_url_handler({"url": "http://public.test/public/page"}, {})
+        assert "page text" in result.response
+
+    def test_off_by_default(self, scripted_adapter: type) -> None:
+        skill = self._skill(scripted_adapter, (200, {}, self.ROBOTS))
+        result = skill._scrape_url_handler({"url": "http://public.test/private/page"}, {})
+        assert "page text" in result.response
+        assert "http://public.test/robots.txt" not in skill.adapter.sent  # type: ignore[attr-defined]  # test handle
+
+    @pytest.mark.parametrize(("status", "allowed"), [(404, True), (403, False), (503, False)])
+    def test_robots_txt_status(self, scripted_adapter: type, status: int, allowed: bool) -> None:
+        skill = self._skill(scripted_adapter, (status, {}, b""), follow_robots_txt=True)
+        result = skill._scrape_url_handler({"url": "http://public.test/public/page"}, {})
+        assert ("page text" in result.response) is allowed
+
+
+class TestExtractTypeAndConcurrency:
+    def _setup(self, **params: Any) -> tuple["SpiderSkill", bool, Mock]:
+        from signalwire.skills.spider.skill import SpiderSkill
+
+        skill = SpiderSkill(_make_mock_agent(), params)
+        with patch.object(skill, "logger") as mock_logger:
+            ok = skill.setup()
+        return skill, ok, mock_logger
+
+    def test_legacy_extract_type_works_as_fast_text(self) -> None:
+        skill, ok, mock_logger = self._setup(extract_type="clean_text")
+        assert ok
+        assert skill.extract_type == "fast_text"
+        assert mock_logger.warning.called
+
+    def test_unknown_extract_type_fails_setup(self) -> None:
+        _, ok, mock_logger = self._setup(extract_type="pdf")
+        assert not ok
+        assert mock_logger.error.called
+
+    def test_concurrent_requests_warns_that_it_does_nothing(self) -> None:
+        _, ok, mock_logger = self._setup(concurrent_requests=10)
+        assert ok
+        assert any("concurrent_requests" in str(c) for c in mock_logger.warning.call_args_list)

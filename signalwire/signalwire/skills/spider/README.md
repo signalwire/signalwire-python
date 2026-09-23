@@ -37,18 +37,18 @@ These parameters are set once with `add_skill()`; the tools themselves take only
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `delay` | float | 0.1 | Seconds between requests |
-| `concurrent_requests` | int | 5 | Accepted and validated (1-20); requests are currently made sequentially |
+| `concurrent_requests` | int | 5 | Deprecated, and has no effect: the spider fetches one page at a time. Setting it logs a warning |
 | `timeout` | int | 5 | Request timeout in seconds |
 | `max_pages` | int | 1 | Maximum pages to crawl |
 | `max_depth` | int | 0 | How many links deep to crawl |
-| `extract_type` | string | "fast_text" | Extraction method: "fast_text", "markdown", or "structured" |
+| `extract_type` | string | "fast_text" | Extraction method: "fast_text", "markdown", or "structured". Any other value stops the skill from loading |
 | `selectors` | dict | {} | CSS/XPath selectors, used by `extract_structured_data` and by `scrape_url` when `extract_type` is "structured" |
 | `follow_patterns` | list | [] | Regex patterns limiting which links `crawl_site` follows |
 | `max_text_length` | int | 3000 | Maximum characters per page |
 | `clean_text` | bool | True | Remove extra whitespace |
 | `cache_enabled` | bool | True | Enable response caching |
-| `follow_robots_txt` | bool | False | Respect robots.txt |
-| `user_agent` | string | "Spider/1.0" | User agent string |
+| `follow_robots_txt` | bool | False | Skip pages that the site's robots.txt disallows for `user_agent` |
+| `user_agent` | string | "Spider/1.0 (SignalWire AI Agent)" | User agent string |
 | `headers` | dict | {} | Additional HTTP headers |
 
 ## Available Tools
@@ -134,7 +134,6 @@ This configuration favors more pages and shorter per-page content over a low del
 
 ```python
 agent.add_skill("spider", {
-    "concurrent_requests": 10,
     "delay": 0.05,
     "max_pages": 20,
     "max_text_length": 1000,
@@ -150,7 +149,6 @@ This configuration adds a longer delay and honors `robots.txt`:
 ```python
 agent.add_skill("spider", {
     "delay": 2.0,
-    "concurrent_requests": 1,
     "follow_robots_txt": True,
     "user_agent": "MyBot/1.0 (contact@example.com)"
 })
@@ -165,15 +163,13 @@ Each call to `add_skill` with a distinct `tool_name` registers a separate set of
 # Fast spider for internal sites
 agent.add_skill("spider", {
     "tool_name": "fast_spider",
-    "delay": 0.1,
-    "concurrent_requests": 10
+    "delay": 0.1
 })
 
 # Slow spider for external sites
 agent.add_skill("spider", {
     "tool_name": "polite_spider",
     "delay": 2.0,
-    "concurrent_requests": 1,
     "follow_robots_txt": True
 })
 # AI can now use: fast_spider_scrape_url() and polite_spider_scrape_url()
