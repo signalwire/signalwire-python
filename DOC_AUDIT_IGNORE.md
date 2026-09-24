@@ -58,6 +58,7 @@ add: set.add — stdlib builtin method
 title: str.title — stdlib builtin method
 setdefault: dict.setdefault / os.environ.setdefault — stdlib builtin method
 init: generic initializer name — stdlib / third-party (pinecone.init shown in search comparison)
+asyncio.get_running_loop: stdlib, named in docs/agent_guide.md (a synchronous handler has no running event loop)
 
 ## argparse (stdlib)
 

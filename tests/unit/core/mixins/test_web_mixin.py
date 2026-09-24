@@ -173,6 +173,10 @@ def _build_mixin(**overrides: Any) -> Any:
         agent._swaig_render_get_response = types.MethodType(_AgentBase._swaig_render_get_response, agent)
     if "_swaig_pre_dispatch" not in overrides:
         agent._swaig_pre_dispatch = types.MethodType(_AgentBase._swaig_pre_dispatch, agent)
+    if "_swaig_configures_per_call" not in overrides:
+        agent._swaig_configures_per_call = types.MethodType(_AgentBase._swaig_configures_per_call, agent)
+    if "_swaig_handler_is_async" not in overrides:
+        agent._swaig_handler_is_async = types.MethodType(_SWMLSvc._swaig_handler_is_async, agent)
     if "_tool_token_rejection" not in overrides:
         agent._tool_token_rejection = types.MethodType(_AgentBase._tool_token_rejection, agent)
     if "_per_call_agent" not in overrides:

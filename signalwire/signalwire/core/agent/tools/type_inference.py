@@ -287,14 +287,33 @@ def create_typed_handler_wrapper(
         A wrapper function with signature (args, raw_data).
     """
 
-    def wrapper(args: dict[str, Any], raw_data: dict[str, Any] | None) -> Any:
-        if has_raw_data:
-            return func(raw_data=raw_data, **args)
-        return func(**args)
+    wrapper: Callable[..., Any]
+    if inspect.iscoroutinefunction(func):
+        # An async wrapper, so the dispatcher can tell the handler is async
+        # and await it on the event loop without a worker thread.
+        async def async_wrapper(
+            args: dict[str, Any], raw_data: dict[str, Any] | None
+        ) -> Any:
+            if has_raw_data:
+                return await func(raw_data=raw_data, **args)
+            return await func(**args)
+
+        wrapper = async_wrapper
+    else:
+
+        def sync_wrapper(args: dict[str, Any], raw_data: dict[str, Any] | None) -> Any:
+            if has_raw_data:
+                return func(raw_data=raw_data, **args)
+            return func(**args)
+
+        wrapper = sync_wrapper
 
     # Preserve original function metadata for debugging
     wrapper.__name__ = getattr(func, "__name__", "typed_handler")
     wrapper.__doc__ = getattr(func, "__doc__", None)
-    wrapper.__wrapped__ = func  # type: ignore[attr-defined]  # standard functools __wrapped__ convention
+    wrapper.__wrapped__ = func  # type: ignore[union-attr]  # standard functools __wrapped__ convention
+    # Marks the SDK's own wrapper, so a per-request copy of the agent can
+    # rebuild it around a method bound to the copy
+    wrapper._typed_has_raw_data = has_raw_data  # type: ignore[union-attr]  # marker attribute on a function
 
     return wrapper

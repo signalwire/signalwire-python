@@ -294,7 +294,7 @@ Handlers typically receive full SWAIG data in `raw_data` and can access `raw_dat
 
 `define_tool` supports explicit schemas and a handler receiving `(args, raw_data)`. Type-hinted decorators can infer schemas, but inspect the result instead of assuming the decorator knows your policy. Use narrow inputs, explicit required fields, and backend validation. The registered tool name and the Python handler name may differ. [S05]
 
-A handler can be `async def`; the SDK awaits it on the request's event loop. A plain `def` handler runs on that loop too, so move slow blocking work, such as a database call that can wait on a lock, off the loop. [S27]
+A handler can be `async def`; the SDK awaits it on the request's event loop, so it must not block. At this guide's baseline, a plain `def` handler runs on that loop too, so move slow blocking work, such as a database call that can wait on a lock, off the loop. Later code runs a plain `def` handler in a worker thread instead, so a slow one doesn't hold up other calls, but handlers for different calls can then run at the same time: protect state they share, and don't share one `sqlite3` connection between threads. `SWML_SYNC_HANDLERS_INLINE=true` restores the baseline's behavior. [S27]
 
 **Verify:** malformed values, omitted required fields, unexpected fields, tenant mismatch, stale state, replay, and backend failures. Descriptions help the model use a tool; they do not validate its inputs. Avoid returning stack traces, credentials, full records, or untrusted instructions as a tool prompt.
 

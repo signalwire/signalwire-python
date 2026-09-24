@@ -13,6 +13,7 @@ The SDK's installed documentation covers this module: run ``sw-pydocs agents``, 
 """
 
 import contextlib
+import copy
 import functools
 import inspect
 import logging
@@ -20,6 +21,7 @@ import os
 import json
 import uuid
 import re
+import types
 from typing import (
     Any,
     ClassVar,
@@ -110,6 +112,56 @@ def _record_explicit_args(init: Callable[_P, None]) -> Callable[_P, None]:
         init(*args, **kwargs)
 
     return wrapper
+
+
+def _bound_to(function: Any, original: object, ephemeral: object) -> Any:
+    """``function``, with its handler bound to ``ephemeral`` if it's bound to ``original``."""
+    rebound = _rebound(getattr(function, "handler", None), original, ephemeral)
+    if rebound is None:
+        return function
+    function = copy.copy(function)
+    function.handler = rebound
+    return function
+
+
+def _rebound(handler: Any, original: object, ephemeral: object) -> Any:
+    """``handler`` bound to ``ephemeral``, or None if it isn't bound to ``original``.
+
+    Covers a method of ``original``, a partial of one, and the SDK's typed
+    wrapper around one. A function that captures ``original`` in a closure
+    can't be rebound.
+    """
+    if isinstance(handler, types.MethodType) and handler.__self__ is original:
+        return types.MethodType(handler.__func__, ephemeral)
+    if isinstance(handler, functools.partial):
+        inner = _rebound(handler.func, original, ephemeral)
+        if inner is None:
+            return None
+        return functools.partial(inner, *handler.args, **handler.keywords)
+    has_raw_data = getattr(handler, "_typed_has_raw_data", None)
+    if has_raw_data is not None:
+        inner = _rebound(getattr(handler, "__wrapped__", None), original, ephemeral)
+        if inner is None:
+            return None
+        from signalwire.core.agent.tools.type_inference import (
+            create_typed_handler_wrapper,
+        )
+
+        return create_typed_handler_wrapper(inner, has_raw_data)
+    return None
+
+
+def _slot_names(klass: type) -> list[str]:
+    """The attribute names ``klass``'s own ``__slots__`` declares, as stored."""
+    slots = klass.__dict__.get("__slots__", ())
+    names = []
+    for slot in (slots,) if isinstance(slots, str) else slots:
+        if slot in ("__dict__", "__weakref__"):
+            continue
+        if slot.startswith("__") and not slot.endswith("__"):
+            slot = f"_{klass.__name__.lstrip('_')}{slot}"  # name mangling
+        names.append(slot)
+    return names
 
 
 class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/_proxy_url_base override SWMLService/ServerlessMixin's by MRO order; mypy flags the base-vs-base shape diff but the resolution is deliberate
@@ -1587,6 +1639,9 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         self.log.debug("swml_rendered", swml_size=len(swml))
         return Response(content=swml, media_type="application/json")
 
+    def _swaig_configures_per_call(self) -> bool:
+        return self._dynamic_config_callback is not None
+
     def _swaig_pre_dispatch(
         self,
         request: Request,
@@ -1806,11 +1861,13 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             _internal_fillers, _swaig_query_params, _native_functions,
             native_functions, pom, _contexts_builder, _contexts_defined,
             skill_manager, _debug_events_enabled, _debug_events_level,
-            _debug_event_handler,
+            _debug_event_handler, _mcp_servers, _sip_usernames,
+            _current_document (a new, empty document; the render rebuilds it),
             _prompt_manager (fresh instance; its _sections, _prompt_text,
                 _post_prompt_text and _contexts are copied),
             _tool_registry (fresh instance; its _swaig_functions and
-                _tool_instances are copied)
+                _tool_instances are copied, and a tool whose handler is a
+                method of this agent gets a handler bound to the copy)
 
         Anything NOT in that list is the master's own object, shared with
         every other request in flight. The distinction that matters is between
@@ -1824,7 +1881,9 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         Getting this wrong does not raise. It produces one visitor's data
         appearing in another visitor's prompt, under concurrency, which is why
         the safe set is enumerated here rather than left to be inferred from
-        the code below.
+        the code below. The concurrency is real: the web server runs the
+        callback and the copy's render in a worker thread, so copies for
+        different calls are configured at the same time.
 
         Callers who need per-request state of their own should keep it in
         `_global_data` (copied) or rebind a fresh object onto the ephemeral
@@ -1839,9 +1898,24 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         cls = self.__class__
         ephemeral_agent = cls.__new__(cls)
 
-        # Copy all attributes as shallow references first
-        for key, value in self.__dict__.items():
+        # Copy all attributes as shallow references first. The items are
+        # snapshotted, because this runs in a worker thread while other
+        # requests use the agent.
+        for key, value in list(self.__dict__.items()):
             setattr(ephemeral_agent, key, value)
+        # A subclass's __slots__ attributes aren't in __dict__
+        for klass in cls.__mro__:
+            for slot in _slot_names(klass):
+                try:
+                    value = klass.__dict__[slot].__get__(self, klass)
+                except AttributeError:
+                    continue  # declared but not set
+                klass.__dict__[slot].__set__(ephemeral_agent, value)
+
+        # The copy's own document. Sharing this agent's would let a verb
+        # method called on the copy, such as play(), add to the document
+        # another request is rendering.
+        ephemeral_agent._current_document = ephemeral_agent._create_empty_document()
 
         # Deep copy only the configuration that affects SWML generation
         # These are the parts that dynamic config might modify
@@ -1852,6 +1926,9 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         ephemeral_agent._pronounce = copy.deepcopy(self._pronounce)
         ephemeral_agent._global_data = copy.deepcopy(self._global_data)
         ephemeral_agent._function_includes = copy.deepcopy(self._function_includes)
+        ephemeral_agent._mcp_servers = copy.deepcopy(self._mcp_servers)
+        if "_sip_usernames" in self.__dict__:
+            ephemeral_agent._sip_usernames = set(self._sip_usernames)
 
         # Deep copy routing callbacks to prevent cross-agent mutation
         if hasattr(self, "_routing_callbacks"):
@@ -1923,12 +2000,15 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         # Create new tool registry for the ephemeral agent
         ephemeral_agent._tool_registry = ToolRegistry(ephemeral_agent)
-        # Copy the SWAIG functions - we need a shallow copy here because
-        # the functions themselves can be shared, we just need a new dict
+        # Copy the SWAIG functions. Most can be shared; one whose handler is
+        # a method of this agent is copied with the handler bound to the
+        # copy, so the handler's self sees what the per-request callback
+        # configured, as on_summary does.
         if hasattr(self._tool_registry, "_swaig_functions"):
-            ephemeral_agent._tool_registry._swaig_functions = (
-                self._tool_registry._swaig_functions.copy()
-            )
+            ephemeral_agent._tool_registry._swaig_functions = {
+                name: _bound_to(function, self, ephemeral_agent)
+                for name, function in self._tool_registry._swaig_functions.items()
+            }
         if hasattr(self._tool_registry, "_tool_instances"):
             ephemeral_agent._tool_registry._tool_instances = (  # type: ignore[attr-defined]  # ToolRegistry internal state, guarded by hasattr above
                 self._tool_registry._tool_instances.copy()
@@ -1940,25 +2020,11 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
 
         ephemeral_agent.skill_manager = SkillManager(ephemeral_agent)
 
-        # Copy any already loaded skills from the original agent
-        # This ensures skills loaded during __init__ are available in the ephemeral agent
-        if hasattr(self.skill_manager, "loaded_skills"):
-            for skill_instance in self.skill_manager.loaded_skills.values():
-                # Re-load the skill in the ephemeral agent's context
-                # We need to get the skill name and params from the existing instance
-                skill_name = skill_instance.SKILL_NAME
-                skill_params = getattr(skill_instance, "params", {})
-                try:
-                    if skill_name is not None:
-                        ephemeral_agent.skill_manager.load_skill(
-                            skill_name, type(skill_instance), skill_params
-                        )
-                except Exception as e:
-                    self.log.warning(
-                        "failed_to_copy_skill_to_ephemeral",
-                        skill_name=skill_name,
-                        error=str(e),
-                    )
+        # The copy starts with the skills this agent has loaded, sharing their
+        # instances. Their tools, hints, prompt sections and global data are
+        # already in the copied configuration. Skills the callback adds load
+        # on the copy only.
+        ephemeral_agent.skill_manager._inherit(self.skill_manager.loaded_skills)
 
         # Re-bind the tool decorator method to the new instance
         ephemeral_agent.tool = ephemeral_agent._tool_decorator  # type: ignore[method-assign]  # intentional per-instance decorator binding

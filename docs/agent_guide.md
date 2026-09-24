@@ -331,6 +331,21 @@ def get_weather(self, args, raw_data):
 
 A handler can also be an `async def` function, so it can await other asynchronous calls. When the agent serves `/swaig`, the SDK awaits the handler on the request's event loop. In serverless deployments and in `swaig-test`, it runs the handler to completion.
 
+#### Handlers and Concurrency
+
+The agent's web server handles every call on one event loop. A plain `def` handler, such as one that calls an API with `requests`, runs in a worker thread, so a slow handler on one call doesn't hold up the others. The same is true of the per-request configuration callback, routing callbacks, `on_summary`, the debug event handler and tools called through `/mcp`. The threads come from AnyIO's thread pool, the one FastAPI uses for `def` routes, which runs 40 at a time by default. An `async def` handler runs on the event loop, so it must not block it: await asynchronous calls instead.
+
+Because handlers for different calls can run at the same time, treat anything they share as shared between threads:
+
+- A handler that's a method of your agent, such as one defined with `@AgentBase.tool` or passed to `define_tool()` as `self.method`, runs with `self` as the agent, which every call shares. With a per-request configuration callback set, a tool call from SignalWire runs the method on that request's copy instead, so `self` sees what the callback configured, and an attribute it assigns stays on the copy. A function that captures the agent in a closure always sees the shared agent, and so does a tool called through `/mcp`, which doesn't use the callback. Don't change the shared agent's configuration from a handler; return a `FunctionResult` with actions, such as `update_global_data()`, to change the call instead.
+- Protect module-level or instance state that handlers change, such as a dictionary of orders by call ID, with a `threading.Lock`, or keep it in a database.
+- Open a database connection in the handler, or use a pool. A `sqlite3` connection opened in one thread can't be used from another.
+- A plain `def` handler has no running event loop, so `asyncio.create_task()`, `asyncio.get_running_loop()` and similar calls raise `RuntimeError` there. Make a handler that needs the loop `async def`.
+
+An `on_swml_request` override still runs on the event loop, because it can change the agent just before the agent's own document is rendered. So does `InfoGathererAgent`'s question callback, which its `on_swml_request` calls. Keep them fast, or do per-request work in the per-request configuration callback instead.
+
+Set `SWML_SYNC_HANDLERS_INLINE=true` to run synchronous handlers and callbacks on the event loop instead, one at a time, as earlier releases did. The serverless entry points call handlers directly, as before.
+
 ### 2. External Webhook Functions
 
 External webhook functions allow you to delegate function execution to external services instead of handling them locally. This is useful when you want to:
@@ -1389,7 +1404,9 @@ The callback function receives four parameters:
 
 ### Dynamic Configuration Methods
 
-The `agent` parameter in your callback is a copy of the agent made for this request, so you can use all the same configuration methods you would use during initialization, and the changes apply to this request only. The configuration the SDK manages, such as the prompt, tools, skills, languages, parameters, hints and global data, is copied. Other attributes, such as ones your own class adds, are shared with the agent and with other requests: assign a new value to one rather than changing the shared object in place, and keep per-caller state in global data or your own storage.
+The `agent` parameter in your callback is a copy of the agent made for this request, so you can use all the same configuration methods you would use during initialization, and the changes apply to this request only. The configuration the SDK manages, such as the prompt, tools, skills, languages, parameters, hints, global data and MCP servers, is copied. Other attributes, such as ones your own class adds, are shared with the agent and with other requests: assign a new value to one rather than changing the shared object in place, and keep per-caller state in global data or your own storage.
+
+The callback, and the rendering of the copy it configured, run in a worker thread, so the callback can look up a tenant in a database without holding up other calls. Callbacks for different calls run at the same time, which is why changing a shared object in place is unsafe: two requests can change it at once. See [Handlers and Concurrency](#handlers-and-concurrency).
 
 #### Language Configuration
 

@@ -172,6 +172,7 @@ Skills are pluggable capabilities loaded via `SkillManager` and discovered throu
 - Use `AgentServer` for multi-agent deployments
 - Implement SWAIG functions with proper error handling
 - State management is optional but recommended for complex workflows
+- Synchronous tool handlers and callbacks run in worker threads, so handlers for different calls run concurrently: guard shared state; a tool method's `self` is the shared agent, or the request's copy when a per-request configuration callback is set (`SWML_SYNC_HANDLERS_INLINE=true` restores one-at-a-time)
 
 ### LLM Parameter Tuning
 - Use `set_prompt_llm_params(**params)` to customize main prompt behavior

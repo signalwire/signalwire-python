@@ -11,6 +11,8 @@ Unit tests for the Spider skill module (web scraping and crawling).
 
 import pytest
 import re
+import sys
+import threading
 from unittest.mock import Mock, patch, MagicMock
 from typing import Any, TYPE_CHECKING
 
@@ -366,6 +368,36 @@ class TestFetchUrl:
         assert result is resp
         assert default_skill._cache is not None
         assert "https://example.com" in default_skill._cache
+
+    def test_concurrent_fetches_share_the_cache_safely(self, default_skill: "SpiderSkill") -> None:
+        # Tool handlers for different calls run in worker threads at once. A
+        # cache hit checked for the key, then read it, and another thread could
+        # evict the entry in between, raising KeyError.
+        default_skill.follow_robots_txt = False
+        default_skill.session.get = Mock(return_value=_make_mock_response())  # type: ignore[method-assign]  # mock
+        default_skill._cache_max_size = 2
+        errors: list[BaseException] = []
+
+        def fetch_repeatedly(offset: int) -> None:
+            try:
+                for i in range(2000):
+                    default_skill._fetch_url(f"https://example.com/{(offset + i) % 3}")
+            except BaseException as e:  # report any failure to the test's thread
+                errors.append(e)
+
+        interval = sys.getswitchinterval()
+        sys.setswitchinterval(1e-6)  # switch threads often, to hit the window
+        try:
+            threads = [threading.Thread(target=fetch_repeatedly, args=(n,)) for n in range(8)]
+            for thread in threads:
+                thread.start()
+            for thread in threads:
+                thread.join()
+        finally:
+            sys.setswitchinterval(interval)
+        assert errors == []
+        assert default_skill._cache is not None
+        assert len(default_skill._cache) <= 2
 
     def test_successful_fetch_no_cache_when_disabled(self, custom_skill: "SpiderSkill") -> None:
         resp = _make_mock_response()
