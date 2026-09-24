@@ -1543,6 +1543,7 @@ class TestCheckServerConfig:
     def test_accepts(self, server: dict[str, Any]) -> None:
         from signalwire.mcp_gateway.gateway_service import _check_server_config
 
+        # no-cheat: accepting means returning without SystemExit; test_rejects covers the check itself
         _check_server_config(server)
 
     def test_run_stops_before_binding_an_empty_port(self) -> None:

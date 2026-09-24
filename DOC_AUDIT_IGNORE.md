@@ -265,3 +265,59 @@ sqlite3.Cursor.fetchone: stdlib, used by docs/pgi_agent_guide.md 6.1
 uuid.uuid4: stdlib, used by docs/pgi_agent_guide.md 6.1 to mint case references
 tempfile.TemporaryDirectory: stdlib, used by docs/pgi_agent_guide.md 6.5
 unittest.TestCase.addCleanup: stdlib, used by docs/pgi_agent_guide.md 6.5
+
+## Full-guardrails tutorial (tutorial/full-guardrails-agent/)
+
+The Penny tutorial builds a reservation agent. Its chapters quote the app's own
+classes (reservations.py, handlers.py, penny.py, test_penny.py) and the stdlib.
+
+ReservationStore._tx: defined in tutorial/full-guardrails-agent/reservations.py; opens a transaction
+ReservationStore._session: defined in tutorial/full-guardrails-agent/reservations.py; loads the call's session row
+ReservationStore._check_call: defined in tutorial/full-guardrails-agent/reservations.py; validates the call id
+ReservationStore._now: defined in tutorial/full-guardrails-agent/reservations.py; reads the injected clock
+ReservationStore.clock: defined in tutorial/full-guardrails-agent/reservations.py; the injected clock (tests pass a fake)
+ReservationStore._table_free: defined in tutorial/full-guardrails-agent/reservations.py; checks one table's availability
+ReservationStore._too_soon: defined in tutorial/full-guardrails-agent/reservations.py; the notice-period rule
+ReservationStore._check_notice: defined in tutorial/full-guardrails-agent/reservations.py; raises when a booking is too soon
+ReservationStore._validate_request: defined in tutorial/full-guardrails-agent/reservations.py; validates party size, date and time
+ReservationStore.find_options: defined in tutorial/full-guardrails-agent/reservations.py; lists free tables
+ReservationStore.update_draft: defined in tutorial/full-guardrails-agent/reservations.py; saves what the caller has said so far
+ReservationStore.gathered: defined in tutorial/full-guardrails-agent/reservations.py; returns the draft for the step's global_data
+ReservationStore.reset_request: defined in tutorial/full-guardrails-agent/reservations.py; clears the draft
+ReservationStore.hold_option: defined in tutorial/full-guardrails-agent/reservations.py; holds a chosen table
+ReservationStore._proposal: defined in tutorial/full-guardrails-agent/reservations.py; reads the held proposal
+ReservationStore._reservation: defined in tutorial/full-guardrails-agent/reservations.py; loads a reservation by code
+ReservationStore._new_code: defined in tutorial/full-guardrails-agent/reservations.py; generates a confirmation code
+ReservationStore.booking_for_call: defined in tutorial/full-guardrails-agent/reservations.py; the reservation this call made
+ReservationStore.request_sms: defined in tutorial/full-guardrails-agent/reservations.py; records an SMS request
+ReservationStore._verified: defined in tutorial/full-guardrails-agent/reservations.py; checks that the caller has been verified
+ReservationStore.verified_reservation: defined in tutorial/full-guardrails-agent/reservations.py; the reservation the caller verified for
+ReservationStore.request_cancel: defined in tutorial/full-guardrails-agent/reservations.py; starts a cancellation
+ReservationStore.confirm_cancel: defined in tutorial/full-guardrails-agent/reservations.py; completes a cancellation
+ReservationStore.keep_reservation: defined in tutorial/full-guardrails-agent/reservations.py; abandons a cancellation
+ReservationStore.save_message: defined in tutorial/full-guardrails-agent/reservations.py; stores a message for the host
+ReservationStore.host_stand_open: defined in tutorial/full-guardrails-agent/reservations.py; the host-stand hours rule
+ReservationStore.record_call_end: defined in tutorial/full-guardrails-agent/reservations.py; records the call's outcome
+ReservationStore.seed_demo: defined in tutorial/full-guardrails-agent/reservations.py; loads demo data
+Option.spoken: defined in tutorial/full-guardrails-agent/reservations.py; the text Penny reads back
+Request.spoken: defined in tutorial/full-guardrails-agent/reservations.py; the text Penny reads back
+Proposal.spoken: defined in tutorial/full-guardrails-agent/reservations.py; the text Penny reads back
+Reservation.spoken: defined in tutorial/full-guardrails-agent/reservations.py; the text Penny reads back
+PennyHandlers._gathered: defined in tutorial/full-guardrails-agent/handlers.py; the store's draft for the step
+Penny._configure_voice: defined in tutorial/full-guardrails-agent/penny.py
+Penny._register_tools: defined in tutorial/full-guardrails-agent/penny.py
+TestHandlers.gathered: defined in tutorial/full-guardrails-agent/test_penny.py; the draft the test passes as global_data
+re.fullmatch: stdlib
+str.isdigit: stdlib
+date.weekday: datetime.date.weekday — stdlib
+datetime.date: datetime.datetime.date — stdlib
+datetime.combine: datetime.datetime.combine — stdlib
+functools.wraps: stdlib
+logging.Logger.exception: stdlib
+secrets.token_urlsafe: stdlib
+io.StringIO: stdlib
+contextlib.redirect_stdout: stdlib
+sqlite3.Connection.executescript: stdlib
+mock.patch.object: unittest.mock.patch.object — stdlib
+unittest.TestCase.subTest: stdlib
+unittest.TestCase.assertLogs: stdlib

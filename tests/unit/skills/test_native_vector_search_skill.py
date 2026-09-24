@@ -1554,8 +1554,11 @@ class TestCallerQueryNotLoggedAboveDebug:
                             index_name="default")
         response = Mock(status_code=200)
         response.json.return_value = {"results": []}
-        with patch("requests.post", return_value=response):
+        with patch("requests.post", return_value=response) as mock_post:
             mock_logger = self._search(skill)
+        mock_post.assert_called_once()
+        assert mock_post.call_args.args[0] == "http://search.internal:8001/search"
+        assert mock_post.call_args.kwargs["json"]["query"] == self.QUERY
         self._assert_clean(mock_logger)
 
     def test_missing_query_is_not_an_error(self) -> None:

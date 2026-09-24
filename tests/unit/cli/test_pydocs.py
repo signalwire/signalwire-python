@@ -13,6 +13,8 @@ written by hand, so these tests check that everything a topic names exists:
 its files, its examples, its API names and the topics it links to.
 """
 
+import ast
+import importlib
 import re
 import subprocess
 import sys
@@ -99,8 +101,14 @@ class TestTopics:
 
     @pytest.mark.parametrize("topic", TOPICS, ids=lambda t: t.name)
     def test_python_snippets_compile(self, topic: Topic) -> None:
+        # Each snippet parses, and every name it imports from the SDK exists
         for number, code in enumerate(_snippets(topic)):
-            compile(code, f"<{topic.name} snippet {number}>", "exec")
+            tree = ast.parse(code, f"<{topic.name} snippet {number}>")
+            for node in ast.walk(tree):
+                if isinstance(node, ast.ImportFrom) and (node.module or "").split(".")[0] == "signalwire":
+                    module = importlib.import_module(node.module or "")
+                    missing = [alias.name for alias in node.names if not hasattr(module, alias.name)]
+                    assert missing == [], (topic.name, node.module, missing)
 
     def test_quickstart_agent_renders(self) -> None:
         namespace: dict[str, object] = {"__name__": "quickstart"}

@@ -22,4 +22,4 @@ def test_large_warns_and_still_loads_base() -> None:
 def test_other_names_do_not_warn(name: str) -> None:
     with warnings.catch_warnings():
         warnings.simplefilter("error", DeprecationWarning)
-        resolve_model_alias(name)
+        assert resolve_model_alias(name) == MODEL_ALIASES.get(name, name)
