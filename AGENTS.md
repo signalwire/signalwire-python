@@ -1,6 +1,6 @@
-# CLAUDE.md
+# AGENTS.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to coding agents working with code in this repository. It mirrors CLAUDE.md, and tests/unit/test_agents_md.py keeps the two in step. To use the SDK rather than change it, run `sw-pydocs`.
 
 ## Project Overview
 
