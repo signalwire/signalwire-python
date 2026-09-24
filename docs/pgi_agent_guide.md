@@ -1,7 +1,7 @@
 # SignalWire PGI and Python SDK
 ## Build natural interfaces on top of software-controlled interactions
 
-This implementation guide is written for AI coding agents, technical assistants, and application developers. It was checked against the `signalwire-sdk` source at commit `67db6f32f7a1dce911f7a9e88ac58cee51151989`. That commit is version 3.4.3 in `pyproject.toml`, plus the changes listed under Unreleased in `CHANGELOG.md`. The SDK requires Python 3.10 or later. The guide also draws on [Programmatically Governed Inference](programmatically_governed_inference.md), the PGI concept document in this directory.
+This implementation guide is written for AI coding agents, technical assistants, and application developers. It was checked against the `signalwire-sdk` source at commit `67db6f32f7a1dce911f7a9e88ac58cee51151989`. That commit is version 3.4.3 in `pyproject.toml`, plus changes that were released in 3.5.0 (see `CHANGELOG.md`). The SDK requires Python 3.10 or later. The guide also draws on [Programmatically Governed Inference](programmatically_governed_inference.md), the PGI concept document in this directory.
 
 Its claims were checked against the source. The reference implementation in [section 6](#6-reference-implementation) and the recipes in sections 5 and 7 were run against that commit, except the RELAY examples in 7.8, which need a live connection. No live call was tested.
 
@@ -53,7 +53,7 @@ This is an implementation and explanation reference, not a marketing prompt. Use
 
 ### Version and evidence discipline
 
-The authoritative implementation baseline for this file is the `signalwire-sdk` source at commit `67db6f3`: version 3.4.3 plus the changes listed under Unreleased in `CHANGELOG.md`. Examples use `from signalwire import AgentBase`, not an assumed older distribution or import path. `SwaigFunctionResult` is a compatibility alias for `FunctionResult` in this snapshot. [S01, S04, S23, S27]
+The authoritative implementation baseline for this file is the `signalwire-sdk` source at commit `67db6f3`: version 3.4.3 plus changes that were released in 3.5.0 (see `CHANGELOG.md`). Examples use `from signalwire import AgentBase`, not an assumed older distribution or import path. `SwaigFunctionResult` is a compatibility alias for `FunctionResult` in this snapshot. [S01, S04, S23, S27]
 
 When building against another version, check its package metadata, method signatures, emitted SWML, and tests. Current docs may move faster or slower than the installed package. Distinguish:
 
@@ -148,7 +148,7 @@ python -m pip install .
 python -c "from importlib.metadata import version; print(version('signalwire-sdk'))"
 ```
 
-Pin the version you actually validate; this is a reproducible baseline, not a statement that it remains the newest code. Installed from commit `67db6f3`, the package reports version 3.4.3. The 3.4.3 release doesn't include the Unreleased changes this guide relies on. For example, on 3.4.3 an agent served with `run()` accepts unsigned requests even with a signing key set, and runs a secure tool without its token. When a release includes those changes, pin that release instead. Optional search extras are installed only when the application uses that functionality. [S23, S27]
+Pin the version you actually validate; this is a reproducible baseline, not a statement that it remains the newest code. Installed from commit `67db6f3`, the package reports version 3.4.3, but the 3.4.3 release doesn't include the changes this guide relies on; they were released in 3.5.0. For example, on 3.4.3 an agent served with `run()` accepts unsigned requests even with a signing key set, and runs a secure tool without its token. Pin 3.5.0 or later. Optional search extras are installed only when the application uses that functionality. [S23, S27]
 
 ## 4. Design before coding
 
@@ -1474,7 +1474,7 @@ A positive answer is evidence that consequential correctness is not merely a pro
 
 ### 12.1. Authority of this reference
 
-This document draws on the PGI concept document and on the SDK source in this repository. The baseline is `signalwire-sdk` at commit `67db6f32f7a1dce911f7a9e88ac58cee51151989`: version 3.4.3 plus the changes listed under Unreleased in `CHANGELOG.md`.
+This document draws on the PGI concept document and on the SDK source in this repository. The baseline is `signalwire-sdk` at commit `67db6f32f7a1dce911f7a9e88ac58cee51151989`: version 3.4.3 plus changes that were released in 3.5.0 (see `CHANGELOG.md`).
 
 [PGI] [Programmatically Governed Inference](programmatically_governed_inference.md) - `docs/programmatically_governed_inference.md`. It describes the intended discipline; the [PGI section of the SDK features guide](sdk_features.md#programmatically-governed-inference-pgi) summarizes it. Where broad rhetoric could imply infallible speech or external transaction guarantees, this guide uses the narrower, implementable claim.
 
@@ -1540,7 +1540,7 @@ The implementation sources in [12.2](#122-implementation-sources) link to files 
 
 - [S26] [SWAIG request/result contract](swaig_reference.md) - `docs/swaig_reference.md`.
 
-- [S27] [Release notes, including the Unreleased changes](../CHANGELOG.md) - `CHANGELOG.md`.
+- [S27] [Release notes, including 3.5.0](../CHANGELOG.md) - `CHANGELOG.md`.
 
 ### 12.3. Key symbols to inspect first
 

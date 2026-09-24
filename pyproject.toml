@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "signalwire-sdk"
-version = "3.4.3"
+version = "3.5.0"
 description = "SignalWire SDK for AI voice agents, live call control (RELAY) and REST. Run sw-pydocs for its documentation."
 authors = [
     {name = "SignalWire Team", email = "info@signalwire.com"}

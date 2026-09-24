@@ -1,6 +1,6 @@
 # Changelog
 
-## [Unreleased]
+## [3.5.0] - 2026-09-24
 
 Webhook signatures and SWAIG tokens are now enforced on every path, including
 serverless. Skills that fetch URLs no longer reach internal addresses through
