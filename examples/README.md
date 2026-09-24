@@ -34,6 +34,7 @@ swaig-test examples/simple_agent.py --exec get_weather --location "New York"
 
 | File | Description |
 |------|-------------|
+| [quickstart_agent.py](quickstart_agent.py) | The README's quickstart: an agent with one prompt section and one tool |
 | [simple_agent.py](simple_agent.py) | Full-featured agent with POM (Prompt Object Model) prompts, SWAIG (SignalWire AI Gateway) tools, multilingual support, SIP routing, and LLM parameter tuning |
 | [simple_static_agent.py](simple_static_agent.py) | Minimal static agent with no dynamic configuration |
 | [simple_dynamic_agent.py](simple_dynamic_agent.py) | Agent with per-request dynamic configuration callback |
@@ -53,6 +54,8 @@ swaig-test examples/simple_agent.py --exec get_weather --location "New York"
 |------|-------------|
 | [contexts_demo.py](contexts_demo.py) | Multi-persona sales workflow with context switching (Franklin/Rachael/Dwight), step navigation, and enter fillers |
 | [gather_info_demo.py](gather_info_demo.py) | Structured data collection using `set_gather_info()` and `add_gather_question()` in the contexts system |
+| [gather_per_question_functions_demo.py](gather_per_question_functions_demo.py) | While gather mode asks a question, only the tools that question names can run |
+| [step_function_inheritance_demo.py](step_function_inheritance_demo.py) | A step without `set_functions()` keeps the previous step's tools; setting or clearing them explicitly |
 
 ### Skills
 
@@ -110,10 +113,11 @@ swaig-test examples/simple_agent.py --exec get_weather --location "New York"
 | [multi_agent_server.py](multi_agent_server.py) | Multiple agents on one server: healthcare, finance, retail, plus InfoGatherer prefabs |
 | [multi_endpoint_agent.py](multi_endpoint_agent.py) | Single agent class serving multiple endpoints |
 
-### MCP Gateway
+### MCP
 
 | File | Description |
 |------|-------------|
+| [mcp_agent.py](mcp_agent.py) | An agent as an MCP server (`enable_mcp_server()`) and as an MCP client (`add_mcp_server()`) |
 | [mcp_gateway_demo.py](mcp_gateway_demo.py) | Connect to MCP (Model Context Protocol) servers through the mcp_gateway skill |
 
 ### LLM Parameters
@@ -142,6 +146,18 @@ swaig-test examples/simple_agent.py --exec get_weather --location "New York"
 | [dynamic_swml_service.py](dynamic_swml_service.py) | Dynamic SWML generation based on request parameters |
 | [swml_service_routing_example.py](swml_service_routing_example.py) | SWML service with route-based document selection |
 | [auto_vivified_example.py](auto_vivified_example.py) | Auto-vivified SWML document construction |
+| [swmlservice_swaig_standalone.py](swmlservice_swaig_standalone.py) | SWAIG tools served by an SWMLService, without an AI agent |
+| [swmlservice_ai_sidecar.py](swmlservice_ai_sidecar.py) | An `ai_sidecar` verb, an AI listener alongside a call, with its tools on the same service |
+
+### RELAY and REST
+
+| File | Description |
+|------|-------------|
+| [quickstart_relay.py](quickstart_relay.py) | The README's RELAY quickstart: answer a call, play a greeting, hang up |
+| [relay_answer_and_welcome.py](relay_answer_and_welcome.py) | Answer inbound calls on a context and greet the caller, with debug logging |
+| [quickstart_rest.py](quickstart_rest.py) | The README's REST quickstart: an AI agent resource, a call command, a number search and a document search |
+
+The [relay/examples/](../relay/examples/) and [rest/examples/](../rest/examples/) directories have more.
 
 ### Amazon Bedrock
 
