@@ -387,7 +387,7 @@ For more information, see:
 - [AgentBase Documentation](agent_guide.md)
 - [Skills Documentation](skills_system.md)
 - [SWAIG Functions Documentation](swaig_reference.md)
-- [SignalWire AI Gateway Documentation](https://docs.signalwire.com/topics/ai-gateway/)
+- [DataMap Guide](datamap_guide.md)
 
 ## Amazon Bedrock Verb Keys
 

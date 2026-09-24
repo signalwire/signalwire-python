@@ -134,7 +134,7 @@ The settings work like this:
 - `voice`: the text-to-speech voice, written as `provider.voice_name`. `rime.bolt` is the Rime provider's "bolt" voice.
 - `speech_fillers`: phrases the platform can say while the model prepares a reply
 
-The [SignalWire documentation](https://signalwire.com/docs) lists the voices each provider offers.
+The agent guide's [list of voice providers](../../../docs/agent_guide.md#voice-providers) shows the voice string format and a sample voice for each provider.
 
 ## Setting Conversation Parameters
 

@@ -1180,6 +1180,31 @@ self.add_language(
 )
 ```
 
+### Voice Providers
+
+A combined voice string is `engine.voice:model`: the text-to-speech provider, the voice's name or ID, and, for providers that have them, a model variant. Voice strings are case-insensitive. SignalWire offered these providers in September 2026; each line shows one sample voice string:
+
+| Provider | Sample voice string |
+|---|---|
+| Amazon Polly | `amazon.Joanna-Neural` |
+| Azure | `azure.en-US-AvaNeural` |
+| Cartesia | `cartesia.a167e0f3-df7e-4d52-a9c3-f949145efdab` |
+| Deepgram | `deepgram.aura-asteria-en` |
+| ElevenLabs | `elevenlabs.thomas` |
+| Fish Audio | `fish.802e3bc2b27e49c2995d23ef70e6ac89:s2.1-pro` |
+| Google Cloud | `gcloud.en-US-Casual-K` |
+| Grok | `grok.eve` |
+| Groq | `groq-tts.autumn` |
+| Inworld | `inworld.Lauren:inworld-tts-1.5-mini` |
+| MiniMax | `minimax.English_CalmWoman:speech-2.6-turbo` |
+| Mistral | `mistral.<voice ID>` |
+| OpenAI | `openai.alloy` |
+| Rime | `rime.luna:coda` |
+| Smallest.ai | `smallest.sophia:lightning_v3.1` |
+| Speechify | `speechify.alicia:simba-3.0` |
+
+Languages differ by provider. ElevenLabs, OpenAI and Grok voices are multilingual; Amazon Polly, Azure, Cartesia and Google Cloud cover many languages; the others cover fewer, so check that a voice speaks the language you set with `code`. Google Cloud and Amazon Polly also accept SSML, wrapped in `<speak>` tags. Each provider's full voice list is in its own documentation.
+
 ## Agent Configuration
 
 ### Adding Hints

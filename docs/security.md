@@ -295,9 +295,34 @@ If you encounter CORS errors:
 
 ## Webhook Signature Validation
 
-SignalWire signs every outbound webhook (SWML callbacks, SWAIG dispatch, post-prompt summaries, RELAY async events) with HMAC-SHA1. The signature is derived from a **Signing Key** the customer copies from the Dashboard's API Credentials page. SDKs MUST verify the signature before acting on a request.
+SignalWire signs every outbound webhook (SWML callbacks, SWAIG dispatch, post-prompt summaries, RELAY async events) with an HMAC. The signature is derived from a **Signing Key** the customer copies from the Dashboard's API Credentials page. With the key set, an agent checks the signature before acting on a request.
 
-The contract is shared across all SignalWire SDK ports. See [`porting-sdk/webhooks.md`](https://github.com/signalwire/porting-sdk/blob/main/webhooks.md) for the canonical spec.
+### How the signature is computed
+
+The SDK validates these schemes for you, with a constant-time comparison. You need the details only to validate requests yourself, or to work out why one was refused.
+
+**Headers.** `X-SignalWire-Signature` carries a SHA-1 signature. Newer platform builds also send `X-SignalWire-Sha256-Signature`, and the agent checks it first when it's present. For cXML compatibility, `X-Twilio-Signature` is accepted in place of `X-SignalWire-Signature`.
+
+**Scheme A: JSON requests** (SWML, SWAIG, post-prompt summaries, RELAY events). The signature is the lowercase hex HMAC of the full URL SignalWire POSTed to, followed by the raw request body:
+
+```
+signature        = hex(HMAC-SHA1(signing_key, url + raw_body))
+sha256 signature = hex(HMAC-SHA256(signing_key, url + raw_body))
+```
+
+`url` is exactly what the platform called: scheme, host, any non-standard port, path and query string. `raw_body` is the body as sent, before JSON parsing. Parsing and re-serializing it changes the bytes and breaks the signature.
+
+**Scheme B: form-encoded requests** (cXML and other compatibility endpoints). The form parameters are sorted by name, and each name and value is appended to the URL; a repeated name keeps its values in their original order. The signature is the standard base64 HMAC-SHA1 of that string. The platform signs some requests with the default port in the URL (`:443` or `:80`) and some without, so the validator tries both. When JSON is posted to a compatibility endpoint, the URL carries a `bodySHA256` query parameter: the signature covers that URL with no form parameters, and the body's SHA-256 hex digest must equal the parameter.
+
+**Test vectors.** `validate_webhook_signature()` accepts the first and third rows, and `validate_request()` accepts the second, with its form parameters passed as a dict:
+
+| Scheme | Signing key | URL | Body | Signature |
+|---|---|---|---|---|
+| A | `PSKtest1234567890abcdef` | `https://example.ngrok.io/webhook` | `{"event":"call.state","params":{"call_id":"abc-123","state":"answered"}}` | `c3c08c1fefaf9ee198a100d5906765a6f394bf0f` |
+| B, form | `12345` | `https://mycompany.com/myapp.php?foo=1&bar=2` | `CallSid=CA1234567890ABCDE`, `Caller=+14158675309`, `Digits=1234`, `From=+14158675309`, `To=+18005551212` | `RSOYDt4T1cUTdK1PDd93/VVr8B8=` |
+| B, JSON | `PSKtest1234567890abcdef` | `https://example.ngrok.io/webhook?bodySHA256=69f3cbfc18e386ef8236cb7008cd5a54b7fed637a8cb3373b5a1591d7f0fd5f4` | `{"event":"call.state"}` | `dfO9ek8mxyFtn2nMz24plPmPfIY=` |
+
+**What it doesn't cover.** The signature has no timestamp, so it doesn't stop a captured request from being sent again. Make side effects idempotent, and use the per-call tool tokens described under [SWAIG Function Token Signing](#swaig-function-token-signing).
 
 ### AgentBase: enable validation
 
