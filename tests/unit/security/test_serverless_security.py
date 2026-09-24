@@ -17,11 +17,10 @@ import os
 import sys
 import types
 from collections.abc import Iterator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from unittest.mock import patch
 from urllib.parse import urlparse
 
-import flask
 import pytest
 
 from signalwire.agent_server import AgentServer
@@ -31,6 +30,9 @@ from signalwire.core.function_result import FunctionResult
 SIGNING_KEY = "PSKtest1234567890abcdef"
 REFUSED = "security token for this function is invalid"
 LAMBDA_HOST = "abc123.lambda-url.us-east-1.on.aws"
+
+if TYPE_CHECKING:
+    import flask
 
 
 @pytest.fixture(autouse=True)
@@ -229,7 +231,10 @@ GCF_BASE = "https://us-central1-project.cloudfunctions.net"
 
 
 def _gcf(agent: AgentBase, path: str, body: str = "", query: str = "",
-         signature: str | None = None) -> flask.Response:
+         signature: str | None = None) -> "flask.Response":
+    # Cloud Functions hands the handler a Flask request. Flask isn't a core
+    # dependency, so only these tests need it.
+    flask = pytest.importorskip("flask", reason="flask is required for the Cloud Functions tests")
     headers = {"Authorization": _auth(agent), "Content-Type": "application/json"}
     if signature:
         headers["X-SignalWire-Signature"] = signature
