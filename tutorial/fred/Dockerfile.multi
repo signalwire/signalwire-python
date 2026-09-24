@@ -1,5 +1,5 @@
 # Stage 1: Build environment
-FROM python:3.11-slim as builder
+FROM python:3.11-slim AS builder
 
 # Set working directory
 WORKDIR /app
@@ -22,7 +22,7 @@ FROM python:3.11-slim
 # Set environment variables
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
-    PYTHONPATH=/app/deps:$PYTHONPATH
+    PYTHONPATH=/app/deps
 
 # Set working directory
 WORKDIR /app

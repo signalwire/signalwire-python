@@ -2,8 +2,8 @@
 
 The SDK supports the [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) in two ways:
 
-1. **MCP Client** — Connect to external MCP servers and use their tools in your agent
-2. **MCP Server** — Expose your agent's `@tool` functions as an MCP endpoint for other clients
+1. **MCP Client**: connect to external MCP servers and use their tools in your agent
+2. **MCP Server**: expose your agent's `@tool` functions as an MCP endpoint for other clients
 
 These features are independent and can be used separately or together.
 
@@ -50,6 +50,8 @@ Resource data is available in prompts via `${global_data.key}` and included in e
 
 ### Multiple Servers
 
+Add more than one server, and the agent merges their tools into one list:
+
 ```python
 self.add_mcp_server("https://mcp-search.example.com/tools",
     headers={"Authorization": "Bearer search-key"})
@@ -61,7 +63,7 @@ Tools from all servers are merged into one list. If an MCP tool has the same nam
 
 ## Exposing Tools as MCP Server
 
-Use `enable_mcp_server()` to add an MCP endpoint at `/mcp` on your agent's server. Any MCP client can connect and use your `@tool` functions.
+Use `enable_mcp_server()` to add an MCP endpoint at `/mcp` on your agent's server. An MCP client that has the agent's basic auth credentials can connect and use your `@tool` functions.
 
 ```python
 from signalwire import AgentBase
@@ -79,27 +81,33 @@ class MyAgent(AgentBase):
 ```
 
 The `/mcp` endpoint handles the full MCP protocol:
-- `initialize` — protocol version and capability negotiation
-- `notifications/initialized` — ready signal
-- `tools/list` — returns all `@tool` functions in MCP format
-- `tools/call` — invokes the handler and returns the result
-- `ping` — keepalive
+- `initialize`: protocol version and capability negotiation
+- `notifications/initialized`: ready signal
+- `tools/list`: returns the agent's tools in MCP format, except DataMap and external webhook tools, which don't run in the agent
+- `tools/call`: invokes the handler and returns the result
+- `ping`: keepalive
 
-### Connecting from Claude Desktop
+### Connecting a Client
 
-Add your agent as an MCP server in Claude Desktop's config:
+The endpoint uses the agent's basic auth credentials, like the agent's other endpoints, and answers 401 without them. Give your MCP client the endpoint's URL and an `Authorization: Basic` header built from those credentials. Many clients accept a configuration like this one; your client's documentation gives its file and exact format:
 
 ```json
 {
     "mcpServers": {
         "my-agent": {
-            "url": "https://your-server.com/agent/mcp"
+            "type": "http",
+            "url": "https://your-server.com/agent/mcp",
+            "headers": {
+                "Authorization": "Basic dXNlcjpwYXNzd29yZA=="
+            }
         }
     }
 }
 ```
 
-Your `@tool` functions are now available in Claude Desktop conversations.
+The header value is `Basic` followed by the Base64 encoding of `user:password`, which `printf '%s' 'user:password' | base64` prints.
+
+Your `@tool` functions are then available to the client.
 
 ## Using Both Together
 
@@ -138,7 +146,7 @@ self.enable_mcp_server()
 self.add_mcp_server("https://your-server.com/agent/mcp")
 ```
 
-This is optional — by default, `enable_mcp_server()` only adds the endpoint without affecting the agent's own SWML output.
+This is optional. By default, `enable_mcp_server()` only adds the endpoint, and doesn't affect the agent's own SWML output.
 
 ## MCP vs SWAIG Webhooks
 

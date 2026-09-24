@@ -7,6 +7,8 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
 DataMap class for building SWAIG data_map configurations
+
+The SDK's installed documentation covers this module: run ``sw-pydocs datamap``, or ``sw-pydocs`` for the index.
 """
 
 from typing import Any
@@ -27,18 +29,18 @@ class DataMap:
         data_map = (DataMap('get_weather')
             .purpose('Get current weather information')
             .parameter('location', 'string', 'City name', required=True)
-            .webhook('GET', 'https://api.weather.com/v1/current?key=API_KEY&q=${location}')
-            .output(FunctionResult('Weather in ${location}: ${response.current.condition.text}, ${response.current.temp_f}°F'))
+            .webhook('GET', 'https://api.weather.com/v1/current?key=API_KEY&q=${enc:args.location}')
+            .output(FunctionResult('Weather in ${args.location}: ${current.condition.text}, ${current.temp_f}°F'))
         )
 
         # Multiple webhooks with fallback
         data_map = (DataMap('search_multi')
             .purpose('Search with fallback APIs')
             .parameter('query', 'string', 'Search query', required=True)
-            .webhook('GET', 'https://api.primary.com/search?q=${query}')
-            .output(FunctionResult('Primary result: ${response.title}'))
-            .webhook('GET', 'https://api.fallback.com/search?q=${query}')
-            .output(FunctionResult('Fallback result: ${response.title}'))
+            .webhook('GET', 'https://api.primary.com/search?q=${enc:args.query}')
+            .output(FunctionResult('Primary result: ${title}'))
+            .webhook('GET', 'https://api.fallback.com/search?q=${enc:args.query}')
+            .output(FunctionResult('Fallback result: ${title}'))
             .fallback_output(FunctionResult('Sorry, all search APIs are unavailable'))
         )
 
@@ -56,9 +58,14 @@ class DataMap:
             .purpose('Search documentation')
             .parameter('query', 'string', 'Search query', required=True)
             .webhook('POST', 'https://api.docs.com/search', headers={'Authorization': 'Bearer TOKEN'})
-            .body({'query': '${query}', 'limit': 3})
-            .output(FunctionResult('Found: ${response.results[0].title} - ${response.results[0].summary}'))
-            .foreach('${response.results}')
+            .body({'query': '${args.query}', 'limit': 3})
+            .output(FunctionResult('Found: ${results[0].title} - ${results[0].summary}'))
+            .foreach({
+                'input_key': 'results',
+                'output_key': 'formatted_results',
+                'max': 3,
+                'append': 'Result: ${this.title} - ${this.summary}\n'
+            })
         )
     """
 

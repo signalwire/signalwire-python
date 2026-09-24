@@ -1,12 +1,14 @@
 # MCP Gateway Skill
 
-Bridge MCP (Model Context Protocol) servers with SignalWire SWAIG functions, allowing agents to seamlessly interact with MCP-based tools.
+Bridge MCP (Model Context Protocol) servers with SignalWire SWAIG functions, so agents can call MCP-based tools.
 
 ## Description
 
 The MCP Gateway skill connects SignalWire agents to MCP servers through a centralized gateway service. It dynamically discovers and registers MCP tools as SWAIG functions, maintaining session state throughout each call.
 
 ## Features
+
+The skill covers these capabilities:
 
 - Dynamic tool discovery from MCP servers
 - Session management tied to SignalWire call IDs
@@ -18,6 +20,8 @@ The MCP Gateway skill connects SignalWire agents to MCP servers through a centra
 
 ## Requirements
 
+The skill needs a running gateway and credentials to reach it:
+
 - Running MCP Gateway service
 - Network access to gateway
 - Gateway credentials (username/password)
@@ -26,12 +30,14 @@ The MCP Gateway skill connects SignalWire agents to MCP servers through a centra
 
 ### Required Parameters
 
-Either Basic Auth credentials OR Bearer token:
-- `gateway_url`: URL of the MCP gateway service (default: "http://localhost:8100")
+The skill needs a gateway URL and one authentication method, either basic auth credentials or a bearer token:
+- `gateway_url`: URL of the MCP gateway service (required)
 - `auth_user` + `auth_password`: Basic auth credentials
-- OR `auth_token`: Bearer token for authentication
+- or `auth_token`: Bearer token for authentication
 
 ### Optional Parameters
+
+The rest of the parameters tune service selection and connection behavior:
 
 - `services`: Array of services to load (default: all available)
   - `name`: Service name
@@ -45,6 +51,8 @@ Either Basic Auth credentials OR Bearer token:
 ## Usage
 
 ### Basic Usage (All Services)
+
+Add the skill with a gateway URL and basic auth credentials to load every available service:
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -66,6 +74,8 @@ agent.run()
 ```
 
 ### Selective Service Loading
+
+List `services` to limit which services and tools the skill registers:
 
 ```python
 # Load specific services with specific tools
@@ -90,6 +100,8 @@ self.add_skill("mcp_gateway", {
 
 ### HTTPS with Self-Signed Certificate
 
+Set `verify_ssl` to false to connect to a gateway with a self-signed certificate:
+
 ```python
 self.add_skill("mcp_gateway", {
     "gateway_url": "https://localhost:8443",
@@ -100,6 +112,8 @@ self.add_skill("mcp_gateway", {
 ```
 
 ### Bearer Token Authentication
+
+Set `auth_token` instead of `auth_user`/`auth_password` to authenticate with a bearer token:
 
 ```python
 self.add_skill("mcp_gateway", {
@@ -126,7 +140,9 @@ For example, with default settings:
 
 ### Using Todo Service
 
-```
+This exchange calls the todo service twice, once to add an item and once to list them:
+
+```text
 User: "Add a task to buy milk"
 Assistant: "I'll add that to your todo list."
 [Calls mcp_todo_add_todo with text="buy milk"]
@@ -136,12 +152,14 @@ User: "What's on my todo list?"
 Assistant: "Let me check your todos."
 [Calls mcp_todo_list_todos]
 Assistant: "Here are your current todos:
-○ #1 [medium] buy milk"
+1. [medium] buy milk"
 ```
 
 ### Multiple Services
 
-```
+A single request can call tools from two different services:
+
+```text
 User: "Add 'finish report' to my todos and calculate 15% of 200"
 Assistant: "I'll add that todo and do the calculation for you."
 [Calls mcp_todo_add_todo with text="finish report"]
@@ -150,6 +168,8 @@ Assistant: "I've added 'finish report' to your todos. 15% of 200 is 30."
 ```
 
 ## Session Management
+
+The skill manages sessions automatically:
 
 - Each SignalWire call gets its own MCP session
 - Sessions persist across multiple tool calls
@@ -168,7 +188,7 @@ self.set_global_data({
 
 # Or in a SWAIG function
 result = SwaigFunctionResult("Session changed")
-result.add_action("set_global_data", {"mcp_call_id": "new-session-456"})
+result.update_global_data({"mcp_call_id": "new-session-456"})
 ```
 
 This is useful for:
@@ -217,14 +237,15 @@ Increase timeout if needed:
 To run the MCP Gateway service:
 
 ```bash
-cd mcp_gateway
-python3 gateway_service.py
+mcp-gateway
 
 # Or with custom config
-python3 gateway_service.py -c myconfig.json
+mcp-gateway -c myconfig.json
 ```
 
 ## Security Considerations
+
+Apply these five practices before you deploy a gateway:
 
 1. Always use HTTPS in production
 2. Use strong authentication credentials

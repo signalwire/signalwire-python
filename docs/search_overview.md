@@ -15,7 +15,7 @@ For related documentation, see:
 
 ### The Problem: Hallucinations and RAG
 
-Large language models are trained on vast amounts of internet text, but they have no knowledge of your specific documentation, internal knowledge bases, or product details. When asked questions outside their training data, they do not say "I don't know" -- they generate plausible-sounding answers that are often completely fictional.
+Large language models are trained on vast amounts of internet text, but they have no knowledge of your specific documentation, internal knowledge bases, or product details. When asked questions outside their training data, they do not say "I don't know." Instead, they generate plausible-sounding answers that are often completely fictional.
 
 For AI agents representing a business, this is unacceptable. The agent needs to answer questions accurately based on actual documentation, not fabricate answers.
 
@@ -27,9 +27,11 @@ For AI agents representing a business, this is unacceptable. The agent needs to 
 
 Instead of relying on the model's training data, the LLM becomes a natural language interface to a knowledge base.
 
-Most RAG implementations require setting up a separate vector database (Pinecone, Weaviate, Qdrant, etc.), writing embedding management code, handling retrieval logic, paying for additional infrastructure, and dealing with latency from multiple service calls. The SignalWire Agents SDK search system eliminates these requirements by integrating search directly into the agent framework.
+Most RAG implementations require setting up a separate vector database (Pinecone, Weaviate, Qdrant, etc.) and writing embedding management code. They also mean handling retrieval logic, paying for additional infrastructure, and absorbing latency from multiple service calls. The SignalWire Agents SDK search system eliminates these requirements by integrating search directly into the agent framework.
 
 ### How It Works: Architecture
+
+Documents flow into a portable index at build time, and agents query that index at runtime:
 
 ```
 +-------------------+    +------------------+    +-------------------+
@@ -44,21 +46,23 @@ Most RAG implementations require setting up a separate vector database (Pinecone
 +-------------------+    +------------------+    +-------------------+
 ```
 
-**Indexing phase:** Documents are processed by the `IndexBuilder`, which scans files, extracts text, breaks content into chunks, generates vector embeddings for each chunk, and saves everything into a portable `.swsearch` SQLite database.
+**Indexing phase:** Documents are processed by the `IndexBuilder`, which scans files, extracts text, and breaks content into chunks. It then generates vector embeddings for each chunk and saves everything into a portable `.swsearch` SQLite database.
 
-**Query phase:** At runtime, an agent equipped with the `native_vector_search` skill sends user queries through the `SearchEngine`, which converts the query to a vector embedding, compares it against all stored chunk vectors, applies hybrid scoring (vector similarity + keyword matching + metadata filtering), and returns ranked results. The LLM then uses these results to generate an accurate response.
+**Query phase:** At runtime, an agent equipped with the `native_vector_search` skill sends user queries through the `SearchEngine`. The engine converts the query to a vector embedding and compares it against all stored chunk vectors. It applies hybrid scoring (vector similarity, keyword matching, and metadata filtering) to return ranked results, and the LLM uses those results to generate an accurate response.
 
 ### Key Features
 
-- **Offline search** -- No external API calls or internet required at query time.
-- **Hybrid search** -- Combines vector similarity and keyword search with metadata filtering.
-- **Document processing** -- Supports Markdown, PDF, DOCX, HTML, Excel, PowerPoint, and more.
-- **Smart chunking** -- Nine chunking strategies including markdown-aware and semantic chunking.
-- **Advanced query processing** -- Optional NLP-enhanced query understanding with synonym expansion.
-- **Flexible deployment** -- Local embedded mode with `.swsearch` files, remote server mode, or PostgreSQL pgvector backend.
-- **Portable indexes** -- A single `.swsearch` file contains the entire knowledge base (embeddings, metadata, full-text index).
-- **Voice-optimized** -- Automatic response formatting adapted for voice conversations vs. text chat.
-- **Production-ready backends** -- Start with SQLite for development, scale to pgvector for multi-agent production systems.
+The search system provides these capabilities:
+
+- **Offline search**: No external API calls or internet required at query time.
+- **Hybrid search**: Combines vector similarity and keyword search with metadata filtering.
+- **Document processing**: Supports Markdown, PDF, DOCX, HTML, Excel, PowerPoint, and more.
+- **Smart chunking**: Nine chunking strategies including markdown-aware and semantic chunking.
+- **Advanced query processing**: Optional NLP-enhanced query understanding with synonym expansion.
+- **Flexible deployment**: Local embedded mode with `.swsearch` files, remote server mode, or PostgreSQL pgvector backend.
+- **Portable indexes**: A single `.swsearch` file contains the entire knowledge base (embeddings, metadata, full-text index).
+- **Voice-optimized**: Automatic response formatting adapted for voice conversations vs. text chat.
+- **Production-ready backends**: Start with SQLite for development, scale to pgvector for multi-agent production systems.
 
 ---
 
@@ -70,6 +74,8 @@ The search system uses optional dependencies to keep the base SDK lightweight. C
 
 #### Basic Search (~500MB)
 
+Install this level with pip:
+
 ```bash
 pip install "signalwire-sdk[search]"
 ```
@@ -80,6 +86,8 @@ Best for: Local development, CI/CD, resource-constrained environments.
 
 #### Full Document Processing (~600MB)
 
+Install this level with pip:
+
 ```bash
 pip install "signalwire-sdk[search-full]"
 ```
@@ -89,6 +97,8 @@ Adds PDF processing (pdfplumber), DOCX processing (python-docx), Excel/PowerPoin
 Best for: Production systems that need document processing but prioritize speed.
 
 #### Advanced NLP (~600MB)
+
+Install this level with pip:
 
 ```bash
 pip install "signalwire-sdk[search-nlp]"
@@ -102,32 +112,38 @@ Adds spaCy for advanced text processing, improved POS tagging, named entity reco
 python -m spacy download en_core_web_sm
 ```
 
-**Performance note:** Advanced NLP features provide significantly better query understanding and synonym expansion, but are 2-3x slower than basic search. Two NLP backends are available:
+**Performance note:** Advanced NLP features improve query understanding and synonym expansion, but they're slower than basic search. Two NLP backends are available:
 
-- **NLTK (default):** ~50-100ms query processing, good for most use cases.
-- **spaCy:** ~150-300ms query processing, better POS tagging and entity recognition, requires model download.
+- **NLTK (default):** faster query processing, good for most use cases.
+- **spaCy:** slower query processing, better POS tagging and entity recognition, requires model download.
 
-Configure via the `nlp_backend` parameter:
+Configure via the `index_nlp_backend` and `query_nlp_backend` parameters, which both default to `nltk`:
 
 ```python
 self.add_skill("native_vector_search", {
-    "nlp_backend": "nltk"   # Fast, default
+    "index_nlp_backend": "nltk",   # Fast, default
+    "query_nlp_backend": "nltk"
 })
 
 self.add_skill("native_vector_search", {
-    "nlp_backend": "spacy"  # Better quality, slower
+    "index_nlp_backend": "spacy",  # Better quality, slower
+    "query_nlp_backend": "spacy"
 })
 ```
+
+An older, single `nlp_backend` parameter still works but is deprecated in favor of these two separate parameters.
 
 Best for: Applications where search quality is more important than speed.
 
 #### All Search Features (~700MB)
 
+Install this level with pip:
+
 ```bash
 pip install "signalwire-sdk[search-all]"
 ```
 
-Includes everything above plus pgvector support for PostgreSQL backends.
+Includes the packages from the options described earlier, plus pgvector support for PostgreSQL backends.
 
 **Additional setup required:**
 
@@ -145,9 +161,9 @@ For production deployments where agents only need to query existing indexes (not
 pip install "signalwire-sdk[search-queryonly]"
 ```
 
-**Size:** ~400MB -- significantly smaller because it excludes the ML models needed to build indexes.
+**Size:** ~400MB, significantly smaller because it excludes the ML models needed to build indexes.
 
-This option is designed for deploying agents in environments such as Lambda functions, Docker containers, or edge devices where the `.swsearch` index file is pre-built and shipped alongside the agent.
+This option is designed for deploying agents in environments such as Lambda functions, Docker containers, or edge devices. The `.swsearch` index file is pre-built and shipped alongside the agent.
 
 ### Feature Comparison Table
 
@@ -177,6 +193,8 @@ pip install "signalwire-sdk[search,pgvector]"
 
 ### Verifying Installation
 
+Run this check to confirm the search package imported correctly:
+
 ```python
 try:
     from signalwire.search import IndexBuilder, SearchEngine
@@ -203,7 +221,7 @@ Note: The sentence-transformers library downloads pre-trained models (~400MB) on
 
 ### Vector Embeddings
 
-An embedding is a list of numbers (a vector) that represents the semantic meaning of a piece of text. Embeddings function as coordinates in a high-dimensional meaning space: texts with similar meanings produce vectors that are close together, while unrelated texts produce vectors that are far apart.
+An embedding is a list of numbers (a vector) that represents the semantic meaning of a piece of text. Embeddings function as coordinates in a high-dimensional meaning space. Texts with similar meanings produce vectors that are close together, while unrelated texts produce vectors that are far apart.
 
 Simplified example (real embeddings have hundreds of dimensions):
 
@@ -221,20 +239,20 @@ The embedding models used by the search system (such as `sentence-transformers/a
 - "doctor" is related to "hospital" and "medicine"
 - Context matters: "Python" can mean a snake or a programming language
 
-During indexing, the model reads each chunk of text, processes it through the neural network, outputs a vector (typically 384 or 768 numbers), and stores that vector alongside the original text. At query time, the same model converts the user's query into a vector and compares it to all stored chunk vectors.
+During indexing, the model reads each chunk of text and processes it through the neural network. It outputs a vector (typically 384 or 768 numbers) and stores that vector alongside the original text. At query time, the same model converts the user's query into a vector and compares it to all stored chunk vectors.
 
 **Available models:**
 
 | Model | Dimensions | Speed | Quality | Notes |
 |-------|-----------|-------|---------|-------|
-| MiniLM ("mini", default) | 384 | ~5x faster than base | Good for most use cases | Lower memory usage |
-| MPNet ("base") | 768 | Baseline | Better for complex queries | Previous default |
+| MiniLM ("mini", default) | 384 | Faster | Good for most use cases | Lower memory usage |
+| MPNet ("base") | 768 | Slower | Better for complex queries | Previous default |
 
 For detailed model comparisons and embedding strategies, see [Search Indexing](search_indexing.md).
 
 ### Semantic vs Keyword Search
 
-Traditional keyword search looks for exact word matches. If documentation says "initiating voice connections" and a user asks "how do I make a phone call", keyword search finds nothing -- not a single word matches.
+Traditional keyword search looks for exact word matches. If documentation says "initiating voice connections" and a user asks "how do I make a phone call", keyword search finds nothing: not a single word matches.
 
 Vector search finds it immediately because the meaning is similar. It understands that:
 
@@ -261,22 +279,22 @@ Chunk A: "error handling guide"     -> similarity: 0.87 (very similar)
 Chunk B: "installation instructions" -> similarity: 0.23 (not similar)
 ```
 
-The `distance_threshold` parameter filters out low-similarity results. Only chunks with similarity above the threshold are returned:
+The `similarity_threshold` parameter (`--similarity-threshold` on the `sw-search` command line, or its older name, `--distance-threshold`) filters out low-similarity results. Only chunks with a score at or above the threshold are returned, so a higher threshold is stricter and a lower threshold is more permissive:
 
 <!-- snippet: no-compile config-excerpt -->
 ```python
-"distance_threshold": 0.3  # Very strict - only near-perfect matches
-"distance_threshold": 0.5  # Balanced - good matches
-"distance_threshold": 0.7  # Permissive - includes loosely related content
+"similarity_threshold": 0.3  # Permissive - includes loosely related content
+"similarity_threshold": 0.5  # Balanced - good matches
+"similarity_threshold": 0.7  # Strict - only near-perfect matches
 ```
 
-For technical documentation, 0.4-0.5 is a good starting point. For creative content or broad topics, 0.6-0.7 may be more appropriate. Too strict yields no results; too permissive yields irrelevant results.
+For precise, technical lookups, 0.6-0.7 is a good starting point. For creative content or broad topics, 0.3-0.4 may be more appropriate, since it admits more loosely related content. Too strict yields no results; too permissive yields irrelevant results.
 
-Once embeddings are generated, search is extremely fast -- comparing vectors is basic arithmetic (multiply and add operations). Modern CPUs can compare thousands of vectors per millisecond. The expensive embedding generation happens once during indexing; queries are cheap.
+Once embeddings are generated, search is extremely fast: comparing vectors is basic arithmetic (multiply and add operations). Modern CPUs can compare thousands of vectors per millisecond. The expensive embedding generation happens once during indexing; queries are cheap.
 
 ### Hybrid Search Algorithm
 
-The search system implements a **vector-first** hybrid search algorithm that combines vector similarity, keyword matching, and metadata filtering to produce higher-quality results than any single approach alone.
+The search system implements a **vector-first** hybrid search algorithm. It combines vector similarity, keyword matching, and metadata filtering to produce higher-quality results than any single approach alone.
 
 #### Vector-First Architecture
 
@@ -285,11 +303,11 @@ Many RAG systems use a keyword-first approach: try keyword search first, fall ba
 The SignalWire search system takes the opposite approach:
 
 1. **Always run vector search** as the primary signal.
-2. **Run keyword/metadata searches in parallel** (not conditionally).
-3. **Use keyword matches as confirmation signals** that boost vector scores.
+2. **Run keyword, metadata, and filename matching in parallel** (not conditionally).
+3. **Use agreement between signals as a tiebreaker**, not as an independent score.
 4. **Return the best combined results.**
 
-Vector search drives the results. Keyword and metadata matches boost the scores of results that match on multiple signals.
+Vector search drives the results. Keyword, metadata, and filename matches can reorder candidates that are already close to each other. They cannot pull a weak semantic match above a strong one.
 
 #### The Confirmation Principle
 
@@ -299,71 +317,36 @@ The core insight of hybrid search is **confirmation**: when multiple independent
 - Keyword search is another: "It contains the exact terms."
 - Metadata is a third: "It is tagged as relevant."
 
-When all three agree, the result is strongly confirmed.
+When several signals agree, the result is more strongly confirmed, though agreement can only move a result within a narrow band. It cannot move a result past a chunk that is closer to the query.
 
 #### Scoring Mechanics
 
 The algorithm proceeds in these steps:
 
-```
-1. Vector search for N*3 candidates (where N = requested count)
-   -> Generates pool of semantically similar chunks
-
-2. Parallel keyword search for query terms
-   -> Identifies chunks with exact term matches
-
-3. Parallel metadata search for tags/fields
-   -> Identifies chunks with matching metadata
-
-4. For each candidate chunk:
-   base_score = vector_similarity
-
-   if chunk matched keywords:
-       keyword_boost = min(0.30, num_keywords * 0.15)
-       base_score *= (1.0 + keyword_boost)
-
-   if chunk matched metadata:
-       metadata_boost = min(0.30, num_metadata_matches * 0.15)
-       base_score *= (1.0 + metadata_boost)
-
-   if chunk has 'code' tag AND (keywords matched OR metadata matched):
-       base_score *= 1.20
-
-   final_score = base_score
-
-5. Sort by final_score descending
-
-6. Return top N results
-```
+1. Vector search fetches a candidate pool of roughly three times the requested result count, so the later steps have room to work.
+2. Keyword matching, weighted metadata field matching (category, product, tags, source, section, and description each carry a different weight), and filename matching run against that same pool.
+3. Each candidate is scored. If it has a vector similarity score, that score is the base, and every additional agreeing signal adds a small boost, capped at a fixed maximum. Agreement can reorder near-ties; it cannot let a weak vector match outrank a stronger one.
+4. A candidate found only through keyword or metadata matching, with no vector score, is scaled below the pool's strongest vector match. A non-semantic match can never outrank a genuine semantic one.
+5. Near-duplicate chunks are removed, keeping the highest-scoring copy of each.
+6. Results are penalized when several chunks come from the same file, so one document cannot dominate the result list. The second chunk from a file keeps 85% of its computed score, the third 70%, the fourth 50%, and the fifth or later 40%.
+7. The top N results are returned.
 
 **Concrete example:**
 
-Query: "how to configure voice settings"
-
-After vector search produces a candidate pool, hybrid scoring adjusts the rankings:
+Consider a query for "how to configure voice settings":
 
 ```
-Result A: Vector similarity 0.78
-  + Keyword matches: "voice", "configuration" -> +15% each (capped at 30%)
-  + Metadata tag: "voice" -> +15%
-  Final score: 0.78 * 1.30 = 1.01
+Chunk A: vector similarity 0.78, also matched by keyword and metadata search
+  Two agreeing signals add the maximum tiebreak bonus: 0.78 + 0.05 = 0.83
 
-Result B: Vector similarity 0.82
-  + No keyword or metadata matches
-  Final score: 0.82
+Chunk B: vector similarity 0.82, no keyword or metadata match
+  No agreeing signals to add: 0.82
 
-Result A now ranks higher than Result B.
+Chunk A now ranks ahead of Chunk B, because the two started as a near-tie.
+A weaker vector match, for example 0.60, could not have passed Chunk B this way.
 ```
 
-**Code chunk boosting:** Chunks containing code blocks receive an additional 20% boost when keyword or metadata matches are also present. This ensures that technical queries surface actual code examples rather than only conceptual descriptions:
-
-```
-Result with code: 0.70 (vector) * 1.15 (keyword) * 1.20 (code tag) = 0.97
-Result without code: 0.85 (vector) * 1.0 (no boost) = 0.85
--> Code example ranks higher
-```
-
-The boost percentages are tuned based on testing with technical documentation. They can be influenced indirectly through `distance_threshold` (stricter thresholds mean fewer candidates for keyword boosting) and `count` (internally the system searches for 3x the requested count to build a good candidate pool before hybrid scoring).
+The exact boost values are internal and may change between releases. For tuning search quality, what matters is this: a strong vector match keeps its rank regardless of keyword or metadata agreement. The `count` parameter also affects how much room the candidate pool has, since the system searches for about 3x the requested count before scoring.
 
 ---
 
@@ -398,17 +381,20 @@ The `sw-search` command will:
 Example output:
 
 ```
-Processing files...
-  docs/getting-started.md (3 chunks)
-  docs/api-reference.md (12 chunks)
-  docs/examples.md (5 chunks)
-
-Building index...
-  Generated embeddings for 20 chunks
-  Index saved to knowledge.swsearch
-
-Index size: 2.3 MB
+Added 3 files from directory: docs
+Found 3 files to process
+Processing 3 files...
+  docs/getting-started.md: 3 chunks
+  docs/api-reference.md: 12 chunks
+  docs/examples.md: 5 chunks
+Created 20 total chunks
+Loading embedding model: sentence-transformers/all-MiniLM-L6-v2
+Generating embeddings for 20 chunks...
+  Progress: 20/20 chunks (100.0%)
+Index created: knowledge.swsearch
 Total chunks: 20
+
+Search index created successfully: knowledge.swsearch
 ```
 
 For full CLI reference, see [CLI Guide](cli_guide.md). For advanced indexing options (chunking strategies, model selection, pgvector backend), see [Search Indexing](search_indexing.md).
@@ -437,7 +423,7 @@ class DocsAgent(AgentBase):
             "description": "Search the documentation to answer user questions about features, APIs, and how-to guides",
             "index_file": "./knowledge.swsearch",
             "count": 5,
-            "distance_threshold": 0.4,
+            "similarity_threshold": 0.4,
             "no_results_message": "I couldn't find information about '{query}' in the documentation. Could you rephrase your question?",
             "swaig_fields": {
                 "fillers": {
@@ -535,15 +521,7 @@ assistant = client.beta.assistants.create(
 
 **Advantages of OpenAI Assistants:** Zero setup, managed infrastructure, automatic improvements.
 
-**Disadvantages:** Vendor lock-in (OpenAI models only), no control over chunking or search tuning, data privacy concerns (documents reside on OpenAI servers), higher latency (multiple API round-trips), and significantly higher cost for search infrastructure.
-
-**Cost comparison (10,000 queries/month):**
-
-- OpenAI Assistants: ~$1,400-1,500/month (vector storage + inference)
-- SignalWire SDK with pgvector: ~$100/month for search infrastructure
-- SignalWire SDK with .swsearch: $0/month for search infrastructure
-
-Note: LLM inference costs apply to all approaches and are not included above.
+**Disadvantages:** Vendor lock-in (OpenAI models only), no control over chunking or search tuning, and data privacy concerns, since documents reside on OpenAI servers. Latency is higher (multiple API round-trips), and the cost for search infrastructure is higher too, since it includes OpenAI's vector storage and inference charges. `.swsearch` files need no separate database server, and pgvector costs only what your own PostgreSQL hosting costs.
 
 ### vs LangChain + External Vector DB
 
@@ -579,7 +557,7 @@ agent.add_skill("native_vector_search", {
 
 **Advantages of LangChain + VectorDB:** Highly flexible, large community, many integrations.
 
-**Disadvantages:** Complex setup with many moving parts, requires managed vector DB subscription ($70+/month for Pinecone), additional latency from network calls to external services, and manual integration code between retrieval and agent.
+**Disadvantages:** Complex setup with many moving parts, and it requires a paid subscription to a managed vector database such as Pinecone. Network calls to external services add latency, and retrieval and the agent need manual integration code between them.
 
 ### vs DIY Approach
 
@@ -604,39 +582,24 @@ top_k = np.argsort(similarities)[-5:][::-1]
 
 **Advantages of DIY:** Full control over every aspect, minimal dependencies, good for learning.
 
-**Disadvantages:** Significant development time (estimated 36-72 hours vs 20 minutes for the SDK approach), ongoing maintenance burden, per-call API costs for embeddings, and missing optimizations like hybrid search and metadata boosting.
+**Disadvantages:** A longer development time than using the SDK, and an ongoing maintenance burden. Embeddings carry a per-call API cost, and optimizations like hybrid search and metadata boosting are missing.
 
-**Development time comparison:**
-
-| Task | DIY | SignalWire SDK |
-|------|-----|----------------|
-| Document loading | 2-4 hours | Included |
-| Chunking strategies | 4-8 hours | Included (9 strategies) |
-| Embedding generation | 2-4 hours | Included |
-| Storage layer | 4-8 hours | Included |
-| Search implementation | 4-8 hours | Included |
-| Hybrid search | 8-16 hours | Included |
-| Metadata filtering | 4-8 hours | Included |
-| Testing and optimization | 8-16 hours | Included |
-| **Total** | **36-72 hours** | **~20 minutes** |
+Building a DIY solution means writing and testing your own document loading, chunking, embedding generation, storage layer, search implementation, hybrid search, and metadata filtering. The SignalWire SDK includes all of these, with nine chunking strategies built in, configured through the `add_skill` call shown earlier.
 
 ### Feature Matrix
 
 | Feature | OpenAI Assistants | LangChain + VectorDB | DIY | SignalWire SDK |
 |---------|-------------------|----------------------|-----|----------------|
-| **Setup Time** | 30 min | 2-4 hours | 8-16 hours | 20 min |
 | **Chunking Control** | No | Yes | Yes | Yes (9 strategies) |
 | **Hybrid Search** | Unknown | Manual | Manual | Built-in |
 | **Metadata Filtering** | Limited | Yes | Manual | Yes |
-| **Cost (10K queries)** | ~$1,400/mo | $100-200/mo | $50-150/mo | $0-100/mo |
 | **Vendor Lock-in** | High | Moderate | None | None |
 | **Offline Operation** | No | No | Possible | Yes (.swsearch) |
 | **Voice Optimized** | No | No | No | Yes |
 | **Agent Integration** | Manual | Manual | Manual | Automatic |
 | **Deployment Size** | N/A | Large | Medium | Small (query-only) |
-| **Latency** | 100-200ms | 50-130ms | 50-100ms | 5-30ms |
 | **LLM Choice** | OpenAI only | Any | Any | Any |
 | **Data Privacy** | OpenAI servers | 3rd party | Your infra | Your infra |
 | **Scalability** | Auto | Managed | DIY | pgvector |
 
-Note: Cost figures represent search infrastructure only. All approaches have additional LLM inference costs.
+Setup time, cost, and query latency all depend on your query volume, hosting choices, and hardware. See the sections earlier on this page for what each approach involves, and measure the ones that matter to you in your own environment.

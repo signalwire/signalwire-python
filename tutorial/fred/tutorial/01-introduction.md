@@ -1,46 +1,45 @@
 # Lesson 1: Introduction to SignalWire Agents
 
-Welcome to your journey of building Fred, a friendly Wikipedia-powered AI assistant! In this first lesson, we'll explore what SignalWire AI Agents are and how they work for building voice applications.
+Before writing Fred, it helps to know what a SignalWire agent is and how a call reaches it. This lesson covers the platform, the SDK's building blocks, and the concepts the rest of the tutorial uses.
 
 ## Table of Contents
 
-1. [What is SignalWire?](#what-is-signalwire)
+1. [What Is SignalWire?](#what-is-signalwire)
 2. [Understanding AI Agents](#understanding-ai-agents)
 3. [The SDK Architecture](#the-sdk-architecture)
-4. [What We're Building](#what-were-building)
+4. [What You're Building](#what-youre-building)
 5. [Key Concepts](#key-concepts)
+6. [Why This Architecture?](#why-this-architecture)
 
 ---
 
-## What is SignalWire?
+## What Is SignalWire?
 
-SignalWire is a communications platform that enables developers to build voice, video, and messaging applications. Think of it as the infrastructure that connects your AI agent to phone calls, allowing your bot to have real conversations with people.
+SignalWire is a communications platform for building voice, video and messaging applications. It carries the phone call and runs the AI conversation, and your agent tells it what to do. The platform provides:
 
-**Key Features:**
-
-- Voice calling capabilities
+- Voice calling
 - Real-time communication
 - AI integration
 - Scalable infrastructure
 
 ## Understanding AI Agents
 
-An AI Agent in the SignalWire context is a Python application that:
+In the SignalWire SDK, an AI agent is a Python web application that does four things:
 
-1. **Listens for incoming calls** via HTTP endpoints
-2. **Generates SWML documents** (SignalWire Markup Language) that define behavior
-3. **Processes voice input** and generates appropriate responses
-4. **Executes functions** based on user requests
+1. **Answers HTTP requests** from SignalWire when a call arrives
+2. **Returns a SWML document** (SignalWire Markup Language) that describes the agent's behavior
+3. **Lets the platform run the conversation**, turning speech into text and the model's replies into speech
+4. **Runs functions** when the model asks for them during the call
 
-### The Communication Flow
+The request flow looks like this:
 
 ```
-User calls → SignalWire Platform → Your Agent → SWML Response → AI Conversation
+Caller → SignalWire platform → Your agent → SWML response → AI conversation
 ```
 
 ## The SDK Architecture
 
-The SignalWire SDK provides a clean abstraction layer:
+Every agent is a Python class that inherits from `AgentBase`:
 
 ```python
 from signalwire import AgentBase
@@ -50,50 +49,49 @@ class MyAgent(AgentBase):
         super().__init__(name="My Agent", route="/agent")
 ```
 
-**Core Components:**
+The SDK has four core components:
 
-1. **AgentBase Class**: The foundation all agents inherit from
-2. **Skills System**: Modular capabilities you can add with one line
-3. **SWAIG Functions**: Tools the AI can call during conversations
-4. **Prompt Object Model (POM)**: Structured way to define agent behavior
+1. **`AgentBase`**: the class every agent inherits from
+2. **Skills**: ready-made capabilities you add with one line
+3. **SWAIG functions**: tools the model can call during a conversation
+4. **Prompt Object Model (POM)**: a structured way to write the agent's prompt
 
-## What We're Building
+## What You're Building
 
-Fred is a voice-enabled Wikipedia assistant that demonstrates:
+Fred is a voice assistant that answers questions from Wikipedia. Building it covers four techniques:
 
-- **Personality Design**: Making AI agents feel human and approachable
-- **Skill Integration**: Using the Wikipedia search skill
-- **Custom Functions**: Adding unique capabilities
-- **Voice Configuration**: Setting up natural-sounding speech
+- **Persona design**: giving the agent a consistent voice and manner
+- **Skill integration**: adding the Wikipedia search skill
+- **Custom functions**: writing a tool of your own
+- **Voice configuration**: choosing a voice and speech settings
 
-### Fred's Capabilities
+By the end of the tutorial, Fred can:
 
-By the end of this tutorial, Fred will be able to:
-
-1. **Search Wikipedia** for any topic
-2. **Share fun facts** about Wikipedia itself
-3. **Engage naturally** in educational conversations
-4. **Handle voice calls** through SignalWire
+1. **Search Wikipedia** for a topic
+2. **Share facts** about Wikipedia itself
+3. **Hold a conversation** about what it finds
+4. **Answer voice calls** through SignalWire
 
 ## Key Concepts
 
-Before we start coding, let's understand these essential concepts:
+The rest of the tutorial relies on five concepts.
 
 ### 1. SWML (SignalWire Markup Language)
 
-SWML is a JSON document that tells SignalWire how your agent should behave. It includes:
-- AI personality and instructions
-- Available functions
-- Voice settings
-- Language configuration
+SWML is a JSON document that tells SignalWire how your agent behaves. It includes:
+
+- The prompt: the agent's persona and instructions
+- The functions the model can call
+- Voice and language settings
+- Conversation parameters
 
 ### 2. SWAIG (SignalWire AI Gateway)
 
-SWAIG enables your agent to execute functions during conversations. When a user asks Fred to search Wikipedia, SWAIG handles the function call and returns results.
+SWAIG lets your agent run functions during a conversation. When a caller asks Fred about a topic, the model calls Fred's search function through SWAIG, and your code returns the result.
 
 ### 3. Skills
 
-Skills are pre-built, reusable modules that add capabilities to your agent. Instead of writing Wikipedia search from scratch, we'll use the existing skill:
+Skills are ready-made modules that add a capability to an agent. Instead of writing Wikipedia search yourself, you add the existing skill:
 
 ```python
 agent.add_skill("wikipedia_search")
@@ -102,41 +100,39 @@ agent.add_skill("wikipedia_search")
 ### 4. HTTP Endpoints
 
 Your agent exposes HTTP endpoints that SignalWire calls:
-- `GET /agent` - Returns the SWML configuration
-- `POST /agent/swaig/` - Handles function execution
+
+- `/agent` returns the SWML document. SignalWire requests it with a `POST`, and you can fetch it with `GET` to inspect it.
+- `POST /agent/swaig/` runs a function
 
 ### 5. Authentication
 
-Agents use HTTP Basic Authentication for security. The SDK handles this automatically, generating credentials or using environment variables.
+Agents protect their endpoints with HTTP Basic authentication. The SDK takes the credentials from environment variables, or generates random ones at startup.
 
 ## Why This Architecture?
 
-**Benefits:**
+Keeping the call on the platform and the logic in your code has four benefits:
 
-1. **Separation of Concerns**: Your code focuses on logic, not telephony
-2. **Scalability**: Agents can handle multiple concurrent calls
-3. **Flexibility**: Easy to add new capabilities
-4. **Testing**: Can test locally without phone infrastructure
+1. **Separation of concerns**: your code handles logic, and the platform handles telephony
+2. **Scalability**: the platform runs many calls at once against the same agent
+3. **Flexibility**: a new capability is a skill or a function, not a rewrite
+4. **Testing**: you can test an agent locally, without a phone line
+
+## Review Questions
+
+1. What is the purpose of SWML?
+2. How do skills extend an agent?
+3. Which two HTTP endpoints does an agent expose?
+
+**Answers:**
+
+1. SWML tells SignalWire how the agent behaves during a call: its prompt, functions and voice settings.
+2. Skills add ready-made, tested capabilities with one line of code.
+3. The agent's route, which returns SWML, and `/swaig`, which runs functions.
 
 ## Next Steps
 
-Now that you understand the concepts, let's set up your development environment!
-
-➡️ Continue to [Lesson 2: Setting Up Your Environment](02-setup.md)
+With the concepts in place, the next step is installing the SDK. Continue with [Lesson 2: Setting Up Your Environment](02-setup.md).
 
 ---
 
-**Review Questions:**
-
-1. What is the purpose of SWML?
-2. How do skills enhance an agent's capabilities?
-3. What are the two main HTTP endpoints an agent exposes?
-
-**Answers:**
-1. SWML defines how the agent behaves during calls (personality, functions, voice settings)
-2. Skills provide pre-built, tested functionality that can be added with one line of code
-3. GET endpoint for SWML configuration, POST endpoint for SWAIG function execution
-
----
-
-[← Back to Overview](README.md) | [Next: Environment Setup →](02-setup.md)
+[Overview](README.md) | [Next: Environment Setup](02-setup.md)

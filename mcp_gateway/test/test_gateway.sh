@@ -2,7 +2,7 @@
 # Test script for MCP Gateway using curl
 
 # Configuration
-GATEWAY_URL="http://localhost:8100"
+GATEWAY_URL="http://localhost:8080"
 AUTH="admin:changeme"
 
 echo "=== MCP Gateway Test Script ==="

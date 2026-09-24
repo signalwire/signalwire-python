@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   fred:
     # Build from local Dockerfile
@@ -19,9 +17,13 @@ services:
     
     # Environment variables
     environment:
-      # Authentication
-      - SWML_BASIC_AUTH_USER=${FRED_AUTH_USER:-fred_user}
-      - SWML_BASIC_AUTH_PASSWORD=${FRED_AUTH_PASSWORD:-secure_password_123}
+      # Authentication: Compose refuses to start without a password
+      - SWML_BASIC_AUTH_USER=${FRED_AUTH_USER:-fred}
+      - SWML_BASIC_AUTH_PASSWORD=${FRED_AUTH_PASSWORD:?Set FRED_AUTH_PASSWORD in .env}
+      
+      # Request signatures, and one tool-token secret for every copy of Fred
+      - SIGNALWIRE_SIGNING_KEY=${SIGNALWIRE_SIGNING_KEY:-}
+      - SIGNALWIRE_SWAIG_SECRET=${SIGNALWIRE_SWAIG_SECRET:-}
       
       # SignalWire configuration
       - SWML_PROXY_URL_BASE=${PROXY_URL:-}
@@ -34,7 +36,7 @@ services:
     
     # Health check
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:3000/health', auth=('${SWML_BASIC_AUTH_USER:-fred_user}', '${SWML_BASIC_AUTH_PASSWORD:-secure_password_123}'))"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:3000/health')"]
       interval: 30s
       timeout: 10s
       retries: 3

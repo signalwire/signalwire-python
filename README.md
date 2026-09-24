@@ -6,10 +6,10 @@
 
 # SignalWire SDK for Python
 
-_Build AI voice agents, control live calls over WebSocket, and manage every SignalWire resource over REST -- all from one package._
+_Build AI voice agents, control live calls over WebSocket, and manage every SignalWire resource over REST, all from one package._
 
 <p align="center">
-  <a href="https://developer.signalwire.com/sdks/agents-sdk" target="_blank">Documentation</a> &middot;
+  <a href="https://signalwire.com/docs/server-sdks" target="_blank">Documentation</a> &middot;
   <a href="https://github.com/signalwire/signalwire-docs/issues/new/choose" target="_blank">Report an Issue</a> &middot;
   <a href="https://pypi.org/project/signalwire-sdk/" target="_blank">PyPI</a>
 </p>
@@ -26,19 +26,32 @@ _Build AI voice agents, control live calls over WebSocket, and manage every Sign
 
 | Capability | What it does | Quick link |
 |-----------|-------------|------------|
-| **AI Agents** | Build voice agents that handle calls autonomously -- the platform runs the AI pipeline, your code defines the persona, tools, and call flow | [Agent Guide](#ai-agents) |
-| **RELAY Client** | Control live calls and SMS/MMS in real time over WebSocket -- answer, play, record, collect DTMF, conference, transfer, and more | [RELAY docs](relay/README.md) |
-| **REST Client** | Manage SignalWire resources over HTTP -- phone numbers, SIP endpoints, Fabric AI agents, video rooms, messaging, and 20 API namespaces | [REST docs](rest/README.md) |
+| **AI Agents** | Build voice agents that handle calls on their own. The platform runs the AI pipeline, and your code defines the persona, tools, and call flow. | [Agent Guide](#ai-agents) |
+| **RELAY Client** | Control live calls and SMS/MMS in real time over WebSocket: answer, play, record, collect DTMF, conference, transfer, and more | [RELAY docs](relay/README.md) |
+| **REST Client** | Manage SignalWire resources over HTTP: phone numbers, SIP endpoints, Fabric AI agents, video rooms, messaging, and 20 API namespaces | [REST docs](rest/README.md) |
+
+Install the SDK from PyPI:
 
 ```bash
 pip install signalwire-sdk
+```
+
+The package installs its own documentation. `sw-pydocs` prints a map of the SDK
+for the installed version, with the docs, examples and tutorials on disk, and
+`sw-pydocs api <name>` reads signatures from the installed code. If you're a
+coding agent working with the SDK, start there:
+
+```bash
+sw-pydocs                 # the map: what the SDK does and where to start
+sw-pydocs agents          # one topic: concepts, files to read, examples, API
+sw-pydocs api AgentBase   # a signature, docstring and members
 ```
 
 ---
 
 ## AI Agents
 
-Each agent is a self-contained microservice that generates [SWML](docs/swml_service_guide.md) (SignalWire Markup Language) and handles [SWAIG](docs/swaig_reference.md) (SignalWire AI Gateway) tool calls. The SignalWire platform runs the entire AI pipeline (STT, LLM, TTS) -- your agent just defines the behavior.
+Each agent is a self-contained microservice that generates [SWML](docs/swml_service_guide.md) (SignalWire Markup Language) and handles [SWAIG](docs/swaig_reference.md) (SignalWire AI Gateway) tool calls. The SignalWire platform runs the entire AI pipeline (STT, LLM, TTS), and your agent defines the behavior.
 
 <!-- include: examples/quickstart_agent.py#agent -->
 ```python
@@ -66,7 +79,7 @@ if __name__ == "__main__":
     agent.run()
 ```
 
-Test locally without running a server:
+`swaig-test` checks the agent locally, without running a server:
 
 ```bash
 swaig-test my_agent.py --list-tools
@@ -76,20 +89,22 @@ swaig-test my_agent.py --exec get_time
 
 ### Agent Features
 
-- **Prompt Object Model (POM)** -- structured prompt composition via `prompt_add_section()`
-- **SWAIG tools** -- define functions with `@AgentBase.tool()` that the AI calls mid-conversation, with native access to the call's media stack
-- **Skills system** -- add capabilities with one-liners: `agent.add_skill("datetime")`
-- **Contexts and steps** -- structured multi-step workflows with navigation control
-- **DataMap tools** -- tools that execute on SignalWire's servers, calling REST APIs without your own webhook
-- **Dynamic configuration** -- per-request agent customization for multi-tenant deployments
-- **Call flow control** -- pre-answer, post-answer, and post-AI verb insertion
-- **Prefab agents** -- ready-to-use archetypes (InfoGatherer, Survey, FAQ, Receptionist, Concierge)
-- **Multi-agent hosting** -- serve multiple agents on a single server with `AgentServer`
-- **Local search** -- offline document search with vector similarity and keyword matching
-- **SIP routing** -- route SIP calls to agents based on usernames
-- **Session state** -- persistent conversation state with global data and post-prompt summaries
-- **Security** -- auto-generated basic auth, function-specific HMAC tokens, SSL support
-- **Serverless** -- auto-detects Lambda, CGI, Google Cloud Functions, Azure Functions
+An agent built on `AgentBase` gets these features:
+
+- **Prompt Object Model (POM)**: structured prompt composition with `prompt_add_section()`
+- **SWAIG tools**: functions defined with `@AgentBase.tool()` that the AI calls mid-conversation, with native access to the call's media stack
+- **Skills system**: capabilities added in one line, such as `agent.add_skill("datetime")`
+- **Contexts and steps**: structured multi-step workflows with navigation control
+- **DataMap tools**: tools that run on SignalWire's servers, calling REST APIs without your own webhook
+- **Dynamic configuration**: per-request agent customization for multi-tenant deployments
+- **Call flow control**: pre-answer, post-answer, and post-AI verb insertion
+- **Prefab agents**: ready-to-use archetypes (InfoGatherer, Survey, FAQ, Receptionist, Concierge)
+- **Multi-agent hosting**: multiple agents on a single server with `AgentServer`
+- **Local search**: offline document search with vector similarity and keyword matching
+- **SIP routing**: SIP calls routed to agents by username
+- **Session state**: persistent conversation state with global data and post-prompt summaries
+- **Security**: auto-generated basic auth, per-call tool tokens, webhook signature validation, and TLS support
+- **Serverless**: automatic detection of Lambda, CGI, Google Cloud Functions, and Azure Functions
 
 ### Agent Examples
 
@@ -135,7 +150,9 @@ async def handle(call):
 client.run()
 ```
 
-- 57+ calling methods (play, record, collect, detect, tap, stream, AI, conferencing, and more)
+The RELAY client provides:
+
+- Calling methods for play, record, collect, detect, tap, stream, AI, conferencing, and more
 - SMS/MMS messaging with delivery tracking
 - Action objects with `wait()`, `stop()`, `pause()`, `resume()`
 - Auto-reconnect with exponential backoff
@@ -160,9 +177,11 @@ client.phone_numbers.search(areacode="512")
 client.datasphere.documents.search(query_string="billing policy")
 ```
 
+The REST client provides:
+
 - 20 namespaced API surfaces: Fabric (13 resource types), Calling (37 commands), Video, Datasphere, Phone Numbers, SIP, Queues, Recordings, and more
-- Shared `requests.Session` for connection pooling
-- Dict returns -- raw JSON, no wrapper objects
+- A shared `requests.Session` for connection pooling
+- Dict returns: raw JSON, with no wrapper objects
 
 See the **[REST documentation](rest/README.md)** for the full guide, API reference, and examples.
 
@@ -170,71 +189,76 @@ See the **[REST documentation](rest/README.md)** for the full guide, API referen
 
 ## Installation
 
+The core package covers agents, RELAY and REST. The search extras add local document search; install the one that fits your needs:
+
 ```bash
 # Core SDK (agents, RELAY, REST)
 pip install signalwire-sdk
 
 # With search (pick one based on your needs)
-pip install signalwire-sdk[search-queryonly]   # Query pre-built .swsearch files (~400MB)
-pip install signalwire-sdk[search]              # Build + query search indexes (~500MB)
-pip install signalwire-sdk[search-full]         # + PDF, DOCX, Excel, HTML processing (~600MB)
-pip install signalwire-sdk[search-all]          # All search features (~700MB)
+pip install "signalwire-sdk[search-queryonly]"   # Query pre-built .swsearch files (~400MB)
+pip install "signalwire-sdk[search]"              # Build + query search indexes (~500MB)
+pip install "signalwire-sdk[search-full]"         # + PDF, DOCX, Excel, HTML processing (~600MB)
+pip install "signalwire-sdk[search-all]"          # All search features (~700MB)
 ```
 
 ## Documentation
 
-Full reference documentation is available at **[developer.signalwire.com/sdks/agents-sdk](https://developer.signalwire.com/sdks/agents-sdk)**.
+Full reference documentation is available at **[signalwire.com/docs/server-sdks](https://signalwire.com/docs/server-sdks)**.
 
-Guides are also available in the [`docs/`](docs/) directory:
+Guides are also available in the [`docs/`](docs/) directory. They're installed with the package, with the examples and tutorials: `sw-pydocs path` prints where.
 
 ### Getting Started
 
-- [Agent Guide](docs/agent_guide.md) -- creating agents, prompt configuration, dynamic setup
-- [Architecture](docs/architecture.md) -- SDK architecture and core concepts
-- [SDK Features](docs/sdk_features.md) -- feature overview, SDK vs raw SWML comparison
+- [Agent Guide](docs/agent_guide.md): creating agents, prompt configuration, dynamic setup
+- [Architecture](docs/architecture.md): SDK architecture and core concepts
+- [SDK Features](docs/sdk_features.md): feature overview, SDK vs raw SWML comparison
 
 ### Core Features
 
-- [SWAIG Reference](docs/swaig_reference.md) -- function results, actions, post_data lifecycle
-- [Contexts and Steps](docs/contexts_guide.md) -- structured workflows, navigation, gather mode
-- [DataMap Guide](docs/datamap_guide.md) -- serverless API tools without webhooks
-- [LLM Parameters](docs/llm_parameters.md) -- temperature, top_p, barge confidence tuning
-- [SWML Service Guide](docs/swml_service_guide.md) -- low-level construction of SWML documents
-- [AI Chat Gateway](docs/ai_chat_gateway.md) -- browser chat widgets without a token in the page
+- [SWAIG Reference](docs/swaig_reference.md): function results, actions, post_data lifecycle
+- [Contexts and Steps](docs/contexts_guide.md): structured workflows, navigation, gather mode
+- [DataMap Guide](docs/datamap_guide.md): serverless API tools without webhooks
+- [LLM Parameters](docs/llm_parameters.md): temperature, top_p, barge confidence tuning
+- [SWML Service Guide](docs/swml_service_guide.md): low-level construction of SWML documents
+- [AI Chat Gateway](docs/ai_chat_gateway.md): browser chat widgets without a token in the page
 
 ### Skills and Extensions
 
-- [Skills System](docs/skills_system.md) -- built-in skills and the modular framework
-- [Third-Party Skills](docs/third_party_skills.md) -- creating and publishing custom skills
-- [MCP Gateway](docs/mcp_gateway_reference.md) -- Model Context Protocol integration
+- [Skills System](docs/skills_system.md): built-in skills and the modular framework
+- [Third-Party Skills](docs/third_party_skills.md): creating and publishing custom skills
+- [MCP Gateway](docs/mcp_gateway_reference.md): Model Context Protocol integration
 
 ### Search System
 
-- [Search Overview](docs/search_overview.md) -- architecture, installation, quick start
-- [Search Indexing](docs/search_indexing.md) -- building indexes, chunking, embeddings
-- [Search Integration](docs/search_integration.md) -- agent integration, skills, HTTP API
-- [Search Deployment](docs/search_deployment.md) -- production deployment, pgvector, scaling
+- [Search Overview](docs/search_overview.md): architecture, installation, quick start
+- [Search Indexing](docs/search_indexing.md): building indexes, chunking, embeddings
+- [Search Integration](docs/search_integration.md): agent integration, skills, HTTP API
+- [Search Deployment](docs/search_deployment.md): production deployment, pgvector, scaling
 
 ### Deployment
 
-- [CLI Guide](docs/cli_guide.md) -- `swaig-test` and `sw-search` command reference
-- [Cloud Functions](docs/cloud_functions_guide.md) -- Lambda, Cloud Functions, Azure deployment
-- [Bedrock Agent](docs/bedrock_agent.md) -- Amazon Bedrock integration
-- [Configuration](docs/configuration.md) -- environment variables, SSL, proxy setup
-- [Security](docs/security.md) -- authentication and security model
+- [CLI Guide](docs/cli_guide.md): `swaig-test` and `sw-search` command reference
+- [Cloud Functions](docs/cloud_functions_guide.md): Lambda, Cloud Functions, Azure deployment
+- [Bedrock Agent](docs/bedrock_agent.md): Amazon Bedrock integration
+- [Configuration](docs/configuration.md): environment variables, SSL, proxy setup
+- [Security](docs/security.md): authentication and security model
 
 ### Reference
 
-- [API Reference](docs/api_reference.md) -- complete class and method reference
-- [Web Service](docs/web_service.md) -- HTTP server and endpoint details
-- [Skills Parameter Schema](docs/skills_parameter_schema.md) -- skill parameter definitions
+- [API Reference](docs/api_reference.md): complete class and method reference
+- [Web Service](docs/web_service.md): HTTP server and endpoint details
+- [Skills Parameter Schema](docs/skills_parameter_schema.md): skill parameter definitions
 
 ### Tutorials
 
-- [Multi-Agent Tutorial](tutorial/multi_agents/README.md) -- 5-lesson guide from first agent to multi-agent systems
-- [Fred Bot Tutorial](tutorial/fred/tutorial/README.md) -- build a Wikipedia AI assistant step-by-step
+- [Multi-Agent Tutorial](tutorial/multi_agents/README.md): 5-lesson guide from first agent to multi-agent systems
+- [Fred Bot Tutorial](tutorial/fred/tutorial/README.md): build a Wikipedia AI assistant step by step
+- [Full-Guardrails Agent Tutorial](tutorial/full-guardrails-agent/tutorial/README.md): build a reservation line that keeps its rules in code, not in the prompt
 
 ## Environment Variables
+
+The SDK reads these environment variables:
 
 | Variable | Used by | Description |
 |----------|---------|-------------|
@@ -244,13 +268,18 @@ Guides are also available in the [`docs/`](docs/) directory:
 | `SWML_BASIC_AUTH_USER` | Agents | Basic auth username (default: auto-generated) |
 | `SWML_BASIC_AUTH_PASSWORD` | Agents | Basic auth password (default: auto-generated) |
 | `SWML_PROXY_URL_BASE` | Agents | Base URL when behind a reverse proxy |
+| `SIGNALWIRE_SIGNING_KEY` | Agents | Your project's signing key. When it's set, agents reject requests SignalWire didn't sign. |
+| `SIGNALWIRE_SWAIG_SECRET` | Agents | Secret for per-call tool tokens. Use the same value on every replica. |
+| `PORT` | Agents | Port the agent listens on (default: `3000`) |
 | `SWML_SSL_ENABLED` | Agents | Enable HTTPS (`true`, `1`, `yes`) |
 | `SWML_SSL_CERT_PATH` | Agents | Path to SSL certificate |
 | `SWML_SSL_KEY_PATH` | Agents | Path to SSL private key |
-| `SIGNALWIRE_LOG_LEVEL` | All | Logging level (`debug`, `info`, `warn`, `error`) |
+| `SIGNALWIRE_LOG_LEVEL` | All | Logging level (`debug`, `info`, `warning`, `error`, `critical`) |
 | `SIGNALWIRE_LOG_MODE` | All | Set to `off` to suppress all logging |
 
 ## Testing
+
+Run the test suite from the repository root:
 
 ```bash
 # Install dev dependencies
@@ -270,4 +299,4 @@ pytest --cov=signalwire --cov-report=html
 
 ## License
 
-MIT -- see [LICENSE](LICENSE) for details.
+MIT. See [LICENSE](LICENSE) for details.

@@ -5,6 +5,8 @@ runs on SignalWire infrastructure.
 
 ## Step 1: Change your imports
 
+Replace the `livekit` imports with their LiveWire equivalents:
+
 <!-- snippet: no-run requires optional third-party package `livekit` -->
 ```python
 # Before
@@ -42,6 +44,8 @@ def get_weather(location: str) -> str:
 
 ## Step 3: Keep your Agent + AgentSession pattern
 
+Construct `Agent` and `AgentSession` the same way; the pipeline arguments become no-ops:
+
 <!-- snippet: no-run illustrative fragment (references `Agent` established in the surrounding prose) -->
 ```python
 agent = Agent(
@@ -60,6 +64,8 @@ session = AgentSession(
 ```
 
 ## Step 4: Replace cli.run_app with LiveWire's run_app
+
+Wrap the entrypoint in an `AgentServer`, and run it with LiveWire's `run_app`:
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -83,6 +89,8 @@ if __name__ == "__main__":
 
 ## What's different under the hood
 
+LiveWire keeps the LiveKit API surface, but maps or no-ops each piece differently:
+
 - **STT, TTS, VAD**: SignalWire's control plane handles all media processing.
   Plugin classes like `DeepgramSTT`, `CartesiaTTS`, and `SileroVAD` still
   construct so your code runs unchanged, but they are no-ops.
@@ -105,5 +113,5 @@ if __name__ == "__main__":
 ## "Did You Know?" tips
 
 When you run a LiveWire agent, you will see a random tip about SignalWire
-features that go beyond what LiveKit offers -- DataMap tools, Contexts & Steps,
+features that go beyond what LiveKit offers: DataMap tools, Contexts & Steps,
 built-in skills, and more.

@@ -9,17 +9,17 @@ See LICENSE file in the project root for full license information.
 """
 
 """
-Fred - The Wikipedia Knowledge Bot
+Fred: a Wikipedia knowledge bot
 
-A friendly agent that can search Wikipedia for factual information.
-Fred is curious, helpful, and loves sharing knowledge from Wikipedia.
+An agent that searches Wikipedia and shares facts about Wikipedia itself,
+with a friendly, curious persona.
 """
 
 from signalwire import AgentBase
 from signalwire.core.function_result import SwaigFunctionResult
 
 class FredTheWikiBot(AgentBase):
-    """Fred - Your friendly Wikipedia assistant"""
+    """Fred, a Wikipedia assistant with a friendly persona"""
     
     def __init__(self):
         super().__init__(
@@ -169,20 +169,19 @@ class FredTheWikiBot(AgentBase):
 
 
 def main():
-    """Run Fred the Wiki Bot"""
+    """Run Fred"""
     print("=" * 60)
-    print("🤖 Fred - The Wikipedia Knowledge Bot")
+    print("Fred: a Wikipedia knowledge bot")
     print("=" * 60)
     print()
-    print("Fred is a friendly assistant who loves searching Wikipedia!")
-    print("He can help you learn about almost any topic.")
+    print("Fred searches Wikipedia and shares facts about Wikipedia itself.")
     print()
-    print("Example questions you can ask Fred:")
-    print("  • 'Tell me about Albert Einstein'")
-    print("  • 'What is quantum physics?'")
-    print("  • 'Who was Marie Curie?'")
-    print("  • 'Search for information about the solar system'")
-    print("  • 'Can you share a fun fact?'")
+    print("Questions to try:")
+    print("  - Tell me about Albert Einstein")
+    print("  - What is quantum physics?")
+    print("  - Who was Marie Curie?")
+    print("  - Search for information about the solar system")
+    print("  - Can you share a fun fact?")
     print()
     
     # Create and run Fred
@@ -191,16 +190,16 @@ def main():
     # Get auth credentials for display
     username, password = fred.get_basic_auth_credentials()
     
-    print(f"Fred is available at: http://localhost:3000/fred")
+    print(f"Fred is available at: http://localhost:{fred.port}/fred")
     print(f"Basic Auth: {username}:{password}")
     print()
-    print("Starting Fred... Press Ctrl+C to stop.")
+    print("Starting Fred. Press Ctrl+C to stop.")
     print("=" * 60)
     
     try:
         fred.run()
     except KeyboardInterrupt:
-        print("\n👋 Fred says goodbye! Thanks for learning with me!")
+        print("\nFred stopped.")
 
 
 if __name__ == "__main__":

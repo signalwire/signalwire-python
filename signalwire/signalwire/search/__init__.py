@@ -17,38 +17,30 @@ It requires additional dependencies that can be installed with:
     pip install signalwire-sdk[search-all]       # All features
 """
 
-import warnings
-from typing import Any
+import importlib
+import importlib.util
+from typing import TYPE_CHECKING, Any
 
-# Check for core search dependencies
-_SEARCH_AVAILABLE = True
-_MISSING_DEPS: list[str] = []
+# The search stack (sentence-transformers, NLTK, numpy, scikit-learn) takes
+# many seconds to import. This package imports it only when a component that
+# needs it is first used, so importing a light submodule such as models, or
+# running sw-search --help, doesn't pay for it.
 
-# These bare imports probe for optional-dependency availability; the import
-# itself is the test, so the bound name is intentionally unused (F401).
-try:
-    import numpy  # noqa: F401
-except ImportError:
-    _SEARCH_AVAILABLE = False
-    _MISSING_DEPS.append("numpy")
+# Optional dependencies: module name -> the package that provides it
+_SEARCH_DEPENDENCIES = {
+    "numpy": "numpy",
+    "sklearn": "scikit-learn",
+    "sentence_transformers": "sentence-transformers",
+    "nltk": "nltk",
+}
 
-try:
-    import sklearn  # noqa: F401
-except ImportError:
-    _SEARCH_AVAILABLE = False
-    _MISSING_DEPS.append("scikit-learn")
-
-try:
-    import sentence_transformers  # noqa: F401
-except ImportError:
-    _SEARCH_AVAILABLE = False
-    _MISSING_DEPS.append("sentence-transformers")
-
-try:
-    import nltk  # noqa: F401
-except ImportError:
-    _SEARCH_AVAILABLE = False
-    _MISSING_DEPS.append("nltk")
+# Probe for them without importing them
+_MISSING_DEPS: list[str] = [
+    package
+    for module, package in _SEARCH_DEPENDENCIES.items()
+    if importlib.util.find_spec(module) is None
+]
+_SEARCH_AVAILABLE = not _MISSING_DEPS
 
 
 def _check_search_dependencies() -> None:
@@ -62,54 +54,43 @@ def _check_search_dependencies() -> None:
         )
 
 
-# Conditional imports based on available dependencies
-__all__ = []
+# Each public name, and the submodule that defines it. __getattr__ imports the
+# submodule the first time the name is used.
+_LAZY_EXPORTS = {
+    "preprocess_query": "query_processor",
+    "preprocess_document_content": "query_processor",
+    "DocumentProcessor": "document_processor",
+    "IndexBuilder": "index_builder",
+    "SearchEngine": "search_engine",
+    "SearchService": "search_service",
+    "SearchIndexMigrator": "migration",
+    "MODEL_ALIASES": "models",
+    "DEFAULT_MODEL": "models",
+    "resolve_model_alias": "models",
+}
+
+if TYPE_CHECKING:
+    from .document_processor import DocumentProcessor
+    from .index_builder import IndexBuilder
+    from .migration import SearchIndexMigrator
+    from .models import DEFAULT_MODEL, MODEL_ALIASES, resolve_model_alias
+    from .query_processor import preprocess_document_content, preprocess_query
+    from .search_engine import SearchEngine
+    from .search_service import SearchService
 
 if _SEARCH_AVAILABLE:
-    try:
-        from .query_processor import preprocess_query, preprocess_document_content
-        from .document_processor import DocumentProcessor
-        from .index_builder import IndexBuilder
-        from .search_engine import SearchEngine
-        from .search_service import SearchService
-        from .models import MODEL_ALIASES, DEFAULT_MODEL, resolve_model_alias
-        from .migration import SearchIndexMigrator
-
-        __all__ = [
-            "DEFAULT_MODEL",
-            "MODEL_ALIASES",
-            "DocumentProcessor",
-            "IndexBuilder",
-            "SearchEngine",
-            "SearchIndexMigrator",
-            "SearchService",
-            "preprocess_document_content",
-            "preprocess_query",
-            "resolve_model_alias",
-        ]
-    except ImportError as e:
-        # Some search components failed to import
-        warnings.warn(
-            f"Some search components failed to import: {e}\n"
-            f"For full search functionality, install: pip install signalwire-sdk[search-all]",
-            ImportWarning,
-            stacklevel=2,
-        )
-
-        # Try to import what we can
-        try:
-            from .query_processor import preprocess_query, preprocess_document_content
-
-            __all__.extend(["preprocess_document_content", "preprocess_query"])
-        except ImportError:
-            pass
-
-        try:
-            from .document_processor import DocumentProcessor
-
-            __all__.append("DocumentProcessor")
-        except ImportError:
-            pass
+    __all__ = [
+        "DEFAULT_MODEL",
+        "MODEL_ALIASES",
+        "DocumentProcessor",
+        "IndexBuilder",
+        "SearchEngine",
+        "SearchIndexMigrator",
+        "SearchService",
+        "preprocess_document_content",
+        "preprocess_query",
+        "resolve_model_alias",
+    ]
 else:
     # Provide stub functions that give helpful error messages.
     # These conditional fallbacks intentionally shadow the real imports above
@@ -144,3 +125,19 @@ else:
         "preprocess_document_content",
         "preprocess_query",
     ]
+
+
+def __getattr__(name: str) -> Any:
+    """Import a search component the first time it's used (PEP 562)."""
+    if not _SEARCH_AVAILABLE or name not in _LAZY_EXPORTS:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    try:
+        module = importlib.import_module(f".{_LAZY_EXPORTS[name]}", __name__)
+    except ImportError as e:
+        raise ImportError(
+            f"{name} failed to import: {e}\n"
+            f"For full search functionality, install: pip install signalwire-sdk[search-all]"
+        ) from e
+    value = getattr(module, name)
+    globals()[name] = value
+    return value

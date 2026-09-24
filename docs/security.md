@@ -1,6 +1,6 @@
 # Security Configuration Guide
 
-This guide covers the security features and configuration options available in SignalWire SDK for both SWML-based services (SWML -- SignalWire Markup Language -- is the JSON document format that defines agent behavior) and the standalone Search Service.
+This guide covers the security features and configuration options available in the SignalWire SDK. It covers both SWML-based services and the standalone Search Service. SWML (SignalWire Markup Language) is the JSON document format that defines agent behavior.
 
 ## Overview
 
@@ -45,7 +45,7 @@ export SWML_BASIC_AUTH_PASSWORD=mysecurepassword
 These govern the trust root used for the SDK's **outbound** connections to
 SignalWire. When set, the named PEM file becomes the CA bundle used to verify the
 server certificate; when unset, the system trust store is used. TLS verification is
-never disabled — an unset value falls back to the default trusted roots, never to
+never disabled: an unset value falls back to the default trusted roots, never to
 "no verification". Use these for private/self-signed deployments or corporate TLS
 inspection.
 
@@ -59,7 +59,7 @@ inspection.
 | Variable | Default | Description |
 |----------|---------|-------------|
 | `SWML_BASIC_AUTH_USER` | `signalwire` | Basic auth username |
-| `SWML_BASIC_AUTH_PASSWORD` | *auto-generated* | Basic auth password (32-char token if not set) |
+| `SWML_BASIC_AUTH_PASSWORD` | *auto-generated* | Basic auth password (43-char token if not set) |
 | `SIGNALWIRE_SIGNING_KEY` | *unset* | Signing Key for **inbound** webhook signature validation. See [Webhook Signature Validation](#webhook-signature-validation). |
 | `SIGNALWIRE_SWAIG_SECRET` | *random per process* | Secret used to sign this agent's **outbound** SWAIG function tokens. See [SWAIG Function Token Signing](#swaig-function-token-signing). |
 
@@ -180,6 +180,8 @@ export SWML_BASIC_AUTH_PASSWORD=$(openssl rand -base64 32)
 
 ### 3. Certificate Management
 
+Follow these practices for certificates:
+
 - Use certificates from a trusted CA in production
 - For development, you can generate self-signed certificates:
 
@@ -265,14 +267,11 @@ If authentication fails:
    echo "Pass length: ${#SWML_BASIC_AUTH_PASSWORD}"
    ```
 
-2. Look for auto-generated credentials in startup logs:
-   ```
-   Basic Auth: signalwire:generated_password_here
-   ```
+2. Don't look for the password in the startup log. The log shows the username and `(credentials configured)` in place of the password, even when the SDK generated it. To use a password you know, set `SWML_BASIC_AUTH_USER` and `SWML_BASIC_AUTH_PASSWORD` before you start the service. In code, `get_basic_auth_credentials()` returns the credentials in use.
 
-3. Test with curl:
+3. Test with curl against a route that requires authentication. The `/health` endpoint doesn't require it, so a successful request there doesn't confirm your credentials:
    ```bash
-   curl -u username:password https://localhost:8000/health
+   curl -u "$SWML_BASIC_AUTH_USER:$SWML_BASIC_AUTH_PASSWORD" https://localhost:3000/your-agent-route
    ```
 
 ### CORS Issues
@@ -296,9 +295,34 @@ If you encounter CORS errors:
 
 ## Webhook Signature Validation
 
-SignalWire signs every outbound webhook (SWML callbacks, SWAIG dispatch, post-prompt summaries, RELAY async events) with HMAC-SHA1 derived from a **Signing Key** the customer copies from the Dashboard → API Credentials page. SDKs MUST verify the signature before acting on a request.
+SignalWire signs every outbound webhook (SWML callbacks, SWAIG dispatch, post-prompt summaries, RELAY async events) with an HMAC. The signature is derived from a **Signing Key** the customer copies from the Dashboard's API Credentials page. With the key set, an agent checks the signature before acting on a request.
 
-The contract is shared across all SignalWire SDK ports — see [`porting-sdk/webhooks.md`](https://github.com/signalwire/porting-sdk/blob/main/webhooks.md) for the canonical spec.
+### How the signature is computed
+
+The SDK validates these schemes for you, with a constant-time comparison. You need the details only to validate requests yourself, or to work out why one was refused.
+
+**Headers.** `X-SignalWire-Signature` carries a SHA-1 signature. Newer platform builds also send `X-SignalWire-Sha256-Signature`, and the agent checks it first when it's present. For cXML compatibility, `X-Twilio-Signature` is accepted in place of `X-SignalWire-Signature`.
+
+**Scheme A: JSON requests** (SWML, SWAIG, post-prompt summaries, RELAY events). The signature is the lowercase hex HMAC of the full URL SignalWire POSTed to, followed by the raw request body:
+
+```
+signature        = hex(HMAC-SHA1(signing_key, url + raw_body))
+sha256 signature = hex(HMAC-SHA256(signing_key, url + raw_body))
+```
+
+`url` is exactly what the platform called: scheme, host, any non-standard port, path and query string. `raw_body` is the body as sent, before JSON parsing. Parsing and re-serializing it changes the bytes and breaks the signature.
+
+**Scheme B: form-encoded requests** (cXML and other compatibility endpoints). The form parameters are sorted by name, and each name and value is appended to the URL; a repeated name keeps its values in their original order. The signature is the standard base64 HMAC-SHA1 of that string. The platform signs some requests with the default port in the URL (`:443` or `:80`) and some without, so the validator tries both. When JSON is posted to a compatibility endpoint, the URL carries a `bodySHA256` query parameter: the signature covers that URL with no form parameters, and the body's SHA-256 hex digest must equal the parameter.
+
+**Test vectors.** `validate_webhook_signature()` accepts the first and third rows, and `validate_request()` accepts the second, with its form parameters passed as a dict:
+
+| Scheme | Signing key | URL | Body | Signature |
+|---|---|---|---|---|
+| A | `PSKtest1234567890abcdef` | `https://example.ngrok.io/webhook` | `{"event":"call.state","params":{"call_id":"abc-123","state":"answered"}}` | `c3c08c1fefaf9ee198a100d5906765a6f394bf0f` |
+| B, form | `12345` | `https://mycompany.com/myapp.php?foo=1&bar=2` | `CallSid=CA1234567890ABCDE`, `Caller=+14158675309`, `Digits=1234`, `From=+14158675309`, `To=+18005551212` | `RSOYDt4T1cUTdK1PDd93/VVr8B8=` |
+| B, JSON | `PSKtest1234567890abcdef` | `https://example.ngrok.io/webhook?bodySHA256=69f3cbfc18e386ef8236cb7008cd5a54b7fed637a8cb3373b5a1591d7f0fd5f4` | `{"event":"call.state"}` | `dfO9ek8mxyFtn2nMz24plPmPfIY=` |
+
+**What it doesn't cover.** The signature has no timestamp, so it doesn't stop a captured request from being sent again. Make side effects idempotent, and use the per-call tool tokens described under [SWAIG Function Token Signing](#swaig-function-token-signing).
 
 ### AgentBase: enable validation
 
@@ -316,9 +340,13 @@ agent = AgentBase(
 agent.serve()
 ```
 
-When `signing_key` is set, signature validation is auto-mounted on `POST /`, `POST /swaig`, `POST /post_prompt`. Requests without a valid `X-SignalWire-Signature` header are rejected with HTTP 403 — the handler is never invoked. The `X-Twilio-Signature` header is accepted as an alias for cXML compatibility.
+When `signing_key` is set, signature validation is auto-mounted on `POST /`, `POST /swaig`, `POST /post_prompt`. Requests without a valid `X-SignalWire-Signature` header are rejected with HTTP 403, and the handler is never invoked. The `X-Twilio-Signature` header is accepted as an alias for cXML compatibility.
 
-When `signing_key` is unset, AgentBase emits a prominent startup warning:
+The check applies however the agent is served: `serve()`, `get_app()`, `mount()`, `AgentServer`, or a serverless platform. It applies on every path that reaches those handlers. That includes the agent's route without a trailing slash, and any routing-callback path, which renders SWML like the root. On a serverless platform every POST is checked, whatever its path. On a serverless platform the URL is rebuilt the same way. It uses `SWML_PROXY_URL_BASE` if set, then the forwarded headers if you opted in with `trust_proxy_for_signature`, then the URL the platform reports. If signed requests are refused, set `SWML_PROXY_URL_BASE` to the public URL.
+
+API Gateway REST APIs (payload version 1.0) hand Lambda the query parameters decoded, and not always in their original order. The SDK tries the two common encodings, but a URL with several query parameters may not be rebuilt exactly, and its signature is then refused. To validate signatures on Lambda, serve the agent from a Lambda function URL or an HTTP API (payload version 2.0), which pass the raw query string.
+
+When `signing_key` is unset, AgentBase logs a prominent warning when it starts serving, or when it's created if logging is already set up:
 
 ```
 [signalwire] webhook signature validation is disabled — set signing_key or SIGNALWIRE_SIGNING_KEY to enable
@@ -344,7 +372,7 @@ if not ok:
     abort(403)
 ```
 
-A legacy alias `validate_request(signing_key, signature, url, params_or_raw_body)` is provided for users migrating from the old `@signalwire/compatibility-api` shape — pass a string raw body for the combined validator, or a pre-parsed dict for direct Scheme B (form-encoded).
+A legacy alias `validate_request(signing_key, signature, url, params_or_raw_body)` is provided for users migrating from the old `@signalwire/compatibility-api` shape. Pass a string raw body for the combined validator, or a pre-parsed dict for direct Scheme B (form-encoded).
 
 ### URL reconstruction behind proxies
 
@@ -389,11 +417,28 @@ Each SWAIG function call an agent hands to the AI carries a short-lived token
 that the agent signs and later verifies itself, so a function URL cannot be
 replayed or called out of context.
 
+A secure function (the default, `secure=True`) runs only when the request
+carries a valid token for that function and that call. A request with no token
+is refused exactly like one with a wrong token, because the token is part of
+the URL the SWML hands out: a request without it didn't come from that SWML.
+Mark a function `secure=False` only if anyone holding the basic-auth
+credentials may call it.
+
+The post-prompt URL carries a token for its call too, and a summary POSTed
+without it is refused, as is one whose URL and body name different calls. The
+token is checked against the agent that runs the function, including a copy
+made by per-call configuration, so a secure tool that configuration registers
+needs its token too. The same rules hold on serverless platforms.
+
+To call a secure function by hand, fetch the SWML with `?call_id=<id>` and
+POST to that function's `web_hook_url`, with the same `call_id` in the body.
+`swaig-test` calls functions directly and needs no token.
+
 By default that secret is **generated randomly per process**. Tokens therefore
 stop verifying whenever the agent restarts, and every replica of the same agent
 signs with a different key.
 
-The failure is easy to miss and points away from its cause. A call placed
+The failure often goes unnoticed and points away from its cause. A call placed
 before a restart keeps running; its next tool call arrives carrying a token the
 new process cannot verify; and the caller is told:
 
@@ -404,8 +449,8 @@ the security token for this function is invalid or expired
 which reads as though the tool failed, rather than as though it was never
 allowed to run. Nothing errors server-side and nothing logs a mismatch.
 
-Set the secret explicitly whenever an agent restarts while calls are live —
-which includes every rolling deploy — and always when more than one replica
+Set the secret explicitly whenever an agent restarts while calls are live
+(which includes every rolling deploy), and always when more than one replica
 serves the same agent:
 
 <!-- snippet: no-run starts a blocking server (covered by SNIPPET-COMPILE) -->

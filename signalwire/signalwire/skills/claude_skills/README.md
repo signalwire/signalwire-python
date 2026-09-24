@@ -8,7 +8,7 @@ This skill bridges Claude Code skills into SignalWire AI agents. It parses Claud
 
 ## Claude Skill Format
 
-Claude skills use a simple markdown format with YAML frontmatter:
+Claude skills use a markdown format with YAML frontmatter:
 
 ```yaml
 ---
@@ -26,6 +26,8 @@ Use $ARGUMENTS for context passed to this skill.
 
 ## Usage
 
+Add the skill with a path to a directory of Claude skills:
+
 <!-- snippet: no-run add_skill('claude_skills') sets up against a real ~/.claude/skills directory (external dependency, not present in CI) -->
 ```python
 from signalwire import AgentBase
@@ -40,6 +42,8 @@ agent.add_skill("claude_skills", {
 
 ## Parameters
 
+The skill accepts these parameters:
+
 | Parameter | Type | Required | Default | Description |
 |-----------|------|----------|---------|-------------|
 | `skills_path` | string | Yes | - | Path to directory containing Claude skill folders |
@@ -47,7 +51,7 @@ agent.add_skill("claude_skills", {
 | `exclude` | array | No | `[]` | Glob patterns for skills to exclude |
 | `tool_prefix` | string | No | `"claude_"` | Prefix for generated tool names (use `""` for no prefix) |
 | `prompt_title` | string | No | `"Claude Skills"` | Title for the prompt section |
-| `prompt_intro` | string | No | See below | Intro text for prompt section |
+| `prompt_intro` | string | No | `"You have access to specialized skills. Call the appropriate tool when the user's question matches:"` | Intro text for prompt section |
 | `skill_descriptions` | object | No | `{}` | Override descriptions for specific skills |
 | `response_prefix` | string | No | `""` | Text to prepend to skill results |
 | `response_postfix` | string | No | `""` | Text to append to skill results |
@@ -59,7 +63,7 @@ These parameters control advanced features that are disabled by default for secu
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `allow_shell_injection` | boolean | `False` | Enable `` !`command` `` preprocessing. **DANGEROUS**: allows arbitrary shell execution in skill bodies |
+| `allow_shell_injection` | boolean | `False` | Enable `` !`command` `` preprocessing, which allows arbitrary shell execution in skill bodies |
 | `allow_script_execution` | boolean | `False` | Discover and list `scripts/`, `assets/` files in prompt sections |
 | `ignore_invocation_control` | boolean | `False` | Override `disable-model-invocation` and `user-invocable` flags, register everything |
 | `shell_timeout` | integer | `30` | Timeout in seconds for shell injection commands |
@@ -67,6 +71,8 @@ These parameters control advanced features that are disabled by default for secu
 > **Security Warning**: Enabling `allow_shell_injection` permits skill bodies to execute arbitrary shell commands on the host system. Only enable this for trusted skills in controlled environments.
 
 ## How It Works
+
+Loading the skill moves through five stages:
 
 1. **Discovery**: Scans `skills_path` for directories containing `SKILL.md` files
 2. **Parsing**: Extracts YAML frontmatter (name, description) and markdown body
@@ -109,7 +115,7 @@ Claude skills support argument placeholders:
 
 - `$ARGUMENTS` - Full arguments string
 - `$0`, `$1`, `$2`... - Positional arguments (space-separated)
-- `$ARGUMENTS[0]`, `$ARGUMENTS[1]`... - Same as above
+- `$ARGUMENTS[0]`, `$ARGUMENTS[1]`... - Same as `$0`, `$1`...
 
 Example skill:
 ```yaml
@@ -123,16 +129,16 @@ Preserve all existing behavior.
 ```
 
 When called with arguments `"Button React Vue"`, expands to:
-```
+```text
 Migrate the Button component from React to Vue.
 Preserve all existing behavior.
 ```
 
 ### Fallback Argument Appending
 
-If a skill body does **not** contain a bare `$ARGUMENTS` placeholder (the indexed form `$ARGUMENTS[N]` does not count) and arguments are non-empty, the arguments are automatically appended:
+If a skill body has no bare `$ARGUMENTS` placeholder (the indexed form `$ARGUMENTS[N]` doesn't count), and the arguments are non-empty, the skill appends them automatically:
 
-```
+```text
 [skill body content]
 
 ARGUMENTS: [the arguments value]
@@ -193,7 +199,7 @@ When shell injection is **disabled** (default) but patterns are detected in skil
 
 When `allow_script_execution=True`, non-markdown files in skill directories are discovered and listed in prompt sections:
 
-```
+```text
 my-skill/
 ├── SKILL.md
 ├── scripts/
@@ -285,7 +291,7 @@ agent.add_skill("claude_skills", {
 ```
 
 This wraps all skill results:
-```
+```text
 Use the following skill instructions to help the user:
 
 [SKILL.md content or section content here]
@@ -307,7 +313,7 @@ Each Claude skill becomes a SWAIG tool named `{prefix}{skill_name}` (default pre
 
 The skill automatically adds a prompt section like:
 
-```
+```text
 ## Claude Skills
 
 You have access to specialized skills. Call the appropriate tool when the user's question matches:
@@ -319,11 +325,13 @@ You have access to specialized skills. Call the appropriate tool when the user's
 
 ## Supporting Files (Progressive Disclosure)
 
-Skills can include additional markdown files that are loaded on-demand. This enables progressive disclosure - the SKILL.md content goes into the prompt as a table of contents, while supporting files are loaded only when the AI calls the tool with a specific section.
+Skills can include additional markdown files that are loaded on-demand. This enables progressive disclosure: the SKILL.md content goes into the prompt as a table of contents. Supporting files load only when the AI calls the tool with a specific section.
 
 ### Directory Structure
 
-```
+A skill with supporting files looks like this:
+
+```text
 my-skill/
 ├── SKILL.md              # TOC - goes in prompt
 ├── reference.md          # Supporting file
@@ -337,6 +345,8 @@ my-skill/
 
 ### How It Works
 
+Registering a skill with supporting files moves through five stages:
+
 1. **Discovery**: All `.md` files in the skill directory (recursively) are discovered
 2. **Prompt Section**: SKILL.md body becomes a TOC in the agent's prompt
 3. **Tool Registration**: ONE tool per skill with optional `section` enum parameter
@@ -344,6 +354,8 @@ my-skill/
 5. **Execution**: When called with a section, return that file's content
 
 ### Example SKILL.md with Sections
+
+The SKILL.md body still becomes the tool's default response, before any section is loaded:
 
 ```yaml
 ---
@@ -387,7 +399,7 @@ When sections exist, the tool has a `section` enum parameter:
 
 The agent's prompt includes the SKILL.md body plus available sections:
 
-```
+```text
 ## explain-code
 
 When explaining code, always include:
@@ -402,6 +414,8 @@ Call claude_explain_code(section="<name>") to load a section.
 ```
 
 ### Benefits
+
+Splitting a skill this way has three effects:
 
 - **Reduced prompt size**: Only SKILL.md goes in the prompt; supporting files load on-demand
 - **Better organization**: Split large skill documentation into logical sections
@@ -425,7 +439,7 @@ All frontmatter fields from the Claude Code skills spec are **parsed** from SKIL
 ## Example
 
 Directory structure:
-```
+```text
 ~/.claude/skills/
 ├── explain-code/
 │   ├── SKILL.md

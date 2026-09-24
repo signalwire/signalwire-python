@@ -15,6 +15,7 @@ Manages sessions, handles authentication, and translates between protocols.
 
 import contextlib
 from collections.abc import Callable
+import ipaddress
 import os
 import json
 import logging
@@ -44,6 +45,64 @@ logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger("gateway_service")
+
+# The password in the sample configuration and in the configuration the gateway
+# writes when it finds none. It's public, so a gateway that accepts it must not
+# listen beyond the local machine.
+_PUBLISHED_DEFAULT_PASSWORD = "changeme"  # noqa: S105  # the public sample password, used only to detect it
+_LOCAL_ONLY_HOST = "127.0.0.1"
+
+
+def _is_loopback_host(host: str) -> bool:
+    """True if binding to ``host`` accepts connections from this machine only."""
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
+
+
+def _check_server_config(server_config: dict[str, Any]) -> None:
+    """Exit with a clear message if the host or port can't be used.
+
+    An environment variable that's set but empty, such as MCP_PORT passed
+    through by a Compose file, replaces the configuration's default with an
+    empty string.
+    """
+    host = server_config.get("host", "0.0.0.0")  # noqa: S104  # intended server default: listen on all interfaces (overridable)
+    port = server_config.get("port", 8080)
+    problems = []
+    if not isinstance(host, str) or not host.strip():
+        problems.append(f"server.host is {host!r}: set server.host or MCP_HOST")
+    if isinstance(port, bool) or not isinstance(port, int) or not 1 <= port <= 65535:
+        problems.append(
+            f"server.port is {port!r}: set server.port or MCP_PORT to a port number"
+        )
+    if problems:
+        raise SystemExit("MCP gateway configuration error: " + "; ".join(problems))
+
+
+def _resolve_bind_host(server_config: dict[str, Any]) -> str:
+    """Return the address to listen on, given the ``server`` configuration.
+
+    While ``auth_password`` is the published default, anyone who knows it can
+    use the gateway, so it listens on the loopback interface only, whatever
+    ``host`` says.
+    """
+    host = str(server_config.get("host", "0.0.0.0"))  # noqa: S104  # intended server default: listen on all interfaces (overridable)
+    if server_config.get(
+        "auth_password"
+    ) == _PUBLISHED_DEFAULT_PASSWORD and not _is_loopback_host(host):
+        logger.warning(
+            "auth_password is the published default, so the gateway will listen "
+            "on %s only, not %s. Set a different password to accept "
+            "connections from other machines.",
+            _LOCAL_ONLY_HOST,
+            host or "all interfaces",
+        )
+        return _LOCAL_ONLY_HOST
+    return host
 
 
 class MCPGateway:
@@ -518,7 +577,8 @@ class MCPGateway:
     def run(self) -> None:
         """Run the gateway service"""
         server_config = self.config.get("server", {})
-        host = server_config.get("host", "0.0.0.0")  # noqa: S104  # intended server default: listen on all interfaces (overridable)
+        _check_server_config(server_config)
+        host = _resolve_bind_host(server_config)
         port = server_config.get("port", 8080)
 
         # Check for SSL certificate

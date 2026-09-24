@@ -32,9 +32,9 @@ USER freduser
 # Expose the port Fred runs on
 EXPOSE 3000
 
-# Health check
+# Health check: /health needs no credentials, and urlopen fails on an error status
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:3000/health', auth=('${SWML_BASIC_AUTH_USER}', '${SWML_BASIC_AUTH_PASSWORD}'))"
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:3000/health')"
 
 # Run Fred
 CMD ["python", "fred.py"]

@@ -4,9 +4,11 @@ Transfer calls between agents using SWML with pattern matching. This skill enabl
 
 ## Description
 
-The SWML Transfer skill provides a flexible way to implement call transfers between agents. It uses pattern matching to determine where to transfer calls based on user input, making it ideal for routing scenarios like transferring to sales, support, or other specialized agents.
+The SWML Transfer skill implements call transfers between agents. It uses pattern matching to route calls based on user input, such as transferring to sales, support, or other specialized agents.
 
 ## Features
+
+The skill covers these capabilities:
 
 - **Pattern-based routing** - Use regex patterns to match user input
 - **Multiple instances** - Load the skill multiple times with different configurations
@@ -19,6 +21,8 @@ The SWML Transfer skill provides a flexible way to implement call transfers betw
 
 ## Requirements
 
+The skill needs no packages and no environment variables:
+
 - No additional Python packages required
 - No environment variables required
 
@@ -26,9 +30,13 @@ The SWML Transfer skill provides a flexible way to implement call transfers betw
 
 ### Required Parameters
 
+The skill needs one required parameter:
+
 - `transfers`: Dictionary mapping regex patterns to transfer configurations
 
 ### Optional Parameters
+
+The rest of the parameters have defaults:
 
 - `tool_name` (default: "transfer_call"): Name of the transfer function
 - `description` (default: "Transfer call based on pattern matching"): Tool description
@@ -57,6 +65,8 @@ Each entry in the `transfers` dictionary should have:
 ## Usage
 
 ### Basic Usage
+
+Add the skill with a `transfers` map to register a pattern-matched transfer tool:
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -88,6 +98,8 @@ agent.serve()
 ```
 
 ### Advanced Configuration
+
+This configuration names the parameter, sets a default prompt, and adds four patterns:
 
 ```python
 # Multiple transfer types with custom messages
@@ -132,6 +144,8 @@ self.add_skill("swml_transfer", {
 
 ### Permanent vs Temporary Transfers
 
+The `final` flag decides whether control returns to this agent after the transfer:
+
 ```python
 # Permanent transfer example - call exits agent completely
 self.add_skill("swml_transfer", {
@@ -161,6 +175,8 @@ self.add_skill("swml_transfer", {
 
 ### Phone Number and SIP Address Transfers
 
+Use `address` instead of `url` to connect directly to a phone number or SIP address:
+
 ```python
 # Transfer to phone numbers and SIP addresses using 'address'
 self.add_skill("swml_transfer", {
@@ -188,6 +204,8 @@ self.add_skill("swml_transfer", {
 ```
 
 ### Mixed Transfer Types
+
+A single `transfers` map can mix `url` and `address` destinations:
 
 ```python
 # Mix SWML endpoints and direct addresses in one skill
@@ -296,7 +314,7 @@ The skill automatically adds prompt sections to help the AI understand available
 
 ### Transferring Section
 Lists all configured transfer destinations extracted from the patterns. For example:
-```
+```text
 ## Transferring
 You can transfer calls using the transfer_to_department function with the following destinations:
 - "sales" - transfers to https://example.com/sales
@@ -305,7 +323,7 @@ You can transfer calls using the transfer_to_department function with the follow
 
 ### Transfer Instructions Section
 Provides usage instructions for the transfer capability:
-```
+```text
 ## Transfer Instructions
 How to use the transfer capability:
 - Use the transfer_to_department function when a transfer is needed
@@ -317,7 +335,10 @@ How to use the transfer capability:
 ## Example Conversations
 
 ### Example 1: Department Transfer
-```
+
+The AI reads the caller's answer, then calls the tool with a matching pattern:
+
+```text
 User: "I need help with my order"
 Agent: "I can help you with that. Would you like to speak with sales or support?"
 User: "I think I need support"
@@ -328,7 +349,10 @@ System: "I hope we were able to resolve your technical issue."
 ```
 
 ### Example 2: Multi-pattern Match
-```
+
+A single pattern can cover several related words:
+
+```text
 User: "I want to talk to someone about pricing"
 Agent: [Uses route_call("pricing")]
 System: "I'll connect you with our sales team for pricing and billing questions."
@@ -336,14 +360,20 @@ System: "I'll connect you with our sales team for pricing and billing questions.
 ```
 
 ### Example 3: No Match
-```
+
+When no pattern matches, the tool returns the default message instead of transferring:
+
+```text
 User: "Transfer me to the CEO"
 Agent: [Uses transfer_to_department("CEO")]
 System: "I can transfer you to sales, support, or a manager. Which would you prefer?"
 ```
 
 ### Example 4: Transfer with Required Fields
-```
+
+When `required_fields` is configured, the AI passes each field's value as its own argument:
+
+```text
 User: "I need to speak with support about my PC that won't boot"
 Agent: "I'll transfer you to support. Let me collect some information first."
 Agent: [Uses transfer_with_data("support", "Customer experiencing boot failure with their PC. Initial troubleshooting not yet performed.", "John Smith", "technical")]
@@ -355,20 +385,31 @@ Support Agent: [Can access the data via ${global_data.call_data.summary}, ${glob
 ## Troubleshooting
 
 ### Transfer Not Working
+
+Check these three things first:
+
 - Verify the URL is accessible and returns valid SWML
 - Check that the pattern syntax is correct (regex format)
 - Enable debug logging to see pattern matching results
 
 ### Pattern Not Matching
+
+Regex patterns are a common source of mismatches:
+
 - Remember to use case-insensitive flag `/i` if needed
 - Test patterns with online regex tools
 - Use pipe `|` for multiple options: `/sales|billing/i`
 
 ### Authentication Issues
+
+Check the destination URL's authentication:
+
 - Ensure URLs include authentication if required
 - Use `agent.get_full_url(include_auth=True)` for building URLs in dynamic configs
 
 ## Best Practices
+
+Keep these five points in mind when you configure transfers:
 
 1. **Use Clear Patterns**: Make patterns specific enough to avoid false matches
 2. **Provide Context**: Use descriptive messages so users know what's happening
@@ -381,9 +422,9 @@ Support Agent: [Can access the data via ${global_data.call_data.summary}, ${glob
 For agents that need to build URLs dynamically (e.g., with proxy detection), implement the skill loading in a dynamic configuration callback:
 
 ```python
-def configure_transfers(self, query_params, body_params, headers, agent):
+def configure_transfers(query_params, body_params, headers, agent):
     # Build URLs with proper proxy detection
-    base_url = self.get_full_url(include_auth=True).rstrip('/')
+    base_url = agent.get_full_url(include_auth=True).rstrip('/')
     
     agent.add_skill("swml_transfer", {
         "transfers": {
@@ -393,4 +434,6 @@ def configure_transfers(self, query_params, body_params, headers, agent):
             }
         }
     })
+
+agent.set_dynamic_config_callback(configure_transfers)
 ```

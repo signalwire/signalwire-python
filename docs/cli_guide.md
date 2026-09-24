@@ -11,7 +11,21 @@ The `swaig-test` CLI tool provides a complete testing environment for:
 
 The tool automatically detects function types, provides appropriate execution environments, and simulates the SignalWire platform locally while making real HTTP requests for DataMap functions.
 
+## Installed Commands
+
+Installing the SDK adds seven command-line tools:
+
+- **`swaig-test`**: tests SWAIG functions and SWML generation locally, and simulates serverless environments. Documented in this guide.
+- **[`sw-search`](search_overview.md)**: builds and queries local `.swsearch` vector search indexes. Also documented in this guide, under [sw-search - Build and Query Search Indexes](#sw-search---build-and-query-search-indexes).
+- **`sw-agent-init`**: creates a new SignalWire agent project, for a local or cloud-function target, with an `AGENTS.md` that points coding agents at `sw-pydocs`.
+- **`sw-agent-dokku`**: initializes, deploys, and manages a SignalWire agent project on Dokku.
+- **[`mcp-gateway`](mcp_gateway_reference.md)**: bridges Model Context Protocol servers to SWAIG functions.
+- **`pom-tool`**: converts a Prompt Object Model (POM) file between JSON, YAML, Markdown, and XML.
+- **`sw-pydocs`**: prints the SDK's documentation for the installed version, for people and coding agents. Documented under [sw-pydocs - The SDK's Installed Documentation](#sw-pydocs---the-sdks-installed-documentation).
+
 ## Key Features
+
+The tool provides these capabilities:
 
 - **`--exec` Syntax**: Modern CLI-style function arguments
 - **Agent Auto-Selection**: Automatically chooses agent when only one exists in file
@@ -22,7 +36,7 @@ The tool automatically detects function types, provides appropriate execution en
 - **Dynamic Agent Support**: Test request-dependent SWML generation with mock request objects
 - **Real HTTP Execution**: DataMap functions make actual HTTP requests to real APIs
 - **Comprehensive Simulation**: Generate realistic post_data with all SignalWire metadata
-- **Advanced Template Engine**: Supports all DataMap variable syntax (`${args.param}`, `${response.field}`, `${array[0].property}`)
+- **Advanced Template Engine**: Supports all DataMap variable syntax (`${args.param}`, response fields from the root such as `${field}`, `${array[0].property}`, and helpers such as `${lc:enc:args.city}`)
 - **Flexible CLI Syntax**: Support both `--exec` and JSON argument styles
 - **Override System**: Precise control over test data with dot notation paths
 - **Mock Request Objects**: Complete FastAPI Request simulation for dynamic agents
@@ -88,6 +102,8 @@ Examples:
 
 ### List Available Functions
 
+`--list-tools` shows each function, its type and its parameters:
+
 ```bash
 # List functions in single-agent file (auto-selected)
 swaig-test examples/joke_skill_demo.py --list-tools
@@ -117,6 +133,8 @@ Available SWAIG functions:
 ```
 
 ### Test SWML Generation
+
+`--dump-swml` renders the agent's SWML document with fake call data:
 
 ```bash
 # Basic SWML generation with fake call data
@@ -168,16 +186,16 @@ swaig-test examples/my_agent.py --list-tools --parse-only
 swaig-test examples/my_agent.py --dump-swml --dry-run
 ```
 
-### Contract (canonical — every SDK port mirrors this exactly)
+### Contract (canonical: every SDK port mirrors this exactly)
 
 This is the reference definition of the flag. Each language port implements the identical behavior so the cross-port DOC-CLI gate can validate documented invocations mechanically rather than heuristically:
 
 - **Names**: `--parse-only`, with `--dry-run` as an exact synonym. Both are boolean (take no value).
 - **What it does**: parse every argument and run all cross-flag validation (the same parsing and validation the tool performs for a normal run), then stop.
-- **What it does NOT do**: it never loads or imports the agent file, never checks whether the agent file exists on disk, never generates SWML, never executes a function, and never opens a network connection. Argument well-formedness is validated; the *world* is not touched. (A syntactically valid invocation naming a non-existent agent file therefore still reports `parse OK` — file existence is a runtime concern, not an argument-validity concern.)
+- **What it does NOT do**: it never loads or imports the agent file. It never checks whether the file exists, generates SWML, executes a function, or opens a network connection. It validates argument well-formedness only. The *world* is not touched. A syntactically valid invocation naming a non-existent agent file still reports `parse OK`, because file existence is a runtime concern, not an argument-validity concern.
 - **On valid arguments**: print exactly the single line `parse OK` to stdout and exit `0`.
-- **On invalid arguments** (unknown flag, missing required positional, mutually-exclusive flags supplied together, bad choice value, etc.): print the parser's error to stderr and exit **non-zero** (the standard argparse usage-error exit code is `2`). `--parse-only` does not suppress or soften any argument error — it surfaces exactly the error a normal run would.
-- **Precedence**: `--parse-only` short-circuits *after* successful argument validation and *before* any action flag (`--list-tools`, `--dump-swml`, `--exec`, `--list-agents`) takes effect. When present it always wins over those actions — including `--dump-swml`, whose normal stdout suppression is bypassed so the `parse OK` line is always printed.
+- **On invalid arguments** (unknown flag, missing required positional, mutually-exclusive flags supplied together, bad choice value, etc.): print the parser's error to stderr, and exit **non-zero**. The standard argparse usage-error exit code is `2`. `--parse-only` does not suppress or soften any argument error. It surfaces exactly the error a normal run would.
+- **Precedence**: `--parse-only` short-circuits *after* successful argument validation and *before* any action flag (`--list-tools`, `--dump-swml`, `--exec`, `--list-agents`) takes effect. When present it always wins over those actions, including `--dump-swml`, whose normal stdout suppression is bypassed so the `parse OK` line is always printed.
 - **Position-independent**: `--parse-only` is honored wherever it appears on the command line, including *after* an `--exec FUNCTION ...` (which otherwise treats trailing tokens as function arguments). This matters because the gate appends the flag to the end of each documented invocation.
 
 ```bash
@@ -196,6 +214,8 @@ swaig-test examples/my_agent.py --route /x --agent-class Y --parse-only  # exit 
 The CLI tool provides comprehensive serverless platform simulation, allowing you to test your agents in Lambda, CGI, Cloud Functions, and Azure Functions environments locally without deployment.
 
 ### Quick Start with Serverless Simulation
+
+These commands cover the platforms and options you will use most often:
 
 ```bash
 # Test agent in Lambda environment
@@ -227,6 +247,8 @@ swaig-test examples/my_agent.py --simulate-serverless lambda --env DEBUG=1 --env
 
 #### AWS Lambda Simulation
 
+Lambda always uses the Function URL format, whether the default or a custom one:
+
 ```bash
 # Default Lambda simulation with auto-generated URLs
 swaig-test examples/my_agent.py --simulate-serverless lambda --dump-swml
@@ -247,18 +269,20 @@ swaig-test examples/my_agent.py --simulate-serverless lambda \
 
 # Test function execution in Lambda context
 swaig-test examples/my_agent.py --simulate-serverless lambda \
-  --exec get_weather --location "San Francisco" \
-  --full-request
+  --exec get_weather --location "San Francisco"
 ```
 
 **Lambda Environment Variables Set:**
 - `AWS_LAMBDA_FUNCTION_NAME`
-- `AWS_LAMBDA_FUNCTION_URL` (if using Function URLs)
-- `AWS_API_GATEWAY_ID` (if using API Gateway)
+- `AWS_LAMBDA_FUNCTION_URL`
 - `AWS_REGION`
 - `_HANDLER`
 
+With `--aws-api-gateway-id`, the simulated `AWS_LAMBDA_FUNCTION_URL` is the API Gateway URL, `https://ID.execute-api.REGION.amazonaws.com/STAGE`. The region defaults to `us-east-1` and the stage to `prod`. `--aws-function-url` takes precedence over it.
+
 #### CGI Simulation
+
+`--cgi-host` is required; the other CGI flags are optional:
 
 ```bash
 # Basic CGI simulation
@@ -289,6 +313,8 @@ swaig-test examples/my_agent.py --simulate-serverless cgi \
 
 #### Google Cloud Functions Simulation
 
+The webhook host comes from the region and project, not from `--gcp-function-url`:
+
 ```bash
 # Basic Cloud Function simulation
 swaig-test examples/my_agent.py --simulate-serverless cloud_function --dump-swml
@@ -310,6 +336,8 @@ swaig-test examples/my_agent.py --simulate-serverless cloud_function \
 
 #### Azure Functions Simulation
 
+The webhook host comes from the `WEBSITE_SITE_NAME` preset; `--azure-env` only sets the reported environment name:
+
 ```bash
 # Basic Azure Functions simulation
 swaig-test examples/my_agent.py --simulate-serverless azure_function --dump-swml
@@ -329,6 +357,8 @@ swaig-test examples/my_agent.py --simulate-serverless azure_function \
 ### Environment Variable Management
 
 #### Manual Environment Variables
+
+`--env` is repeatable, so you can set several variables in one command:
 
 ```bash
 # Set custom environment variables
@@ -382,13 +412,14 @@ The serverless simulation automatically generates appropriate webhook URLs for e
 
 | Platform | Example Webhook URL |
 |----------|-------------------|
-| **Lambda (Function URL)** | `https://abc123.lambda-url.us-east-1.on.aws/swaig/` |
-| **Lambda (API Gateway)** | `https://api123.execute-api.us-east-1.amazonaws.com/prod/swaig/` |
+| **Lambda** | `https://abc123.lambda-url.us-east-1.on.aws/swaig/` |
 | **CGI** | `https://example.com/cgi-bin/agent.cgi/swaig/` |
-| **Cloud Functions** | `https://my-function-abc123.cloudfunctions.net/swaig/` |
-| **Azure Functions** | `https://my-function.azurewebsites.net/swaig/` |
+| **Cloud Functions** | `https://us-central1-my-project.cloudfunctions.net/my-service/swaig/` |
+| **Azure Functions** | `https://my-function-app.azurewebsites.net/api/my-function/swaig/` |
 
 #### URL Generation Examples
+
+Each command extracts the generated webhook URL with `jq`:
 
 ```bash
 # Lambda Function URL
@@ -414,30 +445,17 @@ Test function execution with platform-specific request/response formats:
 
 #### Lambda Function Execution
 
+The result looks the same as a local run; only the environment differs:
+
 ```bash
 # Test function in Lambda context
 swaig-test examples/my_agent.py --simulate-serverless lambda \
-  --exec get_weather --location "Miami" \
-  --full-request
-
-# Example output shows Lambda event format
-swaig-test examples/my_agent.py --simulate-serverless lambda \
-  --exec calculate --expression "2+2" \
-  --full-request --raw
-```
-
-**Lambda Response Format:**
-```json
-{
-  "statusCode": 200,
-  "headers": {
-    "Content-Type": "application/json"
-  },
-  "body": "{\"result\": 4, \"expression\": \"2+2\"}"
-}
+  --exec get_weather --location "Miami"
 ```
 
 #### CGI Function Execution
+
+`--cgi-host` is still required, even when you only need `--exec`:
 
 ```bash
 # Test function in CGI context
@@ -479,6 +497,8 @@ swaig-test examples/my_agent.py --simulate-serverless cloud_function \
 
 #### Testing Multiple Platforms
 
+Loop over the platforms, or diff two platforms' generated SWML directly:
+
 ```bash
 # Test the same agent across multiple platforms
 for platform in lambda cgi cloud_function azure_function; do
@@ -497,6 +517,8 @@ diff lambda.swml cgi.swml
 
 #### Verbose Mode
 
+`--verbose` shows the environment setup and, separately, function execution:
+
 ```bash
 # See detailed environment setup
 swaig-test examples/my_agent.py --simulate-serverless lambda \
@@ -506,11 +528,12 @@ swaig-test examples/my_agent.py --simulate-serverless lambda \
 # Debug function execution
 swaig-test examples/my_agent.py --simulate-serverless lambda \
   --verbose \
-  --exec my_function --param value \
-  --full-request
+  --exec my_function --param value
 ```
 
 #### Environment Inspection
+
+Write a function that reads `os.environ` to see what the simulator set:
 
 ```bash
 # Show environment variables being set
@@ -520,6 +543,8 @@ swaig-test examples/my_agent.py --simulate-serverless lambda \
 ```
 
 #### Format Options
+
+Compare the default pretty-printed form with `--raw`'s compact JSON:
 
 ```bash
 # Pretty-print JSON output
@@ -543,6 +568,8 @@ swaig-test examples/my_agent.py --simulate-serverless lambda \
 
 #### Platform-Specific Testing
 
+This walks through the preceding workflow for Lambda specifically:
+
 ```bash
 # Lambda development workflow
 swaig-test examples/my_agent.py --list-tools  # First test locally
@@ -558,6 +585,8 @@ swaig-test examples/my_agent.py --simulate-serverless lambda \
 ```
 
 #### Environment Management
+
+Keep a separate `.env` file per environment, and select one with `--env-file`:
 
 ```bash
 # Development environment
@@ -656,6 +685,8 @@ The tool automatically converts arguments based on function schema:
 
 ### CLI Syntax Examples
 
+These cover each parameter type from the preceding table:
+
 ```bash
 # String parameters
 swaig-test examples/agent.py --exec greet --name "Alice"
@@ -713,26 +744,27 @@ swaig-test examples/joke_skill_demo.py --verbose --exec get_joke --type dadjokes
 ```
 
 **Complete DataMap Processing Pipeline:**
-1. **URL Template Expansion**: `${args.type}` → `dadjokes`
+1. **URL Template Expansion**: `${args.type}` becomes `dadjokes`
 2. **HTTP Request**: GET to `https://api.api-ninjas.com/v1/dadjokes`
 3. **Response Processing**: Extract joke from API response array
-4. **Output Template**: `${array[0].joke}` → actual joke text
+4. **Output Template**: `${array[0].joke}` becomes the joke text
 5. **Fallback Handling**: If API fails, use fallback message
 
 **Example Output:**
 ```
-Executing DataMap function: get_joke
+Calling DataMap function: get_joke
 Arguments: {"type": "dadjokes"}
+Function type: DataMap (serverless)
 ------------------------------------------------------------
-Simple DataMap structure with 1 webhook(s)
-Processing 1 webhook(s)...
-  Webhook 1: GET https://api.api-ninjas.com/v1/${args.type}
-    Original URL: https://api.api-ninjas.com/v1/${args.type}
-    Template context: {'args': {'type': 'dadjokes'}, 'array': [], 'type': 'dadjokes'}
-    Expanded URL: https://api.api-ninjas.com/v1/dadjokes
-  ✓ Webhook succeeded: 200
-    Response: [{"joke": "Why don't scientists trust atoms? Because they make up everything!"}]
-    Processed output: {'response': "Here's a joke: Why don't scientists trust atoms? Because they make up everything!"}
+=== DataMap Function Execution ===
+--- Processing Webhooks ---
+Making GET request to: https://api.api-ninjas.com/v1/dadjokes
+Response status: 200
+Webhook 1 succeeded!
+Array response: 1 items
+
+--- Processing Webhook Output ---
+Set response = Here's a joke: Why don't scientists trust atoms? Because they make up everything!
 
 RESULT:
 Response: Here's a joke: Why don't scientists trust atoms? Because they make up everything!
@@ -744,7 +776,7 @@ The tool properly handles all DataMap template syntax:
 
 - **Function Arguments**: `${args.type}`, `${args.location}`
 - **Array Access**: `${array[0].joke}`, `${array[0].weather.temp}`
-- **Nested Objects**: `${response.data.results[0].title}`
+- **Nested Objects**: `${data.results[0].title}`
 - **Fallback Values**: `${args.units || "metric"}`
 
 ### DataMap Error Handling
@@ -758,9 +790,16 @@ swaig-test examples/joke_skill_demo.py --verbose --exec get_joke --type invalid
 
 **Fallback Output:**
 ```
-  ✗ Webhook failed: 404
-All webhooks failed, using fallback output...
-Fallback result = {'response': 'Sorry, there is a problem with the joke service right now. Please try again later.'}
+Calling DataMap function: get_joke
+Arguments: {"type": "invalid"}
+Function type: DataMap (serverless)
+------------------------------------------------------------
+Response status: 404
+Webhook failed: HTTP status 404 outside 200-299 range
+Webhook 1 failed, trying next webhook...
+
+--- Using DataMap Fallback Output ---
+Fallback: Set response = Sorry, there is a problem with the joke service right now. Please try again later.
 
 RESULT:
 Response: Sorry, there is a problem with the joke service right now. Please try again later.
@@ -778,7 +817,7 @@ swaig-test examples/datasphere_webhook_env_demo.py --exec search_knowledge
 swaig-test examples/datasphere_serverless_env_demo.py --exec search_knowledge
 
 # Test local webhook function with get_weather
-swaig-test examples/simple_agent.py --exec get_weather --verbose
+swaig-test examples/simple_agent.py --verbose --exec get_weather
 
 # Test math skill function - auto-detected
 swaig-test examples/datasphere_serverless_env_demo.py --exec calculate
@@ -790,7 +829,7 @@ External webhook functions are automatically detected and tested by making HTTP 
 
 ```bash
 # Test external webhook with verbose output
-swaig-test examples/my_agent.py --exec getWeather --verbose
+swaig-test examples/my_agent.py --verbose --exec getWeather
 
 # List functions with their types (local vs external)
 swaig-test examples/my_agent.py --list-tools
@@ -817,7 +856,7 @@ Sending payload: {
 }
 Making POST request to: https://api.example-weather-service.com/webhook
 Response status: 200
-✓ External webhook succeeded
+External webhook succeeded
 ```
 
 **How External Webhook Testing Works:**
@@ -989,21 +1028,19 @@ swaig-test examples/dynamic_agent.py --dump-swml \
 
 ### SWML Output Formats
 
-```bash
-# Standard output with headers
-swaig-test examples/agent.py --dump-swml
-# Output: Headers + formatted SWML + footers
+`--dump-swml` always suppresses agent logs, so its output is JSON only, whether or not you add `--verbose`:
 
-# Raw JSON for automation
+```bash
+# Pretty-printed JSON
+swaig-test examples/agent.py --dump-swml
+# Output: Formatted SWML JSON only
+
+# Compact JSON for automation
 swaig-test examples/agent.py --dump-swml --raw
-# Output: Raw JSON only
+# Output: Compact SWML JSON only
 
 # Pipe to jq for processing
 swaig-test examples/agent.py --dump-swml --raw | jq '.sections.main[1].ai.SWAIG.functions'
-
-# Verbose with fake data details
-swaig-test examples/agent.py --dump-swml --verbose
-# Output: Fake data details + agent info + SWML
 ```
 
 ## Passing Function Arguments
@@ -1012,7 +1049,7 @@ After `--exec <function>`, every following flag is passed to the function as an
 argument (the tool converts each value using the function's parameter schema):
 
 ```bash
-swaig-test examples/agent.py --exec search_function --query "test" --limit 10 --verbose
+swaig-test examples/agent.py --verbose --exec search_function --query "test" --limit 10
 
 # Schema-based type conversion (numbers, booleans) is automatic:
 swaig-test examples/agent.py --exec calculate --expression "25 * 47" --precision 2
@@ -1031,6 +1068,8 @@ The tool automatically converts arguments based on function schema:
 | `array` | `--tags "tag1,tag2,tag3"` | `["tag1","tag2","tag3"]` |
 
 ### CLI Syntax Examples
+
+These cover each parameter type from the preceding table:
 
 ```bash
 # Simple string parameter
@@ -1060,9 +1099,11 @@ DataMap functions follow the SignalWire server-side processing pipeline:
 
 ### Real API Execution Example
 
+This DataMap function makes a real HTTP request when you run it:
+
 ```bash
 # Test DataSphere serverless search with verbose output
-swaig-test examples/datasphere_serverless_env_demo.py --exec search_knowledge --verbose
+swaig-test examples/datasphere_serverless_env_demo.py --verbose --exec search_knowledge --query "AI agents"
 ```
 
 **Example Execution Flow:**
@@ -1109,7 +1150,8 @@ The tool supports all DataMap template syntax with both `${}` and `%{}` variatio
 | Syntax | Description | Example |
 |--------|-------------|---------|
 | `${args.param}` / `%{args.param}` | Function arguments | `${args.query}`, `%{args.type}` |
-| `${response.field}` / `%{response.field}` | API response object | `${response.temperature}` |
+| `${field}` / `%{field}` | A field of the API's JSON object response, from the root | `${temperature}` |
+| `${lc:enc:args.param}` | Prefix helpers, left to right: lowercase, then URL-encode | `${lc:enc:args.city}` |
 | `${array[0].field}` / `%{array[0].field}` | API response array | `${array[0].joke}`, `%{array[0].text}` |
 | `${this.property}` / `%{this.property}` | Current foreach item | `${this.title}`, `%{this.content}` |
 | `${global_data.key}` / `%{global_data.key}` | Call-wide data store | `${global_data.customer_name}` |
@@ -1141,7 +1183,7 @@ DataMap foreach loops concatenate strings from array elements:
 }
 ```
 
-This processes each item in `response.chunks` and builds a single concatenated string in `formatted_results`.
+This processes each item in the response's `chunks` array and builds a single concatenated string in `formatted_results`.
 
 ## Webhook Function Testing
 
@@ -1171,10 +1213,10 @@ def get_weather_external(self, args, raw_data):
 
 ```bash
 # Test external webhook function
-swaig-test examples/my_agent.py --exec getWeather --verbose
+swaig-test examples/my_agent.py --verbose --exec getWeather
 
 # Compare with local function
-swaig-test examples/my_agent.py --exec getHelp --verbose
+swaig-test examples/my_agent.py --verbose --exec getHelp
 ```
 
 **External Webhook Request Format:**
@@ -1204,30 +1246,35 @@ The CLI tool sends the same payload format that SignalWire uses:
 
 ```bash
 # Test with unreachable external service
-swaig-test examples/my_agent.py --exec testBrokenWebhook --verbose
+swaig-test examples/my_agent.py --verbose --exec testBrokenWebhook
 ```
 
 Output shows connection errors and HTTP status codes:
 ```
-✗ Could not connect to external webhook: HTTPSConnectionPool(host='nonexistent.example.com', port=443)
+Could not connect to external webhook: HTTPSConnectionPool(host='nonexistent.example.com', port=443)
 RESULT:
 Dict: {
-  "error": "Could not connect to external webhook: ...",
-  "status_code": null
+  "error": "Could not connect to external webhook: ..."
 }
 ```
 
 ### Post Data Simulation Modes
 
 #### 1. Default Mode (Minimal Data)
+
+With no data flags, the tool sends only the essential keys:
+
 ```bash
 swaig-test my_agent.py --exec my_function
 ```
 **Includes**: `function`, `argument`, `call_id`, `meta_data`, `global_data`
 
 #### 2. Comprehensive Mode (Full SignalWire Environment)
+
+`--fake-full-data` is a CLI flag, so it goes before `--exec`:
+
 ```bash
-swaig-test my_agent.py --exec my_function --fake-full-data
+swaig-test my_agent.py --fake-full-data --exec my_function
 ```
 
 **Includes complete post_data with all SignalWire keys:**
@@ -1240,11 +1287,16 @@ swaig-test my_agent.py --exec my_function --fake-full-data
 - **HTTP context**: `http_method`, `webhook_url`, `user_agent`, `request_headers`
 
 #### 3. Custom Data Mode
+
+`--custom-data` is also a CLI flag, so it goes before `--exec` too:
+
 ```bash
-swaig-test my_agent.py --exec my_function --custom-data '{"call_id":"test-123","global_data":{"environment":"production"}}'
+swaig-test my_agent.py --custom-data '{"call_id":"test-123","global_data":{"environment":"production"}}' --exec my_function
 ```
 
 ### Comprehensive Post Data Example
+
+`--fake-full-data` produces a post_data object shaped like this:
 
 ```json
 {
@@ -1302,14 +1354,15 @@ swaig-test my_agent.py --exec my_function --custom-data '{"call_id":"test-123","
 
 ### DataSphere Knowledge Search (SignalWire's Cloud Document Search / RAG Service)
 
+This calls a real SignalWire DataSphere endpoint, so it needs valid credentials:
+
 ```bash
 # Test DataSphere serverless function
-swaig-test examples/datasphere_serverless_env_demo.py --exec search_knowledge --verbose
+swaig-test examples/datasphere_serverless_env_demo.py --verbose --exec search_knowledge --query "AI agents"
 ```
 
 **Expected Output:**
 ```
-Executing DataMap function: search_knowledge
 === DataMap Function Execution ===
 
 --- Processing Webhooks ---
@@ -1333,16 +1386,18 @@ Response: I found results for "AI agents": ...
 
 ### Math Skill Function
 
+This is a local webhook function, so it runs entirely offline:
+
 ```bash
 # Test webhook-style math function
-swaig-test examples/datasphere_serverless_env_demo.py --exec calculate --verbose
+swaig-test examples/datasphere_serverless_env_demo.py --verbose --exec calculate --expression "25 * 47"
 ```
 
 **Expected Output:**
 ```
-Calling webhook function: calculate
+Calling function: calculate
 Arguments: {"expression": "25 * 47"}
-Function description: Perform mathematical calculations and return the result
+Function type: LOCAL webhook
 
 RESULT:
 FunctionResult: The result of 25 * 47 is 1175.
@@ -1350,9 +1405,11 @@ FunctionResult: The result of 25 * 47 is 1175.
 
 ### DateTime Skill Function
 
+This combines `--fake-full-data` with a local webhook function:
+
 ```bash
 # Test datetime function with comprehensive data
-swaig-test examples/datasphere_serverless_env_demo.py --exec get_datetime --fake-full-data
+swaig-test examples/datasphere_serverless_env_demo.py --fake-full-data --exec get_current_time
 ```
 
 ## Function Type Detection
@@ -1424,12 +1481,14 @@ Available SWAIG functions:
 
 ### Function Arguments
 
-Arguments to a function are passed as flags after `--exec <function>` — there is
+Arguments to a function are passed as flags after `--exec <function>`. There is
 no separate `--args` option. See [Passing Function Arguments](#passing-function-arguments).
 
 ## Real-World Examples
 
 ### Testing Joke Skill (DataMap)
+
+These commands cover the success, plain and error-handling cases:
 
 ```bash
 # Test dad jokes with verbose output
@@ -1443,6 +1502,8 @@ swaig-test examples/joke_skill_demo.py --verbose --exec get_joke --type invalid
 ```
 
 ### Testing Multi-Agent Applications
+
+This walks through discovery, then testing each agent in a two-agent file:
 
 ```bash
 # Discover available agents
@@ -1465,6 +1526,8 @@ swaig-test matti_and_sigmond/dual_agent_app.py --agent-class SigmondAgent --dump
 
 ### Testing External Webhook Functions
 
+This tests one external and one local function, then lists both types:
+
 ```bash
 # Test external webhook with verbose output
 swaig-test examples/my_agent.py --verbose --exec getWeather --location "San Francisco"
@@ -1474,6 +1537,8 @@ swaig-test examples/my_agent.py --list-tools
 ```
 
 ### Advanced SWML Testing
+
+These combine mock request data, call-type overrides and a multi-agent file:
 
 ```bash
 # Test dynamic agent with custom headers and data
@@ -1497,24 +1562,30 @@ swaig-test matti_and_sigmond/dual_agent_app.py --agent-class MattiAgent --dump-s
 
 #### Basic Static Agent SWML
 
+A static agent's SWML does not depend on the request, so `--dump-swml` alone is enough:
+
 ```bash
 # Generate SWML for static agent
 swaig-test examples/simple_agent.py --dump-swml
 ```
 
-**Expected Output:**
-```
-Generating SWML document...
-Agent: Simple Agent
-Route: /swml
-
-SWML Document:
-==================================================
-{"version":"1.0","sections":{"main":[{"ai":{"SWAIG":{"functions":[...]}}}]}}
-==================================================
+**Expected Output:** pretty-printed SWML JSON, and nothing else. `--dump-swml` suppresses agent
+logs and the fake-data preamble even under `--verbose`, so the output stays valid JSON:
+```json
+{
+  "version": "1.0.0",
+  "sections": {
+    "main": [
+      { "answer": {} },
+      { "ai": { "SWAIG": { "functions": ["..."] } } }
+    ]
+  }
+}
 ```
 
 #### Dynamic Agent with Mock Request
+
+The mock headers, method, body and user variables reach the agent's `on_swml_request` callback:
 
 ```bash
 # Test dynamic agent with custom headers and data
@@ -1527,34 +1598,28 @@ swaig-test examples/dynamic_agent.py --dump-swml \
   --verbose
 ```
 
-**Expected Output:**
-```
-Generating SWML document...
-Agent: Dynamic Agent
-Route: /swml
-
-Using fake SWML post_data:
+**Expected Output:** pretty-printed SWML JSON. `on_swml_request` sees the mock headers and
+`--user-vars`, and its changes, such as a custom `ai_instructions`, appear in the output:
+```json
 {
-  "call": {
-    "call_id": "550e8400-e29b-41d4-a716-446655440000",
-    ...
-  },
-  "vars": {
-    "userVariables": {"customer_tier": "premium"}
+  "version": "1.0.0",
+  "sections": {
+    "main": [
+      { "answer": {} },
+      {
+        "ai": {
+          "SWAIG": { "functions": ["..."] },
+          "params": { "ai_instructions": "Custom instructions for premium user" }
+        }
+      }
+    ]
   }
 }
-
-Mock request headers: {"authorization": "Bearer test-token", "x-user-id": "12345"}
-Mock request method: POST
-Dynamic agent modifications: {"ai_instructions": "Custom instructions for premium user"}
-
-SWML Document:
-==================================================
-{"version":"1.0","sections":{"main":[{"ai":{"SWAIG":{"functions":[...]},"params":{"ai_instructions":"Custom instructions for premium user"}}}]}}
-==================================================
 ```
 
 #### Call Type Differentiation
+
+Compare a SIP call against a WebRTC call:
 
 ```bash
 # SIP call scenario
@@ -1576,6 +1641,8 @@ swaig-test examples/agent.py --dump-swml \
 ```
 
 #### Advanced Override Scenarios
+
+`--override` and `--override-json` combine to reach nested paths:
 
 ```bash
 # Complex call state testing
@@ -1599,6 +1666,8 @@ swaig-test examples/agent.py --dump-swml \
 
 #### DataMap Function with CLI Arguments
 
+The legacy JSON syntax and the `--exec` syntax call the same function:
+
 ```bash
 # Traditional JSON approach
 swaig-test examples/datasphere_agent.py --exec search_knowledge
@@ -1612,6 +1681,8 @@ swaig-test examples/datasphere_agent.py --exec search_knowledge \
 
 #### Math Function with Type Conversion
 
+The tool converts each flag's value using the function's parameter schema:
+
 ```bash
 # CLI syntax with automatic type conversion
 swaig-test examples/math_agent.py --exec calculate \
@@ -1621,6 +1692,8 @@ swaig-test examples/math_agent.py --exec calculate \
 ```
 
 #### Complex Function with Mixed Types
+
+This function takes one parameter of each supported type:
 
 ```bash
 # Function with string, number, boolean, and array parameters
@@ -1638,6 +1711,8 @@ swaig-test examples/complex_agent.py --exec process_data \
 ### SWML Testing Workflows
 
 #### Testing Call Flow Scenarios
+
+These scenarios cover an inbound call, a transfer and a scheduled callback:
 
 ```bash
 # Test inbound call flow
@@ -1666,6 +1741,8 @@ swaig-test examples/callback_agent.py --dump-swml \
 
 #### Testing Agent Variations
 
+Loop over project or tier values to compare an agent's SWML across tenants:
+
 ```bash
 # Test with different project configurations
 for project in test-proj staging-proj prod-proj; do
@@ -1687,6 +1764,8 @@ done
 
 #### Pipeline Testing with jq
 
+`--raw` keeps the output as compact JSON, ready to pipe into `jq`:
+
 ```bash
 # Extract specific SWML components
 swaig-test examples/agent.py --dump-swml --raw | jq '.sections.main[0].ai.SWAIG.functions[].function'
@@ -1704,6 +1783,8 @@ swaig-test examples/agent.py --dump-swml --raw | jq 'has("version") and has("sec
 ### Mock Request Testing
 
 #### Testing Request-Dependent Logic
+
+Mock headers and a mock body let you test logic that reads the incoming request:
 
 ```bash
 # Test API key validation
@@ -1728,6 +1809,8 @@ swaig-test examples/webhook_agent.py --dump-swml \
 ```
 
 #### Testing Different Request Patterns
+
+The mock request's method, headers and body can represent a GET, a form post or an upload:
 
 ```bash
 # Test GET request handling
@@ -1755,31 +1838,32 @@ swaig-test examples/upload_agent.py --dump-swml \
 
 | Issue | Symptoms | Solution |
 |-------|----------|----------|
-| **Agent Loading** | "No AgentBase instance found" | Ensure file has `agent` variable or AgentBase subclass |
+| **Multiple Agents** | "Multiple agents found" | Use `--agent-class ClassName` to specify which agent |
+| **Agent Loading** | "Warning: No agent instance found" | Ensure file has `agent` variable or AgentBase subclass |
 | **Function Missing** | "Function 'X' not found" | Use `--list-tools` to verify function registration |
 | **DataMap HTTP Error** | "Webhook request failed" | Check network connectivity and API credentials |
-| **Template Expansion** | "MISSING:variable" in output | Verify template variable names match data structure |
-| **JSON Parsing** | "Invalid JSON in args" | Check JSON syntax in function arguments |
 | **SWML Generation** | "Error generating SWML" | Check agent initialization and SWML template syntax |
 | **Dynamic Agent** | "Dynamic agent callback failed" | Verify on_swml_request method signature and mock request handling |
 | **Override Syntax** | "Override path not found" | Use `--verbose` to see generated data structure and verify paths |
 | **Wrong Argument Order** | CLI flags not working | Put all CLI flags BEFORE `--exec` |
 | **Template Expansion** | "MISSING:variable" in output | Verify template variable names match data structure |
-| **JSON Parsing** | "Invalid JSON in args" | Check JSON syntax or use `--exec` syntax |
+| **JSON Parsing** | "Invalid JSON in args" | Check JSON syntax in function arguments, or use `--exec` syntax |
 | **Serverless URL Issues** | Wrong webhook URLs in SWML | Verify platform-specific configuration and environment variables |
 | **Environment Conflicts** | Unexpected behavior in serverless mode | Clear conflicting environment variables or restart shell |
 | **Platform Detection** | Wrong platform detected | Use `--simulate-serverless` explicitly instead of relying on auto-detection |
 
 ### Debug Strategies
 
-1. **Use `--verbose`**: Shows complete execution flow including fake data generation
-2. **Check function list**: Use `--list-tools --verbose` to see configurations  
-3. **Test connectivity**: For DataMap functions, ensure API endpoints are reachable
-4. **Validate JSON**: Use online JSON validators for complex arguments
-5. **Check logs**: Agent initialization logs show skill loading status
-6. **Test SWML incrementally**: Start with `--dump-swml` then add overrides gradually
-7. **Verify mock requests**: Use `--verbose` to see mock request object details
-8. **Pipeline with jq**: Use `--raw | jq '.'` to validate JSON structure
+1. **Use `--verbose`**: Shows complete execution flow, including agent selection and fake data generation
+2. **Check agent discovery**: Use `--list-agents` to see available agents
+3. **Check function list**: Use `--list-tools --verbose` to see configurations
+4. **Test connectivity**: For DataMap functions, ensure API endpoints are reachable
+5. **Check argument order**: CLI flags before `--exec`, function arguments after the function name
+6. **Validate syntax**: Use `--exec` syntax to avoid JSON parsing issues
+7. **Check logs**: Agent initialization logs show skill loading status
+8. **Test SWML incrementally**: Start with `--dump-swml`, then add overrides gradually
+9. **Verify mock requests**: Use `--verbose` to see mock request object details
+10. **Pipeline with jq**: Use `--raw | jq '.'` to validate JSON structure
 
 ### SWML-Specific Debugging
 
@@ -1818,7 +1902,7 @@ swaig-test my_agent.py --list-tools --verbose | grep -A 10 my_function
 swaig-test my_agent.py --exec my_function --simple-param "value"
 
 # Check type conversion
-swaig-test my_agent.py --exec my_function --number-param 42 --bool-param --verbose
+swaig-test my_agent.py --verbose --exec my_function --number-param 42 --bool-param
 ```
 
 Look for:
@@ -1833,7 +1917,7 @@ Test how DataMap functions handle API failures:
 
 ```bash
 # Test with verbose output to see fallback processing
-swaig-test my_agent.py --exec my_datamap_func --verbose
+swaig-test my_agent.py --verbose --exec my_datamap_func
 ```
 
 If the primary webhook fails, you'll see:
@@ -1849,7 +1933,7 @@ Simulate different environments with custom data:
 
 ```bash
 # Simulate production environment
-swaig-test my_agent.py --exec my_function --fake-full-data --custom-data '{
+swaig-test my_agent.py --fake-full-data --custom-data '{
   "global_data": {
     "environment": "production", 
     "api_tier": "premium",
@@ -1859,7 +1943,7 @@ swaig-test my_agent.py --exec my_function --fake-full-data --custom-data '{
     "ai_instructions": "You are a premium production assistant",
     "temperature": 0.3
   }
-}'
+}' --exec my_function
 ```
 
 ### Testing Complex DataMap Configurations
@@ -1867,7 +1951,7 @@ swaig-test my_agent.py --exec my_function --fake-full-data --custom-data '{
 For DataMap functions with multiple webhooks and complex foreach processing:
 
 ```bash
-swaig-test my_agent.py --exec complex_search --verbose
+swaig-test my_agent.py --verbose --exec complex_search
 ```
 
 This shows the complete processing pipeline:
@@ -1878,25 +1962,164 @@ This shows the complete processing pipeline:
 
 ### DataMap-Specific Debugging
 
-For DataMap function issues:
+For DataMap function issues, `--verbose` traces template expansion, the HTTP request it produces, and fallback handling:
 
 ```bash
 # Enable verbose to see HTTP details
 swaig-test my_agent.py --verbose --exec my_datamap_func --input test
+
+# Check URL template expansion
+swaig-test my_agent.py --verbose --exec my_func --location "New York"
 
 # Check the complete configuration
 swaig-test my_agent.py --list-tools --verbose | grep -A 20 my_datamap
 ```
 
 Look for:
-- Template expansion in request data
-- HTTP response status and content
+- Template expansion in the request data and URL
+- HTTP request and response details
 - Foreach processing details
+- Fallback processing when APIs fail
 - Output template expansion
+
+### Serverless Debugging
+
+#### Environment Variable Issues
+
+Check which variables the simulator set, and clear stale ones between platforms:
+
+```bash
+# Debug environment variable setup
+swaig-test my_agent.py --simulate-serverless lambda --verbose --exec get_status
+
+# Check what environment variables are set
+swaig-test my_agent.py --simulate-serverless lambda --env DEBUG=1 --exec debug_env
+
+# Test environment file loading
+swaig-test my_agent.py --simulate-serverless lambda --env-file my.env --verbose --dump-swml
+
+# Clear conflicting variables
+unset AWS_LAMBDA_FUNCTION_NAME GOOGLE_CLOUD_PROJECT
+swaig-test my_agent.py --simulate-serverless cloud_function --verbose --dump-swml
+```
+
+#### Platform-Specific Debugging
+
+Combine `--verbose` with the platform flags to see exactly what each one changes:
+
+```bash
+# Debug Lambda configuration
+swaig-test my_agent.py --simulate-serverless lambda \
+  --aws-function-name my-function \
+  --aws-region us-west-2 \
+  --verbose --dump-swml
+
+# Debug CGI configuration  
+swaig-test my_agent.py --simulate-serverless cgi \
+  --cgi-host example.com \
+  --cgi-https \
+  --verbose --dump-swml
+
+# Debug webhook URL generation
+swaig-test my_agent.py --simulate-serverless lambda \
+  --dump-swml --raw | jq '.sections.main[1].ai.SWAIG.defaults.web_hook_url'
+```
+
+#### Function Execution Debugging
+
+Run the same function locally and under simulation, then diff the results:
+
+```bash
+# Debug function execution in serverless context
+swaig-test my_agent.py --simulate-serverless lambda \
+  --verbose \
+  --exec my_function --param value
+
+# Compare responses across platforms
+swaig-test my_agent.py --exec my_function --param value > local.json
+swaig-test my_agent.py --simulate-serverless lambda --exec my_function --param value > lambda.json
+diff local.json lambda.json
+```
+
+### Agent Discovery Debugging
+
+Check which agent the tool picks, and confirm an explicit choice overrides it:
+
+```bash
+# Debug agent discovery
+swaig-test my_file.py --list-agents --verbose
+
+# Check if agent is auto-selected
+swaig-test my_file.py --verbose --exec my_function --param value
+
+# Explicitly specify agent
+swaig-test my_file.py --agent-class MyAgent --verbose --exec my_function --param value
+```
+
+### Joke Agent Examples
+
+#### Working Joke API (Success Case)
+
+With a real API key, the webhook succeeds and returns a joke:
+
+```bash
+# Test with a valid API key: shows successful DataMap processing.
+# --verbose must come before --exec, and get_joke requires --type.
+API_NINJAS_KEY=your_api_key swaig-test examples/joke_skill_demo.py --verbose --exec get_joke --type jokes
+```
+
+**Expected Output:**
+```
+=== DataMap Function Execution ===
+--- Processing Webhooks ---
+Making GET request to: https://api.api-ninjas.com/v1/jokes
+Response status: 200
+Webhook 1 succeeded!
+Array response: 1 items
+
+--- Processing Webhook Output ---
+Set response = Here's a joke: What do you call a bear with no teeth? A gummy bear!
+
+RESULT:
+Response: Here's a joke: What do you call a bear with no teeth? A gummy bear!
+```
+
+#### Invalid API Key (Failure Case)
+
+Without a valid key, the webhook fails and the fallback response takes over:
+
+```bash
+# Test with an invalid API key: shows fallback output processing.
+# --verbose must come before --exec.
+swaig-test examples/joke_agent.py --verbose --exec get_joke --type jokes
+```
+
+**Expected Output (when API key is invalid):**
+```
+=== DataMap Function Execution ===
+--- Processing Webhooks ---
+Making GET request to: https://api.api-ninjas.com/v1/jokes
+Response status: 400
+Response data: {"error": "Invalid API Key."}
+Webhook failed: HTTP status 400 outside 200-299 range
+Webhook 1 failed, trying next webhook...
+
+--- Using DataMap Fallback Output ---
+Fallback result = Tell the user that the joke service is not working right now and just make up a joke on your own
+
+RESULT:
+Response: Tell the user that the joke service is not working right now and just make up a joke on your own
+```
+
+This demonstrates both:
+- **Successful webhook processing** with array response handling
+- **Failure detection and fallback** when APIs return errors
 
 ## Integration with Development
 
 ### Pre-Deployment Testing
+
+This loop runs every listed function once, with comprehensive fake data:
 
 ```bash
 # Test all functions systematically
@@ -1913,11 +2136,13 @@ The tool returns appropriate exit codes:
 - `0`: Success
 - `1`: Error (function failed, invalid arguments, network issues, etc.)
 
+A CI step can check that exit code directly:
+
 ```yaml
 # GitHub Actions example
 - name: Test SWAIG Functions
   run: |
-    swaig-test my_agent.py --exec critical_function --fake-full-data
+    swaig-test my_agent.py --fake-full-data --exec critical_function
     if [ $? -ne 0 ]; then
       echo "Critical function test failed"
       exit 1
@@ -1927,6 +2152,8 @@ The tool returns appropriate exit codes:
 ## Performance and Limitations
 
 ### Performance Considerations
+
+Testing has these performance characteristics:
 
 - **DataMap HTTP Requests**: Real network latency applies
 - **Large Responses**: Processing large API responses takes time
@@ -1962,168 +2189,6 @@ When a webhook fails, the tool:
 - Tries the next webhook in sequence (if any)
 - Uses fallback output if all webhooks fail
 - Provides detailed error information in verbose mode
-
-## Troubleshooting
-
-### Common Issues
-
-| Issue | Symptoms | Solution |
-|-------|----------|----------|
-| **Multiple Agents** | "Multiple agents found" | Use `--agent-class ClassName` to specify which agent |
-| **Agent Loading** | "No AgentBase instance found" | Ensure file has agent instance or AgentBase subclass |
-| **Function Missing** | "Function 'X' not found" | Use `--list-tools` to verify function registration |
-| **DataMap HTTP Error** | "Webhook request failed" | Check network connectivity and API credentials |
-| **Wrong Argument Order** | CLI flags not working | Put all CLI flags BEFORE `--exec` |
-| **Template Expansion** | "MISSING:variable" in output | Verify template variable names match data structure |
-| **JSON Parsing** | "Invalid JSON in args" | Check JSON syntax or use `--exec` syntax |
-| **Serverless URL Issues** | Wrong webhook URLs in SWML | Verify platform-specific configuration and environment variables |
-| **Environment Conflicts** | Unexpected behavior in serverless mode | Clear conflicting environment variables or restart shell |
-| **Platform Detection** | Wrong platform detected | Use `--simulate-serverless` explicitly instead of relying on auto-detection |
-
-### Debug Strategies
-
-1. **Use `--verbose`**: Shows complete execution flow including agent selection and fake data generation
-2. **Check agent discovery**: Use `--list-agents` to see available agents
-3. **Check function list**: Use `--list-tools --verbose` to see configurations
-4. **Test connectivity**: For DataMap functions, ensure API endpoints are reachable
-5. **Check argument order**: CLI flags before `--exec`, function args after function name
-6. **Validate syntax**: Use `--exec` syntax to avoid JSON parsing issues
-
-### Serverless Debugging
-
-#### Environment Variable Issues
-
-```bash
-# Debug environment variable setup
-swaig-test my_agent.py --simulate-serverless lambda --verbose --exec get_status
-
-# Check what environment variables are set
-swaig-test my_agent.py --simulate-serverless lambda --env DEBUG=1 --exec debug_env
-
-# Test environment file loading
-swaig-test my_agent.py --simulate-serverless lambda --env-file my.env --verbose --dump-swml
-
-# Clear conflicting variables
-unset AWS_LAMBDA_FUNCTION_NAME GOOGLE_CLOUD_PROJECT
-swaig-test my_agent.py --simulate-serverless cloud_function --verbose --dump-swml
-```
-
-#### Platform-Specific Debugging
-
-```bash
-# Debug Lambda configuration
-swaig-test my_agent.py --simulate-serverless lambda \
-  --aws-function-name my-function \
-  --aws-region us-west-2 \
-  --verbose --dump-swml
-
-# Debug CGI configuration  
-swaig-test my_agent.py --simulate-serverless cgi \
-  --cgi-host example.com \
-  --cgi-https \
-  --verbose --dump-swml
-
-# Debug webhook URL generation
-swaig-test my_agent.py --simulate-serverless lambda \
-  --dump-swml --raw | jq '.sections.main[1].ai.SWAIG.defaults.web_hook_url'
-```
-
-#### Function Execution Debugging
-
-```bash
-# Debug function execution in serverless context
-swaig-test my_agent.py --simulate-serverless lambda \
-  --verbose \
-  --exec my_function --param value \
-  --full-request
-
-# Compare responses across platforms
-swaig-test my_agent.py --exec my_function --param value > local.json
-swaig-test my_agent.py --simulate-serverless lambda --exec my_function --param value > lambda.json
-diff local.json lambda.json
-```
-
-### Agent Discovery Debugging
-
-```bash
-# Debug agent discovery
-swaig-test my_file.py --list-agents --verbose
-
-# Check if agent is auto-selected
-swaig-test my_file.py --verbose --exec my_function --param value
-
-# Explicitly specify agent
-swaig-test my_file.py --agent-class MyAgent --verbose --exec my_function --param value
-```
-
-### DataMap Debugging
-
-```bash
-# Enable verbose to see complete DataMap processing
-swaig-test my_agent.py --verbose --exec my_datamap_func --input test
-
-# Check URL template expansion
-swaig-test my_agent.py --verbose --exec my_func --location "New York"
-```
-
-Look for:
-- URL template expansion details
-- HTTP request/response information
-- Fallback processing when APIs fail
-- Output template processing
-
-### Joke Agent Examples
-
-#### Working Joke API (Success Case)
-
-```bash
-# Test with valid API key - shows successful DataMap processing
-API_NINJAS_KEY=your_api_key swaig-test examples/joke_skill_demo.py --exec get_joke --verbose
-```
-
-**Expected Output:**
-```
-=== DataMap Function Execution ===
---- Processing Webhooks ---
-Making GET request to: https://api.api-ninjas.com/v1/jokes
-Response status: 200
-Webhook 1 succeeded!
-Array response: 1 items
-
---- Processing Webhook Output ---
-Set response = Here's a joke: What do you call a bear with no teeth? A gummy bear!
-
-RESULT:
-Response: Here's a joke: What do you call a bear with no teeth? A gummy bear!
-```
-
-#### Invalid API Key (Failure Case)
-
-```bash
-# Test with invalid API key - shows fallback output processing
-swaig-test examples/joke_agent.py --exec get_joke --verbose
-```
-
-**Expected Output (when API key is invalid):**
-```
-=== DataMap Function Execution ===
---- Processing Webhooks ---
-Making GET request to: https://api.api-ninjas.com/v1/jokes
-Response status: 400
-Response data: {"error": "Invalid API Key."}
-Webhook failed: HTTP status 400 outside 200-299 range
-Webhook 1 failed, trying next webhook...
-
---- Using DataMap Fallback Output ---
-Fallback result = Tell the user that the joke service is not working right now and just make up a joke on your own
-
-RESULT:
-Response: Tell the user that the joke service is not working right now and just make up a joke on your own
-```
-
-This demonstrates both:
-- **Successful webhook processing** with array response handling
-- **Failure detection and fallback** when APIs return errors 
 
 ## Best Practices
 
@@ -2167,38 +2232,63 @@ This demonstrates both:
 
 ---
 
+## sw-pydocs - The SDK's Installed Documentation
+
+`sw-pydocs` prints the SDK's documentation for the installed version. It's written for people and for coding agents: the output is Markdown, with full paths to the docs, examples and tutorials installed with the package.
+
+```bash
+sw-pydocs                          # the index: what the SDK does, where to start, every topic
+sw-pydocs agents                   # one topic: concepts, files to read, examples, API names
+sw-pydocs skills web_search        # a built-in skill's parameters
+sw-pydocs api AgentBase            # a signature, docstring and members, from the installed code
+sw-pydocs api FunctionResult.connect
+sw-pydocs examples contexts        # the examples for a topic, or those matching a word
+sw-pydocs grep "set_functions"     # search the docs and examples; --code adds the SDK's source
+sw-pydocs show agent_guide --toc   # a doc's headings; --section <heading> prints one section
+sw-pydocs path                     # where the docs are installed
+sw-pydocs init                     # add a note about sw-pydocs to this project's AGENTS.md
+```
+
+`python -m signalwire` runs the same command.
+
+The topics are short and hand-written: they describe concepts and known mistakes, and point to the installed docs for the rest. The facts come from the installed package: the version, the commands, the built-in skills and their parameters, the REST namespaces, the `SWML_` and `SIGNALWIRE_` environment variables in its source, and every signature and docstring.
+
+`sw-pydocs init` adds a section to the project's `AGENTS.md` telling coding agents to use `sw-pydocs`, and to `CLAUDE.md` if the project has one that doesn't import `AGENTS.md`. Run it again to update the section. `--skill` also writes an Agent Skills `SKILL.md` under `.agents/skills/` and `.claude/skills/`, and `--print` prints the section without writing anything. `sw-agent-init` writes the same `AGENTS.md` into new projects.
+
 ## sw-search - Build and Query Search Indexes
 
 Build local search indexes from document collections for use with the native vector search skill.
 
 ```bash
-sw-search <source_dir> [options]
+sw-search <source> [<source> ...] [options]
 ```
 
 ### Building Indexes
 
 **Arguments:**
-- `source_dir` - Directory containing documents to index
+- `sources` - One or more source files and/or directories to index
 
 **Options:**
-- `--output FILE` - Output .swsearch file (default: `<source_dir>.swsearch`)
+- `--output FILE` - Output .swsearch file (default: `sources.swsearch`)
 - `--chunk-size SIZE` - Chunk size in words (default: 50)
-- `--chunk-overlap SIZE` - Overlap between chunks in words (default: 10)
+- `--overlap-size SIZE` - Overlap between chunks in words, for the sliding strategy (default: 10)
 - `--file-types TYPES` - Comma-separated file extensions (default: md,txt,rst)
 - `--exclude PATTERNS` - Comma-separated glob patterns to exclude
-- `--model MODEL` - Embedding model name (default: sentence-transformers/all-mpnet-base-v2)
+- `--model MODEL` - Embedding model name or alias `mini`/`base`/`large` (default: `mini`, sentence-transformers/all-MiniLM-L6-v2)
 - `--tags TAGS` - Comma-separated tags to add to all chunks
 - `--verbose` - Show detailed progress information
 - `--validate` - Validate the created index after building
-- `--chunking-strategy STRATEGY` - Chunking strategy: sentence, sliding, paragraph, page, semantic, topic, qa (default: sentence)
-- `--max-sentences-per-chunk NUM` - Maximum sentences per chunk (default: 3)
+- `--chunking-strategy STRATEGY` - Chunking strategy: sentence, sliding, paragraph, page, semantic, topic, qa, json, markdown (default: sentence)
+- `--max-sentences-per-chunk NUM` - Maximum sentences per chunk (default: 5)
 - `--semantic-threshold FLOAT` - Threshold for semantic chunking (default: 0.5)
 - `--topic-threshold FLOAT` - Threshold for topic-based chunking (default: 0.3)
-- `--index-nlp-backend BACKEND` - NLP backend for processing (default: basic)
-- `--split-newlines` - Split on newlines in addition to sentence boundaries
+- `--index-nlp-backend BACKEND` - NLP backend for processing: `nltk` (default) or `spacy`
+- `--split-newlines N` - Split on N or more consecutive newlines, in addition to sentence boundaries
 - `--languages LANGS` - Comma-separated language codes (default: en)
 
 ### Validating Indexes
+
+Check that a built index loads and reports its chunk count:
 
 ```bash
 sw-search validate <index_file> [--verbose]
@@ -2206,13 +2296,15 @@ sw-search validate <index_file> [--verbose]
 
 ### Searching Indexes
 
+Query an index you already built:
+
 ```bash
 sw-search search <index_file> <query> [options]
 ```
 
 **Options:**
 - `--count COUNT` - Number of results to return (default: 5)
-- `--distance-threshold FLOAT` - Minimum similarity score (default: 0.0)
+- `--similarity-threshold FLOAT` - Minimum similarity score, from 0.0 to 1.0. Higher is stricter (default: 0.0). `--distance-threshold` is the older name
 - `--tags TAGS` - Comma-separated tags to filter by
 - `--verbose` - Show detailed information
 - `--json` - Output results as JSON
@@ -2221,6 +2313,8 @@ sw-search search <index_file> <query> [options]
 
 ### Remote Search
 
+Query a running search server instead of a local index file:
+
 ```bash
 sw-search remote <endpoint> <query> [options]
 ```
@@ -2228,12 +2322,16 @@ sw-search remote <endpoint> <query> [options]
 **Options:**
 - `--index-name NAME` - Name of the index to search (required)
 - `--count COUNT` - Number of results to return (default: 5)
-- `--distance-threshold FLOAT` - Minimum similarity score (default: 0.0)
+- `--similarity-threshold FLOAT` - Minimum similarity score, from 0.0 to 1.0. Higher is stricter (default: 0.0). `--distance-threshold` is the older name
 - `--tags TAGS` - Comma-separated tags to filter by
 - `--json` - Output results as JSON
 - `--timeout SECONDS` - Request timeout in seconds (default: 30)
+- `--user USER` - Basic auth user for the search server
+- `--password PASSWORD` - Basic auth password. Without it, `sw-search` reads `SWML_BASIC_AUTH_PASSWORD`, or asks for it
 
 ### Examples
+
+These commands cover the common build, validate and search operations:
 
 ```bash
 # Build from a directory
@@ -2269,6 +2367,8 @@ pip install signalwire-sdk[search]
 ```
 
 ## Getting Help
+
+Each tool documents its own flags:
 
 ```bash
 sw-search --help

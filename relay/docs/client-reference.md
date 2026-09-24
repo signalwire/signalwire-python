@@ -2,6 +2,8 @@
 
 ## Constructor
 
+The constructor accepts these parameters, all of which are optional:
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 RelayClient(
@@ -59,10 +61,12 @@ async def handle(call):
 
 Place an outbound call. Returns a `Call` once the remote party answers.
 
-- `devices` -- nested list of device objects (serial/parallel dial)
-- `tag` -- optional correlation tag (auto-generated if omitted)
-- `max_duration` -- max call duration in minutes
-- `dial_timeout` -- seconds to wait before raising `TimeoutError` (default: 120)
+- `devices`: nested list of device objects (serial/parallel dial)
+- `tag`: optional correlation tag (auto-generated if omitted)
+- `max_duration`: max call duration in minutes
+- `dial_timeout`: seconds to wait before raising `TimeoutError` (default: 120)
+
+Call it with a nested list of device objects:
 
 <!-- snippet: no-compile await-fragment -->
 ```python
@@ -122,6 +126,8 @@ await client.unreceive(["old-context"])
 
 ## Connection Behavior
 
+The client manages its WebSocket connection automatically:
+
 - **Auto-reconnect**: On connection loss, the client reconnects with exponential backoff (1s to 30s).
 - **Ping/pong**: Client sends periodic pings and monitors server pings. After 3 consecutive failures, the connection is force-closed and reconnected.
 - **Request queueing**: Requests made while disconnected are queued and sent after re-authentication.
@@ -135,6 +141,8 @@ Each inbound call handler runs as an independent `asyncio.Task`, so multiple cal
 For multiple WebSocket connections in one process, set `RELAY_MAX_CONNECTIONS` (default: 1).
 
 ## Error Handling
+
+Catch `RelayError` around any call that might fail:
 
 <!-- snippet: no-compile await-fragment -->
 ```python

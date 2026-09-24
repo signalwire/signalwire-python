@@ -11,6 +11,7 @@ AgentServer - Class for hosting multiple SignalWire AI Agents in a single server
 
 import os
 import re
+from http import HTTPStatus
 from pathlib import Path
 from typing import Any
 from collections.abc import Awaitable, Callable
@@ -27,7 +28,6 @@ from signalwire.core.agent_base import AgentBase
 from signalwire.core.swml_service import SWMLService
 from signalwire.core.logging_config import get_logger
 from signalwire.core.mixins.web_mixin import _as_response
-import contextlib
 
 
 class AgentServer:
@@ -381,6 +381,9 @@ class AgentServer:
         # library-safe / silent; running is where the app wants logs). This also
         # applies the CGI-off / auto detection that configure_logging performs.
         configure_logging()
+        # Logging is on now, so warnings the agents' constructors couldn't show are seen.
+        for agent in self.agents.values():
+            agent._warn_unsigned_webhooks()
 
         # Detect execution mode
         mode = get_execution_mode()
@@ -392,223 +395,103 @@ class AgentServer:
         # Server mode - use existing logic
         return self._run_server(host, port)
 
+    def _match_agent(self, path: str) -> tuple[AgentBase, str] | None:
+        """The agent registered at the start of ``path``, and the path below its route.
+
+        The most specific route wins, so an agent registered at "/" serves
+        whatever no other agent's route matches.
+        """
+        path = path.strip("/")
+        routes = sorted(self.agents.items(), key=lambda item: -len(item[0].strip("/")))
+        for route, agent in routes:
+            route_clean = route.strip("/")
+            if not route_clean:
+                return agent, path
+            if path == route_clean or path.startswith(route_clean + "/"):
+                return agent, path[len(route_clean) :].strip("/")
+        return None
+
     def _handle_cgi_request(self) -> str:
-        """Handle CGI request using same routing logic as server"""
+        """Handle a CGI request: route it to an agent, which authenticates and answers it."""
         import os
         import sys
-        import json
+
+        from signalwire.core.mixins.serverless_mixin import (
+            _RequestTooLarge,
+            _cgi_request,
+        )
 
         # Get PATH_INFO to determine routing
         path_info = os.getenv("PATH_INFO", "").strip("/")
+        match = self._match_agent(path_info)
+        if match is None:
+            error = "No agent specified in path" if not path_info else "Not Found"
+            return self._format_cgi_response({"error": error}, status="404 Not Found")
+        agent, relative_path = match
 
-        # Use same routing logic as the server
-        if not path_info:
-            # Root request - return basic info or 404
-            response = {"error": "No agent specified in path"}
-            return self._format_cgi_response(response, status="404 Not Found")
+        # The agent's own credentials protect it, as they do on the web server
+        if not agent._check_cgi_auth():
+            challenge: str = agent._send_cgi_auth_challenge()
+            sys.stdout.write(challenge)
+            sys.stdout.flush()
+            return challenge
 
-        # Find matching agent using same logic as server
-        for route, agent in self.agents.items():
-            route_clean = route.lstrip("/")
+        try:
+            request = _cgi_request()
+        except _RequestTooLarge:
+            error_response = {"error": "Request body too large"}
+            return self._format_cgi_response(
+                error_response, status="413 Payload Too Large"
+            )
 
-            if path_info == route_clean:
-                # Request to agent root - return SWML
-                try:
-                    swml = agent._render_swml()
-                    return self._format_cgi_response(
-                        swml, content_type="application/json"
-                    )
-                except Exception as e:
-                    self.logger.error(f"Failed to generate SWML: {e!s}")
-                    error_response = {"error": "Failed to generate SWML"}
-                    return self._format_cgi_response(
-                        error_response, status="500 Internal Server Error"
-                    )
-
-            elif path_info.startswith(route_clean + "/"):
-                # Request to agent sub-path
-                relative_path = path_info[len(route_clean) :].lstrip("/")
-
-                MAX_CGI_BODY_SIZE = 10 * 1024 * 1024  # 10MB
-
-                if relative_path == "swaig":
-                    # SWAIG function call - parse stdin for POST data
-                    try:
-                        # Read POST data from stdin
-                        content_length = os.getenv("CONTENT_LENGTH")
-                        if content_length:
-                            if int(content_length) > MAX_CGI_BODY_SIZE:
-                                error_response = {"error": "Request body too large"}
-                                return self._format_cgi_response(
-                                    error_response, status="413 Payload Too Large"
-                                )
-                            raw_data = sys.stdin.buffer.read(int(content_length))
-                            try:
-                                post_data = json.loads(raw_data.decode("utf-8"))
-                            except (
-                                json.JSONDecodeError,
-                                ValueError,
-                                UnicodeDecodeError,
-                            ):
-                                post_data = {}
-                        else:
-                            post_data = {}
-
-                        # Execute SWAIG function
-                        result = agent._execute_swaig_function(
-                            "", post_data, None, None
-                        )
-                        return self._format_cgi_response(
-                            result, content_type="application/json"
-                        )
-
-                    except Exception as e:
-                        self.logger.error(f"SWAIG function failed: {e!s}")
-                        error_response = {"error": "SWAIG function failed"}
-                        return self._format_cgi_response(
-                            error_response, status="500 Internal Server Error"
-                        )
-
-                elif relative_path.startswith("swaig/"):
-                    # Direct function call like /matti/swaig/function_name
-                    function_name = relative_path[6:]  # Remove "swaig/"
-
-                    # Validate function name format before dispatch
-                    if function_name and not re.match(
-                        r"^[a-zA-Z_][a-zA-Z0-9_]*$", function_name
-                    ):
-                        error_response = {
-                            "error": f"Invalid function name format: '{function_name}'"
-                        }
-                        return self._format_cgi_response(
-                            error_response, status="400 Bad Request"
-                        )
-
-                    try:
-                        # Read POST data from stdin
-                        content_length = os.getenv("CONTENT_LENGTH")
-                        if content_length:
-                            if int(content_length) > MAX_CGI_BODY_SIZE:
-                                error_response = {"error": "Request body too large"}
-                                return self._format_cgi_response(
-                                    error_response, status="413 Payload Too Large"
-                                )
-                            raw_data = sys.stdin.buffer.read(int(content_length))
-                            try:
-                                post_data = json.loads(raw_data.decode("utf-8"))
-                            except (
-                                json.JSONDecodeError,
-                                ValueError,
-                                UnicodeDecodeError,
-                            ):
-                                post_data = {}
-                        else:
-                            post_data = {}
-
-                        result = agent._execute_swaig_function(
-                            function_name, post_data, None, None
-                        )
-                        return self._format_cgi_response(
-                            result, content_type="application/json"
-                        )
-
-                    except Exception as e:
-                        self.logger.error(f"Function call failed: {e!s}")
-                        error_response = {"error": "Function call failed"}
-                        return self._format_cgi_response(
-                            error_response, status="500 Internal Server Error"
-                        )
-
-        # No matching agent found
-        error_response = {"error": "Not Found"}
-        return self._format_cgi_response(error_response, status="404 Not Found")
+        try:
+            status, body = agent._serverless_response(request, relative_path)
+        except Exception as e:
+            self.logger.error(f"Agent request failed: {e!s}")
+            error_response = {"error": "Request failed"}
+            return self._format_cgi_response(
+                error_response, status="500 Internal Server Error"
+            )
+        return self._format_cgi_response(
+            body, status=f"{status} {HTTPStatus(status).phrase}"
+        )
 
     def _handle_lambda_request(self, event: Any, context: Any) -> dict[str, Any]:
-        """Handle Lambda request using same routing logic as server"""
+        """Handle a Lambda request: route it to an agent, which authenticates and answers it."""
         import json
 
-        # Extract path from Lambda event
-        path = ""
-        if event and "pathParameters" in event and event["pathParameters"]:
-            path = event["pathParameters"].get("proxy", "")
-        elif event and "path" in event:
-            path = event["path"]
+        from signalwire.core.mixins.serverless_mixin import _lambda_request
 
-        path = path.strip("/")
-
-        # Use same routing logic as server
-        if not path:
+        request = _lambda_request(event)
+        match = self._match_agent(request.path)
+        if match is None:
+            no_path = not request.path.strip("/")
+            error = "No agent specified in path" if no_path else "Not Found"
             return {
                 "statusCode": 404,
                 "headers": {"Content-Type": "application/json"},
-                "body": json.dumps({"error": "No agent specified in path"}),
+                "body": json.dumps({"error": error}),
             }
+        agent, relative_path = match
 
-        # Find matching agent
-        for route, agent in self.agents.items():
-            route_clean = route.lstrip("/")
+        # The agent's own credentials protect it, as they do on the web server
+        if not agent._check_lambda_auth(event):
+            lambda_challenge: dict[str, Any] = agent._send_lambda_auth_challenge()
+            return lambda_challenge
 
-            if path == route_clean:
-                # Request to agent root - return SWML
-                try:
-                    swml = agent._render_swml()
-                    return {
-                        "statusCode": 200,
-                        "headers": {"Content-Type": "application/json"},
-                        "body": json.dumps(swml) if isinstance(swml, dict) else swml,
-                    }
-                except Exception as e:
-                    self.logger.error(f"Failed to generate SWML: {e!s}")
-                    return {
-                        "statusCode": 500,
-                        "headers": {"Content-Type": "application/json"},
-                        "body": json.dumps({"error": str(e)}),
-                    }
-
-            elif path.startswith(route_clean + "/"):
-                # Request to agent sub-path
-                relative_path = path[len(route_clean) :].lstrip("/")
-
-                if relative_path == "swaig" or relative_path.startswith("swaig/"):
-                    # SWAIG function call
-                    try:
-                        # Parse function name and body from event
-                        function_name = (
-                            relative_path[6:]
-                            if relative_path.startswith("swaig/")
-                            else ""
-                        )
-
-                        # Get POST data from Lambda event body
-                        post_data = {}
-                        if event and "body" in event and event["body"]:
-                            with contextlib.suppress(json.JSONDecodeError, ValueError):
-                                post_data = json.loads(event["body"])
-
-                        result = agent._execute_swaig_function(
-                            function_name, post_data, None, None
-                        )
-                        return {
-                            "statusCode": 200,
-                            "headers": {"Content-Type": "application/json"},
-                            "body": json.dumps(result)
-                            if isinstance(result, dict)
-                            else result,
-                        }
-
-                    except Exception as e:
-                        self.logger.error(f"Function call failed: {e!s}")
-                        return {
-                            "statusCode": 500,
-                            "headers": {"Content-Type": "application/json"},
-                            "body": json.dumps({"error": "Function call failed"}),
-                        }
-
-        # No matching agent found
+        try:
+            status, body = agent._serverless_response(request, relative_path)
+        except Exception as e:
+            self.logger.error(f"Agent request failed: {e!s}")
+            return {
+                "statusCode": 500,
+                "headers": {"Content-Type": "application/json"},
+                "body": json.dumps({"error": str(e)}),
+            }
         return {
-            "statusCode": 404,
+            "statusCode": status,
             "headers": {"Content-Type": "application/json"},
-            "body": json.dumps({"error": "Not Found"}),
+            "body": body,
         }
 
     def _format_cgi_response(
@@ -864,14 +747,22 @@ class AgentServer:
             """Handle requests that don't match registered routes (e.g. /matti instead of /matti/)"""
             # Check if this path maps to one of our registered agents
             for route, agent in self.agents.items():
+                # This handler dispatches without the router's signature
+                # dependency, so it runs the agent's signature check itself.
                 # Check for exact match with registered route
                 if full_path == route.lstrip("/"):
                     # This is a request to an agent's root without trailing slash
+                    rejected = await agent._reject_unsigned_post(request, "")
+                    if rejected is not None:
+                        return rejected
                     return await agent._handle_root_request(request)
                 if full_path.startswith(route.lstrip("/") + "/"):
                     # This is a request to an agent's sub-path
                     relative_path = full_path[len(route.lstrip("/")) :]
                     relative_path = relative_path.lstrip("/")
+                    rejected = await agent._reject_unsigned_post(request, relative_path)
+                    if rejected is not None:
+                        return rejected
 
                     # Route to appropriate handler based on path
                     if not relative_path or relative_path == "/":

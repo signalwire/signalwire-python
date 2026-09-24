@@ -8,13 +8,20 @@ See LICENSE file in the project root for full license information.
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 from datetime import datetime
 from typing import cast
 from urllib.parse import urlparse, urlunparse
 
-from signalwire.search.models import MODEL_ALIASES, DEFAULT_MODEL, resolve_model_alias
+from signalwire.core.security.security_utils import redact_url
+from signalwire.search.models import (
+    DEFAULT_MODEL,
+    LARGE_ALIAS_DEPRECATION,
+    MODEL_ALIASES,
+    resolve_model_alias,
+)
 
 
 def _mask_connection_string(conn_str: str) -> str:
@@ -32,8 +39,8 @@ def _mask_connection_string(conn_str: str) -> str:
     return "****"
 
 
-def main() -> None:
-    """Main entry point for the build-search command"""
+def _build_parser() -> argparse.ArgumentParser:
+    """The argument parser for building an index, which is also sw-search's help."""
     parser = argparse.ArgumentParser(
         description="Build local search index from documents",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -100,7 +107,6 @@ Examples:
   # Model selection examples (performance vs quality tradeoff)
   sw-search ./docs --model mini     # Fastest (~5x faster), 384 dims, good for most use cases
   sw-search ./docs --model base     # Balanced speed/quality, 768 dims (previous default)
-  sw-search ./docs --model large    # Best quality (same as base currently)
   # Or use full model names:
   sw-search ./docs --model sentence-transformers/all-MiniLM-L6-v2
   sw-search ./docs --model sentence-transformers/all-mpnet-base-v2
@@ -180,6 +186,8 @@ Examples:
   sw-search search docs_collection "how to create an agent" \\
     --backend pgvector \\
     --connection-string "postgresql://user:pass@localhost/knowledge"
+
+Documentation: sw-pydocs prints the SDK's installed docs, examples and API.
         """,
     )
 
@@ -294,7 +302,7 @@ Examples:
     parser.add_argument(
         "--model",
         default=DEFAULT_MODEL,
-        help=f"Sentence transformer model name or alias (mini/base/large). Default: mini ({DEFAULT_MODEL})",
+        help=f"Sentence transformer model name or alias (mini or base; large is deprecated and loads base). Default: mini ({DEFAULT_MODEL})",
     )
 
     parser.add_argument("--tags", help="Comma-separated tags to add to all chunks")
@@ -333,9 +341,16 @@ Examples:
         help="Similarity threshold for topic chunking (default: 0.3)",
     )
 
-    args = parser.parse_args()
+    return parser
+
+
+def main() -> None:
+    """Main entry point for the build-search command"""
+    args = _build_parser().parse_args()
 
     # Resolve model aliases
+    if args.model == "large":
+        print(f"Warning: {LARGE_ALIAS_DEPRECATION}", file=sys.stderr)
     args.model = resolve_model_alias(args.model)
 
     # Validate sources
@@ -749,10 +764,15 @@ def search_command() -> None:
         "--count", type=int, default=5, help="Number of results to return (default: 5)"
     )
     parser.add_argument(
+        "--similarity-threshold",
         "--distance-threshold",
+        dest="similarity_threshold",
         type=float,
         default=0.0,
-        help="Minimum similarity score (default: 0.0)",
+        help=(
+            "Minimum similarity score, from 0.0 to 1.0. Higher is stricter "
+            "(default: 0.0). --distance-threshold is the older name."
+        ),
     )
     parser.add_argument("--tags", help="Comma-separated tags to filter by")
     parser.add_argument(
@@ -769,7 +789,7 @@ def search_command() -> None:
         "--keyword-weight",
         type=float,
         default=None,
-        help="Manual keyword weight (0.0-1.0). Overrides automatic weight detection.",
+        help="Deprecated, and has no effect on ranking. Accepted so existing scripts keep working.",
     )
     parser.add_argument(
         "--verbose", action="store_true", help="Show detailed information"
@@ -782,7 +802,7 @@ def search_command() -> None:
     )
     parser.add_argument(
         "--model",
-        help="Override embedding model for query (mini/base/large or full model name)",
+        help="Override embedding model for query (mini, base or full model name; large is deprecated and loads base)",
     )
 
     args = parser.parse_args()
@@ -793,6 +813,8 @@ def search_command() -> None:
         sys.exit(1)
 
     # Resolve model aliases
+    if args.model == "large":
+        print(f"Warning: {LARGE_ALIAS_DEPRECATION}", file=sys.stderr)
     if args.model and args.model in MODEL_ALIASES:
         args.model = MODEL_ALIASES[args.model]
 
@@ -802,6 +824,11 @@ def search_command() -> None:
     ):
         print("Error: --keyword-weight must be between 0.0 and 1.0")
         sys.exit(1)
+    if args.keyword_weight is not None:
+        print(
+            "Warning: --keyword-weight is deprecated and has no effect on ranking",
+            file=sys.stderr,
+        )
 
     # Validate backend configuration
     if args.backend == "pgvector" and not args.connection_string:
@@ -951,9 +978,8 @@ def search_command() -> None:
                         ),  # vector is None for keyword-only search; search() tolerates it at runtime
                         enhanced_text=enhanced.get("enhanced_text", query),
                         count=args.count,
-                        similarity_threshold=args.distance_threshold,
+                        similarity_threshold=args.similarity_threshold,
                         tags=tags,
-                        keyword_weight=args.keyword_weight,
                         original_query=query,
                     )
 
@@ -1036,9 +1062,8 @@ def search_command() -> None:
             ),  # vector is None for keyword-only search; search() tolerates it at runtime
             enhanced_text=enhanced.get("enhanced_text", args.query),
             count=args.count,
-            similarity_threshold=args.distance_threshold,
+            similarity_threshold=args.similarity_threshold,
             tags=tags,
-            keyword_weight=args.keyword_weight,
             original_query=args.query,  # Pass original for exact match boosting
         )
 
@@ -1278,10 +1303,15 @@ def remote_command() -> None:
         "--count", type=int, default=5, help="Number of results to return (default: 5)"
     )
     parser.add_argument(
+        "--similarity-threshold",
         "--distance-threshold",
+        dest="similarity_threshold",
         type=float,
         default=0.0,
-        help="Minimum similarity score (default: 0.0)",
+        help=(
+            "Minimum similarity score, from 0.0 to 1.0. Higher is stricter "
+            "(default: 0.0). --distance-threshold is the older name."
+        ),
     )
     parser.add_argument("--tags", help="Comma-separated tags to filter by")
     parser.add_argument(
@@ -1299,8 +1329,36 @@ def remote_command() -> None:
         default=30,
         help="Request timeout in seconds (default: 30)",
     )
+    parser.add_argument(
+        "--user",
+        help=(
+            "Basic auth user for the search server. Credentials in the "
+            "endpoint URL also work."
+        ),
+    )
+    parser.add_argument(
+        "--password",
+        help=(
+            "Basic auth password, with --user. Without it, sw-search reads "
+            "SWML_BASIC_AUTH_PASSWORD, or asks for it."
+        ),
+    )
 
     args = parser.parse_args()
+
+    # Credentials: --user, with --password, SWML_BASIC_AUTH_PASSWORD or a
+    # prompt. Without --user, Requests uses any credentials in the URL.
+    auth: tuple[str, str] | None = None
+    if args.user:
+        password = args.password or os.environ.get("SWML_BASIC_AUTH_PASSWORD")
+        if password is None:
+            import getpass
+
+            password = getpass.getpass(f"Password for {args.user}: ")
+        auth = (args.user, password)
+    elif args.password:
+        print("Error: --password needs --user")
+        sys.exit(1)
 
     # Ensure endpoint starts with http:// or https://
     endpoint = args.endpoint
@@ -1327,14 +1385,17 @@ def remote_command() -> None:
         "query": args.query,
         "index_name": args.index_name,
         "count": args.count,
-        "similarity_threshold": args.distance_threshold,
+        "similarity_threshold": args.similarity_threshold,
     }
 
     if args.tags:
         payload["tags"] = [tag.strip() for tag in args.tags.split(",")]
 
+    # The endpoint as printed: never with the password it may carry
+    shown_endpoint = redact_url(endpoint)
+
     if args.verbose:
-        print(f"Searching remote endpoint: {endpoint}")
+        print(f"Searching remote endpoint: {shown_endpoint}")
         print(f"Payload: {payload}")
         print()
 
@@ -1345,6 +1406,7 @@ def remote_command() -> None:
             json=payload,
             headers={"Content-Type": "application/json"},
             timeout=args.timeout,
+            auth=auth,
         )
 
         if response.status_code == 200:
@@ -1417,21 +1479,21 @@ def remote_command() -> None:
             sys.exit(1)
 
     except requests.ConnectionError:
-        print(f"Error: Could not connect to {endpoint}")
+        print(f"Error: Could not connect to {shown_endpoint}")
         print("Make sure the search server is running")
         sys.exit(1)
     except requests.Timeout:
         print(f"Error: Request timed out after {args.timeout} seconds")
         sys.exit(1)
     except requests.RequestException as e:
-        print(f"Error making request: {e}")
+        print(f"Error making request: {redact_url(str(e))}")
         sys.exit(1)
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error: {redact_url(str(e))}")
         if args.verbose:
             import traceback
 
-            traceback.print_exc()
+            print(redact_url(traceback.format_exc()), file=sys.stderr)
         sys.exit(1)
 
 
@@ -1439,140 +1501,11 @@ def console_entry_point() -> None:
     """Console script entry point for pip installation"""
     import sys
 
-    # Fast help check - show help without importing heavy modules.
-    #
-    # NOTE: this text is hand-maintained and has drifted from the parser three
-    # times over. It omitted the `markdown` and `json` strategies (both real and
-    # in daily use), and it advertised all-mpnet-base-v2 as the default model
-    # when DEFAULT_MODEL is all-MiniLM-L6-v2 -- a 768-dim answer to a 384-dim
-    # question, which is the kind of thing someone builds a mismatched index on.
-    # Anything added to the parser below must be added here too, or it is
-    # undiscoverable.
+    # Help comes from the parser itself. A hand-maintained copy used to live
+    # here, and it drifted from the parser repeatedly: it omitted real
+    # strategies and flags, and once advertised the wrong default model.
     if len(sys.argv) > 1 and sys.argv[1] in ["--help", "-h"]:
-        print("""usage: sw-search [-h] [--output OUTPUT] [--chunking-strategy {sentence,sliding,paragraph,page,semantic,topic,qa,json,markdown}]
-                 [--max-sentences-per-chunk MAX_SENTENCES_PER_CHUNK] [--chunk-size CHUNK_SIZE]
-                 [--overlap-size OVERLAP_SIZE] [--split-newlines SPLIT_NEWLINES] [--file-types FILE_TYPES]
-                 [--exclude EXCLUDE] [--languages LANGUAGES] [--model MODEL] [--tags TAGS]
-                 [--index-nlp-backend {nltk,spacy}] [--verbose] [--validate]
-                 [--semantic-threshold SEMANTIC_THRESHOLD] [--topic-threshold TOPIC_THRESHOLD]
-                 sources [sources ...]
-
-Build local search index from documents
-
-positional arguments:
-  sources               Source files and/or directories to index
-
-options:
-  -h, --help            show this help message and exit
-  --output OUTPUT       Output .swsearch file (default: sources.swsearch)
-  --chunking-strategy {sentence,sliding,paragraph,page,semantic,topic,qa,json,markdown}
-                        Chunking strategy to use (default: sentence). Use
-                        "markdown" for documentation with code blocks.
-  --max-sentences-per-chunk MAX_SENTENCES_PER_CHUNK
-                        Maximum sentences per chunk for sentence strategy (default: 5)
-  --chunk-size CHUNK_SIZE
-                        Chunk size in words (default: 50). For the markdown
-                        strategy this is the split threshold, applied as
-                        chunk_size * 6 characters.
-  --min-chunk-size MIN_CHUNK_SIZE
-                        Markdown strategy: minimum words before a heading starts
-                        a new chunk. Shorter sections merge into the next one
-                        instead of being emitted alone (default: 0, split at
-                        every heading).
-  --overlap-size OVERLAP_SIZE
-                        Overlap size in words for sliding window strategy (default: 10)
-  --split-newlines SPLIT_NEWLINES
-                        Split on multiple newlines (for sentence strategy)
-  --file-types FILE_TYPES
-                        Comma-separated file extensions to include for directories (default: md,txt,rst)
-  --exclude EXCLUDE     Comma-separated glob patterns to exclude (e.g., "**/test/**,**/__pycache__/**")
-  --languages LANGUAGES
-                        Comma-separated language codes (default: en)
-  --model MODEL         Sentence transformer model name or alias (mini/base/
-                        large). Default: mini (sentence-transformers/all-MiniLM-L6-v2)
-  --tags TAGS           Comma-separated tags to add to all chunks
-  --index-nlp-backend {nltk,spacy}
-                        NLP backend for document processing: nltk (fast, default) or spacy (slower, expands with WordNet synonyms — effect depends on your corpus, measure it)
-  --verbose             Enable verbose output
-  --validate            Validate the created index after building
-  --semantic-threshold SEMANTIC_THRESHOLD
-                        Similarity threshold for semantic chunking (default: 0.5)
-  --topic-threshold TOPIC_THRESHOLD
-                        Similarity threshold for topic chunking (default: 0.3)
-
-Examples:
-  # Basic usage with directory (defaults to sentence chunking with 5 sentences per chunk)
-  sw-search ./docs
-
-  # Multiple directories
-  sw-search ./docs ./examples --file-types md,txt,py
-
-  # Individual files
-  sw-search README.md ./docs/guide.md ./src/main.py
-
-  # Mixed sources (directories and files)
-  sw-search ./docs README.md ./examples specific_file.txt --file-types md,txt,py
-
-  # Sentence-based chunking with custom parameters
-  sw-search ./docs \\
-    --chunking-strategy sentence \\
-    --max-sentences-per-chunk 10 \\
-    --split-newlines 2
-
-  # Sliding window chunking
-  sw-search ./docs \\
-    --chunking-strategy sliding \\
-    --chunk-size 100 \\
-    --overlap-size 20
-
-  # Paragraph-based chunking
-  sw-search ./docs \\
-    --chunking-strategy paragraph \\
-    --file-types md,txt,rst
-
-  # Page-based chunking (good for PDFs)
-  sw-search ./docs \\
-    --chunking-strategy page \\
-    --file-types pdf
-
-  # Semantic chunking (groups semantically similar sentences)
-  sw-search ./docs \\
-    --chunking-strategy semantic \\
-    --semantic-threshold 0.6
-
-  # Topic-based chunking (groups by topic changes)
-  sw-search ./docs \\
-    --chunking-strategy topic \\
-    --topic-threshold 0.2
-
-  # QA-optimized chunking (optimized for question-answering)
-  sw-search ./docs \\
-    --chunking-strategy qa
-
-  # Full configuration example
-  sw-search ./docs ./examples README.md \\
-    --output ./knowledge.swsearch \\
-    --chunking-strategy sentence \\
-    --max-sentences-per-chunk 8 \\
-    --file-types md,txt,rst,py \\
-    --exclude "**/test/**,**/__pycache__/**" \\
-    --languages en,es,fr \\
-    --model sentence-transformers/all-mpnet-base-v2 \\
-    --tags documentation,api \\
-    --verbose
-
-  # Validate an existing index
-  sw-search validate ./docs.swsearch
-
-  # Search within an index
-  sw-search search ./docs.swsearch "how to create an agent"
-  sw-search search ./docs.swsearch "API reference" --count 3 --verbose
-  sw-search search ./docs.swsearch "configuration" --tags documentation --json
-
-  # Search via remote API
-  sw-search remote http://localhost:8001 "how to create an agent" --index-name docs
-  sw-search remote localhost:8001 "API reference" --index-name docs --count 3 --verbose
-""")
+        _build_parser().print_help()
         return
 
     # Check for subcommands

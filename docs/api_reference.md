@@ -22,9 +22,11 @@ from signalwire.core.data_map import create_expression_tool
 
 ## AgentBase Class
 
-The `AgentBase` class is the foundation for creating AI agents. It extends `SWMLService` (the base class for generating SWML -- SignalWire Markup Language -- documents) and provides comprehensive functionality for building conversational AI agents.
+The `AgentBase` class is the foundation for creating AI agents. It extends `SWMLService` (the base class for generating SWML documents, where SWML is SignalWire Markup Language) and provides comprehensive functionality for building conversational AI agents.
 
 ### Constructor
+
+This is the full constructor signature:
 
 <!-- snippet: no-compile signature-illustration -->
 ```python
@@ -47,7 +49,11 @@ AgentBase(
     suppress_logs: bool = False,
     enable_post_prompt_override: bool = False,
     check_for_input_override: bool = False,
-    config_file: Optional[str] = None
+    config_file: Optional[str] = None,
+    schema_validation: bool = True,
+    signing_key: Optional[str] = None,
+    trust_proxy_for_signature: bool = False,
+    swaig_secret: Optional[str] = None
 )
 ```
 
@@ -67,10 +73,14 @@ AgentBase(
 - `agent_id` (Optional[str]): Unique identifier for the agent
 - `native_functions` (Optional[List[str]]): List of native function names to enable
 - `schema_path` (Optional[str]): Path to custom SWML schema file
-- `suppress_logs` (bool): Suppress logging output (default: False)
+- `suppress_logs` (bool): Silences a few legacy debug and error log lines, not the SDK's logging generally (default: False). See [Suppressing Logs](swml_service_guide.md#suppressing-logs) for how to control log output.
 - `enable_post_prompt_override` (bool): Allow post-prompt URL override (default: False)
 - `check_for_input_override` (bool): Allow check-for-input URL override (default: False)
 - `config_file` (Optional[str]): Path to JSON configuration file with environment variable substitution support. See [Configuration Guide](configuration.md) for details.
+- `schema_validation` (bool): Enable SWML schema validation (default: True). Can also be disabled with the `SWML_SKIP_SCHEMA_VALIDATION=1` environment variable.
+- `signing_key` (Optional[str]): SignalWire Signing Key from the Dashboard. When set, the agent requires a valid signature on every POST. Falls back to the `SIGNALWIRE_SIGNING_KEY` environment variable. See the [Security Configuration Guide](security.md#webhook-signature-validation).
+- `trust_proxy_for_signature` (bool): Honor `X-Forwarded-Proto`/`X-Forwarded-Host` when reconstructing the URL for signature validation (default: False). Enable only when you control the proxy chain.
+- `swaig_secret` (Optional[str]): Secret used to sign this agent's per-call SWAIG function tokens. Falls back to the `SIGNALWIRE_SWAIG_SECRET` environment variable, then a random secret generated per process. See the [Security Configuration Guide](security.md#swaig-function-token-signing).
 
 ### Core Methods
 
@@ -142,11 +152,12 @@ agent.set_post_prompt("Always be polite and professional.")
 
 ##### `set_prompt_llm_params`
 
+Set Language Model parameters for the main prompt. Accepts any parameters which will be passed through to the SignalWire server. The server validates and applies parameters based on the target model's capabilities.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def set_prompt_llm_params(**params) -> AgentBase
 ```
-Set Language Model parameters for the main prompt. Accepts any parameters which will be passed through to the SignalWire server. The server validates and applies parameters based on the target model's capabilities.
 
 **Common Parameters:**
 - `temperature`: Controls randomness. Lower = more focused
@@ -171,11 +182,12 @@ agent.set_prompt_llm_params(
 
 ##### `set_post_prompt_llm_params`
 
+Set Language Model parameters for the post-prompt. Accepts any parameters which will be passed through to the SignalWire server. The server validates and applies parameters based on the target model's capabilities.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def set_post_prompt_llm_params(**params) -> AgentBase
 ```
-Set Language Model parameters for the post-prompt. Accepts any parameters which will be passed through to the SignalWire server. The server validates and applies parameters based on the target model's capabilities.
 
 **Common Parameters:**
 - `temperature`: Controls randomness. Lower = more focused
@@ -198,6 +210,8 @@ agent.set_post_prompt_llm_params(
 
 ##### `prompt_add_section`
 
+Add a structured section to the prompt using Prompt Object Model.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def prompt_add_section(
@@ -209,7 +223,6 @@ def prompt_add_section(
     subsections: Optional[List[Dict[str, Any]]] = None
 ) -> AgentBase
 ```
-Add a structured section to the prompt using Prompt Object Model.
 
 **Parameters:**
 - `title` (str): Section title/heading
@@ -242,6 +255,8 @@ agent.prompt_add_section(
 
 ##### `prompt_add_to_section`
 
+Add content to an existing prompt section.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def prompt_add_to_section(
@@ -251,7 +266,6 @@ def prompt_add_to_section(
     bullets: Optional[List[str]] = None
 ) -> AgentBase
 ```
-Add content to an existing prompt section.
 
 **Parameters:**
 - `title` (str): Title of existing section to modify
@@ -273,6 +287,8 @@ agent.prompt_add_to_section("Process", bullets=["Follow up", "Close ticket"])
 
 ##### `prompt_add_subsection`
 
+Add a subsection to an existing prompt section.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def prompt_add_subsection(
@@ -282,7 +298,6 @@ def prompt_add_subsection(
     bullets: Optional[List[str]] = None
 ) -> AgentBase
 ```
-Add a subsection to an existing prompt section.
 
 **Parameters:**
 - `parent_title` (str): Title of parent section
@@ -304,6 +319,8 @@ agent.prompt_add_subsection(
 
 ##### `add_language`
 
+Configure voice and language settings for the agent.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def add_language(
@@ -316,7 +333,6 @@ def add_language(
     model: Optional[str] = None
 ) -> AgentBase
 ```
-Configure voice and language settings for the agent.
 
 **Parameters:**
 - `name` (str): Human-readable language name
@@ -382,6 +398,8 @@ agent.add_hints(["SignalWire", "SWML", "API", "webhook", "SIP"])
 
 ##### `add_pattern_hint`
 
+Add a pattern-based hint for speech recognition.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def add_pattern_hint(
@@ -391,7 +409,6 @@ def add_pattern_hint(
     ignore_case: bool = False
 ) -> AgentBase
 ```
-Add a pattern-based hint for speech recognition.
 
 **Parameters:**
 - `hint` (str): The hint phrase
@@ -410,6 +427,8 @@ agent.add_pattern_hint(
 
 ##### `add_pronunciation`
 
+Add pronunciation rules for text-to-speech.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def add_pronunciation(
@@ -418,7 +437,6 @@ def add_pronunciation(
     ignore_case: bool = False
 ) -> AgentBase
 ```
-Add pronunciation rules for text-to-speech.
 
 **Parameters:**
 - `replace` (str): Text to replace
@@ -433,13 +451,14 @@ agent.add_pronunciation("SWML", "swim-el")
 
 ##### `set_pronunciations`
 
+Set multiple pronunciation rules at once.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def set_pronunciations(
     pronunciations: List[Dict[str, Any]]
 ) -> AgentBase
 ```
-Set multiple pronunciation rules at once.
 
 **Parameters:**
 - `pronunciations` (List[Dict]): List of pronunciation rule dictionaries
@@ -528,6 +547,8 @@ agent.update_global_data({
 
 ##### `define_tool`
 
+Define a custom SWAIG function/tool.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def define_tool(
@@ -542,7 +563,6 @@ def define_tool(
     **swaig_fields
 ) -> AgentBase
 ```
-Define a custom SWAIG function/tool.
 
 **Parameters:**
 - `name` (str): Function name
@@ -615,13 +635,14 @@ class MyAgent(AgentBase):
 
 ##### `register_swaig_function`
 
+Register a pre-built SWAIG function dictionary.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def register_swaig_function(
     function_dict: Dict[str, Any]
 ) -> AgentBase
 ```
-Register a pre-built SWAIG function dictionary.
 
 **Parameters:**
 - `function_dict` (Dict[str, Any]): Complete SWAIG function definition
@@ -680,6 +701,8 @@ def hangup_hook(self, args, raw_data):
 
 ##### `add_skill`
 
+Add a modular skill to the agent.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def add_skill(
@@ -687,7 +710,6 @@ def add_skill(
     params: Optional[Dict[str, Any]] = None
 ) -> AgentBase
 ```
-Add a modular skill to the agent.
 
 **Parameters:**
 - `skill_name` (str): Name of the skill to add
@@ -769,13 +791,14 @@ if agent.has_skill("web_search"):
 
 ##### `set_native_functions`
 
+Enable specific native SWML functions.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def set_native_functions(
     function_names: List[str]
 ) -> AgentBase
 ```
-Enable specific native SWML functions.
 
 **Parameters:**
 - `function_names` (List[str]): List of native function names to enable
@@ -794,16 +817,17 @@ agent.set_native_functions(["transfer", "hangup", "send_sms"])
 
 ##### `set_internal_fillers`
 
+Set custom filler phrases for internal/native SWAIG functions.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def set_internal_fillers(
     internal_fillers: Dict[str, Dict[str, List[str]]]
 ) -> AgentBase
 ```
-Set custom filler phrases for internal/native SWAIG functions.
 
 **Parameters:**
-- `internal_fillers` (Dict[str, Dict[str, List[str]]]): Function name → language code → filler phrases
+- `internal_fillers` (Dict[str, Dict[str, List[str]]]): Maps a function name to a language code, which maps to filler phrases
 
 **Available Internal Functions:**
 - `next_step`: Moving between workflow steps (contexts system)
@@ -828,6 +852,8 @@ agent.set_internal_fillers({
 
 ##### `add_internal_filler`
 
+Add internal fillers for a specific function and language.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def add_internal_filler(
@@ -836,7 +862,6 @@ def add_internal_filler(
     fillers: List[str]
 ) -> AgentBase
 ```
-Add internal fillers for a specific function and language.
 
 **Parameters:**
 - `function_name` (str): Name of the internal function
@@ -855,6 +880,8 @@ agent.add_internal_filler("next_step", "en-US", [
 
 ##### `add_function_include`
 
+Include external SWAIG functions from another service.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def add_function_include(
@@ -863,7 +890,6 @@ def add_function_include(
     meta_data: Optional[Dict[str, Any]] = None
 ) -> AgentBase
 ```
-Include external SWAIG functions from another service.
 
 **Parameters:**
 - `url` (str): URL of external SWAIG service
@@ -881,13 +907,14 @@ agent.add_function_include(
 
 ##### `set_function_includes`
 
+Set multiple function includes at once.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def set_function_includes(
     includes: List[Dict[str, Any]]
 ) -> AgentBase
 ```
-Set multiple function includes at once.
 
 **Parameters:**
 - `includes` (List[Dict[str, Any]]): List of function include configurations
@@ -934,7 +961,7 @@ agent.set_post_prompt_url("https://myserver.com/post-prompt")
 ##### `add_swaig_query_params(params: dict) -> AgentBase`
 Add query parameters to be included in all SWAIG webhook URLs.
 
-This is useful for preserving dynamic configuration state across SWAIG callbacks. For example, if your dynamic config adds skills based on query parameters, you can pass those same parameters through to the SWAIG webhook so the same configuration is applied.
+This is useful for preserving dynamic configuration state across SWAIG callbacks. For example, if your dynamic config adds skills based on query parameters, you can pass those same parameters through to the SWAIG webhook. This keeps the same configuration applied.
 
 **Parameters:**
 - `params` (dict): Dictionary of query parameter key-value pairs
@@ -964,11 +991,12 @@ agent.clear_swaig_query_params()
 
 ##### `enable_debug_events`
 
+Enable the debug event webhook for this agent. When enabled, the AI module will POST real-time debug events to a `/debug_events` endpoint on this agent during calls. Events are automatically logged via the agent's structured logger and can optionally be handled with a custom callback via `on_debug_event()`.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def enable_debug_events(level: int = 1) -> AgentBase
 ```
-Enable the debug event webhook for this agent. When enabled, the AI module will POST real-time debug events to a `/debug_events` endpoint on this agent during calls. Events are automatically logged via the agent's structured logger and can optionally be handled with a custom callback via `on_debug_event()`.
 
 **Parameters:**
 - `level` (int): Debug event verbosity level. `1` = high-level events (barge, errors, session start/end, step changes). `2+` = adds high-volume events (every LLM request/response, conversation_add). Default: `1`
@@ -1110,13 +1138,14 @@ agent.add_pre_answer_verb("set", {"source": "ai_agent"}) \
 
 ##### `set_dynamic_config_callback`
 
+Set callback for per-request dynamic configuration.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def set_dynamic_config_callback(
     callback: Callable[[dict, dict, dict, AgentBase], None]
 ) -> AgentBase
 ```
-Set callback for per-request dynamic configuration.
 
 **Parameters:**
 - `callback` (Callable): Function that receives (query_params, headers, body, config)
@@ -1140,6 +1169,8 @@ agent.set_dynamic_config_callback(configure_agent)
 
 ##### `enable_sip_routing`
 
+Enable SIP-based routing for voice calls.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def enable_sip_routing(
@@ -1147,7 +1178,6 @@ def enable_sip_routing(
     path: str = "/sip"
 ) -> AgentBase
 ```
-Enable SIP-based routing for voice calls.
 
 **Parameters:**
 - `auto_map` (bool): Automatically map SIP usernames (default: True)
@@ -1172,22 +1202,23 @@ agent.register_sip_username("sales")
 
 ##### `register_routing_callback`
 
+Register custom routing logic for SIP calls.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def register_routing_callback(
-    callback_fn: Callable[[Request, Dict[str, Any]], Optional[str]], 
+    callback_fn: Callable[[Dict[str, Any], Dict[str, Any]], Optional[str]], 
     path: str = "/sip"
 ) -> None
 ```
-Register custom routing logic for SIP calls.
 
 **Parameters:**
-- `callback_fn` (Callable): Function that returns agent route based on request
+- `callback_fn` (Callable): Function that receives the parsed body and headers, `(body, headers)`, and returns a route or `None`
 - `path` (str): Routing endpoint path (default: "/sip")
 
 **Usage:**
 ```python
-def route_call(request, body):
+def route_call(body, headers):
     sip_username = body.get("sip_username")
     if sip_username == "support":
         return "/support-agent"
@@ -1231,6 +1262,8 @@ main_app.include_router(agent_router, prefix="/agent")
 
 ##### `on_summary`
 
+Override to handle conversation summaries. This callback is triggered when the AI generates a summary based on your `post_prompt` configuration.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def on_summary(
@@ -1238,7 +1271,6 @@ def on_summary(
     raw_data: Optional[Dict[str, Any]] = None
 ) -> None
 ```
-Override to handle conversation summaries. This callback is triggered when the AI generates a summary based on your `post_prompt` configuration.
 
 **Parameters:**
 - `summary` (Optional[Dict[str, Any]]): Parsed summary data (from `post_prompt_data.parsed[0]`)
@@ -1282,11 +1314,12 @@ class MyAgent(AgentBase):
 
 ##### `on_debug_event`
 
+Register a handler for debug webhook events. Use as a decorator. Requires `enable_debug_events()` to be called first.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def on_debug_event(handler: Callable) -> Callable
 ```
-Register a handler for debug webhook events. Use as a decorator. Requires `enable_debug_events()` to be called first.
 
 The handler receives:
 - `event_type` (str): The event label (e.g. `"barge"`, `"llm_error"`, `"session_start"`)
@@ -1327,6 +1360,8 @@ class MyAgent(AgentBase):
 
 ##### `on_function_call`
 
+Override to handle function calls with custom logic.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def on_function_call(
@@ -1335,7 +1370,6 @@ def on_function_call(
     raw_data: Optional[Dict[str, Any]] = None
 ) -> Any
 ```
-Override to handle function calls with custom logic.
 
 **Parameters:**
 - `name` (str): Function name being called
@@ -1358,6 +1392,8 @@ class MyAgent(AgentBase):
 
 ##### `on_request`
 
+Override to handle general requests.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def on_request(
@@ -1365,7 +1401,6 @@ def on_request(
     callback_path: Optional[str] = None
 ) -> Optional[dict]
 ```
-Override to handle general requests.
 
 **Parameters:**
 - `request_data` (Optional[dict]): Request data
@@ -1376,6 +1411,8 @@ Override to handle general requests.
 
 ##### `on_swml_request`
 
+Override to handle SWML generation requests.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def on_swml_request(
@@ -1384,7 +1421,6 @@ def on_swml_request(
     request: Optional[Request] = None
 ) -> Optional[dict]
 ```
-Override to handle SWML generation requests.
 
 **Parameters:**
 - `request_data` (Optional[dict]): Request data
@@ -1416,13 +1452,14 @@ class MyAgent(AgentBase):
 
 ##### `get_basic_auth_credentials`
 
+Get basic auth credentials from environment or constructor.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def get_basic_auth_credentials(
     include_source: bool = False
 ) -> Union[Tuple[str, str], Tuple[str, str, str]]
 ```
-Get basic auth credentials from environment or constructor.
 
 **Parameters:**
 - `include_source` (bool): Include source information (default: False)
@@ -1451,8 +1488,6 @@ main_menu.add_step("menu", task="Choose: 1) Support 2) Sales 3) Billing",
                    functions=["transfer_to_support", "transfer_to_sales"])
 ```
 
-This concludes Part 1 of the API reference covering the AgentBase class. The document will continue with FunctionResult, DataMap, and other components in subsequent parts.
-
 ---
 
 ## FunctionResult Class
@@ -1460,6 +1495,8 @@ This concludes Part 1 of the API reference covering the AgentBase class. The doc
 The `FunctionResult` class is used to create structured responses from SWAIG functions. It handles both natural language responses and structured actions that the agent should execute.
 
 ### Constructor
+
+This is the full constructor signature:
 
 <!-- snippet: no-compile signature-illustration -->
 ```python
@@ -1623,11 +1660,16 @@ result = FunctionResult("Thank you for calling. Goodbye!")
 result.hangup()
 ```
 
-##### `hold(timeout: int = 300) -> FunctionResult`
-Put the call on hold.
+##### `hold(prompt: Optional[Union[str, int]] = None, timeout: int = 300, step: Optional[str] = None, timeout_step: Optional[str] = None) -> FunctionResult`
+Put the call on hold. Speech detection pauses for the duration of the hold, so say anything the caller needs to hear before it takes effect. Pass `prompt` to have the agent say it for you automatically.
 
 **Parameters:**
-- `timeout` (int): Hold timeout in seconds (default: 300)
+- `prompt` (Optional[str]): Instruction the model speaks before the hold takes effect. Setting it also turns on `post_process`, so the model gets one more turn to speak before the `hold` action runs. A single positional `int` here is read as `timeout` instead, so `hold(120)` still means `hold(timeout=120)`.
+- `timeout` (int): Seconds to hold, clamped to a maximum of 900 (default: 300)
+- `step` (Optional[str]): Step to enter when the call comes off hold normally, before the timeout
+- `timeout_step` (Optional[str]): Step to enter when the hold reaches its `timeout` with nobody releasing it. Without it, a timed-out hold resumes in the step it left.
+
+Both transitions are deferred: they fire only when the hold actually ends. Returning `swml_change_step()` alongside `hold()` moves the caller immediately, before the hold even begins, which is a separate, earlier transition.
 
 **Usage:**
 ```python
@@ -1635,8 +1677,19 @@ result = FunctionResult("Please hold while I look that up")
 result.hold(timeout=60)
 ```
 
+Announce the hold and route the caller when it ends:
+
+```python
+result = FunctionResult().hold(
+    prompt="Tell the caller you are checking whether someone is available.",
+    timeout=60,
+    step="human_available",
+    timeout_step="take_message",
+)
+```
+
 ##### `stop() -> FunctionResult`
-Stop current audio playback or recording.
+Stop the agent's execution.
 
 **Usage:**
 ```python
@@ -1661,14 +1714,14 @@ Play an audio file in the background.
 
 **Parameters:**
 - `filename` (str): Audio file path or URL
-- `wait` (bool): Wait for file to finish before continuing (default: False)
+- `wait` (bool): Suppress the agent's attention-getting behavior during playback (default: False)
 
 **Usage:**
 ```python
 # Play hold music in background
 result.play_background_file("hold_music.mp3")
 
-# Play announcement and wait for completion
+# Play an announcement without the agent trying to get attention
 result.play_background_file("important_announcement.wav", wait=True)
 ```
 
@@ -1770,13 +1823,13 @@ Control whether to wait for user input.
 
 **Parameters:**
 - `enabled` (Optional[bool]): Enable/disable waiting for user
-- `timeout` (Optional[int]): Timeout in milliseconds
+- `timeout` (Optional[int]): Timeout in seconds
 - `answer_first` (bool): Answer call before waiting (default: False)
 
 **Usage:**
 ```python
 # Wait for user input with 10 second timeout
-result.wait_for_user(enabled=True, timeout=10000)
+result.wait_for_user(enabled=True, timeout=10)
 
 # Don't wait for user (immediate response)
 result.wait_for_user(enabled=False)
@@ -1791,9 +1844,8 @@ Enable or disable specific functions.
 **Usage:**
 ```python
 result.toggle_functions([
-    {"name": "transfer_to_sales", "enabled": True},
-    {"name": "end_call", "enabled": False},
-    {"name": "escalate", "enabled": True, "timeout": 30000}
+    {"function": "transfer_to_sales", "active": True},
+    {"function": "end_call", "active": False}
 ])
 ```
 
@@ -1905,19 +1957,19 @@ result.send_sms(
 
 ### Recording and Media
 
-##### `record_call(control_id: Optional[str] = None, stereo: bool = False, format: str = "wav", direction: str = "both", terminators: Optional[str] = None, beep: bool = False, input_sensitivity: float = 44.0, initial_timeout: float = 0.0, end_silence_timeout: float = 0.0, max_length: Optional[float] = None, status_url: Optional[str] = None) -> FunctionResult`
+##### `record_call(control_id: Optional[str] = None, stereo: bool = False, format: str = "wav", direction: str = "both", terminators: Optional[str] = None, beep: bool = False, input_sensitivity: float = 44.0, initial_timeout: Optional[float] = None, end_silence_timeout: Optional[float] = None, max_length: Optional[float] = None, status_url: Optional[str] = None) -> FunctionResult`
 Start call recording.
 
 **Parameters:**
 - `control_id` (Optional[str]): Unique identifier for this recording
 - `stereo` (bool): Record in stereo (default: False)
 - `format` (str): Recording format: "wav", "mp3", "mp4" (default: "wav")
-- `direction` (str): Recording direction: "both", "inbound", "outbound" (default: "both")
+- `direction` (str): Recording direction: "speak", "listen", "both" (default: "both")
 - `terminators` (Optional[str]): DTMF keys to stop recording
 - `beep` (bool): Play beep before recording (default: False)
 - `input_sensitivity` (float): Input sensitivity level (default: 44.0)
-- `initial_timeout` (float): Initial timeout in seconds (default: 0.0)
-- `end_silence_timeout` (float): End silence timeout in seconds (default: 0.0)
+- `initial_timeout` (Optional[float]): Time to wait for speech start, in seconds (default: unset)
+- `end_silence_timeout` (Optional[float]): Time to wait in silence before ending, in seconds (default: unset)
 - `max_length` (Optional[float]): Maximum recording length in seconds
 - `status_url` (Optional[str]): Webhook URL for recording status
 
@@ -2006,7 +2058,7 @@ Process a payment through the call.
 
 **Parameters:**
 - `payment_connector_url` (str): Payment processor webhook URL
-- `input_method` (str): Input method: "dtmf", "speech" (default: "dtmf")
+- `input_method` (str): only "dtmf" is valid; the SWML pay verb's schema requires this constant (default: "dtmf")
 - `status_url` (Optional[str]): Payment status webhook URL
 - `payment_method` (str): Payment method: "credit-card" (default: "credit-card")
 - `timeout` (int): Input timeout in seconds (default: 5)
@@ -2053,7 +2105,7 @@ result.pay(
 Start call tapping/monitoring.
 
 **Parameters:**
-- `uri` (str): URI to send tapped audio to — `rtp://IP:port`, `ws://example.com`, or `wss://example.com`
+- `uri` (str): URI to send tapped audio to: `rtp://IP:port`, `ws://example.com`, or `wss://example.com`
 - `control_id` (Optional[str]): Unique identifier for this tap
 - `direction` (str): Tap direction: "speak", "listen", "both" (default: "both")
 - `codec` (str): Audio codec: "PCMU" or "PCMA" (default: "PCMU")
@@ -2199,8 +2251,6 @@ result = (FunctionResult("Processing your payment")
     ))
 ```
 
-This concludes Part 2 of the API reference covering the FunctionResult class. The document will continue with DataMap and other components in subsequent parts.
-
 ---
 
 ## DataMap Class
@@ -2208,6 +2258,8 @@ This concludes Part 2 of the API reference covering the FunctionResult class. Th
 The `DataMap` class provides a declarative approach to creating SWAIG tools that integrate with REST APIs without requiring webhook infrastructure. DataMap tools execute on SignalWire's server infrastructure, eliminating the need to expose webhook endpoints.
 
 ### Constructor
+
+`DataMap` takes the function name it will create:
 
 <!-- snippet: no-compile signature-illustration -->
 ```python
@@ -2386,11 +2438,11 @@ data_map = (DataMap('search_with_fallback')
     
     # Primary API
     .webhook('GET', 'https://api.primary.com/search?q=${args.query}')
-    .output(FunctionResult('Primary result: ${response.title}'))
+    .output(FunctionResult('Primary result: ${title}'))
     
     # Fallback API
     .webhook('GET', 'https://api.fallback.com/search?q=${args.query}')
-    .output(FunctionResult('Fallback result: ${response.title}'))
+    .output(FunctionResult('Fallback result: ${title}'))
     
     # Final fallback if all APIs fail
     .fallback_output(FunctionResult('Sorry, all search services are currently unavailable'))
@@ -2408,27 +2460,27 @@ Set the response template for successful API calls.
 - `result` (FunctionResult): Response template with variable substitution
 
 **Variable Substitution in Outputs:**
-- `${response.field}`: API response fields
-- `${response.nested.field}`: Nested response fields
-- `${response.array[0].field}`: Array element fields
+- `${field}`: fields of the API's JSON response, read from the root with no prefix
+- `${nested.field}`: nested response fields
+- `${array[0].field}`: elements of a response that is a JSON array
 - `${args.parameter}`: Original function arguments
 - `${global_data.key}`: Call-wide data store (user info, call state)
 
 **Usage:**
 ```python
 # Simple response template
-data_map.output(FunctionResult('Weather in ${args.location}: ${response.current.condition.text}, ${response.current.temp_f}°F'))
+data_map.output(FunctionResult('Weather in ${args.location}: ${current.condition.text}, ${current.temp_f}°F'))
 
 # Response with actions
 data_map.output(
-    FunctionResult('Found ${response.total_results} results')
+    FunctionResult('Found ${total_results} results')
     .update_global_data({'last_search': '${args.query}'})
     .add_action('play', 'search_complete.mp3')
 )
 
 # Complex response with nested data
 data_map.output(
-    FunctionResult('Order ${response.order.id} status: ${response.order.status}. Estimated delivery: ${response.order.delivery.estimated_date}')
+    FunctionResult('Order ${order.id} status: ${order.status}. Estimated delivery: ${order.delivery.estimated_date}')
 )
 ```
 
@@ -2448,7 +2500,7 @@ data_map.fallback_output(
 
 #### Array Processing
 
-##### `foreach(foreach_config: Union[str, Dict[str, Any]]) -> DataMap`
+##### `foreach(foreach_config: Dict[str, Any]) -> DataMap`
 Process array responses by iterating over elements.
 
 **Parameters:**
@@ -2566,30 +2618,25 @@ data_map.global_error_keys(['error', 'message', 'code'])
 ### Advanced Configuration
 
 ##### `webhook_expressions(expressions: List[Dict[str, Any]]) -> DataMap`
-Add expression-based webhook selection.
+Attach expressions to the most recently added webhook, storing them under its `expressions` field. Call `webhook()` first; calling this before any webhook has been added raises `ValueError`.
 
 **Parameters:**
-- `expressions` (List[Dict[str, Any]]): List of expression configurations
+- `expressions` (List[Dict[str, Any]]): Expression objects to store as given, each needing the same `string`, `pattern` and `output` keys as `expression()`
 
 **Usage:**
 ```python
-# Different APIs based on input
+# Evaluate the webhook's response and pick a reply based on its status field
+data_map.webhook('GET', 'https://api.example.com/status?id=${args.id}')
 data_map.webhook_expressions([
     {
-        'test': '${args.type}',
-        'pattern': 'weather',
-        'webhook': {
-            'method': 'GET',
-            'url': 'https://weather-api.com/current?q=${args.location}'
-        }
+        'string': '${status}',
+        'pattern': 'complete',
+        'output': FunctionResult('The task is complete.').to_dict()
     },
     {
-        'test': '${args.type}',
-        'pattern': 'news',
-        'webhook': {
-            'method': 'GET', 
-            'url': 'https://news-api.com/search?q=${args.query}'
-        }
+        'string': '${status}',
+        'pattern': 'pending',
+        'output': FunctionResult('The task is still in progress.').to_dict()
     }
 ])
 ```
@@ -2598,13 +2645,15 @@ data_map.webhook_expressions([
 
 #### Simple Weather API
 
+This tool calls a weather API directly and formats the response:
+
 ```python
 weather_tool = (DataMap('get_weather')
     .purpose('Get current weather information')
     .parameter('location', 'string', 'City name or ZIP code', required=True)
     .parameter('units', 'string', 'Temperature units', enum=['celsius', 'fahrenheit'])
     .webhook('GET', 'https://api.weather.com/v1/current?key=API_KEY&q=${args.location}&units=${args.units}')
-    .output(FunctionResult('Weather in ${args.location}: ${response.current.condition.text}, ${response.current.temp_f}°F'))
+    .output(FunctionResult('Weather in ${args.location}: ${current.condition.text}, ${current.temp_f}°F'))
     .error_keys(['error'])
 )
 
@@ -2613,6 +2662,8 @@ agent.register_swaig_function(weather_tool.to_swaig_function())
 ```
 
 #### Search with Array Processing
+
+This tool posts a query, then formats each result in the response array:
 
 ```python
 search_tool = (DataMap('search_knowledge')
@@ -2640,6 +2691,8 @@ search_tool = (DataMap('search_knowledge')
 ```
 
 #### Command Processing (No API)
+
+This tool matches the action against patterns and responds without calling an API:
 
 ```python
 control_tool = (DataMap('system_control')
@@ -2716,7 +2769,7 @@ from signalwire.core.data_map import create_simple_api_tool
 weather = create_simple_api_tool(
     name='get_weather',
     url='https://api.weather.com/v1/current?key=API_KEY&q=${location}',
-    response_template='Weather in ${location}: ${response.current.condition.text}',
+    response_template='Weather in ${args.location}: ${current.condition.text}',
     parameters={
         'location': {
             'type': 'string', 
@@ -2770,15 +2823,13 @@ complete_tool = (DataMap('comprehensive_search')
     .parameter('query', 'string', 'Search query', required=True)
     .parameter('category', 'string', 'Search category', enum=['all', 'docs', 'faq'])
     .webhook('GET', 'https://primary-api.com/search?q=${args.query}&cat=${args.category}')
-    .output(FunctionResult('Primary: ${response.title}'))
+    .output(FunctionResult('Primary: ${title}'))
     .webhook('GET', 'https://backup-api.com/search?q=${args.query}')
-    .output(FunctionResult('Backup: ${response.title}'))
+    .output(FunctionResult('Backup: ${title}'))
     .fallback_output(FunctionResult('All search services unavailable'))
     .error_keys(['error', 'message'])
 )
 ```
-
-This concludes Part 3 of the API reference covering the DataMap class. The document will continue with Context System and other components in subsequent parts. 
 
 ---
 
@@ -2791,6 +2842,8 @@ The Context System enhances traditional prompt-based agents by adding structured
 The `ContextBuilder` is accessed via `agent.define_contexts()` and provides the main interface for creating structured workflows.
 
 #### Getting Started
+
+This creates a context, then chains a step onto it:
 
 ```python
 # Access the context builder
@@ -2867,9 +2920,11 @@ class Context:
 1. **Workflow Container Context** (no `system_prompt`): Organizes steps without conversation state changes
 2. **Context Switch Context** (has `system_prompt`): Triggers conversation state changes when entered, processing entry parameters like a `context_switch` SWAIG action
 
-**Prompt Hierarchy:** Base Agent Prompt → Context Prompt → Step Prompt
+**Prompt Hierarchy:** Base Agent Prompt, then Context Prompt, then Step Prompt
 
 #### Usage Examples
+
+Both context types are created the same way, and differ in whether `set_system_prompt` is called:
 
 <!-- snippet: no-run illustrative fragment (references `contexts` established in the surrounding prose) -->
 ```python
@@ -2896,7 +2951,7 @@ manager_context.set_system_prompt("You are a senior manager") \
 
 ## Skills System
 
-The Skills System provides modular, reusable capabilities that can be easily added to any agent.
+The Skills System provides modular, reusable capabilities you can add to any agent.
 
 ### Available Built-in Skills
 
@@ -3100,23 +3155,31 @@ Represents a SWAIG function definition with metadata and validation.
 
 #### Constructor
 
+This is the full constructor signature:
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 SWAIGFunction(
-    function: str,
+    name: str,
+    handler: Callable,
     description: str,
-    parameters: Dict[str, Any],
+    parameters: Optional[Dict[str, Any]] = None,
+    secure: bool = False,
     **kwargs
 )
 ```
 
 **Parameters:**
-- `function` (str): Function name
+- `name` (str): Function name
+- `handler` (Callable): Function to execute when called
 - `description` (str): Function description
 - `parameters` (Dict[str, Any]): JSON schema for parameters
+- `secure` (bool): Require security token (default: False)
 - `**kwargs`: Additional SWAIG properties
 
 #### Usage
+
+This builds the same function `define_tool()` would, one level lower:
 
 ```python
 from signalwire.core.swaig_function import SWAIGFunction
@@ -3150,12 +3213,12 @@ Base class providing SWML document generation and HTTP service capabilities. `Ag
 ##### `get_document() -> Dict[str, Any]`
 Generate the complete SWML document for the service.
 
-##### `handle_request(request_data: Dict[str, Any]) -> Dict[str, Any]`
-Handle incoming HTTP requests and generate appropriate responses.
+##### `handle_request(method: str, url: str, headers: Dict[str, str], body: Optional[Dict[str, Any]] = None) -> Tuple[int, Dict[str, str], str]`
+Framework-free request dispatch: runs proxy detection, basic auth, routing callbacks, and `on_request`, and returns a `(status_code, headers, body)` tuple.
 
 ### Dynamic Configuration
 
-The dynamic configuration callback receives the agent instance directly, allowing you to configure it based on request data.
+The dynamic configuration callback receives a copy of the agent made for the request, and configures it based on the request's data. Its changes apply to that request only.
 
 **Usage:**
 ```python
@@ -3184,26 +3247,37 @@ agent.set_dynamic_config_callback(dynamic_config)
 The SDK supports various environment variables for configuration:
 
 ### Authentication
+
+These variables set the agent's basic auth credentials:
+
 - `SWML_BASIC_AUTH_USER`: Basic auth username
 - `SWML_BASIC_AUTH_PASSWORD`: Basic auth password
 
 ### SSL/HTTPS
+
+These variables configure HTTPS:
+
 - `SWML_SSL_ENABLED`: Enable SSL (true/false)
 - `SWML_SSL_CERT_PATH`: Path to SSL certificate
 - `SWML_SSL_KEY_PATH`: Path to SSL private key
 - `SWML_DOMAIN`: Domain name for SSL
 
 ### Proxy Support
+
+This variable overrides the URL the SDK generates behind a reverse proxy:
+
 - `SWML_PROXY_URL_BASE`: Base URL for proxy server
 
 ### Skills Configuration
+
+The `web_search` skill falls back to these variables when `api_key` or `search_engine_id` is omitted:
+
 - `GOOGLE_SEARCH_API_KEY`: Google Custom Search API key
 - `GOOGLE_SEARCH_ENGINE_ID`: Google Custom Search Engine ID
-- `DATASPHERE_SPACE_NAME`: DataSphere space name
-- `DATASPHERE_PROJECT_ID`: DataSphere project ID
-- `DATASPHERE_TOKEN`: DataSphere access token
 
 ### Usage
+
+An agent can also set these variables itself before reading its configuration:
 
 <!-- snippet: no-run skill setup needs an external backend/API key (e.g. web_search, mcp_gateway) -->
 ```python
@@ -3319,7 +3393,7 @@ class ComprehensiveAgent(AgentBase):
             .parameter("customer_id", "string", "Customer ID", required=True)
             .webhook("GET", "https://api.company.com/customers/${args.customer_id}",
                     headers={"Authorization": "Bearer YOUR_TOKEN"})
-            .output(FunctionResult("Customer: ${response.name}, Status: ${response.status}"))
+            .output(FunctionResult("Customer: ${name}, Status: ${status}"))
             .error_keys(["error"])
         )
         

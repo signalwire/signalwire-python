@@ -16,9 +16,11 @@ A `Call` object represents a live phone call. You get one from `@client.on_call`
 
 ## Actions: Blocking vs Fire-and-Forget
 
-Methods like `play()`, `record()`, `detect()`, etc. return **Action** objects. The `await call.play(...)` itself only waits for the server to accept the command — the actual operation runs asynchronously on the server. You choose how to handle completion:
+Methods like `play()`, `record()`, `detect()`, etc. return **Action** objects. The `await call.play(...)` itself only waits for the server to accept the command: the actual operation runs asynchronously on the server. You choose how to handle completion:
 
 ### Wait inline (blocking)
+
+Await the action's `wait()` method to block until it finishes:
 
 <!-- snippet: no-compile await-fragment -->
 ```python
@@ -28,6 +30,8 @@ await action.wait()  # blocks until playback finishes
 ```
 
 ### Fire and forget (background)
+
+Skip `wait()` to continue immediately and check the action's state later:
 
 <!-- snippet: no-compile await-fragment -->
 ```python
@@ -41,6 +45,8 @@ if action.is_done:
 ```
 
 ### Fire with callback
+
+Pass `on_completed` to run a function when the action finishes, without blocking:
 
 ```python
 # Sync callback
@@ -246,6 +252,8 @@ await call.transfer("https://example.com/swml-endpoint")
 
 ### `send_fax(document, *, identity=None, header_info=None, control_id=None) -> FaxAction`
 
+Send a fax document to the far end.
+
 <!-- snippet: no-compile await-fragment -->
 ```python
 action = await call.send_fax("https://example.com/document.pdf", identity="+15551234567")
@@ -253,6 +261,8 @@ event = await action.wait()
 ```
 
 ### `receive_fax(*, control_id=None) -> FaxAction`
+
+Receive an inbound fax on the call.
 
 <!-- snippet: no-compile await-fragment -->
 ```python
@@ -313,12 +323,16 @@ event = await action.wait()
 
 ### `join_conference(name, *, muted=None, beep=None, max_participants=None, record=None, ...) -> dict`
 
+Join the call to a named ad-hoc conference.
+
 <!-- snippet: no-compile await-fragment -->
 ```python
 await call.join_conference("my_conference", muted=False, beep="onEnter")
 ```
 
 ### `leave_conference(conference_id) -> dict`
+
+Remove the call from a conference it joined.
 
 <!-- snippet: no-compile await-fragment -->
 ```python
@@ -328,6 +342,8 @@ await call.leave_conference("conf-123")
 ## Hold
 
 ### `hold() -> dict` / `unhold() -> dict`
+
+Put the call on hold, or take it off hold.
 
 <!-- snippet: no-compile await-fragment -->
 ```python
@@ -340,6 +356,8 @@ await call.unhold()
 
 ### `denoise() -> dict` / `denoise_stop() -> dict`
 
+Start or stop noise reduction on the call.
+
 <!-- snippet: no-compile await-fragment -->
 ```python
 await call.denoise()
@@ -350,6 +368,8 @@ await call.denoise_stop()
 ## Transcription
 
 ### `transcribe(*, control_id=None, status_url=None) -> TranscribeAction`
+
+Start live transcription of the call.
 
 <!-- snippet: no-compile await-fragment -->
 ```python
@@ -362,12 +382,16 @@ await action.stop()
 
 ### `live_transcribe(action_obj) -> dict`
 
+Start or stop live transcription, sent to a status webhook as it happens.
+
 <!-- snippet: no-compile await-fragment -->
 ```python
 await call.live_transcribe({"start": {"language": "en-US"}})
 ```
 
 ### `live_translate(action_obj, *, status_url=None) -> dict`
+
+Start or stop live translation between two languages.
 
 <!-- snippet: no-compile await-fragment -->
 ```python
@@ -417,12 +441,16 @@ Put an AI session on/off hold.
 
 ### `join_room(name, *, status_url=None) -> dict`
 
+Join the call to a named RELAY room.
+
 <!-- snippet: no-compile await-fragment -->
 ```python
 await call.join_room("my_room")
 ```
 
 ### `leave_room() -> dict`
+
+Remove the call from the room it joined.
 
 <!-- snippet: no-compile await-fragment -->
 ```python
@@ -433,12 +461,16 @@ await call.leave_room()
 
 ### `queue_enter(queue_name, *, control_id=None, status_url=None) -> dict`
 
+Place the call in a named queue to wait for an available agent.
+
 <!-- snippet: no-compile await-fragment -->
 ```python
 await call.queue_enter("support")
 ```
 
 ### `queue_leave(queue_name, *, control_id=None, queue_id=None, status_url=None) -> dict`
+
+Remove the call from a queue it entered.
 
 <!-- snippet: no-compile await-fragment -->
 ```python
@@ -461,6 +493,8 @@ await call.bind_digit(
 ```
 
 ### `clear_digit_bindings(*, realm=None) -> dict`
+
+Remove digit bindings the call has registered.
 
 <!-- snippet: no-compile await-fragment -->
 ```python

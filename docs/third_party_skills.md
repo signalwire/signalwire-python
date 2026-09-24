@@ -1,6 +1,6 @@
 # Third-Party Skills Integration Guide
 
-This guide explains how to create and integrate third-party skills with the SignalWire SDK. The SDK supports multiple methods for loading external skills, making it easy to extend agent capabilities without modifying the core SDK.
+This guide explains how to create and integrate third-party skills with the SignalWire SDK. The SDK supports four methods for loading external skills, so you can extend agent capabilities without changing the core SDK.
 
 ## Overview
 
@@ -191,6 +191,8 @@ After installation, skills are automatically available:
 pip install my-signalwire-skills
 ```
 
+The entry points register the skill on import, with no further setup:
+
 ```python
 # Skills are automatically discovered
 agent.add_skill("weather", {"api_key": "..."})
@@ -219,7 +221,7 @@ agent.add_skill("weather", {"api_key": "..."})
 
 Skills loaded from directories must follow this structure:
 
-```
+```text
 my_skills_directory/
 ├── weather/                 # Skill directory (matches SKILL_NAME)
 │   ├── skill.py            # Required: Contains skill class
@@ -270,13 +272,18 @@ print(all_skills['weather'])
             "enum": ["celsius", "fahrenheit", "kelvin"]
         }
     },
-    "source": "external"  # Shows it's a third-party skill
+    "source": "external"  # "external" for directory or SIGNALWIRE_SKILL_PATHS loading;
+                           # register_skill() and entry points report "registered"
 }
 ```
 
 ## Best Practices
 
+These four areas matter most for a skill other people will install:
+
 ### 1. Skill Naming
+
+Follow these three rules for the skill's name:
 
 - Use lowercase, underscore-separated names
 - Choose unique names to avoid conflicts with built-in skills
@@ -284,12 +291,16 @@ print(all_skills['weather'])
 
 ### 2. Parameter Design
 
+Follow these four rules when you design the parameter schema:
+
 - Always implement `get_parameter_schema()` for GUI compatibility
 - Mark sensitive parameters as `hidden`
 - Provide sensible defaults
 - Use `env_var` for parameters that can come from environment
 
 ### 3. Error Handling
+
+Validate packages, required parameters, and connectivity before returning `True`:
 
 ```python
 def setup(self) -> bool:
@@ -317,7 +328,7 @@ def setup(self) -> bool:
 
 Include a README.md in your skill directory:
 
-```markdown
+````markdown
 # Weather Skill
 
 Provides weather information for any location.
@@ -336,7 +347,7 @@ agent.add_skill("weather", {
     "units": "fahrenheit"
 })
 ```
-```
+````
 
 ## Advanced Features
 
@@ -422,11 +433,11 @@ class TestWeatherSkill(unittest.TestCase):
         from signalwire import register_skill
         register_skill(WeatherSkill)
         
-        # Test adding skill
-        success, error = self.agent.add_skill("weather", {
+        # add_skill() raises ValueError on failure and returns the agent otherwise
+        result = self.agent.add_skill("weather", {
             "api_key": "test-key"
         })
-        self.assertTrue(success)
+        self.assertTrue(result is self.agent)
         
     def test_parameter_schema(self):
         schema = WeatherSkill.get_parameter_schema()
@@ -479,7 +490,7 @@ print(f"External skills: {sources['external_paths']}")
 
 Here's a complete example of a distributable skill package:
 
-```
+```text
 my-signalwire-skills/
 ├── setup.py
 ├── README.md
@@ -498,6 +509,8 @@ my-signalwire-skills/
     ├── test_weather.py
     └── test_translation.py
 ```
+
+The package's `setup.py` registers both skills as entry points:
 
 <!-- snippet: no-run CLI invocation excerpt (not a Python program under this runner) -->
 ```python
@@ -529,6 +542,8 @@ Install and use:
 ```bash
 pip install git+https://github.com/yourname/my-signalwire-skills.git
 ```
+
+Both entry-point skills are available as soon as the package is installed:
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python

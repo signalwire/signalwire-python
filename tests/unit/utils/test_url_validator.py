@@ -86,3 +86,23 @@ class TestValidateUrlAllowPrivate:
         with patch.dict(os.environ, {"SWML_ALLOW_PRIVATE_URLS": "false"}, clear=False):
             with patch("socket.getaddrinfo", return_value=[(0, 0, 0, "", ("10.0.0.5", 0))]):
                 assert validate_url("http://internal") is False
+
+
+class TestValidateUrlAddressForms:
+    """Addresses that reach a blocked host through another notation."""
+
+    def test_ipv4_mapped_metadata_rejected(self) -> None:
+        with patch("socket.getaddrinfo", return_value=[(0, 0, 0, "", ("::ffff:169.254.169.254", 0, 0, 0))]):
+            assert validate_url("http://metadata-v6") is False
+
+    def test_ipv4_mapped_loopback_rejected(self) -> None:
+        with patch("socket.getaddrinfo", return_value=[(0, 0, 0, "", ("::ffff:127.0.0.1", 0, 0, 0))]):
+            assert validate_url("http://loopback-v6") is False
+
+    def test_unspecified_ipv6_rejected(self) -> None:
+        with patch("socket.getaddrinfo", return_value=[(0, 0, 0, "", ("::", 0, 0, 0))]):
+            assert validate_url("http://unspecified") is False
+
+    def test_ipv4_mapped_public_allowed(self) -> None:
+        with patch("socket.getaddrinfo", return_value=[(0, 0, 0, "", ("::ffff:8.8.8.8", 0, 0, 0))]):
+            assert validate_url("http://public-v6") is True

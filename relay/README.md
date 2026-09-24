@@ -4,6 +4,8 @@ Real-time call control and messaging over WebSocket using Python's asyncio. The 
 
 ## Quick Start
 
+Connect a client and answer inbound calls with a greeting:
+
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire.relay import RelayClient
@@ -27,8 +29,10 @@ client.run()
 
 ## Features
 
+The RELAY client provides:
+
 - Asyncio-native with auto-reconnect and exponential backoff
-- All 57+ calling methods: play, record, collect, connect, detect, fax, tap, stream, AI, conferencing, queues, and more
+- Calling methods for play, record, collect, connect, detect, fax, tap, stream, AI, conferencing, queues, and more
 - SMS/MMS messaging: send outbound messages, receive inbound messages, track delivery state
 - Action objects with `wait()`, `stop()`, `pause()`, `resume()` for controllable operations
 - Typed event classes for all call events
@@ -38,15 +42,19 @@ client.run()
 
 ## Documentation
 
-- [Getting Started](docs/getting-started.md) -- installation, configuration, first call
-- [Call Methods Reference](docs/call-methods.md) -- every method available on a Call object
-- [Events](docs/events.md) -- event types, typed event classes, call states
-- [Messaging](docs/messaging.md) -- sending and receiving SMS/MMS messages
-- [Client Reference](docs/client-reference.md) -- RelayClient configuration, methods, connection behavior
+These pages cover the client in depth:
+
+- [Getting Started](docs/getting-started.md): installation, configuration, first call
+- [Call Methods Reference](docs/call-methods.md): every method available on a Call object
+- [Events](docs/events.md): event types, typed event classes, call states
+- [Messaging](docs/messaging.md): sending and receiving SMS/MMS messages
+- [Client Reference](docs/client-reference.md): RelayClient configuration, methods, connection behavior
 
 ## Examples
 
-- [relay_answer_and_welcome.py](examples/relay_answer_and_welcome.py) -- answer an inbound call and play a TTS greeting
+This example is in the repository:
+
+- [relay_answer_and_welcome.py](examples/relay_answer_and_welcome.py): answer an inbound call and play a TTS greeting
 
 ## Environment Variables
 
@@ -62,8 +70,10 @@ client.run()
 
 ## Module Structure
 
+The client's code lives under the installed package:
+
 ```
-signalwire/relay/
+signalwire/signalwire/relay/
     __init__.py      # Public exports
     client.py        # RelayClient -- WebSocket connection, auth, event dispatch
     call.py          # Call object -- all calling methods and Action classes

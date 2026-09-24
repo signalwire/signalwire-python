@@ -147,8 +147,8 @@ class TestParameterSchema:
         assert "num_results" in schema
         assert schema["num_results"]["type"] == "integer"
         assert schema["num_results"]["default"] == 1
-        assert schema["num_results"]["minimum"] == 1
-        assert schema["num_results"]["maximum"] == 5
+        assert schema["num_results"]["min"] == 1
+        assert schema["num_results"]["max"] == 5
 
     def test_contains_no_results_message(self) -> None:
         schema = WikipediaSearchSkill.get_parameter_schema()
@@ -399,6 +399,23 @@ class TestSearchWikiSingleResult:
 
         skill.search_wiki("test")
         assert mock_get.call_args[1]["timeout"] == 10
+
+    @patch("signalwire.skills.wikipedia_search.skill.requests.get")
+    def test_every_request_identifies_the_sdk(self, mock_get: Mock) -> None:
+        """Wikimedia answers 403 to requests without a descriptive User-Agent."""
+        skill = _setup_skill()
+
+        search_resp = Mock()
+        search_resp.json.return_value = _mock_search_response(["Python"])
+        search_resp.raise_for_status = Mock()
+        mock_get.return_value = search_resp
+
+        skill.search_wiki("test")
+        assert mock_get.call_count >= 2  # the search, then an extract
+        for call in mock_get.call_args_list:
+            user_agent = call[1]["headers"]["User-Agent"]
+            assert user_agent.startswith("signalwire-python/")
+            assert "github.com/signalwire/signalwire-python" in user_agent
 
 
 # ===========================================================================

@@ -115,8 +115,10 @@ class SessionManager:
             # Decode the token
             decoded_token = base64.urlsafe_b64decode(token.encode()).decode()
 
-            # Split the token parts
-            parts = decoded_token.split(".")
+            # Split the token parts. The call_id comes first and may itself
+            # contain dots (composed conversation ids such as "root.2"); the
+            # other four fields never do, so split from the right.
+            parts = decoded_token.rsplit(".", 4)
             if len(parts) != 5:
                 return False
 
@@ -226,7 +228,7 @@ class SessionManager:
             decoded_token = base64.urlsafe_b64decode(token.encode()).decode()
 
             # Split the token parts
-            parts = decoded_token.split(".")
+            parts = decoded_token.rsplit(".", 4)  # the call_id may contain dots
             if len(parts) != 5:
                 return {
                     "valid_format": False,

@@ -12,6 +12,8 @@ existing top-level `docs/` directory (owned by `doc-audit.yml`).
 
 ## Layout
 
+The directory holds the MkDocs config, generator scripts, and Fern theme assets:
+
 ```
 reference/
   mkdocs.yml          MkDocs Material + mkdocstrings config (docs_dir = _docs)
@@ -27,7 +29,7 @@ reference/
 
 The `signalwire` package is nested (`signalwire/signalwire/`). mkdocstrings
 resolves imports from the **editable install**, so `gen.sh` runs `pip install -e .`
-first — keep that.
+first. Keep that step.
 
 ## Build & serve locally
 
@@ -58,7 +60,7 @@ works under the `/signalwire-python/` base path.
 The site is unversioned: `mkdocs gh-deploy` publishes it to the `gh-pages` branch,
 where the current release's docs sit at the site root. There is no per-version
 path and no `latest` alias to navigate to. A version selector (via `mike`) can be
-added later without touching the markup. CI does the publishing, see below.
+added later without touching the markup. [CI](#ci) does the publishing.
 
 ## CI
 
@@ -132,6 +134,8 @@ tag like `v31.0.0` sorts newest and starts blocking real releases, dispatch a
 publish with the `version_marker` input set to the correct `vX.Y.Z`.
 
 ## Scope
+
+This site covers a fixed set of concerns, and leaves the rest out on purpose:
 
 - **Theme toggle:** drives Material's own light/dark color scheme. There is no
   cross-origin `localStorage` theme sync with signalwire.com/docs, which is a

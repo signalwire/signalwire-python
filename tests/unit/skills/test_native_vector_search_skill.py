@@ -9,6 +9,7 @@ See LICENSE file in the project root for full license information.
 Unit tests for NativeVectorSearchSkill
 """
 
+import pytest
 from typing import Any
 from collections.abc import Callable
 
@@ -527,10 +528,14 @@ class TestSetupAutoBuild:
 
         mock_query_processor = Mock()
 
+        mock_pgvector = Mock()
+        mock_pgvector.PgVectorBackend.return_value.list_collections.return_value = []
+
         with patch.dict("sys.modules", {
             "signalwire.search": mock_search_mod,
             "signalwire.search.models": mock_models,
             "signalwire.search.query_processor": mock_query_processor,
+            "signalwire.search.pgvector_backend": mock_pgvector,
         }):
             skill = _make_skill({
                 "build_index": True,
@@ -549,6 +554,88 @@ class TestSetupAutoBuild:
             index_nlp_backend="nltk",
         )
         mock_builder.build_index.assert_called_once()
+
+
+class TestPgvectorAutoBuildOverwrite:
+    """pgvector auto-build honors overwrite, and never appends a second copy (B8)."""
+
+    def _setup(self, existing: list[str], **params: Any) -> tuple[Mock, Mock]:
+        mock_builder = Mock()
+        mock_backend = Mock()
+        mock_backend.list_collections.return_value = existing
+        with patch.dict("sys.modules", {
+            "signalwire.search": Mock(IndexBuilder=Mock(return_value=mock_builder), SearchEngine=Mock()),
+            "signalwire.search.models": Mock(resolve_model_alias=Mock(return_value="base-model")),
+            "signalwire.search.query_processor": Mock(),
+            "signalwire.search.pgvector_backend": Mock(PgVectorBackend=Mock(return_value=mock_backend)),
+        }):
+            skill = _make_skill({
+                "build_index": True,
+                "source_dir": "/data/docs",
+                "backend": "pgvector",
+                "connection_string": "postgresql://localhost/db",
+                "collection_name": "my-col",
+                **params,
+            })
+            skill.setup()
+        return mock_builder, mock_backend
+
+    def test_existing_collection_is_not_built_again(self) -> None:
+        mock_builder, mock_backend = self._setup(existing=["my_col"])
+        mock_builder.build_index.assert_not_called()
+        mock_backend.close.assert_called_once()
+
+    def test_new_collection_is_built(self) -> None:
+        mock_builder, _ = self._setup(existing=[])
+        mock_builder.build_index.assert_called_once()
+        assert mock_builder.build_index.call_args.kwargs["overwrite"] is False
+
+    def test_unknown_state_skips_the_build(self) -> None:
+        """If the check can't tell, building could append a second copy."""
+        mock_builder = Mock()
+        mock_backend = Mock()
+        mock_backend.list_collections.side_effect = ConnectionError("server closed the connection")
+        with patch.dict("sys.modules", {
+            "signalwire.search": Mock(IndexBuilder=Mock(return_value=mock_builder), SearchEngine=Mock()),
+            "signalwire.search.models": Mock(resolve_model_alias=Mock(return_value="base-model")),
+            "signalwire.search.query_processor": Mock(),
+            "signalwire.search.pgvector_backend": Mock(PgVectorBackend=Mock(return_value=mock_backend)),
+        }):
+            skill = _make_skill({
+                "build_index": True, "source_dir": "/data/docs", "backend": "pgvector",
+                "connection_string": "postgresql://localhost/db", "collection_name": "my-col",
+            })
+            with patch.object(skill, "logger") as mock_logger:
+                skill.setup()
+        mock_builder.build_index.assert_not_called()
+        assert any("Couldn't check" in str(c) for c in mock_logger.error.call_args_list)
+
+    def test_new_database_counts_as_absent(self) -> None:
+        """A database with no collection_config table yet has no collections."""
+        class UndefinedTable(Exception):
+            pass
+
+        mock_builder = Mock()
+        mock_backend = Mock()
+        mock_backend.list_collections.side_effect = UndefinedTable("relation does not exist")
+        with patch.dict("sys.modules", {
+            "signalwire.search": Mock(IndexBuilder=Mock(return_value=mock_builder), SearchEngine=Mock()),
+            "signalwire.search.models": Mock(resolve_model_alias=Mock(return_value="base-model")),
+            "signalwire.search.query_processor": Mock(),
+            "signalwire.search.pgvector_backend": Mock(PgVectorBackend=Mock(return_value=mock_backend)),
+        }):
+            skill = _make_skill({
+                "build_index": True, "source_dir": "/data/docs", "backend": "pgvector",
+                "connection_string": "postgresql://localhost/db", "collection_name": "my-col",
+            })
+            skill.setup()
+        mock_builder.build_index.assert_called_once()
+
+    def test_overwrite_rebuilds_an_existing_collection(self) -> None:
+        mock_builder, mock_backend = self._setup(existing=["my_col"], overwrite=True)
+        mock_builder.build_index.assert_called_once()
+        assert mock_builder.build_index.call_args.kwargs["overwrite"] is True
+        mock_backend.list_collections.assert_not_called()
 
 
 # ===========================================================================
@@ -1307,3 +1394,198 @@ def _import_raiser(blocked_module: str) -> Callable[..., Any]:
         return real_import(name, *args, **kwargs)
 
     return _custom_import
+
+
+# ===========================================================================
+# Logging: no credentials anywhere, no caller queries above DEBUG
+# ===========================================================================
+
+def _logged(mock_logger: Mock, levels: tuple[str, ...]) -> str:
+    """Every call made to the given logger levels, rendered as one string."""
+    return " ".join(
+        repr(call) for level in levels for call in getattr(mock_logger, level).call_args_list
+    )
+
+
+ALL_LEVELS = ("debug", "info", "warning", "error", "exception", "critical")
+ABOVE_DEBUG = ("info", "warning", "error", "exception", "critical")
+REMOTE_URL = "http://searchuser:s3cret-pw@search.internal:8001"
+
+
+class TestRemoteUrlCredentialsNotLogged:
+    """A remote_url's password must never reach the log."""
+
+    def _setup_with(self, validate: bool, get: Any) -> Mock:
+        skill = _make_skill({"remote_url": REMOTE_URL})
+        mock_requests_mod = Mock()
+        mock_requests_mod.get = get
+        with patch("signalwire.utils.url_validator.validate_url", return_value=validate), \
+             patch.dict("sys.modules", {"requests": mock_requests_mod}), \
+             patch.object(skill, "logger") as mock_logger:
+            skill.setup()
+        return mock_logger
+
+    def test_rejected_url(self) -> None:
+        mock_logger = self._setup_with(False, Mock())
+        assert mock_logger.error.called
+        assert "s3cret-pw" not in _logged(mock_logger, ALL_LEVELS)
+
+    def test_available_server(self) -> None:
+        mock_logger = self._setup_with(True, Mock(return_value=Mock(status_code=200)))
+        assert mock_logger.info.called
+        assert "s3cret-pw" not in _logged(mock_logger, ALL_LEVELS)
+
+    def test_connection_error_that_quotes_the_url(self) -> None:
+        error = ConnectionError(f"Max retries exceeded for {REMOTE_URL}/health")
+        mock_logger = self._setup_with(True, Mock(side_effect=error))
+        assert mock_logger.error.called
+        assert "s3cret-pw" not in _logged(mock_logger, ALL_LEVELS)
+
+
+class TestRemoteUrlAuth:
+    """Credentials in remote_url are decoded as Requests would decode them."""
+
+    @pytest.mark.parametrize(
+        ("remote_url", "auth"),
+        [
+            ("http://:SECRET@search.internal:8001", ("", "SECRET")),
+            ("http://u%40x:p%3Aw@search.internal:8001", ("u@x", "p:w")),
+            ("http://user@search.internal:8001", None),
+        ],
+    )
+    def test_auth(self, remote_url: str, auth: tuple[str, str] | None) -> None:
+        skill = _make_skill({"remote_url": remote_url})
+        with patch("signalwire.utils.url_validator.validate_url", return_value=False):
+            skill.setup()
+        assert skill.remote_auth == auth
+        assert skill.remote_base_url == "http://search.internal:8001"
+
+
+class TestRemoteBaseUrl:
+    """remote_base_url drops the credentials and keeps everything else."""
+
+    @pytest.mark.parametrize(
+        ("remote_url", "base_url", "auth"),
+        [
+            ("http://user:pass@localhost:8001/api", "http://localhost:8001/api", ("user", "pass")),
+            ("http://user:pass@[::1]:8001/api", "http://[::1]:8001/api", ("user", "pass")),
+            ("https://user:pass@Search.Example.com", "https://Search.Example.com", ("user", "pass")),
+            ("http://[::1]:8001", "http://[::1]:8001", None),
+        ],
+    )
+    def test_base_url(self, remote_url: str, base_url: str, auth: tuple[str, str] | None) -> None:
+        skill = _make_skill({"remote_url": remote_url})
+        with patch("signalwire.utils.url_validator.validate_url", return_value=False):
+            skill.setup()
+        assert skill.remote_base_url == base_url
+        assert skill.remote_auth == auth
+
+
+class TestReflectedQueryNotLoggedAboveDebug:
+    """An error body or exception that echoes the query stays out of ERROR."""
+
+    QUERY = "what is my account balance"
+
+    def test_remote_error_body(self) -> None:
+        skill = TestSearchHandler()._setup_skill_for_search(
+            use_remote=True, search_engine=None, remote_base_url="http://search.internal:8001",
+            remote_auth=None, index_name="default",
+        )
+        response = Mock(status_code=500, text=f"no index for query '{self.QUERY}'")
+        with patch("requests.post", return_value=response), patch.object(skill, "logger") as mock_logger:
+            skill._search_handler({"query": self.QUERY}, {})
+        assert self.QUERY not in _logged(mock_logger, ABOVE_DEBUG)
+
+    def test_exception_message(self) -> None:
+        skill = TestSearchHandler()._setup_skill_for_search()
+        skill.search_engine.search.side_effect = RuntimeError(f"bad query: {self.QUERY}")  # type: ignore[union-attr]  # mock search_engine
+        preprocess = Mock(return_value={"enhanced_text": self.QUERY, "vector": [0.1]})
+        with patch.dict("sys.modules", {
+            "signalwire.search.query_processor": Mock(preprocess_query=preprocess),
+        }), patch.object(skill, "logger") as mock_logger:
+            skill._search_handler({"query": self.QUERY}, {})
+        assert self.QUERY not in _logged(mock_logger, ABOVE_DEBUG)
+        assert mock_logger.error.called
+
+
+class TestCallerQueryNotLoggedAboveDebug:
+    """The caller's query and the SWAIG request stay out of INFO and above."""
+
+    QUERY = "what is my account balance"
+    RAW_DATA = {"caller_id_number": "+15551234567", "global_data": {"pin": "8642"}}
+
+    def _skill(self, **overrides: Any) -> NativeVectorSearchSkill:
+        return TestSearchHandler()._setup_skill_for_search(**overrides)
+
+    def _search(self, skill: NativeVectorSearchSkill) -> Mock:
+        preprocess = Mock(return_value={"enhanced_text": self.QUERY, "vector": [0.1]})
+        with patch.dict("sys.modules", {
+            "signalwire.search.query_processor": Mock(preprocess_query=preprocess),
+        }), patch.object(skill, "logger") as mock_logger:
+            skill._search_handler({"query": self.QUERY}, self.RAW_DATA)
+        return mock_logger
+
+    def _assert_clean(self, mock_logger: Mock) -> None:
+        above_debug = _logged(mock_logger, ABOVE_DEBUG)
+        assert self.QUERY not in above_debug
+        everything = _logged(mock_logger, ALL_LEVELS)
+        assert "+15551234567" not in everything
+        assert "8642" not in everything
+
+    def test_local_search(self) -> None:
+        skill = self._skill()
+        skill.search_engine.search.return_value = [  # type: ignore[union-attr]  # mock search_engine
+            {"content": "Balances are shown in the app.", "score": 0.9, "metadata": {}}
+        ]
+        mock_logger = self._search(skill)
+        assert mock_logger.debug.called
+        self._assert_clean(mock_logger)
+
+    def test_local_search_error(self) -> None:
+        skill = self._skill()
+        skill.search_engine.search.side_effect = RuntimeError("index unavailable")  # type: ignore[union-attr]  # mock search_engine
+        mock_logger = self._search(skill)
+        assert mock_logger.error.called
+        self._assert_clean(mock_logger)
+
+    def test_remote_search(self) -> None:
+        skill = self._skill(use_remote=True, search_engine=None,
+                            remote_base_url="http://search.internal:8001", remote_auth=None,
+                            index_name="default")
+        response = Mock(status_code=200)
+        response.json.return_value = {"results": []}
+        with patch("requests.post", return_value=response) as mock_post:
+            mock_logger = self._search(skill)
+        mock_post.assert_called_once()
+        assert mock_post.call_args.args[0] == "http://search.internal:8001/search"
+        assert mock_post.call_args.kwargs["json"]["query"] == self.QUERY
+        self._assert_clean(mock_logger)
+
+    def test_missing_query_is_not_an_error(self) -> None:
+        skill = self._skill()
+        with patch.object(skill, "logger") as mock_logger:
+            skill._search_handler({"query": ""}, self.RAW_DATA)
+        assert not mock_logger.error.called
+
+
+
+class TestKeywordWeightDeprecated:
+    """keyword_weight is deprecated: the skill warns once and stops passing it (B10)."""
+
+    def test_setup_warns(self) -> None:
+        skill = _make_skill({"keyword_weight": 0.5, "remote_url": "http://search.example.com"})
+        with patch("signalwire.utils.url_validator.validate_url", return_value=False), \
+             patch.object(skill, "logger") as mock_logger:
+            skill.setup()
+        warnings_logged = " ".join(repr(c) for c in mock_logger.warning.call_args_list)
+        assert "keyword_weight is deprecated" in warnings_logged
+
+    def test_search_does_not_pass_it(self) -> None:
+        skill = TestSearchHandler()._setup_skill_for_search(keyword_weight=0.5)
+        skill.search_engine.search.return_value = []  # type: ignore[union-attr]  # mock search_engine
+        preprocess = Mock(return_value={"enhanced_text": "q", "vector": [0.1]})
+        with patch.dict("sys.modules", {
+            "signalwire.search.query_processor": Mock(preprocess_query=preprocess),
+        }):
+            skill._search_handler({"query": "q"}, {})
+        assert "keyword_weight" not in skill.search_engine.search.call_args.kwargs  # type: ignore[union-attr]  # mock search_engine

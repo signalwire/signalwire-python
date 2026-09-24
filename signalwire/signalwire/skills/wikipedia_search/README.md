@@ -1,8 +1,10 @@
 # Wikipedia Search Skill
 
-The Wikipedia Search skill provides agents with the ability to search Wikipedia articles and retrieve factual information. This skill uses the Wikipedia API to search for articles and return their introductory content, making it perfect for answering factual questions about people, places, concepts, and more.
+The Wikipedia Search skill lets an agent search Wikipedia articles and retrieve factual information. It uses the Wikipedia API to find articles and return their introductory content, which answers factual questions about people, places, and concepts.
 
 ## Features
+
+The skill covers these capabilities:
 
 - **Free Wikipedia API**: No API keys or credentials required
 - **Article Summaries**: Returns introductory content from Wikipedia articles
@@ -13,15 +15,19 @@ The Wikipedia Search skill provides agents with the ability to search Wikipedia 
 
 ## Requirements
 
+The skill needs one package and no API key:
+
 - **Python Packages**: `requests` (automatically installed with SignalWire Agents)
 - **API Keys**: None required - uses free Wikipedia API
 - **Environment Variables**: None required
 
 ## Parameters
 
+The skill accepts three parameters:
+
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `num_results` | int | 1 | Number of Wikipedia articles to return (minimum: 1) |
+| `num_results` | int | 1 | Number of Wikipedia articles to return (1 to 5) |
 | `no_results_message` | str | Auto-generated | Custom message when no results found. Use `{query}` as placeholder |
 | `swaig_fields` | dict | {} | Additional SWAIG function configuration (fillers, etc.) |
 
@@ -38,6 +44,8 @@ This skill creates one SWAIG tool:
 
 ### Basic Usage
 
+Add the skill with no parameters, and `search_wiki` returns one article per query:
+
 ```python
 from signalwire import AgentBase
 
@@ -49,6 +57,8 @@ agent.add_skill("wikipedia_search")
 
 ### Custom Configuration
 
+Set `num_results` and `no_results_message` to change the defaults:
+
 ```python
 # Custom number of results and no-results message
 agent.add_skill("wikipedia_search", {
@@ -58,6 +68,8 @@ agent.add_skill("wikipedia_search", {
 ```
 
 ### With SWAIG Fields (Fillers)
+
+Add filler phrases the agent speaks while it searches:
 
 ```python
 # Add custom fillers for better user experience
@@ -77,6 +89,8 @@ agent.add_skill("wikipedia_search", {
 ```
 
 ### Advanced Configuration
+
+This example combines every parameter the skill accepts:
 
 ```python
 # Full configuration example
@@ -100,7 +114,7 @@ agent.add_skill("wikipedia_search", {
 
 ## Multiple Instance Support
 
-**This skill does NOT support multiple instances.** You can only load one instance of the Wikipedia search skill per agent. This is because:
+This skill does not support multiple instances. You can load only one instance of the Wikipedia search skill per agent, because:
 
 - Wikipedia search is a general-purpose tool that doesn't need specialization
 - The tool name `search_wiki` is fixed and meaningful
@@ -117,27 +131,37 @@ The skill uses the Wikipedia API with two steps:
 
 ### Search Process
 
-```
-1. Search for articles matching the query
-   → GET https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&srsearch={query}&srlimit={num_results}
+Each search makes up to `num_results` extract requests after the initial search request:
 
-2. For each result, get the article extract
-   → GET https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&format=json&titles={title}
+```text
+1. Search for articles matching the query:
+   GET https://en.wikipedia.org/w/api.php?action=query&list=search&format=json&srsearch={query}&srlimit={num_results}
+
+2. For each result, get the article extract:
+   GET https://en.wikipedia.org/w/api.php?action=query&prop=extracts&exintro&explaintext&format=json&titles={title}
 
 3. Format and return the results
 ```
 
 ## Response Format
 
+The tool separates the title from the summary with a blank line:
+
 ### Single Result
-```
+
+A query that returns one article looks like this:
+
+```text
 **Article Title**
 
 Article content summary...
 ```
 
 ### Multiple Results
-```
+
+When `num_results` returns more than one article, a rule separates each one:
+
+```text
 **First Article Title**
 
 First article content summary...
@@ -175,36 +199,50 @@ The skill provides these hints to improve voice recognition:
 ## Best Practices
 
 ### Query Optimization
+
+Specific queries return more useful articles:
+
 - Use specific terms for better results
 - Try both full names and common names (e.g., "Einstein" vs "Albert Einstein")
 - For disambiguation, be more specific (e.g., "Python programming language" vs "Python")
 
 ### Result Management
+
+Match `num_results` to the query's scope:
+
 - Use `num_results: 1` for specific factual queries
 - Use `num_results: 2-3` for broader topics that might have multiple relevant articles
-- Avoid very high numbers as it can overwhelm users
+- Avoid high numbers, which can overwhelm users
 
 ### Error Messages
+
+Tailor `no_results_message` instead of leaving the default:
+
 - Customize `no_results_message` to match your agent's personality
 - Include suggestions for alternative searches
 - Use the `{query}` placeholder to reference what the user searched for
 
 ### Integration Tips
+
+The skill pairs well with other sources of information:
+
 - Combine with web search for comprehensive information gathering
 - Use for factual verification of claims
-- Great for educational and reference applications
+- Fits educational and reference applications
 
 ## Example Conversations
 
 **User**: "Tell me about quantum physics"
-**Agent**: *Searching Wikipedia...* "Here's what I found about quantum physics: **Quantum mechanics** - Quantum mechanics is a fundamental theory that describes the behavior of nature at and below the scale of atoms..."
+**Agent**: *Searching Wikipedia...* "Here's what I found: quantum mechanics is a theory that describes the behavior of nature at and below the scale of atoms..."
 
 **User**: "Who was Marie Curie?"
-**Agent**: *Let me check Wikipedia for that...* "**Marie Curie** - Marie Salomea Skłodowska-Curie was a Polish and naturalized-French physicist and chemist who conducted pioneering research on radioactivity..."
+**Agent**: *Let me check Wikipedia for that...* "Marie Salomea Skłodowska-Curie was a Polish and naturalized-French physicist and chemist known for her research on radioactivity..."
 
 ## Troubleshooting
 
 ### Common Issues
+
+These three issues cover most reports:
 
 1. **Skill not loading**: Ensure `requests` package is installed
 2. **No results for valid topics**: Try different search terms or check spelling
@@ -213,7 +251,8 @@ The skill provides these hints to improve voice recognition:
 ### Debug Information
 
 The skill logs initialization and search activities:
-```
+
+```text
 Wikipedia search skill initialized with {num_results} max results
 ```
 
@@ -221,8 +260,10 @@ Enable debug logging to see detailed API interactions and error information.
 
 ## Related Skills
 
+Three other skills complement Wikipedia search:
+
 - **web_search**: For current information and broader web content
 - **datasphere**: For searching custom knowledge bases
 - **datetime**: For current date/time context in historical queries
 
-The Wikipedia skill is perfect for factual, encyclopedic information, while web search is better for current events and specific products/services. 
+The Wikipedia skill suits factual, encyclopedic questions; web search suits current events and specific products or services.

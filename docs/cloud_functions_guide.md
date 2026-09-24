@@ -330,6 +330,8 @@ swaig-test examples/my_agent.py --simulate-serverless azure_function \
 
 #### Complete Testing Workflow
 
+This sequence runs each check in order, from listing tools to verifying authentication:
+
 ```bash
 # 1. List available agents and tools
 swaig-test examples/my_agent.py --list-agents
@@ -371,6 +373,8 @@ func start
 
 ### Testing Authentication
 
+Confirm the deployed function rejects an unauthenticated request and accepts a valid one:
+
 ```bash
 # Test without auth (should return 401)
 curl https://your-function-url/
@@ -378,12 +382,20 @@ curl https://your-function-url/
 # Test with valid auth
 curl -u username:password https://your-function-url/
 
-# Test SWAIG function call
-curl -u username:password \
-  -H "Content-Type: application/json" \
-  -d '{"call_id": "test", "argument": {"parsed": [{"param": "value"}]}}' \
-  https://your-function-url/your_function_name
+# Test a SWAIG function call. A function's URL carries a token for one call,
+# so fetch the SWML for a test call and take the function's URL from it.
+URL=$(curl -s -u username:password "https://your-function-url/?call_id=test" | python -c '
+import json, sys
+ai = next(v["ai"] for v in json.load(sys.stdin)["sections"]["main"] if "ai" in v)
+print(next(f["web_hook_url"] for f in ai["SWAIG"]["functions"] if f["function"] == "your_function_name"))')
+
+# The URL includes the credentials; send the same call_id
+curl -H "Content-Type: application/json" \
+  -d '{"function": "your_function_name", "call_id": "test", "argument": {"parsed": [{"param": "value"}]}}' \
+  "$URL"
 ```
+
+With a `signing_key` set, every POST also needs SignalWire's signature, so a call made by hand is refused. Test functions with `swaig-test`, or through SignalWire.
 
 ## Best Practices
 
@@ -397,6 +409,7 @@ curl -u username:password \
 - Implement proper authentication
 - Use environment variables for sensitive data
 - Consider using cloud-native secret management
+- Set `signing_key` (or `SIGNALWIRE_SIGNING_KEY`) so the agent checks that SignalWire signed each request, as it does on a web server. If signed requests are refused with 403, set `SWML_PROXY_URL_BASE` to the function's public URL. See [Webhook Signature Validation](security.md#webhook-signature-validation).
 
 ### Monitoring
 - Enable cloud platform logging
@@ -471,7 +484,7 @@ See `examples/lambda_agent.py` for a complete AWS Lambda deployment example.
 ## Support
 
 For issues specific to cloud function deployment:
-1. Check the troubleshooting section above
+1. Check the [Troubleshooting](#troubleshooting) section
 2. Verify environment variables are set correctly
 3. Test authentication flow manually
 4. Check cloud platform logs for detailed error messages

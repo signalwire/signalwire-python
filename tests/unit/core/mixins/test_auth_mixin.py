@@ -12,6 +12,7 @@ Unit tests for AuthMixin class
 """
 
 import pytest
+from pathlib import Path
 import json
 import base64
 import os
@@ -110,65 +111,25 @@ class TestGetBasicAuthCredentials:
         assert result == ("myuser", "mypass")
 
     def test_returns_tuple_with_source_provided(self) -> None:
-        """With include_source and non-env, non-generated credentials, source is 'provided'."""
+        """Without a recorded source, the credentials count as provided."""
         mixin = ConcreteAuthMixin(("myuser", "mypass"))
-        with patch.dict(os.environ, {}, clear=True):
-            result = mixin.get_basic_auth_credentials(include_source=True)
+        result = mixin.get_basic_auth_credentials(include_source=True)
         assert result == ("myuser", "mypass", "provided")
 
-    def test_source_environment_when_matching_env_vars(self) -> None:
-        """When credentials match environment variables, source is 'environment'."""
-        mixin = ConcreteAuthMixin(("envuser", "envpass"))
-        env = {"SWML_BASIC_AUTH_USER": "envuser", "SWML_BASIC_AUTH_PASSWORD": "envpass"}
+    @pytest.mark.parametrize("source", ["provided", "environment", "config file", "generated"])
+    def test_returns_the_recorded_source(self, source: str) -> None:
+        """The source is the one recorded when the credentials were resolved (B26)."""
+        mixin = ConcreteAuthMixin(("myuser", "mypass"))
+        mixin._basic_auth_source = source  # set by SWMLService.__init__ in a real agent
+        assert mixin.get_basic_auth_credentials(include_source=True) == ("myuser", "mypass", source)
+
+    def test_source_is_not_guessed_from_the_credentials(self) -> None:
+        """A user_ name with a long password used to be labeled generated."""
+        mixin = ConcreteAuthMixin(("user_abc123", "a" * 25))
+        env = {"SWML_BASIC_AUTH_USER": "user_abc123", "SWML_BASIC_AUTH_PASSWORD": "a" * 25}
         with patch.dict(os.environ, env, clear=True):
-            result = mixin.get_basic_auth_credentials(include_source=True)
-        assert result == ("envuser", "envpass", "environment")
-
-    def test_source_not_environment_when_env_partially_matches(self) -> None:
-        """If only one env var matches, source is not 'environment'."""
-        mixin = ConcreteAuthMixin(("envuser", "differentpass"))
-        env = {"SWML_BASIC_AUTH_USER": "envuser", "SWML_BASIC_AUTH_PASSWORD": "envpass"}
-        with patch.dict(os.environ, env, clear=True):
-            result = mixin.get_basic_auth_credentials(include_source=True)
-        assert len(result) == 3
-        assert result[2] != "environment"
-
-    def test_source_generated_when_looks_generated(self) -> None:
-        """Credentials that look generated (user_ prefix, long password) get source 'generated'."""
-        long_password = "a" * 25  # Longer than 20 characters
-        mixin = ConcreteAuthMixin(("user_abc123", long_password))
-        with patch.dict(os.environ, {}, clear=True):
-            result = mixin.get_basic_auth_credentials(include_source=True)
-        assert result == ("user_abc123", long_password, "generated")
-
-    def test_source_not_generated_short_password(self) -> None:
-        """user_ prefix but short password does not count as 'generated'."""
-        mixin = ConcreteAuthMixin(("user_abc", "short"))
-        with patch.dict(os.environ, {}, clear=True):
-            result = mixin.get_basic_auth_credentials(include_source=True)
-        assert len(result) == 3
-        assert result[2] == "provided"
-
-    def test_source_not_generated_no_prefix(self) -> None:
-        """Long password but no user_ prefix does not count as 'generated'."""
-        mixin = ConcreteAuthMixin(("admin", "a" * 25))
-        with patch.dict(os.environ, {}, clear=True):
-            result = mixin.get_basic_auth_credentials(include_source=True)
-        assert len(result) == 3
-        assert result[2] == "provided"
-
-    def test_environment_takes_priority_over_generated(self) -> None:
-        """Even if credentials look generated, environment match takes priority."""
-        long_password = "a" * 25
-        mixin = ConcreteAuthMixin(("user_abc123", long_password))
-        env = {
-            "SWML_BASIC_AUTH_USER": "user_abc123",
-            "SWML_BASIC_AUTH_PASSWORD": long_password,
-        }
-        with patch.dict(os.environ, env, clear=True):
-            result = mixin.get_basic_auth_credentials(include_source=True)
-        assert len(result) == 3
-        assert result[2] == "environment"
+            _, _, source = mixin.get_basic_auth_credentials(include_source=True)  # type: ignore[misc]  # include_source=True returns 3-tuple
+        assert source == "provided"
 
     def test_include_source_false_explicit(self) -> None:
         """Explicitly passing include_source=False returns 2-tuple."""
@@ -861,26 +822,44 @@ class TestSecurityConfigIntegration:
         assert mixin.validate_basic_auth("configuser", "configpass") is True
         assert mixin.validate_basic_auth("other", "other") is False
 
-    def test_credentials_from_security_config_generated(self) -> None:
-        """When SecurityConfig generates a long password, get_basic_auth_credentials detects it."""
-        import secrets
-        generated_pass = secrets.token_urlsafe(32)
-        mixin = ConcreteAuthMixin(("user_abc123", generated_pass))
+    def test_generated_credentials_are_labeled_generated(self) -> None:
+        """An agent with no credentials anywhere reports them as generated (B26)."""
+        from signalwire import AgentBase
+
         with patch.dict(os.environ, {}, clear=True):
-            creds = mixin.get_basic_auth_credentials(include_source=True)
-        assert len(creds) == 3
-        _, _, source = creds
+            agent = AgentBase(name="generated-creds", route="/g")
+            _, _, source = agent.get_basic_auth_credentials(include_source=True)  # type: ignore[misc]  # include_source=True returns 3-tuple
         assert source == "generated"
 
-    def test_credentials_from_env_via_security_config(self) -> None:
-        """When SecurityConfig loads from env, get_basic_auth_credentials detects environment source."""
-        mixin = ConcreteAuthMixin(("envuser", "envpass"))
+    def test_environment_credentials_are_labeled_environment(self) -> None:
+        from signalwire import AgentBase
+
         env = {"SWML_BASIC_AUTH_USER": "envuser", "SWML_BASIC_AUTH_PASSWORD": "envpass"}
         with patch.dict(os.environ, env, clear=True):
-            creds = mixin.get_basic_auth_credentials(include_source=True)
-        assert len(creds) == 3
-        _, _, source = creds
-        assert source == "environment"
+            agent = AgentBase(name="env-creds", route="/e")
+            creds = agent.get_basic_auth_credentials(include_source=True)
+        assert creds == ("envuser", "envpass", "environment")
+
+    def test_constructor_credentials_are_labeled_provided(self) -> None:
+        from signalwire import AgentBase
+
+        env = {"SWML_BASIC_AUTH_USER": "user_x", "SWML_BASIC_AUTH_PASSWORD": "a" * 25}
+        with patch.dict(os.environ, env, clear=True):
+            agent = AgentBase(name="ctor-creds", route="/c", basic_auth=("user_x", "a" * 25))
+            _, _, source = agent.get_basic_auth_credentials(include_source=True)  # type: ignore[misc]  # include_source=True returns 3-tuple
+        assert source == "provided"
+
+    def test_config_file_credentials_are_labeled_config_file(self, tmp_path: Path) -> None:
+        import json
+
+        from signalwire import AgentBase
+
+        config = tmp_path / "agent.json"
+        config.write_text(json.dumps({"security": {"auth": {"basic": {"user": "cfg", "password": "cfgpass"}}}}))
+        with patch.dict(os.environ, {}, clear=True):
+            agent = AgentBase(name="cfg-creds", route="/f", config_file=str(config))
+            creds = agent.get_basic_auth_credentials(include_source=True)
+        assert creds == ("cfg", "cfgpass", "config file")
 
     def test_end_to_end_auth_check_with_config_credentials(self) -> None:
         """Full flow: credentials set, request made, auth succeeds."""

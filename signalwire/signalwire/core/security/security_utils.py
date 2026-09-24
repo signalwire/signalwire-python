@@ -31,7 +31,7 @@ SENSITIVE_HEADERS = frozenset(
 )
 
 # url credentials: ``://user:secret@host`` -> ``://user:****@host``.
-_URL_CREDENTIALS_RE = re.compile(r"://([^:@/]+):([^@/]+)@")
+_URL_CREDENTIALS_RE = re.compile(r"://([^:@/]*):([^@/]*)@")
 
 # Hostnames must not contain whitespace, slashes, or control characters.
 _HOSTNAME_REJECT_RE = re.compile(r"[\s/\\\x00-\x1f\x7f]")

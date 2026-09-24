@@ -91,6 +91,17 @@ class ConcreteServerlessMixin(ServerlessMixin):
     def _render_swml(self, **kwargs: Any) -> str:
         return self._swml_response
 
+    def on_swml_request(self, *args: Any) -> None:
+        return None
+
+    def _tool_token_rejection(self, function_name: str, token: Any, call_id: Any) -> None:
+        # Token enforcement is AgentBase's; it has its own tests. Here every call may run.
+        return None
+
+    def _per_call_agent(self, *args: Any) -> "ConcreteServerlessMixin":
+        # Per-call configuration is AgentBase's; without a callback it is the agent itself.
+        return self
+
     def on_function_call(self, function_name: str, args: Any, raw_data: Any) -> dict[str, Any]:
         fn = self._tool_registry._swaig_functions.get(function_name)
         if fn:
@@ -128,6 +139,13 @@ def _make_azure_request(url: str | None = None, method: str = "GET", body: Any =
     else:
         req.get_body = Mock(return_value=b"")
     return req
+
+
+def _cgi_body(response: str) -> str:
+    """The body of a complete CGI response."""
+    head, separator, body = response.partition("\r\n\r\n")
+    assert separator and head.startswith("Status: "), response
+    return body
 
 
 def _swaig_body(function_name: str, args: Any = None, call_id: str | None = None) -> dict[str, Any]:
@@ -981,7 +999,8 @@ class TestModeDetection:
         mixin = ConcreteServerlessMixin()
         with patch.dict(os.environ, {"PATH_INFO": ""}, clear=False):
             result = mixin.handle_serverless_request(mode="cgi")
-        assert result == mixin._swml_response
+        assert result.startswith("Status: 200 OK\r\n")
+        assert _cgi_body(result) == mixin._swml_response
 
     def test_cgi_mode_auth_failure(self) -> None:
         """mode='cgi' with auth failure returns challenge."""
@@ -1032,7 +1051,7 @@ class TestCGIModeBodyParsing:
              patch("sys.stdin", mock_stdin):
             result = mixin.handle_serverless_request(mode="cgi")
 
-        assert result["response"] == "world"
+        assert json.loads(_cgi_body(result))["response"] == "world"
 
     def test_cgi_function_call_with_raw_args(self) -> None:
         """CGI mode falls back to argument.raw when parsed is empty."""
@@ -1056,16 +1075,28 @@ class TestCGIModeBodyParsing:
              patch("sys.stdin", mock_stdin):
             result = mixin.handle_serverless_request(mode="cgi")
 
-        assert result["got"] == {"from_raw": True}
+        assert json.loads(_cgi_body(result))["got"] == {"from_raw": True}
+
+    def test_cgi_function_needs_a_post(self) -> None:
+        """Running a function takes a POST; a GET of its path is refused."""
+        mixin = ConcreteServerlessMixin(
+            swaig_functions={"hello": lambda args, raw: {"response": "ok"}}
+        )
+        env = {"PATH_INFO": "/hello", "REQUEST_METHOD": "GET"}
+        with patch.dict(os.environ, env, clear=False):
+            os.environ.pop("CONTENT_LENGTH", None)
+            result = mixin.handle_serverless_request(mode="cgi")
+        assert result.startswith("Status: 405 Method Not Allowed\r\n")
 
     def test_cgi_missing_content_length(self) -> None:
         """CGI mode with no CONTENT_LENGTH still works (no body parsed)."""
         mixin = ConcreteServerlessMixin(
             swaig_functions={"hello": lambda args, raw: {"response": "ok"}}
         )
-        env = {"PATH_INFO": "/hello"}
+        env = {"PATH_INFO": "/hello", "REQUEST_METHOD": "POST"}
         with patch.dict(os.environ, env, clear=False):
+            os.environ.pop("CONTENT_LENGTH", None)
             result = mixin.handle_serverless_request(mode="cgi")
 
         # Function called with empty args
-        assert result["response"] == "ok"
+        assert json.loads(_cgi_body(result))["response"] == "ok"

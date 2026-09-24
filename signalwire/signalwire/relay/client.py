@@ -16,6 +16,8 @@ Architecture notes (mirrors the JS SDK):
 - Requests made while disconnected are queued and flushed after re-auth.
 - Server pings are tracked; if no ping arrives within the check interval the
   connection is assumed half-open and force-closed for reconnect.
+
+The SDK's installed documentation covers this module: run ``sw-pydocs relay``, or ``sw-pydocs`` for the index.
 """
 
 from __future__ import annotations

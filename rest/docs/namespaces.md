@@ -4,6 +4,8 @@ Reference for every namespace beyond Fabric, Calling, and Compat (which have the
 
 ## Phone Numbers
 
+Search, purchase, and manage phone numbers:
+
 ```python
 # List your phone numbers
 numbers = client.phone_numbers.list()
@@ -23,6 +25,8 @@ client.phone_numbers.delete("pn-uuid")
 
 ## Addresses
 
+Manage physical addresses on the project:
+
 ```python
 addresses = client.addresses.list()
 address = client.addresses.create(label="Office", street="123 Main St", city="Austin", state="TX")
@@ -31,6 +35,8 @@ client.addresses.delete("addr-uuid")
 ```
 
 ## Queues
+
+Manage call queues and their members:
 
 ```python
 queues = client.queues.list()
@@ -47,6 +53,8 @@ member = client.queues.get_member("q-uuid", "member-uuid")
 
 ## Recordings
 
+List, fetch, and delete call recordings:
+
 ```python
 recordings = client.recordings.list()
 recording = client.recordings.get("rec-uuid")
@@ -54,6 +62,8 @@ client.recordings.delete("rec-uuid")
 ```
 
 ## Number Groups
+
+Group phone numbers and manage their memberships:
 
 ```python
 groups = client.number_groups.list()
@@ -71,6 +81,8 @@ client.number_groups.delete_membership("mem-uuid")
 
 ## Verified Caller IDs
 
+Register and verify caller IDs for outbound calls:
+
 ```python
 callers = client.verified_callers.list()
 caller = client.verified_callers.create(phone_number="+15551234567", name="Office")
@@ -85,7 +97,7 @@ client.verified_callers.submit_verification("vc-uuid", code="123456")
 
 ## SIP Profile
 
-Singleton resource -- no ID needed:
+Singleton resource, no ID needed:
 
 ```python
 profile = client.sip_profile.get()
@@ -93,6 +105,8 @@ client.sip_profile.update(username="myproject", password="newsecret")
 ```
 
 ## Phone Number Lookup
+
+Look up carrier and CNAM data for a number:
 
 ```python
 info = client.lookup.phone_number("+15551234567")
@@ -103,6 +117,8 @@ Note: carrier and CNAM lookups are billable.
 
 ## Short Codes
 
+List and update short codes on the project:
+
 ```python
 codes = client.short_codes.list()
 code = client.short_codes.get("sc-uuid")
@@ -111,11 +127,15 @@ client.short_codes.update("sc-uuid", name="Alerts")
 
 ## Imported Phone Numbers
 
+Import a number from an external carrier:
+
 ```python
 client.imported_numbers.create(number="+15559999999", carrier="external")
 ```
 
 ## MFA (Multi-Factor Authentication)
+
+Request a verification code by SMS or call, then verify it:
 
 ```python
 # Request a verification code via SMS
@@ -137,6 +157,8 @@ result = client.mfa.verify(request_id, token="123456")
 ```
 
 ## 10DLC Campaign Registry
+
+Register brands and campaigns, and assign numbers to them:
 
 ```python
 # Brands
@@ -162,6 +184,8 @@ client.registry.numbers.delete("number-assignment-uuid")
 
 ## Datasphere
 
+Manage documents and run semantic search over them:
+
 ```python
 # Documents
 docs = client.datasphere.documents.list()
@@ -184,6 +208,8 @@ client.datasphere.documents.delete_chunk("doc-uuid", "chunk-uuid")
 ```
 
 ## Video
+
+Manage rooms, sessions, conferences, and their recordings:
 
 ```python
 # Rooms
@@ -255,6 +281,8 @@ logs = client.logs.conferences.list()
 
 ## Project Tokens
 
+Create and manage API tokens scoped to the project:
+
 ```python
 token = client.project.tokens.create(
     name="ci-token",
@@ -266,6 +294,8 @@ client.project.tokens.delete("token-uuid")
 
 ## PubSub Tokens
 
+Create a scoped token for the PubSub API:
+
 ```python
 token = client.pubsub.create_token(
     ttl=60,
@@ -275,6 +305,8 @@ token = client.pubsub.create_token(
 ```
 
 ## Chat Tokens
+
+Create a scoped token for the Chat API:
 
 ```python
 token = client.chat.create_token(

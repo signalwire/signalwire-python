@@ -5,6 +5,8 @@
 
 ## The one thing
 
+Run this script:
+
 ```bash
 bash scripts/run-ci.sh
 ```
@@ -13,9 +15,11 @@ Run it before you push. It runs the same gates CI does, in the same order, and
 it is the difference between a review about your change and a review about
 formatting.
 
-Most of what follows is just explaining what that command already checks.
+Most of what follows explains what that command already checks.
 
 ## Setup
+
+Install the package in editable mode, plus the development dependencies:
 
 ```bash
 pip install -e .
@@ -23,7 +27,7 @@ pip install -r requirements-dev.txt
 ```
 
 `requirements-dev.txt` is not optional, and not only for running the tests.
-The type checker's answer depends on which packages are importable — a
+The type checker's answer depends on which packages are importable. A
 `# type: ignore` that is **required** with `sentence-transformers` installed is
 an **error** without it, and vice versa. Skip the install and your checker
 grades different code than CI's, so a gate can red on lines you never touched.
@@ -40,13 +44,14 @@ code alone.
 `tests/` as well as the package, in strict mode. A new test function without
 annotations fails the gate:
 
+<!-- snippet: no-compile two alternative signatures shown side by side, not a runnable definition -->
 ```python
 async def test_thing(fixture):              # fails
 async def test_thing(fixture: Any) -> None: # passes
 ```
 
 **Tests must assert something real.** A test whose body has no assertion, or
-only a nullness check, is rejected — it passes whether or not the code works.
+only a nullness check, is rejected: it passes whether or not the code works.
 Assert on content:
 
 ```python
@@ -58,6 +63,7 @@ gateway.check_origin(origin)                      # rejected: asserts nothing
 If a test's point is that a call does *not* raise, pair it with the case that
 does, so the test can actually fail:
 
+<!-- snippet: no-run illustrative fragment (references `gateway` and `GatewayRejection` established elsewhere in a real test) -->
 ```python
 gateway.check_origin("http://localhost:3000")     # allowed
 with pytest.raises(GatewayRejection):             # ...and this still isn't
@@ -71,7 +77,7 @@ python3 -m ruff check signalwire --fix
 python3 -m ruff format signalwire
 ```
 
-`__all__` must be sorted (`RUF022`) — append a name to the end and the gate
+`__all__` must be sorted (`RUF022`). Append a name to the end and the gate
 reds. The autofix handles it.
 
 **Docstrings have a floor.** Public symbols need one, measured against a
@@ -84,8 +90,8 @@ fails the gate.
 because two people fixed the same thing in the same week.
 
 **Wire shapes come from the engine, not from the docs.** If you are changing
-what the SDK puts on the wire — an action shape, an enum value, a parameter
-name — say in the PR where you confirmed it. The generated types under
+what the SDK puts on the wire (an action shape, an enum value, a parameter
+name), say in the PR where you confirmed it. The generated types under
 `signalwire/signalwire/**/*_generated.py` are derived from the engine's own
 schemas and are the closest authority in this repo. A change that contradicts
 them needs a reason.
@@ -95,7 +101,7 @@ them needs a reason.
 **Say if you change public API.** New or renamed public classes, methods, or
 parameters have to be reflected in shared infrastructure that lives in a
 private repo, and a maintainer lands that alongside your PR. You do not need
-access to it — just flag it in the description so it does not get missed:
+access to it. Flag it in the description so it does not get missed:
 
 > Changes public surface: adds `ChatGateway.router()`.
 
@@ -110,7 +116,7 @@ Your commits keep your authorship.
 
 ## Rules of engagement
 
-The engineering rules this project is held to — parity with the reference
-implementation, what may and may not be excused, how tests are written — are
+The engineering rules this project is held to (parity with the reference
+implementation, what may and may not be excused, how tests are written) are
 enforced by the gates, so `run-ci.sh` is the practical version of all of them.
 Maintainers work from a fuller ruleset; you do not need it to contribute.

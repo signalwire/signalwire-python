@@ -103,14 +103,26 @@ else:
 
 
 def _cache_key(
-    query: str, index_name: str, count: int, tags: list[str] | None = None
+    query: str,
+    index_name: str,
+    count: int,
+    tags: list[str] | None = None,
+    similarity_threshold: float = 0.0,
+    language: str | None = None,
 ) -> str:
-    """Generate cache key for query results"""
+    """Generate cache key for query results.
+
+    Every request field that changes the results is part of the key, so a
+    request never gets a response computed for different settings.
+    """
     key_data = {
         "query": query.lower().strip(),
         "index": index_name,
         "count": count,
         "tags": sorted(tags) if tags else [],
+        "similarity_threshold": similarity_threshold,
+        # None and "auto" both mean language detection.
+        "language": language or "auto",
     }
     key_str = json.dumps(key_data, sort_keys=True)
     return hashlib.md5(key_str.encode(), usedforsecurity=False).hexdigest()
@@ -513,10 +525,17 @@ class SearchService:
 
         # Check cache first
         cache_key = _cache_key(
-            request.query, request.index_name, request.count, request.tags
+            request.query,
+            request.index_name,
+            request.count,
+            request.tags,
+            request.similarity_threshold,
+            request.language,
         )
         if cache_key in self._query_cache:
-            logger.info(f"Cache hit for query: {request.query[:50]}...")
+            # The query is the caller's words, so it's logged at DEBUG only.
+            logger.info("Cache hit for index %s", request.index_name)
+            logger.debug("Cached query: %.50s", request.query)
             return self._query_cache[cache_key]
 
         search_engine = self.search_engines[request.index_name]
@@ -539,6 +558,12 @@ class SearchService:
                 "model_name"
             ) or search_engine.config.get("embedding_model")
 
+        # Set when preprocessing or the search fails. The response then
+        # reflects an outage, not the index, so it must not be cached: a
+        # transient error would otherwise keep returning empty or degraded
+        # results for this query until the entry is evicted.
+        degraded = False
+
         # Enhance query
         try:
             enhanced = preprocess_query(
@@ -550,6 +575,7 @@ class SearchService:
         except Exception as e:
             logger.error(f"Error preprocessing query: {e}")
             enhanced = {"enhanced_text": request.query, "vector": [], "language": "en"}
+            degraded = True
 
         # Perform search
         try:
@@ -563,6 +589,7 @@ class SearchService:
         except Exception as e:
             logger.error(f"Error performing search: {e}")
             results = []
+            degraded = True
 
         # Format response
         search_results = [
@@ -585,11 +612,12 @@ class SearchService:
         )
 
         # Cache the result
-        if len(self._query_cache) >= self._cache_size:
-            # Simple FIFO eviction
-            first_key = next(iter(self._query_cache))
-            del self._query_cache[first_key]
-        self._query_cache[cache_key] = response
+        if not degraded:
+            if len(self._query_cache) >= self._cache_size:
+                # Simple FIFO eviction
+                first_key = next(iter(self._query_cache))
+                del self._query_cache[first_key]
+            self._query_cache[cache_key] = response
 
         return response
 

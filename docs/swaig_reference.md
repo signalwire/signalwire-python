@@ -1,6 +1,6 @@
 # FunctionResult Methods Reference
 
-SWAIG (SignalWire AI Gateway) is the platform's AI tool-calling system -- it connects the AI's decisions to actions like call transfers, SMS, recordings, and API calls, with native access to the media stack. This document provides a complete reference for all methods available in the `FunctionResult` class. These methods provide convenient abstractions for SWAIG actions, eliminating the need to manually construct action JSON objects.
+SWAIG (SignalWire AI Gateway) is the platform's AI tool-calling system. It connects the AI's decisions to actions such as call transfers, SMS, recordings, and API calls, with native access to the media stack. This document provides a complete reference for all methods available in the `FunctionResult` class. These methods provide convenient abstractions for SWAIG actions, eliminating the need to manually construct action JSON objects.
 
 ## Core Methods
 
@@ -47,7 +47,8 @@ swml_dict = {"version": "1.0.0", "sections": {"main": [{"say": "Hello"}]}}
 result.execute_swml(swml_dict, transfer=True)
 ```
 
-#### **[IMPLEMENTED]** - Transfer/connect call to another destination using SWML.
+#### `connect(destination, final=True, from_addr=None)`
+**[IMPLEMENTED]** - Transfer/connect call to another destination using SWML.
 
 ```python
 result.connect("+15551234567", final=True)  # Permanent transfer
@@ -152,7 +153,7 @@ result.pay(
 
 **Core Parameters:**
 - `payment_connector_url` (required): URL to process payment requests
-- `input_method`: "dtmf" or "voice" (default: "dtmf")
+- `input_method`: only "dtmf" is valid; the SWML pay verb's schema requires this constant (default: "dtmf")
 - `payment_method`: "credit-card" (default: "credit-card")
 - `timeout`: Seconds to wait for input (default: 5)
 - `max_attempts`: Number of retry attempts (default: 1)
@@ -230,7 +231,7 @@ result.record_call(
 **Core Parameters:**
 - `control_id` (optional): Identifier for this recording (for use with stop_record_call)
 - `stereo`: Record in stereo (default: False)
-- `format`: "wav" or "mp3" (default: "wav")
+- `format`: "wav", "mp3", or "mp4" (default: "wav")
 - `direction`: "speak", "listen", or "both" (default: "both")
 
 **Control Options:**
@@ -240,8 +241,8 @@ result.record_call(
 
 **Timing Options:**
 - `input_sensitivity`: Input sensitivity (default: 44.0)
-- `initial_timeout`: Time to wait for speech start (default: 0.0)
-- `end_silence_timeout`: Time to wait in silence before ending (default: 0.0)
+- `initial_timeout`: Time to wait for speech start, in seconds (default: unset)
+- `end_silence_timeout`: Time to wait in silence before ending, in seconds (default: unset)
 
 **Webhook Options:**
 - `status_url`: URL to send recording status events to
@@ -423,7 +424,7 @@ result.tap(
 - `control_id`: Identifier for this tap to use with stop_tap (optional, auto-generated if not provided)
 
 **Audio Configuration:**
-- `direction`: Audio direction to tap (default: "both"; always sent — the underlying SWML verb defaults to "speak" when omitted)
+- `direction`: Audio direction to tap (default: "both"; always sent, because the underlying SWML verb defaults to "speak" when omitted)
   - `"speak"`: What party says
   - `"listen"`: What party hears
   - `"both"`: What party hears and says
@@ -476,13 +477,38 @@ result.hangup()
 
 ### Call Flow Control
 
-#### `hold(timeout=300)`
-Put call on hold with timeout (max 900 seconds).
+#### `hold(prompt=None, timeout=300, step=None, timeout_step=None)`
+Put the call on hold. Speech detection pauses for the duration of the hold, so the agent neither hears nor responds to the caller until the hold ends.
+
+A bare timeout still works the same way it always has:
 
 ```python
 result.hold(60)    # Hold for 1 minute
 result.hold(600)   # Hold for 10 minutes
 ```
+
+`hold()` carries no announcement of its own, so pass `prompt` to have the agent say something before the hold takes effect. Setting `prompt` also turns on `post_process`, which gives the model one more turn to speak before the `hold` action runs:
+
+```python
+result.hold(prompt="Tell the caller you are placing them on hold.", timeout=120)
+```
+
+Pass `step` and `timeout_step` to route the call once the hold ends. `step` applies when someone takes the call off hold; `timeout_step` applies when the `timeout` elapses with nobody releasing it. Both transitions are deferred, firing only when the hold actually ends, unlike `swml_change_step()`, which applies immediately. Leave either one out and a call that ends that way resumes in the step it was already in.
+
+```python
+result.hold(
+    prompt="Tell the caller you are checking if someone is available.",
+    timeout=300,
+    step="back_with_agent",        # released before the timeout
+    timeout_step="take_a_message", # nobody picked up
+)
+```
+
+**Parameters:**
+- `prompt` (str, optional): Instruction the model speaks before the hold takes effect. A single positional `int` is read as `timeout` instead, so existing `hold(120)` calls are unaffected.
+- `timeout` (int): Seconds to hold, clamped to 900. Default 300.
+- `step` (str, optional): Step to enter when the call comes off hold normally.
+- `timeout_step` (str, optional): Step to enter when the hold times out.
 
 #### `wait_for_user(enabled=None, timeout=None, answer_first=False)`
 Control how agent waits for user input with flexible parameters.
@@ -612,7 +638,7 @@ result.enable_extensive_data(False)  # Use normal data
 #### `replace_in_history(text=True)`
 Remove or replace the tool_call + tool_result pair from the LLM's conversation history after the first send. This is useful when a function call is an implementation detail that would confuse the model if it remained visible in context.
 
-When called with a string, the tool_call/tool_result pair is replaced with an assistant message containing that text. When called with `True`, the pair is removed entirely — the LLM will never see that the function was called.
+When called with a string, the tool_call/tool_result pair is replaced with an assistant message containing that text. When called with `True`, the pair is removed entirely, and the LLM never sees that the function was called.
 
 ```python
 # Remove entirely — LLM won't see this function was called
@@ -748,12 +774,16 @@ result = FunctionResult("Let me transfer you to billing") \
 
 ## Implementation Status
 
-- **[IMPLEMENTED]**: `connect()`, `update_global_data()`, and all methods listed above
+Each method in this reference falls into one of these categories:
+
+- **[IMPLEMENTED]**: `connect()`, `update_global_data()`, and the other methods described earlier in this document
 - **[HELPER METHODS]**: `send_sms()`, `pay()`, `record_call()`, `stop_record_call()`, `join_room()`, `sip_refer()`, `join_conference()`, `tap()`, `stop_tap()` - Additional convenience methods that generate SWML
 - **[UTILITY METHODS]**: `create_payment_prompt()`, `create_payment_action()`, `create_payment_parameter()`
 - **[EXTENSIBLE]**: Additional convenience methods for common SWML patterns
 
 ## Best Practices
+
+Keep these practices in mind when writing SWAIG functions:
 
 1. **Use post_process=True** when you want the AI to speak before executing actions
 2. **Chain methods** for cleaner, more readable code
@@ -762,7 +792,7 @@ result = FunctionResult("Let me transfer you to billing") \
 5. **Validate settings** - update_settings() relies on server-side validation 
 
 ### Final State
-The framework now includes **10 virtual helpers total**:
+These are the framework's virtual helpers:
 1. connect() - Call transfer/connect
 2. send_sms() - SMS messaging
 3. pay() - Payment processing
@@ -825,7 +855,7 @@ These keys are only present for traditional webhook SWAIG functions:
 | Key | Type | Description |
 |-----|------|-------------|
 | `prompt_vars` | object | Template variables built from call context, SWML vars, and global_data |
-| `args` | object | First parsed argument object for easy template access |
+| `args` | object | First parsed argument object, for template access |
 | `input` | object | Copy of entire post_data for variable expansion |
 
 ### prompt_vars Contents
@@ -866,12 +896,16 @@ DataMap processing supports template expansion with access to:
 
 ## Related Documentation
 
+For more detail on related topics, see:
+
 - **[API Reference](api_reference.md)** - Complete AgentBase and FunctionResult API reference
 - **[Contexts Guide](contexts_guide.md)** - Using `swml_change_context()` and `swml_change_step()`
 - **[DataMap Guide](datamap_guide.md)** - Using FunctionResult with DataMap outputs
 - **[Agent Guide](agent_guide.md)** - General agent development guide
 
 ### Example Files
+
+These examples in the repository show SWAIG functions in use:
 
 - `examples/simple_agent.py` - Basic SWAIG function usage
 - `examples/swaig_features_agent.py` - Advanced SWAIG features with fillers

@@ -35,21 +35,21 @@ Deploy it alongside your agent, and search works immediately with no external se
 
 **Advantages:**
 
-- **Portability** -- A single file contains the entire knowledge base. Copy it to any machine and it works immediately. No database setup, no connection strings, just a file.
-- **Simplicity** -- No external dependencies. SQLite is embedded. No PostgreSQL installation, no connection pooling, no authentication, no network calls.
-- **Version control** -- Treat knowledge bases like code artifacts. Different versions for different environments (staging, production).
-- **Fast for single users** -- SQLite is optimized for single-user access with low latency and no network overhead.
-- **Serverless-friendly** -- Package the `.swsearch` file directly with AWS Lambda, Google Cloud Functions, or Azure Functions deployments.
+- **Portability**: A single file contains the entire knowledge base. Copy it to any machine and it works immediately, with no database setup and no connection strings.
+- **Simplicity**: No external dependencies. SQLite is embedded, with no PostgreSQL installation, no connection pooling, no authentication, and no network calls.
+- **Version control**: Treat knowledge bases like code artifacts, with different versions for different environments, such as staging and production.
+- **Fast for single users**: SQLite is optimized for single-user access, with low latency and no network overhead.
+- **Serverless-friendly**: Package the `.swsearch` file directly with AWS Lambda, Google Cloud Functions, or Azure Functions deployments.
 
 **Limitations:**
 
-- **No concurrent writes** -- SQLite does not handle multiple writers well. One agent writing works fine; multiple agents trying to update the same index causes contention. Read-only access by multiple agents is fine.
-- **No live updates** -- To update the index, the entire file must be rebuilt. Incremental append is not supported.
-- **File size constraints** -- Practical limits exist for large datasets:
+- **No concurrent writes**: SQLite does not handle multiple writers well. One agent writing works fine, but multiple agents trying to update the same index cause contention. Read-only access by multiple agents is fine.
+- **No live updates**: Updating the index requires rebuilding the entire file. Incremental append is not supported.
+- **File size constraints**: Practical limits exist for large datasets:
   - 1M chunks: ~500MB file (manageable)
   - 10M chunks: ~5GB file (getting large)
   - 100M+ chunks: consider pgvector
-- **No multi-collection management** -- One file equals one collection. Multiple knowledge bases require multiple files, each loaded separately.
+- **No multi-collection management**: One file equals one collection. Multiple knowledge bases require multiple files, each loaded separately.
 
 ### pgvector (PostgreSQL)
 
@@ -72,11 +72,11 @@ Prerequisites:
 
 1. PostgreSQL 12+ with pgvector extension
 2. Python packages: `pip install psycopg2-binary pgvector`
-3. Docker (optional, for easy setup)
+3. Docker (optional, to run PostgreSQL in a container)
 
 #### Setup with Docker
 
-The easiest way to get started is using Docker:
+Docker starts PostgreSQL with the pgvector extension already installed:
 
 ```bash
 # Start PostgreSQL with pgvector
@@ -91,28 +91,7 @@ docker exec -it pgvector psql -U postgres -c "CREATE DATABASE knowledge;"
 docker exec -it pgvector psql -U postgres -d knowledge -c "CREATE EXTENSION vector;"
 ```
 
-Alternatively, use the provided Docker setup from the repository:
-
-```bash
-cd pgvector/
-./setup.sh
-
-# Or manually with docker-compose
-docker-compose up -d
-
-# Verify the database is running
-docker ps | grep pgvector
-```
-
-This creates a PostgreSQL instance with:
-
-- **Database**: knowledge
-- **User**: signalwire
-- **Password**: signalwire123
-- **Port**: 5432
-- **Extensions**: pgvector, pg_trgm (for text search)
-
-For systems without Docker:
+For systems without Docker, the pgvector project's [installation instructions](https://github.com/pgvector/pgvector#installation) cover each platform and PostgreSQL version. On common systems, the commands are:
 
 ```bash
 # Ubuntu/Debian
@@ -172,7 +151,6 @@ CREATE TABLE chunks_<collection_name> (
     tags JSONB DEFAULT '[]'::jsonb,
     metadata JSONB DEFAULT '{}'::jsonb,
     metadata_text TEXT,  -- Searchable text representation of all metadata
-    chunk_hash TEXT UNIQUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -194,25 +172,25 @@ The `metadata_text` field contains a searchable text representation of all metad
 
 **Advantages:**
 
-- **Multi-agent concurrent access** -- Multiple agent instances query the same database without file contention or duplication.
-- **Multiple collections** -- Organize knowledge bases as separate collections within a single database (e.g., `signalwire_unified`, `pricing`, `freeswitch`).
-- **Incremental updates** -- Add new documents to existing collections without rebuilding everything.
-- **Scalability** -- PostgreSQL scales to billions of rows with efficient indexes (IVFFlat, HNSW), partitioning, and replication.
-- **Enterprise features** -- Authentication, authorization, connection pooling, monitoring, backup, and point-in-time recovery.
-- **Real-time updates** -- Add or remove documents without rebuilding the entire index.
+- **Multi-agent concurrent access**: Multiple agent instances query the same database without file contention or duplication.
+- **Multiple collections**: Organize knowledge bases as separate collections within a single database, for example `signalwire_unified`, `pricing`, and `freeswitch`.
+- **Incremental updates**: Add new documents to existing collections without rebuilding everything.
+- **Scalability**: PostgreSQL scales to billions of rows with efficient indexes (IVFFlat, HNSW), partitioning, and replication.
+- **Enterprise features**: Authentication, authorization, connection pooling, monitoring, backup, and point-in-time recovery.
+- **Real-time updates**: Add or remove documents without rebuilding the entire index.
 
 **Limitations:**
 
-- **Infrastructure required** -- Requires running and maintaining a PostgreSQL instance.
-- **Network latency** -- Remote database adds 1-5ms network overhead per query.
-- **Operational complexity** -- Needs connection pooling, monitoring, and backup procedures.
+- **Infrastructure required**: Requires running and maintaining a PostgreSQL instance.
+- **Network latency**: A remote database adds a network round trip to each query.
+- **Operational complexity**: Needs connection pooling, monitoring, and backup procedures.
 
 ### When to Use Which
 
 **Use SQLite (.swsearch) when:**
 
 - Deploying a single agent instance
-- Developing and testing (fast iteration, easy to version control)
+- Developing and testing, where iteration speed and version control matter
 - Running serverless deployments (Lambda, Cloud Functions, Azure Functions)
 - Deploying to edge environments (embedded systems, IoT, offline operation)
 - Managing small to medium knowledge bases (under 1M chunks, under 1GB)
@@ -227,7 +205,7 @@ The `metadata_text` field contains a searchable text representation of all metad
 - Organizing multiple knowledge domains with separate collections per domain
 - Requiring concurrent read/write access
 
-**Hybrid approach -- use both:**
+**A hybrid approach uses both:**
 
 ```bash
 # Development: build with .swsearch files for fast iteration
@@ -237,13 +215,13 @@ sw-search ./docs --output dev.swsearch
 sw-search ./docs \
   --backend pgvector \
   --connection-string "postgresql://localhost/staging" \
-  --collection-name docs
+  --output docs
 
 # Production: deploy to pgvector with replicas
 sw-search ./docs \
   --backend pgvector \
   --connection-string "postgresql://prod-db/production" \
-  --collection-name docs
+  --output docs
 ```
 
 Same code, different backends via configuration.
@@ -267,12 +245,12 @@ Same code, different backends via configuration.
 
 Installing full search functionality brings approximately 500MB of dependencies:
 
-- `torch` (~200MB) -- PyTorch deep learning framework
-- `sentence-transformers` (~150MB) -- Embedding models
-- `transformers` (~100MB) -- HuggingFace transformers
-- `numpy`, `scipy` (~50MB) -- Scientific computing
+- `torch` (~200MB): PyTorch deep learning framework
+- `sentence-transformers` (~150MB): Embedding models
+- `transformers` (~100MB): HuggingFace transformers
+- `numpy`, `scipy` (~50MB): Scientific computing
 
-These libraries are necessary for **generating embeddings** during index building. However, production agents do not need to build indexes. They only need to compare pre-computed vectors, which is just multiplication and addition -- no ML models required.
+These libraries are necessary for **generating embeddings** during index building. However, production agents do not need to build indexes. They only need to compare pre-computed vectors: multiplication and addition, with no ML models required.
 
 ### search-queryonly Installation
 
@@ -420,7 +398,7 @@ jobs:
 sw-search ./docs \
   --backend pgvector \
   --connection-string "$DATABASE_URL" \
-  --collection-name docs \
+  --output docs \
   --model mini
 
 # Deploy query-only everywhere -- embeddings already in PostgreSQL
@@ -486,6 +464,8 @@ kubectl rollout restart deployment/agent
 
 ### Docker Quick Start
 
+Start a PostgreSQL container with the pgvector extension enabled:
+
 ```bash
 # Start PostgreSQL with pgvector
 docker run -d \
@@ -499,7 +479,7 @@ docker exec -it pgvector psql -U postgres -c "CREATE DATABASE knowledge;"
 docker exec -it pgvector psql -U postgres -d knowledge -c "CREATE EXTENSION vector;"
 ```
 
-Docker Compose setup for both PostgreSQL and a search service:
+Docker Compose setup for both PostgreSQL and a search service. The `search-service` image needs its own `search_server.py`, since `signalwire.search.search_service` has no command-line entry point of its own (see [Running the Search Service Server](#running-the-search-service-server)):
 
 ```yaml
 version: '3.8'
@@ -520,17 +500,13 @@ services:
     build: .
     environment:
       PGVECTOR_CONNECTION: "postgresql://signalwire:signalwire123@postgres:5432/knowledge"
-      SEARCH_API_USERNAME: "api-user"
-      SEARCH_API_PASSWORD: "secure-password"
+      SWML_BASIC_AUTH_USER: "api-user"
+      SWML_BASIC_AUTH_PASSWORD: "secure-password"
     ports:
       - "8001:8001"
     depends_on:
       - postgres
-    command: >
-      python -m signalwire.search.search_service
-      --backend pgvector
-      --connection-string "$${PGVECTOR_CONNECTION}"
-      --port 8001
+    command: python search_server.py
 
 volumes:
   pgvector_data:
@@ -604,12 +580,6 @@ sw-search search docs_collection "API reference" \
   --count 10 \
   --verbose
 
-# Keyword-focused search
-sw-search search docs_collection "specific function name" \
-  --backend pgvector \
-  --connection-string "postgresql://signalwire:signalwire123@localhost:5432/knowledge" \
-  --keyword-weight 0.8
-
 # JSON output for scripting
 sw-search search docs_collection "configuration" \
   --backend pgvector \
@@ -620,7 +590,7 @@ sw-search search docs_collection "configuration" \
 
 ### Agent Integration (Direct vs Remote Service)
 
-**Direct connection mode** -- the agent connects directly to PostgreSQL:
+**Direct connection mode** has the agent connect directly to PostgreSQL:
 
 ```python
 from signalwire import AgentBase
@@ -643,13 +613,12 @@ class MyAgent(AgentBase):
             "tool_name": "search_docs",
             "description": "Search the documentation database",
 
-            # Model selection (mini/base/large)
+            # Model selection (mini or base)
             "model_name": "mini",
 
             # Search parameters
             "count": 5,
-            "distance_threshold": 0.1,
-            "keyword_weight": 0.3,
+            "similarity_threshold": 0.1,
 
             # Auto-build from source (optional)
             "build_index": True,
@@ -659,12 +628,12 @@ class MyAgent(AgentBase):
         })
 ```
 
-**Remote service mode** -- the agent queries a centralized search service over HTTP:
+**Remote service mode** has the agent query a centralized search service over HTTP:
 
-First, start the search service:
+First, start the search service (see [Running the Search Service Server](#running-the-search-service-server) for what this script wraps):
 
 ```bash
-python -m signalwire.search.search_service \
+python examples/search_server_standalone.py \
     --backend pgvector \
     --connection-string "postgresql://signalwire:signalwire123@localhost:5432/knowledge" \
     --port 8001
@@ -701,10 +670,12 @@ self.add_skill("native_vector_search", {
 
 The search service provides an HTTP API for searching across document collections stored in pgvector. It supports multiple collections, automatic model detection, hybrid search, authentication, result caching, and HTTPS/TLS.
 
+The `signalwire.search.search_service` module has no command-line entry point of its own; it defines the `SearchService` class. The SDK's `examples/search_server_standalone.py` script wraps that class in a small argument parser, and is the starting point for running it:
+
 **Basic startup:**
 
 ```bash
-python -m signalwire.search.search_service \
+python examples/search_server_standalone.py \
     --backend pgvector \
     --connection-string "postgresql://user:password@localhost:5432/database" \
     --port 8001
@@ -712,9 +683,9 @@ python -m signalwire.search.search_service \
 
 **API endpoints:**
 
-- `POST /search` -- Search the indexes
-- `GET /health` -- Health check and available indexes
-- `POST /reload_index` -- Dynamically add or reload an index
+- `POST /search`: Search the indexes
+- `GET /health`: Health check and available indexes
+- `POST /reload_index`: Dynamically add or reload an index
 
 **Search request:**
 
@@ -740,16 +711,16 @@ curl -X POST "http://localhost:8001/search" \
        "index_name": "signalwire_unified",
        "count": 10,
        "similarity_threshold": 0.3,
-       "tags": ["examples", "code"],
-       "keyword_weight": 0.4
+       "tags": ["examples", "code"]
      }'
 ```
+
+The request body accepts `query`, `index_name`, `count`, `similarity_threshold`, `tags`, and `language`. It has no `keyword_weight` field. `keyword_weight` is deprecated in the Python API, the skill and the CLI too, because it has no effect on ranking.
 
 **Response format:**
 
 ```json
 {
-  "success": true,
   "results": [
     {
       "content": "To create an AI agent, inherit from AgentBase...",
@@ -762,8 +733,12 @@ curl -X POST "http://localhost:8001/search" \
       }
     }
   ],
-  "count": 5,
-  "search_time_ms": 234
+  "query_analysis": {
+    "original_query": "SDK examples",
+    "enhanced_query": "SDK examples",
+    "detected_language": "en",
+    "pos_analysis": null
+  }
 }
 ```
 
@@ -773,33 +748,50 @@ curl -X POST "http://localhost:8001/search" \
 curl "http://localhost:8001/health"
 ```
 
+**Example response:**
+
 ```json
 {
   "status": "healthy",
-  "version": "1.0.0",
   "backend": "pgvector",
-  "indexes": {
-    "signalwire_unified": {
-      "total_chunks": 1234,
-      "total_files": 56,
-      "model": "sentence-transformers/all-MiniLM-L6-v2"
-    }
-  }
+  "indexes": ["signalwire_unified"],
+  "ssl_enabled": false,
+  "auth_required": true,
+  "connection_string": "***"
 }
 ```
 
+The `indexes` field lists the loaded index and collection names. Look up chunk and file counts per collection with the `/search` endpoint's `query_analysis`, or with `sw-search validate` for a `.swsearch` file.
+
 **Dynamic index management:**
 
+The `index_name` and `index_path` fields are query parameters, not a JSON body. For pgvector, `index_path` is the collection name:
+
 ```bash
-curl -X POST "http://localhost:8001/reload_index" \
-     -u "username:password" \
-     -H "Content-Type: application/json" \
-     -d '{
-       "index_name": "new_collection"
-     }'
+curl -X POST "http://localhost:8001/reload_index?index_name=new_collection&index_path=new_collection" \
+     -u "username:password"
 ```
 
 #### Gunicorn / Production Setup
+
+The `search_service` module defines the `SearchService` class, not a WSGI or ASGI factory function. Gunicorn needs a small wrapper module that builds the service and exposes its FastAPI app:
+
+<!-- snippet: no-run connects to a live PostgreSQL database -->
+```python
+# search_wsgi.py
+import os
+from signalwire.search.search_service import SearchService
+
+service = SearchService(
+    port=8001,
+    indexes={"signalwire_unified": "signalwire_unified"},
+    backend="pgvector",
+    connection_string=os.environ["PGVECTOR_CONNECTION"],
+)
+app = service.app
+```
+
+Point Gunicorn at that module's `app` object:
 
 ```bash
 pip install gunicorn
@@ -809,12 +801,12 @@ gunicorn -w 4 -k uvicorn.workers.UvicornWorker \
     --timeout 120 \
     --access-logfile - \
     --error-logfile - \
-    "signalwire.search.search_service:create_app(backend='pgvector', connection_string='$PGVECTOR_CONNECTION')"
+    search_wsgi:app
 ```
 
 #### systemd Service
 
-Create `/etc/systemd/system/search-service.service`:
+Create `/etc/systemd/system/search-service.service`, running the same `search_wsgi:app` module:
 
 ```ini
 [Unit]
@@ -827,12 +819,12 @@ User=www-data
 Group=www-data
 WorkingDirectory=/opt/search-service
 Environment="PGVECTOR_CONNECTION=postgresql://user:pass@localhost/knowledge"
-Environment="SEARCH_API_USERNAME=api-user"
-Environment="SEARCH_API_PASSWORD=secure-password"
+Environment="SWML_BASIC_AUTH_USER=api-user"
+Environment="SWML_BASIC_AUTH_PASSWORD=secure-password"
 ExecStart=/usr/local/bin/gunicorn -w 4 -k uvicorn.workers.UvicornWorker \
     --bind 0.0.0.0:8001 \
     --timeout 120 \
-    "signalwire.search.search_service:create_app(backend='pgvector')"
+    search_wsgi:app
 Restart=always
 
 [Install]
@@ -848,6 +840,8 @@ sudo systemctl status search-service
 ```
 
 #### nginx Reverse Proxy
+
+Terminate HTTPS at nginx and forward requests to the search service over plain HTTP:
 
 ```nginx
 upstream search_backend {
@@ -886,25 +880,27 @@ server {
 
 #### Authentication and Security
 
+The search service shares its security configuration with the rest of the SDK, through the same `SWML_*` variables the agent server reads.
+
 **HTTPS configuration:**
 
 ```bash
-export SEARCH_SSL_ENABLED="true"
-export SEARCH_SSL_CERTFILE="/path/to/cert.pem"
-export SEARCH_SSL_KEYFILE="/path/to/key.pem"
+export SWML_SSL_ENABLED="true"
+export SWML_SSL_CERT_PATH="/path/to/cert.pem"
+export SWML_SSL_KEY_PATH="/path/to/key.pem"
 ```
 
 **API credentials** (auto-generated if not set):
 
 ```bash
-export SEARCH_API_USERNAME="your-username"
-export SEARCH_API_PASSWORD="your-secure-password"
+export SWML_BASIC_AUTH_USER="your-username"
+export SWML_BASIC_AUTH_PASSWORD="your-secure-password"
 ```
 
-**CORS configuration:**
+**CORS configuration** (comma-separated origins):
 
 ```bash
-export SEARCH_CORS_ORIGINS='["https://app.example.com", "https://api.example.com"]'
+export SWML_CORS_ORIGINS="https://app.example.com,https://api.example.com"
 ```
 
 **Rate limiting:**
@@ -926,24 +922,21 @@ app.state.limiter = limiter
 
 ### Environment Variables
 
+The variable names `PGVECTOR_CONNECTION`, `PGVECTOR_DB_USER`, and similar names used elsewhere on this page are a convention, not variables the SDK reads automatically. Your own code reads them with `os.getenv()` and passes the value to `connection_string` (see [Connection Configuration](#connection-configuration)). The search service does read the following variables, shared with the rest of the SDK:
+
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `PGVECTOR_CONNECTION` | Full PostgreSQL connection string | None |
-| `PGVECTOR_DB_USER` | Database username | `signalwire` |
-| `PGVECTOR_DB_PASSWORD` | Database password | `password` |
-| `PGVECTOR_HOST` | Database hostname | `localhost` |
-| `PGVECTOR_PORT` | Database port | `5432` |
-| `PGVECTOR_DB_NAME` | Database name | `knowledge` |
-| `SEARCH_API_USERNAME` | HTTP API username | Auto-generated |
-| `SEARCH_API_PASSWORD` | HTTP API password | Auto-generated |
-| `SEARCH_SSL_ENABLED` | Enable HTTPS | `false` |
-| `SEARCH_SSL_CERTFILE` | Path to SSL certificate | None |
-| `SEARCH_SSL_KEYFILE` | Path to SSL private key | None |
-| `SEARCH_CORS_ORIGINS` | JSON array of allowed origins | None |
-| `SEARCH_CACHE_SIZE` | Number of queries to cache | `1000` |
-| `SEARCH_CACHE_TTL` | Cache TTL in seconds | `3600` |
-| `SEARCH_LOG_LEVEL` | Log level | `INFO` |
-| `SEARCH_LOG_FORMAT` | Log format (`json` or `text`) | `text` |
+| `SWML_BASIC_AUTH_USER` | HTTP API username | `signalwire` |
+| `SWML_BASIC_AUTH_PASSWORD` | HTTP API password | Auto-generated |
+| `SWML_SSL_ENABLED` | Enable HTTPS | `false` |
+| `SWML_SSL_CERT_PATH` | Path to SSL certificate | None |
+| `SWML_SSL_KEY_PATH` | Path to SSL private key | None |
+| `SWML_CORS_ORIGINS` | Comma-separated allowed origins | `*` |
+| `SWML_ALLOWED_HOSTS` | Comma-separated allowed hostnames | `*` |
+| `SIGNALWIRE_LOG_LEVEL` | Log level (`debug`, `info`, `warning`, `error`, `critical`) | `info` |
+| `SIGNALWIRE_LOG_FORMAT` | Log format (`console` or `json`) | `console` |
+
+The result cache holds up to 100 queries with first-in-first-out eviction. It has no expiration and no environment variable controls its size.
 
 ---
 
@@ -958,18 +951,18 @@ app.state.limiter = limiter
 - Want shared knowledge base
 - Scaling beyond 100K chunks
 
-**Step 1: Set up pgvector** (see [Docker Quick Start](#docker-quick-start) above).
+**Step 1: Set up pgvector** (see [Docker Quick Start](#docker-quick-start)).
 
-**Step 2: Verify the existing index.**
+**Step 2: Verify the existing index:**
 
 ```bash
 sw-search validate ./knowledge.swsearch
 sw-search search ./knowledge.swsearch "test query" --verbose
 ```
 
-Note the model used (mini/base/large) -- it must match during migration.
+Note the model used (mini, base, or large). It must match during migration.
 
-**Step 3: Migrate using the CLI.**
+**Step 3: Migrate using the CLI:**
 
 ```bash
 # Basic migration
@@ -1005,7 +998,7 @@ sw-search migrate --info ./knowledge.swsearch
 - Filenames, sections, line numbers, and metadata
 - Configuration (model name, dimensions, chunking strategy, language settings)
 
-**Step 4: Migrate using the Python API (alternative).**
+**Step 4: Migrate using the Python API (alternative):**
 
 <!-- snippet: no-run reads a data/index file that must be built first (needs a real artifact) -->
 ```python
@@ -1025,20 +1018,19 @@ print(f"Migrated {stats['chunks_migrated']} chunks")
 print(f"Errors: {stats['errors']}")
 ```
 
-**Step 5: Verify the migration.**
+**Step 5: Verify the migration:**
 
 ```bash
-sw-search search \
+sw-search search docs \
   --backend pgvector \
   --connection-string "$PGVECTOR_CONNECTION" \
-  --collection-name docs \
   --model mini \
   "test query"
 ```
 
-Compare results to original SQLite queries.
+The collection name is the `index_source` argument, not a flag. Compare results to the original SQLite queries.
 
-**Step 6: Update agent configuration.**
+**Step 6: Update agent configuration:**
 
 Before (SQLite):
 
@@ -1046,7 +1038,7 @@ Before (SQLite):
 self.add_skill("native_vector_search", {
     "tool_name": "search_docs",
     "description": "Search documentation",
-    "index_path": "./knowledge.swsearch"
+    "index_file": "./knowledge.swsearch"
 })
 ```
 
@@ -1063,23 +1055,19 @@ self.add_skill("native_vector_search", {
 })
 ```
 
-**Step 7: Create database indexes for performance.**
+**Step 7: Confirm the indexes.**
+
+Migrating to pgvector creates the collection with `CREATE INDEX IF NOT EXISTS`, the same schema setup used when building a collection directly. An HNSW index on `embedding` already exists, along with GIN indexes on `content`, `tags`, `metadata`, and `metadata_text`. They live on the collection's own table (`chunks_docs` for a collection named `docs`). Confirm them with `psql`:
 
 ```sql
 \c knowledge
-
-CREATE INDEX ON knowledge_chunks USING ivfflat (embedding vector_cosine_ops)
-  WITH (lists = 100);
-
-CREATE INDEX ON knowledge_chunks USING gin (metadata jsonb_path_ops);
-
-CREATE INDEX ON knowledge_chunks (collection_name);
+\d chunks_docs
 ```
 
 **Performance tips for migration:**
 
-- **Batch size:** Default 100; increase up to 500-1000 for faster migration.
-- **Large indexes:** Migration speed is approximately 5-10K chunks per minute.
+- **Batch size:** Default 100. Increase up to 500-1000 for faster migration.
+- **Large indexes:** Larger collections take longer to migrate. Batch size and network latency to PostgreSQL are the main factors.
 - **Network latency:** Run migration from a server close to PostgreSQL.
 - **PostgreSQL tuning for migration:**
 
@@ -1093,49 +1081,11 @@ VACUUM ANALYZE chunks_collection_name;
 
 ### pgvector to SQLite
 
-**When to migrate:**
+The SDK can't migrate a pgvector collection to a `.swsearch` file. `sw-search migrate --to-sqlite` prints "pgvector to SQLite migration not yet implemented" and exits without writing anything, and the same migration in the Python API raises `NotImplementedError` before it connects to the database. No `sw-search export` command exists either. `sw-search` recognizes only `search`, `validate`, `remote`, and `migrate` as subcommands, so `export` is treated as a source path to index, like any other unrecognized first argument.
 
-- Simplifying deployment
-- Moving to serverless/Lambda
-- Reducing to single-agent use case
-- Reducing infrastructure
+To end up with a `.swsearch` file today, rebuild the index from the original source documents (see [Building Indexes with pgvector](#building-indexes-with-pgvector)). This recomputes the embeddings rather than reusing pgvector's copies. The collection's `chunks_<collection_name>` table is an ordinary PostgreSQL table, so reading it directly and writing the rows into a new `.swsearch` file is possible. The SDK does not provide a tool for it.
 
-**Step 1: Export from pgvector.**
-
-```bash
-sw-search export \
-  --backend pgvector \
-  --connection-string "$PGVECTOR_CONNECTION" \
-  --collection-name docs \
-  ./exported.json
-```
-
-Or use the direct migration tool:
-
-```bash
-sw-search migrate \
-  --from-pgvector \
-  --connection-string "postgresql://user:pass@localhost/knowledge" \
-  --collection-name docs \
-  --output knowledge.swsearch
-```
-
-**Step 2: If using export/import, rebuild as `.swsearch`.**
-
-```bash
-sw-search ./exported.json \
-  --chunking-strategy json \
-  --model mini \
-  --output knowledge.swsearch
-```
-
-**Step 3: Verify.**
-
-```bash
-sw-search search ./knowledge.swsearch "test query"
-```
-
-**Step 4: Update agent configuration.**
+**Update agent configuration:**
 
 Before (pgvector):
 
@@ -1153,11 +1103,11 @@ After (SQLite):
 
 ```python
 {
-    "index_path": "./knowledge.swsearch"
+    "index_file": "./knowledge.swsearch"
 }
 ```
 
-**Step 5: Simplify dependencies.**
+**Simplify dependencies:**
 
 ```dockerfile
 # Before: needed PostgreSQL connection
@@ -1175,76 +1125,48 @@ COPY agent.py knowledge.swsearch /app/
 
 ### Between Collections
 
+Each collection has its own table, named `chunks_<collection_name>`, plus a shared `collection_config` table keyed by collection name.
+
 **SQL copy (fast, within same database):**
 
+The destination table must already exist. Create it first by building or connecting a collection with that name, then copy the rows:
+
 ```sql
-INSERT INTO knowledge_chunks (collection_name, content, embedding, metadata)
-SELECT 'new_collection', content, embedding, metadata
-FROM knowledge_chunks
-WHERE collection_name = 'old_collection';
+INSERT INTO chunks_new_collection (content, processed_content, embedding, filename, section, tags, metadata, metadata_text)
+SELECT content, processed_content, embedding, filename, section, tags, metadata, metadata_text
+FROM chunks_old_collection;
 
 -- Verify
-SELECT collection_name, count(*)
-FROM knowledge_chunks
-GROUP BY collection_name;
+SELECT count(*) FROM chunks_new_collection;
 ```
 
 **Rename a collection:**
 
 ```sql
-UPDATE knowledge_chunks
-SET collection_name = 'new_name'
-WHERE collection_name = 'old_name';
+ALTER TABLE chunks_old_name RENAME TO chunks_new_name;
+UPDATE collection_config SET collection_name = 'new_name' WHERE collection_name = 'old_name';
 ```
 
-**Export/import (more flexible, works across databases):**
-
-```bash
-# Export old collection
-sw-search export \
-  --backend pgvector \
-  --connection-string "$PGVECTOR_CONNECTION" \
-  --collection-name old_collection \
-  ./exported.json
-
-# Import as new collection
-sw-search ./exported.json \
-  --chunking-strategy json \
-  --backend pgvector \
-  --connection-string "$PGVECTOR_CONNECTION" \
-  --collection-name new_collection \
-  --model mini
-```
+There is no `sw-search export` command for copying a collection across databases. Use the SQL copy shown earlier within one database. Across databases, write a script against `psycopg2` that reads `chunks_old_collection` from one database and inserts the rows into the other.
 
 **Delete old collection after verification:**
 
 ```sql
-DELETE FROM knowledge_chunks
-WHERE collection_name = 'old_collection';
-
-VACUUM FULL;
+DROP TABLE chunks_old_collection;
+DELETE FROM collection_config WHERE collection_name = 'old_collection';
 ```
 
 ### Changing Models
 
-Embeddings cannot be reused across different models. The entire index must be rebuilt.
+Embeddings cannot be reused across different models, so the entire index must be rebuilt from the source documents. There is no `sw-search export` command for pulling content back out of an existing `.swsearch` file.
 
-**Step 1: Export content.**
-
-```bash
-sw-search export ./knowledge.swsearch ./exported.json
-```
-
-**Step 2: Rebuild with the new model.**
+**Step 1: Rebuild with the new model:**
 
 ```bash
-sw-search ./exported.json \
-  --chunking-strategy json \
-  --model base \
-  --output knowledge_base.swsearch
+sw-search ./docs --model base --output knowledge_base.swsearch
 ```
 
-**Step 3: Compare quality.**
+**Step 2: Compare quality:**
 
 ```bash
 echo "test query" | while read query; do
@@ -1256,7 +1178,7 @@ echo "test query" | while read query; do
 done
 ```
 
-**Step 4: Benchmark before switching.**
+**Step 3: Benchmark before switching:**
 
 <!-- snippet: no-run illustrative fragment (references `search_mini` established in the surrounding prose) -->
 ```python
@@ -1296,21 +1218,13 @@ for q, mini, base in zip(queries, mini_results, base_results):
 
 **Step 1: Analyze the current strategy.**
 
-```bash
-sw-search export ./knowledge.swsearch ./current_chunks.json
+A `.swsearch` file is a SQLite database, so its chunks are visible with the `sqlite3` command-line tool:
 
-python -c "
-import json
-with open('current_chunks.json') as f:
-    data = json.load(f)
-    for i, chunk in enumerate(data['chunks'][:5]):
-        print(f'Chunk {i}:')
-        print(chunk['content'][:200])
-        print('---')
-"
+```bash
+sqlite3 ./knowledge.swsearch "SELECT filename, substr(content, 1, 200) FROM chunks LIMIT 5;"
 ```
 
-**Step 2: Rebuild with the new strategy.**
+**Step 2: Rebuild with the new strategy:**
 
 ```bash
 sw-search ./docs \
@@ -1319,7 +1233,7 @@ sw-search ./docs \
   --output knowledge_markdown.swsearch
 ```
 
-**Step 3: Compare results.**
+**Step 3: Compare results:**
 
 ```bash
 QUERY="how to authenticate"
@@ -1331,7 +1245,7 @@ echo "New (markdown):"
 sw-search search ./knowledge_markdown.swsearch "$QUERY" --count 3
 ```
 
-**Step 4: A/B test in production.**
+**Step 4: A/B test in production:**
 
 ```python
 class ABTestAgent(AgentBase):
@@ -1341,13 +1255,13 @@ class ABTestAgent(AgentBase):
         self.add_skill("native_vector_search", {
             "tool_name": "search_old",
             "description": "Search docs (old chunking)",
-            "index_path": "./knowledge_sentence.swsearch"
+            "index_file": "./knowledge_sentence.swsearch"
         })
 
         self.add_skill("native_vector_search", {
             "tool_name": "search_new",
             "description": "Search docs (new chunking)",
-            "index_path": "./knowledge_markdown.swsearch"
+            "index_file": "./knowledge_markdown.swsearch"
         })
 ```
 
@@ -1357,7 +1271,7 @@ class ABTestAgent(AgentBase):
 |------|----|---------|
 | Sentence | Markdown (for code docs) | `sw-search ./docs --chunking-strategy markdown --model mini --output docs_improved.swsearch` |
 | Paragraph | QA (for FAQ) | `sw-search ./faq --chunking-strategy qa --model mini --output faq_improved.swsearch` |
-| Any | JSON (for manual curation) | Export, edit JSON manually, then rebuild with `--chunking-strategy json` |
+| Any | JSON (for manual curation) | Write chunks as JSON directly (see [JSON Workflow](search_integration.md#in-json-workflow)), then build with `--chunking-strategy json` |
 
 ### Production Update Procedures
 
@@ -1369,14 +1283,13 @@ class ABTestAgent(AgentBase):
 sw-search ./updated-docs \
   --backend pgvector \
   --connection-string "$PGVECTOR_CONNECTION" \
-  --collection-name docs_v2 \
+  --output docs_v2 \
   --model mini
 
 # Test new collection
-sw-search search \
+sw-search search docs_v2 \
   --backend pgvector \
   --connection-string "$PGVECTOR_CONNECTION" \
-  --collection-name docs_v2 \
   --model mini \
   "test queries"
 
@@ -1384,7 +1297,7 @@ sw-search search \
 kubectl set env deployment/agent COLLECTION_NAME=docs_v2
 
 # After verification, delete old collection
-# DELETE FROM knowledge_chunks WHERE collection_name = 'docs_v1';
+# DROP TABLE chunks_docs_v1;
 ```
 
 **Staged rollout:**
@@ -1418,26 +1331,7 @@ Monitor metrics and gradually increase the percentage.
 
 **Incremental updates for small changes:**
 
-```bash
-# Export current collection
-sw-search export \
-  --backend pgvector \
-  --connection-string "$PGVECTOR_CONNECTION" \
-  --collection-name docs \
-  ./current.json
-
-# Edit current.json -- add, update, or remove chunks
-
-# Rebuild to new collection
-sw-search ./current.json \
-  --chunking-strategy json \
-  --backend pgvector \
-  --connection-string "$PGVECTOR_CONNECTION" \
-  --collection-name docs_updated \
-  --model mini
-
-# Test and switch
-```
+There is no `sw-search export` command for pulling an existing collection's chunks back out for editing. For small content changes, edit the source documents and rebuild into a new collection, following the blue-green pattern.
 
 ### Rollback
 
@@ -1481,7 +1375,7 @@ Keep the old index or collection available until the migration is fully verified
 ```python
 # Emergency rollback
 self.add_skill("native_vector_search", {
-    "index_path": "./knowledge_old.swsearch"  # Revert to old index
+    "index_file": "./knowledge_old.swsearch"  # Revert to old index
 })
 ```
 
@@ -1501,7 +1395,7 @@ self.add_skill("native_vector_search", {
 self.add_skill("native_vector_search", {
     "tool_name": "search_docs_old",
     "description": "Search documentation (old SQLite)",
-    "index_path": "./knowledge.swsearch"
+    "index_file": "./knowledge.swsearch"
 })
 ```
 
@@ -1525,35 +1419,30 @@ Test both, compare results, then remove the old one.
 
 | Factor | Impact |
 |--------|--------|
-| Content volume: 100 docs (~1MB) | 30-60 seconds |
-| Content volume: 1,000 docs (~10MB) | 5-10 minutes |
-| Content volume: 10,000 docs (~100MB) | 30-60 minutes |
+| Content volume | Larger corpora take longer to build |
 | Chunking: sentence/paragraph | Fastest |
 | Chunking: markdown | Moderate (needs parsing) |
 | Chunking: semantic/topic | Slowest (requires inference) |
-| Model: mini (384 dims) | ~1,000 chunks/second |
-| Model: base (768 dims) | ~500 chunks/second |
-| Model: large (1024 dims) | ~200 chunks/second |
+| Model: mini (384 dims) | Faster to embed than base or large |
+| Model: base or large (768 dims) | Slower to embed |
 | Hardware: CPU | Significant impact (embedding generation) |
-| Hardware: Memory | Need ~2GB + index size |
+| Hardware: Memory | Scales with index size |
 | Hardware: Disk | I/O speed matters for pgvector |
 
-**Build time benchmarks:**
+**Build time examples:**
+
+Build time depends on the corpus, the chunking strategy, the embedding model, and the host's hardware. Measure it on your own corpus rather than planning around a fixed duration. These commands show the shape of a build at three corpus sizes:
 
 Small knowledge base (100 docs, 2,000 chunks):
 
 ```bash
 sw-search ./docs --model mini --chunking-strategy sentence --output docs.swsearch
-# Time: 45 seconds
-# Size: 8MB
 ```
 
 Medium knowledge base (1,000 docs, 20,000 chunks):
 
 ```bash
 sw-search ./docs --model mini --chunking-strategy markdown --output docs.swsearch
-# Time: 8 minutes
-# Size: 80MB
 ```
 
 Large knowledge base (10,000 docs, 200,000 chunks):
@@ -1561,14 +1450,12 @@ Large knowledge base (10,000 docs, 200,000 chunks):
 ```bash
 sw-search ./docs --model base --chunking-strategy markdown \
   --backend pgvector --connection-string "$PG_CONN" \
-  --collection-name docs
-# Time: 45 minutes
-# Database size: 500MB
+  --output docs
 ```
 
 **Optimizing build performance:**
 
-1. Use mini model when quality allows (2-3x faster than base).
+1. Use the mini model when quality allows; it embeds chunks faster than base or large.
 2. Choose efficient chunking (sentence is fastest; markdown slightly slower but better for tech docs).
 3. Process multiple directories in parallel:
    ```bash
@@ -1580,44 +1467,11 @@ sw-search ./docs --model base --chunking-strategy markdown \
 
 ### Query Performance
 
-**Query time breakdown (SQLite):**
+Query embedding is the largest single step in a search. Vector search itself is fast: an HNSW index answers a similarity query in single-digit milliseconds at a scale of around 20,000 chunks.
 
-```
-Total query time: 15-30ms
-  Embedding generation: 5-10ms (depends on model)
-  Vector search: 3-8ms (SQLite)
-  Hybrid scoring: 2-5ms
-  Result formatting: 1-2ms
-```
+Keyword and metadata retrieval, which hybrid search merges with the vector result, typically takes somewhat longer than the vector search step. A remote pgvector database adds a network round trip on top of all of this. When a client calls the search service over HTTP, request and response overhead can add as much again on top of the search itself. These figures depend on your hardware, corpus, and embedding model, so measure them in your own deployment rather than relying on numbers collected elsewhere.
 
-**Query time breakdown (pgvector):**
-
-```
-Total query time: 20-50ms
-  Embedding generation: 5-10ms (depends on model)
-  Network latency: 1-5ms (if remote)
-  Vector search: 10-25ms (PostgreSQL)
-  Hybrid scoring: 2-5ms
-  Result formatting: 1-2ms
-```
-
-**Performance by index size:**
-
-| Index Size | SQLite | pgvector |
-|------------|--------|----------|
-| Small (< 5,000 chunks) | 10-20ms | 15-30ms |
-| Medium (5,000-50,000 chunks) | 20-40ms | 25-50ms |
-| Large (50,000+ chunks) | 40-80ms | 30-60ms |
-
-pgvector scales better with size due to optimized indexing.
-
-**Embedding model impact on query time:**
-
-- Mini model: 5-8ms
-- Base model: 10-15ms
-- Large model: 20-30ms
-
-Embedding generation accounts for 30-50% of total query time. The mini model provides a significant speedup.
+pgvector scales better than SQLite as an index grows larger.
 
 **Optimizing query performance:**
 
@@ -1636,57 +1490,26 @@ Embedding generation accounts for 30-50% of total query time. The mini model pro
 3. **Set appropriate threshold:**
 <!-- snippet: no-compile config-excerpt -->
    ```python
-   {"distance_threshold": 0.4}  # Filters early, reduces processing
+   {"similarity_threshold": 0.4}  # Filters early, reduces processing
    ```
 
-4. **Add pgvector indexes:**
+4. **The embedding and metadata indexes already exist:** Building or migrating a collection creates an HNSW index on `embedding`, plus GIN indexes on `content`, `tags`, `metadata`, and `metadata_text`, automatically. Rebuild one explicitly only if needed, using the collection's own table name:
    ```sql
-   CREATE INDEX ON knowledge_chunks USING ivfflat (embedding vector_cosine_ops)
-     WITH (lists = 100);
-
-   CREATE INDEX ON knowledge_chunks USING gin (metadata jsonb_path_ops);
-   ```
-
-   HNSW indexes provide faster queries at higher memory cost:
-   ```sql
-   CREATE INDEX ON knowledge_chunks USING hnsw (embedding vector_cosine_ops);
+   REINDEX INDEX idx_chunks_docs_embedding;
    ```
 
 ### Memory Usage
 
-**Index build memory (peak):**
+Peak memory during an index build depends mainly on the embedding model. The mini model needs less memory than base or large, on both SQLite and pgvector.
 
-| Model | SQLite | pgvector |
-|-------|--------|----------|
-| Mini | ~2GB | ~2GB |
-| Base | ~3GB | ~3GB |
-| Large | ~4GB | ~4GB |
-
-**Query runtime memory:**
-
-SQLite:
-```
-Runtime memory: ~1.5GB
-  Embedding model: 1GB (mini), 2GB (base)
-  SQLite index: Loaded on-demand (~50-100MB)
-  Query processing: ~50MB
-```
-
-pgvector:
-```
-Runtime memory: ~1.5GB
-  Embedding model: 1GB (mini), 2GB (base)
-  Query processing: ~50MB
-```
-
-pgvector is more memory-efficient for queries because the index stays in the database.
+At query time, most of a search process's memory holds the loaded embedding model. SQLite also loads part of the index on demand, while pgvector keeps the index in the database instead of the agent's process. This makes pgvector more memory-efficient at query time.
 
 **Optimizing memory:**
 
-1. Use `search-queryonly` in production (saves ~400MB runtime memory).
-2. Use mini model (1GB vs 2GB for base model).
+1. Use `search-queryonly` in production to reduce memory use.
+2. Use the mini model; it needs less memory than the base model.
 3. In multi-agent deployments using `AgentServer`, the model instance is shared automatically.
-4. Models use lazy loading -- they load on first query, not at startup.
+4. Models use lazy loading: they load on first query, not at startup.
 
 ### Caching Strategies
 
@@ -1737,12 +1560,7 @@ class CachingAgent(AgentBase):
 
 **Search service caching:**
 
-The search service includes an LRU cache. Configure via environment variables:
-
-```bash
-export SEARCH_CACHE_SIZE=1000
-export SEARCH_CACHE_TTL=3600
-```
+The search service keeps an in-memory cache of the last 100 distinct queries, keyed by query text, index, result count, and tags. It evicts the oldest entry once that limit is reached, has no expiration, and is not configurable. Reloading an index through `/reload_index` clears it.
 
 **PostgreSQL-level caching:**
 
@@ -1876,13 +1694,13 @@ ORDER BY idx_scan DESC;
 -- Rebuild indexes if needed
 REINDEX INDEX idx_chunks_collection_embedding;
 
--- Full index set for a collection
-CREATE INDEX ON chunks_<collection_name> USING ivfflat (embedding vector_l2_ops)
-  WITH (lists = 100);
+-- Full index set for a collection (created automatically; shown for reference)
+CREATE INDEX ON chunks_<collection_name> USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX ON chunks_<collection_name> USING gin (content gin_trgm_ops);
+CREATE INDEX ON chunks_<collection_name> USING gin (to_tsvector('english', content));
 CREATE INDEX ON chunks_<collection_name> USING gin (tags);
 CREATE INDEX ON chunks_<collection_name> USING gin (metadata);
 CREATE INDEX ON chunks_<collection_name> USING gin (metadata_text gin_trgm_ops);
-CREATE INDEX ON chunks_<collection_name> USING gin (to_tsvector('english', processed_content));
 ```
 
 ### Performance Monitoring
@@ -1952,20 +1770,16 @@ LIMIT 5;
 curl -f http://localhost:8001/health || exit 1
 ```
 
-**Production performance reference (Sigmond agent):**
+**Production deployment example (Sigmond agent):**
 
-| Metric | Value |
-|--------|-------|
+| Aspect | Detail |
+|--------|--------|
 | Collections | 3 (7,500 total chunks) |
 | Agent instances | 4 (Kubernetes) |
 | Backend | pgvector (single database) |
 | Model | Mini |
-| Queries/day | 1,000+ |
-| Average query time | 25ms |
-| P95 query time | 45ms |
-| Memory per agent | 1.5GB |
-| Cache hit rate | 35% |
-| Error rate | < 0.1% |
+
+Track query latency, cache hit rate, and error rate in your own deployment using the monitoring approaches described earlier. These numbers depend on your traffic, hardware, and corpus.
 
 ### Optimization Checklist
 
@@ -1973,7 +1787,7 @@ curl -f http://localhost:8001/health || exit 1
 
 - [ ] Use mini model when quality is sufficient
 - [ ] Reduce result count (3-5 instead of 10+)
-- [ ] Set appropriate `distance_threshold` (0.4-0.5)
+- [ ] Set appropriate `similarity_threshold` (0.4-0.5)
 - [ ] Use pgvector for large indexes
 - [ ] Add indexes to pgvector collections
 - [ ] Implement connection pooling
@@ -1981,7 +1795,7 @@ curl -f http://localhost:8001/health || exit 1
 **Memory efficiency:**
 
 - [ ] Use `search-queryonly` in production
-- [ ] Use mini model (1GB vs 2GB)
+- [ ] Use the mini model to reduce memory use
 - [ ] Use pgvector (index not in memory)
 - [ ] Lazy load search models
 
@@ -2100,7 +1914,7 @@ sw-search ./examples --backend pgvector \
    sw-search ./docs \
      --backend pgvector \
      --connection-string "postgresql://dev-db/knowledge" \
-     --collection-name docs
+     --output docs
    ```
 
 2. Developers install only query-only dependencies:
@@ -2158,6 +1972,8 @@ print("\nMigration complete!")
 ```
 
 ## Examples
+
+These scripts in the repository's `examples/` directory demonstrate the deployment patterns this document covers:
 
 - `examples/pgvector_search_agent.py` - PGVector backend for document search with PostgreSQL
 - `examples/search_server_standalone.py` - Standalone search server deployment

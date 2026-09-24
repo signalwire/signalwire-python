@@ -1899,6 +1899,7 @@ class ProjectGenerator:
             self._create_web_files()
 
         self._create_readme()
+        self._create_agents_note()
 
         if self.config.get("create_venv"):
             self._create_virtualenv()
@@ -1938,6 +1939,7 @@ class ProjectGenerator:
 
         # README.md
         self._create_cloud_readme("aws")
+        self._create_agents_note()
 
         return True
 
@@ -1974,6 +1976,7 @@ class ProjectGenerator:
 
         # README.md
         self._create_cloud_readme("gcp")
+        self._create_agents_note()
 
         return True
 
@@ -2028,6 +2031,7 @@ class ProjectGenerator:
 
         # README.md
         self._create_cloud_readme("azure")
+        self._create_agents_note()
 
         return True
 
@@ -2381,6 +2385,13 @@ DEBUG_WEBHOOK_LEVEL=1
         (self.project_dir / "README.md").write_text(readme)
         print_success("Created README.md")
 
+    def _create_agents_note(self) -> None:
+        """Create AGENTS.md, which points coding agents at sw-pydocs."""
+        from signalwire.cli.pydocs._agents_note import init
+
+        init(self.project_dir)
+        print_success("Created AGENTS.md")
+
     def _create_virtualenv(self) -> None:
         """Create and set up virtual environment."""
         venv_dir = self.project_dir / ".venv"
@@ -2643,6 +2654,8 @@ Examples:
   sw-agent-init myagent -p gcp         Google Cloud Function
   sw-agent-init myagent -p azure       Azure Function
   sw-agent-init myagent -p aws -r us-west-2  Custom region
+
+Documentation: sw-pydocs prints the SDK's installed docs, examples and API.
 """,
     )
     parser.add_argument("name", nargs="?", help="Project name")

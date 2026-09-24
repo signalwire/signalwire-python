@@ -75,14 +75,17 @@ service.serve()
 
 ## Centralized Logging System
 
-The `SWMLService` class includes a centralized logging system based on `structlog` that provides structured, JSON-formatted logs. This logging system is automatically set up when you import the module, so you don't need to configure it in each service or example.
+The `SWMLService` class includes a centralized logging system based on `structlog` that provides structured logs. Importing the module attaches a null handler, so the SDK stays silent by default. `serve()` turns logging output on for you by calling `configure_logging()`; call it yourself earlier if you need logs before that.
 
 ### How It Works
 
-1. When `swml_service.py` is imported, it configures `structlog` (if not already configured)
-2. Each `SWMLService` instance gets a logger bound to its service name
-3. All logs include contextual information like service name, timestamp, and log level
-4. Logs are formatted as JSON for easy parsing and analysis
+Logging in an `SWMLService` works this way:
+
+1. Importing `swml_service.py` attaches a `NullHandler` to the `signalwire` logger, so nothing prints until logging is configured
+2. `serve()` calls `configure_logging()` for you; call it yourself first if you need logging output before that
+3. Each `SWMLService` instance gets a logger bound to its service name
+4. All logs include contextual information like service name, timestamp, and log level
+5. Logs are formatted as colored console text by default, or as JSON when `SIGNALWIRE_LOG_FORMAT=json` is set
 
 ### Using the Logger
 
@@ -114,14 +117,15 @@ The following log levels are available (in increasing order of severity):
 
 ### Suppressing Logs
 
-To suppress logs when running a service, you can set the log level:
+The SDK's logger does not propagate to the root logger, so raising the root logger's level has no effect on it. To raise the level, set `SIGNALWIRE_LOG_LEVEL` before the service starts:
 
-```python
-import logging
-logging.getLogger().setLevel(logging.WARNING)  # Only show warnings and above
+```bash
+export SIGNALWIRE_LOG_LEVEL=warning  # Only show warnings and above
 ```
 
-You can also pass `suppress_logs=True` when initializing an agent:
+`suppress_logs` is a narrower, older setting: it silences five specific log lines, not the SDK's logging generally. `AgentBase` logs one at startup, naming the schema path it found. The `/post_prompt` endpoint logs three for each request it handles. The fifth reports an LLM parameter that fails to apply while the SWML document is rendered. No other log call in the SDK checks it; use `SIGNALWIRE_LOG_LEVEL` or `configure_logging()` to control log output generally.
+
+Passing `suppress_logs=True` when initializing an agent silences those five lines:
 
 ```python
 from signalwire import AgentBase
@@ -157,6 +161,8 @@ SWML documents have the following basic structure:
 
 ### Document Methods
 
+These methods build and read the document:
+
 - `reset_document()`: Reset the document to an empty state
 - `add_verb(verb_name, config)`: Add a verb to the main section
 - `add_section(section_name)`: Add a new section
@@ -165,6 +171,8 @@ SWML documents have the following basic structure:
 - `render_document()`: Get the current document as a JSON string
 
 ### Common Verb Shortcuts
+
+This shortcut works for any verb:
 
 - `add_verb(verb_name, config)`: Add any SWML verb with configuration
 
@@ -222,8 +230,8 @@ By default, a service provides the following endpoints:
 
 - `GET /route`: Return the SWML document
 - `POST /route`: Process request data and return the SWML document
-- `GET /route/`: Same as above but with trailing slash
-- `POST /route/`: Same as above but with trailing slash
+- `GET /route/`: Same as `GET /route`, but with a trailing slash
+- `POST /route/`: Same as `POST /route`, but with a trailing slash
 
 Where `route` is the route path specified when creating the service.
 
@@ -244,16 +252,16 @@ You can also set credentials using environment variables:
 
 ### Dynamic SWML Generation
 
-You can override the `on_swml_request` method to customize SWML documents based on request data:
+You can override the `on_request` method to customize SWML documents based on request data:
 
 ```python
-def on_swml_request(self, request_data=None):
+def on_request(self, request_data=None, callback_path=None):
     if not request_data:
         return None
         
     # Customize document based on request_data
     self.reset_document()
-    self.add_answer_verb()
+    self.add_verb("answer", {})
     
     # Add custom verbs based on request_data
     if request_data.get("caller_type") == "vip":
@@ -276,17 +284,17 @@ The `SWMLService` class allows you to register custom routing callbacks that can
 
 ### Registering a Routing Callback
 
-You can use the `register_routing_callback` method to register a function that will be called to process requests to a specific path:
+You can use the `register_routing_callback` method to register a function that will be called to process requests to a specific path. The callback receives the parsed request body and the request headers, both as plain dictionaries:
 
 <!-- snippet: no-run illustrative fragment (references `service` established in the surrounding prose) -->
 ```python
-def my_routing_callback(request, body):
+def my_routing_callback(body, headers):
     """
     Process incoming requests and determine routing
     
     Args:
-        request: FastAPI Request object
         body: Parsed JSON body as a dictionary
+        headers: Request headers as a dictionary
         
     Returns:
         Optional[str]: If a string is returned, the request will be redirected to that URL.
@@ -305,6 +313,8 @@ service.register_routing_callback(my_routing_callback, path="/customer")
 ```
 
 ### How Routing Works
+
+Routing proceeds in these steps:
 
 1. When a request is received at the registered path, the routing callback is executed
 2. The callback inspects the request and can decide whether to redirect it
@@ -357,7 +367,6 @@ Here's an example of a service that uses routing callbacks to handle different t
 
 ```python
 from signalwire.core.swml_service import SWMLService
-from fastapi import Request
 from typing import Dict, Any, Optional
 
 class MultiSectionService(SWMLService):
@@ -378,7 +387,7 @@ class MultiSectionService(SWMLService):
         self.register_product_route()
     
     def register_customer_route(self):
-        def customer_callback(request: Request, body: Dict[str, Any]) -> Optional[str]:
+        def customer_callback(body: Dict[str, Any], headers: Dict[str, Any]) -> Optional[str]:
             # Check if we need to route to a specific customer ID
             if "customer_id" in body:
                 customer_id = body["customer_id"]
@@ -398,7 +407,7 @@ class MultiSectionService(SWMLService):
         self.add_verb_to_section("customer_section", "hangup", {})
     
     def register_product_route(self):
-        def product_callback(request: Request, body: Dict[str, Any]) -> Optional[str]:
+        def product_callback(body: Dict[str, Any], headers: Dict[str, Any]) -> Optional[str]:
             # Check if we need to route to a specific product ID
             if "product_id" in body:
                 product_id = body["product_id"]
@@ -468,15 +477,20 @@ service = SWMLService(
 
 ### Constructor Parameters
 
+`SWMLService.__init__` accepts these parameters:
+
 - `name`: Service name/identifier (required)
 - `route`: HTTP route path (default: "/")
 - `host`: Host to bind to (default: "0.0.0.0")
 - `port`: Port to bind to (default: 3000)
 - `basic_auth`: Optional tuple of (username, password)
 - `schema_path`: Optional path to schema.json
-- `suppress_logs`: Whether to suppress structured logs (default: False)
+- `config_file`: Optional path to a JSON configuration file
+- `schema_validation`: Enable SWML schema validation (default: True)
 
 ### Document Methods
+
+The same document methods listed earlier are the public API:
 
 - `reset_document()`
 - `add_verb(verb_name, config)`
@@ -487,20 +501,26 @@ service = SWMLService(
 
 ### Service Methods
 
+These methods control the running service:
+
 - `as_router()`: Get a FastAPI router for the service
 - `serve()`: Start the service
 - `stop()`: Stop the service
 - `get_basic_auth_credentials(include_source=False)`: Get the basic auth credentials
-- `on_swml_request(request_data=None)`: Called when SWML is requested
+- `on_request(request_data=None, callback_path=None)`: Called when SWML is requested
 - `register_routing_callback(callback_fn, path="/sip")`: Register a callback for request routing
 
 ### Verb Helper Methods
+
+This shortcut works for any verb:
 
 - `add_verb(verb_name, config)`: Add any SWML verb with configuration
 
 ## Examples
 
 ### Basic Voicemail Service
+
+This service answers, plays a greeting, and records a message:
 
 ```python
 from signalwire.core.swml_service import SWMLService
@@ -556,9 +576,11 @@ class VoicemailService(SWMLService):
 
 ### Dynamic Call Routing Service
 
+This service builds a different document for each department, based on the request data:
+
 ```python
 class CallRouterService(SWMLService):
-    def on_swml_request(self, request_data=None):
+    def on_request(self, request_data=None, callback_path=None):
         # If there's no request data, use default routing
         if not request_data:
             self.log.debug("no_request_data_using_default")

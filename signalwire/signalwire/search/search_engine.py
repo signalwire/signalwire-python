@@ -9,6 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import sqlite3
 import json
+import warnings
 from typing import Any, TYPE_CHECKING
 
 from signalwire.core.logging_config import get_logger
@@ -138,13 +139,21 @@ class SearchEngine:
             similarity_threshold: Minimum similarity score (applied to raw vector
                 pre-merge so the threshold is intuitive)
             tags: Filter by tags
-            keyword_weight: Accepted for API stability; scoring is max-signal-wins
-                with agreement boost, so this is no-op currently
+            keyword_weight: Deprecated, and has no effect. Scoring is
+                max-signal-wins with an agreement boost, so there's no keyword
+                weight to set. Passing a value emits a DeprecationWarning.
             original_query: Original query for exact matching / filename match
 
         Returns:
             List of search results with scores and metadata
         """
+        if keyword_weight is not None:
+            warnings.warn(
+                "keyword_weight has no effect and is deprecated: results are scored by "
+                "their strongest signal, with a boost when signals agree.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         # Fallback: if sqlite backend and numpy/sklearn unavailable, skip the
         # unified pipeline entirely and return keyword-only results directly.
         # The fallback results don't have per-source signal structure, so the

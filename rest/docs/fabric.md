@@ -59,7 +59,7 @@ These resources use `PATCH` for updates (partial update):
 | `fabric.sip_gateways` | `/api/fabric/resources/sip_gateways` |
 | `fabric.cxml_webhooks` | `/api/fabric/resources/cxml_webhooks` |
 
-## Call Flows -- Extra Methods
+## Call Flows: Extra Methods
 
 Call flows support version management:
 
@@ -71,7 +71,7 @@ versions = client.fabric.call_flows.list_versions("call-flow-uuid")
 client.fabric.call_flows.deploy_version("call-flow-uuid", document_version=3)
 ```
 
-## Subscribers -- SIP Endpoints
+## Subscribers: SIP Endpoints
 
 Subscribers have nested SIP endpoint management:
 

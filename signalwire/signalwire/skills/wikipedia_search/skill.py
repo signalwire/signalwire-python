@@ -14,10 +14,18 @@ Provides Wikipedia search capabilities using the Wikipedia API.
 import requests
 from urllib.parse import quote
 from typing import Any, ClassVar, TYPE_CHECKING
+from signalwire import __version__
 from signalwire.core.skill_base import SkillBase
 
 if TYPE_CHECKING:
     from signalwire.core.function_result import FunctionResult
+
+# Wikimedia refuses API requests without a descriptive User-Agent (HTTP 403).
+# Its policy asks for a product token and a way to reach the maintainer.
+USER_AGENT = (
+    f"signalwire-python/{__version__} "
+    "(https://github.com/signalwire/signalwire-python) wikipedia_search"
+)
 
 
 class WikipediaSearchSkill(SkillBase):
@@ -51,8 +59,8 @@ class WikipediaSearchSkill(SkillBase):
                     "description": "Maximum number of Wikipedia articles to return",
                     "default": 1,
                     "required": False,
-                    "minimum": 1,
-                    "maximum": 5,
+                    "min": 1,
+                    "max": 5,
                 },
                 "no_results_message": {
                     "type": "string",
@@ -137,7 +145,9 @@ class WikipediaSearchSkill(SkillBase):
                 f"&srlimit={self.num_results}"
             )
 
-            response = requests.get(search_url, timeout=10)
+            response = requests.get(
+                search_url, headers={"User-Agent": USER_AGENT}, timeout=10
+            )
             response.raise_for_status()
             search_data = response.json()
 
@@ -158,7 +168,9 @@ class WikipediaSearchSkill(SkillBase):
                     f"&titles={quote(title)}"
                 )
 
-                extract_response = requests.get(extract_url, timeout=10)
+                extract_response = requests.get(
+                    extract_url, headers={"User-Agent": USER_AGENT}, timeout=10
+                )
                 extract_response.raise_for_status()
                 extract_data = extract_response.json()
 

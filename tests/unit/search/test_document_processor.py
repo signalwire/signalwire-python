@@ -12,6 +12,7 @@ Unit tests for search document processor module
 """
 
 import pytest
+import sys
 import tempfile
 import os
 from typing import Any
@@ -785,8 +786,8 @@ class TestFileExtraction:
 
     # ── XLSX (Excel) ─────────────────────────────────────────────────
 
-    @patch('signalwire.search.document_processor.load_workbook')
-    def test_extract_excel_success(self, mock_lwb: MagicMock) -> None:
+    def test_extract_excel_success(self) -> None:
+        mock_lwb = MagicMock()
         mock_sheet = Mock()
         mock_sheet.iter_rows.return_value = [
             ("Name", "Age"),
@@ -796,22 +797,34 @@ class TestFileExtraction:
         mock_wb = Mock(); mock_wb.worksheets = [mock_sheet]
         mock_lwb.return_value = mock_wb
 
-        result = self.processor._extract_excel("/fake/data.xlsx")
+        with patch.dict(sys.modules, {"openpyxl": Mock(load_workbook=mock_lwb)}):
+            result = self.processor._extract_excel("/fake/data.xlsx")
         assert "Name" in result
         assert "Alice" in result
         assert "30" in result  # integers become str
         assert "Bob" in result
 
-    @patch('signalwire.search.document_processor.load_workbook', None)
     def test_extract_excel_missing_dependency(self) -> None:
-        result = self.processor._extract_excel("/fake/data.xlsx")
+        with patch.dict(sys.modules, {"openpyxl": None}):
+            result = self.processor._extract_excel("/fake/data.xlsx")
         assert "openpyxl not available" in result
 
-    @patch('signalwire.search.document_processor.load_workbook')
-    def test_extract_excel_exception(self, mock_lwb: MagicMock) -> None:
-        mock_lwb.side_effect = Exception("xlsx error")
-        result = self.processor._extract_excel("/fake/data.xlsx")
+    def test_extract_excel_exception(self) -> None:
+        mock_lwb = MagicMock(side_effect=Exception("xlsx error"))
+        with patch.dict(sys.modules, {"openpyxl": Mock(load_workbook=mock_lwb)}):
+            result = self.processor._extract_excel("/fake/data.xlsx")
         assert "Error processing Excel" in result
+
+    def test_importing_the_module_does_not_load_openpyxl(self) -> None:
+        """openpyxl (and the numpy it imports) loads only for Excel files."""
+        import subprocess
+
+        code = (
+            "import sys; import signalwire.search.document_processor; "
+            "print('openpyxl' in sys.modules)"
+        )
+        out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=120)
+        assert out.stdout.strip().splitlines()[-1] == "False", out.stdout + out.stderr
 
     # ── PPTX (PowerPoint) ────────────────────────────────────────────
 
@@ -1344,6 +1357,72 @@ class TestChunkingStrategies:
         proc = DocumentProcessor(chunking_strategy='markdown')
         chunks = proc.create_chunks("", "doc.md", "md")
         assert isinstance(chunks, list)
+
+
+class TestMarkdownHeadingHierarchy:
+    """Section paths follow each heading's real level (B9).
+
+    The chunkers used to take the first ``level - 1`` entries of the path,
+    which assumes a heading at every level from 1. In a document that starts
+    at ``##``, or skips a level, siblings were recorded as parent and child.
+    """
+
+    DOC = (
+        "## Install\n\nRun the installer.\n\n"
+        "## Configure\n\nSet the project ID.\n\n"
+        "### Environment Variables\n\nThe SDK reads three variables.\n\n"
+        "## Run\n\nStart the agent.\n\n"
+        "# Reference\n\nEvery class.\n\n"
+        "### Deep Heading\n\nThis skips level two.\n\n"
+        "### Sibling Heading\n\nAlso level three.\n\n"
+        "## Classes\n\nAgentBase is the main class.\n"
+    )
+    EXPECTED = [
+        "Install",
+        "Configure",
+        "Configure > Environment Variables",
+        "Run",
+        "Reference",
+        "Reference > Deep Heading",
+        "Reference > Sibling Heading",
+        "Reference > Classes",
+    ]
+
+    @pytest.mark.parametrize("chunker", ["_chunk_markdown_ast", "_chunk_markdown_line_walker"])
+    def test_sections_follow_heading_levels(self, chunker: str) -> None:
+        proc = DocumentProcessor(chunking_strategy="markdown")
+        chunks = getattr(proc, chunker)(self.DOC, "doc.md")
+        assert [c["section"] for c in chunks] == self.EXPECTED
+
+    @pytest.mark.parametrize("chunker", ["_chunk_markdown_ast", "_chunk_markdown_line_walker"])
+    def test_heading_metadata_and_depth_tags(self, chunker: str) -> None:
+        proc = DocumentProcessor(chunking_strategy="markdown")
+        chunks = getattr(proc, chunker)(self.DOC, "doc.md")
+        run = next(c for c in chunks if c["section"] == "Run")
+        assert run["metadata"]["h1"] == "Run"
+        assert "h2" not in run["metadata"]
+        assert "depth:1" in run["metadata"]["tags"]
+
+    def test_folded_small_section_keeps_later_paths_right(self) -> None:
+        """A section too small to stand alone folds into the next one."""
+        proc = DocumentProcessor(chunking_strategy="markdown", min_chunk_size=10)
+        doc = (
+            "## A\n\nx\n\n"
+            "## B\n\n" + "Section B has enough text to stand on its own. " * 3 + "\n\n"
+            "## C\n\n" + "Section C has enough text to stand on its own. " * 3 + "\n"
+        )
+        chunks = proc._chunk_markdown_ast(doc, "doc.md")
+        assert [c["section"] for c in chunks] == ["A", "C"]
+
+    def test_push_heading(self) -> None:
+        push = DocumentProcessor._push_heading
+        path = push([], 2, "A")
+        assert path == [(2, "A")]
+        path = push(path, 4, "B")
+        assert path == [(2, "A"), (4, "B")]
+        assert push(path, 4, "C") == [(2, "A"), (4, "C")]
+        assert push(path, 3, "D") == [(2, "A"), (3, "D")]
+        assert push(path, 1, "E") == [(1, "E")]
 
 
 class TestEdgeCases:

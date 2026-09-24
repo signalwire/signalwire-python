@@ -93,6 +93,7 @@ sw-search search ./knowledge.swsearch "query"
 sw-search remote <endpoint> "query" --index-name <name>
 
 # Other tools
+sw-pydocs            # The SDK's installed docs, for people and coding agents
 sw-agent-init        # Scaffold new agent projects
 sw-agent-dokku       # Dokku deployment helper
 mcp-gateway          # MCP Gateway service
@@ -112,7 +113,7 @@ mcp-gateway          # MCP Gateway service
 - `AuthMixin` → basic auth, security headers
 - `AIConfigMixin` → LLM parameter tuning (temperature, top_p, etc.)
 - `ServerlessMixin` → cloud function environment detection
-- `StateMixin` → per-session state management
+- `StateMixin` → creates and validates the per-call security tokens for SWAIG functions
 
 ### Agent Server
 
@@ -153,7 +154,7 @@ mcp-gateway          # MCP Gateway service
 
 `DataMap` defines server-side API tools that execute REST calls without agent webhooks. Supports expression evaluation for conditional logic.
 - Created with fluent API: `DataMap('tool_name').description('...').webhook('GET', 'url').output(...)`
-- Variable expansion: `${args.param}`, `${response.field}`, `${global_data.key}`
+- Variable expansion: `${args.param}`, `${global_data.key}`, and a webhook response's fields from the root, `${field}`; prefix helpers chain, as in `${lc:enc:args.city}`
 - Use DataMap for simple API integrations, webhooks for complex logic
 
 ### Skills System

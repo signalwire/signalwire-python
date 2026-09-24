@@ -78,16 +78,16 @@ class NativeVectorSearchSkill(SkillBase):
                     "description": "Number of search results to return",
                     "default": 5,
                     "required": False,
-                    "minimum": 1,
-                    "maximum": 20,
+                    "min": 1,
+                    "max": 20,
                 },
                 "similarity_threshold": {
                     "type": "number",
                     "description": "Minimum similarity score for results (0.0 = no limit, 1.0 = exact match)",
                     "default": 0.0,
                     "required": False,
-                    "minimum": 0.0,
-                    "maximum": 1.0,
+                    "min": 0.0,
+                    "max": 1.0,
                 },
                 "tags": {
                     "type": "array",
@@ -145,7 +145,7 @@ class NativeVectorSearchSkill(SkillBase):
                     "description": "Maximum total response size in characters (distributed across all results)",
                     "default": 32768,
                     "required": False,
-                    "minimum": 1000,
+                    "min": 1000,
                 },
                 "response_format_callback": {
                     "type": "callable",
@@ -209,15 +209,15 @@ class NativeVectorSearchSkill(SkillBase):
                 },
                 "keyword_weight": {
                     "type": "number",
-                    "description": "Manual keyword weight (0.0-1.0). Overrides automatic weight detection",
+                    "description": "Deprecated, and has no effect on ranking: results are scored by their strongest signal. Accepted so existing configurations keep working",
                     "default": None,
                     "required": False,
-                    "minimum": 0.0,
-                    "maximum": 1.0,
+                    "min": 0.0,
+                    "max": 1.0,
                 },
                 "model_name": {
                     "type": "string",
-                    "description": "Embedding model to use. Options: 'mini' (fastest, 384 dims), 'base' (balanced, 768 dims), 'large' (same as base). Or specify full model name like 'sentence-transformers/all-MiniLM-L6-v2'",
+                    "description": "Embedding model to use. Options: 'mini' (fastest, 384 dims), 'base' (balanced, 768 dims), 'large' (deprecated: loads the same model as 'base'). Or specify full model name like 'sentence-transformers/all-MiniLM-L6-v2'",
                     "default": "mini",
                     "required": False,
                 },
@@ -263,6 +263,11 @@ class NativeVectorSearchSkill(SkillBase):
         self.max_content_length = self.params.get("max_content_length", 32768)
         self.response_format_callback = self.params.get("response_format_callback")
         self.keyword_weight = self.params.get("keyword_weight")
+        if self.keyword_weight is not None:
+            self.logger.warning(
+                "keyword_weight is deprecated and has no effect on ranking; "
+                "remove it from the skill's configuration"
+            )
         self.model_name = self.params.get("model_name", "mini")
 
         # Remote search server configuration
@@ -273,21 +278,23 @@ class NativeVectorSearchSkill(SkillBase):
             "index_name", "default"
         )  # For remote searches
 
-        # Parse auth from URL if present
+        # Parse auth from URL if present. remote_base_url never carries the
+        # credentials, so it's the form to log and to build request URLs from.
         self.remote_auth = None
         self.remote_base_url = self.remote_url
         if self.remote_url:
             from urllib.parse import urlparse
 
             parsed = urlparse(self.remote_url)
-            if parsed.username and parsed.password:
-                self.remote_auth = (parsed.username, parsed.password)
-                # Reconstruct URL without auth for display
-                self.remote_base_url = f"{parsed.scheme}://{parsed.hostname}"
-                if parsed.port:
-                    self.remote_base_url += f":{parsed.port}"
-                if parsed.path:
-                    self.remote_base_url += parsed.path
+            if "@" in parsed.netloc:
+                # Decode the credentials exactly as Requests would have from
+                # the URL, including an empty user or password.
+                from requests.utils import get_auth_from_url
+
+                url_auth = get_auth_from_url(self.remote_url)
+                self.remote_auth = url_auth if any(url_auth) else None
+                host_and_port = parsed.netloc.rsplit("@", 1)[1]
+                self.remote_base_url = parsed._replace(netloc=host_and_port).geturl()
 
         # SWAIG fields are already extracted by SkillBase.__init__()
         # No need to re-fetch from params - use self.swaig_fields inherited from parent
@@ -300,13 +307,13 @@ class NativeVectorSearchSkill(SkillBase):
 
             if not validate_url(self.remote_url):
                 self.logger.error(
-                    "Remote URL rejected by SSRF protection: %s", self.remote_url
+                    "Remote URL rejected by SSRF protection: %s", self.remote_base_url
                 )
                 return False
 
             self.use_remote = True
             self.search_engine = None  # No local search engine needed
-            self.logger.info(f"Using remote search server: {self.remote_url}")
+            self.logger.info("Using remote search server: %s", self.remote_base_url)
 
             # Test remote connection (lightweight check)
             try:
@@ -334,7 +341,11 @@ class NativeVectorSearchSkill(SkillBase):
                 self.search_available = False
                 return False
             except Exception as e:
-                self.logger.error(f"Failed to connect to remote search server: {e}")
+                from signalwire.core.security.security_utils import redact_url
+
+                self.logger.error(
+                    "Failed to connect to remote search server: %s", redact_url(str(e))
+                )
                 self.search_available = False
                 return False
 
@@ -447,22 +458,46 @@ class NativeVectorSearchSkill(SkillBase):
                             index_nlp_backend=self.index_nlp_backend,
                         )
 
-                        # NOTE: IndexBuilder.build_index() does not accept an
-                        # "overwrite" parameter; passing it raised TypeError at
-                        # runtime (silently swallowed by the except below), so
-                        # pgvector auto-build never actually succeeded. Removed.
-                        builder.build_index(
-                            source_dir=self.source_dir,
-                            output_file=self.collection_name,  # pgvector uses this as collection name
-                            file_types=self.params.get("file_types", ["md", "txt"]),
-                            exclude_patterns=self.params.get("exclude_patterns"),
-                            tags=self.params.get("global_tags"),
+                        # A pgvector collection only grows: storing chunks into
+                        # an existing one appends a second copy. So, as for a
+                        # SQLite index file, build only when the collection
+                        # doesn't exist yet, unless overwrite asks to rebuild.
+                        overwrite = bool(self.params.get("overwrite", False))
+                        exists = (
+                            False if overwrite else self._pgvector_collection_exists()
                         )
-                        self.logger.info(
-                            f"pgvector collection created: {self.collection_name}"
-                        )
+                        if exists:
+                            self.logger.info(
+                                "pgvector collection %s already exists; set "
+                                "overwrite to rebuild it",
+                                self.collection_name,
+                            )
+                        elif exists is None:
+                            # Building now could append a second copy to a
+                            # collection that does exist
+                            self.logger.error(
+                                "Couldn't check whether pgvector collection %s "
+                                "exists, so it wasn't built",
+                                self.collection_name,
+                            )
+                        else:
+                            builder.build_index(
+                                source_dir=self.source_dir,
+                                output_file=self.collection_name,  # pgvector uses this as collection name
+                                file_types=self.params.get("file_types", ["md", "txt"]),
+                                exclude_patterns=self.params.get("exclude_patterns"),
+                                tags=self.params.get("global_tags"),
+                                overwrite=overwrite,
+                            )
+                            self.logger.info(
+                                f"pgvector collection created: {self.collection_name}"
+                            )
                     except Exception as e:
-                        self.logger.error(f"Failed to build pgvector index: {e}")
+                        from signalwire.core.security.security_utils import redact_url
+
+                        self.logger.error(
+                            "Failed to build pgvector index: %s", redact_url(str(e))
+                        )
                         # Don't set search_available to False - we might be connecting to existing collection
                 else:
                     self.logger.warning(
@@ -487,7 +522,11 @@ class NativeVectorSearchSkill(SkillBase):
                             f"Connected to pgvector collection: {self.collection_name}"
                         )
                     except Exception as e:
-                        self.logger.error(f"Failed to connect to pgvector: {e}")
+                        from signalwire.core.security.security_utils import redact_url
+
+                        self.logger.error(
+                            "Failed to connect to pgvector: %s", redact_url(str(e))
+                        )
                         self.search_available = False
                 else:
                     self.logger.error(
@@ -573,15 +612,42 @@ class NativeVectorSearchSkill(SkillBase):
                 ],
             )
 
+    def _pgvector_collection_exists(self) -> bool | None:
+        """Whether the configured pgvector collection already exists.
+
+        None means the check itself failed, so the answer is unknown.
+        """
+        import re
+
+        from signalwire.search.pgvector_backend import PgVectorBackend
+
+        name = self.collection_name or ""
+        if name.endswith(".swsearch"):
+            name = name[: -len(".swsearch")]
+        # The same sanitizing IndexBuilder applies when it stores a collection
+        name = re.sub(r"[^a-zA-Z0-9_]", "_", name)
+        try:
+            backend = PgVectorBackend(self.connection_string or "")
+        except Exception:
+            return None
+        try:
+            return name in backend.list_collections()
+        except Exception as e:
+            # A new database has no collection_config table yet
+            if type(e).__name__ == "UndefinedTable":
+                return False
+            return None
+        finally:
+            backend.close()
+
     def _search_handler(
         self, args: dict[str, Any], raw_data: dict[str, Any]
     ) -> FunctionResult:
         """Handle search requests"""
 
-        # Debug logging to see what arguments are being passed
-        self.logger.info(f"Search handler called with args: {args}")
-        self.logger.info(f"Args type: {type(args)}")
-        self.logger.info(f"Raw data: {raw_data}")
+        # The arguments carry the caller's query, so they're logged at DEBUG
+        # only. raw_data (the whole SWAIG request) isn't logged at all.
+        self.logger.debug("Search handler called with args: %s", args)
 
         if not self.search_available:
             return FunctionResult(
@@ -597,30 +663,24 @@ class NativeVectorSearchSkill(SkillBase):
 
         # Get arguments - the framework handles parsing correctly
         query = args.get("query", "").strip()
-        self.logger.error(f"DEBUG: Extracted query: '{query}' (length: {len(query)})")
-        self.logger.info(f"Query bool value: {bool(query)}")
+        self.logger.debug("Extracted query: %r (length: %d)", query, len(query))
 
         if not query:
-            self.logger.error("Query validation failed - returning error message")
+            self.logger.debug("Search called without a query")
             return FunctionResult("Please provide a search query.")
-
-        self.logger.info("Query validation passed - proceeding with search")
         count = args.get("count", self.count)
 
         try:
             # Perform search (local or remote)
-            self.logger.info(
-                f"DEBUG: use_remote={self.use_remote}, remote_base_url={self.remote_base_url}"
+            self.logger.debug(
+                "use_remote=%s, remote_base_url=%s",
+                self.use_remote,
+                self.remote_base_url,
             )
             if self.use_remote:
                 # For remote searches, let the server handle query preprocessing
-                self.logger.info(
-                    f"DEBUG: Calling _search_remote with query='{query}', count={count}"
-                )
                 results = self._search_remote(query, None, count)
-                self.logger.info(
-                    f"DEBUG: _search_remote returned {len(results)} results"
-                )
+                self.logger.debug("Remote search returned %d results", len(results))
             else:
                 # For local searches, preprocess the query locally
                 from signalwire.search.query_processor import preprocess_query
@@ -655,7 +715,6 @@ class NativeVectorSearchSkill(SkillBase):
                     count=count,
                     similarity_threshold=self.similarity_threshold,
                     tags=self.tags,
-                    keyword_weight=self.keyword_weight,
                     original_query=query,  # Pass original for exact match boosting
                 )
 
@@ -686,10 +745,12 @@ class NativeVectorSearchSkill(SkillBase):
                         if isinstance(formatted_response, str):
                             no_results_msg = formatted_response
                     except Exception as e:
+                        # The callback sees the query; its error can echo it
                         self.logger.error(
-                            f"Error in response_format_callback (no results): {e}",
-                            exc_info=True,
+                            "Error in response_format_callback (no results): %s",
+                            type(e).__name__,
                         )
+                        self.logger.debug("Callback error details", exc_info=True)
 
                 return FunctionResult(no_results_msg)
 
@@ -792,16 +853,20 @@ class NativeVectorSearchSkill(SkillBase):
                         )
 
                 except Exception as e:
+                    # The callback sees the query; its error can echo it
                     self.logger.error(
-                        f"Error in response_format_callback: {e}", exc_info=True
+                        "Error in response_format_callback: %s", type(e).__name__
                     )
+                    self.logger.debug("Callback error details", exc_info=True)
                     # Continue with original response if callback fails
 
             return FunctionResult(response)
 
         except Exception as e:
-            # Log the full error details for debugging
-            self.logger.error(f"Search error for query '{query}': {e!s}", exc_info=True)
+            # The exception's message and traceback can include the caller's
+            # query, so they're DEBUG only
+            self.logger.error("Search error: %s", type(e).__name__)
+            self.logger.debug("Search error details", exc_info=True)
 
             # Return user-friendly error message
             user_msg = "I'm sorry, I encountered an issue while searching. "
@@ -835,8 +900,8 @@ class NativeVectorSearchSkill(SkillBase):
             }
 
             url = f"{self.remote_base_url}/search"
-            self.logger.info(
-                f"DEBUG: Sending POST to {url} with request: {search_request}"
+            self.logger.debug(
+                "Sending POST to %s with request: %s", url, search_request
             )
 
             response = requests.post(
@@ -845,8 +910,8 @@ class NativeVectorSearchSkill(SkillBase):
 
             if response.status_code == 200:
                 data = response.json()
-                self.logger.info(
-                    f"DEBUG: Got response with {len(data.get('results', []))} results"
+                self.logger.debug(
+                    "Remote search server sent %d results", len(data.get("results", []))
                 )
                 # Convert remote response format to local format
                 return [
@@ -857,13 +922,16 @@ class NativeVectorSearchSkill(SkillBase):
                     }
                     for result in data.get("results", [])
                 ]
+            # The body can echo the caller's query, so it's DEBUG only
             self.logger.error(
-                f"Remote search failed with status {response.status_code}: {response.text}"
+                "Remote search failed with status %s", response.status_code
             )
+            self.logger.debug("Remote search error body: %.500s", response.text)
             return []
 
         except Exception as e:
-            self.logger.error(f"Remote search error: {e}")
+            self.logger.error("Remote search error: %s", type(e).__name__)
+            self.logger.debug("Remote search error details", exc_info=True)
             return []
 
     def get_hints(self) -> list[str]:

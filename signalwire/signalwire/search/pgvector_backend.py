@@ -9,6 +9,7 @@ See LICENSE file in the project root for full license information.
 
 import json
 import re
+import warnings
 from typing import Any, TYPE_CHECKING
 
 from signalwire.core.logging_config import get_logger
@@ -462,10 +463,15 @@ class PgVectorBackend:
             cursor.execute(
                 psycopg2_sql.SQL("DROP TABLE IF EXISTS {tbl}").format(tbl=tbl)
             )
-            cursor.execute(
-                "DELETE FROM collection_config WHERE collection_name = %s",
-                (collection_name,),
-            )
+            # A new database has no collection_config table until the first
+            # collection is created, and overwrite deletes before creating.
+            cursor.execute("SELECT to_regclass('collection_config')")
+            row = cursor.fetchone()
+            if row is not None and row[0] is not None:
+                cursor.execute(
+                    "DELETE FROM collection_config WHERE collection_name = %s",
+                    (collection_name,),
+                )
             self.conn.commit()
             logger.info(f"Deleted collection '{collection_name}'")
 
@@ -571,11 +577,20 @@ class PgVectorSearchBackend:
             count: Number of results to return
             similarity_threshold: Minimum similarity score
             tags: Filter by tags
-            keyword_weight: Manual keyword weight (0.0-1.0). If None, uses default weighting
+            keyword_weight: Deprecated, and has no effect. Scoring is
+                max-signal-wins with an agreement boost. Passing a value emits
+                a DeprecationWarning.
 
         Returns:
             List of search results with scores and metadata
         """
+        if keyword_weight is not None:
+            warnings.warn(
+                "keyword_weight has no effect and is deprecated: results are scored by "
+                "their strongest signal, with a boost when signals agree.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
         self._ensure_connection()
 
         # Extract query terms for metadata search

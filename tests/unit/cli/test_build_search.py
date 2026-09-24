@@ -12,6 +12,7 @@ Unit tests for CLI build_search module
 """
 
 import pytest
+import os
 import sys
 import types
 import json
@@ -744,21 +745,31 @@ from signalwire.cli.build_search import (
 class TestConsoleEntryPointExtended:
     """Additional tests for console_entry_point subcommand routing."""
 
-    @patch('builtins.print')
     @patch('sys.argv', ['sw-search', '--help'])
-    def test_console_entry_help_flag(self, mock_print: MagicMock) -> None:
-        """Test --help flag shows help text without importing heavy modules."""
+    def test_console_entry_help_flag(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """Test --help flag shows help text."""
         console_entry_point()
-        printed = ''.join(str(c.args[0]) for c in mock_print.call_args_list if c.args)
-        assert 'Build local search index from documents' in printed
+        assert 'Build local search index from documents' in capsys.readouterr().out
 
-    @patch('builtins.print')
     @patch('sys.argv', ['sw-search', '-h'])
-    def test_console_entry_help_short_flag(self, mock_print: MagicMock) -> None:
+    def test_console_entry_help_short_flag(self, capsys: pytest.CaptureFixture[str]) -> None:
         """Test -h flag shows help text."""
         console_entry_point()
-        printed = ''.join(str(c.args[0]) for c in mock_print.call_args_list if c.args)
-        assert 'positional arguments' in printed
+        assert 'positional arguments' in capsys.readouterr().out
+
+    @patch('sys.argv', ['sw-search', '--help'])
+    def test_help_lists_every_option(self, capsys: pytest.CaptureFixture[str]) -> None:
+        """The help is the parser's own, so no option can go missing from it (B22)."""
+        from signalwire.cli.build_search import _build_parser
+
+        console_entry_point()
+        out = capsys.readouterr().out
+        options = [o for a in _build_parser()._actions for o in a.option_strings]
+        assert options, "parser defines no options"
+        missing = [o for o in options if o not in out]
+        assert missing == []
+        for flag in ("--backend", "--connection-string", "--overwrite", "--output-dir", "--output-format"):
+            assert flag in out
 
     @patch('signalwire.cli.build_search.remote_command')
     @patch('sys.argv', ['sw-search', 'remote', 'http://localhost:8001', 'query'])
@@ -1017,19 +1028,21 @@ class TestMainModelAlias:
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--model', 'large'])
-    def test_model_alias_large(self, mock_builder_class: MagicMock) -> None:
-        """Model alias 'large' should resolve correctly."""
+    def test_model_alias_large(self, mock_builder_class: MagicMock, capsys: pytest.CaptureFixture[str]) -> None:
+        """The deprecated 'large' alias still loads base's model, with a warning (B11)."""
         mock_builder = Mock()
         mock_builder_class.return_value = mock_builder
 
         with patch('pathlib.Path.exists', return_value=True), \
              patch('pathlib.Path.is_file', return_value=False), \
              patch('pathlib.Path.name', new_callable=lambda: property(lambda self: 'docs')), \
-             patch('os.path.exists', return_value=True):
+             patch('os.path.exists', return_value=True), \
+             pytest.warns(DeprecationWarning, match="'large' model alias is deprecated"):
             main()
 
         call_kw = mock_builder_class.call_args[1]
         assert call_kw['model_name'] == 'sentence-transformers/all-mpnet-base-v2'
+        assert "'large' model alias is deprecated" in capsys.readouterr().err
 
     @patch('signalwire.search.index_builder.IndexBuilder')
     @patch('sys.argv', ['sw-search', './docs', '--model', 'custom-org/my-model'])
@@ -1315,6 +1328,18 @@ class TestSearchCommandExtended:
             search_command()
         assert exc_info.value.code == 1
         mock_print.assert_any_call("Error: --keyword-weight must be between 0.0 and 1.0")
+
+    @patch('sys.argv', ['search', 'test.swsearch', 'q', '--keyword-weight', '0.5'])
+    def test_search_keyword_weight_is_deprecated(self) -> None:
+        """A valid --keyword-weight still runs, with a deprecation warning."""
+        with patch('pathlib.Path.exists', return_value=False), \
+             patch('builtins.print') as mock_print, \
+             pytest.raises(SystemExit):
+            search_command()
+        mock_print.assert_any_call(
+            "Warning: --keyword-weight is deprecated and has no effect on ranking",
+            file=sys.stderr,
+        )
 
     @patch('sys.argv', ['search', 'test.swsearch', 'q', '--keyword-weight', '-0.1'])
     def test_search_keyword_weight_negative(self) -> None:
@@ -1925,3 +1950,84 @@ class TestRemoteCommand:
 
         assert exc_info.value.code == 1
         mock_print.assert_any_call("Error: HTTP 500: Internal Server Error")
+
+class TestRemoteCredentialsAndThreshold:
+    """sw-search remote: explicit credentials, redacted URLs (B23), and the
+    --similarity-threshold name with its older alias (B24)."""
+
+    @staticmethod
+    def _ok_response() -> Mock:
+        response = Mock(status_code=200)
+        response.json.return_value = {"results": []}
+        return response
+
+    def _run(self, argv: list[str], env: dict[str, str] | None = None, post_side_effect: object | None = None) -> tuple[Mock, str]:
+        mock_requests = _make_mock_requests_module(
+            post_return=self._ok_response(), post_side_effect=post_side_effect
+        )
+        printed: list[str] = []
+        with patch('sys.argv', ['remote', *argv]), \
+             patch.dict('sys.modules', {'requests': mock_requests}), \
+             patch.dict('os.environ', env or {}, clear=False), \
+             patch('builtins.print', side_effect=lambda *a, **k: printed.append(" ".join(map(str, a)))), \
+             pytest.raises(SystemExit):
+            remote_command()
+        return mock_requests.post, "\n".join(printed)
+
+    def test_user_and_password(self) -> None:
+        post, _ = self._run(['http://localhost:8001', 'q', '--index-name', 'docs', '--user', 'u', '--password', 'p'])
+        assert post.call_args.kwargs['auth'] == ('u', 'p')
+
+    def test_user_with_password_from_environment(self) -> None:
+        post, _ = self._run(['http://localhost:8001', 'q', '--index-name', 'docs', '--user', 'u'],
+                            env={'SWML_BASIC_AUTH_PASSWORD': 'from-env'})
+        assert post.call_args.kwargs['auth'] == ('u', 'from-env')
+
+    def test_user_prompts_for_a_missing_password(self) -> None:
+        with patch.dict('os.environ', {}, clear=False):
+            os.environ.pop('SWML_BASIC_AUTH_PASSWORD', None)
+            with patch('getpass.getpass', return_value='typed') as prompt:
+                post, _ = self._run(['http://localhost:8001', 'q', '--index-name', 'docs', '--user', 'u'])
+        prompt.assert_called_once()
+        assert post.call_args.kwargs['auth'] == ('u', 'typed')
+
+    def test_no_credentials_sends_no_auth(self) -> None:
+        post, _ = self._run(['http://localhost:8001', 'q', '--index-name', 'docs'])
+        assert post.call_args.kwargs['auth'] is None
+
+    def test_password_without_user_is_an_error(self) -> None:
+        with patch('sys.argv', ['remote', 'http://localhost:8001', 'q', '--index-name', 'docs', '--password', 'p']), \
+             patch('builtins.print') as mock_print, \
+             pytest.raises(SystemExit) as exc_info:
+            remote_command()
+        assert exc_info.value.code == 1
+        mock_print.assert_any_call("Error: --password needs --user")
+
+    def test_verbose_endpoint_is_redacted(self) -> None:
+        _, out = self._run(['http://u:s3cret@localhost:8001', 'q', '--index-name', 'docs', '--verbose'])
+        assert 's3cret' not in out
+        assert 'localhost:8001' in out
+
+    def test_verbose_endpoint_with_empty_user_is_redacted(self) -> None:
+        _, out = self._run(['http://:s3cret@localhost:8001', 'q', '--index-name', 'docs', '--verbose'])
+        assert 's3cret' not in out
+        assert 'localhost:8001' in out
+
+    def test_verbose_traceback_is_redacted(self) -> None:
+        error = RuntimeError("failed at http://u:s3cret@localhost:8001/search")
+        _, out = self._run(['http://u:s3cret@localhost:8001', 'q', '--index-name', 'docs', '--verbose'],
+                           post_side_effect=error)
+        assert 'Traceback' in out
+        assert 's3cret' not in out
+
+    def test_connection_error_is_redacted(self) -> None:
+        import requests as real_requests
+        _, out = self._run(['http://u:s3cret@localhost:8001', 'q', '--index-name', 'docs'],
+                           post_side_effect=real_requests.ConnectionError("refused"))
+        assert 'Could not connect' in out
+        assert 's3cret' not in out
+
+    @pytest.mark.parametrize("flag", ["--similarity-threshold", "--distance-threshold"])
+    def test_threshold_under_either_name(self, flag: str) -> None:
+        post, _ = self._run(['http://localhost:8001', 'q', '--index-name', 'docs', flag, '0.7'])
+        assert post.call_args.kwargs['json']['similarity_threshold'] == 0.7

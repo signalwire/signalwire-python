@@ -9,7 +9,7 @@ from signalwire import BedrockAgent
 agent = BedrockAgent(
     name="bedrock_run_test",
     system_prompt="You are a helpful AI assistant powered by Amazon Bedrock.",
-    voice_id="inworld.Mark",
+    voice_id="matthew",
     temperature=0.7,
 )
 

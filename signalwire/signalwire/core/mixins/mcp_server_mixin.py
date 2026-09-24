@@ -8,7 +8,9 @@ Exposes @tool decorated functions as an MCP server endpoint at /mcp.
 Handles the MCP JSON-RPC 2.0 protocol: initialize, tools/list, tools/call.
 """
 
+import inspect
 import logging
+from collections.abc import Awaitable
 from typing import Any
 
 logger = logging.getLogger(__name__)
@@ -17,14 +19,26 @@ logger = logging.getLogger(__name__)
 class MCPServerMixin:
     """Mixin that adds MCP server endpoint to an agent"""
 
+    def _mcp_tools(self) -> dict[str, Any]:
+        """The agent's tools that this endpoint can run, by name.
+
+        DataMap tools run on SignalWire's servers, and external webhook tools
+        run at their own URL, so neither can be called here.
+        """
+        registry = getattr(
+            getattr(self, "_tool_registry", None), "_swaig_functions", {}
+        )
+        return {
+            name: func
+            for name, func in registry.items()
+            if not isinstance(func, dict) and not getattr(func, "webhook_url", None)
+        }
+
     def _build_mcp_tool_list(self) -> list[Any]:
         """Convert registered @tool functions to MCP tool format"""
         tools: list[dict[str, Any]] = []
 
-        if not hasattr(self, "_swaig_functions"):
-            return tools
-
-        for func in self._swaig_functions.values():
+        for func in self._mcp_tools().values():
             tool = {
                 "name": func.name,
                 "description": func.description or func.name,
@@ -42,8 +56,14 @@ class MCPServerMixin:
 
         return tools
 
-    def _handle_mcp_request(self, body: dict[str, Any]) -> dict[str, Any]:
-        """Handle a single MCP JSON-RPC 2.0 request"""
+    def _handle_mcp_request(
+        self, body: dict[str, Any]
+    ) -> dict[str, Any] | Awaitable[dict[str, Any]]:
+        """Handle a single MCP JSON-RPC 2.0 request
+
+        Returns the response, or, for a tools/call whose handler is
+        ``async def``, an awaitable that resolves to it.
+        """
         jsonrpc = body.get("jsonrpc", "")
         method = body.get("method", "")
         req_id = body.get("id")
@@ -84,56 +104,78 @@ class MCPServerMixin:
             tool_name = params.get("name", "")
             arguments = params.get("arguments", {})
 
-            if (
-                not hasattr(self, "_swaig_functions")
-                or tool_name not in self._swaig_functions
-            ):
+            tools = self._mcp_tools()
+            if tool_name not in tools:
                 return self._mcp_error(req_id, -32602, f"Unknown tool: {tool_name}")
 
-            func = self._swaig_functions[tool_name]
+            # Build minimal raw_data for the handler
+            raw_data = {
+                "function": tool_name,
+                "argument": {"parsed": [arguments]},
+            }
 
             try:
-                # Build minimal raw_data for the handler
-                raw_data = {
-                    "function": tool_name,
-                    "argument": {"parsed": [arguments]},
-                }
-
-                result = func.handler(self, arguments, raw_data)
-
-                # Extract text from FunctionResult
-                response_text = ""
-                if hasattr(result, "response"):
-                    response_text = result.response or ""
-                elif isinstance(result, str):
-                    response_text = result
-                elif isinstance(result, dict):
-                    response_text = result.get("response", str(result))
-
-                return {
-                    "jsonrpc": "2.0",
-                    "id": req_id,
-                    "result": {
-                        "content": [{"type": "text", "text": response_text}],
-                        "isError": False,
-                    },
-                }
+                # Registered handlers are already bound, so they take
+                # (args, raw_data), the same as for /swaig.
+                result = tools[tool_name].handler(arguments, raw_data)
             except Exception as e:
-                logger.error(f"MCP tool call error: {tool_name}: {e}")
-                return {
-                    "jsonrpc": "2.0",
-                    "id": req_id,
-                    "result": {
-                        "content": [{"type": "text", "text": f"Error: {e!s}"}],
-                        "isError": True,
-                    },
-                }
+                return self._mcp_tool_error(req_id, tool_name, e)
+
+            if inspect.isawaitable(result):
+                return self._finish_async_mcp_call(req_id, tool_name, result)
+            return self._mcp_tool_result(req_id, result)
 
         # Ping
         if method == "ping":
             return {"jsonrpc": "2.0", "id": req_id, "result": {}}
 
         return self._mcp_error(req_id, -32601, f"Method not found: {method}")
+
+    async def _finish_async_mcp_call(
+        self, req_id: str | int | None, tool_name: str, pending: Awaitable[Any]
+    ) -> dict[str, Any]:
+        """Await an async handler and build its tools/call response."""
+        try:
+            result = await pending
+        except Exception as e:
+            return self._mcp_tool_error(req_id, tool_name, e)
+        return self._mcp_tool_result(req_id, result)
+
+    @staticmethod
+    def _mcp_tool_result(req_id: str | int | None, result: Any) -> dict[str, Any]:
+        """Build a tools/call response from a handler's return value."""
+        # Extract text from FunctionResult
+        response_text = ""
+        if hasattr(result, "response"):
+            response_text = result.response or ""
+        elif isinstance(result, str):
+            response_text = result
+        elif isinstance(result, dict):
+            response_text = result.get("response", str(result))
+
+        return {
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "result": {
+                "content": [{"type": "text", "text": response_text}],
+                "isError": False,
+            },
+        }
+
+    @staticmethod
+    def _mcp_tool_error(
+        req_id: str | int | None, tool_name: str, error: Exception
+    ) -> dict[str, Any]:
+        """Build a tools/call response for a handler that raised."""
+        logger.error(f"MCP tool call error: {tool_name}: {error}")
+        return {
+            "jsonrpc": "2.0",
+            "id": req_id,
+            "result": {
+                "content": [{"type": "text", "text": f"Error: {error!s}"}],
+                "isError": True,
+            },
+        }
 
     @staticmethod
     def _mcp_error(req_id: str | int | None, code: int, message: str) -> dict[str, Any]:

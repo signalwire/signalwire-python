@@ -173,6 +173,12 @@ def _build_mixin(**overrides: Any) -> Any:
         agent._swaig_render_get_response = types.MethodType(_AgentBase._swaig_render_get_response, agent)
     if "_swaig_pre_dispatch" not in overrides:
         agent._swaig_pre_dispatch = types.MethodType(_AgentBase._swaig_pre_dispatch, agent)
+    if "_tool_token_rejection" not in overrides:
+        agent._tool_token_rejection = types.MethodType(_AgentBase._tool_token_rejection, agent)
+    if "_per_call_agent" not in overrides:
+        agent._per_call_agent = types.MethodType(_AgentBase._per_call_agent, agent)
+    if "_warn_unsigned_webhooks" not in overrides:
+        agent._warn_unsigned_webhooks = MagicMock(return_value=None)
 
     return agent
 
@@ -687,9 +693,60 @@ class TestHandleSwaigRequest:
         # Should proceed since function is not secure
         agent.on_function_call.assert_called()
 
+    def test_missing_token_secure_function_is_refused(self) -> None:
+        """A secure function without a token is refused like a wrong token:
+        the token is minted into the function's URL, so a request without one
+        didn't come from the SWML."""
+        agent = _build_mixin()
+        agent._session_manager.validate_tool_token = MagicMock(return_value=True)
+        agent._tool_registry._swaig_functions = {"secure_fn": {"secure": True}}
+        resp = MagicMock()
+        resp.headers = {}
+        body = {"function": "secure_fn", "call_id": "c1"}
+        request = _make_request("POST", body=body, url_path="/agent/swaig")
+        result = _run(agent._handle_swaig_request(request, resp))
+        assert isinstance(result, dict)
+        assert "invalid" in result["response"].lower()
+        agent._session_manager.validate_tool_token.assert_not_called()
+        agent.on_function_call.assert_not_called()
+
+    def test_token_without_call_id_secure_function_is_refused(self) -> None:
+        """A token is only valid for a call, so a request without a call_id
+        can't be validated and is refused."""
+        agent = _build_mixin()
+        agent._session_manager.validate_tool_token = MagicMock(return_value=True)
+        agent._session_manager.debug_token = MagicMock(return_value={})
+        agent._tool_registry._swaig_functions = {"secure_fn": {"secure": True}}
+        resp = MagicMock()
+        resp.headers = {}
+        body = {"function": "secure_fn"}
+        request = _make_request(
+            "POST", body=body,
+            query_params={"__token": "some-token"},
+            url_path="/agent/swaig"
+        )
+        result = _run(agent._handle_swaig_request(request, resp))
+        assert isinstance(result, dict)
+        assert "invalid" in result["response"].lower()
+        agent.on_function_call.assert_not_called()
+
+    def test_nonsecure_function_runs_without_token(self) -> None:
+        agent = _build_mixin()
+        agent._session_manager.validate_tool_token = MagicMock(return_value=False)
+        agent._tool_registry._swaig_functions = {"open_fn": {"secure": False}}
+        agent.on_function_call = MagicMock(return_value={"response": "allowed"})
+        resp = MagicMock()
+        resp.headers = {}
+        body = {"function": "open_fn", "call_id": "c1"}
+        request = _make_request("POST", body=body, url_path="/agent/swaig")
+        result = _run(agent._handle_swaig_request(request, resp))
+        assert result == {"response": "allowed"}
+        agent._session_manager.validate_tool_token.assert_not_called()
+
     def test_dynamic_config_callback_creates_ephemeral(self) -> None:
         ephemeral = MagicMock()
         ephemeral.on_function_call = MagicMock(return_value={"response": "ephemeral"})
+        ephemeral._tool_token_rejection = MagicMock(return_value=None)
         config_cb = MagicMock()
         agent = _build_mixin(_dynamic_config_callback=config_cb)
         agent._create_ephemeral_copy = MagicMock(return_value=ephemeral)
@@ -700,6 +757,8 @@ class TestHandleSwaigRequest:
         result = _run(agent._handle_swaig_request(request, resp))
         agent._create_ephemeral_copy.assert_called_once()
         config_cb.assert_called_once()
+        # The token is checked by the per-call copy, the agent that runs the function
+        ephemeral._tool_token_rejection.assert_called_once_with("f1", None, "c1")
         ephemeral.on_function_call.assert_called_once()
 
     def test_function_execution_error_returns_error_dict(self) -> None:
@@ -753,17 +812,29 @@ class TestHandlePostPromptRequest:
         agent._find_summary_in_post_data = MagicMock(return_value={"summary": "the call ended"})
         agent.on_summary = MagicMock(return_value=None)
         body = {"summary": "the call ended", "call_id": "c1"}
-        request = _make_request("POST", body=body, url_path="/agent/post_prompt")
+        request = _make_request("POST", body=body, query_params={"__token": "t"},
+                                url_path="/agent/post_prompt")
         result = _run(agent._handle_post_prompt_request(request))
         agent.on_summary.assert_called_once_with({"summary": "the call ended"}, body)
         assert result == {"success": True}
+
+    def test_post_without_token_is_refused(self) -> None:
+        """A summary POST must carry the token minted into the post-prompt URL."""
+        agent = _build_mixin()
+        agent.on_summary = MagicMock(return_value=None)
+        body = {"summary": "forged", "call_id": "c1"}
+        request = _make_request("POST", body=body, url_path="/agent/post_prompt")
+        response = _run(agent._handle_post_prompt_request(request))
+        assert response.status_code == 403
+        agent.on_summary.assert_not_called()
 
     def test_post_with_no_summary(self) -> None:
         agent = _build_mixin()
         agent._find_summary_in_post_data = MagicMock(return_value=None)
         agent.on_summary = MagicMock(return_value=None)
         body = {"call_id": "c1"}
-        request = _make_request("POST", body=body, url_path="/agent/post_prompt")
+        request = _make_request("POST", body=body, query_params={"__token": "t"},
+                                url_path="/agent/post_prompt")
         result = _run(agent._handle_post_prompt_request(request))
         agent.on_summary.assert_called_once_with(None, body)
         assert result == {"success": True}
@@ -773,8 +844,9 @@ class TestHandlePostPromptRequest:
         agent._find_summary_in_post_data = MagicMock(return_value="some summary")
         fetch_result = {"conversation": [{"role": "user", "content": "hi"}]}
         agent.on_summary = MagicMock(return_value=fetch_result)
-        body = {"action": "fetch_conversation", "summary": "some summary"}
-        request = _make_request("POST", body=body, url_path="/agent/post_prompt")
+        body = {"action": "fetch_conversation", "summary": "some summary", "call_id": "c1"}
+        request = _make_request("POST", body=body, query_params={"__token": "t"},
+                                url_path="/agent/post_prompt")
         result = _run(agent._handle_post_prompt_request(request))
         assert result == fetch_result
 
@@ -810,7 +882,8 @@ class TestHandlePostPromptRequest:
         agent = _build_mixin(_dynamic_config_callback=config_cb)
         agent._create_ephemeral_copy = MagicMock(return_value=ephemeral)
         body = {"call_id": "c1"}
-        request = _make_request("POST", body=body, url_path="/agent/post_prompt")
+        request = _make_request("POST", body=body, query_params={"__token": "t"},
+                                url_path="/agent/post_prompt")
         _run(agent._handle_post_prompt_request(request))
         agent._create_ephemeral_copy.assert_called_once()
         config_cb.assert_called_once()
@@ -820,7 +893,8 @@ class TestHandlePostPromptRequest:
         agent = _build_mixin()
         agent._find_summary_in_post_data = MagicMock(side_effect=RuntimeError("oops"))
         body = {"call_id": "c1"}
-        request = _make_request("POST", body=body, url_path="/agent/post_prompt")
+        request = _make_request("POST", body=body, query_params={"__token": "t"},
+                                url_path="/agent/post_prompt")
         response = _run(agent._handle_post_prompt_request(request))
         assert response.status_code == 500
 
@@ -1302,6 +1376,7 @@ class TestHandleSwaigRequestMalformedBody:
         config_cb = MagicMock(side_effect=RuntimeError("config boom"))
         ephemeral = MagicMock()
         ephemeral.on_function_call = MagicMock(return_value={"response": "ok"})
+        ephemeral._tool_token_rejection = MagicMock(return_value=None)
         agent = _build_mixin(_dynamic_config_callback=config_cb)
         agent._create_ephemeral_copy = MagicMock(return_value=ephemeral)
         resp = MagicMock()
@@ -1328,7 +1403,7 @@ class TestHandlePostPromptRequestExtraPaths:
         request.headers = {}
         request.url = Mock()
         request.url.path = "/agent/post_prompt"
-        request.query_params = {}
+        request.query_params = {"__token": "t", "call_id": "c1"}
         request.state = Mock(spec=[])
         # body() returns non-empty so json.loads is attempted, but it fails
         request.body = AsyncMock(return_value=b"not-json")
@@ -1350,12 +1425,13 @@ class TestHandlePostPromptRequestExtraPaths:
             query_params={"__token": "bad-tok", "call_id": "c1"},
             url_path="/agent/post_prompt",
         )
-        result = _run(agent._handle_post_prompt_request(request))
+        response = _run(agent._handle_post_prompt_request(request))
         agent._session_manager.debug_token.assert_called_once_with("bad-tok")
-        assert result == {"success": True}
+        assert response.status_code == 403
+        agent.on_summary.assert_not_called()
 
     def test_token_validation_error(self) -> None:
-        """Line 839-840: exception during token validation is caught."""
+        """An exception during token validation is caught, and the POST refused."""
         agent = _build_mixin()
         agent._session_manager.validate_tool_token = MagicMock(side_effect=RuntimeError("token err"))
         agent._find_summary_in_post_data = MagicMock(return_value=None)
@@ -1366,8 +1442,9 @@ class TestHandlePostPromptRequestExtraPaths:
             query_params={"__token": "tok", "call_id": "c1"},
             url_path="/agent/post_prompt",
         )
-        result = _run(agent._handle_post_prompt_request(request))
-        assert result == {"success": True}
+        response = _run(agent._handle_post_prompt_request(request))
+        assert response.status_code == 403
+        agent.on_summary.assert_not_called()
 
     def test_body_not_pre_parsed_falls_through_to_request_json(self) -> None:
         """Line 859: when _post_prompt_body is not set, falls through to request.json()."""
@@ -1382,7 +1459,7 @@ class TestHandlePostPromptRequestExtraPaths:
         request.headers = {}
         request.url = Mock()
         request.url.path = "/agent/post_prompt"
-        request.query_params = {}
+        request.query_params = {"__token": "t", "call_id": "c1"}
         request.state = Mock(spec=[])
         # Make body() return empty so the call_id extraction doesn't set _post_prompt_body
         request.body = AsyncMock(return_value=b"")
@@ -1402,7 +1479,7 @@ class TestHandlePostPromptRequestExtraPaths:
         request.headers = {}
         request.url = Mock()
         request.url.path = "/agent/post_prompt"
-        request.query_params = {}
+        request.query_params = {"__token": "t", "call_id": "c1"}
         request.state = Mock(spec=[])
         # body returns empty so the call_id extraction block is skipped
         request.body = AsyncMock(return_value=b"")
@@ -1424,7 +1501,8 @@ class TestHandlePostPromptRequestExtraPaths:
         agent = _build_mixin(_dynamic_config_callback=config_cb)
         agent._create_ephemeral_copy = MagicMock(return_value=ephemeral)
         body = {"call_id": "c1"}
-        request = _make_request("POST", body=body, url_path="/agent/post_prompt")
+        request = _make_request("POST", body=body, query_params={"__token": "t"},
+                                url_path="/agent/post_prompt")
         result = _run(agent._handle_post_prompt_request(request))
         # Even though config callback failed, summary should still be processed
         ephemeral.on_summary.assert_called_once()
@@ -1436,7 +1514,8 @@ class TestHandlePostPromptRequestExtraPaths:
         agent._find_summary_in_post_data = MagicMock(return_value="some summary")
         agent.on_summary = MagicMock(side_effect=RuntimeError("summary boom"))
         body = {"call_id": "c1"}
-        request = _make_request("POST", body=body, url_path="/agent/post_prompt")
+        request = _make_request("POST", body=body, query_params={"__token": "t"},
+                                url_path="/agent/post_prompt")
         result = _run(agent._handle_post_prompt_request(request))
         # Should still return success; the error is logged but not raised
         assert result == {"success": True}

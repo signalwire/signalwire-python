@@ -1,5 +1,7 @@
 # SignalWire AI Agent Guide
 
+The examples in this guide assume the following imports.
+
 <!-- snippet-setup: shared imports the examples on this page assume -->
 ```python
 from signalwire import AgentBase, AgentServer, DataMap, FunctionResult, SwaigFunctionResult, SWMLService
@@ -40,7 +42,7 @@ The `AgentBase` class provides the foundation for creating AI-powered agents usi
 Key features of `AgentBase` include:
 
 - Structured prompt building with POM (Prompt Object Model)
-- SWAIG (SignalWire AI Gateway) function definitions -- SWAIG is the platform's AI tool-calling system with native access to the media stack
+- SWAIG (SignalWire AI Gateway) function definitions: the platform's AI tool-calling system with native access to the media stack
 - Multilingual support
 - Agent configuration (hint handling, pronunciation rules, etc.)
 - State management for conversations
@@ -107,6 +109,8 @@ The SignalWire AI Agent SDK provides a `run()` method that automatically detects
 
 ### Deployment with `run()`
 
+Call `run()` from the script's entry point, and it starts the agent in whichever mode the environment calls for.
+
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 def main():
@@ -161,15 +165,15 @@ The SDK automatically detects the execution environment:
 | **HTTP Server** | Default when no serverless environment detected | Starts FastAPI server on specified host/port |
 | **CGI** | `GATEWAY_INTERFACE` environment variable present | Processes single CGI request and exits |
 | **AWS Lambda** | `AWS_LAMBDA_FUNCTION_NAME` environment variable | Handles Lambda event/context |
-| **Google Cloud** | `FUNCTION_NAME` or `K_SERVICE` variables | Processes Cloud Function request |
-| **Azure Functions** | `AZURE_FUNCTIONS_*` variables | Handles Azure Function request |
+| **Google Cloud** | `FUNCTION_TARGET`, `K_SERVICE`, or `GOOGLE_CLOUD_PROJECT` variable | Processes Cloud Function request |
+| **Azure Functions** | `AZURE_FUNCTIONS_ENVIRONMENT`, `FUNCTIONS_WORKER_RUNTIME`, or `AzureWebJobsStorage` variable | Handles Azure Function request |
 
 ### Logging Configuration
 
-The SDK includes a central logging system that automatically configures based on the deployment environment:
+The SDK includes a central logging system. Running an agent with `serve()` or `run()` configures it from the environment. An app that embeds an agent with `get_app()` or `as_router()` keeps control of logging. The SDK's loggers write through Python's `logging`, stay silent until the app configures it, and follow the app's configuration. To use the SDK's own output there, call `signalwire.configure_logging()`.
 
 ```python
-# Logging is automatically configured based on environment
+# serve() and run() configure logging from the environment
 # No manual setup required in most cases
 
 # Optional: Override logging mode via environment variable
@@ -231,7 +235,7 @@ class MyAgent(AgentBase):
         return self
 ```
 
-These are not part of the SDK surface — they are one-line helpers you can copy
+These are not part of the SDK surface. They are one-line helpers you can copy
 into your own agent class if you prefer that style.
 
 ### 2. Using Raw Text Prompts
@@ -262,7 +266,7 @@ Analyze the conversation and extract:
 
 SWAIG (SignalWire AI Gateway) functions allow the AI agent to perform actions and access external systems during a call. The AI decides when to call a function based on the conversation; SWAIG handles invocation, parameter passing, and delivering the result back to the AI. There are two types of SWAIG functions you can define:
 
-### SWAIG functions ARE LLM tools — descriptions matter
+### SWAIG Functions Are LLM Tools: Descriptions Matter
 
 Before writing your first SWAIG function, internalize this: a SWAIG function is **exactly the same concept** as a "tool" in native OpenAI / Anthropic tool calling. There is no separate "SWAIG layer" between your function and the model. Each SWAIG function is rendered into the OpenAI tool schema format on every turn:
 
@@ -282,7 +286,7 @@ That schema is sent to the model as part of the same API call that produces the 
 - the **function `description`** to decide WHEN to call this tool
 - the **per-parameter `description` strings** inside `parameters` to decide HOW to fill in each argument
 
-This means **descriptions are prompt engineering**, not developer documentation. They are not a comment for the next human reading the code — they are instructions to the LLM that directly determine whether the model picks your tool when the user's request matches it.
+This means **descriptions are prompt engineering**, not developer documentation. They are not a comment for the next human reading the code. They are instructions to the LLM that directly determine whether the model picks your tool when the user's request matches it.
 
 Compare:
 
@@ -291,7 +295,7 @@ Compare:
 | `description="Lookup function"` | `description="Look up a customer's account details by their account number. Use this BEFORE quoting any account-specific information (balance, plan, status, billing date). Don't use it for general product questions."` |
 | `description="the id"` (parameter) | `description="The customer's 8-digit account number, no dashes or spaces. Ask the user if they don't provide it."` |
 
-A vague description is the #1 cause of "the model has the right tool but doesn't call it" failures. When you find yourself debugging why the model isn't picking a tool that obviously matches the user's request, the first thing to check is whether the description tells the model — in plain language — when to use it and what makes it the right choice over sibling tools.
+A vague description is the #1 cause of "the model has the right tool but doesn't call it" failures. When you find yourself debugging why the model isn't picking a tool that matches the user's request, check the description. It should tell the model, in plain language, when to use the tool and what makes it the right choice over sibling tools.
 
 **Tool count matters too.** LLM tool selection accuracy degrades noticeably past ~7-8 simultaneously-active tools per call. If you have many tools, partition them across steps using `Step.set_functions()` so only the relevant subset is active at any moment. See `contexts_guide.md` for the per-step whitelist mechanism.
 
@@ -324,6 +328,8 @@ def get_weather(self, args, raw_data):
     # Return a FunctionResult
     return FunctionResult(weather_data)
 ```
+
+A handler can also be an `async def` function, so it can await other asynchronous calls. When the agent serves `/swaig`, the SDK awaits the handler on the request's event loop. In serverless deployments and in `swaig-test`, it runs the handler to completion.
 
 ### 2. External Webhook Functions
 
@@ -457,7 +463,7 @@ def get_weather(self, city: str, units: Literal["celsius", "fahrenheit"] = "cels
 ```
 
 The SDK automatically:
-- Infers parameter types from type hints (`str` → `"string"`, `int` → `"integer"`, etc.)
+- Infers parameter types from type hints (`str` becomes `"string"`, `int` becomes `"integer"`, etc.)
 - Marks parameters without defaults as required
 - Extracts the tool description from the docstring's first line
 - Extracts per-parameter descriptions from the `Args:` block
@@ -537,7 +543,7 @@ return (
 )
 ```
 
-In the examples above:
+In these examples:
 - `add_action(name, data)` adds a single action with the given name and data
 - `add_actions(actions)` adds multiple actions at once from a list of action objects
 
@@ -636,7 +642,7 @@ agent = MyAgent(
 )
 ```
 
-The expiration timer resets each time a function is successfully called, so as long as there is activity at least once within the expiration period, the tokens will remain valid throughout the entire conversation.
+The expiration timer resets each time a function is successfully called. As long as a call has activity at least once within the expiration period, its tokens remain valid for the entire conversation.
 
 #### Custom Token Validation
 
@@ -644,9 +650,11 @@ You can override the default token validation by implementing your own `validate
 
 ## Skills System
 
-The Skills System allows you to extend your agents with reusable capabilities via one-liner calls. Skills are modular, reusable components that can be easily added to any agent and configured with parameters.
+The Skills System allows you to extend your agents with reusable capabilities via one-liner calls. Skills are modular, reusable components that you can add to any agent and configure with parameters.
 
 ### Quick Start
+
+Add a skill to an agent with a single `add_skill()` call.
 
 ```python
 from signalwire import AgentBase
@@ -681,7 +689,7 @@ Provides web search capabilities using Google Custom Search API with web scrapin
 - `num_results` (default: 3): Number of search results to return
 - `delay` (default: 0.5): Delay in seconds between requests
 - `tool_name` (default: "web_search"): Custom name for the search tool
-- `no_results_message` (default: "I couldn't find any results for '{query}'. This might be due to a very specific query or temporary issues. Try rephrasing your search or asking about a different topic."): Custom message to return when no search results are found. Use `{query}` as a placeholder for the search query.
+- `no_results_message` (default: "I couldn't find quality results for '{query}'. The search returned only low-quality or inaccessible pages. Try rephrasing your search or asking about a different topic."): Custom message to return when no search results are found. Use `{query}` as a placeholder for the search query.
 
 **Multiple Instance Support:**
 The web_search skill supports multiple instances with different search engines and tool names, allowing you to search different data sources:
@@ -841,8 +849,8 @@ Provides local document search capabilities using vector similarity and keyword 
 - `build_index` (default: False): Auto-build index if missing
 - `source_dir` (optional): Source directory for auto-building index
 - `file_types` (default: ["md", "txt"]): File types to include when building index
-- `count` (default: 3): Number of search results to return
-- `distance_threshold` (default: 0.0): Minimum similarity score for results
+- `count` (default: 5): Number of search results to return
+- `similarity_threshold` (default: 0.0): Minimum similarity score for results
 - `tags` (optional): List of tags to filter search results
 - `response_prefix` (optional): Text to prepend to all search responses
 - `response_postfix` (optional): Text to append to all search responses
@@ -911,6 +919,8 @@ python -m signalwire.cli.build_search ./knowledge \
 For complete documentation on the search system, see [Search Overview](search_overview.md).
 
 ### Skill Management
+
+Query and remove skills at runtime with these methods.
 
 ```python
 # Check what skills are loaded
@@ -1097,7 +1107,7 @@ class DynamicSkillAgent(AgentBase):
 
 ### Best Practices
 
-1. **Choose appropriate parameters**: Configure skills for your use case
+1. **Choose appropriate parameters**: Configure skills for your use case.
    ```python
    # For speed (customer service)
    agent.add_skill("web_search", {"num_results": 1, "delay": 0})
@@ -1169,6 +1179,31 @@ self.add_language(
     voice="rime.spore:multilingual"
 )
 ```
+
+### Voice Providers
+
+A combined voice string is `engine.voice:model`: the text-to-speech provider, the voice's name or ID, and, for providers that have them, a model variant. Voice strings are case-insensitive. SignalWire offered these providers in September 2026; each line shows one sample voice string:
+
+| Provider | Sample voice string |
+|---|---|
+| Amazon Polly | `amazon.Joanna-Neural` |
+| Azure | `azure.en-US-AvaNeural` |
+| Cartesia | `cartesia.a167e0f3-df7e-4d52-a9c3-f949145efdab` |
+| Deepgram | `deepgram.aura-asteria-en` |
+| ElevenLabs | `elevenlabs.thomas` |
+| Fish Audio | `fish.802e3bc2b27e49c2995d23ef70e6ac89:s2.1-pro` |
+| Google Cloud | `gcloud.en-US-Casual-K` |
+| Grok | `grok.eve` |
+| Groq | `groq-tts.autumn` |
+| Inworld | `inworld.Lauren:inworld-tts-1.5-mini` |
+| MiniMax | `minimax.English_CalmWoman:speech-2.6-turbo` |
+| Mistral | `mistral.<voice ID>` |
+| OpenAI | `openai.alloy` |
+| Rime | `rime.luna:coda` |
+| Smallest.ai | `smallest.sophia:lightning_v3.1` |
+| Speechify | `speechify.alicia:simba-3.0` |
+
+Languages differ by provider. ElevenLabs, OpenAI and Grok voices are multilingual; Amazon Polly, Azure, Cartesia and Google Cloud cover many languages; the others cover fewer, so check that a voice speaks the language you set with `code`. Google Cloud and Amazon Polly also accept SSML, wrapped in `<speak>` tags. Each provider's full voice list is in its own documentation.
 
 ## Agent Configuration
 
@@ -1271,6 +1306,9 @@ Dynamic agent configuration allows you to configure agents per-request based on 
 There are two main approaches to agent configuration:
 
 #### Static Configuration (Traditional)
+
+A static agent sets everything once, in its constructor.
+
 ```python
 class StaticAgent(AgentBase):
     def __init__(self):
@@ -1287,6 +1325,9 @@ class StaticAgent(AgentBase):
 **Cons**: Same behavior for all users, requires separate agents for different configurations
 
 #### Dynamic Configuration (New)
+
+A dynamic agent configures itself fresh on every request, from a callback.
+
 ```python
 class DynamicAgent(AgentBase):
     def __init__(self):
@@ -1334,7 +1375,7 @@ class MyDynamicAgent(AgentBase):
             query_params (dict): Query string parameters from the URL
             body_params (dict): Parsed JSON body from POST requests
             headers (dict): HTTP headers from the request
-            agent (AgentBase): The agent instance to configure
+            agent (AgentBase): A copy of the agent, made for this request, to configure
         """
         # Your dynamic configuration logic here
         pass
@@ -1344,13 +1385,16 @@ The callback function receives four parameters:
 - **query_params**: Dictionary of URL query parameters
 - **body_params**: Dictionary of parsed JSON body (empty for GET requests)
 - **headers**: Dictionary of HTTP headers
-- **agent**: The agent instance to configure dynamically
+- **agent**: A copy of the agent, made for this request, to configure
 
 ### Dynamic Configuration Methods
 
-The `agent` parameter in your callback is the actual agent instance, allowing you to use all the same configuration methods you would use during initialization:
+The `agent` parameter in your callback is a copy of the agent made for this request, so you can use all the same configuration methods you would use during initialization, and the changes apply to this request only. The configuration the SDK manages, such as the prompt, tools, skills, languages, parameters, hints and global data, is copied. Other attributes, such as ones your own class adds, are shared with the agent and with other requests: assign a new value to one rather than changing the shared object in place, and keep per-caller state in global data or your own storage.
 
 #### Language Configuration
+
+The callback can add the same languages a static agent would add in its constructor.
+
 ```python
 # Add languages with voice configuration
 agent.add_language("English", "en-US", "rime.spore:mistv2")
@@ -1358,6 +1402,9 @@ agent.add_language("Spanish", "es-ES", "rime.spore:mistv2")
 ```
 
 #### Prompt Building
+
+The callback builds the prompt the same way a static agent does.
+
 ```python
 # Add prompt sections
 agent.prompt_add_section("Role", "You are a helpful assistant.")
@@ -1375,6 +1422,9 @@ agent.set_post_prompt("Summarize the key points of this conversation.")
 ```
 
 #### AI Parameters
+
+The callback can also set AI behavior parameters per request.
+
 ```python
 # Configure AI behavior
 agent.set_params({
@@ -1385,6 +1435,9 @@ agent.set_params({
 ```
 
 #### Global Data
+
+Set or update the data the AI can reference during the call.
+
 ```python
 # Set data available to the AI
 agent.set_global_data({
@@ -1398,6 +1451,9 @@ agent.update_global_data({"additional_info": "value"})
 ```
 
 #### Speech Recognition Hints
+
+Add hints and pronunciation rules from the callback too.
+
 ```python
 # Add hints for better speech recognition
 agent.add_hints(["SignalWire", "SWML", "API", "technical"])
@@ -1405,6 +1461,9 @@ agent.add_pronunciation("API", "A P I")
 ```
 
 #### Function Configuration
+
+Native functions and function includes can vary by request too.
+
 ```python
 # Set native functions
 agent.set_native_functions(["transfer", "hangup"])
@@ -1421,6 +1480,9 @@ agent.add_function_include(
 Your callback function receives detailed information about the incoming request:
 
 #### Query Parameters
+
+Read values straight off the URL's query string.
+
 ```python
 def configure_agent_dynamically(self, query_params, body_params, headers, agent):
     # Extract query parameters
@@ -1440,6 +1502,9 @@ def configure_agent_dynamically(self, query_params, body_params, headers, agent)
 ```
 
 #### POST Body Parameters
+
+A POST request's JSON body works the same way.
+
 ```python
 def configure_agent_dynamically(self, query_params, body_params, headers, agent):
     # Extract from POST body
@@ -1461,6 +1526,9 @@ def configure_agent_dynamically(self, query_params, body_params, headers, agent)
 ```
 
 #### HTTP Headers
+
+The callback also receives the request's HTTP headers.
+
 ```python
 def configure_agent_dynamically(self, query_params, body_params, headers, agent):
     # Extract headers
@@ -1479,6 +1547,9 @@ def configure_agent_dynamically(self, query_params, body_params, headers, agent)
 ### Configuration Examples
 
 #### Simple Multi-Tenant Configuration
+
+One agent can serve several tenants by branching on a query parameter.
+
 ```python
 def configure_agent_dynamically(self, query_params, body_params, headers, agent):
     tenant = query_params.get('tenant', 'default')
@@ -1503,6 +1574,9 @@ def configure_agent_dynamically(self, query_params, body_params, headers, agent)
 ```
 
 #### Language and Localization
+
+Branch on the caller's requested language and region.
+
 ```python
 def configure_agent_dynamically(self, query_params, body_params, headers, agent):
     language = query_params.get('language', 'en')
@@ -1531,6 +1605,9 @@ def configure_agent_dynamically(self, query_params, body_params, headers, agent)
 ```
 
 #### A/B Testing Configuration
+
+Route callers into a control or test group and configure each differently.
+
 ```python
 def configure_agent_dynamically(self, query_params, body_params, headers, agent):
     # Determine test group (could be from query param, user ID hash, etc.)
@@ -1550,6 +1627,9 @@ def configure_agent_dynamically(self, query_params, body_params, headers, agent)
 ```
 
 #### Customer Tier-Based Configuration
+
+Combine several parameters to configure the agent by service tier.
+
 ```python
 def configure_agent_dynamically(self, query_params, body_params, headers, agent):
     customer_id = query_params.get('customer_id')
@@ -1689,6 +1769,8 @@ class MyAgent(AgentBase):
 
 **Step 2: Add Parameter-Based Logic**
 
+Once the callback is in place, branch on the incoming request's parameters.
+
 ```python
 def configure_agent(self, query_params, body_params, headers, agent):
     # Start with base configuration
@@ -1733,7 +1815,7 @@ class MyAgent(AgentBase):
 
 #### Performance Considerations
 
-1. **Keep Callbacks Lightweight**
+1. **Keep Callbacks Lightweight**: do simple parameter extraction, and avoid expensive calls.
 ```python
 def configure_agent(self, query_params, body_params, headers, agent):
     # Good: Simple parameter extraction and configuration
@@ -1744,7 +1826,7 @@ def configure_agent(self, query_params, body_params, headers, agent):
     # customer_data = expensive_api_call(customer_id)  # Don't do this
 ```
 
-2. **Cache Configuration Data**
+2. **Cache Configuration Data**: precompute templates once, in the constructor.
 ```python
 class MyAgent(AgentBase):
     def __init__(self):
@@ -1764,7 +1846,7 @@ class MyAgent(AgentBase):
         agent.set_params(self.tier_configs[tier])
 ```
 
-3. **Use Default Values**
+3. **Use Default Values**: provide a fallback for every parameter you read.
 ```python
 def configure_agent(self, query_params, body_params, headers, agent):
     # Always provide defaults
@@ -1778,7 +1860,7 @@ def configure_agent(self, query_params, body_params, headers, agent):
 
 #### Security Considerations
 
-1. **Validate Input Parameters**
+1. **Validate Input Parameters**: check and clamp every value from the request.
 ```python
 def configure_agent(self, query_params, body_params, headers, agent):
     # Validate and sanitize inputs
@@ -1794,7 +1876,7 @@ def configure_agent(self, query_params, body_params, headers, agent):
         timeout = 500  # Safe default
 ```
 
-2. **Protect Sensitive Configuration**
+2. **Protect Sensitive Configuration**: never let a request parameter set a credential.
 ```python
 def configure_agent(self, query_params, body_params, headers, agent):
     # Don't expose internal configuration via parameters
@@ -1811,7 +1893,7 @@ def configure_agent(self, query_params, body_params, headers, agent):
         })
 ```
 
-3. **Rate Limiting for Complex Configurations**
+3. **Rate Limiting for Complex Configurations**: cache expensive per-customer lookups.
 ```python
 from functools import lru_cache
 
@@ -1830,7 +1912,7 @@ class MyAgent(AgentBase):
 
 #### Error Handling
 
-1. **Graceful Degradation**
+1. **Graceful Degradation**: fall back to a default configuration if the custom one fails.
 ```python
 def configure_agent(self, query_params, body_params, headers, agent):
     try:
@@ -1844,7 +1926,7 @@ def configure_agent(self, query_params, body_params, headers, agent):
         self.apply_default_config(agent)
 ```
 
-2. **Configuration Validation**
+2. **Configuration Validation**: reject a request that's missing what it needs.
 ```python
 def configure_agent(self, query_params, body_params, headers, agent):
     # Validate required parameters
@@ -1867,9 +1949,11 @@ Dynamic agent configuration enables sophisticated, multi-tenant AI applications 
 
 ### Debug Events
 
-The debug events system provides real-time visibility into what the AI module is doing during a call. When enabled, the module POSTs structured JSON events to your agent throughout the call lifecycle — session start/end, barge interruptions, LLM errors, step changes, and more.
+The debug events system provides real-time visibility into what the AI module is doing during a call. When enabled, the module POSTs structured JSON events to your agent throughout the call lifecycle: session start/end, barge interruptions, LLM errors, step changes, and more.
 
 #### Basic Setup
+
+Call `enable_debug_events()` before serving the agent, and every event starts logging.
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -1878,7 +1962,7 @@ agent.enable_debug_events()  # That's it — events are auto-logged
 agent.serve()
 ```
 
-With just `enable_debug_events()`, every debug event is logged through the agent's structured logger. No other configuration is needed — the SDK automatically:
+Calling `enable_debug_events()` alone logs every debug event through the agent's structured logger. No other configuration is needed. The SDK automatically:
 - Registers a `/debug_events` endpoint on the agent
 - Sets `debug_webhook_url` and `debug_webhook_level` in the SWML params
 - Logs each incoming event with its type and payload
@@ -1914,8 +1998,12 @@ The handler is called for every event in addition to the default structured logg
 
 #### Verbosity Levels
 
-- **Level 1** (default): High-level events — session start/end, barge, errors, step changes, hold, filler, gather flow, action processing
-- **Level 2+**: Adds high-volume events — every LLM request/response, conversation history additions
+Debug events have two verbosity levels:
+
+- **Level 1** (default): High-level events, such as session start/end, barge, errors, step changes, hold, filler, gather flow, and action processing.
+- **Level 2+**: Adds high-volume events, such as every LLM request/response and conversation history additions.
+
+Set `level=2` to include the high-volume events.
 
 ```python
 agent.enable_debug_events(level=2)  # Include LLM request/response events
@@ -1945,9 +2033,9 @@ These hooks are particularly useful for:
 To implement lifecycle hooks, define them as regular SWAIG functions with these specific names.
 
 > **Note:** The SDK does not ship built-in session storage. The `update_state`,
-> `get_state`, and `delete_state` methods in the example below are helpers you
-> would implement yourself on top of Redis, a database, or another external
-> store — see **Important Notes** item 4 below.
+> `get_state`, and `delete_state` methods in the following example are
+> helpers you would implement yourself on top of Redis, a database, or
+> another external store. See [Important Notes](#important-notes) item 4.
 
 ```python
 from signalwire import AgentBase, FunctionResult
@@ -2010,6 +2098,9 @@ class MyAgent(AgentBase):
 #### Common Use Cases
 
 ##### 1. User Preference Loading
+
+A `startup_hook` can load the caller's saved preferences before the AI speaks.
+
 ```python
 @AgentBase.tool(name="startup_hook", description="Called when the voice session starts", parameters={})
 def startup_hook(self, args, raw_data):
@@ -2029,6 +2120,9 @@ def startup_hook(self, args, raw_data):
 ```
 
 ##### 2. Analytics and Logging
+
+A `hangup_hook` can send call metrics to an analytics service when the session ends.
+
 ```python
 @AgentBase.tool(name="hangup_hook", description="Called when the voice session ends", parameters={})
 def hangup_hook(self, args, raw_data):
@@ -2124,13 +2218,13 @@ self.register_routing_callback(self.handle_customer_route, path="/customer")
 self.register_routing_callback(self.handle_product_route, path="/product")
 
 # Define the routing handlers
-def handle_customer_route(self, request, body):
+def handle_customer_route(self, body, headers):
     """
     Process customer-related requests
     
     Args:
-        request: FastAPI Request object
         body: Parsed JSON body as dictionary
+        headers: HTTP headers as a dictionary
         
     Returns:
         Optional[str]: A URL to redirect to, or None to process normally
@@ -2146,13 +2240,14 @@ def handle_customer_route(self, request, body):
     return None
     
 # Customize SWML based on the route in on_swml_request
-def on_swml_request(self, request_data=None, callback_path=None):
+def on_swml_request(self, request_data=None, callback_path=None, request=None):
     """
     Customize SWML based on the request and path
     
     Args:
         request_data: The request body data
         callback_path: The path that triggered the routing callback
+        request: The FastAPI Request object, when available
     """
     if callback_path == "/customer":
         # Serve customer-specific content
@@ -2173,13 +2268,14 @@ def on_swml_request(self, request_data=None, callback_path=None):
 You can modify the SWML document based on request data by overriding the `on_swml_request` method:
 
 ```python
-def on_swml_request(self, request_data=None, callback_path=None):
+def on_swml_request(self, request_data=None, callback_path=None, request=None):
     """
     Customize the SWML document based on request data
     
     Args:
         request_data: The request data (body for POST or query params for GET)
         callback_path: The path that triggered the routing callback
+        request: The FastAPI Request object, when available
         
     Returns:
         Optional dict with modifications to apply to the document
@@ -2426,11 +2522,7 @@ agent = SurveyAgent(
             "id": "satisfaction",
             "text": "How satisfied are you with our product?",
             "type": "rating",
-            "scale": 5,
-            "labels": {
-                "1": "Very dissatisfied",
-                "5": "Very satisfied"
-            }
+            "scale": 5
         },
         {
             "id": "feedback",
@@ -2570,6 +2662,8 @@ class CustomerSupportAgent(AgentBase):
 
 #### Using the Custom Prefab
 
+Instantiate `CustomerSupportAgent` the same way you would any other agent.
+
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 # Create an instance of the custom prefab
@@ -2618,7 +2712,7 @@ class EnhancedGatherer(InfoGathererAgent):
 
 1. **Clear Documentation**: Document the purpose, parameters, and extension points
 2. **Sensible Defaults**: Provide working defaults that make sense for the use case
-3. **Error Handling**: Implement robust error handling with helpful messages
+3. **Error Handling**: Implement thorough error handling with helpful messages
 4. **Modular Design**: Keep prefabs focused on a specific use case
 5. **Consistent Interface**: Maintain consistent patterns across related prefabs
 6. **Extension Points**: Provide clear ways for others to extend your prefab
@@ -2655,6 +2749,8 @@ my-prefab-agents/
 
 ### Constructor Parameters
 
+`AgentBase.__init__()` accepts these parameters:
+
 - `name`: Agent name/identifier (required)
 - `route`: HTTP route path (default: "/")
 - `host`: Host to bind to (default: "0.0.0.0")
@@ -2665,29 +2761,34 @@ my-prefab-agents/
 - `auto_answer`: Auto-answer calls (default: True)
 - `record_call`: Record calls (default: False)
 - `schema_path`: Optional path to schema.json file
-- `suppress_logs`: Whether to suppress structured logs (default: False)
+- `suppress_logs`: Silences a few legacy debug and error log lines, not the SDK's logging generally. Use `configure_logging()` and the environment variables in [Logging Configuration](#logging-configuration) to control log output. (default: False)
+- `signing_key`: SignalWire Signing Key from the Dashboard (API Credentials), or the `SIGNALWIRE_SIGNING_KEY` environment variable. When set, the SDK requires a valid signature on every `POST /`, `/swaig` and `/post_prompt` request and rejects the rest with 403. Unset, inbound requests aren't checked for a genuine SignalWire origin. (default: None)
+- `swaig_secret`: Secret that signs this agent's own per-call SWAIG function tokens, or the `SIGNALWIRE_SWAIG_SECRET` environment variable. Unset, a random secret is generated per process. A restart then invalidates tokens already issued to calls in progress, and two replicas can't verify each other's tokens. (default: None)
+- `trust_proxy_for_signature`: Whether signature validation honors `X-Forwarded-Proto`/`X-Forwarded-Host` when reconstructing the request URL. Enable it only when you control the proxy chain, since these headers are otherwise spoofable. (default: False)
 
 ### Prompt Methods
+
+These methods build and override the agent's prompt:
 
 - `prompt_add_section(title, body=None, bullets=None, numbered=False, numbered_bullets=False)`
 - `prompt_add_subsection(parent_title, title, body=None, bullets=None)`
 - `prompt_add_to_section(title, body=None, bullet=None, bullets=None)`
-- `set_prompt_text(prompt_text)` or `set_prompt(prompt_text)`
+- `set_prompt_text(prompt_text)`
 - `set_post_prompt(prompt_text)`
-- `setPersonality(text)` - Convenience method that calls prompt_add_section
-- `setGoal(text)` - Convenience method that calls prompt_add_section
-- `setInstructions(bullets)` - Convenience method that calls prompt_add_section
+- `setPersonality(text)`, `setGoal(text)`, `setInstructions(bullets)`: not part of the SDK. `examples/simple_agent.py` defines them as one-line wrappers around `prompt_add_section()`.
 
 ### SWAIG Methods
+
+These methods define and configure SWAIG functions:
 
 - `@AgentBase.tool(name, description, parameters={}, secure=True, fillers=None)`
 - `define_tool(name, description, parameters, handler, secure=True, fillers=None)`
 - `set_native_functions(function_names)`
-- `add_native_function(function_name)`
-- `remove_native_function(function_name)`
 - `add_function_include(url, functions, meta_data=None)`
 
 ### Configuration Methods
+
+These methods configure hints, pronunciation, languages, AI parameters, and global data:
 
 - `add_hint(hint)` and `add_hints(hints)`
 - `add_pattern_hint(hint, pattern, replace, ignore_case=False)`
@@ -2698,12 +2799,11 @@ my-prefab-agents/
 
 ### State Methods
 
-- `get_state(call_id)`
-- `set_state(call_id, data)` 
-- `update_state(call_id, data)`
-- `clear_state(call_id)`
+The SDK doesn't ship built-in session storage. `get_state()`, `update_state()`, and `delete_state()` are helpers you implement yourself on top of Redis, a database, or another external store. See [Session Lifecycle Hooks](#session-lifecycle-hooks) for an example.
 
 ### SIP Routing Methods
+
+An individual agent enables SIP routing with these methods:
 
 - `enable_sip_routing(auto_map=True, path="/sip")`: Enable SIP routing for an agent
 - `register_sip_username(sip_username)`: Register a SIP username for an agent
@@ -2711,14 +2811,18 @@ my-prefab-agents/
 
 #### AgentServer SIP Methods
 
+A multi-agent server sets up SIP routing centrally with these methods:
+
 - `setup_sip_routing(route="/sip", auto_map=True)`: Set up central SIP routing for a server
 - `register_sip_username(username, route)`: Map a SIP username to an agent route
 
 ### Service Methods
 
+These methods serve the agent and customize its behavior per request:
+
 - `serve(host=None, port=None)`: Start the web server
 - `as_router()`: Return a FastAPI router for this agent
-- `on_swml_request(request_data=None, callback_path=None)`: Customize SWML based on request data and path
+- `on_swml_request(request_data=None, callback_path=None, request=None)`: Customize SWML based on request data and path
 - `on_summary(summary, raw_data=None)`: Handle post-prompt summaries
 - `on_function_call(name, args, raw_data=None)`: Process SWAIG function calls
 - `register_routing_callback(callback_fn, path="/sip")`: Register a callback for custom path routing
@@ -2739,7 +2843,7 @@ The SDK provides several endpoints for different purposes:
 
 ## Testing
 
-The SignalWire AI Agent SDK provides comprehensive testing capabilities through the `swaig-test` CLI tool, which allows you to test agents locally and simulate serverless environments without deployment.
+The SignalWire AI Agent SDK provides testing through the `swaig-test` CLI tool. It tests agents locally and simulates serverless environments without deployment.
 
 ### Local Agent Testing
 
@@ -2765,6 +2869,8 @@ Test your agents in simulated serverless environments to ensure they work correc
 
 #### AWS Lambda Testing
 
+Pass `--simulate-serverless lambda` to test the agent as it would run on AWS Lambda.
+
 ```bash
 # Basic Lambda environment simulation
 swaig-test examples/my_agent.py --simulate-serverless lambda --dump-swml
@@ -2777,11 +2883,12 @@ swaig-test examples/my_agent.py --simulate-serverless lambda \
 
 # Test function execution in Lambda context
 swaig-test examples/my_agent.py --simulate-serverless lambda \
-  --exec get_weather --location "Miami" \
-  --full-request
+  --exec get_weather --location "Miami"
 ```
 
 #### CGI Environment Testing
+
+The `cgi` platform needs a host name, since CGI has no request URL of its own.
 
 ```bash
 # Test CGI environment
@@ -2798,6 +2905,8 @@ swaig-test examples/my_agent.py --simulate-serverless cgi \
 
 #### Google Cloud Functions Testing
 
+Pass `--simulate-serverless cloud_function` to test against Google Cloud Functions.
+
 ```bash
 # Test Cloud Functions environment
 swaig-test examples/my_agent.py --simulate-serverless cloud_function \
@@ -2807,6 +2916,8 @@ swaig-test examples/my_agent.py --simulate-serverless cloud_function \
 ```
 
 #### Azure Functions Testing
+
+Pass `--simulate-serverless azure_function` to test against Azure Functions.
 
 ```bash
 # Test Azure Functions environment
@@ -2916,6 +3027,8 @@ For more detailed testing documentation, see the [CLI Guide](cli_guide.md).
 
 ### Simple Question-Answering Agent
 
+This agent answers general questions and reports the current time through one tool.
+
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import AgentBase
@@ -2961,6 +3074,8 @@ if __name__ == "__main__":
 ```
 
 ### Multi-Language Customer Service Agent
+
+This agent supports English and Spanish, and looks up accounts and creates support tickets.
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -3075,8 +3190,11 @@ For working examples of dynamic agent configuration, see these files in the `exa
 
 These examples demonstrate the progression from static to dynamic configuration and show real-world use cases like multi-tenant applications, A/B testing, and personalization.
 
-For more examples, see the `examples` directory in the SignalWire AI Agent SDK repository. 
+For more examples, see the `examples` directory in the SignalWire AI Agent SDK repository.
 
+You can also build a search index directly from this guide with `sw-search`.
+
+```bash
 # Build index from the comprehensive concepts guide
 sw-search docs/agent_guide.md --output concepts.swsearch
 
@@ -3090,3 +3208,4 @@ sw-search ./knowledge \
     --chunking-strategy sentence \
     --max-sentences-per-chunk 8 \
     --verbose
+```

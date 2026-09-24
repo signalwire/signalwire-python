@@ -17,6 +17,8 @@ The SDK is built around a clear class hierarchy:
 
 ### Key Components
 
+Seven areas make up the SDK:
+
 1. **SWML Document Management**
    - Schema validation for SWML documents
    - Dynamic SWML verb creation and validation
@@ -27,7 +29,7 @@ The SDK is built around a clear class hierarchy:
    - Section-based organization (Personality, Goal, Instructions, etc.)
    - Programmatic prompt construction and manipulation
 
-3. **SWAIG (SignalWire AI Gateway) Function Framework** -- SWAIG is the platform's AI tool-calling system with native access to the media stack. When the AI decides to call a function, SWAIG handles invocation, parameter passing, and result delivery.
+3. **SWAIG (SignalWire AI Gateway) Function Framework**: the platform's AI tool-calling system, with native access to the media stack. When the model calls a function, SWAIG handles invocation, parameter passing, and result delivery.
    - Tool definition and registration system
    - Parameter validation using JSON schema
    - Security tokens for function execution
@@ -81,7 +83,12 @@ DataMap tools follow a pipeline execution model on the SignalWire server:
 
 ### Core Components
 
+DataMap has three parts:
+
 1. **Builder Pattern**: Fluent interface for constructing data_map configurations
+
+   Chain method calls to build a tool definition:
+
 <!-- snippet: no-compile indented-list-excerpt -->
    ```python
    tool = (DataMap('function_name')
@@ -93,47 +100,63 @@ DataMap tools follow a pipeline execution model on the SignalWire server:
    ```
 
 2. **Processing Pipeline**: Ordered execution with early termination
-   - **Expressions**: Pattern matching against arguments
+   - **Expressions**: Pattern matching on a template, usually an argument
    - **Webhooks**: HTTP API calls with variable substitution
    - **Foreach**: Array iteration for response processing
    - **Output**: Final response generation using FunctionResult
 
 3. **Variable Expansion**: Dynamic substitution using `${variable}` syntax
    - Function arguments: `${args.parameter_name}`
-   - API responses: `${response.field.nested_field}`
-   - Array elements: `${foreach.item_field}`
+   - API responses, read from the root: `${field.nested_field}`, or `${array[0].field}` for an array response
+   - The current element in a `foreach`: `${this.item_field}`
    - Global data: `${global_data.key}`
-   - Metadata: `${meta_data.call_id}`
+   - Function metadata: `${meta_data.key}`, and call details such as `${call_id}`
+   - Prefix helpers, applied left to right: `${lc:enc:args.city}` lowercases, then URL-encodes
 
 ### Tool Types
 
 The system supports different tool patterns:
 
 1. **API Integration Tools**: Direct REST API calls
+
+   This tool calls a weather API and templates the response from it:
+
 <!-- snippet: no-compile indented-list-excerpt -->
    ```python
    weather_tool = (DataMap('get_weather')
-       .webhook('GET', 'https://api.weather.com/v1/current?q=${location}')
-       .output(FunctionResult('Weather: ${response.current.condition}'))
+       .webhook('GET', 'https://api.weather.com/v1/current?q=${enc:args.location}')
+       .output(FunctionResult('Weather: ${current.condition}'))
    )
    ```
 
 2. **Expression-Based Tools**: Pattern matching without API calls
+
+   This tool matches the `command` argument against a pattern, with no webhook involved:
+
 <!-- snippet: no-compile indented-list-excerpt -->
    ```python
    control_tool = (DataMap('file_control')
-       .expression(r'start.*', FunctionResult().add_action('start', True))
-       .expression(r'stop.*', FunctionResult().add_action('stop', True))
+       .parameter('command', 'string', 'The control command', required=True)
+       .expression('${args.command}', r'start.*', FunctionResult().add_action('start', True))
+       .expression('${args.command}', r'stop.*', FunctionResult().add_action('stop', True))
    )
    ```
 
 3. **Array Processing Tools**: Handle list responses
+
+   `foreach` walks an array in the webhook's response and builds text from each element, and `output` renders once, reading that text:
+
 <!-- snippet: no-compile indented-list-excerpt -->
    ```python
    search_tool = (DataMap('search_docs')
-       .webhook('GET', 'https://api.docs.com/search')
-       .foreach('${response.results}')
-       .output(FunctionResult('Found: ${foreach.title}'))
+       .webhook('GET', 'https://api.docs.com/search?q=${enc:args.query}')
+       .foreach({
+           'input_key': 'results',
+           'output_key': 'found',
+           'max': 3,
+           'append': '${this.title}\n',
+       })
+       .output(FunctionResult('Found: ${found}'))
    )
    ```
 
@@ -237,6 +260,8 @@ The skills system follows a three-layer architecture:
 
 ### Core Components
 
+The skills system has three parts:
+
 1. **SkillBase**: Abstract base class defining the skill interface
    - Dependency validation (packages and environment variables)
    - Tool registration with the agent
@@ -255,6 +280,8 @@ The skills system follows a three-layer architecture:
    - Metadata extraction for skill information
 
 ### Skill Lifecycle
+
+A skill moves through three stages, from discovery on disk to tools registered on the agent:
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -346,6 +373,9 @@ The SDK implements a multi-layer security model:
 The SDK is designed to be highly extensible:
 
 1. **Custom Agents**: Extend AgentBase to create specialized agents
+
+   A minimal subclass only needs a name and a route:
+
 <!-- snippet: no-compile indented-list-excerpt -->
    ```python
    class CustomAgent(AgentBase):
@@ -354,6 +384,9 @@ The SDK is designed to be highly extensible:
    ```
 
 2. **Tool Registration**: Add new tools using the decorator pattern
+
+   Used on a class method, `@AgentBase.tool()` binds `self` for you:
+
 <!-- snippet: no-compile indented-list-excerpt -->
    ```python
    @AgentBase.tool(
@@ -367,6 +400,9 @@ The SDK is designed to be highly extensible:
    ```
 
 3. **Prompt Customization**: Add sections, hints, languages
+
+   Add a language and pronunciation hints on an existing agent instance:
+
 <!-- snippet: no-compile indented-list-excerpt -->
    ```python
    agent.add_language(name="English", code="en-US", voice="elevenlabs.josh")
@@ -376,6 +412,9 @@ The SDK is designed to be highly extensible:
 4. **Session Management**: The SDK includes session management for secure function calls
 
 5. **Request Handling**: Override request handling methods
+
+   Override `on_swml_request()` to inspect or modify a request before SWML is rendered:
+
 <!-- snippet: no-compile indented-list-excerpt -->
    ```python
    def on_swml_request(self, request_data):
@@ -383,6 +422,9 @@ The SDK is designed to be highly extensible:
    ```
 
 6. **Custom Prefabs**: Create reusable agent patterns
+
+   A prefab is an `AgentBase` subclass whose constructor takes your own configuration:
+
 <!-- snippet: no-compile indented-list-excerpt -->
    ```python
    class MyCustomPrefab(AgentBase):
@@ -393,6 +435,9 @@ The SDK is designed to be highly extensible:
    ```
 
 7. **Dynamic Configuration**: Per-request agent configuration for flexible behavior
+
+   The callback receives the request data and a copy of the agent, made for this request, to configure:
+
 <!-- snippet: no-compile indented-list-excerpt -->
    ```python
    def configure_agent_dynamically(self, query_params, body_params, headers, agent):
@@ -405,6 +450,9 @@ The SDK is designed to be highly extensible:
    ```
 
 8. **Skills Integration**: Add capabilities with one-liner calls
+
+   Add a skill by name, with optional parameters:
+
    ```python
    # Add built-in skills
    agent.add_skill("web_search")
@@ -419,6 +467,9 @@ The SDK is designed to be highly extensible:
    ```
 
 9. **Custom Skills**: Create reusable skill modules
+
+   A custom skill subclasses `SkillBase` and implements `setup()` and `register_tools()`:
+
 <!-- snippet: no-compile indented-list-excerpt -->
    ```python
    from signalwire.core.skill_base import SkillBase
@@ -464,13 +515,17 @@ Dynamic configuration intercepts the SWML document generation process to apply r
 
 #### Component Interaction
 
+A request moves through five steps:
+
 1. **Request Processing**: The framework extracts query parameters, body data, and headers from incoming requests
 2. **Callback Invocation**: If a dynamic configuration callback is registered, it's called with the request data
-3. **Agent Configuration**: The callback receives the actual agent instance (AgentBase) and configures it directly using familiar AgentBase methods
+3. **Agent Configuration**: The callback receives a copy of the agent (an AgentBase) made for this request, and configures it with the usual AgentBase methods
 4. **SWML Generation**: The configuration is applied during SWML document rendering
 5. **Response Delivery**: The customized SWML document is returned to the client
 
 #### Request Processing Flow
+
+The five steps from Component Interaction expand into this sequence, from the incoming request to the rendered SWML document:
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────────────┐
@@ -516,7 +571,7 @@ Dynamic configuration intercepts the SWML document generation process to apply r
 
 #### Direct Agent Configuration
 
-The dynamic configuration callback receives the actual agent instance, allowing direct manipulation of the agent's configuration for a single request:
+The dynamic configuration callback receives a copy of the agent made for this request, so its changes apply to that request only. The configuration the SDK manages, such as the prompt, tools, skills, languages, parameters, hints and global data, is copied; other attributes, such as ones your own class adds, are shared with the agent:
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────────┐
@@ -553,6 +608,8 @@ The dynamic configuration system is designed with performance in mind:
 
 #### Memory Management
 
+Each request configures the agent, renders SWML, and resets, so requests don't leak configuration into each other:
+
 ```
 Request 1 ┌─────────────┐    Request 2 ┌─────────────┐    Request 3 ┌─────────────┐
 Lifecycle │ RECEIVE     │    Lifecycle │ RECEIVE     │    Lifecycle │ RECEIVE     │
@@ -576,7 +633,8 @@ Lifecycle │ RECEIVE     │    Lifecycle │ RECEIVE     │    Lifecycle │ 
 
 The dynamic configuration architecture supports several key patterns:
 
-1. **Multi-Tenant Applications**
+1. **Multi-Tenant Applications**: the same agent instance applies a different configuration per tenant:
+
    ```
    ┌─────────────┐    ┌──────────────┐    ┌─────────────┐
    │ Tenant A    │    │ Same Agent   │    │ Config A    │
@@ -589,7 +647,8 @@ The dynamic configuration architecture supports several key patterns:
    └─────────────┘    └──────────────┘    └─────────────┘
    ```
 
-2. **A/B Testing and Experimentation**
+2. **A/B Testing and Experimentation**: the callback picks a configuration version based on request data:
+
    ```
    ┌─────────────┐    ┌──────────────┐    ┌─────────────┐
    │ Control     │    │ Decision     │    │ Version A   │
@@ -602,7 +661,8 @@ The dynamic configuration architecture supports several key patterns:
    └─────────────┘    └──────────────┘    └─────────────┘
    ```
 
-3. **Geographic and Cultural Localization**
+3. **Geographic and Cultural Localization**: the callback selects a voice and locale from the caller's region:
+
    ```
    ┌─────────────┐    ┌──────────────┐    ┌─────────────┐
    │ US Request  │    │ Locale       │    │ English     │
@@ -663,6 +723,8 @@ This approach ensures zero downtime and allows for testing and validation at eac
 The SDK includes a collection of prefab agents that provide ready-to-use implementations for common use cases. These prefabs can be used directly or serve as templates for custom implementations.
 
 ### Built-in Prefab Types
+
+The SDK ships five prefabs:
 
 1. **InfoGathererAgent**
    - Purpose: Collect specific information from users in a structured conversation
@@ -752,6 +814,8 @@ When designing prefabs, consider exposing these customization points:
 
 ### Prefab Best Practices
 
+Five practices keep a prefab usable by others:
+
 1. **Clear Documentation**: Document the purpose, parameters, and extension points
 2. **Sensible Defaults**: Provide working defaults that make sense for the use case
 3. **Error Handling**: Implement robust error handling with helpful messages
@@ -785,6 +849,8 @@ The POM (Prompt Object Model) represents a structured approach to prompt constru
 The Contexts and Steps system enhances traditional POM prompts by adding structured, workflow-driven guidance on top of the base prompt. This system adds guided workflow execution while maintaining the foundational prompt structure.
 
 #### Core Architecture
+
+A `ContextBuilder` holds one or more contexts, and each context holds an ordered list of steps:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -1030,7 +1096,7 @@ The SDK uses FastAPI for routing with these key endpoints:
 - **/** (GET/POST): Main endpoint that returns the SWML document
 - **/swaig/** (POST): Endpoint for executing SWAIG functions
 - **/post_prompt/** (POST): Endpoint for receiving conversation summaries
-- **/sip/** (GET/POST): Optional endpoint for SIP routing
+- **/sip** (GET/POST): Optional endpoint for SIP routing
 
 The SDK also supports dynamic creation of custom routing endpoints:
 
@@ -1056,10 +1122,12 @@ The SDK supports multiple deployment models:
    - Enable SSL termination at proxy level
 
 4. **Direct HTTPS Mode**
-   - Configure with SSL certificates
-   - `agent.serve(ssl_cert="cert.pem", ssl_key="key.pem")`
+   - Configure with SSL certificates through the environment
+   - `SWML_SSL_ENABLED=true SWML_SSL_CERT_PATH=cert.pem SWML_SSL_KEY_PATH=key.pem`, then `agent.run()`
 
 ## Best Practices
+
+Six areas matter most when building and deploying an agent:
 
 1. **Prompt Structure**
    - Use POM for clear, structured prompts
@@ -1127,15 +1195,19 @@ Key environment variables:
 - `SWML_SSL_KEY_PATH`: Path to SSL key
 - `SWML_DOMAIN`: Domain name for the service
 
-Proxy / request-trust knobs (all default OFF — enable only behind a trusted proxy):
+Proxy / request-trust knobs (all default OFF, enable only behind a trusted proxy):
 - `SWML_TRUST_PROXY_HEADERS`: trust `X-Forwarded-*` host/proto headers (`1`/`true`/`yes`)
 - `SWML_TRUST_REMOTE_USER`: trust the `REMOTE_USER` CGI header for auth
 - `SWML_ALLOW_PRIVATE_URLS`: allow webhook/target URLs that resolve to private IPs
   (off by default to block SSRF)
+- `SWML_URL_FETCH_USE_PROXY`: let the spider and web_search skills fetch pages
+  through `HTTP_PROXY` and `HTTPS_PROXY` (`1`/`true`/`yes`). They ignore those by
+  default, because the private-address check can't see where a proxy connects.
+  Set it only for a proxy that blocks private destinations itself.
 - `SWML_PROXY_DEBUG`: verbose proxy-header resolution logging
 
 Other knobs:
-- `SWML_SKIP_SCHEMA_VALIDATION`: skip SWML schema validation (`1`) — for debugging only
+- `SWML_SKIP_SCHEMA_VALIDATION`: skip SWML schema validation (`1`), for debugging only
 - `SIGNALWIRE_LOG_FORMAT`: log renderer, `console` (default) or `json`
 - `SIGNALWIRE_SPACE_NAME`: default space name used by `sw-agent-init` scaffolding
 
@@ -1146,12 +1218,16 @@ of `AgentBase` / `SWMLService` (not an environment variable).
 
 ### SWML Document Request (GET/POST /)
 
+Four steps handle this request:
+
 1. Client requests the root endpoint
 2. Authentication is validated 
 3. `on_swml_request()` is called to allow customization
 4. Current SWML document is rendered and returned
 
 ### SWAIG Function Call (POST /swaig/)
+
+Five steps handle this request:
 
 1. Client sends a POST request to the SWAIG endpoint
 2. Authentication is validated
@@ -1160,6 +1236,8 @@ of `AgentBase` / `SWMLService` (not an environment variable).
 5. Function is executed and result returned
 
 ### Post-Prompt Processing (POST /post_prompt/)
+
+Four steps handle this request:
 
 1. Client sends conversation summary data
 2. Authentication is validated

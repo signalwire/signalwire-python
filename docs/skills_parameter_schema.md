@@ -51,14 +51,15 @@ schema = list_skills_with_params()
             },
             "num_results": {
                 "type": "integer",
-                "description": "Default number of search results to return",
-                "default": 1,
+                "description": "Number of high-quality results to return",
+                "default": 3,
                 "required": False,
                 "min": 1,
                 "max": 10
             },
             ...
-        }
+        },
+        "source": "built-in"
     },
     "datetime": {
         "name": "datetime",
@@ -73,8 +74,15 @@ schema = list_skills_with_params()
                 "description": "Additional SWAIG function metadata to merge into tool definitions",
                 "default": {},
                 "required": False
+            },
+            "skip_prompt": {
+                "type": "boolean",
+                "description": "If true, the skill will not inject its default prompt section into the POM",
+                "default": False,
+                "required": False
             }
-        }
+        },
+        "source": "built-in"
     },
     ...
 }
@@ -336,7 +344,7 @@ All skills automatically inherit these base parameters from `SkillBase`:
 
 ## Examples
 
-### Simple Skill (No Parameters)
+### Skill With No Extra Parameters
 
 Skills like `datetime` and `math` that don't need configuration:
 
@@ -381,6 +389,8 @@ def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
 
 ## Best Practices
 
+Keep these seven points in mind when you design a schema:
+
 1. **Always provide descriptions** - Make parameters self-documenting
 2. **Set sensible defaults** - Allow skills to work with minimal configuration
 3. **Mark secrets as hidden** - Protect sensitive information in UIs
@@ -388,13 +398,3 @@ def get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]:
 5. **Document environment variables** - Show alternative configuration methods
 6. **Validate in setup()** - Ensure all required parameters are present
 7. **Support backward compatibility** - Handle deprecated parameters gracefully
-
-## Future Enhancements
-
-The parameter schema system is designed to be extensible. Future enhancements may include:
-
-- **Conditional parameters** - Show/hide based on other parameter values
-- **Complex validation** - Cross-parameter validation rules
-- **Nested schemas** - Support for complex object parameters
-- **Internationalization** - Localized descriptions and error messages
-- **Runtime parameter updates** - Modify configuration without restart

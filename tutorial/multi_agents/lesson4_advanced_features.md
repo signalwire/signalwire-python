@@ -1,6 +1,6 @@
 # Lesson 4: Advanced Features and Best Practices
 
-In this lesson, you'll master advanced features of the SignalWire Agents SDK and learn production deployment best practices. We'll cover custom SWAIG functions, error handling, debugging techniques, and deployment strategies.
+This lesson covers advanced features of the SignalWire Agents SDK and production deployment practices: custom SWAIG functions, error handling, debugging techniques, and deployment strategies.
 
 ## Table of Contents
 
@@ -21,6 +21,8 @@ SWAIG (SignalWire AI Gateway) functions allow your agent to perform actions beyo
 
 ### Basic Function Structure
 
+A SWAIG function is a Python function registered with the `@self.tool()` decorator inside the agent's `__init__`:
+
 ```python
 from signalwire import AgentBase
 from signalwire.core.function_result import SwaigFunctionResult
@@ -38,7 +40,7 @@ class MyAgent(AgentBase):
                 "tax_rate": {"type": "number", "description": "Tax rate (default 8%)"}
             }
         )
-        def calculate_price(self, args, raw_data):
+        def calculate_price(args, raw_data):
             """Calculate total price including tax"""
             amount = args.get("amount", 0)
             tax_rate = args.get("tax_rate", 0.08)
@@ -66,7 +68,7 @@ class MyAgent(AgentBase):
     },
     required=["customer_name", "items"]  # These params are required
 )
-def create_order(self, args, raw_data):
+def create_order(args, raw_data):
     customer_name = args.get("customer_name")
     items = args.get("items")
     priority = args.get("priority", "normal")
@@ -97,7 +99,7 @@ The `SwaigFunctionResult` class provides rich responses:
         "product_id": {"type": "string", "description": "The product ID to check"}
     }
 )
-def check_inventory(self, args, raw_data):
+def check_inventory(args, raw_data):
     product_id = args.get("product_id")
     # Simulate inventory check
     in_stock = 5
@@ -105,14 +107,7 @@ def check_inventory(self, args, raw_data):
     if in_stock > 0:
         result = SwaigFunctionResult(f"Product {product_id} is in stock ({in_stock} units)")
 
-        # Add structured data
-        result.add_data({
-            "product_id": product_id,
-            "quantity": in_stock,
-            "warehouse": "main"
-        })
-
-        # Add action for the agent
+        # Add data the agent can reference later in the call
         result.add_action("set_global_data", {
             "last_checked_product": product_id,
             "stock_level": in_stock
@@ -122,8 +117,7 @@ def check_inventory(self, args, raw_data):
     else:
         # Return error state
         return SwaigFunctionResult(
-            f"Product {product_id} is out of stock",
-            error=True
+            f"Product {product_id} is out of stock"
         )
 ```
 
@@ -140,7 +134,7 @@ Both patterns are supported:
         "query": {"type": "string", "description": "Search query"}
     }
 )
-async def fetch_data(self, args, raw_data):
+async def fetch_data(args, raw_data):
     query = args.get("query")
     import aiohttp
     async with aiohttp.ClientSession() as session:
@@ -157,7 +151,7 @@ async def fetch_data(self, args, raw_data):
         "y": {"type": "integer", "description": "Second number"}
     }
 )
-def calculate(self, args, raw_data):
+def calculate(args, raw_data):
     x = args.get("x", 0)
     y = args.get("y", 0)
     return SwaigFunctionResult(f"Result: {x + y}")
@@ -171,6 +165,8 @@ Proper error handling ensures your agent gracefully handles failures.
 
 ### Function Error Handling
 
+Wrap the function body in a `try`/`except` block and describe the problem in the response text:
+
 ```python
 @self.tool(
     "process_order",
@@ -179,14 +175,13 @@ Proper error handling ensures your agent gracefully handles failures.
         "order_id": {"type": "string", "description": "The order ID to process"}
     }
 )
-def process_order(self, args, raw_data):
+def process_order(args, raw_data):
     order_id = args.get("order_id")
     try:
         # Validate input
         if not order_id or len(order_id) < 5:
             return SwaigFunctionResult(
-                "Invalid order ID format",
-                error=True
+                "Invalid order ID format"
             )
 
         # Simulate processing
@@ -198,19 +193,19 @@ def process_order(self, args, raw_data):
 
     except ValueError as e:
         return SwaigFunctionResult(
-            f"Order processing failed: {str(e)}",
-            error=True
+            f"Order processing failed: {str(e)}"
         )
     except Exception as e:
         # Log unexpected errors
         logger.error(f"Unexpected error processing order: {e}")
         return SwaigFunctionResult(
-            "An unexpected error occurred. Please try again.",
-            error=True
+            "An unexpected error occurred. Please try again."
         )
 ```
 
 ### Agent-Level Error Handling
+
+The prompt can also tell the model how to talk about a failed function call:
 
 ```python
 class RobustAgent(AgentBase):
@@ -232,6 +227,8 @@ class RobustAgent(AgentBase):
 
 ### Validation Patterns
 
+Collect validation problems into a list, then report all of them at once instead of stopping at the first one:
+
 ```python
 @self.tool(
     "update_customer",
@@ -242,7 +239,7 @@ class RobustAgent(AgentBase):
         "phone": {"type": "string", "description": "Customer's phone number"}
     }
 )
-def update_customer(self, args, raw_data):
+def update_customer(args, raw_data):
     customer_id = args.get("customer_id")
     email = args.get("email")
     phone = args.get("phone")
@@ -260,8 +257,7 @@ def update_customer(self, args, raw_data):
 
     if errors:
         return SwaigFunctionResult(
-            f"Validation failed: {', '.join(errors)}",
-            error=True
+            f"Validation failed: {', '.join(errors)}"
         )
 
     # Process valid input
@@ -275,6 +271,8 @@ def update_customer(self, args, raw_data):
 Effective logging is crucial for troubleshooting and monitoring.
 
 ### Using the Logger
+
+Get a logger from the SDK's logging module and call it from inside a tool function:
 
 ```python
 from signalwire.core.logging_config import get_logger
@@ -293,7 +291,7 @@ class DebugAgent(AgentBase):
                 "param": {"type": "string", "description": "Parameter to process"}
             }
         )
-        def debug_function(self, args, raw_data):
+        def debug_function(args, raw_data):
             param = args.get("param", "")
             logger.debug(f"Function called with param: {param}")
 
@@ -305,25 +303,24 @@ class DebugAgent(AgentBase):
 
             except Exception as e:
                 logger.error(f"Operation failed: {e}", exc_info=True)
-                return SwaigFunctionResult("Operation failed", error=True)
+                return SwaigFunctionResult("Operation failed")
 ```
 
 ### Log Levels
 
+Set the level when you create the server:
+
 ```python
-# Set log level when creating server
 server = AgentServer(log_level="debug")
-
-# Or via environment variable
-export SIGNALWIRE_LOG_LEVEL=debug
-
-# Available levels:
-# - debug: Detailed information for debugging
-# - info: General information (default)
-# - warning: Warning messages
-# - error: Error messages only
-# - critical: Critical issues only
 ```
+
+You can set the same level through the environment instead:
+
+```bash
+export SIGNALWIRE_LOG_LEVEL=debug
+```
+
+The accepted levels are `debug` (detailed information for debugging), `info` (general information, the default), `warning`, `error`, and `critical`.
 
 ### Debugging Techniques
 
@@ -354,11 +351,11 @@ swaig-test agent.py --exec function_name --param value
     description="Debug agent state",
     parameters={}
 )
-def debug_state(self, args, raw_data):
+def debug_state(args, raw_data):
     import json
     state = {
         "agent_name": self.get_name(),
-        "functions": list(self._tools.keys()),
+        "functions": list(self._tool_registry._swaig_functions.keys()),
         "languages": self._languages
     }
     logger.info(f"Agent state: {json.dumps(state, indent=2)}")
@@ -371,6 +368,8 @@ def debug_state(self, args, raw_data):
 
 ### Environment Variables
 
+Set authentication, logging, and SSL through environment variables rather than hardcoding them:
+
 ```bash
 # Core configuration
 export SWML_BASIC_AUTH_USER=produser
@@ -382,13 +381,11 @@ export SWML_SSL_ENABLED=true
 export SWML_SSL_CERT_PATH=/etc/ssl/certs/agent.crt
 export SWML_SSL_KEY_PATH=/etc/ssl/private/agent.key
 export SWML_DOMAIN=agents.example.com
-
-# Performance tuning
-export PYTORCH_DISABLE_AVX512=1  # For compatibility
-export WORKERS=4  # Number of worker processes
 ```
 
 ### Docker Deployment
+
+This `Dockerfile` installs the SDK, runs the agent as a non-root user, and checks `/health`:
 
 ```dockerfile
 # Dockerfile
@@ -417,6 +414,8 @@ CMD ["python", "agent.py"]
 
 ### Systemd Service
 
+On a plain Linux host without Docker, a systemd unit keeps the agent running and restarts it on failure:
+
 ```ini
 # /etc/systemd/system/signalwire-agent.service
 [Unit]
@@ -438,6 +437,8 @@ WantedBy=multi-user.target
 ```
 
 ### Health Monitoring
+
+`AgentServer` already exposes `/health`. Add a route directly to its FastAPI app for a more detailed check:
 
 <!-- snippet: no-run illustrative fragment (references `server` established in the surrounding prose) -->
 ```python
@@ -466,44 +467,41 @@ async def detailed_health():
 
 ### Unit Testing Functions
 
+Call `on_function_call()` the same way the SWAIG endpoint does, with the function name, its arguments, and the raw request data:
+
 ```python
-import pytest
 from signalwire.core.function_result import SwaigFunctionResult
 
-@pytest.mark.asyncio
-async def test_calculate_price():
-    # Create agent instance
+def test_calculate_price():
     agent = MyAgent()
-    
-    # Get the function
-    calc_func = agent._tools["calculate_price"]["function"]
-    
-    # Test normal case
-    result = await calc_func(amount=100.0, tax_rate=0.08)
+
+    # Test the normal case
+    result = agent.on_function_call("calculate_price", {"amount": 100.0, "tax_rate": 0.08}, {})
     assert isinstance(result, SwaigFunctionResult)
-    assert "108.00" in result.message
-    
-    # Test edge cases
-    result = await calc_func(amount=0, tax_rate=0)
-    assert "0.00" in result.message
+    assert "108.00" in result.response
+
+    # Test the edge case
+    result = agent.on_function_call("calculate_price", {"amount": 0, "tax_rate": 0}, {})
+    assert "0.00" in result.response
 ```
 
 ### Integration Testing
 
+Run the agent, then test it as a client would, over HTTP and through `swaig-test`:
+
 ```python
 # test_integration.py
 import requests
-import json
 
 def test_agent_swml_generation():
-    """Test that agent generates valid SWML"""
+    """Test that the agent generates valid SWML"""
     response = requests.get("http://localhost:3000/")
     assert response.status_code == 200
-    
+
     swml = response.json()
-    assert "ai" in swml
-    assert "prompt" in swml["ai"]
-    assert "voice" in swml["ai"]
+    ai_section = swml["sections"]["main"][-1]["ai"]
+    assert "prompt" in ai_section
+    assert "languages" in ai_section
 
 def test_function_execution():
     """Test function execution via swaig-test"""
@@ -517,6 +515,8 @@ def test_function_execution():
 ```
 
 ### Load Testing
+
+Send concurrent requests to the SWML endpoint to see how the agent behaves under load:
 
 ```bash
 # Using Apache Bench
@@ -535,6 +535,8 @@ wait
 
 ### Caching Strategies
 
+Cache an expensive lookup on the agent instance, and expire it after a few minutes:
+
 ```python
 from functools import lru_cache
 import asyncio
@@ -551,7 +553,7 @@ class OptimizedAgent(AgentBase):
                 "product_id": {"type": "string", "description": "The product ID to look up"}
             }
         )
-        async def get_product_info(self, args, raw_data):
+        async def get_product_info(args, raw_data):
             product_id = args.get("product_id")
             # Check cache first
             if product_id in self._cache:
@@ -574,6 +576,8 @@ class OptimizedAgent(AgentBase):
 
 ### Async Best Practices
 
+Run independent queries concurrently with `asyncio.gather()` instead of awaiting them one at a time:
+
 ```python
 # Good: Concurrent operations
 @self.tool(
@@ -583,7 +587,7 @@ class OptimizedAgent(AgentBase):
         "customer_id": {"type": "string", "description": "The customer ID"}
     }
 )
-async def get_full_info(self, args, raw_data):
+async def get_full_info(args, raw_data):
     customer_id = args.get("customer_id")
     # Run multiple queries concurrently
     orders, profile, preferences = await asyncio.gather(
@@ -603,6 +607,8 @@ async def get_full_info_slow(customer_id):
 
 ### Memory Management
 
+Keep the search skill's result count small, and delete large objects once a function no longer needs them:
+
 ```python
 # Limit search results
 self.add_skill("native_vector_search", {
@@ -619,7 +625,7 @@ self.add_skill("native_vector_search", {
         "dataset_id": {"type": "string", "description": "The dataset ID to process"}
     }
 )
-async def process_large_data(self, args, raw_data):
+async def process_large_data(args, raw_data):
     dataset_id = args.get("dataset_id")
     data = await load_large_dataset(dataset_id)
     result = process_data(data)
@@ -636,6 +642,8 @@ async def process_large_data(self, args, raw_data):
 
 ### Input Sanitization
 
+Strip characters a downstream query does not expect, and cap the length, before using caller-supplied text:
+
 ```python
 import re
 
@@ -646,14 +654,14 @@ import re
         "query": {"type": "string", "description": "Search query to sanitize and execute"}
     }
 )
-def safe_search(self, args, raw_data):
+def safe_search(args, raw_data):
     query = args.get("query", "")
     # Sanitize input
     safe_query = re.sub(r'[^\w\s-]', '', query)
     safe_query = safe_query.strip()[:100]  # Limit length
 
     if not safe_query:
-        return SwaigFunctionResult("Invalid search query", error=True)
+        return SwaigFunctionResult("Invalid search query")
 
     # Safe to use
     results = search_database(safe_query)
@@ -661,6 +669,8 @@ def safe_search(self, args, raw_data):
 ```
 
 ### Secrets Management
+
+Read credentials from the environment, and never write them to the logs:
 
 ```python
 import os
@@ -682,10 +692,10 @@ class SecureAgent(AgentBase):
                 "endpoint": {"type": "string", "description": "API endpoint to call"}
             }
         )
-        def secure_api_call(self, args, raw_data):
+        def secure_api_call(args, raw_data):
             endpoint = args.get("endpoint")
             if not self._api_key:
-                return SwaigFunctionResult("API not configured", error=True)
+                return SwaigFunctionResult("API not configured")
 
             # Never log secrets
             logger.info(f"Calling API endpoint: {endpoint}")
@@ -696,6 +706,8 @@ class SecureAgent(AgentBase):
 ```
 
 ### Rate Limiting
+
+Track call timestamps per user, and reject a request once it exceeds the limit for the current window:
 
 ```python
 from datetime import datetime, timedelta
@@ -713,7 +725,7 @@ class RateLimitedAgent(AgentBase):
                 "user_id": {"type": "string", "description": "User ID for rate limiting"}
             }
         )
-        def limited_function(self, args, raw_data):
+        def limited_function(args, raw_data):
             user_id = args.get("user_id")
             # Check rate limit (10 calls per minute)
             now = datetime.now()
@@ -728,8 +740,7 @@ class RateLimitedAgent(AgentBase):
             # Check limit
             if len(self._call_counts[user_id]) >= 10:
                 return SwaigFunctionResult(
-                    "Rate limit exceeded. Please try again later.",
-                    error=True
+                    "Rate limit exceeded. Please try again later."
                 )
             
             # Record call
@@ -743,26 +754,28 @@ class RateLimitedAgent(AgentBase):
 
 ## Summary
 
-You've mastered advanced SignalWire Agents features! You've learned:
+This lesson covered advanced SignalWire Agents features:
 
 **Technical Skills:**
-- ✅ Creating custom SWAIG functions with parameters and validation
-- ✅ Proper error handling with SwaigFunctionResult
-- ✅ Logging and debugging techniques
-- ✅ Production deployment patterns
-- ✅ Testing strategies for reliability
+- Creating custom SWAIG functions with parameters and validation
+- Proper error handling with SwaigFunctionResult
+- Logging and debugging techniques
+- Production deployment patterns
+- Testing strategies for reliability
 
 **Best Practices:**
-- ✅ Performance optimization techniques
-- ✅ Security considerations
-- ✅ Monitoring and health checks
-- ✅ Scalable architecture patterns
+- Performance optimization techniques
+- Security considerations
+- Monitoring and health checks
+- Scalable architecture patterns
 
 **What's Next?**
 
 In the final lesson, you'll learn how to extend agents with custom skills, create complex conversation flows, and integrate with external services.
 
 ### Practice Exercises
+
+Before moving on, try these exercises:
 
 1. **Create a Calculator Agent**: Build an agent with math functions (add, subtract, multiply, divide) with proper error handling
 2. **Add Caching**: Implement a caching layer for expensive operations
@@ -786,4 +799,4 @@ Before deploying to production:
 
 ---
 
-[← Lesson 3: Building Multi-Agent Systems](lesson3_multi_agent_systems.md) | [Tutorial Overview](README.md) | [Lesson 5: Extending Your Agents →](lesson5_extending_agents.md)
+[Previous: Lesson 3 - Building Multi-Agent Systems](lesson3_multi_agent_systems.md) | [Tutorial Overview](README.md) | [Next: Lesson 5 - Extending Your Agents](lesson5_extending_agents.md)

@@ -1,6 +1,6 @@
 # SignalWire Agents Skills System
 
-This directory contains the modular skills system for SignalWire AI Agents. Skills provide reusable, configurable capabilities that can be easily added to any agent.
+This directory contains the modular skills system for SignalWire AI Agents. Skills provide reusable, configurable capabilities that you can add to any agent.
 
 ## Table of Contents
 
@@ -20,7 +20,7 @@ This directory contains the modular skills system for SignalWire AI Agents. Skil
 
 The skills system provides:
 - **Modular capabilities**: Reusable functionality across agents
-- **Automatic discovery**: Skills are automatically found and registered
+- **On-demand discovery**: Skills are found and loaded automatically when you request them by name
 - **Configuration validation**: Parameter checking and error handling
 - **DataMap integration**: Serverless API execution without custom webhooks
 - **Documentation**: Built-in help and usage information
@@ -29,40 +29,39 @@ The skills system provides:
 
 ### Step 1: Create Skill Directory
 
-Create a new directory under `signalwire_agents/skills/` with your skill name:
+Create a new directory under `signalwire/signalwire/skills/` with your skill name:
 
 ```bash
-mkdir signalwire_agents/skills/your_skill_name
+mkdir signalwire/signalwire/skills/your_skill_name
 ```
 
 ### Step 2: Required Files
 
 Every skill needs these files:
 
-```
-signalwire_agents/skills/your_skill_name/
+```text
+signalwire/signalwire/skills/your_skill_name/
 ├── __init__.py          # Package initialization
 ├── skill.py            # Main skill implementation
 └── README.md           # Skill documentation
 ```
 
-### Step 3: Update Package Configuration
+### Step 3: No Manual Package Registration Needed
 
-Add your skill to `pyproject.toml`:
+`pyproject.toml` discovers packages automatically, so a new skill needs no entry there:
 
 ```toml
 [tool.setuptools]
-packages = [
-    # ... existing packages ...
-    "signalwire_agents.skills.your_skill_name"
-]
+packages = {find = {where = ["signalwire"], include = ["signalwire*"]}}
 ```
+
+Every directory under `signalwire/signalwire/` with an `__init__.py` is included, so the file from Step 2 is all `pyproject.toml` needs.
 
 ## Skill Structure
 
 ### `__init__.py`
 
-Simple package initialization:
+A package initialization file:
 
 ```python
 """Your Skill Name for SignalWire Agents"""
@@ -148,6 +147,8 @@ class YourSkillClass(SkillBase):
 
 ### Required Class Attributes
 
+Every skill class needs these five attributes:
+
 - `SKILL_NAME`: Unique identifier for the skill
 - `SKILL_DESCRIPTION`: Brief description shown in skill listings
 - `SKILL_VERSION`: Version string for the skill
@@ -156,6 +157,8 @@ class YourSkillClass(SkillBase):
 
 ### Required Methods
 
+`setup()` and `register_tools()` are required, since `SkillBase` declares them abstract. `get_parameter_schema()` must also be overridden with skill-specific parameters; the registry rejects a skill that only inherits the base implementation. The rest are optional overrides with working defaults.
+
 #### `setup(self) -> bool`
 - Validate and store configuration parameters
 - Return `True` if setup successful, `False` otherwise
@@ -163,8 +166,13 @@ class YourSkillClass(SkillBase):
 
 #### `register_tools(self) -> None`
 - Register SWAIG functions/tools with the agent
-- Use `self.agent.register_swaig_function()` for custom functions
-- Use DataMap for external API integration
+- Use `self.define_tool()` for custom Python-handler functions
+- Use DataMap plus `self.agent.register_swaig_function()` for external API integration
+
+#### `get_parameter_schema(cls) -> Dict[str, Dict[str, Any]]`
+- Classmethod. Return metadata (type, description, default, required) for every parameter the skill accepts
+- Call `super().get_parameter_schema()` first and update the result, so the skill keeps the base `swaig_fields` and `skip_prompt` parameters
+- See [Skills Parameter Schema](../../../docs/skills_parameter_schema.md) for the full reference
 
 #### `get_hints(self) -> List[str]`
 - Return phrases for speech recognition hints (optional)
@@ -193,7 +201,7 @@ def register_tools(self) -> None:
         .parameter("param2", "string", "Optional parameter", required=False)
         .webhook("GET", "https://api.example.com/endpoint/${args.param1}", 
                  headers={"Authorization": f"Bearer {self.api_key}"})
-        .output(SwaigFunctionResult("Result: ${response.data}"))
+        .output(SwaigFunctionResult("Result: ${data}"))
         .error_keys(["error", "message"])
     )
     
@@ -202,45 +210,38 @@ def register_tools(self) -> None:
 
 ### DataMap Features
 
+DataMap tools support these features:
+
 - **Dynamic URLs**: Use `${args.param}` for user inputs
 - **Headers**: Add authentication and other headers
-- **Response Processing**: Extract data with `${response.field}`
+- **Response Processing**: Read the API's JSON response from the root, as `${field}`
 - **Error Handling**: Specify error keys to watch for
 - **Defaults**: Use `${args.param || "default"}` for fallbacks
 
 ## Package Configuration
 
-After creating your skill, update `pyproject.toml` to include it in the package:
+`pyproject.toml` discovers every package under `signalwire/signalwire/` automatically:
 
 ```toml
 [tool.setuptools]
-packages = [
-    "signalwire_agents",
-    "signalwire_agents.prefabs", 
-    "signalwire_agents.utils",
-    "signalwire_agents.core",
-    "signalwire_agents.core.state",
-    "signalwire_agents.core.security",
-    "signalwire_agents.skills",
-    "signalwire_agents.skills.web_search",
-    "signalwire_agents.skills.datetime", 
-    "signalwire_agents.skills.math",
-    "signalwire_agents.skills.joke",
-    "signalwire_agents.skills.datasphere",
-    "signalwire_agents.skills.wikipedia_search",
-    "signalwire_agents.skills.your_skill_name"  # Add your skill here
-]
+packages = {find = {where = ["signalwire"], include = ["signalwire*"]}}
 ```
+
+A new skill needs no entry here. Setuptools includes any directory under `signalwire/signalwire/` that has an `__init__.py`, so the file from [Required Files](#required-files) is enough.
 
 ## Testing Your Skill
 
 ### 1. Install the Package
+
+Reinstall the package so Python picks up the new skill directory:
 
 ```bash
 pip install . --force-reinstall
 ```
 
 ### 2. Test Skill Discovery
+
+List every skill the registry can find, including the one you just added:
 
 ```python
 from signalwire.skills.registry import skill_registry
@@ -249,10 +250,12 @@ skill_registry.discover_skills()
 skills = skill_registry.list_skills()
 print(f"Found {len(skills)} skills:")
 for skill in skills:
-    print(f"  • {skill['name']}: {skill['description']}")
+    print(f"  - {skill['name']}: {skill['description']}")
 ```
 
 ### 3. Test Skill Usage
+
+Load the skill on a test agent and confirm it doesn't raise an error:
 
 <!-- snippet: no-run illustrative skill name a reader would provide (not a built-in skill) -->
 ```python
@@ -278,7 +281,7 @@ agent = TestAgent()
 
 Create a comprehensive README for your skill:
 
-```markdown
+````markdown
 # Your Skill Name
 
 Brief description of what the skill does.
@@ -344,7 +347,7 @@ Show example interactions between users and agents using your skill.
 ## Troubleshooting
 
 Common issues and solutions.
-```
+````
 
 ## Examples
 
@@ -391,6 +394,8 @@ if __name__ == "__main__":
 
 ## Best Practices
 
+These practices cover configuration, error handling, documentation, security, performance, and compatibility:
+
 ### Configuration
 - Always validate required parameters in `setup()`
 - Provide sensible defaults for optional parameters
@@ -429,9 +434,11 @@ if __name__ == "__main__":
 
 ## Troubleshooting
 
+These four problem areas cover most issues you'll run into:
+
 ### Skill Not Found
-- Check that the skill directory is in `signalwire_agents/skills/`
-- Verify `pyproject.toml` includes your skill package
+- Check that the skill directory is in `signalwire/signalwire/skills/`
+- Verify the skill directory has an `__init__.py`
 - Reinstall the package after changes: `pip install . --force-reinstall`
 
 ### Import Errors
@@ -450,4 +457,4 @@ if __name__ == "__main__":
 - Test API calls independently first
 - Use `.error_keys()` to handle API errors
 
-Remember to always test your skill thoroughly and provide clear documentation for other developers! 
+Test your skill thoroughly, and document it clearly for other developers.

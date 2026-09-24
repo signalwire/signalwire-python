@@ -1,5 +1,7 @@
 # WebService Documentation
 
+The examples on this page assume these imports:
+
 <!-- snippet-setup: shared imports the examples on this page assume -->
 ```python
 from signalwire import AgentBase, AgentServer, DataMap, FunctionResult, SwaigFunctionResult, SWMLService
@@ -22,7 +24,7 @@ The `WebService` class provides static file serving capabilities for the SignalW
 
 ## Overview
 
-WebService is designed to serve static files with configurable security features. It's perfect for:
+WebService is designed to serve static files with configurable security features. Use it for:
 - Serving agent documentation and API specs
 - Hosting static assets (images, CSS, JavaScript)
 - Serving generated reports and exports
@@ -30,6 +32,8 @@ WebService is designed to serve static files with configurable security features
 - Hosting agent UI components
 
 ### Key Features
+
+It provides these capabilities:
 - **Multiple directory mounting** - Serve different directories at different URL paths
 - **Security-first design** - Authentication, CORS, security headers, file filtering
 - **HTTPS support** - Full SSL/TLS support with PEM files
@@ -47,6 +51,8 @@ pip install signalwire-sdk
 ```
 
 ## Quick Start
+
+This starts a service that serves two directories over HTTP:
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -73,6 +79,8 @@ WebService can be configured through multiple methods (in order of priority):
 
 ### 1. Constructor Parameters
 
+Pass options directly to the constructor:
+
 ```python
 service = WebService(
     port=8002,                          # Port to bind to
@@ -90,6 +98,8 @@ service = WebService(
 ```
 
 ### 2. Environment Variables
+
+Or set the same options as environment variables:
 
 ```bash
 # Basic authentication
@@ -152,6 +162,8 @@ WebService implements HTTP Basic Authentication. Credentials can be set via:
 ### File Security
 
 #### Default Blocked Extensions/Files
+
+WebService blocks these extensions and files by default:
 - `.env`, `.git`, `.gitignore`
 - `.key`, `.pem`, `.crt`
 - `.pyc`, `__pycache__`
@@ -177,6 +189,7 @@ Automatically adds security headers to all responses:
 - `X-Content-Type-Options: nosniff`
 - `X-Frame-Options: DENY`
 - `X-XSS-Protection: 1; mode=block`
+- `Referrer-Policy: strict-origin-when-cross-origin`
 - `Strict-Transport-Security` (when HTTPS is enabled)
 
 ## HTTPS/SSL Support
@@ -185,6 +198,8 @@ WebService provides multiple ways to enable HTTPS:
 
 ### Method 1: Environment Variables
 
+Set the certificate and key paths as environment variables:
+
 ```bash
 # Using file paths
 export SWML_SSL_CERT_PATH="/path/to/cert.pem"
@@ -192,6 +207,8 @@ export SWML_SSL_KEY_PATH="/path/to/key.pem"
 ```
 
 ### Method 2: Direct Parameters
+
+Or pass the paths to `start()` directly:
 
 <!-- snippet: no-run reads a data/index file that must be built first (needs a real artifact) -->
 ```python
@@ -204,6 +221,8 @@ service.start(
 ```
 
 ### Method 3: Configuration File
+
+Or set the same options in the security section of a configuration file:
 
 ```json
 {
@@ -266,6 +285,8 @@ Serve files from mounted directories
 
 ### Basic File Serving
 
+This serves two directories, each at its own route:
+
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import WebService
@@ -286,6 +307,8 @@ service.start()
 
 ### With Directory Browsing
 
+Setting `enable_directory_browsing` shows a directory listing for a mounted directory:
+
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 service = WebService(
@@ -299,6 +322,8 @@ service.start()
 
 ### Restricted File Types
 
+`allowed_extensions` limits serving to a whitelist:
+
 ```python
 # Only serve web assets
 service = WebService(
@@ -309,6 +334,8 @@ service = WebService(
 ```
 
 ### Dynamic Directory Management
+
+`add_directory()` and `remove_directory()` change what a running service serves:
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -326,6 +353,8 @@ service.start()
 
 ### With Custom Authentication
 
+Pass `basic_auth` to set credentials instead of using the auto-generated ones:
+
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 service = WebService(
@@ -336,6 +365,8 @@ service.start()
 ```
 
 ### HTTPS with Let's Encrypt
+
+Point `ssl_cert` and `ssl_key` at existing certificate files:
 
 <!-- snippet: no-run reads a data/index file that must be built first (needs a real artifact) -->
 ```python
@@ -351,6 +382,8 @@ service.start(
 ```
 
 ### Multi-Environment Configuration
+
+A single script can pick its settings from an environment variable:
 
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
@@ -433,6 +466,8 @@ agent.serve(port=3000)  # Agent on port 3000, WebService on 8002
 
 ### Docker Deployment
 
+This image installs the SDK and runs WebService as the container's entry point:
+
 ```dockerfile
 FROM python:3.11-slim
 
@@ -514,6 +549,8 @@ server {
 ## Best Practices
 
 ### Security
+
+Follow these practices in production:
 1. **Always use HTTPS in production** - Protect data in transit
 2. **Change default credentials** - Never use auto-generated auth in production
 3. **Restrict file types** - Use `allowed_extensions` to whitelist safe files
@@ -521,12 +558,16 @@ server {
 5. **Use reverse proxy** - Put Nginx/Apache in front for additional security
 
 ### Performance
+
+These settings keep a deployment responsive under load:
 1. **Set appropriate cache headers** - WebService adds 1-hour cache by default
 2. **Limit file sizes** - Adjust `max_file_size` based on your needs
 3. **Use CDN for static assets** - Offload traffic for better performance
 4. **Compress large files** - Use gzip/brotli at reverse proxy level
 
 ### Organization
+
+Structure directories this way to keep a deployment maintainable:
 1. **Separate content types** - Use different routes for different file types
 2. **Version your assets** - Include version in path (e.g., `/assets/v1/`)
 3. **Use index.html** - Provide default files for directories
@@ -536,13 +577,13 @@ server {
 
 ### Common Issues
 
-**Issue: "FastAPI not available"**
+**FastAPI not available:**
 ```bash
 # Install FastAPI and uvicorn
 pip install fastapi uvicorn
 ```
 
-**Issue: SSL certificate errors**
+**SSL certificate errors:**
 ```python
 # Check certificate paths
 import os
@@ -550,13 +591,13 @@ print(os.path.exists("/path/to/cert.pem"))  # Should be True
 print(os.path.exists("/path/to/key.pem"))   # Should be True
 ```
 
-**Issue: Permission denied**
+**Permission denied:**
 ```bash
 # Ensure read permissions on directories
 chmod -R 755 /path/to/static/files
 ```
 
-**Issue: Directory not found**
+**Directory not found:**
 ```python
 # Use absolute paths
 import os
@@ -584,6 +625,8 @@ service.start()
 
 ### WebService Class
 
+This is the full constructor signature:
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 class WebService:
@@ -600,6 +643,8 @@ class WebService:
 ```
 
 #### Parameters
+
+The constructor accepts these parameters:
 - `port`: Port to bind to (default: 8002)
 - `directories`: Dictionary mapping URL paths to local directories
 - `basic_auth`: Tuple of (username, password) for authentication
@@ -613,6 +658,9 @@ class WebService:
 #### Methods
 
 ##### start()
+
+Start the web service.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def start(self,
@@ -621,21 +669,24 @@ def start(self,
           ssl_cert: Optional[str] = None,
           ssl_key: Optional[str] = None)
 ```
-Start the web service.
 
 ##### add_directory()
+
+Add a new directory to serve.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def add_directory(self, route: str, directory: str) -> None
 ```
-Add a new directory to serve.
 
 ##### remove_directory()
+
+Remove a directory from being served.
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 def remove_directory(self, route: str) -> None
 ```
-Remove a directory from being served.
 
 ## Integration with SignalWire Agents
 
@@ -689,4 +740,4 @@ if __name__ == "__main__":
 
 ## Summary
 
-WebService provides a secure, configurable static file server that integrates with the SignalWire SDK. It follows the same architectural patterns as other SDK services, making it familiar and easy to use while providing configurable security features and flexible deployment options.
+WebService provides a secure, configurable static file server that integrates with the SignalWire SDK. It follows the same architectural patterns as other SDK services, with configurable security features and flexible deployment options.

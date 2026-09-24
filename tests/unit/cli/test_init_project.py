@@ -452,6 +452,14 @@ class TestProjectGenerator:
         tvars = gen._get_template_vars()
         assert tvars['region'] == 'us-east-1'
 
+    @pytest.mark.parametrize("platform", ["local", "aws"])
+    def test_generated_project_has_agents_md(self, platform: str, tmp_path: Path) -> None:
+        # AGENTS.md points coding agents working on the project at sw-pydocs
+        config = self._make_config(platform=platform, project_dir=str(tmp_path / "proj"))
+        assert ProjectGenerator(config).generate() is True
+        agents = (tmp_path / "proj" / "AGENTS.md").read_text(encoding="utf-8")
+        assert "sw-pydocs" in agents
+
     @patch('pathlib.Path.mkdir')
     @patch('pathlib.Path.write_text')
     def test_generate_local_creates_structure(self, mock_write: MagicMock, mock_mkdir: MagicMock) -> None:

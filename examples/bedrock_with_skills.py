@@ -7,9 +7,7 @@ import os
 from signalwire import BedrockAgent
 
 # Create a Bedrock agent
-agent = BedrockAgent(
-    name="bedrock_skills_test", voice_id="inworld.Mark", temperature=0.8
-)
+agent = BedrockAgent(name="bedrock_skills_test", voice_id="matthew", temperature=0.8)
 
 # Set up the agent's personality using POM (Prompt Object Model)
 agent.prompt_add_section(

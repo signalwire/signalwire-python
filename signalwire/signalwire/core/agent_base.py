@@ -8,9 +8,14 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
 Base class for all SignalWire AI Agents
+
+The SDK's installed documentation covers this module: run ``sw-pydocs agents``, or ``sw-pydocs`` for the index.
 """
 
 import contextlib
+import functools
+import inspect
+import logging
 import os
 import json
 import uuid
@@ -18,6 +23,7 @@ import re
 from typing import (
     Any,
     ClassVar,
+    ParamSpec,
     TYPE_CHECKING,
     cast,
 )
@@ -64,7 +70,7 @@ from signalwire.core.swml_service import SWMLService
 from signalwire.core.function_result import FunctionResult
 from signalwire.pom.pom import PromptObjectModel
 from signalwire.core.skill_manager import SkillManager
-from signalwire.core.logging_config import get_logger, get_execution_mode
+from signalwire.core.logging_config import get_logger, get_execution_mode, _would_emit
 
 # Import refactored components
 from signalwire.core.agent.prompt.manager import PromptManager
@@ -82,6 +88,28 @@ from signalwire.core.mixins.mcp_server_mixin import MCPServerMixin
 
 # Create a logger using centralized system
 logger = get_logger("agent_base")
+
+_P = ParamSpec("_P")
+
+
+def _record_explicit_args(init: Callable[_P, None]) -> Callable[_P, None]:
+    """Record which __init__ arguments the caller passed, by name.
+
+    A config file supplies values only for the arguments the caller left
+    out. Comparing an argument with its default can't tell route="/" passed
+    on purpose from route left out, so this records the names as
+    _explicit_init_args. The signature stays as it is.
+    """
+    signature = inspect.signature(init)
+
+    @functools.wraps(init)
+    def wrapper(*args: _P.args, **kwargs: _P.kwargs) -> None:
+        bound = signature.bind_partial(*args, **kwargs)
+        self = args[0]
+        self._explicit_init_args = frozenset(bound.arguments) - {"self"}  # type: ignore[attr-defined]  # set before __init__ runs, read in it
+        init(*args, **kwargs)
+
+    return wrapper
 
 
 class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/_proxy_url_base override SWMLService/ServerlessMixin's by MRO order; mypy flags the base-vs-base shape diff but the resolution is deliberate
@@ -120,6 +148,7 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
     _native_functions: list[Any]
     _is_ephemeral: bool
 
+    @_record_explicit_args
     def __init__(
         self,
         name: str,
@@ -200,12 +229,17 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         # Load service configuration from config file before initializing SWMLService
         service_config = self._load_service_config(config_file, name)
 
-        # Apply service config values, with constructor parameters taking precedence
-        final_route = route if route != "/" else service_config.get("route", route)
-        final_host = host if host != "0.0.0.0" else service_config.get("host", host)  # noqa: S104  # literal compared against the bind-all default, not a new bind
+        # Apply service config values, with constructor parameters taking
+        # precedence: a config value fills in only an argument the caller left
+        # out. name is required, so the caller's name always wins.
+        explicit: frozenset[str] = getattr(self, "_explicit_init_args", frozenset())
+        final_route = (
+            route if "route" in explicit else service_config.get("route", route)
+        )
+        final_host = host if "host" in explicit else service_config.get("host", host)
         # For port: use explicit param if provided, else config file, else let SWMLService use PORT env var
         final_port = port if port is not None else service_config.get("port", None)
-        final_name = service_config.get("name", name)
+        final_name = name
 
         # Initialize the SWMLService base class
         super().__init__(
@@ -286,16 +320,11 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         # and the SDK logs a one-time WARNING so users notice in production.
         self.signing_key = signing_key or os.environ.get("SIGNALWIRE_SIGNING_KEY")
         self._trust_proxy_for_signature = trust_proxy_for_signature
+        self._unsigned_warning_logged = False
         if self.signing_key:
             self.log.info("webhook_signature_validation_enabled")
         else:
-            self.log.warning(
-                "webhook_signature_validation_disabled",
-                message=(
-                    "[signalwire] webhook signature validation is disabled — "
-                    "set signing_key or SIGNALWIRE_SIGNING_KEY to enable"
-                ),
-            )
+            self._warn_unsigned_webhooks()
 
         # URL override variables
         self._web_hook_url_override: str | None = None
@@ -1428,6 +1457,11 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             except ValueError as e:
                 if not agent_to_use._suppress_logs:
                     agent_to_use.log.error("ai_verb_config_error", error=str(e))
+                # A configuration error, such as a step that lists a tool the
+                # agent doesn't have. Without its config the AI verb can't be
+                # built, and the schema check would report only the missing
+                # prompt, so raise the reason itself.
+                raise
         else:
             # Fallback if no handler (shouldn't happen but just in case)
             ai_config = {"prompt": {"text" if not prompt_is_pom else "pom": prompt}}
@@ -1517,6 +1551,29 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         # Return the rendered document as a string
         return agent_to_use.render_document()
 
+    def _warn_unsigned_webhooks(self) -> None:
+        """Log, once, that webhook signatures aren't checked, where it will be seen.
+
+        An agent is usually built before run() or serve() turns the SDK's logging
+        on, so a warning logged by the constructor would go nowhere. It's logged
+        as soon as something would show it: in the constructor when logging is
+        already set up, and otherwise when the agent starts serving.
+        """
+        if (
+            self.signing_key
+            or self._unsigned_warning_logged
+            or not _would_emit("agent_base", logging.WARNING)
+        ):
+            return
+        self._unsigned_warning_logged = True
+        self.log.warning(
+            "webhook_signature_validation_disabled",
+            message=(
+                "[signalwire] webhook signature validation is disabled — "
+                "set signing_key or SIGNALWIRE_SIGNING_KEY to enable"
+            ),
+        )
+
     # -- SWAIG extension-point overrides ------------------------------------
     # SWMLService now owns the /swaig handler (lifted down so non-agent
     # SWMLServices can host SWAIG too). AgentBase customizes behavior via
@@ -1537,54 +1594,104 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
         call_id: str | None,
         function_name: str,
     ) -> tuple[Any, dict[str, Any] | None]:
-        req_log = self.log.bind(endpoint="swaig", function=function_name)
+        # Apply per-call configuration first, then check the token against the
+        # agent that will run the function: a tool that configuration adds must
+        # meet the same rule as one registered up front.
+        target = self
+        if request:
+            target = self._per_call_agent(
+                dict(request.query_params), body, dict(request.headers)
+            )
 
-        # Validate security token if present.
         token = request.query_params.get("__token") or request.query_params.get("token")
+        rejection = target._tool_token_rejection(function_name, token, call_id)
+        if rejection is not None:
+            return self, rejection
+        return target, None
+
+    def _per_call_agent(
+        self,
+        query_params: dict[str, Any],
+        body: dict[str, Any],
+        headers: dict[str, Any],
+    ) -> Any:
+        """The agent to handle one request: a per-call copy when configuration is set.
+
+        Args:
+            query_params: The request's query parameters
+            body: The parsed request body
+            headers: The request's headers
+
+        Returns:
+            A copy with the dynamic config callback applied, or this agent
+            when there is no callback
+        """
+        if not self._dynamic_config_callback:
+            return self
+        target = self._create_ephemeral_copy()
+        try:
+            self._dynamic_config_callback(query_params, body, headers, target)
+        except Exception as e:
+            self.log.error("dynamic_config_error", error=str(e))
+        return target
+
+    def _tool_token_rejection(
+        self, function_name: str, token: str | None, call_id: str | None
+    ) -> dict[str, Any] | None:
+        """Refuse a secure function's call unless it carries a valid token.
+
+        A secure function runs only with a valid token for that function and
+        that call. The token is minted into the function's URL when the SWML is
+        rendered, so a request that arrives without one didn't come from that
+        SWML: a missing token, or a missing call_id, is refused like a wrong
+        token. Every path that dispatches a SWAIG function, web server or
+        serverless, checks it here.
+
+        Args:
+            function_name: The function the request asks to run
+            token: The token from the request's query string, if any
+            call_id: The call the request belongs to, if known
+
+        Returns:
+            The SWAIG response to send instead of running the function, or
+            None when the function may run
+        """
+        req_log = self.log.bind(endpoint="swaig", function=function_name)
+        func_entry = self._tool_registry._swaig_functions.get(function_name)
+        secure = func_entry is not None and (
+            func_entry.secure
+            if hasattr(func_entry, "secure")
+            else func_entry.get("secure", True)
+        )
+        if not token and not secure:
+            return None
         if token:
             req_log.debug("token_found", token_length=len(token))
-            if (
-                hasattr(self, "_session_manager")
-                and function_name in self._tool_registry._swaig_functions
-                and call_id is not None
-            ):
-                is_valid = self._session_manager.validate_tool_token(
-                    function_name, token, call_id
+        is_valid = bool(
+            token
+            and call_id is not None
+            and hasattr(self, "_session_manager")
+            and self._session_manager.validate_tool_token(function_name, token, call_id)
+        )
+        if is_valid:
+            req_log.debug("token_valid")
+        elif not token:
+            req_log.warning("token_missing")
+        else:
+            req_log.warning("token_invalid")
+            if hasattr(self._session_manager, "debug_token"):
+                debug_info = self._session_manager.debug_token(token)
+                req_log.debug("token_debug", debug=json.dumps(debug_info))
+        if secure and not is_valid:
+            from signalwire.core.function_result import FunctionResult
+
+            return FunctionResult(
+                response=(
+                    "I'm sorry, the security token for this function is invalid "
+                    "or expired. I cannot execute this action."
                 )
-                if is_valid:
-                    req_log.debug("token_valid")
-                else:
-                    req_log.warning("token_invalid")
-                    if hasattr(self._session_manager, "debug_token"):
-                        debug_info = self._session_manager.debug_token(token)
-                        req_log.debug("token_debug", debug=json.dumps(debug_info))
-                    func_entry = self._tool_registry._swaig_functions.get(function_name)
-                    if func_entry and (
-                        func_entry.secure
-                        if hasattr(func_entry, "secure")
-                        else func_entry.get("secure", True)
-                    ):
-                        from signalwire.core.function_result import FunctionResult
-
-                        return self, FunctionResult(
-                            response=(
-                                "I'm sorry, the security token for this function is invalid "
-                                "or expired. I cannot execute this action."
-                            )
-                        ).to_dict()
-
-        # Dynamic-config ephemeral agent.
-        target = self
-        if self._dynamic_config_callback and request:
-            target = self._create_ephemeral_copy()
-            try:
-                query_params = dict(request.query_params)
-                headers = dict(request.headers)
-                self._dynamic_config_callback(query_params, body, headers, target)
-            except Exception as e:
-                req_log.error("dynamic_config_error", error=str(e))
-
-        return target, None
+            ).to_dict()
+        return None
 
     def _build_webhook_url(
         self, endpoint: str, query_params: dict[str, str] | None = None

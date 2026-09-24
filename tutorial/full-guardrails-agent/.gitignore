@@ -1,0 +1,8 @@
+# Runtime files: the reservation book, the run script's pid and log, real settings,
+# and the virtual environment from Lesson 3.
+*.sqlite3
+*.sqlite3-journal
+penny.pid
+penny.log
+.env
+.venv/

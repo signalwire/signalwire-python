@@ -77,4 +77,6 @@ examples:
 
 For platform-specific options: %(prog)s --help-platforms
 For more examples: %(prog)s --help-examples
+
+Documentation: sw-pydocs prints the SDK's installed docs, examples and API.
 """

@@ -2,9 +2,11 @@
 
 ## Overview
 
-BedrockAgent is a specialized agent implementation that integrates Amazon Bedrock's voice-to-voice model with SignalWire's agent ecosystem. It extends AgentBase to provide full compatibility with all SignalWire agent features while generating SWML (SignalWire Markup Language) documents with the `amazon_bedrock` verb instead of the standard `ai` verb.
+BedrockAgent is a specialized agent implementation that integrates Amazon Bedrock's voice-to-voice model with SignalWire's agent ecosystem. It extends AgentBase to provide full compatibility with all SignalWire agent features. It generates SWML (SignalWire Markup Language) documents with the `amazon_bedrock` verb instead of the standard `ai` verb.
 
 ## Key Features
+
+BedrockAgent adds the following to the standard agent feature set:
 
 - **Full Agent Compatibility**: Inherits all capabilities from AgentBase including skills, tools, POM (Prompt Object Model), and SWAIG (SignalWire AI Gateway) functions
 - **Bedrock Integration**: Generates SWML with `amazon_bedrock` verb for native Bedrock support
@@ -23,6 +25,8 @@ from signalwire import BedrockAgent
 
 ### Creating a BedrockAgent
 
+Construct a `BedrockAgent` the same way you construct a standard agent, and run it the same way.
+
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 from signalwire import BedrockAgent
@@ -31,7 +35,7 @@ from signalwire import BedrockAgent
 agent = BedrockAgent(
     name="my_bedrock_agent",
     system_prompt="You are a helpful AI assistant.",
-    voice_id="joanna",
+    voice_id="tiffany",
     temperature=0.7
 )
 
@@ -41,9 +45,11 @@ agent.run()
 
 ### With Skills and Tools
 
+BedrockAgent loads skills and defines custom tools the same way a standard agent does.
+
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
-from signalwire import BedrockAgent
+from signalwire import BedrockAgent, FunctionResult
 
 agent = BedrockAgent(
     name="advanced_bedrock",
@@ -58,11 +64,20 @@ agent = BedrockAgent(
 agent.add_skill("datetime")
 agent.add_skill("weather_api", {"api_key": "your_api_key"})
 
-# Add custom tools
-@agent.tool
-def calculate_sum(a: int, b: int):
-    """Calculate the sum of two numbers"""
-    return f"The sum of {a} and {b} is {a + b}"
+# Add a custom tool. A tool decorated outside a class body takes
+# (args, raw_data), not (self, args, raw_data).
+@agent.tool(
+    "calculate_sum",
+    description="Add two numbers together",
+    parameters={
+        "a": {"type": "integer", "description": "The first number"},
+        "b": {"type": "integer", "description": "The second number"},
+    },
+)
+def calculate_sum(args, raw_data):
+    a = args.get("a", 0)
+    b = args.get("b", 0)
+    return FunctionResult(f"The sum of {a} and {b} is {a + b}")
 
 # Run the agent
 if __name__ == "__main__":
@@ -71,13 +86,15 @@ if __name__ == "__main__":
 
 ## Constructor Parameters
 
+The constructor accepts these parameters, all of which are optional:
+
 <!-- snippet: no-compile signature-illustration -->
 ```python
 BedrockAgent(
     name: str = "bedrock_agent",      # Agent name
     route: str = "/bedrock",          # HTTP route for the agent
     system_prompt: Optional[str] = None,  # Initial system prompt
-    voice_id: str = "matthew",        # Bedrock voice ID
+    voice_id: str = "matthew",        # tiffany, matthew, amy, lupe or carlos
     temperature: float = 0.7,         # Generation temperature (0-1)
     top_p: float = 0.9,              # Nucleus sampling parameter (0-1)
     max_tokens: int = 1024,          # Maximum tokens to generate
@@ -87,15 +104,12 @@ BedrockAgent(
 
 ### Available Voice IDs
 
-Common Bedrock voice IDs include:
-- `matthew` - Male voice
-- `joanna` - Female voice
-- `ivy` - Female voice
-- `justin` - Male voice
-- `kendra` - Female voice
-- `kimberly` - Female voice
-- `salli` - Female voice
-- `joey` - Male voice
+The SWML schema accepts five Bedrock voice IDs:
+- `tiffany`
+- `matthew` (the default)
+- `amy`
+- `lupe`
+- `carlos`
 
 ## Available Methods
 
@@ -135,11 +149,17 @@ BedrockAgent inherits all methods from AgentBase, including:
 ### BedrockAgent-Specific Methods
 
 #### Voice Configuration
+
+Call `set_voice()` to change the voice after construction:
+
 ```python
-agent.set_voice("joanna")  # Change the Bedrock voice
+agent.set_voice("amy")  # Change the Bedrock voice
 ```
 
 #### Inference Parameters
+
+Call `set_inference_params()` to change temperature, top_p, or max_tokens after construction:
+
 ```python
 # Update inference parameters
 agent.set_inference_params(
@@ -156,7 +176,7 @@ The following methods have modified behavior in BedrockAgent:
 1. **`set_llm_model(model)`** - Logs warning and does nothing (Bedrock uses fixed model)
 2. **`set_llm_temperature(temperature)`** - Redirects to `set_inference_params()`
 3. **`set_post_prompt_llm_params(**params)`** - Logs warning (post-prompt uses OpenAI)
-4. **`set_prompt_llm_params(**params)`** - Logs warning, use `set_inference_params()` instead
+4. **`set_prompt_llm_params(**params)`** - Accepts the settings the Bedrock `prompt` object defines. `temperature`, `top_p` and `max_tokens` update the inference settings, as `set_inference_params()` does. `confidence`, `presence_penalty` and `frequency_penalty` go into the prompt. Other settings, such as `barge_confidence`, log a warning and are ignored
 
 ## SWML Output Structure
 
@@ -174,12 +194,10 @@ BedrockAgent generates SWML with the `amazon_bedrock` verb:
         "amazon_bedrock": {
           "prompt": {
             "text": "Your system prompt here",
-            "voice_id": "joanna",
+            "voice_id": "matthew",
             "temperature": 0.3,
             "top_p": 1.0,
-            "barge_confidence": 0.0,
-            "presence_penalty": 0.1,
-            "frequency_penalty": 0.1
+            "max_tokens": 1024
           },
           "SWAIG": {
             "functions": [...],
@@ -187,15 +205,8 @@ BedrockAgent generates SWML with the `amazon_bedrock` verb:
               "web_hook_url": "http://..."
             }
           },
-          "params": {
-            "temperature": 0.8,
-            "top_p": 0.9,
-            "max_tokens": 1024
-          },
-          "global_data": {},
-          "languages": [...],
-          "hints": [...],
-          "pronounce": [...]
+          "params": {},
+          "global_data": {}
         }
       }
     ]
@@ -204,6 +215,8 @@ BedrockAgent generates SWML with the `amazon_bedrock` verb:
 ```
 
 ## Key Differences from Standard Agent
+
+BedrockAgent differs from a standard agent in five ways:
 
 1. **Verb Name**: Generates `amazon_bedrock` verb instead of `ai`
 2. **Voice Configuration**: Voice ID is included in the prompt object (Bedrock-specific)
@@ -217,21 +230,23 @@ BedrockAgent is fully compatible with swaig-test:
 
 ```bash
 # List functions
-swaig-test examples/bedrock_with_skills.py --list
+swaig-test examples/bedrock_with_skills.py --list-tools
 
 # Dump SWML
-swaig-test examples/bedrock_with_skills.py --dump
+swaig-test examples/bedrock_with_skills.py --dump-swml
 
 # Test a function
-swaig-test examples/bedrock_with_skills.py --exec calculate_sum
+swaig-test examples/bedrock_with_skills.py --exec get_current_time
 ```
 
 ## Complete Example
 
+This example combines a POM prompt, a language, two skills, two custom tools, and SIP routing in one agent.
+
 <!-- snippet: no-run starts a blocking server/client (covered by SNIPPET-COMPILE + EXAMPLES-RUN) -->
 ```python
 #!/usr/bin/env python3
-from signalwire import BedrockAgent
+from signalwire import BedrockAgent, FunctionResult
 import os
 
 # Create a BedrockAgent with full configuration
@@ -271,16 +286,19 @@ if os.environ.get("WEATHER_API_KEY"):
     })
 
 # Add custom tools
-@agent.tool
-def transfer_to_support():
-    """Transfer the call to support department"""
-    return "transfer:support"
+@agent.tool("transfer_to_support", description="Transfer the call to the support department")
+def transfer_to_support(args, raw_data):
+    return FunctionResult("Transferring you to support now.").connect("+15551234567")
 
-@agent.tool
-def check_order_status(order_id: str):
-    """Check the status of an order"""
-    # Simulate order lookup
-    return f"Order {order_id} is currently being processed and will ship tomorrow."
+@agent.tool(
+    "check_order_status",
+    description="Check the status of an order",
+    parameters={"order_id": {"type": "string", "description": "The order ID to look up"}},
+)
+def check_order_status(args, raw_data):
+    order_id = args.get("order_id", "")
+    # Simulate an order lookup
+    return FunctionResult(f"Order {order_id} is currently being processed and will ship tomorrow.")
 
 # Enable SIP routing
 agent.enable_sip_routing()
@@ -294,14 +312,16 @@ if __name__ == "__main__":
 
 ## Deployment Considerations
 
+Keep these points in mind when deploying a BedrockAgent:
+
 1. **Environment Variables**: Set API keys for skills that require them
-2. **Authentication**: Uses same auth mechanism as standard agents (dev:w00t by default)
+2. **Authentication**: Uses the same HTTP Basic Auth as standard agents: username `signalwire` and an auto-generated password unless `SWML_BASIC_AUTH_USER`/`SWML_BASIC_AUTH_PASSWORD` are set
 3. **Port Configuration**: Default port 3000, configurable via constructor or environment
 4. **Production**: Use proper authentication and HTTPS in production environments
 
 ## Migration from Standard Agent
 
-Migrating from a standard Agent to BedrockAgent is straightforward:
+Migrating from a standard Agent to BedrockAgent needs only a few changes:
 
 ```python
 # Before
@@ -322,8 +342,10 @@ Most code will work without modification. Only adjust:
 
 ### Common Issues
 
+These issues come up most often:
+
 1. **Voice not changing**: Ensure you're using valid Bedrock voice IDs
-2. **Parameters not applying**: Use `set_inference_params()` instead of `set_prompt_llm_params()`
+2. **Parameters not applying**: Bedrock's prompt defines `temperature`, `top_p`, `max_tokens`, `confidence`, `presence_penalty` and `frequency_penalty`. Other settings, such as `barge_confidence`, are ignored with a warning
 3. **Skills not loading**: Check API keys are properly configured
 4. **SWML not generating**: Verify the agent is running and accessible
 
@@ -341,6 +363,8 @@ agent.enable_debug_routes()
 
 ## Best Practices
 
+Follow these practices when building with BedrockAgent:
+
 1. **Voice Selection**: Choose appropriate voices for your use case and language
 2. **Temperature Settings**: Lower values (0.3-0.5) for factual responses, higher (0.7-0.9) for creative tasks
 3. **Skill Loading**: Load only necessary skills to minimize token usage
@@ -349,6 +373,8 @@ agent.enable_debug_routes()
 
 ## Limitations
 
+BedrockAgent carries these limits:
+
 - Cannot change the underlying AI model (Bedrock uses a fixed voice-to-voice model)
 - Post-prompt summarization uses OpenAI for compatibility with existing integrations
 - Text-specific features like hints and pronunciation rules don't apply to voice models
@@ -356,10 +382,12 @@ agent.enable_debug_routes()
 
 ## See Also
 
+For more information, see:
+
 - [AgentBase Documentation](agent_guide.md)
 - [Skills Documentation](skills_system.md)
 - [SWAIG Functions Documentation](swaig_reference.md)
-- [SignalWire AI Gateway Documentation](https://docs.signalwire.com/topics/ai-gateway/)
+- [DataMap Guide](datamap_guide.md)
 
 ## Amazon Bedrock Verb Keys
 
@@ -368,23 +396,20 @@ The `amazon_bedrock` verb in SWML supports the following keys:
 **Top-level keys:**
 - `prompt` - Prompt configuration with text/POM and voice settings
 - `SWAIG` - Function definitions and webhook configuration
-- `params` - Inference parameters for the model
+- `params` - Session settings such as `attention_timeout` and `inactivity_timeout`
 - `global_data` - Global data available to all functions
 - `post_prompt` - Post-prompt text for summary generation
 - `post_prompt_url` - URL for posting conversation summaries
 
 **Within nested objects:**
-- **prompt**: `text`, `pom`, `voice_id`, `temperature`, `top_p`
+- **prompt**: `text` or `pom`, `voice_id`, `temperature`, `top_p`, `max_tokens`, `confidence`, `presence_penalty`, `frequency_penalty`
 - **SWAIG**: `functions`, `defaults`
-- **params**: `temperature`, `top_p`, `max_tokens`
+- **params**: session settings such as `attention_timeout`, `inactivity_timeout`, and `hard_stop_time`, not the inference settings in `prompt`
 - **global_data**: (any custom key-value pairs)
 
 **Features not applicable to voice-to-voice models:**
 - `languages` - Language configuration (voice models handle languages natively through voice)
 - `hints` - AI hints (voice models process audio directly without text hints)
 - `pronounce` - Pronunciation rules (not needed as voice input preserves pronunciation)
-- `barge_confidence` - ASR confidence threshold (not applicable to voice-to-voice)
-- `presence_penalty` - Topic diversity control (text model parameter)
-- `frequency_penalty` - Repetition control (text model parameter)
 
-These features are designed for text-based AI models and don't apply to Bedrock's voice-to-voice architecture.
+These features are designed for text-based AI models and don't apply to Bedrock's voice-to-voice architecture. `BedrockAgent` passes `confidence`, `presence_penalty` and `frequency_penalty` through from `set_prompt_llm_params()`, and leaves out `barge_confidence`, which the Bedrock `prompt` object doesn't define.

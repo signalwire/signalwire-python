@@ -24,6 +24,7 @@ import re
 import sys
 
 import structlog
+from collections.abc import MutableMapping
 from typing import Any
 
 _CONTROL_CHAR_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f-\x9f]")
@@ -56,10 +57,6 @@ def _install_library_null_handler() -> None:
     sw_logger = logging.getLogger("signalwire")
     if not any(isinstance(h, logging.NullHandler) for h in sw_logger.handlers):
         sw_logger.addHandler(logging.NullHandler())
-
-
-# Import-time side effect: ONLY the library NullHandler. NOT global configuration.
-_install_library_null_handler()
 
 
 def get_execution_mode() -> str:
@@ -241,54 +238,19 @@ def _configure_structlog(level_num: int, log_format: str, stream: Any) -> None:
     sw_logger.propagate = False  # Don't bubble up to root
     sw_logger.addHandler(handler)
 
-    # Also attach to known SDK short-name loggers
-    for name in _get_sdk_logger_names():
-        lgr = logging.getLogger(name)
-        lgr.handlers.clear()
-        lgr.setLevel(level_num)
-        lgr.propagate = False
-        lgr.addHandler(handler)
-
-
-def _get_sdk_logger_names() -> list[str]:
-    """Known SDK logger names that don't use the signalwire. prefix.
-
-    These are used by the 11 files that call get_logger() with short names.
-    They need to be handled alongside the signalwire namespace logger.
-    """
-    return [
-        "swml_service",
-        "agent_base",
-        "AgentServer",
-        "skill_registry",
-        "skill_manager",
-        "security_config",
-        "config_loader",
-        "auth_handler",
-        "web_service",
-        "search_service",
-        "bedrock_agent",
-        "relay_client",
-        "relay_call",
-    ]
-
 
 def _configure_off_mode() -> None:
     """Suppress all logging output without leaking file descriptors."""
     off_level = logging.CRITICAL + 10
 
-    # Silence the signalwire namespace
+    # Silence the signalwire namespace. The NullHandler stays: a child logger
+    # someone set to its own level would otherwise find no handler at all and
+    # fall through to Python's last-resort handler on stderr.
     sw_logger = logging.getLogger("signalwire")
     sw_logger.handlers.clear()
+    sw_logger.addHandler(logging.NullHandler())
     sw_logger.setLevel(off_level)
     sw_logger.propagate = False
-
-    # Silence known SDK short-name loggers
-    for name in _get_sdk_logger_names():
-        lgr = logging.getLogger(name)
-        lgr.handlers.clear()
-        lgr.setLevel(off_level)
-        lgr.propagate = False
 
     # Configure structlog with a filtering bound logger that suppresses everything
     structlog.configure(
@@ -328,7 +290,82 @@ def get_logger(name: str) -> Any:
     """
     # Library-safe: do NOT auto-configure global logging here. Every SDK module
     # calls get_logger() at import, so auto-configuring would hijack the host
-    # app's logging the moment any SDK submodule is imported. The SDK's own
-    # logger carries a NullHandler (installed at module load) so it's silent by
-    # default; the app opts in to SDK output via configure_logging().
-    return structlog.get_logger(name)
+    # app's logging the moment any SDK submodule is imported.
+    #
+    # Nor return structlog.get_logger(): until someone configures structlog,
+    # its defaults print every level, debug included, straight to stdout. The
+    # SDK's loggers instead carry their own processors and always write through
+    # stdlib logging, so the NullHandlers installed at module load keep them
+    # silent by default, the host app's stdlib logging config applies, and
+    # configure_logging() attaches the SDK's own handler.
+    return structlog.wrap_logger(
+        logging.getLogger(_sdk_logger_name(name)),
+        processors=[*_get_structlog_processors(), _to_stdlib_record],
+        wrapper_class=structlog.stdlib.BoundLogger,
+    )
+
+
+def _sdk_logger_name(name: str) -> str:
+    """The stdlib logger name for an SDK logger: always under ``signalwire``.
+
+    A short name such as "agent_base" becomes "signalwire.agent_base", so the
+    SDK never shares a logger with a host app that happens to use the name.
+    """
+    if name == "signalwire" or name.startswith("signalwire."):
+        return name
+    return f"signalwire.{name}"
+
+
+def _would_emit(name: str, level: int) -> bool:
+    """Whether a record at ``level`` on SDK logger ``name`` would reach a real handler.
+
+    Until configure_logging() runs or the host app sets up logging, the only
+    handler an SDK record meets is the NullHandler on "signalwire", so it goes
+    nowhere.
+    """
+    logger: logging.Logger | None = logging.getLogger(_sdk_logger_name(name))
+    if logger is None or not logger.isEnabledFor(level):
+        return False
+    while logger is not None:
+        if any(
+            not isinstance(handler, logging.NullHandler) and level >= handler.level
+            for handler in logger.handlers
+        ):
+            return True
+        if not logger.propagate:
+            return False
+        logger = logger.parent
+    return False
+
+
+class _EventDict(dict[str, Any]):
+    """An event dict handed to stdlib logging as the record's message.
+
+    The handler configure_logging() installs formats it through structlog's
+    ProcessorFormatter, which reads it as a dict. Any other formatter, such as
+    a host app's ``logging.basicConfig()``, calls ``str()`` on it, which gives
+    a readable line instead of a dict repr.
+    """
+
+    def __str__(self) -> str:
+        fields = " ".join(
+            f"{key}={value!r}"
+            for key, value in self.items()
+            if key not in ("event", "level", "logger", "timestamp")
+            and not key.startswith("_")
+        )
+        return f"{self.get('event', '')} {fields}".rstrip()
+
+
+def _to_stdlib_record(
+    logger: Any, method_name: str, event_dict: MutableMapping[str, Any]
+) -> tuple[Any, ...]:
+    """Final processor: hand the event to stdlib logging for its handlers to render."""
+    return structlog.stdlib.ProcessorFormatter.wrap_for_formatter(
+        logger, method_name, _EventDict(event_dict)
+    )
+
+
+# Import-time side effect: ONLY the library NullHandlers. NOT global configuration.
+# Last, because it needs every definition above.
+_install_library_null_handler()

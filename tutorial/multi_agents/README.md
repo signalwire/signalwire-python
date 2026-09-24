@@ -1,6 +1,6 @@
 # SignalWire Agents SDK Tutorial
 
-Welcome to the comprehensive tutorial for building AI-powered voice agents using the SignalWire Agents SDK. This tutorial will take you from creating your first simple agent to building sophisticated multi-agent systems with knowledge base integration.
+This tutorial builds AI-powered voice agents with the SignalWire Agents SDK. It starts with a single sales agent and ends with a multi-agent system that searches a knowledge base and hands off calls between specialists.
 
 ## Table of Contents
 
@@ -14,7 +14,7 @@ Welcome to the comprehensive tutorial for building AI-powered voice agents using
 
 ## What You'll Learn
 
-This tutorial covers everything you need to know to build production-ready AI voice agents:
+This tutorial covers what you need to build a production-ready AI voice agent:
 
 **Core Concepts:**
 
@@ -64,7 +64,7 @@ Before starting this tutorial, ensure you have:
 This tutorial is organized into progressive lessons, each building on the previous:
 
 ### Lesson 1: Creating Your First Agent
-[📖 Read Lesson 1](lesson1_first_agent.md)
+[Read Lesson 1](lesson1_first_agent.md)
 
 Learn the fundamentals by building a simple sales agent named Morgan. You'll understand:
 - Basic agent structure and configuration
@@ -72,7 +72,7 @@ Learn the fundamentals by building a simple sales agent named Morgan. You'll und
 - Running agents locally and with SSL
 
 ### Lesson 2: Adding Intelligence with Knowledge Bases
-[📖 Read Lesson 2](lesson2_knowledge_bases.md)
+[Read Lesson 2](lesson2_knowledge_bases.md)
 
 Enhance your agent with searchable knowledge using vector search. You'll learn:
 - Installing search dependencies
@@ -80,7 +80,7 @@ Enhance your agent with searchable knowledge using vector search. You'll learn:
 - Integrating knowledge bases into agents
 
 ### Lesson 3: Building Multi-Agent Systems
-[📖 Read Lesson 3](lesson3_multi_agent_systems.md)
+[Read Lesson 3](lesson3_multi_agent_systems.md)
 
 Create a complete multi-agent system with routing and context sharing. You'll master:
 - AgentServer for hosting multiple agents
@@ -88,16 +88,16 @@ Create a complete multi-agent system with routing and context sharing. You'll ma
 - Agent-to-agent transfers with context preservation
 
 ### Lesson 4: Advanced Features and Best Practices
-[📖 Read Lesson 4](lesson4_advanced_features.md)
+[Read Lesson 4](lesson4_advanced_features.md)
 
-Master advanced concepts for production deployment. Topics include:
+This lesson covers advanced concepts for production deployment:
 - Custom SWAIG functions
 - Error handling strategies
 - Production deployment patterns
 - Performance optimization
 
 ### Lesson 5: Extending Your Agents
-[📖 Read Lesson 5](lesson5_extending_agents.md)
+[Read Lesson 5](lesson5_extending_agents.md)
 
 Learn to add custom functionality and create sophisticated conversational flows:
 - Creating custom skills
@@ -110,6 +110,8 @@ Learn to add custom functionality and create sophisticated conversational flows:
 ## Getting Started
 
 ### Quick Installation
+
+Clone the repository and install the SDK in editable mode:
 
 ```bash
 # Clone the repository (if not already done)
@@ -136,10 +138,11 @@ python tutorial/multi_agents/sales_agent.py
 
 ### Testing with SWML
 
-You can test your agent using curl:
+The endpoint requires basic auth. Set `SWML_BASIC_AUTH_USER` and `SWML_BASIC_AUTH_PASSWORD` before starting the agent, so you know the credentials to pass to curl with `-u`:
 
 ```bash
 curl -X POST http://localhost:3000/ \
+  -u devuser:devpassword \
   -H "Content-Type: application/json" \
   -d '{}'
 ```
@@ -181,7 +184,6 @@ python agent.py
 | `SWML_DOMAIN` | Domain for SSL | None |
 | `SWML_BASIC_AUTH_USER` | Basic auth username | Auto-generated |
 | `SWML_BASIC_AUTH_PASSWORD` | Basic auth password | Auto-generated |
-| `PYTORCH_DISABLE_AVX512` | Disable AVX512 for compatibility | `0` |
 
 ### Code Examples
 
@@ -209,17 +211,16 @@ All code examples from this tutorial are available in this directory:
    pip install -e .[search]
    ```
 
-3. **PyTorch compatibility issues:**
+3. **PyTorch crashes with an "illegal instruction" error:** first force PyTorch's most basic CPU kernels. If it still crashes, install a PyTorch build that supports your CPU, as the [search troubleshooting guide](../../docs/search_troubleshooting.md#illegal-instruction-error-cpu-compatibility) describes:
    ```bash
-   # Disable AVX512 instructions
-   export PYTORCH_DISABLE_AVX512=1
+   ATEN_CPU_CAPABILITY=default sw-search tutorial/multi_agents/sales_knowledge.md --output sales_knowledge.swsearch
    ```
 
 ### Getting Help
 
 **Resources:**
 
-- [SignalWire Documentation](https://docs.signalwire.com)
+- [SignalWire Documentation](https://signalwire.com/docs)
 - [GitHub Issues](https://github.com/signalwire/signalwire-python/issues)
 - [Community Discord](https://discord.gg/signalwire)
 
@@ -234,32 +235,32 @@ All code examples from this tutorial are available in this directory:
 
 **Agent Development:**
 
-- ✅ Always inherit from `AgentBase`
-- ✅ Use POM for structured prompts
-- ✅ Handle errors gracefully with `SwaigFunctionResult`
-- ✅ Test locally before deployment
-- ✅ Use meaningful function and parameter names
+- Always inherit from `AgentBase`
+- Use POM for structured prompts
+- Handle errors gracefully with `SwaigFunctionResult`
+- Test locally before deployment
+- Use meaningful function and parameter names
 
 **Production Deployment:**
 
-- ✅ Enable SSL/HTTPS in production
-- ✅ Use environment variables for configuration
-- ✅ Implement proper logging
-- ✅ Set up health checks
-- ✅ Monitor agent performance
+- Enable SSL/HTTPS in production
+- Use environment variables for configuration
+- Implement proper logging
+- Set up health checks
+- Monitor agent performance
 
 **Security:**
 
-- ✅ Use strong authentication
-- ✅ Validate all inputs
-- ✅ Don't expose sensitive data in prompts
-- ✅ Use HTTPS for all communications
-- ✅ Regularly update dependencies
+- Use strong authentication
+- Validate all inputs
+- Don't expose sensitive data in prompts
+- Use HTTPS for all communications
+- Regularly update dependencies
 
 ---
 
 ## Ready to Begin?
 
-Start with [Lesson 1: Creating Your First Agent](lesson1_first_agent.md) to begin your journey into building AI-powered voice agents with SignalWire!
+Start with [Lesson 1: Creating Your First Agent](lesson1_first_agent.md).
 
 *This tutorial is part of the SignalWire Agents SDK. For the latest updates and more information, visit the [official repository](https://github.com/signalwire/signalwire-python).*

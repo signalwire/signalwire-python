@@ -10,6 +10,7 @@ import sys
 import json
 import os
 import logging
+import importlib.util
 from typing import Dict, Any, Optional, List
 
 # Configure logging
@@ -33,15 +34,25 @@ METHODS: Dict[str, Dict[str, Any]] = {}  # method_name -> definition
 METHOD_DESCRIPTIONS: Dict[str, str] = {}  # method_name -> brief description
 
 
+def default_schema_path() -> str:
+    """The SDK's schema.json: the installed package's copy, or this checkout's."""
+    spec = importlib.util.find_spec('signalwire')
+    if spec is not None and spec.submodule_search_locations:
+        for location in spec.submodule_search_locations:
+            candidate = os.path.join(location, 'schema.json')
+            if os.path.isfile(candidate):
+                return candidate
+    # Not installed: the package source is signalwire/signalwire/ in this repo
+    return os.path.join(
+        os.path.dirname(__file__), '..', '..', 'signalwire', 'signalwire', 'schema.json'
+    )
+
+
 def load_schema():
     """Load and index the SWML schema file."""
     global SCHEMA, METHODS, METHOD_DESCRIPTIONS
 
-    # Default to the schema.json in the signalwire package
-    default_schema_path = os.path.join(
-        os.path.dirname(__file__), '..', '..', 'signalwire', 'schema.json'
-    )
-    schema_path = os.environ.get('SWML_SCHEMA_PATH', default_schema_path)
+    schema_path = os.environ.get('SWML_SCHEMA_PATH') or default_schema_path()
     schema_path = os.path.normpath(schema_path)
 
     logger.info(f"Loading schema from {schema_path}")

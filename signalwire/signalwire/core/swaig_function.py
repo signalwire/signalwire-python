@@ -11,6 +11,9 @@ SwaigFunction class for defining and managing SWAIG function interfaces
 
 from typing import TYPE_CHECKING, Any
 from collections.abc import Callable
+import asyncio
+import concurrent.futures
+import inspect
 import logging
 
 # Import here to avoid circular imports
@@ -21,6 +24,30 @@ if TYPE_CHECKING:
     # runtime; TYPE_CHECKING-only so there's no import cost / cycle). Generated from
     # porting-sdk/swaig-specs/swaig-request.yaml (vendored from mod_openai).
     from signalwire.core.swaig_request_generated import SwaigRequest
+
+
+def _resolve_awaitable(result: Any) -> Any:
+    """Return ``result``, first running it to completion if it's awaitable.
+
+    For synchronous callers of an ``async def`` tool handler, such as the
+    serverless entry points and ``swaig-test``. It uses ``asyncio.run()`` when
+    no event loop is running in this thread. Inside a running loop, where
+    ``asyncio.run()`` isn't allowed, it runs the awaitable on a separate
+    thread's loop and waits for it. Asynchronous callers, such as the
+    ``/swaig`` endpoint, await the result on their own loop instead.
+    """
+    if not inspect.isawaitable(result):
+        return result
+
+    async def _await() -> Any:
+        return await result
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        return asyncio.run(_await())
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        return pool.submit(asyncio.run, _await()).result()
 
 
 class SWAIGFunction:
@@ -157,8 +184,9 @@ class SWAIGFunction:
             if raw_data is None:
                 raw_data = {}  # Provide an empty dict as fallback
 
-            # Call the handler with both args and raw_data
-            result = self.handler(args, raw_data)
+            # Call the handler with both args and raw_data. An async handler
+            # returns an awaitable, which runs to completion here.
+            result = _resolve_awaitable(self.handler(args, raw_data))
 
             # Handle different result types - everything must end up as a FunctionResult
             if isinstance(result, FunctionResult):

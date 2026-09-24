@@ -29,39 +29,39 @@ Results: []
    ```
    Examine the similarity scores in verbose output.
 
-3. Check the distance threshold:
+3. Check the similarity threshold:
 <!-- snippet: no-compile config-excerpt -->
    ```python
    {
-       "distance_threshold": 0.7  # Very strict -- may filter out valid results
+       "similarity_threshold": 0.7  # Very strict -- may filter out valid results
    }
    ```
 
 **Common Causes and Solutions:**
 
-1. **Distance threshold too strict** -- Lower the threshold to allow weaker but valid matches:
+1. **Similarity threshold too strict**: Lower the threshold to allow weaker but valid matches:
    ```python
    # Problem
-   {"distance_threshold": 0.7}  # Only near-perfect matches
+   {"similarity_threshold": 0.7}  # Only near-perfect matches
 
    # Solution
-   {"distance_threshold": 0.4}  # More permissive
+   {"similarity_threshold": 0.4}  # More permissive
    ```
 
-2. **Content does not exist in the index** -- Verify and add missing content:
+2. **Content does not exist in the index**: Verify and add missing content:
    ```bash
    sw-search search ./knowledge.swsearch "authentication" --verbose --count 10
    # If no content about authentication exists, rebuild with additional sources
    sw-search ./auth-docs --output updated.swsearch
    ```
 
-3. **Query phrasing does not match content semantically** -- Try synonym variations:
+3. **Query phrasing does not match content semantically**: Try synonym variations:
    ```bash
    # "how to authenticate" may not match content phrased as "bearer token usage"
    sw-search search ./knowledge.swsearch "bearer token" --verbose
    ```
 
-4. **Model mismatch between index build and query** -- The embedding model used at query time must match the model used when building the index:
+4. **Model mismatch between index build and query**: The embedding model used at query time must match the model used when building the index:
    ```python
    # Built with base model
    # sw-search ./docs --model base --output docs.swsearch
@@ -70,7 +70,7 @@ Results: []
    {"model_name": "base"}  # Must match the build model
    ```
 
-**Fallback strategy** -- Try progressively lower thresholds:
+**Fallback strategy**: Try progressively lower thresholds:
 ```python
 def search_with_fallback(self, query):
     """Try multiple thresholds"""
@@ -111,24 +111,24 @@ Results:
    sw-search search ./knowledge.swsearch "Python authentication examples" --verbose --count 10
    ```
 
-3. Check chunking quality by exporting the index:
+3. Check chunking quality by reading the index directly. A `.swsearch` file is a SQLite database, so its chunks are queryable with `sqlite3`:
    ```bash
-   sw-search export ./knowledge.swsearch ./exported.json
+   sqlite3 ./knowledge.swsearch "SELECT filename, section, content FROM chunks"
    # Review chunk boundaries -- are they mixing topics?
    ```
 
 **Common Causes and Solutions:**
 
-1. **Threshold too permissive** -- Raise the threshold to reject weak matches:
+1. **Threshold too permissive**: Raise the threshold to reject weak matches:
    ```python
    # Problem
-   {"distance_threshold": 0.2}  # Accepts weak matches
+   {"similarity_threshold": 0.2}  # Accepts weak matches
 
    # Solution
-   {"distance_threshold": 0.4}
+   {"similarity_threshold": 0.4}
    ```
 
-2. **Poor chunking strategy** -- Use a strategy that matches your content type:
+2. **Poor chunking strategy**: Use a strategy that matches your content type:
    ```bash
    # Problem: sentence strategy splits code blocks
    sw-search ./docs --chunking-strategy sentence
@@ -138,21 +138,21 @@ Results:
    ```
    See [search_indexing.md](search_indexing.md) for details on chunking strategies.
 
-3. **Missing metadata and tags** -- Add tags during indexing to improve hybrid scoring:
+3. **Missing metadata and tags**: Add tags during indexing to improve hybrid scoring:
    ```bash
    sw-search ./docs --tags python,authentication,examples --output docs.swsearch
    ```
 
-4. **Content lacks specificity** -- If generic content dominates, add more specific documents covering the exact topics users ask about.
+4. **Content lacks specificity**: If generic content dominates, add more specific documents covering the exact topics users ask about.
 
 **Tag-based filtering:**
 ```python
 self.add_skill("native_vector_search", {
     "tool_name": "search_python_examples",
     "description": "Search for Python code examples",
-    "index_path": "./docs.swsearch",
+    "index_file": "./docs.swsearch",
     "tags": ["python", "code"],
-    "distance_threshold": 0.4
+    "similarity_threshold": 0.4
 })
 ```
 
@@ -183,23 +183,23 @@ Results:
 
 2. Examine metadata on each result:
    ```bash
-   sw-search export ./knowledge.swsearch ./exported.json
+   sqlite3 ./knowledge.swsearch "SELECT filename, section, tags, metadata FROM chunks"
    # Check if the best result lacks metadata that other results have
    ```
 
 **Common Causes and Solutions:**
 
-1. **Missing metadata on the best result** -- Results with tags receive keyword boosts in hybrid scoring. Add tags to the relevant chunks:
+1. **Missing metadata on the best result**: Results with tags receive keyword boosts in hybrid scoring. Re-export the source documents to JSON, add tags, and rebuild:
    ```bash
-   sw-search export ./knowledge.swsearch ./chunks.json
+   sw-search ./docs --output-format json --output chunks.json
    # Edit chunks.json to add metadata:
    # {"content": "Voice configuration guide...", "metadata": {"tags": ["voice", "configuration", "guide"]}}
    sw-search ./chunks.json --chunking-strategy json --output fixed.swsearch
    ```
 
-2. **Keyword matches boosting wrong results** -- A result containing both query keywords (e.g., "Configuration for voice, database, and API...") may receive a keyword boost even though it is less relevant than a focused document.
+2. **Keyword matches boosting wrong results**: A result containing both query keywords (e.g., "Configuration for voice, database, and API...") may receive a keyword boost even though it is less relevant than a focused document.
 
-3. **Increase result count** -- Returning more results allows the LLM to select the most relevant one:
+3. **Increase result count**: Returning more results allows the LLM to select the most relevant one:
 <!-- snippet: no-compile config-excerpt -->
    ```python
    {"count": 5}
@@ -233,7 +233,7 @@ Search results appear cut off mid-sentence or are incomplete.
 
 2. Examine individual chunk sizes:
    ```bash
-   sw-search export ./knowledge.swsearch ./chunks.json
+   sqlite3 ./knowledge.swsearch "SELECT filename, LENGTH(content) FROM chunks ORDER BY LENGTH(content) DESC LIMIT 10"
    # Check for very long chunks
    ```
 
@@ -248,21 +248,21 @@ Search results appear cut off mid-sentence or are incomplete.
 
 **Common Causes and Solutions:**
 
-1. **max_content_length too low** -- Increase the budget:
+1. **max_content_length too low**: Increase the budget:
 <!-- snippet: no-compile config-excerpt -->
    ```python
    {"max_content_length": 32768}  # 32KB (default)
    ```
 
-2. **Individual chunks too long** -- Rechunk with a strategy that produces smaller pieces:
+2. **Individual chunks too long**: Rechunk with a strategy that produces smaller pieces, for example by lowering the sentence count per chunk:
    ```bash
    sw-search ./docs \
      --chunking-strategy sentence \
-     --max-chunk-size 1000 \
+     --max-sentences-per-chunk 3 \
      --output docs_small_chunks.swsearch
    ```
 
-3. **Too many results for the budget** -- Reduce the result count so each result gets more space:
+3. **Too many results for the budget**: Reduce the result count so each result gets more space:
 <!-- snippet: no-compile config-excerpt -->
    ```python
    {
@@ -292,11 +292,11 @@ The agent does not invoke the search function even when the user asks questions 
    swaig-test agent.py --exec search_docs --query "test"
    ```
 
-3. Check the function description -- a vague description makes it less likely the LLM will invoke it.
+3. Check the function description. A vague description makes it less likely the LLM will invoke it.
 
 **Common Causes and Solutions:**
 
-1. **Vague function description** -- Provide a specific, detailed description:
+1. **Vague function description**: Provide a specific, detailed description:
    ```python
    # Problem
    {"description": "Search docs"}
@@ -310,11 +310,11 @@ The agent does not invoke the search function even when the user asks questions 
            "API usage, troubleshooting, code examples, or technical details. "
            "This is your primary source of truth."
        ),
-       "index_path": "./docs.swsearch"
+       "index_file": "./docs.swsearch"
    })
    ```
 
-2. **No prompt instructions telling the agent to search** -- Add explicit guidance:
+2. **No prompt instructions telling the agent to search**: Add explicit guidance:
 <!-- snippet: no-compile method-body-excerpt -->
    ```python
    self.prompt_add_section(
@@ -328,7 +328,7 @@ The agent does not invoke the search function even when the user asks questions 
    )
    ```
 
-3. **LLM believes it already knows the answer** -- Strengthen the prompt:
+3. **LLM believes it already knows the answer**: Strengthen the prompt:
 <!-- snippet: no-compile indented-list-excerpt -->
    ```python
    "ALWAYS search before answering, even if you think you know the answer"
@@ -355,7 +355,7 @@ Error loading model: sentence-transformers/all-MiniLM-L6-v2
 
 2. Check the model cache:
    ```bash
-   ls ~/.cache/huggingface/transformers/
+   ls ~/.cache/huggingface/hub/
    ```
 
 3. Check network access to Hugging Face:
@@ -365,22 +365,22 @@ Error loading model: sentence-transformers/all-MiniLM-L6-v2
 
 **Common Causes and Solutions:**
 
-1. **Search dependencies not installed** -- Install the appropriate search extras:
+1. **Search dependencies not installed**: Install the appropriate search extras:
    ```bash
    # Base install does not include search
    pip install signalwire-sdk[search]
    ```
 
-2. **Network issues preventing model download on first run** -- Pre-download the model:
+2. **Network issues preventing model download on first run**: Pre-download the model:
    ```bash
    python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
    ```
 
-3. **Insufficient disk space** -- Models require approximately 400MB:
+3. **Insufficient disk space**: Models require approximately 400MB:
    ```bash
    df -h ~/.cache
    # Clean if needed
-   rm -rf ~/.cache/huggingface/transformers/
+   rm -rf ~/.cache/huggingface/hub/
    ```
 
 **Pre-download in Docker builds:**
@@ -389,12 +389,12 @@ RUN pip install signalwire-sdk[search] && \
     python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
 ```
 
-**Offline mode** -- If the model is already cached:
+**Offline mode**: If the model is already cached:
 ```bash
 export TRANSFORMERS_OFFLINE=1
 ```
 
-**Query-only mode** -- If you only need to query existing indexes and do not need the full model:
+**Query-only mode**: If you only need to query existing indexes and do not need the full model:
 ```bash
 pip install signalwire-sdk[search-queryonly]
 ```
@@ -431,25 +431,22 @@ This occurs when PyTorch was compiled with newer CPU instruction sets (such as A
 
 **Solution:**
 
-Set environment variables to disable the unsupported instruction sets:
+PyTorch chooses many of its CPU kernels at runtime, based on what the processor supports. First, force the most basic kernels with `ATEN_CPU_CAPABILITY` and run the build again:
 
 ```bash
-export PYTORCH_DISABLE_AVX2=1
-export PYTORCH_DISABLE_AVX512=1
+ATEN_CPU_CAPABILITY=default sw-search ./docs --output index.swsearch
 ```
 
-Then run commands with these variables set:
+If it still crashes, the installed binary itself uses instructions the CPU lacks. Install a PyTorch build that supports this CPU and operating system, using the options on the PyTorch installation page. The CPU-only wheels are a common choice, but they don't support every older processor:
+
 ```bash
-PYTORCH_DISABLE_AVX2=1 PYTORCH_DISABLE_AVX512=1 sw-search ./docs --output index.swsearch
+pip uninstall torch
+pip install torch --index-url https://download.pytorch.org/whl/cpu
 ```
 
-**Permanent Fix:**
+**Alternative:**
 
-Add the exports to your shell profile (`.bashrc`, `.zshrc`, or equivalent):
-```bash
-export PYTORCH_DISABLE_AVX2=1
-export PYTORCH_DISABLE_AVX512=1
-```
+Run `sw-search` on hardware that supports AVX2 and AVX-512, or inside a container built for the host's actual CPU capabilities.
 
 ---
 
@@ -461,7 +458,7 @@ export PYTORCH_DISABLE_AVX512=1
 Error: could not connect to PostgreSQL server
 ```
 
-or
+Or the extension itself may be missing:
 
 ```
 vector type not found in the database
@@ -507,6 +504,7 @@ vector type not found in the database
    # Install the extension package (PostgreSQL 16 example)
    sudo apt-get install postgresql-16-pgvector
    ```
+   Then enable it inside the target database:
    ```sql
    -- Enable in the database (as superuser)
    CREATE EXTENSION vector;
@@ -536,7 +534,7 @@ vector type not found in the database
    telnet postgres-host 5432
    ```
 
-5. **Authentication failure** -- Verify credentials and check `pg_hba.conf` for allowed connection methods.
+5. **Authentication failure**: Verify credentials and check `pg_hba.conf` for allowed connection methods.
 
 6. **Docker container cannot reach host PostgreSQL:**
    ```bash
@@ -581,7 +579,7 @@ See [search_deployment.md](search_deployment.md) for full pgvector deployment gu
 
 **Symptoms:**
 
-Search queries take 500ms or more instead of the expected 20-50ms range.
+Search queries take much longer than expected.
 
 **Diagnosis:**
 
@@ -601,18 +599,18 @@ Search queries take 500ms or more instead of the expected 20-50ms range.
 3. Check which model is being used:
 <!-- snippet: no-compile config-excerpt -->
    ```python
-   {"model_name": "large"}  # Large models are significantly slower
+   {"model_name": "base"}  # base is slower than mini
    ```
 
 **Common Causes and Solutions:**
 
-1. **Using the large model** -- Switch to the mini model for 2-3x faster queries with minimal quality loss:
+1. **Using the base model**: Switch to the mini model for faster queries with minimal quality loss:
 <!-- snippet: no-compile config-excerpt -->
    ```python
    {"model_name": "mini"}
    ```
 
-2. **No vector index on pgvector** -- Create an IVFFlat index:
+2. **No vector index on pgvector**: Create an IVFFlat index:
    ```sql
    -- For small datasets (< 100k rows)
    CREATE INDEX ON knowledge_chunks USING ivfflat (embedding vector_cosine_ops)
@@ -623,16 +621,16 @@ Search queries take 500ms or more instead of the expected 20-50ms range.
      WITH (lists = 1000);
    ```
 
-3. **Too many results requested** -- Reduce the result count:
+3. **Too many results requested**: Reduce the result count:
 <!-- snippet: no-compile config-excerpt -->
    ```python
    {"count": 3}  # Faster than requesting 10+
    ```
 
-4. **Remote pgvector with high network latency** -- For single-agent deployments, consider using a local SQLite index instead:
+4. **Remote pgvector with high network latency**: For single-agent deployments, consider using a local SQLite index instead:
 <!-- snippet: no-compile config-excerpt -->
    ```python
-   {"index_path": "./local.swsearch"}
+   {"index_file": "./local.swsearch"}
    ```
 
 5. **PostgreSQL not tuned for vector operations:**
@@ -650,7 +648,7 @@ Search queries take 500ms or more instead of the expected 20-50ms range.
    LIMIT 5;
    ```
 
-**Connection pool exhaustion** (multi-agent deployments) -- Use pgbouncer for connection pooling:
+**Connection pool exhaustion** (multi-agent deployments): use pgbouncer for connection pooling:
 ```ini
 # /etc/pgbouncer/pgbouncer.ini
 [databases]
@@ -661,6 +659,9 @@ pool_mode = transaction
 max_client_conn = 1000
 default_pool_size = 25
 ```
+
+Point agents at pgbouncer instead of PostgreSQL directly:
+
 ```bash
 # Connect through pgbouncer (default port 6432)
 # postgresql://user:pass@localhost:6432/knowledge
@@ -683,13 +684,13 @@ This exposes similarity scores, hybrid scoring details, and timing information i
 
 ### Inspecting Chunks
 
-Export the index to inspect what was actually indexed:
+A `.swsearch` file is a SQLite database, so query it directly to inspect what was indexed:
 
 ```bash
-sw-search export ./knowledge.swsearch ./inspect.json
+sqlite3 ./knowledge.swsearch "SELECT filename, section, content FROM chunks"
 ```
 
-Review the exported JSON to verify:
+Review the output to verify:
 - Chunk boundaries are sensible and do not split related content
 - Metadata and tags are present on chunks that need them
 - Chunk sizes are appropriate (not too large, not too small)
@@ -702,7 +703,7 @@ Verify that the embedding model loads correctly and produces vectors:
 python -c "from sentence_transformers import SentenceTransformer; m = SentenceTransformer('all-MiniLM-L6-v2'); print(m.encode('test').shape)"
 ```
 
-If this fails, see the [Model Loading Errors](#model-loading-errors) and ["Illegal Instruction" Error](#illegal-instruction-error-cpu-compatibility) sections above.
+If this fails, see the earlier [Model Loading Errors](#model-loading-errors) and ["Illegal Instruction" Error](#illegal-instruction-error-cpu-compatibility) sections.
 
 ### Score Analysis
 
@@ -718,15 +719,16 @@ Interpret the scores:
 - **0.3 to 0.5**: Weak match, may or may not be relevant
 - **Below 0.3**: Poor match, likely irrelevant
 
-A typical `distance_threshold` of 0.4 provides a good balance between recall and precision.
+A typical `--similarity-threshold` of 0.4 provides a good balance between recall and precision.
 
 ### Verbose CLI Output
 
 The `--verbose` flag on `sw-search search` provides:
 - Similarity scores for each result
-- Hybrid scoring breakdown (vector score, keyword boost, metadata boost)
-- Query timing information
-- Number of chunks scanned
+- The NLP backend and embedding model used for the query
+- How many chunks and files the loaded index contains
+
+For example:
 
 ```bash
 sw-search search ./knowledge.swsearch "query" --verbose
@@ -757,6 +759,8 @@ When troubleshooting search issues, work through this checklist in order:
 
 ### Index Building
 
+Follow these practices when building an index:
+
 - **Choose the right chunking strategy for your content type:**
   - Technical docs with code: `markdown`
   - FAQ/support content: `qa`
@@ -780,7 +784,9 @@ When troubleshooting search issues, work through this checklist in order:
 
 ### Agent Configuration
 
-- **Write specific, detailed function descriptions** -- The LLM uses the description to decide when to call the search function. Generic descriptions like "Search docs" lead to the function not being invoked.
+Follow these practices when configuring the skill on an agent:
+
+- **Write specific, detailed function descriptions**: The LLM uses the description to decide when to call the search function. Generic descriptions like "Search docs" lead to the function not being invoked.
 - **Add explicit prompt instructions** telling the agent to search before answering:
 <!-- snippet: no-compile method-body-excerpt -->
   ```python
@@ -791,7 +797,7 @@ When troubleshooting search issues, work through this checklist in order:
   ])
   ```
 - **Match the model name** between the index build and the agent configuration.
-- **Set a balanced distance threshold** -- Start with 0.4 and adjust based on testing.
+- **Set a balanced distance threshold**: Start with 0.4 and adjust based on testing.
 - **Tune result count and content length** together to avoid truncation:
 <!-- snippet: no-compile config-excerpt -->
   ```python
@@ -803,12 +809,14 @@ When troubleshooting search issues, work through this checklist in order:
 
 ### Production Deployment
 
+Follow these practices when deploying to production:
+
 - **Use `search-queryonly` in production** to save approximately 400MB of dependencies:
   ```bash
   pip install signalwire-sdk[search-queryonly]
   ```
 - **Use `search-full` for building indexes** in your CI/CD pipeline or development environment.
-- **Switch to pgvector for multi-agent deployments** -- SQLite is appropriate for single-agent setups; pgvector handles concurrent access and shared knowledge bases.
+- **Switch to pgvector for multi-agent deployments**: SQLite is appropriate for single-agent setups; pgvector handles concurrent access and shared knowledge bases.
 - **Pre-download models in Docker builds** to avoid first-run delays:
   ```dockerfile
   RUN pip install signalwire-sdk[search] && \
@@ -820,24 +828,24 @@ When troubleshooting search issues, work through this checklist in order:
     WITH (lists = 100);
   ```
 - **Use connection pooling** (pgbouncer) for multi-agent deployments sharing a pgvector database.
-- **Monitor search performance** -- Track query latency, result counts, and no-result queries to identify content gaps and performance regressions.
+- **Monitor search performance**: Track query latency, result counts, and no-result queries to identify content gaps and performance regressions.
 
 ### Common Mistakes to Avoid
 
-1. **Not telling the agent to search** -- Adding the search skill without prompt instructions means the LLM may never invoke it. Always pair `add_skill()` with prompt instructions.
+1. **Not telling the agent to search**: Adding the search skill without prompt instructions means the LLM may never invoke it. Always pair `add_skill()` with prompt instructions.
 
-2. **Using the wrong chunking strategy** -- Sentence-based chunking splits code blocks and destroys their meaning. Use the markdown strategy for technical documentation.
+2. **Using the wrong chunking strategy**: Sentence-based chunking splits code blocks and destroys their meaning. Use the markdown strategy for technical documentation.
 
 3. **Setting the distance threshold too strictly or too loosely:**
    - Too strict (0.7): returns no results for valid queries
    - Too permissive (0.2): returns irrelevant results
    - Recommended starting point: 0.4
 
-4. **Mismatched models** -- Building the index with one model and querying with a different model produces meaningless similarity scores. Always match the model.
+4. **Mismatched models**: Building the index with one model and querying with a different model produces meaningless similarity scores. Always match the model.
 
-5. **Ignoring metadata** -- Indexes built without tags lose the keyword boosting benefits of hybrid search. Add relevant tags during indexing.
+5. **Ignoring metadata**: Indexes built without tags lose the keyword boosting benefits of hybrid search. Add relevant tags during indexing.
 
-6. **Deploying without testing** -- Always test with the CLI and `swaig-test` before deploying:
+6. **Deploying without testing**: Always test with the CLI and `swaig-test` before deploying:
    ```bash
    sw-search search ./knowledge.swsearch "test queries"
    swaig-test agent.py --exec search_docs --query "test"
@@ -851,7 +859,7 @@ When troubleshooting search issues, work through this checklist in order:
 ```bash
 sw-search --help
 sw-search search --help
-sw-search export --help
+sw-search validate --help
 ```
 
 **Enable debug logging:**
@@ -865,9 +873,9 @@ os.environ['SIGNALWIRE_LOG_LEVEL'] = 'DEBUG'
 sw-search search ./knowledge.swsearch "query" --verbose
 ```
 
-**Export and inspect index contents:**
+**Inspect index contents directly:**
 ```bash
-sw-search export ./knowledge.swsearch ./inspect.json
+sqlite3 ./knowledge.swsearch "SELECT filename, section, content FROM chunks"
 ```
 
 **GitHub Issues:**

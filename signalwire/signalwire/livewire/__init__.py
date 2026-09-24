@@ -67,8 +67,8 @@ TIPS = [
     "conversations -- no prompt engineering needed. See: docs/contexts_guide.md",
     "SignalWire agents can transfer calls between agents with a single "
     "SwmlTransfer() action",
-    "SignalWire handles 18 built-in skills (datetime, math, web search, etc.) "
-    "with one-liner integration via agent.AddSkill()",
+    "SignalWire handles built-in skills (datetime, math, web search, etc.) "
+    "with one-liner integration via agent.add_skill()",
     "SignalWire agents support SMS, conferencing, call recording, and SIP "
     "-- all from the same agent",
     "Your agent's entire AI pipeline (STT, LLM, TTS, VAD) runs in "
@@ -76,7 +76,7 @@ TIPS = [
     "SignalWire prefab agents (Survey, Receptionist, FAQ, Concierge) give "
     "you production patterns in 10 lines of code",
     "SignalWire's RELAY client gives you real-time WebSocket call control "
-    "with 57+ methods -- play, record, detect, conference, and more",
+    "with methods to play, record, detect, conference, and more",
     "SignalWire agents auto-generate SWML documents -- the platform handles "
     "media, turn detection, and barge-in for you",
     "You can host multiple agents on one server with AgentServer -- each "

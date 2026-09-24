@@ -35,7 +35,11 @@ from .config import (
     HELP_DESCRIPTION,
     HELP_EPILOG_SHORT,
 )
-from .core.argparse_helpers import CustomArgumentParser, parse_function_arguments
+from .core.argparse_helpers import (
+    CustomArgumentParser,
+    parse_function_arguments,
+    undeclared_argument_warnings,
+)
 from .core.agent_loader import (
     discover_agents_in_file,
     load_agent_from_file,
@@ -390,8 +394,12 @@ def main() -> int:
     )
     serverless_group.add_argument("--env-file", help="Load environment from file")
 
+    parser.add_argument(
+        "--call-id",
+        help="call_id the simulated request carries (put it before --exec)",
+    )
+
     # Hidden/advanced options (not shown in main help)
-    parser.add_argument("--call-id", help=argparse.SUPPRESS)
     parser.add_argument("--project-id", help=argparse.SUPPRESS)
     parser.add_argument("--space-id", help=argparse.SUPPRESS)
     parser.add_argument("--method", default="POST", help=argparse.SUPPRESS)
@@ -473,6 +481,15 @@ def main() -> int:
         print("parse OK")
         return 0
 
+    # SDK logs are silent until something configures logging. --verbose turns
+    # them on, at debug level unless SIGNALWIRE_LOG_LEVEL says otherwise, before
+    # the agent file is loaded so its construction is logged too.
+    if args.verbose and not args.raw:
+        from signalwire.core.logging_config import configure_logging
+
+        os.environ.setdefault("SIGNALWIRE_LOG_LEVEL", "debug")
+        configure_logging()
+
     # ===== SERVERLESS SIMULATION SETUP =====
     serverless_simulator = None
 
@@ -511,6 +528,25 @@ def main() -> int:
                 env_overrides["AWS_LAMBDA_FUNCTION_URL"] = args.aws_function_url
             if args.aws_region:
                 env_overrides["AWS_REGION"] = args.aws_region
+            # Behind API Gateway, the agent's URL is the gateway's. The SDK
+            # reads it from AWS_LAMBDA_FUNCTION_URL, so simulate that.
+            if args.aws_api_gateway_id and args.aws_function_url:
+                print(
+                    "Warning: --aws-api-gateway-id is ignored when --aws-function-url is set",
+                    file=sys.stderr,
+                )
+            elif args.aws_api_gateway_id:
+                region = args.aws_region or "us-east-1"
+                stage = args.aws_stage or "prod"
+                env_overrides["AWS_LAMBDA_FUNCTION_URL"] = (
+                    f"https://{args.aws_api_gateway_id}.execute-api."
+                    f"{region}.amazonaws.com/{stage}"
+                )
+            elif args.aws_stage:
+                print(
+                    "Warning: --aws-stage only applies with --aws-api-gateway-id",
+                    file=sys.stderr,
+                )
         elif args.simulate_serverless == "cgi":
             if args.cgi_host:
                 env_overrides["HTTP_HOST"] = args.cgi_host
@@ -729,8 +765,13 @@ def main() -> int:
             body=request_body,
         )
 
-        # Apply dynamic configuration
-        apply_dynamic_config(agent, mock_request, verbose=args.verbose and not args.raw)
+        # Apply dynamic configuration, except for a SWML dump alone: that renders
+        # as the server does, applying the callback to a per-request copy, so
+        # applying it here too would run it twice
+        if args.list_tools or not args.dump_swml:
+            apply_dynamic_config(
+                agent, mock_request, verbose=args.verbose and not args.raw
+            )
 
         # Handle --list-tools
         if args.list_tools:
@@ -763,6 +804,12 @@ def main() -> int:
             except ValueError as e:
                 print(f"Error parsing arguments: {e}")
                 return 1
+
+            cli_options = {o for a in parser._actions for o in a.option_strings}
+            for warning in undeclared_argument_warnings(
+                function_args, func, cli_options
+            ):
+                print(warning, file=sys.stderr)
 
             # Check if this is a DataMap function
             is_datamap = isinstance(func, dict) and "data_map" in func
@@ -844,9 +891,16 @@ def main() -> int:
                             args.verbose,
                         )
                     else:
-                        # For local webhook functions, call the agent's handler
-                        result = agent.on_function_call(
-                            args.tool_name, function_args, post_data
+                        # For local webhook functions, call the agent's handler,
+                        # running an async handler to completion
+                        from signalwire.core.swaig_function import (
+                            _resolve_awaitable,
+                        )
+
+                        result = _resolve_awaitable(
+                            agent.on_function_call(
+                                args.tool_name, function_args, post_data
+                            )
                         )
 
                     print("RESULT:")

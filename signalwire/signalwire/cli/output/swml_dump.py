@@ -137,10 +137,12 @@ def handle_dump_swml(agent: "AgentBase", args: argparse.Namespace) -> int:
             print(f"Mock request method: {mock_request.method}")
             print("-" * 60)
 
-        # Apply dynamic configuration with the mock request
-        apply_dynamic_config(agent, mock_request, verbose=args.verbose and not args.raw)
+        verbose = args.verbose and not args.raw
 
-        # For dynamic agents, call on_swml_request if available
+        # For dynamic agents, call on_swml_request if available. As on the
+        # server, rendering then applies the dynamic configuration callback to
+        # a copy of the agent, so it isn't applied to the agent first: that
+        # would run it twice, and duplicate whatever it adds.
         if hasattr(agent, "on_swml_request"):
             try:
                 # Dynamic agents expect (request_data, callback_path, request)
@@ -150,7 +152,7 @@ def handle_dump_swml(agent: "AgentBase", args: argparse.Namespace) -> int:
                     post_data, "/swml", cast(Any, mock_request)
                 )
 
-                if args.verbose and not args.raw:
+                if verbose:
                     print(f"Dynamic agent modifications: {modifications}")
 
                 # Generate SWML with modifications
@@ -161,10 +163,15 @@ def handle_dump_swml(agent: "AgentBase", args: argparse.Namespace) -> int:
                         f"Dynamic agent callback failed, falling back to static SWML: {e}"
                     )
                 # Fall back to static SWML generation
+                apply_dynamic_config(agent, mock_request, verbose=verbose)
                 swml_doc = agent._render_swml()
-        else:
+        elif hasattr(agent, "_render_swml"):
             # Static agent - generate SWML normally
+            apply_dynamic_config(agent, mock_request, verbose=verbose)
             swml_doc = agent._render_swml()
+        else:
+            # A plain SWMLService: its document is what it serves
+            swml_doc = agent.render_document()
 
         if args.raw:
             # Output only the raw JSON for piping to jq/yq

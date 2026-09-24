@@ -6,6 +6,8 @@ RELAY events are server-pushed notifications about call state changes and operat
 
 ### On a Call
 
+Register a listener directly, or wait inline for a specific event:
+
 ```python
 @client.on_call
 async def handle(call):
@@ -107,6 +109,8 @@ if event.event_type == "calling.call.state":
 
 ## Call States
 
+A call moves through these states in order:
+
 ```
 created -> ringing -> answered -> ending -> ended
 ```
@@ -131,6 +135,6 @@ When a call reaches the `ended` state, the `end_reason` field indicates why:
 
 ## Message States
 
-Outbound messages progress through: `queued` → `initiated` → `sent` → `delivered` (or `undelivered`/`failed`).
+Outbound messages progress through `queued`, `initiated`, `sent`, and `delivered` (or `undelivered`/`failed`).
 
 Constants: `MESSAGE_STATE_QUEUED`, `MESSAGE_STATE_INITIATED`, `MESSAGE_STATE_SENT`, `MESSAGE_STATE_DELIVERED`, `MESSAGE_STATE_UNDELIVERED`, `MESSAGE_STATE_FAILED`, `MESSAGE_STATE_RECEIVED`

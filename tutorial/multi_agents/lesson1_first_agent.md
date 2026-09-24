@@ -1,6 +1,6 @@
 # Lesson 1: Creating Your First Agent
 
-In this lesson, you'll learn how to create a simple AI-powered voice agent using the SignalWire Agents SDK. We'll build Morgan, a friendly sales specialist who can help customers with PC building recommendations.
+This lesson builds Morgan, a friendly sales specialist who helps customers with PC building recommendations. Morgan is a simple AI-powered voice agent built with the SignalWire Agents SDK.
 
 ## Table of Contents
 
@@ -37,9 +37,11 @@ SignalWire Agents are Python classes that inherit from `AgentBase`. Every agent 
 
 ## Creating a Basic Agent
 
-Let's create our first agent. We'll build Morgan, a sales specialist for PC Builder Pro.
+This section creates the first agent: Morgan, a sales specialist for PC Builder Pro.
 
 ### Step 1: Import Required Modules
+
+Create `sales_agent.py` and define an agent class that inherits from `AgentBase`:
 
 ```python
 #!/usr/bin/env python3
@@ -77,6 +79,8 @@ The Prompt Object Model (POM) provides a structured way to define agent behavior
 
 ### Step 3: Add the Agent's Role
 
+Add a prompt section that names Morgan and sets the character:
+
 ```python
 def __init__(self):
     super().__init__(
@@ -101,6 +105,8 @@ def __init__(self):
 
 ### Step 4: Define Areas of Expertise
 
+Add a second section listing what Morgan specializes in:
+
 ```python
     # Add expertise section
     self.prompt_add_section(
@@ -117,6 +123,8 @@ def __init__(self):
 ```
 
 ### Step 5: Define Tasks and Workflow
+
+Add the steps Morgan should follow during a sales call:
 
 ```python
     # Define the sales workflow
@@ -136,6 +144,8 @@ def __init__(self):
 
 ### Step 6: Add Voice Instructions
 
+Add a section that describes how Morgan should sound while speaking:
+
 ```python
     # Voice and tone instructions
     self.prompt_add_section(
@@ -152,9 +162,11 @@ def __init__(self):
 
 ## Adding Voice and Language
 
-SignalWire supports multiple text-to-speech voices. Let's configure Morgan's voice:
+SignalWire supports multiple text-to-speech voices.
 
 ### Step 7: Configure Voice Settings
+
+Configure Morgan's voice with `add_language()`:
 
 ```python
     # Configure language and voice
@@ -276,6 +288,8 @@ if __name__ == "__main__":
 
 ### Step 8: Run the Agent
 
+Run the script from the repository root:
+
 ```bash
 # Make sure you're in the signalwire-python directory
 cd /path/to/signalwire-python
@@ -293,21 +307,33 @@ Press Ctrl+C to stop
 ==================================================
 ```
 
+Every request to the agent needs basic auth. Without `SWML_BASIC_AUTH_USER` and `SWML_BASIC_AUTH_PASSWORD` set, the SDK generates a password and keeps it out of the logs. Set both before running the agent, so you know what to pass to curl:
+
+```bash
+export SWML_BASIC_AUTH_USER=devuser
+export SWML_BASIC_AUTH_PASSWORD=devpassword
+python tutorial/multi_agents/sales_agent.py
+```
+
 ---
 
 ## Testing Your Agent
 
 ### Method 1: Get SWML Document
 
+Request the SWML document directly with curl, while the agent is running:
+
 ```bash
 # Get the SWML configuration
-curl http://localhost:3000/
+curl -u devuser:devpassword http://localhost:3000/
 
 # With pretty printing
-curl http://localhost:3000/ | python -m json.tool
+curl -u devuser:devpassword http://localhost:3000/ | python -m json.tool
 ```
 
 ### Method 2: Test with swaig-test
+
+`swaig-test` builds the agent without starting a server, which is faster for quick checks:
 
 ```bash
 # Install the SDK if not already done
@@ -319,26 +345,38 @@ swaig-test tutorial/multi_agents/sales_agent.py --dump-swml
 
 ### Understanding the SWML Output
 
-The agent returns a JSON document that SignalWire uses to control the call:
+The agent returns a JSON document that SignalWire uses to control the call. `answer` picks up the call, and `ai` carries the prompt and the voice configuration:
 
 ```json
 {
-  "ai": {
-    "voice": "rime.marsh",
-    "language": {
-      "name": "English",
-      "code": "en-US",
-      "voice": "rime.marsh"
-    },
-    "prompt": {
-      "sections": [
-        {
-          "title": "AI Role",
-          "body": "You are Morgan..."
+  "version": "1.0.0",
+  "sections": {
+    "main": [
+      {
+        "answer": {}
+      },
+      {
+        "ai": {
+          "prompt": {
+            "pom": [
+              {
+                "title": "AI Role",
+                "body": "You are Morgan..."
+              }
+              // ... other sections
+            ]
+          },
+          "params": {},
+          "languages": [
+            {
+              "name": "English",
+              "code": "en-US",
+              "voice": "rime.marsh"
+            }
+          ]
         }
-        // ... other sections
-      ]
-    }
+      }
+    ]
   }
 }
 ```
@@ -350,6 +388,8 @@ The agent returns a JSON document that SignalWire uses to control the call:
 For production deployments, you'll want to enable SSL/HTTPS:
 
 ### Method 1: Using Environment Variables
+
+Export the SSL variables in the shell, then run the agent:
 
 ```bash
 # Set SSL environment variables
@@ -363,6 +403,8 @@ python tutorial/multi_agents/sales_agent.py
 ```
 
 ### Method 2: Using a Single Command
+
+Set the same variables inline, on the command that starts the agent:
 
 ```bash
 SWML_SSL_ENABLED=true \
@@ -394,15 +436,15 @@ python tutorial/multi_agents/sales_agent.py
 
 ## Summary
 
-Congratulations! You've created your first SignalWire agent. You've learned:
+This lesson built a working SignalWire agent. It covered:
 
 **Key Concepts:**
 
-- ✅ How to create an agent by inheriting from `AgentBase`
-- ✅ Using the Prompt Object Model (POM) to structure agent behavior
-- ✅ Configuring voice and language settings
-- ✅ Running agents locally and with SSL/HTTPS
-- ✅ Testing agents with curl and swaig-test
+- How to create an agent by inheriting from `AgentBase`
+- Using the Prompt Object Model (POM) to structure agent behavior
+- Configuring voice and language settings
+- Running agents locally and with SSL/HTTPS
+- Testing agents with curl and swaig-test
 
 **What's Next?**
 
@@ -427,4 +469,4 @@ Before moving on, try these exercises:
 
 ---
 
-[← Back to Tutorial Overview](README.md) | [Next: Lesson 2 - Adding Intelligence with Knowledge Bases →](lesson2_knowledge_bases.md)
+[Tutorial Overview](README.md) | [Next: Lesson 2 - Adding Intelligence with Knowledge Bases](lesson2_knowledge_bases.md)

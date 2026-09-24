@@ -1,0 +1,82 @@
+.\" Man page for sw-pydocs
+.\" Copyright (c) 2025 SignalWire
+.\" Licensed under the MIT License
+.TH SW-PYDOCS 1 "September 2026" "SignalWire SDK" "SignalWire Commands"
+.SH NAME
+sw-pydocs \- print the SignalWire SDK's documentation for the installed version
+.SH SYNOPSIS
+.B sw-pydocs
+.br
+.B sw-pydocs
+.I topic
+.RI [ name ]
+.br
+.B sw-pydocs
+.I command
+.RI [ options ]
+.SH DESCRIPTION
+.B sw-pydocs
+prints the documentation that ships with the signalwire-sdk package, as
+Markdown, for people and for coding agents. With no arguments it prints an
+index: what the SDK does, where to start, and every topic. Each topic
+describes an area and lists the installed docs to read, examples and API
+names, with full paths.
+.PP
+Facts come from the installed package, so they match the installed version:
+the commands, the built-in skills and their parameters, the REST namespaces,
+the SWML_ and SIGNALWIRE_ environment variables in its source, and every
+signature and docstring.
+.PP
+.B python -m signalwire
+runs the same command.
+.SH COMMANDS
+.TP
+.I topic \fR[\fIname\fR]
+Print a topic, such as agents, tools, contexts, skills, relay, rest, search or
+deploy.
+.B sw-pydocs topics
+lists them all. The skills topic takes a skill name and prints its parameters.
+.TP
+.BI "api " name
+Print the signature, docstring, source location and members of an SDK name,
+such as AgentBase, FunctionResult.connect or signalwire.relay.Call.
+.TP
+.BR examples " [\fIfilter\fR]"
+List the installed examples with descriptions and paths: all of them, those
+for a topic, or those matching a word.
+.TP
+.BI "grep " regex
+Search the installed docs and examples, ignoring case.
+.B \-\-code
+also searches the SDK's source, and
+.BI \-\-limit " n"
+sets the most lines printed (default 100).
+.TP
+.BI "show " file
+Print an installed doc, named by path, file name or stem.
+.B \-\-toc
+lists its headings, and
+.BI \-\-section " heading"
+prints the first section whose heading contains the text.
+.TP
+.BR path " [\fIfile\fR]"
+Print the directory the docs are installed in, or one file's full path.
+.TP
+.B init
+Add a section about
+.B sw-pydocs
+to the AGENTS.md in the current directory, or in
+.BI \-\-dir " directory" \fR.
+.B \-\-skill
+also writes an Agent Skills SKILL.md, and
+.B \-\-print
+prints the section without writing it.
+.TP
+.B \-\-version
+Print the installed SDK version.
+.SH EXIT STATUS
+0 on success, 1 when a name or file isn't found, and 2 for a usage error.
+.SH SEE ALSO
+.BR swaig-test (1),
+.BR sw-search (1),
+.BR sw-agent-init (1)
