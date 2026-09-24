@@ -12,15 +12,81 @@ DataMap function execution and template expansion
 
 import re
 import json
+import sys
 import requests
+from collections.abc import Callable
 from typing import Any
+from urllib.parse import quote
 from ..config import HTTP_REQUEST_TIMEOUT
+
+
+# A ${...} or %{...} with no braces inside it, so nested templates such as
+# ${meta_data.table.${lc:args.target}} expand from the inside out
+_TEMPLATE = re.compile(r"[$%]\{([^{}]*)\}")
+
+# Prefix helpers, applied left to right: ${lc:enc:args.city} takes
+# args.city, lowercases it, then URL-encodes it. The platform's reference
+# also writes the encoder with its encoding named, as enc:url.
+_HELPERS: dict[str, Callable[[str], str]] = {
+    "lc": str.lower,
+    "enc": lambda value: quote(value, safe=""),
+}
+
+
+def _lookup(data: dict[str, Any], path: str) -> Any:
+    """The value at a dotted path with [n] indexes, or a <MISSING:path> marker."""
+    value: Any = data
+    for part in re.findall(r"[^.\[\]]+|\[\d+\]", path):
+        if part.startswith("["):
+            index = int(part[1:-1])
+            if not (isinstance(value, list) and 0 <= index < len(value)):
+                return f"<MISSING:{path}>"
+            value = value[index]
+        elif isinstance(value, dict) and part in value:
+            value = value[part]
+        else:
+            return f"<MISSING:{path}>"
+    return value
+
+
+def _expand_one(body: str, data: dict[str, Any]) -> str:
+    """One template's value: its helpers applied to the value at its path."""
+    parts = body.split(":")
+    helpers: list[Callable[[str], str]] = []
+    while len(parts) > 1 and parts[0] in _HELPERS:
+        helpers.append(_HELPERS[parts.pop(0)])
+        if helpers[-1] is _HELPERS["enc"] and len(parts) > 1 and parts[0] == "url":
+            parts.pop(0)
+    path = ":".join(parts)
+    value = _lookup(data, path)
+    text = str(value)
+    if isinstance(value, str) and value.startswith("<MISSING:"):
+        return text
+    for helper in helpers:
+        text = helper(text)
+    return text
+
+
+def _hint_response_prefix(result: Any) -> None:
+    """Explain an unresolved ${response.*}, a common mistake."""
+    if "<MISSING:response." in str(result):
+        print(
+            "Note: ${response.<field>} didn't resolve. The platform reads a webhook's "
+            "JSON response from the root: write ${<field>}, not ${response.<field>}.",
+            file=sys.stderr,
+        )
 
 
 def simple_template_expand(template: str, data: dict[str, Any]) -> str:
     """
-    Simple template expansion for DataMap testing
-    Supports both ${key} and %{key} syntax with nested object access and array indexing
+    Expand DataMap templates as the platform does, for local testing.
+
+    ``${path}`` and ``%{path}`` read a value from ``data`` by a dotted path,
+    with ``[n]`` for array elements. Prefix helpers transform it, left to
+    right: ``lc`` lowercases and ``enc`` (or ``enc:url``) URL-encodes, so
+    ``${lc:enc:args.city}`` is the city, lowercased and URL-encoded. Nested
+    templates expand from the inside out. A path that doesn't resolve becomes
+    ``<MISSING:path>``. ``@{...}`` functions are left as they are.
 
     Args:
         template: Template string with ${} or %{} variables
@@ -33,89 +99,14 @@ def simple_template_expand(template: str, data: dict[str, Any]) -> str:
         return ""
 
     result = template
-
-    # Handle both ${variable.path} and %{variable.path} syntax
-    patterns = [
-        r"\$\{([^}]+)\}",  # ${variable} syntax
-        r"%\{([^}]+)\}",  # %{variable} syntax
-    ]
-
-    for pattern in patterns:
-        for match in re.finditer(pattern, result):
-            var_path = match.group(1)
-
-            # Handle array indexing syntax like "array[0].joke"
-            if "[" in var_path and "]" in var_path:
-                # Split path with array indexing
-                parts = []
-                current_part = ""
-                i = 0
-                while i < len(var_path):
-                    if var_path[i] == "[":
-                        if current_part:
-                            parts.append(current_part)
-                            current_part = ""
-                        # Find the closing bracket
-                        j = i + 1
-                        while j < len(var_path) and var_path[j] != "]":
-                            j += 1
-                        if j < len(var_path):
-                            index = var_path[i + 1 : j]
-                            parts.append(f"[{index}]")
-                            i = j + 1
-                            if i < len(var_path) and var_path[i] == ".":
-                                i += 1  # Skip the dot after ]
-                        else:
-                            current_part += var_path[i]
-                            i += 1
-                    elif var_path[i] == ".":
-                        if current_part:
-                            parts.append(current_part)
-                            current_part = ""
-                        i += 1
-                    else:
-                        current_part += var_path[i]
-                        i += 1
-
-                if current_part:
-                    parts.append(current_part)
-
-                # Navigate through the data structure
-                value: Any = data
-                try:
-                    for part in parts:
-                        if part.startswith("[") and part.endswith("]"):
-                            # Array index
-                            index = int(part[1:-1])
-                            if isinstance(value, list) and 0 <= index < len(value):
-                                value = value[index]
-                            else:
-                                value = f"<MISSING:{var_path}>"
-                                break
-                        else:
-                            # Object property
-                            if isinstance(value, dict) and part in value:
-                                value = value[part]
-                            else:
-                                value = f"<MISSING:{var_path}>"
-                                break
-                except (ValueError, TypeError, IndexError):
-                    value = f"<MISSING:{var_path}>"
-
-            else:
-                # Regular nested object access (no array indexing)
-                path_parts = var_path.split(".")
-                value = data
-                for part in path_parts:
-                    if isinstance(value, dict) and part in value:
-                        value = value[part]
-                    else:
-                        value = f"<MISSING:{var_path}>"
-                        break
-
-            # Replace the variable with its value
-            result = result.replace(match.group(0), str(value))
-
+    # Each pass expands the innermost templates; nesting is never deep
+    for _ in range(20):
+        expanded = _TEMPLATE.sub(
+            lambda match: _expand_one(match.group(1), data), result
+        )
+        if expanded == result:
+            break
+        result = expanded
     return result
 
 
@@ -352,15 +343,15 @@ def execute_datamap_function(
                 # Add response data to context
                 webhook_context = context.copy()
 
-                # Handle different response types
+                # As on the platform, an object response's fields are read from
+                # the root of the template data (${current.temp_f}), and an array
+                # response is under array (${array[0].joke})
                 if isinstance(response_data, list):
-                    # For array responses, use ${array[0].field} syntax
                     webhook_context["array"] = response_data
                     if verbose:
                         print(f"Array response: {len(response_data)} items")
                 else:
-                    # For object responses, use ${response.field} syntax
-                    webhook_context["response"] = response_data
+                    webhook_context.update(response_data)
                     if verbose:
                         print("Object response")
 
@@ -454,6 +445,7 @@ def execute_datamap_function(
                             f"Result: {json.dumps(final_result, indent=2) if isinstance(final_result, dict) else final_result}"
                         )
 
+                    _hint_response_prefix(final_result)
                     return final_result
 
                 # No output template defined, return the response data
