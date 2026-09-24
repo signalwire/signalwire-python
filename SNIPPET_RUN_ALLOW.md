@@ -12,4 +12,4 @@ display quickstart, not a runnable program). The agent/relay quickstart entries
 auto-classify covers a server-starting quickstart (verified — the gate is clean without
 them), so those lines were redundant (double-allowlist purge, plan 3-python-f).
 
-- README.md:158 — quickstart_rest include: hardcoded placeholder creds + real host — a display quickstart, not runnable against the mock (burn-py, 2026-07-09; reason updated 2026-07-19; anchor refreshed 2026-07-23 after the quickstart_agent/relay blocks above gained ruff-format blank lines; refreshed 2026-09-23 after README prose edits)
+- README.md:169 — quickstart_rest include: hardcoded placeholder creds + real host — a display quickstart, not runnable against the mock (burn-py, 2026-07-09; reason updated 2026-07-19; anchor refreshed 2026-07-23 after the quickstart_agent/relay blocks above gained ruff-format blank lines; refreshed 2026-09-23 after README prose edits, and 2026-09-24 after the sw-pydocs section)

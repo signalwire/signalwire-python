@@ -5,7 +5,25 @@
 Webhook signatures and SWAIG tokens are now enforced on every path, including
 serverless. Skills that fetch URLs no longer reach internal addresses through
 redirects, the agent's `/mcp` endpoint requires basic auth, and `async def`
-tool handlers run.
+tool handlers run. The package now installs its documentation, and
+`sw-pydocs` prints it.
+
+### Added
+- `sw-pydocs`: the SDK's documentation for the installed version, for people
+  and coding agents. With no arguments it prints an index; `sw-pydocs <topic>`
+  covers an area, with the installed docs to read, examples and API names;
+  `sw-pydocs api <name>` prints a signature, docstring and members from the
+  installed code; and `examples`, `grep`, `show` and `path` find the installed
+  files. `python -m signalwire` runs it too.
+- The wheel installs the docs, examples and tutorials, under
+  `signalwire/_docs/`, so it's about twice as large (1.7 MB).
+- `sw-pydocs init` adds a section to a project's `AGENTS.md` that tells coding
+  agents to use `sw-pydocs`, and `sw-agent-init` writes it into new projects.
+- The package's `llms.txt` lists the installed docs.
+
+### Changed
+- Importing `signalwire.cli` no longer imports `swaig-test`, so the SDK's other
+  commands start about 0.8 seconds sooner.
 
 ### Fixed
 - Security: `serve()` (and so `run()`) registered its catch-all route before the

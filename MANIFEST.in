@@ -1,0 +1,14 @@
+# The documentation that setup.py installs under signalwire/_docs/. The list
+# of what ships is signalwire/signalwire/cli/pydocs/_bundle.py; keep this in
+# step with it (tests/unit/cli/test_pydocs_bundle.py checks).
+include README.md CHANGELOG.md
+graft docs
+graft examples
+graft tutorial
+graft relay
+graft rest
+graft livewire
+graft mcp
+graft mcp_gateway
+exclude docs/pipecat_comparison.md docs/livekit_comparison.md
+global-exclude __pycache__ *.py[cod] .DS_Store .env *.pem *.key

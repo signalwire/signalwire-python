@@ -1,0 +1,68 @@
+# SignalWire SDK for Python
+
+> Build AI voice agents, control live calls over WebSocket (RELAY), and manage SignalWire resources over REST. The documentation for the installed version ships with the package.
+
+Run `sw-pydocs` for a map of the SDK, `sw-pydocs <topic>` for an area, and `sw-pydocs api <name>` for signatures read from the installed code. The links below are relative to this file, in the installed package.
+
+## Build AI agents
+
+- [README.md](_docs/README.md): The SDK's overview and quickstarts for agents, RELAY and REST
+- [docs/agent_guide.md](_docs/docs/agent_guide.md): The main guide to building agents
+- [docs/architecture.md](_docs/docs/architecture.md): How the pieces fit: mixins, request flow, configuration
+- [docs/api_reference.md](_docs/docs/api_reference.md): Reference for AgentBase and the other public classes
+- [docs/sdk_features.md](_docs/docs/sdk_features.md): What the SDK adds over writing SWML by hand
+- [docs/configuration.md](_docs/docs/configuration.md): Config files and environment variables
+- [docs/pgi_agent_guide.md](_docs/docs/pgi_agent_guide.md): How to design agents that stay within their rules
+- [docs/llm_parameters.md](_docs/docs/llm_parameters.md): Model parameters for the prompt and post-prompt
+- [docs/swaig_reference.md](_docs/docs/swaig_reference.md): Every FunctionResult method and action
+- [docs/datamap_guide.md](_docs/docs/datamap_guide.md): The DataMap builder, templates, expressions and testing
+- [docs/contexts_guide.md](_docs/docs/contexts_guide.md): Contexts, steps, navigation, gather mode and history
+- [docs/skills_system.md](_docs/docs/skills_system.md): How skills load, and how to write one
+- [docs/skills_parameter_schema.md](_docs/docs/skills_parameter_schema.md): How skills describe their parameters
+- [docs/third_party_skills.md](_docs/docs/third_party_skills.md): Packaging and loading skills from outside the SDK
+- [tutorial/full-guardrails-agent/tutorial/README.md](_docs/tutorial/full-guardrails-agent/tutorial/README.md): A complete agent built this way, lesson by lesson
+
+## Call control and APIs
+
+- [docs/swml_service_guide.md](_docs/docs/swml_service_guide.md): SWMLService and SWMLBuilder
+- [mcp/swml-schema-search/README.md](_docs/mcp/swml-schema-search/README.md): An MCP server for looking up SWML verbs
+- [relay/README.md](_docs/relay/README.md): Overview of the RELAY client
+- [relay/docs/getting-started.md](_docs/relay/docs/getting-started.md): Connecting, receiving calls, first steps
+- [relay/docs/client-reference.md](_docs/relay/docs/client-reference.md): RelayClient reference
+- [relay/docs/call-methods.md](_docs/relay/docs/call-methods.md): Every Call method
+- [relay/docs/events.md](_docs/relay/docs/events.md): Events and their payloads
+- [relay/docs/messaging.md](_docs/relay/docs/messaging.md): Sending and receiving messages
+- [rest/README.md](_docs/rest/README.md): Overview of the REST client
+- [rest/docs/getting-started.md](_docs/rest/docs/getting-started.md): Credentials and first requests
+- [rest/docs/client-reference.md](_docs/rest/docs/client-reference.md): RestClient reference
+- [rest/docs/namespaces.md](_docs/rest/docs/namespaces.md): Every namespace and its operations
+- [rest/docs/calling.md](_docs/rest/docs/calling.md): Commands for live calls
+- [rest/docs/fabric.md](_docs/rest/docs/fabric.md): Fabric resources: AI agents, subscribers, SWML scripts
+
+## Knowledge and integrations
+
+- [docs/search_overview.md](_docs/docs/search_overview.md): How search works, and which pieces to use
+- [docs/search_indexing.md](_docs/docs/search_indexing.md): Building indexes: sources, chunking, models
+- [docs/search_integration.md](_docs/docs/search_integration.md): Adding search to an agent
+- [docs/search_deployment.md](_docs/docs/search_deployment.md): Search services, pgvector and production setups
+- [docs/search_troubleshooting.md](_docs/docs/search_troubleshooting.md): Fixing common search problems
+- [livewire/README.md](_docs/livewire/README.md): What LiveWire supports
+- [livewire/docs/migration-guide.md](_docs/livewire/docs/migration-guide.md): Moving a LiveKit agent to LiveWire
+- [docs/mcp_integration.md](_docs/docs/mcp_integration.md): The /mcp endpoint and add_mcp_server()
+- [docs/mcp_gateway_reference.md](_docs/docs/mcp_gateway_reference.md): The MCP gateway service and skill
+- [mcp_gateway/README.md](_docs/mcp_gateway/README.md): Running the gateway, including with Docker
+- [docs/ai_chat_gateway.md](_docs/docs/ai_chat_gateway.md): Setting up the gateway, keys and the chat client
+- [docs/bedrock_agent.md](_docs/docs/bedrock_agent.md): BedrockAgent's options and differences
+
+## Run and test
+
+- [docs/cloud_functions_guide.md](_docs/docs/cloud_functions_guide.md): Lambda, Google Cloud Functions and Azure Functions
+- [docs/security.md](_docs/docs/security.md): Auth, signatures, tokens and TLS in production
+- [docs/web_service.md](_docs/docs/web_service.md): Serving static files alongside agents
+- [docs/cli_guide.md](_docs/docs/cli_guide.md): swaig-test's options and simulation
+- [tutorial/full-guardrails-agent/tutorial/10-testing-and-running.md](_docs/tutorial/full-guardrails-agent/tutorial/10-testing-and-running.md): Testing a complete agent, step by step
+
+## Learn
+
+- [tutorial/fred/tutorial/README.md](_docs/tutorial/fred/tutorial/README.md): Fred: a first agent
+- [tutorial/multi_agents/README.md](_docs/tutorial/multi_agents/README.md): PC Builder Pro: knowledge bases and multiple agents

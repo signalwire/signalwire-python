@@ -7,9 +7,15 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
 SignalWire SDK
-=======================
+==============
 
-A package for building AI agents using SignalWire's AI and SWML capabilities.
+Build AI voice agents, control live calls over WebSocket (RELAY), and manage
+SignalWire resources over REST.
+
+The documentation for this installed version ships with the package. Run
+``sw-pydocs`` (or ``python -m signalwire``) for a map of the SDK and its
+installed docs, examples and tutorials, and ``sw-pydocs api <name>`` for
+signatures read from this code.
 """
 
 from typing import TYPE_CHECKING, Any

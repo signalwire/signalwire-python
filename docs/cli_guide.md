@@ -13,14 +13,15 @@ The tool automatically detects function types, provides appropriate execution en
 
 ## Installed Commands
 
-Installing the SDK adds six command-line tools:
+Installing the SDK adds seven command-line tools:
 
 - **`swaig-test`**: tests SWAIG functions and SWML generation locally, and simulates serverless environments. Documented in this guide.
 - **[`sw-search`](search_overview.md)**: builds and queries local `.swsearch` vector search indexes. Also documented in this guide, under [sw-search - Build and Query Search Indexes](#sw-search---build-and-query-search-indexes).
-- **`sw-agent-init`**: creates a new SignalWire agent project, for a local or cloud-function target.
+- **`sw-agent-init`**: creates a new SignalWire agent project, for a local or cloud-function target, with an `AGENTS.md` that points coding agents at `sw-pydocs`.
 - **`sw-agent-dokku`**: initializes, deploys, and manages a SignalWire agent project on Dokku.
 - **[`mcp-gateway`](mcp_gateway_reference.md)**: bridges Model Context Protocol servers to SWAIG functions.
 - **`pom-tool`**: converts a Prompt Object Model (POM) file between JSON, YAML, Markdown, and XML.
+- **`sw-pydocs`**: prints the SDK's documentation for the installed version, for people and coding agents. Documented under [sw-pydocs - The SDK's Installed Documentation](#sw-pydocs---the-sdks-installed-documentation).
 
 ## Key Features
 
@@ -2229,6 +2230,29 @@ When a webhook fails, the tool:
 6. **Use `--verbose`** to debug environment setup and URL generation
 
 ---
+
+## sw-pydocs - The SDK's Installed Documentation
+
+`sw-pydocs` prints the SDK's documentation for the installed version. It's written for people and for coding agents: the output is Markdown, with full paths to the docs, examples and tutorials installed with the package.
+
+```bash
+sw-pydocs                          # the index: what the SDK does, where to start, every topic
+sw-pydocs agents                   # one topic: concepts, files to read, examples, API names
+sw-pydocs skills web_search        # a built-in skill's parameters
+sw-pydocs api AgentBase            # a signature, docstring and members, from the installed code
+sw-pydocs api FunctionResult.connect
+sw-pydocs examples contexts        # the examples for a topic, or those matching a word
+sw-pydocs grep "set_functions"     # search the docs and examples; --code adds the SDK's source
+sw-pydocs show agent_guide --toc   # a doc's headings; --section <heading> prints one section
+sw-pydocs path                     # where the docs are installed
+sw-pydocs init                     # add a note about sw-pydocs to this project's AGENTS.md
+```
+
+`python -m signalwire` runs the same command.
+
+The topics are short and hand-written: they describe concepts and known mistakes, and point to the installed docs for the rest. The facts come from the installed package: the version, the commands, the built-in skills and their parameters, the REST namespaces, the environment variables the code reads, and every signature and docstring.
+
+`sw-pydocs init` adds a section to the project's `AGENTS.md` telling coding agents to use `sw-pydocs`, and to `CLAUDE.md` if the project has one that doesn't import `AGENTS.md`. Run it again to update the section. `--skill` also writes an Agent Skills `SKILL.md` under `.agents/skills/` and `.claude/skills/`, and `--print` prints the section without writing anything. `sw-agent-init` writes the same `AGENTS.md` into new projects.
 
 ## sw-search - Build and Query Search Indexes
 

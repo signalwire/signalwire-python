@@ -186,6 +186,8 @@ Examples:
   sw-search search docs_collection "how to create an agent" \\
     --backend pgvector \\
     --connection-string "postgresql://user:pass@localhost/knowledge"
+
+Documentation: sw-pydocs prints the SDK's installed docs, examples and API.
         """,
     )
 

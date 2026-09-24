@@ -2262,6 +2262,8 @@ Examples:
   sw-agent-dokku config show                     # Show config
   sw-agent-dokku config set KEY=value            # Set config
   sw-agent-dokku scale web=2                     # Scale processes
+
+Documentation: sw-pydocs prints the SDK's installed docs, examples and API.
 """,
     )
 

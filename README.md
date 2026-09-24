@@ -36,6 +36,17 @@ Install the SDK from PyPI:
 pip install signalwire-sdk
 ```
 
+The package installs its own documentation. `sw-pydocs` prints a map of the SDK
+for the installed version, with the docs, examples and tutorials on disk, and
+`sw-pydocs api <name>` reads signatures from the installed code. If you're a
+coding agent working with the SDK, start there:
+
+```bash
+sw-pydocs                 # the map: what the SDK does and where to start
+sw-pydocs agents          # one topic: concepts, files to read, examples, API
+sw-pydocs api AgentBase   # a signature, docstring and members
+```
+
 ---
 
 ## AI Agents
@@ -195,7 +206,7 @@ pip install "signalwire-sdk[search-all]"          # All search features (~700MB)
 
 Full reference documentation is available at **[signalwire.com/docs/server-sdks](https://signalwire.com/docs/server-sdks)**.
 
-Guides are also available in the [`docs/`](docs/) directory.
+Guides are also available in the [`docs/`](docs/) directory. They're installed with the package, with the examples and tutorials: `sw-pydocs path` prints where.
 
 ### Getting Started
 
