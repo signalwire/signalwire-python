@@ -201,9 +201,9 @@ PGI is enforced through four layers of constraint, each operating independently.
 
 **Layer 1: Semantic Constraints**. The model receives a prompt describing its role and instructions for how to behave. This is the weakest layer; it depends on probabilistic compliance. PGI treats it as guidance, not enforcement. The remaining layers are the law.
 
-**Layer 2: Schema Constraints**. At each step, the model sees only the tools registered for that step. Tools belonging to other steps do not exist in its function schema. The model cannot call them, reference them, or reason about them. This is the difference between telling someone not to open a door and removing the door from the building.
+**Layer 2: Schema Constraints**. At each step, the model sees only the tools listed for that step. Tools belonging to other steps do not exist in its function schema. The model cannot call them, reference them, or reason about them. This is the difference between telling someone not to open a door and removing the door from the building.
 
-**Layer 3: Transition Constraints**. Each step defines which steps it can transition to. The platform validates every transition against this whitelist. The model cannot skip phases, loop back to completed steps, or jump to unreachable states. The conversational flow is governed by the same deterministic logic as any well-designed state machine.
+**Layer 3: Transition Constraints**. Each step defines which steps the model may move to, and the platform offers the model only those. The model cannot skip phases, loop back to completed steps, or jump to unreachable states. Trusted code can still move the conversation: a tool handler's `swml_change_step()` isn't limited by the list, which is how the application, not the model, decides when a phase ends. The conversational flow is governed by the same deterministic logic as any well-designed state machine.
 
 **Layer 4: Execution Authority**. When the model calls a tool, it is making a request, not issuing a command. The tool handler accesses authoritative state and applies business logic. It returns both a response for the model to speak and a set of actions for the platform to execute. The model does not update state. The model does not decide what happens next. The platform does.
 
@@ -212,15 +212,15 @@ PGI is enforced through four layers of constraint, each operating independently.
 A blackjack dealer agent shows the pattern directly: each phase of the game gets its own step and its own tools.
 
 ```python
-betting = ctx.add_step("betting")
+betting = ctx.add_step("betting").set_text("Take the player's bet.")
 betting.set_functions(["place_bet"])
 betting.set_valid_steps(["playing"])
 
-playing = ctx.add_step("playing")
+playing = ctx.add_step("playing").set_text("Play the hand.")
 playing.set_functions(["hit", "stand", "double_down"])
-playing.set_valid_steps(["hand_complete"])
+playing.set_valid_steps([])  # the handlers decide when the hand is over
 
-lost = ctx.add_step("you_lost")
+lost = ctx.add_step("you_lost").set_text("The game is over.")
 lost.set_functions([])
 lost.set_valid_steps([])
 ```
@@ -264,6 +264,8 @@ PGI produces a property that makes it fundamentally different from guardrails, o
 The strongest test of any PGI system: replace the model with a rigid scripted menu ("press 1 for tacos, press 2 for drinks"). The system would still produce correct outcomes. The tool handlers would still validate input, enforce business rules, and manage state. The experience would be worse, but every order would be accurate and every transition would follow the rules. The model makes the interaction natural. The software makes it correct. In a PGI system, those are independent properties.
 
 The SDK's contexts/steps/function restrictions are the primitives that make PGI mechanical rather than aspirational. The developer defines steps, scopes tools to steps, declares transitions, and writes tool handlers that return structured results with platform actions. The platform enforces all of it. The developer brings domain expertise. The SDK provides the governance infrastructure.
+
+For the full discipline, see [Programmatically Governed Inference](programmatically_governed_inference.md). For how to apply it with this SDK, see the [PGI implementation guide](pgi_agent_guide.md).
 
 ---
 

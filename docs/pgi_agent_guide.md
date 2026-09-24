@@ -1,7 +1,7 @@
 # SignalWire PGI and Python SDK
 ## Build natural interfaces on top of software-controlled interactions
 
-This implementation guide is written for AI coding agents, technical assistants, and application developers. It was checked against the `signalwire-sdk` source at commit `67db6f32f7a1dce911f7a9e88ac58cee51151989`. That commit is version 3.4.3 in `pyproject.toml`, plus the changes listed under Unreleased in `CHANGELOG.md`. The SDK requires Python 3.10 or later. The guide also draws on SignalWire's PGI documents and its public documentation.
+This implementation guide is written for AI coding agents, technical assistants, and application developers. It was checked against the `signalwire-sdk` source at commit `67db6f32f7a1dce911f7a9e88ac58cee51151989`. That commit is version 3.4.3 in `pyproject.toml`, plus the changes listed under Unreleased in `CHANGELOG.md`. The SDK requires Python 3.10 or later. The guide also draws on [Programmatically Governed Inference](programmatically_governed_inference.md), the PGI concept document in this directory.
 
 Its claims were checked against the source. The reference implementation in [section 6](#6-reference-implementation) and the recipes in sections 5 and 7 were run against that commit, except the RELAY examples in 7.8, which need a live connection. No live call was tested.
 
@@ -58,7 +58,7 @@ The authoritative implementation baseline for this file is the `signalwire-sdk` 
 When building against another version, check its package metadata, method signatures, emitted SWML, and tests. Current docs may move faster or slower than the installed package. Distinguish:
 
 - **Source-verified SDK contract:** a method exists and emits a particular shape.
-- **Documented platform behavior:** described by SignalWire documentation or SignalWire's PGI documents.
+- **Documented platform behavior:** described by SignalWire documentation, including the [PGI concept document](programmatically_governed_inference.md).
 - **Application design recommendation:** an engineering choice you must implement.
 - **Runtime verification:** observed on a real call or service. Do not report this unless you ran it.
 
@@ -216,7 +216,7 @@ The implementation is not done when it talks. It is done when the business outco
 
 ## 5. Capability guide
 
-Each record connects a feature to the problem it solves. `Pxx` numbers refer to a companion guide of developer pain points, which isn't part of this repository. Source identifiers resolve in Section 12.
+Each record connects a feature to the problem it solves. `Pxx` numbers refer to the entries in [Developer pain points](developer_pain_points.md). Source identifiers resolve in [section 12](#12-evidence-and-source-map).
 
 ### C01. Agent definition without application-owned media
 
@@ -1017,7 +1017,7 @@ tool = (DataMap("lookup_public_item")
     })
     .body({"sku": "${args.sku}"})
     .output(FunctionResult(
-        tool_result="Availability: ${response.availability}",
+        tool_result="Availability: ${availability}",
         tool_prompt="Explain only the returned availability. Do not invent inventory quantities."))
     .fallback_output(FunctionResult(
         tool_result="Catalog availability could not be verified.",
@@ -1026,7 +1026,7 @@ tool = (DataMap("lookup_public_item")
 agent.register_swaig_function(tool.to_swaig_function())
 ```
 
-`catalog.example.com` is an application endpoint placeholder, not a SignalWire service. Its backend must validate the SKU and caller/service permissions. Keep the host fixed; do not let the model choose an arbitrary URL. Protect the SWML definition because it can contain integration credentials. Verify response mapping and failure behavior against the real API. [S09]
+The output template reads the webhook's JSON response from the root of the template data, so `${availability}` is the response's `availability` field. Arguments are `${args.name}`. `catalog.example.com` is an application endpoint placeholder, not a SignalWire service. Its backend must validate the SKU and caller/service permissions. Keep the host fixed; do not let the model choose an arbitrary URL. Protect the SWML definition because it can contain integration credentials. Verify response mapping and failure behavior against the real API. [S09]
 
 ### 7.4. Announced, bounded hold with different return paths
 
@@ -1474,16 +1474,17 @@ A positive answer is evidence that consequential correctness is not merely a pro
 
 ### 12.1. Authority of this reference
 
-This document draws on SignalWire's two PGI documents and on the SDK source in this repository. The baseline is `signalwire-sdk` at commit `67db6f32f7a1dce911f7a9e88ac58cee51151989`: version 3.4.3 plus the changes listed under Unreleased in `CHANGELOG.md`.
+This document draws on the PGI concept document and on the SDK source in this repository. The baseline is `signalwire-sdk` at commit `67db6f32f7a1dce911f7a9e88ac58cee51151989`: version 3.4.3 plus the changes listed under Unreleased in `CHANGELOG.md`.
 
-[PGI] "Programmatically Governed Inference" and "The Model Should Never Have Had Authority," SignalWire's technical document and companion essay. They describe the intended discipline. Neither is part of this repository; the [PGI section of the SDK features guide](sdk_features.md#programmatically-governed-inference-pgi) summarizes it. Private source locations and credentials are not included. Where broad source rhetoric could imply infallible speech or external transaction guarantees, this guide uses the narrower, implementable claim.
+[PGI] [Programmatically Governed Inference](programmatically_governed_inference.md) - `docs/programmatically_governed_inference.md`. It describes the intended discipline; the [PGI section of the SDK features guide](sdk_features.md#programmatically-governed-inference-pgi) summarizes it. Where broad rhetoric could imply infallible speech or external transaction guarantees, this guide uses the narrower, implementable claim.
 
-The implementation sources in [12.2](#122-implementation-sources) link to files in this repository. Use the installed source when building against another version. Public entry points checked for orientation:
+`Pxx` labels resolve in [Developer pain points](developer_pain_points.md), which maps each problem to the mechanism that addresses it and to what the application still owns.
 
-- [SignalWire Python repository](https://github.com/signalwire/signalwire-python)
-- [System-directed AI](https://signalwire.com/docs/platform/ai)
-- [Contexts and workflows](https://signalwire.com/docs/server-sdks/guides/contexts-workflows)
-- [SWAIG guide](https://signalwire.com/docs/server-sdks/guides/swaig)
+The implementation sources in [12.2](#122-implementation-sources) link to files in this repository. Use the installed source when building against another version. These documents in this repository cover the concepts those sources implement:
+
+- [Programmatically Governed Inference](programmatically_governed_inference.md): the discipline, its four layers and data isolation
+- [Contexts and Steps Guide](contexts_guide.md): contexts, steps, per-step tools, navigation, history and gather questions
+- [FunctionResult methods reference](swaig_reference.md): tool results, platform actions and the data each SWAIG request carries
 
 ### 12.2. Implementation sources
 

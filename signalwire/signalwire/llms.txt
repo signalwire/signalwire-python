@@ -20,6 +20,8 @@ Run `sw-pydocs` for a map of the SDK, `sw-pydocs <topic>` for an area, and `sw-p
 - [docs/skills_system.md](_docs/docs/skills_system.md): How skills load, and how to write one
 - [docs/skills_parameter_schema.md](_docs/docs/skills_parameter_schema.md): How skills describe their parameters
 - [docs/third_party_skills.md](_docs/docs/third_party_skills.md): Packaging and loading skills from outside the SDK
+- [docs/programmatically_governed_inference.md](_docs/docs/programmatically_governed_inference.md): The discipline itself: why the model gets no authority, and the four constraint layers
+- [docs/developer_pain_points.md](_docs/docs/developer_pain_points.md): Problems P01-P36 that the guide cites, what the SDK and platform provide, and what stays yours
 - [tutorial/full-guardrails-agent/tutorial/README.md](_docs/tutorial/full-guardrails-agent/tutorial/README.md): A complete agent built this way, lesson by lesson
 
 ## Call control and APIs

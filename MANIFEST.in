@@ -16,10 +16,12 @@ include docs/cloud_functions_guide.md
 include docs/configuration.md
 include docs/contexts_guide.md
 include docs/datamap_guide.md
+include docs/developer_pain_points.md
 include docs/llm_parameters.md
 include docs/mcp_gateway_reference.md
 include docs/mcp_integration.md
 include docs/pgi_agent_guide.md
+include docs/programmatically_governed_inference.md
 include docs/sdk_features.md
 include docs/search_deployment.md
 include docs/search_indexing.md

@@ -965,6 +965,14 @@ implementation, and testing and review checklists.
     docs=(
         ("docs/pgi_agent_guide.md", "The PGI implementation guide for coding agents"),
         (
+            "docs/programmatically_governed_inference.md",
+            "The discipline itself: why the model gets no authority, and the four constraint layers",
+        ),
+        (
+            "docs/developer_pain_points.md",
+            "Problems P01-P36 that the guide cites, what the SDK and platform provide, and what stays yours",
+        ),
+        (
             "tutorial/full-guardrails-agent/tutorial/README.md",
             "A complete agent built this way, lesson by lesson",
         ),
