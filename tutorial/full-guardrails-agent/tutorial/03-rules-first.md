@@ -26,7 +26,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-`requirements.txt` asks for `signalwire-sdk>=3.4.4`, the first release that enforces webhook signatures and tool tokens on every path, and `tzdata`. `tzdata` supplies time zone data to containers that don't ship it, since Penny works in the restaurant's time zone.
+`requirements.txt` asks for `signalwire-sdk>=3.5.0`, the first release that enforces webhook signatures and tool tokens on every path, and `tzdata`. `tzdata` supplies time zone data to containers that don't ship it, since Penny works in the restaurant's time zone.
 
 ## The House Policy
 
