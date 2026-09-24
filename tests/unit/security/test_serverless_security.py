@@ -234,15 +234,15 @@ def _gcf(agent: AgentBase, path: str, body: str = "", query: str = "",
          signature: str | None = None) -> "flask.Response":
     # Cloud Functions hands the handler a Flask request. Flask isn't a core
     # dependency, so only these tests need it.
-    flask = pytest.importorskip("flask", reason="flask is required for the Cloud Functions tests")
+    flask_module = pytest.importorskip("flask", reason="flask is required for the Cloud Functions tests")
     headers = {"Authorization": _auth(agent), "Content-Type": "application/json"}
     if signature:
         headers["X-SignalWire-Signature"] = signature
-    app = flask.Flask("gcf")
+    app = flask_module.Flask("gcf")
     with app.test_request_context(path, method="POST" if body else "GET", data=body,
                                   query_string=query, headers=headers, base_url=GCF_BASE):
         response: flask.Response = agent.handle_serverless_request(
-            flask.request, None, mode="google_cloud_function")
+            flask_module.request, None, mode="google_cloud_function")
     return response
 
 
