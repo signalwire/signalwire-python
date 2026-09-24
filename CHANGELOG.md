@@ -143,7 +143,8 @@ tool handlers run. The package now installs its documentation, and
   array, arguments the function doesn't declare get a warning, and
   `--aws-api-gateway-id` and `--aws-stage` now simulate an API Gateway URL.
   `--dump-swml` showed whatever a per-call configuration callback adds twice;
-  it shows it once, as the server sends it. `--help` lists `--call-id`.
+  it shows it once, as the server sends it. It can also dump a plain
+  `SWMLService`, and `--help` lists `--call-id`.
 - `BedrockAgent` renders `max_tokens`, `presence_penalty` and
   `frequency_penalty`, and `set_prompt_llm_params()` accepts the settings the
   Bedrock prompt defines. The examples use voices Bedrock offers.

@@ -165,10 +165,13 @@ def handle_dump_swml(agent: "AgentBase", args: argparse.Namespace) -> int:
                 # Fall back to static SWML generation
                 apply_dynamic_config(agent, mock_request, verbose=verbose)
                 swml_doc = agent._render_swml()
-        else:
+        elif hasattr(agent, "_render_swml"):
             # Static agent - generate SWML normally
             apply_dynamic_config(agent, mock_request, verbose=verbose)
             swml_doc = agent._render_swml()
+        else:
+            # A plain SWMLService: its document is what it serves
+            swml_doc = agent.render_document()
 
         if args.raw:
             # Output only the raw JSON for piping to jq/yq
