@@ -119,7 +119,7 @@ from signalwire.core.data_map import create_expression_tool
 
 DataMap is a serverless function execution system within SignalWire AI Agents that enables integration with external APIs without the need for custom webhook endpoints. Unlike traditional webhook-based SWAIG (SignalWire AI Gateway) functions that require you to host and maintain HTTP endpoints, DataMap functions are executed entirely within the SignalWire infrastructure. SWAIG is the platform's AI tool-calling system with native access to the media stack. DataMap is one way to define SWAIG functions without running your own server.
 
-The SDK's role stops at building this configuration: `DataMap.to_swaig_function()` serializes it into the SWAIG function definition. SignalWire's platform runs it during a call, fetching each webhook, expanding template variables, and evaluating expressions. See the platform's [Data Map guide](https://signalwire.com/docs/swml/guides/data-map) for what happens on that side.
+The SDK's role stops at building this configuration: `DataMap.to_swaig_function()` serializes it into the SWAIG function definition. SignalWire's platform runs it during a call, fetching each webhook, expanding template variables, and evaluating expressions. Sections 2 to 8 describe what happens on that side.
 
 **Key Characteristics:**
 - **Serverless Architecture**: No need to host webhook endpoints
@@ -239,7 +239,7 @@ Many applications benefit from using both DataMap and traditional webhooks:
 
 ## 2. DataMap Architecture and Processing Pipeline
 
-The SDK's part in this pipeline is small: `DataMap.to_swaig_function()` (in `signalwire/signalwire/core/data_map.py`) builds the `data_map` structure and hands it to SWML as part of the function definition. Everything described in this section happens on SignalWire's platform when your agent calls the function during a live call. That includes the HTTP requests, template expansion, and expression evaluation. See the platform's [Data Map guide](https://signalwire.com/docs/swml/guides/data-map) for the execution side.
+The SDK's part in this pipeline is small: `DataMap.to_swaig_function()` (in `signalwire/signalwire/core/data_map.py`) builds the `data_map` structure and hands it to SWML as part of the function definition. Everything described in this section happens on SignalWire's platform when your agent calls the function during a live call. That includes the HTTP requests, template expansion, and expression evaluation, which the rest of this section and sections 4 to 8 describe.
 
 ### 2.1 Server-Side Processing Flow
 
@@ -283,8 +283,8 @@ DataMap processing follows a strict sequential order that ensures deterministic 
   ]
 }
 ```
-- Pattern matching against function arguments
-- Early exit if pattern matches
+- Each expression expands its `string` template, such as `${args.query}`, and matches the result against its `pattern`, a PCRE regular expression
+- Expressions are tried in order; the first match's `output` ends the function
 - Bypasses HTTP requests for known cases
 
 **2. Webhook Sequential Processing**:
@@ -297,8 +297,8 @@ DataMap processing follows a strict sequential order that ensures deterministic 
 }
 ```
 - Process webhooks in array order
-- Stop at first successful webhook
-- Each webhook has independent configuration
+- Stop at the first webhook that produces an output
+- Each webhook has independent configuration, and evaluates its own `foreach`, then `expressions`, then `output` when its response arrives
 
 **3. Foreach Processing (Per Successful Webhook)**:
 ```json
@@ -326,6 +326,9 @@ DataMap processing follows a strict sequential order that ensures deterministic 
 ```
 - Webhook-level output (if webhook succeeds)
 - DataMap-level fallback output (if all webhooks fail)
+- A generic error for the AI if nothing produced an output
+
+The first valid `output` anywhere ends the function, like a `return` statement.
 
 **Processing Flow Diagram:**
 ```
@@ -358,68 +361,49 @@ Function Call
 
 ### 2.3 Context and Variable Scope
 
-DataMap maintains a hierarchical context system that provides access to various data sources during template expansion:
+Every template reads from one JSON object, the template data, which the platform builds for each call of the function. A template names a path from its root: `${args.query}` walks from the root into `args` and then `query`. Its root holds:
 
-**Context Hierarchy:**
-```
-┌────────────────────────────────────────┐
-│                args                    │ ← Function arguments
-│  ┌──────────────────────────────────┐  │
-│  │            response              │  │ ← HTTP response object
-│  │  ┌────────────────────────────┐  │  │
-│  │  │          this             │  │  │ ← Current foreach item
-│  │  │                           │  │  │
-│  │  └────────────────────────────┘  │  │
-│  └──────────────────────────────────┘  │
-└────────────────────────────────────────┘
-```
+- `args`: the arguments the AI extracted for this call, by parameter name. Example: `${args.query}`.
+- `global_data`: the application's global data, as the agent set it with `set_global_data()` or an action changed it. Example: `${global_data.api_token}`.
+- `meta_data`: the function's own metadata. Example: `${meta_data.table.sales}`.
+- Details of the call: `call_id`, `ai_session_id`, `conversation_id`, `function` (the function's name), `caller_id_name`, `caller_id_num`, `project_id`, `space_id` and `app_name`.
+- `prompt_vars`: built-in variables describing the call and the AI session.
 
-**Variable Sources:**
+When a webhook responds, its JSON response joins the root. If the response is an object, its fields are read directly: a response of `{"total": 25, "results": [...]}` gives `${total}` and `${results[0].title}`. There is no `response.` prefix. If the response is an array, it's under `array`: `${array[0].joke}`.
 
-1. **Function Arguments** (`args.*`)
-   - Direct access to function call parameters
-   - Available throughout entire execution
-   - Example: `${args.query}`, `${args.filters}`
+During a `foreach`, `this` is the current element of the array it walks, as in `${this.title}`, and the text it builds is stored under its `output_key`, as in `${formatted_results}`.
 
-2. **HTTP Response Data** (`response.*` or `array.*`)
-   - Response object for object responses
-   - Array data for array responses
-   - Available after successful webhook execution
-
-3. **Global Data** (`global_data.*`)
-   - Agent-level configuration and state
-   - SWML prompt variables
-   - Conversation context
-
-4. **Foreach Context** (`this.*`)
-   - Current item during foreach processing
-   - Only available within foreach append templates
-   - Dynamic scope based on array iteration
-
-**Context Evolution:**
+**Context evolution:**
 ```javascript
-// Initial context
-{
-  "args": {"query": "SignalWire", "count": 3}
-}
-
-// After webhook success (object response)
+// When the function is called
 {
   "args": {"query": "SignalWire", "count": 3},
-  "response": {"results": [...], "total": 25}
+  "global_data": {...},
+  "meta_data": {...},
+  "call_id": "..."
 }
 
-// After webhook success (array response)
+// After a webhook returns the object {"results": [...], "total": 25}
 {
   "args": {"query": "SignalWire", "count": 3},
-  "array": [{"title": "...", "text": "..."}, ...]
+  "results": [{"title": "...", "text": "..."}, ...],
+  "total": 25,
+  ...
 }
 
-// During foreach processing
+// After a webhook returns an array
 {
   "args": {"query": "SignalWire", "count": 3},
-  "array": [...],
-  "this": {"title": "Current Item", "text": "Current content"}
+  "array": [{"title": "...", "text": "..."}, ...],
+  ...
+}
+
+// While a foreach walks "results"
+{
+  "args": {"query": "SignalWire", "count": 3},
+  "results": [...],
+  "this": {"title": "Current item", "text": "Current content"},
+  ...
 }
 ```
 
@@ -542,7 +526,7 @@ DataMap configurations follow a specific JSON schema that defines how external A
       "method": "GET",
       "headers": {"Authorization": "Bearer ${global_data.api_token}"},
       "params": {"q": "${args.query}"},
-      "output": {"response": "Result: ${response.data}"}
+      "output": {"response": "Result: ${data}"}
     }]
   }
 }
@@ -658,7 +642,7 @@ DataMap configurations can include nested objects and complex data structures fo
           "append": "## ${this.title}\n${this.excerpt}\n**Score:** ${this.relevance_score}\n\n"
         },
         "output": {
-          "response": "Found ${response.total} results:\n\n${formatted_results}",
+          "response": "Found ${total} results:\n\n${formatted_results}",
           "action": [
             {
               "SWML": {
@@ -668,8 +652,8 @@ DataMap configurations can include nested objects and complex data structures fo
                     {
                       "set": {
                         "last_search_query": "${args.query}",
-                        "last_search_results": "${response.total}",
-                        "search_timestamp": "${response.timestamp}"
+                        "last_search_results": "${total}",
+                        "search_timestamp": "${timestamp}"
                       }
                     }
                   ]
@@ -780,54 +764,67 @@ When validation fails, the AI agent receives clear error messages:
 
 ### 4.1 Template Syntax Overview
 
-Template expansion allows you to dynamically construct URLs, headers, and request bodies based on function arguments and context variables. SignalWire's platform performs this expansion when it runs your data_map function; the SDK never evaluates a `${...}` expression itself.
+Template expansion builds URLs, request parameters and responses from the call's data. SignalWire's platform expands templates when it runs your `data_map` function; the SDK never evaluates one itself. `swaig-test --exec` simulates the expansion locally (see [section 11](#11-development-and-testing)).
 
-See the platform's [variables reference](https://signalwire.com/docs/swml/reference/variables) for the `${...}` and `%{...}` syntax. Its [template functions reference](https://signalwire.com/docs/swml/reference/template-functions) documents eight built-in functions: `lc`, `enc:url`, `strftime_tz`, `fmt_ph`, `expr`, `echo`, `separate`, and `sleep`.
+**Variables.** `${path}` is replaced by the value at `path` in the template data (see [2.3](#23-context-and-variable-scope)). `%{path}` means the same. A path uses dots for object fields and zero-based `[n]` for array elements, as in `${args.filters.category}` and `${results[0].title}`. If the path is valid but the value isn't set, the template becomes an empty string.
 
-**Template Syntax:**
+**Prefix helpers.** Inside `${...}`, a helper name and a colon before the path transform the value:
+
+| Helper | What it does | Example |
+|---|---|---|
+| `lc` | Lowercases the value | `${lc:args.department}` |
+| `enc` | URL-encodes the value; the platform's reference also writes it with its encoding named, `enc:url` | `${enc:args.query}` or `${enc:url:args.query}` |
+
+Helpers chain, and apply from left to right. `${lc:enc:args.location}` takes the value of `args.location`, lowercases it, then URL-encodes it, in one step. The built-in weather skill builds its request URL this way:
+
 ```
-${expression}
+https://api.weatherapi.com/v1/current.json?key=KEY&q=${lc:enc:args.location}
 ```
 
-**Expression Types:**
-- **Variable**: `${args.query}`, `${global_data.api_token}`
-- **Array Access**: `${array[index].property}`
-- **Object Access**: `${object.property}`
-- **Template Functions**: `${lc:<value>}` and `${enc:url:<value>}`, and the `@{...}` functions such as `@{expr <expression>}` and `@{strftime_tz <timezone> <format>}`. The template functions reference has the full syntax.
+**Nested templates** expand from the inside out. In `${meta_data.contacts.${lc:args.department}}`, the inner template turns "Sales" into `sales`, and the outer one then reads `meta_data.contacts.sales`.
+
+**`@{...}` functions** take arguments after a space:
+
+| Function | Syntax | What it does |
+|---|---|---|
+| `strftime_tz` | `@{strftime_tz <timezone> <format>}` | The current date and time in a time zone, with strftime codes: `@{strftime_tz America/Chicago %Y-%m-%d %H:%M:%S}` |
+| `fmt_ph` | `@{fmt_ph <format> <number>}` or `@{fmt_ph <format>:sep:<separator> <number>}` | Formats a phone number as `national` (the default), `international`, `RFC3966` or `e164`, optionally with a separator between digit groups for text-to-speech: `@{fmt_ph national:sep:- ${caller_id_num}}` |
+| `expr` | `@{expr <expression>}` | Arithmetic on literal numbers, with `+ - * /` and parentheses; it can't read variables: `@{expr (100 - 25) / 5}` |
+| `echo` | `@{echo <text>}` | Returns its argument, for debugging expansion: `@{echo ${args.input}}` |
+| `separate` | `@{separate <text>}` | Puts a space between characters, so text-to-speech spells out codes: `@{separate ${args.code}}` reads "ABC123" as "A B C 1 2 3" |
+| `sleep` | `@{sleep <seconds>}` | Pauses for that many seconds. Delays can cause timeouts, so use it sparingly |
+
+Template functions work in SWAIG contexts only: `data_map` expressions, webhooks and output, responses from SWAIG function webhooks, and AI prompt variable expansion. Other SWML methods don't expand them.
 
 ### 4.2 Variable Types and Sources
 
-DataMap supports a variety of variable types and sources that can be accessed during template expansion:
-
-**Variable Sources:**
-- **Function Arguments** (`args.*`)
-- **HTTP Response Data** (`response.*` or `array.*`)
-- **Global Data** (`global_data.*`)
-- **Foreach Context** (`this.*`)
+- **Function arguments**: `${args.query}`
+- **Webhook response fields**, at the root: `${total}`, `${results[0].title}`, and `${array[0].text}` for an array response
+- **Global data**: `${global_data.api_token}`
+- **Function metadata**: `${meta_data.table}`
+- **Call details**: `${call_id}`, `${caller_id_num}`
+- **Foreach**: `${this.title}` while walking an array, and the `output_key` it fills, such as `${formatted_results}`
 
 ### 4.3 Array and Object Access Patterns
 
-DataMap provides flexible access patterns for array and object data:
+**Array access:**
+```
+${results[0].title}
+${array[0].joke}
+```
 
-**Array Access:**
+**Object access:**
 ```
-${array[index].property}
-```
-
-**Object Access:**
-```
-${object.property}
+${current.condition.text}
+${args.filters.category}
 ```
 
 ### 4.4 Context-Specific Variables
 
-DataMap provides context-specific variables that can be used in template expansion:
-
-**Context-Specific Variables:**
-- **Function Arguments**: `${args.query}`, `${args.filters}`
-- **HTTP Response Data**: `${response.data}`, `${array[0].text}`
-- **Global Data**: `${global_data.api_token}`, `${global_data.prompt_variables}`
-- **Foreach Context**: `${this.title}`, `${this.text}`
+- In a webhook's `url` and `params`: `args`, `global_data`, `meta_data` and the call details. The response doesn't exist yet.
+- In a webhook's `foreach`, `expressions` and `output`: all of those, plus the response's fields (or `array`).
+- In a `foreach` `append` template: also `this`, the current element.
+- In the top-level `output`, which runs when no webhook produced an output: `args`, `global_data`, `meta_data` and the call details.
 
 ### 4.5 Template Expansion Examples
 
@@ -849,7 +846,7 @@ DataMap provides context-specific variables that can be used in template expansi
       "method": "GET",
       "headers": {"Authorization": "Bearer ${global_data.api_token}"},
       "params": {"q": "${args.query}"},
-      "output": {"response": "Result: ${response.data}"}
+      "output": {"response": "Result: ${data}"}
     }]
   }
 }
@@ -912,7 +909,7 @@ DataMap provides context-specific variables that can be used in template expansi
           "append": "## ${this.title}\n${this.excerpt}\n**Score:** ${this.relevance_score}\n\n"
         },
         "output": {
-          "response": "Found ${response.total} results:\n\n${formatted_results}",
+          "response": "Found ${total} results:\n\n${formatted_results}",
           "action": [
             {
               "SWML": {
@@ -922,8 +919,8 @@ DataMap provides context-specific variables that can be used in template expansi
                     {
                       "set": {
                         "last_search_query": "${args.query}",
-                        "last_search_results": "${response.total}",
-                        "search_timestamp": "${response.timestamp}"
+                        "last_search_results": "${total}",
+                        "search_timestamp": "${timestamp}"
                       }
                     }
                   ]
@@ -946,104 +943,78 @@ DataMap provides context-specific variables that can be used in template expansi
 
 ### 5.1 Webhook Structure
 
-DataMap functions can be configured with multiple webhooks to handle different scenarios and provide fallback mechanisms:
+Each entry in `webhooks` describes one HTTP request. The SWML schema defines these fields:
 
-**Webhook Configuration:**
-```json
-{
-  "webhooks": [
-    {"url": "https://primary-api.com/search", "...": "..."},
-    {"url": "https://fallback-api.com/search", "...": "..."}
-  ]
-}
-```
+| Field | Required | What it does |
+|---|---|---|
+| `url` | Yes | The endpoint. Templates in it are expanded before the request, as in `https://api.example.com/weather?q=${enc:args.city}`. Credentials can go in it as `https://user:password@host/...`. |
+| `method` | Yes | The HTTP method, such as `GET` or `POST`. |
+| `headers` | No | Headers to send, such as `Authorization`. |
+| `params` | No | The request's parameters, sent as its JSON body. Templates in the values are expanded first. The SDK sets this with `.params()`. |
+| `input_args_as_params` | No | When true, the function's arguments are merged into `params`. With no `params`, they become the whole body. |
+| `require_args` | No | Arguments that must be present for this request to be made. |
+| `error_keys` | No | Keys that mark a response as a failure when they appear in it. |
+| `foreach`, `expressions`, `output` | No | Evaluated in that order when the response arrives. See [section 7](#7-foreach-processing-and-array-iteration) and [section 8](#8-output-generation-and-result-formatting). |
 
 ### 5.2 HTTP Methods and Headers
 
-DataMap functions can use various HTTP methods and headers to customize request configurations:
-
-**HTTP Method Examples:**
-- **GET**: Retrieving data from a server
-- **POST**: Sending data to a server for processing
-- **PUT**: Updating existing data on a server
-- **DELETE**: Removing data from a server
-
-**HTTP Header Examples:**
-- **Authorization**: Used for authentication and access control
-- **Content-Type**: Specifies the format of the request body
-- **Accept**: Specifies the format of the response body
-- **X-Request-ID**: Used for request tracking and correlation
+The request uses the webhook's `method` and `headers`. It has a body when `params` is set or the method is `POST`: the expanded `params` object, as JSON. A `GET` without `params` has no body.
 
 ### 5.3 Request Body Construction
 
-DataMap functions can construct request bodies dynamically based on function arguments and context variables:
+`params` is the body. For example, this webhook:
 
-**Request Body Examples:**
-- **Simple Query**: `${args.query}`
-- **JSON Object**: `${json_object}`
-- **Formatted String**: `${formatted_string}`
+```json
+{
+  "url": "https://api.example.com/weather",
+  "method": "POST",
+  "params": {"call_id": "${call_id}", "city": "${args.location}"},
+  "output": {"response": "The weather in ${city} is ${temp} degrees and ${conditions}."}
+}
+```
+
+sends `{"call_id": "...", "city": "New York"}`. Its output then reads `city`, `temp` and `conditions` from the root of the JSON the API returns. With `input_args_as_params: true` and no `params`, the body is the arguments themselves, such as `{"location": "New York"}`.
 
 ### 5.4 Sequential Webhook Processing
 
-DataMap functions can be configured to process multiple webhooks in sequence:
+Webhooks run in array order. The first one to produce an output ends the function, like a `return` statement, so later webhooks act as fallbacks:
 
-**Sequential Webhook Configuration:**
 ```json
 {
   "webhooks": [
-    {"url": "https://primary-api.com/search", "...": "..."},
-    {"url": "https://fallback-api.com/search", "...": "..."}
+    {"url": "https://primary-api.example.com/search", "...": "..."},
+    {"url": "https://fallback-api.example.com/search", "...": "..."}
   ]
 }
 ```
 
 ### 5.5 Webhook Failure Detection
 
-DataMap functions can be configured to handle webhook failures and provide fallback mechanisms:
-
-**Webhook Failure Configuration:**
-```json
-{
-  "webhooks": [
-    {"url": "https://primary-api.com/search", "...": "..."},
-    {"url": "https://fallback-api.com/search", "...": "..."}
-  ]
-}
-```
+A webhook that fails moves processing to the next one. That includes a response containing one of its `error_keys`, such as `"error_keys": ["error"]` for an API that reports errors in an `error` field. When no webhook produces an output, the top-level `output` runs; without one, the AI gets a generic error.
 
 ## 6. Response Processing and Data Handling
 
 ### 6.1 Response Data Structure
 
-DataMap functions can return various types of response data:
-
-**Response Data Types:**
-- **Text**: Simple text response
-- **JSON**: Structured data in JSON format
-- **Array**: List of data items
-- **Object**: Key-value pairs
+A webhook's response is parsed as JSON, and joins the template data (see [2.3](#23-context-and-variable-scope)) for its `foreach`, `expressions` and `output`.
 
 ### 6.2 Array vs Object Response Handling
 
-DataMap functions can handle both array and object responses:
+An object response's fields are read from the root, with no prefix. For this response:
 
-**Array Response Example:**
 ```json
-{
-  "response": {
-    "results": [{"title": "...", "text": "..."}, ...]
-  }
-}
+{"results": [{"title": "Rates", "text": "..."}], "total": 25}
 ```
 
-**Object Response Example:**
+`${total}` is `25` and `${results[0].title}` is `Rates`.
+
+An array response is under `array`. For this response:
+
 ```json
-{
-  "response": {
-    "results": {"total": 25, "data": [...]}
-  }
-}
+[{"joke": "Why did the webhook cross the road?"}]
 ```
+
+`${array[0].joke}` is the joke.
 
 ### 6.3 Error Response Processing
 
@@ -1079,7 +1050,12 @@ DataMap functions can define custom error keys to provide more detailed error in
 
 ### 7.1 Foreach Configuration
 
-DataMap functions can be configured to process array data:
+`foreach` turns an array in the webhook's response into text for the output:
+
+- `input_key` (required): the key in the response whose value is the array, such as `results`.
+- `output_key` (required): where the built text is stored; the output reads it as `${formatted_results}`.
+- `append` (required): a template added to the text once per element, where `${this.title}` reads the current element's field.
+- `max`: the most elements to use, from the start of the array.
 
 **Foreach Configuration Example:**
 ```json
@@ -1093,14 +1069,11 @@ DataMap functions can be configured to process array data:
 }
 ```
 
+For a response of `{"results": [{"title": "Rates"}, {"title": "Coverage"}]}`, `${formatted_results}` is `Result: Rates` and `Result: Coverage`, one per line.
+
 ### 7.2 Array Data Sources
 
-DataMap functions can use various array data sources:
-
-**Array Data Sources:**
-- **Function Results**: `${response.results}`
-- **Global Data**: `${global_data.array}`
-- **Foreach Context**: `${this.array}`
+`input_key` names a field of the webhook's response that holds an array. It's a key name, such as `results`, not a template.
 
 ### 7.3 Template Expansion in Foreach
 
@@ -1260,7 +1233,7 @@ DataMap functions can be integrated with the skills system:
           "append": "## ${this.title}\n${this.excerpt}\n**Score:** ${this.relevance_score}\n\n"
         },
         "output": {
-          "response": "Found ${response.total} results:\n\n${formatted_results}",
+          "response": "Found ${total} results:\n\n${formatted_results}",
           "action": [
             {
               "SWML": {
@@ -1270,8 +1243,8 @@ DataMap functions can be integrated with the skills system:
                     {
                       "set": {
                         "last_search_query": "${args.query}",
-                        "last_search_results": "${response.total}",
-                        "search_timestamp": "${response.timestamp}"
+                        "last_search_results": "${total}",
+                        "search_timestamp": "${timestamp}"
                       }
                     }
                   ]
@@ -1338,6 +1311,8 @@ Read a secret from `os.environ` when you build the DataMap in Python. Or referen
 
 `--verbose` traces template expansion, the HTTP request and response, and fallback handling. See [Troubleshooting](cli_guide.md#troubleshooting) in the CLI guide, and the worked example in [9.1](#91-datamap-skills-vs-raw-configuration) for the configuration shape.
 
+The simulation expands templates as [section 4](#4-template-expansion-system) describes: paths, the `lc` and `enc` helpers, and nested templates. It leaves `@{...}` functions as they are, and a path that doesn't resolve shows as `<MISSING:path>`. It builds the call's arguments, but not global data, metadata or the call details the platform adds. It also accepts an argument without its `args.` prefix, as `${location}`; write `${args.location}`, the form the platform documents.
+
 ## 12. Advanced Patterns and Techniques
 
 ### 12.0 Helper Functions
@@ -1353,8 +1328,8 @@ from signalwire.core.data_map import create_simple_api_tool
 
 weather = create_simple_api_tool(
     name='get_weather',
-    url='https://api.weather.com/v1/current?key=API_KEY&q=${location}',
-    response_template='Weather: ${response.current.condition.text}, ${response.current.temp_f}°F',
+    url='https://api.weather.com/v1/current?key=API_KEY&q=${args.location}',
+    response_template='Weather: ${current.condition.text}, ${current.temp_f}°F',
     parameters={
         'location': {
             'type': 'string',
@@ -1406,7 +1381,7 @@ DataMap functions can be configured with multiple webhooks to handle different s
 
 ### 12.2 Complex Template Expressions
 
-Nest object and array access freely inside a template, such as `${response.data.results[0].title}` or `${args.filters.category}`, as the worked example in [9.1](#91-datamap-skills-vs-raw-configuration) does for its search filters.
+Nest object and array access freely inside a template, such as `${data.results[0].title}` or `${args.filters.category}`, as the worked example in [9.1](#91-datamap-skills-vs-raw-configuration) does for its search filters.
 
 ### 12.3 Dynamic API Endpoint Selection
 
@@ -1414,7 +1389,7 @@ Put `${args.region}` directly in the URL string passed to `.webhook()`. The plat
 
 ### 12.4 Response Transformation Patterns
 
-Reshape a response with the `output` template's own string interpolation, such as `${response.total} results: ${formatted_results}`, rather than a separate transformation step. See the worked example in [9.1](#91-datamap-skills-vs-raw-configuration).
+Reshape a response with the `output` template's own string interpolation, such as `${total} results: ${formatted_results}`, rather than a separate transformation step. See the worked example in [9.1](#91-datamap-skills-vs-raw-configuration).
 
 ## 13. Error Handling and Reliability
 

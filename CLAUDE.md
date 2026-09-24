@@ -154,7 +154,7 @@ mcp-gateway          # MCP Gateway service
 
 `DataMap` defines server-side API tools that execute REST calls without agent webhooks. Supports expression evaluation for conditional logic.
 - Created with fluent API: `DataMap('tool_name').description('...').webhook('GET', 'url').output(...)`
-- Variable expansion: `${args.param}`, `${response.field}`, `${global_data.key}`
+- Variable expansion: `${args.param}`, `${global_data.key}`, and a webhook response's fields from the root, `${field}`; prefix helpers chain, as in `${lc:enc:args.city}`
 - Use DataMap for simple API integrations, webhooks for complex logic
 
 ### Skills System

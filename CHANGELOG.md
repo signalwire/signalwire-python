@@ -146,6 +146,10 @@ tool handlers run. The package now installs its documentation, and
 - `swaig-test`: the DataMap simulator accepts a webhook that returns a JSON
   array, arguments the function doesn't declare get a warning, and
   `--aws-api-gateway-id` and `--aws-stage` now simulate an API Gateway URL.
+  The DataMap simulator read a webhook's object response under `response.`,
+  where the platform reads it from the root, and it didn't expand the `lc`
+  and `enc` helpers or nested templates; it now does, and it points out a
+  `${response.…}` that doesn't resolve.
   `--dump-swml` showed whatever a per-call configuration callback adds twice;
   it shows it once, as the server sends it. It can also dump a plain
   `SWMLService`, and `--help` lists `--call-id`.
@@ -216,6 +220,10 @@ tool handlers run. The package now installs its documentation, and
 - A subclass that passes its own `route="/"` default to `AgentBase` now
   overrides a route set in the config file, even when its caller didn't pass a
   route. Forward only the arguments the caller gave.
+- The docs showed DataMap templates reading a webhook's response as
+  `${response.field}`, which the platform doesn't resolve: it reads the JSON
+  response from the root, as `${field}`, and arguments as `${args.name}`.
+  Check DataMap tools written from the old docs.
 - Code that reads `minimum`/`maximum` from a skill's parameter schema should
   read `min`/`max`.
 - The credential source is `provided`, `environment`, `config file` or

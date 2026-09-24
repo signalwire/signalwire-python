@@ -314,16 +314,21 @@ weather = (
     .description("Get the current weather for a city")
     .parameter("city", "string", "City name", required=True)
     .webhook("GET", "https://api.example.com/weather?city=${enc:url:args.city}")
-    .output(FunctionResult("Weather in ${args.city}: ${response.current.summary}"))
+    .output(FunctionResult("Weather in ${args.city}: ${current.summary}"))
 )
 self.register_swaig_function(weather.to_swaig_function())
 ```
 
-- Templates read `${args.x}`, `${response.x}`, `${global_data.x}` and
-  `${array[0].x}`. The platform expands them, not the SDK.
-- Template functions transform a value, and stack from left to right:
-  `${enc:url:args.city}` URL-encodes it, and `${lc:enc:url:args.city}`
-  lowercases it first. The guide lists them all.
+- A template reads a path from the root of the call's data: `${args.city}`
+  for an argument, `${global_data.x}`, `${meta_data.x}`, and call details
+  such as `${call_id}`. When a webhook responds, its JSON object's fields join
+  the root, so an API that returns `{"current": {...}}` is read as
+  `${current.summary}`, with no `response.` prefix. An array response is
+  `${array[0].x}`. The platform expands templates, not the SDK.
+- Prefix helpers transform a value, left to right: `${lc:enc:args.city}` takes
+  `args.city`, lowercases it, then URL-encodes it. `@{...}` functions format
+  dates and phone numbers, and more; the guide's section 4 lists them all.
+- A webhook's `params` are its JSON request body, set with `.params()`.
 - `swaig-test --exec` simulates a DataMap tool locally, including its HTTP
   request.
 - Use DataMap for simple lookups. Use a Python tool when the result depends on

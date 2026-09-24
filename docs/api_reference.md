@@ -2438,11 +2438,11 @@ data_map = (DataMap('search_with_fallback')
     
     # Primary API
     .webhook('GET', 'https://api.primary.com/search?q=${args.query}')
-    .output(FunctionResult('Primary result: ${response.title}'))
+    .output(FunctionResult('Primary result: ${title}'))
     
     # Fallback API
     .webhook('GET', 'https://api.fallback.com/search?q=${args.query}')
-    .output(FunctionResult('Fallback result: ${response.title}'))
+    .output(FunctionResult('Fallback result: ${title}'))
     
     # Final fallback if all APIs fail
     .fallback_output(FunctionResult('Sorry, all search services are currently unavailable'))
@@ -2460,27 +2460,27 @@ Set the response template for successful API calls.
 - `result` (FunctionResult): Response template with variable substitution
 
 **Variable Substitution in Outputs:**
-- `${response.field}`: API response fields
-- `${response.nested.field}`: Nested response fields
-- `${response.array[0].field}`: Array element fields
+- `${field}`: fields of the API's JSON response, read from the root with no prefix
+- `${nested.field}`: nested response fields
+- `${array[0].field}`: elements of a response that is a JSON array
 - `${args.parameter}`: Original function arguments
 - `${global_data.key}`: Call-wide data store (user info, call state)
 
 **Usage:**
 ```python
 # Simple response template
-data_map.output(FunctionResult('Weather in ${args.location}: ${response.current.condition.text}, ${response.current.temp_f}°F'))
+data_map.output(FunctionResult('Weather in ${args.location}: ${current.condition.text}, ${current.temp_f}°F'))
 
 # Response with actions
 data_map.output(
-    FunctionResult('Found ${response.total_results} results')
+    FunctionResult('Found ${total_results} results')
     .update_global_data({'last_search': '${args.query}'})
     .add_action('play', 'search_complete.mp3')
 )
 
 # Complex response with nested data
 data_map.output(
-    FunctionResult('Order ${response.order.id} status: ${response.order.status}. Estimated delivery: ${response.order.delivery.estimated_date}')
+    FunctionResult('Order ${order.id} status: ${order.status}. Estimated delivery: ${order.delivery.estimated_date}')
 )
 ```
 
@@ -2629,12 +2629,12 @@ Attach expressions to the most recently added webhook, storing them under its `e
 data_map.webhook('GET', 'https://api.example.com/status?id=${args.id}')
 data_map.webhook_expressions([
     {
-        'string': '${response.status}',
+        'string': '${status}',
         'pattern': 'complete',
         'output': FunctionResult('The task is complete.').to_dict()
     },
     {
-        'string': '${response.status}',
+        'string': '${status}',
         'pattern': 'pending',
         'output': FunctionResult('The task is still in progress.').to_dict()
     }
@@ -2653,7 +2653,7 @@ weather_tool = (DataMap('get_weather')
     .parameter('location', 'string', 'City name or ZIP code', required=True)
     .parameter('units', 'string', 'Temperature units', enum=['celsius', 'fahrenheit'])
     .webhook('GET', 'https://api.weather.com/v1/current?key=API_KEY&q=${args.location}&units=${args.units}')
-    .output(FunctionResult('Weather in ${args.location}: ${response.current.condition.text}, ${response.current.temp_f}°F'))
+    .output(FunctionResult('Weather in ${args.location}: ${current.condition.text}, ${current.temp_f}°F'))
     .error_keys(['error'])
 )
 
@@ -2769,7 +2769,7 @@ from signalwire.core.data_map import create_simple_api_tool
 weather = create_simple_api_tool(
     name='get_weather',
     url='https://api.weather.com/v1/current?key=API_KEY&q=${location}',
-    response_template='Weather in ${location}: ${response.current.condition.text}',
+    response_template='Weather in ${args.location}: ${current.condition.text}',
     parameters={
         'location': {
             'type': 'string', 
@@ -2823,9 +2823,9 @@ complete_tool = (DataMap('comprehensive_search')
     .parameter('query', 'string', 'Search query', required=True)
     .parameter('category', 'string', 'Search category', enum=['all', 'docs', 'faq'])
     .webhook('GET', 'https://primary-api.com/search?q=${args.query}&cat=${args.category}')
-    .output(FunctionResult('Primary: ${response.title}'))
+    .output(FunctionResult('Primary: ${title}'))
     .webhook('GET', 'https://backup-api.com/search?q=${args.query}')
-    .output(FunctionResult('Backup: ${response.title}'))
+    .output(FunctionResult('Backup: ${title}'))
     .fallback_output(FunctionResult('All search services unavailable'))
     .error_keys(['error', 'message'])
 )
@@ -3393,7 +3393,7 @@ class ComprehensiveAgent(AgentBase):
             .parameter("customer_id", "string", "Customer ID", required=True)
             .webhook("GET", "https://api.company.com/customers/${args.customer_id}",
                     headers={"Authorization": "Bearer YOUR_TOKEN"})
-            .output(FunctionResult("Customer: ${response.name}, Status: ${response.status}"))
+            .output(FunctionResult("Customer: ${name}, Status: ${status}"))
             .error_keys(["error"])
         )
         

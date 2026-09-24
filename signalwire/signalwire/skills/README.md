@@ -201,7 +201,7 @@ def register_tools(self) -> None:
         .parameter("param2", "string", "Optional parameter", required=False)
         .webhook("GET", "https://api.example.com/endpoint/${args.param1}", 
                  headers={"Authorization": f"Bearer {self.api_key}"})
-        .output(SwaigFunctionResult("Result: ${response.data}"))
+        .output(SwaigFunctionResult("Result: ${data}"))
         .error_keys(["error", "message"])
     )
     
@@ -214,7 +214,7 @@ DataMap tools support these features:
 
 - **Dynamic URLs**: Use `${args.param}` for user inputs
 - **Headers**: Add authentication and other headers
-- **Response Processing**: Extract data with `${response.field}`
+- **Response Processing**: Read the API's JSON response from the root, as `${field}`
 - **Error Handling**: Specify error keys to watch for
 - **Defaults**: Use `${args.param || "default"}` for fallbacks
 

@@ -279,7 +279,7 @@ SignalWire's SWAIG provides 20+ actions that tools can return to control call be
 
 5. **Serverless-First:** True auto-detection of Lambda, Cloud Functions, Azure Functions, and CGI. Agents deploy anywhere with `agent.run()`. Pipecat requires a persistent server or Pipecat Cloud.
 
-6. **DataMap (Serverless Tools):** Execute API integrations on SignalWire's servers without running a webhook server. Supports expressions with pattern matching, HTTP webhooks with foreach iteration, variable substitution (`${args.*}`, `${global_data.*}`, `${response.*}`), and error handling. No equivalent exists in Pipecat.
+6. **DataMap (Serverless Tools):** Execute API integrations on SignalWire's servers without running a webhook server. Supports expressions with pattern matching, HTTP webhooks with foreach iteration, variable substitution (`${args.*}`, `${global_data.*}`, and a webhook response's fields read from the root), and error handling. No equivalent exists in Pipecat.
 
 7. **Structured Prompts (POM):** The Prompt Object Model provides a disciplined approach to prompt engineering with sections, bullets, and hierarchy. Pipecat uses raw message lists.
 

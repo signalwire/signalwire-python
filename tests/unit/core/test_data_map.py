@@ -162,7 +162,7 @@ class TestDataMapOutput:
     def test_set_output(self) -> None:
         """Test setting output"""
         data_map = DataMap("test_function")
-        output = FunctionResult("API call successful: ${response.data}")
+        output = FunctionResult("API call successful: ${data}")
         
         # Must add webhook first
         data_map.webhook("GET", "https://api.example.com/data")
@@ -217,7 +217,7 @@ class TestDataMapSerialization:
         data_map = DataMap("test_function")
         data_map.purpose("Test function")
         data_map.webhook("GET", "https://api.example.com/data")
-        output = FunctionResult("Webhook result: ${response.data}")
+        output = FunctionResult("Webhook result: ${data}")
         data_map.output(output)
         
         swaig_func = data_map.to_swaig_function()
@@ -269,7 +269,7 @@ class TestDataMapFactoryFunctions:
         data_map = create_simple_api_tool(
             name="weather_tool",
             url="https://api.weather.com/current?location=${location}",
-            response_template="Weather: ${response.condition}, ${response.temp}°F"
+            response_template="Weather: ${condition}, ${temp}°F"
         )
         
         assert isinstance(data_map, DataMap)
@@ -387,7 +387,7 @@ class TestDataMapTemplateVariables:
     def test_response_variables_in_output(self) -> None:
         """Test response variables in output templates"""
         data_map = DataMap("test_function")
-        output = FunctionResult("Result: ${response.data.title}")
+        output = FunctionResult("Result: ${data.title}")
         
         data_map.webhook("GET", "https://api.example.com/data")
         data_map.output(output)

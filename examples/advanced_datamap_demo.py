@@ -73,7 +73,7 @@ def create_advanced_webhook_demo():
             "POST",
             "https://api.example.com/advanced",
             headers={
-                "Authorization": "Bearer ${token}",
+                "Authorization": "Bearer YOUR_TOKEN",
                 "User-Agent": "SignalWire-Agent/1.0",
             },
             input_args_as_params=True,  # Merge function args into params
@@ -84,14 +84,14 @@ def create_advanced_webhook_demo():
         .webhook_expressions(
             [
                 {
-                    "string": "${response.status}",
+                    "string": "${status}",
                     "pattern": "^success$",
                     "output": {"response": "Operation completed successfully"},
                 },
                 {
-                    "string": "${response.error_code}",
+                    "string": "${error_code}",
                     "pattern": "^(404|500)$",
-                    "output": {"response": "API Error: ${response.error_message}"},
+                    "output": {"response": "API Error: ${error_message}"},
                 },
             ]
         )
@@ -102,7 +102,7 @@ def create_advanced_webhook_demo():
             headers={"Accept": "application/json"},
         )
         .params({"q": "${args.action}"})
-        .output(FunctionResult("Backup result: ${response.data}"))
+        .output(FunctionResult("Backup result: ${data}"))
         # Global fallback
         .fallback_output(FunctionResult("All APIs are currently unavailable"))
         .global_error_keys(["error", "fault", "exception"])
@@ -122,7 +122,7 @@ def create_form_encoding_demo():
             "https://forms.example.com/submit",
             headers={
                 "Content-Type": "application/x-www-form-urlencoded",
-                "X-API-Key": "${api_key}",
+                "X-API-Key": "YOUR_API_KEY",
             },
             form_param="form_data",
         )  # Sends entire JSON as form_data parameter
@@ -149,12 +149,12 @@ def create_array_processing_demo():
         .webhook(
             "GET",
             "https://search-api.example.com/search",
-            headers={"Authorization": "Bearer ${search_token}"},
+            headers={"Authorization": "Bearer YOUR_SEARCH_TOKEN"},
         )
         .params(
             {
                 "q": "${args.query}",
-                "max_results": "@{expr ${args.limit} > 10 ? 10 : ${args.limit}}",
+                "max_results": "${args.limit}",
             }
         )
         .foreach(
@@ -167,7 +167,7 @@ def create_array_processing_demo():
         )
         .output(
             FunctionResult(
-                'Found @{expr ${response.total}} results for "${args.query}":\n\n${formatted_results}'
+                'Found ${total} results for "${args.query}":\n\n${formatted_results}'
             )
         )
         .error_keys(["error"])

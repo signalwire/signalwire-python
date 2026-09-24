@@ -117,13 +117,13 @@ data_map = (DataMap("check_stock")
     .purpose("Check product stock levels")
     .parameter("sku", "string", "Product SKU", required=True)
     .webhook("GET", "https://api.warehouse.com/stock/${args.sku}")
-    .output(FunctionResult("Stock for ${args.sku}: ${response.quantity} units"))
+    .output(FunctionResult("Stock for ${args.sku}: ${quantity} units"))
     .fallback_output(FunctionResult("Could not check stock right now")))
 
 agent.register_swaig_function(data_map.to_swaig_function())
 ```
 
-DataMap tools execute on SignalWire's servers. No webhook is needed. The SDK generates the `data_map` structure in the SWML with variable expansion (`${args.*}`, `${response.*}`, `${global_data.*}`), foreach iteration, expression matching, and error handling. Your agent never receives the callback; SignalWire handles the entire API call.
+DataMap tools execute on SignalWire's servers. No webhook is needed. The SDK generates the `data_map` structure in the SWML with variable expansion (`${args.*}`, a webhook response's fields from the root such as `${quantity}`, and `${global_data.*}`), foreach iteration, expression matching, and error handling. Your agent never receives the callback; SignalWire handles the entire API call.
 
 ### 3. Skills (Packaged Integrations)
 

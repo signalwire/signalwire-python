@@ -59,8 +59,8 @@ class DataMapDemoAgent(AgentBase):
         # 1. Simple weather API - basic pattern
         weather_tool = create_simple_api_tool(
             name="get_weather",
-            url="https://api.weather.com/v1/current?key=API_KEY&q=${location}",
-            response_template="Current weather in ${location}: ${response.current.condition.text}, ${response.current.temp_f}°F",
+            url="https://api.weather.com/v1/current?key=API_KEY&q=${enc:args.location}",
+            response_template="Current weather in ${args.location}: ${current.condition.text}, ${current.temp_f}°F",
             parameters={
                 "location": {
                     "type": "string",
@@ -115,15 +115,18 @@ class DataMapDemoAgent(AgentBase):
                     "Content-Type": "application/json",
                 },
             )
-            .body({"query": "${query}", "limit": "${limit}"})
+            .params({"query": "${args.query}", "limit": "${args.limit}"})
+            # Builds one line per result, under "found", from the response's
+            # "results" array
             .foreach(
                 {
-                    "input_key": "${response.results}",
-                    "output_key": "foreach",
-                    "append": True,
+                    "input_key": "results",
+                    "output_key": "found",
+                    "max": 5,
+                    "append": "${this.title}: ${this.summary}\n",
                 }
             )
-            .output(FunctionResult("Found: ${foreach.title} - ${foreach.summary}"))
+            .output(FunctionResult("Found:\n${found}"))
             .error_keys(["error", "status"])
         )
 
@@ -138,10 +141,10 @@ class DataMapDemoAgent(AgentBase):
                 enum=["programming", "dad", "general"],
                 required=False,
             )
-            .webhook("GET", "https://api.jokes.com/random?category=${category}")
-            .output(
-                FunctionResult("Here's a ${response.category} joke: ${response.joke}")
+            .webhook(
+                "GET", "https://api.jokes.com/random?category=${enc:args.category}"
             )
+            .output(FunctionResult("Here's a ${category} joke: ${joke}"))
             .error_keys(["error"])
         )
 
@@ -160,27 +163,25 @@ class DataMapDemoAgent(AgentBase):
             # First try fast API
             .webhook(
                 "GET",
-                "https://api.fastsearch.com/q?term=${query}",
+                "https://api.fastsearch.com/q?term=${enc:args.query}",
                 headers={"X-API-Key": "FAST_KEY"},
             )
+            .output(FunctionResult("Top result: ${items[0].title}"))
             # Fallback to comprehensive API if first fails
             .webhook(
                 "GET",
-                "https://api.comprehensive.com/search?q=${query}&detail=full",
+                "https://api.comprehensive.com/search?q=${enc:args.query}&detail=full",
                 headers={"Authorization": "Bearer COMPREHENSIVE_TOKEN"},
             )
             .foreach(
                 {
-                    "input_key": "${response.items}",
-                    "output_key": "foreach",
-                    "append": True,
+                    "input_key": "items",
+                    "output_key": "found",
+                    "max": 5,
+                    "append": "${this.title} (score ${this.relevance})\n",
                 }
             )
-            .output(
-                FunctionResult(
-                    "Search result: ${foreach.title} - Score: ${foreach.relevance}"
-                )
-            )
+            .output(FunctionResult("Search results:\n${found}"))
             .error_keys(["error", "failed", "unavailable"])
         )
 
@@ -232,8 +233,8 @@ def print_data_map_examples():
     # Simple weather API
     weather = create_simple_api_tool(
         "get_weather",
-        "https://api.weather.com/v1/current?key=API_KEY&q=${location}",
-        "Weather in ${location}: ${response.current.condition.text}, ${response.current.temp_f}°F",
+        "https://api.weather.com/v1/current?key=API_KEY&q=${enc:args.location}",
+        "Weather in ${args.location}: ${current.condition.text}, ${current.temp_f}°F",
         parameters={
             "location": {"type": "string", "description": "City name", "required": True}
         },
@@ -271,15 +272,16 @@ def print_data_map_examples():
             "https://api.docs.com/search",
             headers={"Authorization": "Bearer TOKEN"},
         )
-        .body({"query": "${query}", "limit": 3})
+        .params({"query": "${args.query}", "limit": 3})
         .foreach(
             {
-                "input_key": "${response.results}",
-                "output_key": "foreach",
-                "append": True,
+                "input_key": "results",
+                "output_key": "found",
+                "max": 3,
+                "append": "${this.title}: ${this.summary}\n",
             }
         )
-        .output(FunctionResult("Found: ${foreach.title} - ${foreach.summary}"))
+        .output(FunctionResult("Found:\n${found}"))
         .error_keys(["error"])
     )
 

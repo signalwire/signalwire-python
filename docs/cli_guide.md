@@ -36,7 +36,7 @@ The tool provides these capabilities:
 - **Dynamic Agent Support**: Test request-dependent SWML generation with mock request objects
 - **Real HTTP Execution**: DataMap functions make actual HTTP requests to real APIs
 - **Comprehensive Simulation**: Generate realistic post_data with all SignalWire metadata
-- **Advanced Template Engine**: Supports all DataMap variable syntax (`${args.param}`, `${response.field}`, `${array[0].property}`)
+- **Advanced Template Engine**: Supports all DataMap variable syntax (`${args.param}`, response fields from the root such as `${field}`, `${array[0].property}`, and helpers such as `${lc:enc:args.city}`)
 - **Flexible CLI Syntax**: Support both `--exec` and JSON argument styles
 - **Override System**: Precise control over test data with dot notation paths
 - **Mock Request Objects**: Complete FastAPI Request simulation for dynamic agents
@@ -776,7 +776,7 @@ The tool properly handles all DataMap template syntax:
 
 - **Function Arguments**: `${args.type}`, `${args.location}`
 - **Array Access**: `${array[0].joke}`, `${array[0].weather.temp}`
-- **Nested Objects**: `${response.data.results[0].title}`
+- **Nested Objects**: `${data.results[0].title}`
 - **Fallback Values**: `${args.units || "metric"}`
 
 ### DataMap Error Handling
@@ -1150,7 +1150,8 @@ The tool supports all DataMap template syntax with both `${}` and `%{}` variatio
 | Syntax | Description | Example |
 |--------|-------------|---------|
 | `${args.param}` / `%{args.param}` | Function arguments | `${args.query}`, `%{args.type}` |
-| `${response.field}` / `%{response.field}` | API response object | `${response.temperature}` |
+| `${field}` / `%{field}` | A field of the API's JSON object response, from the root | `${temperature}` |
+| `${lc:enc:args.param}` | Prefix helpers, left to right: lowercase, then URL-encode | `${lc:enc:args.city}` |
 | `${array[0].field}` / `%{array[0].field}` | API response array | `${array[0].joke}`, `%{array[0].text}` |
 | `${this.property}` / `%{this.property}` | Current foreach item | `${this.title}`, `%{this.content}` |
 | `${global_data.key}` / `%{global_data.key}` | Call-wide data store | `${global_data.customer_name}` |
@@ -1182,7 +1183,7 @@ DataMap foreach loops concatenate strings from array elements:
 }
 ```
 
-This processes each item in `response.chunks` and builds a single concatenated string in `formatted_results`.
+This processes each item in the response's `chunks` array and builds a single concatenated string in `formatted_results`.
 
 ## Webhook Function Testing
 

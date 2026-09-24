@@ -100,17 +100,18 @@ DataMap has three parts:
    ```
 
 2. **Processing Pipeline**: Ordered execution with early termination
-   - **Expressions**: Pattern matching against arguments
+   - **Expressions**: Pattern matching on a template, usually an argument
    - **Webhooks**: HTTP API calls with variable substitution
    - **Foreach**: Array iteration for response processing
    - **Output**: Final response generation using FunctionResult
 
 3. **Variable Expansion**: Dynamic substitution using `${variable}` syntax
    - Function arguments: `${args.parameter_name}`
-   - API responses: `${response.field.nested_field}`
-   - Array elements: `${foreach.item_field}`
+   - API responses, read from the root: `${field.nested_field}`, or `${array[0].field}` for an array response
+   - The current element in a `foreach`: `${this.item_field}`
    - Global data: `${global_data.key}`
-   - Metadata: `${meta_data.call_id}`
+   - Function metadata: `${meta_data.key}`, and call details such as `${call_id}`
+   - Prefix helpers, applied left to right: `${lc:enc:args.city}` lowercases, then URL-encodes
 
 ### Tool Types
 
@@ -123,8 +124,8 @@ The system supports different tool patterns:
 <!-- snippet: no-compile indented-list-excerpt -->
    ```python
    weather_tool = (DataMap('get_weather')
-       .webhook('GET', 'https://api.weather.com/v1/current?q=${location}')
-       .output(FunctionResult('Weather: ${response.current.condition}'))
+       .webhook('GET', 'https://api.weather.com/v1/current?q=${enc:args.location}')
+       .output(FunctionResult('Weather: ${current.condition}'))
    )
    ```
 
@@ -143,14 +144,19 @@ The system supports different tool patterns:
 
 3. **Array Processing Tools**: Handle list responses
 
-   `foreach` iterates over an array in the webhook's response, and `output` renders once per item:
+   `foreach` walks an array in the webhook's response and builds text from each element, and `output` renders once, reading that text:
 
 <!-- snippet: no-compile indented-list-excerpt -->
    ```python
    search_tool = (DataMap('search_docs')
-       .webhook('GET', 'https://api.docs.com/search')
-       .foreach('${response.results}')
-       .output(FunctionResult('Found: ${foreach.title}'))
+       .webhook('GET', 'https://api.docs.com/search?q=${enc:args.query}')
+       .foreach({
+           'input_key': 'results',
+           'output_key': 'found',
+           'max': 3,
+           'append': '${this.title}\n',
+       })
+       .output(FunctionResult('Found: ${found}'))
    )
    ```
 
