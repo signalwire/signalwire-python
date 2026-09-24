@@ -244,3 +244,24 @@ update_order_status: user-defined helper shown in tutorial/multi_agents/lesson5
 # stdlib
 rstrip: str.rstrip — stdlib string method (tutorial lesson3 + skills/swml_transfer/README.md prose)
 urlopen: urllib.request.urlopen — stdlib HTTP call in tutorial/fred/tutorial/appendix-docker-deployment.md
+
+## PGI agent guide (docs/pgi_agent_guide.md): reference implementation and stdlib
+
+# Section 6 of the guide is a five-file application (case_domain.py,
+# case_workflow.py, case_handlers.py, agent.py, test_reference.py). These are
+# methods and classes it defines, or stdlib calls it makes. None is an SDK symbol.
+
+CaseStore._connect: defined in docs/pgi_agent_guide.md 6.1 (case_domain.py); opens the SQLite connection
+CaseStore._key: defined in docs/pgi_agent_guide.md 6.1 (case_domain.py); validates the tenant and call id
+CaseStore.submit: defined in docs/pgi_agent_guide.md 6.1 (case_domain.py); CaseHandlers.submit in 6.3 shares the name
+CaseHandlers._call_id: defined in docs/pgi_agent_guide.md 6.3 (case_handlers.py)
+CaseHandlers._projection: defined in docs/pgi_agent_guide.md 6.3 (case_handlers.py)
+CaseHandlers._result: defined in docs/pgi_agent_guide.md 6.3 (case_handlers.py)
+CaseHandlers._failure: defined in docs/pgi_agent_guide.md 6.3 (case_handlers.py)
+CaseHandlers.finish: defined in docs/pgi_agent_guide.md 6.3 (case_handlers.py); called by the tests in 6.5
+ReferenceTests.draft: test helper defined in docs/pgi_agent_guide.md 6.5 (test_reference.py)
+agent.SupportAgent: class defined in docs/pgi_agent_guide.md 6.4 (agent.py), started with SupportAgent().run()
+sqlite3.Cursor.fetchone: stdlib, used by docs/pgi_agent_guide.md 6.1
+uuid.uuid4: stdlib, used by docs/pgi_agent_guide.md 6.1 to mint case references
+tempfile.TemporaryDirectory: stdlib, used by docs/pgi_agent_guide.md 6.5
+unittest.TestCase.addCleanup: stdlib, used by docs/pgi_agent_guide.md 6.5
