@@ -1606,9 +1606,13 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         """
         Set a callback function for dynamic agent configuration
 
-        This callback receives the actual agent instance, allowing you to dynamically
-        configure ANY aspect of the agent including adding skills, modifying prompts,
-        changing parameters, etc. based on request data.
+        The callback receives a copy of the agent made for this request, and can
+        configure any aspect of it from the request's data: skills, prompts,
+        parameters and so on. Its changes apply to this request only. The
+        configuration the SDK manages is copied; other attributes, such as ones
+        a subclass adds, are shared with the agent and other requests, so
+        assign new values to those rather than changing them in place (see
+        ``_create_ephemeral_copy``).
 
         Args:
             callback: Function that takes (query_params, body_params, headers, agent)

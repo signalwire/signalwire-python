@@ -430,7 +430,7 @@ The SDK is designed to be highly extensible:
 
 7. **Dynamic Configuration**: Per-request agent configuration for flexible behavior
 
-   The callback receives the request data and the agent instance to configure:
+   The callback receives the request data and a copy of the agent, made for this request, to configure:
 
 <!-- snippet: no-compile indented-list-excerpt -->
    ```python
@@ -513,7 +513,7 @@ A request moves through five steps:
 
 1. **Request Processing**: The framework extracts query parameters, body data, and headers from incoming requests
 2. **Callback Invocation**: If a dynamic configuration callback is registered, it's called with the request data
-3. **Agent Configuration**: The callback receives the actual agent instance (AgentBase) and configures it directly using familiar AgentBase methods
+3. **Agent Configuration**: The callback receives a copy of the agent (an AgentBase) made for this request, and configures it with the usual AgentBase methods
 4. **SWML Generation**: The configuration is applied during SWML document rendering
 5. **Response Delivery**: The customized SWML document is returned to the client
 
@@ -565,7 +565,7 @@ The five steps from Component Interaction expand into this sequence, from the in
 
 #### Direct Agent Configuration
 
-The dynamic configuration callback receives the actual agent instance, allowing direct manipulation of the agent's configuration for a single request:
+The dynamic configuration callback receives a copy of the agent made for this request, so its changes apply to that request only. The configuration the SDK manages, such as the prompt, tools, skills, languages, parameters, hints and global data, is copied; other attributes, such as ones your own class adds, are shared with the agent:
 
 ```
 ┌───────────────────────────────────────────────────────────────────────────────┐

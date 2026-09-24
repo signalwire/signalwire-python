@@ -1350,7 +1350,7 @@ class MyDynamicAgent(AgentBase):
             query_params (dict): Query string parameters from the URL
             body_params (dict): Parsed JSON body from POST requests
             headers (dict): HTTP headers from the request
-            agent (AgentBase): The agent instance to configure
+            agent (AgentBase): A copy of the agent, made for this request, to configure
         """
         # Your dynamic configuration logic here
         pass
@@ -1360,11 +1360,11 @@ The callback function receives four parameters:
 - **query_params**: Dictionary of URL query parameters
 - **body_params**: Dictionary of parsed JSON body (empty for GET requests)
 - **headers**: Dictionary of HTTP headers
-- **agent**: The agent instance to configure dynamically
+- **agent**: A copy of the agent, made for this request, to configure
 
 ### Dynamic Configuration Methods
 
-The `agent` parameter in your callback is the actual agent instance, allowing you to use all the same configuration methods you would use during initialization:
+The `agent` parameter in your callback is a copy of the agent made for this request, so you can use all the same configuration methods you would use during initialization, and the changes apply to this request only. The configuration the SDK manages, such as the prompt, tools, skills, languages, parameters, hints and global data, is copied. Other attributes, such as ones your own class adds, are shared with the agent and with other requests: assign a new value to one rather than changing the shared object in place, and keep per-caller state in global data or your own storage.
 
 #### Language Configuration
 

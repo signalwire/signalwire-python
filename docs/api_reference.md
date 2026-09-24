@@ -3218,7 +3218,7 @@ Framework-free request dispatch: runs proxy detection, basic auth, routing callb
 
 ### Dynamic Configuration
 
-The dynamic configuration callback receives the agent instance directly, allowing you to configure it based on request data.
+The dynamic configuration callback receives a copy of the agent made for the request, and configures it based on the request's data. Its changes apply to that request only.
 
 **Usage:**
 ```python
