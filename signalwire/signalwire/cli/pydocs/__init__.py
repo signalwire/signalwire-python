@@ -17,6 +17,7 @@ code, so the answers always match the installed version.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from pathlib import Path
@@ -89,7 +90,7 @@ def _cmd_examples(argv: list[str]) -> int:
 
 def _cmd_grep(argv: list[str]) -> int:
     from ._bundle import docs_root
-    from ._files import all_doc_files, grep, package_dir
+    from ._files import all_doc_files, grep, package_dir, source_files
 
     parser = argparse.ArgumentParser(
         prog="sw-pydocs grep", description="Search the installed docs and examples."
@@ -108,9 +109,11 @@ def _cmd_grep(argv: list[str]) -> int:
         return _err(f"Invalid regular expression: {e}", 2)
     root = docs_root()
     files = all_doc_files(root)
+    if args.limit < 1:
+        return _err("--limit must be 1 or more.", 2)
     if args.code:
         base = package_dir()
-        for path in sorted(base.rglob("*.py")):
+        for path in source_files():
             files["signalwire/" + path.relative_to(base).as_posix()] = path
     matches, total = grep(pattern, files, args.limit)
     if not matches:
@@ -304,8 +307,13 @@ def main(argv: list[str] | None = None) -> int:
 def console_main() -> None:
     """The ``sw-pydocs`` command."""
     try:
-        sys.exit(main())
+        code = main()
+        # Flush here, so a reader that stopped early fails inside this block
+        sys.stdout.flush()
     except BrokenPipeError:
-        # Output piped to a command that stopped reading, such as head
-        sys.stderr.close()
+        # Output piped to a command that stopped reading, such as head. Point
+        # stdout at the null device so Python's flush at exit can't fail again.
+        devnull = os.open(os.devnull, os.O_WRONLY)
+        os.dup2(devnull, sys.stdout.fileno())
         sys.exit(0)
+    sys.exit(code)

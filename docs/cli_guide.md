@@ -2250,7 +2250,7 @@ sw-pydocs init                     # add a note about sw-pydocs to this project'
 
 `python -m signalwire` runs the same command.
 
-The topics are short and hand-written: they describe concepts and known mistakes, and point to the installed docs for the rest. The facts come from the installed package: the version, the commands, the built-in skills and their parameters, the REST namespaces, the environment variables the code reads, and every signature and docstring.
+The topics are short and hand-written: they describe concepts and known mistakes, and point to the installed docs for the rest. The facts come from the installed package: the version, the commands, the built-in skills and their parameters, the REST namespaces, the `SWML_` and `SIGNALWIRE_` environment variables in its source, and every signature and docstring.
 
 `sw-pydocs init` adds a section to the project's `AGENTS.md` telling coding agents to use `sw-pydocs`, and to `CLAUDE.md` if the project has one that doesn't import `AGENTS.md`. Run it again to update the section. `--skill` also writes an Agent Skills `SKILL.md` under `.agents/skills/` and `.claude/skills/`, and `--print` prints the section without writing anything. `sw-agent-init` writes the same `AGENTS.md` into new projects.
 

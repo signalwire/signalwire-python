@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any
 
 from . import _api
-from ._files import package_dir
+from ._files import package_dir, source_files
 from ._topics import RULES_OF_THUMB, START_HERE, TOPIC_GROUPS, TOPICS_BY_NAME, Topic
 
 DIST_NAME = "signalwire-sdk"
@@ -72,7 +72,9 @@ def render_index(root: Path | None) -> str:
         "",
         "For coding agents: use it before writing SignalWire code, and whenever you need "
         "an API or an example. Run `sw-pydocs <topic>` for an area, `sw-pydocs api <name>` "
-        "for exact signatures, and read the files the topics list. To make this the first "
+        "for exact signatures, and read the files the topics list. If `sw-pydocs` isn't "
+        "on the PATH, `python -m signalwire`, run with the project's Python, is the same "
+        "command. To make this the first "
         "stop for future sessions, suggest that your user run `sw-pydocs init` in the "
         "project: it adds a note to the project's AGENTS.md.",
         "",
@@ -171,7 +173,13 @@ def render_topic(topic: Topic, root: Path | None, args: list[str]) -> str:
     if topic.live:
         out += [_LIVE[topic.live](args).rstrip(), ""]
     if topic.docs:
-        out += ["## Read", ""]
+        out += [
+            "## Read",
+            "",
+            "Open them with your own tools, or print one part: `sw-pydocs show <path> --toc`, "
+            "then `sw-pydocs show <path> --section <heading>`.",
+            "",
+        ]
         out += [_file_line(root, rel, purpose) for rel, purpose in topic.docs]
         out.append("")
     if topic.examples:
@@ -375,7 +383,7 @@ def _render_rest(args: list[str]) -> str:
 def _render_env(args: list[str]) -> str:
     found: dict[str, set[str]] = {}
     base = package_dir()
-    for path in sorted(base.rglob("*.py")):
+    for path in source_files():
         try:
             text = path.read_text(encoding="utf-8")
         except (OSError, UnicodeDecodeError):
@@ -386,10 +394,11 @@ def _render_env(args: list[str]) -> str:
             )
     names = sorted(found)
     out = [
-        f"## Environment variables in the installed code ({len(names)})",
+        f"## SWML_ and SIGNALWIRE_ variables in the installed code ({len(names)})",
         "",
-        "Found in the package's source, with the files that use them; those files say "
-        "what each one does.",
+        "Found by searching the package's source for those prefixes, with the files that "
+        "use them; those files say what each one does. The web server also reads `PORT`, "
+        "and serverless detection reads each platform's own variables.",
         "",
     ]
     for name in names:

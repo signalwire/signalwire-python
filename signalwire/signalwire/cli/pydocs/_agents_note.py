@@ -25,7 +25,8 @@ version:
 
 - Run `sw-pydocs` for a map of the SDK, and `sw-pydocs <topic>` for an area:
   `agents`, `tools`, `contexts`, `skills`, `relay`, `rest`, `search`, `deploy`
-  and more.
+  and more. If the command isn't on the PATH, `python -m signalwire` with the
+  project's Python runs the same thing.
 - Check SDK names and signatures with `sw-pydocs api <name>` instead of
   recalling them. `sw-pydocs examples` and `sw-pydocs grep <regex>` find
   examples and docs.

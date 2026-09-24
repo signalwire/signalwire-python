@@ -70,9 +70,10 @@ if __name__ == "__main__":
   SWML document at `/agent` and its tools at `/agent/swaig`. On AWS Lambda,
   Google Cloud Functions, Azure Functions or CGI, it handles the platform's
   request instead.
-- Every endpoint needs basic auth. Set `SWML_BASIC_AUTH_USER` and
-  `SWML_BASIC_AUTH_PASSWORD`; otherwise the agent generates credentials, which
-  `agent.get_basic_auth_credentials()` returns.
+- Every endpoint except the `/health` and `/ready` probes needs basic auth.
+  Set `SWML_BASIC_AUTH_USER` and `SWML_BASIC_AUTH_PASSWORD`; otherwise the
+  agent generates credentials, which `agent.get_basic_auth_credentials()`
+  returns.
 - To take calls, SignalWire must reach the agent over HTTPS: deploy it, or use
   a tunnel during development and set `SWML_PROXY_URL_BASE` to the public URL.
   Then point a phone number's SWML webhook at
@@ -814,15 +815,19 @@ _SECURITY = Topic(
     title="Security",
     summary="Basic auth, webhook signatures, tool tokens and URL-fetch protection",
     body="""\
-- Basic auth protects every endpoint. Set `SWML_BASIC_AUTH_USER` and
-  `SWML_BASIC_AUTH_PASSWORD`, or let the agent generate credentials.
-- Webhook signatures: with a `signing_key` (or `SIGNALWIRE_SIGNING_KEY`), the
-  agent refuses requests that SignalWire didn't sign.
+- Basic auth protects every endpoint except the `/health` and `/ready`
+  probes. Set `SWML_BASIC_AUTH_USER` and `SWML_BASIC_AUTH_PASSWORD`, or let the
+  agent generate credentials.
+- Webhook signatures: with a `signing_key` (or `SIGNALWIRE_SIGNING_KEY`), every
+  POST must carry a valid SignalWire signature. That covers SignalWire's
+  requests for the SWML document, its tool calls and its summaries. A GET for
+  the SWML document needs only basic auth.
 - Tool tokens: a secure tool runs only with the token minted into that call's
   SWML. `swaig_secret` (or `SIGNALWIRE_SWAIG_SECRET`) keeps tokens valid across
   replicas and restarts.
-- Skills that fetch URLs refuse private and internal addresses, redirects
-  included. `SWML_ALLOW_PRIVATE_URLS` allows them.
+- The spider and web_search skills, which fetch URLs that callers and search
+  results supply, refuse private and internal addresses, redirects included.
+  `SWML_ALLOW_PRIVATE_URLS` allows them.
 - Security is also a design question: what the model can see and request, and
   what the handlers enforce (`sw-pydocs pgi`).
 """,
@@ -837,7 +842,7 @@ _SECURITY = Topic(
 _CONFIG = Topic(
     name="config",
     title="Configuration and environment variables",
-    summary="Config files, precedence, and every environment variable the SDK reads",
+    summary="Config files, precedence, and the SDK's environment variables",
     body="""\
 Settings come from constructor arguments, then a config file
 (`config_file=...`), then environment variables, then defaults, in that order

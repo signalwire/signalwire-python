@@ -37,6 +37,14 @@ def package_dir() -> Path:
     return Path(__file__).resolve().parents[2]
 
 
+def source_files() -> list[Path]:
+    """The installed package's Python source, without the bundled examples."""
+    base = package_dir()
+    return sorted(
+        p for p in base.rglob("*.py") if "_docs" not in p.relative_to(base).parts
+    )
+
+
 def all_doc_files(root: Path | None) -> dict[str, Path]:
     """Every documentation file, by the path sw-pydocs shows for it.
 
@@ -57,9 +65,14 @@ def resolve(name: str, files: dict[str, Path]) -> list[str]:
     """The documentation files ``name`` could mean, best matches first.
 
     Accepts a path as shown by sw-pydocs, the same without ``.md``, a file
-    name such as ``agent_guide.md``, or a stem such as ``agent_guide``.
+    name such as ``agent_guide.md``, a stem such as ``agent_guide``, or the
+    full path that ``sw-pydocs path`` prints.
     """
-    wanted = name.strip().strip("/")
+    given = Path(name.strip())
+    if given.is_absolute():
+        target = given.resolve()
+        return [rel for rel, path in files.items() if path.resolve() == target]
+    wanted = name.strip().replace("\\", "/").strip("/")
     if wanted in files:
         return [wanted]
     if wanted + ".md" in files:

@@ -120,6 +120,9 @@ class TestTopics:
     def test_renders(self, topic: Topic) -> None:
         text = render_topic(topic, ROOT, [])
         assert text.startswith(f"# {topic.title}")
+        if topic.docs:
+            # How to read one part of a long doc, beside the list of docs
+            assert "sw-pydocs show <path> --toc" in text
 
 
 class TestExamples:
@@ -215,6 +218,22 @@ class TestLiveSections:
         assert "`SWML_ALLOWED_HOSTS`" in out
         # A header-name constant exported in __all__, not a variable
         assert "SIGNALWIRE_SIGNATURE_HEADER" not in out
+
+    def test_env_skips_the_bundled_examples(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
+        # Installed, the examples sit inside the package, under _docs/
+        package = tmp_path / "signalwire"
+        (package / "core").mkdir(parents=True)
+        (package / "_docs" / "examples").mkdir(parents=True)
+        (package / "core" / "x.py").write_text('os.getenv("SWML_FROM_CODE")\n', encoding="utf-8")
+        (package / "_docs" / "examples" / "e.py").write_text('os.getenv("SWML_FROM_EXAMPLE")\n', encoding="utf-8")
+        monkeypatch.setattr("signalwire.cli.pydocs._files.package_dir", lambda: package)
+        monkeypatch.setattr("signalwire.cli.pydocs._render.package_dir", lambda: package)
+        code, out, _ = _run(capsys, "config")
+        assert code == 0
+        assert "`SWML_FROM_CODE`" in out
+        assert "SWML_FROM_EXAMPLE" not in out
 
     def test_prefabs(self, capsys: pytest.CaptureFixture[str]) -> None:
         import signalwire.prefabs
@@ -332,6 +351,22 @@ class TestFiles:
         assert code == 2
         assert "Invalid regular expression" in err
 
+    def test_show_takes_the_path_that_path_prints(self, capsys: pytest.CaptureFixture[str]) -> None:
+        _, printed, _ = _run(capsys, "path", "agent_guide")
+        code, out, _ = _run(capsys, "show", printed.strip(), "--toc")
+        assert code == 0
+        assert "Agent" in out
+
+    def test_show_takes_backslashes(self, capsys: pytest.CaptureFixture[str]) -> None:
+        code, out, _ = _run(capsys, "show", "docs\\agent_guide.md", "--toc")
+        assert code == 0
+        assert "Agent" in out
+
+    def test_grep_limit_must_be_positive(self, capsys: pytest.CaptureFixture[str]) -> None:
+        code, _, err = _run(capsys, "grep", "AgentBase", "--limit", "0")
+        assert code == 2
+        assert "--limit" in err
+
     def test_path(self, capsys: pytest.CaptureFixture[str]) -> None:
         assert ROOT is not None
         code, out, _ = _run(capsys, "path")
@@ -436,6 +471,24 @@ def test_cli_package_imports_swaig_test_lazily() -> None:
     import signalwire.cli
 
     assert signalwire.cli.test_swaig_main.__module__ == "signalwire.cli.test_swaig"
+
+
+@pytest.mark.parametrize("args", [[], ["api", "AgentBase"]], ids=["short output", "long output"])
+def test_closed_pipe_exits_quietly(args: list[str]) -> None:
+    # Output piped into a command that stops reading, such as head. Short
+    # output fits the buffer and fails only at interpreter exit; long output
+    # fails while it's written.
+    proc = subprocess.Popen(  # noqa: S603  # fixed arguments: this interpreter and module
+        [sys.executable, "-m", "signalwire", *args],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    assert proc.stdout is not None and proc.stderr is not None
+    proc.stdout.close()
+    stderr = proc.stderr.read().decode()
+    assert proc.wait(timeout=60) == 0
+    assert "Exception ignored" not in stderr
+    assert "BrokenPipeError" not in stderr
 
 
 def test_python_m_signalwire() -> None:
