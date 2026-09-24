@@ -1,5 +1,17 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+- `FunctionResult.change_voice(voice)` emits the SWAIG `change_voice` action,
+  which changes the agent's voice mid-call. `voice` is an `engine.voice:model`
+  spec, the same form the SWML `languages` list uses (the `engine.` prefix and
+  `:model` suffix are optional), and it replaces the voice of the language
+  currently in use; a different TTS engine is allowed. The platform applies it
+  at the next speech batch boundary, never mid-utterance, keeps it for that
+  language for the rest of the call, and falls back to the fallback voice if the
+  new one will not open.
+
 ## [3.5.0] - 2026-09-24
 
 Webhook signatures and SWAIG tokens are now enforced on every path, including

@@ -673,6 +673,30 @@ class FunctionResult:
         """
         return self.add_action("stop_playback_bg", True)
 
+    def change_voice(self, voice: str) -> "FunctionResult":
+        """
+        Change the agent's voice for the rest of the call.
+
+        The voice is an `engine.voice:model` spec, the same form a language's
+        voice takes in the SWML `languages` list (for example
+        "elevenlabs.rachel"); the `engine.` prefix and the `:model` suffix are
+        optional. It replaces the voice of the language currently in use, and
+        switching to a voice on a different TTS engine is allowed.
+
+        The change is not immediate: the platform applies it at the next speech
+        batch boundary, never in the middle of an utterance. It then persists
+        for that language for the rest of the call, including when the call
+        later switches back to that language. If the new voice cannot be opened,
+        the platform falls back to its fallback voice. An empty spec is ignored.
+
+        Args:
+            voice: Voice spec in `engine.voice:model` form
+
+        Returns:
+            self for method chaining
+        """
+        return self.add_action("change_voice", voice)
+
     def add_dynamic_hints(self, hints: list[str | dict[str, Any]]) -> "FunctionResult":
         """
         Add dynamic speech recognition hints during a call.

@@ -708,6 +708,46 @@ class TestPlayBackgroundFile:
         assert ret is result
 
 
+class TestChangeVoice:
+    """Test change_voice() method (SWAIG action `change_voice`)"""
+
+    def test_change_voice_emits_string_form(self) -> None:
+        """change_voice emits the bare-string form of the change_voice action"""
+        result = FunctionResult().change_voice("elevenlabs.rachel")
+        assert result.action == [{"change_voice": "elevenlabs.rachel"}]
+
+    def test_change_voice_passes_model_suffix_through_verbatim(self) -> None:
+        """The engine.voice:model spec reaches the wire unmodified"""
+        result = FunctionResult().change_voice("gcloud.en-US-Neural2-A:chirp")
+        assert result.action[0]["change_voice"] == "gcloud.en-US-Neural2-A:chirp"
+
+    def test_change_voice_serialized_wire_shape(self) -> None:
+        """to_dict() puts the exact change_voice action on the wire"""
+        result = FunctionResult("Switching voices now").change_voice("amazon.Joanna")
+        assert result.to_dict() == {
+            "response": "Switching voices now",
+            "action": [{"change_voice": "amazon.Joanna"}],
+        }
+        assert json.loads(json.dumps(result.to_dict())) == result.to_dict()
+
+    def test_change_voice_chains_with_other_actions(self) -> None:
+        """change_voice returns self and preserves action order when chained"""
+        result = FunctionResult("ok")
+        ret = result.change_voice("elevenlabs.rachel").say("Hello again")
+        assert ret is result
+        assert result.action == [
+            {"change_voice": "elevenlabs.rachel"},
+            {"say": "Hello again"},
+        ]
+
+    def test_change_voice_is_documented(self) -> None:
+        """The public method documents its argument and return value"""
+        doc = FunctionResult.change_voice.__doc__
+        assert doc is not None
+        assert "voice:" in doc
+        assert "Returns:" in doc
+
+
 class TestStopBackgroundFile:
     """Test stop_background_file() method"""
 
