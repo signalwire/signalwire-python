@@ -1724,7 +1724,8 @@ SWML with the "amazon_bedrock" verb instead of "ai".</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Bedrock voice ID (default: matthew)</p>
+                <p>Bedrock voice: tiffany, matthew, amy, lupe or carlos
+(default: matthew)</p>
               </div>
             </td>
             <td>
@@ -1837,7 +1838,7 @@ SWML with the "amazon_bedrock" verb instead of "ai".</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Bedrock voice identifier (e.g., 'matthew', 'joanna')</p>
+                <p>Bedrock voice: 'tiffany', 'matthew', 'amy', 'lupe' or 'carlos'</p>
               </div>
             </td>
             <td>
@@ -2095,9 +2096,12 @@ parameters are configured in the C code.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Set prompt LLM parameters - use set_inference_params instead</p>
-<p>For Bedrock, use set_inference_params() to configure temperature,
-top_p, and max_tokens.</p>
+        <p>Set the prompt settings that Bedrock's prompt object defines</p>
+<p>temperature, top_p and max_tokens update the inference settings, as
+set_inference_params() does. confidence, presence_penalty and
+frequency_penalty go into the prompt object. Anything else, such as
+barge_confidence, isn't part of the Bedrock prompt, so it's ignored
+with a warning.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2120,11 +2124,34 @@ top_p, and max_tokens.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Parameters (ignored, use set_inference_params)</p>
+                <p>Prompt settings</p>
               </div>
             </td>
             <td>
                   <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="BedrockAgent (signalwire.agents.bedrock.BedrockAgent)" href="#signalwire.agents.bedrock.BedrockAgent">BedrockAgent</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>self for method chaining</p>
+              </div>
             </td>
           </tr>
       </tbody>
@@ -2354,7 +2381,8 @@ SWML with the "amazon_bedrock" verb instead of "ai".</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Bedrock voice ID (default: matthew)</p>
+                <p>Bedrock voice: tiffany, matthew, amy, lupe or carlos
+(default: matthew)</p>
               </div>
             </td>
             <td>
@@ -2467,7 +2495,7 @@ SWML with the "amazon_bedrock" verb instead of "ai".</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Bedrock voice identifier (e.g., 'matthew', 'joanna')</p>
+                <p>Bedrock voice: 'tiffany', 'matthew', 'amy', 'lupe' or 'carlos'</p>
               </div>
             </td>
             <td>
@@ -2725,9 +2753,12 @@ parameters are configured in the C code.</p>
 
     <div class="doc doc-contents ">
 
-        <p>Set prompt LLM parameters - use set_inference_params instead</p>
-<p>For Bedrock, use set_inference_params() to configure temperature,
-top_p, and max_tokens.</p>
+        <p>Set the prompt settings that Bedrock's prompt object defines</p>
+<p>temperature, top_p and max_tokens update the inference settings, as
+set_inference_params() does. confidence, presence_penalty and
+frequency_penalty go into the prompt object. Anything else, such as
+barge_confidence, isn't part of the Bedrock prompt, so it's ignored
+with a warning.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -2750,11 +2781,34 @@ top_p, and max_tokens.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Parameters (ignored, use set_inference_params)</p>
+                <p>Prompt settings</p>
               </div>
             </td>
             <td>
                   <code>{}</code>
+            </td>
+          </tr>
+      </tbody>
+    </table>
+
+
+    <p><span class="doc-section-title">Returns:</span></p>
+    <table>
+      <thead>
+        <tr>
+          <th>Type</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody>
+          <tr class="doc-section-item">
+            <td>
+                  <code><a class="autorefs autorefs-internal" title="BedrockAgent (signalwire.agents.bedrock.BedrockAgent)" href="#signalwire.agents.bedrock.BedrockAgent">BedrockAgent</a></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>self for method chaining</p>
+              </div>
             </td>
           </tr>
       </tbody>

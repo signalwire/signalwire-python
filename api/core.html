@@ -5154,50 +5154,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#signalwire.core.data_map.DataMap--simple-api-call-output-goes-inside-webhook" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Simple API call - output goes inside webhook
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#signalwire.core.data_map.DataMap--multiple-webhooks-with-fallback" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multiple webhooks with fallback
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#signalwire.core.data_map.DataMap--expression-based-responses-no-api-calls" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Expression-based responses (no API calls)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#signalwire.core.data_map.DataMap--api-with-array-processing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        API with array processing
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#signalwire.core.data_map.DataMap.function_name" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -29811,50 +29767,6 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#signalwire.core.data_map.DataMap--simple-api-call-output-goes-inside-webhook" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Simple API call - output goes inside webhook
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#signalwire.core.data_map.DataMap--multiple-webhooks-with-fallback" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Multiple webhooks with fallback
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#signalwire.core.data_map.DataMap--expression-based-responses-no-api-calls" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        Expression-based responses (no API calls)
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#signalwire.core.data_map.DataMap--api-with-array-processing" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        API with array processing
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
   <a href="#signalwire.core.data_map.DataMap.function_name" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -51902,16 +51814,20 @@ of response text and actions.</p>
 3. post_process: Whether to let AI take another turn before executing actions</p>
 <p>IMPORTANT - <code>response</code> is a prompt, not a script:
     The SWML schema defines it as "a static response text or message returned
-    to the AI agent's context". It is instruction the model reads, and the
-    model then decides what to say. It is NOT played to the caller verbatim.</p>
-<div class="highlight"><pre><span></span><code>Write it as an instruction, in the second person:
+    to the AI agent's context". The model reads it and then decides what to
+    say. It is NOT played to the caller verbatim.</p>
+<div class="highlight"><pre><span></span><code>It can carry facts, an instruction, or both. The clearest form keeps them
+apart, with the facts in tool_result and the instruction in tool_prompt:
 
-    FunctionResult("Tell the caller their order shipped Tuesday.")   # right
-    FunctionResult("Your order shipped Tuesday.")                    # wrong
+    FunctionResult(tool_result="Order 1234 shipped Tuesday.",
+                   tool_prompt="Tell the caller when their order shipped.")
+    FunctionResult("Order 1234 shipped Tuesday.")                    # facts
+    FunctionResult("Tell the caller their order shipped Tuesday.")   # instruction
+    FunctionResult("Your order shipped Tuesday.")                    # avoid
 
-The wrong form usually still "works" because the model tends to parrot
-it, but it is being interpreted, not spoken, so it will drift, get
-rephrased, or be merged with other context.
+Avoid the last form, a line written for the caller. It usually still
+"works" because the model tends to parrot it, but it's interpreted, not
+spoken, so it will drift, get rephrased, or be merged with other context.
 </code></pre></div>
 <p>Post-processing behavior:
 - post_process=False (default): Execute actions immediately after AI response
@@ -52073,10 +51989,9 @@ said at all.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Optional PROMPT to inject into the model's context. This is
-     instruction the model reads, not speech played to the caller -
-     write it in the second person ("Tell them ..."). See the class
-     docstring.</p>
+                <p>Optional PROMPT to inject into the model's context: facts
+     or an instruction the model reads, not speech played to the
+     caller. See the class docstring.</p>
               </div>
             </td>
             <td>
@@ -66256,6 +66171,7 @@ original function.</p>
 <p>Licensed under the MIT License.
 See LICENSE file in the project root for full license information.</p>
 <p>Base class for all SignalWire AI Agents</p>
+<p>The SDK's installed documentation covers this module: run <code>sw-pydocs agents</code>, or <code>sw-pydocs</code> for the index.</p>
 
 
 
@@ -69867,6 +69783,7 @@ See LICENSE file in the project root for full license information.</p>
 <p>This module provides an alternative to traditional POM-based prompts by allowing
 agents to be defined as structured contexts with sequential steps. Each step
 contains its own prompt, completion criteria, and function restrictions.</p>
+<p>The SDK's installed documentation covers this module: run <code>sw-pydocs contexts</code>, or <code>sw-pydocs</code> for the index.</p>
 
 
 
@@ -74531,6 +74448,7 @@ greeting context on transfers.</p>
 <p>Licensed under the MIT License.
 See LICENSE file in the project root for full license information.</p>
 <p>DataMap class for building SWAIG data_map configurations</p>
+<p>The SDK's installed documentation covers this module: run <code>sw-pydocs datamap</code>, or <code>sw-pydocs</code> for the index.</p>
 
 
 
@@ -74566,49 +74484,58 @@ See LICENSE file in the project root for full license information.</p>
 
 
 
-        <p>Builder class for creating SWAIG data_map configurations.</p>
-<p>This provides a fluent interface for building data_map tools that execute
+        <div class="highlight"><pre><span></span><code>Builder class for creating SWAIG data_map configurations.
+
+This provides a fluent interface for building data_map tools that execute
 on the SignalWire server without requiring webhook endpoints. Works similar
-to FunctionResult but for building data_map structures.</p>
+to FunctionResult but for building data_map structures.
 
+Example usage:
+    # Simple API call - output goes inside webhook
+    data_map = (DataMap('get_weather')
+        .purpose('Get current weather information')
+        .parameter('location', 'string', 'City name', required=True)
+        .webhook('GET', 'https://api.weather.com/v1/current?key=API_KEY&amp;q=${enc:args.location}')
+        .output(FunctionResult('Weather in ${args.location}: ${current.condition.text}, ${current.temp_f}°F'))
+    )
 
-<details class="example-usage" open>
-  <summary>Example usage</summary>
-  <h5 id="signalwire.core.data_map.DataMap--simple-api-call-output-goes-inside-webhook">Simple API call - output goes inside webhook<a class="headerlink" href="#signalwire.core.data_map.DataMap--simple-api-call-output-goes-inside-webhook" title="Permanent link">&para;</a></h5>
-<p>data_map = (DataMap('get_weather')
-    .purpose('Get current weather information')
-    .parameter('location', 'string', 'City name', required=True)
-    .webhook('GET', 'https://api.weather.com/v1/current?key=API_KEY&amp;q=${location}')
-    .output(FunctionResult('Weather in ${location}: ${response.current.condition.text}, ${response.current.temp_f}°F'))
-)</p>
-<h5 id="signalwire.core.data_map.DataMap--multiple-webhooks-with-fallback">Multiple webhooks with fallback<a class="headerlink" href="#signalwire.core.data_map.DataMap--multiple-webhooks-with-fallback" title="Permanent link">&para;</a></h5>
-<p>data_map = (DataMap('search_multi')
-    .purpose('Search with fallback APIs')
-    .parameter('query', 'string', 'Search query', required=True)
-    .webhook('GET', 'https://api.primary.com/search?q=${query}')
-    .output(FunctionResult('Primary result: ${response.title}'))
-    .webhook('GET', 'https://api.fallback.com/search?q=${query}')
-    .output(FunctionResult('Fallback result: ${response.title}'))
-    .fallback_output(FunctionResult('Sorry, all search APIs are unavailable'))
-)</p>
-<h5 id="signalwire.core.data_map.DataMap--expression-based-responses-no-api-calls">Expression-based responses (no API calls)<a class="headerlink" href="#signalwire.core.data_map.DataMap--expression-based-responses-no-api-calls" title="Permanent link">&para;</a></h5>
-<p>data_map = (DataMap('file_control')
-    .purpose('Control file playback')
-    .parameter('command', 'string', 'Playback command')
-    .parameter('filename', 'string', 'File to control', required=False)
-    .expression('${args.command}', r'start.<em>', FunctionResult().add_action('start_playbook', {'file': '${args.filename}'}))
-    .expression('${args.command}', r'stop.</em>', FunctionResult().add_action('stop_playback', True))
-)</p>
-<h5 id="signalwire.core.data_map.DataMap--api-with-array-processing">API with array processing<a class="headerlink" href="#signalwire.core.data_map.DataMap--api-with-array-processing" title="Permanent link">&para;</a></h5>
-<p>data_map = (DataMap('search_docs')
-    .purpose('Search documentation')
-    .parameter('query', 'string', 'Search query', required=True)
-    .webhook('POST', 'https://api.docs.com/search', headers={'Authorization': 'Bearer TOKEN'})
-    .body({'query': '${query}', 'limit': 3})
-    .output(FunctionResult('Found: ${response.results[0].title} - ${response.results[0].summary}'))
-    .foreach('${response.results}')
-)</p>
-</details>
+    # Multiple webhooks with fallback
+    data_map = (DataMap('search_multi')
+        .purpose('Search with fallback APIs')
+        .parameter('query', 'string', 'Search query', required=True)
+        .webhook('GET', 'https://api.primary.com/search?q=${enc:args.query}')
+        .output(FunctionResult('Primary result: ${title}'))
+        .webhook('GET', 'https://api.fallback.com/search?q=${enc:args.query}')
+        .output(FunctionResult('Fallback result: ${title}'))
+        .fallback_output(FunctionResult('Sorry, all search APIs are unavailable'))
+    )
+
+    # Expression-based responses (no API calls)
+    data_map = (DataMap('file_control')
+        .purpose('Control file playback')
+        .parameter('command', 'string', 'Playback command')
+        .parameter('filename', 'string', 'File to control', required=False)
+        .expression('${args.command}', r'start.*', FunctionResult().add_action('start_playbook', {'file': '${args.filename}'}))
+        .expression('${args.command}', r'stop.*', FunctionResult().add_action('stop_playback', True))
+    )
+
+    # API with array processing
+    data_map = (DataMap('search_docs')
+        .purpose('Search documentation')
+        .parameter('query', 'string', 'Search query', required=True)
+        .webhook('POST', 'https://api.docs.com/search', headers={'Authorization': 'Bearer TOKEN'})
+        .body({'query': '${args.query}', 'limit': 3})
+        .output(FunctionResult('Found: ${results[0].title} - ${results[0].summary}'))
+        .foreach({
+            'input_key': 'results',
+            'output_key': 'formatted_results',
+            'max': 3,
+            'append': 'Result: ${this.title} - ${this.summary}
+</code></pre></div>
+<p>'
+            })
+        )</p>
+
 
 
 
@@ -76188,6 +76115,7 @@ emit values from this list.</p>
 <p>Licensed under the MIT License.
 See LICENSE file in the project root for full license information.</p>
 <p>FunctionResult class for handling the response format of SWAIG function calls</p>
+<p>The SDK's installed documentation covers this module: run <code>sw-pydocs tools</code>, or <code>sw-pydocs</code> for the index.</p>
 
 
 
@@ -76255,16 +76183,20 @@ of response text and actions.</p>
 3. post_process: Whether to let AI take another turn before executing actions</p>
 <p>IMPORTANT - <code>response</code> is a prompt, not a script:
     The SWML schema defines it as "a static response text or message returned
-    to the AI agent's context". It is instruction the model reads, and the
-    model then decides what to say. It is NOT played to the caller verbatim.</p>
-<div class="highlight"><pre><span></span><code>Write it as an instruction, in the second person:
+    to the AI agent's context". The model reads it and then decides what to
+    say. It is NOT played to the caller verbatim.</p>
+<div class="highlight"><pre><span></span><code>It can carry facts, an instruction, or both. The clearest form keeps them
+apart, with the facts in tool_result and the instruction in tool_prompt:
 
-    FunctionResult("Tell the caller their order shipped Tuesday.")   # right
-    FunctionResult("Your order shipped Tuesday.")                    # wrong
+    FunctionResult(tool_result="Order 1234 shipped Tuesday.",
+                   tool_prompt="Tell the caller when their order shipped.")
+    FunctionResult("Order 1234 shipped Tuesday.")                    # facts
+    FunctionResult("Tell the caller their order shipped Tuesday.")   # instruction
+    FunctionResult("Your order shipped Tuesday.")                    # avoid
 
-The wrong form usually still "works" because the model tends to parrot
-it, but it is being interpreted, not spoken, so it will drift, get
-rephrased, or be merged with other context.
+Avoid the last form, a line written for the caller. It usually still
+"works" because the model tends to parrot it, but it's interpreted, not
+spoken, so it will drift, get rephrased, or be merged with other context.
 </code></pre></div>
 <p>Post-processing behavior:
 - post_process=False (default): Execute actions immediately after AI response
@@ -76426,10 +76358,9 @@ said at all.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Optional PROMPT to inject into the model's context. This is
-     instruction the model reads, not speech played to the caller -
-     write it in the second person ("Tell them ..."). See the class
-     docstring.</p>
+                <p>Optional PROMPT to inject into the model's context: facts
+     or an instruction the model reads, not speech played to the
+     caller. See the class docstring.</p>
               </div>
             </td>
             <td>
@@ -84359,9 +84290,14 @@ decomposed request-dispatch core and the other SDK ports.</p>
     <div class="doc doc-contents ">
 
         <p>Set a callback function for dynamic agent configuration</p>
-<p>This callback receives the actual agent instance, allowing you to dynamically
-configure ANY aspect of the agent including adding skills, modifying prompts,
-changing parameters, etc. based on request data.</p>
+<p>The callback receives a copy of the agent made for this request, and can
+configure any aspect of it from the request's data: skills, prompts,
+parameters and so on. Its changes apply to this request only. The
+configuration the SDK manages is copied; other attributes, such as ones
+a subclass adds, are shared with the agent and other requests, so
+assign new values to those rather than changing them in place (see
+<code>_create_ephemeral_copy</code>). The web server runs the callback in a
+worker thread, so callbacks for different calls can run at once.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -84860,7 +84796,7 @@ agent.add_per_call_config(configure_page_context)</p>
               <div class="doc-md-description">
                 <p>If include_source is True:
 (username, password, source) tuple, where source is one of:
-"provided", "environment", or "generated"</p>
+"provided", "environment", "config file", or "generated"</p>
               </div>
             </td>
           </tr>
@@ -87416,7 +87352,17 @@ barge_confidence is not applicable to post-prompt.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Response appropriate for the serverless platform</p>
+                <p>Response appropriate for the serverless platform: a complete CGI</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>response, a Lambda response dict, or the Flask or Azure response</p>
               </div>
             </td>
           </tr>
@@ -90064,7 +90010,7 @@ See LICENSE file in the project root for full license information.</p>
               <div class="doc-md-description">
                 <p>If include_source is True:
 (username, password, source) tuple, where source is one of:
-"provided", "environment", or "generated"</p>
+"provided", "environment", "config file", or "generated"</p>
               </div>
             </td>
           </tr>
@@ -91421,7 +91367,17 @@ See LICENSE file in the project root for full license information.</p>
             </td>
             <td>
               <div class="doc-md-description">
-                <p>Response appropriate for the serverless platform</p>
+                <p>Response appropriate for the serverless platform: a complete CGI</p>
+              </div>
+            </td>
+          </tr>
+          <tr class="doc-section-item">
+            <td>
+                  <code><span title="typing.Any">Any</span></code>
+            </td>
+            <td>
+              <div class="doc-md-description">
+                <p>response, a Lambda response dict, or the Flask or Azure response</p>
               </div>
             </td>
           </tr>
@@ -93359,9 +93315,14 @@ decomposed request-dispatch core and the other SDK ports.</p>
     <div class="doc doc-contents ">
 
         <p>Set a callback function for dynamic agent configuration</p>
-<p>This callback receives the actual agent instance, allowing you to dynamically
-configure ANY aspect of the agent including adding skills, modifying prompts,
-changing parameters, etc. based on request data.</p>
+<p>The callback receives a copy of the agent made for this request, and can
+configure any aspect of it from the request's data: skills, prompts,
+parameters and so on. Its changes apply to this request only. The
+configuration the SDK manages is copied; other attributes, such as ones
+a subclass adds, are shared with the agent and other requests, so
+assign new values to those rather than changing them in place (see
+<code>_create_ephemeral_copy</code>). The web server runs the callback in a
+worker thread, so callbacks for different calls can run at once.</p>
 
 
 <p><span class="doc-section-title">Parameters:</span></p>
@@ -109059,6 +109020,7 @@ See LICENSE file in the project root for full license information.</p>
 <p>Licensed under the MIT License.
 See LICENSE file in the project root for full license information.</p>
 <p>Base SWML Service for SignalWire Agents</p>
+<p>The SDK's installed documentation covers this module: run <code>sw-pydocs swml</code>, or <code>sw-pydocs</code> for the index.</p>
 
 
 

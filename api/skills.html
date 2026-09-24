@@ -6445,6 +6445,17 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#signalwire.skills.wikipedia_search.skill.USER_AGENT" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        USER_AGENT
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#signalwire.skills.wikipedia_search.skill.WikipediaSearchSkill" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -12263,6 +12274,17 @@
   
     <nav class="md-nav" aria-label="skill">
       <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#signalwire.skills.wikipedia_search.skill.USER_AGENT" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        USER_AGENT
+      
+    </span>
+  </a>
+  
+</li>
         
           <li class="md-nav__item">
   <a href="#signalwire.skills.wikipedia_search.skill.WikipediaSearchSkill" class="md-nav__link">
@@ -20133,7 +20155,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h5 id="signalwire.skills.spider.SpiderSkill.delay" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">delay</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'delay'</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">delay</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'delay'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'delay'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20153,7 +20175,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h5 id="signalwire.skills.spider.SpiderSkill.concurrent_requests" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">concurrent_requests</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'concurrent_requests'</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">concurrent_requests</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'concurrent_requests'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'concurrent_requests'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20173,7 +20195,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h5 id="signalwire.skills.spider.SpiderSkill.timeout" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">timeout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'timeout'</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">timeout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'timeout'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'timeout'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20193,7 +20215,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h5 id="signalwire.skills.spider.SpiderSkill.max_pages" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">max_pages</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'max_pages'</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">max_pages</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'max_pages'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'max_pages'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20213,7 +20235,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h5 id="signalwire.skills.spider.SpiderSkill.max_depth" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">max_depth</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'max_depth'</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">max_depth</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'max_depth'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'max_depth'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20233,7 +20255,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h5 id="signalwire.skills.spider.SpiderSkill.extract_type" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">extract_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'extract_type'</span><span class="p">,</span> <span class="s1">'fast_text'</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">extract_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'extract_type'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'extract_type'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20253,7 +20275,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h5 id="signalwire.skills.spider.SpiderSkill.max_text_length" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">max_text_length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'max_text_length'</span><span class="p">,</span> <span class="mi">3000</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">max_text_length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'max_text_length'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'max_text_length'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20273,7 +20295,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h5 id="signalwire.skills.spider.SpiderSkill.clean_text" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">clean_text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'clean_text'</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">clean_text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'clean_text'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'clean_text'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20293,7 +20315,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h5 id="signalwire.skills.spider.SpiderSkill.cache_enabled" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">cache_enabled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'cache_enabled'</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">cache_enabled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'cache_enabled'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'cache_enabled'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20313,7 +20335,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h5 id="signalwire.skills.spider.SpiderSkill.follow_robots_txt" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">follow_robots_txt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'follow_robots_txt'</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">follow_robots_txt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'follow_robots_txt'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'follow_robots_txt'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20333,7 +20355,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h5 id="signalwire.skills.spider.SpiderSkill.user_agent" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">user_agent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'user_agent'</span><span class="p">,</span> <span class="s1">'Spider/1.0 (SignalWire AI Agent)'</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">user_agent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'user_agent'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'user_agent'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20373,7 +20395,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h5 id="signalwire.skills.spider.SpiderSkill.session" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">session</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="n">session</span> <span class="o">=</span> <span class="n">_PublicSession</span><span class="p">()</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20775,7 +20797,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h6 id="signalwire.skills.spider.skill.SpiderSkill.delay" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">delay</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'delay'</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">delay</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'delay'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'delay'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20795,7 +20817,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h6 id="signalwire.skills.spider.skill.SpiderSkill.concurrent_requests" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">concurrent_requests</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'concurrent_requests'</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">concurrent_requests</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'concurrent_requests'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'concurrent_requests'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20815,7 +20837,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h6 id="signalwire.skills.spider.skill.SpiderSkill.timeout" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">timeout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'timeout'</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">timeout</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'timeout'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'timeout'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20835,7 +20857,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h6 id="signalwire.skills.spider.skill.SpiderSkill.max_pages" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">max_pages</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'max_pages'</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">max_pages</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'max_pages'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'max_pages'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20855,7 +20877,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h6 id="signalwire.skills.spider.skill.SpiderSkill.max_depth" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">max_depth</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'max_depth'</span><span class="p">,</span> <span class="mi">0</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">max_depth</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'max_depth'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'max_depth'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20875,7 +20897,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h6 id="signalwire.skills.spider.skill.SpiderSkill.extract_type" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">extract_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'extract_type'</span><span class="p">,</span> <span class="s1">'fast_text'</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">extract_type</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'extract_type'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'extract_type'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20895,7 +20917,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h6 id="signalwire.skills.spider.skill.SpiderSkill.max_text_length" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">max_text_length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'max_text_length'</span><span class="p">,</span> <span class="mi">3000</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">max_text_length</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'max_text_length'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'max_text_length'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20915,7 +20937,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h6 id="signalwire.skills.spider.skill.SpiderSkill.clean_text" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">clean_text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'clean_text'</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">clean_text</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'clean_text'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'clean_text'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20935,7 +20957,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h6 id="signalwire.skills.spider.skill.SpiderSkill.cache_enabled" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">cache_enabled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'cache_enabled'</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">cache_enabled</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'cache_enabled'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'cache_enabled'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20955,7 +20977,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h6 id="signalwire.skills.spider.skill.SpiderSkill.follow_robots_txt" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">follow_robots_txt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'follow_robots_txt'</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">follow_robots_txt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'follow_robots_txt'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'follow_robots_txt'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -20975,7 +20997,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h6 id="signalwire.skills.spider.skill.SpiderSkill.user_agent" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">user_agent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'user_agent'</span><span class="p">,</span> <span class="s1">'Spider/1.0 (SignalWire AI Agent)'</span><span class="p">)</span></code>
+            <code class="highlight language-python"><span class="n">user_agent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="s1">'user_agent'</span><span class="p">,</span> <span class="n">defaults</span><span class="p">[</span><span class="s1">'user_agent'</span><span class="p">])</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -21015,7 +21037,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h6 id="signalwire.skills.spider.skill.SpiderSkill.session" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">session</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="n">session</span> <span class="o">=</span> <span class="n">_PublicSession</span><span class="p">()</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -22661,7 +22683,7 @@ See LICENSE file in the project root for full license information.</p>
 
 
 <h6 id="signalwire.skills.web_search.skill.GoogleSearchScraper.session" class="doc doc-heading">
-            <code class="highlight language-python"><span class="n">session</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span></code>
+            <code class="highlight language-python"><span class="n">session</span> <span class="o">=</span> <span class="n">_PublicSession</span><span class="p">()</span></code>
 
   <span class="doc doc-labels">
       <small class="doc doc-label doc-label-instance-attribute"><code>instance-attribute</code></small>
@@ -25195,6 +25217,26 @@ See LICENSE file in the project root for full license information.</p>
 
 
 
+
+<div class="doc doc-object doc-attribute">
+
+
+
+<h5 id="signalwire.skills.wikipedia_search.skill.USER_AGENT" class="doc doc-heading">
+            <code class="highlight language-python"><span class="n">USER_AGENT</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">'signalwire-python/</span><span class="si">{</span><span class="n">__version__</span><span class="si">}</span><span class="s1"> (https://github.com/signalwire/signalwire-python) wikipedia_search'</span></code>
+
+  <span class="doc doc-labels">
+      <small class="doc doc-label doc-label-module-attribute"><code>module-attribute</code></small>
+  </span>
+
+<a href="#signalwire.skills.wikipedia_search.skill.USER_AGENT" class="headerlink" title="Permanent link">&para;</a></h5>
+
+
+    <div class="doc doc-contents ">
+
+    </div>
+
+</div>
 
 
 
