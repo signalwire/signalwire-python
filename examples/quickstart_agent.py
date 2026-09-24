@@ -8,7 +8,8 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 """
 
-# Quickstart: a minimal AI agent.
+# Quickstart: a minimal AI agent. For the SDK's installed documentation, run
+# `sw-pydocs`.
 #
 # This is the canonical README quickstart, kept as a real, gate-compiled example so
 # the README code block can be included from it byte-for-byte (README-INCLUDE gate).

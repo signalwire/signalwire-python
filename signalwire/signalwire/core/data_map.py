@@ -7,6 +7,8 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
 DataMap class for building SWAIG data_map configurations
+
+The SDK's installed documentation covers this module: run ``sw-pydocs datamap``, or ``sw-pydocs`` for the index.
 """
 
 from typing import Any

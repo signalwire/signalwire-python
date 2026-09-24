@@ -8,6 +8,8 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
 Base class for all SignalWire AI Agents
+
+The SDK's installed documentation covers this module: run ``sw-pydocs agents``, or ``sw-pydocs`` for the index.
 """
 
 import contextlib

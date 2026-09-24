@@ -7,6 +7,8 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
 RestClient — top-level REST client with namespaced sub-objects.
+
+The SDK's installed documentation covers this module: run ``sw-pydocs rest``, or ``sw-pydocs`` for the index.
 """
 
 import os

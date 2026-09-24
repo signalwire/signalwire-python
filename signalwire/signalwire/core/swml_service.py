@@ -8,6 +8,8 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
 Base SWML Service for SignalWire Agents
+
+The SDK's installed documentation covers this module: run ``sw-pydocs swml``, or ``sw-pydocs`` for the index.
 """
 
 import os

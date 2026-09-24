@@ -11,6 +11,8 @@ Contexts and Steps System for SignalWire Agents
 This module provides an alternative to traditional POM-based prompts by allowing
 agents to be defined as structured contexts with sequential steps. Each step
 contains its own prompt, completion criteria, and function restrictions.
+
+The SDK's installed documentation covers this module: run ``sw-pydocs contexts``, or ``sw-pydocs`` for the index.
 """
 
 from typing import Optional, Any

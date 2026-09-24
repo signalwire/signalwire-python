@@ -7,6 +7,8 @@ Licensed under the MIT License.
 See LICENSE file in the project root for full license information.
 
 FunctionResult class for handling the response format of SWAIG function calls
+
+The SDK's installed documentation covers this module: run ``sw-pydocs tools``, or ``sw-pydocs`` for the index.
 """
 
 from typing import Any, Literal
