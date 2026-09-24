@@ -117,6 +117,10 @@ tool handlers run. The package now installs its documentation, and
   set. If it can't tell whether the collection exists, it logs an error and
   doesn't build. `IndexBuilder.build_index()` accepts `overwrite`.
 - pgvector: `overwrite` failed on a database with no collections yet.
+- A context step that lists a tool the agent doesn't have made rendering fail
+  with "Missing required field 'prompt'", and the reason was only logged,
+  which `swaig-test` suppresses by default. Rendering now raises the reason:
+  the step, the missing tool and the tools that exist.
 - Search service: the query cache ignored `similarity_threshold` and
   `language`, so a repeated query with a stricter threshold got the earlier
   results, and it cached the empty results of a failed search. It no longer

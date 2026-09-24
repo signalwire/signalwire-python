@@ -1457,6 +1457,11 @@ class AgentBase(  # type: ignore[misc]  # intentional diamond: WebMixin's serve/
             except ValueError as e:
                 if not agent_to_use._suppress_logs:
                     agent_to_use.log.error("ai_verb_config_error", error=str(e))
+                # A configuration error, such as a step that lists a tool the
+                # agent doesn't have. Without its config the AI verb can't be
+                # built, and the schema check would report only the missing
+                # prompt, so raise the reason itself.
+                raise
         else:
             # Fallback if no handler (shouldn't happen but just in case)
             ai_config = {"prompt": {"text" if not prompt_is_pom else "pom": prompt}}
