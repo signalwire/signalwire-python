@@ -22,6 +22,7 @@ from fastapi.responses import JSONResponse
 from signalwire.core.web import HostAppRouter
 
 from signalwire.core.logging_config import get_execution_mode
+from signalwire.core._sync_handlers import is_async_callable, run_sync_handler
 from signalwire.core.security.security_utils import (
     filter_sensitive_headers,
     redact_url,
@@ -743,7 +744,12 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                     )
                 try:
                     body = await request.json()
-                    result = self._handle_mcp_request(body)
+                    # A synchronous tool runs in a worker thread; an async
+                    # one comes back as an awaitable for this loop.
+                    if self._mcp_request_runs_sync_code(body):
+                        result = await run_sync_handler(self._handle_mcp_request, body)
+                    else:
+                        result = self._handle_mcp_request(body)
                     if inspect.isawaitable(result):
                         result = await result
                     from starlette.responses import JSONResponse
@@ -979,7 +985,9 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                     req_log.debug("processing_routing_callback", path=callback_path)
                     # Call the routing callback: (body, headers) -> route | None
                     try:
-                        route = callback_fn(body, dict(request.headers))
+                        route = await run_sync_handler(
+                            callback_fn, body, dict(request.headers)
+                        )
                         if route is not None:
                             req_log.info("routing_request", route=route)
                             # Return a redirect to the new route
@@ -1000,7 +1008,7 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                 req_log.error("error_in_request_modifier", error=str(e))
 
             # Render SWML
-            swml = self._render_swml(call_id, modifications)
+            swml = await self._render_request_swml(call_id, modifications)
             req_log.debug("swml_rendered", swml_size=len(swml))
 
             # Return as JSON
@@ -1013,6 +1021,24 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                 status_code=500,
                 media_type="application/json",
             )
+
+    async def _render_request_swml(
+        self, call_id: str | None, modifications: dict[str, Any] | None
+    ) -> str:
+        """Render one request's SWML, off the event loop when that's safe.
+
+        With a per-request configuration callback, the callback and the render
+        work on a private copy of the agent, so they run in a worker thread.
+        Without one, the render builds the agent's own document, which every
+        request shares, so it stays on the event loop, where two renders can't
+        interleave.
+        """
+        swml: str
+        if modifications and modifications.get("__use_ephemeral_agent"):
+            swml = await run_sync_handler(self._render_swml, call_id, modifications)
+        else:
+            swml = self._render_swml(call_id, modifications)
+        return swml
 
     async def _handle_debug_request(self, request: Request) -> Response:
         """Handle GET/POST requests to the debug endpoint"""
@@ -1087,7 +1113,7 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                 req_log.error("error_in_request_modifier", error=str(e))
 
             # Render SWML
-            swml = self._render_swml(call_id, modifications)
+            swml = await self._render_request_swml(call_id, modifications)
             req_log.debug("swml_rendered", swml_size=len(swml))
 
             # Return as JSON
@@ -1171,7 +1197,7 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             if request.method == "GET":
                 # Check if we should use dynamic config via on_swml_request
                 modifications = self.on_swml_request(None, None, request)
-                swml = self._render_swml(call_id, modifications)
+                swml = await self._render_request_swml(call_id, modifications)
                 req_log.debug("swml_rendered", swml_size=len(swml))
                 return Response(content=swml, media_type="application/json")
 
@@ -1191,7 +1217,9 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
                 req_log.error("error_parsing_request_body", error=str(e))
                 body = {}
 
-            status, payload = self._post_prompt_response(
+            # on_summary, and any per-call configuration, is user code
+            status, payload = await run_sync_handler(
+                self._post_prompt_response,
                 body,
                 request.query_params.get("call_id"),
                 token,
@@ -1477,7 +1505,10 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             handler = getattr(self, "_debug_event_handler", None)
             if handler:
                 try:
-                    result = handler(event_type, body)
+                    if is_async_callable(handler):
+                        result = handler(event_type, body)
+                    else:
+                        result = await run_sync_handler(handler, event_type, body)
                     if asyncio.iscoroutine(result):
                         await result
                 except Exception as e:
@@ -1612,7 +1643,8 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
         configuration the SDK manages is copied; other attributes, such as ones
         a subclass adds, are shared with the agent and other requests, so
         assign new values to those rather than changing them in place (see
-        ``_create_ephemeral_copy``).
+        ``_create_ephemeral_copy``). The web server runs the callback in a
+        worker thread, so callbacks for different calls can run at once.
 
         Args:
             callback: Function that takes (query_params, body_params, headers, agent)

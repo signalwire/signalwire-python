@@ -11,6 +11,7 @@ Spider skill for fast web scraping with SignalWire AI Agents.
 
 import re
 import collections
+import threading
 import time
 import urllib.robotparser
 from typing import Any, ClassVar, TYPE_CHECKING, cast
@@ -226,6 +227,8 @@ class SpiderSkill(SkillBase):
             collections.OrderedDict() if self.cache_enabled else None
         )
         self._cache_max_size = 100
+        # Handlers for different calls run in worker threads at the same time
+        self._cache_lock = threading.Lock()
 
         # XPath expressions for unwanted elements
         self.remove_xpaths = [
@@ -396,9 +399,12 @@ class SpiderSkill(SkillBase):
     def _fetch_url(self, url: str) -> requests.Response | None:
         """Fetch a URL with caching and error handling."""
         # Check cache first
-        if self.cache_enabled and self._cache is not None and url in self._cache:
-            self.logger.debug(f"Cache hit for {url}")
-            return self._cache[url]
+        if self.cache_enabled and self._cache is not None:
+            with self._cache_lock:
+                cached = self._cache.get(url)
+            if cached is not None:
+                self.logger.debug(f"Cache hit for {url}")
+                return cached
 
         try:
             if self.follow_robots_txt:
@@ -413,9 +419,10 @@ class SpiderSkill(SkillBase):
 
             # Cache successful responses (with size limit)
             if self.cache_enabled and self._cache is not None:
-                if len(self._cache) >= self._cache_max_size:
-                    self._cache.popitem(last=False)  # Evict oldest
-                self._cache[url] = response
+                with self._cache_lock:
+                    if len(self._cache) >= self._cache_max_size:
+                        self._cache.popitem(last=False)  # Evict oldest
+                    self._cache[url] = response
 
             return response
 
@@ -806,5 +813,6 @@ class SpiderSkill(SkillBase):
         if hasattr(self, "session"):
             self.session.close()
         if hasattr(self, "_cache") and self._cache is not None:
-            self._cache.clear()
+            with self._cache_lock:
+                self._cache.clear()
         self.logger.info("Spider skill cleaned up")

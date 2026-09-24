@@ -66,6 +66,10 @@ from signalwire.core.swml_handler import (  # noqa: E402
 from signalwire.core.security_config import SecurityConfig  # noqa: E402
 from signalwire.core.security.security_utils import redact_url  # noqa: E402
 from signalwire.core.function_result import FunctionResult  # noqa: E402
+from signalwire.core._sync_handlers import (  # noqa: E402
+    is_async_callable,
+    run_sync_handler,
+)
 from signalwire.core.agent.tools.registry import ToolRegistry  # noqa: E402
 from signalwire.core.mixins.tool_mixin import ToolMixin  # noqa: E402
 
@@ -831,6 +835,34 @@ class SWMLService(ToolMixin):
         """
         return Response(content=self.render_document(), media_type="application/json")
 
+    def _swaig_configures_per_call(self) -> bool:
+        """Extension point: True when _swaig_pre_dispatch runs user code.
+
+        The SWAIG endpoint then runs it in a worker thread. The default
+        dispatch runs none; AgentBase's runs the per-request configuration
+        callback when one is set.
+        """
+        return False
+
+    def _swaig_handler_is_async(self, target: Any, function_name: str) -> bool:
+        """True when dispatching ``function_name`` runs no synchronous user code.
+
+        That's the SDK's own ``on_function_call`` calling an ``async def``
+        handler: the call only creates a coroutine, which runs on the event
+        loop, so it needs no worker thread.
+        """
+        if "on_function_call" in getattr(target, "__dict__", {}):
+            return False  # replaced on the instance: user code
+        if (
+            getattr(type(target), "on_function_call", None)
+            is not ToolMixin.on_function_call
+        ):
+            return False  # overridden by a subclass: user code
+        registry = getattr(target, "_tool_registry", None)
+        func = registry._swaig_functions.get(function_name) if registry else None
+        handler = getattr(func, "handler", None)
+        return handler is not None and is_async_callable(handler)
+
     def _swaig_pre_dispatch(
         self,
         request: Request,
@@ -950,14 +982,28 @@ class SWMLService(ToolMixin):
             if call_id:
                 req_log = req_log.bind(call_id=call_id)
 
-            target, short_circuit = self._swaig_pre_dispatch(
-                request, body, call_id, function_name
-            )
+            # Per-call configuration and a synchronous handler are user code,
+            # so they run in a worker thread rather than blocking the event
+            # loop. The context variables they set carry over to later steps.
+            if self._swaig_configures_per_call():
+                target, short_circuit = await run_sync_handler(
+                    self._swaig_pre_dispatch, request, body, call_id, function_name
+                )
+            else:
+                target, short_circuit = self._swaig_pre_dispatch(
+                    request, body, call_id, function_name
+                )
             if short_circuit is not None:
                 return short_circuit
 
             try:
-                result = target.on_function_call(function_name, args, body)
+                if self._swaig_handler_is_async(target, function_name):
+                    # Only creates the coroutine; no worker thread needed
+                    result = target.on_function_call(function_name, args, body)
+                else:
+                    result = await run_sync_handler(
+                        target.on_function_call, function_name, args, body
+                    )
                 if inspect.isawaitable(result):
                     # An async def handler runs on this request's event loop.
                     result = await result
@@ -1134,50 +1180,82 @@ class SWMLService(ToolMixin):
         """
         Shared decomposed dispatch logic over primitives, returning a
         ``(status, headers, body_string)`` triple. Both :meth:`handle_request`
-        and the FastAPI :meth:`_handle_request` delegate here; this is the single
-        source of dispatch behavior.
+        and the FastAPI :meth:`_handle_request` follow these steps; this is the
+        single source of dispatch behavior.
         """
+        refused = self._request_auth_failure(url, headers)
+        if refused is not None:
+            return refused
+        callback_fn = self._routing_callback_for(method, body, callback_path)
+        if callback_fn is not None:
+            route = self._request_route(callback_fn, body, headers)
+            if route is not None:
+                # Use 307 to preserve the POST method and its body.
+                return (307, {"Location": route}, "")
+        return self._request_swml(body, callback_path)
+
+    def _request_auth_failure(
+        self, url: str, headers: dict[str, str]
+    ) -> tuple[int, dict[str, str], str] | None:
+        """The 401 response for a request without valid credentials, or None."""
         # Always detect proxy from current request - allows mixing direct and proxied access
         self._detect_proxy_from_primitives(url, headers)
 
-        # Check auth
         if not self._check_basic_auth_headers(headers):
             return (
                 401,
                 {"WWW-Authenticate": "Basic"},
                 json.dumps({"error": "Unauthorized"}),
             )
+        return None
 
-        # Process request body if it's a POST with a parsed (non-empty) body,
+    def _routing_callback_for(
+        self, method: str, body: dict[str, Any], callback_path: str | None
+    ) -> Callable[[dict[str, Any], dict[str, Any]], str | None] | None:
+        """The routing callback that applies to this request, or None."""
+        # The routing callback runs for a POST with a parsed (non-empty) body,
         # for a callback path with a callback registered for it.
         # (Matches the original: the routing callback only ran when a non-empty
         # raw body was successfully parsed.)
-        if (
+        if not (
             method == "POST"
             and body
             and callback_path
             and getattr(self, "_routing_callbacks", None)
             and callback_path in self._routing_callbacks
         ):
-            callback_fn = self._routing_callbacks[callback_path]
-            self.log.debug(
-                "checking_routing",
-                path=callback_path,
-                body_keys=list(body.keys()),
-            )
+            return None
+        self.log.debug(
+            "checking_routing",
+            path=callback_path,
+            body_keys=list(body.keys()),
+        )
+        callback_fn: Callable[[dict[str, Any], dict[str, Any]], str | None] = (
+            self._routing_callbacks[callback_path]
+        )
+        return callback_fn
 
-            # Call the callback function: (body, headers) -> route | None
-            try:
-                route = callback_fn(body, headers)
+    def _request_route(
+        self,
+        callback_fn: Callable[[dict[str, Any], dict[str, Any]], str | None],
+        body: dict[str, Any],
+        headers: dict[str, str],
+    ) -> str | None:
+        """The route ``callback_fn`` sends this request to, or None."""
+        # Call the callback function: (body, headers) -> route | None
+        try:
+            route: str | None = callback_fn(body, headers)
+        except Exception as e:
+            self.log.error("error_in_routing_callback", error=str(e))
+            return None
+        if route is not None:
+            self.log.info("routing_request", route=route)
+        return route
 
-                if route is not None:
-                    self.log.info("routing_request", route=route)
-                    # Return a redirect to the new route.
-                    # Use 307 to preserve the POST method and its body.
-                    return (307, {"Location": route}, "")
-            except Exception as e:
-                self.log.error("error_in_routing_callback", error=str(e))
-
+    def _request_swml(
+        self, body: dict[str, Any], callback_path: str | None
+    ) -> tuple[int, dict[str, str], str]:
+        """The SWML response for a request, after any on_request changes."""
         # Allow for customized handling in subclasses
         modifications = self.on_request(body, callback_path)
 
@@ -1235,13 +1313,27 @@ class SWMLService(ToolMixin):
                 # Continue with empty body if parsing fails
                 body = {}
 
-        status, out_headers, body_str = self._handle_request_core(
-            request.method,
-            str(request.url),
-            dict(request.headers),
-            body,
-            callback_path,
-        )
+        # The same steps as _handle_request_core, except that a routing
+        # callback, which is user code, runs in a worker thread. on_request and
+        # the render stay on the event loop, because they can change and read
+        # the document every request shares.
+        headers = dict(request.headers)
+        refused = self._request_auth_failure(str(request.url), headers)
+        route: str | None = None
+        if refused is not None:
+            status, out_headers, body_str = refused
+        else:
+            callback_fn = self._routing_callback_for(
+                request.method, body, callback_path
+            )
+            if callback_fn is not None:
+                route = await run_sync_handler(
+                    self._request_route, callback_fn, body, headers
+                )
+            if route is not None:
+                status, out_headers, body_str = 307, {"Location": route}, ""
+            else:
+                status, out_headers, body_str = self._request_swml(body, callback_path)
 
         # 401: preserve the original HTTPException-based auth-failure path exactly
         if status == 401:

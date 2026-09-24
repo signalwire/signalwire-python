@@ -1207,6 +1207,8 @@ Proxy / request-trust knobs (all default OFF, enable only behind a trusted proxy
 - `SWML_PROXY_DEBUG`: verbose proxy-header resolution logging
 
 Other knobs:
+- `SWML_SYNC_HANDLERS_INLINE`: run synchronous tool handlers and callbacks on the
+  event loop, one at a time, instead of in worker threads (`1`/`true`/`yes`)
 - `SWML_SKIP_SCHEMA_VALIDATION`: skip SWML schema validation (`1`), for debugging only
 - `SIGNALWIRE_LOG_FORMAT`: log renderer, `console` (default) or `json`
 - `SIGNALWIRE_SPACE_NAME`: default space name used by `sw-agent-init` scaffolding

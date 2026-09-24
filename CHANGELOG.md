@@ -5,8 +5,9 @@
 Webhook signatures and SWAIG tokens are now enforced on every path, including
 serverless. Skills that fetch URLs no longer reach internal addresses through
 redirects, the agent's `/mcp` endpoint requires basic auth, and `async def`
-tool handlers run. The package now installs its documentation, and
-`sw-pydocs` prints it.
+tool handlers run. Synchronous handlers and callbacks run in worker threads,
+so a slow one no longer holds up every other call. The package now installs
+its documentation, and `sw-pydocs` prints it.
 
 ### Added
 - `sw-pydocs`: the SDK's documentation for the installed version, for people
@@ -22,6 +23,31 @@ tool handlers run. The package now installs its documentation, and
 - The package's `llms.txt` lists the installed docs.
 
 ### Changed
+- The web server runs synchronous user code in a worker thread, from AnyIO's
+  thread pool (40 threads by default), instead of on its event loop: `def`
+  tool handlers, the per-request configuration callback and the render of the
+  copy it configures, routing callbacks, `on_summary`, the debug event handler
+  and tools called through `/mcp`. Before, a handler that waited on an API or
+  a database held up every other request on the server, including other
+  calls' SWML. The context variables that code sets are applied to the
+  request's context when it returns, so they still reach the request's later
+  steps, such as the configuration callback's to the tool. `async def`
+  handlers are still awaited directly on the event loop, without a worker
+  thread.
+  An `on_swml_request` override (including `InfoGathererAgent`'s question
+  callback) and the render of the agent's own document stay on the event
+  loop too, as do a plain `SWMLService`'s `on_request` and render. Set
+  `SWML_SYNC_HANDLERS_INLINE=true` to run everything on the event loop, as
+  before.
+- With a per-request configuration callback set, a tool handler that's a
+  method of the agent (an `@AgentBase.tool` method, or `self.method` passed to
+  `define_tool()`, or a partial of one) runs with `self` as that request's
+  configured copy, as `on_summary` already did. It used to run on the
+  original agent, so it couldn't see what the callback configured. Tools
+  called through `/mcp` don't use the callback and still run on the agent.
+- The per-request copy starts with the skills the agent loaded, instead of
+  loading each one again, which ran every skill's `setup()` on every
+  request and left the copy's skill list empty.
 - Importing `signalwire.cli` no longer imports `swaig-test`, so the SDK's other
   commands start about 0.8 seconds sooner.
 
@@ -164,6 +190,15 @@ tool handlers run. The package now installs its documentation, and
   `schema.json` without `SWML_SCHEMA_PATH`.
 - The MCP gateway's Docker image builds and runs, and Compose passes its
   defaults instead of empty strings for unset variables.
+- The per-request copy of an agent shared the agent's SWML document until its
+  render, so a verb method such as `play()` called on the copy in the
+  per-request callback added the verb to the agent's own document. The copy
+  now starts with its own.
+- `add_mcp_server()` in the per-request callback added the server to the
+  agent's own list, so every call added another, and later calls saw them
+  all. The copy now has its own list, as it does for SIP usernames.
+- The spider skill's page cache could raise `KeyError` when two fetches ran
+  at once, which they now can. It's locked.
 
 ### Deprecated
 - `keyword_weight` (`SearchEngine.search()`, the pgvector backend,
@@ -201,6 +236,21 @@ tool handlers run. The package now installs its documentation, and
   Set `auth_password` (or `MCP_AUTH_PASSWORD`) to accept other connections.
   Compose now requires `MCP_AUTH_PASSWORD`, and the sample configuration,
   Compose file and scripts use port 8080, the code's default, instead of 8100.
+- With a per-request configuration callback set, a tool method's `self` is
+  the request's copy of the agent. A method that kept state across calls by
+  assigning an attribute (`self.count += 1`) now assigns it on the copy, and
+  the value is gone after the request. Keep that state in an object the
+  agent already holds, or in your own storage.
+- Synchronous tool handlers and callbacks can now run at the same time as each
+  other. Guard state they share, such as a module-level dictionary, with a
+  `threading.Lock`, and don't share one `sqlite3` connection between them.
+  A synchronous handler no longer runs on the event loop, so
+  `asyncio.create_task()`, `asyncio.get_running_loop()` and similar calls in
+  it raise `RuntimeError`; make such a handler `async def`.
+  Without a per-request configuration callback, a handler that's a method of
+  the agent runs with `self` as the agent every call shares. Setting
+  `SWML_SYNC_HANDLERS_INLINE=true` restores the previous behavior while you
+  check.
 - The MCP gateway's Docker image installs `signalwire-sdk` from PyPI (pin one
   with `--build-arg SDK_VERSION=x.y.z`), so it gets these fixes only from a
   release that includes them.

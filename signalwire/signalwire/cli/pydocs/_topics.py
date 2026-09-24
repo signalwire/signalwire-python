@@ -133,7 +133,8 @@ existing FastAPI app.
 
 Per-call configuration: `set_dynamic_config_callback()` configures a copy of
 the agent for each request, from its query parameters, body and headers, for
-per-tenant prompts, voices and tools. Don't keep per-caller state on the
+per-tenant prompts, voices and tools. The callback runs in a worker thread,
+at the same time as other calls' callbacks. Don't keep per-caller state on the
 shared agent instance.
 
 Configuration precedence: constructor arguments, then the config file, then
@@ -231,8 +232,10 @@ _TOOLS = Topic(
     summary="Functions the model can call, and what they return",
     body="""\
 A tool is a function the model can ask to call. SignalWire sends the call to
-the agent's `/swaig` endpoint, and the SDK runs your handler. Handlers can be
-`async def`.
+the agent's `/swaig` endpoint, and the SDK runs your handler. A plain `def`
+handler runs in a worker thread, so handlers for different calls run at the
+same time: guard state they share. An `async def` handler runs on the event
+loop and must not block it.
 
 Declare a tool with type hints, and the SDK builds its schema. The docstring's
 summary is the tool's description, and its `Args:` describe the parameters:

@@ -22,6 +22,19 @@ class SkillManager:
         self.agent = agent
         self.loaded_skills: dict[str, SkillBase] = {}
         self.logger = get_logger("skill_manager")
+        # Skills a per-request copy shares with the agent it was copied from
+        self._inherited: set[str] = set()
+
+    def _inherit(self, loaded_skills: dict[str, SkillBase]) -> None:
+        """Start with ``loaded_skills``, those of the agent this manager's
+        agent is a per-request copy of.
+
+        Their tools, hints, prompt sections and global data are already in the
+        copy's configuration, so they aren't loaded again, which would repeat
+        each skill's setup on every request.
+        """
+        self.loaded_skills.update(loaded_skills)
+        self._inherited.update(loaded_skills)
 
     def load_skill(
         self,
@@ -123,6 +136,9 @@ class SkillManager:
             instance_key = skill_instance.get_instance_key()
 
             # Check if this instance is already loaded
+            if instance_key in self._inherited:
+                # Loaded on the agent this per-request copy was made from
+                return True, ""
             if instance_key in self.loaded_skills:
                 # For single-instance skills, this is an error
                 if not skill_instance.SUPPORTS_MULTIPLE_INSTANCES:
@@ -230,7 +246,11 @@ class SkillManager:
             return False
 
         try:
-            skill_instance.cleanup()
+            if instance_key in self._inherited:
+                # The agent this copy was made from still uses this instance
+                self._inherited.discard(instance_key)
+            else:
+                skill_instance.cleanup()
             del self.loaded_skills[instance_key]
             self.logger.info(f"Successfully unloaded skill instance '{instance_key}'")
             return True

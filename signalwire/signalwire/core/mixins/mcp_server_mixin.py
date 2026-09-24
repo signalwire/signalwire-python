@@ -13,6 +13,8 @@ import logging
 from collections.abc import Awaitable
 from typing import Any
 
+from signalwire.core._sync_handlers import is_async_callable
+
 logger = logging.getLogger(__name__)
 
 
@@ -55,6 +57,15 @@ class MCPServerMixin:
             tools.append(tool)
 
         return tools
+
+    def _mcp_request_runs_sync_code(self, body: dict[str, Any]) -> bool:
+        """True when ``body`` is a tools/call for a synchronous handler."""
+        if not isinstance(body, dict) or body.get("method") != "tools/call":
+            return False
+        params = body.get("params")
+        name = params.get("name", "") if isinstance(params, dict) else ""
+        tool = self._mcp_tools().get(name)
+        return tool is not None and not is_async_callable(tool.handler)
 
     def _handle_mcp_request(
         self, body: dict[str, Any]
