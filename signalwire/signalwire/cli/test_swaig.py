@@ -394,8 +394,12 @@ def main() -> int:
     )
     serverless_group.add_argument("--env-file", help="Load environment from file")
 
+    parser.add_argument(
+        "--call-id",
+        help="call_id the simulated request carries (put it before --exec)",
+    )
+
     # Hidden/advanced options (not shown in main help)
-    parser.add_argument("--call-id", help=argparse.SUPPRESS)
     parser.add_argument("--project-id", help=argparse.SUPPRESS)
     parser.add_argument("--space-id", help=argparse.SUPPRESS)
     parser.add_argument("--method", default="POST", help=argparse.SUPPRESS)
@@ -761,8 +765,13 @@ def main() -> int:
             body=request_body,
         )
 
-        # Apply dynamic configuration
-        apply_dynamic_config(agent, mock_request, verbose=args.verbose and not args.raw)
+        # Apply dynamic configuration, except for a SWML dump alone: that renders
+        # as the server does, applying the callback to a per-request copy, so
+        # applying it here too would run it twice
+        if args.list_tools or not args.dump_swml:
+            apply_dynamic_config(
+                agent, mock_request, verbose=args.verbose and not args.raw
+            )
 
         # Handle --list-tools
         if args.list_tools:
