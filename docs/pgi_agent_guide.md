@@ -1531,7 +1531,7 @@ The implementation sources in [12.2](#122-implementation-sources) link to files 
 
 - [S22] [AI Chat client implementation](../signalwire/signalwire/ai_chat/client.py) - `signalwire/signalwire/ai_chat/client.py`.
 
-- [S23] [Package version and dependencies](../pyproject.toml) - `pyproject.toml`.
+- [S23] Package version and dependencies - `pyproject.toml` in the SDK's source repository; in an installed package, `sw-pydocs --version` prints the version.
 
 - [S24] [RELAY event and action model](../relay/docs/events.md) - `relay/docs/events.md`.
 

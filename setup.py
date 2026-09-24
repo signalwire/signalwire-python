@@ -22,15 +22,36 @@ _bundle = runpy.run_path(str(ROOT / "signalwire/signalwire/cli/pydocs/_bundle.py
 
 
 class BuildPyWithDocs(build_py):
-    """Also copy the documentation into the package, under signalwire/_docs/."""
+    """Also install the documentation in the package, under signalwire/_docs/."""
+
+    def _docs(self) -> list[tuple[str, Path, Path]]:
+        target = Path(self.build_lib) / "signalwire" / "_docs"
+        return [
+            (rel, ROOT / rel, target / rel) for rel in _bundle["iter_doc_files"](ROOT)
+        ]
 
     def run(self) -> None:
         super().run()
-        target = Path(self.build_lib) / "signalwire" / "_docs"
-        for rel in _bundle["iter_doc_files"](ROOT):
-            dest = target / rel
+        for rel, source, dest in self._docs():
             dest.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(ROOT / rel, dest)
+            if rel.endswith(".md"):
+                with source.open(encoding="utf-8", newline="") as f:
+                    text = f.read()
+                with dest.open("w", encoding="utf-8", newline="") as f:
+                    f.write(_bundle["installed_text"](rel, text))
+            else:
+                shutil.copy2(source, dest)
+
+    # Declared as outputs, so editable installs that link the build's files
+    # include the docs too
+    def get_outputs(self, include_bytecode: bool = True) -> list[str]:
+        docs = [str(dest) for _, _, dest in self._docs()]
+        return [*super().get_outputs(include_bytecode), *docs]
+
+    def get_output_mapping(self) -> dict[str, str]:
+        mapping = super().get_output_mapping()
+        mapping.update({str(dest): str(source) for _, source, dest in self._docs()})
+        return mapping
 
 
 setup(cmdclass={"build_py": BuildPyWithDocs})
