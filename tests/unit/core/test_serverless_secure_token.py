@@ -30,7 +30,7 @@ import base64
 import io
 import json
 import sys
-from typing import Any
+from typing import Any, NamedTuple
 from unittest.mock import Mock, patch
 
 import pytest
@@ -85,24 +85,15 @@ def _swaig_body(function_name: str, call_id: str | None = CALL_ID) -> dict[str, 
     return body
 
 
-def _assert_ran(payload: dict[str, Any]) -> None:
-    assert payload.get("response") == HANDLER_RAN, (
-        f"expected the handler to RUN, got {payload!r}"
-    )
+class _Reply(NamedTuple):
+    """One serverless invocation's outcome: the HTTP status and the decoded SWAIG body."""
 
-
-def _assert_refused(payload: dict[str, Any]) -> None:
-    response = payload.get("response", "")
-    assert REFUSAL_FRAGMENT in response, (
-        f"expected a secure-token REFUSAL, got {payload!r}"
-    )
-    assert HANDLER_RAN not in json.dumps(payload), (
-        f"handler RAN despite an invalid/absent token: {payload!r}"
-    )
+    status: int
+    payload: dict[str, Any]
 
 
 # ---------------------------------------------------------------------------
-# Per-mode invocation helpers -- each returns the decoded SWAIG result dict.
+# Per-mode invocation helpers -- each returns the status and the decoded SWAIG body.
 #
 # The four modes carry the query string in four DIFFERENT places; that is the
 # whole point of the per-mode extraction under test.
@@ -114,7 +105,7 @@ def _invoke_lambda_v2(
     function_name: str,
     token: str | None,
     call_id: str | None = CALL_ID,
-) -> dict[str, Any]:
+) -> _Reply:
     """HTTP API v2 payload: `rawPath` + `queryStringParameters` dict."""
     event: dict[str, Any] = {
         "rawPath": f"/{function_name}",
@@ -124,10 +115,7 @@ def _invoke_lambda_v2(
     if token is not None:
         event["queryStringParameters"] = {"__token": token}
     result = agent.handle_serverless_request(event=event, mode="lambda")
-    assert result["statusCode"] == 200, (
-        f"refusal must be a 200 + FunctionResult body, got {result['statusCode']}"
-    )
-    return dict(json.loads(result["body"]))
+    return _Reply(int(result["statusCode"]), dict(json.loads(result["body"])))
 
 
 def _invoke_lambda_v2_raw(
@@ -135,7 +123,7 @@ def _invoke_lambda_v2_raw(
     function_name: str,
     token: str | None,
     call_id: str | None = CALL_ID,
-) -> dict[str, Any]:
+) -> _Reply:
     """HTTP API v2 payload variant carrying `rawQueryString` instead of the dict."""
     event: dict[str, Any] = {
         "rawPath": f"/{function_name}",
@@ -145,8 +133,7 @@ def _invoke_lambda_v2_raw(
     if token is not None:
         event["rawQueryString"] = f"__token={token}"
     result = agent.handle_serverless_request(event=event, mode="lambda")
-    assert result["statusCode"] == 200
-    return dict(json.loads(result["body"]))
+    return _Reply(int(result["statusCode"]), dict(json.loads(result["body"])))
 
 
 def _invoke_lambda_v1(
@@ -154,7 +141,7 @@ def _invoke_lambda_v1(
     function_name: str,
     token: str | None,
     call_id: str | None = CALL_ID,
-) -> dict[str, Any]:
+) -> _Reply:
     """REST API v1 payload: `pathParameters.proxy` + `queryStringParameters`."""
     event: dict[str, Any] = {
         "pathParameters": {"proxy": function_name},
@@ -164,8 +151,7 @@ def _invoke_lambda_v1(
     if token is not None:
         event["queryStringParameters"] = {"__token": token}
     result = agent.handle_serverless_request(event=event, mode="lambda")
-    assert result["statusCode"] == 200
-    return dict(json.loads(result["body"]))
+    return _Reply(int(result["statusCode"]), dict(json.loads(result["body"])))
 
 
 def _invoke_cgi(
@@ -173,7 +159,7 @@ def _invoke_cgi(
     function_name: str,
     token: str | None,
     call_id: str | None = CALL_ID,
-) -> dict[str, Any]:
+) -> _Reply:
     """CGI: `QUERY_STRING` environment variable."""
     body = json.dumps(_swaig_body(function_name, call_id))
     env = {
@@ -190,8 +176,10 @@ def _invoke_cgi(
     # CGI mode returns the complete CGI response text (status line, headers, a
     # blank line, then the JSON body); the SWAIG payload is the body.
     assert isinstance(result, str)
-    _headers, _sep, body_text = result.partition("\r\n\r\n")
-    return dict(json.loads(body_text))
+    headers, _sep, body_text = result.partition("\r\n\r\n")
+    status_line = headers.split("\r\n", 1)[0]
+    assert status_line.startswith("Status: "), f"no CGI status line: {result!r}"
+    return _Reply(int(status_line.split()[1]), dict(json.loads(body_text)))
 
 
 def _invoke_gcf(
@@ -199,7 +187,7 @@ def _invoke_gcf(
     function_name: str,
     token: str | None,
     call_id: str | None = CALL_ID,
-) -> dict[str, Any]:
+) -> _Reply:
     """Google Cloud Functions: Flask `request.args` mapping."""
     request = Mock()
     request.path = f"/{function_name}"
@@ -225,10 +213,7 @@ def _invoke_gcf(
     with patch.dict(sys.modules, {"flask": flask_stub}):
         agent.handle_serverless_request(event=request, mode="google_cloud_function")
 
-    assert captured["status"] == 200, (
-        f"refusal must be a 200 + FunctionResult body, got {captured['status']}"
-    )
-    return dict(json.loads(captured["body"]))
+    return _Reply(int(captured["status"]), dict(json.loads(captured["body"])))
 
 
 def _invoke_azure(
@@ -236,7 +221,7 @@ def _invoke_azure(
     function_name: str,
     token: str | None,
     call_id: str | None = CALL_ID,
-) -> dict[str, Any]:
+) -> _Reply:
     """Azure Functions: `req.params` mapping (and the query in `req.url`)."""
     query = f"?__token={token}" if token is not None else ""
     req = Mock()
@@ -265,10 +250,7 @@ def _invoke_azure(
     ):
         agent.handle_serverless_request(event=req, mode="azure_function")
 
-    assert captured["status"] == 200, (
-        f"refusal must be a 200 + FunctionResult body, got {captured['status']}"
-    )
-    return dict(json.loads(captured["body"]))
+    return _Reply(int(captured["status"]), dict(json.loads(captured["body"])))
 
 
 _INVOKERS = {
@@ -285,6 +267,9 @@ MODES = list(_INVOKERS)
 
 # ---------------------------------------------------------------------------
 # The 4-state matrix, per mode.
+#
+# Every reply -- run or refused -- is a 200: a refusal is a FunctionResult body,
+# never an HTTP error status (the engine has no handling for one).
 # ---------------------------------------------------------------------------
 
 
@@ -292,28 +277,37 @@ MODES = list(_INVOKERS)
 def test_secure_tool_valid_token_runs(agent: _SecureAgent, mode: str) -> None:
     """A VALID token must still run the handler in every serverless mode."""
     token = _valid_token(agent, "secret_tool")
-    _assert_ran(_INVOKERS[mode](agent, "secret_tool", token))
+    reply = _INVOKERS[mode](agent, "secret_tool", token)
+    assert reply.status == 200
+    assert reply.payload["response"] == HANDLER_RAN
 
 
 @pytest.mark.parametrize("mode", MODES)
 def test_secure_tool_forged_token_refused(agent: _SecureAgent, mode: str) -> None:
     """A FORGED token must be refused in every serverless mode."""
-    _assert_refused(
-        _INVOKERS[mode](agent, "secret_tool", "obviously-not-a-valid-token")
-    )
+    reply = _INVOKERS[mode](agent, "secret_tool", "obviously-not-a-valid-token")
+    assert reply.status == 200
+    assert REFUSAL_FRAGMENT in reply.payload["response"]
+    assert HANDLER_RAN not in json.dumps(reply.payload)
 
 
 @pytest.mark.parametrize("mode", MODES)
 def test_secure_tool_absent_token_refused(agent: _SecureAgent, mode: str) -> None:
     """An ABSENT token must be refused -- never weaker than a wrong one."""
-    _assert_refused(_INVOKERS[mode](agent, "secret_tool", None))
+    reply = _INVOKERS[mode](agent, "secret_tool", None)
+    assert reply.status == 200
+    assert REFUSAL_FRAGMENT in reply.payload["response"]
+    assert HANDLER_RAN not in json.dumps(reply.payload)
 
 
 @pytest.mark.parametrize("mode", MODES)
 def test_secure_tool_missing_call_id_refused(agent: _SecureAgent, mode: str) -> None:
     """A token with NO call_id to check it against counts as UNVALIDATED."""
     token = _valid_token(agent, "secret_tool")
-    _assert_refused(_INVOKERS[mode](agent, "secret_tool", token, call_id=None))
+    reply = _INVOKERS[mode](agent, "secret_tool", token, call_id=None)
+    assert reply.status == 200
+    assert REFUSAL_FRAGMENT in reply.payload["response"]
+    assert HANDLER_RAN not in json.dumps(reply.payload)
 
 
 @pytest.mark.parametrize("mode", MODES)
@@ -322,7 +316,10 @@ def test_secure_tool_token_for_other_function_refused(
 ) -> None:
     """A token minted for a DIFFERENT function must not authorize this one."""
     token = _valid_token(agent, "open_tool")
-    _assert_refused(_INVOKERS[mode](agent, "secret_tool", token))
+    reply = _INVOKERS[mode](agent, "secret_tool", token)
+    assert reply.status == 200
+    assert REFUSAL_FRAGMENT in reply.payload["response"]
+    assert HANDLER_RAN not in json.dumps(reply.payload)
 
 
 @pytest.mark.parametrize("mode", MODES)
@@ -331,7 +328,10 @@ def test_secure_tool_token_for_other_call_refused(
 ) -> None:
     """A token minted for a DIFFERENT call_id must not authorize this call."""
     token = _valid_token(agent, "secret_tool", call_id="some-other-call")
-    _assert_refused(_INVOKERS[mode](agent, "secret_tool", token))
+    reply = _INVOKERS[mode](agent, "secret_tool", token)
+    assert reply.status == 200
+    assert REFUSAL_FRAGMENT in reply.payload["response"]
+    assert HANDLER_RAN not in json.dumps(reply.payload)
 
 
 # ---------------------------------------------------------------------------
@@ -342,17 +342,23 @@ def test_secure_tool_token_for_other_call_refused(
 
 @pytest.mark.parametrize("mode", MODES)
 def test_insecure_tool_absent_token_runs(agent: _SecureAgent, mode: str) -> None:
-    _assert_ran(_INVOKERS[mode](agent, "open_tool", None))
+    reply = _INVOKERS[mode](agent, "open_tool", None)
+    assert reply.status == 200
+    assert reply.payload["response"] == HANDLER_RAN
 
 
 @pytest.mark.parametrize("mode", MODES)
 def test_insecure_tool_forged_token_runs(agent: _SecureAgent, mode: str) -> None:
-    _assert_ran(_INVOKERS[mode](agent, "open_tool", "garbage-token"))
+    reply = _INVOKERS[mode](agent, "open_tool", "garbage-token")
+    assert reply.status == 200
+    assert reply.payload["response"] == HANDLER_RAN
 
 
 @pytest.mark.parametrize("mode", MODES)
 def test_insecure_tool_missing_call_id_runs(agent: _SecureAgent, mode: str) -> None:
-    _assert_ran(_INVOKERS[mode](agent, "open_tool", None, call_id=None))
+    reply = _INVOKERS[mode](agent, "open_tool", None, call_id=None)
+    assert reply.status == 200
+    assert reply.payload["response"] == HANDLER_RAN
 
 
 # ---------------------------------------------------------------------------
@@ -370,7 +376,8 @@ def test_lambda_bare_token_param_accepted(agent: _SecureAgent) -> None:
         "body": json.dumps(_swaig_body("secret_tool")),
     }
     result = agent.handle_serverless_request(event=event, mode="lambda")
-    _assert_ran(json.loads(result["body"]))
+    assert result["statusCode"] == 200
+    assert json.loads(result["body"])["response"] == HANDLER_RAN
 
 
 def test_lambda_dunder_token_wins_over_bare(agent: _SecureAgent) -> None:
@@ -383,4 +390,5 @@ def test_lambda_dunder_token_wins_over_bare(agent: _SecureAgent) -> None:
         "body": json.dumps(_swaig_body("secret_tool")),
     }
     result = agent.handle_serverless_request(event=event, mode="lambda")
-    _assert_ran(json.loads(result["body"]))
+    assert result["statusCode"] == 200
+    assert json.loads(result["body"])["response"] == HANDLER_RAN
