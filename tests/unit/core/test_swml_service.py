@@ -377,12 +377,13 @@ class TestCreateVerbMethods:
         self, mock_swml_service: SWMLService
     ) -> None:
         """Calling a dynamically created verb method should add the verb to the document."""
-        verb_names = mock_swml_service.schema_utils.get_all_verb_names()
-        # Pick a verb that isn't 'sleep' (which has special handling)
-        non_sleep = [v for v in verb_names if v != "sleep"]
-        if not non_sleep:
-            pytest.skip("No non-sleep verbs available")
-        vn = non_sleep[0]
+        # `set` is an open-keyed, dynamically installed verb (no required field, no
+        # closed key set), so any config is valid for it. Named, not "the first
+        # schema verb": which verb comes first is schema order, and a verb with a
+        # required field (the first is `ai`, which requires `prompt`) fails
+        # validation when called empty.
+        vn = "set"
+        assert vn in mock_swml_service.schema_utils.get_all_verb_names()
         mock_swml_service.reset_document()
         # Call with no kwargs (empty config)
         method = getattr(mock_swml_service, vn)
@@ -394,11 +395,13 @@ class TestCreateVerbMethods:
 
     def test_verb_method_passes_kwargs(self, mock_swml_service: SWMLService) -> None:
         """Keyword arguments should end up in the verb config dict."""
-        verb_names = mock_swml_service.schema_utils.get_all_verb_names()
-        non_sleep = [v for v in verb_names if v != "sleep"]
-        if not non_sleep:
-            pytest.skip("No non-sleep verbs available")
-        vn = non_sleep[0]
+        # `set` is an open-keyed, dynamically installed verb (no required field, no
+        # closed key set), so any config is valid for it. Named, not "the first
+        # schema verb": which verb comes first is schema order, and a verb with a
+        # required field (the first is `ai`, which requires `prompt`) fails
+        # validation when called empty.
+        vn = "set"
+        assert vn in mock_swml_service.schema_utils.get_all_verb_names()
         mock_swml_service.reset_document()
         method = getattr(mock_swml_service, vn)
         method(some_key="some_value")
@@ -410,11 +413,13 @@ class TestCreateVerbMethods:
         self, mock_swml_service: SWMLService
     ) -> None:
         """None-valued kwargs should be stripped from the config."""
-        verb_names = mock_swml_service.schema_utils.get_all_verb_names()
-        non_sleep = [v for v in verb_names if v != "sleep"]
-        if not non_sleep:
-            pytest.skip("No non-sleep verbs available")
-        vn = non_sleep[0]
+        # `set` is an open-keyed, dynamically installed verb (no required field, no
+        # closed key set), so any config is valid for it. Named, not "the first
+        # schema verb": which verb comes first is schema order, and a verb with a
+        # required field (the first is `ai`, which requires `prompt`) fails
+        # validation when called empty.
+        vn = "set"
+        assert vn in mock_swml_service.schema_utils.get_all_verb_names()
         mock_swml_service.reset_document()
         method = getattr(mock_swml_service, vn)
         method(present="yes", absent=None)

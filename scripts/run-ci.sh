@@ -328,6 +328,16 @@ sched_gate GEN-FRESH desc="generated REST/RELAY types reproduce from specs" \
     -- python3 "$PORTING_SDK_DIR/scripts/generate_python_rest_types.py" \
         --signalwire-python "$PORT_ROOT/signalwire" --check
 
+# SCHEMA-BUNDLE: the runtime SWML verb set (installed from the BUNDLED
+# signalwire/signalwire/schema.json) must equal the static stub GEN-FRESH keeps
+# current with porting-sdk/schema.json. FRESH: the bundle is byte-identical to
+# porting-sdk's schema.json at the pinned ref (+ its schema.json.sha256 record).
+# AGREE: runtime verb methods == _SwmlVerbs methods, both directions. --selftest runs
+# the negative controls (stale bundle, missing verb, extra verb must each fail).
+# Re-bundle with scripts/sync_schema_bundle.py. Cheap static check -> per-PR wave.
+sched_gate SCHEMA-BUNDLE desc="bundled schema.json == porting-sdk's; runtime verb methods == static stub (both directions)" \
+    -- python3 "$PORT_ROOT/scripts/check_schema_bundle.py" --porting-sdk "$PORTING_SDK_DIR" --selftest
+
 # ---- expansion gates (GATE_EXPANSION_PLAN) — enforcing ----------------------
 # python is the reference: GEN-TYPE-DEGENERACY + GEN-IDIOM self-skip clean;
 # PUBLIC-JARGON + RELEASE-FRESH enforce; ROUTE-COLLISION enforces (modulo the

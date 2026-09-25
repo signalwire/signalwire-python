@@ -11,6 +11,18 @@
   at the next speech batch boundary, never mid-utterance, keeps it for that
   language for the rest of the call, and falls back to the fallback voice if the
   new one will not open.
+- `SWMLBuilder` and `SWMLService` gain the SWML verbs `echo`, `execute_rpc`,
+  `ring`, `set_meta`, `stream`, `stop_stream`, `transcribe` and
+  `transcribe_stop`. The type stubs already declared them, but the bundled
+  `schema.json` the methods are installed from did not, so calling one raised
+  `AttributeError`. The bundle is now the current SWML schema.
+
+### Fixed
+- Generated SWML verb methods accept the verb's config as one positional
+  mapping, the form the type stubs declare (`builder.echo({"timeout": 30})`).
+  Keyword arguments still work and are merged over the mapping.
+- The `return` verb is available as `return_()`, the name the type stubs
+  declare. It still emits the `return` key.
 
 ## [3.5.0] - 2026-09-24
 

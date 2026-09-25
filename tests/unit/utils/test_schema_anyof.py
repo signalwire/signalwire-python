@@ -17,10 +17,11 @@ None — which ``_validate_verb_top_level_keys`` reads as "no key-set to enforce
 and answers valid for ANY key. The check did not report a problem; it stopped
 checking and reported success, which is the worse of the two.
 
-Five verbs in the SHIPPED schema.json are union-shaped — connect and play (oneOf
-of $refs), send_sms (anyOf of $refs), sleep (anyOf of an object / integer /
-SWMLVar), and unset (anyOf of string / array). Four of the five have object
-branches whose keys are perfectly enumerable.
+Many verb configs in the SHIPPED schema.json are union-shaped — among them
+connect and play (unions of $refs), send_sms, sleep (object / integer / SWMLVar),
+label (string / object), unset (string / array), and every verb that also takes a
+positional array form. Where a union has object branches, their keys are
+perfectly enumerable.
 
 The semantic: a config satisfying a union satisfies SOME branch, so the known
 keys are the UNION of the object branches' keys, and a key belonging to no branch
@@ -48,14 +49,16 @@ from signalwire.utils.schema_utils import SchemaUtils
 # set the union must resolve to and a legitimate config that must keep passing.
 UNION_SHAPED_VERBS: list[tuple[str, str, dict[str, Any], int]] = [
     ("sleep", "duration", {"duration": 5000}, 1),
-    ("play", "url", {"url": "https://example.test/a.mp3"}, 8),
+    ("play", "url", {"url": "https://example.test/a.mp3"}, 9),
     (
         "send_sms",
         "body",
         {"to_number": "+15551110000", "from_number": "+15552220000", "body": "hi"},
-        6,
+        7,
     ),
-    ("connect", "to", {"to": "sip:alice@example.test"}, 22),
+    ("connect", "to", {"to": "sip:alice@example.test"}, 32),
+    # label: string shorthand | {label}. The object branch is closed.
+    ("label", "label", {"label": "top"}, 1),
 ]
 
 # Shapes that genuinely have no closed key-set, so the fix is not read as
@@ -63,8 +66,21 @@ UNION_SHAPED_VERBS: list[tuple[str, str, dict[str, Any], int]] = [
 #   set   -- an OPEN object (unevaluatedProperties:{} with no `not`, zero declared
 #            properties): a free-form variable bag by design.
 #   unset -- a union with no object branch (string | array of string).
-#   cond / label / return -- array / string / untyped, not objects at all.
-NON_ENUMERABLE_VERBS = ["set", "unset", "cond", "label", "return"]
+#   cond / return / eval -- array / untyped, not closed objects.
+#   detect_machine / enter_queue / pay / transcribe_stop -- objects the schema
+#            leaves open (no `unevaluatedProperties: {not: {}}`), so there is no
+#            closed key set to enforce.
+NON_ENUMERABLE_VERBS = [
+    "set",
+    "unset",
+    "cond",
+    "return",
+    "eval",
+    "detect_machine",
+    "enter_queue",
+    "pay",
+    "transcribe_stop",
+]
 
 
 @pytest.fixture(scope="module")
@@ -212,8 +228,8 @@ class TestRefFollowingStillWorks:
 
 
 class TestEngagedVerbCount:
-    """The aggregate the fix moves: 30 -> 34 engaged verbs, with the four
-    newly-engaged ones named. An aggregate-only assertion would let a resolver
+    """The aggregate: 41 engaged verbs in the shipped schema, with the
+    union-shaped ones named. An aggregate-only assertion would let a resolver
     that engaged the WRONG four pass, so both are pinned."""
 
     def test_engaged_count_and_membership(self, schema_utils: SchemaUtils) -> None:
@@ -224,15 +240,15 @@ class TestEngagedVerbCount:
         }
         disengaged = set(schema_utils.verbs) - engaged
 
-        assert len(engaged) == 34, (
-            f"expected 34 engaged verbs, got {len(engaged)}; "
+        assert len(engaged) == 41, (
+            f"expected 41 engaged verbs, got {len(engaged)}; "
             f"disengaged = {sorted(disengaged)}"
         )
-        # The four union-shaped verbs with object branches, which the pre-fix
+        # The union-shaped verbs with object branches, which the pre-fix
         # resolver bailed on.
-        for verb in ["sleep", "play", "send_sms", "connect"]:
+        for verb in ["sleep", "play", "send_sms", "connect", "label"]:
             assert verb in engaged, f"{verb} must be engaged after the fix"
-        # Nothing may be weakened: these five have no closed key-set.
+        # Nothing may be weakened: these have no closed key-set.
         assert disengaged == set(NON_ENUMERABLE_VERBS), (
             f"the disengaged set must be exactly {sorted(NON_ENUMERABLE_VERBS)}, "
             f"got {sorted(disengaged)}"

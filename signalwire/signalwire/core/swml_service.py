@@ -58,6 +58,9 @@ except ImportError:
 from signalwire.utils.schema_utils import (  # noqa: E402
     SchemaUtils,
     SchemaValidationError,
+    _verb_body,
+    _verb_method_name,
+    _verb_name_for_attribute,
 )
 from signalwire.core.swml_handler import (  # noqa: E402
     VerbHandlerRegistry,
@@ -267,7 +270,8 @@ class SWMLService(ToolMixin):
         # Create a method for each verb
         for verb_name in verb_names:
             # Skip verbs that already have specific methods
-            if hasattr(self, verb_name):
+            method_name = _verb_method_name(verb_name)
+            if hasattr(self, method_name):
                 self.log.debug("skipping_verb_has_method", verb=verb_name)
                 continue
 
@@ -297,7 +301,7 @@ class SWMLService(ToolMixin):
                     raise TypeError("sleep() missing required argument: 'duration'")
 
                 # Set it as an attribute of self
-                setattr(self, verb_name, types.MethodType(sleep_method, self))
+                setattr(self, method_name, types.MethodType(sleep_method, self))
 
                 # Also cache it for later
                 self._verb_methods_cache[verb_name] = sleep_method
@@ -314,9 +318,11 @@ class SWMLService(ToolMixin):
                 method would close over the shared loop variable and emit the
                 last verb in the schema.
 
-                The returned function takes keyword arguments only, drops every
-                kwarg whose value is None (so unset options never reach the
-                wire), and calls ``add_verb(name, config)`` — returning that
+                The returned function takes the verb's config as one optional
+                positional mapping and/or keyword arguments, merges the keywords
+                over the mapping, drops every keyword whose value is None (so
+                unset options never reach the wire), and calls
+                ``add_verb(name, config)`` — returning that
                 call's bool, i.e. **False when the verb fails schema
                 validation** rather than raising. It carries the verb's schema
                 ``description`` as its ``__doc__`` when the schema has one.
@@ -328,26 +334,28 @@ class SWMLService(ToolMixin):
                 than an object in SWML and is special-cased by the caller.
 
                 Args:
-                    name: The SWML verb name, used as both the emitted key and
-                        the method name.
+                    name: The SWML verb name, used as the emitted key. The
+                        method is installed under it, or under ``return_`` for
+                        a keyword verb such as ``return``.
 
                 Returns:
-                    An unbound function of ``(self_instance, **kwargs) ->
-                    bool``, which the caller binds with ``types.MethodType``
+                    An unbound function of ``(self_instance, config=None,
+                    **kwargs) -> bool``, which the caller binds with ``types.MethodType``
                     and caches in ``_verb_methods_cache``.
                 """
 
-                def verb_method(self_instance: "SWMLService", **kwargs: Any) -> bool:
+                def verb_method(
+                    self_instance: "SWMLService", config: Any = None, **kwargs: Any
+                ) -> bool:
                     """
                     Dynamically generated method for SWML verb
                     """
                     self.log.debug(
                         "executing_verb_method", verb=name, kwargs_count=len(kwargs)
                     )
-                    config = {
-                        key: value for key, value in kwargs.items() if value is not None
-                    }
-                    return self_instance.add_verb(name, config)
+                    return self_instance.add_verb(
+                        name, _verb_body(name, config, kwargs)
+                    )
 
                 # Add docstring to the method
                 verb_properties = self.schema_utils.get_verb_properties(name)
@@ -362,7 +370,7 @@ class SWMLService(ToolMixin):
             method = make_verb_method(verb_name)
 
             # Set it as an attribute of self
-            setattr(self, verb_name, types.MethodType(method, self))
+            setattr(self, method_name, types.MethodType(method, self))
 
             # Also cache it for later
             self._verb_methods_cache[verb_name] = method
@@ -440,7 +448,9 @@ class SWMLService(ToolMixin):
 
         verb_names = _schema_utils.get_all_verb_names()
 
-        if name in verb_names:
+        verb = _verb_name_for_attribute(name, verb_names)
+        if verb is not None:
+            name = verb
             _log.debug("getattr_valid_verb", verb=name)
 
             # Check if we already have this method in the cache
@@ -484,17 +494,16 @@ class SWMLService(ToolMixin):
                 return types.MethodType(sleep_method, self)
 
             # Generate the method implementation for normal verbs
-            def verb_method(self_instance: "SWMLService", **kwargs: Any) -> bool:
+            def verb_method(
+                self_instance: "SWMLService", config: Any = None, **kwargs: Any
+            ) -> bool:
                 """
                 Dynamically generated method for SWML verb
                 """
                 self.log.debug(
                     "executing_dynamic_verb", verb=name, kwargs_count=len(kwargs)
                 )
-                config = {
-                    key: value for key, value in kwargs.items() if value is not None
-                }
-                return self_instance.add_verb(name, config)
+                return self_instance.add_verb(name, _verb_body(name, config, kwargs))
 
             # Add docstring to the method
             verb_properties = self.schema_utils.get_verb_properties(name)

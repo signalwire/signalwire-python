@@ -14,6 +14,8 @@ Uses jsonschema-rs for full JSON Schema validation with type checking.
 
 import os
 import json
+import keyword
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, cast
 
@@ -40,6 +42,58 @@ class SchemaValidationError(Exception):
 
 # Create a logger
 logger = get_logger("signalwire.utils.schema_utils")
+
+
+def _verb_method_name(verb_name: str) -> str:
+    """
+    The Python attribute name a SWML verb method is installed under.
+
+    A verb whose name is a Python keyword (``return``) cannot be called as
+    ``builder.return()``, so it is installed as ``return_`` — the same name the
+    generated static stub (``swml_verbs_generated._SwmlVerbs``) declares. The
+    verb still emits its wire key (``return``).
+    """
+    return f"{verb_name}_" if keyword.iskeyword(verb_name) else verb_name
+
+
+def _verb_name_for_attribute(name: str, verb_names: list[str]) -> str | None:
+    """
+    The SWML verb an attribute name reaches, or None if it reaches none.
+
+    Accepts the verb's own name and its keyword-escaped method name
+    (``return_`` -> ``return``).
+    """
+    if name in verb_names:
+        return name
+    if name.endswith("_") and keyword.iskeyword(name[:-1]) and name[:-1] in verb_names:
+        return name[:-1]
+    return None
+
+
+def _verb_body(verb_name: str, config: Any, kwargs: dict[str, Any]) -> Any:
+    """
+    Build a verb's body from a generated verb method's arguments.
+
+    The static stub declares each verb method as ``verb(config)`` — one
+    positional mapping — and the runtime methods also take keyword arguments.
+    Both forms are accepted: the mapping is copied, keyword arguments are
+    merged over it, and any keyword whose value is None is dropped so unset
+    options never reach the wire. A non-mapping ``config`` (a verb's positional
+    array or scalar form) is passed through unchanged and cannot be combined
+    with keyword arguments.
+
+    Raises:
+        TypeError: If a non-mapping ``config`` is combined with keyword arguments.
+    """
+    extra = {key: value for key, value in kwargs.items() if value is not None}
+    if config is None:
+        return extra
+    if isinstance(config, Mapping):
+        return {**config, **extra}
+    if extra:
+        msg = f"{verb_name}() takes either a positional non-object body or keyword arguments, not both"
+        raise TypeError(msg)
+    return config
 
 
 def _verb_is_deprecated(verb_def: dict[str, Any], verb_name: str) -> bool:
