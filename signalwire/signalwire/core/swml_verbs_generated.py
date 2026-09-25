@@ -17,19 +17,19 @@ _Self = TypeVar("_Self", bound="_SwmlVerbs")
 class AI(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    ai: AiConfig | list[str | SWMLVar] | str | SWMLVar
+    ai: AiConfig | list[str | SWMLVar] | float | str | SWMLVar
 
 
 class AiSidecar(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    ai_sidecar: AiSidecarConfig
+    ai_sidecar: AiSidecarConfig | list[Any] | float | str
 
 
 class AmazonBedrock(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    amazon_bedrock: AmazonBedrockConfig
+    amazon_bedrock: AmazonBedrockConfig | list[Any] | float | str
 
 
 class Answer(TypedDict, total=False):
@@ -131,16 +131,25 @@ class ConnectSipHeader(TypedDict, total=False):
     value: str | SWMLVar
 
 
+class DataMap(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    contexts: Any
+    expressions: list[Expression] | Expression
+    output: Any
+    webhooks: list[Webhook] | Webhook
+
+
 class Denoise(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    denoise: dict[str, Any]
+    denoise: dict[str, Any] | list[Any] | float | str
 
 
 class DetectMachine(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    detect_machine: DetectMachineConfig
+    detect_machine: DetectMachineConfig | list[Any] | float | str
 
 
 class Echo(TypedDict, total=False):
@@ -152,25 +161,44 @@ class Echo(TypedDict, total=False):
 class EnterQueue(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    enter_queue: EnterQueueConfig
+    enter_queue: EnterQueueConfig | list[Any] | float | str
 
 
 class Execute(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    execute: ExecuteConfig | list[str | SWMLVar] | str | SWMLVar
+    execute: ExecuteConfig | list[str | SWMLVar] | float | str | SWMLVar
 
 
 class ExecuteRpc(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    execute_rpc: ExecuteRpcConfig
+    execute_rpc: ExecuteRpcConfig | list[Any] | float | str
+
+
+class Expression(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    pattern: str
+    expr: str
+    # non-identifier field 'nomatch-output': Any
+    output: Any
+    string: str
+
+
+class Foreach(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    append: str
+    input_key: str
+    max: Any
+    output_key: str
 
 
 class Goto(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    goto: GotoConfig | list[str | SWMLVar] | str | SWMLVar
+    goto: GotoConfig | list[str | SWMLVar] | float | str | SWMLVar
 
 
 class Hangup(TypedDict, total=False):
@@ -182,6 +210,7 @@ class Hangup(TypedDict, total=False):
             Literal["hangup", "cancel", "busy", "noAnswer", "decline", "error"]
             | SWMLVar
         ]
+        | float
         | Literal["hangup", "cancel", "busy", "noAnswer", "decline", "error"]
         | SWMLVar
     )
@@ -190,85 +219,144 @@ class Hangup(TypedDict, total=False):
 class JoinConference(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    join_conference: JoinConferenceConfig | list[str | SWMLVar] | str | SWMLVar
+    join_conference: JoinConferenceConfig | list[str | SWMLVar] | float | str | SWMLVar
 
 
 class JoinRoom(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    join_room: JoinRoomConfig | list[str | SWMLVar] | str | SWMLVar
+    join_room: JoinRoomConfig | list[str | SWMLVar] | float | str | SWMLVar
+
+
+class JsonSchema(TypedDict, total=False):
+    """A JSON Schema (draft 2020-12). The value is forwarded verbatim to the receiving tool-call API, which owns this contract; the engine does not inspect it.
+
+    Open shape: extra server keys are permitted and partial payloads are valid;
+    not validated at runtime (a TypedDict is a plain ``dict``).
+    """
+
+    title: str
+    description: str
+    type: (
+        Literal["array", "boolean", "integer", "null", "number", "object", "string"]
+        | list[
+            Literal["array", "boolean", "integer", "null", "number", "object", "string"]
+        ]
+    )
+    const: Any
+    enum: list[Any]
+    format: str
+    pattern: str
+    minimum: float
+    maximum: float
+    exclusiveMinimum: float
+    exclusiveMaximum: float
+    minLength: int
+    maxLength: int
+    minItems: int
+    maxItems: int
+    minProperties: int
+    maxProperties: int
+    default: Any
+    examples: list[Any]
+    deprecated: bool
+    properties: dict[str, JsonSchema | bool]
+    required: list[str]
+    prefixItems: list[JsonSchema | bool]
+    items: JsonSchema | bool
+    propertyNames: JsonSchema | bool
+    additionalProperties: JsonSchema | bool
+    unevaluatedProperties: JsonSchema | bool
+    oneOf: list[JsonSchema | bool]
+    anyOf: list[JsonSchema | bool]
+    allOf: list[JsonSchema | bool]
+    # non-identifier field 'not': JsonSchema | bool
+    contains: JsonSchema | bool
+    dependentRequired: dict[str, list[str]]
+    dependentSchemas: dict[str, JsonSchema | bool]
+    # non-identifier field 'else': JsonSchema | bool
+    # non-identifier field 'if': JsonSchema | bool
+    maxContains: int
+    minContains: int
+    multipleOf: float
+    patternProperties: dict[str, JsonSchema | bool]
+    readOnly: bool
+    then: JsonSchema | bool
+    unevaluatedItems: JsonSchema | bool
+    uniqueItems: bool
+    writeOnly: bool
 
 
 class Label(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    label: LabelConfig | list[str] | str
+    label: LabelConfig | list[str] | float | str
 
 
 class LiveTranscribe(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    live_transcribe: LiveTranscribeConfig
+    live_transcribe: LiveTranscribeConfig | list[Any] | float | str
 
 
 class LiveTranslate(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    live_translate: LiveTranslateConfig
+    live_translate: LiveTranslateConfig | list[Any] | float | str
 
 
 class Pay(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    pay: PayConfig | list[Any | Literal["dtmf", "voice"] | SWMLVar]
+    pay: PayConfig | list[Any | Literal["dtmf", "voice"] | SWMLVar] | float | str
 
 
 class Play(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    play: PlayConfig | list[str] | str
+    play: PlayConfig | list[str] | float | str
 
 
 class Prompt(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    prompt: PromptConfig | list[str | int | SWMLVar | float] | str
+    prompt: PromptConfig | list[str | int | SWMLVar | float] | float | str
 
 
 class ReceiveFax(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    receive_fax: ReceiveFaxConfig | list[str | SWMLVar] | str | SWMLVar
+    receive_fax: ReceiveFaxConfig | list[str | SWMLVar] | float | str | SWMLVar
 
 
 class Record(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    record: RecordConfig
+    record: RecordConfig | list[Any] | float | str
 
 
 class RecordCall(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    record_call: RecordCallConfig
+    record_call: RecordCallConfig | list[Any] | float | str
 
 
 class Request(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    request: RequestConfig
+    request: RequestConfig | list[Any] | float | str
 
 
 class Return(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    # non-identifier field 'return': dict[str, Any]
+    # non-identifier field 'return': dict[str, Any] | list[Any] | bool | None | float | str
 
 
 class Ring(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    ring: dict[str, Any]
+    ring: dict[str, Any] | list[Any] | float | str
 
 
 class RingbackConfig(TypedDict, total=False):
@@ -286,7 +374,7 @@ class RingbackConfig(TypedDict, total=False):
 class SIPRefer(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    sip_refer: SipReferConfig | list[str | SWMLVar] | str | SWMLVar
+    sip_refer: SipReferConfig | list[str | SWMLVar] | float | str | SWMLVar
 
 
 SWMLMethod: TypeAlias = "AI | AiSidecar | AmazonBedrock | Answer | Cond | Connect | Denoise | DetectMachine | Echo | EnterQueue | Execute | ExecuteRpc | Goto | Hangup | JoinConference | JoinRoom | Label | LiveTranscribe | LiveTranslate | Pay | Play | Prompt | ReceiveFax | Record | RecordCall | Request | Return | Ring | SIPRefer | SendDigits | SendFax | SendSMS | Set | SetMeta | Sleep | StopDenoise | StopRecordCall | StopStream | StopTap | Stream | Switch | Tap | Transcribe | TranscribeStop | Transfer | Unset | UserEvent"
@@ -304,13 +392,13 @@ class Section(TypedDict, total=False):
 class SendDigits(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    send_digits: SendDigitsConfig | list[str | SWMLVar] | str | SWMLVar
+    send_digits: SendDigitsConfig | list[str | SWMLVar] | float | str | SWMLVar
 
 
 class SendFax(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    send_fax: SendFaxConfig | list[str | SWMLVar] | str | SWMLVar
+    send_fax: SendFaxConfig | list[str | SWMLVar] | float | str | SWMLVar
 
 
 class SendSMS(TypedDict, total=False):
@@ -328,7 +416,7 @@ class Set(TypedDict, total=False):
 class SetMeta(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    set_meta: SetMetaConfig
+    set_meta: SetMetaConfig | list[Any] | float | str
 
 
 class Sleep(TypedDict, total=False):
@@ -340,37 +428,37 @@ class Sleep(TypedDict, total=False):
 class StopDenoise(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    stop_denoise: dict[str, Any]
+    stop_denoise: dict[str, Any] | list[Any] | float | str
 
 
 class StopRecordCall(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    stop_record_call: StopRecordCallConfig | list[str | SWMLVar] | str | SWMLVar
+    stop_record_call: StopRecordCallConfig | list[str | SWMLVar] | float | str | SWMLVar
 
 
 class StopStream(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    stop_stream: StopStreamConfig | list[Any | SWMLVar] | str | float | SWMLVar
+    stop_stream: StopStreamConfig | list[Any | SWMLVar] | float | str | SWMLVar
 
 
 class StopTap(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    stop_tap: StopTapConfig | list[Any | SWMLVar] | str | float | SWMLVar
+    stop_tap: StopTapConfig | list[Any | SWMLVar] | float | str | SWMLVar
 
 
 class Stream(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    stream: StreamConfig | list[str | SWMLVar] | str | SWMLVar
+    stream: StreamConfig | list[str | SWMLVar] | float | str | SWMLVar
 
 
 class Switch(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    switch: SwitchConfig
+    switch: SwitchConfig | list[Any] | float | str
 
 
 class Tap(TypedDict, total=False):
@@ -379,6 +467,7 @@ class Tap(TypedDict, total=False):
     tap: (
         TapConfig
         | list[str | SWMLVar | Literal["listen", "speak", "both"]]
+        | float
         | str
         | SWMLVar
     )
@@ -387,19 +476,19 @@ class Tap(TypedDict, total=False):
 class Transcribe(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    transcribe: TranscribeConfig
+    transcribe: TranscribeConfig | list[Any] | float | str
 
 
 class TranscribeStop(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    transcribe_stop: dict[str, Any]
+    transcribe_stop: dict[str, Any] | list[Any] | float | str
 
 
 class Transfer(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    transfer: TransferConfig | list[str | SWMLVar] | str | SWMLVar
+    transfer: TransferConfig | list[str | SWMLVar] | float | str | SWMLVar
 
 
 class Unset(TypedDict, total=False):
@@ -411,7 +500,23 @@ class Unset(TypedDict, total=False):
 class UserEvent(TypedDict, total=False):
     """Open shape: extra server keys permitted; not validated at runtime."""
 
-    user_event: UserEventConfig
+    user_event: UserEventConfig | list[Any] | float | str
+
+
+class Webhook(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    error_keys: list[Any]
+    expressions: Expression | dict[str, Any]
+    foreach: Foreach | dict[str, Any]
+    form_param: str
+    headers: Any
+    input_args_as_params: bool
+    method: str
+    output: Any
+    params: Any
+    require_args: Any
+    url: str
 
 
 class AiConfig(TypedDict, total=False):
@@ -444,7 +549,7 @@ class AiSWAIGItem(TypedDict, total=False):
     description: str
     active: bool | float | str
     argument: dict[str, Any]
-    data_map: dict[str, Any]
+    data_map: DataMap
     fillers: dict[str, Any]
     function: str
     meta_data: dict[str, Any]
@@ -478,13 +583,13 @@ class AiSWAIGFunctionsItem(TypedDict, total=False):
 
     description: str
     active: bool | float | str
-    argument: dict[str, Any]
-    data_map: dict[str, Any]
+    argument: JsonSchema
+    data_map: DataMap
     fillers: dict[str, Any]
     function: str
     meta_data: dict[str, Any]
     meta_data_token: str
-    parameters: dict[str, Any]
+    parameters: JsonSchema
     purpose: str
     skip_fillers: bool | str
     wait_file: str
@@ -502,7 +607,7 @@ class AiSWAIGHooksItem(TypedDict, total=False):
     description: str
     active: bool | float | str
     argument: dict[str, Any]
-    data_map: dict[str, Any]
+    data_map: DataMap
     fillers: dict[str, Any]
     function: str
     meta_data: dict[str, Any]
@@ -560,11 +665,25 @@ class AiLanguagesItem(TypedDict, total=False):
     listen_language: list[Any] | str
     model: str
     name: str
-    params: dict[str, Any]
+    params: AiLanguagesItemParams
     pronounce: list[Any]
     speech_fillers: list[Any] | dict[str, Any]
     turn_fillers: list[Any]
     voice: str
+
+
+class AiLanguagesItemParams(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    emotion: str
+    pitch: float | str
+    similarity: float | str
+    speakingRate: float | str
+    speed: float | str
+    stability: float | str
+    streaming: bool | str
+    temperature: float | str
+    vol: float | str
 
 
 class AiMultilingual(TypedDict, total=False):
@@ -627,20 +746,6 @@ class AiParams(TypedDict, total=False):
     attention_escalate_prompt: str
     attention_timeout: int | str
     attention_timeout_prompt: str
-    audible_debug: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    audible_latency: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
     auth_token: str
     auto_correct: (
         bool
@@ -683,13 +788,6 @@ class AiParams(TypedDict, total=False):
             "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
         ]
     )
-    cache_mode: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
     call_uuid: str
     cartesia_key: str
     cartesia_model: str
@@ -705,13 +803,6 @@ class AiParams(TypedDict, total=False):
     conversation_id: str
     conversation_sliding_window: int | str
     convo: list[AiParamsConvoItem]
-    debug: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
     debug_webhook_level: int | str
     debug_webhook_url: str
     deepgram_key_override: str
@@ -753,13 +844,6 @@ class AiParams(TypedDict, total=False):
     eleven_labs_similarity: float | str
     eleven_labs_stability: float | str
     eleven_labs_stream_first: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
-    enable_accounting: (
         bool
         | float
         | Literal[
@@ -1111,13 +1195,6 @@ class AiParams(TypedDict, total=False):
     url: str
     utility_model: str
     vad_config: str
-    verbose_logs: (
-        bool
-        | float
-        | Literal[
-            "0", "1", "active", "allow", "enabled", "false", "on", "t", "true", "yes"
-        ]
-    )
     video_fps: int | str
     video_idle_file: str
     video_listening_file: str
@@ -1159,9 +1236,15 @@ class AiPostPrompt(TypedDict, total=False):
     not validated at runtime (a TypedDict is a plain ``dict``).
     """
 
+    max_completion_tokens: float
+    max_tokens: float
     model: str
     pom: list[AiPostPromptPomItem]
+    reasoning_effort: str
+    temperature: float
     text: str
+    top_p: float
+    verbosity: str
 
 
 class AiPostPromptPomItem(TypedDict, total=False):
@@ -1183,10 +1266,16 @@ class AiPrompt(TypedDict, total=False):
     """
 
     contexts: dict[str, Any]
+    max_completion_tokens: float
+    max_tokens: float
     model: str
     pom: list[AiPromptPomItem]
+    reasoning_effort: str
     steps: list[AiPromptStepsItem]
+    temperature: float
     text: str
+    top_p: float
+    verbosity: str
 
 
 class AiPromptPomItem(TypedDict, total=False):
@@ -1259,7 +1348,7 @@ class AiSidecarSWAIGFunctionsItem(TypedDict, total=False):
 
     description: str
     function: str
-    parameters: dict[str, Any]
+    parameters: JsonSchema
     purpose: str
     web_hook_auth_pass: str
     web_hook_auth_password: str
@@ -1335,7 +1424,19 @@ class AmazonBedrockSWAIG(TypedDict, total=False):
     """
 
     defaults: dict[str, Any]
-    functions: list[Any]
+    functions: list[AmazonBedrockSWAIGFunctionsItem]
+
+
+class AmazonBedrockSWAIGFunctionsItem(TypedDict, total=False):
+    """Open shape: extra server keys permitted; not validated at runtime."""
+
+    description: str
+    data_map: dict[str, Any]
+    function: str
+    meta_data: dict[str, Any]
+    meta_data_token: str
+    parameters: dict[str, Any]
+    web_hook_url: str
 
 
 class AmazonBedrockGreetingPrompt(TypedDict, total=False):
@@ -2102,11 +2203,11 @@ class _SwmlVerbs:
     """The SWML verb methods SwmlBuilder installs at runtime (static view)."""
 
     def ai_sidecar(self: _Self, config: AiSidecarConfig | None = None) -> _Self:
-        """Start ai_sidecar mode — live_transcribe with an LLM/SWAIG/MCP loop on top."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def amazon_bedrock(self: _Self, config: AmazonBedrockConfig | None = None) -> _Self:
-        """Creates a new Bedrock AI Agent"""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def cond(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
@@ -2118,99 +2219,99 @@ class _SwmlVerbs:
         raise NotImplementedError  # installed dynamically at runtime
 
     def denoise(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
-        """Start noise reduction. You can stop it at any time using `stop_denoise`."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def detect_machine(self: _Self, config: DetectMachineConfig | None = None) -> _Self:
-        """A detection method that combines AMD (Answering Machine Detection) and fax detection."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def echo(self: _Self, config: EchoConfig | None = None) -> _Self:
-        """Add the echo verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def enter_queue(self: _Self, config: EnterQueueConfig | None = None) -> _Self:
-        """Place the current call in a named queue where it will wait to be connected to an available agent or resource."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def execute(self: _Self, config: ExecuteConfig | None = None) -> _Self:
-        """Add the execute verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def execute_rpc(self: _Self, config: ExecuteRpcConfig | None = None) -> _Self:
-        """Execute a remote procedure call."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def goto(self: _Self, config: GotoConfig | None = None) -> _Self:
-        """Add the goto verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def join_conference(
         self: _Self, config: JoinConferenceConfig | None = None
     ) -> _Self:
-        """Add the join_conference verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def join_room(self: _Self, config: JoinRoomConfig | None = None) -> _Self:
-        """Add the join_room verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def label(self: _Self, config: LabelConfig | None = None) -> _Self:
-        """Add the label verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def live_transcribe(
         self: _Self, config: LiveTranscribeConfig | None = None
     ) -> _Self:
-        """Start live transcription of the call. The transcription will be sent to the specified webhook URL."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def live_translate(self: _Self, config: LiveTranslateConfig | None = None) -> _Self:
-        """Start live translation of the call. The translation will be sent to the specified webhook URL."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def pay(self: _Self, config: PayConfig | None = None) -> _Self:
-        """Add the pay verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def prompt(self: _Self, config: PromptConfig | None = None) -> _Self:
-        """Add the prompt verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def receive_fax(self: _Self, config: ReceiveFaxConfig | None = None) -> _Self:
-        """Add the receive_fax verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def record(self: _Self, config: RecordConfig | None = None) -> _Self:
-        """Record the call audio in the foreground, pausing further SWML execution until recording ends."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def record_call(self: _Self, config: RecordCallConfig | None = None) -> _Self:
-        """Record call in the background."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def request(self: _Self, config: RequestConfig | None = None) -> _Self:
-        """Send a GET, POST, PUT, or DELETE request to a remote URL."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def return_(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
-        """Return a value from an execute call or exit the script. The value can be any type."""
+        """Body shape enforced by CHECK_swml_method_return, swml_schema.c:1468."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def ring(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
-        """Send 180 Ringing on an inbound call without answering."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def sip_refer(self: _Self, config: SipReferConfig | None = None) -> _Self:
-        """Add the sip_refer verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def send_digits(self: _Self, config: SendDigitsConfig | None = None) -> _Self:
-        """Add the send_digits verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def send_fax(self: _Self, config: SendFaxConfig | None = None) -> _Self:
-        """Add the send_fax verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def send_sms(self: _Self, config: SendSmsConfig | None = None) -> _Self:
@@ -2222,53 +2323,53 @@ class _SwmlVerbs:
         raise NotImplementedError  # installed dynamically at runtime
 
     def set_meta(self: _Self, config: SetMetaConfig | None = None) -> _Self:
-        """Add customer metadata to call and conference events"""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def sleep(self: _Self, config: SleepConfig | None = None) -> _Self:
-        """Add the sleep verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def stop_denoise(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
-        """Stop noise reduction that was started with denoise."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def stop_record_call(
         self: _Self, config: StopRecordCallConfig | None = None
     ) -> _Self:
-        """Add the stop_record_call verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def stop_stream(self: _Self, config: StopStreamConfig | None = None) -> _Self:
-        """Add the stop_stream verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def stop_tap(self: _Self, config: StopTapConfig | None = None) -> _Self:
-        """Add the stop_tap verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def stream(self: _Self, config: StreamConfig | None = None) -> _Self:
-        """Add the stream verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def switch(self: _Self, config: SwitchConfig | None = None) -> _Self:
-        """Execute different instructions based on a variable's value."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def tap(self: _Self, config: TapConfig | None = None) -> _Self:
-        """Add the tap verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def transcribe(self: _Self, config: TranscribeConfig | None = None) -> _Self:
-        """Start transcription on the call."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def transcribe_stop(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
-        """Stop transcription on the call."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def transfer(self: _Self, config: TransferConfig | None = None) -> _Self:
-        """Add the transfer verb."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime
 
     def unset(self: _Self, config: Mapping[str, Any] | None = None) -> _Self:
@@ -2276,5 +2377,5 @@ class _SwmlVerbs:
         raise NotImplementedError  # installed dynamically at runtime
 
     def user_event(self: _Self, config: UserEventConfig | None = None) -> _Self:
-        """Allows the user to set and send events to the connected client on the call."""
+        """Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889."""
         raise NotImplementedError  # installed dynamically at runtime

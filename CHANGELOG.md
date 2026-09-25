@@ -17,6 +17,11 @@
   `schema.json` the methods are installed from did not, so calling one raised
   `AttributeError`. The bundle is now the current SWML schema.
 
+### Changed
+- The typed `AiParams` config no longer declares `audible_debug`,
+  `audible_latency`, `cache_mode`, `debug`, `enable_accounting` or
+  `verbose_logs`; the SWML schema withholds them.
+
 ### Fixed
 - Generated SWML verb methods accept the verb's config as one positional
   mapping, the form the type stubs declare (`builder.echo({"timeout": 30})`).

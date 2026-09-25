@@ -25,6 +25,7 @@
       "properties": {
         "ai": {
           "title": "ai Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "ai Method",
@@ -60,7 +61,7 @@
                             "type": "object"
                           },
                           "data_map": {
-                            "type": "object"
+                            "$ref": "#/$defs/DataMap"
                           },
                           "fillers": {
                             "type": "object"
@@ -156,10 +157,10 @@
                                 ]
                               },
                               "argument": {
-                                "type": "object"
+                                "$ref": "#/$defs/JsonSchema"
                               },
                               "data_map": {
-                                "type": "object"
+                                "$ref": "#/$defs/DataMap"
                               },
                               "fillers": {
                                 "type": "object"
@@ -174,7 +175,7 @@
                                 "type": "string"
                               },
                               "parameters": {
-                                "type": "object"
+                                "$ref": "#/$defs/JsonSchema"
                               },
                               "purpose": {
                                 "type": "string"
@@ -252,7 +253,7 @@
                                 "type": "object"
                               },
                               "data_map": {
-                                "type": "object"
+                                "$ref": "#/$defs/DataMap"
                               },
                               "fillers": {
                                 "type": "object"
@@ -528,7 +529,92 @@
                         "type": "string"
                       },
                       "params": {
-                        "type": "object"
+                        "type": "object",
+                        "properties": {
+                          "emotion": {
+                            "type": "string"
+                          },
+                          "pitch": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "similarity": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "speakingRate": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "speed": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "stability": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "streaming": {
+                            "anyOf": [
+                              {
+                                "type": "boolean"
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "temperature": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ]
+                          },
+                          "vol": {
+                            "anyOf": [
+                              {
+                                "type": "number"
+                              },
+                              {
+                                "type": "string"
+                              }
+                            ]
+                          }
+                        }
                       },
                       "pronounce": {
                         "type": "array"
@@ -799,64 +885,6 @@
                     "attention_timeout_prompt": {
                       "type": "string"
                     },
-                    "audible_debug": {
-                      "anyOf": [
-                        {
-                          "type": "boolean"
-                        },
-                        {
-                          "type": "number"
-                        },
-                        {
-                          "type": "string",
-                          "enum": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
-                          "x-emit-canonical": [
-                            "true",
-                            "false"
-                          ]
-                        }
-                      ]
-                    },
-                    "audible_latency": {
-                      "anyOf": [
-                        {
-                          "type": "boolean"
-                        },
-                        {
-                          "type": "number"
-                        },
-                        {
-                          "type": "string",
-                          "enum": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
-                          "x-emit-canonical": [
-                            "true",
-                            "false"
-                          ]
-                        }
-                      ]
-                    },
                     "auth_token": {
                       "type": "string"
                     },
@@ -1049,36 +1077,6 @@
                         }
                       ]
                     },
-                    "cache_mode": {
-                      "default": false,
-                      "anyOf": [
-                        {
-                          "type": "boolean"
-                        },
-                        {
-                          "type": "number"
-                        },
-                        {
-                          "type": "string",
-                          "enum": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
-                          "x-emit-canonical": [
-                            "true",
-                            "false"
-                          ]
-                        }
-                      ]
-                    },
                     "call_uuid": {
                       "type": "string"
                     },
@@ -1172,36 +1170,6 @@
                           }
                         }
                       }
-                    },
-                    "debug": {
-                      "minimum": 1,
-                      "anyOf": [
-                        {
-                          "type": "boolean"
-                        },
-                        {
-                          "type": "number"
-                        },
-                        {
-                          "type": "string",
-                          "enum": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
-                          "x-emit-canonical": [
-                            "true",
-                            "false"
-                          ]
-                        }
-                      ]
                     },
                     "debug_webhook_level": {
                       "anyOf": [
@@ -1388,36 +1356,6 @@
                       ]
                     },
                     "eleven_labs_stream_first": {
-                      "anyOf": [
-                        {
-                          "type": "boolean"
-                        },
-                        {
-                          "type": "number"
-                        },
-                        {
-                          "type": "string",
-                          "enum": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
-                          "x-emit-canonical": [
-                            "true",
-                            "false"
-                          ]
-                        }
-                      ]
-                    },
-                    "enable_accounting": {
-                      "default": true,
                       "anyOf": [
                         {
                           "type": "boolean"
@@ -2984,35 +2922,6 @@
                     "vad_config": {
                       "type": "string"
                     },
-                    "verbose_logs": {
-                      "anyOf": [
-                        {
-                          "type": "boolean"
-                        },
-                        {
-                          "type": "number"
-                        },
-                        {
-                          "type": "string",
-                          "enum": [
-                            "0",
-                            "1",
-                            "active",
-                            "allow",
-                            "enabled",
-                            "false",
-                            "on",
-                            "t",
-                            "true",
-                            "yes"
-                          ],
-                          "x-emit-canonical": [
-                            "true",
-                            "false"
-                          ]
-                        }
-                      ]
-                    },
                     "video_fps": {
                       "anyOf": [
                         {
@@ -3098,6 +3007,12 @@
                   "description": "The final set of instructions and configuration settings to send to the agent.",
                   "type": "object",
                   "properties": {
+                    "max_completion_tokens": {
+                      "type": "number"
+                    },
+                    "max_tokens": {
+                      "type": "number"
+                    },
                     "model": {
                       "type": "string"
                     },
@@ -3127,7 +3042,19 @@
                         }
                       }
                     },
+                    "reasoning_effort": {
+                      "type": "string"
+                    },
+                    "temperature": {
+                      "type": "number"
+                    },
                     "text": {
+                      "type": "string"
+                    },
+                    "top_p": {
+                      "type": "number"
+                    },
+                    "verbosity": {
                       "type": "string"
                     }
                   }
@@ -3174,6 +3101,12 @@
                     "contexts": {
                       "type": "object"
                     },
+                    "max_completion_tokens": {
+                      "type": "number"
+                    },
+                    "max_tokens": {
+                      "type": "number"
+                    },
                     "model": {
                       "type": "string"
                     },
@@ -3202,6 +3135,9 @@
                           }
                         }
                       }
+                    },
+                    "reasoning_effort": {
+                      "type": "string"
                     },
                     "steps": {
                       "type": "array",
@@ -3268,7 +3204,16 @@
                         }
                       }
                     },
+                    "temperature": {
+                      "type": "number"
+                    },
                     "text": {
+                      "type": "string"
+                    },
+                    "top_p": {
+                      "type": "number"
+                    },
+                    "verbosity": {
                       "type": "string"
                     }
                   }
@@ -3338,18 +3283,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "ai (bare agent)",
               "description": "Shorthand for `{\"ai\": {\"agent\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "anyOf": [
@@ -3379,352 +3320,367 @@
       "properties": {
         "ai_sidecar": {
           "title": "ai_sidecar Method",
-          "description": "Start ai_sidecar mode — live_transcribe with an LLM/SWAIG/MCP loop on top.",
-          "type": "object",
-          "properties": {
-            "SWAIG": {
-              "title": "swaig",
-              "description": "SWAIG functions and MCP servers available to the sidecar.",
-              "anyOf": [
-                {
-                  "type": "object",
-                  "properties": {
-                    "defaults": {
-                      "type": "object"
-                    },
-                    "functions": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "description": {
-                            "type": "string"
-                          },
-                          "function": {
-                            "type": "string"
-                          },
-                          "parameters": {
-                            "type": "object"
-                          },
-                          "purpose": {
-                            "type": "string"
-                          },
-                          "web_hook_auth_pass": {
-                            "type": "string"
-                          },
-                          "web_hook_auth_password": {
-                            "type": "string"
-                          },
-                          "web_hook_auth_user": {
-                            "type": "string"
-                          },
-                          "web_hook_url": {
-                            "type": "string"
-                          }
-                        }
-                      }
-                    },
-                    "mcp_servers": {
-                      "type": "array"
-                    }
-                  }
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "action": {
-              "description": "Summarize the conversation instead of starting a sidecar. When you include `action.summarize`,\nthe request generates a one-off summary and returns rather than attaching a sidecar.",
-              "anyOf": [
-                {
-                  "type": "object"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "customer_role": {
-              "description": "Which leg is the customer, used as the turn-end trigger source. **Default:** `remote-caller`.",
-              "default": "remote-caller",
-              "examples": [
-                "TranscribeDirection.`remote-caller`"
-              ],
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "remote-caller",
-                    "local-caller"
-                  ]
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "direction": {
-              "description": "The call legs to observe. Both legs are required — a single-leg value is rejected. When omitted, both legs are observed. **Default:** both legs (`remote-caller` and `local-caller`).",
-              "examples": [
-                "#[\n    TranscribeDirection.`remote-caller`,\n    TranscribeDirection.`local-caller`\n  ]"
-              ],
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "type": "string",
-                    "enum": [
-                      "remote-caller",
-                      "local-caller"
-                    ]
-                  }
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "global_data": {
-              "description": "A key-value object of data that is available throughout the sidecar session. You can reference it in the prompt with variable expansion, and it is included in the requests sent to your tools.\nIt also persists across sessions on the same call leg.",
-              "examples": [
-                "#{ company_name: \"Acme Corp\" }"
-              ],
-              "anyOf": [
-                {
-                  "type": "object"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "hints": {
-              "description": "Hints that improve speech recognition of specific terms, such as product names, competitor names, jargon, or customer names. Strongly recommended.",
-              "examples": [
-                "#[\"ACME\", \"Globex\", \"FedRAMP\", \"SOC 2\"]"
-              ],
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
-                  }
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "lang": {
-              "description": "The conversation language as a single BCP-47 tag. Sets the speech recognition language and is shared with the model as a hint.",
-              "examples": [
-                "string(\"en-US\")"
-              ],
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "model": {
-              "description": "The model used for the sidecar's advice and its end-of-call summaries. Suggested values: `gpt-4o-mini`, `gpt-4.1-mini`, `gpt-4.1-nano`. **Default:** `gpt-4o-mini`.",
-              "default": "gpt-4o-mini",
-              "examples": [
-                "gpt-4.1-mini"
-              ],
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "params": {
-              "description": "Tuning options for the sidecar.",
-              "anyOf": [
-                {
-                  "type": "object",
-                  "properties": {
-                    "act_on_channel": {
-                      "type": "boolean",
-                      "default": true
-                    },
-                    "ai_summary": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "ai_summary_prompt": {
-                      "type": "string"
-                    },
-                    "debug": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "debug_level": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 100,
-                      "default": 0
-                    },
-                    "deepgram_key_override": {
-                      "type": "string"
-                    },
-                    "deepgram_url_override": {
-                      "type": "string"
-                    },
-                    "final_summary": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "idle_timeout_ms": {
-                      "type": "integer",
-                      "minimum": 50,
-                      "maximum": 5000,
-                      "default": 200
-                    },
-                    "live_events": {
-                      "type": "boolean",
-                      "default": false
-                    },
-                    "max_history_tokens": {
-                      "type": "integer",
-                      "minimum": 1000,
-                      "maximum": 200000,
-                      "default": 8000
-                    },
-                    "max_iters_per_tick": {
-                      "type": "integer",
-                      "minimum": 1,
-                      "maximum": 20,
-                      "default": 5
-                    },
-                    "min_interval_ms": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 60000,
-                      "default": 0
-                    },
-                    "speech_engine": {
-                      "type": "string",
-                      "enum": [
-                        "deepgram",
-                        "google"
-                      ],
-                      "default": "deepgram"
-                    },
-                    "speech_timeout": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 600000,
-                      "default": 0
-                    },
-                    "summary_model": {
-                      "type": "string",
-                      "default": "gpt-4o-mini"
-                    },
-                    "transcribe_prompt": {
-                      "type": "string"
-                    },
-                    "vad_silence_ms": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 60000,
-                      "default": 0
-                    },
-                    "vad_thresh": {
-                      "type": "integer",
-                      "minimum": 0,
-                      "maximum": 10000,
-                      "default": 0
-                    },
-                    "verbose_utterances": {
-                      "type": "boolean",
-                      "default": false
-                    }
-                  }
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "permissions": {
-              "description": "SWAIG permission overrides. Defaults to all permissions enabled.",
-              "anyOf": [
-                {
-                  "type": "object",
-                  "properties": {
-                    "swaig_allow_settings": {
-                      "type": "boolean"
-                    },
-                    "swaig_allow_swml": {
-                      "type": "boolean"
-                    },
-                    "swaig_set_global_data": {
-                      "type": "boolean"
-                    }
-                  }
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "prompt": {
-              "description": "The prompt used to write the summary. May be given as a string, or as an object with a `file` key naming a file to read it from. Defaults to `Be helpful.`",
-              "default": "Be helpful.",
-              "examples": [
-                "Provide a brief summary of the conversation, including the main topics discussed."
-              ],
-              "anyOf": [
-                {
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "ai_sidecar Method",
+              "description": "Start ai_sidecar mode — live_transcribe with an LLM/SWAIG/MCP loop on top.",
+              "type": "object",
+              "properties": {
+                "SWAIG": {
+                  "title": "swaig",
+                  "description": "SWAIG functions and MCP servers available to the sidecar.",
                   "anyOf": [
                     {
                       "type": "object",
                       "properties": {
-                        "file": {
-                          "type": "string"
+                        "defaults": {
+                          "type": "object"
+                        },
+                        "functions": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "description": {
+                                "type": "string"
+                              },
+                              "function": {
+                                "type": "string"
+                              },
+                              "parameters": {
+                                "$ref": "#/$defs/JsonSchema"
+                              },
+                              "purpose": {
+                                "type": "string"
+                              },
+                              "web_hook_auth_pass": {
+                                "type": "string"
+                              },
+                              "web_hook_auth_password": {
+                                "type": "string"
+                              },
+                              "web_hook_auth_user": {
+                                "type": "string"
+                              },
+                              "web_hook_url": {
+                                "type": "string"
+                              }
+                            }
+                          }
+                        },
+                        "mcp_servers": {
+                          "type": "array"
                         }
                       }
                     },
                     {
-                      "type": "string"
+                      "$ref": "#/$defs/SWMLVar"
                     }
                   ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "url": {
-              "description": "The webhook URL the sidecar POSTs its callbacks to. Receives both transcription events and sidecar callbacks.\nWhen unset, callbacks are published only on the relay topic and no webhook POST is made.\nBasic auth can be embedded in the URL in the format `username:password@url`.",
-              "default": "relay_only",
-              "examples": [
-                "https://example.com/sidecar/events"
-              ],
-              "anyOf": [
-                {
-                  "type": "string"
+                "action": {
+                  "description": "Summarize the conversation instead of starting a sidecar. When you include `action.summarize`,\nthe request generates a one-off summary and returns rather than attaching a sidecar.",
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
+                "customer_role": {
+                  "description": "Which leg is the customer, used as the turn-end trigger source. **Default:** `remote-caller`.",
+                  "default": "remote-caller",
+                  "examples": [
+                    "TranscribeDirection.`remote-caller`"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "remote-caller",
+                        "local-caller"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "direction": {
+                  "description": "The call legs to observe. Both legs are required — a single-leg value is rejected. When omitted, both legs are observed. **Default:** both legs (`remote-caller` and `local-caller`).",
+                  "examples": [
+                    "#[\n    TranscribeDirection.`remote-caller`,\n    TranscribeDirection.`local-caller`\n  ]"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "enum": [
+                          "remote-caller",
+                          "local-caller"
+                        ]
+                      }
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "global_data": {
+                  "description": "A key-value object of data that is available throughout the sidecar session. You can reference it in the prompt with variable expansion, and it is included in the requests sent to your tools.\nIt also persists across sessions on the same call leg.",
+                  "examples": [
+                    "#{ company_name: \"Acme Corp\" }"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "hints": {
+                  "description": "Hints that improve speech recognition of specific terms, such as product names, competitor names, jargon, or customer names. Strongly recommended.",
+                  "examples": [
+                    "#[\"ACME\", \"Globex\", \"FedRAMP\", \"SOC 2\"]"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "lang": {
+                  "description": "The conversation language as a single BCP-47 tag. Sets the speech recognition language and is shared with the model as a hint.",
+                  "examples": [
+                    "string(\"en-US\")"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "model": {
+                  "description": "The model used for the sidecar's advice and its end-of-call summaries. Suggested values: `gpt-4o-mini`, `gpt-4.1-mini`, `gpt-4.1-nano`. **Default:** `gpt-4o-mini`.",
+                  "default": "gpt-4o-mini",
+                  "examples": [
+                    "gpt-4.1-mini"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "params": {
+                  "description": "Tuning options for the sidecar.",
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "act_on_channel": {
+                          "type": "boolean",
+                          "default": true
+                        },
+                        "ai_summary": {
+                          "type": "boolean",
+                          "default": false
+                        },
+                        "ai_summary_prompt": {
+                          "type": "string"
+                        },
+                        "debug": {
+                          "type": "boolean",
+                          "default": false
+                        },
+                        "debug_level": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 100,
+                          "default": 0
+                        },
+                        "deepgram_key_override": {
+                          "type": "string"
+                        },
+                        "deepgram_url_override": {
+                          "type": "string"
+                        },
+                        "final_summary": {
+                          "type": "boolean",
+                          "default": false
+                        },
+                        "idle_timeout_ms": {
+                          "type": "integer",
+                          "minimum": 50,
+                          "maximum": 5000,
+                          "default": 200
+                        },
+                        "live_events": {
+                          "type": "boolean",
+                          "default": false
+                        },
+                        "max_history_tokens": {
+                          "type": "integer",
+                          "minimum": 1000,
+                          "maximum": 200000,
+                          "default": 8000
+                        },
+                        "max_iters_per_tick": {
+                          "type": "integer",
+                          "minimum": 1,
+                          "maximum": 20,
+                          "default": 5
+                        },
+                        "min_interval_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 60000,
+                          "default": 0
+                        },
+                        "speech_engine": {
+                          "type": "string",
+                          "enum": [
+                            "deepgram",
+                            "google"
+                          ],
+                          "default": "deepgram"
+                        },
+                        "speech_timeout": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 600000,
+                          "default": 0
+                        },
+                        "summary_model": {
+                          "type": "string",
+                          "default": "gpt-4o-mini"
+                        },
+                        "transcribe_prompt": {
+                          "type": "string"
+                        },
+                        "vad_silence_ms": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 60000,
+                          "default": 0
+                        },
+                        "vad_thresh": {
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 10000,
+                          "default": 0
+                        },
+                        "verbose_utterances": {
+                          "type": "boolean",
+                          "default": false
+                        }
+                      }
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "permissions": {
+                  "description": "SWAIG permission overrides. Defaults to all permissions enabled.",
+                  "anyOf": [
+                    {
+                      "type": "object",
+                      "properties": {
+                        "swaig_allow_settings": {
+                          "type": "boolean"
+                        },
+                        "swaig_allow_swml": {
+                          "type": "boolean"
+                        },
+                        "swaig_set_global_data": {
+                          "type": "boolean"
+                        }
+                      }
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "prompt": {
+                  "description": "The prompt used to write the summary. May be given as a string, or as an object with a `file` key naming a file to read it from. Defaults to `Be helpful.`",
+                  "default": "Be helpful.",
+                  "examples": [
+                    "Provide a brief summary of the conversation, including the main topics discussed."
+                  ],
+                  "anyOf": [
+                    {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "properties": {
+                            "file": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "url": {
+                  "description": "The webhook URL the sidecar POSTs its callbacks to. Receives both transcription events and sidecar callbacks.\nWhen unset, callbacks are published only on the relay topic and no webhook POST is made.\nBasic auth can be embedded in the URL in the format `username:password@url`.",
+                  "default": "relay_only",
+                  "examples": [
+                    "https://example.com/sidecar/events"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 }
-              ]
+              },
+              "required": [
+                "lang"
+              ],
+              "unevaluatedProperties": {
+                "not": {}
+              }
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
             }
-          },
-          "required": [
-            "lang"
-          ],
-          "unevaluatedProperties": {
-            "not": {}
-          }
+          ]
         }
       },
       "required": [
@@ -3740,161 +3696,243 @@
       "properties": {
         "amazon_bedrock": {
           "title": "amazon_bedrock Method",
-          "description": "Creates a new Bedrock AI Agent",
-          "type": "object",
-          "properties": {
-            "SWAIG": {
-              "description": "An object holding the user-defined functions/endpoints that can be executed during the dialogue. The engine reads two keys off it: `functions`, the array of function definitions, and `defaults`, an object of settings applied to each of them.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "amazon_bedrock Method",
+              "description": "Creates a new Bedrock AI Agent",
               "type": "object",
               "properties": {
-                "defaults": {
-                  "type": "object"
-                },
-                "functions": {
-                  "type": "array"
-                }
-              }
-            },
-            "app_name": {
-              "type": "string"
-            },
-            "assistant_name": {
-              "type": "string"
-            },
-            "assistant_prompt": {
-              "type": "string"
-            },
-            "conversation_id": {
-              "type": "string"
-            },
-            "global_data": {
-              "description": "A powerful and flexible environmental variable which can accept arbitrary data that is set initially in the SWML script\nor from the SWML `set_global_data` action. This data can be referenced `globally`.\nAll contained information can be accessed and expanded within the prompt - for example, by using a template string.",
-              "type": "object",
-              "examples": [
-                "#{ company_name: \"Acme Corp\", support_hours: \"9am-5pm EST\" }"
-              ]
-            },
-            "greeting_prompt": {
-              "type": "object",
-              "properties": {
-                "role": {
-                  "type": "string"
-                },
-                "text": {
-                  "type": "string"
-                }
-              }
-            },
-            "params": {
-              "description": "A JSON object containing parameters as key-value pairs.",
-              "type": "object",
-              "properties": {
-                "attention_timeout": {
-                  "anyOf": [
-                    {
-                      "type": "number"
+                "SWAIG": {
+                  "description": "An object holding the user-defined functions/endpoints that can be executed during the dialogue. The engine reads two keys off it: `functions`, the array of function definitions, and `defaults`, an object of settings applied to each of them.",
+                  "type": "object",
+                  "properties": {
+                    "defaults": {
+                      "type": "object"
                     },
-                    {
-                      "type": "string"
+                    "functions": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "description": {
+                            "type": "string"
+                          },
+                          "data_map": {
+                            "type": "object"
+                          },
+                          "function": {
+                            "type": "string"
+                          },
+                          "meta_data": {
+                            "type": "object"
+                          },
+                          "meta_data_token": {
+                            "type": "string"
+                          },
+                          "parameters": {
+                            "type": "object"
+                          },
+                          "web_hook_url": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "description",
+                          "function"
+                        ]
+                      }
                     }
+                  }
+                },
+                "app_name": {
+                  "type": "string"
+                },
+                "assistant_name": {
+                  "type": "string"
+                },
+                "assistant_prompt": {
+                  "type": "string"
+                },
+                "conversation_id": {
+                  "type": "string"
+                },
+                "global_data": {
+                  "description": "A powerful and flexible environmental variable which can accept arbitrary data that is set initially in the SWML script\nor from the SWML `set_global_data` action. This data can be referenced `globally`.\nAll contained information can be accessed and expanded within the prompt - for example, by using a template string.",
+                  "type": "object",
+                  "examples": [
+                    "#{ company_name: \"Acme Corp\", support_hours: \"9am-5pm EST\" }"
                   ]
                 },
-                "compact_conversation_time": {
-                  "type": "string"
-                },
-                "compact_strategy": {
-                  "type": "string"
-                },
-                "hard_stop_prompt": {
-                  "type": "string"
-                },
-                "hard_stop_time": {
-                  "type": "string"
-                },
-                "inactivity_timeout": {
-                  "anyOf": [
-                    {
-                      "type": "number"
+                "greeting_prompt": {
+                  "type": "object",
+                  "properties": {
+                    "role": {
+                      "type": "string"
                     },
-                    {
+                    "text": {
                       "type": "string"
                     }
-                  ]
+                  },
+                  "if": {
+                    "required": [
+                      "role",
+                      "text"
+                    ]
+                  },
+                  "then": {
+                    "properties": {
+                      "role": {
+                        "type": "string",
+                        "enum": [
+                          "USER",
+                          "SYSTEM"
+                        ]
+                      }
+                    }
+                  }
                 },
-                "video_idle_file": {
-                  "type": "string"
-                },
-                "video_listening_file": {
-                  "type": "string"
-                },
-                "video_talking_file": {
-                  "type": "string"
-                }
-              }
-            },
-            "post_prompt": {
-              "description": "The final set of instructions and configuration settings to send to the agent.",
-              "type": "object",
-              "properties": {
-                "pom": {
-                  "type": "array"
-                },
-                "text": {
-                  "type": "string"
-                }
-              }
-            },
-            "post_prompt_url": {
-              "description": "The URL to which to send status callbacks and reports. Authentication can also be set in the url in the format of `username:password@url`.",
-              "type": "string",
-              "format": "uri",
-              "examples": [
-                "https://example.com/bedrock-callback"
-              ]
-            },
-            "prompt": {
-              "description": "Establishes the initial set of instructions and settings to configure the agent.",
-              "type": "object",
-              "properties": {
-                "pom": {
-                  "type": "array"
-                },
-                "temperature": {
-                  "anyOf": [
-                    {
-                      "type": "number"
+                "params": {
+                  "description": "A JSON object containing parameters as key-value pairs.",
+                  "type": "object",
+                  "properties": {
+                    "attention_timeout": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ]
                     },
-                    {
+                    "compact_conversation_time": {
+                      "type": "string"
+                    },
+                    "compact_strategy": {
+                      "type": "string"
+                    },
+                    "hard_stop_prompt": {
+                      "type": "string"
+                    },
+                    "hard_stop_time": {
+                      "type": "string"
+                    },
+                    "inactivity_timeout": {
+                      "anyOf": [
+                        {
+                          "type": "number"
+                        },
+                        {
+                          "type": "string"
+                        }
+                      ]
+                    },
+                    "video_idle_file": {
+                      "type": "string"
+                    },
+                    "video_listening_file": {
+                      "type": "string"
+                    },
+                    "video_talking_file": {
                       "type": "string"
                     }
-                  ]
+                  }
                 },
-                "text": {
-                  "type": "string"
-                },
-                "top_p": {
-                  "anyOf": [
-                    {
-                      "type": "number"
+                "post_prompt": {
+                  "description": "The final set of instructions and configuration settings to send to the agent.",
+                  "type": "object",
+                  "properties": {
+                    "pom": {
+                      "type": "array"
                     },
-                    {
+                    "text": {
                       "type": "string"
                     }
+                  }
+                },
+                "post_prompt_url": {
+                  "description": "The URL to which to send status callbacks and reports. Authentication can also be set in the url in the format of `username:password@url`.",
+                  "type": "string",
+                  "format": "uri",
+                  "examples": [
+                    "https://example.com/bedrock-callback"
                   ]
                 },
-                "voice_id": {
-                  "type": "string"
+                "prompt": {
+                  "description": "Establishes the initial set of instructions and settings to configure the agent.",
+                  "type": "object",
+                  "properties": {
+                    "pom": {
+                      "type": "array"
+                    },
+                    "temperature": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0.0,
+                          "maximum": 2.0
+                        },
+                        {
+                          "type": "string",
+                          "x-value-bounds": {
+                            "minimum": 0.0,
+                            "maximum": 2.0
+                          }
+                        }
+                      ]
+                    },
+                    "text": {
+                      "type": "string"
+                    },
+                    "top_p": {
+                      "anyOf": [
+                        {
+                          "type": "number",
+                          "minimum": 0.0,
+                          "maximum": 1.0
+                        },
+                        {
+                          "type": "string",
+                          "x-value-bounds": {
+                            "minimum": 0.0,
+                            "maximum": 1.0
+                          }
+                        }
+                      ]
+                    },
+                    "voice_id": {
+                      "type": "string",
+                      "pattern": "^(?:[Tt][Ii][Ff][Ff][Aa][Nn][Yy]|[Mm][Aa][Tt][Tt][Hh][Ee][Ww]|[Aa][Mm][Yy]|[Ll][Uu][Pp][Ee]|[Cc][Aa][Rr][Ll][Oo][Ss])$",
+                      "x-enum-case-insensitive": [
+                        "tiffany",
+                        "matthew",
+                        "amy",
+                        "lupe",
+                        "carlos"
+                      ]
+                    }
+                  }
+                },
+                "transcript_webhook_url": {
+                  "type": "string",
+                  "format": "uri"
                 }
+              },
+              "unevaluatedProperties": {
+                "not": {}
               }
             },
-            "transcript_webhook_url": {
-              "type": "string",
-              "format": "uri"
+            {
+              "type": "array"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
             }
-          },
-          "unevaluatedProperties": {
-            "not": {}
-          }
+          ]
         }
       },
       "required": [
@@ -3910,6 +3948,7 @@
       "properties": {
         "answer": {
           "title": "answer Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "answer Method",
@@ -4040,14 +4079,28 @@
               "description": "Shorthand for `{\"answer\": {\"max_duration\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
+                  "type": "number"
+                },
+                {
+                  "minimum": 0.0,
+                  "default": 14400,
                   "anyOf": [
                     {
-                      "type": "string"
+                      "type": "number"
                     },
                     {
-                      "type": "number"
+                      "$ref": "#/$defs/SWMLVar"
                     }
                   ]
+                }
+              ]
+            },
+            {
+              "title": "answer (bare max_duration)",
+              "description": "Shorthand for `{\"answer\": {\"max_duration\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
+              "allOf": [
+                {
+                  "type": "string"
                 },
                 {
                   "minimum": 0.0,
@@ -4722,7 +4775,33 @@
           },
           "unevaluatedProperties": {
             "not": {}
-          }
+          },
+          "allOf": [
+            {
+              "oneOf": [
+                {
+                  "required": [
+                    "to"
+                  ]
+                },
+                {
+                  "required": [
+                    "serial"
+                  ]
+                },
+                {
+                  "required": [
+                    "parallel"
+                  ]
+                },
+                {
+                  "required": [
+                    "serial_parallel"
+                  ]
+                }
+              ]
+            }
+          ]
         }
       },
       "required": [
@@ -5054,21 +5133,70 @@
         "not": {}
       }
     },
+    "DataMap": {
+      "title": "DataMap",
+      "type": "object",
+      "properties": {
+        "contexts": {},
+        "expressions": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Expression"
+              }
+            },
+            {
+              "$ref": "#/$defs/Expression"
+            }
+          ]
+        },
+        "output": {},
+        "webhooks": {
+          "anyOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Webhook"
+              }
+            },
+            {
+              "$ref": "#/$defs/Webhook"
+            }
+          ]
+        }
+      }
+    },
     "Denoise": {
       "title": "Denoise object",
       "type": "object",
       "properties": {
         "denoise": {
           "title": "denoise Method",
-          "description": "Start noise reduction. You can stop it at any time using `stop_denoise`.",
-          "type": "object",
-          "examples": [
-            {}
-          ],
-          "properties": {},
-          "unevaluatedProperties": {
-            "not": {}
-          }
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "denoise Method",
+              "description": "Start noise reduction. You can stop it at any time using `stop_denoise`.",
+              "type": "object",
+              "examples": [
+                {}
+              ],
+              "properties": {},
+              "unevaluatedProperties": {
+                "not": {}
+              }
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ]
         }
       },
       "required": [
@@ -5084,197 +5212,212 @@
       "properties": {
         "detect_machine": {
           "title": "detect_machine Method",
-          "description": "A detection method that combines AMD (Answering Machine Detection) and fax detection.\nDetect whether the user on the other end of the call is a machine (fax, voicemail, etc.) or a human.\nThe detection result(s) will be sent to the specified status_url as a POST request\nand will also be saved in the detect_result variable.",
-          "type": "object",
-          "properties": {
-            "detect_interruptions": {
-              "default": false,
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "detect_message_end": {
-              "description": "If `true`, stops detection on beep / end of voicemail greeting. Default `false`.",
-              "default": false,
-              "examples": [
-                "true"
-              ],
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "detectors": {
-              "description": "Comma-separated string of detectors to enable. Valid values: `amd`, `fax`.",
-              "default": "amd,fax",
-              "examples": [
-                "amd,fax"
-              ],
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "end_silence_timeout": {
-              "description": "How long to wait for voice to finish. Default `1.0`.",
-              "exclusiveMinimum": 0.0,
-              "default": 1,
-              "examples": [
-                "1.0"
-              ],
-              "anyOf": [
-                {
-                  "type": "number"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "initial_timeout": {
-              "description": "How long to wait for initial voice before giving up. Default `4.5`.",
-              "exclusiveMinimum": 0.0,
-              "default": 4.5,
-              "examples": [
-                "4.5"
-              ],
-              "anyOf": [
-                {
-                  "type": "number"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "machine_ready_timeout": {
-              "description": "How long to wait for voice to finish before firing READY event. Default is `end_silence_timeout`.",
-              "exclusiveMinimum": 0.0,
-              "examples": [
-                "2.0"
-              ],
-              "anyOf": [
-                {
-                  "type": "number"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "machine_voice_threshold": {
-              "description": "The number of seconds of ongoing voice activity required to classify as MACHINE. Default `1.25`.",
-              "exclusiveMinimum": 0.0,
-              "default": 1.25,
-              "examples": [
-                "1.25"
-              ],
-              "anyOf": [
-                {
-                  "type": "number"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "machine_words_threshold": {
-              "description": "The minimum number of words that must be detected in a single utterance before classifying the call as MACHINE. Default `6`.",
-              "minimum": 1,
-              "default": 6,
-              "examples": [
-                "6"
-              ],
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "status_url": {
-              "description": "The http(s) URL to deliver detector events to.",
-              "examples": [
-                "https://example.com/amd-status"
-              ],
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uri"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "timeout": {
-              "description": "The max time to run detector. Default `30.0` seconds.",
-              "minimum": 0.0,
-              "default": 30.0,
-              "examples": [
-                "30.0"
-              ],
-              "anyOf": [
-                {
-                  "type": "number"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "tone": {
-              "description": "The tone to detect, will only receive remote side tone. Default `CED`.",
-              "default": "ced",
-              "examples": [
-                "CED"
-              ],
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "CNG",
-                    "CED",
-                    "cng",
-                    "ced"
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "detect_machine Method",
+              "description": "A detection method that combines AMD (Answering Machine Detection) and fax detection.\nDetect whether the user on the other end of the call is a machine (fax, voicemail, etc.) or a human.\nThe detection result(s) will be sent to the specified status_url as a POST request\nand will also be saved in the detect_result variable.",
+              "type": "object",
+              "properties": {
+                "detect_interruptions": {
+                  "default": false,
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
                   ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "wait": {
-              "description": "If false, the detector will run asynchronously and status_url must be set.\nIf true, the detector will wait for detection to complete before moving to the next SWML instruction.\nDefault is `true`.",
-              "default": true,
-              "examples": [
-                "true"
-              ],
-              "anyOf": [
-                {
-                  "type": "boolean"
+                "detect_message_end": {
+                  "description": "If `true`, stops detection on beep / end of voicemail greeting. Default `false`.",
+                  "default": false,
+                  "examples": [
+                    "true"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
+                "detectors": {
+                  "description": "Comma-separated string of detectors to enable. Valid values: `amd`, `fax`.",
+                  "default": "amd,fax",
+                  "examples": [
+                    "amd,fax"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "end_silence_timeout": {
+                  "description": "How long to wait for voice to finish. Default `1.0`.",
+                  "exclusiveMinimum": 0.0,
+                  "default": 1,
+                  "examples": [
+                    "1.0"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "initial_timeout": {
+                  "description": "How long to wait for initial voice before giving up. Default `4.5`.",
+                  "exclusiveMinimum": 0.0,
+                  "default": 4.5,
+                  "examples": [
+                    "4.5"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "machine_ready_timeout": {
+                  "description": "How long to wait for voice to finish before firing READY event. Default is `end_silence_timeout`.",
+                  "exclusiveMinimum": 0.0,
+                  "examples": [
+                    "2.0"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "machine_voice_threshold": {
+                  "description": "The number of seconds of ongoing voice activity required to classify as MACHINE. Default `1.25`.",
+                  "exclusiveMinimum": 0.0,
+                  "default": 1.25,
+                  "examples": [
+                    "1.25"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "machine_words_threshold": {
+                  "description": "The minimum number of words that must be detected in a single utterance before classifying the call as MACHINE. Default `6`.",
+                  "minimum": 1,
+                  "default": 6,
+                  "examples": [
+                    "6"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "status_url": {
+                  "description": "The http(s) URL to deliver detector events to.",
+                  "examples": [
+                    "https://example.com/amd-status"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "timeout": {
+                  "description": "The max time to run detector. Default `30.0` seconds.",
+                  "minimum": 0.0,
+                  "default": 30.0,
+                  "examples": [
+                    "30.0"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "tone": {
+                  "description": "The tone to detect, will only receive remote side tone. Default `CED`.",
+                  "default": "ced",
+                  "examples": [
+                    "CED"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "CNG",
+                        "CED",
+                        "cng",
+                        "ced"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "wait": {
+                  "description": "If false, the detector will run asynchronously and status_url must be set.\nIf true, the detector will wait for detection to complete before moving to the next SWML instruction.\nDefault is `true`.",
+                  "default": true,
+                  "examples": [
+                    "true"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 }
-              ]
+              }
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
             }
-          }
+          ]
         }
       },
       "required": [
@@ -5613,7 +5756,33 @@
           },
           "unevaluatedProperties": {
             "not": {}
-          }
+          },
+          "allOf": [
+            {
+              "oneOf": [
+                {
+                  "required": [
+                    "to"
+                  ]
+                },
+                {
+                  "required": [
+                    "serial"
+                  ]
+                },
+                {
+                  "required": [
+                    "parallel"
+                  ]
+                },
+                {
+                  "required": [
+                    "serial_parallel"
+                  ]
+                }
+              ]
+            }
+          ]
         }
       },
       "required": [
@@ -5629,6 +5798,7 @@
       "properties": {
         "echo": {
           "title": "echo",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "echo",
@@ -5676,14 +5846,28 @@
               "description": "Shorthand for `{\"echo\": {\"timeout\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
+                  "type": "number"
+                },
+                {
+                  "minimum": 1,
+                  "default": 60,
                   "anyOf": [
                     {
-                      "type": "string"
+                      "type": "integer"
                     },
                     {
-                      "type": "number"
+                      "$ref": "#/$defs/SWMLVar"
                     }
                   ]
+                }
+              ]
+            },
+            {
+              "title": "echo (bare timeout)",
+              "description": "Shorthand for `{\"echo\": {\"timeout\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
+              "allOf": [
+                {
+                  "type": "string"
                 },
                 {
                   "minimum": 1,
@@ -5715,93 +5899,108 @@
       "properties": {
         "enter_queue": {
           "title": "enter_queue Method",
-          "description": "Place the current call in a named queue where it will wait to be connected to an available agent or resource.\nWhile waiting, callers will hear music or custom audio.\nWhen an agent connects to the queue (using the connect method), the caller and agent are bridged together.\nAfter the bridge completes, execution continues with the SWML script specified in transfer_after_bridge.",
-          "type": "object",
-          "properties": {
-            "execute_after_queue": {
-              "anyOf": [
-                {
-                  "type": "string"
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "enter_queue Method",
+              "description": "Place the current call in a named queue where it will wait to be connected to an available agent or resource.\nWhile waiting, callers will hear music or custom audio.\nWhen an agent connects to the queue (using the connect method), the caller and agent are bridged together.\nAfter the bridge completes, execution continues with the SWML script specified in transfer_after_bridge.",
+              "type": "object",
+              "properties": {
+                "execute_after_queue": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
+                "queue_name": {
+                  "description": "Name of the queue to enter. If a queue with this name does not exist, it will be automatically created.",
+                  "examples": [
+                    "support-queue"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "status_url": {
+                  "description": "HTTP or HTTPS URL to deliver queue status events. Default not set",
+                  "examples": [
+                    "https://example.com/queue-status"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "wait_time": {
+                  "description": "Maximum time in seconds to wait in the queue before timeout. Default `3600`",
+                  "minimum": 1,
+                  "default": 3600,
+                  "examples": [
+                    "1800"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "wait_url": {
+                  "description": "URL for media to play while waiting in the queue. Default hold music will be played if not set",
+                  "examples": [
+                    "https://example.com/queue-music.mp3"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "whisper_url": {
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 }
+              },
+              "required": [
+                "queue_name"
               ]
             },
-            "queue_name": {
-              "description": "Name of the queue to enter. If a queue with this name does not exist, it will be automatically created.",
-              "examples": [
-                "support-queue"
-              ],
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
+            {
+              "type": "array"
             },
-            "status_url": {
-              "description": "HTTP or HTTPS URL to deliver queue status events. Default not set",
-              "examples": [
-                "https://example.com/queue-status"
-              ],
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uri"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
+            {
+              "type": "number"
             },
-            "wait_time": {
-              "description": "Maximum time in seconds to wait in the queue before timeout. Default `3600`",
-              "minimum": 1,
-              "default": 3600,
-              "examples": [
-                "1800"
-              ],
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "wait_url": {
-              "description": "URL for media to play while waiting in the queue. Default hold music will be played if not set",
-              "examples": [
-                "https://example.com/queue-music.mp3"
-              ],
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uri"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "whisper_url": {
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uri"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
+            {
+              "type": "string"
             }
-          },
-          "required": [
-            "queue_name"
           ]
         }
       },
@@ -5837,6 +6036,7 @@
       "properties": {
         "execute": {
           "title": "execute Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "execute Method",
@@ -5941,18 +6141,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "execute (bare dest)",
               "description": "Shorthand for `{\"execute\": {\"dest\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "anyOf": [
@@ -5982,56 +6178,71 @@
       "properties": {
         "execute_rpc": {
           "title": "execute_rpc",
-          "description": "Execute a remote procedure call.",
-          "type": "object",
-          "properties": {
-            "call_id": {
-              "anyOf": [
-                {
-                  "type": "string"
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "execute_rpc",
+              "description": "Execute a remote procedure call.",
+              "type": "object",
+              "properties": {
+                "call_id": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
+                "method": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "node_id": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "params": {
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 }
-              ]
+              },
+              "required": [
+                "method"
+              ],
+              "unevaluatedProperties": {
+                "not": {}
+              }
             },
-            "method": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
+            {
+              "type": "array"
             },
-            "node_id": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
+            {
+              "type": "number"
             },
-            "params": {
-              "anyOf": [
-                {
-                  "type": "object"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
+            {
+              "type": "string"
             }
-          },
-          "required": [
-            "method"
-          ],
-          "unevaluatedProperties": {
-            "not": {}
-          }
+          ]
         }
       },
       "required": [
@@ -6041,12 +6252,46 @@
         "not": {}
       }
     },
+    "Expression": {
+      "title": "Expression",
+      "type": "object",
+      "properties": {
+        "pattern": {
+          "type": "string"
+        },
+        "expr": {
+          "type": "string"
+        },
+        "nomatch-output": {},
+        "output": {},
+        "string": {
+          "type": "string"
+        }
+      }
+    },
+    "Foreach": {
+      "title": "Foreach",
+      "type": "object",
+      "properties": {
+        "append": {
+          "type": "string"
+        },
+        "input_key": {
+          "type": "string"
+        },
+        "max": {},
+        "output_key": {
+          "type": "string"
+        }
+      }
+    },
     "Goto": {
       "title": "Goto object",
       "type": "object",
       "properties": {
         "goto": {
           "title": "goto Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "goto Method",
@@ -6128,18 +6373,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "goto (bare label)",
               "description": "Shorthand for `{\"goto\": {\"label\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "anyOf": [
@@ -6169,6 +6410,7 @@
       "properties": {
         "hangup": {
           "title": "hangup Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "hangup Method",
@@ -6232,18 +6474,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "hangup (bare reason)",
               "description": "Shorthand for `{\"hangup\": {\"reason\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "anyOf": [
@@ -6281,67 +6519,83 @@
       "properties": {
         "if": {
           "title": "if",
-          "description": "Conditional branching (deprecated).",
-          "type": "object",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "deprecated": true,
-          "properties": {
-            "condition": {
-              "anyOf": [
-                {
-                  "type": "string"
+          "anyOf": [
+            {
+              "title": "if",
+              "description": "Conditional branching (deprecated).",
+              "type": "object",
+              "deprecated": true,
+              "properties": {
+                "condition": {
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
+                "else": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/SWMLMethod"
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "code": {},
+                        "meta": {}
+                      },
+                      "unevaluatedProperties": {
+                        "not": {}
+                      }
+                    }
+                  ]
+                },
+                "then": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/SWMLMethod"
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "code": {},
+                        "meta": {}
+                      },
+                      "unevaluatedProperties": {
+                        "not": {}
+                      }
+                    }
+                  ]
                 }
-              ]
+              },
+              "required": [
+                "condition"
+              ],
+              "unevaluatedProperties": {
+                "not": {}
+              }
             },
-            "else": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/SWMLMethod"
-                  }
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "code": {},
-                    "meta": {}
-                  },
-                  "unevaluatedProperties": {
-                    "not": {}
-                  }
-                }
-              ]
+            {
+              "type": "array"
             },
-            "then": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/SWMLMethod"
-                  }
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "code": {},
-                    "meta": {}
-                  },
-                  "unevaluatedProperties": {
-                    "not": {}
-                  }
-                }
-              ]
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
             }
-          },
-          "required": [
-            "condition"
-          ],
-          "unevaluatedProperties": {
-            "not": {}
-          }
+          ]
         }
       },
       "required": [
@@ -6357,6 +6611,7 @@
       "properties": {
         "join_conference": {
           "title": "join_conference Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "join_conference Method",
@@ -6801,18 +7056,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "join_conference (bare name)",
               "description": "Shorthand for `{\"join_conference\": {\"name\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "anyOf": [
@@ -6842,6 +7093,7 @@
       "properties": {
         "join_room": {
           "title": "join_room Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "join_room Method",
@@ -6892,18 +7144,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "join_room (bare name)",
               "description": "Shorthand for `{\"join_room\": {\"name\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "anyOf": [
@@ -6927,12 +7175,337 @@
         "not": {}
       }
     },
+    "JsonSchema": {
+      "title": "JsonSchema",
+      "description": "A JSON Schema (draft 2020-12). The value is forwarded verbatim to the receiving tool-call API, which owns this contract; the engine does not inspect it.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "array",
+                "boolean",
+                "integer",
+                "null",
+                "number",
+                "object",
+                "string"
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "array",
+                  "boolean",
+                  "integer",
+                  "null",
+                  "number",
+                  "object",
+                  "string"
+                ]
+              }
+            }
+          ]
+        },
+        "const": {},
+        "enum": {
+          "type": "array"
+        },
+        "format": {
+          "type": "string"
+        },
+        "pattern": {
+          "type": "string"
+        },
+        "minimum": {
+          "type": "number"
+        },
+        "maximum": {
+          "type": "number"
+        },
+        "exclusiveMinimum": {
+          "type": "number"
+        },
+        "exclusiveMaximum": {
+          "type": "number"
+        },
+        "minLength": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxLength": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "minItems": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxItems": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "minProperties": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "maxProperties": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "default": {},
+        "examples": {
+          "type": "array"
+        },
+        "deprecated": {
+          "type": "boolean"
+        },
+        "properties": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/JsonSchema"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "prefixItems": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/JsonSchema"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "items": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchema"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "propertyNames": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchema"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "additionalProperties": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchema"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "unevaluatedProperties": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchema"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "oneOf": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/JsonSchema"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "anyOf": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/JsonSchema"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "allOf": {
+          "type": "array",
+          "items": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/JsonSchema"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "not": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchema"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "contains": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchema"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "dependentRequired": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "dependentSchemas": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/JsonSchema"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "else": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchema"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "if": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchema"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "maxContains": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "minContains": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "multipleOf": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "patternProperties": {
+          "type": "object",
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "$ref": "#/$defs/JsonSchema"
+              },
+              {
+                "type": "boolean"
+              }
+            ]
+          }
+        },
+        "readOnly": {
+          "type": "boolean"
+        },
+        "then": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchema"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "unevaluatedItems": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonSchema"
+            },
+            {
+              "type": "boolean"
+            }
+          ]
+        },
+        "uniqueItems": {
+          "type": "boolean"
+        },
+        "writeOnly": {
+          "type": "boolean"
+        }
+      }
+    },
     "Label": {
       "title": "Label object",
       "type": "object",
       "properties": {
         "label": {
           "title": "label Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "label Method",
@@ -6972,18 +7545,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "label (bare label)",
               "description": "Shorthand for `{\"label\": {\"label\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "type": "string"
@@ -7006,169 +7575,184 @@
       "properties": {
         "live_transcribe": {
           "title": "live_transcribe Method",
-          "description": "Start live transcription of the call. The transcription will be sent to the specified webhook URL.",
-          "type": "object",
-          "properties": {
-            "action": {
-              "title": "TranscribeAction union",
-              "description": "The action to perform during live transcription.",
-              "anyOf": [
-                {
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "live_transcribe Method",
+              "description": "Start live transcription of the call. The transcription will be sent to the specified webhook URL.",
+              "type": "object",
+              "properties": {
+                "action": {
+                  "title": "TranscribeAction union",
+                  "description": "The action to perform during live transcription.",
                   "anyOf": [
                     {
-                      "type": "string",
-                      "enum": [
-                        "start",
-                        "stop",
-                        "summarize"
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "start",
+                            "stop",
+                            "summarize"
+                          ]
+                        },
+                        {
+                          "type": "object",
+                          "properties": {
+                            "start": {
+                              "type": "object",
+                              "properties": {
+                                "ai_summary": {
+                                  "type": "boolean"
+                                },
+                                "ai_summary_prompt": {
+                                  "type": "string"
+                                },
+                                "debug_level": {
+                                  "type": "integer",
+                                  "default": 0
+                                },
+                                "deepgram_key_override": {
+                                  "type": "string"
+                                },
+                                "deepgram_url_override": {
+                                  "type": "string"
+                                },
+                                "direction": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "hints": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "lang": {
+                                  "type": "string"
+                                },
+                                "live_events": {
+                                  "type": "boolean"
+                                },
+                                "speech_engine": {
+                                  "type": "string",
+                                  "enum": [
+                                    "deepgram",
+                                    "google"
+                                  ],
+                                  "default": "deepgram"
+                                },
+                                "speech_timeout": {
+                                  "type": "integer",
+                                  "default": 60000
+                                },
+                                "vad_silence_ms": {
+                                  "type": "integer",
+                                  "default": 700,
+                                  "x-default-per-engine": {
+                                    "deepgram": 700,
+                                    "google": 500
+                                  },
+                                  "x-default-varies-by": "speech_engine"
+                                },
+                                "vad_thresh": {
+                                  "type": "integer",
+                                  "default": 400
+                                },
+                                "verbose_utterances": {
+                                  "type": "boolean"
+                                },
+                                "webhook": {
+                                  "type": "string"
+                                }
+                              }
+                            },
+                            "stop": {},
+                            "summarize": {
+                              "type": "object",
+                              "properties": {
+                                "ai_model": {
+                                  "type": "string"
+                                },
+                                "prompt": {
+                                  "type": "string"
+                                },
+                                "summary_prompt": {
+                                  "type": "string"
+                                },
+                                "webhook": {
+                                  "type": "string"
+                                }
+                              }
+                            }
+                          }
+                        }
                       ]
                     },
                     {
-                      "type": "object",
-                      "properties": {
-                        "start": {
-                          "type": "object",
-                          "properties": {
-                            "ai_summary": {
-                              "type": "boolean"
-                            },
-                            "ai_summary_prompt": {
-                              "type": "string"
-                            },
-                            "debug_level": {
-                              "type": "integer",
-                              "default": 0
-                            },
-                            "deepgram_key_override": {
-                              "type": "string"
-                            },
-                            "deepgram_url_override": {
-                              "type": "string"
-                            },
-                            "direction": {
-                              "type": "array",
-                              "items": {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ],
+                  "x-required-on": "relay"
+                },
+                "hints": {
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "anyOf": [
+                          {
+                            "type": "object",
+                            "properties": {
+                              "pattern": {
                                 "type": "string"
-                              }
-                            },
-                            "hints": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
-                              }
-                            },
-                            "lang": {
-                              "type": "string"
-                            },
-                            "live_events": {
-                              "type": "boolean"
-                            },
-                            "speech_engine": {
-                              "type": "string",
-                              "enum": [
-                                "deepgram",
-                                "google"
-                              ],
-                              "default": "deepgram"
-                            },
-                            "speech_timeout": {
-                              "type": "integer",
-                              "default": 60000
-                            },
-                            "vad_silence_ms": {
-                              "type": "integer",
-                              "default": 700,
-                              "x-default-per-engine": {
-                                "deepgram": 700,
-                                "google": 500
                               },
-                              "x-default-varies-by": "speech_engine"
-                            },
-                            "vad_thresh": {
-                              "type": "integer",
-                              "default": 400
-                            },
-                            "verbose_utterances": {
-                              "type": "boolean"
-                            },
-                            "webhook": {
-                              "type": "string"
+                              "hint": {
+                                "type": "string"
+                              },
+                              "ignore_case": {
+                                "anyOf": [
+                                  {
+                                    "type": "boolean"
+                                  },
+                                  {
+                                    "type": "string"
+                                  }
+                                ]
+                              },
+                              "replace": {
+                                "type": "string"
+                              }
                             }
+                          },
+                          {
+                            "type": "string"
                           }
-                        },
-                        "stop": {},
-                        "summarize": {
-                          "type": "object",
-                          "properties": {
-                            "ai_model": {
-                              "type": "string"
-                            },
-                            "prompt": {
-                              "type": "string"
-                            },
-                            "summary_prompt": {
-                              "type": "string"
-                            },
-                            "webhook": {
-                              "type": "string"
-                            }
-                          }
-                        }
+                        ]
                       }
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
                     }
                   ]
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
                 }
-              ],
-              "x-required-on": "relay"
+              },
+              "unevaluatedProperties": {
+                "not": {}
+              }
             },
-            "hints": {
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "anyOf": [
-                      {
-                        "type": "object",
-                        "properties": {
-                          "pattern": {
-                            "type": "string"
-                          },
-                          "hint": {
-                            "type": "string"
-                          },
-                          "ignore_case": {
-                            "anyOf": [
-                              {
-                                "type": "boolean"
-                              },
-                              {
-                                "type": "string"
-                              }
-                            ]
-                          },
-                          "replace": {
-                            "type": "string"
-                          }
-                        }
-                      },
-                      {
-                        "type": "string"
-                      }
-                    ]
-                  }
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
+            {
+              "type": "array"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
             }
-          },
-          "unevaluatedProperties": {
-            "not": {}
-          }
+          ]
         }
       },
       "required": [
@@ -7184,158 +7768,173 @@
       "properties": {
         "live_translate": {
           "title": "live_translate Method",
-          "description": "Start live translation of the call. The translation will be sent to the specified webhook URL.",
-          "type": "object",
-          "properties": {
-            "action": {
-              "title": "TranslateAction union",
-              "description": "The action to perform during live translation.",
-              "anyOf": [
-                {
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "live_translate Method",
+              "description": "Start live translation of the call. The translation will be sent to the specified webhook URL.",
+              "type": "object",
+              "properties": {
+                "action": {
+                  "title": "TranslateAction union",
+                  "description": "The action to perform during live translation.",
                   "anyOf": [
                     {
-                      "type": "string",
-                      "enum": [
-                        "inject",
-                        "start",
-                        "stop",
-                        "summarize"
-                      ]
-                    },
-                    {
-                      "type": "object",
-                      "properties": {
-                        "inject": {
-                          "type": "object",
-                          "properties": {
-                            "direction": {
-                              "type": "string"
-                            },
-                            "message": {
-                              "type": "string"
-                            }
-                          }
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "inject",
+                            "start",
+                            "stop",
+                            "summarize"
+                          ]
                         },
-                        "start": {
+                        {
                           "type": "object",
                           "properties": {
-                            "ai_summary": {
-                              "type": "boolean"
-                            },
-                            "ai_summary_prompt": {
-                              "type": "string"
-                            },
-                            "debug_level": {
-                              "type": "integer",
-                              "default": 0
-                            },
-                            "deepgram_key_override": {
-                              "type": "string"
-                            },
-                            "deepgram_url_override": {
-                              "type": "string"
-                            },
-                            "direction": {
-                              "type": "array",
-                              "items": {
-                                "type": "string"
+                            "inject": {
+                              "type": "object",
+                              "properties": {
+                                "direction": {
+                                  "type": "string"
+                                },
+                                "message": {
+                                  "type": "string"
+                                }
                               }
                             },
-                            "filter_from": {
-                              "type": "string"
+                            "start": {
+                              "type": "object",
+                              "properties": {
+                                "ai_summary": {
+                                  "type": "boolean"
+                                },
+                                "ai_summary_prompt": {
+                                  "type": "string"
+                                },
+                                "debug_level": {
+                                  "type": "integer",
+                                  "default": 0
+                                },
+                                "deepgram_key_override": {
+                                  "type": "string"
+                                },
+                                "deepgram_url_override": {
+                                  "type": "string"
+                                },
+                                "direction": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string"
+                                  }
+                                },
+                                "filter_from": {
+                                  "type": "string"
+                                },
+                                "filter_to": {
+                                  "type": "string"
+                                },
+                                "from_lang": {
+                                  "type": "string"
+                                },
+                                "from_voice": {
+                                  "type": "string"
+                                },
+                                "from_voice_params": {
+                                  "type": "object"
+                                },
+                                "live_events": {
+                                  "type": "boolean"
+                                },
+                                "mode": {
+                                  "type": "string"
+                                },
+                                "speech_engine": {
+                                  "type": "string",
+                                  "enum": [
+                                    "deepgram",
+                                    "google"
+                                  ],
+                                  "default": "deepgram"
+                                },
+                                "speech_timeout": {
+                                  "type": "integer",
+                                  "default": 60000
+                                },
+                                "to_lang": {
+                                  "type": "string"
+                                },
+                                "to_voice": {
+                                  "type": "string"
+                                },
+                                "to_voice_params": {
+                                  "type": "object"
+                                },
+                                "translation_model": {
+                                  "type": "string"
+                                },
+                                "translation_model_params": {
+                                  "type": "object"
+                                },
+                                "vad_silence_ms": {
+                                  "type": "integer",
+                                  "default": 700,
+                                  "x-default-per-engine": {
+                                    "deepgram": 700,
+                                    "google": 500
+                                  },
+                                  "x-default-varies-by": "speech_engine"
+                                },
+                                "vad_thresh": {
+                                  "type": "integer",
+                                  "default": 400
+                                },
+                                "webhook": {
+                                  "type": "string"
+                                }
+                              }
                             },
-                            "filter_to": {
-                              "type": "string"
-                            },
-                            "from_lang": {
-                              "type": "string"
-                            },
-                            "from_voice": {
-                              "type": "string"
-                            },
-                            "from_voice_params": {
-                              "type": "object"
-                            },
-                            "live_events": {
-                              "type": "boolean"
-                            },
-                            "mode": {
-                              "type": "string"
-                            },
-                            "speech_engine": {
-                              "type": "string",
-                              "enum": [
-                                "deepgram",
-                                "google"
-                              ],
-                              "default": "deepgram"
-                            },
-                            "speech_timeout": {
-                              "type": "integer",
-                              "default": 60000
-                            },
-                            "to_lang": {
-                              "type": "string"
-                            },
-                            "to_voice": {
-                              "type": "string"
-                            },
-                            "to_voice_params": {
-                              "type": "object"
-                            },
-                            "translation_model": {
-                              "type": "string"
-                            },
-                            "translation_model_params": {
-                              "type": "object"
-                            },
-                            "vad_silence_ms": {
-                              "type": "integer",
-                              "default": 700,
-                              "x-default-per-engine": {
-                                "deepgram": 700,
-                                "google": 500
-                              },
-                              "x-default-varies-by": "speech_engine"
-                            },
-                            "vad_thresh": {
-                              "type": "integer",
-                              "default": 400
-                            },
-                            "webhook": {
-                              "type": "string"
-                            }
-                          }
-                        },
-                        "stop": {},
-                        "summarize": {
-                          "type": "object",
-                          "properties": {
-                            "prompt": {
-                              "type": "string"
-                            },
-                            "summary_prompt": {
-                              "type": "string"
-                            },
-                            "webhook": {
-                              "type": "string"
+                            "stop": {},
+                            "summarize": {
+                              "type": "object",
+                              "properties": {
+                                "prompt": {
+                                  "type": "string"
+                                },
+                                "summary_prompt": {
+                                  "type": "string"
+                                },
+                                "webhook": {
+                                  "type": "string"
+                                }
+                              }
                             }
                           }
                         }
-                      }
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
                     }
-                  ]
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
+                  ],
+                  "x-required-on": "relay"
                 }
-              ],
-              "x-required-on": "relay"
+              },
+              "unevaluatedProperties": {
+                "not": {}
+              }
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
             }
-          },
-          "unevaluatedProperties": {
-            "not": {}
-          }
+          ]
         }
       },
       "required": [
@@ -7351,6 +7950,7 @@
       "properties": {
         "pay": {
           "title": "pay Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "pay Method",
@@ -7734,6 +8334,12 @@
                   ]
                 }
               ]
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
             }
           ]
         }
@@ -7751,6 +8357,7 @@
       "properties": {
         "play": {
           "title": "play Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "play Method",
@@ -7910,18 +8517,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "play (bare url)",
               "description": "Shorthand for `{\"play\": {\"url\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "type": "string",
@@ -7945,6 +8548,7 @@
       "properties": {
         "prompt": {
           "title": "prompt Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "prompt Method",
@@ -8158,6 +8762,7 @@
                 },
                 "terminators": {
                   "description": "Digits that terminate digit collection.\nDefault is not set.",
+                  "default": "",
                   "examples": [
                     "#"
                   ],
@@ -8223,6 +8828,7 @@
                 },
                 {
                   "description": "Digits that terminate digit collection.\nDefault is not set.",
+                  "default": "",
                   "examples": [
                     "#"
                   ],
@@ -8270,18 +8876,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "prompt (bare url)",
               "description": "Shorthand for `{\"prompt\": {\"url\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "type": "string",
@@ -8305,6 +8907,7 @@
       "properties": {
         "receive_fax": {
           "title": "receive_fax Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "receive_fax Method",
@@ -8354,18 +8957,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "receive_fax (bare status_url)",
               "description": "Shorthand for `{\"receive_fax\": {\"status_url\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "anyOf": [
@@ -8396,178 +8995,193 @@
       "properties": {
         "record": {
           "title": "record Method",
-          "description": "Record the call audio in the foreground, pausing further SWML execution until recording ends.\nUse this, for example, to record voicemails.\nTo record calls in the background in a non-blocking fashion, use the record_call method.",
-          "type": "object",
-          "properties": {
-            "format": {
-              "description": "The format to record in. Can be `wav`, `mp3`, or `mp4`.\nDefault is `\"wav\"`.",
-              "default": "wav",
-              "examples": [
-                "mp3"
-              ],
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "wav",
-                    "mp3",
-                    "mp4"
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "record Method",
+              "description": "Record the call audio in the foreground, pausing further SWML execution until recording ends.\nUse this, for example, to record voicemails.\nTo record calls in the background in a non-blocking fashion, use the record_call method.",
+              "type": "object",
+              "properties": {
+                "format": {
+                  "description": "The format to record in. Can be `wav`, `mp3`, or `mp4`.\nDefault is `\"wav\"`.",
+                  "default": "wav",
+                  "examples": [
+                    "mp3"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "wav",
+                        "mp3",
+                        "mp4"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
                   ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "beep": {
-              "description": "Play a beep before recording.\nDefault is `false`.",
-              "default": false,
-              "examples": [
-                "true"
-              ],
-              "anyOf": [
-                {
-                  "type": "boolean"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "direction": {
-              "description": "Direction of the audio to record: \"speak\" for what party says, \"listen\" for what party hears.\nDefault is `\"speak\"`.",
-              "default": "speak",
-              "examples": [
-                "speak"
-              ],
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "listen",
-                    "speak",
-                    "both"
+                "beep": {
+                  "description": "Play a beep before recording.\nDefault is `false`.",
+                  "default": false,
+                  "examples": [
+                    "true"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
                   ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "end_silence_timeout": {
-              "description": "Time in seconds to wait in silence before ending the recording.\nDefault is `5.0` seconds.",
-              "exclusiveMinimum": 0.0,
-              "default": 5.0,
-              "examples": [
-                "5.0"
-              ],
-              "anyOf": [
-                {
-                  "type": "number"
+                "direction": {
+                  "description": "Direction of the audio to record: \"speak\" for what party says, \"listen\" for what party hears.\nDefault is `\"speak\"`.",
+                  "default": "speak",
+                  "examples": [
+                    "speak"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "listen",
+                        "speak",
+                        "both"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "initial_timeout": {
-              "description": "Time in seconds to wait for the start of speech.\nDefault is `4.0` seconds.",
-              "exclusiveMinimum": 0.0,
-              "default": 4.0,
-              "examples": [
-                "4.0"
-              ],
-              "anyOf": [
-                {
-                  "type": "number"
+                "end_silence_timeout": {
+                  "description": "Time in seconds to wait in silence before ending the recording.\nDefault is `5.0` seconds.",
+                  "exclusiveMinimum": 0.0,
+                  "default": 5.0,
+                  "examples": [
+                    "5.0"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "input_sensitivity": {
-              "description": "How sensitive the recording voice activity detector is to background noise.\nA larger value is more sensitive. Allowed values from 0.0 to 100.0.\nDefault is `44.0`.",
-              "minimum": 0,
-              "maximum": 100,
-              "default": 44.0,
-              "examples": [
-                "44.0"
-              ],
-              "anyOf": [
-                {
-                  "type": "number"
+                "initial_timeout": {
+                  "description": "Time in seconds to wait for the start of speech.\nDefault is `4.0` seconds.",
+                  "exclusiveMinimum": 0.0,
+                  "default": 4.0,
+                  "examples": [
+                    "4.0"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "max_length": {
-              "description": "Maximum length of the recording in seconds.",
-              "minimum": 0,
-              "default": 0,
-              "examples": [
-                "60"
-              ],
-              "anyOf": [
-                {
-                  "type": "integer"
+                "input_sensitivity": {
+                  "description": "How sensitive the recording voice activity detector is to background noise.\nA larger value is more sensitive. Allowed values from 0.0 to 100.0.\nDefault is `44.0`.",
+                  "minimum": 0,
+                  "maximum": 100,
+                  "default": 44.0,
+                  "examples": [
+                    "44.0"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "status_url": {
-              "description": "URL to send recording status events to.",
-              "examples": [
-                "https://example.com/recording-status"
-              ],
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uri"
+                "max_length": {
+                  "description": "Maximum length of the recording in seconds.",
+                  "minimum": 0,
+                  "default": 0,
+                  "examples": [
+                    "60"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "stereo": {
-              "description": "If true, record in stereo.\nDefault is `false`.",
-              "default": false,
-              "examples": [
-                "true"
-              ],
-              "anyOf": [
-                {
-                  "type": "boolean"
+                "status_url": {
+                  "description": "URL to send recording status events to.",
+                  "examples": [
+                    "https://example.com/recording-status"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "terminators": {
-              "description": "String of digits that will stop the recording when pressed. Default is `\\\"#\\\"`.",
-              "default": "#",
-              "examples": [
-                "#"
-              ],
-              "anyOf": [
-                {
-                  "type": "string"
+                "stereo": {
+                  "description": "If true, record in stereo.\nDefault is `false`.",
+                  "default": false,
+                  "examples": [
+                    "true"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
+                "terminators": {
+                  "description": "String of digits that will stop the recording when pressed. Default is `\\\"#\\\"`.",
+                  "default": "#",
+                  "examples": [
+                    "#"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 }
-              ]
+              },
+              "unevaluatedProperties": {
+                "not": {}
+              }
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
             }
-          },
-          "unevaluatedProperties": {
-            "not": {}
-          }
+          ]
         }
       },
       "required": [
@@ -8583,192 +9197,207 @@
       "properties": {
         "record_call": {
           "title": "record_call Method",
-          "description": "Record call in the background.\nUnlike the record method, the record_call method will start the recording and continue executing\nthe SWML script while allowing the recording to happen in the background.\nTo stop call recordings started with record_call, use the stop_record_call method.",
-          "type": "object",
-          "properties": {
-            "format": {
-              "description": "The format to record in. It can be `wav`, `mp3`, or `mp4`.\nDefault is `\"wav\"`.",
-              "default": "wav",
-              "examples": [
-                "mp3"
-              ],
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "wav",
-                    "mp3",
-                    "mp4"
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "record_call Method",
+              "description": "Record call in the background.\nUnlike the record method, the record_call method will start the recording and continue executing\nthe SWML script while allowing the recording to happen in the background.\nTo stop call recordings started with record_call, use the stop_record_call method.",
+              "type": "object",
+              "properties": {
+                "format": {
+                  "description": "The format to record in. It can be `wav`, `mp3`, or `mp4`.\nDefault is `\"wav\"`.",
+                  "default": "wav",
+                  "examples": [
+                    "mp3"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "wav",
+                        "mp3",
+                        "mp4"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
                   ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "beep": {
-              "description": "Play a beep before recording.\nDefault is `false`.",
-              "default": false,
-              "examples": [
-                "true"
-              ],
-              "anyOf": [
-                {
-                  "type": "boolean"
+                "beep": {
+                  "description": "Play a beep before recording.\nDefault is `false`.",
+                  "default": false,
+                  "examples": [
+                    "true"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "control_id": {
-              "description": "Identifier for this recording, to use with `stop_call_record`.",
-              "examples": [
-                "recording_001"
-              ],
-              "anyOf": [
-                {
-                  "type": "string"
+                "control_id": {
+                  "description": "Identifier for this recording, to use with `stop_call_record`.",
+                  "examples": [
+                    "recording_001"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "direction": {
-              "description": "Direction of the audio to record: \"speak\" for what party says, \"listen\" for what party hears, \"both\" for what the party hears and says.\nDefault is `\"both\"`.",
-              "default": "both",
-              "examples": [
-                "both"
-              ],
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "listen",
-                    "speak",
+                "direction": {
+                  "description": "Direction of the audio to record: \"speak\" for what party says, \"listen\" for what party hears, \"both\" for what the party hears and says.\nDefault is `\"both\"`.",
+                  "default": "both",
+                  "examples": [
                     "both"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "listen",
+                        "speak",
+                        "both"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
                   ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "end_silence_timeout": {
-              "description": "Time in seconds to wait in silence before ending the recording.\nDefault is `0.0` seconds.",
-              "exclusiveMinimum": 0.0,
-              "default": 0.0,
-              "examples": [
-                "0.0"
-              ],
-              "anyOf": [
-                {
-                  "type": "number"
+                "end_silence_timeout": {
+                  "description": "Time in seconds to wait in silence before ending the recording.\nDefault is `0.0` seconds.",
+                  "exclusiveMinimum": 0.0,
+                  "default": 0.0,
+                  "examples": [
+                    "0.0"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "initial_timeout": {
-              "description": "Time in seconds to wait for the start of speech.\nDefault is `0.0` seconds.",
-              "exclusiveMinimum": 0.0,
-              "default": 0.0,
-              "examples": [
-                "0.0"
-              ],
-              "anyOf": [
-                {
-                  "type": "number"
+                "initial_timeout": {
+                  "description": "Time in seconds to wait for the start of speech.\nDefault is `0.0` seconds.",
+                  "exclusiveMinimum": 0.0,
+                  "default": 0.0,
+                  "examples": [
+                    "0.0"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "input_sensitivity": {
-              "description": "How sensitive the recording voice activity detector is to background noise.\nA larger value is more sensitive. Allowed values from 0.0 to 100.0.\nDefault is `44.0`.",
-              "minimum": 0,
-              "maximum": 100,
-              "default": 44.0,
-              "examples": [
-                "44.0"
-              ],
-              "anyOf": [
-                {
-                  "type": "number"
+                "input_sensitivity": {
+                  "description": "How sensitive the recording voice activity detector is to background noise.\nA larger value is more sensitive. Allowed values from 0.0 to 100.0.\nDefault is `44.0`.",
+                  "minimum": 0,
+                  "maximum": 100,
+                  "default": 44.0,
+                  "examples": [
+                    "44.0"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "max_length": {
-              "description": "Maximum length of the recording in seconds.",
-              "minimum": 0,
-              "default": 0,
-              "examples": [
-                "300"
-              ],
-              "anyOf": [
-                {
-                  "type": "integer"
+                "max_length": {
+                  "description": "Maximum length of the recording in seconds.",
+                  "minimum": 0,
+                  "default": 0,
+                  "examples": [
+                    "300"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "status_url": {
-              "description": "http or https URL to deliver record_call status events",
-              "examples": [
-                "https://example.com/record-call-status"
-              ],
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uri"
+                "status_url": {
+                  "description": "http or https URL to deliver record_call status events",
+                  "examples": [
+                    "https://example.com/record-call-status"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "stereo": {
-              "description": "If `true`, record in stereo.\nDefault is `false`.",
-              "default": false,
-              "examples": [
-                "true"
-              ],
-              "anyOf": [
-                {
-                  "type": "boolean"
+                "stereo": {
+                  "description": "If `true`, record in stereo.\nDefault is `false`.",
+                  "default": false,
+                  "examples": [
+                    "true"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
+                "terminators": {
+                  "description": "String of digits that will stop the recording when pressed. Default is `\\\"\\\"` (empty).",
+                  "default": "",
+                  "examples": [
+                    "#*"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 }
-              ]
+              },
+              "unevaluatedProperties": {
+                "not": {}
+              }
             },
-            "terminators": {
-              "description": "String of digits that will stop the recording when pressed. Default is `\\\"\\\"` (empty).",
-              "default": "",
-              "examples": [
-                "#*"
-              ],
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
+            {
+              "type": "array"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
             }
-          },
-          "unevaluatedProperties": {
-            "not": {}
-          }
+          ]
         }
       },
       "required": [
@@ -8784,136 +9413,151 @@
       "properties": {
         "request": {
           "title": "request Method",
-          "description": "Send a GET, POST, PUT, or DELETE request to a remote URL.",
-          "type": "object",
-          "properties": {
-            "body": {
-              "description": "Request body. Objects are JSON-encoded automatically.",
-              "examples": [
-                "#{ phone: \"%{message.from}\" }"
-              ],
-              "anyOf": [
-                {
-                  "type": "object"
-                },
-                {
-                  "type": "array",
-                  "items": {}
-                },
-                {
-                  "type": "string"
-                },
-                {
-                  "type": "number"
-                },
-                {
-                  "type": "boolean"
-                }
-              ]
-            },
-            "connect_timeout": {
-              "description": "Maximum time in seconds to wait for a connection. Defaults to `5` when the key is absent, and is clamped to a maximum of `30`. Fractional input is truncated to an integer.",
-              "minimum": 0,
-              "maximum": 30,
-              "default": 5,
-              "examples": [
-                "5.0"
-              ],
-              "anyOf": [
-                {
-                  "type": "integer"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "headers": {
-              "description": "HTTP headers to include with the request, as a map of header name to value. Each value must be a string.",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "request Method",
+              "description": "Send a GET, POST, PUT, or DELETE request to a remote URL.",
               "type": "object",
-              "examples": [
-                "#{ Authorization: \"Bearer token\" }"
-              ]
-            },
-            "method": {
-              "description": "The HTTP method to be used for the request. Can be `GET`, `POST`, `PUT`, or `DELETE`.",
-              "examples": [
-                "POST"
-              ],
-              "anyOf": [
-                {
-                  "type": "string",
-                  "enum": [
-                    "get",
-                    "GET",
-                    "put",
-                    "PUT",
-                    "POST",
-                    "post",
-                    "DELETE",
-                    "delete"
+              "properties": {
+                "body": {
+                  "description": "Request body. Objects are JSON-encoded automatically.",
+                  "examples": [
+                    "#{ phone: \"%{message.from}\" }"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "type": "array",
+                      "items": {}
+                    },
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "boolean"
+                    }
                   ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "save_variables": {
-              "description": "If `true`, parse the JSON response into `request_response.*` variables.",
-              "default": false,
-              "examples": [
-                "true"
-              ],
-              "anyOf": [
-                {
-                  "type": "boolean"
+                "connect_timeout": {
+                  "description": "Maximum time in seconds to wait for a connection. Defaults to `5` when the key is absent, and is clamped to a maximum of `30`. Fractional input is truncated to an integer.",
+                  "minimum": 0,
+                  "maximum": 30,
+                  "default": 5,
+                  "examples": [
+                    "5.0"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "timeout": {
-              "description": "Timeout in seconds. Defaults to `5` when the key is absent, and is clamped to a maximum of `30`. Fractional input is truncated to an integer.",
-              "minimum": 0,
-              "maximum": 30,
-              "default": 5,
-              "examples": [
-                "3"
-              ],
-              "anyOf": [
-                {
-                  "type": "integer"
+                "headers": {
+                  "description": "HTTP headers to include with the request, as a map of header name to value. Each value must be a string.",
+                  "type": "object",
+                  "examples": [
+                    "#{ Authorization: \"Bearer token\" }"
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
-            },
-            "url": {
-              "description": "Endpoint to call. Must be a publicly reachable URL.",
-              "examples": [
-                "https://api.example.com/lookup"
-              ],
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uri"
+                "method": {
+                  "description": "The HTTP method to be used for the request. Can be `GET`, `POST`, `PUT`, or `DELETE`.",
+                  "examples": [
+                    "POST"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "enum": [
+                        "get",
+                        "GET",
+                        "put",
+                        "PUT",
+                        "POST",
+                        "post",
+                        "DELETE",
+                        "delete"
+                      ]
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 },
-                {
-                  "$ref": "#/$defs/SWMLVar"
+                "save_variables": {
+                  "description": "If `true`, parse the JSON response into `request_response.*` variables.",
+                  "default": false,
+                  "examples": [
+                    "true"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "boolean"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "timeout": {
+                  "description": "Timeout in seconds. Defaults to `5` when the key is absent, and is clamped to a maximum of `30`. Fractional input is truncated to an integer.",
+                  "minimum": 0,
+                  "maximum": 30,
+                  "default": 5,
+                  "examples": [
+                    "3"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
+                },
+                "url": {
+                  "description": "Endpoint to call. Must be a publicly reachable URL.",
+                  "examples": [
+                    "https://api.example.com/lookup"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 }
-              ]
+              },
+              "required": [
+                "method",
+                "url"
+              ],
+              "unevaluatedProperties": {
+                "not": {}
+              }
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
             }
-          },
-          "required": [
-            "method",
-            "url"
-          ],
-          "unevaluatedProperties": {
-            "not": {}
-          }
+          ]
         }
       },
       "required": [
@@ -8929,9 +9573,30 @@
       "properties": {
         "return": {
           "title": "return Method",
-          "description": "Return a value from an execute call or exit the script. The value can be any type.",
-          "type": "object",
-          "properties": {}
+          "description": "Body shape enforced by CHECK_swml_method_return, swml_schema.c:1468.",
+          "anyOf": [
+            {
+              "title": "return Method",
+              "description": "Return a value from an execute call or exit the script. The value can be any type.",
+              "type": "object",
+              "properties": {}
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ]
         }
       },
       "required": [
@@ -8947,12 +9612,27 @@
       "properties": {
         "ring": {
           "title": "ring",
-          "description": "Send 180 Ringing on an inbound call without answering.",
-          "type": "object",
-          "properties": {},
-          "unevaluatedProperties": {
-            "not": {}
-          }
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "ring",
+              "description": "Send 180 Ringing on an inbound call without answering.",
+              "type": "object",
+              "properties": {},
+              "unevaluatedProperties": {
+                "not": {}
+              }
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ]
         }
       },
       "required": [
@@ -9014,6 +9694,7 @@
       "properties": {
         "sip_refer": {
           "title": "sip_refer Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "sip_refer Method",
@@ -9092,7 +9773,23 @@
               },
               "unevaluatedProperties": {
                 "not": {}
-              }
+              },
+              "allOf": [
+                {
+                  "anyOf": [
+                    {
+                      "required": [
+                        "to_uri"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "to"
+                      ]
+                    }
+                  ]
+                }
+              ]
             },
             {
               "title": "sip_refer (positional array form)",
@@ -9117,18 +9814,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "sip_refer (bare to_uri)",
               "description": "Shorthand for `{\"sip_refer\": {\"to_uri\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "anyOf": [
@@ -9340,6 +10033,7 @@
       "properties": {
         "send_digits": {
           "title": "send_digits Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "send_digits Method",
@@ -9390,18 +10084,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "send_digits (bare digits)",
               "description": "Shorthand for `{\"send_digits\": {\"digits\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "anyOf": [
@@ -9431,6 +10121,7 @@
       "properties": {
         "send_fax": {
           "title": "send_fax Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "send_fax Method",
@@ -9569,18 +10260,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "send_fax (bare document)",
               "description": "Shorthand for `{\"send_fax\": {\"document\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "anyOf": [
@@ -9753,19 +10440,34 @@
       "properties": {
         "set_meta": {
           "title": "set_meta",
-          "description": "Add customer metadata to call and conference events",
-          "type": "object",
-          "properties": {
-            "private": {
-              "type": "object"
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "set_meta",
+              "description": "Add customer metadata to call and conference events",
+              "type": "object",
+              "properties": {
+                "private": {
+                  "type": "object"
+                },
+                "public": {
+                  "type": "object"
+                }
+              },
+              "unevaluatedProperties": {
+                "not": {}
+              }
             },
-            "public": {
-              "type": "object"
+            {
+              "type": "array"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
             }
-          },
-          "unevaluatedProperties": {
-            "not": {}
-          }
+          ]
         }
       },
       "required": [
@@ -9781,6 +10483,7 @@
       "properties": {
         "sleep": {
           "title": "sleep Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "sleep Method",
@@ -9835,14 +10538,26 @@
               "description": "Shorthand for `{\"sleep\": {\"duration\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
+                  "type": "number"
+                },
+                {
                   "anyOf": [
                     {
-                      "type": "string"
+                      "type": "integer"
                     },
                     {
-                      "type": "number"
+                      "$ref": "#/$defs/SWMLVar"
                     }
                   ]
+                }
+              ]
+            },
+            {
+              "title": "sleep (bare duration)",
+              "description": "Shorthand for `{\"sleep\": {\"duration\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
+              "allOf": [
+                {
+                  "type": "string"
                 },
                 {
                   "anyOf": [
@@ -9872,15 +10587,30 @@
       "properties": {
         "stop_denoise": {
           "title": "stop_denoise Method",
-          "description": "Stop noise reduction that was started with denoise.",
-          "type": "object",
-          "examples": [
-            {}
-          ],
-          "properties": {},
-          "unevaluatedProperties": {
-            "not": {}
-          }
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "stop_denoise Method",
+              "description": "Stop noise reduction that was started with denoise.",
+              "type": "object",
+              "examples": [
+                {}
+              ],
+              "properties": {},
+              "unevaluatedProperties": {
+                "not": {}
+              }
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ]
         }
       },
       "required": [
@@ -9896,6 +10626,7 @@
       "properties": {
         "stop_record_call": {
           "title": "stop_record_call Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "stop_record_call Method",
@@ -9943,18 +10674,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "stop_record_call (bare control_id)",
               "description": "Shorthand for `{\"stop_record_call\": {\"control_id\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "anyOf": [
@@ -9984,6 +10711,7 @@
       "properties": {
         "stop_stream": {
           "title": "stop_stream Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "stop_stream Method",
@@ -10027,18 +10755,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "stop_stream (bare control_id)",
               "description": "Shorthand for `{\"stop_stream\": {\"control_id\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "anyOf": [
@@ -10066,6 +10790,7 @@
       "properties": {
         "stop_tap": {
           "title": "stop_tap Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "stop_tap Method",
@@ -10109,18 +10834,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "stop_tap (bare control_id)",
               "description": "Shorthand for `{\"stop_tap\": {\"control_id\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "anyOf": [
@@ -10148,6 +10869,7 @@
       "properties": {
         "stream": {
           "title": "stream Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "stream Method",
@@ -10312,18 +11034,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "stream (bare url)",
               "description": "Shorthand for `{\"stream\": {\"url\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "anyOf": [
@@ -10354,55 +11072,70 @@
       "properties": {
         "switch": {
           "title": "switch Method",
-          "description": "Execute different instructions based on a variable's value.",
-          "type": "object",
-          "properties": {
-            "default": {
-              "description": "Array of SWML methods to execute if no `case` matches. If omitted and no case\nmatches, execution stops with an error.",
-              "anyOf": [
-                {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/$defs/SWMLMethod"
-                  }
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "switch Method",
+              "description": "Execute different instructions based on a variable's value.",
+              "type": "object",
+              "properties": {
+                "default": {
+                  "description": "Array of SWML methods to execute if no `case` matches. If omitted and no case\nmatches, execution stops with an error.",
+                  "anyOf": [
+                    {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/$defs/SWMLMethod"
+                      }
+                    },
+                    {
+                      "type": "object",
+                      "properties": {
+                        "code": {},
+                        "meta": {}
+                      },
+                      "unevaluatedProperties": {
+                        "not": {}
+                      }
+                    }
+                  ]
                 },
-                {
-                  "type": "object",
-                  "properties": {
-                    "code": {},
-                    "meta": {}
-                  },
-                  "unevaluatedProperties": {
-                    "not": {}
-                  }
+                "case": {
+                  "description": "Map of values to arrays of SWML methods to execute. The key is the value to compare\nagainst `variable` (after applying `transform`); the value is the array of methods\nto run on match.",
+                  "type": "object"
+                },
+                "variable": {
+                  "description": "Variable path to match. Specified without the `%{}` wrapper (e.g. `message.body`).",
+                  "examples": [
+                    "message.body"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 }
-              ]
-            },
-            "case": {
-              "description": "Map of values to arrays of SWML methods to execute. The key is the value to compare\nagainst `variable` (after applying `transform`); the value is the array of methods\nto run on match.",
-              "type": "object"
-            },
-            "variable": {
-              "description": "Variable path to match. Specified without the `%{}` wrapper (e.g. `message.body`).",
-              "examples": [
-                "message.body"
+              },
+              "required": [
+                "variable"
               ],
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
-                }
-              ]
+              "unevaluatedProperties": {
+                "not": {}
+              }
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
             }
-          },
-          "required": [
-            "variable"
-          ],
-          "unevaluatedProperties": {
-            "not": {}
-          }
+          ]
         }
       },
       "required": [
@@ -10418,6 +11151,7 @@
       "properties": {
         "tap": {
           "title": "tap Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "tap Method",
@@ -10575,18 +11309,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "tap (bare uri)",
               "description": "Shorthand for `{\"tap\": {\"uri\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "anyOf": [
@@ -10617,28 +11347,43 @@
       "properties": {
         "transcribe": {
           "title": "transcribe Method",
-          "description": "Start transcription on the call.",
-          "type": "object",
-          "properties": {
-            "status_url": {
-              "description": "An HTTP or HTTPS URL that receives the status callback when the transcription finishes",
-              "examples": [
-                "https://example.com/transcribe-status"
-              ],
-              "anyOf": [
-                {
-                  "type": "string",
-                  "format": "uri"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "transcribe Method",
+              "description": "Start transcription on the call.",
+              "type": "object",
+              "properties": {
+                "status_url": {
+                  "description": "An HTTP or HTTPS URL that receives the status callback when the transcription finishes",
+                  "examples": [
+                    "https://example.com/transcribe-status"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "string",
+                      "format": "uri"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ]
                 }
-              ]
+              },
+              "unevaluatedProperties": {
+                "not": {}
+              }
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
             }
-          },
-          "unevaluatedProperties": {
-            "not": {}
-          }
+          ]
         }
       },
       "required": [
@@ -10654,9 +11399,24 @@
       "properties": {
         "transcribe_stop": {
           "title": "transcribe_stop Method",
-          "description": "Stop transcription on the call.",
-          "type": "object",
-          "properties": {}
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "transcribe_stop Method",
+              "description": "Stop transcription on the call.",
+              "type": "object",
+              "properties": {}
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            }
+          ]
         }
       },
       "required": [
@@ -10672,6 +11432,7 @@
       "properties": {
         "transfer": {
           "title": "transfer Method",
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
           "anyOf": [
             {
               "title": "transfer Method",
@@ -10743,18 +11504,14 @@
               ]
             },
             {
+              "type": "number"
+            },
+            {
               "title": "transfer (bare dest)",
               "description": "Shorthand for `{\"transfer\": {\"dest\": ...}}`. A string or number body binds the parameter at positional index 0 (swml_get_method_param, swml_schema.c:33-34).",
               "allOf": [
                 {
-                  "anyOf": [
-                    {
-                      "type": "string"
-                    },
-                    {
-                      "type": "number"
-                    }
-                  ]
+                  "type": "string"
                 },
                 {
                   "anyOf": [
@@ -10813,27 +11570,42 @@
       "properties": {
         "user_event": {
           "title": "user_event Method",
-          "description": "Allows the user to set and send events to the connected client on the call.\nThis is useful for triggering actions on the client side.\nCommonly used with the [browser-sdk](https://developer.signalwire.com/sdks/reference/browser-sdk/SignalWire%20Client/).\nThe event object can be any valid JSON object.\nAny key-value pair in the object is sent to the client as an event type called `user_event`.",
-          "type": "object",
-          "properties": {
-            "event": {
-              "examples": [
-                "#{\n      type: \"call_update\",\n      status: \"connected\",\n      caller_name: \"John Doe\",\n    }"
-              ],
-              "anyOf": [
-                {
-                  "type": "object"
-                },
-                {
-                  "$ref": "#/$defs/SWMLVar"
+          "description": "Body shape enforced by check_method_type_and_unknown_params, swml_schema.c:889.",
+          "anyOf": [
+            {
+              "title": "user_event Method",
+              "description": "Allows the user to set and send events to the connected client on the call.\nThis is useful for triggering actions on the client side.\nCommonly used with the [browser-sdk](https://developer.signalwire.com/sdks/reference/browser-sdk/SignalWire%20Client/).\nThe event object can be any valid JSON object.\nAny key-value pair in the object is sent to the client as an event type called `user_event`.",
+              "type": "object",
+              "properties": {
+                "event": {
+                  "examples": [
+                    "#{\n      type: \"call_update\",\n      status: \"connected\",\n      caller_name: \"John Doe\",\n    }"
+                  ],
+                  "anyOf": [
+                    {
+                      "type": "object"
+                    },
+                    {
+                      "$ref": "#/$defs/SWMLVar"
+                    }
+                  ],
+                  "x-required-on": "relay"
                 }
-              ],
-              "x-required-on": "relay"
+              },
+              "unevaluatedProperties": {
+                "not": {}
+              }
+            },
+            {
+              "type": "array"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
             }
-          },
-          "unevaluatedProperties": {
-            "not": {}
-          }
+          ]
         }
       },
       "required": [
@@ -10841,6 +11613,55 @@
       ],
       "unevaluatedProperties": {
         "not": {}
+      }
+    },
+    "Webhook": {
+      "title": "Webhook",
+      "type": "object",
+      "properties": {
+        "error_keys": {
+          "type": "array"
+        },
+        "expressions": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Expression"
+            },
+            {
+              "not": {
+                "type": "object"
+              }
+            }
+          ]
+        },
+        "foreach": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Foreach"
+            },
+            {
+              "not": {
+                "type": "object"
+              }
+            }
+          ]
+        },
+        "form_param": {
+          "type": "string"
+        },
+        "headers": {},
+        "input_args_as_params": {
+          "type": "boolean"
+        },
+        "method": {
+          "type": "string"
+        },
+        "output": {},
+        "params": {},
+        "require_args": {},
+        "url": {
+          "type": "string"
+        }
       }
     }
   }
