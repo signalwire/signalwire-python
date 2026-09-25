@@ -31,6 +31,11 @@ class SkillBase(ABC):
     SUPPORTS_MULTIPLE_INSTANCES: bool = False  # Set to True to allow multiple instances
 
     def __init__(self, agent: "AgentBase", params: dict[str, Any] | None = None):
+        """Bind the skill to ``agent`` with its configuration ``params``.
+
+        Raises ``ValueError`` if the subclass does not define ``SKILL_NAME`` or
+        ``SKILL_DESCRIPTION``.
+        """
         if self.SKILL_NAME is None:
             raise ValueError(f"{self.__class__.__name__} must define SKILL_NAME")
         if self.SKILL_DESCRIPTION is None:

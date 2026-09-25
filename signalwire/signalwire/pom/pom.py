@@ -28,6 +28,7 @@ class Section:
         numbered: bool | None = None,
         numberedBullets: bool = False,
     ):
+        """Create a section; the attributes are described on the class."""
         self.title = title
 
         # Validate body is a string
@@ -414,6 +415,7 @@ class PromptObjectModel:
         return pom
 
     def __init__(self, debug: bool = False):
+        """Create an empty prompt object model."""
         self.sections: list[Section] = []
         self.debug = debug
 

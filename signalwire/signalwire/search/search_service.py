@@ -224,6 +224,12 @@ class SearchService:
         backend: str = "sqlite",
         connection_string: str | None = None,
     ):
+        """Configure the service from ``config_file`` and the arguments given.
+
+        ``indexes`` maps index names to index paths; ``backend`` is ``sqlite`` or
+        ``pgvector``, the latter using ``connection_string``. ``basic_auth`` falls back
+        to the security configuration's credentials.
+        """
         # Load configuration first
         self._load_config(config_file)
 

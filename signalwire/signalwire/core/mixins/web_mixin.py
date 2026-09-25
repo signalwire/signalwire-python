@@ -109,6 +109,7 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
             headers: dict[str, Any],
             agent: Any,
         ) -> None:
+            """Run every registered dynamic config callback, in registration order."""
             for callback in callbacks:
                 callback(query_params, body_params, headers, agent)
 
@@ -1738,6 +1739,7 @@ class WebMixin(_HostTyped):  # type: ignore[misc]  # _HostTyped is object at run
 
         Example:
             def my_config(query_params, body_params, headers, agent):
+                '''Add premium features for premium callers and record the tier.'''
                 if query_params.get('tier') == 'premium':
                     agent.add_skill("advanced_search")
                     agent.add_language("English", "en-US", "premium_voice")

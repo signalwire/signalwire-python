@@ -101,6 +101,7 @@ class _NoopTracker:
     """Ensures each noop message is printed at most once."""
 
     def __init__(self) -> None:
+        """Start with no keys logged."""
         self._lock = threading.Lock()
         self._logged: dict[str, bool] = {}
 
@@ -160,6 +161,7 @@ class AgentHandoff:
     """Signals a handoff to another agent in multi-agent scenarios."""
 
     def __init__(self, agent: Any, *, returns: Any = None) -> None:
+        """Hand off to ``agent``; ``returns`` is reported back to the caller."""
         self.agent = agent
         self.returns = returns
 
@@ -173,6 +175,7 @@ class ChatContext:
     """Minimal stub mirroring livekit ChatContext."""
 
     def __init__(self) -> None:
+        """Start with an empty message list."""
         self.messages: list[dict[str, str]] = []
 
     def append(self, *, role: str = "user", text: str = "") -> "ChatContext":
@@ -216,6 +219,7 @@ def function_tool(
     """
 
     def _wrap(fn: "Callable[..., Any]") -> "Callable[..., Any]":
+        """Attach the tool name, description and parameter schema to ``fn``."""
         tool_name = name or fn.__name__
         tool_desc = description or (inspect.getdoc(fn) or "")
 
@@ -294,6 +298,7 @@ class RunContext:
         speech_handle: Any = None,
         function_call: Any = None,
     ) -> None:
+        """Hold the session, speech handle and function call of a tool run."""
         self.session = session
         self.speech_handle = speech_handle
         self.function_call = function_call
@@ -340,6 +345,13 @@ class Agent:
         min_endpointing_delay: Any = NOT_GIVEN,
         max_endpointing_delay: Any = NOT_GIVEN,
     ):
+        """Create an agent from its instructions and tools.
+
+        ``stt``, ``tts``, ``vad``, ``turn_detection`` and ``mcp_servers`` are accepted
+        for source compatibility and log a one-time notice instead of configuring
+        anything. ``allow_interruptions`` and the endpointing delays, when given,
+        override the session's values for this agent.
+        """
         self.instructions = instructions
         self._tools: list[Any] = list(tools or [])
         self._chat_ctx = chat_ctx
@@ -495,6 +507,12 @@ class AgentSession:
         max_tool_steps: int = 3,
         preemptive_generation: bool = False,
     ):
+        """Create a session from the LLM, tools, user data and timing options.
+
+        ``stt``, ``tts``, ``vad``, ``turn_detection`` and ``mcp_servers`` are accepted
+        for source compatibility and log a one-time notice instead of configuring
+        anything, as does a ``max_tool_steps`` other than the default.
+        """
         # Noop pipeline stubs
         if stt is not None:
             _global_noop.once(
@@ -776,6 +794,7 @@ class JobProcess:
     """Mirrors a livekit JobProcess -- used for prewarm/setup."""
 
     def __init__(self) -> None:
+        """Start with empty ``userdata``."""
         self.userdata: dict[str, Any] = {}
 
 
@@ -783,6 +802,7 @@ class JobContext:
     """Mirrors a livekit JobContext -- provides room and connection info."""
 
     def __init__(self) -> None:
+        """Create the job's room and process holders; no agent is bound yet."""
         self.room = Room()
         self.proc = JobProcess()
         self._agent = None
@@ -814,6 +834,7 @@ class AgentServer:
     """Mirrors a livekit AgentServer -- registers entrypoints and starts."""
 
     def __init__(self, **kwargs: Any) -> None:
+        """Create a server with no entrypoint; keyword arguments are ignored."""
         self.setup_fnc: Callable[..., Any] | None = None
         self._entrypoint: Callable[..., Any] | None = None
         self._agent_name: str = ""
@@ -836,6 +857,7 @@ class AgentServer:
             )
 
         def _decorator(fn: "Callable[..., Any]") -> "Callable[..., Any]":
+            """Register ``fn`` as the session entrypoint and return it unchanged."""
             self._entrypoint = fn
             if agent_name:
                 self._agent_name = agent_name
@@ -868,6 +890,7 @@ class InferenceSTT:
     """Stub for livekit inference.STT."""
 
     def __init__(self, model: str = "", **kwargs: Any) -> None:
+        """Record the model and log a one-time notice that the stub does nothing."""
         self.model = model
         _global_noop.once(
             "inference_stt",
@@ -880,6 +903,7 @@ class InferenceLLM:
     """Stub for livekit inference.LLM."""
 
     def __init__(self, model: str = "", **kwargs: Any) -> None:
+        """Record the model name; the stub does nothing else."""
         self.model = model
 
 
@@ -887,6 +911,7 @@ class InferenceTTS:
     """Stub for livekit inference.TTS."""
 
     def __init__(self, model: str = "", **kwargs: Any) -> None:
+        """Record the model and log a one-time notice that the stub does nothing."""
         self.model = model
         _global_noop.once(
             "inference_tts",
@@ -903,17 +928,23 @@ class InferenceTTS:
 
 
 class _VoiceNamespace:
+    """The ``voice`` namespace: ``Agent`` and ``AgentSession``."""
+
     Agent = Agent
     AgentSession = AgentSession
 
 
 class _LLMNamespace:
+    """The ``llm`` namespace: ``tool``, ``ToolError`` and ``ChatContext``."""
+
     tool = staticmethod(function_tool)
     ToolError = ToolError
     ChatContext = ChatContext
 
 
 class _InferenceNamespace:
+    """The ``inference`` namespace: the ``STT``, ``LLM`` and ``TTS`` stubs."""
+
     STT = InferenceSTT
     LLM = InferenceLLM
     TTS = InferenceTTS
@@ -968,6 +999,8 @@ def run_app(server: AgentServer) -> None:
 
 # Also provide a cli_ns namespace for ``from livewire import cli_ns``
 class _CLINamespace:
+    """The ``cli`` namespace: ``run_app``."""
+
     run_app = staticmethod(run_app)
 
 

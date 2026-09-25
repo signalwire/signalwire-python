@@ -292,6 +292,7 @@ class {agent_class}(AgentBase):
     """{agent_name} agent for AWS Lambda deployment."""
 
     def __init__(self):
+        """Set up the agent's prompt, language and tools."""
         super().__init__(name="{agent_name_slug}")
 
         self._configure_prompts()
@@ -299,6 +300,7 @@ class {agent_class}(AgentBase):
         self._setup_functions()
 
     def _configure_prompts(self):
+        """Define the agent's role and guidelines."""
         self.prompt_add_section(
             "Role",
             "You are a helpful AI assistant deployed on AWS Lambda."
@@ -314,6 +316,7 @@ class {agent_class}(AgentBase):
         )
 
     def _setup_functions(self):
+        """Register the agent's tools."""
         @self.tool(
             description="Get information about a topic",
             parameters={{
@@ -328,6 +331,7 @@ class {agent_class}(AgentBase):
             }}
         )
         def get_info(args, raw_data):
+            """Return information about the requested topic."""
             topic = args.get("topic", "")
             return FunctionResult(
                 f"Information about {{topic}}: This is a placeholder response."
@@ -335,6 +339,7 @@ class {agent_class}(AgentBase):
 
         @self.tool(description="Get AWS Lambda deployment information")
         def get_platform_info(args, raw_data):
+            """Report the Lambda function, region, memory and runtime."""
             region = os.getenv("AWS_REGION", "unknown")
             function_name = os.getenv("AWS_LAMBDA_FUNCTION_NAME", "unknown")
             memory = os.getenv("AWS_LAMBDA_FUNCTION_MEMORY_SIZE", "unknown")
@@ -675,6 +680,7 @@ class {agent_class}(AgentBase):
     """{agent_name} agent for Google Cloud Functions deployment."""
 
     def __init__(self):
+        """Set up the agent's prompt, language and tools."""
         super().__init__(name="{agent_name_slug}")
 
         self._configure_prompts()
@@ -682,6 +688,7 @@ class {agent_class}(AgentBase):
         self._setup_functions()
 
     def _configure_prompts(self):
+        """Define the agent's role and guidelines."""
         self.prompt_add_section(
             "Role",
             "You are a helpful AI assistant deployed on Google Cloud Functions."
@@ -697,6 +704,7 @@ class {agent_class}(AgentBase):
         )
 
     def _setup_functions(self):
+        """Register the agent's tools."""
         @self.tool(
             description="Get information about a topic",
             parameters={{
@@ -711,6 +719,7 @@ class {agent_class}(AgentBase):
             }}
         )
         def get_info(args, raw_data):
+            """Return information about the requested topic."""
             topic = args.get("topic", "")
             return FunctionResult(
                 f"Information about {{topic}}: This is a placeholder response."
@@ -718,6 +727,7 @@ class {agent_class}(AgentBase):
 
         @self.tool(description="Get Google Cloud deployment information")
         def get_platform_info(args, raw_data):
+            """Report the Cloud Run service, revision and project this agent runs on."""
             import urllib.request
 
             # Gen 2 Cloud Functions run on Cloud Run with these env vars
@@ -907,6 +917,7 @@ class {agent_class}(AgentBase):
     """{agent_name} agent for Azure Functions deployment."""
 
     def __init__(self):
+        """Set up the agent's prompt, language and tools."""
         super().__init__(name="{agent_name_slug}")
 
         self._configure_prompts()
@@ -914,6 +925,7 @@ class {agent_class}(AgentBase):
         self._setup_functions()
 
     def _configure_prompts(self):
+        """Define the agent's role and guidelines."""
         self.prompt_add_section(
             "Role",
             "You are a helpful AI assistant deployed on Azure Functions."
@@ -929,6 +941,7 @@ class {agent_class}(AgentBase):
         )
 
     def _setup_functions(self):
+        """Register the agent's tools."""
         @self.tool(
             description="Get information about a topic",
             parameters={{
@@ -943,6 +956,7 @@ class {agent_class}(AgentBase):
             }}
         )
         def get_info(args, raw_data):
+            """Return information about the requested topic."""
             topic = args.get("topic", "")
             return FunctionResult(
                 f"Information about {{topic}}: This is a placeholder response."
@@ -950,6 +964,7 @@ class {agent_class}(AgentBase):
 
         @self.tool(description="Get Azure Functions deployment information")
         def get_platform_info(args, raw_data):
+            """Report the function app, region and runtime this agent runs on."""
             function_name = os.getenv("WEBSITE_SITE_NAME", "unknown")
             region = os.getenv("REGION_NAME", "unknown")
             runtime = os.getenv("FUNCTIONS_WORKER_RUNTIME", "unknown")
@@ -1333,6 +1348,7 @@ class MainAgent(AgentBase):
     """Main voice AI agent."""
 
     def __init__(self):
+        """Set up the agent at the /swml route."""
         super().__init__(
             name="main-agent",
             route="/swml"
@@ -1420,6 +1436,7 @@ MAGENTA = "\\033[35m"
 
 
 def print_separator(char="-", width=80):
+    """Print a dimmed separator line."""
     print(f"{DIM}{char * width}{RESET}")
 
 
@@ -1497,15 +1514,16 @@ def print_post_prompt_data(data):
 
     # Main function
     main_body_parts = [
-        """
+        '''
 def main():
+    """Start the server and serve the agent."""
     host = os.getenv("HOST", "0.0.0.0")
     port = int(os.getenv("PORT", "5000"))
 
     # Create server and register agent
     server = AgentServer(host=host, port=port)
     server.register(agent)
-"""
+'''
     ]
 
     if has_web_ui:
@@ -1789,6 +1807,7 @@ Add new tools to your agent using the `@AgentBase.tool` decorator:
     }}
 )
 def my_tool(self, args, raw_data):
+    '''Return the result for ``param1``.'''
     param1 = args.get("param1")
     return FunctionResult(f"Result: {{param1}}")
 ```
@@ -1903,6 +1922,11 @@ class ProjectGenerator:
     """Generates a new SignalWire agent project."""
 
     def __init__(self, config: dict[str, Any]):
+        """Prepare to generate the project ``config`` describes.
+
+        ``config`` carries the project directory and name, the selected features, and
+        optionally the credentials, the target platform and its cloud settings.
+        """
         self.config = config
         self.project_dir = Path(config["project_dir"])
         self.project_name = config["project_name"]

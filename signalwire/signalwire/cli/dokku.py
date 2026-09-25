@@ -279,6 +279,7 @@ class {agent_class}(AgentBase):
     """{agent_name} agent for Dokku deployment."""
 
     def __init__(self):
+        """Set up the agent's prompt, language and tools."""
         super().__init__(name="{agent_slug}")
 
         self._configure_prompts()
@@ -286,6 +287,7 @@ class {agent_class}(AgentBase):
         self._setup_functions()
 
     def _configure_prompts(self):
+        """Define the agent's role and guidelines."""
         self.prompt_add_section(
             "Role",
             "You are a helpful AI assistant deployed on Dokku."
@@ -301,6 +303,7 @@ class {agent_class}(AgentBase):
         )
 
     def _setup_functions(self):
+        """Register the agent's tools."""
         @self.tool(
             description="Get information about a topic",
             parameters={{
@@ -315,6 +318,7 @@ class {agent_class}(AgentBase):
             }}
         )
         def get_info(args, raw_data):
+            """Return information about the requested topic."""
             topic = args.get("topic", "")
             return FunctionResult(
                 f"Information about {{topic}}: This is a placeholder response."
@@ -322,6 +326,7 @@ class {agent_class}(AgentBase):
 
         @self.tool(description="Get deployment information")
         def get_deployment_info(args, raw_data):
+            """Report the Dokku app name and environment."""
             app_name = os.getenv("APP_NAME", "unknown")
             app_env = os.getenv("APP_ENV", "unknown")
 
@@ -364,6 +369,7 @@ class {agent_class}(AgentBase):
     """{agent_name} agent for Dokku deployment."""
 
     def __init__(self):
+        """Set up the agent's prompt, language and tools."""
         super().__init__(name="{agent_slug}", route="/swml")
 
         self._configure_prompts()
@@ -371,6 +377,7 @@ class {agent_class}(AgentBase):
         self._setup_functions()
 
     def _configure_prompts(self):
+        """Define the agent's role and guidelines."""
         self.prompt_add_section(
             "Role",
             "You are a helpful AI assistant deployed on Dokku."
@@ -386,6 +393,7 @@ class {agent_class}(AgentBase):
         )
 
     def _setup_functions(self):
+        """Register the agent's tools."""
         @self.tool(
             description="Get information about a topic",
             parameters={{
@@ -400,6 +408,7 @@ class {agent_class}(AgentBase):
             }}
         )
         def get_info(args, raw_data):
+            """Return information about the requested topic."""
             topic = args.get("topic", "")
             return FunctionResult(
                 f"Information about {{topic}}: This is a placeholder response."
@@ -407,6 +416,7 @@ class {agent_class}(AgentBase):
 
         @self.tool(description="Get deployment information")
         def get_deployment_info(args, raw_data):
+            """Report the Dokku app name and environment."""
             app_name = os.getenv("APP_NAME", "unknown")
             app_env = os.getenv("APP_ENV", "unknown")
 
@@ -1909,6 +1919,11 @@ class DokkuProjectGenerator:
     """Generates Dokku deployment files for SignalWire agents."""
 
     def __init__(self, app_name: str, options: dict[str, Any]):
+        """Prepare to generate the deployment for ``app_name``.
+
+        The agent's slug and class name are derived from ``app_name``; ``options`` may
+        set ``project_dir`` (default ``./<app_name>``) among the generation options.
+        """
         self.app_name = app_name
         self.options = options
         self.project_dir = Path(options.get("project_dir", f"./{app_name}"))

@@ -59,6 +59,7 @@ class Found:
 
 
 def _import(name: str) -> ModuleType | None:
+    """Import module ``name``, or return ``None`` if it cannot be imported."""
     try:
         return importlib.import_module(name)
     except ImportError:
@@ -83,10 +84,12 @@ def _lookup_dotted(name: str) -> Found | None:
 
 
 def _public(names: list[str]) -> list[str]:
+    """Return the names that do not start with an underscore."""
     return [n for n in names if not n.startswith("_")]
 
 
 def _module_names(module: ModuleType) -> list[str]:
+    """Return a module's ``__all__``, or its public names when it has none."""
     exported = getattr(module, "__all__", None)
     return list(exported) if exported else _public(dir(module))
 
@@ -143,6 +146,7 @@ def suggestions(name: str) -> list[str]:
 
 
 def _clean(text: str) -> str:
+    """Drop the typing, collections.abc and signalwire prefixes from ``text``."""
     return _ANNOTATION_NOISE.sub("", text)
 
 
@@ -168,6 +172,7 @@ def summary(obj: Any) -> str:
 
 
 def _source(obj: Any) -> str:
+    """Return ``obj``'s source ``path:line``, or ``""`` if it has no source file."""
     target: Any = obj.fget if isinstance(obj, property) else obj
     if target is None:
         return ""
@@ -180,6 +185,7 @@ def _source(obj: Any) -> str:
 
 
 def _kind(obj: Any) -> str:
+    """Name ``obj``'s kind: module, class, property, function or its type."""
     if inspect.ismodule(obj):
         return "module"
     if inspect.isclass(obj):

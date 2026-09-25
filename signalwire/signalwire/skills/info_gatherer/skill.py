@@ -202,6 +202,7 @@ class InfoGathererSkill(SkillBase):
     # ------------------------------------------------------------------ #
 
     def _get_prompt_sections(self) -> list[dict[str, Any]]:
+        """Return the prompt section telling the model how to run the question flow."""
         return [
             {
                 "title": f"Info Gatherer ({self.get_instance_key()})",
@@ -265,6 +266,7 @@ class InfoGathererSkill(SkillBase):
     def _handle_start_questions(
         self, args: dict[str, Any], raw_data: dict[str, Any]
     ) -> FunctionResult:
+        """Return the instruction for the current question, or say there are none."""
         state = self.get_skill_data(raw_data)
         questions = state.get("questions", [])
         question_index = state.get("question_index", 0)
@@ -287,6 +289,12 @@ class InfoGathererSkill(SkillBase):
     def _handle_submit_answer(
         self, args: dict[str, Any], raw_data: dict[str, Any]
     ) -> FunctionResult:
+        """Record the answer and return the next question, or finish the flow.
+
+        A question that needs confirmation is refused until the answer is confirmed.
+        After the last answer, both tools are deactivated and the completion message is
+        returned.
+        """
         answer = args.get("answer", "")
         confirmed = args.get("confirmed_by_user", False)
         state = self.get_skill_data(raw_data)
@@ -356,6 +364,7 @@ class InfoGathererSkill(SkillBase):
         question_number: int = 1,
         total_questions: int = 1,
     ) -> str:
+        """Build the instruction to ask one question and submit its answer."""
         if is_first_question:
             instruction = (
                 f"Ask each question one at a time, wait for the user's answer, "
@@ -379,6 +388,10 @@ class InfoGathererSkill(SkillBase):
 
     @staticmethod
     def _validate_questions(questions: Any) -> None:
+        """Raise ``ValueError`` unless ``questions`` is a non-empty list of dicts.
+
+        Each question must carry ``key_name`` and ``question_text``.
+        """
         if not questions:
             raise ValueError("At least one question is required")
         if not isinstance(questions, list):

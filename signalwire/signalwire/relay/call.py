@@ -79,6 +79,11 @@ class Action:
         terminal_event: str,
         terminal_states: tuple[str, ...],
     ):
+        """Bind the action to its call and control_id and arm its completion future.
+
+        ``terminal_event`` is the event type that reports this operation's state, and
+        ``terminal_states`` are the states of that event that end it.
+        """
         self.call = call
         self.control_id = control_id
         self._terminal_event = terminal_event
@@ -240,6 +245,7 @@ class PlayAction(VolumeAction):
     _command_prefix = "play"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a play operation; it ends on the ``finished`` or ``error`` state."""
         super().__init__(
             call, control_id, EVENT_CALL_PLAY, (PLAY_STATE_FINISHED, PLAY_STATE_ERROR)
         )
@@ -251,6 +257,7 @@ class RecordAction(PausableAction):
     _command_prefix = "record"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a record operation; it ends on ``finished`` or ``no_input``."""
         super().__init__(
             call,
             control_id,
@@ -265,9 +272,11 @@ class DetectAction(StoppableAction):
     _command_prefix = "detect"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a detect operation; it ends on ``finished`` or ``error``."""
         super().__init__(call, control_id, EVENT_CALL_DETECT, ("finished", "error"))
 
     def _check_event(self, event: RelayEvent) -> None:
+        """Resolve on the first detect result, or on a terminal state."""
         # Detect delivers results continuously. Resolve on first result or
         # when finished/error.
         detect = event.params.get("detect", {})
@@ -283,6 +292,7 @@ class CollectAction(VolumeAction):
     _command_prefix = "play_and_collect"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a play_and_collect; it ends on a collect result or terminal state."""
         super().__init__(
             call,
             control_id,
@@ -291,6 +301,7 @@ class CollectAction(VolumeAction):
         )
 
     def _check_event(self, event: RelayEvent) -> None:
+        """Resolve on collect events only, ignoring the play phase's events."""
         # play_and_collect shares a control_id across play and collect
         # phases.  Only resolve on collect events, not play events.
         if event.event_type != EVENT_CALL_COLLECT:
@@ -314,6 +325,7 @@ class StandaloneCollectAction(StoppableAction):
     _command_prefix = "collect"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a collect; it ends on a result or a terminal collect state."""
         super().__init__(
             call,
             control_id,
@@ -322,6 +334,7 @@ class StandaloneCollectAction(StoppableAction):
         )
 
     def _check_event(self, event: RelayEvent) -> None:
+        """Resolve on the first collect result or a terminal collect state."""
         if event.event_type != EVENT_CALL_COLLECT:
             return
         result = event.params.get("result", {})
@@ -341,6 +354,7 @@ class FaxAction(StoppableAction):
     (``send_fax``/``receive_fax``) is set per-instance from the constructor."""
 
     def __init__(self, call: Call, control_id: str, method_prefix: str):
+        """Track a fax operation; ``method_prefix`` names send or receive."""
         super().__init__(call, control_id, EVENT_CALL_FAX, ("finished", "error"))
         self._command_prefix = method_prefix
 
@@ -351,6 +365,7 @@ class TapAction(StoppableAction):
     _command_prefix = "tap"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a tap operation; it ends on the ``finished`` tap state."""
         super().__init__(call, control_id, EVENT_CALL_TAP, ("finished",))
 
 
@@ -360,6 +375,7 @@ class StreamAction(StoppableAction):
     _command_prefix = "stream"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a stream operation; it ends on the ``finished`` stream state."""
         super().__init__(call, control_id, EVENT_CALL_STREAM, ("finished",))
 
 
@@ -369,6 +385,7 @@ class PayAction(StoppableAction):
     _command_prefix = "pay"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a pay operation; it ends on the ``finished`` or ``error`` pay state."""
         super().__init__(call, control_id, EVENT_CALL_PAY, ("finished", "error"))
 
 
@@ -378,6 +395,7 @@ class TranscribeAction(StoppableAction):
     _command_prefix = "transcribe"
 
     def __init__(self, call: Call, control_id: str):
+        """Track a transcribe operation; it ends on the ``finished`` state."""
         super().__init__(call, control_id, EVENT_CALL_TRANSCRIBE, ("finished",))
 
 
@@ -387,6 +405,7 @@ class AIAction(StoppableAction):
     _command_prefix = "ai"
 
     def __init__(self, call: Call, control_id: str):
+        """Track an AI session; it ends on a ``finished`` or ``error`` AI event."""
         # AI sessions don't have a standard event type with state field —
         # they end when the call ends or when stopped. We treat "finished"
         # and "error" as terminal states from calling.call.ai events if any.
@@ -419,6 +438,11 @@ class Call:
         state: str = "",
         segment_id: str = "",
     ):
+        """Create the call object for a call the client dialed or received.
+
+        The identifiers come from the server's ``calling.call.receive`` event or a dial
+        response; ``state`` is the call state known at creation time.
+        """
         self._client = client
         self.call_id = call_id
         self.node_id = node_id
@@ -528,6 +552,7 @@ class Call:
         future: asyncio.Future[RelayEvent] = asyncio.get_running_loop().create_future()
 
         def _handler(event: RelayEvent) -> None:
+            """Complete the future with the first event the predicate accepts."""
             if future.done():
                 return
             if predicate is None or predicate(event):
@@ -1703,6 +1728,7 @@ class Call:
     # ------------------------------------------------------------------
 
     def __repr__(self) -> str:
+        """Show the call id, state and direction."""
         return (
             f"<Call id={self.call_id!r} state={self.state!r} "
             f"direction={self.direction!r}>"

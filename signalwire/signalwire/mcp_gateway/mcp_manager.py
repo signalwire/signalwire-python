@@ -42,6 +42,7 @@ class MCPService:
     sandbox_config: dict[str, Any] | None = None
 
     def __post_init__(self) -> None:
+        """Default the sandbox to on, with resource limits and a restricted env."""
         # Default sandbox config if not provided
         if self.sandbox_config is None:
             self.sandbox_config = {
@@ -51,6 +52,7 @@ class MCPService:
             }
 
     def __hash__(self) -> int:
+        """Hash by service name."""
         return hash(self.name)
 
 
@@ -58,6 +60,7 @@ class MCPClient:
     """Client for communicating with a single MCP server process"""
 
     def __init__(self, service: MCPService, sandbox_base_dir: str = "./sandbox"):
+        """Prepare a client for ``service``; the server process is not started yet."""
         self.service = service
         self.process: subprocess.Popen[str] | None = None
         self.request_id = 0
@@ -454,6 +457,7 @@ class MCPManager:
     """Manages multiple MCP services and their lifecycles"""
 
     def __init__(self, config: dict[str, Any]):
+        """Create a manager for ``config`` and ensure its sandbox directory exists."""
         self.config = config
         self.services: dict[str, MCPService] = {}
         self.clients: dict[str, MCPClient] = {}

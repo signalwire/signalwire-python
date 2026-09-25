@@ -24,6 +24,7 @@ class SkillRegistry:
     """Global registry for on-demand skill loading"""
 
     def __init__(self) -> None:
+        """Create an empty registry; skills are loaded on first use."""
         self._skills: dict[str, type[SkillBase]] = {}
         self._external_paths: list[Path] = []  # Additional paths to search for skills
         self._entry_points_loaded = False

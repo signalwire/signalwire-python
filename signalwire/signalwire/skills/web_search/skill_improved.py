@@ -24,6 +24,7 @@ class GoogleSearchScraper:
     def __init__(
         self, api_key: str, search_engine_id: str, max_content_length: int = 32768
     ):
+        """Keep the credentials and open the HTTP session used for requests."""
         self.api_key = api_key
         self.search_engine_id = search_engine_id
         self.max_content_length = max_content_length

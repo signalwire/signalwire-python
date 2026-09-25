@@ -84,6 +84,11 @@ class SignalWireRestError(Exception):
         method: str = "GET",
         headers: dict[str, str] | None = None,
     ) -> None:
+        """Record the failed request and the response the server returned.
+
+        ``status_code`` is ``None`` when no response was produced; ``request_id`` is
+        read from the response headers when the server sent one.
+        """
         self.status_code = status_code
         self.body = body
         self.url = url
@@ -110,6 +115,7 @@ _REQUEST_ID_HEADERS = (
 
 
 def _extract_request_id(headers: dict[str, str] | None) -> str | None:
+    """Return the request id from the first known request-id header, if any."""
     if not headers:
         return None
     lowered = {k.lower(): v for k, v in headers.items()}
@@ -131,6 +137,7 @@ class SignalWireRestTransportError(SignalWireRestError):
     """
 
     def __init__(self, body: Any, url: str, method: str = "GET") -> None:
+        """Record a request that failed before any response was received."""
         super().__init__(None, body, url, method, headers=None)
 
 
@@ -144,6 +151,12 @@ class HttpClient:
         host: str,
         request_options: RequestOptions | None = None,
     ) -> None:
+        """Open an authenticated session against ``host``.
+
+        A loopback host (``127.0.0.1`` or ``localhost``) is reached over plain HTTP;
+        every other host over HTTPS. ``request_options`` sets the client-wide timeout,
+        retry and header defaults.
+        """
         # A loopback host (127.0.0.1[:port] / localhost[:port]) is a local mock/dev
         # server that speaks plain HTTP — use http:// for it. Every other host is the
         # real platform over https://. This lets a shipped example run verbatim against
@@ -197,6 +210,11 @@ class HttpClient:
         params: dict[str, Any] | None = None,
         request_options: RequestOptions | None = None,
     ) -> Any:
+        """Send one request, retrying per the request options; return the body.
+
+        Raises ``SignalWireRestError`` for a non-2xx response and
+        ``SignalWireRestTransportError`` when no response was received.
+        """
         url = self._base_url + path
         # D1 (owner-approved 2026-07-18): error.url is the FULL URL WITH the query
         # string preserved — the reference decision the fleet never actually took (the
@@ -422,10 +440,12 @@ class BaseResource:
     """Base for all namespace/resource classes."""
 
     def __init__(self, http: HttpClient, base_path: str) -> None:
+        """Bind the resource to the HTTP client and its base API path."""
         self._http = http
         self._base_path = base_path
 
     def _path(self, *parts: Any) -> str:
+        """Join path segments onto the resource's base path."""
         return "/".join([self._base_path] + [str(p) for p in parts])
 
 

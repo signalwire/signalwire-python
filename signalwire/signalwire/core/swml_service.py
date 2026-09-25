@@ -87,7 +87,7 @@ class _NullLog:
     """
 
     def debug(self, *args: Any, **kwargs: Any) -> None:
-        return None
+        """Discard the log call."""
 
 
 _NULL_LOG = _NullLog()
@@ -1932,6 +1932,7 @@ class SWMLService(ToolMixin):
         """
 
         def _hget(name: str, default: str | None = None) -> str | None:
+            """Return a header's value, trying the name as given and then lowercased."""
             # Tolerate both the original casing and the lowercase form that
             # ``dict(request.headers)`` produces, so direct callers of
             # handle_request may pass conventionally-cased header names.

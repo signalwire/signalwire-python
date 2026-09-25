@@ -148,24 +148,34 @@ def _refuse_blocked_peer(sock: socket.socket, host: str) -> None:
 
 
 class _PublicHTTPConnection(HTTPConnection):
+    """An HTTP connection that refuses private or internal peer addresses."""
+
     def _new_conn(self) -> socket.socket:
+        """Connect, then refuse a peer at a private or internal address."""
         sock = super()._new_conn()
         _refuse_blocked_peer(sock, self.host)
         return sock
 
 
 class _PublicHTTPSConnection(HTTPSConnection):
+    """An HTTPS connection that refuses private or internal peer addresses."""
+
     def _new_conn(self) -> socket.socket:
+        """Connect, then refuse a peer at a private or internal address."""
         sock = super()._new_conn()
         _refuse_blocked_peer(sock, self.host)
         return sock
 
 
 class _PublicHTTPConnectionPool(HTTPConnectionPool):
+    """An HTTP connection pool whose connections refuse private or internal peers."""
+
     ConnectionCls = _PublicHTTPConnection
 
 
 class _PublicHTTPSConnectionPool(HTTPSConnectionPool):
+    """An HTTPS connection pool whose connections refuse private or internal peers."""
+
     ConnectionCls = _PublicHTTPSConnection
 
 
@@ -178,6 +188,7 @@ class _PublicAdapter(HTTPAdapter):
     """
 
     def init_poolmanager(self, *args: Any, **kwargs: Any) -> None:
+        """Set up the pool manager to use the address-checking connection pools."""
         super().init_poolmanager(*args, **kwargs)
         self.poolmanager.pool_classes_by_scheme = {
             "http": _PublicHTTPConnectionPool,
@@ -201,6 +212,7 @@ class _PublicSession(requests.Session):
     """
 
     def __init__(self, allow_private: bool = False) -> None:
+        """Create the session; unless ``allow_private``, refuse private peers."""
         super().__init__()
         self._allow_private = allow_private
         if not allow_private:
@@ -211,6 +223,11 @@ class _PublicSession(requests.Session):
     def send(
         self, request: requests.PreparedRequest, **kwargs: Any
     ) -> requests.Response:
+        """Check the URL, then send the request; redirects are checked too.
+
+        Raises an error for a private, internal or invalid URL. Unless a proxy is in
+        use, the request connects directly so the peer address check applies.
+        """
         # resolve_redirects() sends each redirect through this method, so
         # every hop is checked before it's requested.
         url = request.url or ""
@@ -230,6 +247,7 @@ class _PublicSession(requests.Session):
         prepared_request: requests.PreparedRequest,
         proxies: dict[str, str] | None,
     ) -> dict[str, str]:
+        """Return a redirect's proxies; drop proxy credentials when direct."""
         # Requests calls this for each redirect. For a plain-HTTP target it
         # would add the environment proxy's credentials as a header, which a
         # direct request would then send to the target itself.

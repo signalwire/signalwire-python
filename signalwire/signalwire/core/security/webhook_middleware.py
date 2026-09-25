@@ -224,6 +224,7 @@ def make_webhook_validation_dependency(
         raise ValueError("signing_key is required")
 
     def _forbidden() -> NoReturn:
+        """Reject the request with a bare 403, giving no reason."""
         # Single canonical 403 short-circuit. No body detail (would leak
         # which branch failed); validators MUST NOT log scheme details.
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN)

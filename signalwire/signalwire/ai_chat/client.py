@@ -261,6 +261,10 @@ class AIChatClient:
 
     @staticmethod
     def _resolve_url(url: str | None, space: str) -> str:
+        """Return ``url``, else a ``RAILS_DEV_MODE`` URL, else the space's URL.
+
+        Raises ``ValueError`` when none of the three is available.
+        """
         if url:
             return url
         dev_url = os.environ.get("RAILS_DEV_MODE", "").strip()

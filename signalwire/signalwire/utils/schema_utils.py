@@ -31,6 +31,7 @@ class SchemaValidationError(Exception):
     """Raised when SWML schema validation fails."""
 
     def __init__(self, verb_name: str, errors: list[str]):
+        """Record the verb and its validation errors."""
         self.verb_name = verb_name
         self.errors = errors
         message = f"Schema validation failed for '{verb_name}': {'; '.join(errors)}"

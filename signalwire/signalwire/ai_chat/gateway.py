@@ -409,6 +409,7 @@ class ChatGateway:
         return out
 
     def _charge_mint(self) -> None:
+        """Count a new conversation against the window limit, or reject with 429."""
         now = time.monotonic()
         cutoff = now - self.window_seconds
         self._mints = [t for t in self._mints if t > cutoff]
@@ -417,6 +418,7 @@ class ChatGateway:
         self._mints.append(now)
 
     def _charge_turn(self, conversation_id: str) -> None:
+        """Count a turn against the conversation's limit, or reject it with 429."""
         now = time.monotonic()
         # Sweep here rather than on a timer: a handle cannot outlive its TTL,
         # so anything older can never be charged against again.
@@ -574,6 +576,7 @@ class ChatGateway:
         router = APIRouter()
 
         def _cors(origin: str | None) -> dict[str, str]:
+            """Return CORS headers for an allowed origin, and none otherwise."""
             if origin is None:
                 return {}
             try:
@@ -674,8 +677,10 @@ class ChatGateway:
 
 
 def _b64(raw: bytes) -> str:
+    """Encode bytes as unpadded URL-safe base64."""
     return base64.urlsafe_b64encode(raw).decode().rstrip("=")
 
 
 def _unb64(text: str) -> bytes:
+    """Decode unpadded URL-safe base64, restoring the stripped padding."""
     return base64.urlsafe_b64decode(text + "=" * (-len(text) % 4))

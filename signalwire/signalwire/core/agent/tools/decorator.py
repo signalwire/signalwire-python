@@ -73,6 +73,7 @@ class ToolDecorator:
                     },
                 )
                 def lookup_account(self, args, raw_data):
+                    '''Look up a customer's account by account number.'''
                     ...
 
             If you omit `description`, the function's docstring is used —
@@ -217,6 +218,7 @@ class ToolDecorator:
                     },
                 )
                 def lookup_account(self, args, raw_data):
+                    '''Look up a customer's account by account number.'''
                     ...
             """
 

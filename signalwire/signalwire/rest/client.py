@@ -49,6 +49,12 @@ class RestClient(_GeneratedResourceTree):
         host: str | None = None,
         request_options: RequestOptions | None = None,
     ) -> None:
+        """Create a client for one project.
+
+        Each argument falls back to its environment variable when omitted:
+        ``SIGNALWIRE_PROJECT_ID``, ``SIGNALWIRE_API_TOKEN`` and ``SIGNALWIRE_SPACE``.
+        Raises ``ValueError`` if any of the three is still missing.
+        """
         project = project or os.environ.get("SIGNALWIRE_PROJECT_ID", "")
         token = token or os.environ.get("SIGNALWIRE_API_TOKEN", "")
         host = host or os.environ.get("SIGNALWIRE_SPACE", "")

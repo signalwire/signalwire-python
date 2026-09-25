@@ -180,6 +180,12 @@ class RelayClient:
         contexts: list[str] | None = None,
         max_active_calls: int | None = None,
     ):
+        """Configure the client; nothing connects until ``connect()`` or ``run()``.
+
+        Each credential falls back to its environment variable when omitted:
+        ``SIGNALWIRE_PROJECT_ID``, ``SIGNALWIRE_API_TOKEN``, ``SIGNALWIRE_JWT_TOKEN``
+        and ``SIGNALWIRE_SPACE`` (the host).
+        """
         self.project = project or os.environ.get("SIGNALWIRE_PROJECT_ID", "")
         self.token = token or os.environ.get("SIGNALWIRE_API_TOKEN", "")
         self.jwt_token = jwt_token or os.environ.get("SIGNALWIRE_JWT_TOKEN", "")
@@ -281,6 +287,7 @@ class RelayClient:
         self._auth_reject_attempts: int = 0
 
     def __del__(self) -> None:
+        """Drop this client from the live-client registry when collected."""
         _active_clients.discard(id(self))
 
     async def __aenter__(self) -> RelayClient:
@@ -1328,6 +1335,7 @@ class RelayClient:
         )
 
     def _cancel_check_ping(self) -> None:
+        """Cancel the pending server-ping check, if one is scheduled."""
         if self._check_ping_handle:
             self._check_ping_handle.cancel()
             self._check_ping_handle = None
@@ -1357,6 +1365,7 @@ class RelayError(Exception):
     """Error returned by the RELAY server."""
 
     def __init__(self, code: int, message: str):
+        """Record the RELAY error code and message the server returned."""
         self.code = code
         self.message = message
         super().__init__(f"RELAY error {code}: {message}")

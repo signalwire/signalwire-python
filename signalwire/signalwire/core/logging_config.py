@@ -53,22 +53,27 @@ class _as_processor:
     __slots__ = ("_transform",)
 
     def __init__(self, transform: Callable[[dict[str, Any]], dict[str, Any]]) -> None:
+        """Wrap ``transform``, a function of the event dict alone."""
         self._transform = transform
 
     def __call__(
         self, logger: Any, method_name: str, event_dict: dict[str, Any]
     ) -> dict[str, Any]:
+        """Apply the transform to the event dict; the other arguments are unused."""
         return self._transform(event_dict)
 
     def __eq__(self, other: object) -> bool:
+        """Compare equal to another adapter wrapping the same transform."""
         if isinstance(other, _as_processor):
             return self._transform == other._transform
         return NotImplemented
 
     def __hash__(self) -> int:
+        """Hash by the wrapped transform, consistent with equality."""
         return hash(self._transform)
 
     def __repr__(self) -> str:
+        """Show the wrapped transform's name."""
         name = getattr(self._transform, "__name__", repr(self._transform))
         return f"<_as_processor {name}>"
 
@@ -407,6 +412,7 @@ class _EventDict(dict[str, Any]):
     """
 
     def __str__(self) -> str:
+        """Render the event followed by its public fields as ``key=value`` pairs."""
         fields = " ".join(
             f"{key}={value!r}"
             for key, value in self.items()

@@ -153,6 +153,7 @@ class GoogleMapsClient:
     """
 
     def __init__(self, api_key: str):
+        """Keep the Google Maps API key used for every request."""
         self.api_key = api_key
 
     def validate_address(

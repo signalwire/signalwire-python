@@ -95,7 +95,9 @@ else:
     # Provide stub functions that give helpful error messages.
     # These conditional fallbacks intentionally shadow the real imports above
     # when optional deps are absent; mypy can't model that mutual exclusion.
-    def preprocess_query(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
+    def preprocess_query(  # type: ignore[misc]
+        *args: Any, **kwargs: Any
+    ) -> Any:
         """Unavailable-dependency stub for :func:`.query_processor.preprocess_query`.
 
         Bound under this name only when one of numpy, scikit-learn,
@@ -109,7 +111,9 @@ else:
         """
         _check_search_dependencies()
 
-    def preprocess_document_content(*args: Any, **kwargs: Any) -> Any:  # type: ignore[misc]
+    def preprocess_document_content(  # type: ignore[misc]
+        *args: Any, **kwargs: Any
+    ) -> Any:
         """Unavailable-dependency stub for
         :func:`.query_processor.preprocess_document_content`.
 

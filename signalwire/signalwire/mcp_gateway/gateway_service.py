@@ -115,6 +115,7 @@ class MCPGateway:
     """Main gateway service class"""
 
     def __init__(self, config_path: str = "config.json") -> None:
+        """Load ``config_path`` and build the app, managers and rate limiter."""
         # Use unified config loader
         self.config_loader = ConfigLoader([config_path])
 
