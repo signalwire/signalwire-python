@@ -876,7 +876,7 @@ class TestFileExtraction:
             "import sys; import signalwire.search.document_processor; "
             "print('openpyxl' in sys.modules)"
         )
-        out = subprocess.run(
+        out = subprocess.run(  # noqa: S603  # fixed arguments: this interpreter and a literal script
             [sys.executable, "-c", code], capture_output=True, text=True, timeout=120
         )
         assert out.stdout.strip().splitlines()[-1] == "False", out.stdout + out.stderr

@@ -15,7 +15,7 @@ REPO = Path(__file__).resolve().parents[3]
 
 
 def _swaig_test(*args: str) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(
+    return subprocess.run(  # noqa: S603  # fixed arguments: this interpreter and the CLI module
         [
             sys.executable,
             "-m",

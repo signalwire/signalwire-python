@@ -18,7 +18,7 @@ HEAVY = ("sentence_transformers", "nltk", "sklearn", "torch")
 
 
 def _run(code: str) -> list[str]:
-    completed = subprocess.run(
+    completed = subprocess.run(  # noqa: S603  # fixed arguments: this interpreter and a test-literal script
         [sys.executable, "-c", code], capture_output=True, text=True, timeout=180
     )
     assert completed.returncode == 0, completed.stderr

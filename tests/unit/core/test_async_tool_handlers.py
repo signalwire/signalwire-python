@@ -200,7 +200,7 @@ def test_swaig_test_cli_runs_async_handler(tmp_path: Path) -> None:
         )
     """)
     )
-    completed = subprocess.run(
+    completed = subprocess.run(  # noqa: S603  # fixed arguments: this interpreter and the CLI module
         [
             sys.executable,
             "-m",
