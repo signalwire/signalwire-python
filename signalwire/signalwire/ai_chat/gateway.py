@@ -591,6 +591,7 @@ class ChatGateway:
 
         @router.options("/")
         async def preflight(request: Request) -> Response:
+            """Answer a CORS preflight: 204, with allow headers only for an allowed origin."""
             origin = request.headers.get("origin")
             headers = _cors(origin)
             if headers:
@@ -601,6 +602,12 @@ class ChatGateway:
 
         @router.post("/")
         async def proxy(request: Request) -> Response:
+            """Validate a browser request and forward it to the chat service.
+
+            Rejections come back as ``{"error": ...}`` with their status. Create,
+            end and log calls return a JSON summary; a chat streams the service's
+            response body through unbuffered.
+            """
             origin = request.headers.get("origin")
             auth = request.headers.get("authorization", "")
             key = auth[7:] if auth.lower().startswith("bearer ") else None
@@ -665,6 +672,7 @@ class ChatGateway:
                 headers["X-Chat-Handle"] = minted
 
             async def stream() -> Any:
+                """Yield the service's response body chunk by chunk, unbuffered."""
                 async with self._client.raw_post(method, params) as resp:
                     async for chunk in resp.content.iter_any():
                         yield chunk
