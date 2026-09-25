@@ -1725,4 +1725,4 @@ class SignalwireReauthenticateResult(TypedDict, total=False):
     authentication: str
     authorization: dict[str, Any]
     ice_servers: list[Any]
-    result: Any
+    result: dict[str, Any]

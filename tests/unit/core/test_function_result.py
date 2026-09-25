@@ -740,6 +740,19 @@ class TestChangeVoice:
             {"say": "Hello again"},
         ]
 
+    def test_change_voice_matches_generated_builder_wire(self) -> None:
+        """FunctionResult.change_voice and the spec-generated change_voice builder
+        put the identical action on the wire: one wire shape, not two."""
+        from signalwire.core.swaig_actions_generated import _SwaigActions
+
+        class _Host(_SwaigActions):
+            def __init__(self) -> None:
+                self.action: list[dict[str, Any]] = []
+
+        spec = "gcloud.en-US-Neural2-A:chirp"
+        generated = _Host().change_voice(spec)
+        assert FunctionResult().change_voice(spec).action == generated.action
+
     def test_change_voice_is_documented(self) -> None:
         """The public method documents its argument and return value"""
         doc = FunctionResult.change_voice.__doc__

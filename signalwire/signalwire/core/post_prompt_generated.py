@@ -181,7 +181,6 @@ class PostPromptSystemLogEntry(TypedDict, total=False):
         "hangup_hook",
         "hearing_hint",
         "inner_dialog",
-        "inner_dialog_scorecard",
         "manual_say",
         "reset",
         "session_end",
@@ -275,7 +274,6 @@ class PostPromptStampsUs(TypedDict, total=False):
 
     speech_start: int
     last_word_end: int
-    suspected_end: int
     turn_decided: int
     status_pushed: int
     request_detect: int
