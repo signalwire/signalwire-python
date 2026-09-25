@@ -42,6 +42,26 @@ class SchemaValidationError(Exception):
 logger = get_logger("signalwire.utils.schema_utils")
 
 
+def _verb_is_deprecated(verb_def: dict[str, Any], verb_name: str) -> bool:
+    """
+    Whether a SWML verb wrapper is marked deprecated in the schema.
+
+    The flag is JSON Schema's ``deprecated`` annotation, carried on the
+    wrapper definition or on its single verb property.
+
+    Args:
+        verb_def: The verb's wrapper definition from ``$defs``.
+        verb_name: The verb's property name inside that wrapper.
+
+    Returns:
+        True when either carries ``"deprecated": true``.
+    """
+    if verb_def.get("deprecated") is True:
+        return True
+    prop = (verb_def.get("properties") or {}).get(verb_name)
+    return isinstance(prop, dict) and prop.get("deprecated") is True
+
+
 class SchemaUtils:
     """
     Utility class for loading and working with SWML schemas
@@ -260,6 +280,9 @@ class SchemaUtils:
                                         "name": actual_verb,
                                         "schema_name": verb_name,
                                         "definition": verb_def,
+                                        "deprecated": _verb_is_deprecated(
+                                            verb_def, actual_verb
+                                        ),
                                     }
                                     self.log.debug("verb_added", verb=actual_verb)
         else:
@@ -565,12 +588,17 @@ class SchemaUtils:
 
     def get_all_verb_names(self) -> list[str]:
         """
-        Get all verb names defined in the schema
+        Get the names of the verbs the SDK exposes as builder/service methods.
+
+        A verb the schema marks ``"deprecated": true`` is left out: it is not
+        SDK surface, so no ``dial()``/``eval()``/``if()`` method is installed for
+        it. It stays known to validation, so a document that already carries
+        it still validates.
 
         Returns:
             List of verb names
         """
-        return list(self.verbs.keys())
+        return [name for name, info in self.verbs.items() if not info.get("deprecated")]
 
     def get_verb_parameters(self, verb_name: str) -> dict[str, Any]:
         """

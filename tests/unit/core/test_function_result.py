@@ -635,6 +635,60 @@ class TestHold:
         ret = result.hold()
         assert ret is result
 
+    def test_hold_step_and_timeout_step_emit_object_form(self) -> None:
+        """step / timeout_step switch the action to the {timeout, step, timeout_step} object"""
+        result = FunctionResult().hold(
+            timeout=120, step="back_with_agent", timeout_step="take_a_message"
+        )
+        assert result.action == [
+            {
+                "hold": {
+                    "timeout": 120,
+                    "step": "back_with_agent",
+                    "timeout_step": "take_a_message",
+                }
+            }
+        ]
+
+    def test_hold_only_step(self) -> None:
+        """Either destination may be given alone; the other key is omitted"""
+        result = FunctionResult().hold(step="back_with_agent")
+        assert result.action == [{"hold": {"timeout": 300, "step": "back_with_agent"}}]
+
+    def test_hold_only_timeout_step(self) -> None:
+        result = FunctionResult().hold(60, timeout_step="take_a_message")
+        assert result.action == [
+            {"hold": {"timeout": 60, "timeout_step": "take_a_message"}}
+        ]
+
+    def test_hold_routing_clamps_timeout(self) -> None:
+        result = FunctionResult().hold(timeout=5000, step="s")
+        assert result.action == [{"hold": {"timeout": 900, "step": "s"}}]
+
+    def test_hold_matches_generated_builder_wire(self) -> None:
+        """FunctionResult.hold and the spec-generated hold builder (HoldAction,
+        actions.c:269) put the identical action on the wire, in both the bare
+        integer form and the routed object form: one wire shape, not two."""
+        from signalwire.core.swaig_actions_generated import HoldAction, _SwaigActions
+
+        class _Host(_SwaigActions):
+            def __init__(self) -> None:
+                self.action: list[dict[str, Any]] = []
+
+        assert FunctionResult().hold(120).action == _Host().hold(120).action
+
+        routed: HoldAction = {
+            "timeout": 120,
+            "step": "back",
+            "timeout_step": "voicemail",
+        }
+        ours = FunctionResult().hold(120, step="back", timeout_step="voicemail")
+        generated = _Host().hold(routed)
+        assert ours.action == generated.action
+        assert json.dumps(ours.action, sort_keys=True) == json.dumps(
+            generated.action, sort_keys=True
+        )
+
 
 class TestWaitForUser:
     """Test wait_for_user() method"""
