@@ -1733,6 +1733,21 @@ Stop background audio playback.
 result.stop_background_file()
 ```
 
+##### `change_voice(voice: str) -> FunctionResult`
+Change the agent's voice for the rest of the call. The new voice replaces the
+voice of the language currently in use and is applied at the next speech batch
+boundary, never mid-utterance. If it will not open, the platform falls back to
+the fallback voice.
+
+**Parameters:**
+- `voice` (str): Voice spec in `engine.voice:model` form, the same form the SWML
+  `languages` list uses; the `engine.` prefix and `:model` suffix are optional
+
+**Usage:**
+```python
+result.change_voice("elevenlabs.rachel")
+```
+
 ### Data Management Actions
 
 ##### `update_global_data(data: Dict[str, Any]) -> FunctionResult`
