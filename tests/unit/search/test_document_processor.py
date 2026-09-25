@@ -13,7 +13,7 @@ Unit tests for search document processor module
 
 import pytest
 import sys
-from typing import Any
+from typing import Any, ClassVar
 from unittest.mock import Mock, patch, MagicMock, mock_open
 
 from signalwire.search.document_processor import DocumentProcessor
@@ -1500,7 +1500,7 @@ class TestMarkdownHeadingHierarchy:
         "### Sibling Heading\n\nAlso level three.\n\n"
         "## Classes\n\nAgentBase is the main class.\n"
     )
-    EXPECTED = [
+    EXPECTED: ClassVar[list[str]] = [
         "Install",
         "Configure",
         "Configure > Environment Variables",

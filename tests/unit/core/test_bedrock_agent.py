@@ -25,14 +25,25 @@ def _render(agent: BedrockAgent) -> dict[str, Any]:
 
 
 def _bedrock_verb(document: dict[str, Any]) -> dict[str, Any]:
-    return next(v["amazon_bedrock"] for v in document["sections"]["main"] if "amazon_bedrock" in v)
+    return next(
+        v["amazon_bedrock"]
+        for v in document["sections"]["main"]
+        if "amazon_bedrock" in v
+    )
 
 
 @pytest.fixture
 def agent() -> BedrockAgent:
-    agent = BedrockAgent(name="bedrock", route="/bedrock", voice_id="tiffany", max_tokens=512)
+    agent = BedrockAgent(
+        name="bedrock", route="/bedrock", voice_id="tiffany", max_tokens=512
+    )
     agent.set_prompt_text("You are a helpful assistant.")
-    agent.set_prompt_llm_params(presence_penalty=0.3, frequency_penalty=0.2, confidence=0.5, barge_confidence=0.4)
+    agent.set_prompt_llm_params(
+        presence_penalty=0.3,
+        frequency_penalty=0.2,
+        confidence=0.5,
+        barge_confidence=0.4,
+    )
     return agent
 
 

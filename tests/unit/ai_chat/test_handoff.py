@@ -45,7 +45,7 @@ def _recording_sender(events: list[Any]) -> Any:
 def gateway() -> ChatGateway:
     client = AIChatClient(
         project="p",
-        token="t",  # noqa: S106 - test fixture, not a credential
+        token="t",
         url="https://service.example.invalid/aichat",
     )
     return ChatGateway(
@@ -289,7 +289,9 @@ class TestConversationIdSanitization:
             sdk_logger.setLevel(level)
 
     @pytest.mark.parametrize("safe", ["conv-abc", "root.2", "a_b-c.d:e"])
-    def test_safe_ids_are_quiet(self, safe: str, records: list[logging.LogRecord]) -> None:
+    def test_safe_ids_are_quiet(
+        self, safe: str, records: list[logging.LogRecord]
+    ) -> None:
         _warn_if_id_will_be_altered(safe)
         assert records == []
 

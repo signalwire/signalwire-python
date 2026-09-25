@@ -18,14 +18,24 @@ from signalwire import AgentBase
 @pytest.fixture
 def config_file(tmp_path: Path) -> str:
     path = tmp_path / "agent.json"
-    path.write_text(json.dumps({
-        "service": {"name": "from-config", "route": "/from-config", "host": "127.0.0.1"}
-    }))
+    path.write_text(
+        json.dumps(
+            {
+                "service": {
+                    "name": "from-config",
+                    "route": "/from-config",
+                    "host": "127.0.0.1",
+                }
+            }
+        )
+    )
     return str(path)
 
 
 def test_explicit_arguments_win_even_at_their_default_values(config_file: str) -> None:
-    agent = AgentBase(name="explicit", route="/", host="0.0.0.0", config_file=config_file)
+    agent = AgentBase(
+        name="explicit", route="/", host="0.0.0.0", config_file=config_file
+    )
     assert agent.name == "explicit"
     assert agent.route in ("", "/")
     assert agent.host == "0.0.0.0"

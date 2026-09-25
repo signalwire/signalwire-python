@@ -46,7 +46,10 @@ def test_components_resolve_on_first_use() -> None:
 
 
 @pytest.mark.skipif(
-    any(find_spec(m) is None for m in ("numpy", "sklearn", "sentence_transformers", "nltk")),
+    any(
+        find_spec(m) is None
+        for m in ("numpy", "sklearn", "sentence_transformers", "nltk")
+    ),
     reason="needs the search extras installed",
 )
 def test_available_when_the_dependencies_are_installed() -> None:

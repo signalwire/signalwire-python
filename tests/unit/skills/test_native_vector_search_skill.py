@@ -11,7 +11,7 @@ Unit tests for NativeVectorSearchSkill
 
 from pathlib import Path
 import pytest
-from typing import Any
+from typing import Any, ClassVar
 from collections.abc import Callable
 
 from unittest.mock import Mock, patch
@@ -1825,9 +1825,9 @@ class TestReflectedQueryNotLoggedAboveDebug:
 
     def test_exception_message(self) -> None:
         skill = TestSearchHandler()._setup_skill_for_search()
-        skill.search_engine.search.side_effect = RuntimeError(
+        skill.search_engine.search.side_effect = RuntimeError(  # type: ignore[union-attr]  # mock search_engine
             f"bad query: {self.QUERY}"
-        )  # type: ignore[union-attr]  # mock search_engine
+        )
         preprocess = Mock(return_value={"enhanced_text": self.QUERY, "vector": [0.1]})
         with (
             patch.dict(
@@ -1849,7 +1849,10 @@ class TestCallerQueryNotLoggedAboveDebug:
     """The caller's query and the SWAIG request stay out of INFO and above."""
 
     QUERY = "what is my account balance"
-    RAW_DATA = {"caller_id_number": "+15551234567", "global_data": {"pin": "8642"}}
+    RAW_DATA: ClassVar[dict[str, Any]] = {
+        "caller_id_number": "+15551234567",
+        "global_data": {"pin": "8642"},
+    }
 
     def _skill(self, **overrides: Any) -> NativeVectorSearchSkill:
         return TestSearchHandler()._setup_skill_for_search(**overrides)

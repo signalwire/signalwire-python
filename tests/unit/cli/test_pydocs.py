@@ -105,9 +105,16 @@ class TestTopics:
         for number, code in enumerate(_snippets(topic)):
             tree = ast.parse(code, f"<{topic.name} snippet {number}>")
             for node in ast.walk(tree):
-                if isinstance(node, ast.ImportFrom) and (node.module or "").split(".")[0] == "signalwire":
+                if (
+                    isinstance(node, ast.ImportFrom)
+                    and (node.module or "").split(".")[0] == "signalwire"
+                ):
                     module = importlib.import_module(node.module or "")
-                    missing = [alias.name for alias in node.names if not hasattr(module, alias.name)]
+                    missing = [
+                        alias.name
+                        for alias in node.names
+                        if not hasattr(module, alias.name)
+                    ]
                     assert missing == [], (topic.name, node.module, missing)
 
     def test_quickstart_agent_renders(self) -> None:
@@ -122,7 +129,11 @@ class TestTopics:
         namespace: dict[str, object] = {}
         exec(code, namespace)  # noqa: S102  # our own snippet
         document = namespace["service"].get_document()  # type: ignore[attr-defined]  # an SWMLService
-        assert [next(iter(verb)) for verb in document["sections"]["main"]] == ["answer", "play", "hangup"]
+        assert [next(iter(verb)) for verb in document["sections"]["main"]] == [
+            "answer",
+            "play",
+            "hangup",
+        ]
 
     @pytest.mark.parametrize("topic", TOPICS, ids=lambda t: t.name)
     def test_renders(self, topic: Topic) -> None:
@@ -193,7 +204,9 @@ class TestIndex:
 class TestLiveSections:
     """Sections read from the installed package."""
 
-    def test_skills_lists_the_registry(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_skills_lists_the_registry(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         from signalwire.skills.registry import skill_registry
 
         code, out, _ = _run(capsys, "skills")
@@ -218,7 +231,9 @@ class TestLiveSections:
         assert "`client.phone_numbers`" in out
         assert "`client.fabric`" in out
 
-    def test_env_lists_variables_not_constants(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_env_lists_variables_not_constants(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         code, out, _ = _run(capsys, "config")
         assert code == 0
         assert "`SWML_BASIC_AUTH_PASSWORD`" in out
@@ -228,16 +243,25 @@ class TestLiveSections:
         assert "SIGNALWIRE_SIGNATURE_HEADER" not in out
 
     def test_env_skips_the_bundled_examples(
-        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+        capsys: pytest.CaptureFixture[str],
     ) -> None:
         # Installed, the examples sit inside the package, under _docs/
         package = tmp_path / "signalwire"
         (package / "core").mkdir(parents=True)
         (package / "_docs" / "examples").mkdir(parents=True)
-        (package / "core" / "x.py").write_text('os.getenv("SWML_FROM_CODE")\n', encoding="utf-8")
-        (package / "_docs" / "examples" / "e.py").write_text('os.getenv("SWML_FROM_EXAMPLE")\n', encoding="utf-8")
+        (package / "core" / "x.py").write_text(
+            'os.getenv("SWML_FROM_CODE")\n', encoding="utf-8"
+        )
+        (package / "_docs" / "examples" / "e.py").write_text(
+            'os.getenv("SWML_FROM_EXAMPLE")\n', encoding="utf-8"
+        )
         monkeypatch.setattr("signalwire.cli.pydocs._files.package_dir", lambda: package)
-        monkeypatch.setattr("signalwire.cli.pydocs._render.package_dir", lambda: package)
+        monkeypatch.setattr(
+            "signalwire.cli.pydocs._render.package_dir", lambda: package
+        )
         code, out, _ = _run(capsys, "config")
         assert code == 0
         assert "`SWML_FROM_CODE`" in out
@@ -268,17 +292,24 @@ class TestApi:
         assert "### PromptMixin" in out
         assert "- `prompt_add_section(" in out
 
-    def test_method_signature_drops_self(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_method_signature_drops_self(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         code, out, _ = _run(capsys, "api", "FunctionResult.connect")
         assert code == 0
         assert "connect(destination: str" in out
         assert "(self" not in out
 
-    def test_bare_name_lists_every_match(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_bare_name_lists_every_match(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         code, out, _ = _run(capsys, "api", "hangup")
         assert code == 0
         assert "## Other matches" in out
-        assert "signalwire.relay.Call.hangup" in out or "signalwire.FunctionResult.hangup" in out
+        assert (
+            "signalwire.relay.Call.hangup" in out
+            or "signalwire.FunctionResult.hangup" in out
+        )
 
     def test_module(self, capsys: pytest.CaptureFixture[str]) -> None:
         code, out, _ = _run(capsys, "api", "signalwire.prefabs")
@@ -291,7 +322,9 @@ class TestApi:
         assert code == 1
         assert "prompt_add_section" in err
 
-    def test_bare_word_falls_back_to_api(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_bare_word_falls_back_to_api(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         code, out, _ = _run(capsys, "DataMap")
         assert code == 0
         assert "sw-pydocs api DataMap" in out
@@ -323,12 +356,16 @@ class TestFiles:
         code, out, _ = _run(capsys, "show", "relay/docs/getting-started", "--toc")
         assert code == 0
         first = out.splitlines()[0].split(maxsplit=1)[1]
-        code, out, _ = _run(capsys, "show", "relay/docs/getting-started", "--section", first)
+        code, out, _ = _run(
+            capsys, "show", "relay/docs/getting-started", "--section", first
+        )
         assert code == 0
         assert first in out
 
     def test_show_missing_section(self, capsys: pytest.CaptureFixture[str]) -> None:
-        code, _, err = _run(capsys, "show", "agent_guide", "--section", "no such heading zz")
+        code, _, err = _run(
+            capsys, "show", "agent_guide", "--section", "no such heading zz"
+        )
         assert code == 1
         assert "--toc" in err
 
@@ -359,7 +396,9 @@ class TestFiles:
         assert code == 2
         assert "Invalid regular expression" in err
 
-    def test_show_takes_the_path_that_path_prints(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_show_takes_the_path_that_path_prints(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         _, printed, _ = _run(capsys, "path", "agent_guide")
         code, out, _ = _run(capsys, "show", printed.strip(), "--toc")
         assert code == 0
@@ -370,7 +409,9 @@ class TestFiles:
         assert code == 0
         assert "Agent" in out
 
-    def test_grep_limit_must_be_positive(self, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_grep_limit_must_be_positive(
+        self, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         code, _, err = _run(capsys, "grep", "AgentBase", "--limit", "0")
         assert code == 2
         assert "--limit" in err
@@ -402,14 +443,18 @@ class TestInit:
         text = agents.read_text(encoding="utf-8")
         assert text.startswith("# Project\n\nOur own rules.\n\n" + NOTE_BEGIN)
         # An old copy of the note is replaced, not duplicated
-        agents.write_text(text.replace("sw-pydocs pgi", "old text") + "\nAfter.\n", encoding="utf-8")
+        agents.write_text(
+            text.replace("sw-pydocs pgi", "old text") + "\nAfter.\n", encoding="utf-8"
+        )
         assert init(tmp_path) == [(agents, "updated")]
         text = agents.read_text(encoding="utf-8")
         assert text.count(NOTE_BEGIN) == 1
         assert "old text" not in text
         assert text.endswith("After.\n")
 
-    def test_claude_md_gets_the_note_unless_it_imports_agents_md(self, tmp_path: Path) -> None:
+    def test_claude_md_gets_the_note_unless_it_imports_agents_md(
+        self, tmp_path: Path
+    ) -> None:
         (tmp_path / "CLAUDE.md").write_text("# Notes\n", encoding="utf-8")
         init(tmp_path)
         assert NOTE_BEGIN in (tmp_path / "CLAUDE.md").read_text(encoding="utf-8")
@@ -422,7 +467,9 @@ class TestInit:
     def test_skill(self, tmp_path: Path) -> None:
         init(tmp_path, skill=True)
         for base in (".agents", ".claude"):
-            skill = (tmp_path / base / "skills" / "signalwire-sdk" / "SKILL.md").read_text(encoding="utf-8")
+            skill = (
+                tmp_path / base / "skills" / "signalwire-sdk" / "SKILL.md"
+            ).read_text(encoding="utf-8")
             assert skill.startswith("---\nname: signalwire-sdk\ndescription: ")
 
     def test_command(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
@@ -430,7 +477,9 @@ class TestInit:
         assert code == 0
         assert f"created: {tmp_path / 'AGENTS.md'}" in out
 
-    def test_print_writes_nothing(self, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_print_writes_nothing(
+        self, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         code, out, _ = _run(capsys, "init", "--dir", str(tmp_path), "--print")
         assert (code, out) == (0, note())
         assert not (tmp_path / "AGENTS.md").exists()
@@ -469,19 +518,29 @@ def test_index_loads_no_heavy_modules() -> None:
         "    main([])\n"
         "print(' '.join(sys.modules))\n"
     )
-    for heavy in ("numpy", "torch", "sentence_transformers", "fastapi", "signalwire.cli.test_swaig"):
+    for heavy in (
+        "numpy",
+        "torch",
+        "sentence_transformers",
+        "fastapi",
+        "signalwire.cli.test_swaig",
+    ):
         assert heavy not in loaded, heavy
 
 
 def test_cli_package_imports_swaig_test_lazily() -> None:
-    loaded = _subprocess_modules("import sys, signalwire.cli\nprint(' '.join(sys.modules))\n")
+    loaded = _subprocess_modules(
+        "import sys, signalwire.cli\nprint(' '.join(sys.modules))\n"
+    )
     assert "signalwire.cli.test_swaig" not in loaded
     import signalwire.cli
 
     assert signalwire.cli.test_swaig_main.__module__ == "signalwire.cli.test_swaig"
 
 
-@pytest.mark.parametrize("args", [[], ["api", "AgentBase"]], ids=["short output", "long output"])
+@pytest.mark.parametrize(
+    "args", [[], ["api", "AgentBase"]], ids=["short output", "long output"]
+)
 def test_closed_pipe_exits_quietly(args: list[str]) -> None:
     # Output piped into a command that stops reading, such as head. Short
     # output fits the buffer and fails only at interpreter exit; long output

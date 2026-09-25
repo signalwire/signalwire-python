@@ -737,8 +737,9 @@ class TestHandleSearch:
         assert [r.content for r in loose.results] == ["weak match"]
         assert strict.results == []
         thresholds = [
-            c.kwargs["similarity_threshold"] for c in engine.search.call_args_list
-        ]  # type: ignore[attr-defined]  # mock attr
+            c.kwargs["similarity_threshold"]
+            for c in engine.search.call_args_list  # type: ignore[attr-defined]  # mock attr
+        ]
         assert thresholds == [0.0, 0.9]
 
     def test_handle_search_other_language_is_not_served_from_cache(
@@ -803,8 +804,8 @@ class TestHandleSearch:
         assert mock_pp.call_count == 2
         vectors = [
             c.kwargs["query_vector"]
-            for c in service_with_engine.search_engines["default"].search.call_args_list
-        ]  # type: ignore[attr-defined]  # mock attr
+            for c in service_with_engine.search_engines["default"].search.call_args_list  # type: ignore[attr-defined]  # mock attr
+        ]
         assert vectors == [[], [0.1]]
 
     def test_handle_search_cache_eviction(

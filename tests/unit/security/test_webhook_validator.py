@@ -136,6 +136,7 @@ class TestSchemeA:
 # Scheme A / SHA-256 — RELAY/JSON with a stronger hash (hex)
 # ---------------------------------------------------------------------------
 
+
 class TestSchemeASha256:
     """hex(HMAC-SHA256(key, url + raw_body)) — the X-SignalWire-Sha256-Signature
     header. Same message construction as Scheme A, stronger hash."""
@@ -149,9 +150,7 @@ class TestSchemeASha256:
 
     def test_positive_vector(self) -> None:
         """A correctly-constructed SHA-256 signature validates."""
-        sig = self._sign(
-            VECTOR_A["signing_key"], VECTOR_A["url"], VECTOR_A["raw_body"]
-        )
+        sig = self._sign(VECTOR_A["signing_key"], VECTOR_A["url"], VECTOR_A["raw_body"])
         assert len(sig) == 64  # SHA-256 hex is 64 chars vs SHA-1's 40
         assert (
             validate_webhook_signature_sha256(
@@ -173,9 +172,7 @@ class TestSchemeASha256:
         )
 
     def test_negative_tampered_body(self) -> None:
-        sig = self._sign(
-            VECTOR_A["signing_key"], VECTOR_A["url"], VECTOR_A["raw_body"]
-        )
+        sig = self._sign(VECTOR_A["signing_key"], VECTOR_A["url"], VECTOR_A["raw_body"])
         tampered = VECTOR_A["raw_body"].replace("answered", "ringing")
         assert (
             validate_webhook_signature_sha256(
@@ -185,9 +182,7 @@ class TestSchemeASha256:
         )
 
     def test_negative_wrong_key(self) -> None:
-        sig = self._sign(
-            VECTOR_A["signing_key"], VECTOR_A["url"], VECTOR_A["raw_body"]
-        )
+        sig = self._sign(VECTOR_A["signing_key"], VECTOR_A["url"], VECTOR_A["raw_body"])
         assert (
             validate_webhook_signature_sha256(
                 "wrong-key", sig, VECTOR_A["url"], VECTOR_A["raw_body"]

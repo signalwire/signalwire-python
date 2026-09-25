@@ -16,7 +16,10 @@ from unittest.mock import Mock, patch
 
 import pytest
 
-from signalwire.cli.execution.datamap_exec import execute_datamap_function, simple_template_expand
+from signalwire.cli.execution.datamap_exec import (
+    execute_datamap_function,
+    simple_template_expand,
+)
 
 DATA: dict[str, Any] = {
     "args": {"city": "New York", "target": "Sales"},
@@ -44,15 +47,23 @@ def test_template_expansion(template: str, expected: str) -> None:
     assert simple_template_expand(template, DATA) == expected
 
 
-def _run(output: str, payload: Any, url: str = "https://api.example.com/w?q=${lc:enc:args.city}") -> tuple[Any, Mock]:
+def _run(
+    output: str,
+    payload: Any,
+    url: str = "https://api.example.com/w?q=${lc:enc:args.city}",
+) -> tuple[Any, Mock]:
     response = Mock(status_code=200, text="{}")
     response.json.return_value = payload
     config = {
         "function": "get_weather",
-        "data_map": {"webhooks": [{"url": url, "method": "GET", "output": {"response": output}}]},
+        "data_map": {
+            "webhooks": [{"url": url, "method": "GET", "output": {"response": output}}]
+        },
     }
-    with patch("signalwire.utils.url_validator.validate_url", return_value=True), \
-         patch("requests.get", return_value=response) as get:
+    with (
+        patch("signalwire.utils.url_validator.validate_url", return_value=True),
+        patch("requests.get", return_value=response) as get,
+    ):
         return execute_datamap_function(config, {"city": "New York"}), get
 
 
@@ -63,6 +74,8 @@ def test_object_response_is_read_from_the_root() -> None:
 
 
 def test_response_prefix_gets_a_hint(capsys: pytest.CaptureFixture[str]) -> None:
-    result, _ = _run("It's ${response.current.temp_f} degrees", {"current": {"temp_f": 72}})
+    result, _ = _run(
+        "It's ${response.current.temp_f} degrees", {"current": {"temp_f": 72}}
+    )
     assert "<MISSING:response.current.temp_f>" in str(result)
     assert "not ${response.<field>}" in capsys.readouterr().err

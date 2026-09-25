@@ -926,8 +926,12 @@ class TestPgVectorBackendDeleteCollection:
 
         backend.delete_collection("my_collection")
 
-        executed_sqls = [str(c[0][0]).strip() for c in mock_cursor.execute.call_args_list]
-        assert any("DROP TABLE IF EXISTS chunks_my_collection" in sql for sql in executed_sqls)
+        executed_sqls = [
+            str(c[0][0]).strip() for c in mock_cursor.execute.call_args_list
+        ]
+        assert any(
+            "DROP TABLE IF EXISTS chunks_my_collection" in sql for sql in executed_sqls
+        )
         assert not any("DELETE FROM collection_config" in sql for sql in executed_sqls)
         mock_conn.commit.assert_called()
 

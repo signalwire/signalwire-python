@@ -200,9 +200,13 @@ class TestImportIsLibrarySafe:
         import signalwire.core.logging_config as lc
 
         importlib.reload(lc)
-        assert host.handlers == [], "import added a handler to the host app's auth_handler logger"
+        assert host.handlers == [], (
+            "import added a handler to the host app's auth_handler logger"
+        )
 
-    def test_off_mode_silences_a_child_with_its_own_level(self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]) -> None:
+    def test_off_mode_silences_a_child_with_its_own_level(
+        self, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+    ) -> None:
         # A child set to its own level still finds the namespace's NullHandler,
         # so nothing reaches Python's last-resort handler on stderr.
         import signalwire.core.logging_config as lc
